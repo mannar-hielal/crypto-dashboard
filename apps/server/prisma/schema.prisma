@@ -1,0 +1,133 @@
+// Crypto Dashboard - Paper Trading Platform
+// Phase 1 Database Schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================================
+// USERS & AUTHENTICATION
+// ============================================================================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  password  String // bcrypt hashed
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  account Account?
+  trades  Trade[]
+  orders  Order[]
+
+  @@index([email])
+  @@index([username])
+}
+
+// ============================================================================
+// ACCOUNT & BALANCE
+// ============================================================================
+
+model Account {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Virtual balance tracking
+  totalBalance     Decimal @default(10000) @db.Decimal(20, 8)
+  availableBalance Decimal @default(10000) @db.Decimal(20, 8)
+  unrealizedPnl    Decimal @default(0) @db.Decimal(20, 8)
+  realizedPnl      Decimal @default(0) @db.Decimal(20, 8)
+
+  // Metadata
+  lastReset  DateTime @default(now())
+  resetCount Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  trades Trade[]
+  orders Order[]
+}
+
+// ============================================================================
+// ORDERS (Virtual Order State Machine)
+// ============================================================================
+
+model Order {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  // Order details
+  symbol    String
+  side      String // "BUY" | "SELL"
+  orderType String // "MARKET" | "LIMIT"
+  quantity  Decimal @db.Decimal(20, 8)
+
+  // Pricing
+  limitPrice         Decimal? @db.Decimal(20, 8)
+  filledQuantity     Decimal  @default(0) @db.Decimal(20, 8)
+  averageFilledPrice Decimal? @db.Decimal(20, 8)
+
+  // State machine: PENDING -> PARTIALLY_FILLED -> FILLED | CANCELLED
+  status      String    @default("PENDING")
+  createdAt   DateTime  @default(now())
+  filledAt    DateTime?
+  cancelledAt DateTime?
+
+  // Metadata
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  trades Trade[]
+
+  @@index([userId])
+  @@index([accountId])
+  @@index([symbol])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// TRADES (Completed executions)
+// ============================================================================
+
+model Trade {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  orderId   String?
+  order     Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  // Trade execution details
+  symbol        String
+  side          String // "BUY" | "SELL"
+  quantity      Decimal @db.Decimal(20, 8)
+  executedPrice Decimal @db.Decimal(20, 8)
+  totalCost     Decimal @db.Decimal(20, 8)
+
+  // PnL
+  pnl        Decimal @default(0) @db.Decimal(20, 8)
+  pnlPercent Decimal @default(0) @db.Decimal(6, 4)
+
+  // Metadata
+  executedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([accountId])
+  @@index([symbol])
+  @@index([executedAt])
+}
