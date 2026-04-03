@@ -39,6 +39,10 @@ RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 
 WORKDIR /app
 
+# WORKDIR creates /app owned by root — give nodejs write access before switching user
+# Without this, pnpm can't create temp/cache files under /app and fails with EACCES
+RUN chown -R nodejs:nodejs /app
+
 # Copy workspace manifests with correct ownership so pnpm install runs as nodejs (not root)
 # Root lockfile = same versions CI tested and builder used
 COPY --chown=nodejs:nodejs package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -47,6 +51,9 @@ COPY --chown=nodejs:nodejs apps/server/package.json apps/server/
 # Switch to non-root BEFORE installing — pnpm store lands in /home/nodejs (not /root)
 # This prevents module resolution errors at runtime caused by /root being unreadable by nodejs
 USER nodejs
+
+# Force pnpm (and any Node lib) to use /tmp for temp files — always writable by any user
+ENV TMPDIR=/tmp
 
 # Install production dependencies only
 RUN pnpm install --frozen-lockfile --prod
