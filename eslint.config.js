@@ -26,11 +26,13 @@ export default [
     },
   },
   // Typed rules — only for server source files (requires tsconfig)
+  // tsconfig.eslint.json extends the base but includes test files too,
+  // so ESLint can resolve types for __tests__/**  without polluting the build output.
   {
     files: ['apps/server/src/**/*.ts'],
     languageOptions: {
       parserOptions: {
-        project: ['./apps/server/tsconfig.json'],
+        project: ['./apps/server/tsconfig.eslint.json'],
         tsconfigRootDir: import.meta.dirname,
       },
     },
