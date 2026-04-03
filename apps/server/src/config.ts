@@ -1,7 +1,11 @@
 /**
  * Environment Configuration & Validation
  * Ensures all required environment variables are set before app starts
+ *
+ * Note: console.* is intentional here — this module bootstraps before the
+ * pino logger exists (logger.ts imports config, so we can't import logger here).
  */
+/* eslint-disable no-console */
 
 import { config as dotenvConfig } from 'dotenv';
 import { resolve } from 'path';

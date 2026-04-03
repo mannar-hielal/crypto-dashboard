@@ -6,6 +6,9 @@
 
 import { EventEmitter } from 'events';
 import { Kline, OrderBook, Trade, StreamData } from '../types';
+import { logger } from '../logger.js';
+
+const log = logger.child({ service: 'BybitWebSocketManager' });
 
 interface WebSocketSubscription {
   channel: string;
@@ -40,7 +43,7 @@ export class BybitWebSocketManager extends EventEmitter {
         this.ws = new WebSocket(this.url);
 
         this.ws.onopen = () => {
-          console.log('[Bybit WS] Connected');
+          log.info('Connected');
           this.reconnectAttempts = 0;
           this.reconnectDelay = 1000;
 
@@ -59,13 +62,13 @@ export class BybitWebSocketManager extends EventEmitter {
         };
 
         this.ws.onerror = (error) => {
-          console.error('[Bybit WS] Error:', error);
+          log.error({ err: error }, 'WebSocket error');
           this.emit('error', error);
           reject(error);
         };
 
         this.ws.onclose = () => {
-          console.log('[Bybit WS] Disconnected');
+          log.info('Disconnected');
           this.stopHeartbeat();
 
           if (!this.isManuallyClosed) {
@@ -75,7 +78,7 @@ export class BybitWebSocketManager extends EventEmitter {
           this.emit('disconnected');
         };
       } catch (error) {
-        console.error('[Bybit WS] Connection failed:', error);
+        log.error({ err: error }, 'Connection failed');
         reject(error);
       }
     });
@@ -93,7 +96,7 @@ export class BybitWebSocketManager extends EventEmitter {
     }
 
     this.subscriptions.clear();
-    console.log('[Bybit WS] Manually closed');
+    log.info('Manually closed');
   }
 
   /**
@@ -109,28 +112,26 @@ export class BybitWebSocketManager extends EventEmitter {
   subscribe(channel: string, symbol: string, interval?: string): void {
     // 🔐 Validate channel
     if (!BybitWebSocketManager.VALID_CHANNELS.has(channel)) {
-      console.error(`[Bybit WS] Invalid channel: ${channel}`);
+      log.error({ channel }, 'Invalid channel');
       return;
     }
 
     // 🔐 Validate symbol format
     if (!BybitWebSocketManager.VALID_SYMBOL.test(symbol)) {
-      console.error(`[Bybit WS] Invalid symbol format: ${symbol}`);
+      log.error({ symbol }, 'Invalid symbol format');
       return;
     }
 
     // 🔐 Enforce subscription limit
     if (this.subscriptions.size >= BybitWebSocketManager.MAX_SUBSCRIPTIONS) {
-      console.error(
-        `[Bybit WS] Subscription limit (${BybitWebSocketManager.MAX_SUBSCRIPTIONS}) reached`
-      );
+      log.error({ limit: BybitWebSocketManager.MAX_SUBSCRIPTIONS }, 'Subscription limit reached');
       return;
     }
 
     const key = `${channel}|${symbol}${interval ? `|${interval}` : ''}`;
 
     if (this.subscriptions.has(key)) {
-      console.log(`[Bybit WS] Already subscribed to ${key}`);
+      log.info({ key }, 'Already subscribed');
       return;
     }
 
@@ -149,7 +150,7 @@ export class BybitWebSocketManager extends EventEmitter {
     const key = `${channel}|${symbol}${interval ? `|${interval}` : ''}`;
 
     if (!this.subscriptions.has(key)) {
-      console.log(`[Bybit WS] Not subscribed to ${key}`);
+      log.info({ key }, 'Not subscribed');
       return;
     }
 
@@ -177,7 +178,7 @@ export class BybitWebSocketManager extends EventEmitter {
 
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(message));
-      console.log(`[Bybit WS] Subscribed to ${topic}`);
+      log.info({ topic }, 'Subscribed');
     }
   }
 
@@ -198,7 +199,7 @@ export class BybitWebSocketManager extends EventEmitter {
 
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(message));
-      console.log(`[Bybit WS] Unsubscribed from ${topic}`);
+      log.info({ topic }, 'Unsubscribed');
     }
   }
 
@@ -209,7 +210,7 @@ export class BybitWebSocketManager extends EventEmitter {
     // 🔐 Reject oversized messages — prevents DoS via large payload JSON.parse
     const MAX_MESSAGE_SIZE = 64 * 1024; // 64KB — more than enough for market data
     if (rawData.length > MAX_MESSAGE_SIZE) {
-      console.error(`[Bybit WS] Message rejected: too large (${rawData.length} bytes)`);
+      log.error({ size: rawData.length }, 'Message rejected: too large');
       return;
     }
 
@@ -218,7 +219,7 @@ export class BybitWebSocketManager extends EventEmitter {
 
       // Bybit sends op: "subscribe" confirmations - ignore these
       if (data.op === 'subscribe' || data.op === 'unsubscribe') {
-        console.log(`[Bybit WS] ${data.op} confirmation:`, data.success);
+        log.debug({ op: data.op, success: data.success }, 'Op confirmation');
         return;
       }
 
@@ -236,9 +237,9 @@ export class BybitWebSocketManager extends EventEmitter {
       }
     } catch (error) {
       // 🔐 Never log rawData — could be large or contain sensitive market data
-      console.error(
-        '[Bybit WS] Failed to parse message:',
-        error instanceof Error ? error.message : 'Unknown error'
+      log.error(
+        { err: error instanceof Error ? error.message : 'Unknown error' },
+        'Failed to parse message'
       );
     }
   }
@@ -246,11 +247,11 @@ export class BybitWebSocketManager extends EventEmitter {
   /**
    * Private: Process stream data and emit typed events
    */
-    private processStreamData(data: { topic: string; data: unknown }): void {
-        try {
-            const { topic, data: streamData } = data;
+  private processStreamData(data: { topic: string; data: unknown }): void {
+    try {
+      const { topic, data: streamData } = data;
 
-            if (!topic || !streamData) return;
+      if (!topic || !streamData) return;
 
       // Parse topic: e.g., "kline.1.BTCUSDT", "orderbook.1.BTCUSDT", "publicTrade.BTCUSDT"
       const parts = topic.split('.');
@@ -273,24 +274,24 @@ export class BybitWebSocketManager extends EventEmitter {
         this.emit(`${channelType}:${symbol}`, eventData);
       }
     } catch (error) {
-      console.error('[Bybit WS] Error processing stream data:', error, data);
+      log.error({ err: error }, 'Error processing stream data');
     }
   }
 
   /**
    * Private: Parse kline (candle) data from Bybit
    */
-    private parseKline(data: string[], symbol: string, _interval?: string): StreamData | null {
-        try {
-            const kline: Kline = {
-                timestamp: parseInt(data[0]),
-                open: parseFloat(data[1]),
-                high: parseFloat(data[2]),
-                low: parseFloat(data[3]),
-                close: parseFloat(data[4]),
-                volume: parseFloat(data[5]),
-                quoteAssetVolume: parseFloat(data[6]),
-            };
+  private parseKline(data: string[], symbol: string, _interval?: string): StreamData | null {
+    try {
+      const kline: Kline = {
+        timestamp: parseInt(data[0]),
+        open: parseFloat(data[1]),
+        high: parseFloat(data[2]),
+        low: parseFloat(data[3]),
+        close: parseFloat(data[4]),
+        volume: parseFloat(data[5]),
+        quoteAssetVolume: parseFloat(data[6]),
+      };
 
       return {
         symbol,
@@ -299,7 +300,7 @@ export class BybitWebSocketManager extends EventEmitter {
         timestamp: kline.timestamp,
       };
     } catch (error) {
-      console.error('[Bybit WS] Failed to parse kline:', error, data);
+      log.error({ err: error }, 'Failed to parse kline');
       return null;
     }
   }
@@ -307,16 +308,19 @@ export class BybitWebSocketManager extends EventEmitter {
   /**
    * Private: Parse order book data from Bybit
    */
-    private parseOrderBook(data: { b: string[][]; a: string[][]; ts: string }, symbol: string): StreamData | null {
-        try {
-            const {b, a, ts} = data; // bids, asks, timestamp
+  private parseOrderBook(
+    data: { b: string[][]; a: string[][]; ts: string },
+    symbol: string
+  ): StreamData | null {
+    try {
+      const { b, a, ts } = data; // bids, asks, timestamp
 
-            const orderBook: OrderBook = {
-                symbol,
-                bids: b.map((bid) => [parseFloat(bid[0]), parseFloat(bid[1])]),
-                asks: a.map((ask) => [parseFloat(ask[0]), parseFloat(ask[1])]),
-                timestamp: parseInt(ts),
-            };
+      const orderBook: OrderBook = {
+        symbol,
+        bids: b.map((bid) => [parseFloat(bid[0]), parseFloat(bid[1])]),
+        asks: a.map((ask) => [parseFloat(ask[0]), parseFloat(ask[1])]),
+        timestamp: parseInt(ts),
+      };
 
       return {
         symbol,
@@ -325,7 +329,7 @@ export class BybitWebSocketManager extends EventEmitter {
         timestamp: orderBook.timestamp,
       };
     } catch (error) {
-      console.error('[Bybit WS] Failed to parse order book:', error, data);
+      log.error({ err: error }, 'Failed to parse order book');
       return null;
     }
   }
@@ -333,16 +337,16 @@ export class BybitWebSocketManager extends EventEmitter {
   /**
    * Private: Parse trade data from Bybit
    */
-    private parseTrade(data: string[], symbol: string): StreamData | null {
-        try {
-            // data is an array of trades: [[price, qty, side, timestamp], ...]
-            if (Array.isArray(data) && data.length > 0) {
-                const trade: Trade = {
-                    price: parseFloat(data[0]),
-                    quantity: parseFloat(data[1]),
-                    side: data[2].toUpperCase() as 'BUY' | 'SELL',
-                    timestamp: parseInt(data[3]),
-                };
+  private parseTrade(data: string[], symbol: string): StreamData | null {
+    try {
+      // data is an array of trades: [[price, qty, side, timestamp], ...]
+      if (Array.isArray(data) && data.length > 0) {
+        const trade: Trade = {
+          price: parseFloat(data[0]),
+          quantity: parseFloat(data[1]),
+          side: data[2].toUpperCase() as 'BUY' | 'SELL',
+          timestamp: parseInt(data[3]),
+        };
 
         return {
           symbol,
@@ -354,7 +358,7 @@ export class BybitWebSocketManager extends EventEmitter {
 
       return null;
     } catch (error) {
-      console.error('[Bybit WS] Failed to parse trade:', error, data);
+      log.error({ err: error }, 'Failed to parse trade');
       return null;
     }
   }
@@ -366,8 +370,9 @@ export class BybitWebSocketManager extends EventEmitter {
     if (this.isManuallyClosed) return;
 
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error(
-        `[Bybit WS] Max reconnection attempts (${this.maxReconnectAttempts}) reached. Giving up.`
+      log.error(
+        { maxAttempts: this.maxReconnectAttempts },
+        'Max reconnection attempts reached, giving up'
       );
       this.emit('reconnectFailed');
       return;
@@ -376,13 +381,14 @@ export class BybitWebSocketManager extends EventEmitter {
     this.reconnectAttempts++;
     const delay = Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1), 30000);
 
-    console.log(
-      `[Bybit WS] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`
+    log.info(
+      { delay, attempt: this.reconnectAttempts, maxAttempts: this.maxReconnectAttempts },
+      'Reconnecting'
     );
 
     setTimeout(() => {
       this.connect().catch((error) => {
-        console.error('[Bybit WS] Reconnection failed:', error);
+        log.error({ err: error }, 'Reconnection failed');
       });
     }, delay);
   }

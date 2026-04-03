@@ -5,6 +5,9 @@
  */
 
 import { Kline } from '../types';
+import { logger } from '../logger.js';
+
+const log = logger.child({ service: 'CandleAggregator' });
 
 export type ChartInterval = '1m' | '5m' | '15m' | '1h' | '4h' | '1d';
 
@@ -45,14 +48,14 @@ export class CandleAggregator {
 
     // 🔐 Validate symbol format
     if (!CandleAggregator.VALID_SYMBOL.test(symbol)) {
-      console.error(`[CandleAggregator] Invalid symbol: ${symbol}`);
+      log.error({ symbol }, 'Invalid symbol');
       return result;
     }
 
     if (!this.state.has(symbol)) {
       // 🔐 Enforce symbol limit — prevents memory exhaustion
       if (this.state.size >= CandleAggregator.MAX_SYMBOLS) {
-        console.error(`[CandleAggregator] Symbol limit (${CandleAggregator.MAX_SYMBOLS}) reached`);
+        log.error({ limit: CandleAggregator.MAX_SYMBOLS }, 'Symbol limit reached');
         return result;
       }
       this.state.set(symbol, {
@@ -96,12 +99,12 @@ export class CandleAggregator {
     this.state.delete(symbol);
   }
 
-    private aggregate(
-        state: AggregatorState,
-        interval: ChartInterval,
-        incomingCandle: Kline,
-        _candleTime: number,
-    ): Kline | null {
+  private aggregate(
+    state: AggregatorState,
+    interval: ChartInterval,
+    incomingCandle: Kline,
+    _candleTime: number
+  ): Kline | null {
     const intervalMinutes = INTERVAL_MINUTES[interval];
     const candleClosedTime = incomingCandle.timestamp;
     const openCandleTime = this.getIntervalStart(candleClosedTime, intervalMinutes);
@@ -167,11 +170,11 @@ export class CandleAggregator {
     return date.getTime();
   }
 
-    private getPreviousClosePrice(
-        state: AggregatorState,
-        interval: ChartInterval,
-        _candleTime: number,
-    ): number {
+  private getPreviousClosePrice(
+    state: AggregatorState,
+    interval: ChartInterval,
+    _candleTime: number
+  ): number {
     const history = state.history.get(interval) || [];
     if (history.length > 0) {
       return history[history.length - 1].close;

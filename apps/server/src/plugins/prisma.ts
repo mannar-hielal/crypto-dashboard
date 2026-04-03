@@ -9,20 +9,20 @@ const adapter = new PrismaPg({ connectionString: config.databaseUrl });
 const prisma = new PrismaClient({ adapter });
 
 export const prismaPlugin = fp(async (app: FastifyInstance) => {
-    await prisma.$connect();
+  await prisma.$connect();
 
-    // Makes app.prisma available everywhere in the app
-    app.decorate('prisma', prisma);
+  // Makes app.prisma available everywhere in the app
+  app.decorate('prisma', prisma);
 
-    // Disconnect cleanly when server shuts down
-    app.addHook('onClose', async () => {
-        await prisma.$disconnect();
-    });
+  // Disconnect cleanly when server shuts down
+  app.addHook('onClose', async () => {
+    await prisma.$disconnect();
+  });
 });
 
 // Extend Fastify's type definitions so TypeScript knows about app.prisma
 declare module 'fastify' {
-    interface FastifyInstance {
-        prisma: PrismaClient;
-    }
+  interface FastifyInstance {
+    prisma: PrismaClient;
+  }
 }

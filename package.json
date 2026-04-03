@@ -2,8 +2,8 @@
   "name": "crypto-dashboard",
   "version": "0.1.0",
   "description": "Free TradingView Plus alternative - Paper trading dashboard for crypto",
-	"private": true,
-	"type": "module",
+  "private": true,
+  "type": "module",
   "license": "MIT",
   "author": "MannarHielal",
   "scripts": {
