@@ -3,4 +3,3 @@
   "include": ["src/**/*", "generated/**/*", "vitest.config.ts"],
   "exclude": ["node_modules", "dist"]
 }
-
