@@ -4,5 +4,11 @@
 # 1. Type-check (catches TS errors ESLint misses)
 pnpm --filter server type-check
 
-# 2. Lint + format staged files only
+# 2. Auto-fix + format staged files only (fast, per-file)
 pnpm lint-staged
+
+# 3. Full project lint — catches issues that only appear when ESLint walks
+#    the whole project (e.g. files missing from tsconfig, cross-file rules).
+#    This mirrors exactly what CI runs, so "works locally" = "passes CI".
+pnpm lint
+
