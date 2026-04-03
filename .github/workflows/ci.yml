@@ -32,16 +32,10 @@ jobs:
         with:
           node-version-file: '.node-version'
           cache: 'pnpm'
-          cache-dependency-path: |
-            pnpm-lock.yaml
-            apps/server/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml # single root lockfile — workspace covers all packages
 
-      - name: Install root dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Install server dependencies
-        run: pnpm install --frozen-lockfile
-        working-directory: apps/server
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile # installs root + all workspace packages (server, future client)
 
       - name: Type-check
         run: pnpm type-check
