@@ -15,7 +15,7 @@ PORT     = "3001"
 # Never put secrets in this file.
 
 [deploy]
-release_command = "npx prisma migrate deploy"
+release_command = "pnpm exec prisma migrate deploy"
 
 [http_service]
 internal_port       = 3001

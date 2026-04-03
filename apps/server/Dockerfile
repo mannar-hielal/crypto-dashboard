@@ -1,6 +1,6 @@
 # ─── Stage 1: Builder ─────────────────────────────────────────────────────────
 # Installs all deps (including dev) and compiles TypeScript → dist/
-FROM node:24-alpine AS builder
+FROM node:24.14.1-alpine AS builder
 
 WORKDIR /app
 
@@ -20,12 +20,15 @@ COPY apps/server/prisma.config.ts  apps/server/
 COPY apps/server/tsconfig.json     apps/server/
 
 # Generate Prisma client from schema, then compile TypeScript
-RUN cd apps/server && pnpm prisma generate && pnpm build
+# DATABASE_URL is a dummy — only needed so prisma generate can parse the schema at build time
+RUN cd apps/server && \
+    DATABASE_URL="postgresql://prisma:prisma@localhost:5432/prisma?schema=public" \
+    pnpm prisma generate && pnpm build
 
 
 # ─── Stage 2: Production runner ───────────────────────────────────────────────
 # Lean image — only production deps + compiled output
-FROM node:24-alpine AS runner
+FROM node:24.14.1-alpine AS runner
 
 # 🔐 Non-root user — containers should never run as root
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
@@ -38,10 +41,11 @@ WORKDIR /app
 COPY apps/server/package.json apps/server/pnpm-lock.yaml apps/server/
 RUN cd apps/server && pnpm install --frozen-lockfile --prod
 
-# Copy compiled output and generated Prisma client from builder
-COPY --from=builder /app/apps/server/dist      apps/server/dist
-COPY --from=builder /app/apps/server/generated apps/server/generated
-COPY --from=builder /app/apps/server/prisma    apps/server/prisma
+# Copy compiled output, Prisma assets, and runtime Prisma config from builder
+COPY --from=builder /app/apps/server/dist             apps/server/dist
+COPY --from=builder /app/apps/server/generated        apps/server/generated
+COPY --from=builder /app/apps/server/prisma           apps/server/prisma
+COPY --from=builder /app/apps/server/prisma.config.ts apps/server/prisma.config.ts
 
 # Switch to non-root after installs (installs need root for corepack)
 USER nodejs
