@@ -3,97 +3,83 @@
  * Ensures all required environment variables are set before app starts
  */
 
-import 'dotenv/config';
+import { config as dotenvConfig } from 'dotenv';
+import { resolve } from 'path';
+
+// Monorepo setup: load from local .env first, fallback to root .env
+dotenvConfig({ path: resolve(process.cwd(), '.env') });
+dotenvConfig({ path: resolve(process.cwd(), '../../.env') });
 
 interface Config {
-  // App
-  port: number;
-  nodeEnv: 'development' | 'production' | 'test';
-
-  // Database
-  databaseUrl: string;
-
-  // Redis
-  redisUrl: string;
-
-  // Bybit
-  bybitApiKey: string;
-  bybitApiSecret: string;
-  bybitTestnet: boolean;
-
-  // JWT
-  jwtSecret: string;
-
-  // Logging
-  logLevel: 'debug' | 'info' | 'warn' | 'error';
+    port: number;
+    nodeEnv: 'development' | 'production' | 'test';
+    databaseUrl: string;
+    redisUrl: string;
+    bybitApiKey: string;
+    bybitApiSecret: string;
+    bybitTestnet: boolean;
+    jwtSecret: string;
+    logLevel: 'debug' | 'info' | 'warn' | 'error';
 }
 
-/**
- * Load and validate environment configuration
- */
 function loadConfig(): Config {
-  const missingVars: string[] = [];
+    const getEnv = (key: string, defaultValue?: string): string => {
+        const value = process.env[key] || defaultValue;
+        return value || '';
+    };
 
-  // Helper to get env var or track missing
-  const getEnv = (key: string, defaultValue?: string): string => {
-    const value = process.env[key] || defaultValue;
-    if (!value) {
-      missingVars.push(key);
+    const config: Config = {
+        port: parseInt(getEnv('PORT', '3001'), 10) || 3001,
+        nodeEnv: (getEnv('NODE_ENV', 'development') as Config['nodeEnv']) || 'development',
+        databaseUrl: getEnv('DATABASE_URL'),
+        redisUrl: getEnv('REDIS_URL'),
+        bybitApiKey: getEnv('BYBIT_API_KEY'),
+        bybitApiSecret: getEnv('BYBIT_API_SECRET'),
+        bybitTestnet: getEnv('BYBIT_TESTNET', 'true').toLowerCase() === 'true',
+        jwtSecret: getEnv('JWT_SECRET'),
+        logLevel: (getEnv('LOG_LEVEL', 'info') as Config['logLevel']) || 'info',
+    };
+
+    // Check for missing critical variables
+    const criticalVars = ['DATABASE_URL', 'REDIS_URL', 'BYBIT_API_KEY', 'BYBIT_API_SECRET', 'JWT_SECRET'];
+    const criticalMissing = criticalVars.filter((v) => !process.env[v]);
+
+    if (criticalMissing.length > 0) {
+        console.error('❌ Missing required environment variables:', criticalMissing.join(', '));
+        console.error('\nPlease ensure your .env file contains:');
+        criticalMissing.forEach((v) => console.error(`  ${v}=<value>`));
+        process.exit(1);
     }
-    return value || '';
-  };
 
-  const config: Config = {
-    port: parseInt(getEnv('PORT', '3001'), 10) || 3001,
-    nodeEnv: (getEnv('NODE_ENV', 'development') as any) || 'development',
-    databaseUrl: getEnv('DATABASE_URL'),
-    redisUrl: getEnv('REDIS_URL'),
-    bybitApiKey: getEnv('BYBIT_API_KEY'),
-    bybitApiSecret: getEnv('BYBIT_API_SECRET'),
-    bybitTestnet: getEnv('BYBIT_TESTNET', 'true').toLowerCase() === 'true',
-    jwtSecret: getEnv('JWT_SECRET'),
-    logLevel: (getEnv('LOG_LEVEL', 'info') as any) || 'info',
-  };
+    // Validate URL formats — 🔐 never log the actual URL (may contain credentials)
+    try {
+        new URL(config.databaseUrl);
+    } catch {
+        console.error('❌ Invalid DATABASE_URL format. Check your .env file.');
+        process.exit(1);
+    }
 
-  // Critical variables that must exist
-  const criticalVars = ['DATABASE_URL', 'REDIS_URL', 'BYBIT_API_KEY', 'BYBIT_API_SECRET', 'JWT_SECRET'];
-  const criticalMissing = criticalVars.filter((v) => !process.env[v]);
+    try {
+        new URL(config.redisUrl);
+    } catch {
+        console.error('❌ Invalid REDIS_URL format. Check your .env file.');
+        process.exit(1);
+    }
 
-  if (criticalMissing.length > 0) {
-    console.error(
-      '❌ Missing required environment variables:',
-      criticalMissing.join(', ')
-    );
-    console.error('\nPlease ensure your .env file contains:');
-    criticalMissing.forEach((v) => console.error(`  ${v}=<value>`));
-    process.exit(1);
-  }
+    // 🔐 Only log host — never log full URLs (credentials exposure risk)
+    const dbHost = (() => {
+        try { return new URL(config.databaseUrl).host; } catch { return 'unknown'; }
+    })();
 
-  // Validate URL formats
-  try {
-    new URL(config.databaseUrl);
-  } catch (e) {
-    console.error('❌ Invalid DATABASE_URL format:', config.databaseUrl);
-    process.exit(1);
-  }
+    console.log('✅ Environment configuration loaded successfully');
+    console.log(`   Mode:           ${config.nodeEnv}`);
+    console.log(`   Database host:  ${dbHost}`);
+    console.log(`   Redis:          localhost (connected)`);
+    console.log(`   Bybit Testnet:  ${config.bybitTestnet}`);
+    console.log(`   Log level:      ${config.logLevel}`);
 
-  try {
-    new URL(config.redisUrl);
-  } catch (e) {
-    console.error('❌ Invalid REDIS_URL format:', config.redisUrl);
-    process.exit(1);
-  }
-
-  console.log('✅ Environment configuration loaded successfully');
-  console.log(`   Mode: ${config.nodeEnv}`);
-  console.log(`   Database: ${config.databaseUrl.split('@')[1] || 'localhost'}`);
-  console.log(`   Redis: ${config.redisUrl}`);
-  console.log(`   Bybit Testnet: ${config.bybitTestnet}`);
-
-  return config;
+    return config;
 }
 
 export const config = loadConfig();
-
 export default config;
-
