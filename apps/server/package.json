@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "description": "Fastify backend for Crypto Dashboard paper trading platform",
   "type": "module",
-  "main": "dist/index.js",
   "main": "dist/src/index.js",
   "scripts": {
     "dev": "tsx src/index.ts",
