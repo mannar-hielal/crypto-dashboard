@@ -54,6 +54,7 @@ crypto-dashboard/
 ### Setup
 
 1. **Clone & install dependencies**
+
    ```bash
    git clone https://github.com/mannar-hielal/crypto-dashboard.git
    cd crypto-dashboard
@@ -61,6 +62,7 @@ crypto-dashboard/
    ```
 
 2. **Configure environment**
+
    ```bash
    cp apps/server/.env.example apps/server/.env
    # Edit apps/server/.env — add your Bybit Testnet API keys and generate a JWT secret
@@ -68,22 +70,25 @@ crypto-dashboard/
    ```
 
 3. **Start database & Redis**
+
    ```bash
    docker compose up -d
    ```
 
 4. **Run database migrations**
+
    ```bash
    cd apps/server
    pnpm prisma migrate deploy
    ```
 
 5. **Start backend**
+
    ```bash
    pnpm dev:server
    ```
 
-6. **Start frontend** *(coming soon)*
+6. **Start frontend** _(coming soon)_
    ```bash
    pnpm dev:client
    ```

@@ -1,42 +1,42 @@
 {
-	"name": "@crypto-dashboard/server",
-	"version": "0.1.0",
-	"description": "Fastify backend for Crypto Dashboard paper trading platform",
-	"type": "module",
-	"main": "dist/index.js",
-	"packageManager": "pnpm@10.33.0",
-	"scripts": {
-		"dev": "tsx src/index.ts",
-		"build": "tsc",
-		"start": "node dist/index.js",
-		"type-check": "tsc --noEmit",
-		"prisma:studio": "prisma studio"
-	},
-	"dependencies": {
-		"@fastify/cors": "^11.2.0",
-		"@fastify/helmet": "^13.0.2",
-		"@fastify/jwt": "^10.0.0",
-		"@fastify/rate-limit": "^10.3.0",
-		"@fastify/websocket": "^11.2.0",
-		"@prisma/adapter-pg": "^7.6.0",
-		"@prisma/client": "^7.6.0",
-		"bcrypt": "^6.0.0",
-		"bybit-api": "^4.6.1",
-		"dotenv": "^17.4.0",
-		"fastify": "^5.8.4",
-		"fastify-plugin": "^5.1.0",
-		"ioredis": "^5.10.1",
-		"pg": "^8.20.0",
-		"pino": "^10.3.1",
-		"prisma": "^7.6.0",
-		"uuid": "^13.0.0"
-	},
-	"devDependencies": {
-		"@types/bcrypt": "^5.0.2",
-		"@types/node": "^20.10.6",
-		"@types/pg": "^8.20.0",
-		"nodemon": "^3.0.2",
-		"tsx": "^4.21.0",
-		"typescript": "^5.3.3"
-	}
+  "name": "@crypto-dashboard/server",
+  "version": "0.1.0",
+  "description": "Fastify backend for Crypto Dashboard paper trading platform",
+  "type": "module",
+  "main": "dist/index.js",
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "type-check": "tsc --noEmit",
+    "prisma:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.2.0",
+    "@fastify/helmet": "^13.0.2",
+    "@fastify/jwt": "^10.0.0",
+    "@fastify/rate-limit": "^10.3.0",
+    "@fastify/websocket": "^11.2.0",
+    "@prisma/adapter-pg": "^7.6.0",
+    "@prisma/client": "^7.6.0",
+    "bcrypt": "^6.0.0",
+    "bybit-api": "^4.6.1",
+    "dotenv": "^17.4.0",
+    "fastify": "^5.8.4",
+    "fastify-plugin": "^5.1.0",
+    "ioredis": "^5.10.1",
+    "pg": "^8.20.0",
+    "pino": "^10.3.1",
+    "prisma": "^7.6.0",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/node": "^20.10.6",
+    "@types/pg": "^8.20.0",
+    "nodemon": "^3.0.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.3.3"
+  }
 }

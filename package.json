@@ -1,45 +1,46 @@
 {
-	"name": "crypto-dashboard",
-	"version": "0.1.0",
-	"description": "Free TradingView Plus alternative - Paper trading dashboard for crypto",
+  "name": "crypto-dashboard",
+  "version": "0.1.0",
+  "description": "Free TradingView Plus alternative - Paper trading dashboard for crypto",
 	"private": true,
-	"license": "MIT",
-	"author": "MannarHielal",
-	"scripts": {
-		"dev:server": "pnpm --filter server dev",
-		"dev:client": "pnpm --filter client dev",
-		"dev": "pnpm --parallel dev:server dev:client",
-		"lint": "eslint . --ext .ts,.tsx,.js,.jsx",
-		"format": "prettier --write .",
-		"type-check": "pnpm --filter server type-check && pnpm --filter client type-check"
-	},
-	"keywords": [
-		"crypto",
-		"trading",
-		"paper-trading",
-		"bybit",
-		"charts",
-		"indicators"
-	],
-	"engines": {
-		"node": ">=20.0.0",
-		"pnpm": ">=10.0.0"
-	},
-	"devDependencies": {
-		"prettier": "^3.8.1",
-		"eslint": "^10.1.0",
-		"@eslint/js": "^10.0.1",
-		"typescript-eslint": "^8.58.0",
-		"husky": "^9.1.7",
-		"lint-staged": "^16.4.0"
-	},
-	"lint-staged": {
-		"*.{ts,tsx,js,jsx}": [
-			"eslint --fix",
-			"prettier --write"
-		],
-		"*.{json,md}": [
-			"prettier --write"
-		]
-	}
+	"type": "module",
+  "license": "MIT",
+  "author": "MannarHielal",
+  "scripts": {
+    "dev:server": "pnpm --filter server dev",
+    "dev:client": "pnpm --filter client dev",
+    "dev": "pnpm --parallel dev:server dev:client",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "format": "prettier --write .",
+    "type-check": "pnpm --filter server type-check && pnpm --filter client type-check"
+  },
+  "keywords": [
+    "crypto",
+    "trading",
+    "paper-trading",
+    "bybit",
+    "charts",
+    "indicators"
+  ],
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "devDependencies": {
+    "prettier": "^3.8.1",
+    "eslint": "^10.1.0",
+    "@eslint/js": "^10.0.1",
+    "typescript-eslint": "^8.58.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  }
 }
