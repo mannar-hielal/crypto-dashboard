@@ -21,6 +21,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
+        with:
+          # Pin to the exact commit CI validated — prevents deploying a different
+          # commit if new pushes land on main between CI finishing and deploy starting
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Setup Fly CLI
         uses: superfly/flyctl-actions/setup-flyctl@1.5

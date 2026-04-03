@@ -14,7 +14,7 @@ A free, self-hosted paper trading dashboard that replicates TradingView Plus fea
 - [x] Docker for PostgreSQL + Redis (dev/prod parity from day one)
 - [x] ESLint + Prettier with Husky pre-commit hooks
 - [x] TypeScript strict mode + type-check enforced on every commit
-- [x] Node.js version pinned (`v24.12.0`)
+- [x] Node.js version pinned (`v24.14.1`)
 - [x] Pino structured logger (no bare `console.*`)
 - [x] CORS origin configurable per environment
 
@@ -80,7 +80,7 @@ crypto-dashboard/
 │       │   └── types/             # Shared domain interfaces
 │       └── tsconfig.json
 ├── .env.example                   # ← copy this to .env
-├── .node-version                  # Node 24.12.0
+- `.node-version`                  # Node 24.14.1
 ├── docker-compose.yml             # PostgreSQL 16 + Redis 7
 ├── eslint.config.js
 ├── .prettierrc.json
