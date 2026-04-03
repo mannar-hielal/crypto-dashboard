@@ -1,0 +1,42 @@
+# Fly.io application configuration
+# Docs: https://fly.io/docs/reference/configuration/
+
+app = "crypto-dashboard-api"
+primary_region = "sin" # Singapore — closest to Bybit's infrastructure
+
+[build]
+dockerfile = "apps/server/Dockerfile"
+
+[env]
+NODE_ENV = "production"
+PORT     = "3001"
+# All secrets (DATABASE_URL, REDIS_URL, JWT_SECRET, etc.) are set via:
+#   fly secrets set KEY=value
+# Never put secrets in this file.
+
+[deploy]
+release_command = "npx prisma migrate deploy"
+
+[http_service]
+internal_port       = 3001
+force_https         = true
+auto_stop_machines  = "stop"
+auto_start_machines = true
+min_machines_running = 1
+
+[http_service.concurrency]
+type       = "connections"
+hard_limit = 250
+soft_limit = 200
+
+[[http_service.checks]]
+grace_period = "15s"
+interval     = "30s"
+method       = "GET"
+path         = "/health"
+timeout      = "5s"
+
+[[vm]]
+memory   = "512mb"
+cpu_kind = "shared"
+cpus     = 1

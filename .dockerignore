@@ -1,0 +1,30 @@
+# Root-level .dockerignore — used when building from the project root
+# Keeps the Docker build context lean and fast
+
+# Dependencies (reinstalled inside Docker)
+node_modules
+apps/*/node_modules
+
+# Build outputs (rebuilt inside Docker)
+dist
+apps/*/dist
+
+# Environment files — secrets are injected at runtime, never baked into images
+.env
+.env.*
+!.env.example
+
+# Git and CI
+.git
+.github
+.husky
+
+# Dev tooling (not needed in production image)
+*.md
+.prettierrc.json
+eslint.config.js
+
+# IDE
+.idea
+.vscode
+
