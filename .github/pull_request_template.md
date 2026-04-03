@@ -1,27 +1,37 @@
-## What
+## 📋 What does this PR do?
 
-<!-- A brief description of WHAT this PR does -->
+<!-- One sentence summary -->
 
-## Why
+## 🔗 Related issue / ticket
 
-<!-- WHY is this change needed? Link to issue if applicable -->
+<!-- Closes #XX or N/A -->
 
-Closes #
+## ✅ Type of change
 
-## How to test
+- [ ] `feat` — New feature
+- [ ] `fix` — Bug fix
+- [ ] `security` — Security hardening
+- [ ] `chore` — Tooling / dependencies
+- [ ] `docs` — Documentation only
+- [ ] `refactor` — Code refactor (no behavior change)
+- [ ] `test` — Tests added or updated
 
-<!-- Step-by-step for the tester -->
+## 🧪 How to test
 
+<!-- Step-by-step for the reviewer to verify -->
 1.
 2.
 
-## Screenshots (if UI change)
+## 📸 Screenshots (if UI change)
 
-<!-- Before / After -->
+<!-- Drag & drop or N/A -->
 
-## Checklist
+## 🔒 Security / DevOps checklist
 
-- [ ] Self-reviewed the code
-- [ ] Lint & format pass (`pnpm lint`, `pnpm format`)
-- [ ] No secrets or `.env` values committed
-- [ ] Tests added/updated (if applicable)
+- [ ] No secrets or credentials committed
+- [ ] Input is validated / sanitized
+- [ ] Rate limiting still applies where needed
+- [ ] No new `console.*` — logger used instead
+- [ ] ESLint + Prettier pass locally
+- [ ] Type-check passes (`pnpm type-check`)
+- [ ] Tests pass (`pnpm test`)
