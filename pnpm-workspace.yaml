@@ -1,4 +1,3 @@
 packages:
-  # All subfolders under apps/ are workspace packages
-  # Add apps/client here once the frontend is scaffolded
+  # All subfolders under apps/ are workspace packages (server now, client coming)
   - 'apps/*'

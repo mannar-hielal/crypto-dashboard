@@ -80,7 +80,7 @@ crypto-dashboard/
 │       │   └── types/             # Shared domain interfaces
 │       └── tsconfig.json
 ├── .env.example                   # ← copy this to .env
-- `.node-version`                  # Node 24.14.1
+├── .node-version                  # Node 24.14.1
 ├── docker-compose.yml             # PostgreSQL 16 + Redis 7
 ├── eslint.config.js
 ├── .prettierrc.json
