@@ -1,18 +1,19 @@
 name: Deploy
 
 on:
-  push:
-    branches: [main] # only deploys when code lands on main
+  # Triggers AFTER the CI workflow finishes on main — no duplicate runs
+  # CI already handles type-check/lint/build; deploy only needs to know it passed
+  workflow_run:
+    workflows: ['CI']
+    branches: [main]
+    types: [completed]
 
 jobs:
-  ci:
-    name: Type-check · Lint · Build
-    uses: ./.github/workflows/ci.yml # reuse the exact same CI checks
-
   deploy:
     name: Deploy to Fly.io
     runs-on: ubuntu-latest
-    needs: ci
+    # Only deploy if CI actually succeeded — never deploy a broken build
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     environment: production
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true

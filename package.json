@@ -7,13 +7,12 @@
   "license": "MIT",
   "author": "MannarHielal",
   "scripts": {
-    "dev:server": "pnpm --filter server dev",
-    "dev:client": "pnpm --filter client dev",
-    "dev": "pnpm --parallel dev:server dev:client",
+    "dev:server": "pnpm --filter @crypto-dashboard/server dev",
+    "dev": "pnpm dev:server",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "type-check": "pnpm --filter server type-check && pnpm --filter client type-check"
+    "type-check": "pnpm --filter @crypto-dashboard/server type-check"
   },
   "keywords": [
     "crypto",
