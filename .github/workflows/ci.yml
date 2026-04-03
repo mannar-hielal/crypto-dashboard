@@ -33,6 +33,8 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml # single root lockfile — workspace covers all packages
 
       - name: Install dependencies
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres # dummy value — satisfies prisma generate postinstall; no DB is started in this job
         run: pnpm install --frozen-lockfile # installs root + all workspace packages (server, future client)
 
       - name: Type-check
@@ -40,7 +42,7 @@ jobs:
         working-directory: apps/server
 
       - name: Format check
-        run: pnpm prettier --check .
+        run: pnpm format:check
 
       - name: Lint
         run: pnpm lint
