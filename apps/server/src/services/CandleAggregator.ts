@@ -4,7 +4,7 @@
  * Maintains an in-memory cache of open candles
  */
 
-import { Kline } from '../types';
+import { Kline } from '../types/index.js';
 import { logger } from '../logger.js';
 
 const log = logger.child({ service: 'CandleAggregator' });

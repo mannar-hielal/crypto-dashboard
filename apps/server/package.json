@@ -4,11 +4,11 @@
   "description": "Fastify backend for Crypto Dashboard paper trading platform",
   "type": "module",
   "main": "dist/index.js",
-  "packageManager": "pnpm@10.33.0",
+  "main": "dist/src/index.js",
   "scripts": {
     "dev": "tsx src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "node dist/src/index.js",
     "type-check": "tsc --noEmit",
     "prisma:studio": "prisma studio"
   },

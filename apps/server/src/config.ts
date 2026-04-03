@@ -24,6 +24,7 @@ interface Config {
   bybitTestnet: boolean;
   jwtSecret: string;
   logLevel: 'debug' | 'info' | 'warn' | 'error';
+  corsOrigin: string;
 }
 
 function loadConfig(): Config {
@@ -42,6 +43,7 @@ function loadConfig(): Config {
     bybitTestnet: getEnv('BYBIT_TESTNET', 'true').toLowerCase() === 'true',
     jwtSecret: getEnv('JWT_SECRET'),
     logLevel: (getEnv('LOG_LEVEL', 'info') as Config['logLevel']) || 'info',
+    corsOrigin: getEnv('CORS_ORIGIN', 'http://localhost:5173'),
   };
 
   // Check for missing critical variables

@@ -4,7 +4,7 @@
  * All calculations are done on-the-fly with minimal memory overhead
  */
 
-import { Kline, EMAValue, MACDValue, VWAPValue } from '../types';
+import { Kline, EMAValue, MACDValue, VWAPValue } from '../types/index.js';
 
 /**
  * Exponential Moving Average (EMA)

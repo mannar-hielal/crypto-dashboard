@@ -5,7 +5,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { Kline, OrderBook, Trade, StreamData } from '../types';
+import { Kline, OrderBook, Trade, StreamData } from '../types/index.js';
 import { logger } from '../logger.js';
 
 const log = logger.child({ service: 'BybitWebSocketManager' });
@@ -262,11 +262,11 @@ export class BybitWebSocketManager extends EventEmitter {
       let eventData: StreamData | null = null;
 
       if (channelType === 'kline') {
-        eventData = this.parseKline(streamData, symbol, interval);
+        eventData = this.parseKline(streamData as string[], symbol, interval);
       } else if (channelType === 'orderbook') {
-        eventData = this.parseOrderBook(streamData, symbol);
+        eventData = this.parseOrderBook(streamData as { b: string[][]; a: string[][]; ts: string }, symbol);
       } else if (channelType === 'publicTrade') {
-        eventData = this.parseTrade(streamData, symbol);
+        eventData = this.parseTrade(streamData as string[], symbol);
       }
 
       if (eventData) {

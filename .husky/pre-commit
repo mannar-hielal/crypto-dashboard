@@ -1,4 +1,8 @@
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
 
+# 1. Type-check (catches TS errors ESLint misses)
+pnpm --filter server type-check
+
+# 2. Lint + format staged files only
 pnpm lint-staged
