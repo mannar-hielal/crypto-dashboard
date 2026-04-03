@@ -42,7 +42,7 @@ jobs:
         working-directory: apps/server
 
       - name: Format check
-        run: pnpm prettier --check .
+        run: pnpm format:check
 
       - name: Lint
         run: pnpm lint
