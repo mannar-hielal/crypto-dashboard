@@ -28,6 +28,8 @@ jobs:
         uses: superfly/flyctl-actions/setup-flyctl@1.5
 
       - name: Deploy
-        run: flyctl deploy --remote-only
+        # --ha=false — Phase 1 is single-machine; no need for a second HA machine.
+        # Saves ~50% of app compute cost. Re-enable when traffic justifies it.
+        run: flyctl deploy --remote-only --ha=false
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
