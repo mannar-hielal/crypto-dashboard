@@ -9,6 +9,7 @@ A free, self-hosted paper trading dashboard that replicates TradingView Plus fea
 ## 🎯 Phase 1 Progress
 
 ### Infrastructure & Quality
+
 - [x] Monorepo with pnpm workspaces
 - [x] Docker for PostgreSQL + Redis (dev/prod parity from day one)
 - [x] ESLint + Prettier with Husky pre-commit hooks
@@ -18,6 +19,7 @@ A free, self-hosted paper trading dashboard that replicates TradingView Plus fea
 - [x] CORS origin configurable per environment
 
 ### Backend
+
 - [x] Fastify server with security headers (Helmet), rate limiting, CORS
 - [x] JWT authentication — register / login / `/me`
 - [x] PostgreSQL via Prisma ORM (User, Account, Order, Trade schema)
@@ -26,11 +28,13 @@ A free, self-hosted paper trading dashboard that replicates TradingView Plus fea
 - [x] Indicator calculators — EMA (9/21/200), MACD, VWAP (scaffolded)
 
 ### Frontend
+
 - [ ] React + Vite client (not started)
 - [ ] 4-panel synced chart layout (single symbol, multiple timeframes)
 - [ ] TradingView Lightweight Charts integration
 
 ### Features
+
 - [ ] Live Bybit price feed wired to frontend
 - [ ] EMA, MACD, VWAP displayed on charts
 - [ ] Paper buy / sell with virtual balance ($10,000 starting)
@@ -41,13 +45,13 @@ A free, self-hosted paper trading dashboard that replicates TradingView Plus fea
 
 ## 🏗️ Architecture
 
-| Layer | Stack |
-|---|---|
-| **Backend** | Node.js v24 + Fastify + Prisma 7 + PostgreSQL 16 |
-| **Frontend** | React + TypeScript + Vite + Lightweight Charts *(coming)* |
-| **Logger** | Pino (structured JSON in prod, pretty-printed in dev) |
-| **Data** | Bybit V5 WebSocket API (Testnet) |
-| **Infrastructure** | Docker Compose (PostgreSQL + Redis) |
+| Layer              | Stack                                                     |
+| ------------------ | --------------------------------------------------------- |
+| **Backend**        | Node.js v24 + Fastify + Prisma 7 + PostgreSQL 16          |
+| **Frontend**       | React + TypeScript + Vite + Lightweight Charts _(coming)_ |
+| **Logger**         | Pino (structured JSON in prod, pretty-printed in dev)     |
+| **Data**           | Bybit V5 WebSocket API (Testnet)                          |
+| **Infrastructure** | Docker Compose (PostgreSQL + Redis)                       |
 
 ---
 
@@ -169,16 +173,16 @@ pnpm prisma studio            # Visual DB browser at localhost:5555
 
 ## 🔐 Security Hardening (applied)
 
-| Area | Measure |
-|---|---|
-| HTTP headers | Helmet (XSS, clickjacking, MIME sniffing) |
-| Auth | bcrypt cost 12, timing-attack safe compare |
-| Rate limiting | Global 100/min + per-route (5/hr register, 10/15min login) |
-| Input validation | Fastify JSON Schema with `additionalProperties: false` |
-| WebSocket | 64KB message size limit, symbol/channel allowlist |
-| Logging | Pino structured logs — credentials never logged |
-| CORS | `CORS_ORIGIN` env var — not hardcoded |
-| Env vars | Validated at startup, process exits on missing critical vars |
+| Area             | Measure                                                      |
+| ---------------- | ------------------------------------------------------------ |
+| HTTP headers     | Helmet (XSS, clickjacking, MIME sniffing)                    |
+| Auth             | bcrypt cost 12, timing-attack safe compare                   |
+| Rate limiting    | Global 100/min + per-route (5/hr register, 10/15min login)   |
+| Input validation | Fastify JSON Schema with `additionalProperties: false`       |
+| WebSocket        | 64KB message size limit, symbol/channel allowlist            |
+| Logging          | Pino structured logs — credentials never logged              |
+| CORS             | `CORS_ORIGIN` env var — not hardcoded                        |
+| Env vars         | Validated at startup, process exits on missing critical vars |
 
 ---
 
@@ -186,14 +190,14 @@ pnpm prisma studio            # Visual DB browser at localhost:5555
 
 Each commit = one testable unit of work.
 
-| Prefix | When to use |
-|---|---|
-| `feat:` | New feature or endpoint |
-| `fix:` | Bug fix |
-| `security:` | Security hardening |
-| `chore:` | Tooling, dependencies, config |
-| `setup:` | Infrastructure setup |
-| `docs:` | Documentation only |
+| Prefix      | When to use                   |
+| ----------- | ----------------------------- |
+| `feat:`     | New feature or endpoint       |
+| `fix:`      | Bug fix                       |
+| `security:` | Security hardening            |
+| `chore:`    | Tooling, dependencies, config |
+| `setup:`    | Infrastructure setup          |
+| `docs:`     | Documentation only            |
 
 ---
 

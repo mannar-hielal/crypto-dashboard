@@ -12,6 +12,7 @@
     "dev": "pnpm --parallel dev:server dev:client",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "type-check": "pnpm --filter server type-check && pnpm --filter client type-check"
   },
   "keywords": [

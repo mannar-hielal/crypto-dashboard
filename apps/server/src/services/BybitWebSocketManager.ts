@@ -264,7 +264,10 @@ export class BybitWebSocketManager extends EventEmitter {
       if (channelType === 'kline') {
         eventData = this.parseKline(streamData as string[], symbol, interval);
       } else if (channelType === 'orderbook') {
-        eventData = this.parseOrderBook(streamData as { b: string[][]; a: string[][]; ts: string }, symbol);
+        eventData = this.parseOrderBook(
+          streamData as { b: string[][]; a: string[][]; ts: string },
+          symbol
+        );
       } else if (channelType === 'publicTrade') {
         eventData = this.parseTrade(streamData as string[], symbol);
       }

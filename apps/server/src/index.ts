@@ -23,8 +23,8 @@ await app.register(rateLimit, {
 await app.register(cors, {
   origin:
     config.nodeEnv === 'production'
-      ? config.corsOrigin   // 🔐 locked to CORS_ORIGIN env var in production
-      : true,               // allow all origins in development
+      ? config.corsOrigin // 🔐 locked to CORS_ORIGIN env var in production
+      : true, // allow all origins in development
   credentials: true,
 });
 

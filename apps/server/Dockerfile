@@ -37,18 +37,22 @@ RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 
 WORKDIR /app
 
-# Copy manifests and install production dependencies only
-COPY apps/server/package.json apps/server/pnpm-lock.yaml apps/server/
+# Copy manifests with correct ownership so pnpm install runs as nodejs (not root)
+COPY --chown=nodejs:nodejs apps/server/package.json apps/server/pnpm-lock.yaml apps/server/
+
+# Switch to non-root BEFORE installing — pnpm store lands in /home/nodejs (not /root)
+# This prevents module resolution errors at runtime caused by /root being unreadable by nodejs
+USER nodejs
+
+# Install production dependencies only
 RUN cd apps/server && pnpm install --frozen-lockfile --prod
 
 # Copy compiled output, Prisma assets, and runtime Prisma config from builder
-COPY --from=builder /app/apps/server/dist             apps/server/dist
-COPY --from=builder /app/apps/server/generated        apps/server/generated
-COPY --from=builder /app/apps/server/prisma           apps/server/prisma
-COPY --from=builder /app/apps/server/prisma.config.ts apps/server/prisma.config.ts
-
-# Switch to non-root after installs (installs need root for corepack)
-USER nodejs
+# --chown ensures nodejs owns all files (no root-owned files after USER switch)
+COPY --from=builder --chown=nodejs:nodejs /app/apps/server/dist             apps/server/dist
+COPY --from=builder --chown=nodejs:nodejs /app/apps/server/generated        apps/server/generated
+COPY --from=builder --chown=nodejs:nodejs /app/apps/server/prisma           apps/server/prisma
+COPY --from=builder --chown=nodejs:nodejs /app/apps/server/prisma.config.ts apps/server/prisma.config.ts
 
 # Set final working directory to the server app
 WORKDIR /app/apps/server

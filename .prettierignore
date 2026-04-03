@@ -1,0 +1,17 @@
+# Auto-generated lockfiles — never reformat these
+pnpm-lock.yaml
+apps/*/pnpm-lock.yaml
+
+# Build output & generated code
+dist/
+apps/*/dist/
+apps/server/generated/
+
+# Dependencies
+node_modules/
+apps/*/node_modules/
+
+# Environment files
+.env
+.env.*
+

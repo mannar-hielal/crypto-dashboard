@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ '**' ]
+    branches: [main, develop] # avoids duplicate runs — PRs already trigger the pull_request event
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
   workflow_call:
 
 concurrency:
@@ -46,6 +46,9 @@ jobs:
       - name: Type-check
         run: pnpm type-check
         working-directory: apps/server
+
+      - name: Format check
+        run: pnpm prettier --check .
 
       - name: Lint
         run: pnpm lint

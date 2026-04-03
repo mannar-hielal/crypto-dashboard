@@ -2,12 +2,12 @@ name: Deploy
 
 on:
   push:
-    branches: [main]  # only deploys when code lands on main
+    branches: [main] # only deploys when code lands on main
 
 jobs:
   ci:
     name: Type-check · Lint · Build
-    uses: ./.github/workflows/ci.yml  # reuse the exact same CI checks
+    uses: ./.github/workflows/ci.yml # reuse the exact same CI checks
 
   deploy:
     name: Deploy to Fly.io
