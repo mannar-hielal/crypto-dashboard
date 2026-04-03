@@ -1,8 +1,12 @@
 import fp from 'fastify-plugin';
 import { FastifyInstance } from 'fastify';
-import { PrismaClient } from '../../generated/prisma/index.js';
+import { PrismaClient } from '../../generated/prisma/client.js';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { config } from '../config.js';
 
-const prisma = new PrismaClient();
+// 🔐 Prisma 7 uses explicit driver adapters instead of implicit env reading
+const adapter = new PrismaPg({ connectionString: config.databaseUrl });
+const prisma = new PrismaClient({ adapter });
 
 export const prismaPlugin = fp(async (app: FastifyInstance) => {
     await prisma.$connect();
@@ -10,7 +14,7 @@ export const prismaPlugin = fp(async (app: FastifyInstance) => {
     // Makes app.prisma available everywhere in the app
     app.decorate('prisma', prisma);
 
-    // Disconnect when server shuts down
+    // Disconnect cleanly when server shuts down
     app.addHook('onClose', async () => {
         await prisma.$disconnect();
     });

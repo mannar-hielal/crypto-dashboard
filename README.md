@@ -1,66 +1,89 @@
-# Crypto Dashboard - Free TradingView Plus Alternative
+# Crypto Dashboard — Free TradingView Plus Alternative
 
-A free, open-source paper trading dashboard that replicates TradingView Plus features for cryptocurrency trading on Bybit.
+A free, open-source paper trading dashboard that replicates TradingView Plus features for cryptocurrency trading on Bybit Testnet.
+
+> ⚠️ **Paper Trading Only** — No real money. Educational purposes only.
 
 ## 🎯 Phase 1 Goals
 
-- 4-panel synced chart layout (single symbol, multiple timeframes)
-- Live Bybit price feeds via WebSocket
-- EMA (9, 21, 200), MACD, and VWAP indicators
-- Paper trading with virtual balance ($10,000 starting)
-- Simple authentication (username + password)
-- PWA-ready web app (mobile responsive)
-- Trade history tracking
+- [ ] 4-panel synced chart layout (single symbol, multiple timeframes)
+- [ ] Live Bybit price feed via WebSocket
+- [ ] EMA (9, 21, 200), MACD, and VWAP indicators
+- [ ] Paper trading with virtual balance ($10,000 starting)
+- [x] Authentication (register, login, JWT)
+- [ ] PWA-ready web app (mobile responsive)
+- [ ] Trade history tracking
 
 ## 🏗️ Architecture
 
 **Backend:** Node.js + Fastify + Prisma + PostgreSQL + Redis  
-**Frontend:** Next.js + TypeScript + Tailwind CSS + Lightweight Charts  
-**Data:** Bybit V5 API (Testnet for Phase 1)
+**Frontend:** React + TypeScript + Tailwind CSS + Lightweight Charts  
+**Data:** Bybit V5 WebSocket API (Testnet)  
+**Infrastructure:** Docker (PostgreSQL + Redis)
 
 ## 📋 Project Structure
 
 ```
 crypto-dashboard/
 ├── apps/
-│   ├── client/              # Next.js frontend (PWA)
-│   └── server/              # Fastify backend (Node.js)
-├── .husky/                  # Git hooks (Prettier, ESLint)
-├── docker-compose.yml       # PostgreSQL + Redis
-├── eslint.config.js         # ESLint configuration
-├── .prettierrc.json         # Prettier configuration
-├── package.json             # Root workspace config
-├── .gitignore               # Git ignore rules
-└── README.md                # This file
+│   ├── client/                  # React frontend (PWA) — coming Phase 1
+│   └── server/                  # Fastify backend
+│       ├── prisma/              # Database schema & migrations
+│       ├── src/
+│       │   ├── index.ts         # Server entry point
+│       │   ├── config.ts        # Environment configuration
+│       │   ├── plugins/         # Fastify plugins (Prisma, JWT auth)
+│       │   ├── routes/          # API route handlers
+│       │   └── services/        # Business logic (WebSocket, indicators)
+│       └── .env.example         # Environment variable template
+├── docker-compose.yml           # PostgreSQL + Redis
+├── eslint.config.js             # ESLint configuration
+├── .prettierrc.json             # Prettier configuration
+├── package.json                 # Root workspace config
+└── .gitignore
 ```
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- Node.js v20+ (via nvm)
-- pnpm 10+
+- Node.js v20+
+- pnpm v10+
 - Docker Desktop
-- macOS/Linux
 
 ### Setup
 
-1. **Install dependencies**
+1. **Clone & install dependencies**
    ```bash
+   git clone https://github.com/mannar-hielal/crypto-dashboard.git
+   cd crypto-dashboard
    pnpm install
    ```
 
-2. **Start Docker services**
+2. **Configure environment**
+   ```bash
+   cp apps/server/.env.example apps/server/.env
+   # Edit apps/server/.env — add your Bybit Testnet API keys and generate a JWT secret
+   # Generate JWT secret: openssl rand -base64 32
+   ```
+
+3. **Start database & Redis**
    ```bash
    docker compose up -d
    ```
 
-3. **Start backend**
+4. **Run database migrations**
+   ```bash
+   cd apps/server
+   pnpm prisma migrate deploy
+   ```
+
+5. **Start backend**
    ```bash
    pnpm dev:server
    ```
 
-4. **Start frontend** (in another terminal)
+6. **Start frontend** *(coming soon)*
    ```bash
    pnpm dev:client
    ```
@@ -68,50 +91,57 @@ crypto-dashboard/
 ## 🔧 Development Commands
 
 ```bash
-# Start both frontend and backend
-pnpm dev
+# Start Docker services (PostgreSQL + Redis)
+docker compose up -d
 
-# Format code with Prettier
+# Stop Docker services
+docker compose down
+
+# Start backend dev server
+pnpm dev:server
+
+# Format code
 pnpm format
 
-# Lint code with ESLint
+# Lint code
 pnpm lint
 
 # Type checking
 pnpm type-check
+
+# Open Prisma Studio (visual DB browser)
+cd apps/server && pnpm prisma studio
 ```
 
 ## 📝 Commit Strategy
 
-Each commit represents one small unit of work:
+Each commit represents one testable unit of work:
 
-- **[setup]** - Infrastructure, dependencies, configuration
-- **[backend]** - Services, database models, API routes
-- **[frontend]** - Components, pages, state management
-- **[feature]** - Specific feature implementations
+- **feat:** New feature or endpoint
+- **fix:** Bug fix
+- **security:** Security hardening
+- **setup:** Infrastructure, dependencies, configuration
+- **docs:** Documentation updates
 
-Example: `[setup] Add Prettier, ESLint, and Husky for code quality checks`
+## 🔐 Security Notes
 
-## ⚠️ Important Notes
-
-- **Paper Trading Only:** This is for practice, not real money
-- **Testnet API:** Uses Bybit Testnet for safety
-- **No Financial Advice:** This tool is educational only
-- **Phase 1:** Focus on core features first
+- Use Bybit **Testnet** API keys only — never mainnet keys in development
+- Generate JWT secret with: `openssl rand -base64 32`
+- Rate limiting is applied on all auth endpoints
+- Never commit `.env` files — use `.env.example` as template
 
 ## 📚 Resources
 
 - [Bybit V5 API Docs](https://bybit-exchange.github.io/docs/v5/intro)
-- [TradingView Lightweight Charts](https://www.tradingview.com/lightweight-charts/)
-- [Fastify Documentation](https://www.fastify.io/)
+- [Fastify Documentation](https://fastify.dev/)
 - [Prisma ORM](https://www.prisma.io/)
+- [TradingView Lightweight Charts](https://tradingview.github.io/lightweight-charts/)
 
 ## 📄 License
 
-MIT
+MIT — see [LICENSE](./LICENSE)
 
 ---
 
-**Status:** Phase 1 Foundation  
-**Last Updated:** April 2, 2026
-
+**Status:** Phase 1 — In Progress  
+**Last Updated:** April 3, 2026
