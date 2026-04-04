@@ -25,6 +25,9 @@ interface Config {
   jwtSecret: string;
   logLevel: 'debug' | 'info' | 'warn' | 'error';
   corsOrigin: string;
+  resendApiKey: string;
+  resendFromEmail: string;
+  clientUrl: string;
 }
 
 function loadConfig(): Config {
@@ -44,6 +47,9 @@ function loadConfig(): Config {
     jwtSecret: getEnv('JWT_SECRET'),
     logLevel: (getEnv('LOG_LEVEL', 'info') as Config['logLevel']) || 'info',
     corsOrigin: getEnv('CORS_ORIGIN', 'http://localhost:5173'),
+    resendApiKey: getEnv('RESEND_API_KEY', ''),
+    resendFromEmail: getEnv('RESEND_FROM_EMAIL', 'onboarding@resend.dev'),
+    clientUrl: getEnv('CLIENT_URL', 'http://localhost:5173'),
   };
 
   // Check for missing critical variables

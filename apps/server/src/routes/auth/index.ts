@@ -1,4 +1,5 @@
 import { FastifyInstance, FastifyReply } from 'fastify';
+import { config } from '../../config.js';
 import bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'node:crypto';
 
@@ -178,6 +179,61 @@ const meSchema = {
   },
 };
 
+const forgotPasswordSchema = {
+  tags: ['Auth'],
+  summary: 'Request password reset',
+  description:
+    '🔐 Always returns 200 regardless of whether the email exists — prevents email enumeration attacks.',
+  body: {
+    type: 'object',
+    required: ['email'],
+    additionalProperties: false,
+    properties: {
+      email: {
+        type: 'string',
+        pattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$',
+        maxLength: 255,
+      },
+    },
+  },
+  response: {
+    200: {
+      type: 'object',
+      required: ['message'],
+      properties: { message: { type: 'string' } },
+    },
+  },
+};
+
+const resetPasswordSchema = {
+  tags: ['Auth'],
+  summary: 'Reset password using token',
+  description:
+    'Validates the one-time token and updates the user password. Token expires in 1 hour.',
+  body: {
+    type: 'object',
+    required: ['token', 'password'],
+    additionalProperties: false,
+    properties: {
+      token: { type: 'string', minLength: 64, maxLength: 64 }, // 32 bytes = 64 hex chars
+      password: {
+        type: 'string',
+        minLength: 8,
+        maxLength: 72,
+        pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).+$',
+      },
+    },
+  },
+  response: {
+    200: {
+      type: 'object',
+      required: ['message'],
+      properties: { message: { type: 'string' } },
+    },
+    400: errorResponse,
+  },
+};
+
 // ─── ROUTES ───────────────────────────────────────────────────────────────────
 
 export async function authRoutes(app: FastifyInstance) {
@@ -338,6 +394,84 @@ export async function authRoutes(app: FastifyInstance) {
 
     void reply.clearCookie(REFRESH_TOKEN_COOKIE, { path: '/' });
     return reply.status(204).send();
+  });
+
+  // ─── FORGOT PASSWORD ─────────────────────────────────────────────────────────
+  app.post(
+    '/forgot-password',
+    {
+      schema: forgotPasswordSchema,
+      config: {
+        rateLimit: {
+          max: 3,
+          timeWindow: '15 minutes',
+          skip: () => process.env.NODE_ENV !== 'production',
+        },
+      }, // 🔐 strict rate limit — prevents email enumeration via timing
+    },
+    async (request, reply) => {
+      const { email } = request.body as { email: string };
+
+      // 🔐 Always return 200 — never reveal whether the email exists
+      const SAFE_RESPONSE = { message: 'If that email exists, a reset link has been sent.' };
+
+      const user = await app.prisma.user.findUnique({ where: { email } });
+      if (!user) {
+        return reply.send(SAFE_RESPONSE);
+      }
+
+      // Invalidate any existing unused tokens for this user before issuing a new one
+      await app.prisma.passwordResetToken.deleteMany({
+        where: { userId: user.id, usedAt: null },
+      });
+
+      const rawToken = generateRefreshToken(); // reuse same 256-bit generator
+      const tokenHash = hashToken(rawToken);
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      await app.prisma.passwordResetToken.create({
+        data: { tokenHash, userId: user.id, expiresAt },
+      });
+
+      const resetUrl = `${config.clientUrl}/reset-password?token=${rawToken}`;
+
+      await EmailService.sendPasswordResetEmail(email, resetUrl);
+
+      return reply.send(SAFE_RESPONSE);
+    }
+  );
+
+  // ─── RESET PASSWORD ───────────────────────────────────────────────────────────
+  app.post('/reset-password', { schema: resetPasswordSchema }, async (request, reply) => {
+    const { token, password } = request.body as { token: string; password: string };
+
+    const tokenHash = hashToken(token);
+
+    const resetToken = await app.prisma.passwordResetToken.findUnique({ where: { tokenHash } });
+
+    // 🔐 Unified error message — don't reveal whether token was invalid vs expired
+    if (!resetToken || resetToken.expiresAt < new Date() || resetToken.usedAt !== null) {
+      return reply.status(400).send({ error: 'Invalid or expired reset token' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
+
+    // 🔐 Atomic transaction: update password + mark token as used in one DB operation
+    await app.prisma.$transaction([
+      app.prisma.user.update({
+        where: { id: resetToken.userId },
+        data: { password: hashedPassword },
+      }),
+      app.prisma.passwordResetToken.update({
+        where: { tokenHash },
+        data: { usedAt: new Date() },
+      }),
+    ]);
+
+    // 🔐 Invalidate all active sessions — force re-login after password change
+    await app.prisma.refreshToken.deleteMany({ where: { userId: resetToken.userId } });
+
+    return reply.send({ message: 'Password updated successfully. Please log in again.' });
   });
 
   // ─── ME (protected) ──────────────────────────────────────────────────────────
