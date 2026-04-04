@@ -1,11 +1,39 @@
 import { FastifyInstance } from 'fastify';
 import bcrypt from 'bcrypt';
 
+// ─── SHARED RESPONSE SCHEMAS ──────────────────────────────────────────────────
+const userResponse = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    email: { type: 'string' },
+    username: { type: 'string' },
+  },
+};
+
+const tokenResponse = {
+  type: 'object',
+  properties: {
+    token: { type: 'string' },
+    user: userResponse,
+  },
+};
+
+const errorResponse = {
+  type: 'object',
+  properties: {
+    error: { type: 'string' },
+  },
+};
+
 // ─── REQUEST SCHEMAS ──────────────────────────────────────────────────────────
 // Fastify validates ALL incoming data against these BEFORE your handler runs.
 // Invalid requests → instant 400 rejection. No DB hit, no CPU wasted.
 
 const registerSchema = {
+  tags: ['Auth'],
+  summary: 'Register a new user',
+  description: 'Creates a user account and a paper trading account. Returns a JWT token.',
   body: {
     type: 'object',
     required: ['email', 'username', 'password'],
@@ -32,9 +60,16 @@ const registerSchema = {
       },
     },
   },
+  response: {
+    201: tokenResponse,
+    409: errorResponse,
+  },
 };
 
 const loginSchema = {
+  tags: ['Auth'],
+  summary: 'Login',
+  description: 'Authenticate with email and password. Returns a JWT token.',
   body: {
     type: 'object',
     required: ['email', 'password'],
@@ -48,6 +83,41 @@ const loginSchema = {
       password: { type: 'string', minLength: 1, maxLength: 72 },
     },
   },
+  response: {
+    200: tokenResponse,
+    401: errorResponse,
+  },
+};
+
+const meSchema = {
+  tags: ['Auth'],
+  summary: 'Get current user',
+  description: 'Returns the authenticated user profile and their paper trading account.',
+  security: [{ bearerAuth: [] }], // 🔐 tells Swagger UI this route needs a JWT
+  response: {
+    200: {
+      type: 'object',
+      properties: {
+        user: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            email: { type: 'string' },
+            username: { type: 'string' },
+            account: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                id: { type: 'string' },
+                balance: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    },
+    401: errorResponse,
+  },
 };
 
 // ─── ROUTES ───────────────────────────────────────────────────────────────────
@@ -58,7 +128,13 @@ export async function authRoutes(app: FastifyInstance) {
     '/register',
     {
       schema: registerSchema,
-      config: { rateLimit: { max: 5, timeWindow: '1 hour' } }, // 🔐 max 5 registrations/hour per IP
+      config: {
+        rateLimit: {
+          max: 5,
+          timeWindow: '1 hour',
+          skip: () => process.env.NODE_ENV !== 'production', // skip in dev/test
+        },
+      }, // 🔐 max 5 registrations/hour per IP (production only)
     },
     async (request, reply) => {
       const { email, username, password } = request.body as {
@@ -99,7 +175,13 @@ export async function authRoutes(app: FastifyInstance) {
     '/login',
     {
       schema: loginSchema,
-      config: { rateLimit: { max: 10, timeWindow: '15 minutes' } }, // 🔐 max 10 attempts/15min per IP
+      config: {
+        rateLimit: {
+          max: 10,
+          timeWindow: '15 minutes',
+          skip: () => process.env.NODE_ENV !== 'production', // skip in dev/test
+        },
+      }, // 🔐 max 10 attempts/15min per IP (production only)
     },
     async (request, reply) => {
       const { email, password } = request.body as {
@@ -126,7 +208,7 @@ export async function authRoutes(app: FastifyInstance) {
   );
 
   // ─── ME (protected) ──────────────────────────────────────────────────────────
-  app.get('/me', { onRequest: [app.authenticate] }, async (request) => {
+  app.get('/me', { schema: meSchema, onRequest: [app.authenticate] }, async (request) => {
     const { userId } = request.user as { userId: string; email: string };
 
     const user = await app.prisma.user.findUnique({
