@@ -10,7 +10,7 @@ import { authRoutes } from './routes/auth/index.js';
 
 export async function buildApp() {
   const app = Fastify({
-    // Silent logger in tests — no noise in terminal output
+    // Disable Fastify's logger in tests to reduce terminal noise
     logger: config.nodeEnv === 'test' ? false : { level: config.logLevel },
   });
 

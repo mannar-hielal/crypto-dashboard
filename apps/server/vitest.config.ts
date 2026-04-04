@@ -7,7 +7,7 @@ export default defineConfig({
     // so config.ts won't call process.exit(1) for missing vars
     env: {
       NODE_ENV: 'test',
-      DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/crypto_dashboard_dev',
+      DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/crypto_dashboard_test',
       REDIS_URL: 'redis://localhost:6379',
       JWT_SECRET: 'test-only-secret-min-32-chars-not-for-production',
       BYBIT_API_KEY: 'test-key',

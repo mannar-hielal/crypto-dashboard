@@ -8,11 +8,14 @@ import type { FastifyInstance } from 'fastify';
  * vi.mock() is auto-hoisted by Vitest above all imports, so the mock is in place
  * before buildApp() ever tries to import the real prismaPlugin.
  */
-vi.mock('../plugins/prisma.js', () => ({
-  prismaPlugin: async (app: FastifyInstance) => {
+vi.mock('../plugins/prisma.js', () => {
+  const skipOverride = Symbol.for('skip-override');
+  const prismaPlugin = async (app: FastifyInstance) => {
     app.decorate('prisma', {} as never);
-  },
-}));
+  };
+  (prismaPlugin as unknown as Record<symbol, boolean>)[skipOverride] = true;
+  return { prismaPlugin };
+});
 
 import { buildApp } from '../app.js';
 
