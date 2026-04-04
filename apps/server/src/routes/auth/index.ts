@@ -1,7 +1,8 @@
+import { createHash, randomBytes } from 'node:crypto';
+import bcrypt from 'bcrypt';
 import { FastifyInstance, FastifyReply } from 'fastify';
 import { config } from '../../config.js';
-import bcrypt from 'bcrypt';
-import { createHash, randomBytes } from 'node:crypto';
+import { EmailService } from '../../services/EmailService.js';
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 // 🔐 Cost 12 in non-test environments = ~250ms per hash (brute-force resistant).
