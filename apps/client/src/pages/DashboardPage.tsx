@@ -1,5 +1,6 @@
 import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@crypto-dashboard/sdk';
+import { Button } from '@/components/ui/button';
 
 export function DashboardPage() {
   const { user, clearAuth } = useAuthStore();
@@ -13,9 +14,9 @@ export function DashboardPage() {
     <div className="flex h-screen flex-col items-center justify-center gap-4">
       <h1 className="text-2xl font-bold">Dashboard</h1>
       <p className="text-muted-foreground">Welcome, {user?.username} 👋</p>
-      <button onClick={() => void handleLogout()} className="text-sm underline">
+      <Button variant="outline" size="sm" onClick={() => void handleLogout()}>
         Logout
-      </button>
+      </Button>
     </div>
   );
 }

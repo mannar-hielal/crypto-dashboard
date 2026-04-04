@@ -4,7 +4,6 @@ import { authApi } from '@crypto-dashboard/sdk';
 import { useAuthStore } from '@/store/authStore';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 
-// Pages (created in Steps 9 & 10)
 import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';

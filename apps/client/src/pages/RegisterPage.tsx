@@ -29,7 +29,7 @@ const registerSchema = z.object({
   password: z
     .string()
     .min(8, 'At least 8 characters')
-    .max(72)
+    .max(72, 'Max 72 characters')
     .regex(/(?=.*[a-z])/, 'Must include a lowercase letter')
     .regex(/(?=.*[A-Z])/, 'Must include an uppercase letter')
     .regex(/(?=.*[0-9])/, 'Must include a number')
