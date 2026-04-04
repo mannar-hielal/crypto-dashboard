@@ -10,7 +10,7 @@ on:
 
 jobs:
   deploy:
-    name: Deploy to Fly.io
+    name: Deploy to Fly.io + Cloudflare Pages
     runs-on: ubuntu-latest
     # Only deploy if CI actually succeeded — never deploy a broken build
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
@@ -24,12 +24,45 @@ jobs:
           # commit if new pushes land on main between CI finishing and deploy starting
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      - name: Setup Fly CLI
-        uses: superfly/flyctl-actions/setup-flyctl@1.5
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4.1.0
+        with:
+          version: 10.33.0
 
-      - name: Deploy
+      - name: Setup Node.js
+        uses: actions/setup-node@v4.4.0
+        with:
+          node-version-file: '.node-version'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        env:
+          # Dummy value — satisfies prisma generate postinstall; no DB operations here
+          DATABASE_URL: postgresql://placeholder
+        run: pnpm install --frozen-lockfile
+
+      # ── Server ────────────────────────────────────────────────────────────────
+      - name: Deploy server to Fly.io
         # --ha=false — Phase 1 is single-machine; no need for a second HA machine.
         # Saves ~50% of app compute cost. Re-enable when traffic justifies it.
         run: flyctl deploy --remote-only --ha=false
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      # ── Client ────────────────────────────────────────────────────────────────
+      - name: Build client
+        # VITE_API_URL is baked into the JS bundle at build time — must point at
+        # the live Fly.io server, not localhost
+        run: pnpm build
+        working-directory: apps/client
+        env:
+          VITE_API_URL: https://crypto-dashboard-api.fly.dev
+
+      - name: Deploy client to Cloudflare Pages
+        # wrangler reads CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID from env
+        # --branch=main tells Cloudflare this is a production deployment
+        run: npx wrangler pages deploy dist --project-name=crypto-dashboard --branch=main
+        working-directory: apps/client
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
