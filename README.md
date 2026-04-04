@@ -31,7 +31,10 @@ A free, self-hosted paper trading dashboard that replicates TradingView Plus fea
 
 ### Frontend
 
-- [ ] React + Vite client (not started)
+- [x] React 19 + Vite 8 + TypeScript client scaffolded (`apps/client`)
+- [x] Tailwind CSS v4 configured (dark-first dashboard theme)
+- [x] CDSDK — shared types + API functions (`generated/CDSDK`)
+- [x] Cloudflare Pages deployment wired in CI/CD
 - [ ] 4-panel synced chart layout (single symbol, multiple timeframes)
 - [ ] TradingView Lightweight Charts integration
 
@@ -47,13 +50,15 @@ A free, self-hosted paper trading dashboard that replicates TradingView Plus fea
 
 ## 🏗️ Architecture
 
-| Layer              | Stack                                                     |
-| ------------------ | --------------------------------------------------------- |
-| **Backend**        | Node.js v24 + Fastify + Prisma 7 + PostgreSQL 16          |
-| **Frontend**       | React + TypeScript + Vite + Lightweight Charts _(coming)_ |
-| **Logger**         | Pino (structured JSON in prod, pretty-printed in dev)     |
-| **Data**           | Bybit V5 WebSocket API (Testnet)                          |
-| **Infrastructure** | Docker Compose (PostgreSQL + Redis)                       |
+| Layer              | Stack                                                       |
+| ------------------ | ----------------------------------------------------------- |
+| **Backend**        | Node.js v24 + Fastify + Prisma 7 + PostgreSQL 16            |
+| **Frontend**       | React 19 + TypeScript + Vite 8 + Tailwind CSS v4            |
+| **Shared SDK**     | `generated/CDSDK` — types + API functions (Guidewire-style) |
+| **Logger**         | Pino (structured JSON in prod, pretty-printed in dev)       |
+| **Data**           | Bybit V5 WebSocket API (Testnet)                            |
+| **Infrastructure** | Docker Compose (PostgreSQL + Redis)                         |
+| **Hosting**        | Fly.io (server) + Cloudflare Pages (client)                 |
 
 ---
 
@@ -62,7 +67,13 @@ A free, self-hosted paper trading dashboard that replicates TradingView Plus fea
 ```
 crypto-dashboard/
 ├── apps/
-│   ├── client/                    # React frontend (PWA) — coming
+│   ├── client/                    # React 19 frontend (PWA)
+│   │   ├── src/
+│   │   │   ├── main.tsx           # Entry point
+│   │   │   ├── App.tsx            # Root component
+│   │   │   └── index.css          # Tailwind v4 + dark base theme
+│   │   ├── .env.example           # ← copy to .env.local for local dev
+│   │   └── vite.config.ts
 │   └── server/                    # Fastify backend
 │       ├── prisma/                # Schema & migrations
 │       │   └── schema.prisma
@@ -81,6 +92,11 @@ crypto-dashboard/
 │       │   │   └── IndicatorCalculator.ts
 │       │   └── types/             # Shared domain interfaces
 │       └── tsconfig.json
+├── generated/
+│   └── CDSDK/                     # Shared SDK — import from '@crypto-dashboard/sdk'
+│       ├── types/                 # TypeScript interfaces (User, Account, AuthResponse…)
+│       ├── api/                   # Typed fetch functions (authApi.register/login/me)
+│       └── index.ts               # Single barrel export
 ├── .env.example                   # ← copy this to .env
 ├── .node-version                  # Node 24.14.1
 ├── docker-compose.yml             # PostgreSQL 16 + Redis 7
@@ -116,6 +132,10 @@ crypto-dashboard/
    # Edit .env — fill in your Bybit Testnet API keys
    # Generate a JWT secret:
    openssl rand -base64 32
+
+   # For the frontend:
+   cp apps/client/.env.example apps/client/.env.local
+   # VITE_API_URL defaults to http://localhost:3001 — no change needed for local dev
    ```
 
 3. **Start infrastructure (PostgreSQL + Redis)**
@@ -131,11 +151,15 @@ crypto-dashboard/
    pnpm prisma migrate deploy
    ```
 
-5. **Start backend**
+5. **Start backend + frontend**
 
    ```bash
-   # From project root:
+   # Backend (from project root):
    pnpm dev:server
+
+   # Frontend (separate terminal):
+   pnpm --filter @crypto-dashboard/client dev
+   # → http://localhost:5173
    ```
 
 6. **Verify it's running**
@@ -159,10 +183,14 @@ docker compose down -v        # Stop + wipe data volumes
 pnpm dev:server               # Start backend with hot reload
 pnpm --filter server build    # Compile TypeScript to dist/
 
+# Frontend
+pnpm --filter @crypto-dashboard/client dev    # Start Vite dev server → http://localhost:5173
+pnpm --filter @crypto-dashboard/client build  # Production build → apps/client/dist/
+
 # Code quality (also run automatically on every commit)
-pnpm lint                     # ESLint check
+pnpm lint                     # ESLint check (root + client)
 pnpm format                   # Prettier format whole project
-pnpm type-check               # TypeScript strict type check
+pnpm type-check               # TypeScript strict type check (server)
 
 # Testing
 pnpm test                                           # Run all unit tests once
@@ -226,7 +254,20 @@ Each commit = one testable unit of work.
 - [Fastify Documentation](https://fastify.dev/)
 - [Prisma ORM](https://www.prisma.io/)
 - [TradingView Lightweight Charts](https://tradingview.github.io/lightweight-charts/)
+- [Tailwind CSS v4](https://tailwindcss.com/)
+- [Cloudflare Pages](https://pages.cloudflare.com/)
 - [Pino Logger](https://getpino.io/)
+
+---
+
+## 🌐 Deployment
+
+| Service    | Platform         | URL                                      |
+| ---------- | ---------------- | ---------------------------------------- |
+| **Server** | Fly.io           | `https://crypto-dashboard-api.fly.dev`   |
+| **Client** | Cloudflare Pages | `https://crypto-dashboard-7yy.pages.dev` |
+
+Deployments trigger automatically when `main` is updated and CI passes.
 
 ---
 
