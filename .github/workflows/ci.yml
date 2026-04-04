@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ] # avoids duplicate runs — PRs already trigger the pull_request event
+    branches: [main, develop] # avoids duplicate runs — PRs already trigger the pull_request event
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
   workflow_call:
 
 concurrency:
@@ -61,4 +61,3 @@ jobs:
       - name: Build (client)
         run: pnpm build
         working-directory: apps/client
-
