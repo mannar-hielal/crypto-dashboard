@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -43,14 +43,13 @@ export function ResetPasswordPage() {
   const token = searchParams.get('token') ?? '';
   const [serverError, setServerError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Clean up redirect timer if the component unmounts before it fires
+  // Redirect to login 2s after successful reset — cleaned up on unmount
   useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
+    if (!success) return;
+    const timer = setTimeout(() => void navigate('/login'), 2000);
+    return () => clearTimeout(timer);
+  }, [success, navigate]);
 
   const form = useForm<ResetForm>({
     resolver: zodResolver(resetSchema),
@@ -77,7 +76,7 @@ export function ResetPasswordPage() {
     try {
       await authApi.resetPassword({ token, password: data.password });
       setSuccess(true);
-      timerRef.current = setTimeout(() => void navigate('/login'), 2000);
+      // Navigation is handled by the useEffect watching `success`
     } catch (err) {
       setServerError(err instanceof Error ? err.message : 'Reset failed');
     }
