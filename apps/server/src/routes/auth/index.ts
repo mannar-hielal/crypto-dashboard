@@ -60,7 +60,7 @@ const registerSchema = {
   tags: ['Auth'],
   summary: 'Register a new user',
   description:
-    'Creates a user account and a paper trading account. Returns a 15-min access token. A 7-day refresh token is set as an httpOnly cookie.',
+    'Creates a user account and a paper trading account. Returns a 15-min access token. A 7-day refresh token is set as an httpOnly cookie (sameSite: none + secure in production, lax in development).',
   body: {
     type: 'object',
     required: ['email', 'username', 'password'],
@@ -96,7 +96,7 @@ const loginSchema = {
   tags: ['Auth'],
   summary: 'Login',
   description:
-    'Authenticate with email and password. Returns a 15-min access token. A 7-day refresh token is set as an httpOnly cookie.',
+    'Authenticate with email and password. Returns a 15-min access token. A 7-day refresh token is set as an httpOnly cookie (sameSite: none + secure in production, lax in development).',
   body: {
     type: 'object',
     required: ['email', 'password'],
@@ -121,7 +121,7 @@ const refreshSchema = {
   tags: ['Auth'],
   summary: 'Refresh access token',
   description:
-    'Uses the httpOnly refresh token cookie to issue a new 15-min access token. Old refresh token is deleted and a new one is set (rotation).',
+    'Uses the httpOnly refresh token cookie (sameSite: none + secure in prod) to issue a new 15-min access token. Old refresh token is deleted and a new one is set (rotation).',
   response: {
     200: {
       type: 'object',

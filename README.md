@@ -25,7 +25,7 @@ A free, self-hosted paper trading dashboard that replicates TradingView Plus fea
 - [x] Fastify server with security headers (Helmet), rate limiting, CORS
 - [x] JWT authentication — register / login / refresh / logout / `/me`
 - [x] Password reset flow — forgot-password + reset-password with one-time token (Resend email)
-- [x] Refresh token rotation — SHA-256 hashed tokens, httpOnly cookie, 7-day TTL
+- [x] Refresh token rotation — SHA-256 hashed tokens, httpOnly cookie (`sameSite: none + secure` in prod, `lax` in dev), 7-day TTL
 - [x] PostgreSQL via Prisma ORM (User, Account, Order, Trade, PasswordResetToken schema)
 - [x] WebSocket manager for Bybit V5 live feed (scaffolded, not yet wired)
 - [x] Candle aggregator — 1m → 5m, 15m, 1h, 4h, 1d (scaffolded)
@@ -241,19 +241,20 @@ All endpoints are documented with request/response schemas, authentication requi
 
 ## 🔐 Security Hardening (applied)
 
-| Area             | Measure                                                                             |
-| ---------------- | ----------------------------------------------------------------------------------- |
-| HTTP headers     | Helmet (XSS, clickjacking, MIME sniffing)                                           |
-| Auth             | bcrypt cost 12, timing-attack safe compare                                          |
-| Tokens           | Access token in Zustand memory (15 min), refresh token in httpOnly cookie (7 days)  |
-| Token rotation   | Refresh tokens hashed (SHA-256) in DB, rotated on every refresh                     |
-| Password reset   | One-time token, 1h expiry, marked `usedAt` after use                                |
-| Rate limiting    | Global 100/min + per-route (5/hr register, 10/15min login, 3/15min forgot-password) |
-| Input validation | Fastify JSON Schema with `additionalProperties: false`                              |
-| WebSocket        | 64KB message size limit, symbol/channel allowlist                                   |
-| Logging          | Pino structured logs — credentials never logged                                     |
-| CORS             | `CORS_ORIGIN` env var — not hardcoded                                               |
-| Env vars         | Validated at startup, process exits on missing critical vars                        |
+| Area             | Measure                                                                                                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| HTTP headers     | Helmet (XSS, clickjacking, MIME sniffing)                                                                                                                                |
+| Auth             | bcrypt cost 12, timing-attack safe compare                                                                                                                               |
+| Tokens           | Access token in Zustand memory (15 min); refresh token in httpOnly cookie (7 days, `sameSite: none + secure` in prod, `lax` in dev)                                      |
+| CSRF             | `sameSite: none` is paired with `secure: true` (HTTPS-only) in production; state-changing endpoints require a valid refresh token or JWT — no cookie-only attack surface |
+| Token rotation   | Refresh tokens hashed (SHA-256) in DB, rotated on every refresh                                                                                                          |
+| Password reset   | One-time token, 1h expiry, marked `usedAt` after use                                                                                                                     |
+| Rate limiting    | Global 100/min + per-route (5/hr register, 10/15min login, 3/15min forgot-password)                                                                                      |
+| Input validation | Fastify JSON Schema with `additionalProperties: false`                                                                                                                   |
+| WebSocket        | 64KB message size limit, symbol/channel allowlist                                                                                                                        |
+| Logging          | Pino structured logs — credentials never logged                                                                                                                          |
+| CORS             | `CORS_ORIGIN` env var — not hardcoded                                                                                                                                    |
+| Env vars         | Validated at startup, process exits on missing critical vars                                                                                                             |
 
 ---
 
