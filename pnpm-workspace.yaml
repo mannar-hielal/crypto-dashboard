@@ -1,3 +1,5 @@
 packages:
-  # All subfolders under apps/ are workspace packages (server now, client coming)
+  # All subfolders under apps/ are workspace packages
   - 'apps/*'
+  # Shared SDK (types + API functions) — like Guidewire's CDSDK
+  - 'generated/*'
