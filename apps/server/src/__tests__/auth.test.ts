@@ -19,6 +19,12 @@ vi.mock('../plugins/prisma.js', () => {
         findUnique: vi.fn(),
         create: vi.fn(),
       },
+      refreshToken: {
+        // Default: always succeeds — individual tests can override with mockResolvedValueOnce
+        create: vi.fn().mockResolvedValue({}),
+        findUnique: vi.fn(),
+        delete: vi.fn().mockResolvedValue({}),
+      },
     } as never);
   };
   (plugin as unknown as Record<symbol, boolean>)[skipOverride] = true;
@@ -62,8 +68,8 @@ describe('POST /api/auth/register', () => {
     });
 
     expect(res.statusCode).toBe(201);
-    const body = res.json<{ token: string; user: { email: string } }>();
-    expect(typeof body.token).toBe('string');
+    const body = res.json<{ accessToken: string; user: { email: string } }>();
+    expect(typeof body.accessToken).toBe('string');
     expect(body.user.email).toBe(validUser.email);
   });
 
@@ -156,7 +162,7 @@ describe('POST /api/auth/login', () => {
     });
 
     expect(res.statusCode).toBe(200);
-    expect(typeof res.json<{ token: string }>().token).toBe('string');
+    expect(typeof res.json<{ accessToken: string }>().accessToken).toBe('string');
   });
 
   it('returns 401 on wrong password', async () => {

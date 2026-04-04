@@ -43,5 +43,13 @@
     "*.{ts,tsx,js,jsx}": [
       "eslint --fix"
     ]
+  },
+  "pnpm": {
+    "peerDependencyRules": {
+      "ignoreMissing": [],
+      "allowedVersions": {
+        "eslint-plugin-react-hooks>eslint": "10"
+      }
+    }
   }
 }
