@@ -17,13 +17,25 @@ export interface Account {
   updatedAt: string;
 }
 
+// Returned by /register and /login
+// accessToken is short-lived (15 min) — store in Zustand memory only, never localStorage
 export interface AuthResponse {
-  token: string;
+  accessToken: string;
   user: User;
+}
+
+// Returned by /refresh
+export interface RefreshResponse {
+  accessToken: string;
 }
 
 export interface MeResponse {
   user: User & { account: Account | null };
+}
+
+// Returned by /forgot-password and /reset-password
+export interface MessageResponse {
+  message: string;
 }
 
 export interface ApiError {

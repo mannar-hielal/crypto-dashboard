@@ -1,3 +1,4 @@
+import cookie from '@fastify/cookie';
 import Fastify, { type FastifyError } from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
@@ -73,7 +74,8 @@ export async function buildApp() {
     credentials: true,
   });
 
-  // ─── CORE PLUGINS ─────────────────────────────────────────────────────────
+  // ─── CORE PLUGINS ─────────────────────────────────────────────────────────────
+  await app.register(cookie);
   await app.register(jwt, { secret: config.jwtSecret });
   await app.register(prismaPlugin);
   await app.register(authPlugin);

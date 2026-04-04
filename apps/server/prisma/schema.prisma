@@ -23,12 +23,39 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relations
-  account Account?
-  trades  Trade[]
-  orders  Order[]
+  account             Account?
+  trades              Trade[]
+  orders              Order[]
+  refreshTokens       RefreshToken[] // 🔐 active sessions
+  passwordResetTokens PasswordResetToken[] // 🔐 pending resets
 
   @@index([email])
   @@index([username])
+}
+
+// 🔐 One row per active session. Deleted on logout. Rotated on refresh.
+model RefreshToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique // SHA-256 of the raw token — never store raw
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// 🔐 One-time use. Expires in 1 hour. Marked usedAt after consumption.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique // SHA-256 of the raw token
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime? // null = unused, non-null = already consumed
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 // ============================================================================

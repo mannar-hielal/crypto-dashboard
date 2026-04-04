@@ -25,6 +25,9 @@ interface Config {
   jwtSecret: string;
   logLevel: 'debug' | 'info' | 'warn' | 'error';
   corsOrigin: string;
+  resendApiKey: string;
+  resendFromEmail: string;
+  clientUrl: string;
 }
 
 function loadConfig(): Config {
@@ -44,6 +47,9 @@ function loadConfig(): Config {
     jwtSecret: getEnv('JWT_SECRET'),
     logLevel: (getEnv('LOG_LEVEL', 'info') as Config['logLevel']) || 'info',
     corsOrigin: getEnv('CORS_ORIGIN', 'http://localhost:5173'),
+    resendApiKey: getEnv('RESEND_API_KEY', ''),
+    resendFromEmail: getEnv('RESEND_FROM_EMAIL', 'onboarding@resend.dev'),
+    clientUrl: getEnv('CLIENT_URL', 'http://localhost:5173'),
   };
 
   // Check for missing critical variables
@@ -60,6 +66,15 @@ function loadConfig(): Config {
     console.error('❌ Missing required environment variables:', criticalMissing.join(', '));
     console.error('\nPlease ensure your .env file contains:');
     criticalMissing.forEach((v) => console.error(`  ${v}=<value>`));
+    process.exit(1);
+  }
+
+  // 🔐 In production, CLIENT_URL must be explicitly set — the localhost default would
+  //    generate password reset links that are unreachable for real users.
+  if (config.nodeEnv === 'production' && !process.env.CLIENT_URL) {
+    console.error(
+      '❌ CLIENT_URL is not set in production. Password reset links would point to localhost and be unusable.'
+    );
     process.exit(1);
   }
 
