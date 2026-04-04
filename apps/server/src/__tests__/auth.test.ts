@@ -1,6 +1,15 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 
+// ─── Mock EmailService ────────────────────────────────────────────────────────
+// Prevent real Resend API calls during tests — RESEND_API_KEY is set in .env
+// so without this mock the SDK fires a real HTTP request and may throw.
+vi.mock('../services/EmailService.js', () => ({
+  EmailService: {
+    sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
 // ─── Mock Prisma ─────────────────────────────────────────────────────────────
 // We don't want a real DB in unit tests. vi.mock() is auto-hoisted by Vitest
 // so it runs before any import, replacing the real plugin with a fake.
@@ -18,13 +27,23 @@ vi.mock('../plugins/prisma.js', () => {
         findFirst: vi.fn(),
         findUnique: vi.fn(),
         create: vi.fn(),
+        update: vi.fn().mockResolvedValue({}),
       },
       refreshToken: {
         // Default: always succeeds — individual tests can override with mockResolvedValueOnce
         create: vi.fn().mockResolvedValue({}),
         findUnique: vi.fn(),
         delete: vi.fn().mockResolvedValue({}),
+        deleteMany: vi.fn().mockResolvedValue({}),
       },
+      passwordResetToken: {
+        findUnique: vi.fn(),
+        create: vi.fn().mockResolvedValue({}),
+        update: vi.fn().mockResolvedValue({}),
+        deleteMany: vi.fn().mockResolvedValue({}),
+      },
+      // Resolves the array of operations passed to it (mirrors Prisma's interactive transaction)
+      $transaction: vi.fn().mockImplementation((ops: Promise<unknown>[]) => Promise.all(ops)),
     } as never);
   };
   (plugin as unknown as Record<symbol, boolean>)[skipOverride] = true;
@@ -243,3 +262,282 @@ describe('GET /api/auth/me', () => {
     expect(res.statusCode).toBe(401);
   });
 });
+
+// ─── REFRESH ─────────────────────────────────────────────────────────────────
+describe('POST /api/auth/refresh', () => {
+  let app: FastifyInstance;
+  // 64 hex chars = 32 bytes, same format as a real refresh token
+  const RAW_TOKEN = 'a'.repeat(64);
+  const FUTURE = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const PAST = new Date(Date.now() - 1000);
+
+  beforeAll(async () => {
+    app = await buildApp();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('returns 200 with a new access token when the refresh token is valid', async () => {
+    (app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'rt-1',
+      tokenHash: 'hashed',
+      userId: 'user-1',
+      expiresAt: FUTURE,
+    });
+    (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'user-1',
+      email: validUser.email,
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/refresh',
+      headers: { cookie: `refresh_token=${RAW_TOKEN}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(typeof res.json<{ accessToken: string }>().accessToken).toBe('string');
+  });
+
+  it('returns 401 when no refresh token cookie is present', async () => {
+    const res = await app.inject({ method: 'POST', url: '/api/auth/refresh' });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('returns 401 when the token is not found in the DB (stolen/invalid)', async () => {
+    (app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/refresh',
+      headers: { cookie: `refresh_token=${RAW_TOKEN}` },
+    });
+
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('returns 401 when the token is expired', async () => {
+    (app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'rt-1',
+      tokenHash: 'hashed',
+      userId: 'user-1',
+      expiresAt: PAST, // 🔐 expired
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/refresh',
+      headers: { cookie: `refresh_token=${RAW_TOKEN}` },
+    });
+
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('returns 401 when the user no longer exists after token lookup', async () => {
+    (app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'rt-1',
+      tokenHash: 'hashed',
+      userId: 'deleted-user',
+      expiresAt: FUTURE,
+    });
+    // Token found but user was deleted
+    (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/refresh',
+      headers: { cookie: `refresh_token=${RAW_TOKEN}` },
+    });
+
+    expect(res.statusCode).toBe(401);
+  });
+});
+
+// ─── LOGOUT ──────────────────────────────────────────────────────────────────
+describe('POST /api/auth/logout', () => {
+  let app: FastifyInstance;
+  const RAW_TOKEN = 'b'.repeat(64);
+
+  beforeAll(async () => {
+    app = await buildApp();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('returns 204 and clears the cookie when a valid token cookie is present', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/logout',
+      headers: { cookie: `refresh_token=${RAW_TOKEN}` },
+    });
+
+    expect(res.statusCode).toBe(204);
+    // 🔐 Verify cookie is cleared (Max-Age=0 means browser deletes it)
+    const setCookie = res.headers['set-cookie'] as string;
+    expect(setCookie).toMatch(/Max-Age=0/i);
+  });
+
+  it('returns 204 even when no cookie is present (idempotent logout)', async () => {
+    const res = await app.inject({ method: 'POST', url: '/api/auth/logout' });
+    expect(res.statusCode).toBe(204);
+  });
+});
+
+// ─── FORGOT PASSWORD ─────────────────────────────────────────────────────────
+describe('POST /api/auth/forgot-password', () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    app = await buildApp();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('returns 200 with a safe message when the email exists', async () => {
+    (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'user-1',
+      email: validUser.email,
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/forgot-password',
+      payload: { email: validUser.email },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json<{ message: string }>().message).toMatch(/reset link/i);
+  });
+
+  it('returns 200 with the SAME message when the email does NOT exist (🔐 prevents enumeration)', async () => {
+    (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/forgot-password',
+      payload: { email: 'ghost@example.com' },
+    });
+
+    // 🔐 Must be identical to the "email exists" response — attacker cannot distinguish them
+    expect(res.statusCode).toBe(200);
+    expect(res.json<{ message: string }>().message).toMatch(/reset link/i);
+  });
+
+  it('returns 400 for an invalid email format', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/forgot-password',
+      payload: { email: 'not-an-email' },
+    });
+
+    expect(res.statusCode).toBe(400);
+  });
+});
+
+// ─── RESET PASSWORD ───────────────────────────────────────────────────────────
+describe('POST /api/auth/reset-password', () => {
+  let app: FastifyInstance;
+  const VALID_TOKEN = 'c'.repeat(64); // 64 hex chars = valid token format
+  const STRONG_PASSWORD = 'NewPass1!@#';
+  const FUTURE = new Date(Date.now() + 60 * 60 * 1000);
+  const PAST = new Date(Date.now() - 1000);
+
+  beforeAll(async () => {
+    app = await buildApp();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('returns 200 and updates the password when the token is valid', async () => {
+    (app.prisma.passwordResetToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'prt-1',
+      tokenHash: 'hashed',
+      userId: 'user-1',
+      expiresAt: FUTURE,
+      usedAt: null, // not yet used
+    });
+    // $transaction resolves both ops (user.update + passwordResetToken.update)
+    (app.prisma.$transaction as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{}, {}]);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/reset-password',
+      payload: { token: VALID_TOKEN, password: STRONG_PASSWORD },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json<{ message: string }>().message).toMatch(/password updated/i);
+  });
+
+  it('returns 400 when the token is not found in the DB', async () => {
+    (app.prisma.passwordResetToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      null
+    );
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/reset-password',
+      payload: { token: VALID_TOKEN, password: STRONG_PASSWORD },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json<{ error: string }>().error).toMatch(/invalid or expired/i);
+  });
+
+  it('returns 400 when the token is expired', async () => {
+    (app.prisma.passwordResetToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'prt-1',
+      tokenHash: 'hashed',
+      userId: 'user-1',
+      expiresAt: PAST, // 🔐 expired
+      usedAt: null,
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/reset-password',
+      payload: { token: VALID_TOKEN, password: STRONG_PASSWORD },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json<{ error: string }>().error).toMatch(/invalid or expired/i);
+  });
+
+  it('returns 400 when the token has already been used (🔐 one-time use enforcement)', async () => {
+    (app.prisma.passwordResetToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'prt-1',
+      tokenHash: 'hashed',
+      userId: 'user-1',
+      expiresAt: FUTURE,
+      usedAt: new Date(), // 🔐 already consumed
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/reset-password',
+      payload: { token: VALID_TOKEN, password: STRONG_PASSWORD },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json<{ error: string }>().error).toMatch(/invalid or expired/i);
+  });
+
+  it('returns 400 when the new password is too weak', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/reset-password',
+      payload: { token: VALID_TOKEN, password: 'weakpassword' },
+    });
+
+    expect(res.statusCode).toBe(400);
+  });
+});
+
