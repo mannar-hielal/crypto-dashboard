@@ -119,9 +119,16 @@ const meSchema = {
             account: {
               type: 'object',
               nullable: true,
+              // Prisma Decimal fields serialise to strings in JSON
               properties: {
                 id: { type: 'string' },
-                balance: { type: 'string' },
+                userId: { type: 'string' },
+                totalBalance: { type: 'string' },
+                availableBalance: { type: 'string' },
+                unrealizedPnl: { type: 'string' },
+                realizedPnl: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' },
+                updatedAt: { type: 'string', format: 'date-time' },
               },
             },
           },

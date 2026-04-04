@@ -95,9 +95,12 @@ export async function buildApp() {
         { err: error, method: request.method, url: request.url },
         'Unhandled server error'
       );
+      // 🔐 Never leak internal details (DB errors, stack traces) to the client
+      void reply.status(statusCode).send({ error: 'Internal Server Error' });
+      return;
     }
 
-    void reply.status(statusCode).send({ error: error.message ?? 'Internal Server Error' });
+    void reply.status(statusCode).send({ error: error.message ?? 'Bad Request' });
   });
 
   // ─── HEALTH CHECK ─────────────────────────────────────────────────────────
