@@ -69,6 +69,15 @@ function loadConfig(): Config {
     process.exit(1);
   }
 
+  // 🔐 In production, CLIENT_URL must be explicitly set — the localhost default would
+  //    generate password reset links that are unreachable for real users.
+  if (config.nodeEnv === 'production' && !process.env.CLIENT_URL) {
+    console.error(
+      '❌ CLIENT_URL is not set in production. Password reset links would point to localhost and be unusable.'
+    );
+    process.exit(1);
+  }
+
   // Validate URL formats — 🔐 never log the actual URL (may contain credentials)
   try {
     new URL(config.databaseUrl);

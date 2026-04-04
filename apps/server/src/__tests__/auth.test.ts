@@ -22,7 +22,7 @@ vi.mock('../services/EmailService.js', () => ({
 vi.mock('../plugins/prisma.js', () => {
   const skipOverride = Symbol.for('skip-override');
   const plugin = async (app: FastifyInstance) => {
-    app.decorate('prisma', {
+    const prismaClient = {
       user: {
         findFirst: vi.fn(),
         findUnique: vi.fn(),
@@ -41,9 +41,17 @@ vi.mock('../plugins/prisma.js', () => {
         updateMany: vi.fn().mockResolvedValue({ count: 1 }),
         deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
-      // $transaction resolves the array of operations passed to it (mirrors Prisma's sequential transaction)
-      $transaction: vi.fn().mockImplementation((ops: Promise<unknown>[]) => Promise.all(ops)),
-    } as never);
+      // Supports both transaction forms used in production code:
+      //   Array form:       $transaction([op1, op2])          → runs ops concurrently via Promise.all
+      //   Interactive form: $transaction(async (tx) => { … }) → calls the callback with this mock client
+      $transaction: vi
+        .fn()
+        .mockImplementation(
+          async (arg: Promise<unknown>[] | ((tx: unknown) => Promise<unknown>)) =>
+            typeof arg === 'function' ? arg(prismaClient) : Promise.all(arg)
+        ),
+    };
+    app.decorate('prisma', prismaClient as never);
   };
   (plugin as unknown as Record<symbol, boolean>)[skipOverride] = true;
   return { prismaPlugin: plugin };
@@ -463,8 +471,8 @@ describe('POST /api/auth/reset-password', () => {
       expiresAt: FUTURE,
       usedAt: null, // not yet used
     });
-    // $transaction resolves with [userUpdate, tokenUpdate] — tokenUpdate.count=1 signals one-time use
-    (app.prisma.$transaction as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{}, { count: 1 }]);
+    // Interactive $transaction calls back with the mock client;
+    // passwordResetToken.updateMany returns { count: 1 } and user.update returns {} by default.
 
     const res = await app.inject({
       method: 'POST',

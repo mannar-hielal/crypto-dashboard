@@ -235,6 +235,28 @@ const resetPasswordSchema = {
   },
 };
 
+// ─── COOKIE OPTIONS ───────────────────────────────────────────────────────────
+// Shared across setCookie and every clearCookie call — must be identical so browsers
+// can match and delete the cookie (mismatched options prevent deletion).
+//
+// 🔐 sameSite strategy:
+//   'none' + secure:true in production → required for cross-domain deployments
+//   (client on app.example.com, API on api.example.com) so the browser includes
+//   the cookie in cross-site fetch requests with credentials:'include'.
+//   'lax' in development → client and API share localhost, no HTTPS needed.
+const COOKIE_BASE_OPTIONS = {
+  path: '/',
+  sameSite: (process.env.NODE_ENV === 'production' ? 'none' : 'lax') as 'none' | 'lax',
+  secure: process.env.NODE_ENV === 'production',
+} as const;
+
+// Sentinel used to abort the reset-password transaction without leaking stack traces
+class TokenConsumedError extends Error {
+  constructor() {
+    super('Token already consumed by a concurrent request');
+  }
+}
+
 // ─── ROUTES ───────────────────────────────────────────────────────────────────
 
 export async function authRoutes(app: FastifyInstance) {
@@ -253,10 +275,8 @@ export async function authRoutes(app: FastifyInstance) {
     await app.prisma.refreshToken.create({ data: { tokenHash, userId, expiresAt } });
 
     void reply.setCookie(REFRESH_TOKEN_COOKIE, rawRefresh, {
+      ...COOKIE_BASE_OPTIONS,
       httpOnly: true, // 🔐 JS cannot read this cookie — XSS-safe
-      secure: process.env.NODE_ENV === 'production', // 🔐 HTTPS only in production
-      sameSite: 'strict', // 🔐 CSRF protection
-      path: '/',
       maxAge: REFRESH_TOKEN_TTL_SECONDS,
     });
 
@@ -360,11 +380,7 @@ export async function authRoutes(app: FastifyInstance) {
 
     // 🔐 Token not found or expired — clear cookie to avoid stale state
     if (!stored || stored.expiresAt < new Date()) {
-      void reply.clearCookie(REFRESH_TOKEN_COOKIE, {
-        path: '/',
-        sameSite: 'strict',
-        secure: process.env.NODE_ENV === 'production',
-      });
+      void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
       return reply.status(401).send({ error: 'Invalid or expired refresh token' });
     }
 
@@ -374,11 +390,7 @@ export async function authRoutes(app: FastifyInstance) {
     const { count: deleted } = await app.prisma.refreshToken.deleteMany({ where: { tokenHash } });
     if (deleted === 0) {
       // Another concurrent request already consumed this token
-      void reply.clearCookie(REFRESH_TOKEN_COOKIE, {
-        path: '/',
-        sameSite: 'strict',
-        secure: process.env.NODE_ENV === 'production',
-      });
+      void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
       return reply.status(401).send({ error: 'Invalid or expired refresh token' });
     }
 
@@ -389,11 +401,7 @@ export async function authRoutes(app: FastifyInstance) {
     });
 
     if (!user) {
-      void reply.clearCookie(REFRESH_TOKEN_COOKIE, {
-        path: '/',
-        sameSite: 'strict',
-        secure: process.env.NODE_ENV === 'production',
-      });
+      void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
       return reply.status(401).send({ error: 'User no longer exists' });
     }
 
@@ -412,11 +420,7 @@ export async function authRoutes(app: FastifyInstance) {
       await app.prisma.refreshToken.deleteMany({ where: { tokenHash } });
     }
 
-    void reply.clearCookie(REFRESH_TOKEN_COOKIE, {
-      path: '/',
-      sameSite: 'strict',
-      secure: process.env.NODE_ENV === 'production',
-    });
+    void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
     return reply.status(204).send();
   });
 
@@ -486,24 +490,29 @@ export async function authRoutes(app: FastifyInstance) {
 
     const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
-    // 🔐 Atomic transaction: update password + conditionally mark token as used.
-    //    updateMany with usedAt: null ensures only ONE concurrent request wins —
-    //    if a second request races through the findUnique check, its updateMany
-    //    returns count=0 and is rejected, preventing double-use of the same token.
-    const [, tokenUpdate] = await app.prisma.$transaction([
-      app.prisma.user.update({
-        where: { id: resetToken.userId },
-        data: { password: hashedPassword },
-      }),
-      app.prisma.passwordResetToken.updateMany({
-        where: { tokenHash, usedAt: null },
-        data: { usedAt: new Date() },
-      }),
-    ]);
+    // 🔐 Interactive transaction: consume the token FIRST so that if a concurrent
+    //    request races through the findUnique check, its updateMany returns count=0
+    //    and the entire transaction is aborted before the password is updated.
+    //    Doing it in the opposite order would let both requests update the password
+    //    even when one should have been rejected.
+    try {
+      await app.prisma.$transaction(async (tx) => {
+        const { count } = await tx.passwordResetToken.updateMany({
+          where: { tokenHash, usedAt: null },
+          data: { usedAt: new Date() },
+        });
+        if (count === 0) throw new TokenConsumedError();
 
-    if (tokenUpdate.count === 0) {
-      // Another concurrent request already consumed this token
-      return reply.status(400).send({ error: 'Invalid or expired reset token' });
+        await tx.user.update({
+          where: { id: resetToken.userId },
+          data: { password: hashedPassword },
+        });
+      });
+    } catch (err) {
+      if (err instanceof TokenConsumedError) {
+        return reply.status(400).send({ error: 'Invalid or expired reset token' });
+      }
+      throw err;
     }
 
     // 🔐 Invalidate all active sessions — force re-login after password change
