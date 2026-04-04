@@ -42,6 +42,9 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       # ── Server ────────────────────────────────────────────────────────────────
+      - name: Setup Fly CLI
+        uses: superfly/flyctl-actions/setup-flyctl@1.5
+
       - name: Deploy server to Fly.io
         # --ha=false — Phase 1 is single-machine; no need for a second HA machine.
         # Saves ~50% of app compute cost. Re-enable when traffic justifies it.
