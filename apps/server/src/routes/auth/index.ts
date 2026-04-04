@@ -117,8 +117,7 @@ const meSchema = {
             email: { type: 'string' },
             username: { type: 'string' },
             account: {
-              type: 'object',
-              nullable: true,
+              type: ['object', 'null'],
               // Prisma Decimal fields serialise to strings in JSON
               properties: {
                 id: { type: 'string' },
