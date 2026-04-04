@@ -103,9 +103,9 @@ describe('POST /api/auth/register', () => {
   });
 
   it('strips extra unknown fields and still registers successfully', async () => {
-    // 🔐 Fastify AJV defaults to removeAdditional:true — extra fields are
-    // silently stripped before the handler runs, so the attacker's injected
-    // `role` field never reaches the DB. This IS the expected secure behaviour.
+    // 🔐 Fastify's AJV runs with removeAdditional:true by default — extra fields
+    // are silently stripped before the handler runs, so the attacker's injected
+    // `role` field never reaches the DB. The request is NOT rejected (no 400).
     (app.prisma.user.findFirst as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
     (app.prisma.user.create as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       id: 'user-1',

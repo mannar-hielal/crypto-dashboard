@@ -26,6 +26,11 @@ const errorResponse = {
   },
 };
 
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+// 🔐 Cost 12 in production = ~250ms per hash (brute-force resistant).
+// Cost 1 in test = fast CI without compromising real security.
+const BCRYPT_ROUNDS = process.env.NODE_ENV === 'test' ? 1 : 12;
+
 // ─── REQUEST SCHEMAS ──────────────────────────────────────────────────────────
 // Fastify validates ALL incoming data against these BEFORE your handler runs.
 // Invalid requests → instant 400 rejection. No DB hit, no CPU wasted.
@@ -150,7 +155,7 @@ export async function authRoutes(app: FastifyInstance) {
         return reply.status(409).send({ error: 'Email or username already taken' });
       }
 
-      const hashedPassword = await bcrypt.hash(password, 12);
+      const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
       const user = await app.prisma.user.create({
         data: {

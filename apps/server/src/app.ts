@@ -61,10 +61,13 @@ export async function buildApp() {
     // that helmet's strict default CSP would block. In production CSP is fully on.
     contentSecurityPolicy: config.nodeEnv === 'production',
   });
-  await app.register(rateLimit, {
-    max: 100,
-    timeWindow: '1 minute',
-  });
+  // Skip rate limiting in test — prevents flaky tests caused by per-IP counters
+  if (config.nodeEnv !== 'test') {
+    await app.register(rateLimit, {
+      max: 100,
+      timeWindow: '1 minute',
+    });
+  }
   await app.register(cors, {
     origin: config.nodeEnv === 'production' ? config.corsOrigin : true,
     credentials: true,
