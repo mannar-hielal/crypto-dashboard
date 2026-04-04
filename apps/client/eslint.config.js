@@ -20,4 +20,13 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    // Shadcn/ui generated components export both components and variants
+    // (e.g. buttonVariants) which triggers the fast-refresh rule.
+    // These files are auto-generated — disable the rule for the whole folder.
+    files: ['src/components/ui/**/*.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ]);
