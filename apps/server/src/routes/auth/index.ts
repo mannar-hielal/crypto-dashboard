@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt';
 // ─── SHARED RESPONSE SCHEMAS ──────────────────────────────────────────────────
 const userResponse = {
   type: 'object',
+  required: ['id', 'email', 'username'],
   properties: {
     id: { type: 'string' },
     email: { type: 'string' },
@@ -13,6 +14,7 @@ const userResponse = {
 
 const tokenResponse = {
   type: 'object',
+  required: ['token', 'user'],
   properties: {
     token: { type: 'string' },
     user: userResponse,
@@ -21,13 +23,14 @@ const tokenResponse = {
 
 const errorResponse = {
   type: 'object',
+  required: ['error'],
   properties: {
     error: { type: 'string' },
   },
 };
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-// 🔐 Cost 12 in production = ~250ms per hash (brute-force resistant).
+// 🔐 Cost 12 in non-test environments = ~250ms per hash (brute-force resistant).
 // Cost 1 in test = fast CI without compromising real security.
 const BCRYPT_ROUNDS = process.env.NODE_ENV === 'test' ? 1 : 12;
 
@@ -104,9 +107,11 @@ const meSchema = {
   response: {
     200: {
       type: 'object',
+      required: ['user'],
       properties: {
         user: {
           type: 'object',
+          required: ['id', 'email', 'username'],
           properties: {
             id: { type: 'string' },
             email: { type: 'string' },

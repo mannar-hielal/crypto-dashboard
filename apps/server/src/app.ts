@@ -81,6 +81,25 @@ export async function buildApp() {
   // ─── ROUTES ───────────────────────────────────────────────────────────────
   await app.register(authRoutes, { prefix: '/api/auth' });
 
+  // ─── CUSTOM ERROR HANDLER ─────────────────────────────────────────────────
+  // 🔐 Normalises ALL error responses to { error: string } so:
+  //    1. The documented schema (errorResponse) matches what the API actually returns.
+  //    2. Fastify's verbose validation payload ({ statusCode, code, error, message })
+  //       is never leaked to the client — hides internal implementation details.
+  //    3. 5xx errors are logged server-side while only a safe message goes out.
+  app.setErrorHandler((error, request, reply) => {
+    const statusCode = error.statusCode ?? 500;
+
+    if (statusCode >= 500) {
+      app.log.error(
+        { err: error, method: request.method, url: request.url },
+        'Unhandled server error'
+      );
+    }
+
+    void reply.status(statusCode).send({ error: error.message ?? 'Internal Server Error' });
+  });
+
   // ─── HEALTH CHECK ─────────────────────────────────────────────────────────
   app.get(
     '/health',

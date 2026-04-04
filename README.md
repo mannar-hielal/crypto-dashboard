@@ -165,9 +165,9 @@ pnpm format                   # Prettier format whole project
 pnpm type-check               # TypeScript strict type check
 
 # Testing
-pnpm test                     # Run all unit tests (watch mode)
-pnpm test:run                 # Run all unit tests once (CI mode)
-pnpm test:coverage            # Run tests with coverage report
+pnpm test                                           # Run all unit tests once
+pnpm --filter @crypto-dashboard/server test:watch   # Run backend unit tests in watch mode
+pnpm test:coverage                                  # Run backend tests with coverage report
 
 # Database
 cd apps/server
