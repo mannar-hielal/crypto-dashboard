@@ -23,9 +23,14 @@ export const EmailService = {
   async sendPasswordResetEmail(to: string, resetUrl: string): Promise<void> {
     const client = getResend();
 
-    // 🔧 Dev fallback: log to stdout so you can test the flow without a real key
+    // 🔧 Dev fallback: log to stdout so you can test the flow without a real key.
+    // 🔐 Gated to non-production — never log raw reset URLs (contain live tokens) in prod.
     if (!client) {
-      logger.info({ to, resetUrl }, '📧 [DEV] Password reset link (no RESEND_API_KEY set)');
+      if (config.nodeEnv !== 'production') {
+        logger.info({ to, resetUrl }, '📧 [DEV] Password reset link (no RESEND_API_KEY set)');
+      } else {
+        logger.warn({ to }, 'RESEND_API_KEY not configured in production — email not sent');
+      }
       return;
     }
 
@@ -49,9 +54,9 @@ export const EmailService = {
     });
 
     if (error) {
-      // 🔐 Log server-side but never expose delivery errors to the caller
+      // 🔐 Log server-side only — do not throw. Callers (e.g. /forgot-password) must
+      //    return the same response regardless of delivery outcome to prevent enumeration.
       logger.error({ err: error, to }, 'Failed to send password reset email');
-      throw new Error('Email delivery failed');
     }
   },
 };

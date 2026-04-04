@@ -241,19 +241,19 @@ All endpoints are documented with request/response schemas, authentication requi
 
 ## 🔐 Security Hardening (applied)
 
-| Area             | Measure                                                              |
-| ---------------- | -------------------------------------------------------------------- |
-| HTTP headers     | Helmet (XSS, clickjacking, MIME sniffing)                            |
-| Auth             | bcrypt cost 12, timing-attack safe compare                           |
-| Tokens           | Access token in Zustand memory (15 min), refresh token in httpOnly cookie (7 days) |
-| Token rotation   | Refresh tokens hashed (SHA-256) in DB, rotated on every refresh      |
-| Password reset   | One-time token, 1h expiry, marked `usedAt` after use                 |
+| Area             | Measure                                                                             |
+| ---------------- | ----------------------------------------------------------------------------------- |
+| HTTP headers     | Helmet (XSS, clickjacking, MIME sniffing)                                           |
+| Auth             | bcrypt cost 12, timing-attack safe compare                                          |
+| Tokens           | Access token in Zustand memory (15 min), refresh token in httpOnly cookie (7 days)  |
+| Token rotation   | Refresh tokens hashed (SHA-256) in DB, rotated on every refresh                     |
+| Password reset   | One-time token, 1h expiry, marked `usedAt` after use                                |
 | Rate limiting    | Global 100/min + per-route (5/hr register, 10/15min login, 3/15min forgot-password) |
-| Input validation | Fastify JSON Schema with `additionalProperties: false`               |
-| WebSocket        | 64KB message size limit, symbol/channel allowlist                    |
-| Logging          | Pino structured logs — credentials never logged                      |
-| CORS             | `CORS_ORIGIN` env var — not hardcoded                                |
-| Env vars         | Validated at startup, process exits on missing critical vars          |
+| Input validation | Fastify JSON Schema with `additionalProperties: false`                              |
+| WebSocket        | 64KB message size limit, symbol/channel allowlist                                   |
+| Logging          | Pino structured logs — credentials never logged                                     |
+| CORS             | `CORS_ORIGIN` env var — not hardcoded                                               |
+| Env vars         | Validated at startup, process exits on missing critical vars                        |
 
 ---
 

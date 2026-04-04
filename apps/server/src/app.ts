@@ -75,7 +75,7 @@ export async function buildApp() {
   });
 
   // ─── CORE PLUGINS ─────────────────────────────────────────────────────────────
-  await app.register(cookie); // ← add this line
+  await app.register(cookie);
   await app.register(jwt, { secret: config.jwtSecret });
   await app.register(prismaPlugin);
   await app.register(authPlugin);

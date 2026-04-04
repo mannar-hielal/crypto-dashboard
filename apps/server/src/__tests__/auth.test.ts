@@ -33,16 +33,15 @@ vi.mock('../plugins/prisma.js', () => {
         // Default: always succeeds — individual tests can override with mockResolvedValueOnce
         create: vi.fn().mockResolvedValue({}),
         findUnique: vi.fn(),
-        delete: vi.fn().mockResolvedValue({}),
-        deleteMany: vi.fn().mockResolvedValue({}),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       passwordResetToken: {
         findUnique: vi.fn(),
         create: vi.fn().mockResolvedValue({}),
-        update: vi.fn().mockResolvedValue({}),
-        deleteMany: vi.fn().mockResolvedValue({}),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
-      // Resolves the array of operations passed to it (mirrors Prisma's interactive transaction)
+      // $transaction resolves the array of operations passed to it (mirrors Prisma's sequential transaction)
       $transaction: vi.fn().mockImplementation((ops: Promise<unknown>[]) => Promise.all(ops)),
     } as never);
   };
@@ -464,8 +463,8 @@ describe('POST /api/auth/reset-password', () => {
       expiresAt: FUTURE,
       usedAt: null, // not yet used
     });
-    // $transaction resolves both ops (user.update + passwordResetToken.update)
-    (app.prisma.$transaction as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{}, {}]);
+    // $transaction resolves with [userUpdate, tokenUpdate] — tokenUpdate.count=1 signals one-time use
+    (app.prisma.$transaction as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{}, { count: 1 }]);
 
     const res = await app.inject({
       method: 'POST',
@@ -540,4 +539,3 @@ describe('POST /api/auth/reset-password', () => {
     expect(res.statusCode).toBe(400);
   });
 });
-

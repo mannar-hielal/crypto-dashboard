@@ -360,12 +360,27 @@ export async function authRoutes(app: FastifyInstance) {
 
     // 🔐 Token not found or expired — clear cookie to avoid stale state
     if (!stored || stored.expiresAt < new Date()) {
-      void reply.clearCookie(REFRESH_TOKEN_COOKIE, { path: '/', sameSite: 'strict' });
+      void reply.clearCookie(REFRESH_TOKEN_COOKIE, {
+        path: '/',
+        sameSite: 'strict',
+        secure: process.env.NODE_ENV === 'production',
+      });
       return reply.status(401).send({ error: 'Invalid or expired refresh token' });
     }
 
-    // 🔐 Token rotation: delete old before issuing new — stolen old tokens stop working
-    await app.prisma.refreshToken.delete({ where: { tokenHash } });
+    // 🔐 Token rotation: use deleteMany (P2025-safe) so concurrent /refresh requests
+    //    each get an atomic delete. Only the first succeeds (count=1); the second
+    //    gets count=0 and is treated as an invalid token — no 500 race condition.
+    const { count: deleted } = await app.prisma.refreshToken.deleteMany({ where: { tokenHash } });
+    if (deleted === 0) {
+      // Another concurrent request already consumed this token
+      void reply.clearCookie(REFRESH_TOKEN_COOKIE, {
+        path: '/',
+        sameSite: 'strict',
+        secure: process.env.NODE_ENV === 'production',
+      });
+      return reply.status(401).send({ error: 'Invalid or expired refresh token' });
+    }
 
     // Fetch the user to include email in the new access token payload
     const user = await app.prisma.user.findUnique({
@@ -374,7 +389,11 @@ export async function authRoutes(app: FastifyInstance) {
     });
 
     if (!user) {
-      void reply.clearCookie(REFRESH_TOKEN_COOKIE, { path: '/', sameSite: 'strict' });
+      void reply.clearCookie(REFRESH_TOKEN_COOKIE, {
+        path: '/',
+        sameSite: 'strict',
+        secure: process.env.NODE_ENV === 'production',
+      });
       return reply.status(401).send({ error: 'User no longer exists' });
     }
 
@@ -389,11 +408,15 @@ export async function authRoutes(app: FastifyInstance) {
 
     if (rawToken) {
       const tokenHash = hashToken(rawToken);
-      // 🔐 Silently ignore if token not found (already expired/deleted)
-      await app.prisma.refreshToken.delete({ where: { tokenHash } }).catch(() => null);
+      // 🔐 deleteMany is idempotent — no P2025 if already expired/deleted
+      await app.prisma.refreshToken.deleteMany({ where: { tokenHash } });
     }
 
-    void reply.clearCookie(REFRESH_TOKEN_COOKIE, { path: '/', sameSite: 'strict' });
+    void reply.clearCookie(REFRESH_TOKEN_COOKIE, {
+      path: '/',
+      sameSite: 'strict',
+      secure: process.env.NODE_ENV === 'production',
+    });
     return reply.status(204).send();
   });
 
@@ -436,7 +459,13 @@ export async function authRoutes(app: FastifyInstance) {
 
       const resetUrl = `${config.clientUrl}/reset-password?token=${rawToken}`;
 
-      await EmailService.sendPasswordResetEmail(email, resetUrl);
+      try {
+        await EmailService.sendPasswordResetEmail(email, resetUrl);
+      } catch (err) {
+        // 🔐 Log but never propagate — a delivery failure must not reveal whether
+        //    the email exists (a 500 only for existing users breaks anti-enumeration)
+        app.log.error({ err }, 'Failed to queue password reset email');
+      }
 
       return reply.send(SAFE_RESPONSE);
     }
@@ -457,17 +486,25 @@ export async function authRoutes(app: FastifyInstance) {
 
     const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
-    // 🔐 Atomic transaction: update password + mark token as used in one DB operation
-    await app.prisma.$transaction([
+    // 🔐 Atomic transaction: update password + conditionally mark token as used.
+    //    updateMany with usedAt: null ensures only ONE concurrent request wins —
+    //    if a second request races through the findUnique check, its updateMany
+    //    returns count=0 and is rejected, preventing double-use of the same token.
+    const [, tokenUpdate] = await app.prisma.$transaction([
       app.prisma.user.update({
         where: { id: resetToken.userId },
         data: { password: hashedPassword },
       }),
-      app.prisma.passwordResetToken.update({
-        where: { tokenHash },
+      app.prisma.passwordResetToken.updateMany({
+        where: { tokenHash, usedAt: null },
         data: { usedAt: new Date() },
       }),
     ]);
+
+    if (tokenUpdate.count === 0) {
+      // Another concurrent request already consumed this token
+      return reply.status(400).send({ error: 'Invalid or expired reset token' });
+    }
 
     // 🔐 Invalidate all active sessions — force re-login after password change
     await app.prisma.refreshToken.deleteMany({ where: { userId: resetToken.userId } });
