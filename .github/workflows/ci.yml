@@ -45,11 +45,7 @@ jobs:
         run: pnpm format:check
 
       - name: Lint
-        run: pnpm lint
-
-      - name: Lint (client)
-        run: pnpm lint
-        working-directory: apps/client
+        run: pnpm lint # root flat config already covers apps/client/** — no separate client lint step needed
 
       - name: Test
         run: pnpm test
