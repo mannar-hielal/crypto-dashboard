@@ -67,6 +67,7 @@ const registerSchema = {
   },
   response: {
     201: tokenResponse,
+    400: errorResponse, // Fastify body validation failure
     409: errorResponse,
   },
 };
@@ -90,6 +91,7 @@ const loginSchema = {
   },
   response: {
     200: tokenResponse,
+    400: errorResponse, // Fastify body validation failure
     401: errorResponse,
   },
 };
@@ -213,7 +215,7 @@ export async function authRoutes(app: FastifyInstance) {
   );
 
   // ─── ME (protected) ──────────────────────────────────────────────────────────
-  app.get('/me', { schema: meSchema, onRequest: [app.authenticate] }, async (request) => {
+  app.get('/me', { schema: meSchema, onRequest: [app.authenticate] }, async (request, reply) => {
     const { userId } = request.user as { userId: string; email: string };
 
     const user = await app.prisma.user.findUnique({
@@ -221,6 +223,11 @@ export async function authRoutes(app: FastifyInstance) {
       include: { account: true },
       omit: { password: true }, // 🔐 never expose password hash
     });
+
+    // 🔐 User was deleted after token was issued — treat as unauthorized
+    if (!user) {
+      return reply.status(401).send({ error: 'User no longer exists' });
+    }
 
     return { user };
   });
