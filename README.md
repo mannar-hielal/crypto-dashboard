@@ -17,6 +17,8 @@ A free, self-hosted paper trading dashboard that replicates TradingView Plus fea
 - [x] Node.js version pinned (`v24.14.1`)
 - [x] Pino structured logger (no bare `console.*`)
 - [x] CORS origin configurable per environment
+- [x] Vitest testing setup — unit tests for health endpoint, indicators, and auth routes
+- [x] Swagger / OpenAPI documentation served at `/docs`
 
 ### Backend
 
@@ -162,12 +164,29 @@ pnpm lint                     # ESLint check
 pnpm format                   # Prettier format whole project
 pnpm type-check               # TypeScript strict type check
 
+# Testing
+pnpm test                                           # Run all unit tests once
+pnpm --filter @crypto-dashboard/server test:watch   # Run backend unit tests in watch mode
+pnpm test:coverage                                  # Run backend tests with coverage report
+
 # Database
 cd apps/server
 pnpm prisma migrate dev       # Create + apply a new migration
 pnpm prisma migrate deploy    # Apply pending migrations (CI/prod)
 pnpm prisma studio            # Visual DB browser at localhost:5555
 ```
+
+---
+
+## 📖 API Documentation
+
+Swagger UI is available in **development** at:
+
+```
+http://localhost:3001/docs
+```
+
+All endpoints are documented with request/response schemas, authentication requirements, and example payloads. The `/docs` route is disabled in production.
 
 ---
 
@@ -218,4 +237,4 @@ MIT — see [LICENSE](./LICENSE)
 ---
 
 **Status:** Phase 1 — In Progress  
-**Last Updated:** April 3, 2026
+**Last Updated:** April 4, 2026

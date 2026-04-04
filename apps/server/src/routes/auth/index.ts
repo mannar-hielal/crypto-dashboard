@@ -1,11 +1,47 @@
 import { FastifyInstance } from 'fastify';
 import bcrypt from 'bcrypt';
 
+// ─── SHARED RESPONSE SCHEMAS ──────────────────────────────────────────────────
+const userResponse = {
+  type: 'object',
+  required: ['id', 'email', 'username'],
+  properties: {
+    id: { type: 'string' },
+    email: { type: 'string' },
+    username: { type: 'string' },
+  },
+};
+
+const tokenResponse = {
+  type: 'object',
+  required: ['token', 'user'],
+  properties: {
+    token: { type: 'string' },
+    user: userResponse,
+  },
+};
+
+const errorResponse = {
+  type: 'object',
+  required: ['error'],
+  properties: {
+    error: { type: 'string' },
+  },
+};
+
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+// 🔐 Cost 12 in non-test environments = ~250ms per hash (brute-force resistant).
+// Cost 1 in test = fast CI without compromising real security.
+const BCRYPT_ROUNDS = process.env.NODE_ENV === 'test' ? 1 : 12;
+
 // ─── REQUEST SCHEMAS ──────────────────────────────────────────────────────────
 // Fastify validates ALL incoming data against these BEFORE your handler runs.
 // Invalid requests → instant 400 rejection. No DB hit, no CPU wasted.
 
 const registerSchema = {
+  tags: ['Auth'],
+  summary: 'Register a new user',
+  description: 'Creates a user account and a paper trading account. Returns a JWT token.',
   body: {
     type: 'object',
     required: ['email', 'username', 'password'],
@@ -32,9 +68,17 @@ const registerSchema = {
       },
     },
   },
+  response: {
+    201: tokenResponse,
+    400: errorResponse, // Fastify body validation failure
+    409: errorResponse,
+  },
 };
 
 const loginSchema = {
+  tags: ['Auth'],
+  summary: 'Login',
+  description: 'Authenticate with email and password. Returns a JWT token.',
   body: {
     type: 'object',
     required: ['email', 'password'],
@@ -48,6 +92,50 @@ const loginSchema = {
       password: { type: 'string', minLength: 1, maxLength: 72 },
     },
   },
+  response: {
+    200: tokenResponse,
+    400: errorResponse, // Fastify body validation failure
+    401: errorResponse,
+  },
+};
+
+const meSchema = {
+  tags: ['Auth'],
+  summary: 'Get current user',
+  description: 'Returns the authenticated user profile and their paper trading account.',
+  security: [{ bearerAuth: [] }], // 🔐 tells Swagger UI this route needs a JWT
+  response: {
+    200: {
+      type: 'object',
+      required: ['user'],
+      properties: {
+        user: {
+          type: 'object',
+          required: ['id', 'email', 'username'],
+          properties: {
+            id: { type: 'string' },
+            email: { type: 'string' },
+            username: { type: 'string' },
+            account: {
+              type: ['object', 'null'],
+              // Prisma Decimal fields serialise to strings in JSON
+              properties: {
+                id: { type: 'string' },
+                userId: { type: 'string' },
+                totalBalance: { type: 'string' },
+                availableBalance: { type: 'string' },
+                unrealizedPnl: { type: 'string' },
+                realizedPnl: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' },
+                updatedAt: { type: 'string', format: 'date-time' },
+              },
+            },
+          },
+        },
+      },
+    },
+    401: errorResponse,
+  },
 };
 
 // ─── ROUTES ───────────────────────────────────────────────────────────────────
@@ -58,7 +146,13 @@ export async function authRoutes(app: FastifyInstance) {
     '/register',
     {
       schema: registerSchema,
-      config: { rateLimit: { max: 5, timeWindow: '1 hour' } }, // 🔐 max 5 registrations/hour per IP
+      config: {
+        rateLimit: {
+          max: 5,
+          timeWindow: '1 hour',
+          skip: () => process.env.NODE_ENV !== 'production', // skip in dev/test
+        },
+      }, // 🔐 max 5 registrations/hour per IP (production only)
     },
     async (request, reply) => {
       const { email, username, password } = request.body as {
@@ -74,7 +168,7 @@ export async function authRoutes(app: FastifyInstance) {
         return reply.status(409).send({ error: 'Email or username already taken' });
       }
 
-      const hashedPassword = await bcrypt.hash(password, 12);
+      const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
       const user = await app.prisma.user.create({
         data: {
@@ -99,7 +193,13 @@ export async function authRoutes(app: FastifyInstance) {
     '/login',
     {
       schema: loginSchema,
-      config: { rateLimit: { max: 10, timeWindow: '15 minutes' } }, // 🔐 max 10 attempts/15min per IP
+      config: {
+        rateLimit: {
+          max: 10,
+          timeWindow: '15 minutes',
+          skip: () => process.env.NODE_ENV !== 'production', // skip in dev/test
+        },
+      }, // 🔐 max 10 attempts/15min per IP (production only)
     },
     async (request, reply) => {
       const { email, password } = request.body as {
@@ -126,7 +226,7 @@ export async function authRoutes(app: FastifyInstance) {
   );
 
   // ─── ME (protected) ──────────────────────────────────────────────────────────
-  app.get('/me', { onRequest: [app.authenticate] }, async (request) => {
+  app.get('/me', { schema: meSchema, onRequest: [app.authenticate] }, async (request, reply) => {
     const { userId } = request.user as { userId: string; email: string };
 
     const user = await app.prisma.user.findUnique({
@@ -134,6 +234,11 @@ export async function authRoutes(app: FastifyInstance) {
       include: { account: true },
       omit: { password: true }, // 🔐 never expose password hash
     });
+
+    // 🔐 User was deleted after token was issued — treat as unauthorized
+    if (!user) {
+      return reply.status(401).send({ error: 'User no longer exists' });
+    }
 
     return { user };
   });

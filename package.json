@@ -12,7 +12,9 @@
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "type-check": "pnpm --filter @crypto-dashboard/server type-check"
+    "type-check": "pnpm --filter @crypto-dashboard/server type-check",
+    "test": "pnpm --filter @crypto-dashboard/server test",
+    "test:coverage": "pnpm --filter @crypto-dashboard/server test:coverage"
   },
   "keywords": [
     "crypto",
@@ -39,7 +41,7 @@
       "eslint --fix",
       "prettier --write"
     ],
-    "*.{json,md}": [
+    "*.{json,md,yml,yaml}": [
       "prettier --write"
     ]
   }
