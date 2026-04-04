@@ -360,7 +360,7 @@ export async function authRoutes(app: FastifyInstance) {
 
     // 🔐 Token not found or expired — clear cookie to avoid stale state
     if (!stored || stored.expiresAt < new Date()) {
-      void reply.clearCookie(REFRESH_TOKEN_COOKIE, { path: '/' });
+      void reply.clearCookie(REFRESH_TOKEN_COOKIE, { path: '/', sameSite: 'strict' });
       return reply.status(401).send({ error: 'Invalid or expired refresh token' });
     }
 
@@ -374,7 +374,7 @@ export async function authRoutes(app: FastifyInstance) {
     });
 
     if (!user) {
-      void reply.clearCookie(REFRESH_TOKEN_COOKIE, { path: '/' });
+      void reply.clearCookie(REFRESH_TOKEN_COOKIE, { path: '/', sameSite: 'strict' });
       return reply.status(401).send({ error: 'User no longer exists' });
     }
 
@@ -393,7 +393,7 @@ export async function authRoutes(app: FastifyInstance) {
       await app.prisma.refreshToken.delete({ where: { tokenHash } }).catch(() => null);
     }
 
-    void reply.clearCookie(REFRESH_TOKEN_COOKIE, { path: '/' });
+    void reply.clearCookie(REFRESH_TOKEN_COOKIE, { path: '/', sameSite: 'strict' });
     return reply.status(204).send();
   });
 

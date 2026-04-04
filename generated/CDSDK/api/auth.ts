@@ -7,7 +7,11 @@ const BASE_URL =
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
+    headers: {
+      // Only set Content-Type when there's a body — Fastify rejects Content-Type: application/json with an empty body
+      ...(init?.body != null && { 'Content-Type': 'application/json' }),
+      ...init?.headers,
+    },
     credentials: 'include', // 🔐 sends httpOnly refresh_token cookie automatically
     ...init,
   });
