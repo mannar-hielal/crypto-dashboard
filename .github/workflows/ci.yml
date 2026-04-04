@@ -37,7 +37,7 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres # dummy value — satisfies prisma generate postinstall; no DB is started in this job
         run: pnpm install --frozen-lockfile # installs root + all workspace packages (server, future client)
 
-      - name: Type-check
+      - name: Type-check (server)
         run: pnpm type-check
         working-directory: apps/server
 
@@ -45,11 +45,15 @@ jobs:
         run: pnpm format:check
 
       - name: Lint
-        run: pnpm lint
+        run: pnpm lint # root flat config already covers apps/client/** — no separate client lint step needed
 
       - name: Test
         run: pnpm test
 
-      - name: Build
+      - name: Build (server)
         run: pnpm build
         working-directory: apps/server
+
+      - name: Build (client)
+        run: pnpm build
+        working-directory: apps/client

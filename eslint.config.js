@@ -10,7 +10,7 @@ export default [
       'build',
       '.turbo',
       'pnpm-lock.yaml',
-      '**/generated/**', // 🔐 never lint auto-generated Prisma client
+      'apps/server/generated/**', // 🔐 never lint auto-generated Prisma client
     ],
   },
   js.configs.recommended,
