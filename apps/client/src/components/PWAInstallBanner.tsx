@@ -21,6 +21,8 @@ const DISMISSED_KEY = 'pwa-install-banner-dismissed';
 export function PWAInstallBanner() {
   const [platform, setPlatform] = useState<'ios' | 'ios-other' | 'android' | null>(null);
   const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null);
+  // Track the android delay timer so it can be cleared on unmount (fix: timer leak)
+  const androidTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const isDismissed = localStorage.getItem(DISMISSED_KEY) === 'true';
@@ -50,7 +52,10 @@ export function PWAInstallBanner() {
     const handleInstallPrompt = (e: Event) => {
       e.preventDefault(); // suppress the browser's default mini-infobar
       deferredPrompt.current = e as BeforeInstallPromptEvent;
-      setTimeout(() => setPlatform('android'), 2500);
+      // Re-check dismissed flag — user may have dismissed our banner between page load
+      // and the moment beforeinstallprompt fired (fix: race condition)
+      if (localStorage.getItem(DISMISSED_KEY) === 'true') return;
+      androidTimerRef.current = setTimeout(() => setPlatform('android'), 2500);
     };
 
     const handleInstalled = () => {
@@ -65,6 +70,8 @@ export function PWAInstallBanner() {
     return () => {
       window.removeEventListener('beforeinstallprompt', handleInstallPrompt);
       window.removeEventListener('appinstalled', handleInstalled);
+      // Clear android timer on unmount to prevent state updates on unmounted component
+      if (androidTimerRef.current) clearTimeout(androidTimerRef.current);
     };
   }, []);
 
@@ -79,7 +86,11 @@ export function PWAInstallBanner() {
     const { outcome } = await deferredPrompt.current.userChoice;
     deferredPrompt.current = null;
     if (outcome === 'accepted') {
-      setPlatform(null); // don't set dismissed — app is installed, banner won't show again anyway
+      setPlatform(null); // installed — banner won't show again anyway
+    } else {
+      // User dismissed the native dialog — hide and persist so the banner
+      // doesn't reappear with a dead Install button (no prompt to reuse)
+      dismiss();
     }
   };
 
