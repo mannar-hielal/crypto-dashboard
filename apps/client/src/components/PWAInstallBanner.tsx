@@ -19,24 +19,30 @@ const DISMISSED_KEY = 'pwa-install-banner-dismissed';
  *              Hides automatically on `appinstalled`.
  */
 export function PWAInstallBanner() {
-  const [platform, setPlatform] = useState<'ios' | 'android' | null>(null);
+  const [platform, setPlatform] = useState<'ios' | 'ios-other' | 'android' | null>(null);
   const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
     const isDismissed = localStorage.getItem(DISMISSED_KEY) === 'true';
     if (isDismissed) return;
 
-    // ── iOS Safari detection ──────────────────────────────────────────────────
+    // ── iOS detection ────────────────────────────────────────────────────────
+    const ua = navigator.userAgent;
     const isIOS =
-      /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+      /iphone|ipad|ipod/i.test(ua) ||
       // iPadOS 13+ reports as MacIntel with touch support
       (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
     const isInStandaloneMode =
       'standalone' in navigator && (navigator as { standalone?: boolean }).standalone === true;
 
+    // Non-Safari iOS browsers (Chrome/CriOS, Edge/EdgA/EdgiOS, Firefox/FxiOS, Opera/OPiOS)
+    // cannot install PWAs — the Share sheet "Add to Home Screen" option only exists in Safari.
+    // Tell the user to open the URL in Safari instead.
+    const isNonSafariIOS = isIOS && /CriOS|EdgA|EdgiOS|FxiOS|OPiOS/i.test(ua);
+
     if (isIOS && !isInStandaloneMode) {
-      const timer = setTimeout(() => setPlatform('ios'), 2500);
+      const timer = setTimeout(() => setPlatform(isNonSafariIOS ? 'ios-other' : 'ios'), 2500);
       return () => clearTimeout(timer);
     }
 
@@ -106,7 +112,7 @@ export function PWAInstallBanner() {
           <p className="text-sm font-semibold">Install Crypto Dashboard</p>
 
           {platform === 'ios' ? (
-            // ── iOS instructions ──────────────────────────────────────────────
+            // ── iOS Safari: Share → Add to Home Screen ────────────────────────
             <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
               Tap{' '}
               <span aria-label="Share button" className="inline-block">
@@ -126,6 +132,12 @@ export function PWAInstallBanner() {
                 </svg>
               </span>{' '}
               then <strong>"Add to Home Screen"</strong> to install this app on your iPhone.
+            </p>
+          ) : platform === 'ios-other' ? (
+            // ── Chrome / Edge / Firefox on iOS: must use Safari ───────────────
+            <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+              To install this app, open this page in <strong>Safari</strong> — your current browser
+              doesn&apos;t support PWA installation on iOS.
             </p>
           ) : (
             // ── Android / Chrome: real install button ─────────────────────────
