@@ -174,7 +174,6 @@ export class CandleAggregator {
     return date.getTime();
   }
 
-
   private storeCandle(state: AggregatorState, interval: ChartInterval, candle: Kline): void {
     if (!state.history.has(interval)) {
       state.history.set(interval, []);
