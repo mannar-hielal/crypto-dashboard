@@ -124,12 +124,18 @@ export function PWAInstallBanner() {
                 x: [0, -6, 6, -4, 4, -2, 0],
               }
         }
-        transition={{
-          duration: 0.55,
-          repeat: Infinity,
-          repeatDelay: 3.5,
-          ease: 'easeInOut',
-        }}
+        // Gate the transition as well — passing repeat:Infinity even with an empty animate{}
+        // still schedules background animation timers, wasting CPU for users who prefer no motion.
+        transition={
+          prefersReducedMotion
+            ? undefined
+            : {
+                duration: 0.55,
+                repeat: Infinity,
+                repeatDelay: 3.5,
+                ease: 'easeInOut',
+              }
+        }
         role="banner"
         aria-label="Install app"
         className="rounded-2xl border border-border bg-card p-4 shadow-2xl"
