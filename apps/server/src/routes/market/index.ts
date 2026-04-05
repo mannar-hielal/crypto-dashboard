@@ -169,7 +169,7 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
         log.info({ symbol, interval }, 'Client disconnected from live feed');
       });
 
-      socket.on('error', (err) => {
+      socket.on('error', (err: Error) => {
         log.error({ err }, 'Client WebSocket error');
         unsubscribe();
       });
