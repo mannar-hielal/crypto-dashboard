@@ -40,6 +40,18 @@ export default defineConfig({
         ],
       },
 
+      // Enable SW registration in Vite dev server only when explicitly opted in.
+      // Keeping it always-on causes cached assets to persist across reloads even
+      // after config changes, which makes local debugging confusing.
+      //
+      // To enable: add VITE_PWA_DEV_SW=true to apps/client/.env.local
+      // To disable again: remove the flag or set it to false, then clear site
+      // data in DevTools → Application → Storage → Clear site data.
+      devOptions: {
+        enabled: process.env['VITE_PWA_DEV_SW'] === 'true',
+        type: 'module',
+      },
+
       // Workbox cache strategy
       workbox: {
         // Cache the app shell (HTML, JS, CSS, fonts, images) — stale-while-revalidate
