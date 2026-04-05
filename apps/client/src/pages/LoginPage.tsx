@@ -38,8 +38,18 @@ export function LoginPage() {
 
       setAuth(accessToken, user);
       void navigate('/dashboard');
-    } catch {
-      setServerError('Invalid email or password');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message.toLowerCase() : '';
+      const isCredentialError =
+        errorMessage.includes('invalid email or password') ||
+        errorMessage.includes('invalid credentials') ||
+        errorMessage.includes('unauthorized') ||
+        errorMessage.includes('401');
+      setServerError(
+        isCredentialError
+          ? 'Invalid email or password'
+          : 'Unable to sign in right now. Please try again.'
+      );
     }
   };
 
@@ -142,8 +152,14 @@ export function LoginPage() {
               placeholder="you@example.com"
               className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-indigo-500 focus:ring-indigo-500/20"
               {...register('email')}
+              aria-invalid={!!errors.email}
+              aria-describedby={errors.email ? 'email-error' : undefined}
             />
-            {errors.email && <p className="text-xs text-rose-400">{errors.email.message}</p>}
+            {errors.email && (
+              <p id="email-error" className="text-xs text-rose-400">
+                {errors.email.message}
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -165,12 +181,22 @@ export function LoginPage() {
               placeholder="••••••••"
               className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-indigo-500 focus:ring-indigo-500/20"
               {...register('password')}
+              aria-invalid={!!errors.password}
+              aria-describedby={errors.password ? 'password-error' : undefined}
             />
-            {errors.password && <p className="text-xs text-rose-400">{errors.password.message}</p>}
+            {errors.password && (
+              <p id="password-error" className="text-xs text-rose-400">
+                {errors.password.message}
+              </p>
+            )}
           </div>
 
           {serverError && (
-            <p className="rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-400">
+            <p
+              role="alert"
+              aria-live="polite"
+              className="rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-400"
+            >
               {serverError}
             </p>
           )}

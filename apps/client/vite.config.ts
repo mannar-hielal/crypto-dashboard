@@ -9,7 +9,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      // generateSW: Vite generates the service worker automatically.
+      // generateSW: vite-plugin-pwa generates the service worker automatically using Workbox.
       // registerType 'autoUpdate': new SW activates on next page load without prompting.
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'pwa-192x192.png', 'pwa-512x512.png'],
@@ -49,7 +49,7 @@ export default defineConfig({
         runtimeCaching: [
           {
             // Cache Cloudflare Pages assets
-            urlPattern: /^https:\/\/crypto-dashboard-7yy\.pages\.dev\/.*/i,
+            urlPattern: ({ url }: { url: URL }) => url.origin === self.location.origin,
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'app-shell',

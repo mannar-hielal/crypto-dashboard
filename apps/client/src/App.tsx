@@ -30,7 +30,7 @@ export default function App() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    // AnimatePresence: detects route changes via location.key and plays
+    // AnimatePresence: detects route changes via location.pathname and plays
     // enter/exit animations on the outgoing and incoming page components.
     // mode="wait" ensures the old page fully exits before the new one enters.
     <AnimatePresence mode="wait">
