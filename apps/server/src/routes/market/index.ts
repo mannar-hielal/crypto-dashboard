@@ -158,7 +158,7 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
       // ② Subscribe to live updates and forward to this client
       const unsubscribe = fastify.bybit.subscribe((bar: LiveBar) => {
         if (bar.symbol !== symbol || bar.interval !== interval) return;
-        if (socket.readyState === socket.OPEN) {
+        if (socket.readyState === 1 /* WebSocket.OPEN */) {
           socket.send(JSON.stringify({ type: 'bar', bar }));
         }
       });

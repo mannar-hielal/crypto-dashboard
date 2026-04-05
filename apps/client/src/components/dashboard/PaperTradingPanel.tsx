@@ -64,12 +64,16 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
     return sum + pnl;
   }, 0);
 
-  /** Equity = available balance + current market value of all open positions */
+  /** Equity = available balance + margin basis plus unrealized PnL for all open positions */
   const equity =
     balance +
     positions.reduce((sum, pos) => {
       if (!latestPrice) return sum + pos.entryUsdtAmount;
-      return sum + pos.quantity * latestPrice;
+      const pnl =
+        pos.side === 'long'
+          ? (latestPrice - pos.entryPrice) * pos.quantity
+          : (pos.entryPrice - latestPrice) * pos.quantity;
+      return sum + pos.entryUsdtAmount + pnl;
     }, 0);
 
   /** Quantity preview shown below the amount input */
@@ -120,7 +124,12 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
   }
 
   function handleClose(positionId: string) {
-    closePosition(positionId, latestPrice ?? 0);
+    setFormError(null);
+    if (!latestPrice) {
+      setFormError('Waiting for live price…');
+      return;
+    }
+    closePosition(positionId, latestPrice);
   }
 
   // ── Render ────────────────────────────────────────────────────────────────

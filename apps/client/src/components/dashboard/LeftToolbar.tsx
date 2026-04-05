@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { ElementType } from 'react';
 import {
   MousePointer2,
   Crosshair,
@@ -16,7 +17,7 @@ import {
 // null = visual separator between groups
 type Tool = {
   id: string;
-  icon: React.ElementType;
+  icon: ElementType;
   label: string;
 } | null;
 

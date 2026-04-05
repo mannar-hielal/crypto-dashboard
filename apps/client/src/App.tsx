@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router';
 import { AnimatePresence } from 'framer-motion';
 import { authApi } from '@crypto-dashboard/sdk';
@@ -14,6 +14,12 @@ import { DashboardPage } from '@/pages/DashboardPage';
 import { TermsPage } from '@/pages/TermsPage';
 import { PrivacyPage } from '@/pages/PrivacyPage';
 
+// 🔐 Module-level flag — unlike useRef, this survives React StrictMode's
+// simulated mount → unmount → remount cycle, so only ONE /refresh fires
+// per actual page load (not two concurrent requests that race on the same
+// rotation token and log the user out).
+let refreshInitiated = false;
+
 export default function App() {
   // Use individual selectors so App only re-renders when setAuth/setLoading themselves change,
   // not on every unrelated store update (e.g. user data changing after login).
@@ -21,16 +27,9 @@ export default function App() {
   const setLoading = useAuthStore((state) => state.setLoading);
   const location = useLocation();
 
-  // 🔐 React StrictMode (dev) double-invokes effects: both calls fire a POST /refresh
-  //    concurrently with the SAME cookie. The server uses token rotation — the first
-  //    request consumes the token, the second gets a 401, and the catch sets
-  //    isLoading=false with no auth → user is logged out on every page refresh.
-  //    useRef value survives StrictMode's simulated remount, so only ONE fetch fires.
-  const refreshInitiated = useRef(false);
-
   useEffect(() => {
-    if (refreshInitiated.current) return;
-    refreshInitiated.current = true;
+    if (refreshInitiated) return;
+    refreshInitiated = true;
 
     // 🔐 On every app boot, try to restore the session silently.
     // The browser sends the httpOnly refresh_token cookie automatically.

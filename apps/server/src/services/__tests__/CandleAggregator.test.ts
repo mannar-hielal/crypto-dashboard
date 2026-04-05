@@ -51,13 +51,15 @@ describe('CandleAggregator', () => {
       expect(agg.process(makeCandle(5), 'BTCUSDT').has('5m')).toBe(true);
     });
 
-    it('aggregates high and low correctly across a 5m period', () => {
+    it('aggregates high, low, and close correctly across a 5m period', () => {
       [100, 105, 98, 102, 101].forEach((close, i) => {
         agg.process(makeCandle(i, close), 'BTCUSDT');
       });
       const c5 = agg.process(makeCandle(5, 103), 'BTCUSDT').get('5m')!;
       expect(c5.high).toBe(105);
       expect(c5.low).toBe(98);
+      // close must equal the last 1m candle of the period (minute 4, close=101)
+      expect(c5.close).toBe(101);
     });
 
     it('accumulates volume correctly across a 5m period (5 × vol=10 = 50)', () => {

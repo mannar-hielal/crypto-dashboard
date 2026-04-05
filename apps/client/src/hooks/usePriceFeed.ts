@@ -17,7 +17,14 @@ import { useMarketStore } from '@/store/marketStore';
 const RECONNECT_DELAY_MS = 3_000;
 
 export function usePriceFeed() {
-  const { symbol, interval, setSnapshot, addBar, setConnected } = useMarketStore();
+  // Individual selectors: this hook re-renders ONLY when symbol or interval
+  // change (user switches timeframe). Bar updates land in the store but don't
+  // cause usePriceFeed itself to re-render.
+  const symbol = useMarketStore((state) => state.symbol);
+  const interval = useMarketStore((state) => state.interval);
+  const setSnapshot = useMarketStore((state) => state.setSnapshot);
+  const addBar = useMarketStore((state) => state.addBar);
+  const setConnected = useMarketStore((state) => state.setConnected);
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

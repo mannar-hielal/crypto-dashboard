@@ -25,6 +25,7 @@ interface OpenCandle {
   open: number;
   high: number;
   low: number;
+  close: number; // always the last 1m bar's close in this period
   volume: number;
   quoteAssetVolume: number;
   tradeCount: number;
@@ -117,6 +118,7 @@ export class CandleAggregator {
         open: incomingCandle.open,
         high: incomingCandle.high,
         low: incomingCandle.low,
+        close: incomingCandle.close,
         volume: incomingCandle.volume,
         quoteAssetVolume: incomingCandle.quoteAssetVolume,
         tradeCount: 1,
@@ -134,7 +136,7 @@ export class CandleAggregator {
         open: openCandle.open,
         high: openCandle.high,
         low: openCandle.low,
-        close: this.getPreviousClosePrice(state, interval, openPeriod),
+        close: openCandle.close, // last 1m close of the just-finished period
         volume: openCandle.volume,
         quoteAssetVolume: openCandle.quoteAssetVolume,
       };
@@ -146,6 +148,7 @@ export class CandleAggregator {
         open: incomingCandle.open,
         high: incomingCandle.high,
         low: incomingCandle.low,
+        close: incomingCandle.close,
         volume: incomingCandle.volume,
         quoteAssetVolume: incomingCandle.quoteAssetVolume,
         tradeCount: 1,
@@ -155,6 +158,7 @@ export class CandleAggregator {
     } else {
       openCandle.high = Math.max(openCandle.high, incomingCandle.high);
       openCandle.low = Math.min(openCandle.low, incomingCandle.low);
+      openCandle.close = incomingCandle.close; // keep rolling close up-to-date
       openCandle.volume += incomingCandle.volume;
       openCandle.quoteAssetVolume += incomingCandle.quoteAssetVolume;
       openCandle.tradeCount += 1;
@@ -170,17 +174,6 @@ export class CandleAggregator {
     return date.getTime();
   }
 
-  private getPreviousClosePrice(
-    state: AggregatorState,
-    interval: ChartInterval,
-    _candleTime: number
-  ): number {
-    const history = state.history.get(interval) || [];
-    if (history.length > 0) {
-      return history[history.length - 1].close;
-    }
-    return state.openCandles.get(interval)?.open || 0;
-  }
 
   private storeCandle(state: AggregatorState, interval: ChartInterval, candle: Kline): void {
     if (!state.history.has(interval)) {

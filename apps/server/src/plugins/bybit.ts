@@ -139,17 +139,20 @@ async function bybitPlugin(fastify: FastifyInstance): Promise<void> {
     log.error({ err }, 'Bybit WebSocket error');
   });
 
-  // ─── Connect on startup ───────────────────────────────────────────────────
-
-  try {
-    await manager.connect();
-    // Phase 1: single symbol, 1-minute klines
-    manager.subscribe('kline', 'BTCUSDT', '1');
-    log.info({ testnet: config.bybitTestnet }, 'Bybit connected — subscribed to kline.1.BTCUSDT');
-  } catch (err) {
-    // Don't fail startup if Bybit is temporarily unreachable — reconnect will retry
-    log.error({ err }, 'Bybit initial connection failed — auto-reconnect will retry');
-  }
+  // ─── Connect in the background ───────────────────────────────────────────
+  // Fire-and-forget: don't await so Fastify boots and serves health/auth
+  // endpoints even when Bybit is temporarily unreachable.
+  void manager
+    .connect()
+    .then(() => {
+      // Phase 1: single symbol, 1-minute klines
+      manager.subscribe('kline', 'BTCUSDT', '1');
+      log.info({ testnet: config.bybitTestnet }, 'Bybit connected — subscribed to kline.1.BTCUSDT');
+    })
+    .catch((err: unknown) => {
+      // Auto-reconnect will retry; don't crash startup
+      log.error({ err }, 'Bybit initial connection failed — auto-reconnect will retry');
+    });
 
   // ─── Decorate fastify ─────────────────────────────────────────────────────
 
