@@ -127,7 +127,7 @@ export function DashboardPage() {
       {/* inert when hidden: removes h-0 content from tab order + a11y tree  */}
       <div
         className={`shrink-0 transition-all duration-200 ease-in-out ${PANEL_HEIGHT[panelSize]}`}
-        {...(panelSize === 'hidden' ? { inert: '' } : {})}
+        inert={panelSize === 'hidden'}
       >
         <PaperTradingPanel size={panelSize} onSizeChange={setPanelSize} />
       </div>
