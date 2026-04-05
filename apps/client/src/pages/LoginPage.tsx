@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { Link, useNavigate } from 'react-router';
 import { motion } from 'framer-motion';
 import { authApi } from '@crypto-dashboard/sdk';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AuthLayout } from '@/components/AuthLayout';
 import {
   Form,
   FormControl,
@@ -20,35 +21,48 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email'),
+  email: z.string().email('Invalid email address'),
   password: z.string().min(1, 'Password is required'),
 });
 
-type LoginForm = z.infer<typeof loginSchema>;
+type LoginFormData = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { setAuth } = useAuthStore();
+  const setAuth = useAuthStore((s) => s.setAuth);
   const [serverError, setServerError] = useState<string | null>(null);
 
-  const form = useForm<LoginForm>({
+  const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { email: '', password: '' }, // explicit defaults — prevents undefined on conditional mounts
   });
 
-  async function onSubmit(data: LoginForm) {
+  const onSubmit = async (data: LoginFormData) => {
     setServerError(null);
     try {
-      const { accessToken, user } = await authApi.login(data);
+      const { accessToken, user } = await authApi.login({
+        email: data.email,
+        password: data.password,
+      });
       setAuth(accessToken, user);
       void navigate('/dashboard');
-    } catch (err) {
-      setServerError(err instanceof Error ? err.message : 'Login failed');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message.toLowerCase() : '';
+      const isCredentialError =
+        errorMessage.includes('invalid email or password') ||
+        errorMessage.includes('invalid credentials') ||
+        errorMessage.includes('unauthorized') ||
+        errorMessage.includes('401');
+      setServerError(
+        isCredentialError
+          ? 'Invalid email or password'
+          : 'Unable to sign in right now. Please try again.'
+      );
     }
-  }
+  };
 
   return (
-    <div className="bg-background flex h-screen items-center justify-center p-4">
+    <AuthLayout>
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -57,14 +71,14 @@ export function LoginPage() {
       >
         <Card>
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Welcome back</CardTitle>
-            <CardDescription>Sign in to your account</CardDescription>
+            <CardTitle className="text-2xl">Sign in</CardTitle>
+            <CardDescription>Enter your credentials to continue</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="space-y-4">
                 {serverError && (
-                  <Alert variant="destructive">
+                  <Alert variant="destructive" role="alert" aria-live="polite">
                     <AlertDescription>{serverError}</AlertDescription>
                   </Alert>
                 )}
@@ -80,6 +94,7 @@ export function LoginPage() {
                           type="email"
                           placeholder="you@example.com"
                           autoComplete="email"
+                          aria-invalid={!!form.formState.errors.email}
                           {...field}
                         />
                       </FormControl>
@@ -95,10 +110,7 @@ export function LoginPage() {
                     <FormItem>
                       <div className="flex items-center justify-between">
                         <FormLabel>Password</FormLabel>
-                        <Link
-                          to="/forgot-password"
-                          className="text-muted-foreground text-xs underline"
-                        >
+                        <Link to="/forgot-password" className="text-sm underline">
                           Forgot password?
                         </Link>
                       </div>
@@ -107,6 +119,7 @@ export function LoginPage() {
                           type="password"
                           placeholder="••••••••"
                           autoComplete="current-password"
+                          aria-invalid={!!form.formState.errors.password}
                           {...field}
                         />
                       </FormControl>
@@ -122,7 +135,7 @@ export function LoginPage() {
                 <p className="text-muted-foreground text-center text-sm">
                   Don&apos;t have an account?{' '}
                   <Link to="/register" className="underline">
-                    Sign up
+                    Create one
                   </Link>
                 </p>
               </form>
@@ -130,6 +143,6 @@ export function LoginPage() {
           </CardContent>
         </Card>
       </motion.div>
-    </div>
+    </AuthLayout>
   );
 }

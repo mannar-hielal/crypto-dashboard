@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router';
+import { Routes, Route, Navigate, useLocation } from 'react-router';
+import { AnimatePresence } from 'framer-motion';
 import { authApi } from '@crypto-dashboard/sdk';
 import { useAuthStore } from '@/store/authStore';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -9,9 +10,15 @@ import { RegisterPage } from '@/pages/RegisterPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 import { DashboardPage } from '@/pages/DashboardPage';
+import { TermsPage } from '@/pages/TermsPage';
+import { PrivacyPage } from '@/pages/PrivacyPage';
 
 export default function App() {
-  const { setAuth, setLoading } = useAuthStore();
+  // Use individual selectors so App only re-renders when setAuth/setLoading themselves change,
+  // not on every unrelated store update (e.g. user data changing after login).
+  const setAuth = useAuthStore((state) => state.setAuth);
+  const setLoading = useAuthStore((state) => state.setLoading);
+  const location = useLocation();
 
   useEffect(() => {
     // 🔐 On every app boot, try to restore the session silently.
@@ -20,30 +27,35 @@ export default function App() {
     authApi
       .refresh()
       .then(({ accessToken }) => {
-        // Fetch the user profile with the new token
         return authApi.me(accessToken).then(({ user }) => setAuth(accessToken, user));
       })
       .catch(() => {
-        // No valid session — clear loading, user will see the login page
         setLoading(false);
       });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <Routes>
-      {/* Public routes */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
+    // AnimatePresence: detects route changes via location.pathname and plays
+    // enter/exit animations on the outgoing and incoming page components.
+    // mode="wait" ensures the old page fully exits before the new one enters.
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        {/* Public routes */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
 
-      {/* Protected routes */}
-      <Route element={<ProtectedRoute />}>
-        <Route path="/dashboard" element={<DashboardPage />} />
-      </Route>
+        {/* Protected routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+        </Route>
 
-      {/* Default redirect */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
+        {/* Default redirect */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </AnimatePresence>
   );
 }

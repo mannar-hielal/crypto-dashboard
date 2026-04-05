@@ -17,6 +17,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AuthLayout } from '@/components/AuthLayout';
 
 const resetSchema = z
   .object({
@@ -58,7 +59,7 @@ export function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <div className="bg-background flex h-screen items-center justify-center p-4">
+      <AuthLayout>
         <Alert variant="destructive" className="max-w-sm">
           <AlertDescription>
             Invalid or missing reset token.{' '}
@@ -67,7 +68,7 @@ export function ResetPasswordPage() {
             </Link>
           </AlertDescription>
         </Alert>
-      </div>
+      </AuthLayout>
     );
   }
 
@@ -83,7 +84,7 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <div className="bg-background flex h-screen items-center justify-center p-4">
+    <AuthLayout>
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -153,6 +154,6 @@ export function ResetPasswordPage() {
           </CardContent>
         </Card>
       </motion.div>
-    </div>
+    </AuthLayout>
   );
 }
