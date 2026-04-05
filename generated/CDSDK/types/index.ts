@@ -41,3 +41,41 @@ export interface MessageResponse {
 export interface ApiError {
   error: string;
 }
+
+// ─── Market ──────────────────────────────────────────────────────────────────
+
+export interface CandleBar {
+  timestamp: number; // Unix ms — start of the candle
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+  quoteAssetVolume: number;
+  confirm?: boolean; // true = candle closed; false = still forming
+  interval?: string;
+}
+
+export interface IndicatorSnapshot {
+  ema9: number | null;
+  ema21: number | null;
+  ema200: number | null;
+  macd: { macd: number; signal: number; histogram: number } | null;
+  vwap: number | null;
+}
+
+export interface LiveBar {
+  symbol: string;
+  interval: string; // '1m' | '5m' | '15m' | '1h' | '4h' | '1d'
+  kline: CandleBar;
+  indicators: IndicatorSnapshot;
+}
+
+// Discriminated union — what the server sends over /api/market/ws
+export type WsMessage = { type: 'snapshot'; bars: LiveBar[] } | { type: 'bar'; bar: LiveBar };
+
+export interface CandleHistoryResponse {
+  symbol: string;
+  interval: string;
+  candles: CandleBar[];
+}
