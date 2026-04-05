@@ -133,7 +133,7 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
             onClick={onClose}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            title="Close panel (re-open with the toggle in the toolbar)"
+            title="Close panel (re-open with the ⊞ toggle in the top row)"
             className="flex h-6 w-6 items-center justify-center rounded text-[#848e9c] hover:text-[#f6465d]"
           >
             <X className="h-3.5 w-3.5" />

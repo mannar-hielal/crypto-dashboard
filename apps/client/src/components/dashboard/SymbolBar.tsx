@@ -117,10 +117,10 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
       : null;
   const isPositive = (priceChange ?? 0) >= 0;
 
-  // ── 24h stats from available bars ───────────────────────────────────────
-  const high24h = bars.length > 0 ? Math.max(...bars.map((b) => b.high)) : null;
-  const low24h = bars.length > 0 ? Math.min(...bars.map((b) => b.low)) : null;
-  const vol24h = bars.length > 0 ? bars.reduce((sum, b) => sum + b.volume, 0) : null;
+  // ── Stats from loaded bars (not necessarily a true 24h window) ──────────
+  const periodHigh = bars.length > 0 ? Math.max(...bars.map((b) => b.high)) : null;
+  const periodLow = bars.length > 0 ? Math.min(...bars.map((b) => b.low)) : null;
+  const periodVol = bars.length > 0 ? bars.reduce((sum, b) => sum + b.volume, 0) : null;
 
   const activeEntry = SYMBOLS.find((s) => s.symbol === symbol);
   const filteredSymbols = SYMBOLS.filter(
@@ -289,20 +289,20 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
       {/* Divider */}
       <span className="h-4 w-px shrink-0 bg-white/[0.08]" />
 
-      {/* ── 24h stats ────────────────────────────────────────────────────── */}
+      {/* ── Stats derived from loaded bars ───────────────────────────────── */}
       <div className="hidden items-center gap-5 overflow-hidden lg:flex">
         <StatItem
-          label="24h Change"
+          label="Change"
           value={
             changePercent !== null ? `${isPositive ? '+' : ''}${changePercent.toFixed(2)}%` : '—'
           }
           positive={changePercent !== null ? isPositive : undefined}
         />
         <StatItem
-          label="↑ 24h High"
+          label="Period High"
           value={
-            high24h !== null
-              ? high24h.toLocaleString(undefined, {
+            periodHigh !== null
+              ? periodHigh.toLocaleString(undefined, {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })
@@ -310,17 +310,17 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
           }
         />
         <StatItem
-          label="↓ 24h Low"
+          label="Period Low"
           value={
-            low24h !== null
-              ? low24h.toLocaleString(undefined, {
+            periodLow !== null
+              ? periodLow.toLocaleString(undefined, {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })
               : '—'
           }
         />
-        <StatItem label="24h Volume (USDT)" value={vol24h !== null ? formatVol(vol24h) : '—'} />
+        <StatItem label="Volume (base)" value={periodVol !== null ? formatVol(periodVol) : '—'} />
       </div>
 
       {/* Push timeframes + status to the right */}

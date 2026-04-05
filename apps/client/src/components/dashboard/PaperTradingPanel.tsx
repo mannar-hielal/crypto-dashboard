@@ -95,28 +95,29 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
 
         {/* Right: collapse / expand + close */}
         <div className="flex items-center gap-0.5">
-          {/* Collapse ↔ Expand: only shown when panel is not hidden */}
-          {size === 'open' ? (
-            <motion.button
-              onClick={() => onSizeChange('collapsed')}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              title="Collapse"
-              className="flex h-6 w-6 items-center justify-center rounded text-[#848e9c] hover:text-white"
-            >
-              <ChevronDown className="h-3.5 w-3.5" />
-            </motion.button>
-          ) : (
-            <motion.button
-              onClick={() => onSizeChange('open')}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              title="Expand"
-              className="flex h-6 w-6 items-center justify-center rounded text-[#848e9c] hover:text-white"
-            >
-              <ChevronUp className="h-3.5 w-3.5" />
-            </motion.button>
-          )}
+          {/* Collapse ↔ Expand: hidden when panel is fully closed (h-0) */}
+          {size !== 'hidden' &&
+            (size === 'open' ? (
+              <motion.button
+                onClick={() => onSizeChange('collapsed')}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                title="Collapse"
+                className="flex h-6 w-6 items-center justify-center rounded text-[#848e9c] hover:text-white"
+              >
+                <ChevronDown className="h-3.5 w-3.5" />
+              </motion.button>
+            ) : (
+              <motion.button
+                onClick={() => onSizeChange('open')}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                title="Expand"
+                className="flex h-6 w-6 items-center justify-center rounded text-[#848e9c] hover:text-white"
+              >
+                <ChevronUp className="h-3.5 w-3.5" />
+              </motion.button>
+            ))}
 
           {/* Close: hides the panel entirely — floating pill re-opens it */}
           <motion.button

@@ -6,6 +6,7 @@ import { IndicatorManager } from '../services/IndicatorCalculator.js';
 import type { Kline } from '../types/index.js';
 import { config } from '../config.js';
 import { logger } from '../logger.js';
+import { ALLOWED_SYMBOLS } from '../constants.js';
 
 const log = logger.child({ plugin: 'bybit' });
 
@@ -142,29 +143,18 @@ async function bybitPlugin(fastify: FastifyInstance): Promise<void> {
   // ─── Connect in the background ───────────────────────────────────────────
   // Fire-and-forget: don't await so Fastify boots and serves health/auth
   // endpoints even when Bybit is temporarily unreachable.
-
-  // All symbols tracked for live klines — aggregator converts 1m → all intervals.
-  const LIVE_SYMBOLS = [
-    'BTCUSDT',
-    'ETHUSDT',
-    'SOLUSDT',
-    'BNBUSDT',
-    'XRPUSDT',
-    'DOGEUSDT',
-    'ADAUSDT',
-    'AVAXUSDT',
-    'LINKUSDT',
-  ];
+  // ALLOWED_SYMBOLS is the single source of truth (src/constants.ts) — also
+  // used by the market routes allowlist, so both stay in sync automatically.
 
   void manager
     .connect()
     .then(() => {
-      for (const sym of LIVE_SYMBOLS) {
+      for (const sym of ALLOWED_SYMBOLS) {
         manager.subscribe('kline', sym, '1');
       }
       log.info(
-        { testnet: config.bybitTestnet, symbols: LIVE_SYMBOLS },
-        `Bybit connected — subscribed to 1m klines for ${LIVE_SYMBOLS.length} symbols`
+        { testnet: config.bybitTestnet, symbols: ALLOWED_SYMBOLS },
+        `Bybit connected — subscribed to 1m klines for ${ALLOWED_SYMBOLS.length} symbols`
       );
     })
     .catch((err: unknown) => {

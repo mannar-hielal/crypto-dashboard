@@ -51,7 +51,7 @@ function toUTC(ms: number): UTCTimestamp {
 export function ChartPanel() {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const prevLenRef = useRef(0); // tracks first-load for fitContent()
+  const prevLenRef = useRef(0); // tracks first-load to trigger scrollToRealTime()
 
   // ── Series refs (created once, updated on every bars change) ─────────────
   const candleRef = useRef<ISeriesApi<'Candlestick'> | null>(null);

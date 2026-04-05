@@ -3,23 +3,14 @@ import type { WebSocket } from '@fastify/websocket';
 import type { LiveBar } from '../../plugins/bybit.js';
 import { config } from '../../config.js';
 import { logger } from '../../logger.js';
+import { ALLOWED_SYMBOLS } from '../../constants.js';
 
 const log = logger.child({ route: 'market' });
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 
-// 🔐 Allowlist: only these symbols and intervals are permitted
-const ALLOWED_SYMBOLS = new Set([
-  'BTCUSDT',
-  'ETHUSDT',
-  'SOLUSDT',
-  'BNBUSDT',
-  'XRPUSDT',
-  'DOGEUSDT',
-  'ADAUSDT',
-  'AVAXUSDT',
-  'LINKUSDT',
-]);
+// 🔐 Allowlist: single source of truth lives in src/constants.ts
+const ALLOWED_SYMBOLS_SET = new Set(ALLOWED_SYMBOLS);
 const ALLOWED_INTERVALS = new Set(['1m', '5m', '15m', '1h', '4h', '1d']);
 
 // Maps our interval notation → Bybit REST API notation
@@ -126,7 +117,7 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
       const limit = Math.min(parseInt(request.query.limit ?? '200', 10) || 200, 1000);
 
       // 🔐 Validate against allowlist
-      if (!ALLOWED_SYMBOLS.has(symbol)) {
+      if (!ALLOWED_SYMBOLS_SET.has(symbol)) {
         return reply.status(400).send({ error: `Symbol not supported: ${symbol}` });
       }
       if (!ALLOWED_INTERVALS.has(interval)) {
@@ -152,7 +143,7 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
       const interval = request.query.interval ?? '1m';
 
       // 🔐 Validate against allowlist
-      if (!ALLOWED_SYMBOLS.has(symbol) || !ALLOWED_INTERVALS.has(interval)) {
+      if (!ALLOWED_SYMBOLS_SET.has(symbol) || !ALLOWED_INTERVALS.has(interval)) {
         socket.close(1008, 'Invalid symbol or interval');
         return;
       }
