@@ -142,12 +142,30 @@ async function bybitPlugin(fastify: FastifyInstance): Promise<void> {
   // ─── Connect in the background ───────────────────────────────────────────
   // Fire-and-forget: don't await so Fastify boots and serves health/auth
   // endpoints even when Bybit is temporarily unreachable.
+
+  // All symbols tracked for live klines — aggregator converts 1m → all intervals.
+  const LIVE_SYMBOLS = [
+    'BTCUSDT',
+    'ETHUSDT',
+    'SOLUSDT',
+    'BNBUSDT',
+    'XRPUSDT',
+    'DOGEUSDT',
+    'ADAUSDT',
+    'AVAXUSDT',
+    'LINKUSDT',
+  ];
+
   void manager
     .connect()
     .then(() => {
-      // Phase 1: single symbol, 1-minute klines
-      manager.subscribe('kline', 'BTCUSDT', '1');
-      log.info({ testnet: config.bybitTestnet }, 'Bybit connected — subscribed to kline.1.BTCUSDT');
+      for (const sym of LIVE_SYMBOLS) {
+        manager.subscribe('kline', sym, '1');
+      }
+      log.info(
+        { testnet: config.bybitTestnet, symbols: LIVE_SYMBOLS },
+        `Bybit connected — subscribed to 1m klines for ${LIVE_SYMBOLS.length} symbols`
+      );
     })
     .catch((err: unknown) => {
       // Auto-reconnect will retry; don't crash startup

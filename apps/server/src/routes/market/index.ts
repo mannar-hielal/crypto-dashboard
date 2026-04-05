@@ -9,7 +9,17 @@ const log = logger.child({ route: 'market' });
 // ─── Validation ───────────────────────────────────────────────────────────────
 
 // 🔐 Allowlist: only these symbols and intervals are permitted
-const ALLOWED_SYMBOLS = new Set(['BTCUSDT', 'ETHUSDT']);
+const ALLOWED_SYMBOLS = new Set([
+  'BTCUSDT',
+  'ETHUSDT',
+  'SOLUSDT',
+  'BNBUSDT',
+  'XRPUSDT',
+  'DOGEUSDT',
+  'ADAUSDT',
+  'AVAXUSDT',
+  'LINKUSDT',
+]);
 const ALLOWED_INTERVALS = new Set(['1m', '5m', '15m', '1h', '4h', '1d']);
 
 // Maps our interval notation → Bybit REST API notation

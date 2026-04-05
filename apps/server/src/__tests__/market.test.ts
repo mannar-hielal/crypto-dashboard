@@ -104,6 +104,17 @@ describe('GET /api/market/candles', () => {
     expect(res.statusCode).toBe(200);
   });
 
+  it('accepts SOLUSDT, BNBUSDT, DOGEUSDT and other added symbols', async () => {
+    for (const sym of ['SOLUSDT', 'BNBUSDT', 'DOGEUSDT', 'ADAUSDT', 'AVAXUSDT', 'LINKUSDT']) {
+      stubFetchOk();
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/market/candles?symbol=${sym}&interval=1m`,
+      });
+      expect(res.statusCode, `expected 200 for ${sym}`).toBe(200);
+    }
+  });
+
   it('parses OHLCV fields correctly from the Bybit kline format', async () => {
     stubFetchOk([['1700000000000', '44800', '44900', '44700', '44900', '1.2', '53880']]);
 
@@ -153,7 +164,7 @@ describe('GET /api/market/candles', () => {
   it('returns 400 for an unsupported symbol', async () => {
     const res = await app.inject({
       method: 'GET',
-      url: '/api/market/candles?symbol=DOGEUSDT&interval=1m',
+      url: '/api/market/candles?symbol=PEPEUSDT&interval=1m',
     });
 
     expect(res.statusCode).toBe(400);
