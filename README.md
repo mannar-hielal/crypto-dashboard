@@ -41,7 +41,9 @@ A free, self-hosted paper trading dashboard that replicates TradingView Plus fea
 - [x] Cloudflare Pages deployment wired in CI/CD
 - [x] React Router v7 with public/protected route split
 - [x] Zustand auth store — access token in memory, refresh token in httpOnly cookie
-- [x] Login, Register, Forgot Password, Reset Password pages (Framer Motion animations)
+- [x] Login page — dark glassmorphism design, animated background orbs, glass card with Framer Motion entrance animation
+- [x] Register, Forgot Password, Reset Password pages (functional, UI redesign in progress)
+- [x] AnimatePresence page transitions wired in App.tsx
 - [x] Silent session restore on app boot via `/api/auth/refresh`
 - [ ] 4-panel synced chart layout (single symbol, multiple timeframes)
 - [ ] TradingView Lightweight Charts integration
@@ -52,7 +54,7 @@ A free, self-hosted paper trading dashboard that replicates TradingView Plus fea
 - [ ] EMA, MACD, VWAP displayed on charts
 - [ ] Paper buy / sell with virtual balance ($10,000 starting)
 - [ ] Trade history tracking
-- [ ] PWA shell (installable, mobile responsive)
+- [x] PWA shell — installable, mobile-responsive, dark splash screen (`#080B14`), custom candlestick icon
 
 ---
 
@@ -303,5 +305,5 @@ MIT — see [LICENSE](./LICENSE)
 ---
 
 **Status:** Phase 1 — In Progress  
-**Last Updated:** April 4, 2026  
+**Last Updated:** April 5, 2026  
 **Live:** [API](https://crypto-dashboard-api.fly.dev/health) · [App](https://crypto-dashboard-7yy.pages.dev)
