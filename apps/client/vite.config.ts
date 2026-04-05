@@ -48,8 +48,11 @@ export default defineConfig({
         navigateFallback: '/index.html',
         runtimeCaching: [
           {
-            // Cache same-origin http(s) assets — avoids Node-context `self` reference
-            urlPattern: ({ url }) => url.protocol === 'http:' || url.protocol === 'https:',
+            // Cache same-origin static assets only — explicitly excludes /api/* so auth/session
+            // responses are never served from the SW cache (always go to network for live data).
+            urlPattern: ({ url }) =>
+              (url.protocol === 'http:' || url.protocol === 'https:') &&
+              !url.pathname.startsWith('/api/'),
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'app-shell',

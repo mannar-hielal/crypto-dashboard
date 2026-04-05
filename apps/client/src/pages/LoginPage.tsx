@@ -34,7 +34,7 @@ export function LoginPage() {
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { email: '', password: '' }, // explicit defaults — prevents undefined on conditional mounts
   });
 
   const onSubmit = async (data: LoginFormData) => {
