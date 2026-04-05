@@ -19,7 +19,7 @@ const DISMISSED_KEY = 'pwa-install-banner-dismissed';
  *              Hides automatically on `appinstalled`.
  */
 export function PWAInstallBanner() {
-  const [platform, setPlatform] = useState<'ios' | 'ios-other' | 'android' | null>(null);
+  const [platform, setPlatform] = useState<'ios' | 'ipad' | 'ios-other' | 'android' | null>(null);
   const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null);
   // Track the android delay timer so it can be cleared on unmount (fix: timer leak)
   const androidTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -43,8 +43,16 @@ export function PWAInstallBanner() {
     // Tell the user to open the URL in Safari instead.
     const isNonSafariIOS = isIOS && /CriOS|EdgA|EdgiOS|FxiOS|OPiOS/i.test(ua);
 
+    // iPad detection: used to show correct Share button location in instructions.
+    // On iPad, the Share button is in the top toolbar; on iPhone it's at the bottom.
+    const isIPad =
+      /ipad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
     if (isIOS && !isInStandaloneMode) {
-      const timer = setTimeout(() => setPlatform(isNonSafariIOS ? 'ios-other' : 'ios'), 2500);
+      const timer = setTimeout(
+        () => setPlatform(isNonSafariIOS ? 'ios-other' : isIPad ? 'ipad' : 'ios'),
+        2500
+      );
       return () => clearTimeout(timer);
     }
 
@@ -122,33 +130,63 @@ export function PWAInstallBanner() {
         <div className="flex-1">
           <p className="text-sm font-semibold">Install Crypto Dashboard</p>
 
-          {platform === 'ios' ? (
-            // ── iOS Safari: Share → Add to Home Screen ────────────────────────
-            <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-              Tap{' '}
-              <span aria-label="Share button" className="inline-block">
-                <svg
-                  viewBox="0 0 24 24"
-                  className="mb-0.5 inline-block h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-                  <polyline points="16 6 12 2 8 6" />
-                  <line x1="12" y1="2" x2="12" y2="15" />
-                </svg>
-              </span>{' '}
-              then <strong>"Add to Home Screen"</strong> to install this app on your iPhone.
-            </p>
+          {platform === 'ios' || platform === 'ipad' ? (
+            // ── iOS / iPadOS Safari: visual step-by-step guide ────────────────
+            // Apple provides no JS API to trigger "Add to Home Screen" — the user
+            // must do it manually via the Share sheet. We make it as clear as possible.
+            <div className="mt-2 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="bg-primary text-primary-foreground flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
+                  1
+                </span>
+                <p className="text-muted-foreground text-xs">
+                  Tap the{' '}
+                  <span className="inline-flex items-center gap-0.5 font-medium">
+                    Share
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="inline-block h-3.5 w-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                      <polyline points="16 6 12 2 8 6" />
+                      <line x1="12" y1="2" x2="12" y2="15" />
+                    </svg>
+                  </span>{' '}
+                  button{' '}
+                  {platform === 'ipad'
+                    ? 'in the top-right toolbar of Safari'
+                    : 'at the bottom of Safari'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="bg-primary text-primary-foreground flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
+                  2
+                </span>
+                <p className="text-muted-foreground text-xs">
+                  Scroll down and tap{' '}
+                  <strong className="text-foreground">"Add to Home Screen"</strong>
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="bg-primary text-primary-foreground flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
+                  3
+                </span>
+                <p className="text-muted-foreground text-xs">
+                  Tap <strong className="text-foreground">"Add"</strong> — done!
+                </p>
+              </div>
+            </div>
           ) : platform === 'ios-other' ? (
-            // ── Chrome / Edge / Firefox on iOS: must use Safari ───────────────
+            // ── Chrome / Edge / Firefox on iOS or iPadOS: must use Safari ─────
             <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
               To install this app, open this page in <strong>Safari</strong> — your current browser
-              doesn&apos;t support PWA installation on iOS.
+              doesn&apos;t support PWA installation on this device.
             </p>
           ) : (
             // ── Android / Chrome: real install button ─────────────────────────
