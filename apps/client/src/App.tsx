@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router';
 import { AnimatePresence } from 'framer-motion';
 import { authApi } from '@crypto-dashboard/sdk';
@@ -21,7 +21,17 @@ export default function App() {
   const setLoading = useAuthStore((state) => state.setLoading);
   const location = useLocation();
 
+  // 🔐 React StrictMode (dev) double-invokes effects: both calls fire a POST /refresh
+  //    concurrently with the SAME cookie. The server uses token rotation — the first
+  //    request consumes the token, the second gets a 401, and the catch sets
+  //    isLoading=false with no auth → user is logged out on every page refresh.
+  //    useRef value survives StrictMode's simulated remount, so only ONE fetch fires.
+  const refreshInitiated = useRef(false);
+
   useEffect(() => {
+    if (refreshInitiated.current) return;
+    refreshInitiated.current = true;
+
     // 🔐 On every app boot, try to restore the session silently.
     // The browser sends the httpOnly refresh_token cookie automatically.
     // If it's valid, we get a new access token and the user stays logged in.
@@ -31,6 +41,8 @@ export default function App() {
         return authApi.me(accessToken).then(({ user }) => setAuth(accessToken, user));
       })
       .catch(() => {
+        // Refresh failed (first visit, expired token, logged out on another tab).
+        // Clear the loading state so ProtectedRoute redirects to /login.
         setLoading(false);
       });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
