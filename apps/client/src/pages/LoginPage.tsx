@@ -90,9 +90,12 @@ export function LoginPage() {
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="space-y-4">
-              {/* Server error */}
+              {/* Server error — role=alert makes screen readers announce it immediately */}
               {serverError && (
                 <motion.div
+                  role="alert"
+                  aria-live="polite"
+                  aria-atomic="true"
                   initial={{ opacity: 0, y: -6 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="rounded-lg border border-[#f6465d]/20 bg-[#f6465d]/10 px-3 py-2.5 text-xs font-medium text-[#f6465d]"

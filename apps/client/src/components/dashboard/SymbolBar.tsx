@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import NumberFlow from '@number-flow/react';
 import {
   Star,
@@ -117,10 +117,19 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
       : null;
   const isPositive = (priceChange ?? 0) >= 0;
 
-  // ── Stats from loaded bars (not necessarily a true 24h window) ──────────
-  const periodHigh = bars.length > 0 ? Math.max(...bars.map((b) => b.high)) : null;
-  const periodLow = bars.length > 0 ? Math.min(...bars.map((b) => b.low)) : null;
-  const periodVol = bars.length > 0 ? bars.reduce((sum, b) => sum + b.volume, 0) : null;
+  // ── Stats from loaded bars — single O(n) pass, memoized against bars reference ──
+  const { periodHigh, periodLow, periodVol } = useMemo(() => {
+    if (bars.length === 0) return { periodHigh: null, periodLow: null, periodVol: null };
+    let high = -Infinity;
+    let low = Infinity;
+    let vol = 0;
+    for (const b of bars) {
+      if (b.high > high) high = b.high;
+      if (b.low < low) low = b.low;
+      vol += b.volume;
+    }
+    return { periodHigh: high, periodLow: low, periodVol: vol };
+  }, [bars]);
 
   const activeEntry = SYMBOLS.find((s) => s.symbol === symbol);
   const filteredSymbols = SYMBOLS.filter(
