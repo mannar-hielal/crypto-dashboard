@@ -9,9 +9,18 @@ const log = logger.child({ route: 'market' });
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 
+// Derive the narrow union type from the allowlist array
+type AllowedSymbol = (typeof ALLOWED_SYMBOLS)[number];
+
 // 🔐 Allowlist: single source of truth lives in src/constants.ts
-const ALLOWED_SYMBOLS_SET = new Set(ALLOWED_SYMBOLS);
+// Typed as Set<string> so .has() accepts any string without TypeScript complaints.
+const ALLOWED_SYMBOLS_SET = new Set<string>(ALLOWED_SYMBOLS);
 const ALLOWED_INTERVALS = new Set(['1m', '5m', '15m', '1h', '4h', '1d']);
+
+/** Type guard: narrows a raw string to AllowedSymbol after the Set check. */
+function isAllowedSymbol(s: string): s is AllowedSymbol {
+  return ALLOWED_SYMBOLS_SET.has(s);
+}
 
 // Maps our interval notation → Bybit REST API notation
 const BYBIT_INTERVAL_MAP: Record<string, string> = {
@@ -112,17 +121,18 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
       },
     },
     async (request, reply) => {
-      const symbol = (request.query.symbol ?? 'BTCUSDT').toUpperCase();
+      const symbolRaw = (request.query.symbol ?? 'BTCUSDT').toUpperCase();
       const interval = request.query.interval ?? '1m';
       const limit = Math.min(parseInt(request.query.limit ?? '200', 10) || 200, 1000);
 
-      // 🔐 Validate against allowlist
-      if (!ALLOWED_SYMBOLS_SET.has(symbol)) {
-        return reply.status(400).send({ error: `Symbol not supported: ${symbol}` });
+      // 🔐 Validate against allowlist — guard also narrows type to AllowedSymbol
+      if (!isAllowedSymbol(symbolRaw)) {
+        return reply.status(400).send({ error: `Symbol not supported: ${symbolRaw}` });
       }
       if (!ALLOWED_INTERVALS.has(interval)) {
         return reply.status(400).send({ error: `Interval not supported: ${interval}` });
       }
+      const symbol = symbolRaw; // AllowedSymbol
 
       try {
         const candles = await fetchHistoricalCandles(symbol, interval, limit);
@@ -139,14 +149,15 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
     '/ws',
     { websocket: true },
     (socket: WebSocket, request: FastifyRequest<{ Querystring: WsQuerystring }>) => {
-      const symbol = (request.query.symbol ?? 'BTCUSDT').toUpperCase();
+      const symbolRaw = (request.query.symbol ?? 'BTCUSDT').toUpperCase();
       const interval = request.query.interval ?? '1m';
 
-      // 🔐 Validate against allowlist
-      if (!ALLOWED_SYMBOLS_SET.has(symbol) || !ALLOWED_INTERVALS.has(interval)) {
+      // 🔐 Validate against allowlist — guard also narrows type to AllowedSymbol
+      if (!isAllowedSymbol(symbolRaw) || !ALLOWED_INTERVALS.has(interval)) {
         socket.close(1008, 'Invalid symbol or interval');
         return;
       }
+      const symbol = symbolRaw; // AllowedSymbol
 
       log.info({ symbol, interval }, 'Client connected to live feed');
 
