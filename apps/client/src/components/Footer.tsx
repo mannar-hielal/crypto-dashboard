@@ -2,7 +2,7 @@ import { Link } from 'react-router';
 
 export function Footer() {
   return (
-    <footer className="py-6 text-center">
+    <footer className="px-4 py-6 text-center">
       <p className="text-muted-foreground text-xs">
         ⚠️ Paper trading only — no real money involved. For educational purposes only.
       </p>

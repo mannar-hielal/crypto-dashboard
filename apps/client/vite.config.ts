@@ -40,6 +40,14 @@ export default defineConfig({
         ],
       },
 
+      // Enable SW registration in Vite dev server so Chrome considers the app
+      // installable during local development (Application → Manifest → "Add to home screen").
+      // type: 'module' matches Vite's ESM dev output.
+      devOptions: {
+        enabled: true,
+        type: 'module',
+      },
+
       // Workbox cache strategy
       workbox: {
         // Cache the app shell (HTML, JS, CSS, fonts, images) — stale-while-revalidate

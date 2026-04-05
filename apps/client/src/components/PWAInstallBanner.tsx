@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 
 // BeforeInstallPromptEvent is not yet in standard TS DOM lib
 interface BeforeInstallPromptEvent extends Event {
@@ -21,8 +22,9 @@ const DISMISSED_KEY = 'pwa-install-banner-dismissed';
 export function PWAInstallBanner() {
   const [platform, setPlatform] = useState<'ios' | 'ipad' | 'ios-other' | 'android' | null>(null);
   const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null);
-  // Track the android delay timer so it can be cleared on unmount (fix: timer leak)
   const androidTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Respect the OS "reduce motion" preference — disables the attention shake
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     const isDismissed = localStorage.getItem(DISMISSED_KEY) === 'true';
@@ -105,105 +107,128 @@ export function PWAInstallBanner() {
   if (!platform) return null;
 
   return (
-    <div
-      role="banner"
-      aria-label="Install app"
-      className="fixed bottom-4 left-4 right-4 z-50 rounded-2xl border border-border bg-card p-4 shadow-2xl"
+    // Layer 1 — spring slide-up entrance from below the viewport
+    <motion.div
+      initial={{ y: 120, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+      className="fixed bottom-4 left-4 right-4 z-50"
     >
-      {/* Dismiss button */}
-      <button
-        onClick={dismiss}
-        aria-label="Dismiss install banner"
-        className="text-muted-foreground hover:text-foreground absolute right-3 top-3 text-lg leading-none"
+      {/* Layer 2 — periodic attention shake; pauses between each cycle */}
+      <motion.div
+        animate={
+          prefersReducedMotion
+            ? {}
+            : {
+                rotate: [0, -3, 3, -2, 2, -1, 0],
+                x: [0, -6, 6, -4, 4, -2, 0],
+              }
+        }
+        transition={{
+          duration: 0.55,
+          repeat: Infinity,
+          repeatDelay: 3.5,
+          ease: 'easeInOut',
+        }}
+        role="banner"
+        aria-label="Install app"
+        className="rounded-2xl border border-border bg-card p-4 shadow-2xl"
       >
-        ✕
-      </button>
+        {/* Dismiss button */}
+        <button
+          onClick={dismiss}
+          aria-label="Dismiss install banner"
+          className="text-muted-foreground hover:text-foreground absolute right-3 top-3 text-lg leading-none"
+        >
+          ✕
+        </button>
 
-      <div className="flex items-start gap-3 pr-6">
-        {/* App icon */}
-        <img
-          src="/pwa-192x192.png"
-          alt="Crypto Dashboard"
-          className="h-12 w-12 flex-shrink-0 rounded-xl"
-        />
+        <div className="flex items-start gap-3 pr-6">
+          {/* App icon */}
+          <img
+            src="/pwa-192x192.png"
+            alt="Crypto Dashboard"
+            className="h-12 w-12 flex-shrink-0 rounded-xl"
+          />
 
-        <div className="flex-1">
-          <p className="text-sm font-semibold">Install Crypto Dashboard</p>
+          <div className="flex-1">
+            <p className="text-sm font-semibold">Install Crypto Dashboard</p>
 
-          {platform === 'ios' || platform === 'ipad' ? (
-            // ── iOS / iPadOS Safari: visual step-by-step guide ────────────────
-            // Apple provides no JS API to trigger "Add to Home Screen" — the user
-            // must do it manually via the Share sheet. We make it as clear as possible.
-            <div className="mt-2 space-y-1.5">
-              <div className="flex items-center gap-2">
-                <span className="bg-primary text-primary-foreground flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
-                  1
-                </span>
-                <p className="text-muted-foreground text-xs">
-                  Tap the{' '}
-                  <span className="inline-flex items-center gap-0.5 font-medium">
-                    Share
-                    <svg
-                      viewBox="0 0 24 24"
-                      className="inline-block h-3.5 w-3.5"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-                      <polyline points="16 6 12 2 8 6" />
-                      <line x1="12" y1="2" x2="12" y2="15" />
-                    </svg>
-                  </span>{' '}
-                  button{' '}
-                  {platform === 'ipad'
-                    ? 'in the top-right toolbar of Safari'
-                    : 'at the bottom of Safari'}
-                </p>
+            {platform === 'ios' || platform === 'ipad' ? (
+              // ── iOS / iPadOS Safari: visual step-by-step guide ────────────────
+              // Apple provides no JS API to trigger "Add to Home Screen" — the user
+              // must do it manually via the Share sheet. We make it as clear as possible.
+              <div className="mt-2 space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="bg-primary text-primary-foreground flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
+                    1
+                  </span>
+                  <p className="text-muted-foreground text-xs">
+                    Tap the{' '}
+                    <span className="inline-flex items-center gap-0.5 font-medium">
+                      Share
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="inline-block h-3.5 w-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                        <polyline points="16 6 12 2 8 6" />
+                        <line x1="12" y1="2" x2="12" y2="15" />
+                      </svg>
+                    </span>{' '}
+                    button{' '}
+                    {platform === 'ipad'
+                      ? 'in the top-right toolbar of Safari'
+                      : 'at the bottom of Safari'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="bg-primary text-primary-foreground flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
+                    2
+                  </span>
+                  <p className="text-muted-foreground text-xs">
+                    Scroll down and tap{' '}
+                    <strong className="text-foreground">"Add to Home Screen"</strong>
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="bg-primary text-primary-foreground flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
+                    3
+                  </span>
+                  <p className="text-muted-foreground text-xs">
+                    Tap <strong className="text-foreground">"Add"</strong> — done!
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="bg-primary text-primary-foreground flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
-                  2
-                </span>
-                <p className="text-muted-foreground text-xs">
-                  Scroll down and tap{' '}
-                  <strong className="text-foreground">"Add to Home Screen"</strong>
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="bg-primary text-primary-foreground flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
-                  3
-                </span>
-                <p className="text-muted-foreground text-xs">
-                  Tap <strong className="text-foreground">"Add"</strong> — done!
-                </p>
-              </div>
-            </div>
-          ) : platform === 'ios-other' ? (
-            // ── Chrome / Edge / Firefox on iOS or iPadOS: must use Safari ─────
-            <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-              To install this app, open this page in <strong>Safari</strong> — your current browser
-              doesn&apos;t support PWA installation on this device.
-            </p>
-          ) : (
-            // ── Android / Chrome: real install button ─────────────────────────
-            <>
+            ) : platform === 'ios-other' ? (
+              // ── Chrome / Edge / Firefox on iOS or iPadOS: must use Safari ─────
               <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                Add to your home screen for a faster, full-screen experience.
+                To install this app, open this page in <strong>Safari</strong> — your current
+                browser doesn&apos;t support PWA installation on this device.
               </p>
-              <button
-                onClick={() => void handleAndroidInstall()}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 mt-3 rounded-lg px-4 py-1.5 text-xs font-semibold transition-colors"
-              >
-                Install
-              </button>
-            </>
-          )}
+            ) : (
+              // ── Android / Chrome: real install button ─────────────────────────
+              <>
+                <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                  Add to your home screen for a faster, full-screen experience.
+                </p>
+                <button
+                  onClick={() => void handleAndroidInstall()}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 mt-3 rounded-lg px-4 py-1.5 text-xs font-semibold transition-colors"
+                >
+                  Install
+                </button>
+              </>
+            )}
+          </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
