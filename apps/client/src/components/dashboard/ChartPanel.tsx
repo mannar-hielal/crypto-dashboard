@@ -319,7 +319,12 @@ export function ChartPanel() {
     const timeScale = chartRef.current?.timeScale();
     const firstTime = toUTC(bars[0].timestamp);
     const lastTime = toUTC(bars[bars.length - 1].timestamp);
-    const visibleRange = timeScale?.getVisibleRange();
+    // getVisibleRange() returns Time (a union), but we only ever feed UTCTimestamp
+    // values so it's safe to cast here for the comparison below.
+    const visibleRange = timeScale?.getVisibleRange() as
+      | { from: UTCTimestamp; to: UTCTimestamp }
+      | null
+      | undefined;
 
     const shouldFitContent =
       prevLenRef.current === 0 ||
