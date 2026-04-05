@@ -1,0 +1,173 @@
+import fp from 'fastify-plugin';
+import type { FastifyInstance } from 'fastify';
+import { BybitWebSocketManager } from '../services/BybitWebSocketManager.js';
+import { CandleAggregator } from '../services/CandleAggregator.js';
+import { IndicatorManager } from '../services/IndicatorCalculator.js';
+import type { Kline } from '../types/index.js';
+import { config } from '../config.js';
+import { logger } from '../logger.js';
+
+const log = logger.child({ plugin: 'bybit' });
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface IndicatorSnapshot {
+  ema9: number | null;
+  ema21: number | null;
+  ema200: number | null;
+  macd: { macd: number; signal: number; histogram: number } | null;
+  vwap: number | null;
+}
+
+export interface LiveBar {
+  symbol: string;
+  interval: string; // '1m' | '5m' | '15m' | '1h' | '4h' | '1d'
+  kline: Kline;
+  indicators: IndicatorSnapshot;
+}
+
+export interface BybitService {
+  /** Returns the last SNAPSHOT_SIZE bars for a symbol+interval pair */
+  getSnapshot(symbol: string, interval: string): LiveBar[];
+  /** Subscribe to live bar updates. Returns an unsubscribe function. */
+  subscribe(listener: (bar: LiveBar) => void): () => void;
+}
+
+// Extend FastifyInstance so TypeScript knows about fastify.bybit
+declare module 'fastify' {
+  interface FastifyInstance {
+    bybit: BybitService;
+  }
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const SNAPSHOT_SIZE = 500; // ~8 hours of 1m candles in memory
+
+// ─── Plugin ───────────────────────────────────────────────────────────────────
+
+async function bybitPlugin(fastify: FastifyInstance): Promise<void> {
+  // Skip real connection in test environment
+  if (config.nodeEnv === 'test') {
+    const noopService: BybitService = {
+      getSnapshot: () => [],
+      subscribe: () => () => undefined,
+    };
+    fastify.decorate('bybit', noopService);
+    return;
+  }
+
+  const manager = new BybitWebSocketManager(config.bybitTestnet);
+  const aggregator = new CandleAggregator();
+
+  // One IndicatorManager per "symbol:interval" key
+  const indicatorManagers = new Map<string, IndicatorManager>();
+  // Ring-buffer of recent bars per "symbol:interval" key
+  const snapshots = new Map<string, LiveBar[]>();
+  // Active browser WebSocket listeners
+  const listeners = new Set<(bar: LiveBar) => void>();
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────
+
+  function getOrCreateManager(key: string): IndicatorManager {
+    if (!indicatorManagers.has(key)) {
+      indicatorManagers.set(key, new IndicatorManager());
+    }
+    return indicatorManagers.get(key)!;
+  }
+
+  function upsertSnapshot(key: string, bar: LiveBar): void {
+    if (!snapshots.has(key)) snapshots.set(key, []);
+    const snap = snapshots.get(key)!;
+    const last = snap[snap.length - 1];
+    // Update the forming (unconfirmed) candle in-place instead of appending
+    if (last?.kline.timestamp === bar.kline.timestamp) {
+      snap[snap.length - 1] = bar;
+    } else {
+      snap.push(bar);
+      if (snap.length > SNAPSHOT_SIZE) snap.shift();
+    }
+  }
+
+  // ─── Data pipeline: Bybit → Aggregator → Indicators → Broadcast ───────────
+
+  manager.on('data', (streamData) => {
+    if (streamData.dataType !== 'kline') return;
+
+    const kline = streamData.data as Kline;
+    const symbol = streamData.symbol;
+
+    // Aggregator converts the incoming 1m kline into all intervals
+    const aggregated = aggregator.process(kline, symbol);
+
+    for (const [interval, aggregatedKline] of aggregated) {
+      const key = `${symbol}:${interval}`;
+      const indicatorManager = getOrCreateManager(key);
+      const iv = indicatorManager.update(aggregatedKline);
+
+      const bar: LiveBar = {
+        symbol,
+        interval,
+        kline: aggregatedKline,
+        indicators: {
+          ema9: iv.ema9.value,
+          ema21: iv.ema21.value,
+          ema200: iv.ema200.value,
+          macd: {
+            macd: iv.macd.macd,
+            signal: iv.macd.signal,
+            histogram: iv.macd.histogram,
+          },
+          vwap: iv.vwap.vwap,
+        },
+      };
+
+      upsertSnapshot(key, bar);
+
+      // Broadcast to all connected WebSocket clients
+      for (const listener of listeners) {
+        try {
+          listener(bar);
+        } catch (err) {
+          log.error({ err }, 'Broadcast listener error');
+        }
+      }
+    }
+  });
+
+  manager.on('error', (err) => {
+    log.error({ err }, 'Bybit WebSocket error');
+  });
+
+  // ─── Connect on startup ───────────────────────────────────────────────────
+
+  try {
+    await manager.connect();
+    // Phase 1: single symbol, 1-minute klines
+    manager.subscribe('kline', 'BTCUSDT', '1');
+    log.info({ testnet: config.bybitTestnet }, 'Bybit connected — subscribed to kline.1.BTCUSDT');
+  } catch (err) {
+    // Don't fail startup if Bybit is temporarily unreachable — reconnect will retry
+    log.error({ err }, 'Bybit initial connection failed — auto-reconnect will retry');
+  }
+
+  // ─── Decorate fastify ─────────────────────────────────────────────────────
+
+  const service: BybitService = {
+    getSnapshot: (symbol, interval) => snapshots.get(`${symbol}:${interval}`) ?? [],
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+
+  fastify.decorate('bybit', service);
+
+  // Clean disconnect on server close (prevents zombie connections)
+  fastify.addHook('onClose', async () => {
+    manager.disconnect();
+    log.info('Bybit disconnected');
+  });
+}
+
+export default fp(bybitPlugin, { name: 'bybit' });
