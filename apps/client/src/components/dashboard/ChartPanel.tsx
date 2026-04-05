@@ -313,8 +313,21 @@ export function ChartPanel() {
     macdLineRef.current.setData(linePoints(macd));
     signalRef.current.setData(linePoints(signal));
 
-    // Auto-fit the time scale on first load only — user controls zoom after that
-    if (prevLenRef.current === 0) chartRef.current?.timeScale().fitContent();
+    // Auto-fit on first load, and also when a snapshot replacement moves the
+    // entire dataset outside the current visible range (e.g. interval change).
+    // For ordinary incremental bar updates, preserve the user's zoom/pan state.
+    const timeScale = chartRef.current?.timeScale();
+    const firstTime = toUTC(bars[0].timestamp);
+    const lastTime = toUTC(bars[bars.length - 1].timestamp);
+    const visibleRange = timeScale?.getVisibleRange();
+
+    const shouldFitContent =
+      prevLenRef.current === 0 ||
+      !visibleRange ||
+      lastTime < visibleRange.from ||
+      firstTime > visibleRange.to;
+
+    if (shouldFitContent) timeScale?.fitContent();
     prevLenRef.current = bars.length;
   }, [bars]);
 

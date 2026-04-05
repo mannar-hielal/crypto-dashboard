@@ -60,17 +60,17 @@ A free, self-hosted paper trading dashboard that replicates TradingView Plus fea
 
 ## 🏗️ Architecture
 
-| Layer              | Stack                                                             |
-| ------------------ | ----------------------------------------------------------------- |
-| **Backend**        | Node.js v24 + Fastify + Prisma 7 + PostgreSQL 16                  |
-| **Frontend**       | React 19 + TypeScript + Vite 8 + Tailwind CSS v4                  |
-| **Charting**       | TradingView Lightweight Charts v5                                 |
-| **Shared SDK**     | `generated/CDSDK` — types + API functions                        |
-| **State**          | Zustand (auth, market, paper trading)                             |
-| **Logger**         | Pino (structured JSON in prod, pretty-printed in dev)             |
-| **Data**           | Bybit V5 WebSocket API (mainnet)                                  |
-| **Infrastructure** | Docker Compose (PostgreSQL + Redis)                               |
-| **Hosting**        | Fly.io (server) + Cloudflare Pages (client)                       |
+| Layer              | Stack                                                 |
+| ------------------ | ----------------------------------------------------- |
+| **Backend**        | Node.js v24 + Fastify + Prisma 7 + PostgreSQL 16      |
+| **Frontend**       | React 19 + TypeScript + Vite 8 + Tailwind CSS v4      |
+| **Charting**       | TradingView Lightweight Charts v5                     |
+| **Shared SDK**     | `generated/CDSDK` — types + API functions             |
+| **State**          | Zustand (auth, market, paper trading)                 |
+| **Logger**         | Pino (structured JSON in prod, pretty-printed in dev) |
+| **Data**           | Bybit V5 WebSocket API (mainnet)                      |
+| **Infrastructure** | Docker Compose (PostgreSQL + Redis)                   |
+| **Hosting**        | Fly.io (server) + Cloudflare Pages (client)           |
 
 ---
 
@@ -236,17 +236,17 @@ pnpm prisma studio            # Visual DB browser at localhost:5555
 
 ## 🧪 Test Coverage
 
-| Suite                           | Tests | What's covered                                                          |
-| ------------------------------- | ----- | ----------------------------------------------------------------------- |
-| `auth.test.ts`                  | 26    | Register, login, refresh, logout, /me, forgot-password, reset-password  |
-| `health.test.ts`                | 2     | Health endpoint                                                         |
-| `market.test.ts`                | 10    | Candles route — defaults, OHLCV parsing, allowlist, 502 errors          |
-| `BybitWebSocketManager.test.ts` | 25    | Subscribe/unsubscribe, message parsing, DoS guard, connect lifecycle    |
-| `CandleAggregator.test.ts`      | 14    | OHLCV aggregation, close accuracy, multi-symbol isolation, history      |
-| `IndicatorCalculator.test.ts`   | 8     | EMA, MACD, VWAP calculations                                            |
-| `marketStore.test.ts`           | 18    | setSnapshot, addBar upsert, MAX_BARS cap, derived state                 |
-| `paperStore.test.ts`            | 25    | Order validation, PnL (long/short), balance floor, history cap          |
-| **Total**                       | **128** |                                                                       |
+| Suite                           | Tests   | What's covered                                                         |
+| ------------------------------- | ------- | ---------------------------------------------------------------------- |
+| `auth.test.ts`                  | 26      | Register, login, refresh, logout, /me, forgot-password, reset-password |
+| `health.test.ts`                | 2       | Health endpoint                                                        |
+| `market.test.ts`                | 10      | Candles route — defaults, OHLCV parsing, allowlist, 502 errors         |
+| `BybitWebSocketManager.test.ts` | 25      | Subscribe/unsubscribe, message parsing, DoS guard, connect lifecycle   |
+| `CandleAggregator.test.ts`      | 14      | OHLCV aggregation, close accuracy, multi-symbol isolation, history     |
+| `IndicatorCalculator.test.ts`   | 8       | EMA, MACD, VWAP calculations                                           |
+| `marketStore.test.ts`           | 18      | setSnapshot, addBar upsert, MAX_BARS cap, derived state                |
+| `paperStore.test.ts`            | 25      | Order validation, PnL (long/short), balance floor, history cap         |
+| **Total**                       | **128** |                                                                        |
 
 ---
 
@@ -264,20 +264,20 @@ All endpoints are documented with request/response schemas, authentication requi
 
 ## 🔐 Security Hardening
 
-| Area             | Measure                                                                                                                                                                  |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| HTTP headers     | Helmet (XSS, clickjacking, MIME sniffing)                                                                                                                                |
-| Auth             | bcrypt cost 12, timing-attack safe compare                                                                                                                               |
-| Tokens           | Access token in Zustand memory (15 min); refresh token in httpOnly cookie (7 days, `sameSite: none + secure` in prod, `lax` in dev)                                      |
-| CSRF             | `sameSite: none` paired with `secure: true` (HTTPS-only) in production; state-changing endpoints require a valid JWT or refresh token                                    |
-| Token rotation   | Refresh tokens hashed (SHA-256) in DB, rotated on every use                                                                                                              |
-| Password reset   | One-time token, 1h expiry, marked `usedAt` after use                                                                                                                     |
-| Rate limiting    | Global 100/min + per-route (5/hr register, 10/15min login, 3/15min forgot-password)                                                                                      |
-| Input validation | Fastify JSON Schema with `additionalProperties: false`                                                                                                                   |
-| WebSocket        | 64KB message size limit, symbol/channel allowlist, `readyState` check before send                                                                                        |
-| Logging          | Pino structured logs — credentials never logged                                                                                                                          |
-| CORS             | `CORS_ORIGIN` env var — not hardcoded                                                                                                                                    |
-| Env vars         | Validated at startup; process exits on missing critical vars                                                                                                             |
+| Area             | Measure                                                                                                                               |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| HTTP headers     | Helmet (XSS, clickjacking, MIME sniffing)                                                                                             |
+| Auth             | bcrypt cost 12, timing-attack safe compare                                                                                            |
+| Tokens           | Access token in Zustand memory (15 min); refresh token in httpOnly cookie (7 days, `sameSite: none + secure` in prod, `lax` in dev)   |
+| CSRF             | `sameSite: none` paired with `secure: true` (HTTPS-only) in production; state-changing endpoints require a valid JWT or refresh token |
+| Token rotation   | Refresh tokens hashed (SHA-256) in DB, rotated on every use                                                                           |
+| Password reset   | One-time token, 1h expiry, marked `usedAt` after use                                                                                  |
+| Rate limiting    | Global 100/min + per-route (5/hr register, 10/15min login, 3/15min forgot-password)                                                   |
+| Input validation | Fastify JSON Schema with `additionalProperties: false`                                                                                |
+| WebSocket        | 64KB message size limit, symbol/channel allowlist, `readyState` check before send                                                     |
+| Logging          | Pino structured logs — credentials never logged                                                                                       |
+| CORS             | `CORS_ORIGIN` env var — not hardcoded                                                                                                 |
+| Env vars         | Validated at startup; process exits on missing critical vars                                                                          |
 
 ---
 

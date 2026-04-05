@@ -292,29 +292,44 @@ export class BybitWebSocketManager extends EventEmitter {
       const items = Array.isArray(data) ? data : [data];
       if (items.length === 0) return null;
 
-      // Bybit v5 kline object shape
-      const item = items[0] as {
-        start: number;
-        open: string;
-        high: string;
-        low: string;
-        close: string;
-        volume: string;
-        turnover: string;
-        confirm: boolean;
-        interval: string;
-      };
+      const item = items[0];
+      // Runtime guard: reject anything that isn't a plain object
+      if (!item || typeof item !== 'object') return null;
+      const raw = item as Record<string, unknown>;
+
+      // Coerce all numeric fields and reject the message if any are non-finite
+      // (guards against Bybit sending a string "NaN" or a missing field)
+      const timestamp = Number(raw.start);
+      const open = parseFloat(String(raw.open));
+      const high = parseFloat(String(raw.high));
+      const low = parseFloat(String(raw.low));
+      const close = parseFloat(String(raw.close));
+      const volume = parseFloat(String(raw.volume));
+      const quoteAssetVolume = parseFloat(String(raw.turnover));
+
+      if (
+        !Number.isFinite(timestamp) ||
+        !Number.isFinite(open) ||
+        !Number.isFinite(high) ||
+        !Number.isFinite(low) ||
+        !Number.isFinite(close) ||
+        !Number.isFinite(volume) ||
+        !Number.isFinite(quoteAssetVolume)
+      ) {
+        log.warn({ symbol }, 'Kline message dropped: non-finite numeric field');
+        return null;
+      }
 
       const kline: Kline = {
-        timestamp: item.start,
-        open: parseFloat(item.open),
-        high: parseFloat(item.high),
-        low: parseFloat(item.low),
-        close: parseFloat(item.close),
-        volume: parseFloat(item.volume),
-        quoteAssetVolume: parseFloat(item.turnover),
-        confirm: item.confirm,
-        interval: item.interval,
+        timestamp,
+        open,
+        high,
+        low,
+        close,
+        volume,
+        quoteAssetVolume,
+        confirm: Boolean(raw.confirm),
+        interval: typeof raw.interval === 'string' ? raw.interval : undefined,
       };
 
       return {
@@ -369,19 +384,24 @@ export class BybitWebSocketManager extends EventEmitter {
       const items = Array.isArray(data) ? data : [data];
       if (items.length === 0) return null;
 
-      // Bybit v5 trade object shape
-      const item = items[0] as {
-        T: number; // timestamp (Unix ms)
-        S: string; // side: "Buy" or "Sell"
-        v: string; // quantity
-        p: string; // price
-      };
+      const item = items[0];
+      if (!item || typeof item !== 'object') return null;
+      const raw = item as Record<string, unknown>;
+
+      const timestamp = Number(raw.T);
+      const price = parseFloat(String(raw.p));
+      const quantity = parseFloat(String(raw.v));
+
+      if (!Number.isFinite(timestamp) || !Number.isFinite(price) || !Number.isFinite(quantity)) {
+        log.warn({ symbol }, 'Trade message dropped: non-finite numeric field');
+        return null;
+      }
 
       const trade: Trade = {
-        price: parseFloat(item.p),
-        quantity: parseFloat(item.v),
-        side: item.S === 'Buy' ? 'BUY' : 'SELL',
-        timestamp: item.T,
+        price,
+        quantity,
+        side: raw.S === 'Buy' ? 'BUY' : 'SELL',
+        timestamp,
       };
 
       return {
