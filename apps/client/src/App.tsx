@@ -14,6 +14,12 @@ import { DashboardPage } from '@/pages/DashboardPage';
 import { TermsPage } from '@/pages/TermsPage';
 import { PrivacyPage } from '@/pages/PrivacyPage';
 
+// 🔐 Module-level flag — unlike useRef, this survives React StrictMode's
+// simulated mount → unmount → remount cycle, so only ONE /refresh fires
+// per actual page load (not two concurrent requests that race on the same
+// rotation token and log the user out).
+let refreshInitiated = false;
+
 export default function App() {
   // Use individual selectors so App only re-renders when setAuth/setLoading themselves change,
   // not on every unrelated store update (e.g. user data changing after login).
@@ -22,6 +28,9 @@ export default function App() {
   const location = useLocation();
 
   useEffect(() => {
+    if (refreshInitiated) return;
+    refreshInitiated = true;
+
     // 🔐 On every app boot, try to restore the session silently.
     // The browser sends the httpOnly refresh_token cookie automatically.
     // If it's valid, we get a new access token and the user stays logged in.
@@ -31,6 +40,8 @@ export default function App() {
         return authApi.me(accessToken).then(({ user }) => setAuth(accessToken, user));
       })
       .catch(() => {
+        // Refresh failed (first visit, expired token, logged out on another tab).
+        // Clear the loading state so ProtectedRoute redirects to /login.
         setLoading(false);
       });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

@@ -246,14 +246,15 @@ export class BybitWebSocketManager extends EventEmitter {
 
   /**
    * Private: Process stream data and emit typed events
+   * data.ts is the top-level server timestamp from Bybit v5
    */
-  private processStreamData(data: { topic: string; data: unknown }): void {
+  private processStreamData(data: { topic: string; data: unknown; ts?: number }): void {
     try {
-      const { topic, data: streamData } = data;
+      const { topic, data: streamData, ts: streamTs } = data;
 
       if (!topic || !streamData) return;
 
-      // Parse topic: e.g., "kline.1.BTCUSDT", "orderbook.1.BTCUSDT", "publicTrade.BTCUSDT"
+      // Parse topic: e.g. "kline.1.BTCUSDT", "orderbook.1.BTCUSDT", "publicTrade.BTCUSDT"
       const parts = topic.split('.');
       const channelType = parts[0];
       const symbol = parts[parts.length - 1];
@@ -262,14 +263,15 @@ export class BybitWebSocketManager extends EventEmitter {
       let eventData: StreamData | null = null;
 
       if (channelType === 'kline') {
-        eventData = this.parseKline(streamData as string[], symbol, interval);
+        eventData = this.parseKline(streamData, symbol, interval);
       } else if (channelType === 'orderbook') {
         eventData = this.parseOrderBook(
-          streamData as { b: string[][]; a: string[][]; ts: string },
-          symbol
+          streamData as { b: string[][]; a: string[][] },
+          symbol,
+          streamTs ?? Date.now()
         );
       } else if (channelType === 'publicTrade') {
-        eventData = this.parseTrade(streamData as string[], symbol);
+        eventData = this.parseTrade(streamData, symbol);
       }
 
       if (eventData) {
@@ -282,18 +284,52 @@ export class BybitWebSocketManager extends EventEmitter {
   }
 
   /**
-   * Private: Parse kline (candle) data from Bybit
+   * Private: Parse kline (candle) data from Bybit v5
+   * Bybit v5 sends an array of kline objects — we use the first (most recent) item
    */
-  private parseKline(data: string[], symbol: string, _interval?: string): StreamData | null {
+  private parseKline(data: unknown, symbol: string, _interval?: string): StreamData | null {
     try {
+      const items = Array.isArray(data) ? data : [data];
+      if (items.length === 0) return null;
+
+      const item = items[0];
+      // Runtime guard: reject anything that isn't a plain object
+      if (!item || typeof item !== 'object') return null;
+      const raw = item as Record<string, unknown>;
+
+      // Coerce all numeric fields and reject the message if any are non-finite
+      // (guards against Bybit sending a string "NaN" or a missing field)
+      const timestamp = Number(raw.start);
+      const open = parseFloat(String(raw.open));
+      const high = parseFloat(String(raw.high));
+      const low = parseFloat(String(raw.low));
+      const close = parseFloat(String(raw.close));
+      const volume = parseFloat(String(raw.volume));
+      const quoteAssetVolume = parseFloat(String(raw.turnover));
+
+      if (
+        !Number.isFinite(timestamp) ||
+        !Number.isFinite(open) ||
+        !Number.isFinite(high) ||
+        !Number.isFinite(low) ||
+        !Number.isFinite(close) ||
+        !Number.isFinite(volume) ||
+        !Number.isFinite(quoteAssetVolume)
+      ) {
+        log.warn({ symbol }, 'Kline message dropped: non-finite numeric field');
+        return null;
+      }
+
       const kline: Kline = {
-        timestamp: parseInt(data[0]),
-        open: parseFloat(data[1]),
-        high: parseFloat(data[2]),
-        low: parseFloat(data[3]),
-        close: parseFloat(data[4]),
-        volume: parseFloat(data[5]),
-        quoteAssetVolume: parseFloat(data[6]),
+        timestamp,
+        open,
+        high,
+        low,
+        close,
+        volume,
+        quoteAssetVolume,
+        confirm: Boolean(raw.confirm),
+        interval: typeof raw.interval === 'string' ? raw.interval : undefined,
       };
 
       return {
@@ -309,20 +345,22 @@ export class BybitWebSocketManager extends EventEmitter {
   }
 
   /**
-   * Private: Parse order book data from Bybit
+   * Private: Parse order book data from Bybit v5
+   * ts comes from the top-level message field (not inside data)
    */
   private parseOrderBook(
-    data: { b: string[][]; a: string[][]; ts: string },
-    symbol: string
+    data: { b: string[][]; a: string[][] },
+    symbol: string,
+    ts: number
   ): StreamData | null {
     try {
-      const { b, a, ts } = data; // bids, asks, timestamp
+      const { b, a } = data; // bids, asks
 
       const orderBook: OrderBook = {
         symbol,
         bids: b.map((bid) => [parseFloat(bid[0]), parseFloat(bid[1])]),
         asks: a.map((ask) => [parseFloat(ask[0]), parseFloat(ask[1])]),
-        timestamp: parseInt(ts),
+        timestamp: ts,
       };
 
       return {
@@ -338,28 +376,40 @@ export class BybitWebSocketManager extends EventEmitter {
   }
 
   /**
-   * Private: Parse trade data from Bybit
+   * Private: Parse trade data from Bybit v5
+   * Bybit v5 sends an array of trade objects — we use the first item
    */
-  private parseTrade(data: string[], symbol: string): StreamData | null {
+  private parseTrade(data: unknown, symbol: string): StreamData | null {
     try {
-      // data is an array of trades: [[price, qty, side, timestamp], ...]
-      if (Array.isArray(data) && data.length > 0) {
-        const trade: Trade = {
-          price: parseFloat(data[0]),
-          quantity: parseFloat(data[1]),
-          side: data[2].toUpperCase() as 'BUY' | 'SELL',
-          timestamp: parseInt(data[3]),
-        };
+      const items = Array.isArray(data) ? data : [data];
+      if (items.length === 0) return null;
 
-        return {
-          symbol,
-          dataType: 'trade',
-          data: trade,
-          timestamp: trade.timestamp,
-        };
+      const item = items[0];
+      if (!item || typeof item !== 'object') return null;
+      const raw = item as Record<string, unknown>;
+
+      const timestamp = Number(raw.T);
+      const price = parseFloat(String(raw.p));
+      const quantity = parseFloat(String(raw.v));
+
+      if (!Number.isFinite(timestamp) || !Number.isFinite(price) || !Number.isFinite(quantity)) {
+        log.warn({ symbol }, 'Trade message dropped: non-finite numeric field');
+        return null;
       }
 
-      return null;
+      const trade: Trade = {
+        price,
+        quantity,
+        side: raw.S === 'Buy' ? 'BUY' : 'SELL',
+        timestamp,
+      };
+
+      return {
+        symbol,
+        dataType: 'trade',
+        data: trade,
+        timestamp: trade.timestamp,
+      };
     } catch (error) {
       log.error({ err: error }, 'Failed to parse trade');
       return null;

@@ -13,8 +13,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "type-check": "pnpm --filter @crypto-dashboard/server type-check",
-    "test": "pnpm --filter @crypto-dashboard/server test",
-    "test:coverage": "pnpm --filter @crypto-dashboard/server test:coverage"
+    "test": "pnpm --filter @crypto-dashboard/server test && pnpm --filter @crypto-dashboard/client test",
+    "test:coverage": "pnpm --filter @crypto-dashboard/server test:coverage && pnpm --filter @crypto-dashboard/client test:coverage"
   },
   "keywords": [
     "crypto",

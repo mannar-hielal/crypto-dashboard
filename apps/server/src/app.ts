@@ -1,3 +1,6 @@
+import websocket from '@fastify/websocket';
+import bybitPlugin from './plugins/bybit.js';
+import { marketRoutes } from './routes/market/index.js';
 import cookie from '@fastify/cookie';
 import Fastify, { type FastifyError } from 'fastify';
 import cors from '@fastify/cors';
@@ -41,6 +44,7 @@ export async function buildApp() {
       tags: [
         { name: 'Health', description: 'Server health & readiness' },
         { name: 'Auth', description: 'Register, login and profile' },
+        { name: 'Market', description: 'Real-time market data and historical candles' },
       ],
     },
   });
@@ -74,6 +78,9 @@ export async function buildApp() {
     credentials: true,
   });
 
+  // WebSocket support — must be registered before any websocket routes
+  await app.register(websocket);
+
   // ─── CORE PLUGINS ─────────────────────────────────────────────────────────────
   await app.register(cookie);
   await app.register(jwt, { secret: config.jwtSecret });
@@ -82,6 +89,8 @@ export async function buildApp() {
 
   // ─── ROUTES ───────────────────────────────────────────────────────────────
   await app.register(authRoutes, { prefix: '/api/auth' });
+  await app.register(bybitPlugin);
+  await app.register(marketRoutes, { prefix: '/api/market' });
 
   // ─── CUSTOM ERROR HANDLER ─────────────────────────────────────────────────
   // 🔐 Normalises ALL error responses to { error: string } so:

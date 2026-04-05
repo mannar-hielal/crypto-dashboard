@@ -6,13 +6,15 @@
 // ─── MARKET DATA ──────────────────────────────────────────────────────────────
 
 export interface Kline {
-  timestamp: number; // Unix ms
+  timestamp: number; // Unix ms — start of the candle
   open: number;
   high: number;
   low: number;
   close: number;
   volume: number;
   quoteAssetVolume: number;
+  confirm?: boolean; // true = candle closed/confirmed; false = still forming
+  interval?: string; // e.g. "1", "5", "15", "60", "240", "D"
 }
 
 export interface OrderBook {
