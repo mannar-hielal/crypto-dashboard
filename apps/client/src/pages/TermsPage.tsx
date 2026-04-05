@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { LegalLayout } from '@/components/LegalLayout';
 
 const CONTACT_EMAIL = 'adminwithu@gmail.com'; // TODO: replace with legal@yourdomain.com once domain is live
@@ -9,8 +10,8 @@ export function TermsPage() {
         <h2>1. Acceptance of Terms</h2>
         <p>
           By accessing or using Crypto Dashboard ("the Service", "we", "us"), you agree to be bound
-          by these Terms of Use and our <a href="/privacy">Privacy Policy</a>. If you do not agree,
-          do not use the Service.
+          by these Terms of Use and our <Link to="/privacy">Privacy Policy</Link>. If you do not
+          agree, do not use the Service.
         </p>
       </section>
 
@@ -126,9 +127,9 @@ export function TermsPage() {
       <section>
         <h2>9. Privacy &amp; Data Protection</h2>
         <p>
-          Your use of the Service is governed by our <a href="/privacy">Privacy Policy</a>, which is
-          incorporated into these Terms. We process your personal data in accordance with the Swiss
-          Federal Act on Data Protection (nDSG) and, where applicable, the EU General Data
+          Your use of the Service is governed by our <Link to="/privacy">Privacy Policy</Link>,
+          which is incorporated into these Terms. We process your personal data in accordance with
+          the Swiss Federal Act on Data Protection (nDSG) and, where applicable, the EU General Data
           Protection Regulation (GDPR).
         </p>
       </section>

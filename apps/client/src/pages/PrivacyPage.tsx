@@ -71,7 +71,10 @@ export function PrivacyPage() {
             <tr>
               <td>Server access logs</td>
               <td>Security monitoring, abuse prevention</td>
-              <td>IP address + request metadata — purged after 30 days</td>
+              <td>
+                IP address + request metadata — retained per hosting provider defaults (Fly.io /
+                Cloudflare)
+              </td>
             </tr>
           </tbody>
         </table>
@@ -135,7 +138,8 @@ export function PrivacyPage() {
             hour, whichever comes first.
           </li>
           <li>
-            <strong>Server logs</strong>: purged after 30 days.
+            <strong>Server logs</strong>: retained per hosting provider defaults (Fly.io /
+            Cloudflare). We do not operate a custom log purge mechanism.
           </li>
         </ul>
       </section>

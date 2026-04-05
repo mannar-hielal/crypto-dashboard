@@ -14,7 +14,10 @@ import { TermsPage } from '@/pages/TermsPage';
 import { PrivacyPage } from '@/pages/PrivacyPage';
 
 export default function App() {
-  const { setAuth, setLoading } = useAuthStore();
+  // Use individual selectors so App only re-renders when setAuth/setLoading themselves change,
+  // not on every unrelated store update (e.g. user data changing after login).
+  const setAuth = useAuthStore((state) => state.setAuth);
+  const setLoading = useAuthStore((state) => state.setLoading);
   const location = useLocation();
 
   useEffect(() => {
