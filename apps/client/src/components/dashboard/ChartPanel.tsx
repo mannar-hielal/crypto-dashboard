@@ -12,7 +12,7 @@ import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts';
 import { useMarketStore } from '@/store/marketStore';
 import { calcEMA, calcVWAP, calcMACD } from '@/lib/indicators';
 
-const CHART_BG = '#1e2235';
+const CHART_BG = '#0b0d18';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -81,13 +81,13 @@ export function ChartPanel() {
         fontSize: 12,
       },
       grid: {
-        vertLines: { color: 'rgba(255,255,255,0.08)' },
-        horzLines: { color: 'rgba(255,255,255,0.08)' },
+        vertLines: { color: 'rgba(255,255,255,0.04)' },
+        horzLines: { color: 'rgba(255,255,255,0.04)' },
       },
       crosshair: { mode: CrosshairMode.Normal },
-      rightPriceScale: { borderColor: 'rgba(255,255,255,0.12)' },
+      rightPriceScale: { borderColor: 'rgba(255,255,255,0.07)' },
       timeScale: {
-        borderColor: 'rgba(255,255,255,0.12)',
+        borderColor: 'rgba(255,255,255,0.07)',
         timeVisible: true,
         secondsVisible: false,
         barSpacing: 12,
@@ -104,12 +104,12 @@ export function ChartPanel() {
 
     // ── Pane 0: main candles ────────────────────────────────────────────────
     candleRef.current = chart.addSeries(CandlestickSeries, {
-      upColor: '#22d3a5',
-      downColor: '#f43f5e',
-      borderUpColor: '#22d3a5',
-      borderDownColor: '#f43f5e',
-      wickUpColor: '#22d3a5',
-      wickDownColor: '#f43f5e',
+      upColor: '#02c076',
+      downColor: '#f6465d',
+      borderUpColor: '#02c076',
+      borderDownColor: '#f6465d',
+      wickUpColor: '#02c076',
+      wickDownColor: '#f6465d',
     });
 
     // ── Pane 0: EMA 9 — silver/gray ─────────────────────────────────────────
@@ -288,11 +288,11 @@ export function ChartPanel() {
     ema200Ref.current.setData(linePoints(ema200));
     vwapRef.current.setData(linePoints(vwap));
 
-    // Histogram — 4 colours matching TradingView's MACD style:
-    //   ≥0 & rising  → #26a69a (strong bull, dark teal)
-    //   ≥0 & falling → #b2dfdb (weak bull, light teal)
-    //   <0 & rising  → #ffcdd2 (weak bear, light pink)
-    //   <0 & falling → #ef5350 (strong bear, red)
+    // Histogram — 4 colours matching EXGEN/TradingView MACD style:
+    //   ≥0 & rising  → #02c076 (strong bull, EXGEN green)
+    //   ≥0 & falling → #02c07666 (weak bull, muted green)
+    //   <0 & rising  → #f6465d66 (weak bear, muted red)
+    //   <0 & falling → #f6465d (strong bear, EXGEN red)
     const histPts: { time: UTCTimestamp; value: number; color: string }[] = [];
     for (let i = 0; i < bars.length; i++) {
       if (histogram[i] !== null) {
@@ -301,9 +301,9 @@ export function ChartPanel() {
         const rising = val >= prev;
         let color: string;
         if (val >= 0) {
-          color = rising ? '#26a69a' : '#b2dfdb';
+          color = rising ? '#02c076' : '#02c07666';
         } else {
-          color = rising ? '#ffcdd2' : '#ef5350';
+          color = rising ? '#f6465d66' : '#f6465d';
         }
         histPts.push({ time: toUTC(bars[i].timestamp), value: val, color });
       }
@@ -343,7 +343,10 @@ export function ChartPanel() {
 
       {/* ── Hover legend ─────────────────────────────────────────────────── */}
       {hoverData && (
-        <div className="pointer-events-none absolute left-3 top-3 z-10 rounded border border-white/[0.08] bg-[#1a1d2e]/90 px-3 py-2 backdrop-blur-sm">
+        <div
+          className="pointer-events-none absolute left-3 top-3 z-10 rounded-lg border border-white/[0.06] px-3 py-2 backdrop-blur-md"
+          style={{ background: 'rgba(11,12,26,0.90)' }}
+        >
           {/* Time */}
           <p className="mb-1.5 text-[10px] font-medium text-slate-500">{hoverData.time}</p>
 
@@ -357,23 +360,21 @@ export function ChartPanel() {
               })}
             </span>
             <span className="text-slate-500">H</span>
-            <span className="text-emerald-400">
+            <span style={{ color: '#02c076' }}>
               {hoverData.high.toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}
             </span>
             <span className="text-slate-500">L</span>
-            <span className="text-rose-400">
+            <span style={{ color: '#f6465d' }}>
               {hoverData.low.toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}
             </span>
             <span className="text-slate-500">C</span>
-            <span
-              className={hoverData.close >= hoverData.open ? 'text-emerald-400' : 'text-rose-400'}
-            >
+            <span style={{ color: hoverData.close >= hoverData.open ? '#02c076' : '#f6465d' }}>
               {hoverData.close.toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
