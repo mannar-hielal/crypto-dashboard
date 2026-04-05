@@ -48,8 +48,8 @@ export default defineConfig({
         navigateFallback: '/index.html',
         runtimeCaching: [
           {
-            // Cache Cloudflare Pages assets
-            urlPattern: ({ url }: { url: URL }) => url.origin === self.location.origin,
+            // Cache same-origin http(s) assets — avoids Node-context `self` reference
+            urlPattern: ({ url }) => url.protocol === 'http:' || url.protocol === 'https:',
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'app-shell',
