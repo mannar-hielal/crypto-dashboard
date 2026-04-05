@@ -18,6 +18,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AuthLayout } from '@/components/AuthLayout';
 
 const registerSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -60,7 +61,7 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="bg-background flex h-screen items-center justify-center p-4">
+    <AuthLayout>
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -148,6 +149,6 @@ export function RegisterPage() {
           </CardContent>
         </Card>
       </motion.div>
-    </div>
+    </AuthLayout>
   );
 }
