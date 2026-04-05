@@ -55,6 +55,8 @@ function resetStore() {
     latestPrice: null,
     priceChange: null,
     isConnected: false,
+    symbol: 'BTCUSDT', // reset so setSymbol() tests don't leak into others
+    interval: '1m', // reset so setInterval() tests don't leak into others
   });
 }
 

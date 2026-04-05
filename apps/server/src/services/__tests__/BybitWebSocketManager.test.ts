@@ -53,10 +53,12 @@ function handleMessage(manager: BybitWebSocketManager, raw: string) {
 describe('BybitWebSocketManager', () => {
   beforeEach(() => {
     wsInstances.length = 0; // clear between tests
+    vi.useFakeTimers(); // 🔐 prevents startHeartbeat()'s setInterval from leaking open handles
     vi.stubGlobal('WebSocket', MockWebSocket);
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
