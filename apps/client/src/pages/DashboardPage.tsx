@@ -49,6 +49,7 @@ const PANEL_HEIGHT: Record<PanelSize, string> = {
  */
 export function DashboardPage() {
   usePriceFeed();
+  useTPSLMonitor();
   const [panelSize, setPanelSize] = useState<PanelSize>('open');
   // TradingPanel is open by default on desktop; users can toggle it
   const [tradingPanelOpen, setTradingPanelOpen] = useState(true);
