@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import NumberFlow from '@number-flow/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RotateCcw, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useMarketStore } from '@/store/marketStore';
 import { usePaperStore } from '@/store/paperStore';
 
@@ -35,6 +35,8 @@ interface TradingPanelProps {
 export function TradingPanel({ onClose }: TradingPanelProps) {
   const [orderSide, setOrderSide] = useState<OrderSide>('buy');
   const [usdtInput, setUsdtInput] = useState('');
+  const [tpInput, setTpInput] = useState('');
+  const [slInput, setSlInput] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
   const symbol = useMarketStore((s) => s.symbol);
@@ -43,7 +45,10 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
   const balance = usePaperStore((s) => s.balance);
   const positions = usePaperStore((s) => s.positions);
   const placeOrder = usePaperStore((s) => s.placeOrder);
-  const reset = usePaperStore((s) => s.reset);
+
+  // Note: local state resets automatically when the symbol changes because
+  // DashboardPage passes key={symbol} to this component — React remounts it
+  // with fresh state instead of patching it in place.
 
   // ── Derived values ────────────────────────────────────────────────────────
   const unrealizedPnl = positions.reduce((sum, pos) => {
@@ -75,6 +80,8 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
   function handleSideChange(side: OrderSide) {
     setOrderSide(side);
     setFormError(null);
+    setTpInput('');
+    setSlInput('');
   }
 
   function handlePreset(pct: number) {
@@ -98,12 +105,55 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
       setFormError('Insufficient balance');
       return;
     }
-    const id = placeOrder(symbol, orderSide, latestPrice, amount);
+
+    const tp = tpInput ? parseFloat(tpInput) : undefined;
+    const sl = slInput ? parseFloat(slInput) : undefined;
+
+    // Validate TP/SL — must be positive and in the correct direction
+    if (tp !== undefined && !isNaN(tp)) {
+      if (tp <= 0) {
+        setFormError('Take-Profit must be a positive price');
+        return;
+      }
+      if (orderSide === 'buy' && tp <= latestPrice) {
+        setFormError('Take-Profit must be above current price for a Long');
+        return;
+      }
+      if (orderSide === 'sell' && tp >= latestPrice) {
+        setFormError('Take-Profit must be below current price for a Short');
+        return;
+      }
+    }
+    if (sl !== undefined && !isNaN(sl)) {
+      if (sl <= 0) {
+        setFormError('Stop-Loss must be a positive price');
+        return;
+      }
+      if (orderSide === 'buy' && sl >= latestPrice) {
+        setFormError('Stop-Loss must be below current price for a Long');
+        return;
+      }
+      if (orderSide === 'sell' && sl <= latestPrice) {
+        setFormError('Stop-Loss must be above current price for a Short');
+        return;
+      }
+    }
+
+    const id = placeOrder(
+      symbol,
+      orderSide,
+      latestPrice,
+      amount,
+      tp !== undefined && !isNaN(tp) ? tp : undefined,
+      sl !== undefined && !isNaN(sl) ? sl : undefined
+    );
     if (!id) {
       setFormError('Order could not be placed');
       return;
     }
     setUsdtInput('');
+    setTpInput('');
+    setSlInput('');
   }
 
   return (
@@ -118,16 +168,6 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
       >
         <span className="text-xs font-bold tracking-wide text-white/80">Paper Trading</span>
         <div className="flex items-center gap-0.5">
-          {/* Reset account */}
-          <motion.button
-            onClick={reset}
-            whileHover={{ scale: 1.1, rotate: -45 }}
-            whileTap={{ scale: 0.9 }}
-            title="Reset account to $10,000"
-            className="flex h-6 w-6 items-center justify-center rounded text-[#848e9c] hover:text-white"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-          </motion.button>
           {/* Close panel — re-open via the ⊞ icon in SymbolBar */}
           <motion.button
             onClick={onClose}
@@ -276,6 +316,51 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
                 {pct}%
               </motion.button>
             ))}
+          </div>
+        </div>
+
+        {/* TP / SL inputs */}
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#848e9c]">
+            TP / SL <span className="normal-case font-normal opacity-60">(optional)</span>
+          </p>
+          {/* Take Profit */}
+          <div className="relative">
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={tpInput}
+              onChange={(e) => {
+                setTpInput(e.target.value);
+                setFormError(null);
+              }}
+              placeholder="Take Profit"
+              className="w-full rounded-md border border-white/[0.08] px-2.5 py-1.5 pr-12 text-xs text-white placeholder-[#848e9c]/50 focus:border-[#02c076]/50 focus:outline-none transition-colors"
+              style={{ background: '#131628' }}
+            />
+            <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-[#02c076]/70">
+              TP
+            </span>
+          </div>
+          {/* Stop Loss */}
+          <div className="relative">
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={slInput}
+              onChange={(e) => {
+                setSlInput(e.target.value);
+                setFormError(null);
+              }}
+              placeholder="Stop Loss"
+              className="w-full rounded-md border border-white/[0.08] px-2.5 py-1.5 pr-12 text-xs text-white placeholder-[#848e9c]/50 focus:border-[#f6465d]/50 focus:outline-none transition-colors"
+              style={{ background: '#131628' }}
+            />
+            <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-[#f6465d]/70">
+              SL
+            </span>
           </div>
         </div>
 

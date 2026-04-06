@@ -123,7 +123,7 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
     async (request, reply) => {
       const symbolRaw = (request.query.symbol ?? 'BTCUSDT').toUpperCase();
       const interval = request.query.interval ?? '1m';
-      const limit = Math.min(parseInt(request.query.limit ?? '200', 10) || 200, 1000);
+      const limit = Math.min(Math.max(1, parseInt(request.query.limit ?? '200', 10) || 200), 1000);
 
       // 🔐 Validate against allowlist — guard also narrows type to AllowedSymbol
       if (!isAllowedSymbol(symbolRaw)) {
