@@ -19,7 +19,7 @@ import { persist } from 'zustand/middleware';
 const STARTING_BALANCE = 10_000; // $10,000 USDT
 const MAX_HISTORY = 100; // keep last 100 closed trades
 const MAX_JOURNAL = 200; // keep last 200 journal entries
-const COMMISSION_RATE = 0.0007; // 0.07% taker fee
+export const COMMISSION_RATE = 0.0007; // 0.07% taker fee
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -155,7 +155,9 @@ export const usePaperStore = create<PaperState>()(
 
         // ── Validation ──────────────────────────────────────────────────────
         if (usdtAmount <= 0 || price <= 0) return null;
-        if (usdtAmount > balance) return null; // not enough funds
+        // Include entry commission in the balance check — prevents going negative
+        // when placing a 100%-of-balance order (usdtAmount + fee > balance).
+        if (usdtAmount + usdtAmount * COMMISSION_RATE > balance) return null;
 
         const quantity = usdtAmount / price;
         const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -283,7 +285,7 @@ export const usePaperStore = create<PaperState>()(
           time: now,
           balanceBefore: balBefore,
           balanceAfter: balAfter,
-          pnl,
+          pnl: pnl - commission, // net PnL — matches actual balance impact
           action: `Close ${pos.side} position for ${pos.symbol} at price ${exitPrice.toFixed(4)} for ${pos.quantity.toFixed(6)} units`,
         };
 
@@ -315,7 +317,7 @@ export const usePaperStore = create<PaperState>()(
           positions: s.positions.filter((p) => p.id !== positionId),
           history: [closed, ...s.history].slice(0, MAX_HISTORY),
           orders: [closingOrder, ...s.orders].slice(0, MAX_HISTORY * 2),
-          realizedPnl: s.realizedPnl + pnl,
+          realizedPnl: s.realizedPnl + pnl - commission,
           balanceLog: [logEntry, ...s.balanceLog].slice(0, MAX_HISTORY * 2),
           journal: [...closingJournalEntries, ...s.journal].slice(0, MAX_JOURNAL),
         }));
@@ -336,7 +338,11 @@ export const usePaperStore = create<PaperState>()(
 
       editJournalEntry: (entryId: string, text: string) => {
         set((s) => ({
-          journal: s.journal.map((e) => (e.id === entryId ? { ...e, text } : e)),
+          journal: s.journal.map((e) => {
+            // System-generated entries are read-only — only user notes can be edited
+            if (e.id !== entryId || !e.isUserNote) return e;
+            return { ...e, text };
+          }),
         }));
       },
 

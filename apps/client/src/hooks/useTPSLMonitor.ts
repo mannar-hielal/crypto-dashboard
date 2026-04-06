@@ -25,7 +25,6 @@ export function useTPSLMonitor() {
 
   // Use refs so the effect closure always reads the latest store state
   // without needing to re-subscribe and re-attach the effect.
-  const getPositions = () => usePaperStore.getState().positions;
   const closePosition = useRef(usePaperStore.getState().closePosition);
   const addJournalNote = useRef(usePaperStore.getState().addJournalNote);
 
@@ -35,7 +34,7 @@ export function useTPSLMonitor() {
     const price = latestPrice;
     // Only evaluate positions for the currently active symbol — other symbols
     // have no live price feed active so we must not close them on a different ticker.
-    const positions = getPositions().filter((p) => p.symbol === symbol);
+    const positions = usePaperStore.getState().positions.filter((p) => p.symbol === symbol);
 
     for (const pos of positions) {
       let triggered: 'TP' | 'SL' | null = null;

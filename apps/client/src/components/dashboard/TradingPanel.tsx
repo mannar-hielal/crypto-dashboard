@@ -46,6 +46,17 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
   const positions = usePaperStore((s) => s.positions);
   const placeOrder = usePaperStore((s) => s.placeOrder);
 
+  // Reset TP/SL during render when the active symbol changes — this is the
+  // React-recommended pattern for "reset state on prop change" and avoids
+  // calling setState inside a useEffect (which triggers cascading renders).
+  const [lastSymbol, setLastSymbol] = useState(symbol);
+  if (symbol !== lastSymbol) {
+    setLastSymbol(symbol);
+    setTpInput('');
+    setSlInput('');
+    setFormError(null);
+  }
+
   // ── Derived values ────────────────────────────────────────────────────────
   const unrealizedPnl = positions.reduce((sum, pos) => {
     if (!latestPrice) return sum;
@@ -105,8 +116,12 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
     const tp = tpInput ? parseFloat(tpInput) : undefined;
     const sl = slInput ? parseFloat(slInput) : undefined;
 
-    // Validate TP/SL direction relative to entry price
+    // Validate TP/SL — must be positive and in the correct direction
     if (tp !== undefined && !isNaN(tp)) {
+      if (tp <= 0) {
+        setFormError('Take-Profit must be a positive price');
+        return;
+      }
       if (orderSide === 'buy' && tp <= latestPrice) {
         setFormError('Take-Profit must be above current price for a Long');
         return;
@@ -117,6 +132,10 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
       }
     }
     if (sl !== undefined && !isNaN(sl)) {
+      if (sl <= 0) {
+        setFormError('Stop-Loss must be a positive price');
+        return;
+      }
       if (orderSide === 'buy' && sl >= latestPrice) {
         setFormError('Stop-Loss must be below current price for a Long');
         return;
