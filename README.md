@@ -51,9 +51,13 @@ A free, self-hosted paper trading dashboard that replicates TradingView Plus fea
 - [x] **`ChartPanel`** — TradingView Lightweight Charts candlestick chart with EMA9/21/200 overlays, VWAP (orange sparse dots), MACD pane (4-color histogram), crosshair hover legend showing OHLC + all indicator values
 - [x] **`TopBar`** — interval buttons (1m/5m/15m/1h/4h/1d), live BTC price + 24h change
 - [x] **`LeftToolbar`** — drawing tool icon placeholders (cursor, trendline, shapes, text, pencil)
-- [x] **`DashboardPage`** — full layout orchestrating chart + 3-state paper trading panel (collapsed/open/maximized)
+- [x] **`SymbolBar`** — trading sub-header with symbol picker dropdown, live price + 24h stats, timeframe buttons (1m/5m/15m/1h/4h/1d), TradingPanel toggle with pulsing ring indicator, WebSocket connection status
+- [x] **`DashboardPage`** — full layout: LeftToolbar | ChartPanel | TradingPanel (right) + PaperTradingPanel (bottom); panel states are independently controlled with animated open/close transitions
+- [x] **Panel close/reopen UX** — both side panels have an `✕` button; bottom panel reopens via a glowing purple floating pill (pulse animation); right panel reopens via the pulsing `⊞` toggle in SymbolBar
+- [x] **Chart initial load** — `scrollToRealTime()` replaces `fitContent()` so the chart opens showing ~40 readable candles (natural TradingView-style density) instead of compressing all history
 - [x] **`paperStore`** — Zustand + persist, $10,000 starting balance, long/short positions, correct PnL (longs and shorts), MAX_HISTORY=100
-- [x] **`PaperTradingPanel`** — order entry form with quick-fill presets, open positions table with live PnL, closed trade history; equity correctly accounts for short margin model
+- [x] **`TradingPanel`** — right sidebar for order entry: balance/equity summary, Buy Long / Sell Short toggle, USDT amount input with % presets (25/50/75/100), quantity preview, mark price display, reset account button
+- [x] **`PaperTradingPanel`** — bottom panel: open positions table with live PnL + close button per row, closed trade history; collapse/expand/hide states with animated height transitions
 - [x] PWA shell — installable, mobile-responsive, dark splash screen (`#080B14`), custom candlestick icon
 
 ---
@@ -84,11 +88,14 @@ crypto-dashboard/
 │   │       ├── App.tsx                 # Routes + silent session restore
 │   │       ├── components/
 │   │       │   ├── dashboard/
-│   │       │   │   ├── ChartPanel.tsx  # Lightweight Charts + indicators
-│   │       │   │   ├── TopBar.tsx      # Interval picker + live price
-│   │       │   │   ├── LeftToolbar.tsx # Drawing tool sidebar
-│   │       │   │   └── PaperTradingPanel.tsx
-│   │       │   └── ui/                 # Shadcn/ui components
+│   │       │   │   ├── ChartPanel.tsx        # Lightweight Charts + indicators
+│   │       │   │   ├── TopBar.tsx            # App header + user avatar
+│   │       │   │   ├── SymbolBar.tsx         # Symbol picker, price, timeframes, panel toggles
+│   │       │   │   ├── LeftToolbar.tsx       # Drawing tool icon sidebar
+│   │       │   │   ├── TradingPanel.tsx      # Right sidebar: order entry (buy/sell/short)
+│   │       │   │   ├── PaperTradingPanel.tsx # Bottom panel: positions + history
+│   │       │   │   └── TickerBar.tsx         # Live ticker strip
+│   │       │   └── ui/                       # Shadcn/ui components
 │   │       ├── hooks/
 │   │       │   └── usePriceFeed.ts     # REST + WebSocket lifecycle
 │   │       ├── pages/
@@ -326,5 +333,5 @@ MIT — see [LICENSE](./LICENSE)
 ---
 
 **Status:** Phase 1 complete — live market feed, TradingView-style dashboard, paper trading  
-**Last Updated:** April 5, 2026  
+**Last Updated:** April 6, 2026  
 **Live:** [API](https://crypto-dashboard-api.fly.dev/health) · [App](https://crypto-dashboard-7yy.pages.dev)
