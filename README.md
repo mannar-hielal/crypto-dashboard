@@ -6,7 +6,32 @@ A free, self-hosted paper trading dashboard that replicates TradingView Plus fea
 
 ---
 
-## 🎯 Phase 1 Progress
+## 🗺️ Phase Roadmap
+
+### ✅ Completed
+
+| Phase                 | Scope                       | Highlights                                                                                                                                                        |
+| --------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Phase 1**           | Foundation + Live Dashboard | Monorepo, auth (JWT + refresh rotation + password reset), Bybit WebSocket feed, TradingView chart with EMA/MACD/VWAP, paper trading (buy/sell, PnL, journal), PWA |
+| **Phase 2 — partial** | Paper Trading Enhancements  | TP/SL auto-monitor, per-trade commission accounting, system vs user journal entries                                                                               |
+
+### 🔄 In Progress
+
+| Phase       | Scope                      | Remaining                                                               |
+| ----------- | -------------------------- | ----------------------------------------------------------------------- |
+| **Phase 2** | Paper Trading Enhancements | Account management (username / email / password change, delete account) |
+
+### 📋 Planned
+
+| Phase       | Scope                                                             |
+| ----------- | ----------------------------------------------------------------- |
+| **Phase 3** | Chart drawing tools (trendlines, horizontal lines, Fibonacci)     |
+| **Phase 4** | Multi-symbol watchlist + price alerts                             |
+| **Phase 5** | Trade analytics (win rate, avg PnL, drawdown, equity curve chart) |
+
+---
+
+## 🎯 Phase 1 Progress ✅
 
 ### Infrastructure & Quality
 
@@ -17,7 +42,7 @@ A free, self-hosted paper trading dashboard that replicates TradingView Plus fea
 - [x] Node.js version pinned (`v24.14.1`)
 - [x] Pino structured logger (no bare `console.*`)
 - [x] CORS origin configurable per environment
-- [x] Vitest testing setup — 128 tests across server (85) and client (43)
+- [x] Vitest testing setup — 131 tests across server (86) and client (45)
 - [x] Swagger / OpenAPI documentation served at `/docs`
 
 ### Backend
@@ -55,10 +80,20 @@ A free, self-hosted paper trading dashboard that replicates TradingView Plus fea
 - [x] **`DashboardPage`** — full layout: LeftToolbar | ChartPanel | TradingPanel (right) + PaperTradingPanel (bottom); panel states are independently controlled with animated open/close transitions
 - [x] **Panel close/reopen UX** — both side panels have an `✕` button; bottom panel reopens via a glowing purple floating pill (pulse animation); right panel reopens via the pulsing `⊞` toggle in SymbolBar
 - [x] **Chart initial load** — `scrollToRealTime()` replaces `fitContent()` so the chart opens showing ~40 readable candles (natural TradingView-style density) instead of compressing all history
-- [x] **`paperStore`** — Zustand + persist, $10,000 starting balance, long/short positions, correct PnL (longs and shorts), MAX_HISTORY=100
-- [x] **`TradingPanel`** — right sidebar for order entry: balance/equity summary, Buy Long / Sell Short toggle, USDT amount input with % presets (25/50/75/100), quantity preview, mark price display, reset account button
-- [x] **`PaperTradingPanel`** — bottom panel: open positions table with live PnL + close button per row, closed trade history; collapse/expand/hide states with animated height transitions
+- [x] **`paperStore`** — Zustand + persist, $10,000 starting balance, long/short positions, correct PnL (longs and shorts), 0.07% taker commission on open and close, MAX_HISTORY=100, order history, balance log, journal (system + user notes)
+- [x] **`TradingPanel`** — right sidebar for order entry: balance/equity summary, Buy Long / Sell Short toggle, USDT amount input with % presets (25/50/75/100), quantity preview, mark price display, optional TP/SL inputs with direction validation
+- [x] **`PaperTradingPanel`** — bottom panel: open positions table with live PnL, TP/SL columns, and close button per row; closed trade history; journal tab (system trade events + editable user notes); collapse/expand/hide states with animated height transitions
 - [x] PWA shell — installable, mobile-responsive, dark splash screen (`#080B14`), custom candlestick icon
+
+---
+
+## 🎯 Phase 2 Progress (in progress)
+
+- [x] **`useTPSLMonitor` hook** — subscribes to `latestPrice` on every tick; auto-closes positions when TP or SL is breached; scoped to the active symbol only (prevents cross-symbol false triggers); appends a non-editable system journal entry on each auto-close
+- [x] **Take-Profit / Stop-Loss on positions** — `Position` stores optional `takeProfit` and `stopLoss` prices; `placeOrder` accepts and persists them; `TradingPanel` exposes TP/SL inputs with real-time direction validation
+- [x] **Commission accounting** — 0.07% taker fee deducted from balance on open; exit commission deducted from `returnAmount` on close; `HistoricalOrder` records the fee for both legs
+- [x] **System vs user journal entries** — `addJournalNote(text, isUserNote?)` distinguishes auto-generated entries (not editable) from user-authored notes (editable via the pen icon)
+- [ ] Account management (username / email / password change, delete account)
 
 ---
 
@@ -97,7 +132,8 @@ crypto-dashboard/
 │   │       │   │   └── TickerBar.tsx         # Live ticker strip
 │   │       │   └── ui/                       # Shadcn/ui components
 │   │       ├── hooks/
-│   │       │   └── usePriceFeed.ts     # REST + WebSocket lifecycle
+│   │       │   ├── usePriceFeed.ts     # REST + WebSocket lifecycle
+│   │       │   └── useTPSLMonitor.ts   # Auto-close positions on TP/SL breach
 │   │       ├── pages/
 │   │       │   ├── DashboardPage.tsx   # Main trading layout
 │   │       │   ├── LoginPage.tsx
@@ -227,7 +263,7 @@ pnpm format                   # Prettier format whole project
 pnpm type-check               # TypeScript strict type check (server)
 
 # Testing
-pnpm test                                           # Run all 128 tests (server + client)
+pnpm test                                           # Run all 131 tests (server + client)
 pnpm test:coverage                                  # Run all tests with coverage report
 pnpm --filter @crypto-dashboard/server test:watch   # Backend tests in watch mode
 pnpm --filter @crypto-dashboard/client test:watch   # Client tests in watch mode
@@ -243,17 +279,17 @@ pnpm prisma studio            # Visual DB browser at localhost:5555
 
 ## 🧪 Test Coverage
 
-| Suite                           | Tests   | What's covered                                                         |
-| ------------------------------- | ------- | ---------------------------------------------------------------------- |
-| `auth.test.ts`                  | 26      | Register, login, refresh, logout, /me, forgot-password, reset-password |
-| `health.test.ts`                | 2       | Health endpoint                                                        |
-| `market.test.ts`                | 10      | Candles route — defaults, OHLCV parsing, allowlist, 502 errors         |
-| `BybitWebSocketManager.test.ts` | 25      | Subscribe/unsubscribe, message parsing, DoS guard, connect lifecycle   |
-| `CandleAggregator.test.ts`      | 14      | OHLCV aggregation, close accuracy, multi-symbol isolation, history     |
-| `IndicatorCalculator.test.ts`   | 8       | EMA, MACD, VWAP calculations                                           |
-| `marketStore.test.ts`           | 18      | setSnapshot, addBar upsert, MAX_BARS cap, derived state                |
-| `paperStore.test.ts`            | 25      | Order validation, PnL (long/short), balance floor, history cap         |
-| **Total**                       | **128** |                                                                        |
+| Suite                           | Tests   | What's covered                                                                        |
+| ------------------------------- | ------- | ------------------------------------------------------------------------------------- |
+| `auth.test.ts`                  | 26      | Register, login, refresh, logout, /me, forgot-password, reset-password                |
+| `health.test.ts`                | 2       | Health endpoint                                                                       |
+| `market.test.ts`                | 10      | Candles route — defaults, OHLCV parsing, allowlist, 502 errors                        |
+| `BybitWebSocketManager.test.ts` | 25      | Subscribe/unsubscribe, message parsing, DoS guard, connect lifecycle                  |
+| `CandleAggregator.test.ts`      | 14      | OHLCV aggregation, close accuracy, multi-symbol isolation, history                    |
+| `IndicatorCalculator.test.ts`   | 8       | EMA, MACD, VWAP calculations                                                          |
+| `marketStore.test.ts`           | 20      | setSnapshot, addBar upsert, MAX_BARS cap, derived state                               |
+| `paperStore.test.ts`            | 25      | Order validation, PnL (long/short), commission accounting, balance floor, history cap |
+| **Total**                       | **131** |                                                                                       |
 
 ---
 
@@ -332,6 +368,6 @@ MIT — see [LICENSE](./LICENSE)
 
 ---
 
-**Status:** Phase 1 complete — live market feed, TradingView-style dashboard, paper trading  
+**Status:** Phase 1 complete · Phase 2 in progress (TP/SL auto-monitor done, account management next)  
 **Last Updated:** April 6, 2026  
 **Live:** [API](https://crypto-dashboard-api.fly.dev/health) · [App](https://crypto-dashboard-7yy.pages.dev)
