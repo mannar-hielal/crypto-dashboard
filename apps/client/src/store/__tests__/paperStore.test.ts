@@ -20,7 +20,10 @@ const SYMBOL = 'BTCUSDT';
 
 /** Resets the store and clears localStorage between every test. */
 function resetStore() {
-  usePaperStore.setState({ balance: STARTING_BALANCE, positions: [], history: [] });
+  // Use the store's own reset() action — it resets ALL fields (balance, positions,
+  // history, orders, realizedPnl, balanceLog, journal) so new store fields can
+  // never accidentally leak state between tests.
+  usePaperStore.getState().reset();
   localStorage.clear();
 }
 

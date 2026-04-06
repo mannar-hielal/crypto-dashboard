@@ -46,16 +46,9 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
   const positions = usePaperStore((s) => s.positions);
   const placeOrder = usePaperStore((s) => s.placeOrder);
 
-  // Reset TP/SL during render when the active symbol changes — this is the
-  // React-recommended pattern for "reset state on prop change" and avoids
-  // calling setState inside a useEffect (which triggers cascading renders).
-  const [lastSymbol, setLastSymbol] = useState(symbol);
-  if (symbol !== lastSymbol) {
-    setLastSymbol(symbol);
-    setTpInput('');
-    setSlInput('');
-    setFormError(null);
-  }
+  // Note: local state resets automatically when the symbol changes because
+  // DashboardPage passes key={symbol} to this component — React remounts it
+  // with fresh state instead of patching it in place.
 
   // ── Derived values ────────────────────────────────────────────────────────
   const unrealizedPnl = positions.reduce((sum, pos) => {

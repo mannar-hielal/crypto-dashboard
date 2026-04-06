@@ -249,6 +249,8 @@ export const usePaperStore = create<PaperState>()(
 
         // Return margin + PnL to balance, minus exit commission (floor at 0 — no negative balance)
         const commission = pos.quantity * exitPrice * COMMISSION_RATE;
+        // Entry commission was also paid at open — include it so realizedPnl reflects true net P&L
+        const entryCommission = pos.entryUsdtAmount * COMMISSION_RATE;
         const returnAmount = Math.max(0, pos.entryUsdtAmount + pnl - commission);
         const now = Date.now();
         const closedId = `${now}-${Math.random().toString(36).slice(2, 7)}`;
@@ -317,7 +319,7 @@ export const usePaperStore = create<PaperState>()(
           positions: s.positions.filter((p) => p.id !== positionId),
           history: [closed, ...s.history].slice(0, MAX_HISTORY),
           orders: [closingOrder, ...s.orders].slice(0, MAX_HISTORY * 2),
-          realizedPnl: s.realizedPnl + pnl - commission,
+          realizedPnl: s.realizedPnl + pnl - commission - entryCommission,
           balanceLog: [logEntry, ...s.balanceLog].slice(0, MAX_HISTORY * 2),
           journal: [...closingJournalEntries, ...s.journal].slice(0, MAX_JOURNAL),
         }));

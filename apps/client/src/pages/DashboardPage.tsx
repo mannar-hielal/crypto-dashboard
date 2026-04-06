@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart2 } from 'lucide-react';
 import { usePriceFeed } from '@/hooks/usePriceFeed';
 import { useTPSLMonitor } from '@/hooks/useTPSLMonitor';
+import { useMarketStore } from '@/store/marketStore';
 import { TopBar } from '@/components/dashboard/TopBar';
 import { LeftToolbar } from '@/components/dashboard/LeftToolbar';
 import { ChartPanel } from '@/components/dashboard/ChartPanel';
@@ -51,6 +52,7 @@ const PANEL_HEIGHT: Record<PanelSize, string> = {
 export function DashboardPage() {
   usePriceFeed();
   useTPSLMonitor();
+  const symbol = useMarketStore((s) => s.symbol);
   const [panelSize, setPanelSize] = useState<PanelSize>('open');
   // TradingPanel is open by default on desktop; users can toggle it
   const [tradingPanelOpen, setTradingPanelOpen] = useState(true);
@@ -119,7 +121,7 @@ export function DashboardPage() {
               transition={{ duration: 0.2, ease: 'easeInOut' }}
               className="shrink-0 overflow-hidden"
             >
-              <TradingPanel onClose={() => setTradingPanelOpen(false)} />
+              <TradingPanel key={symbol} onClose={() => setTradingPanelOpen(false)} />
             </motion.div>
           )}
         </AnimatePresence>
