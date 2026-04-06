@@ -95,6 +95,8 @@ export const useMarketStore = create<MarketState>((set, get) => ({
   },
 
   setConnected: (isConnected) => set({ isConnected }),
-  setSymbol: (symbol) => set({ symbol }),
-  setInterval: (interval) => set({ interval }),
+  setSymbol: (symbol) =>
+    set({ symbol, bars: [], indicators: null, latestPrice: null, priceChange: null }),
+  setInterval: (interval) =>
+    set({ interval, bars: [], indicators: null, latestPrice: null, priceChange: null }),
 }));

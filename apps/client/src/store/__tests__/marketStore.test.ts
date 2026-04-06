@@ -198,5 +198,31 @@ describe('marketStore', () => {
       useMarketStore.getState().setInterval('4h');
       expect(useMarketStore.getState().interval).toBe('4h');
     });
+
+    it('clears bars, indicators, latestPrice and priceChange when symbol changes', () => {
+      useMarketStore.getState().setSnapshot(makeSnapshot(5, 100), {
+        ema9: 100,
+        ema21: 99,
+        ema200: 95,
+        macd: null,
+        vwap: 100.5,
+      });
+      useMarketStore.getState().setSymbol('ETHUSDT');
+      const s = useMarketStore.getState();
+      expect(s.bars).toHaveLength(0);
+      expect(s.indicators).toBeNull();
+      expect(s.latestPrice).toBeNull();
+      expect(s.priceChange).toBeNull();
+    });
+
+    it('clears bars, indicators, latestPrice and priceChange when interval changes', () => {
+      useMarketStore.getState().setSnapshot(makeSnapshot(5, 100), null);
+      useMarketStore.getState().setInterval('4h');
+      const s = useMarketStore.getState();
+      expect(s.bars).toHaveLength(0);
+      expect(s.indicators).toBeNull();
+      expect(s.latestPrice).toBeNull();
+      expect(s.priceChange).toBeNull();
+    });
   });
 });

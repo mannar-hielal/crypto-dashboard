@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ElementType } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   MousePointer2,
   Crosshair,
@@ -40,36 +41,74 @@ const TOOLS: Tool[] = [
 // ─── Component ────────────────────────────────────────────────────────────────
 export function LeftToolbar() {
   const [activeTool, setActiveTool] = useState('cursor');
+  const [hoveredTool, setHoveredTool] = useState<string | null>(null);
 
   return (
-    <aside className="flex w-11 shrink-0 flex-col items-center gap-0.5 border-r border-white/[0.08] bg-[#1a1d2e] py-2 overflow-y-auto">
+    <aside
+      className="flex w-11 shrink-0 flex-col items-center gap-0.5 border-r border-white/[0.06] py-2 overflow-y-auto"
+      style={{ background: '#0b0c1a' }}
+    >
       {TOOLS.map((tool, i) => {
         // Separator
         if (tool === null) {
-          return <div key={`sep-${i}`} className="my-1 h-px w-6 rounded-full bg-white/[0.07]" />;
+          return (
+            <div
+              key={`sep-${i}`}
+              className="my-1.5 h-px w-6 rounded-full"
+              style={{ background: 'rgba(255,255,255,0.06)' }}
+            />
+          );
         }
 
         const Icon = tool.icon;
         const isActive = activeTool === tool.id;
 
         return (
-          <button
+          <motion.button
             key={tool.id}
             onClick={() => setActiveTool(tool.id)}
+            onHoverStart={() => setHoveredTool(tool.id)}
+            onHoverEnd={() => setHoveredTool(null)}
             title={tool.label}
-            className={`group relative flex h-8 w-8 items-center justify-center rounded transition-colors ${
-              isActive
-                ? 'bg-indigo-500/20 text-indigo-400'
-                : 'text-slate-400 hover:bg-white/[0.05] hover:text-white'
-            }`}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            className="group relative flex h-8 w-8 items-center justify-center rounded"
+            style={{
+              background: isActive ? '#7b2ff720' : 'transparent',
+              color: isActive ? '#a855f7' : '#848e9c',
+            }}
           >
-            <Icon className="h-[15px] w-[15px]" />
+            {/* Active glow ring */}
+            {isActive && (
+              <motion.span
+                layoutId="toolbar-active"
+                className="absolute inset-0 rounded"
+                style={{
+                  background: '#7b2ff720',
+                  boxShadow: '0 0 0 1px #7b2ff740',
+                }}
+                transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+              />
+            )}
 
-            {/* Tooltip — appears to the right on hover */}
-            <span className="pointer-events-none absolute left-full ml-2 hidden whitespace-nowrap rounded bg-[#2a3249] px-2 py-1 text-[10px] font-medium text-slate-300 shadow-lg group-hover:block z-50">
-              {tool.label}
-            </span>
-          </button>
+            <Icon className="relative z-10 h-[15px] w-[15px]" />
+
+            {/* Tooltip — framer-motion animated */}
+            <AnimatePresence>
+              {hoveredTool === tool.id && (
+                <motion.span
+                  initial={{ opacity: 0, x: -4 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -4 }}
+                  transition={{ duration: 0.12 }}
+                  className="pointer-events-none absolute left-full ml-2.5 z-50 whitespace-nowrap rounded-md border border-white/[0.08] px-2 py-1 text-[10px] font-semibold text-white/80 shadow-xl"
+                  style={{ background: '#131628' }}
+                >
+                  {tool.label}
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
         );
       })}
     </aside>
