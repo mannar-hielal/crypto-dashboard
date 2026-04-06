@@ -99,7 +99,8 @@
 - [ ] `useEffect` cleanup returns a function that cancels pending work (timers, WebSocket connections, `isMountedRef.current = false`).
 - [ ] `isMountedRef` guard is in place before calling `setState` or store actions inside async operations.
 - [ ] WebSocket `onclose` handler is set to `null` before calling `.close()` in cleanup — prevents auto-reconnect firing after intentional disconnect.
-- [ ] No `setState` called inside `useEffect` that reacts to state it sets (infinite loop) — use the "reset state on prop change" pattern shown in `TradingPanel`.
+- [ ] No `setState` called inside `useEffect` that reacts to state it sets (infinite loop).
+- [ ] **No during-render `setState`** — calling `setState` conditionally during render forces an extra render and behaves unpredictably under StrictMode/concurrent mode. When a component needs to reset local state on a prop change, add `key={prop}` on the _parent_ side instead; React remounts the component with fresh state automatically.
 - [ ] `useEffect` dependency arrays are accurate — no missing deps, no over-broad deps that trigger on every render.
 
 ### Component Design
@@ -116,6 +117,7 @@
   - Short: TP must be < entry price; SL must be > entry price.
 - [ ] `placeOrder` includes entry commission in the balance check (`usdtAmount + fee > balance`) — prevents going negative on 100% orders.
 - [ ] `closePosition` applies `Math.max(0, returnAmount)` — balance never goes below zero.
+- [ ] **`realizedPnl` subtracts BOTH legs of commission** — entry commission (`entryUsdtAmount × COMMISSION_RATE`) AND exit commission (`qty × exitPrice × COMMISSION_RATE`). Omitting either leg overstates realized profit.
 - [ ] `useTPSLMonitor` only evaluates positions matching the active `symbol` — cross-symbol false triggers are a known bug risk.
 
 ---
@@ -135,6 +137,8 @@
 - [ ] Every new feature or bug fix has at least one test case.
 - [ ] New route handlers have a happy-path test and at least one error/edge-case test.
 - [ ] New store actions in `paperStore` / `marketStore` have unit tests that verify state transitions.
+- [ ] **Complex business logic inside hooks is extracted into a pure function and tested independently** — hooks are hard to test in isolation; a pure helper (e.g. `checkTPSL`) can be unit-tested with zero React/store setup, giving faster and more precise coverage.
+- [ ] **Test `beforeEach` / teardown helpers reset ALL store fields** — use the store's own `reset()` action rather than a partial `setState`. Partial resets silently leave new fields (e.g. `orders`, `journal`, `realizedPnl`) at their previous values, causing state leakage between tests and flaky assertions as the store evolves.
 - [ ] Tests do not depend on real databases, real external APIs, or network calls — Prisma and EmailService are always mocked.
 - [ ] The Prisma mock uses `Symbol.for('skip-override')` so decorations are visible across plugin scopes (see `auth.test.ts` pattern).
 - [ ] `vi.fn()` mocks for Prisma methods that return `{ count: N }` use `mockResolvedValue({ count: 1 })` by default and override with `mockResolvedValueOnce` per test — avoids cross-test pollution.
