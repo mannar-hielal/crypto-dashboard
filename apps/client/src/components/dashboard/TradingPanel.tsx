@@ -35,6 +35,8 @@ interface TradingPanelProps {
 export function TradingPanel({ onClose }: TradingPanelProps) {
   const [orderSide, setOrderSide] = useState<OrderSide>('buy');
   const [usdtInput, setUsdtInput] = useState('');
+  const [tpInput, setTpInput] = useState('');
+  const [slInput, setSlInput] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
   const symbol = useMarketStore((s) => s.symbol);

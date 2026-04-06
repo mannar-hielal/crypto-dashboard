@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart2 } from 'lucide-react';
 import { usePriceFeed } from '@/hooks/usePriceFeed';
+import { useTPSLMonitor } from '@/hooks/useTPSLMonitor';
 import { TopBar } from '@/components/dashboard/TopBar';
 import { LeftToolbar } from '@/components/dashboard/LeftToolbar';
 import { ChartPanel } from '@/components/dashboard/ChartPanel';
