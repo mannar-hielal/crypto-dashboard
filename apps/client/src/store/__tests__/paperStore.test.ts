@@ -40,12 +40,14 @@ describe('paperStore', () => {
 
     it('deducts the USDT amount from balance on a buy', () => {
       usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 1_000);
-      expect(usePaperStore.getState().balance).toBe(9_000);
+      // balance = 10000 - 1000 (margin) - 0.7 (entry commission: 1000 * 0.0007) = 8999.3
+      expect(usePaperStore.getState().balance).toBeCloseTo(8_999.3);
     });
 
     it('deducts the USDT amount from balance on a sell (margin model)', () => {
       usePaperStore.getState().placeOrder(SYMBOL, 'sell', 50_000, 500);
-      expect(usePaperStore.getState().balance).toBe(9_500);
+      // balance = 10000 - 500 (margin) - 0.35 (entry commission: 500 * 0.0007) = 9499.65
+      expect(usePaperStore.getState().balance).toBeCloseTo(9_499.65);
     });
 
     it('creates a long position for a buy order', () => {
@@ -131,10 +133,13 @@ describe('paperStore', () => {
 
     it('returns margin + PnL to balance after a profitable long', () => {
       const id = usePaperStore.getState().placeOrder(SYMBOL, 'buy', 40_000, 4_000)!;
-      // balance after order = 6000
-      // after close: 6000 + (4000 margin + 1000 PnL) = 11000
+      // Entry commission : 4000 * 0.0007 = 2.8  → balance after open = 5997.2
+      // qty = 4000 / 40000 = 0.1 BTC; gross PnL = (50000 - 40000) * 0.1 = 1000
+      // Exit commission  : 0.1 * 50000 * 0.0007 = 3.5
+      // returnAmount = 4000 + 1000 - 3.5 = 4996.5
+      // final balance = 5997.2 + 4996.5 = 10993.7
       usePaperStore.getState().closePosition(id, 50_000);
-      expect(usePaperStore.getState().balance).toBeCloseTo(11_000);
+      expect(usePaperStore.getState().balance).toBeCloseTo(10_993.7);
     });
 
     it('floors balance return at 0 — balance never goes negative', () => {
