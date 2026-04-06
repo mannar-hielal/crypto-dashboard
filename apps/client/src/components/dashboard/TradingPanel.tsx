@@ -151,8 +151,8 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
       orderSide,
       latestPrice,
       amount,
-      tp && !isNaN(tp) ? tp : undefined,
-      sl && !isNaN(sl) ? sl : undefined
+      tp !== undefined && !isNaN(tp) ? tp : undefined,
+      sl !== undefined && !isNaN(sl) ? sl : undefined
     );
     if (!id) {
       setFormError('Order could not be placed');
