@@ -21,6 +21,7 @@ import { usePaperStore } from '@/store/paperStore';
 
 export function useTPSLMonitor() {
   const latestPrice = useMarketStore((s) => s.latestPrice);
+  const symbol = useMarketStore((s) => s.symbol);
 
   // Use refs so the effect closure always reads the latest store state
   // without needing to re-subscribe and re-attach the effect.
@@ -32,7 +33,9 @@ export function useTPSLMonitor() {
     if (latestPrice === null) return;
 
     const price = latestPrice;
-    const positions = getPositions();
+    // Only evaluate positions for the currently active symbol — other symbols
+    // have no live price feed active so we must not close them on a different ticker.
+    const positions = getPositions().filter((p) => p.symbol === symbol);
 
     for (const pos of positions) {
       let triggered: 'TP' | 'SL' | null = null;
@@ -49,10 +52,12 @@ export function useTPSLMonitor() {
       if (triggered) {
         closePosition.current(pos.id, price);
         const label = triggered === 'TP' ? 'Take-Profit' : 'Stop-Loss';
+        // isUserNote: false — system-generated entries must not be user-editable
         addJournalNote.current(
-          `Auto-closed ${pos.side.toUpperCase()} ${pos.symbol} — ${label} hit at $${price.toFixed(4)}`
+          `Auto-closed ${pos.side.toUpperCase()} ${pos.symbol} — ${label} hit at $${price.toFixed(4)}`,
+          false
         );
       }
     }
-  }, [latestPrice]);
+  }, [latestPrice, symbol]);
 }

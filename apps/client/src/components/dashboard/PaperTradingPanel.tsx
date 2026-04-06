@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -132,6 +132,13 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
   const [infoTab, setInfoTab] = useState<InfoTab>('positions');
   const [confirmingReset, setConfirmingReset] = useState(false);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clear the reset confirmation timer on unmount to avoid state updates on an unmounted component
+  useEffect(() => {
+    return () => {
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    };
+  }, []);
 
   // ── Journal UI state ──────────────────────────────────────────────────────
   const [isAddingNote, setIsAddingNote] = useState(false);

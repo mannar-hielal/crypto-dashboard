@@ -129,8 +129,8 @@ interface PaperState {
   /** Close an open position at the given exit price. */
   closePosition: (positionId: string, exitPrice: number) => void;
 
-  /** Add a custom user note to the journal. */
-  addJournalNote: (text: string) => void;
+  /** Add a note to the journal. Pass isUserNote=false for system-generated entries (not user-editable). */
+  addJournalNote: (text: string, isUserNote?: boolean) => void;
 
   /** Edit any journal entry (typically used for user notes). */
   editJournalEntry: (entryId: string, text: string) => void;
@@ -188,7 +188,7 @@ export const usePaperStore = create<PaperState>()(
         };
 
         const balBefore = balance;
-        const balAfter = balance - usdtAmount;
+        const balAfter = balance - usdtAmount - commission;
 
         const logEntry: BalanceEvent = {
           id: `bl-${id}`,
@@ -222,7 +222,7 @@ export const usePaperStore = create<PaperState>()(
         ];
 
         set((s) => ({
-          balance: s.balance - usdtAmount,
+          balance: s.balance - usdtAmount - commission,
           positions: [...s.positions, position],
           orders: [order, ...s.orders].slice(0, MAX_HISTORY * 2),
           balanceLog: [logEntry, ...s.balanceLog].slice(0, MAX_HISTORY * 2),
@@ -245,9 +245,9 @@ export const usePaperStore = create<PaperState>()(
             ? (exitPrice - pos.entryPrice) * pos.quantity
             : (pos.entryPrice - exitPrice) * pos.quantity;
 
-        // Return margin + PnL to balance (floor at 0 — no negative balance)
-        const returnAmount = Math.max(0, pos.entryUsdtAmount + pnl);
+        // Return margin + PnL to balance, minus exit commission (floor at 0 — no negative balance)
         const commission = pos.quantity * exitPrice * COMMISSION_RATE;
+        const returnAmount = Math.max(0, pos.entryUsdtAmount + pnl - commission);
         const now = Date.now();
         const closedId = `${now}-${Math.random().toString(36).slice(2, 7)}`;
 
@@ -321,13 +321,13 @@ export const usePaperStore = create<PaperState>()(
         }));
       },
 
-      addJournalNote: (text: string) => {
+      addJournalNote: (text: string, isUserNote = true) => {
         const noteId = `j-note-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
         const entry: JournalEntry = {
           id: noteId,
           time: Date.now(),
           text,
-          isUserNote: true,
+          isUserNote,
         };
         set((s) => ({
           journal: [entry, ...s.journal].slice(0, MAX_JOURNAL),
