@@ -22,17 +22,6 @@ export function Footer() {
         >
           Privacy Policy
         </Link>
-        <span className="text-muted-foreground/40" aria-hidden="true">
-          ·
-        </span>
-        <a
-          href="https://github.com/mannar-hielal/crypto-dashboard"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-muted-foreground hover:text-foreground underline-offset-4 transition-colors hover:underline"
-        >
-          GitHub
-        </a>
       </nav>
       <p className="text-muted-foreground/50 mt-2 text-xs">
         © {new Date().getFullYear()} Crypto Dashboard

@@ -1,115 +1,47 @@
-# Crypto Dashboard — Free TradingView Plus Alternative
+# Crypto Dashboard
 
-A free, self-hosted paper trading dashboard that replicates TradingView Plus features for cryptocurrency trading on Bybit mainnet.
+A professional paper trading dashboard for cryptocurrency. Real-time charting, simulated long/short trading, and a full order management system — without risking real money.
 
-> ⚠️ **Paper Trading Only** — No real money. Educational purposes only.
-
----
-
-## 🗺️ Phase Roadmap
-
-### ✅ Completed
-
-| Phase                 | Scope                       | Highlights                                                                                                                                                        |
-| --------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Phase 1**           | Foundation + Live Dashboard | Monorepo, auth (JWT + refresh rotation + password reset), Bybit WebSocket feed, TradingView chart with EMA/MACD/VWAP, paper trading (buy/sell, PnL, journal), PWA |
-| **Phase 2 — partial** | Paper Trading Enhancements  | TP/SL auto-monitor, per-trade commission accounting, system vs user journal entries                                                                               |
-
-### 🔄 In Progress
-
-| Phase       | Scope                      | Remaining                                                               |
-| ----------- | -------------------------- | ----------------------------------------------------------------------- |
-| **Phase 2** | Paper Trading Enhancements | Account management (username / email / password change, delete account) |
-
-### 📋 Planned
-
-| Phase       | Scope                                                             |
-| ----------- | ----------------------------------------------------------------- |
-| **Phase 3** | Chart drawing tools (trendlines, horizontal lines, Fibonacci)     |
-| **Phase 4** | Multi-symbol watchlist + price alerts                             |
-| **Phase 5** | Trade analytics (win rate, avg PnL, drawdown, equity curve chart) |
+> ⚠️ **Paper Trading Only** — No real money. For educational and practice purposes only.
 
 ---
 
-## 🎯 Phase 1 Progress ✅
+## ✨ Features
 
-### Infrastructure & Quality
-
-- [x] Monorepo with pnpm workspaces
-- [x] Docker for PostgreSQL + Redis (dev/prod parity from day one)
-- [x] ESLint + Prettier with Husky pre-commit hooks
-- [x] TypeScript strict mode + type-check enforced on every commit
-- [x] Node.js version pinned (`v24.14.1`)
-- [x] Pino structured logger (no bare `console.*`)
-- [x] CORS origin configurable per environment
-- [x] Vitest testing setup — 131 tests across server (86) and client (45)
-- [x] Swagger / OpenAPI documentation served at `/docs`
-
-### Backend
-
-- [x] Fastify server with security headers (Helmet), rate limiting, CORS
-- [x] JWT authentication — register / login / refresh / logout / `/me`
-- [x] Password reset flow — forgot-password + reset-password with one-time token (Resend email)
-- [x] Refresh token rotation — SHA-256 hashed tokens, httpOnly cookie (`sameSite: none + secure` in prod, `lax` in dev), 7-day TTL
-- [x] PostgreSQL via Prisma ORM (User, Account, Order, Trade, PasswordResetToken schema)
-- [x] **Bybit WebSocket Manager** — connects to Bybit mainnet V5, multi-channel subscriptions, exponential-backoff reconnect, 30s heartbeat, 64KB message guard
-- [x] **Bybit Fastify plugin** — bootstraps WS manager on startup (non-blocking), exposes `fastify.bybit` service (`getSnapshot`, `subscribe`)
-- [x] **Candle Aggregator** — aggregates 1m klines → 5m, 15m, 1h, 4h, 1d in memory; correct OHLCV (including rolling close)
-- [x] **Indicator calculators** — EMA (9/21/200), MACD (12/26/9), VWAP; calculated per bar and broadcast with each live update
-- [x] **Market routes** — `GET /api/market/candles` (historical OHLCV, up to 1000 bars) + `GET /api/market/ws` (WebSocket live feed with initial snapshot); symbol/interval allowlist enforced
-
-### Frontend
-
-- [x] React 19 + Vite 8 + TypeScript client (`apps/client`)
-- [x] Tailwind CSS v4 configured (dark-first dashboard theme)
-- [x] Shadcn/ui Nova preset — Button, Input, Card, Alert, Form, Label components
-- [x] `@` path alias configured (e.g. `@/components/ui/button`)
-- [x] CDSDK — shared types + API functions (`generated/CDSDK`) including market API
-- [x] Cloudflare Pages deployment wired in CI/CD
-- [x] React Router v7 with public/protected route split
-- [x] Zustand auth store — access token in memory, refresh token in httpOnly cookie
-- [x] Login / Register / Forgot Password / Reset Password pages
-- [x] AnimatePresence page transitions
-- [x] Silent session restore on app boot via `/api/auth/refresh` (StrictMode-safe module-level guard)
-- [x] **`usePriceFeed` hook** — REST fetch on mount + auto-reconnecting WebSocket; fine-grained store selectors to prevent cascade re-renders
-- [x] **`marketStore`** — Zustand store for live bars, indicators, connection state; MAX_BARS=500 ring buffer
-- [x] **`ChartPanel`** — TradingView Lightweight Charts candlestick chart with EMA9/21/200 overlays, VWAP (orange sparse dots), MACD pane (4-color histogram), crosshair hover legend showing OHLC + all indicator values
-- [x] **`TopBar`** — interval buttons (1m/5m/15m/1h/4h/1d), live BTC price + 24h change
-- [x] **`LeftToolbar`** — drawing tool icon placeholders (cursor, trendline, shapes, text, pencil)
-- [x] **`SymbolBar`** — trading sub-header with symbol picker dropdown, live price + 24h stats, timeframe buttons (1m/5m/15m/1h/4h/1d), TradingPanel toggle with pulsing ring indicator, WebSocket connection status
-- [x] **`DashboardPage`** — full layout: LeftToolbar | ChartPanel | TradingPanel (right) + PaperTradingPanel (bottom); panel states are independently controlled with animated open/close transitions
-- [x] **Panel close/reopen UX** — both side panels have an `✕` button; bottom panel reopens via a glowing purple floating pill (pulse animation); right panel reopens via the pulsing `⊞` toggle in SymbolBar
-- [x] **Chart initial load** — `scrollToRealTime()` replaces `fitContent()` so the chart opens showing ~40 readable candles (natural TradingView-style density) instead of compressing all history
-- [x] **`paperStore`** — Zustand + persist, $10,000 starting balance, long/short positions, correct PnL (longs and shorts), 0.07% taker commission on open and close, MAX_HISTORY=100, order history, balance log, journal (system + user notes)
-- [x] **`TradingPanel`** — right sidebar for order entry: balance/equity summary, Buy Long / Sell Short toggle, USDT amount input with % presets (25/50/75/100), quantity preview, mark price display, optional TP/SL inputs with direction validation
-- [x] **`PaperTradingPanel`** — bottom panel: open positions table with live PnL, TP/SL columns, and close button per row; closed trade history; journal tab (system trade events + editable user notes); collapse/expand/hide states with animated height transitions
-- [x] PWA shell — installable, mobile-responsive, dark splash screen (`#080B14`), custom candlestick icon
+- **Live Candlestick Charts** — EMA (9/21/200), MACD, and VWAP indicators via TradingView Lightweight Charts
+- **Paper Trading** — Simulated long/short market orders with $10,000 virtual balance and full P&L accounting
+- **TP/SL Auto-Monitor** — Positions close automatically when Take-Profit or Stop-Loss levels are hit
+- **Order & Balance History** — Full audit trail of every order, balance change, and commission
+- **Trading Journal** — Auto-generated trade events + personal editable notes
+- **Multi-Timeframe** — 1m / 5m / 15m / 1h / 4h / 1d intervals with live aggregation
+- **Real-Time Data** — Bybit V5 WebSocket feed with automatic reconnection
+- **Authentication** — JWT + refresh token rotation + email-based password reset
+- **PWA** — Installable on desktop and mobile, works offline for the UI shell
 
 ---
 
-## 🎯 Phase 2 Progress (in progress)
+## 🗺️ Roadmap
 
-- [x] **`useTPSLMonitor` hook** — subscribes to `latestPrice` on every tick; auto-closes positions when TP or SL is breached; scoped to the active symbol only (prevents cross-symbol false triggers); appends a non-editable system journal entry on each auto-close
-- [x] **Take-Profit / Stop-Loss on positions** — `Position` stores optional `takeProfit` and `stopLoss` prices; `placeOrder` accepts and persists them; `TradingPanel` exposes TP/SL inputs with real-time direction validation
-- [x] **Commission accounting** — 0.07% taker fee deducted from balance on open; exit commission deducted from `returnAmount` on close; `HistoricalOrder` records the fee for both legs
-- [x] **System vs user journal entries** — `addJournalNote(text, isUserNote?)` distinguishes auto-generated entries (not editable) from user-authored notes (editable via the pen icon)
-- [ ] Account management (username / email / password change, delete account)
+| Phase       | Status         | Scope                                                                                                           |
+| ----------- | -------------- | --------------------------------------------------------------------------------------------------------------- |
+| **Phase 1** | ✅ Complete    | Auth, live chart, paper trading v1 (market orders), TP/SL monitor, journal, PWA                                 |
+| **Phase 2** | 🔄 In Progress | Limit/Stop orders, TradingPanel redesign (bid/ask, order types), pending orders monitor, real-time bid/ask feed |
+| **Phase 3** | 📋 Planned     | Sync trades to DB, user profile & account settings                                                              |
+| **Phase 4** | 📋 Planned     | Advanced indicators, multi-symbol watchlist, price alerts                                                       |
 
 ---
 
 ## 🏗️ Architecture
 
-| Layer              | Stack                                                 |
-| ------------------ | ----------------------------------------------------- |
-| **Backend**        | Node.js v24 + Fastify + Prisma 7 + PostgreSQL 16      |
-| **Frontend**       | React 19 + TypeScript + Vite 8 + Tailwind CSS v4      |
-| **Charting**       | TradingView Lightweight Charts v5                     |
-| **Shared SDK**     | `generated/CDSDK` — types + API functions             |
-| **State**          | Zustand (auth, market, paper trading)                 |
-| **Logger**         | Pino (structured JSON in prod, pretty-printed in dev) |
-| **Data**           | Bybit V5 WebSocket API (mainnet)                      |
-| **Infrastructure** | Docker Compose (PostgreSQL + Redis)                   |
-| **Hosting**        | Fly.io (server) + Cloudflare Pages (client)           |
+| Layer              | Stack                                            |
+| ------------------ | ------------------------------------------------ |
+| **Backend**        | Node.js v24 + Fastify + Prisma 7 + PostgreSQL 16 |
+| **Frontend**       | React 19 + TypeScript + Vite 8 + Tailwind CSS v4 |
+| **Charting**       | TradingView Lightweight Charts v5                |
+| **State**          | Zustand                                          |
+| **Data**           | Bybit V5 WebSocket API (mainnet)                 |
+| **Infrastructure** | Docker Compose (PostgreSQL + Redis)              |
+| **Hosting**        | Fly.io (API) + Cloudflare Pages (client)         |
 
 ---
 
@@ -118,59 +50,22 @@ A free, self-hosted paper trading dashboard that replicates TradingView Plus fea
 ```
 crypto-dashboard/
 ├── apps/
-│   ├── client/                         # React 19 frontend (PWA)
+│   ├── client/          # React 19 frontend (PWA)
 │   │   └── src/
-│   │       ├── App.tsx                 # Routes + silent session restore
-│   │       ├── components/
-│   │       │   ├── dashboard/
-│   │       │   │   ├── ChartPanel.tsx        # Lightweight Charts + indicators
-│   │       │   │   ├── TopBar.tsx            # App header + user avatar
-│   │       │   │   ├── SymbolBar.tsx         # Symbol picker, price, timeframes, panel toggles
-│   │       │   │   ├── LeftToolbar.tsx       # Drawing tool icon sidebar
-│   │       │   │   ├── TradingPanel.tsx      # Right sidebar: order entry (buy/sell/short)
-│   │       │   │   ├── PaperTradingPanel.tsx # Bottom panel: positions + history
-│   │       │   │   └── TickerBar.tsx         # Live ticker strip
-│   │       │   └── ui/                       # Shadcn/ui components
-│   │       ├── hooks/
-│   │       │   ├── usePriceFeed.ts     # REST + WebSocket lifecycle
-│   │       │   └── useTPSLMonitor.ts   # Auto-close positions on TP/SL breach
-│   │       ├── pages/
-│   │       │   ├── DashboardPage.tsx   # Main trading layout
-│   │       │   ├── LoginPage.tsx
-│   │       │   ├── RegisterPage.tsx
-│   │       │   ├── ForgotPasswordPage.tsx
-│   │       │   └── ResetPasswordPage.tsx
-│   │       ├── store/
-│   │       │   ├── authStore.ts        # Access token in memory
-│   │       │   ├── marketStore.ts      # Live bars + indicators (MAX_BARS=500)
-│   │       │   └── paperStore.ts       # Virtual balance + positions (persisted)
-│   │       └── lib/
-│   │           └── indicators.ts       # Client-side indicator utilities
-│   └── server/                         # Fastify backend
-│       ├── prisma/                     # Schema & migrations
+│   │       ├── components/dashboard/   # Chart, panels, toolbar
+│   │       ├── hooks/                  # usePriceFeed, useTPSLMonitor
+│   │       ├── pages/                  # Dashboard, auth pages
+│   │       └── store/                  # Zustand stores (auth, market, paper)
+│   └── server/          # Fastify backend
 │       └── src/
-│           ├── plugins/
-│           │   ├── prisma.ts
-│           │   ├── auth.ts             # JWT authenticate decorator
-│           │   └── bybit.ts            # Bybit WS plugin + broadcast service
-│           ├── routes/
-│           │   ├── auth/               # register/login/refresh/logout/me/…
-│           │   └── market/             # GET /candles, WS /ws
-│           ├── services/
-│           │   ├── BybitWebSocketManager.ts  # Reconnect + heartbeat + allowlist
-│           │   ├── CandleAggregator.ts       # 1m → 5m/15m/1h/4h/1d
-│           │   ├── IndicatorCalculator.ts    # EMA/MACD/VWAP
-│           │   └── EmailService.ts           # Resend (stdout fallback in dev)
-│           └── types/
+│           ├── plugins/                # Prisma, JWT auth, Bybit WS
+│           ├── routes/                 # auth/, market/
+│           └── services/              # BybitWebSocketManager, CandleAggregator, IndicatorCalculator
 ├── generated/
-│   └── CDSDK/                          # Shared SDK — '@crypto-dashboard/sdk'
-│       ├── api/
-│       │   ├── auth.ts                 # authApi.*
-│       │   └── market.ts               # marketApi.getCandles / wsUrl
-│       └── types/                      # User, CandleBar, LiveBar, WsMessage…
-├── docker-compose.yml                  # PostgreSQL 16 + Redis 7
-├── .env.example
-└── package.json                        # Root workspace
+│   └── CDSDK/           # Shared SDK — '@crypto-dashboard/sdk'
+├── docs/                # Project documentation
+├── docker-compose.yml
+└── package.json
 ```
 
 ---
@@ -179,13 +74,13 @@ crypto-dashboard/
 
 ### Prerequisites
 
-- **Node.js** v24+ — use [fnm](https://github.com/Schniz/fnm) or [nvm](https://github.com/nvm-sh/nvm), it will auto-read `.node-version`
+- **Node.js** v24+ — use [fnm](https://github.com/Schniz/fnm) or [nvm](https://github.com/nvm-sh/nvm) (auto-reads `.node-version`)
 - **pnpm** v10+ — `npm install -g pnpm`
 - **Docker Desktop** — [download](https://www.docker.com/products/docker-desktop/)
 
 ### Setup
 
-1. **Clone & install dependencies**
+1. **Clone & install**
 
    ```bash
    git clone https://github.com/mannar-hielal/crypto-dashboard.git
@@ -197,29 +92,27 @@ crypto-dashboard/
 
    ```bash
    cp .env.example .env
-   # Edit .env — set DATABASE_URL, REDIS_URL, JWT secrets, RESEND_API_KEY
-   # Generate a JWT secret:
+   # Edit .env — set DATABASE_URL, JWT_SECRET, RESEND_API_KEY, REDIS_URL, BYBIT_API_KEY, BYBIT_API_SECRET
+   # Generate a secure JWT secret:
    openssl rand -base64 32
 
-   # For the frontend:
    cp apps/client/.env.example apps/client/.env.local
    # VITE_API_URL defaults to http://localhost:3001 — no change needed for local dev
    ```
 
-3. **Start infrastructure (PostgreSQL + Redis)**
+3. **Start infrastructure**
 
    ```bash
    docker compose up -d
    ```
 
-4. **Run database migrations**
+4. **Run migrations**
 
    ```bash
-   cd apps/server
-   pnpm prisma migrate deploy
+   cd apps/server && pnpm prisma migrate deploy
    ```
 
-5. **Start backend + frontend**
+5. **Start dev servers**
 
    ```bash
    # Backend (from project root):
@@ -230,144 +123,61 @@ crypto-dashboard/
    # → http://localhost:5173
    ```
 
-6. **Verify it's running**
+6. **Verify**
 
    ```bash
    curl http://localhost:3001/health
    # → { "status": "ok", "environment": "development" }
    ```
 
-   Open `http://localhost:5173/dashboard` — the chart loads with live BTC/USDT price, EMA/VWAP/MACD indicators, and the paper trading panel.
+   Open `http://localhost:5173` — the chart loads with live BTC/USDT price, EMA/VWAP/MACD indicators, and the paper trading panel.
 
 ---
 
 ## 🔧 Development Commands
 
 ```bash
-# Infrastructure
-docker compose up -d          # Start PostgreSQL + Redis
-docker compose down           # Stop services
-docker compose down -v        # Stop + wipe data volumes
-
-# Backend
-pnpm dev:server               # Start backend with hot reload
-pnpm --filter server build    # Compile TypeScript to dist/
-
-# Frontend
-pnpm --filter @crypto-dashboard/client dev    # Vite dev server → http://localhost:5173
-pnpm --filter @crypto-dashboard/client build  # Production build → apps/client/dist/
-
-# Code quality (also run automatically on every commit)
-pnpm lint                     # ESLint check
-pnpm format                   # Prettier format whole project
-pnpm type-check               # TypeScript strict type check (server)
-
-# Testing
-pnpm test                                           # Run all 131 tests (server + client)
-pnpm test:coverage                                  # Run all tests with coverage report
-pnpm --filter @crypto-dashboard/server test:watch   # Backend tests in watch mode
-pnpm --filter @crypto-dashboard/client test:watch   # Client tests in watch mode
+# Code quality
+pnpm lint             # ESLint
+pnpm format           # Prettier
+pnpm type-check       # TypeScript strict check
+pnpm test             # Run all tests (148 total)
+pnpm test:coverage    # Tests with coverage report
 
 # Database
 cd apps/server
-pnpm prisma migrate dev       # Create + apply a new migration
-pnpm prisma migrate deploy    # Apply pending migrations (CI/prod)
-pnpm prisma studio            # Visual DB browser at localhost:5555
+pnpm prisma migrate dev    # Create + apply a new migration
+pnpm prisma studio         # Visual DB browser → localhost:5555
+
+# Infrastructure
+docker compose up -d       # Start PostgreSQL + Redis
+docker compose down -v     # Stop + wipe data volumes
 ```
-
----
-
-## 🧪 Test Coverage
-
-| Suite                           | Tests   | What's covered                                                                        |
-| ------------------------------- | ------- | ------------------------------------------------------------------------------------- |
-| `auth.test.ts`                  | 26      | Register, login, refresh, logout, /me, forgot-password, reset-password                |
-| `health.test.ts`                | 2       | Health endpoint                                                                       |
-| `market.test.ts`                | 10      | Candles route — defaults, OHLCV parsing, allowlist, 502 errors                        |
-| `BybitWebSocketManager.test.ts` | 25      | Subscribe/unsubscribe, message parsing, DoS guard, connect lifecycle                  |
-| `CandleAggregator.test.ts`      | 14      | OHLCV aggregation, close accuracy, multi-symbol isolation, history                    |
-| `IndicatorCalculator.test.ts`   | 8       | EMA, MACD, VWAP calculations                                                          |
-| `marketStore.test.ts`           | 20      | setSnapshot, addBar upsert, MAX_BARS cap, derived state                               |
-| `paperStore.test.ts`            | 25      | Order validation, PnL (long/short), commission accounting, balance floor, history cap |
-| **Total**                       | **131** |                                                                                       |
 
 ---
 
 ## 📖 API Documentation
 
-Swagger UI is available in **development** at:
-
-```
-http://localhost:3001/docs
-```
-
-All endpoints are documented with request/response schemas, authentication requirements, and example payloads. The `/docs` route is disabled in production.
-
----
-
-## 🔐 Security Hardening
-
-| Area             | Measure                                                                                                                               |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| HTTP headers     | Helmet (XSS, clickjacking, MIME sniffing)                                                                                             |
-| Auth             | bcrypt cost 12, timing-attack safe compare                                                                                            |
-| Tokens           | Access token in Zustand memory (15 min); refresh token in httpOnly cookie (7 days, `sameSite: none + secure` in prod, `lax` in dev)   |
-| CSRF             | `sameSite: none` paired with `secure: true` (HTTPS-only) in production; state-changing endpoints require a valid JWT or refresh token |
-| Token rotation   | Refresh tokens hashed (SHA-256) in DB, rotated on every use                                                                           |
-| Password reset   | One-time token, 1h expiry, marked `usedAt` after use                                                                                  |
-| Rate limiting    | Global 100/min + per-route (5/hr register, 10/15min login, 3/15min forgot-password)                                                   |
-| Input validation | Fastify JSON Schema with `additionalProperties: false`                                                                                |
-| WebSocket        | 64KB message size limit, symbol/channel allowlist, `readyState` check before send                                                     |
-| Logging          | Pino structured logs — credentials never logged                                                                                       |
-| CORS             | `CORS_ORIGIN` env var — not hardcoded                                                                                                 |
-| Env vars         | Validated at startup; process exits on missing critical vars                                                                          |
-
----
-
-## 📝 Commit Convention
-
-Each commit = one testable unit of work.
-
-| Prefix      | When to use                   |
-| ----------- | ----------------------------- |
-| `feat:`     | New feature or endpoint       |
-| `fix:`      | Bug fix                       |
-| `security:` | Security hardening            |
-| `chore:`    | Tooling, dependencies, config |
-| `setup:`    | Infrastructure setup          |
-| `docs:`     | Documentation only            |
-
----
-
-## 📚 Resources
-
-- [Bybit V5 API Docs](https://bybit-exchange.github.io/docs/v5/intro)
-- [Fastify Documentation](https://fastify.dev/)
-- [Prisma ORM](https://www.prisma.io/)
-- [TradingView Lightweight Charts](https://tradingview.github.io/lightweight-charts/)
-- [Tailwind CSS v4](https://tailwindcss.com/)
-- [Cloudflare Pages](https://pages.cloudflare.com/)
-- [Pino Logger](https://getpino.io/)
+Swagger UI is available in development at `http://localhost:3001/docs` (disabled in production).
 
 ---
 
 ## 🌐 Deployment
 
-| Service    | Platform         | URL                                      |
-| ---------- | ---------------- | ---------------------------------------- |
-| **Server** | Fly.io           | `https://crypto-dashboard-api.fly.dev`   |
-| **Client** | Cloudflare Pages | `https://crypto-dashboard-7yy.pages.dev` |
+| Service | Platform         | URL                                    |
+| ------- | ---------------- | -------------------------------------- |
+| **API** | Fly.io           | https://crypto-dashboard-api.fly.dev   |
+| **App** | Cloudflare Pages | https://crypto-dashboard-7yy.pages.dev |
 
-Deployments trigger automatically when `main` is updated and CI passes.
+Deployments trigger automatically on push to `main` when CI passes.
 
 ---
 
 ## 📄 License
 
-MIT — see [LICENSE](./LICENSE)
+© 2026 Mannar Hielal. All Rights Reserved. See [LICENSE](./LICENSE).
 
 ---
 
-**Status:** Phase 1 complete · Phase 2 in progress (TP/SL auto-monitor done, account management next)  
-**Last Updated:** April 6, 2026  
-**Live:** [API](https://crypto-dashboard-api.fly.dev/health) · [App](https://crypto-dashboard-7yy.pages.dev)
+**Live:** [API Health](https://crypto-dashboard-api.fly.dev/health) · [App](https://crypto-dashboard-7yy.pages.dev)  
+**Last updated:** April 11, 2026
