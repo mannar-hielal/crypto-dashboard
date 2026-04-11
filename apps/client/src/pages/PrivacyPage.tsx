@@ -4,7 +4,7 @@ const CONTACT_EMAIL = 'adminwithu@gmail.com'; // TODO: replace with legal@yourdo
 
 export function PrivacyPage() {
   return (
-    <LegalLayout title="Privacy Policy" lastUpdated="April 5, 2026">
+    <LegalLayout title="Privacy Policy" lastUpdated="April 11, 2026">
       <section>
         <h2>1. Data Controller</h2>
         <p>
@@ -66,7 +66,10 @@ export function PrivacyPage() {
             <tr>
               <td>Paper trade history</td>
               <td>Displaying your simulated portfolio and order history</td>
-              <td>Database — retained until account deletion</td>
+              <td>
+                Your browser's localStorage on your device only — not transmitted to or stored on
+                our servers. Clearing your browser data will erase it.
+              </td>
             </tr>
             <tr>
               <td>Server access logs</td>
@@ -223,7 +226,7 @@ export function PrivacyPage() {
             </tr>
             <tr>
               <td>Bybit</td>
-              <td>Real-time market data (Testnet — price feed only)</td>
+              <td>Real-time market data (mainnet — price feed only, no user data transmitted)</td>
               <td>Global</td>
               <td>
                 <a

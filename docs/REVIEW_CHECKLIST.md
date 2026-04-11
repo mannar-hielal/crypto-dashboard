@@ -1,7 +1,7 @@
 # Pre-Commit Review Checklist
 
-> Run through every section that is relevant to your change before pushing.  
-> Covers everything currently in the codebase as of Phase 2 — update this file when new patterns are introduced.
+> Run through every section that is relevant to your change before pushing.
+> Covers everything currently in the codebase, starting from Phase 1, kept current across all phases — update this file when new patterns are introduced.
 
 ---
 
@@ -29,6 +29,17 @@
 - [ ] JWT payload contains only `userId` and `email` — no sensitive fields (roles, passwords, PII).
 - [ ] Password fields are never included in any API response (`omit: { password: true }` on every user query).
 
+### JWT Hardening [Phase 1+]
+
+- [ ] 🔐 `JWT_SECRET` has at least 32 bytes (256 bits) of entropy — validated at startup in `config.ts` by checking `Buffer.byteLength(config.jwtSecret, 'utf8') >= 32`; process exits with a clear error if not met.
+- [ ] 🔐 JWT algorithm is explicitly declared as `HS256` in `app.ts` (`algorithms: ['HS256']` option on `@fastify/jwt`) — prevents `alg: none` downgrade attacks if library defaults ever change.
+- [ ] 🔐 Access token is **never** passed as a URL query parameter — only via `Authorization: Bearer` header. JWTs in URLs leak to server logs, browser history, and `Referer` headers.
+
+### CSRF & Cookie Posture [Phase 1+]
+
+- [ ] 🔐 CSRF defence relies on the Bearer token strategy: every state-mutating endpoint requires a valid JWT in Zustand memory (not readable from a cookie). `/refresh` and `/logout` are CSRF-safe by design — logout is benign and `/refresh` without a valid httpOnly cookie is a no-op. No CSRF token or double-submit cookie is required.
+- [ ] 🔐 Cookie `sameSite` is **`lax`** in development and **`none` + `secure: true`** in production — this is the only approved combination; never use `sameSite: strict` without verifying cross-domain redirect flows still work. Match `COOKIE_BASE_OPTIONS` exactly on every `setCookie` / `clearCookie` call.
+
 ### Input Validation
 
 - [ ] Every new Fastify route has a JSON Schema with `additionalProperties: false` — extra fields are rejected before the handler runs.
@@ -54,6 +65,20 @@
 - [ ] 5xx errors are logged server-side and return only `{ error: 'Internal Server Error' }` to the client — no stack traces, DB error messages, or internal paths leak.
 - [ ] Endpoint that queries by email always returns the same response whether or not the email exists (anti-enumeration — see `forgot-password`).
 - [ ] `deleteMany` is used instead of `delete` for token invalidation so concurrent requests get count=0 (atomic, no P2025 race).
+- [ ] 🔐 The `app.ts` error handler logs `request.url` on 5xx — verify no sensitive data (tokens, passwords) can appear in a server route URL. POST bodies are never in the URL; audit every GET route for sensitive query params before adding one.
+- [ ] 🔐 When `/refresh` detects a token already consumed (`deleteMany` returns `count=0`), **all** refresh tokens for that `userId` are revoked immediately (`deleteMany({ where: { userId: stored.userId } })`) — a race or token theft means the attacker's newly issued token must also be killed, not just the victim's stale one.
+
+### Client-Side Security [Phase 2+]
+
+- [ ] 🔐 `dangerouslySetInnerHTML` is prohibited without explicit HTML sanitization (e.g. DOMPurify) — React's default JSX rendering is safe; any raw HTML injection is not.
+- [ ] 🔐 User-typed content (e.g. journal entries in `paperStore`) renders as plain text only — never as HTML. No component may pass user strings to `dangerouslySetInnerHTML` or `innerHTML`.
+- [ ] 🔐 `paperStore` `persist()` uses a `version` number and a `migrate` function so a malformed or tampered localStorage snapshot never crashes the app on hydration — always increment `version` when adding new required state fields.
+
+### Production-Readiness [Phase 1+]
+
+- [ ] 🔐 **Dependency CVEs**: `pnpm audit` is part of the pre-release gate — `high` or `critical` findings block deployment. Run before every release; do not ship with known critical CVEs.
+- [ ] 🔐 **HTTP Security Headers**: in production, verify Helmet enables HSTS with `includeSubDomains`, CSP whitelists only known origins (no `unsafe-inline` / `unsafe-eval`), and `corsOrigin` is never `*`.
+- [ ] 🔐 **Authenticated WebSocket tokens** [Phase 3+]: future authenticated WebSocket endpoints must pass JWT via the `Authorization` header in the HTTP upgrade request — never as a `?token=` query parameter (query params appear in access logs and browser history).
 
 ---
 
@@ -216,12 +241,3 @@
 ---
 
 ## Quick Self-Checklist (run every time)
-
-```
-pnpm lint          # zero ESLint errors
-pnpm type-check    # zero TypeScript errors
-pnpm test          # all 131+ tests pass, no new skips
-pnpm format        # code is formatted
-```
-
-> If any command fails, fix it before pushing. CI will block the PR anyway — save the round-trip.
