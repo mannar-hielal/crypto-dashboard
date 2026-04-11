@@ -92,7 +92,7 @@ crypto-dashboard/
 
    ```bash
    cp .env.example .env
-   # Edit .env — set DATABASE_URL, JWT_SECRET, RESEND_API_KEY
+   # Edit .env — set DATABASE_URL, JWT_SECRET, RESEND_API_KEY, REDIS_URL, BYBIT_API_KEY, BYBIT_API_SECRET
    # Generate a secure JWT secret:
    openssl rand -base64 32
 
