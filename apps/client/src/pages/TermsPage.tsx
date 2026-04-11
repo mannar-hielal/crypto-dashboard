@@ -5,7 +5,7 @@ const CONTACT_EMAIL = 'adminwithu@gmail.com'; // TODO: replace with legal@yourdo
 
 export function TermsPage() {
   return (
-    <LegalLayout title="Terms of Use" lastUpdated="April 5, 2026">
+    <LegalLayout title="Terms of Use" lastUpdated="April 11, 2026">
       <section>
         <h2>1. Acceptance of Terms</h2>
         <p>
@@ -18,15 +18,20 @@ export function TermsPage() {
       <section>
         <h2>2. Description of Service</h2>
         <p>
-          Crypto Dashboard is a free, self-hosted <strong>paper trading simulation platform</strong>{' '}
-          that replicates charting and trading features using real-time price data from the Bybit
-          Testnet API. All trading activity on this platform is simulated using virtual currency.
+          Crypto Dashboard is a <strong>paper trading simulation platform</strong> that provides
+          professional-grade charting and order management tools using real-time price data from the
+          Bybit API. All trading activity on this platform is simulated using virtual currency.
         </p>
         <p>
           <strong>
             No real cryptocurrency or fiat money is ever exchanged, deposited, or withdrawn through
             this Service.
           </strong>
+        </p>
+        <p>
+          The Service is currently offered during an early-access period. Subscription-based pricing
+          tiers will be introduced in a future release. Registered users will be notified of any
+          changes to the pricing model before they take effect.
         </p>
       </section>
 
@@ -103,16 +108,11 @@ export function TermsPage() {
       <section>
         <h2>8. Intellectual Property</h2>
         <p>
-          All code, design, and content produced by this project is the property of Mannar Hielal
-          unless otherwise stated. The project is open source under the{' '}
-          <a
-            href="https://github.com/mannar-hielal/crypto-dashboard/blob/main/LICENSE"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            MIT License
-          </a>
-          . Real-time price data is provided by Bybit and is subject to{' '}
+          All code, design, content, and assets produced by this project are the exclusive
+          proprietary property of Mannar Hielal. All rights reserved. No part of the Service
+          may be copied, reproduced, modified, distributed, or sublicensed without the express prior
+          written permission of Mannar Hielal. Real-time price data is provided by Bybit and is
+          subject to{' '}
           <a
             href="https://www.bybit.com/en/terms-service/user-agreement/"
             target="_blank"
@@ -139,7 +139,7 @@ export function TermsPage() {
         <p>The Service integrates with the following third-party providers:</p>
         <ul>
           <li>
-            <strong>Bybit</strong> — real-time market data (Testnet)
+            <strong>Bybit</strong> — real-time market data (mainnet)
           </li>
           <li>
             <strong>Resend</strong> — transactional email delivery (password reset)
@@ -183,7 +183,8 @@ export function TermsPage() {
           TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, MANNAR HIELAL SHALL NOT BE LIABLE FOR
           ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING FROM YOUR
           USE OF THE SERVICE. SINCE NO REAL FUNDS ARE INVOLVED IN THIS PLATFORM, OUR MAXIMUM
-          AGGREGATE LIABILITY TO YOU SHALL NOT EXCEED CHF 100.
+          AGGREGATE LIABILITY TO YOU SHALL NOT EXCEED THE GREATER OF (A) THE TOTAL FEES PAID BY YOU
+          TO THE SERVICE IN THE THREE (3) MONTHS PRECEDING THE CLAIM, OR (B) CHF 100.
         </p>
         <p>
           EU consumers may have additional rights under mandatory consumer protection laws of their
