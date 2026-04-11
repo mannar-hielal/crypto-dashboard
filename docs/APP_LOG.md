@@ -33,18 +33,18 @@
 
 ### Key library versions (client)
 
-| Library            | Version   | Notes                           |
-|--------------------|-----------|----------------------------------|
-| react              | ^19.2.4   |                                  |
-| zustand            | ^5.0.12   |                                  |
-| framer-motion      | ^12.38.0  | Animations throughout            |
-| lightweight-charts | ^5.1.0    | TradingView chart library        |
-| @number-flow/react | ^0.6.0    | Animated number transitions      |
-| lucide-react       | ^1.7.0    | Icons                            |
-| tailwindcss        | ^4.2.2    |                                  |
-| react-router       | ^7.14.0   |                                  |
-| vite               | ^8.0.1    |                                  |
-| vitest             | ^4.1.2    |                                  |
+| Library            | Version  | Notes                       |
+| ------------------ | -------- | --------------------------- |
+| react              | ^19.2.4  |                             |
+| zustand            | ^5.0.12  |                             |
+| framer-motion      | ^12.38.0 | Animations throughout       |
+| lightweight-charts | ^5.1.0   | TradingView chart library   |
+| @number-flow/react | ^0.6.0   | Animated number transitions |
+| lucide-react       | ^1.7.0   | Icons                       |
+| tailwindcss        | ^4.2.2   |                             |
+| react-router       | ^7.14.0  |                             |
+| vite               | ^8.0.1   |                             |
+| vitest             | ^4.1.2   |                             |
 
 ### Code conventions
 
@@ -65,8 +65,8 @@
 
 ### Phase 1 Retroactive — Fix Immediately (auth is already live)
 
-| Item                                                                                                                          | File                   | Type            | Status    |
-|-------------------------------------------------------------------------------------------------------------------------------|------------------------|-----------------|-----------|
+| Item                                                                                                                          | File                   | Type            | Status     |
+| ----------------------------------------------------------------------------------------------------------------------------- | ---------------------- | --------------- | ---------- |
 | `JWT_SECRET` entropy check — `Buffer.byteLength(secret) >= 32` at startup                                                     | `config.ts`            | Code change     | ⬜ Pending |
 | Explicit `algorithms: ['HS256']` on `@fastify/jwt` registration                                                               | `app.ts`               | Code change     | ⬜ Pending |
 | Token-theft full-revocation: when `/refresh` detects `count=0`, call `deleteMany({ where: { userId } })` to kill all sessions | `routes/auth/index.ts` | Code change     | ⬜ Pending |
@@ -75,15 +75,15 @@
 
 ### Phase 2 — Current Sprint
 
-| Item                                                                                 | File                  | Type           | Status    |
-|--------------------------------------------------------------------------------------|-----------------------|----------------|-----------|
+| Item                                                                                 | File                  | Type           | Status     |
+| ------------------------------------------------------------------------------------ | --------------------- | -------------- | ---------- |
 | `dangerouslySetInnerHTML` prohibition + user content as plain text                   | `REVIEW_CHECKLIST.md` | Checklist item | ✅ Added   |
 | `paperStore` `persist()` — add `version` + `migrate` for safe localStorage hydration | `paperStore.ts`       | Code change    | ⬜ Pending |
 
 ### Phase 3+ — Future
 
 | Item                                                                   | Notes                                                 |
-|------------------------------------------------------------------------|-------------------------------------------------------|
+| ---------------------------------------------------------------------- | ----------------------------------------------------- |
 | Authenticated WebSocket JWT via `Authorization` header (not `?token=`) | Apply when WS auth is added                           |
 | WAF/CDN layer for distributed brute-force protection                   | IP rate limits alone are insufficient against botnets |
 
@@ -129,6 +129,7 @@
 ### Bottom Panel — `PaperTradingPanel` ✅ (current implementation)
 
 **Header — account selector block (left):**
+
 - `Paper Trading ▼` button — label only, no dropdown
 - `{username} USD ▼` button — label only, no dropdown
 - ⚙️ gear icon — currently implements a **2-click reset** (NOT a modal yet):
@@ -137,16 +138,16 @@
 
 **Header — stats bar (right, horizontally scrollable):**
 
-| Field           | Actual formula (from code)                                     | Color rule                        |
-|-----------------|----------------------------------------------------------------|-----------------------------------|
-| Account balance | `balance` (free cash, margin already deducted at open)         | neutral                           |
-| Equity          | `balance + accountMargin + unrealizedPnl`                      | neutral                           |
-| Realized P&L    | `paperStore.realizedPnl`                                       | green / red / neutral             |
-| Unrealized P&L  | sum of pos PnL using `latestPrice` (active symbol only)        | green / `#848e9c` (0) / red       |
-| Account margin  | `sum(pos.entryUsdtAmount)`                                     | ⓘ "Funds used to keep your positions open" |
-| Available funds | `balance` (same as balance — it IS the free cash)              | ⓘ "Funds you can trade with"      |
-| Orders margin   | hardcoded `0.00` — `pendingOrders` not yet implemented         | ⓘ "Funds needed to execute your orders" |
-| Margin buffer   | `accountMargin > 0 ? (equity/accountMargin)*100 : 100` → shows `100%` when no positions | amber <150%, red <110% |
+| Field           | Actual formula (from code)                                                              | Color rule                                 |
+| --------------- | --------------------------------------------------------------------------------------- | ------------------------------------------ |
+| Account balance | `balance` (free cash, margin already deducted at open)                                  | neutral                                    |
+| Equity          | `balance + accountMargin + unrealizedPnl`                                               | neutral                                    |
+| Realized P&L    | `paperStore.realizedPnl`                                                                | green / red / neutral                      |
+| Unrealized P&L  | sum of pos PnL using `latestPrice` (active symbol only)                                 | green / `#848e9c` (0) / red                |
+| Account margin  | `sum(pos.entryUsdtAmount)`                                                              | ⓘ "Funds used to keep your positions open" |
+| Available funds | `balance` (same as balance — it IS the free cash)                                       | ⓘ "Funds you can trade with"               |
+| Orders margin   | hardcoded `0.00` — `pendingOrders` not yet implemented                                  | ⓘ "Funds needed to execute your orders"    |
+| Margin buffer   | `accountMargin > 0 ? (equity/accountMargin)*100 : 100` → shows `100%` when no positions | amber <150%, red <110%                     |
 
 > ⚠️ **Critical formula note**: `balance` in `paperStore` = free cash AFTER positions open (entryUsdtAmount deducted).
 > Therefore: `equity = balance + accountMargin + unrealizedPnl` — NOT `balance + unrealizedPnl`.
@@ -154,6 +155,7 @@
 > The "∞" for marginBuffer when no positions is NOT implemented; it shows `100%` instead.
 
 **Header — panel controls (right):**
+
 - ChevronDown → `'collapsed'` (header only visible)
 - ChevronUp → `'open'` (full height h-52)
 - ✕ → `'hidden'` (h-0, panel removed from view)
@@ -229,6 +231,7 @@ Based on TradingView markup reference. Adapt what fits — not a 1:1 copy.
 **Header:** Symbol name + ✕ (hides panel only — component stays mounted, local state preserved)
 
 **Side selector (always visible below header):**
+
 - Split button: `Sell {bidPrice}` (neutral/dark left) | `Buy {askPrice}` (blue right)
 - Spread badge centered between
 - Active side highlighted; clicking switches Buy ↔ Sell
@@ -240,20 +243,22 @@ Based on TradingView markup reference. Adapt what fits — not a 1:1 copy.
 - **Stop (extra)**: Price input — defaults to current ask/bid
 
 **Exits section** (collapsible, default expanded, all tabs):
+
 - `Take profit, price` — toggle switch + price input (disabled when off)
 - `Stop loss, price` — toggle switch + price input (disabled when off)
 - Existing TP/SL directional validation from `paperStore` applies
 
 **Order info section** (all tabs):
 
-| Field       | Formula                                                            |
-|-------------|--------------------------------------------------------------------|
+| Field       | Formula                                                             |
+| ----------- | ------------------------------------------------------------------- |
 | Margin      | `usdtAmount / 10` shown as `{margin} / {balance}` with progress bar |
-| Leverage    | `10:1` (fixed for crypto)                                          |
-| Trade value | `usdtAmount` USD                                                   |
-| Commission  | `usdtAmount * 0.0007` USD                                          |
+| Leverage    | `10:1` (fixed for crypto)                                           |
+| Trade value | `usdtAmount` USD                                                    |
+| Commission  | `usdtAmount * 0.0007` USD                                           |
 
 **Submit button** (full-width, blue, sticky bottom):
+
 - Primary: `Buy` / `Sell`
 - Secondary: `{qty} {symbol} MARKET` | `@ {price} LIMIT` | `@ {price} STOP`
 
@@ -267,24 +272,39 @@ Persisted to `localStorage` key `cd-paper-trading`. No `version`/`migrate` yet (
 
 ```typescript
 interface PaperState {
-  balance: number;            // free cash (entryUsdtAmount deducted at open)
-  positions: Position[];      // open positions
-  history: ClosedTrade[];     // closed trades (MAX_HISTORY = 100)
-  orders: HistoricalOrder[];  // all order history (MAX_HISTORY * 2)
-  realizedPnl: number;        // net of all commissions
+  balance: number; // free cash (entryUsdtAmount deducted at open)
+  positions: Position[]; // open positions
+  history: ClosedTrade[]; // closed trades (MAX_HISTORY = 100)
+  orders: HistoricalOrder[]; // all order history (MAX_HISTORY * 2)
+  realizedPnl: number; // net of all commissions
   balanceLog: BalanceEvent[]; // balance change log (MAX_HISTORY * 2)
-  journal: JournalEntry[];    // trading journal (MAX_JOURNAL = 200)
+  journal: JournalEntry[]; // trading journal (MAX_JOURNAL = 200)
 }
 
 interface Position {
-  id, symbol, side: 'long'|'short', quantity, entryPrice,
-  entryUsdtAmount, openedAt, takeProfit?, stopLoss?
+  id;
+  symbol;
+  side: 'long' | 'short';
+  quantity;
+  entryPrice;
+  entryUsdtAmount;
+  openedAt;
+  takeProfit?;
+  stopLoss?;
 }
 interface HistoricalOrder {
-  id, symbol, side: 'buy'|'sell', type: 'market'|'limit'|'stop',
-  qty, limitPrice?, stopPrice?, fillPrice?,
-  status: 'filled'|'cancelled'|'rejected',
-  commission, placingTime, closingTime
+  id;
+  symbol;
+  side: 'buy' | 'sell';
+  type: 'market' | 'limit' | 'stop';
+  qty;
+  limitPrice?;
+  stopPrice?;
+  fillPrice?;
+  status: 'filled' | 'cancelled' | 'rejected';
+  commission;
+  placingTime;
+  closingTime;
 }
 ```
 
@@ -296,17 +316,23 @@ Actions: `placeOrder`, `closePosition`, `addJournalNote`, `editJournalEntry`, `r
 
 ```typescript
 interface PendingOrder {
-  id, symbol, side: 'buy'|'sell', type: 'limit'|'stop',
-  usdtAmount,   // reserved at placement (deducted from balance)
-  triggerPrice, // limit or stop trigger price
-  qty,          // pre-calculated: usdtAmount / triggerPrice
-  takeProfit?, stopLoss?, placedAt
+  id;
+  symbol;
+  side: 'buy' | 'sell';
+  type: 'limit' | 'stop';
+  usdtAmount; // reserved at placement (deducted from balance)
+  triggerPrice; // limit or stop trigger price
+  qty; // pre-calculated: usdtAmount / triggerPrice
+  takeProfit?;
+  stopLoss?;
+  placedAt;
 }
 // New field: pendingOrders: PendingOrder[]  (persisted)
 // New actions: placeLimitOrder, placeStopOrder, cancelPendingOrder
 ```
 
 **Execution rules (by `usePendingOrderMonitor`):**
+
 - Limit Buy: `price <= triggerPrice` · Limit Sell: `price >= triggerPrice`
 - Stop Buy: `price >= triggerPrice` · Stop Sell: `price <= triggerPrice`
 - Scoped to active symbol only (mirrors `useTPSLMonitor`)
@@ -320,12 +346,12 @@ interface PendingOrder {
 
 ```typescript
 interface MarketState {
-  bars: CandleBar[];           // up to MAX_BARS = 500
+  bars: CandleBar[]; // up to MAX_BARS = 500
   indicators: IndicatorSnapshot | null;
   latestPrice: number | null;
   priceChange: number | null;
-  symbol: string;              // default 'BTCUSDT'
-  interval: string;            // default '1m'
+  symbol: string; // default 'BTCUSDT'
+  interval: string; // default '1m'
   isConnected: boolean;
   // Actions: setSnapshot, addBar, setConnected, setSymbol, setInterval
 }
@@ -338,9 +364,9 @@ interface MarketState {
 ### `marketStore` — planned additions ⏳ (bid/ask + prices map)
 
 ```typescript
-bid: number | null;              // best bid from Bybit orderbook.1
-ask: number | null;              // best ask from Bybit orderbook.1
-prices: Record<string, number>;  // last known close per symbol — NEVER wiped
+bid: number | null; // best bid from Bybit orderbook.1
+ask: number | null; // best ask from Bybit orderbook.1
+prices: Record<string, number>; // last known close per symbol — NEVER wiped
 // New action: setBidAsk(bid, ask)
 ```
 
@@ -393,28 +419,28 @@ prices: Record<string, number>;  // last known close per symbol — NEVER wiped
 
 ## 📁 Key Files
 
-| File                                                         | Purpose                                                            |
-|--------------------------------------------------------------|--------------------------------------------------------------------|
-| `apps/client/src/store/paperStore.ts`                        | All paper trading state + actions                                  |
-| `apps/client/src/store/marketStore.ts`                       | Live price feed state                                              |
-| `apps/client/src/store/authStore.ts`                         | Auth token + user (in-memory, no persist)                          |
-| `apps/client/src/hooks/useTPSLMonitor.ts`                    | Auto-close hook + exported `checkTPSL()`                           |
-| `apps/client/src/hooks/usePriceFeed.ts`                      | WebSocket price feed lifecycle                                     |
-| `apps/client/src/components/dashboard/PaperTradingPanel.tsx` | Bottom panel (positions/orders/journal)                            |
-| `apps/client/src/components/dashboard/TradingPanel.tsx`      | Right sidebar order entry                                          |
-| `apps/client/src/pages/DashboardPage.tsx`                    | Dashboard orchestrator — exports `PanelSize` type, mounts hooks    |
-| `apps/server/src/routes/auth/index.ts`                       | All auth routes (register/login/logout/refresh/me/reset-password)  |
-| `apps/server/src/routes/market/index.ts`                     | REST + WebSocket market data routes                                |
-| `apps/server/src/services/BybitWebSocketManager.ts`          | Bybit WS connection singleton                                      |
-| `apps/server/src/constants.ts`                               | `ALLOWED_SYMBOLS` — source of truth for WS subscriptions + routes  |
-| `generated/CDSDK/types/index.ts`                             | Shared types (User, Account, CandleBar, WsMessage, etc.)           |
-| `generated/CDSDK/api/auth.ts`                                | Client-side auth API calls                                         |
-| `generated/CDSDK/api/market.ts`                              | Client-side market API + WS URL                                    |
-| `apps/server/prisma/schema.prisma`                           | DB schema (User, Account, Order, Trade, tokens)                    |
+| File                                                         | Purpose                                                                               |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| `apps/client/src/store/paperStore.ts`                        | All paper trading state + actions                                                     |
+| `apps/client/src/store/marketStore.ts`                       | Live price feed state                                                                 |
+| `apps/client/src/store/authStore.ts`                         | Auth token + user (in-memory, no persist)                                             |
+| `apps/client/src/hooks/useTPSLMonitor.ts`                    | Auto-close hook + exported `checkTPSL()`                                              |
+| `apps/client/src/hooks/usePriceFeed.ts`                      | WebSocket price feed lifecycle                                                        |
+| `apps/client/src/components/dashboard/PaperTradingPanel.tsx` | Bottom panel (positions/orders/journal)                                               |
+| `apps/client/src/components/dashboard/TradingPanel.tsx`      | Right sidebar order entry                                                             |
+| `apps/client/src/pages/DashboardPage.tsx`                    | Dashboard orchestrator — exports `PanelSize` type, mounts hooks                       |
+| `apps/server/src/routes/auth/index.ts`                       | All auth routes (register/login/logout/refresh/me/reset-password)                     |
+| `apps/server/src/routes/market/index.ts`                     | REST + WebSocket market data routes                                                   |
+| `apps/server/src/services/BybitWebSocketManager.ts`          | Bybit WS connection singleton                                                         |
+| `apps/server/src/constants.ts`                               | `ALLOWED_SYMBOLS` — source of truth for WS subscriptions + routes                     |
+| `generated/CDSDK/types/index.ts`                             | Shared types (User, Account, CandleBar, WsMessage, etc.)                              |
+| `generated/CDSDK/api/auth.ts`                                | Client-side auth API calls                                                            |
+| `generated/CDSDK/api/market.ts`                              | Client-side market API + WS URL                                                       |
+| `apps/server/prisma/schema.prisma`                           | DB schema (User, Account, Order, Trade, tokens)                                       |
 | `docs/markup-reference/`                                     | HTML UI reference files — component structure & interaction patterns (not 1:1 copies) |
-| `docs/screenshots/theme/`                                    | Visual source of truth — spacing, colors, sizes, layout                |
-| `docs/REVIEW_CHECKLIST.md`                                   | Pre-commit review checklist — run before every push                |
-| `docs/APP_LOG.md`                                            | This file — full project context, attach at start of every session |
+| `docs/screenshots/theme/`                                    | Visual source of truth — spacing, colors, sizes, layout                               |
+| `docs/REVIEW_CHECKLIST.md`                                   | Pre-commit review checklist — run before every push                                   |
+| `docs/APP_LOG.md`                                            | This file — full project context, attach at start of every session                    |
 
 ---
 

@@ -109,8 +109,8 @@ export function TermsPage() {
         <h2>8. Intellectual Property</h2>
         <p>
           All code, design, content, and assets produced by this project are the exclusive
-          proprietary property of Mannar Hielal. All rights reserved. No part of the Service
-          may be copied, reproduced, modified, distributed, or sublicensed without the express prior
+          proprietary property of Mannar Hielal. All rights reserved. No part of the Service may be
+          copied, reproduced, modified, distributed, or sublicensed without the express prior
           written permission of Mannar Hielal. Real-time price data is provided by Bybit and is
           subject to{' '}
           <a

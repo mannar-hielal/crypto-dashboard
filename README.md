@@ -22,26 +22,26 @@ A professional paper trading dashboard for cryptocurrency. Real-time charting, s
 
 ## 🗺️ Roadmap
 
-| Phase | Status | Scope |
-|---|---|---|
-| **Phase 1** | ✅ Complete | Auth, live chart, paper trading v1 (market orders), TP/SL monitor, journal, PWA |
+| Phase       | Status         | Scope                                                                                                           |
+| ----------- | -------------- | --------------------------------------------------------------------------------------------------------------- |
+| **Phase 1** | ✅ Complete    | Auth, live chart, paper trading v1 (market orders), TP/SL monitor, journal, PWA                                 |
 | **Phase 2** | 🔄 In Progress | Limit/Stop orders, TradingPanel redesign (bid/ask, order types), pending orders monitor, real-time bid/ask feed |
-| **Phase 3** | 📋 Planned | Sync trades to DB, user profile & account settings |
-| **Phase 4** | 📋 Planned | Advanced indicators, multi-symbol watchlist, price alerts |
+| **Phase 3** | 📋 Planned     | Sync trades to DB, user profile & account settings                                                              |
+| **Phase 4** | 📋 Planned     | Advanced indicators, multi-symbol watchlist, price alerts                                                       |
 
 ---
 
 ## 🏗️ Architecture
 
-| Layer | Stack |
-|---|---|
-| **Backend** | Node.js v24 + Fastify + Prisma 7 + PostgreSQL 16 |
-| **Frontend** | React 19 + TypeScript + Vite 8 + Tailwind CSS v4 |
-| **Charting** | TradingView Lightweight Charts v5 |
-| **State** | Zustand |
-| **Data** | Bybit V5 WebSocket API (mainnet) |
-| **Infrastructure** | Docker Compose (PostgreSQL + Redis) |
-| **Hosting** | Fly.io (API) + Cloudflare Pages (client) |
+| Layer              | Stack                                            |
+| ------------------ | ------------------------------------------------ |
+| **Backend**        | Node.js v24 + Fastify + Prisma 7 + PostgreSQL 16 |
+| **Frontend**       | React 19 + TypeScript + Vite 8 + Tailwind CSS v4 |
+| **Charting**       | TradingView Lightweight Charts v5                |
+| **State**          | Zustand                                          |
+| **Data**           | Bybit V5 WebSocket API (mainnet)                 |
+| **Infrastructure** | Docker Compose (PostgreSQL + Redis)              |
+| **Hosting**        | Fly.io (API) + Cloudflare Pages (client)         |
 
 ---
 
@@ -164,9 +164,9 @@ Swagger UI is available in development at `http://localhost:3001/docs` (disabled
 
 ## 🌐 Deployment
 
-| Service | Platform | URL |
-|---|---|---|
-| **API** | Fly.io | https://crypto-dashboard-api.fly.dev |
+| Service | Platform         | URL                                    |
+| ------- | ---------------- | -------------------------------------- |
+| **API** | Fly.io           | https://crypto-dashboard-api.fly.dev   |
 | **App** | Cloudflare Pages | https://crypto-dashboard-7yy.pages.dev |
 
 Deployments trigger automatically on push to `main` when CI passes.

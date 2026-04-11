@@ -22,7 +22,6 @@ export function Footer() {
         >
           Privacy Policy
         </Link>
-
       </nav>
       <p className="text-muted-foreground/50 mt-2 text-xs">
         © {new Date().getFullYear()} Crypto Dashboard
