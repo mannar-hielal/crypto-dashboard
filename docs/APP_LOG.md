@@ -11,9 +11,11 @@
 >
 > 🎨 **Visual/UI rule**: Before implementing any UI change, always ask the user a Q&A to confirm
 > visual decisions (spacing, colors, sizes, layout, etc.). Always refer to
-> [`docs/screenshots/theme`](screenshots/theme) as the visual source of truth for all
-> styling decisions. For component structure and interaction patterns, refer to
-> [`docs/markup-reference`](markup-reference) — HTML reference files for UI components.
+> [`docs/screenshots/theme`](screenshots/theme) as the **primary** visual source of truth for all
+> styling decisions (colors, spacing, sizes, layout). When an element is not visible or not
+> distinguishable in screenshots, **fall back** to [`docs/markup-reference`](markup-reference) for
+> that element's visual properties (e.g. exact color values, sizes). For component structure and
+> interaction patterns, refer to `docs/markup-reference` — HTML reference files for UI components.
 > Goal is **not** a 1:1 copy; take what makes sense and do it better where possible.
 > Always ask clarifying questions when there is confusion or uncertainty before implementing.
 
@@ -52,9 +54,10 @@
 - Security comments: `🔐` on every decision made for security reasons
 - Commit prefixes: `feat:` `fix:` `security:` `chore:` `setup:` `docs:`
 - ESLint + Prettier enforced in CI. `pnpm lint && pnpm type-check && pnpm test` must pass before every push.
-- Background palette: `#0b0c1a` (page bg), `#0f1020` (panel/header bg), `#131628` (input/card bg)
-- Accent palette: `#7b2ff7`/`#a855f7` (purple primary), `#02c076` (green/profit), `#f6465d` (red/loss), `#f0b90b` (amber/warning), `#848e9c` (muted text)
-- Visual source of truth: `docs/screenshots/theme/` — always consult before making spacing, color, size, or layout decisions
+- Background palette: `#0f0e29` (page bg), `#211e49` (panel/header bg), `#1e1d34` (footer bg), `#3e3c73` (input/card bg) — sampled from `docs/screenshots/theme/header.png` + `footer.png`
+- Accent palette: `#a555e2`/`#695bec` (purple primary), `#4e3287` (purpleDeep), `#2ccd78` (green/profit), `#d5455c` (red/loss), `#e7ab33` (amber/warning), `#cac5d4` (muted text) — sampled from `docs/screenshots/theme/header.png`
+- Visual source of truth: `docs/screenshots/theme/` — always consult before making spacing, color, size, or layout decisions. Fall back to `docs/markup-reference/` when element not visible in screenshots.
+- **No hardcoded hex values, font strings, or font sizes in components** — always import from `@/lib/tokens`. Canvas/chart libs (lightweight-charts) must use `tokens.ts` directly (cannot read CSS vars). Tailwind pseudo-classes (`hover:`, `focus:`) use named brand utilities from `@theme inline` in `index.css`.
 - Q&A required before any UI implementation — no visual assumptions
 
 ---
@@ -421,6 +424,8 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 
 | File                                                         | Purpose                                                                               |
 | ------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| `apps/client/src/lib/tokens.ts`                              | **Design tokens** — single source of truth for all colors, fonts, sizes (JS/TS side)  |
+| `apps/client/src/index.css`                                  | Tailwind v4 theme — `@theme inline` generates brand color utilities from tokens       |
 | `apps/client/src/store/paperStore.ts`                        | All paper trading state + actions                                                     |
 | `apps/client/src/store/marketStore.ts`                       | Live price feed state                                                                 |
 | `apps/client/src/store/authStore.ts`                         | Auth token + user (in-memory, no persist)                                             |
@@ -455,7 +460,7 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 - **Phase 2**: Paper trading v1 — `paperStore` (market orders), `TradingPanel` (market-only), `PaperTradingPanel` (Positions + Order History + Balance History + Journal tabs), TP/SL monitor, commission accounting
 - **Phase 2**: Review infrastructure — `REVIEW_CHECKLIST.md`, `APP_LOG.md`, CI-passing tests (148 total)
 
-### 🔄 In Progress (current sprint — 2026-04-11)
+### 🔄 In Progress (current sprint — 2026-04-12)
 
 - **Phase 2 cont.**: `TradingPanel` redesign — Bid/Ask side selector, Limit/Stop tabs, Exits section, Order info panel
 - **Phase 2 cont.**: `PaperTradingPanel` header redesign — Account Settings modal, Orders tab (pendingOrders), maximize button
@@ -472,11 +477,11 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 
 ---
 
-## 🧪 Test Counts (as of 2026-04-11)
+## 🧪 Test Counts (as of 2026-04-12)
 
 - **Server**: 86 tests (6 files)
-- **Client**: 62 tests (3 files — paperStore × 25, marketStore × 20, checkTPSL × 17)
-- **Total**: 148 tests, all green ✅
+- **Client**: 75 tests (5 files — paperStore × 25, marketStore × 20, checkTPSL × 17, cryptoIcons × 5, CryptoIcon × 8)
+- **Total**: 161 tests, all green ✅
 
 ---
 
@@ -492,7 +497,34 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 - **`availableFunds = balance`** — balance already excludes locked margin; no subtraction needed
 - Leverage column in Positions table shows `1:1` — no leverage system implemented yet (crypto target: 10:1)
 - `useTPSLMonitor` and `usePendingOrderMonitor` (planned) are both scoped to active symbol only
+- **EMA 200 bar starvation**: `calcEMA(closes, 200)` needs >200 bars to produce a visible line. With exactly 200 bars, only one data point is generated (the very last index) — invisible on chart. Fixed: `usePriceFeed` now fetches 500 bars on mount.
+- **EMA 200 color source**: `#9c27b0` — taken from `docs/markup-reference/layout-area-center/chart.html` (`rgb(156, 39, 176)`). Screenshots/theme did not show EMA lines, so markup-reference was the fallback per visual rule.
+- **`CHART_BG` typo fixed**: was `'#0b0d18'` (wrong), corrected to `chart.bg` → `'#050212'` (matches bg.page token, sampled from screenshots).
+- **lightweight-charts + CSS vars**: canvas-based library cannot read CSS custom properties. All chart series colors **must** be plain hex strings — provided via `tokens.ts` `chart` group, never via `var(--...)`.
+- **Tailwind pseudo-class arbitrary values** (`hover:text-[#hex]`, `focus:border-[#hex]/50`) cannot be replaced with inline styles. They require named utilities — defined in `index.css` `@theme inline` as `--color-brand-*` and used as `hover:text-brand-*`, `focus:border-brand-*`.
+- **Two-surface token sync**: `tokens.ts` (JS/TS inline styles, canvas libs) and `index.css @theme inline` (Tailwind utilities) must be kept manually in sync — no single source can serve both. When updating a color token, update both surfaces in the same commit.
+- **`CRYPTO_ICON_URLS` type annotation**: switched from `Record<string, string>` annotation + `as const` to `satisfies Record<string, string>` (validates shape without widening). Lookup in `CryptoIcon.tsx` casts to `Record<string, string | undefined>` first — `satisfies` narrows keys to literal union, so bracket-access without cast would be a TS error.
+- **Framer Motion `key` on CSS-animated ticker**: `TickerBar` `doubled.map` uses `key={i}` (array index) — pre-existing. Safe here because the list is static and order never changes, but violates the checklist rule. Pending fix: `${item.symbol}-${i < items.length ? 'a' : 'b'}`.
+- **`motion.form` stagger timing**: `LoginPage` form fields use `delayChildren: 0.12` — fields start appearing before the card entrance (`duration: 0.35`) finishes. Intentional fast-start; bump to `0.28` if visual overlap is undesirable.
 
 ---
 
-_Last updated: 2026-04-11 — Added docs/markup-reference folder to app log. Updated visual/UI rule to reference markup-reference for component structure and interaction patterns. Clarified goal is not 1:1 — take what makes sense and improve. Added rule to always ask clarifying questions before implementing._
+## 🗂️ Pending Tasks (from review 2026-04-12)
+
+> Items raised by the code review of `fix/chart-area` branch — address before merging.
+
+| Priority  | Task                                                                          | File(s)     | Checklist ref  |
+| --------- | ----------------------------------------------------------------------------- | ----------- | -------------- |
+| 🟡 Should | Amend / reword garbled commit message on `7bc5bf6` (contains shell artifacts) | git history | §11 Code Style |
+
+**Resolved (260d0f8 · a298230):**
+
+- ✅ Tests for `CryptoIcon` (8 tests — renders img for known symbol, fallback badge for unknown)
+- ✅ Tests for `cryptoIcons.ts` (5 tests — 9 entries, uppercase keys, non-empty string values)
+- ✅ `key={i}` → `${item.symbol}-${i < items.length ? 'a' : 'b'}` stable keys in `TickerBar.tsx`
+- ✅ `satisfies Record<string, string>` applied to `cryptoIcons.ts`; lookup cast fixed in `CryptoIcon.tsx`
+- ✅ `noValidate` added to `motion.form` in `RegisterPage.tsx`
+
+---
+
+_Last updated: 2026-04-12 — **PR review issues resolved** (`260d0f8` · `a298230`): added tests for `CryptoIcon` (8) and `cryptoIcons.ts` (5), fixed stable keys in `TickerBar`, applied `satisfies` + lookup cast in `cryptoIcons.ts`/`CryptoIcon.tsx`, added `noValidate` to `RegisterPage`. Client tests now 75 (5 files), total 161. 1 open item: garbled commit message on `7bc5bf6`. Previously: animation pass — `CryptoIcon` spring pop, ticker live pulse, symbol crossfade, staggered auth forms, position row exit animation (commits `705db2d` · `b95054a`). Design tokens + crypto icons + palette calibration (`7bc5bf6`)._
