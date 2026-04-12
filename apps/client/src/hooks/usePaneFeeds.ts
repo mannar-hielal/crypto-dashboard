@@ -124,4 +124,3 @@ export function usePaneFeeds() {
   useSinglePaneFeed(2, panes[2].symbol, panes[2].interval, count > 2);
   useSinglePaneFeed(3, panes[3].symbol, panes[3].interval, count > 3);
 }
-

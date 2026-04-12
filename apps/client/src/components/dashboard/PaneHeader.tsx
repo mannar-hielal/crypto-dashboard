@@ -85,17 +85,11 @@ export function PaneHeader({ paneIndex, isActive, onActivate }: PaneHeaderProps)
           className="flex items-center gap-1 rounded px-1 py-0.5 transition-colors hover:bg-white/[0.06]"
         >
           <CryptoIcon symbol={baseAsset} size={13} />
-          <span
-            className="font-bold text-white"
-            style={{ fontSize: fontSize.xs10 }}
-          >
+          <span className="font-bold text-white" style={{ fontSize: fontSize.xs10 }}>
             {baseAsset}
           </span>
           <span style={{ fontSize: '9px', color: color.muted }}>/USDT</span>
-          <ChevronDown
-            className="h-2.5 w-2.5"
-            style={{ color: color.muted }}
-          />
+          <ChevronDown className="h-2.5 w-2.5" style={{ color: color.muted }} />
         </button>
 
         <AnimatePresence>
@@ -163,10 +157,7 @@ export function PaneHeader({ paneIndex, isActive, onActivate }: PaneHeaderProps)
       <span className="h-3 w-px shrink-0 bg-white/[0.07]" />
 
       {/* Interval quick-switch */}
-      <div
-        className="flex shrink-0 items-center gap-px"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="flex shrink-0 items-center gap-px" onClick={(e) => e.stopPropagation()}>
         {INTERVALS.map((tf) => (
           <button
             key={tf}
@@ -196,17 +187,22 @@ export function PaneHeader({ paneIndex, isActive, onActivate }: PaneHeaderProps)
           className="shrink-0 tabular-nums font-semibold"
           style={{
             fontSize: fontSize.xs10,
-            color: changePercent !== null
-              ? isPositive
-                ? color.green
-                : color.red
-              : 'rgba(255,255,255,0.6)',
+            color:
+              changePercent !== null
+                ? isPositive
+                  ? color.green
+                  : color.red
+                : 'rgba(255,255,255,0.6)',
           }}
         >
-          {latestPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          {latestPrice.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
           {changePercent !== null && (
             <span className="ml-1" style={{ fontSize: '9px' }}>
-              {isPositive ? '+' : ''}{changePercent.toFixed(2)}%
+              {isPositive ? '+' : ''}
+              {changePercent.toFixed(2)}%
             </span>
           )}
         </span>
@@ -226,4 +222,3 @@ export function PaneHeader({ paneIndex, isActive, onActivate }: PaneHeaderProps)
     </div>
   );
 }
-

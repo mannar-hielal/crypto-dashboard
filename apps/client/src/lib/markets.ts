@@ -32,4 +32,3 @@ export const SYMBOLS: SymbolEntry[] = [
   { symbol: 'AVAXUSDT', base: 'AVAX', label: 'Avalanche' },
   { symbol: 'LINKUSDT', base: 'LINK', label: 'Chainlink' },
 ];
-

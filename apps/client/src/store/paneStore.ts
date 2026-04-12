@@ -65,7 +65,8 @@ function createPaneStore() {
 
       const priceChange =
         updatedBars.length >= 2
-          ? incomingKline.close - (updatedBars[updatedBars.length - 2]?.close ?? incomingKline.close)
+          ? incomingKline.close -
+            (updatedBars[updatedBars.length - 2]?.close ?? incomingKline.close)
           : null;
 
       set({
@@ -93,4 +94,3 @@ export const paneStores = [
 ] as const;
 
 export type PaneStore = ReturnType<typeof createPaneStore>;
-

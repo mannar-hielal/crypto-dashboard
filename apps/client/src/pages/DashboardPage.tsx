@@ -117,7 +117,10 @@ export function DashboardPage() {
               className="shrink-0 overflow-hidden"
             >
               {/* key={`${activePane}-${symbol}`} resets form when active pane or symbol changes */}
-              <TradingPanel key={`${activePane}-${symbol}`} onClose={() => setTradingPanelOpen(false)} />
+              <TradingPanel
+                key={`${activePane}-${symbol}`}
+                onClose={() => setTradingPanelOpen(false)}
+              />
             </motion.div>
           )}
         </AnimatePresence>

@@ -218,13 +218,13 @@ Tab badge counts: purple pill for Positions count, gray pill for Order History c
 
 **Layout IDs and pane counts:**
 
-| ID   | Grid       | Panes |
-| ---- | ---------- | ----- |
-| `1`  | 1×1        | 1     |
-| `2h` | 2 columns  | 2     |
-| `2v` | 2 rows     | 2     |
-| `3h` | 3 columns  | 3     |
-| `4`  | 2×2 grid   | 4     |
+| ID   | Grid      | Panes |
+| ---- | --------- | ----- |
+| `1`  | 1×1       | 1     |
+| `2h` | 2 columns | 2     |
+| `2v` | 2 rows    | 2     |
+| `3h` | 3 columns | 3     |
+| `4`  | 2×2 grid  | 4     |
 
 **`layoutStore`** (persisted `cd-layout` v1):
 
@@ -490,36 +490,36 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 
 ## 📁 Key Files
 
-| File                                                         | Purpose                                                                               |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| `apps/client/src/lib/tokens.ts`                              | **Design tokens** — single source of truth for all colors, fonts, sizes (JS/TS side)  |
-| `apps/client/src/index.css`                                  | Tailwind v4 theme — `@theme inline` generates brand color utilities from tokens       |
-| `apps/client/src/store/paperStore.ts`                        | All paper trading state + actions                                                     |
-| `apps/client/src/store/marketStore.ts`                       | Live price feed state                                                                 |
-| `apps/client/src/store/authStore.ts`                         | Auth token + user (in-memory, no persist)                                             |
-| `apps/client/src/hooks/useTPSLMonitor.ts`                    | Auto-close hook + exported `checkTPSL()`                                              |
-| `apps/client/src/hooks/usePriceFeed.ts`                      | WebSocket price feed lifecycle                                                        |
-| `apps/client/src/components/dashboard/PaperTradingPanel.tsx` | Bottom panel (positions/orders/journal)                                               |
-| `apps/client/src/components/dashboard/TradingPanel.tsx`      | Right sidebar order entry                                                             |
-| `apps/client/src/pages/DashboardPage.tsx`                    | Dashboard orchestrator — exports `PanelSize` type, mounts hooks                       |
-| `apps/server/src/routes/auth/index.ts`                       | All auth routes (register/login/logout/refresh/me/reset-password)                     |
-| `apps/server/src/routes/market/index.ts`                     | REST + WebSocket market data routes                                                   |
-| `apps/server/src/services/BybitWebSocketManager.ts`          | Bybit WS connection singleton                                                         |
-| `apps/server/src/constants.ts`                               | `ALLOWED_SYMBOLS` — source of truth for WS subscriptions + routes                     |
-| `generated/CDSDK/types/index.ts`                             | Shared types (User, Account, CandleBar, WsMessage, etc.)                              |
-| `generated/CDSDK/api/auth.ts`                                | Client-side auth API calls                                                            |
-| `generated/CDSDK/api/market.ts`                              | Client-side market API + WS URL                                                       |
+| File                                                         | Purpose                                                                                                                                      |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/client/src/lib/tokens.ts`                              | **Design tokens** — single source of truth for all colors, fonts, sizes (JS/TS side)                                                         |
+| `apps/client/src/index.css`                                  | Tailwind v4 theme — `@theme inline` generates brand color utilities from tokens                                                              |
+| `apps/client/src/store/paperStore.ts`                        | All paper trading state + actions                                                                                                            |
+| `apps/client/src/store/marketStore.ts`                       | Live price feed state                                                                                                                        |
+| `apps/client/src/store/authStore.ts`                         | Auth token + user (in-memory, no persist)                                                                                                    |
+| `apps/client/src/hooks/useTPSLMonitor.ts`                    | Auto-close hook + exported `checkTPSL()`                                                                                                     |
+| `apps/client/src/hooks/usePriceFeed.ts`                      | WebSocket price feed lifecycle                                                                                                               |
+| `apps/client/src/components/dashboard/PaperTradingPanel.tsx` | Bottom panel (positions/orders/journal)                                                                                                      |
+| `apps/client/src/components/dashboard/TradingPanel.tsx`      | Right sidebar order entry                                                                                                                    |
+| `apps/client/src/pages/DashboardPage.tsx`                    | Dashboard orchestrator — exports `PanelSize` type, mounts hooks                                                                              |
+| `apps/server/src/routes/auth/index.ts`                       | All auth routes (register/login/logout/refresh/me/reset-password)                                                                            |
+| `apps/server/src/routes/market/index.ts`                     | REST + WebSocket market data routes                                                                                                          |
+| `apps/server/src/services/BybitWebSocketManager.ts`          | Bybit WS connection singleton                                                                                                                |
+| `apps/server/src/constants.ts`                               | `ALLOWED_SYMBOLS` — source of truth for WS subscriptions + routes                                                                            |
+| `generated/CDSDK/types/index.ts`                             | Shared types (User, Account, CandleBar, WsMessage, etc.)                                                                                     |
+| `generated/CDSDK/api/auth.ts`                                | Client-side auth API calls                                                                                                                   |
+| `generated/CDSDK/api/market.ts`                              | Client-side market API + WS URL                                                                                                              |
 | `apps/client/src/lib/markets.ts`                             | Shared `SYMBOLS` (9 coins), `INTERVALS` (6), `INTERVAL_LABELS`, `SymbolEntry` type — imported by SymbolBar, PaneHeader, layoutStore defaults |
-| `apps/client/src/store/layoutStore.ts`                       | Layout config — layout ID, activePane, per-pane symbol/interval, sync options          |
-| `apps/client/src/store/paneStore.ts`                         | 4 independent vanilla Zustand stores (bars/price/connection per pane)                  |
-| `apps/client/src/hooks/usePaneFeeds.ts`                      | Manages 4 WS+REST connections (one per active pane) — replaces `usePriceFeed`          |
-| `apps/client/src/components/dashboard/ChartLayoutPicker.tsx` | Layout picker popover (5 SVG icons) + sync option toggles                              |
-| `apps/client/src/components/dashboard/PaneHeader.tsx`        | Per-pane mini header (symbol picker, interval buttons, live price, connection dot)      |
-| `apps/client/src/components/dashboard/MultiChartArea.tsx`    | CSS grid renderer for all layouts; wires crosshair + time-range sync                   |
-| `docs/markup-reference/`                                     | HTML UI reference files — component structure & interaction patterns (not 1:1 copies) |
-| `docs/screenshots/theme/`                                    | Visual source of truth — spacing, colors, sizes, layout                               |
-| `docs/REVIEW_CHECKLIST.md`                                   | Pre-commit review checklist — run before every push                                   |
-| `docs/APP_LOG.md`                                            | This file — full project context, attach at start of every session                    |
+| `apps/client/src/store/layoutStore.ts`                       | Layout config — layout ID, activePane, per-pane symbol/interval, sync options                                                                |
+| `apps/client/src/store/paneStore.ts`                         | 4 independent vanilla Zustand stores (bars/price/connection per pane)                                                                        |
+| `apps/client/src/hooks/usePaneFeeds.ts`                      | Manages 4 WS+REST connections (one per active pane) — replaces `usePriceFeed`                                                                |
+| `apps/client/src/components/dashboard/ChartLayoutPicker.tsx` | Layout picker popover (5 SVG icons) + sync option toggles                                                                                    |
+| `apps/client/src/components/dashboard/PaneHeader.tsx`        | Per-pane mini header (symbol picker, interval buttons, live price, connection dot)                                                           |
+| `apps/client/src/components/dashboard/MultiChartArea.tsx`    | CSS grid renderer for all layouts; wires crosshair + time-range sync                                                                         |
+| `docs/markup-reference/`                                     | HTML UI reference files — component structure & interaction patterns (not 1:1 copies)                                                        |
+| `docs/screenshots/theme/`                                    | Visual source of truth — spacing, colors, sizes, layout                                                                                      |
+| `docs/REVIEW_CHECKLIST.md`                                   | Pre-commit review checklist — run before every push                                                                                          |
+| `docs/APP_LOG.md`                                            | This file — full project context, attach at start of every session                                                                           |
 
 ---
 

@@ -74,8 +74,9 @@ export function MultiChartArea() {
             const x = other.timeScale().timeToCoordinate(time as never);
             if (x !== null) {
               // Use null as y to only draw the vertical time crosshair line
-              (other as IChartApi & { setCrossHairXY: (x: number, y: number, v: boolean) => void })
-                .setCrossHairXY(x, param.point.y, true);
+              (
+                other as IChartApi & { setCrossHairXY: (x: number, y: number, v: boolean) => void }
+              ).setCrossHairXY(x, param.point.y, true);
             }
           } catch {
             // Ignore — follower chart may not have data for this time yet
@@ -170,4 +171,3 @@ export function MultiChartArea() {
     </div>
   );
 }
-

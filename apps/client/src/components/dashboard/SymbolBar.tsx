@@ -31,15 +31,29 @@ function formatVol(v: number): string {
 
 // ─── StatItem ─────────────────────────────────────────────────────────────────
 
-function StatItem({ label, value, positive }: { label: string; value: string; positive?: boolean }) {
+function StatItem({
+  label,
+  value,
+  positive,
+}: {
+  label: string;
+  value: string;
+  positive?: boolean;
+}) {
   const statColor =
     positive === true ? color.green : positive === false ? color.red : 'rgba(255,255,255,0.6)';
   return (
     <div className="flex flex-col gap-px">
-      <span className="font-semibold uppercase tracking-wider" style={{ fontSize: fontSize.xxs, color: color.muted }}>
+      <span
+        className="font-semibold uppercase tracking-wider"
+        style={{ fontSize: fontSize.xxs, color: color.muted }}
+      >
         {label}
       </span>
-      <span className="tabular-nums font-semibold" style={{ fontSize: fontSize.xs11, color: statColor }}>
+      <span
+        className="tabular-nums font-semibold"
+        style={{ fontSize: fontSize.xs11, color: statColor }}
+      >
         {value}
       </span>
     </div>
@@ -64,30 +78,42 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
 
   // ── Market data — subscribe to all 4 pane stores, pick the active one ────
   // (4 unconditional hook calls — hooks rule compliant)
-  const d0 = useStore(paneStores[0], useShallow((s) => ({
-    latestPrice: s.latestPrice,
-    priceChange: s.priceChange,
-    bars: s.bars,
-    isConnected: s.isConnected,
-  })));
-  const d1 = useStore(paneStores[1], useShallow((s) => ({
-    latestPrice: s.latestPrice,
-    priceChange: s.priceChange,
-    bars: s.bars,
-    isConnected: s.isConnected,
-  })));
-  const d2 = useStore(paneStores[2], useShallow((s) => ({
-    latestPrice: s.latestPrice,
-    priceChange: s.priceChange,
-    bars: s.bars,
-    isConnected: s.isConnected,
-  })));
-  const d3 = useStore(paneStores[3], useShallow((s) => ({
-    latestPrice: s.latestPrice,
-    priceChange: s.priceChange,
-    bars: s.bars,
-    isConnected: s.isConnected,
-  })));
+  const d0 = useStore(
+    paneStores[0],
+    useShallow((s) => ({
+      latestPrice: s.latestPrice,
+      priceChange: s.priceChange,
+      bars: s.bars,
+      isConnected: s.isConnected,
+    }))
+  );
+  const d1 = useStore(
+    paneStores[1],
+    useShallow((s) => ({
+      latestPrice: s.latestPrice,
+      priceChange: s.priceChange,
+      bars: s.bars,
+      isConnected: s.isConnected,
+    }))
+  );
+  const d2 = useStore(
+    paneStores[2],
+    useShallow((s) => ({
+      latestPrice: s.latestPrice,
+      priceChange: s.priceChange,
+      bars: s.bars,
+      isConnected: s.isConnected,
+    }))
+  );
+  const d3 = useStore(
+    paneStores[3],
+    useShallow((s) => ({
+      latestPrice: s.latestPrice,
+      priceChange: s.priceChange,
+      bars: s.bars,
+      isConnected: s.isConnected,
+    }))
+  );
 
   const allData = [d0, d1, d2, d3];
   const { latestPrice, priceChange, bars, isConnected } = allData[activePane];
@@ -147,7 +173,10 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
       {/* ── Symbol picker ─────────────────────────────────────────────────── */}
       <div className="relative shrink-0">
         <motion.button
-          onClick={() => { setSymbolOpen((p) => !p); setSymbolSearch(''); }}
+          onClick={() => {
+            setSymbolOpen((p) => !p);
+            setSymbolSearch('');
+          }}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-bold text-white transition-colors"
@@ -191,7 +220,10 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
                 </div>
                 <div className="max-h-64 overflow-y-auto py-1">
                   {filteredSymbols.length === 0 ? (
-                    <p className="px-3 py-2" style={{ fontSize: fontSize.xs11, color: color.muted }}>
+                    <p
+                      className="px-3 py-2"
+                      style={{ fontSize: fontSize.xs11, color: color.muted }}
+                    >
                       No results
                     </p>
                   ) : (
@@ -207,16 +239,24 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
                           <div className="flex items-center gap-2">
                             <CryptoIcon symbol={entry.base} size={20} />
                             <div>
-                              <p className="text-xs font-bold" style={{ color: isActive ? color.purple : 'white' }}>
+                              <p
+                                className="text-xs font-bold"
+                                style={{ color: isActive ? color.purple : 'white' }}
+                              >
                                 {entry.base}/USDT
                               </p>
-                              <p style={{ fontSize: fontSize.xs10, color: color.muted }}>{entry.label}</p>
+                              <p style={{ fontSize: fontSize.xs10, color: color.muted }}>
+                                {entry.label}
+                              </p>
                             </div>
                           </div>
                           {isActive && (
                             <span
                               className="h-1.5 w-1.5 rounded-full"
-                              style={{ background: color.purpleDark, boxShadow: `0 0 4px 2px ${color.purpleDark}60` }}
+                              style={{
+                                background: color.purpleDark,
+                                boxShadow: `0 0 4px 2px ${color.purpleDark}60`,
+                              }}
                             />
                           )}
                         </motion.button>
@@ -259,8 +299,13 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
                     color: isPositive ? color.green : color.red,
                   }}
                 >
-                  {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                  {isPositive ? '+' : ''}{changePercent.toFixed(2)}%
+                  {isPositive ? (
+                    <TrendingUp className="h-3 w-3" />
+                  ) : (
+                    <TrendingDown className="h-3 w-3" />
+                  )}
+                  {isPositive ? '+' : ''}
+                  {changePercent.toFixed(2)}%
                 </span>
               )}
             </>
@@ -277,14 +322,19 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
       <div className="hidden items-center gap-5 overflow-hidden lg:flex">
         <StatItem
           label="Change"
-          value={changePercent !== null ? `${isPositive ? '+' : ''}${changePercent.toFixed(2)}%` : '—'}
+          value={
+            changePercent !== null ? `${isPositive ? '+' : ''}${changePercent.toFixed(2)}%` : '—'
+          }
           positive={changePercent !== null ? isPositive : undefined}
         />
         <StatItem
           label="Period High"
           value={
             periodHigh !== null
-              ? periodHigh.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              ? periodHigh.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })
               : '—'
           }
         />
@@ -292,7 +342,10 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
           label="Period Low"
           value={
             periodLow !== null
-              ? periodLow.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              ? periodLow.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })
               : '—'
           }
         />
@@ -327,7 +380,10 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
                 transition={{ type: 'spring', stiffness: 500, damping: 35 }}
               />
             )}
-            <span className="relative z-10" style={{ color: interval === tf ? color.purple : undefined }}>
+            <span
+              className="relative z-10"
+              style={{ color: interval === tf ? color.purple : undefined }}
+            >
               {tf}
             </span>
           </motion.button>
@@ -346,7 +402,11 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
         className="relative flex shrink-0 items-center justify-center rounded p-1 transition-colors"
         style={{ color: tradingPanelOpen ? color.purple : color.muted }}
       >
-        {tradingPanelOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
+        {tradingPanelOpen ? (
+          <PanelRightClose className="h-4 w-4" />
+        ) : (
+          <PanelRightOpen className="h-4 w-4" />
+        )}
         {!tradingPanelOpen && (
           <motion.span
             className="absolute inset-0 rounded"
