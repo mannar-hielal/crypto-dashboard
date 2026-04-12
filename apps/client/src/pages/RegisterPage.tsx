@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/form';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AuthLayout } from '@/components/AuthLayout';
+import { gradient, radius } from '@/lib/tokens';
 
 const registerSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -134,7 +135,18 @@ export function RegisterPage() {
                   )}
                 />
 
-                <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                <Button
+                  type="submit"
+                  className="w-full font-bold tracking-wide text-white"
+                  style={{
+                    background: form.formState.isSubmitting
+                      ? 'rgba(100,91,237,0.5)'
+                      : gradient.brand,
+                    borderRadius: radius.button,
+                    boxShadow: `0 0 20px ${gradient.brandFrom}55`,
+                  }}
+                  disabled={form.formState.isSubmitting}
+                >
                   {form.formState.isSubmitting ? 'Creating account…' : 'Create account'}
                 </Button>
 

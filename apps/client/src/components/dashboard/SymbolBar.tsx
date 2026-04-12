@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMarketStore } from '@/store/marketStore';
+import { bg, color, fontSize } from '@/lib/tokens';
+import { CryptoIcon } from '@/components/ui/CryptoIcon';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -64,15 +66,21 @@ function StatItem({
   value: string;
   positive?: boolean;
 }) {
-  const color =
-    positive === true ? '#02c076' : positive === false ? '#f6465d' : 'rgba(255,255,255,0.6)';
+  const statColor =
+    positive === true ? color.green : positive === false ? color.red : 'rgba(255,255,255,0.6)';
 
   return (
     <div className="flex flex-col gap-px">
-      <span className="text-[9px] font-semibold uppercase tracking-wider text-[#848e9c]">
+      <span
+        className="font-semibold uppercase tracking-wider"
+        style={{ fontSize: fontSize.xxs, color: color.muted }}
+      >
         {label}
       </span>
-      <span className="text-[11px] tabular-nums font-semibold" style={{ color }}>
+      <span
+        className="tabular-nums font-semibold"
+        style={{ fontSize: fontSize.xs11, color: statColor }}
+      >
         {value}
       </span>
     </div>
@@ -147,17 +155,18 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
   return (
     <div
       className="flex h-11 w-full shrink-0 items-center gap-3 border-b border-white/[0.06] px-3"
-      style={{ background: '#0f1020' }}
+      style={{ background: bg.panel }}
     >
-      {/* ── Star (favourite placeholder) ────────────────────────────────── */}
+      {/* ── Star ──────────────────────────────────────────────────────────── */}
       <button
         title="Add to favourites"
-        className="shrink-0 text-[#848e9c] transition-colors hover:text-[#f0b90b]"
+        className="shrink-0 transition-colors hover:text-brand-amber"
+        style={{ color: color.muted }}
       >
         <Star className="h-3.5 w-3.5" />
       </button>
 
-      {/* ── Symbol picker ────────────────────────────────────────────────── */}
+      {/* ── Symbol picker ─────────────────────────────────────────────────── */}
       <div className="relative shrink-0">
         <motion.button
           onClick={() => {
@@ -168,16 +177,17 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
           whileTap={{ scale: 0.98 }}
           className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-bold text-white transition-colors"
           style={{
-            background: symbolOpen ? '#131628' : 'transparent',
+            background: symbolOpen ? bg.surface : 'transparent',
             border: '1px solid rgba(255,255,255,0.06)',
           }}
         >
+          <CryptoIcon symbol={activeEntry?.base ?? symbol.replace('USDT', '')} size={18} />
           <span className="tracking-wide">{activeEntry?.base ?? symbol.replace('USDT', '')}</span>
-          <span className="text-[11px] font-normal text-[#848e9c]">/USDT</span>
+          <span style={{ fontSize: fontSize.xs11, color: color.muted }}>/USDT</span>
           {symbolOpen ? (
-            <ChevronUp className="h-3 w-3 text-[#848e9c]" />
+            <ChevronUp className="h-3 w-3" style={{ color: color.muted }} />
           ) : (
-            <ChevronDown className="h-3 w-3 text-[#848e9c]" />
+            <ChevronDown className="h-3 w-3" style={{ color: color.muted }} />
           )}
         </motion.button>
 
@@ -193,24 +203,30 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
                 exit={{ opacity: 0, y: -6, scale: 0.97 }}
                 transition={{ duration: 0.15 }}
                 className="absolute left-0 top-full z-50 mt-1.5 w-52 overflow-hidden rounded-xl border border-white/[0.08] shadow-2xl"
-                style={{ background: '#0f1020' }}
+                style={{ background: bg.panel }}
               >
                 {/* Search */}
                 <div className="flex items-center gap-2 border-b border-white/[0.06] px-3 py-2">
-                  <Search className="h-3 w-3 shrink-0 text-[#848e9c]" />
+                  <Search className="h-3 w-3 shrink-0" style={{ color: color.muted }} />
                   <input
                     autoFocus
                     value={symbolSearch}
                     onChange={(e) => setSymbolSearch(e.target.value)}
                     placeholder="Search…"
-                    className="w-full bg-transparent text-xs text-white placeholder-[#848e9c]/50 outline-none"
+                    className="w-full bg-transparent text-xs text-white outline-none"
+                    style={{ caretColor: color.purple }}
                   />
                 </div>
 
                 {/* Symbol list */}
                 <div className="max-h-64 overflow-y-auto py-1">
                   {filteredSymbols.length === 0 ? (
-                    <p className="px-3 py-2 text-[11px] text-[#848e9c]">No results</p>
+                    <p
+                      className="px-3 py-2"
+                      style={{ fontSize: fontSize.xs11, color: color.muted }}
+                    >
+                      No results
+                    </p>
                   ) : (
                     filteredSymbols.map((entry) => {
                       const isActive = entry.symbol === symbol;
@@ -218,34 +234,29 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
                         <motion.button
                           key={entry.symbol}
                           onClick={() => handleSymbolSelect(entry.symbol)}
-                          whileHover={{ background: '#131628' }}
+                          whileHover={{ background: bg.surface }}
                           className="flex w-full items-center justify-between px-3 py-1.5 text-left transition-colors"
                         >
                           <div className="flex items-center gap-2">
-                            <span
-                              className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[8px] font-black text-white"
-                              style={{
-                                background: isActive ? '#7b2ff7' : '#131628',
-                                border: '1px solid rgba(255,255,255,0.08)',
-                              }}
-                            >
-                              {entry.base.slice(0, 2)}
-                            </span>
+                            <CryptoIcon symbol={entry.base} size={20} />
                             <div>
                               <p
-                                className={`text-xs font-bold ${isActive ? 'text-[#a855f7]' : 'text-white'}`}
+                                className="text-xs font-bold"
+                                style={{ color: isActive ? color.purple : 'white' }}
                               >
                                 {entry.base}/USDT
                               </p>
-                              <p className="text-[10px] text-[#848e9c]">{entry.label}</p>
+                              <p style={{ fontSize: fontSize.xs10, color: color.muted }}>
+                                {entry.label}
+                              </p>
                             </div>
                           </div>
                           {isActive && (
                             <span
                               className="h-1.5 w-1.5 rounded-full"
                               style={{
-                                background: '#7b2ff7',
-                                boxShadow: '0 0 4px 2px #7b2ff760',
+                                background: color.purpleDark,
+                                boxShadow: `0 0 4px 2px ${color.purpleDark}60`,
                               }}
                             />
                           )}
@@ -263,7 +274,7 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
       {/* Divider */}
       <span className="h-4 w-px shrink-0 bg-white/[0.08]" />
 
-      {/* ── Live price + change% ─────────────────────────────────────────── */}
+      {/* ── Live price + change% ──────────────────────────────────────────── */}
       <div className="flex shrink-0 items-center gap-2 tabular-nums">
         {latestPrice !== null ? (
           <>
@@ -274,10 +285,11 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
             />
             {changePercent !== null && (
               <span
-                className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[11px] font-semibold"
+                className="flex items-center gap-0.5 rounded px-1.5 py-0.5 font-semibold"
                 style={{
-                  background: isPositive ? '#02c07618' : '#f6465d18',
-                  color: isPositive ? '#02c076' : '#f6465d',
+                  fontSize: fontSize.xs11,
+                  background: isPositive ? `${color.green}18` : `${color.red}18`,
+                  color: isPositive ? color.green : color.red,
                 }}
               >
                 {isPositive ? (
@@ -298,7 +310,7 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
       {/* Divider */}
       <span className="h-4 w-px shrink-0 bg-white/[0.08]" />
 
-      {/* ── Stats derived from loaded bars ───────────────────────────────── */}
+      {/* ── Stats ────────────────────────────────────────────────────────── */}
       <div className="hidden items-center gap-5 overflow-hidden lg:flex">
         <StatItem
           label="Change"
@@ -332,10 +344,9 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
         <StatItem label="Volume (base)" value={periodVol !== null ? formatVol(periodVol) : '—'} />
       </div>
 
-      {/* Push timeframes + status to the right */}
       <div className="flex-1" />
 
-      {/* ── Timeframe buttons ────────────────────────────────────────────── */}
+      {/* ── Timeframe buttons ─────────────────────────────────────────────── */}
       <div className="flex shrink-0 items-center gap-0.5">
         {INTERVALS.map((tf) => (
           <motion.button
@@ -344,19 +355,23 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
             title={INTERVAL_LABELS[tf]}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className={`relative rounded px-2.5 py-1 text-[11px] font-semibold transition-colors ${
-              interval === tf ? 'text-white' : 'text-[#848e9c] hover:text-white'
-            }`}
+            className={`relative rounded px-2.5 py-1 font-semibold transition-colors ${interval === tf ? 'text-white' : 'hover:text-white'}`}
+            style={{ fontSize: fontSize.xs11, color: interval === tf ? 'white' : color.muted }}
           >
             {interval === tf && (
               <motion.span
                 layoutId="active-tf"
                 className="absolute inset-0 rounded"
-                style={{ background: '#7b2ff720' }}
+                style={{ background: `${color.purpleDark}20` }}
                 transition={{ type: 'spring', stiffness: 500, damping: 35 }}
               />
             )}
-            <span className={`relative z-10 ${interval === tf ? 'text-[#a855f7]' : ''}`}>{tf}</span>
+            <span
+              className="relative z-10"
+              style={{ color: interval === tf ? color.purple : undefined }}
+            >
+              {tf}
+            </span>
           </motion.button>
         ))}
       </div>
@@ -364,27 +379,26 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
       {/* Divider */}
       <span className="h-4 w-px shrink-0 bg-white/[0.08]" />
 
-      {/* ── Trade panel toggle ───────────────────────────────────────────── */}
+      {/* ── Trade panel toggle ────────────────────────────────────────────── */}
       <motion.button
         onClick={onToggleTrading}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         title={tradingPanelOpen ? 'Hide trade panel' : 'Show trade panel'}
         className="relative flex shrink-0 items-center justify-center rounded p-1 transition-colors"
-        style={{ color: tradingPanelOpen ? '#a855f7' : '#848e9c' }}
+        style={{ color: tradingPanelOpen ? color.purple : color.muted }}
       >
         {tradingPanelOpen ? (
           <PanelRightClose className="h-4 w-4" />
         ) : (
           <PanelRightOpen className="h-4 w-4" />
         )}
-        {/* Subtle pulsing ring when panel is hidden — guides user to re-open */}
         {!tradingPanelOpen && (
           <motion.span
             className="absolute inset-0 rounded"
             animate={{ opacity: [0.4, 0.9, 0.4] }}
             transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ background: 'rgba(168,85,247,0.12)', pointerEvents: 'none' }}
+            style={{ background: `${color.purple}1f`, pointerEvents: 'none' }}
           />
         )}
       </motion.button>
@@ -392,7 +406,7 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
       {/* Divider */}
       <span className="h-4 w-px shrink-0 bg-white/[0.08]" />
 
-      {/* ── Connection status ────────────────────────────────────────────── */}
+      {/* ── Connection status ─────────────────────────────────────────────── */}
       <div className="flex shrink-0 items-center gap-1.5">
         <span
           className={isConnected ? 'pulse-live-dot' : ''}
@@ -401,12 +415,12 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
             width: 7,
             height: 7,
             borderRadius: '50%',
-            background: isConnected ? '#02c076' : '#848e9c',
+            background: isConnected ? color.green : color.muted,
           }}
         />
         <span
-          className="text-[10px] font-bold uppercase tracking-widest"
-          style={{ color: isConnected ? '#02c076' : '#848e9c' }}
+          className="font-bold uppercase tracking-widest"
+          style={{ fontSize: fontSize.xs10, color: isConnected ? color.green : color.muted }}
         >
           {isConnected ? 'Live' : 'Offline'}
         </span>

@@ -11,9 +11,11 @@
 >
 > 🎨 **Visual/UI rule**: Before implementing any UI change, always ask the user a Q&A to confirm
 > visual decisions (spacing, colors, sizes, layout, etc.). Always refer to
-> [`docs/screenshots/theme`](screenshots/theme) as the visual source of truth for all
-> styling decisions. For component structure and interaction patterns, refer to
-> [`docs/markup-reference`](markup-reference) — HTML reference files for UI components.
+> [`docs/screenshots/theme`](screenshots/theme) as the **primary** visual source of truth for all
+> styling decisions (colors, spacing, sizes, layout). When an element is not visible or not
+> distinguishable in screenshots, **fall back** to [`docs/markup-reference`](markup-reference) for
+> that element's visual properties (e.g. exact color values, sizes). For component structure and
+> interaction patterns, refer to `docs/markup-reference` — HTML reference files for UI components.
 > Goal is **not** a 1:1 copy; take what makes sense and do it better where possible.
 > Always ask clarifying questions when there is confusion or uncertainty before implementing.
 
@@ -52,9 +54,10 @@
 - Security comments: `🔐` on every decision made for security reasons
 - Commit prefixes: `feat:` `fix:` `security:` `chore:` `setup:` `docs:`
 - ESLint + Prettier enforced in CI. `pnpm lint && pnpm type-check && pnpm test` must pass before every push.
-- Background palette: `#0b0c1a` (page bg), `#0f1020` (panel/header bg), `#131628` (input/card bg)
-- Accent palette: `#7b2ff7`/`#a855f7` (purple primary), `#02c076` (green/profit), `#f6465d` (red/loss), `#f0b90b` (amber/warning), `#848e9c` (muted text)
-- Visual source of truth: `docs/screenshots/theme/` — always consult before making spacing, color, size, or layout decisions
+- Background palette: `#0f0e29` (page bg), `#211e49` (panel/header bg), `#1e1d34` (footer bg), `#3e3c73` (input/card bg) — sampled from `docs/screenshots/theme/header.png` + `footer.png`
+- Accent palette: `#a555e2`/`#695bec` (purple primary), `#4e3287` (purpleDeep), `#2ccd78` (green/profit), `#d5455c` (red/loss), `#e7ab33` (amber/warning), `#cac5d4` (muted text) — sampled from `docs/screenshots/theme/header.png`
+- Visual source of truth: `docs/screenshots/theme/` — always consult before making spacing, color, size, or layout decisions. Fall back to `docs/markup-reference/` when element not visible in screenshots.
+- **No hardcoded hex values, font strings, or font sizes in components** — always import from `@/lib/tokens`. Canvas/chart libs (lightweight-charts) must use `tokens.ts` directly (cannot read CSS vars). Tailwind pseudo-classes (`hover:`, `focus:`) use named brand utilities from `@theme inline` in `index.css`.
 - Q&A required before any UI implementation — no visual assumptions
 
 ---
@@ -421,6 +424,8 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 
 | File                                                         | Purpose                                                                               |
 | ------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| `apps/client/src/lib/tokens.ts`                              | **Design tokens** — single source of truth for all colors, fonts, sizes (JS/TS side)  |
+| `apps/client/src/index.css`                                  | Tailwind v4 theme — `@theme inline` generates brand color utilities from tokens       |
 | `apps/client/src/store/paperStore.ts`                        | All paper trading state + actions                                                     |
 | `apps/client/src/store/marketStore.ts`                       | Live price feed state                                                                 |
 | `apps/client/src/store/authStore.ts`                         | Auth token + user (in-memory, no persist)                                             |
@@ -455,7 +460,7 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 - **Phase 2**: Paper trading v1 — `paperStore` (market orders), `TradingPanel` (market-only), `PaperTradingPanel` (Positions + Order History + Balance History + Journal tabs), TP/SL monitor, commission accounting
 - **Phase 2**: Review infrastructure — `REVIEW_CHECKLIST.md`, `APP_LOG.md`, CI-passing tests (148 total)
 
-### 🔄 In Progress (current sprint — 2026-04-11)
+### 🔄 In Progress (current sprint — 2026-04-12)
 
 - **Phase 2 cont.**: `TradingPanel` redesign — Bid/Ask side selector, Limit/Stop tabs, Exits section, Order info panel
 - **Phase 2 cont.**: `PaperTradingPanel` header redesign — Account Settings modal, Orders tab (pendingOrders), maximize button
@@ -492,7 +497,12 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 - **`availableFunds = balance`** — balance already excludes locked margin; no subtraction needed
 - Leverage column in Positions table shows `1:1` — no leverage system implemented yet (crypto target: 10:1)
 - `useTPSLMonitor` and `usePendingOrderMonitor` (planned) are both scoped to active symbol only
+- **EMA 200 bar starvation**: `calcEMA(closes, 200)` needs >200 bars to produce a visible line. With exactly 200 bars, only one data point is generated (the very last index) — invisible on chart. Fixed: `usePriceFeed` now fetches 500 bars on mount.
+- **EMA 200 color source**: `#9c27b0` — taken from `docs/markup-reference/layout-area-center/chart.html` (`rgb(156, 39, 176)`). Screenshots/theme did not show EMA lines, so markup-reference was the fallback per visual rule.
+- **`CHART_BG` typo fixed**: was `'#0b0d18'` (wrong), corrected to `chart.bg` → `'#050212'` (matches bg.page token, sampled from screenshots).
+- **lightweight-charts + CSS vars**: canvas-based library cannot read CSS custom properties. All chart series colors **must** be plain hex strings — provided via `tokens.ts` `chart` group, never via `var(--...)`.
+- **Tailwind pseudo-class arbitrary values** (`hover:text-[#hex]`, `focus:border-[#hex]/50`) cannot be replaced with inline styles. They require named utilities — defined in `index.css` `@theme inline` as `--color-brand-*` and used as `hover:text-brand-*`, `focus:border-brand-*`.
 
 ---
 
-_Last updated: 2026-04-11 — Added docs/markup-reference folder to app log. Updated visual/UI rule to reference markup-reference for component structure and interaction patterns. Clarified goal is not 1:1 — take what makes sense and improve. Added rule to always ask clarifying questions before implementing._
+_Last updated: 2026-04-12 — Crypto coin icons implemented: installed `cryptocurrency-icons@0.18.1`, created `src/vite-env.d.ts`, `src/lib/cryptoIcons.ts` (9-coin URL map, Vite `?url` imports → offline-ready static assets), `src/components/ui/CryptoIcon.tsx` (renders icon img with 2-letter fallback badge). Applied CryptoIcon to SymbolBar (active symbol button + dropdown items) and TickerBar (each ticker row). Updated TopBar: header background `bg.page`→`bg.panel`, logo + avatar gradients updated to `gradient.brand`. Updated Footer: all text now uses explicit `color.muted` / `fontSize.xs` tokens instead of Tailwind muted-foreground class. Fixed hardcoded `#080910` in TickerBar → `bg.page` token. Previously: re-calibrated bg tokens from footer.png: bg.page #0f0e29, bg.footer #1e1d34. Re-calibrated purple/muted from header.png. Applied brand gradient + radius.button to auth CTA buttons._
