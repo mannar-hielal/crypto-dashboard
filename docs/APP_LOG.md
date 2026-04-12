@@ -291,7 +291,7 @@ Tab badge counts: purple pill for Positions count, gray pill for Order History c
 - TP / SL optional price inputs (directional validation)
 - Submit: `↑ Buy SYMBOL · Market` / `↓ Sell SYMBOL · Market`
 - Mark price display at bottom
-- Resets on symbol or active pane change via `key={`${activePane}-${symbol}`}` in `DashboardPage`
+- Resets on symbol or active pane change via ``key={`${activePane}-${symbol}`}`` in `DashboardPage`
 
 ---
 
@@ -483,7 +483,7 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 
 ### State reset pattern
 
-- Use `key={prop}` on parent to reset child state on prop change (`TradingPanel` uses `key={`${activePane}-${symbol}`}`)
+- Use `key={prop}` on parent to reset child state on prop change (`TradingPanel` uses ``key={`${activePane}-${symbol}`}``)
 - Never use during-render `setState`, never use `useEffect` + `setState` for reset
 
 ---
@@ -590,7 +590,7 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 - **Tailwind pseudo-class arbitrary values** (`hover:text-[#hex]`, `focus:border-[#hex]/50`) cannot be replaced with inline styles. They require named utilities — defined in `index.css` `@theme inline` as `--color-brand-*` and used as `hover:text-brand-*`, `focus:border-brand-*`.
 - **Two-surface token sync**: `tokens.ts` (JS/TS inline styles, canvas libs) and `index.css @theme inline` (Tailwind utilities) must be kept manually in sync — no single source can serve both. When updating a color token, update both surfaces in the same commit.
 - **Multi-chart layout state**: `layoutStore` holds layout ID + pane configs; `paneStores[0..3]` are vanilla Zustand stores (`createStore()`) fed by `usePaneFeeds`. Components read per-pane data with `useStore(paneStores[i], selector)`. `SymbolBar`/`TradingPanel`/`useTPSLMonitor` use 4 unconditional `useStore` calls (hooks-rule compliant) and pick the active index.
-- **`marketStore` is no longer used at runtime** — kept intact for existing tests (all 75 pass). All live data flows through `paneStores`.
+- **`marketStore` is still used at runtime in some client UI** — `TickerBar` and `PaperTradingPanel` still read live prices from `useMarketStore`; `paneStores` power the multi-chart pane flow. `marketStore` is also kept intact for existing tests (all 75 pass).
 - **TP/SL monitoring** is scoped to `paneStores[0]` (primary trading pane). When the user has multiple charts open, TP/SL still monitors only the pane-0 symbol.
 - **`setCrossHairXY` removed in v5**: lightweight-charts v5 has NO `setCrossHairXY`. The public API is `setCrosshairPosition(price, time, seriesApi)` + `clearCrosshairPosition()`. The original implementation used a type-cast to call the removed method, which threw `TypeError` silently (caught by `try/catch`). Fixed in `fix/crosshair-sync` commit: `ChartPanel.onChartReady` now passes both chart + candlestick series; `MultiChartArea` stores `seriesRefs[0..3]` alongside `chartRefs[0..3]`; crosshair handler calls `setCrosshairPosition(followerPrice, time, followerSeries)` and `clearCrosshairPosition()` on mouse-leave.
 - **Crosshair Y-sync fix**: The original `setCrosshairPosition` Y value was `bar.close` — the bar's close price at that timestamp. This caused the follower's horizontal line to be fixed at the close level regardless of where the cursor's actual Y was on the source chart (cursor could be mid-wick, above/below close, etc.). Fixed by using `otherSeries.coordinateToPrice(param.point.y)` which maps the source cursor's Y pixel directly to the equivalent price on the follower chart's own price scale, placing the horizontal line at the same relative height. Falls back to `bar.close` only when `coordinateToPrice` returns `null` (cursor is in the MACD sub-pane, outside the main price pane).
@@ -624,4 +624,4 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 
 ---
 
-_Last updated: 2026-04-12 — **fix: 4-chart layout — missing candles + crosshair sync** (`ChartPanel`, `MultiChartArea`): `ChartPanel` data effect now resets `prevLenRef=0` and clears all series when `bars.length===0` (symbol change), so the next data load correctly sets `isFirstLoad=true`, triggers `priceScale('right').applyOptions({autoScale:true})` + `scrollToRealTime()` — fixing Y-axis locked at the old symbol's range. `MultiChartArea` crosshair handler adds `followerLatest===null` guard (skip when no data) and discards `coordinateToPrice` results >50% from `latestPrice` (stale scale), falling back to `bar.close` and breaking the feedback loop that kept charts stuck at a previous symbol's price range. Previously: **fix: crosshair Y-sync** (`MultiChartArea`): replaced `bar.close` with `otherSeries.coordinateToPrice(param.point.y)`. Previously: **fix: crosshair sync echo** (`MultiChartArea`): replaced `isSyncingCrosshair` boolean guard with `param.sourceEvent` check. Previously: **Multi-chart layout feature** (`7dfd54a`). Previously: **PR review issues resolved** (`260d0f8` · `a298230`). Client tests 75 (5 files), total 161. 1 open item: garbled commit on `7bc5bf6`._
+_Last updated: 2026-04-12 — **chore: code review fixes** (`usePaneFeeds`, `layoutStore`, `APP_LOG`): `usePaneFeeds` replaces shared `isMountedRef` (re-set to `true` on every effect run) with a per-run closure `cancelled` flag, preventing stale REST updates after pane deactivation. `layoutStore` imports symbol/interval defaults from `markets.ts` (no more hard-coded strings); `setLayout` now clamps `activePane` to `count-1` instead of `0`; persist `merge` added to clamp on hydration. `layoutStore.test.ts` added (11 tests). Previously: **chore: code review cleanup + README corrections** (`ChartPanel`, `MultiChartArea`, `README`). Previously: **fix: 4-chart layout — missing candles + crosshair sync** (`ChartPanel`, `MultiChartArea`). Previously: **fix: crosshair Y-sync** (`MultiChartArea`). Previously: **fix: crosshair sync echo** (`MultiChartArea`). Previously: **Multi-chart layout feature** (`7dfd54a`). Previously: **PR review issues resolved** (`260d0f8` · `a298230`). Client tests 75+11=86 (6 files), total 172. 1 open item: garbled commit on `7bc5bf6`._

@@ -12,6 +12,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { SYMBOLS, INTERVALS } from '@/lib/markets';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -55,10 +56,10 @@ export const LAYOUT_GRID_CLASS: Record<LayoutId, string> = {
 
 /** Default symbol/interval for each pane slot */
 const DEFAULT_PANES: PaneConfig[] = [
-  { symbol: 'BTCUSDT', interval: '1m' },
-  { symbol: 'ETHUSDT', interval: '1m' },
-  { symbol: 'SOLUSDT', interval: '1m' },
-  { symbol: 'BNBUSDT', interval: '1m' },
+  { symbol: SYMBOLS[0].symbol, interval: INTERVALS[0] }, // BTCUSDT, 1m
+  { symbol: SYMBOLS[1].symbol, interval: INTERVALS[0] }, // ETHUSDT, 1m
+  { symbol: SYMBOLS[2].symbol, interval: INTERVALS[0] }, // SOLUSDT, 1m
+  { symbol: SYMBOLS[3].symbol, interval: INTERVALS[0] }, // BNBUSDT, 1m
 ];
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -92,8 +93,10 @@ export const useLayoutStore = create<LayoutState>()(
       setLayout: (layout) => {
         const count = LAYOUT_PANE_COUNT[layout];
         const { activePane } = get();
-        // Clamp activePane to new pane count
-        set({ layout, activePane: activePane >= count ? 0 : activePane });
+        // Clamp to the last valid index — e.g. pane 3 on a 4→2 switch → pane 1,
+        // not pane 0. Resetting to 0 discards the user's active-pane choice when
+        // a nearer pane (e.g. 1) would still be valid in the new layout.
+        set({ layout, activePane: activePane >= count ? count - 1 : activePane });
       },
 
       setActivePane: (index) => set({ activePane: index }),
@@ -125,6 +128,22 @@ export const useLayoutStore = create<LayoutState>()(
         set({ syncOptions: { ...syncOptions, [key]: !syncOptions[key] } });
       },
     }),
-    { name: 'cd-layout', version: 1 }
+    {
+      name: 'cd-layout',
+      version: 1,
+      // Clamp activePane on hydration: persisted state could have an activePane
+      // that is out of range for the persisted layout if the layout was changed
+      // between sessions without going through setLayout (e.g. manual storage
+      // edit, future schema migration). merge() runs before the state is applied.
+      merge: (persistedState, currentState) => {
+        const merged = {
+          ...currentState,
+          ...(persistedState as Partial<LayoutState>),
+        } as LayoutState;
+        const count = LAYOUT_PANE_COUNT[merged.layout] ?? 1;
+        if (merged.activePane >= count) merged.activePane = count - 1;
+        return merged;
+      },
+    }
   )
 );

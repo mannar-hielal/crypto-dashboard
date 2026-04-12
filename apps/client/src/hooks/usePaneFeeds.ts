@@ -28,10 +28,17 @@ function useSinglePaneFeed(
 ) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    isMountedRef.current = true;
+    // Per-run cancellation flag captured by closure — NOT a shared ref.
+    // isMountedRef.current was previously set to `true` at the START of every
+    // effect run, including the inactive (cleanup-only) run that fires when
+    // isActive becomes false. That meant an in-flight REST promise from the
+    // previous active run would see isMountedRef.current === true and still
+    // update the store. Using a closure variable avoids the race completely:
+    // old async work captures its own `cancelled` and the new effect run
+    // creates a fresh variable without disturbing the old closure.
+    let cancelled = false;
     const store = paneStores[paneIndex];
 
     // ── Pane is not visible in current layout → disconnect + clear ──────────
@@ -46,7 +53,9 @@ function useSinglePaneFeed(
         reconnectTimerRef.current = null;
       }
       store.getState().reset();
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
 
     // ── Active: reset stale data, then connect ───────────────────────────────
@@ -56,23 +65,23 @@ function useSinglePaneFeed(
     marketApi
       .getCandles(symbol, interval, 500)
       .then((res) => {
-        if (isMountedRef.current) store.getState().setSnapshot(res.candles, null);
+        if (!cancelled) store.getState().setSnapshot(res.candles, null);
       })
       .catch(() => {});
 
     // Step 2: WebSocket live feed
     function connect() {
-      if (!isMountedRef.current) return;
+      if (cancelled) return;
 
       const ws = new WebSocket(marketApi.wsUrl(symbol, interval));
       wsRef.current = ws;
 
       ws.onopen = () => {
-        if (isMountedRef.current) store.getState().setConnected(true);
+        if (!cancelled) store.getState().setConnected(true);
       };
 
       ws.onmessage = (e: MessageEvent<string>) => {
-        if (!isMountedRef.current) return;
+        if (cancelled) return;
         try {
           const msg = JSON.parse(e.data) as WsMessage;
           if (msg.type === 'snapshot') {
@@ -90,7 +99,7 @@ function useSinglePaneFeed(
       };
 
       ws.onclose = () => {
-        if (!isMountedRef.current) return;
+        if (cancelled) return;
         store.getState().setConnected(false);
         reconnectTimerRef.current = setTimeout(connect, RECONNECT_DELAY_MS);
       };
@@ -101,7 +110,7 @@ function useSinglePaneFeed(
     connect();
 
     return () => {
-      isMountedRef.current = false;
+      cancelled = true;
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       if (wsRef.current) {
         wsRef.current.onclose = null; // 🔐 prevent reconnect on intentional close
