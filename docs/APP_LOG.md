@@ -441,7 +441,13 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 | `generated/CDSDK/types/index.ts`                             | Shared types (User, Account, CandleBar, WsMessage, etc.)                              |
 | `generated/CDSDK/api/auth.ts`                                | Client-side auth API calls                                                            |
 | `generated/CDSDK/api/market.ts`                              | Client-side market API + WS URL                                                       |
-| `apps/server/prisma/schema.prisma`                           | DB schema (User, Account, Order, Trade, tokens)                                       |
+| `apps/client/src/lib/markets.ts`                             | Shared SYMBOLS + INTERVALS constants (imported by SymbolBar, PaneHeader, layoutStore) |
+| `apps/client/src/store/layoutStore.ts`                       | Layout config — layout ID, activePane, per-pane symbol/interval, sync options          |
+| `apps/client/src/store/paneStore.ts`                         | 4 independent vanilla Zustand stores (bars/price/connection per pane)                  |
+| `apps/client/src/hooks/usePaneFeeds.ts`                      | Manages 4 WS+REST connections (one per active pane) — replaces `usePriceFeed`          |
+| `apps/client/src/components/dashboard/ChartLayoutPicker.tsx` | Layout picker popover (5 SVG icons) + sync option toggles                              |
+| `apps/client/src/components/dashboard/PaneHeader.tsx`        | Per-pane mini header (symbol picker, interval buttons, live price, connection dot)      |
+| `apps/client/src/components/dashboard/MultiChartArea.tsx`    | CSS grid renderer for all layouts; wires crosshair + time-range sync                   |
 | `docs/markup-reference/`                                     | HTML UI reference files — component structure & interaction patterns (not 1:1 copies) |
 | `docs/screenshots/theme/`                                    | Visual source of truth — spacing, colors, sizes, layout                               |
 | `docs/REVIEW_CHECKLIST.md`                                   | Pre-commit review checklist — run before every push                                   |
@@ -459,6 +465,18 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 - **Phase 2**: Live price feed (WebSocket → `usePriceFeed` → `marketStore`)
 - **Phase 2**: Paper trading v1 — `paperStore` (market orders), `TradingPanel` (market-only), `PaperTradingPanel` (Positions + Order History + Balance History + Journal tabs), TP/SL monitor, commission accounting
 - **Phase 2**: Review infrastructure — `REVIEW_CHECKLIST.md`, `APP_LOG.md`, CI-passing tests (148 total)
+
+### ✅ Completed (added 2026-04-12)
+
+- **Multi-chart split layout** — `layoutStore`, `paneStore` (4 vanilla Zustand stores), `usePaneFeeds` (4 independent WS+REST connections), `ChartLayoutPicker`, `PaneHeader`, `MultiChartArea`
+- Supported layouts: `1` (single), `2h` (side-by-side), `2v` (stacked), `3h` (3 columns), `4` (2×2 grid)
+- Per-pane symbol + interval selection (each pane has its own `PaneHeader` with mini symbol picker + interval quick-switch)
+- Cross-pane sync options (toggleable per-session): symbol, interval, crosshair (time axis via `timeToCoordinate`), time range (`setVisibleRange`) — all with circular-event guard refs
+- Layout + sync options persisted to `localStorage` (`cd-layout`)
+- `SymbolBar` now reads from `layoutStore.panes[activePane]` + `paneStores[activePane]` (4 unconditional `useStore` calls, picks active)
+- `TradingPanel` + `useTPSLMonitor` migrated to `layoutStore` + `paneStores` (TP/SL monitors pane 0 — primary trading pane)
+- `src/lib/markets.ts` — shared `SYMBOLS`, `INTERVALS`, `INTERVAL_LABELS` constants (previously duplicated in `SymbolBar`)
+- Commit: `7dfd54a`
 
 ### 🔄 In Progress (current sprint — 2026-04-12)
 
@@ -503,7 +521,12 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 - **lightweight-charts + CSS vars**: canvas-based library cannot read CSS custom properties. All chart series colors **must** be plain hex strings — provided via `tokens.ts` `chart` group, never via `var(--...)`.
 - **Tailwind pseudo-class arbitrary values** (`hover:text-[#hex]`, `focus:border-[#hex]/50`) cannot be replaced with inline styles. They require named utilities — defined in `index.css` `@theme inline` as `--color-brand-*` and used as `hover:text-brand-*`, `focus:border-brand-*`.
 - **Two-surface token sync**: `tokens.ts` (JS/TS inline styles, canvas libs) and `index.css @theme inline` (Tailwind utilities) must be kept manually in sync — no single source can serve both. When updating a color token, update both surfaces in the same commit.
-- **`CRYPTO_ICON_URLS` type annotation**: switched from `Record<string, string>` annotation + `as const` to `satisfies Record<string, string>` (validates shape without widening). Lookup in `CryptoIcon.tsx` casts to `Record<string, string | undefined>` first — `satisfies` narrows keys to literal union, so bracket-access without cast would be a TS error.
+- **Multi-chart layout state**: `layoutStore` holds layout ID + pane configs; `paneStores[0..3]` are vanilla Zustand stores (`createStore()`) fed by `usePaneFeeds`. Components read per-pane data with `useStore(paneStores[i], selector)`. `SymbolBar`/`TradingPanel`/`useTPSLMonitor` use 4 unconditional `useStore` calls (hooks-rule compliant) and pick the active index.
+- **`marketStore` is no longer used at runtime** — kept intact for existing tests (all 75 pass). All live data flows through `paneStores`.
+- **TP/SL monitoring** is scoped to `paneStores[0]` (primary trading pane). When the user has multiple charts open, TP/SL still monitors only the pane-0 symbol.
+- **Crosshair sync guard**: `isSyncingCrosshair` ref breaks circular `subscribeCrosshairMove` loops. Same pattern for `isSyncingTimeRange`.
+- **`useStore` with dynamic store** — `SymbolBar` calls `useStore` 4 times (unconditional), picks `allData[activePane]`. Safe because hook call count never changes.
+- **`layoutStore` persistence**: `cd-layout` key, version 1. Layout + sync options survive page refresh; per-pane symbol/interval also persisted. (validates shape without widening). Lookup in `CryptoIcon.tsx` casts to `Record<string, string | undefined>` first — `satisfies` narrows keys to literal union, so bracket-access without cast would be a TS error.
 - **Framer Motion `key` on CSS-animated ticker**: `TickerBar` `doubled.map` uses `key={i}` (array index) — pre-existing. Safe here because the list is static and order never changes, but violates the checklist rule. Pending fix: `${item.symbol}-${i < items.length ? 'a' : 'b'}`.
 - **`motion.form` stagger timing**: `LoginPage` form fields use `delayChildren: 0.12` — fields start appearing before the card entrance (`duration: 0.35`) finishes. Intentional fast-start; bump to `0.28` if visual overlap is undesirable.
 
@@ -527,4 +550,4 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 
 ---
 
-_Last updated: 2026-04-12 — **PR review issues resolved** (`260d0f8` · `a298230`): added tests for `CryptoIcon` (8) and `cryptoIcons.ts` (5), fixed stable keys in `TickerBar`, applied `satisfies` + lookup cast in `cryptoIcons.ts`/`CryptoIcon.tsx`, added `noValidate` to `RegisterPage`. Client tests now 75 (5 files), total 161. 1 open item: garbled commit message on `7bc5bf6`. Previously: animation pass — `CryptoIcon` spring pop, ticker live pulse, symbol crossfade, staggered auth forms, position row exit animation (commits `705db2d` · `b95054a`). Design tokens + crypto icons + palette calibration (`7bc5bf6`)._
+_Last updated: 2026-04-12 — **Multi-chart layout feature** (`7dfd54a`): split view with 1/2h/2v/3h/4 layouts, per-pane symbol+interval, cross-pane crosshair+time-range sync, layout picker in SymbolBar, `layoutStore`+`paneStores` architecture. Previously: **PR review issues resolved** (`260d0f8` · `a298230`): tests for `CryptoIcon`/`cryptoIcons.ts`, stable keys in TickerBar, `satisfies`+lookup cast, `noValidate` on RegisterPage. Client tests 75 (5 files), total 161. 1 open item: garbled commit on `7bc5bf6`._
