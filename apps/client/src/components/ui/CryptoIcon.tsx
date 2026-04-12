@@ -1,5 +1,12 @@
+import { motion } from 'framer-motion';
 import { CRYPTO_ICON_URLS } from '@/lib/cryptoIcons';
 import { bg } from '@/lib/tokens';
+
+const popIn = {
+  initial: { scale: 0.5, opacity: 0 },
+  animate: { scale: 1, opacity: 1 },
+  transition: { type: 'spring' as const, stiffness: 420, damping: 22 },
+};
 
 interface CryptoIconProps {
   /** Base symbol — e.g. 'BTC', 'ETH'. Case-insensitive. */
@@ -23,7 +30,8 @@ export function CryptoIcon({ symbol, size = 20, className = '' }: CryptoIconProp
 
   if (!url) {
     return (
-      <span
+      <motion.span
+        {...popIn}
         className={`inline-flex shrink-0 items-center justify-center rounded-full font-black text-white ${className}`}
         style={{
           width: size,
@@ -35,12 +43,13 @@ export function CryptoIcon({ symbol, size = 20, className = '' }: CryptoIconProp
         }}
       >
         {symbol.slice(0, 2).toUpperCase()}
-      </span>
+      </motion.span>
     );
   }
 
   return (
-    <img
+    <motion.img
+      {...popIn}
       src={url}
       alt={symbol}
       width={size}

@@ -275,37 +275,46 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
       <span className="h-4 w-px shrink-0 bg-white/[0.08]" />
 
       {/* ── Live price + change% ──────────────────────────────────────────── */}
-      <div className="flex shrink-0 items-center gap-2 tabular-nums">
-        {latestPrice !== null ? (
-          <>
-            <NumberFlow
-              value={latestPrice}
-              format={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
-              className="text-sm font-bold text-white"
-            />
-            {changePercent !== null && (
-              <span
-                className="flex items-center gap-0.5 rounded px-1.5 py-0.5 font-semibold"
-                style={{
-                  fontSize: fontSize.xs11,
-                  background: isPositive ? `${color.green}18` : `${color.red}18`,
-                  color: isPositive ? color.green : color.red,
-                }}
-              >
-                {isPositive ? (
-                  <TrendingUp className="h-3 w-3" />
-                ) : (
-                  <TrendingDown className="h-3 w-3" />
-                )}
-                {isPositive ? '+' : ''}
-                {changePercent.toFixed(2)}%
-              </span>
-            )}
-          </>
-        ) : (
-          <div className="h-4 w-24 rounded shimmer-bg" />
-        )}
-      </div>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={symbol}
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -5 }}
+          transition={{ duration: 0.15, ease: 'easeOut' }}
+          className="flex shrink-0 items-center gap-2 tabular-nums"
+        >
+          {latestPrice !== null ? (
+            <>
+              <NumberFlow
+                value={latestPrice}
+                format={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                className="text-sm font-bold text-white"
+              />
+              {changePercent !== null && (
+                <span
+                  className="flex items-center gap-0.5 rounded px-1.5 py-0.5 font-semibold"
+                  style={{
+                    fontSize: fontSize.xs11,
+                    background: isPositive ? `${color.green}18` : `${color.red}18`,
+                    color: isPositive ? color.green : color.red,
+                  }}
+                >
+                  {isPositive ? (
+                    <TrendingUp className="h-3 w-3" />
+                  ) : (
+                    <TrendingDown className="h-3 w-3" />
+                  )}
+                  {isPositive ? '+' : ''}
+                  {changePercent.toFixed(2)}%
+                </span>
+              )}
+            </>
+          ) : (
+            <div className="h-4 w-24 rounded shimmer-bg" />
+          )}
+        </motion.div>
+      </AnimatePresence>
 
       {/* Divider */}
       <span className="h-4 w-px shrink-0 bg-white/[0.08]" />

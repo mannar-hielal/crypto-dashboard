@@ -38,6 +38,7 @@ const rowVariants = {
     y: 0,
     transition: { delay: i * 0.04, duration: 0.2, ease: 'easeOut' as const },
   }),
+  exit: { opacity: 0, x: -14, transition: { duration: 0.16, ease: 'easeIn' as const } },
 };
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -385,6 +386,15 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
 
             {/* ── Scrollable table area ────────────────────────────────────── */}
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={infoTab}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.14, ease: 'easeOut' }}
+                  className="flex min-h-0 flex-1 flex-col overflow-hidden"
+                >
               {/* ════ Positions ════════════════════════════════════════════════ */}
               {infoTab === 'positions' &&
                 (positions.length === 0 ? (
@@ -429,24 +439,27 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                         </tr>
                       </thead>
                       <tbody>
-                        {positions.map((pos, i) => {
-                          const markPrice = latestPrice ?? pos.entryPrice;
-                          const pnl =
-                            pos.side === 'long'
-                              ? (markPrice - pos.entryPrice) * pos.quantity
-                              : (pos.entryPrice - markPrice) * pos.quantity;
-                          const pnlPct = (pnl / pos.entryUsdtAmount) * 100;
-                          const isProfit = pnl >= 0;
+                        <AnimatePresence>
+                          {positions.map((pos, i) => {
+                            const markPrice = latestPrice ?? pos.entryPrice;
+                            const pnl =
+                              pos.side === 'long'
+                                ? (markPrice - pos.entryPrice) * pos.quantity
+                                : (pos.entryPrice - markPrice) * pos.quantity;
+                            const pnlPct = (pnl / pos.entryUsdtAmount) * 100;
+                            const isProfit = pnl >= 0;
 
-                          return (
-                            <motion.tr
-                              key={pos.id}
-                              custom={i}
-                              variants={rowVariants}
-                              initial="hidden"
-                              animate="visible"
-                              className="border-b border-white/[0.03] transition-colors hover:bg-white/[0.02]"
-                            >
+                            return (
+                              <motion.tr
+                                key={pos.id}
+                                custom={i}
+                                variants={rowVariants}
+                                initial="hidden"
+                                animate="visible"
+                                exit="exit"
+                                layout
+                                className="border-b border-white/[0.03] transition-colors hover:bg-white/[0.02]"
+                              >
                               <td className="px-3 py-1.5 font-bold text-white">{pos.symbol}</td>
                               <td className="px-3 py-1.5">
                                 <span
@@ -517,6 +530,7 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                             </motion.tr>
                           );
                         })}
+                        </AnimatePresence>
                       </tbody>
                     </table>
                   </div>
@@ -556,46 +570,49 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                         </tr>
                       </thead>
                       <tbody>
-                        {history.map((trade, i) => {
-                          const isProfit = trade.pnl >= 0;
-                          return (
-                            <motion.tr
-                              key={trade.id}
-                              custom={i}
-                              variants={rowVariants}
-                              initial="hidden"
-                              animate="visible"
-                              className="border-b border-white/[0.03] transition-colors hover:bg-white/[0.02]"
-                            >
-                              <td className="px-3 py-1.5 font-bold text-white">{trade.symbol}</td>
-                              <td
-                                className="px-3 py-1.5 font-bold"
-                                style={{
-                                  fontSize: fontSize.xs10,
-                                  color: trade.side === 'long' ? color.green : color.red,
-                                }}
+                        <AnimatePresence>
+                          {history.map((trade, i) => {
+                            const isProfit = trade.pnl >= 0;
+                            return (
+                              <motion.tr
+                                key={trade.id}
+                                custom={i}
+                                variants={rowVariants}
+                                initial="hidden"
+                                animate="visible"
+                                exit="exit"
+                                className="border-b border-white/[0.03] transition-colors hover:bg-white/[0.02]"
                               >
-                                {trade.side === 'long' ? 'LONG' : 'SHORT'}
-                              </td>
-                              <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                {trade.quantity.toFixed(6)}
-                              </td>
-                              <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                ${trade.entryPrice.toFixed(2)}
-                              </td>
-                              <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                ${trade.exitPrice.toFixed(2)}
-                              </td>
-                              <td
-                                className="px-3 py-1.5 text-right tabular-nums font-semibold"
-                                style={{ color: isProfit ? color.green : color.red }}
-                              >
-                                {isProfit ? '+' : ''}
-                                {trade.pnl.toFixed(2)}
-                              </td>
-                            </motion.tr>
-                          );
-                        })}
+                                <td className="px-3 py-1.5 font-bold text-white">{trade.symbol}</td>
+                                <td
+                                  className="px-3 py-1.5 font-bold"
+                                  style={{
+                                    fontSize: fontSize.xs10,
+                                    color: trade.side === 'long' ? color.green : color.red,
+                                  }}
+                                >
+                                  {trade.side === 'long' ? 'LONG' : 'SHORT'}
+                                </td>
+                                <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                  {trade.quantity.toFixed(6)}
+                                </td>
+                                <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                  ${trade.entryPrice.toFixed(2)}
+                                </td>
+                                <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                  ${trade.exitPrice.toFixed(2)}
+                                </td>
+                                <td
+                                  className="px-3 py-1.5 text-right tabular-nums font-semibold"
+                                  style={{ color: isProfit ? color.green : color.red }}
+                                >
+                                  {isProfit ? '+' : ''}
+                                  {trade.pnl.toFixed(2)}
+                                </td>
+                              </motion.tr>
+                            );
+                          })}
+                        </AnimatePresence>
                       </tbody>
                     </table>
                   </div>
@@ -722,6 +739,9 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                   )}
                 </div>
               )}
+            </div>
+            </motion.div>
+              </AnimatePresence>
             </div>
           </motion.div>
         )}

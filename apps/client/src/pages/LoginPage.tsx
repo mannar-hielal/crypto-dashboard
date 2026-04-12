@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate } from 'react-router';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { authApi } from '@crypto-dashboard/sdk';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,18 @@ const loginSchema = z.object({
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
+
+// ─── Animation variants ──────────────────────────────────────────────────────
+
+const formContainerVariants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.08, delayChildren: 0.12 } },
+};
+
+const formFieldVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.28, ease: 'easeOut' as const } },
+};
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -92,89 +104,105 @@ export function LoginPage() {
           </div>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="space-y-4">
-              {serverError && (
-                <motion.div
-                  role="alert"
-                  aria-live="polite"
-                  aria-atomic="true"
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="rounded-lg border px-3 py-2.5 text-xs font-medium"
-                  style={{
-                    borderColor: `${color.red}33`,
-                    background: `${color.red}1a`,
-                    color: color.red,
-                  }}
-                >
-                  {serverError}
-                </motion.div>
-              )}
-
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel
-                      className="text-xs font-semibold uppercase tracking-widest"
-                      style={{ color: color.muted }}
-                    >
-                      Email
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="you@example.com"
-                        autoComplete="email"
-                        aria-invalid={!!form.formState.errors.email}
-                        className="border-white/[0.08] text-white focus-visible:ring-0 focus-visible:border-brand-purple-dark/50"
-                        style={{ background: bg.surface }}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage style={{ color: color.red }} />
-                  </FormItem>
+            <motion.form
+              variants={formContainerVariants}
+              initial="hidden"
+              animate="visible"
+              onSubmit={form.handleSubmit(onSubmit)}
+              noValidate
+              className="space-y-4"
+            >
+              <AnimatePresence>
+                {serverError && (
+                  <motion.div
+                    key="server-error"
+                    variants={formFieldVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit={{ opacity: 0, y: -6, transition: { duration: 0.15 } }}
+                    role="alert"
+                    aria-live="polite"
+                    aria-atomic="true"
+                    className="rounded-lg border px-3 py-2.5 text-xs font-medium"
+                    style={{
+                      borderColor: `${color.red}33`,
+                      background: `${color.red}1a`,
+                      color: color.red,
+                    }}
+                  >
+                    {serverError}
+                  </motion.div>
                 )}
-              />
+              </AnimatePresence>
 
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="flex items-center justify-between">
+              <motion.div variants={formFieldVariants}>
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
                       <FormLabel
                         className="text-xs font-semibold uppercase tracking-widest"
                         style={{ color: color.muted }}
                       >
-                        Password
+                        Email
                       </FormLabel>
-                      <Link
-                        to="/forgot-password"
-                        className="transition-colors hover:text-brand-purple"
-                        style={{ fontSize: fontSize.xs11, color: color.purpleDark }}
-                      >
-                        Forgot password?
-                      </Link>
-                    </div>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="••••••••"
-                        autoComplete="current-password"
-                        aria-invalid={!!form.formState.errors.password}
-                        className="border-white/[0.08] text-white focus-visible:ring-0 focus-visible:border-brand-purple-dark/50"
-                        style={{ background: bg.surface }}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage style={{ color: color.red }} />
-                  </FormItem>
-                )}
-              />
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="you@example.com"
+                          autoComplete="email"
+                          aria-invalid={!!form.formState.errors.email}
+                          className="border-white/[0.08] text-white focus-visible:ring-0 focus-visible:border-brand-purple-dark/50"
+                          style={{ background: bg.surface }}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage style={{ color: color.red }} />
+                    </FormItem>
+                  )}
+                />
+              </motion.div>
 
-              <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+              <motion.div variants={formFieldVariants}>
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="flex items-center justify-between">
+                        <FormLabel
+                          className="text-xs font-semibold uppercase tracking-widest"
+                          style={{ color: color.muted }}
+                        >
+                          Password
+                        </FormLabel>
+                        <Link
+                          to="/forgot-password"
+                          className="transition-colors hover:text-brand-purple"
+                          style={{ fontSize: fontSize.xs11, color: color.purpleDark }}
+                        >
+                          Forgot password?
+                        </Link>
+                      </div>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="••••••••"
+                          autoComplete="current-password"
+                          aria-invalid={!!form.formState.errors.password}
+                          className="border-white/[0.08] text-white focus-visible:ring-0 focus-visible:border-brand-purple-dark/50"
+                          style={{ background: bg.surface }}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage style={{ color: color.red }} />
+                    </FormItem>
+                  )}
+                />
+              </motion.div>
+
+              <motion.div variants={formFieldVariants} whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
                 <Button
                   type="submit"
                   className="w-full font-bold tracking-wide text-white"
@@ -191,7 +219,11 @@ export function LoginPage() {
                 </Button>
               </motion.div>
 
-              <p className="text-center text-sm" style={{ color: color.muted }}>
+              <motion.p
+                variants={formFieldVariants}
+                className="text-center text-sm"
+                style={{ color: color.muted }}
+              >
                 Don&apos;t have an account?{' '}
                 <Link
                   to="/register"
@@ -200,8 +232,8 @@ export function LoginPage() {
                 >
                   Create one
                 </Link>
-              </p>
-            </form>
+              </motion.p>
+            </motion.form>
           </Form>
         </div>
       </motion.div>

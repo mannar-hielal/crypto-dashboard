@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import NumberFlow from '@number-flow/react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useMarketStore } from '@/store/marketStore';
 import { usePaperStore } from '@/store/paperStore';
@@ -39,6 +39,7 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
   const [tpInput, setTpInput] = useState('');
   const [slInput, setSlInput] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+  const executeAnim = useAnimation();
 
   const symbol = useMarketStore((s) => s.symbol);
   const latestPrice = useMarketStore((s) => s.latestPrice);
@@ -155,6 +156,8 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
     setUsdtInput('');
     setTpInput('');
     setSlInput('');
+    // Success pulse on the button
+    void executeAnim.start({ scale: [1, 1.06, 1], transition: { duration: 0.35, ease: 'easeOut' } });
   }
 
   return (
@@ -238,7 +241,7 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
         {/* Divider */}
         <div className="h-px w-full bg-white/[0.05]" />
 
-        {/* Buy / Sell toggle */}
+        {/* Buy / Sell toggle — shared layoutId pill slides between buttons */}
         <div
           className="flex rounded-md p-0.5 border border-white/[0.06]"
           style={{ background: bg.surface }}
@@ -246,24 +249,34 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
           <motion.button
             onClick={() => handleSideChange('buy')}
             whileTap={{ scale: 0.97 }}
-            className="flex-1 rounded py-1.5 text-xs font-bold transition-all"
-            style={{
-              background: orderSide === 'buy' ? color.green : 'transparent',
-              color: orderSide === 'buy' ? bg.page : color.muted,
-            }}
+            className="relative flex-1 rounded py-1.5 text-xs font-bold"
+            style={{ color: orderSide === 'buy' ? bg.page : color.muted }}
           >
-            Buy / Long
+            {orderSide === 'buy' && (
+              <motion.span
+                layoutId="side-pill"
+                className="absolute inset-0 rounded"
+                style={{ background: color.green }}
+                transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+              />
+            )}
+            <span className="relative z-10">Buy / Long</span>
           </motion.button>
           <motion.button
             onClick={() => handleSideChange('sell')}
             whileTap={{ scale: 0.97 }}
-            className="flex-1 rounded py-1.5 text-xs font-bold transition-all"
-            style={{
-              background: orderSide === 'sell' ? color.red : 'transparent',
-              color: orderSide === 'sell' ? '#ffffff' : color.muted,
-            }}
+            className="relative flex-1 rounded py-1.5 text-xs font-bold"
+            style={{ color: orderSide === 'sell' ? '#ffffff' : color.muted }}
           >
-            Sell / Short
+            {orderSide === 'sell' && (
+              <motion.span
+                layoutId="side-pill"
+                className="absolute inset-0 rounded"
+                style={{ background: color.red }}
+                transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+              />
+            )}
+            <span className="relative z-10">Sell / Short</span>
           </motion.button>
         </div>
 
@@ -408,6 +421,7 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
         {/* Execute button */}
         <motion.button
           onClick={handleExecute}
+          animate={executeAnim}
           disabled={!latestPrice || !usdtInput || parseFloat(usdtInput) <= 0}
           whileHover={{ scale: 1.02, filter: 'brightness(1.1)' }}
           whileTap={{ scale: 0.98 }}

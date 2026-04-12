@@ -6,6 +6,7 @@
  * The active symbol price is wired to the market store (live); the rest are static.
  */
 
+import { motion } from 'framer-motion';
 import { useMarketStore } from '@/store/marketStore';
 import { bg, color, fontSize } from '@/lib/tokens';
 import { CryptoIcon } from '@/components/ui/CryptoIcon';
@@ -28,26 +29,47 @@ function TickerItem({
   price,
   change,
   positive,
+  isLive = false,
 }: {
   symbol: string;
   price: string;
   change: string;
   positive: boolean;
+  isLive?: boolean;
 }) {
   const itemColor = positive ? color.green : color.red;
   const arrow = positive ? '↑' : '↓';
   const base = symbol.split('/')[0];
 
   return (
-    <span className="flex shrink-0 items-center gap-2 px-4" style={{ fontSize: fontSize.xs11 }}>
+    <span
+      className="relative flex shrink-0 items-center gap-2 px-4"
+      style={{ fontSize: fontSize.xs11 }}
+    >
+      {/* Live pulse overlay */}
+      {isLive && (
+        <motion.span
+          className="pointer-events-none absolute inset-0"
+          animate={{ opacity: [0.0, 0.12, 0.0] }}
+          transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ background: color.purpleDark, borderRadius: 4 }}
+        />
+      )}
       <CryptoIcon symbol={base} size={14} />
       <span className="font-semibold text-white/80">{symbol}</span>
       <span className="tabular-nums text-white/60">{price}</span>
       <span style={{ color: itemColor }} className="tabular-nums font-medium">
         {change}&nbsp;{arrow}
       </span>
-      {/* Separator dot */}
-      <span className="ml-2 h-1 w-1 rounded-full bg-white/10" />
+      {/* Live indicator dot / static separator dot */}
+      {isLive ? (
+        <span
+          className="ml-2 h-1.5 w-1.5 shrink-0 rounded-full pulse-live-dot"
+          style={{ background: color.green }}
+        />
+      ) : (
+        <span className="ml-2 h-1 w-1 rounded-full bg-white/10" />
+      )}
     </span>
   );
 }
@@ -118,7 +140,7 @@ export function TickerBar() {
         {/* The scrolling content — CSS animation avoids framer-motion overhead */}
         <div className="ticker-scroll flex items-center">
           {doubled.map((item, i) => (
-            <TickerItem key={i} {...item} />
+            <TickerItem key={i} {...item} isLive={i === 0 || i === items.length} />
           ))}
         </div>
       </div>

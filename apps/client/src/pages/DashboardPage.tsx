@@ -19,10 +19,11 @@ import { bg, color, fontSize } from '@/lib/tokens';
 /** hidden = fully closed (h-0); collapsed = header-only; open = full height */
 export type PanelSize = 'hidden' | 'collapsed' | 'open';
 
-const PANEL_HEIGHT: Record<PanelSize, string> = {
-  hidden: 'h-0 overflow-hidden',
-  collapsed: 'h-9',
-  open: 'h-52',
+/** Pixel heights used by the Framer Motion spring — mirrors h-0 / h-9 / h-52 */
+const PANEL_HEIGHTS: Record<PanelSize, number> = {
+  hidden: 0,
+  collapsed: 36, // 2.25 rem × 16 px
+  open: 208,     // 13 rem  × 16 px
 };
 
 /**
@@ -118,19 +119,23 @@ export function DashboardPage() {
         </AnimatePresence>
       </div>
 
-      <div
-        className={`shrink-0 transition-all duration-200 ease-in-out ${PANEL_HEIGHT[panelSize]}`}
+      {/* Spring-animated height — initial={false} skips the mount animation */}
+      <motion.div
+        className="shrink-0 overflow-hidden"
+        initial={false}
+        animate={{ height: PANEL_HEIGHTS[panelSize] }}
+        transition={{ type: 'spring', stiffness: 380, damping: 35 }}
         inert={panelSize === 'hidden'}
       >
         <PaperTradingPanel size={panelSize} onSizeChange={setPanelSize} />
-      </div>
+      </motion.div>
 
       <TickerBar />
 
       {/* ── Dashboard footer ─────────────────────────────────────────────── */}
       <div
         className="flex h-7 w-full shrink-0 items-center justify-between border-t border-white/[0.05] px-4"
-        style={{ background: '#06070f' }}
+        style={{ background: bg.footer }}
       >
         <span style={{ fontSize: fontSize.xs10, color: `${color.muted}80` }}>
           ⚠️ Paper trading only — no real funds. For educational purposes.

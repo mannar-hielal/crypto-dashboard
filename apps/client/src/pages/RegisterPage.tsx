@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { authApi } from '@crypto-dashboard/sdk';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,18 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AuthLayout } from '@/components/AuthLayout';
 import { gradient, radius } from '@/lib/tokens';
+
+// ─── Animation variants ──────────────────────────────────────────────────────
+
+const formContainerVariants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.07, delayChildren: 0.1 } },
+};
+
+const formFieldVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.26, ease: 'easeOut' as const } },
+};
 
 const registerSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -76,87 +88,118 @@ export function RegisterPage() {
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                {serverError && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{serverError}</AlertDescription>
-                  </Alert>
-                )}
-
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="email"
-                          placeholder="you@example.com"
-                          autoComplete="email"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+              <motion.form
+                variants={formContainerVariants}
+                initial="hidden"
+                animate="visible"
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-4"
+              >
+                <AnimatePresence>
+                  {serverError && (
+                    <motion.div
+                      key="server-error"
+                      variants={formFieldVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit={{ opacity: 0, y: -6, transition: { duration: 0.15 } }}
+                    >
+                      <Alert variant="destructive">
+                        <AlertDescription>{serverError}</AlertDescription>
+                      </Alert>
+                    </motion.div>
                   )}
-                />
+                </AnimatePresence>
 
-                <FormField
-                  control={form.control}
-                  name="username"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Username</FormLabel>
-                      <FormControl>
-                        <Input placeholder="satoshi_nakamoto" autoComplete="username" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <motion.div variants={formFieldVariants}>
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="email"
+                            placeholder="you@example.com"
+                            autoComplete="email"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </motion.div>
 
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="password"
-                          placeholder="••••••••"
-                          autoComplete="new-password"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <motion.div variants={formFieldVariants}>
+                  <FormField
+                    control={form.control}
+                    name="username"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Username</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="satoshi_nakamoto"
+                            autoComplete="username"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </motion.div>
 
-                <Button
-                  type="submit"
-                  className="w-full font-bold tracking-wide text-white"
-                  style={{
-                    background: form.formState.isSubmitting
-                      ? 'rgba(100,91,237,0.5)'
-                      : gradient.brand,
-                    borderRadius: radius.button,
-                    boxShadow: `0 0 20px ${gradient.brandFrom}55`,
-                  }}
-                  disabled={form.formState.isSubmitting}
+                <motion.div variants={formFieldVariants}>
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="password"
+                            placeholder="••••••••"
+                            autoComplete="new-password"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </motion.div>
+
+                <motion.div variants={formFieldVariants} whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+                  <Button
+                    type="submit"
+                    className="w-full font-bold tracking-wide text-white"
+                    style={{
+                      background: form.formState.isSubmitting
+                        ? 'rgba(100,91,237,0.5)'
+                        : gradient.brand,
+                      borderRadius: radius.button,
+                      boxShadow: `0 0 20px ${gradient.brandFrom}55`,
+                    }}
+                    disabled={form.formState.isSubmitting}
+                  >
+                    {form.formState.isSubmitting ? 'Creating account…' : 'Create account'}
+                  </Button>
+                </motion.div>
+
+                <motion.p
+                  variants={formFieldVariants}
+                  className="text-muted-foreground text-center text-sm"
                 >
-                  {form.formState.isSubmitting ? 'Creating account…' : 'Create account'}
-                </Button>
-
-                <p className="text-muted-foreground text-center text-sm">
                   Already have an account?{' '}
                   <Link to="/login" className="underline">
                     Sign in
                   </Link>
-                </p>
-              </form>
+                </motion.p>
+              </motion.form>
             </Form>
           </CardContent>
         </Card>
