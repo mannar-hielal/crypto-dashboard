@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import NumberFlow from '@number-flow/react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useMarketStore } from '@/store/marketStore';
 import { usePaperStore } from '@/store/paperStore';
+import { bg, color, fontSize } from '@/lib/tokens';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -38,6 +39,7 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
   const [tpInput, setTpInput] = useState('');
   const [slInput, setSlInput] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+  const executeAnim = useAnimation();
 
   const symbol = useMarketStore((s) => s.symbol);
   const latestPrice = useMarketStore((s) => s.latestPrice);
@@ -154,17 +156,22 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
     setUsdtInput('');
     setTpInput('');
     setSlInput('');
+    // Success pulse on the button
+    void executeAnim.start({
+      scale: [1, 1.06, 1],
+      transition: { duration: 0.35, ease: 'easeOut' },
+    });
   }
 
   return (
     <aside
       className="flex w-64 shrink-0 flex-col overflow-y-auto border-l border-white/[0.06]"
-      style={{ background: '#0f1020' }}
+      style={{ background: bg.panel }}
     >
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div
         className="flex h-9 shrink-0 items-center justify-between border-b border-white/[0.05] px-3"
-        style={{ background: '#0b0c1a' }}
+        style={{ background: bg.page }}
       >
         <span className="text-xs font-bold tracking-wide text-white/80">Paper Trading</span>
         <div className="flex items-center gap-0.5">
@@ -174,7 +181,8 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             title="Close panel (re-open with the ⊞ toggle in the top row)"
-            className="flex h-6 w-6 items-center justify-center rounded text-[#848e9c] hover:text-[#f6465d]"
+            className="flex h-6 w-6 items-center justify-center rounded transition-colors hover:text-brand-red"
+            style={{ color: color.muted }}
           >
             <X className="h-3.5 w-3.5" />
           </motion.button>
@@ -185,7 +193,10 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
       <div className="flex flex-col gap-3 p-3">
         {/* Balance */}
         <div>
-          <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-widest text-[#848e9c]">
+          <p
+            className="mb-0.5 font-semibold uppercase tracking-widest"
+            style={{ fontSize: fontSize.xs10, color: color.muted }}
+          >
             Balance
           </p>
           <NumberFlow
@@ -198,9 +209,12 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
         {/* Equity row */}
         <div
           className="flex items-center justify-between rounded-md border border-white/[0.06] px-2.5 py-1.5"
-          style={{ background: '#131628' }}
+          style={{ background: bg.surface }}
         >
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-[#848e9c]">
+          <span
+            className="font-semibold uppercase tracking-wider"
+            style={{ fontSize: fontSize.xs10, color: color.muted }}
+          >
             Equity
           </span>
           <NumberFlow
@@ -212,12 +226,15 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
 
         {/* Unrealized P&L */}
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-[#848e9c]">
+          <span
+            className="font-semibold uppercase tracking-wider"
+            style={{ fontSize: fontSize.xs10, color: color.muted }}
+          >
             Unrealized P&amp;L
           </span>
           <span
             className="text-xs font-bold tabular-nums"
-            style={{ color: unrealizedPnl >= 0 ? '#02c076' : '#f6465d' }}
+            style={{ color: unrealizedPnl >= 0 ? color.green : color.red }}
           >
             {unrealizedPnl >= 0 ? '+' : ''}
             {unrealizedPnl.toFixed(2)} USDT
@@ -227,38 +244,48 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
         {/* Divider */}
         <div className="h-px w-full bg-white/[0.05]" />
 
-        {/* Buy / Sell toggle */}
+        {/* Buy / Sell toggle — shared layoutId pill slides between buttons */}
         <div
           className="flex rounded-md p-0.5 border border-white/[0.06]"
-          style={{ background: '#131628' }}
+          style={{ background: bg.surface }}
         >
           <motion.button
             onClick={() => handleSideChange('buy')}
             whileTap={{ scale: 0.97 }}
-            className="flex-1 rounded py-1.5 text-xs font-bold transition-all"
-            style={{
-              background: orderSide === 'buy' ? '#02c076' : 'transparent',
-              color: orderSide === 'buy' ? '#0b0c1a' : '#848e9c',
-            }}
+            className="relative flex-1 rounded py-1.5 text-xs font-bold"
+            style={{ color: orderSide === 'buy' ? bg.page : color.muted }}
           >
-            Buy / Long
+            {orderSide === 'buy' && (
+              <motion.span
+                layoutId="side-pill"
+                className="absolute inset-0 rounded"
+                style={{ background: color.green }}
+                transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+              />
+            )}
+            <span className="relative z-10">Buy / Long</span>
           </motion.button>
           <motion.button
             onClick={() => handleSideChange('sell')}
             whileTap={{ scale: 0.97 }}
-            className="flex-1 rounded py-1.5 text-xs font-bold transition-all"
-            style={{
-              background: orderSide === 'sell' ? '#f6465d' : 'transparent',
-              color: orderSide === 'sell' ? '#ffffff' : '#848e9c',
-            }}
+            className="relative flex-1 rounded py-1.5 text-xs font-bold"
+            style={{ color: orderSide === 'sell' ? '#ffffff' : color.muted }}
           >
-            Sell / Short
+            {orderSide === 'sell' && (
+              <motion.span
+                layoutId="side-pill"
+                className="absolute inset-0 rounded"
+                style={{ background: color.red }}
+                transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+              />
+            )}
+            <span className="relative z-10">Sell / Short</span>
           </motion.button>
         </div>
 
         {/* Available balance hint */}
-        <div className="flex items-center justify-between text-[10px]">
-          <span className="text-[#848e9c]">Available</span>
+        <div className="flex items-center justify-between" style={{ fontSize: fontSize.xs10 }}>
+          <span style={{ color: color.muted }}>Available</span>
           <span className="font-semibold text-white/60">
             $
             {balance.toLocaleString(undefined, {
@@ -282,23 +309,28 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
                 setFormError(null);
               }}
               placeholder="Amount"
-              className="w-full rounded-md border border-white/[0.08] px-2.5 py-1.5 pr-14 text-xs text-white placeholder-[#848e9c]/50 focus:border-[#7b2ff7]/50 focus:outline-none transition-colors"
-              style={{ background: '#131628' }}
+              className="w-full rounded-md border border-white/[0.08] px-2.5 py-1.5 pr-14 text-xs text-white transition-colors focus:outline-none focus:border-brand-purple-dark/50"
+              style={{ background: bg.surface, fontSize: fontSize.xs }}
             />
-            <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-[#848e9c]">
+            <span
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 font-semibold"
+              style={{ fontSize: fontSize.xs10, color: color.muted }}
+            >
               USDT
             </span>
           </div>
 
           {/* Quantity preview */}
           {previewQty !== null && (
-            <p className="text-[10px] text-[#848e9c]">
+            <p style={{ fontSize: fontSize.xs10, color: color.muted }}>
               ≈{' '}
               <span className="text-white/60">
                 {previewQty.toFixed(6)} {baseAsset}
               </span>
               {latestPrice && (
-                <span className="ml-1 text-[#848e9c]/60">@ ${latestPrice.toFixed(2)}</span>
+                <span style={{ color: `${color.muted}99` }} className="ml-1">
+                  @ ${latestPrice.toFixed(2)}
+                </span>
               )}
             </p>
           )}
@@ -311,7 +343,8 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
                 onClick={() => handlePreset(pct)}
                 whileHover={{ scale: 1.04 }}
                 whileTap={{ scale: 0.96 }}
-                className="flex-1 rounded border border-white/[0.08] py-0.5 text-[10px] font-semibold text-[#848e9c] transition-colors hover:border-[#7b2ff7]/40 hover:text-white"
+                className="flex-1 rounded border border-white/[0.08] py-0.5 font-semibold transition-colors hover:border-brand-purple-dark/40 hover:text-white"
+                style={{ fontSize: fontSize.xs10, color: color.muted }}
               >
                 {pct}%
               </motion.button>
@@ -321,7 +354,10 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
 
         {/* TP / SL inputs */}
         <div className="flex flex-col gap-1.5">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#848e9c]">
+          <p
+            className="font-semibold uppercase tracking-widest"
+            style={{ fontSize: fontSize.xs10, color: color.muted }}
+          >
             TP / SL <span className="normal-case font-normal opacity-60">(optional)</span>
           </p>
           {/* Take Profit */}
@@ -336,10 +372,13 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
                 setFormError(null);
               }}
               placeholder="Take Profit"
-              className="w-full rounded-md border border-white/[0.08] px-2.5 py-1.5 pr-12 text-xs text-white placeholder-[#848e9c]/50 focus:border-[#02c076]/50 focus:outline-none transition-colors"
-              style={{ background: '#131628' }}
+              className="w-full rounded-md border border-white/[0.08] px-2.5 py-1.5 pr-12 text-xs text-white transition-colors focus:outline-none focus:border-brand-green/50"
+              style={{ background: bg.surface }}
             />
-            <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-[#02c076]/70">
+            <span
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 font-semibold"
+              style={{ fontSize: fontSize.xs10, color: `${color.green}b3` }}
+            >
               TP
             </span>
           </div>
@@ -355,10 +394,13 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
                 setFormError(null);
               }}
               placeholder="Stop Loss"
-              className="w-full rounded-md border border-white/[0.08] px-2.5 py-1.5 pr-12 text-xs text-white placeholder-[#848e9c]/50 focus:border-[#f6465d]/50 focus:outline-none transition-colors"
-              style={{ background: '#131628' }}
+              className="w-full rounded-md border border-white/[0.08] px-2.5 py-1.5 pr-12 text-xs text-white transition-colors focus:outline-none focus:border-brand-red/50"
+              style={{ background: bg.surface }}
             />
-            <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-[#f6465d]/70">
+            <span
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 font-semibold"
+              style={{ fontSize: fontSize.xs10, color: `${color.red}b3` }}
+            >
               SL
             </span>
           </div>
@@ -371,8 +413,8 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
-              className="text-[10px] font-semibold"
-              style={{ color: '#f6465d' }}
+              className="font-semibold"
+              style={{ fontSize: fontSize.xs10, color: color.red }}
             >
               {formError}
             </motion.p>
@@ -382,14 +424,16 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
         {/* Execute button */}
         <motion.button
           onClick={handleExecute}
+          animate={executeAnim}
           disabled={!latestPrice || !usdtInput || parseFloat(usdtInput) <= 0}
           whileHover={{ scale: 1.02, filter: 'brightness(1.1)' }}
           whileTap={{ scale: 0.98 }}
           className="w-full rounded-md py-2.5 text-xs font-bold tracking-wide transition-all disabled:cursor-not-allowed disabled:opacity-30"
           style={{
-            background: orderSide === 'buy' ? '#02c076' : '#f6465d',
-            color: orderSide === 'buy' ? '#0b0c1a' : '#ffffff',
-            boxShadow: orderSide === 'buy' ? '0 0 16px 0px #02c07630' : '0 0 16px 0px #f6465d30',
+            background: orderSide === 'buy' ? color.green : color.red,
+            color: orderSide === 'buy' ? bg.page : '#ffffff',
+            boxShadow:
+              orderSide === 'buy' ? `0 0 16px 0px ${color.green}30` : `0 0 16px 0px ${color.red}30`,
           }}
         >
           {orderSide === 'buy' ? '↑ Buy' : '↓ Sell'} {symbol} · Market
@@ -399,12 +443,18 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
         {latestPrice !== null && (
           <div
             className="flex items-center justify-between rounded-md border border-white/[0.06] px-2.5 py-1.5"
-            style={{ background: '#131628' }}
+            style={{ background: bg.surface }}
           >
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#848e9c]">
+            <span
+              className="font-semibold uppercase tracking-wider"
+              style={{ fontSize: fontSize.xs10, color: color.muted }}
+            >
               Mark Price
             </span>
-            <span className="text-[11px] tabular-nums font-semibold text-white/70">
+            <span
+              className="tabular-nums font-semibold text-white/70"
+              style={{ fontSize: fontSize.xs11 }}
+            >
               $
               {latestPrice.toLocaleString(undefined, {
                 minimumFractionDigits: 2,

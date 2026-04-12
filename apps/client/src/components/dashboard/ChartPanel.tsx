@@ -11,8 +11,9 @@ import {
 import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts';
 import { useMarketStore } from '@/store/marketStore';
 import { calcEMA, calcVWAP, calcMACD } from '@/lib/indicators';
+import { bg, color, chart as chartColors, font, fontSize } from '@/lib/tokens';
 
-const CHART_BG = '#0b0d18';
+const CHART_BG = chartColors.bg;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -77,7 +78,7 @@ export function ChartPanel() {
       layout: {
         background: { color: CHART_BG },
         textColor: '#d1d4dc',
-        fontFamily: "'Geist', ui-sans-serif, sans-serif",
+        fontFamily: font.sans,
         fontSize: 12,
       },
       grid: {
@@ -104,17 +105,17 @@ export function ChartPanel() {
 
     // ── Pane 0: main candles ────────────────────────────────────────────────
     candleRef.current = chart.addSeries(CandlestickSeries, {
-      upColor: '#02c076',
-      downColor: '#f6465d',
-      borderUpColor: '#02c076',
-      borderDownColor: '#f6465d',
-      wickUpColor: '#02c076',
-      wickDownColor: '#f6465d',
+      upColor: chartColors.candleUp,
+      downColor: chartColors.candleDown,
+      borderUpColor: chartColors.candleUp,
+      borderDownColor: chartColors.candleDown,
+      wickUpColor: chartColors.candleUp,
+      wickDownColor: chartColors.candleDown,
     });
 
     // ── Pane 0: EMA 9 — silver/gray ─────────────────────────────────────────
     ema9Ref.current = chart.addSeries(LineSeries, {
-      color: '#94a3b8',
+      color: chartColors.ema9,
       lineWidth: 2,
       title: 'EMA 9',
       priceLineVisible: false,
@@ -124,7 +125,7 @@ export function ChartPanel() {
 
     // ── Pane 0: EMA 20 — blue ───────────────────────────────────────────────
     ema20Ref.current = chart.addSeries(LineSeries, {
-      color: '#3b82f6',
+      color: chartColors.ema20,
       lineWidth: 2,
       title: 'EMA 20',
       priceLineVisible: false,
@@ -134,7 +135,7 @@ export function ChartPanel() {
 
     // ── Pane 0: EMA 200 — purple (trend filter, thin — background reference) ─
     ema200Ref.current = chart.addSeries(LineSeries, {
-      color: '#a855f7',
+      color: chartColors.ema200,
       lineWidth: 1,
       title: 'EMA 200',
       priceLineVisible: false,
@@ -144,7 +145,7 @@ export function ChartPanel() {
 
     // ── Pane 0: VWAP — orange sparse-dotted ─────────────────────────────────
     vwapRef.current = chart.addSeries(LineSeries, {
-      color: '#f97316',
+      color: chartColors.vwap,
       lineWidth: 2,
       lineStyle: LineStyle.SparseDotted,
       title: 'VWAP',
@@ -156,7 +157,7 @@ export function ChartPanel() {
     // ── Pane 1: MACD histogram (pane auto-created by passing index 1) ────────
     macdHistRef.current = chart.addSeries(
       HistogramSeries,
-      { color: '#22d3a5', priceLineVisible: false, lastValueVisible: false },
+      { color: chartColors.macdHistBull, priceLineVisible: false, lastValueVisible: false },
       1
     );
 
@@ -164,7 +165,7 @@ export function ChartPanel() {
     macdLineRef.current = chart.addSeries(
       LineSeries,
       {
-        color: '#2962ff',
+        color: chartColors.macdLine,
         lineWidth: 2,
         title: 'MACD',
         priceLineVisible: false,
@@ -178,7 +179,7 @@ export function ChartPanel() {
     signalRef.current = chart.addSeries(
       LineSeries,
       {
-        color: '#ff6d00',
+        color: chartColors.macdSignal,
         lineWidth: 2,
         title: 'Signal',
         priceLineVisible: false,
@@ -301,9 +302,9 @@ export function ChartPanel() {
         const rising = val >= prev;
         let color: string;
         if (val >= 0) {
-          color = rising ? '#02c076' : '#02c07666';
+          color = rising ? chartColors.macdHistBull : `${chartColors.macdHistBull}66`;
         } else {
-          color = rising ? '#f6465d66' : '#f6465d';
+          color = rising ? `${chartColors.macdHistBear}66` : chartColors.macdHistBear;
         }
         histPts.push({ time: toUTC(bars[i].timestamp), value: val, color });
       }
@@ -348,36 +349,38 @@ export function ChartPanel() {
       {hoverData && (
         <div
           className="pointer-events-none absolute left-3 top-3 z-10 rounded-lg border border-white/[0.06] px-3 py-2 backdrop-blur-md"
-          style={{ background: 'rgba(11,12,26,0.90)' }}
+          style={{ background: `${bg.page}e6` }}
         >
           {/* Time */}
-          <p className="mb-1.5 text-[10px] font-medium text-slate-500">{hoverData.time}</p>
+          <p className="mb-1.5" style={{ fontSize: fontSize.xs10, color: color.muted }}>
+            {hoverData.time}
+          </p>
 
           {/* OHLC */}
-          <div className="flex items-center gap-2 font-mono text-[11px]">
-            <span className="text-slate-500">O</span>
+          <div className="flex items-center gap-2 font-mono" style={{ fontSize: fontSize.xs11 }}>
+            <span style={{ color: color.muted }}>O</span>
             <span className="text-slate-200">
               {hoverData.open.toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}
             </span>
-            <span className="text-slate-500">H</span>
-            <span style={{ color: '#02c076' }}>
+            <span style={{ color: color.muted }}>H</span>
+            <span style={{ color: color.green }}>
               {hoverData.high.toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}
             </span>
-            <span className="text-slate-500">L</span>
-            <span style={{ color: '#f6465d' }}>
+            <span style={{ color: color.muted }}>L</span>
+            <span style={{ color: color.red }}>
               {hoverData.low.toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}
             </span>
-            <span className="text-slate-500">C</span>
-            <span style={{ color: hoverData.close >= hoverData.open ? '#02c076' : '#f6465d' }}>
+            <span style={{ color: color.muted }}>C</span>
+            <span style={{ color: hoverData.close >= hoverData.open ? color.green : color.red }}>
               {hoverData.close.toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
@@ -386,10 +389,13 @@ export function ChartPanel() {
           </div>
 
           {/* Indicators */}
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 font-mono text-[10px]">
+          <div
+            className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 font-mono"
+            style={{ fontSize: fontSize.xs10 }}
+          >
             {hoverData.ema9 !== null && (
               <span>
-                <span style={{ color: '#94a3b8' }}>EMA9 </span>
+                <span style={{ color: chartColors.ema9 }}>EMA9 </span>
                 <span className="text-slate-300">
                   {hoverData.ema9.toLocaleString(undefined, {
                     minimumFractionDigits: 2,
@@ -400,7 +406,7 @@ export function ChartPanel() {
             )}
             {hoverData.ema20 !== null && (
               <span>
-                <span style={{ color: '#3b82f6' }}>EMA20 </span>
+                <span style={{ color: chartColors.ema20 }}>EMA20 </span>
                 <span className="text-slate-300">
                   {hoverData.ema20.toLocaleString(undefined, {
                     minimumFractionDigits: 2,
@@ -411,7 +417,7 @@ export function ChartPanel() {
             )}
             {hoverData.ema200 !== null && (
               <span>
-                <span style={{ color: '#a855f7' }}>EMA200 </span>
+                <span style={{ color: chartColors.ema200 }}>EMA200 </span>
                 <span className="text-slate-300">
                   {hoverData.ema200.toLocaleString(undefined, {
                     minimumFractionDigits: 2,
@@ -422,7 +428,7 @@ export function ChartPanel() {
             )}
             {hoverData.vwap !== null && (
               <span>
-                <span style={{ color: '#f97316' }}>VWAP </span>
+                <span style={{ color: chartColors.vwap }}>VWAP </span>
                 <span className="text-slate-300">
                   {hoverData.vwap.toLocaleString(undefined, {
                     minimumFractionDigits: 2,

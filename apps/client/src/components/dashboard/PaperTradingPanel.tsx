@@ -14,6 +14,7 @@ import { useMarketStore } from '@/store/marketStore';
 import { usePaperStore } from '@/store/paperStore';
 import type { JournalEntry } from '@/store/paperStore';
 import type { PanelSize } from '@/pages/DashboardPage';
+import { bg, color, fontSize } from '@/lib/tokens';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,6 +38,7 @@ const rowVariants = {
     y: 0,
     transition: { delay: i * 0.04, duration: 0.2, ease: 'easeOut' as const },
   }),
+  exit: { opacity: 0, x: -14, transition: { duration: 0.16, ease: 'easeIn' as const } },
 };
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -73,14 +75,14 @@ function JournalRow({
     <tr className="group border-b border-white/[0.03] transition-colors hover:bg-white/[0.02]">
       {/* Time */}
       <td
-        className="shrink-0 whitespace-nowrap px-3 py-1.5 font-mono text-[11px] tabular-nums"
-        style={{ color: '#848e9c', minWidth: 152 }}
+        className="shrink-0 whitespace-nowrap px-3 py-1.5 font-mono tabular-nums"
+        style={{ fontSize: fontSize.xs11, color: color.muted, minWidth: 152 }}
       >
         {fmtTime(entry.time)}
       </td>
 
       {/* Text */}
-      <td className="w-full px-3 py-1.5 text-[11px] text-white/70">
+      <td className="w-full px-3 py-1.5 text-white/70" style={{ fontSize: fontSize.xs11 }}>
         {isEditing ? (
           <div className="flex items-center gap-1.5">
             <input
@@ -92,15 +94,16 @@ function JournalRow({
                 if (e.key === 'Escape') onCancelEdit();
               }}
               onBlur={onSaveEdit}
-              className="flex-1 rounded border border-white/[0.08] px-2 py-0.5 text-[11px] text-white focus:border-[#7b2ff7]/50 focus:outline-none"
-              style={{ background: '#131628' }}
+              className="flex-1 rounded border border-white/[0.08] px-2 py-0.5 text-white focus:outline-none focus:border-brand-purple-dark/50"
+              style={{ fontSize: fontSize.xs11, background: bg.surface }}
             />
             <button
               onMouseDown={(e) => {
-                e.preventDefault(); // prevent blur from firing before click
+                e.preventDefault();
                 onSaveEdit();
               }}
-              className="shrink-0 text-[#02c076] hover:brightness-125"
+              style={{ color: color.green }}
+              className="shrink-0 hover:brightness-125"
             >
               <Check className="h-3 w-3" />
             </button>
@@ -110,13 +113,14 @@ function JournalRow({
         )}
       </td>
 
-      {/* Actions — pen icon visible on hover, only for user notes */}
+      {/* Actions */}
       <td className="px-2 py-1.5 text-right" style={{ minWidth: 28 }}>
         {entry.isUserNote && !isEditing && (
           <button
             onClick={() => onStartEdit(entry)}
             title="Edit note"
-            className="opacity-0 transition-opacity group-hover:opacity-100 text-[#848e9c] hover:text-[#a855f7]"
+            className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-brand-purple"
+            style={{ color: color.muted }}
           >
             <Pencil className="h-3 w-3" />
           </button>
@@ -209,19 +213,21 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
   return (
     <div
       className="flex h-full w-full flex-col border-t border-white/[0.06]"
-      style={{ background: '#0b0c1a' }}
+      style={{ background: bg.page }}
     >
-      {/* ── Header bar (always visible) ────────────────────────────────────── */}
+      {/* ── Header bar ────────────────────────────────────────────────────── */}
       <div
         className="flex h-9 shrink-0 items-center justify-between border-b border-white/[0.05] px-3"
-        style={{ background: '#0f1020' }}
+        style={{ background: bg.panel }}
       >
         {/* Left: quick stats */}
         <div className="flex items-center gap-3 overflow-hidden">
           <span className="text-xs font-bold text-white/80 tracking-wide">Positions</span>
           <span className="h-3 w-px bg-white/[0.08]" />
-          <span className="text-[11px] tabular-nums text-[#848e9c]">
-            <span className="mr-1 text-[#848e9c]/60">Balance</span>
+          <span className="tabular-nums" style={{ fontSize: fontSize.xs11, color: color.muted }}>
+            <span className="mr-1" style={{ color: `${color.muted}99` }}>
+              Balance
+            </span>
             <span className="text-white/70">
               $
               {balance.toLocaleString(undefined, {
@@ -232,8 +238,8 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
           </span>
           <span className="h-3 w-px bg-white/[0.08]" />
           <span
-            className="text-[11px] font-semibold tabular-nums"
-            style={{ color: unrealizedPnl >= 0 ? '#02c076' : '#f6465d' }}
+            className="font-semibold tabular-nums"
+            style={{ fontSize: fontSize.xs11, color: unrealizedPnl >= 0 ? color.green : color.red }}
           >
             {unrealizedPnl >= 0 ? '+' : ''}
             {unrealizedPnl.toFixed(2)} P&amp;L
@@ -242,7 +248,6 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
 
         {/* Right: gear (reset) + collapse + close */}
         <div className="flex items-center gap-0.5">
-          {/* ── Account reset (gear icon) ── */}
           <AnimatePresence mode="wait">
             {confirmingReset ? (
               <motion.button
@@ -253,11 +258,12 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                 transition={{ duration: 0.12 }}
                 onClick={handleResetClick}
                 title="Click again to confirm reset"
-                className="flex h-6 items-center gap-1 rounded px-2 text-[10px] font-bold"
+                className="flex h-6 items-center gap-1 rounded px-2 font-bold"
                 style={{
-                  background: 'rgba(246,70,93,0.12)',
-                  color: '#f6465d',
-                  border: '1px solid rgba(246,70,93,0.35)',
+                  fontSize: fontSize.xs10,
+                  background: `${color.red}1f`,
+                  color: color.red,
+                  border: `1px solid ${color.red}59`,
                 }}
               >
                 Reset?
@@ -273,14 +279,14 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 title="Account settings — reset paper account"
-                className="flex h-6 w-6 items-center justify-center rounded text-[#848e9c] hover:text-white"
+                className="flex h-6 w-6 items-center justify-center rounded hover:text-white"
+                style={{ color: color.muted }}
               >
                 <Settings className="h-3.5 w-3.5" />
               </motion.button>
             )}
           </AnimatePresence>
 
-          {/* Collapse ↔ Expand */}
           {size !== 'hidden' &&
             (size === 'open' ? (
               <motion.button
@@ -288,7 +294,8 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 title="Collapse"
-                className="flex h-6 w-6 items-center justify-center rounded text-[#848e9c] hover:text-white"
+                className="flex h-6 w-6 items-center justify-center rounded hover:text-white"
+                style={{ color: color.muted }}
               >
                 <ChevronDown className="h-3.5 w-3.5" />
               </motion.button>
@@ -298,19 +305,20 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 title="Expand"
-                className="flex h-6 w-6 items-center justify-center rounded text-[#848e9c] hover:text-white"
+                className="flex h-6 w-6 items-center justify-center rounded hover:text-white"
+                style={{ color: color.muted }}
               >
                 <ChevronUp className="h-3.5 w-3.5" />
               </motion.button>
             ))}
 
-          {/* Close */}
           <motion.button
             onClick={() => onSizeChange('hidden')}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             title="Close panel"
-            className="flex h-6 w-6 items-center justify-center rounded text-[#848e9c] hover:text-[#f6465d]"
+            className="flex h-6 w-6 items-center justify-center rounded hover:text-brand-red"
+            style={{ color: color.muted }}
           >
             <X className="h-3.5 w-3.5" />
           </motion.button>
@@ -331,38 +339,44 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
             {/* ── Tab bar ─────────────────────────────────────────────────── */}
             <div
               className="flex items-center border-b border-white/[0.06]"
-              style={{ background: '#0f1020' }}
+              style={{ background: bg.panel }}
             >
               {(['positions', 'history', 'journal'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setInfoTab(tab)}
                   className="relative flex items-center gap-1.5 px-4 py-2 text-xs font-semibold capitalize transition-colors"
-                  style={{ color: infoTab === tab ? '#a855f7' : '#848e9c' }}
+                  style={{ color: infoTab === tab ? color.purple : color.muted }}
                 >
                   {infoTab === tab && (
                     <motion.span
                       layoutId="active-bottom-tab"
                       className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t"
-                      style={{ background: '#7b2ff7' }}
+                      style={{ background: color.purpleDark }}
                     />
                   )}
                   {tab}
                   {tab === 'positions' && positions.length > 0 && (
                     <span
-                      className="rounded-full px-1.5 py-px text-[9px] font-bold text-white"
-                      style={{ background: '#7b2ff7' }}
+                      className="rounded-full px-1.5 py-px font-bold text-white"
+                      style={{ fontSize: fontSize.xxs, background: color.purpleDark }}
                     >
                       {positions.length}
                     </span>
                   )}
                   {tab === 'history' && history.length > 0 && (
-                    <span className="rounded-full bg-white/[0.08] px-1.5 py-px text-[9px] font-semibold text-[#848e9c]">
+                    <span
+                      className="rounded-full bg-white/[0.08] px-1.5 py-px font-semibold"
+                      style={{ fontSize: fontSize.xxs, color: color.muted }}
+                    >
                       {history.length}
                     </span>
                   )}
                   {tab === 'journal' && journal.length > 0 && (
-                    <span className="rounded-full bg-white/[0.08] px-1.5 py-px text-[9px] font-semibold text-[#848e9c]">
+                    <span
+                      className="rounded-full bg-white/[0.08] px-1.5 py-px font-semibold"
+                      style={{ fontSize: fontSize.xxs, color: color.muted }}
+                    >
                       {journal.length}
                     </span>
                   )}
@@ -372,335 +386,368 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
 
             {/* ── Scrollable table area ────────────────────────────────────── */}
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              {/* ════ Positions ════════════════════════════════════════════════ */}
-              {infoTab === 'positions' &&
-                (positions.length === 0 ? (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex h-full items-center justify-center text-xs text-[#848e9c]"
-                  >
-                    No open positions
-                  </motion.div>
-                ) : (
-                  <div className="flex-1 overflow-y-auto">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr
-                          className="border-b border-white/[0.04] text-[10px] text-[#848e9c]"
-                          style={{ background: '#0f1020' }}
-                        >
-                          <th className="px-3 py-1.5 text-left font-semibold uppercase tracking-wider">
-                            Symbol
-                          </th>
-                          <th className="px-3 py-1.5 text-left font-semibold uppercase tracking-wider">
-                            Side
-                          </th>
-                          <th className="px-3 py-1.5 text-right font-semibold uppercase tracking-wider">
-                            Qty
-                          </th>
-                          <th className="px-3 py-1.5 text-right font-semibold uppercase tracking-wider">
-                            Entry
-                          </th>
-                          <th className="px-3 py-1.5 text-right font-semibold uppercase tracking-wider">
-                            Mark
-                          </th>
-                          <th className="px-3 py-1.5 text-right font-semibold uppercase tracking-wider">
-                            TP
-                          </th>
-                          <th className="px-3 py-1.5 text-right font-semibold uppercase tracking-wider">
-                            SL
-                          </th>
-                          <th className="px-3 py-1.5 text-right font-semibold uppercase tracking-wider">
-                            PnL (USDT)
-                          </th>
-                          <th className="px-3 py-1.5 text-center font-semibold uppercase tracking-wider">
-                            Close
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {positions.map((pos, i) => {
-                          const markPrice = latestPrice ?? pos.entryPrice;
-                          const pnl =
-                            pos.side === 'long'
-                              ? (markPrice - pos.entryPrice) * pos.quantity
-                              : (pos.entryPrice - markPrice) * pos.quantity;
-                          const pnlPct = (pnl / pos.entryUsdtAmount) * 100;
-                          const isProfit = pnl >= 0;
-
-                          return (
-                            <motion.tr
-                              key={pos.id}
-                              custom={i}
-                              variants={rowVariants}
-                              initial="hidden"
-                              animate="visible"
-                              className="border-b border-white/[0.03] transition-colors hover:bg-white/[0.02]"
-                            >
-                              <td className="px-3 py-1.5 font-bold text-white">{pos.symbol}</td>
-                              <td className="px-3 py-1.5">
-                                <span
-                                  className="flex items-center gap-0.5 text-[10px] font-bold"
-                                  style={{ color: pos.side === 'long' ? '#02c076' : '#f6465d' }}
-                                >
-                                  {pos.side === 'long' ? (
-                                    <TrendingUp className="h-3 w-3" />
-                                  ) : (
-                                    <TrendingDown className="h-3 w-3" />
-                                  )}
-                                  {pos.side === 'long' ? 'LONG' : 'SHORT'}
-                                </span>
-                              </td>
-                              <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                {pos.quantity.toFixed(6)}
-                              </td>
-                              <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                ${pos.entryPrice.toFixed(2)}
-                              </td>
-                              <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                ${markPrice.toFixed(2)}
-                              </td>
-                              {/* Take Profit */}
-                              <td
-                                className="px-3 py-1.5 text-right tabular-nums text-[10px]"
-                                style={{ color: pos.takeProfit ? '#02c076' : '#848e9c' }}
-                              >
-                                {pos.takeProfit ? `$${pos.takeProfit.toFixed(2)}` : '—'}
-                              </td>
-                              {/* Stop Loss */}
-                              <td
-                                className="px-3 py-1.5 text-right tabular-nums text-[10px]"
-                                style={{ color: pos.stopLoss ? '#f6465d' : '#848e9c' }}
-                              >
-                                {pos.stopLoss ? `$${pos.stopLoss.toFixed(2)}` : '—'}
-                              </td>
-                              <td
-                                className="px-3 py-1.5 text-right tabular-nums font-semibold"
-                                style={{ color: isProfit ? '#02c076' : '#f6465d' }}
-                              >
-                                {isProfit ? '+' : ''}
-                                {pnl.toFixed(2)}{' '}
-                                <span className="text-[10px] opacity-70">
-                                  ({isProfit ? '+' : ''}
-                                  {pnlPct.toFixed(2)}%)
-                                </span>
-                              </td>
-                              <td className="px-3 py-1.5 text-center">
-                                <motion.button
-                                  onClick={() => handleClose(pos.id)}
-                                  whileHover={{ scale: 1.2 }}
-                                  whileTap={{ scale: 0.9 }}
-                                  title="Close at market price"
-                                  className="mx-auto flex h-5 w-5 items-center justify-center rounded text-[#848e9c] transition-colors hover:text-[#f6465d]"
-                                >
-                                  <X className="h-3 w-3" />
-                                </motion.button>
-                              </td>
-                            </motion.tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                ))}
-
-              {/* ════ History ══════════════════════════════════════════════════ */}
-              {infoTab === 'history' &&
-                (history.length === 0 ? (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex h-full items-center justify-center text-xs text-[#848e9c]"
-                  >
-                    No closed trades yet
-                  </motion.div>
-                ) : (
-                  <div className="flex-1 overflow-y-auto">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr
-                          className="border-b border-white/[0.04] text-[10px] text-[#848e9c]"
-                          style={{ background: '#0f1020' }}
-                        >
-                          <th className="px-3 py-1.5 text-left font-semibold uppercase tracking-wider">
-                            Symbol
-                          </th>
-                          <th className="px-3 py-1.5 text-left font-semibold uppercase tracking-wider">
-                            Side
-                          </th>
-                          <th className="px-3 py-1.5 text-right font-semibold uppercase tracking-wider">
-                            Qty
-                          </th>
-                          <th className="px-3 py-1.5 text-right font-semibold uppercase tracking-wider">
-                            Entry
-                          </th>
-                          <th className="px-3 py-1.5 text-right font-semibold uppercase tracking-wider">
-                            Exit
-                          </th>
-                          <th className="px-3 py-1.5 text-right font-semibold uppercase tracking-wider">
-                            PnL (USDT)
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {history.map((trade, i) => {
-                          const isProfit = trade.pnl >= 0;
-                          return (
-                            <motion.tr
-                              key={trade.id}
-                              custom={i}
-                              variants={rowVariants}
-                              initial="hidden"
-                              animate="visible"
-                              className="border-b border-white/[0.03] transition-colors hover:bg-white/[0.02]"
-                            >
-                              <td className="px-3 py-1.5 font-bold text-white">{trade.symbol}</td>
-                              <td
-                                className="px-3 py-1.5 text-[10px] font-bold"
-                                style={{ color: trade.side === 'long' ? '#02c076' : '#f6465d' }}
-                              >
-                                {trade.side === 'long' ? 'LONG' : 'SHORT'}
-                              </td>
-                              <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                {trade.quantity.toFixed(6)}
-                              </td>
-                              <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                ${trade.entryPrice.toFixed(2)}
-                              </td>
-                              <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                ${trade.exitPrice.toFixed(2)}
-                              </td>
-                              <td
-                                className="px-3 py-1.5 text-right tabular-nums font-semibold"
-                                style={{ color: isProfit ? '#02c076' : '#f6465d' }}
-                              >
-                                {isProfit ? '+' : ''}
-                                {trade.pnl.toFixed(2)}
-                              </td>
-                            </motion.tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                ))}
-
-              {/* ════ Journal ══════════════════════════════════════════════════ */}
-              {infoTab === 'journal' && (
-                <div className="flex min-h-0 flex-1 flex-col">
-                  {/* Add-note input — slides in when active */}
-                  <AnimatePresence initial={false}>
-                    {isAddingNote && (
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={infoTab}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.14, ease: 'easeOut' }}
+                  className="flex min-h-0 flex-1 flex-col overflow-hidden"
+                >
+                  {/* ════ Positions ════════════════════════════════════════════════ */}
+                  {infoTab === 'positions' &&
+                    (positions.length === 0 ? (
                       <motion.div
-                        key="add-note"
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.15 }}
-                        className="flex shrink-0 items-center gap-2 overflow-hidden border-b border-white/[0.06] px-3 py-2"
-                        style={{ background: '#0f1020' }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="flex h-full items-center justify-center text-xs"
+                        style={{ color: color.muted }}
                       >
-                        <input
-                          autoFocus
-                          value={noteText}
-                          onChange={(e) => setNoteText(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSaveNote();
-                            if (e.key === 'Escape') {
-                              setNoteText('');
-                              setIsAddingNote(false);
-                            }
-                          }}
-                          placeholder="Type a journal note… (Enter to save)"
-                          className="flex-1 rounded border border-white/[0.08] px-2 py-1 text-[11px] text-white placeholder-[#848e9c]/50 focus:border-[#7b2ff7]/50 focus:outline-none"
-                          style={{ background: '#131628' }}
-                        />
-                        <button
-                          onClick={handleSaveNote}
-                          title="Save note"
-                          className="shrink-0 text-[#02c076] hover:brightness-125"
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setNoteText('');
-                            setIsAddingNote(false);
-                          }}
-                          title="Cancel"
-                          className="shrink-0 text-[#848e9c] hover:text-white"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
+                        No open positions
                       </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Journal table */}
-                  {journal.length === 0 ? (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="flex h-full flex-col items-center justify-center gap-2 text-xs text-[#848e9c]"
-                    >
-                      <span>No journal entries yet — place a trade to see activity.</span>
-                      <button
-                        onClick={() => setIsAddingNote(true)}
-                        className="flex items-center gap-1 text-[11px] text-[#a855f7] transition-colors hover:brightness-125"
-                      >
-                        <Pencil className="h-3 w-3" />
-                        Add a note
-                      </button>
-                    </motion.div>
-                  ) : (
-                    <div className="flex-1 overflow-y-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr
-                            className="border-b border-white/[0.04] text-[10px] text-[#848e9c]"
-                            style={{ background: '#0f1020' }}
-                          >
-                            <th
-                              className="px-3 py-1.5 text-left font-semibold uppercase tracking-wider"
-                              style={{ minWidth: 152 }}
+                    ) : (
+                      <div className="flex-1 overflow-y-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr
+                              className="border-b border-white/[0.04]"
+                              style={{
+                                background: bg.panel,
+                                fontSize: fontSize.xs10,
+                                color: color.muted,
+                              }}
                             >
-                              Time
-                            </th>
-                            <th className="w-full px-3 py-1.5 text-left font-semibold uppercase tracking-wider">
-                              Text
-                            </th>
-                            {/* Pen icon column header — click to add a note */}
-                            <th className="px-2 py-1.5 text-right" style={{ minWidth: 28 }}>
-                              <button
-                                onClick={() => setIsAddingNote(true)}
-                                title="Add journal note"
-                                className="ml-auto flex items-center justify-center text-[#848e9c] transition-colors hover:text-[#a855f7]"
-                              >
-                                <Pencil className="h-3 w-3" />
-                              </button>
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {journal.map((entry) => (
-                            <JournalRow
-                              key={entry.id}
-                              entry={entry}
-                              editingId={editingId}
-                              editText={editText}
-                              onStartEdit={handleStartEdit}
-                              onEditChange={setEditText}
-                              onSaveEdit={handleSaveEdit}
-                              onCancelEdit={handleCancelEdit}
+                              {[
+                                'Symbol',
+                                'Side',
+                                'Qty',
+                                'Entry',
+                                'Mark',
+                                'TP',
+                                'SL',
+                                'PnL (USDT)',
+                                'Close',
+                              ].map((h) => (
+                                <th
+                                  key={h}
+                                  className={`px-3 py-1.5 font-semibold uppercase tracking-wider ${h === 'Symbol' || h === 'Side' ? 'text-left' : h === 'Close' ? 'text-center' : 'text-right'}`}
+                                >
+                                  {h}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <AnimatePresence>
+                              {positions.map((pos, i) => {
+                                const markPrice = latestPrice ?? pos.entryPrice;
+                                const pnl =
+                                  pos.side === 'long'
+                                    ? (markPrice - pos.entryPrice) * pos.quantity
+                                    : (pos.entryPrice - markPrice) * pos.quantity;
+                                const pnlPct = (pnl / pos.entryUsdtAmount) * 100;
+                                const isProfit = pnl >= 0;
+
+                                return (
+                                  <motion.tr
+                                    key={pos.id}
+                                    custom={i}
+                                    variants={rowVariants}
+                                    initial="hidden"
+                                    animate="visible"
+                                    exit="exit"
+                                    layout
+                                    className="border-b border-white/[0.03] transition-colors hover:bg-white/[0.02]"
+                                  >
+                                    <td className="px-3 py-1.5 font-bold text-white">
+                                      {pos.symbol}
+                                    </td>
+                                    <td className="px-3 py-1.5">
+                                      <span
+                                        className="flex items-center gap-0.5 font-bold"
+                                        style={{
+                                          fontSize: fontSize.xs10,
+                                          color: pos.side === 'long' ? color.green : color.red,
+                                        }}
+                                      >
+                                        {pos.side === 'long' ? (
+                                          <TrendingUp className="h-3 w-3" />
+                                        ) : (
+                                          <TrendingDown className="h-3 w-3" />
+                                        )}
+                                        {pos.side === 'long' ? 'LONG' : 'SHORT'}
+                                      </span>
+                                    </td>
+                                    <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                      {pos.quantity.toFixed(6)}
+                                    </td>
+                                    <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                      ${pos.entryPrice.toFixed(2)}
+                                    </td>
+                                    <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                      ${markPrice.toFixed(2)}
+                                    </td>
+                                    <td
+                                      className="px-3 py-1.5 text-right tabular-nums"
+                                      style={{
+                                        fontSize: fontSize.xs10,
+                                        color: pos.takeProfit ? color.green : color.muted,
+                                      }}
+                                    >
+                                      {pos.takeProfit ? `$${pos.takeProfit.toFixed(2)}` : '—'}
+                                    </td>
+                                    <td
+                                      className="px-3 py-1.5 text-right tabular-nums"
+                                      style={{
+                                        fontSize: fontSize.xs10,
+                                        color: pos.stopLoss ? color.red : color.muted,
+                                      }}
+                                    >
+                                      {pos.stopLoss ? `$${pos.stopLoss.toFixed(2)}` : '—'}
+                                    </td>
+                                    <td
+                                      className="px-3 py-1.5 text-right tabular-nums font-semibold"
+                                      style={{ color: isProfit ? color.green : color.red }}
+                                    >
+                                      {isProfit ? '+' : ''}
+                                      {pnl.toFixed(2)}{' '}
+                                      <span
+                                        style={{ fontSize: fontSize.xs10 }}
+                                        className="opacity-70"
+                                      >
+                                        ({isProfit ? '+' : ''}
+                                        {pnlPct.toFixed(2)}%)
+                                      </span>
+                                    </td>
+                                    <td className="px-3 py-1.5 text-center">
+                                      <motion.button
+                                        onClick={() => handleClose(pos.id)}
+                                        whileHover={{ scale: 1.2 }}
+                                        whileTap={{ scale: 0.9 }}
+                                        title="Close at market price"
+                                        className="mx-auto flex h-5 w-5 items-center justify-center rounded transition-colors hover:text-brand-red"
+                                        style={{ color: color.muted }}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </motion.button>
+                                    </td>
+                                  </motion.tr>
+                                );
+                              })}
+                            </AnimatePresence>
+                          </tbody>
+                        </table>
+                      </div>
+                    ))}
+
+                  {/* ════ History ══════════════════════════════════════════════════ */}
+                  {infoTab === 'history' &&
+                    (history.length === 0 ? (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="flex h-full items-center justify-center text-xs"
+                        style={{ color: color.muted }}
+                      >
+                        No closed trades yet
+                      </motion.div>
+                    ) : (
+                      <div className="flex-1 overflow-y-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr
+                              className="border-b border-white/[0.04]"
+                              style={{
+                                background: bg.panel,
+                                fontSize: fontSize.xs10,
+                                color: color.muted,
+                              }}
+                            >
+                              {['Symbol', 'Side', 'Qty', 'Entry', 'Exit', 'PnL (USDT)'].map((h) => (
+                                <th
+                                  key={h}
+                                  className={`px-3 py-1.5 font-semibold uppercase tracking-wider ${h === 'Symbol' || h === 'Side' ? 'text-left' : 'text-right'}`}
+                                >
+                                  {h}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <AnimatePresence>
+                              {history.map((trade, i) => {
+                                const isProfit = trade.pnl >= 0;
+                                return (
+                                  <motion.tr
+                                    key={trade.id}
+                                    custom={i}
+                                    variants={rowVariants}
+                                    initial="hidden"
+                                    animate="visible"
+                                    exit="exit"
+                                    className="border-b border-white/[0.03] transition-colors hover:bg-white/[0.02]"
+                                  >
+                                    <td className="px-3 py-1.5 font-bold text-white">
+                                      {trade.symbol}
+                                    </td>
+                                    <td
+                                      className="px-3 py-1.5 font-bold"
+                                      style={{
+                                        fontSize: fontSize.xs10,
+                                        color: trade.side === 'long' ? color.green : color.red,
+                                      }}
+                                    >
+                                      {trade.side === 'long' ? 'LONG' : 'SHORT'}
+                                    </td>
+                                    <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                      {trade.quantity.toFixed(6)}
+                                    </td>
+                                    <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                      ${trade.entryPrice.toFixed(2)}
+                                    </td>
+                                    <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                      ${trade.exitPrice.toFixed(2)}
+                                    </td>
+                                    <td
+                                      className="px-3 py-1.5 text-right tabular-nums font-semibold"
+                                      style={{ color: isProfit ? color.green : color.red }}
+                                    >
+                                      {isProfit ? '+' : ''}
+                                      {trade.pnl.toFixed(2)}
+                                    </td>
+                                  </motion.tr>
+                                );
+                              })}
+                            </AnimatePresence>
+                          </tbody>
+                        </table>
+                      </div>
+                    ))}
+
+                  {/* ════ Journal ══════════════════════════════════════════════════ */}
+                  {infoTab === 'journal' && (
+                    <div className="flex min-h-0 flex-1 flex-col">
+                      <AnimatePresence initial={false}>
+                        {isAddingNote && (
+                          <motion.div
+                            key="add-note"
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.15 }}
+                            className="flex shrink-0 items-center gap-2 overflow-hidden border-b border-white/[0.06] px-3 py-2"
+                            style={{ background: bg.panel }}
+                          >
+                            <input
+                              autoFocus
+                              value={noteText}
+                              onChange={(e) => setNoteText(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveNote();
+                                if (e.key === 'Escape') {
+                                  setNoteText('');
+                                  setIsAddingNote(false);
+                                }
+                              }}
+                              placeholder="Type a journal note… (Enter to save)"
+                              className="flex-1 rounded border border-white/[0.08] px-2 py-1 text-white focus:outline-none focus:border-brand-purple-dark/50"
+                              style={{ fontSize: fontSize.xs11, background: bg.surface }}
                             />
-                          ))}
-                        </tbody>
-                      </table>
+                            <button
+                              onClick={handleSaveNote}
+                              title="Save note"
+                              className="shrink-0 hover:brightness-125"
+                              style={{ color: color.green }}
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setNoteText('');
+                                setIsAddingNote(false);
+                              }}
+                              title="Cancel"
+                              className="shrink-0 hover:text-white"
+                              style={{ color: color.muted }}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      {journal.length === 0 ? (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="flex h-full flex-col items-center justify-center gap-2 text-xs"
+                          style={{ color: color.muted }}
+                        >
+                          <span>No journal entries yet — place a trade to see activity.</span>
+                          <button
+                            onClick={() => setIsAddingNote(true)}
+                            className="flex items-center gap-1 transition-colors hover:brightness-125"
+                            style={{ fontSize: fontSize.xs11, color: color.purple }}
+                          >
+                            <Pencil className="h-3 w-3" />
+                            Add a note
+                          </button>
+                        </motion.div>
+                      ) : (
+                        <div className="flex-1 overflow-y-auto">
+                          <table className="w-full">
+                            <thead>
+                              <tr
+                                className="border-b border-white/[0.04]"
+                                style={{
+                                  background: bg.panel,
+                                  fontSize: fontSize.xs10,
+                                  color: color.muted,
+                                }}
+                              >
+                                <th
+                                  className="px-3 py-1.5 text-left font-semibold uppercase tracking-wider"
+                                  style={{ minWidth: 152 }}
+                                >
+                                  Time
+                                </th>
+                                <th className="w-full px-3 py-1.5 text-left font-semibold uppercase tracking-wider">
+                                  Text
+                                </th>
+                                <th className="px-2 py-1.5 text-right" style={{ minWidth: 28 }}>
+                                  <button
+                                    onClick={() => setIsAddingNote(true)}
+                                    title="Add journal note"
+                                    className="ml-auto flex items-center justify-center transition-colors hover:text-brand-purple"
+                                    style={{ color: color.muted }}
+                                  >
+                                    <Pencil className="h-3 w-3" />
+                                  </button>
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {journal.map((entry) => (
+                                <JournalRow
+                                  key={entry.id}
+                                  entry={entry}
+                                  editingId={editingId}
+                                  editText={editText}
+                                  onStartEdit={handleStartEdit}
+                                  onEditChange={setEditText}
+                                  onSaveEdit={handleSaveEdit}
+                                  onCancelEdit={handleCancelEdit}
+                                />
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
-              )}
+                </motion.div>
+              </AnimatePresence>
             </div>
           </motion.div>
         )}

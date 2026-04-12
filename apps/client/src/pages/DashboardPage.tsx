@@ -12,16 +12,18 @@ import { PaperTradingPanel } from '@/components/dashboard/PaperTradingPanel';
 import { TickerBar } from '@/components/dashboard/TickerBar';
 import { SymbolBar } from '@/components/dashboard/SymbolBar';
 import { TradingPanel } from '@/components/dashboard/TradingPanel';
+import { bg, color, fontSize } from '@/lib/tokens';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 /** hidden = fully closed (h-0); collapsed = header-only; open = full height */
 export type PanelSize = 'hidden' | 'collapsed' | 'open';
 
-const PANEL_HEIGHT: Record<PanelSize, string> = {
-  hidden: 'h-0 overflow-hidden',
-  collapsed: 'h-9',
-  open: 'h-52',
+/** Pixel heights used by the Framer Motion spring — mirrors h-0 / h-9 / h-52 */
+const PANEL_HEIGHTS: Record<PanelSize, number> = {
+  hidden: 0,
+  collapsed: 36, // 2.25 rem × 16 px
+  open: 208, // 13 rem  × 16 px
 };
 
 /**
@@ -58,28 +60,19 @@ export function DashboardPage() {
   const [tradingPanelOpen, setTradingPanelOpen] = useState(true);
 
   return (
-    <div
-      className="flex h-screen w-full flex-col overflow-hidden"
-      style={{ background: '#0b0c1a' }}
-    >
-      {/* ── App header ───────────────────────────────────────────────────── */}
+    <div className="flex h-screen w-full flex-col overflow-hidden" style={{ background: bg.page }}>
       <TopBar />
-
-      {/* ── Symbol / trading sub-header ──────────────────────────────────── */}
       <SymbolBar
         tradingPanelOpen={tradingPanelOpen}
         onToggleTrading={() => setTradingPanelOpen((v) => !v)}
       />
 
-      {/* ── Middle: left toolbar + chart + right trade panel ─────────────── */}
       <div className="flex min-h-0 flex-1">
         <LeftToolbar />
 
-        {/* Chart area — relative so the re-open pill can float inside it */}
         <div className="relative min-w-0 flex-1">
           <ChartPanel />
 
-          {/* Floating pill: re-opens the positions panel when it's fully closed */}
           <AnimatePresence>
             {panelSize === 'hidden' && (
               <motion.button
@@ -90,14 +83,14 @@ export function DashboardPage() {
                 transition={{ duration: 0.2, ease: 'easeOut' }}
                 onClick={() => setPanelSize('collapsed')}
                 title="Show positions panel"
-                className="absolute bottom-4 left-4 flex items-center gap-2 rounded-full px-4 py-2 text-[11px] font-bold text-white transition-all hover:brightness-110 active:scale-95"
+                className="absolute bottom-4 left-4 flex items-center gap-2 rounded-full px-4 py-2 font-bold text-white transition-all hover:brightness-110 active:scale-95"
                 style={{
-                  background: 'linear-gradient(135deg, #7b2ff7 0%, #a855f7 100%)',
-                  border: '1px solid rgba(168,85,247,0.5)',
-                  boxShadow: '0 0 18px 4px rgba(123,47,247,0.45), 0 4px 16px rgba(0,0,0,0.6)',
+                  fontSize: fontSize.xs11,
+                  background: `linear-gradient(135deg, ${color.purpleDark} 0%, ${color.purple} 100%)`,
+                  border: `1px solid ${color.purple}80`,
+                  boxShadow: `0 0 18px 4px ${color.purpleDark}73, 0 4px 16px rgba(0,0,0,0.6)`,
                 }}
               >
-                {/* Pulsing dot to draw the eye */}
                 <motion.span
                   animate={{ scale: [1, 1.4, 1], opacity: [1, 0.5, 1] }}
                   transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
@@ -110,7 +103,6 @@ export function DashboardPage() {
           </AnimatePresence>
         </div>
 
-        {/* TradingPanel: animated open/close — preserves chart width on close */}
         <AnimatePresence initial={false}>
           {tradingPanelOpen && (
             <motion.div
@@ -127,27 +119,31 @@ export function DashboardPage() {
         </AnimatePresence>
       </div>
 
-      {/* ── Bottom: positions + history panel ────────────────────────────── */}
-      {/* inert when hidden: removes h-0 content from tab order + a11y tree  */}
-      <div
-        className={`shrink-0 transition-all duration-200 ease-in-out ${PANEL_HEIGHT[panelSize]}`}
+      {/* Spring-animated height — initial={false} skips the mount animation */}
+      <motion.div
+        className="shrink-0 overflow-hidden"
+        initial={false}
+        animate={{ height: PANEL_HEIGHTS[panelSize] }}
+        transition={{ type: 'spring', stiffness: 380, damping: 35 }}
         inert={panelSize === 'hidden'}
       >
         <PaperTradingPanel size={panelSize} onSizeChange={setPanelSize} />
-      </div>
+      </motion.div>
 
-      {/* ── Ticker bar — always pinned above the footer ───────────────────── */}
       <TickerBar />
 
       {/* ── Dashboard footer ─────────────────────────────────────────────── */}
       <div
         className="flex h-7 w-full shrink-0 items-center justify-between border-t border-white/[0.05] px-4"
-        style={{ background: '#06070f' }}
+        style={{ background: bg.footer }}
       >
-        <span className="text-[10px]" style={{ color: '#848e9c80' }}>
+        <span style={{ fontSize: fontSize.xs10, color: `${color.muted}80` }}>
           ⚠️ Paper trading only — no real funds. For educational purposes.
         </span>
-        <nav className="flex items-center gap-3 text-[10px]" style={{ color: '#848e9c60' }}>
+        <nav
+          className="flex items-center gap-3"
+          style={{ fontSize: fontSize.xs10, color: `${color.muted}60` }}
+        >
           <Link to="/terms" className="transition-colors hover:text-white/50">
             Terms of Use
           </Link>

@@ -36,7 +36,7 @@ export function usePriceFeed() {
 
     // ── Step 1: fetch historical candles (fills chart before WS is ready) ──
     marketApi
-      .getCandles(symbol, interval, 200)
+      .getCandles(symbol, interval, 500)
       .then((res) => {
         if (isMountedRef.current) {
           setSnapshot(res.candles, null);
