@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import NumberFlow from '@number-flow/react';
 import { useStore } from 'zustand';
+import { useShallow } from 'zustand/shallow';
 import {
   Star,
   ChevronDown,
@@ -63,30 +64,30 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
 
   // ── Market data — subscribe to all 4 pane stores, pick the active one ────
   // (4 unconditional hook calls — hooks rule compliant)
-  const d0 = useStore(paneStores[0], (s) => ({
+  const d0 = useStore(paneStores[0], useShallow((s) => ({
     latestPrice: s.latestPrice,
     priceChange: s.priceChange,
     bars: s.bars,
     isConnected: s.isConnected,
-  }));
-  const d1 = useStore(paneStores[1], (s) => ({
+  })));
+  const d1 = useStore(paneStores[1], useShallow((s) => ({
     latestPrice: s.latestPrice,
     priceChange: s.priceChange,
     bars: s.bars,
     isConnected: s.isConnected,
-  }));
-  const d2 = useStore(paneStores[2], (s) => ({
+  })));
+  const d2 = useStore(paneStores[2], useShallow((s) => ({
     latestPrice: s.latestPrice,
     priceChange: s.priceChange,
     bars: s.bars,
     isConnected: s.isConnected,
-  }));
-  const d3 = useStore(paneStores[3], (s) => ({
+  })));
+  const d3 = useStore(paneStores[3], useShallow((s) => ({
     latestPrice: s.latestPrice,
     priceChange: s.priceChange,
     bars: s.bars,
     isConnected: s.isConnected,
-  }));
+  })));
 
   const allData = [d0, d1, d2, d3];
   const { latestPrice, priceChange, bars, isConnected } = allData[activePane];
