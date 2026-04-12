@@ -9,11 +9,23 @@ import {
   LineStyle,
 } from 'lightweight-charts';
 import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts';
-import { useMarketStore } from '@/store/marketStore';
+import { useStore } from 'zustand';
+import { paneStores } from '@/store/paneStore';
 import { calcEMA, calcVWAP, calcMACD } from '@/lib/indicators';
 import { bg, color, chart as chartColors, font, fontSize } from '@/lib/tokens';
 
 const CHART_BG = chartColors.bg;
+
+// ─── Props ────────────────────────────────────────────────────────────────────
+
+interface ChartPanelProps {
+  /** Which pane store to read data from (0–3) */
+  paneIndex: 0 | 1 | 2 | 3;
+  /** Called once when the lightweight-charts instance is ready */
+  onChartReady?: (chart: IChartApi) => void;
+  /** Called when the chart is destroyed (pane unmounts) */
+  onChartDestroy?: () => void;
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -49,7 +61,7 @@ function toUTC(ms: number): UTCTimestamp {
   return Math.floor(ms / 1000) as UTCTimestamp;
 }
 
-export function ChartPanel() {
+export function ChartPanel({ paneIndex, onChartReady, onChartDestroy }: ChartPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const prevLenRef = useRef(0); // tracks first-load to trigger scrollToRealTime()
@@ -64,8 +76,8 @@ export function ChartPanel() {
   const macdLineRef = useRef<ISeriesApi<'Line'> | null>(null);
   const signalRef = useRef<ISeriesApi<'Line'> | null>(null);
 
-  // Selector: only subscribe to bars — ChartPanel doesn't care about price/connection state
-  const bars = useMarketStore((s) => s.bars);
+  // Read bars from this pane's store
+  const bars = useStore(paneStores[paneIndex], (s) => s.bars);
 
   // ── Hover legend state ───────────────────────────────────────────────────
   const [hoverData, setHoverData] = useState<LegendData | null>(null);
@@ -234,14 +246,19 @@ export function ChartPanel() {
     });
     ro.observe(containerRef.current);
 
+    // Notify parent so MultiChartArea can wire up sync
+    onChartReady?.(chart);
+
     return () => {
       ro.disconnect();
       chart.remove();
       chartRef.current = null;
+      onChartDestroy?.();
     };
-  }, []); // empty dep array — create once
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // create once
 
-  // ── 2. Push updated data to every series whenever bars changes ───────────
+  // ── 2. Push data whenever bars changes ───────────────────────────────────
   useEffect(() => {
     if (
       bars.length === 0 ||

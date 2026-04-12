@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart2 } from 'lucide-react';
-import { usePriceFeed } from '@/hooks/usePriceFeed';
+import { usePaneFeeds } from '@/hooks/usePaneFeeds';
 import { useTPSLMonitor } from '@/hooks/useTPSLMonitor';
-import { useMarketStore } from '@/store/marketStore';
+import { useLayoutStore } from '@/store/layoutStore';
 import { TopBar } from '@/components/dashboard/TopBar';
 import { LeftToolbar } from '@/components/dashboard/LeftToolbar';
-import { ChartPanel } from '@/components/dashboard/ChartPanel';
+import { MultiChartArea } from '@/components/dashboard/MultiChartArea';
 import { PaperTradingPanel } from '@/components/dashboard/PaperTradingPanel';
 import { TickerBar } from '@/components/dashboard/TickerBar';
 import { SymbolBar } from '@/components/dashboard/SymbolBar';
@@ -22,8 +22,8 @@ export type PanelSize = 'hidden' | 'collapsed' | 'open';
 /** Pixel heights used by the Framer Motion spring — mirrors h-0 / h-9 / h-52 */
 const PANEL_HEIGHTS: Record<PanelSize, number> = {
   hidden: 0,
-  collapsed: 36, // 2.25 rem × 16 px
-  open: 208, // 13 rem  × 16 px
+  collapsed: 36,
+  open: 208,
 };
 
 /**
@@ -52,11 +52,14 @@ const PANEL_HEIGHTS: Record<PanelSize, number> = {
  * is tied to the page, not to individual child components.
  */
 export function DashboardPage() {
-  usePriceFeed();
+  usePaneFeeds();
   useTPSLMonitor();
-  const symbol = useMarketStore((s) => s.symbol);
+
+  // Active pane symbol drives the TradingPanel key (resets form on symbol change)
+  const activePane = useLayoutStore((s) => s.activePane);
+  const symbol = useLayoutStore((s) => s.panes[s.activePane].symbol);
+
   const [panelSize, setPanelSize] = useState<PanelSize>('open');
-  // TradingPanel is open by default on desktop; users can toggle it
   const [tradingPanelOpen, setTradingPanelOpen] = useState(true);
 
   return (
@@ -71,7 +74,7 @@ export function DashboardPage() {
         <LeftToolbar />
 
         <div className="relative min-w-0 flex-1">
-          <ChartPanel />
+          <MultiChartArea />
 
           <AnimatePresence>
             {panelSize === 'hidden' && (
@@ -113,13 +116,13 @@ export function DashboardPage() {
               transition={{ duration: 0.2, ease: 'easeInOut' }}
               className="shrink-0 overflow-hidden"
             >
-              <TradingPanel key={symbol} onClose={() => setTradingPanelOpen(false)} />
+              {/* key={`${activePane}-${symbol}`} resets form when active pane or symbol changes */}
+              <TradingPanel key={`${activePane}-${symbol}`} onClose={() => setTradingPanelOpen(false)} />
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* Spring-animated height — initial={false} skips the mount animation */}
       <motion.div
         className="shrink-0 overflow-hidden"
         initial={false}

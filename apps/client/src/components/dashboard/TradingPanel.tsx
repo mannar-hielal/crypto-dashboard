@@ -2,7 +2,9 @@ import { useState } from 'react';
 import NumberFlow from '@number-flow/react';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { X } from 'lucide-react';
-import { useMarketStore } from '@/store/marketStore';
+import { useStore } from 'zustand';
+import { useLayoutStore } from '@/store/layoutStore';
+import { paneStores } from '@/store/paneStore';
 import { usePaperStore } from '@/store/paperStore';
 import { bg, color, fontSize } from '@/lib/tokens';
 
@@ -41,8 +43,15 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
   const [formError, setFormError] = useState<string | null>(null);
   const executeAnim = useAnimation();
 
-  const symbol = useMarketStore((s) => s.symbol);
-  const latestPrice = useMarketStore((s) => s.latestPrice);
+  const activePane = useLayoutStore((s) => s.activePane);
+  const symbol = useLayoutStore((s) => s.panes[s.activePane].symbol);
+
+  // Subscribe to all 4 pane stores for latestPrice, pick the active one
+  const lp0 = useStore(paneStores[0], (s) => s.latestPrice);
+  const lp1 = useStore(paneStores[1], (s) => s.latestPrice);
+  const lp2 = useStore(paneStores[2], (s) => s.latestPrice);
+  const lp3 = useStore(paneStores[3], (s) => s.latestPrice);
+  const latestPrice = [lp0, lp1, lp2, lp3][activePane];
 
   const balance = usePaperStore((s) => s.balance);
   const positions = usePaperStore((s) => s.positions);
