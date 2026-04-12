@@ -395,352 +395,359 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                   transition={{ duration: 0.14, ease: 'easeOut' }}
                   className="flex min-h-0 flex-1 flex-col overflow-hidden"
                 >
-              {/* ════ Positions ════════════════════════════════════════════════ */}
-              {infoTab === 'positions' &&
-                (positions.length === 0 ? (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex h-full items-center justify-center text-xs"
-                    style={{ color: color.muted }}
-                  >
-                    No open positions
-                  </motion.div>
-                ) : (
-                  <div className="flex-1 overflow-y-auto">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr
-                          className="border-b border-white/[0.04]"
-                          style={{
-                            background: bg.panel,
-                            fontSize: fontSize.xs10,
-                            color: color.muted,
-                          }}
-                        >
-                          {[
-                            'Symbol',
-                            'Side',
-                            'Qty',
-                            'Entry',
-                            'Mark',
-                            'TP',
-                            'SL',
-                            'PnL (USDT)',
-                            'Close',
-                          ].map((h) => (
-                            <th
-                              key={h}
-                              className={`px-3 py-1.5 font-semibold uppercase tracking-wider ${h === 'Symbol' || h === 'Side' ? 'text-left' : h === 'Close' ? 'text-center' : 'text-right'}`}
-                            >
-                              {h}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <AnimatePresence>
-                          {positions.map((pos, i) => {
-                            const markPrice = latestPrice ?? pos.entryPrice;
-                            const pnl =
-                              pos.side === 'long'
-                                ? (markPrice - pos.entryPrice) * pos.quantity
-                                : (pos.entryPrice - markPrice) * pos.quantity;
-                            const pnlPct = (pnl / pos.entryUsdtAmount) * 100;
-                            const isProfit = pnl >= 0;
-
-                            return (
-                              <motion.tr
-                                key={pos.id}
-                                custom={i}
-                                variants={rowVariants}
-                                initial="hidden"
-                                animate="visible"
-                                exit="exit"
-                                layout
-                                className="border-b border-white/[0.03] transition-colors hover:bg-white/[0.02]"
-                              >
-                              <td className="px-3 py-1.5 font-bold text-white">{pos.symbol}</td>
-                              <td className="px-3 py-1.5">
-                                <span
-                                  className="flex items-center gap-0.5 font-bold"
-                                  style={{
-                                    fontSize: fontSize.xs10,
-                                    color: pos.side === 'long' ? color.green : color.red,
-                                  }}
-                                >
-                                  {pos.side === 'long' ? (
-                                    <TrendingUp className="h-3 w-3" />
-                                  ) : (
-                                    <TrendingDown className="h-3 w-3" />
-                                  )}
-                                  {pos.side === 'long' ? 'LONG' : 'SHORT'}
-                                </span>
-                              </td>
-                              <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                {pos.quantity.toFixed(6)}
-                              </td>
-                              <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                ${pos.entryPrice.toFixed(2)}
-                              </td>
-                              <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                ${markPrice.toFixed(2)}
-                              </td>
-                              <td
-                                className="px-3 py-1.5 text-right tabular-nums"
-                                style={{
-                                  fontSize: fontSize.xs10,
-                                  color: pos.takeProfit ? color.green : color.muted,
-                                }}
-                              >
-                                {pos.takeProfit ? `$${pos.takeProfit.toFixed(2)}` : '—'}
-                              </td>
-                              <td
-                                className="px-3 py-1.5 text-right tabular-nums"
-                                style={{
-                                  fontSize: fontSize.xs10,
-                                  color: pos.stopLoss ? color.red : color.muted,
-                                }}
-                              >
-                                {pos.stopLoss ? `$${pos.stopLoss.toFixed(2)}` : '—'}
-                              </td>
-                              <td
-                                className="px-3 py-1.5 text-right tabular-nums font-semibold"
-                                style={{ color: isProfit ? color.green : color.red }}
-                              >
-                                {isProfit ? '+' : ''}
-                                {pnl.toFixed(2)}{' '}
-                                <span style={{ fontSize: fontSize.xs10 }} className="opacity-70">
-                                  ({isProfit ? '+' : ''}
-                                  {pnlPct.toFixed(2)}%)
-                                </span>
-                              </td>
-                              <td className="px-3 py-1.5 text-center">
-                                <motion.button
-                                  onClick={() => handleClose(pos.id)}
-                                  whileHover={{ scale: 1.2 }}
-                                  whileTap={{ scale: 0.9 }}
-                                  title="Close at market price"
-                                  className="mx-auto flex h-5 w-5 items-center justify-center rounded transition-colors hover:text-brand-red"
-                                  style={{ color: color.muted }}
-                                >
-                                  <X className="h-3 w-3" />
-                                </motion.button>
-                              </td>
-                            </motion.tr>
-                          );
-                        })}
-                        </AnimatePresence>
-                      </tbody>
-                    </table>
-                  </div>
-                ))}
-
-              {/* ════ History ══════════════════════════════════════════════════ */}
-              {infoTab === 'history' &&
-                (history.length === 0 ? (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex h-full items-center justify-center text-xs"
-                    style={{ color: color.muted }}
-                  >
-                    No closed trades yet
-                  </motion.div>
-                ) : (
-                  <div className="flex-1 overflow-y-auto">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr
-                          className="border-b border-white/[0.04]"
-                          style={{
-                            background: bg.panel,
-                            fontSize: fontSize.xs10,
-                            color: color.muted,
-                          }}
-                        >
-                          {['Symbol', 'Side', 'Qty', 'Entry', 'Exit', 'PnL (USDT)'].map((h) => (
-                            <th
-                              key={h}
-                              className={`px-3 py-1.5 font-semibold uppercase tracking-wider ${h === 'Symbol' || h === 'Side' ? 'text-left' : 'text-right'}`}
-                            >
-                              {h}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <AnimatePresence>
-                          {history.map((trade, i) => {
-                            const isProfit = trade.pnl >= 0;
-                            return (
-                              <motion.tr
-                                key={trade.id}
-                                custom={i}
-                                variants={rowVariants}
-                                initial="hidden"
-                                animate="visible"
-                                exit="exit"
-                                className="border-b border-white/[0.03] transition-colors hover:bg-white/[0.02]"
-                              >
-                                <td className="px-3 py-1.5 font-bold text-white">{trade.symbol}</td>
-                                <td
-                                  className="px-3 py-1.5 font-bold"
-                                  style={{
-                                    fontSize: fontSize.xs10,
-                                    color: trade.side === 'long' ? color.green : color.red,
-                                  }}
-                                >
-                                  {trade.side === 'long' ? 'LONG' : 'SHORT'}
-                                </td>
-                                <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                  {trade.quantity.toFixed(6)}
-                                </td>
-                                <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                  ${trade.entryPrice.toFixed(2)}
-                                </td>
-                                <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                  ${trade.exitPrice.toFixed(2)}
-                                </td>
-                                <td
-                                  className="px-3 py-1.5 text-right tabular-nums font-semibold"
-                                  style={{ color: isProfit ? color.green : color.red }}
-                                >
-                                  {isProfit ? '+' : ''}
-                                  {trade.pnl.toFixed(2)}
-                                </td>
-                              </motion.tr>
-                            );
-                          })}
-                        </AnimatePresence>
-                      </tbody>
-                    </table>
-                  </div>
-                ))}
-
-              {/* ════ Journal ══════════════════════════════════════════════════ */}
-              {infoTab === 'journal' && (
-                <div className="flex min-h-0 flex-1 flex-col">
-                  <AnimatePresence initial={false}>
-                    {isAddingNote && (
+                  {/* ════ Positions ════════════════════════════════════════════════ */}
+                  {infoTab === 'positions' &&
+                    (positions.length === 0 ? (
                       <motion.div
-                        key="add-note"
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.15 }}
-                        className="flex shrink-0 items-center gap-2 overflow-hidden border-b border-white/[0.06] px-3 py-2"
-                        style={{ background: bg.panel }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="flex h-full items-center justify-center text-xs"
+                        style={{ color: color.muted }}
                       >
-                        <input
-                          autoFocus
-                          value={noteText}
-                          onChange={(e) => setNoteText(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSaveNote();
-                            if (e.key === 'Escape') {
-                              setNoteText('');
-                              setIsAddingNote(false);
-                            }
-                          }}
-                          placeholder="Type a journal note… (Enter to save)"
-                          className="flex-1 rounded border border-white/[0.08] px-2 py-1 text-white focus:outline-none focus:border-brand-purple-dark/50"
-                          style={{ fontSize: fontSize.xs11, background: bg.surface }}
-                        />
-                        <button
-                          onClick={handleSaveNote}
-                          title="Save note"
-                          className="shrink-0 hover:brightness-125"
-                          style={{ color: color.green }}
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setNoteText('');
-                            setIsAddingNote(false);
-                          }}
-                          title="Cancel"
-                          className="shrink-0 hover:text-white"
+                        No open positions
+                      </motion.div>
+                    ) : (
+                      <div className="flex-1 overflow-y-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr
+                              className="border-b border-white/[0.04]"
+                              style={{
+                                background: bg.panel,
+                                fontSize: fontSize.xs10,
+                                color: color.muted,
+                              }}
+                            >
+                              {[
+                                'Symbol',
+                                'Side',
+                                'Qty',
+                                'Entry',
+                                'Mark',
+                                'TP',
+                                'SL',
+                                'PnL (USDT)',
+                                'Close',
+                              ].map((h) => (
+                                <th
+                                  key={h}
+                                  className={`px-3 py-1.5 font-semibold uppercase tracking-wider ${h === 'Symbol' || h === 'Side' ? 'text-left' : h === 'Close' ? 'text-center' : 'text-right'}`}
+                                >
+                                  {h}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <AnimatePresence>
+                              {positions.map((pos, i) => {
+                                const markPrice = latestPrice ?? pos.entryPrice;
+                                const pnl =
+                                  pos.side === 'long'
+                                    ? (markPrice - pos.entryPrice) * pos.quantity
+                                    : (pos.entryPrice - markPrice) * pos.quantity;
+                                const pnlPct = (pnl / pos.entryUsdtAmount) * 100;
+                                const isProfit = pnl >= 0;
+
+                                return (
+                                  <motion.tr
+                                    key={pos.id}
+                                    custom={i}
+                                    variants={rowVariants}
+                                    initial="hidden"
+                                    animate="visible"
+                                    exit="exit"
+                                    layout
+                                    className="border-b border-white/[0.03] transition-colors hover:bg-white/[0.02]"
+                                  >
+                                    <td className="px-3 py-1.5 font-bold text-white">
+                                      {pos.symbol}
+                                    </td>
+                                    <td className="px-3 py-1.5">
+                                      <span
+                                        className="flex items-center gap-0.5 font-bold"
+                                        style={{
+                                          fontSize: fontSize.xs10,
+                                          color: pos.side === 'long' ? color.green : color.red,
+                                        }}
+                                      >
+                                        {pos.side === 'long' ? (
+                                          <TrendingUp className="h-3 w-3" />
+                                        ) : (
+                                          <TrendingDown className="h-3 w-3" />
+                                        )}
+                                        {pos.side === 'long' ? 'LONG' : 'SHORT'}
+                                      </span>
+                                    </td>
+                                    <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                      {pos.quantity.toFixed(6)}
+                                    </td>
+                                    <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                      ${pos.entryPrice.toFixed(2)}
+                                    </td>
+                                    <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                      ${markPrice.toFixed(2)}
+                                    </td>
+                                    <td
+                                      className="px-3 py-1.5 text-right tabular-nums"
+                                      style={{
+                                        fontSize: fontSize.xs10,
+                                        color: pos.takeProfit ? color.green : color.muted,
+                                      }}
+                                    >
+                                      {pos.takeProfit ? `$${pos.takeProfit.toFixed(2)}` : '—'}
+                                    </td>
+                                    <td
+                                      className="px-3 py-1.5 text-right tabular-nums"
+                                      style={{
+                                        fontSize: fontSize.xs10,
+                                        color: pos.stopLoss ? color.red : color.muted,
+                                      }}
+                                    >
+                                      {pos.stopLoss ? `$${pos.stopLoss.toFixed(2)}` : '—'}
+                                    </td>
+                                    <td
+                                      className="px-3 py-1.5 text-right tabular-nums font-semibold"
+                                      style={{ color: isProfit ? color.green : color.red }}
+                                    >
+                                      {isProfit ? '+' : ''}
+                                      {pnl.toFixed(2)}{' '}
+                                      <span
+                                        style={{ fontSize: fontSize.xs10 }}
+                                        className="opacity-70"
+                                      >
+                                        ({isProfit ? '+' : ''}
+                                        {pnlPct.toFixed(2)}%)
+                                      </span>
+                                    </td>
+                                    <td className="px-3 py-1.5 text-center">
+                                      <motion.button
+                                        onClick={() => handleClose(pos.id)}
+                                        whileHover={{ scale: 1.2 }}
+                                        whileTap={{ scale: 0.9 }}
+                                        title="Close at market price"
+                                        className="mx-auto flex h-5 w-5 items-center justify-center rounded transition-colors hover:text-brand-red"
+                                        style={{ color: color.muted }}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </motion.button>
+                                    </td>
+                                  </motion.tr>
+                                );
+                              })}
+                            </AnimatePresence>
+                          </tbody>
+                        </table>
+                      </div>
+                    ))}
+
+                  {/* ════ History ══════════════════════════════════════════════════ */}
+                  {infoTab === 'history' &&
+                    (history.length === 0 ? (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="flex h-full items-center justify-center text-xs"
+                        style={{ color: color.muted }}
+                      >
+                        No closed trades yet
+                      </motion.div>
+                    ) : (
+                      <div className="flex-1 overflow-y-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr
+                              className="border-b border-white/[0.04]"
+                              style={{
+                                background: bg.panel,
+                                fontSize: fontSize.xs10,
+                                color: color.muted,
+                              }}
+                            >
+                              {['Symbol', 'Side', 'Qty', 'Entry', 'Exit', 'PnL (USDT)'].map((h) => (
+                                <th
+                                  key={h}
+                                  className={`px-3 py-1.5 font-semibold uppercase tracking-wider ${h === 'Symbol' || h === 'Side' ? 'text-left' : 'text-right'}`}
+                                >
+                                  {h}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <AnimatePresence>
+                              {history.map((trade, i) => {
+                                const isProfit = trade.pnl >= 0;
+                                return (
+                                  <motion.tr
+                                    key={trade.id}
+                                    custom={i}
+                                    variants={rowVariants}
+                                    initial="hidden"
+                                    animate="visible"
+                                    exit="exit"
+                                    className="border-b border-white/[0.03] transition-colors hover:bg-white/[0.02]"
+                                  >
+                                    <td className="px-3 py-1.5 font-bold text-white">
+                                      {trade.symbol}
+                                    </td>
+                                    <td
+                                      className="px-3 py-1.5 font-bold"
+                                      style={{
+                                        fontSize: fontSize.xs10,
+                                        color: trade.side === 'long' ? color.green : color.red,
+                                      }}
+                                    >
+                                      {trade.side === 'long' ? 'LONG' : 'SHORT'}
+                                    </td>
+                                    <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                      {trade.quantity.toFixed(6)}
+                                    </td>
+                                    <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                      ${trade.entryPrice.toFixed(2)}
+                                    </td>
+                                    <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                      ${trade.exitPrice.toFixed(2)}
+                                    </td>
+                                    <td
+                                      className="px-3 py-1.5 text-right tabular-nums font-semibold"
+                                      style={{ color: isProfit ? color.green : color.red }}
+                                    >
+                                      {isProfit ? '+' : ''}
+                                      {trade.pnl.toFixed(2)}
+                                    </td>
+                                  </motion.tr>
+                                );
+                              })}
+                            </AnimatePresence>
+                          </tbody>
+                        </table>
+                      </div>
+                    ))}
+
+                  {/* ════ Journal ══════════════════════════════════════════════════ */}
+                  {infoTab === 'journal' && (
+                    <div className="flex min-h-0 flex-1 flex-col">
+                      <AnimatePresence initial={false}>
+                        {isAddingNote && (
+                          <motion.div
+                            key="add-note"
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.15 }}
+                            className="flex shrink-0 items-center gap-2 overflow-hidden border-b border-white/[0.06] px-3 py-2"
+                            style={{ background: bg.panel }}
+                          >
+                            <input
+                              autoFocus
+                              value={noteText}
+                              onChange={(e) => setNoteText(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveNote();
+                                if (e.key === 'Escape') {
+                                  setNoteText('');
+                                  setIsAddingNote(false);
+                                }
+                              }}
+                              placeholder="Type a journal note… (Enter to save)"
+                              className="flex-1 rounded border border-white/[0.08] px-2 py-1 text-white focus:outline-none focus:border-brand-purple-dark/50"
+                              style={{ fontSize: fontSize.xs11, background: bg.surface }}
+                            />
+                            <button
+                              onClick={handleSaveNote}
+                              title="Save note"
+                              className="shrink-0 hover:brightness-125"
+                              style={{ color: color.green }}
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setNoteText('');
+                                setIsAddingNote(false);
+                              }}
+                              title="Cancel"
+                              className="shrink-0 hover:text-white"
+                              style={{ color: color.muted }}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      {journal.length === 0 ? (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="flex h-full flex-col items-center justify-center gap-2 text-xs"
                           style={{ color: color.muted }}
                         >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {journal.length === 0 ? (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="flex h-full flex-col items-center justify-center gap-2 text-xs"
-                      style={{ color: color.muted }}
-                    >
-                      <span>No journal entries yet — place a trade to see activity.</span>
-                      <button
-                        onClick={() => setIsAddingNote(true)}
-                        className="flex items-center gap-1 transition-colors hover:brightness-125"
-                        style={{ fontSize: fontSize.xs11, color: color.purple }}
-                      >
-                        <Pencil className="h-3 w-3" />
-                        Add a note
-                      </button>
-                    </motion.div>
-                  ) : (
-                    <div className="flex-1 overflow-y-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr
-                            className="border-b border-white/[0.04]"
-                            style={{
-                              background: bg.panel,
-                              fontSize: fontSize.xs10,
-                              color: color.muted,
-                            }}
+                          <span>No journal entries yet — place a trade to see activity.</span>
+                          <button
+                            onClick={() => setIsAddingNote(true)}
+                            className="flex items-center gap-1 transition-colors hover:brightness-125"
+                            style={{ fontSize: fontSize.xs11, color: color.purple }}
                           >
-                            <th
-                              className="px-3 py-1.5 text-left font-semibold uppercase tracking-wider"
-                              style={{ minWidth: 152 }}
-                            >
-                              Time
-                            </th>
-                            <th className="w-full px-3 py-1.5 text-left font-semibold uppercase tracking-wider">
-                              Text
-                            </th>
-                            <th className="px-2 py-1.5 text-right" style={{ minWidth: 28 }}>
-                              <button
-                                onClick={() => setIsAddingNote(true)}
-                                title="Add journal note"
-                                className="ml-auto flex items-center justify-center transition-colors hover:text-brand-purple"
-                                style={{ color: color.muted }}
+                            <Pencil className="h-3 w-3" />
+                            Add a note
+                          </button>
+                        </motion.div>
+                      ) : (
+                        <div className="flex-1 overflow-y-auto">
+                          <table className="w-full">
+                            <thead>
+                              <tr
+                                className="border-b border-white/[0.04]"
+                                style={{
+                                  background: bg.panel,
+                                  fontSize: fontSize.xs10,
+                                  color: color.muted,
+                                }}
                               >
-                                <Pencil className="h-3 w-3" />
-                              </button>
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {journal.map((entry) => (
-                            <JournalRow
-                              key={entry.id}
-                              entry={entry}
-                              editingId={editingId}
-                              editText={editText}
-                              onStartEdit={handleStartEdit}
-                              onEditChange={setEditText}
-                              onSaveEdit={handleSaveEdit}
-                              onCancelEdit={handleCancelEdit}
-                            />
-                          ))}
-                        </tbody>
-                      </table>
+                                <th
+                                  className="px-3 py-1.5 text-left font-semibold uppercase tracking-wider"
+                                  style={{ minWidth: 152 }}
+                                >
+                                  Time
+                                </th>
+                                <th className="w-full px-3 py-1.5 text-left font-semibold uppercase tracking-wider">
+                                  Text
+                                </th>
+                                <th className="px-2 py-1.5 text-right" style={{ minWidth: 28 }}>
+                                  <button
+                                    onClick={() => setIsAddingNote(true)}
+                                    title="Add journal note"
+                                    className="ml-auto flex items-center justify-center transition-colors hover:text-brand-purple"
+                                    style={{ color: color.muted }}
+                                  >
+                                    <Pencil className="h-3 w-3" />
+                                  </button>
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {journal.map((entry) => (
+                                <JournalRow
+                                  key={entry.id}
+                                  entry={entry}
+                                  editingId={editingId}
+                                  editText={editText}
+                                  onStartEdit={handleStartEdit}
+                                  onEditChange={setEditText}
+                                  onSaveEdit={handleSaveEdit}
+                                  onCancelEdit={handleCancelEdit}
+                                />
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
-              )}
-            </motion.div>
-            </AnimatePresence>
+                </motion.div>
+              </AnimatePresence>
             </div>
           </motion.div>
         )}

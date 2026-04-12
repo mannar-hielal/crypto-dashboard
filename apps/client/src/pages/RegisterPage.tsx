@@ -173,7 +173,11 @@ export function RegisterPage() {
                   />
                 </motion.div>
 
-                <motion.div variants={formFieldVariants} whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+                <motion.div
+                  variants={formFieldVariants}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                >
                   <Button
                     type="submit"
                     className="w-full font-bold tracking-wide text-white"

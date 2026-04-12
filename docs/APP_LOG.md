@@ -514,14 +514,14 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 
 > Items raised by the code review of `fix/chart-area` branch — address before merging.
 
-| Priority | Task | File(s) | Checklist ref |
-|---|---|---|---|
-| 🔴 Must | Add tests for `CryptoIcon` (renders img for known symbol, fallback badge for unknown) | `src/components/ui/__tests__/CryptoIcon.test.tsx` (new) | §6 Tests |
-| 🔴 Must | Add tests for `cryptoIcons.ts` (9 entries, uppercase keys, non-empty string values) | `src/lib/__tests__/cryptoIcons.test.ts` (new) | §6 Tests |
-| 🟡 Should | Fix `key={i}` → `${item.symbol}-${i < items.length ? 'a' : 'b'}` in `TickerBar.tsx` doubled map | `TickerBar.tsx` | §4 Component Design |
-| 🟡 Should | Amend / reword garbled commit message on `7bc5bf6` (contains shell artifacts) | git history | §11 Code Style |
-| 🟢 Minor | Replace `Record<string, string>` annotation + `as const` with `satisfies Record<string, string>` in `cryptoIcons.ts` | `cryptoIcons.ts` | §1 TypeScript |
-| 🟢 Minor | Add `noValidate` to `motion.form` in `RegisterPage.tsx` (LoginPage has it, RegisterPage doesn't) | `RegisterPage.tsx` | §4 Component Design |
+| Priority  | Task                                                                                                                 | File(s)                                                 | Checklist ref       |
+| --------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ------------------- |
+| 🔴 Must   | Add tests for `CryptoIcon` (renders img for known symbol, fallback badge for unknown)                                | `src/components/ui/__tests__/CryptoIcon.test.tsx` (new) | §6 Tests            |
+| 🔴 Must   | Add tests for `cryptoIcons.ts` (9 entries, uppercase keys, non-empty string values)                                  | `src/lib/__tests__/cryptoIcons.test.ts` (new)           | §6 Tests            |
+| 🟡 Should | Fix `key={i}` → `${item.symbol}-${i < items.length ? 'a' : 'b'}` in `TickerBar.tsx` doubled map                      | `TickerBar.tsx`                                         | §4 Component Design |
+| 🟡 Should | Amend / reword garbled commit message on `7bc5bf6` (contains shell artifacts)                                        | git history                                             | §11 Code Style      |
+| 🟢 Minor  | Replace `Record<string, string>` annotation + `as const` with `satisfies Record<string, string>` in `cryptoIcons.ts` | `cryptoIcons.ts`                                        | §1 TypeScript       |
+| 🟢 Minor  | Add `noValidate` to `motion.form` in `RegisterPage.tsx` (LoginPage has it, RegisterPage doesn't)                     | `RegisterPage.tsx`                                      | §4 Component Design |
 
 ---
 

@@ -23,7 +23,7 @@ export type PanelSize = 'hidden' | 'collapsed' | 'open';
 const PANEL_HEIGHTS: Record<PanelSize, number> = {
   hidden: 0,
   collapsed: 36, // 2.25 rem × 16 px
-  open: 208,     // 13 rem  × 16 px
+  open: 208, // 13 rem  × 16 px
 };
 
 /**

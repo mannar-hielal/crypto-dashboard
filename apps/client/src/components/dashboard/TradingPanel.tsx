@@ -157,7 +157,10 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
     setTpInput('');
     setSlInput('');
     // Success pulse on the button
-    void executeAnim.start({ scale: [1, 1.06, 1], transition: { duration: 0.35, ease: 'easeOut' } });
+    void executeAnim.start({
+      scale: [1, 1.06, 1],
+      transition: { duration: 0.35, ease: 'easeOut' },
+    });
   }
 
   return (
