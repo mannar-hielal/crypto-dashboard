@@ -26,7 +26,9 @@ interface CryptoIconProps {
  * — offline-ready for PWA, zero runtime dependencies.
  */
 export function CryptoIcon({ symbol, size = 20, className = '' }: CryptoIconProps) {
-  const url = CRYPTO_ICON_URLS[symbol.toUpperCase()];
+  // Cast to Record<string, string> at lookup — CRYPTO_ICON_URLS is narrowed to
+  // exact literal keys by `satisfies`, so a plain string index requires this cast.
+  const url = (CRYPTO_ICON_URLS as Record<string, string | undefined>)[symbol.toUpperCase()];
 
   if (!url) {
     return (
