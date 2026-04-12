@@ -477,11 +477,12 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 
 ---
 
-## 🧪 Test Counts (as of 2026-04-11)
+## 🧪 Test Counts (as of 2026-04-12)
 
 - **Server**: 86 tests (6 files)
 - **Client**: 62 tests (3 files — paperStore × 25, marketStore × 20, checkTPSL × 17)
 - **Total**: 148 tests, all green ✅
+- ⚠️ **Coverage gap (from review 2026-04-12)**: `CryptoIcon` component and `cryptoIcons.ts` URL map have no tests — both are pending (see Pending Tasks)
 
 ---
 
@@ -502,7 +503,26 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 - **`CHART_BG` typo fixed**: was `'#0b0d18'` (wrong), corrected to `chart.bg` → `'#050212'` (matches bg.page token, sampled from screenshots).
 - **lightweight-charts + CSS vars**: canvas-based library cannot read CSS custom properties. All chart series colors **must** be plain hex strings — provided via `tokens.ts` `chart` group, never via `var(--...)`.
 - **Tailwind pseudo-class arbitrary values** (`hover:text-[#hex]`, `focus:border-[#hex]/50`) cannot be replaced with inline styles. They require named utilities — defined in `index.css` `@theme inline` as `--color-brand-*` and used as `hover:text-brand-*`, `focus:border-brand-*`.
+- **Two-surface token sync**: `tokens.ts` (JS/TS inline styles, canvas libs) and `index.css @theme inline` (Tailwind utilities) must be kept manually in sync — no single source can serve both. When updating a color token, update both surfaces in the same commit.
+- **`CRYPTO_ICON_URLS` type annotation**: uses `Record<string, string>` with `as const` — the explicit annotation widens the narrowed type. Prefer `satisfies Record<string, string>` to validate shape without widening (low priority, functionally identical at runtime).
+- **Framer Motion `key` on CSS-animated ticker**: `TickerBar` `doubled.map` uses `key={i}` (array index) — pre-existing. Safe here because the list is static and order never changes, but violates the checklist rule. Pending fix: `${item.symbol}-${i < items.length ? 'a' : 'b'}`.
+- **`motion.form` stagger timing**: `LoginPage` form fields use `delayChildren: 0.12` — fields start appearing before the card entrance (`duration: 0.35`) finishes. Intentional fast-start; bump to `0.28` if visual overlap is undesirable.
 
 ---
 
-_Last updated: 2026-04-12 — **Animation pass (commit `705db2d`)**: Added comprehensive Framer Motion animations throughout the app. (1) `CryptoIcon.tsx` — spring scale-in pop (`initial: scale 0.5 → 1, opacity 0 → 1`) for both the icon img and fallback badge on mount. (2) `TickerBar.tsx` — live ticker item gets a repeating `opacity` pulse overlay (`color.purpleDark`) + pulsing green dot (`pulse-live-dot`); added `isLive` prop to `TickerItem`. (3) `SymbolBar.tsx` — price + change-% block wrapped in `AnimatePresence mode="wait"` keyed on `symbol`; crossfades with `y: 5 → 0` on symbol change. (4) `LoginPage.tsx` — form fields stagger in sequentially via `motion.form` + `staggerChildren: 0.08`; server error banner has `AnimatePresence` exit. (5) `RegisterPage.tsx` — same stagger treatment; imports `AnimatePresence`. (6) `PaperTradingPanel.tsx` — added `exit` variant (`opacity 0, x -14`) to `rowVariants`; positions and history `<tbody>` rows now wrapped in `AnimatePresence` for smooth exit when a position is closed. Previously (commit `7bc5bf6`): design tokens, crypto icons, brand palette calibration — see session-2026-04-06.txt._
+## 🗂️ Pending Tasks (from review 2026-04-12)
+
+> Items raised by the code review of `fix/chart-area` branch — address before merging.
+
+| Priority | Task | File(s) | Checklist ref |
+|---|---|---|---|
+| 🔴 Must | Add tests for `CryptoIcon` (renders img for known symbol, fallback badge for unknown) | `src/components/ui/__tests__/CryptoIcon.test.tsx` (new) | §6 Tests |
+| 🔴 Must | Add tests for `cryptoIcons.ts` (9 entries, uppercase keys, non-empty string values) | `src/lib/__tests__/cryptoIcons.test.ts` (new) | §6 Tests |
+| 🟡 Should | Fix `key={i}` → `${item.symbol}-${i < items.length ? 'a' : 'b'}` in `TickerBar.tsx` doubled map | `TickerBar.tsx` | §4 Component Design |
+| 🟡 Should | Amend / reword garbled commit message on `7bc5bf6` (contains shell artifacts) | git history | §11 Code Style |
+| 🟢 Minor | Replace `Record<string, string>` annotation + `as const` with `satisfies Record<string, string>` in `cryptoIcons.ts` | `cryptoIcons.ts` | §1 TypeScript |
+| 🟢 Minor | Add `noValidate` to `motion.form` in `RegisterPage.tsx` (LoginPage has it, RegisterPage doesn't) | `RegisterPage.tsx` | §4 Component Design |
+
+---
+
+_Last updated: 2026-04-12 — **Code review of `fix/chart-area`**: `tsc --noEmit` clean, `pnpm lint` clean, 62/62 client tests pass. 1 blocker: no tests for `CryptoIcon` / `cryptoIcons.ts`. 2 should-fix items: garbled commit message on `7bc5bf6`, `key={i}` index key in TickerBar. 3 minor notes: `satisfies` for icon URL map, `noValidate` on RegisterPage form, stagger `delayChildren` timing. Full review in session notes. Previously: animation pass — `CryptoIcon` spring pop, ticker live pulse, symbol crossfade, staggered auth forms, position row exit animation (commits `705db2d` · `b95054a`). Design tokens + crypto icons + palette calibration (`7bc5bf6`)._
