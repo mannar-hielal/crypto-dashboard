@@ -21,8 +21,12 @@ const CHART_BG = chartColors.bg;
 interface ChartPanelProps {
   /** Which pane store to read data from (0–3) */
   paneIndex: 0 | 1 | 2 | 3;
-  /** Called once when the lightweight-charts instance is ready */
-  onChartReady?: (chart: IChartApi) => void;
+  /**
+   * Called once when the lightweight-charts instance is ready.
+   * Receives both the chart API and the primary candlestick series so that
+   * MultiChartArea can use setCrosshairPosition (v5 API).
+   */
+  onChartReady?: (chart: IChartApi, series: ISeriesApi<'Candlestick'>) => void;
   /** Called when the chart is destroyed (pane unmounts) */
   onChartDestroy?: () => void;
 }
@@ -247,7 +251,7 @@ export function ChartPanel({ paneIndex, onChartReady, onChartDestroy }: ChartPan
     ro.observe(containerRef.current);
 
     // Notify parent so MultiChartArea can wire up sync
-    onChartReady?.(chart);
+    onChartReady?.(chart, candleRef.current!);
 
     return () => {
       ro.disconnect();

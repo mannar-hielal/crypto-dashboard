@@ -16,8 +16,9 @@
 
 import { useRef, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import type { IChartApi } from 'lightweight-charts';
+import type { IChartApi, ISeriesApi } from 'lightweight-charts';
 import { useLayoutStore, LAYOUT_PANE_COUNT, LAYOUT_GRID_CLASS } from '@/store/layoutStore';
+import { paneStores } from '@/store/paneStore';
 import { ChartPanel } from '@/components/dashboard/ChartPanel';
 import { PaneHeader } from '@/components/dashboard/PaneHeader';
 import { color } from '@/lib/tokens';
@@ -33,6 +34,8 @@ export function MultiChartArea() {
 
   // ── Chart instance refs ─────────────────────────────────────────────────
   const chartRefs = useRef<(IChartApi | null)[]>([null, null, null, null]);
+  // Candlestick series refs — required for setCrosshairPosition (v5 API)
+  const seriesRefs = useRef<(ISeriesApi<'Candlestick'> | null)[]>([null, null, null, null]);
 
   // Guard flags to prevent circular sync loops
   const isSyncingCrosshair = useRef(false);
@@ -52,31 +55,38 @@ export function MultiChartArea() {
 
   // ── Called by ChartPanel when its chart instance is ready ───────────────
   const handleChartReady = useCallback(
-    (paneIndex: number, chart: IChartApi) => {
+    (paneIndex: number, chart: IChartApi, series: ISeriesApi<'Candlestick'>) => {
       chartRefs.current[paneIndex] = chart;
+      seriesRefs.current[paneIndex] = series;
 
       // ── Crosshair sync ────────────────────────────────────────────────
       chart.subscribeCrosshairMove((param) => {
         if (!syncRef.current.crosshair) return;
         if (isSyncingCrosshair.current) return;
-        if (!param.point || !param.time) return;
 
         isSyncingCrosshair.current = true;
-        const time = param.time as number;
 
         for (let i = 0; i < paneCountRef.current; i++) {
           if (i === paneIndex) continue;
           const other = chartRefs.current[i];
-          if (!other) continue;
+          const otherSeries = seriesRefs.current[i];
+          if (!other || !otherSeries) continue;
 
           try {
-            // Convert the master pane's time to an x-coordinate in the follower
-            const x = other.timeScale().timeToCoordinate(time as never);
-            if (x !== null) {
-              // Use null as y to only draw the vertical time crosshair line
-              (
-                other as IChartApi & { setCrossHairXY: (x: number, y: number, v: boolean) => void }
-              ).setCrossHairXY(x, param.point.y, true);
+            if (!param.point || !param.time) {
+              // Cursor left the source chart — hide crosshair on followers
+              other.clearCrosshairPosition();
+            } else {
+              // Look up the follower's own close price at this timestamp so
+              // the horizontal crosshair line lands on a meaningful level.
+              // Fallback to latestPrice when the follower has no bar yet.
+              const timeSecs = param.time as number;
+              const otherBars = paneStores[i as 0 | 1 | 2 | 3].getState().bars;
+              const bar = otherBars.find((b) => Math.floor(b.timestamp / 1000) === timeSecs);
+              const price = bar?.close ?? paneStores[i as 0 | 1 | 2 | 3].getState().latestPrice;
+              if (price !== null && price !== undefined) {
+                other.setCrosshairPosition(price, param.time, otherSeries);
+              }
             }
           } catch {
             // Ignore — follower chart may not have data for this time yet
@@ -114,6 +124,7 @@ export function MultiChartArea() {
 
   const handleChartDestroy = useCallback((paneIndex: number) => {
     chartRefs.current[paneIndex] = null;
+    seriesRefs.current[paneIndex] = null;
   }, []);
 
   return (
@@ -146,7 +157,7 @@ export function MultiChartArea() {
             >
               <ChartPanel
                 paneIndex={paneIndex}
-                onChartReady={(chart) => handleChartReady(paneIndex, chart)}
+                onChartReady={(chart, series) => handleChartReady(paneIndex, chart, series)}
                 onChartDestroy={() => handleChartDestroy(paneIndex)}
               />
 

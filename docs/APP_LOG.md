@@ -261,7 +261,7 @@ Tab badge counts: purple pill for Positions count, gray pill for Order History c
 - `PaneHeader` is only rendered when `paneCount > 1` (hidden in single-chart mode)
 - Click anywhere on a pane area → `setActivePane(i)`; active pane gets animated purple border + inner glow
 - `chartRefs[0..3]` — `IChartApi | null`, registered via `ChartPanel.onChartReady` callback
-- **Crosshair sync**: `subscribeCrosshairMove` → `timeToCoordinate(time)` → `setCrossHairXY(x, y)` on each follower
+- **Crosshair sync**: `subscribeCrosshairMove` → `setCrosshairPosition(price, time, series)` on each follower (v5 API); `clearCrosshairPosition()` when cursor leaves source chart
 - **Time range sync**: `subscribeVisibleTimeRangeChange` → `setVisibleRange(range)` on each follower
 - Guard refs (`isSyncingCrosshair`, `isSyncingTimeRange`) break circular event loops
 - Sync options + pane count read via refs so event handlers stay up-to-date without re-registration
@@ -592,7 +592,8 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 - **Multi-chart layout state**: `layoutStore` holds layout ID + pane configs; `paneStores[0..3]` are vanilla Zustand stores (`createStore()`) fed by `usePaneFeeds`. Components read per-pane data with `useStore(paneStores[i], selector)`. `SymbolBar`/`TradingPanel`/`useTPSLMonitor` use 4 unconditional `useStore` calls (hooks-rule compliant) and pick the active index.
 - **`marketStore` is no longer used at runtime** — kept intact for existing tests (all 75 pass). All live data flows through `paneStores`.
 - **TP/SL monitoring** is scoped to `paneStores[0]` (primary trading pane). When the user has multiple charts open, TP/SL still monitors only the pane-0 symbol.
-- **Crosshair sync guard**: `isSyncingCrosshair` ref breaks circular `subscribeCrosshairMove` loops. Same pattern for `isSyncingTimeRange`.
+- **`setCrossHairXY` removed in v5**: lightweight-charts v5 has NO `setCrossHairXY`. The public API is `setCrosshairPosition(price, time, seriesApi)` + `clearCrosshairPosition()`. The original implementation used a type-cast to call the removed method, which threw `TypeError` silently (caught by `try/catch`). Fixed in `fix/crosshair-sync` commit: `ChartPanel.onChartReady` now passes both chart + candlestick series; `MultiChartArea` stores `seriesRefs[0..3]` alongside `chartRefs[0..3]`; crosshair handler calls `setCrosshairPosition(followerPrice, time, followerSeries)` and `clearCrosshairPosition()` on mouse-leave.
+- **Crosshair sync guard**: `isSyncingCrosshair` ref breaks circular `subscribeCrosshairMove` loops (applies to both `setCrosshairPosition` and `clearCrosshairPosition` paths). Same pattern for `isSyncingTimeRange`.
 - **`useStore` with dynamic store** — `SymbolBar` calls `useStore` 4 times (unconditional), picks `allData[activePane]`. Safe because hook call count never changes.
 - **`layoutStore` persistence**: `cd-layout` key, version 1. Layout + sync options survive page refresh; per-pane symbol/interval also persisted. (validates shape without widening). Lookup in `CryptoIcon.tsx` casts to `Record<string, string | undefined>` first — `satisfies` narrows keys to literal union, so bracket-access without cast would be a TS error.
 - **Framer Motion `key` on CSS-animated ticker**: `TickerBar` `doubled.map` uses `key={i}` (array index) — pre-existing. Safe here because the list is static and order never changes, but violates the checklist rule. Pending fix: `${item.symbol}-${i < items.length ? 'a' : 'b'}`.
