@@ -110,10 +110,7 @@ export function MultiChartArea() {
               // ETH at ~2 400 to BTC at ~71 000 — the scale hasn't updated
               // yet). Discard the stale value to break the feedback loop that
               // would otherwise keep the chart locked at the old symbol's range.
-              if (
-                price !== null &&
-                (price < followerLatest * 0.5 || price > followerLatest * 2)
-              ) {
+              if (price !== null && (price < followerLatest * 0.5 || price > followerLatest * 2)) {
                 price = null;
               }
 

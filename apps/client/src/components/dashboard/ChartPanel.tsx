@@ -395,7 +395,7 @@ export function ChartPanel({ paneIndex, onChartReady, onChartDestroy }: ChartPan
       {/* ── Hover legend ─────────────────────────────────────────────────── */}
       {hoverData && (
         <div
-          className="pointer-events-none absolute left-3 top-3 z-10 rounded-lg border border-white/[0.06] px-3 py-2 backdrop-blur-md"
+          className="pointer-events-none absolute left-3 top-3 z-10 rounded-lg border border-white/6 px-3 py-2 backdrop-blur-md"
           style={{ background: `${bg.page}e6` }}
         >
           {/* Time */}
