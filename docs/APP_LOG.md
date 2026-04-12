@@ -122,7 +122,7 @@
 ```
 
 - `PanelSize = 'hidden' | 'collapsed' | 'open'` — exported from `DashboardPage.tsx`, used by `PaperTradingPanel`
-- `TradingPanel` uses `key={symbol}` — React remounts on symbol change, resetting all local form state
+- `TradingPanel` uses `key={`${activePane}-${symbol}`}` — React remounts on active pane OR symbol change, resetting all local form state
 - `TradingPanel` open/close is `AnimatePresence` animated (`width: 0 → 256`)
 - `inert` attribute on PaperTradingPanel wrapper when `size === 'hidden'` (removes from tab order + a11y tree)
 - When panel is `'hidden'`, a floating purple pill button appears bottom-left of chart to re-open it
@@ -214,6 +214,74 @@ Tab badge counts: purple pill for Positions count, gray pill for Order History c
 
 ---
 
+### Multi-Chart Layout System ✅ (current implementation)
+
+**Layout IDs and pane counts:**
+
+| ID   | Grid      | Panes |
+| ---- | --------- | ----- |
+| `1`  | 1×1       | 1     |
+| `2h` | 2 columns | 2     |
+| `2v` | 2 rows    | 2     |
+| `3h` | 3 columns | 3     |
+| `4`  | 2×2 grid  | 4     |
+
+**`layoutStore`** (persisted `cd-layout` v1):
+
+- `layout: LayoutId` — active layout ID
+- `activePane: number` — pane that receives SymbolBar controls + TradingPanel focus
+- `panes: PaneConfig[]` — 4 entries; defaults: `BTC/1m · ETH/1m · SOL/1m · BNB/1m`
+- `syncOptions: SyncOptions` — defaults: `crosshair: true, timeRange: true, symbol: false, interval: false`
+- `setLayout()` clamps `activePane` to `paneCount − 1` when switching to a smaller layout
+- `setPaneSymbol()` / `setPaneInterval()` propagate to all panes when the matching sync flag is on
+
+**`paneStores[0..3]`** — vanilla `createStore()` instances (NOT `create()`), one per pane slot:
+
+- Each holds `bars`, `indicators`, `latestPrice`, `priceChange`, `isConnected`
+- `reset()` wipes all data — called before connecting to a new symbol/interval
+- Read in React via `useStore(paneStores[i], selector)` — always called unconditionally (hook-count stable)
+
+**`usePaneFeeds`** — always mounts 4 `useSinglePaneFeed` calls (hook-count never changes):
+
+- Inactive panes (outside current layout) → WS closed, store reset immediately
+- Active panes → REST fetch 500 bars first, then WebSocket live feed
+- WebSocket auto-reconnects after `3 000 ms` on close; blocked when component unmounts
+- Re-runs when `symbol`, `interval`, or `isActive` changes
+
+**`ChartLayoutPicker`** (rendered inside `SymbolBar`, right side):
+
+- Trigger: 7×7 icon reflecting active layout; highlights purple + border when popover is open
+- Popover (w-56): "Layout" row with 5 SVG icons (paths match TradingView `chart-layout.html`) + "Sync across panes" section
+- Sync section: 4 animated pill toggles (spring 600/35) — Sync Symbol / Sync Interval / Sync Crosshair / Sync Time Range
+- Selecting a layout closes the popover; sync toggles keep popover open until backdrop click
+
+**`MultiChartArea`:**
+
+- CSS `grid` element — applies `LAYOUT_GRID_CLASS[layout]` (Tailwind `grid-cols-*`/`grid-rows-*`)
+- `PaneHeader` is only rendered when `paneCount > 1` (hidden in single-chart mode)
+- Click anywhere on a pane area → `setActivePane(i)`; active pane gets animated purple border + inner glow
+- `chartRefs[0..3]` — `IChartApi | null`, registered via `ChartPanel.onChartReady` callback
+- **Crosshair sync**: `subscribeCrosshairMove` → `setCrosshairPosition(price, time, series)` on each follower (v5 API); `clearCrosshairPosition()` when cursor leaves source chart. Echo loop broken by `param.sourceEvent` check — `sourceEvent` is only set on real pointer events, undefined on programmatic calls. **Y-sync**: `price` is derived via `otherSeries.coordinateToPrice(param.point.y)` which maps the source cursor's Y pixel to the equivalent price on the follower's price scale, landing the horizontal line at the same relative height. **Guards**: (1) skip entirely if `followerLatest === null` (data not loaded); (2) discard `coordinateToPrice` result if it deviates >50% from `followerLatest` (stale scale after symbol change) and fall back to `bar.close`.
+- **Time range sync**: `subscribeVisibleTimeRangeChange` → `setVisibleRange(range)` on each follower
+- Guard ref `isSyncingTimeRange` breaks circular time-range loop; crosshair uses `sourceEvent` instead
+- Sync options + pane count read via refs so event handlers stay up-to-date without re-registration
+
+**`PaneHeader`** (h-7, rendered only in multi-pane mode):
+
+- Animated left stripe (`layoutId="active-pane-stripe"`, spring 500/35) marks active pane
+- Symbol picker: `CryptoIcon` (13 px) · base name · `/USDT` · `ChevronDown` → popover with search input + scrollable list
+- Interval quick-switch: all 6 `INTERVALS` as 9 px buttons; active interval highlighted purple
+- Right side: live price (green/red) + `±x.xx%` change badge; connection dot (5 px, green pulse when connected)
+- Clicking the header row itself activates the pane (calls `onActivate`)
+
+**`markets.ts`** — shared constants (used by SymbolBar, PaneHeader, layoutStore defaults):
+
+- `SYMBOLS` (9): BTC, ETH, SOL, BNB, XRP, DOGE, ADA, AVAX, LINK — all vs USDT
+- `INTERVALS` (6): `1m · 5m · 15m · 1h · 4h · 1d`
+- `INTERVAL_LABELS` record maps each interval to its display name
+
+---
+
 ### Right Panel — `TradingPanel` ✅ (current implementation — market orders only)
 
 - Header: "Paper Trading" label + ✕ close (hides panel, state preserved)
@@ -223,7 +291,7 @@ Tab badge counts: purple pill for Positions count, gray pill for Order History c
 - TP / SL optional price inputs (directional validation)
 - Submit: `↑ Buy SYMBOL · Market` / `↓ Sell SYMBOL · Market`
 - Mark price display at bottom
-- Resets on symbol change via `key={symbol}` in `DashboardPage`
+- Resets on symbol or active pane change via ``key={`${activePane}-${symbol}`}`` in `DashboardPage`
 
 ---
 
@@ -415,37 +483,43 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 
 ### State reset pattern
 
-- Use `key={prop}` on parent to reset child state on prop change (`TradingPanel` uses `key={symbol}`)
+- Use `key={prop}` on parent to reset child state on prop change (`TradingPanel` uses ``key={`${activePane}-${symbol}`}``)
 - Never use during-render `setState`, never use `useEffect` + `setState` for reset
 
 ---
 
 ## 📁 Key Files
 
-| File                                                         | Purpose                                                                               |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| `apps/client/src/lib/tokens.ts`                              | **Design tokens** — single source of truth for all colors, fonts, sizes (JS/TS side)  |
-| `apps/client/src/index.css`                                  | Tailwind v4 theme — `@theme inline` generates brand color utilities from tokens       |
-| `apps/client/src/store/paperStore.ts`                        | All paper trading state + actions                                                     |
-| `apps/client/src/store/marketStore.ts`                       | Live price feed state                                                                 |
-| `apps/client/src/store/authStore.ts`                         | Auth token + user (in-memory, no persist)                                             |
-| `apps/client/src/hooks/useTPSLMonitor.ts`                    | Auto-close hook + exported `checkTPSL()`                                              |
-| `apps/client/src/hooks/usePriceFeed.ts`                      | WebSocket price feed lifecycle                                                        |
-| `apps/client/src/components/dashboard/PaperTradingPanel.tsx` | Bottom panel (positions/orders/journal)                                               |
-| `apps/client/src/components/dashboard/TradingPanel.tsx`      | Right sidebar order entry                                                             |
-| `apps/client/src/pages/DashboardPage.tsx`                    | Dashboard orchestrator — exports `PanelSize` type, mounts hooks                       |
-| `apps/server/src/routes/auth/index.ts`                       | All auth routes (register/login/logout/refresh/me/reset-password)                     |
-| `apps/server/src/routes/market/index.ts`                     | REST + WebSocket market data routes                                                   |
-| `apps/server/src/services/BybitWebSocketManager.ts`          | Bybit WS connection singleton                                                         |
-| `apps/server/src/constants.ts`                               | `ALLOWED_SYMBOLS` — source of truth for WS subscriptions + routes                     |
-| `generated/CDSDK/types/index.ts`                             | Shared types (User, Account, CandleBar, WsMessage, etc.)                              |
-| `generated/CDSDK/api/auth.ts`                                | Client-side auth API calls                                                            |
-| `generated/CDSDK/api/market.ts`                              | Client-side market API + WS URL                                                       |
-| `apps/server/prisma/schema.prisma`                           | DB schema (User, Account, Order, Trade, tokens)                                       |
-| `docs/markup-reference/`                                     | HTML UI reference files — component structure & interaction patterns (not 1:1 copies) |
-| `docs/screenshots/theme/`                                    | Visual source of truth — spacing, colors, sizes, layout                               |
-| `docs/REVIEW_CHECKLIST.md`                                   | Pre-commit review checklist — run before every push                                   |
-| `docs/APP_LOG.md`                                            | This file — full project context, attach at start of every session                    |
+| File                                                         | Purpose                                                                                                                                      |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/client/src/lib/tokens.ts`                              | **Design tokens** — single source of truth for all colors, fonts, sizes (JS/TS side)                                                         |
+| `apps/client/src/index.css`                                  | Tailwind v4 theme — `@theme inline` generates brand color utilities from tokens                                                              |
+| `apps/client/src/store/paperStore.ts`                        | All paper trading state + actions                                                                                                            |
+| `apps/client/src/store/marketStore.ts`                       | Live price feed state                                                                                                                        |
+| `apps/client/src/store/authStore.ts`                         | Auth token + user (in-memory, no persist)                                                                                                    |
+| `apps/client/src/hooks/useTPSLMonitor.ts`                    | Auto-close hook + exported `checkTPSL()`                                                                                                     |
+| `apps/client/src/hooks/usePriceFeed.ts`                      | WebSocket price feed lifecycle                                                                                                               |
+| `apps/client/src/components/dashboard/PaperTradingPanel.tsx` | Bottom panel (positions/orders/journal)                                                                                                      |
+| `apps/client/src/components/dashboard/TradingPanel.tsx`      | Right sidebar order entry                                                                                                                    |
+| `apps/client/src/pages/DashboardPage.tsx`                    | Dashboard orchestrator — exports `PanelSize` type, mounts hooks                                                                              |
+| `apps/server/src/routes/auth/index.ts`                       | All auth routes (register/login/logout/refresh/me/reset-password)                                                                            |
+| `apps/server/src/routes/market/index.ts`                     | REST + WebSocket market data routes                                                                                                          |
+| `apps/server/src/services/BybitWebSocketManager.ts`          | Bybit WS connection singleton                                                                                                                |
+| `apps/server/src/constants.ts`                               | `ALLOWED_SYMBOLS` — source of truth for WS subscriptions + routes                                                                            |
+| `generated/CDSDK/types/index.ts`                             | Shared types (User, Account, CandleBar, WsMessage, etc.)                                                                                     |
+| `generated/CDSDK/api/auth.ts`                                | Client-side auth API calls                                                                                                                   |
+| `generated/CDSDK/api/market.ts`                              | Client-side market API + WS URL                                                                                                              |
+| `apps/client/src/lib/markets.ts`                             | Shared `SYMBOLS` (9 coins), `INTERVALS` (6), `INTERVAL_LABELS`, `SymbolEntry` type — imported by SymbolBar, PaneHeader, layoutStore defaults |
+| `apps/client/src/store/layoutStore.ts`                       | Layout config — layout ID, activePane, per-pane symbol/interval, sync options                                                                |
+| `apps/client/src/store/paneStore.ts`                         | 4 independent vanilla Zustand stores (bars/price/connection per pane)                                                                        |
+| `apps/client/src/hooks/usePaneFeeds.ts`                      | Manages 4 WS+REST connections (one per active pane) — replaces `usePriceFeed`                                                                |
+| `apps/client/src/components/dashboard/ChartLayoutPicker.tsx` | Layout picker popover (5 SVG icons) + sync option toggles                                                                                    |
+| `apps/client/src/components/dashboard/PaneHeader.tsx`        | Per-pane mini header (symbol picker, interval buttons, live price, connection dot)                                                           |
+| `apps/client/src/components/dashboard/MultiChartArea.tsx`    | CSS grid renderer for all layouts; wires crosshair + time-range sync                                                                         |
+| `docs/markup-reference/`                                     | HTML UI reference files — component structure & interaction patterns (not 1:1 copies)                                                        |
+| `docs/screenshots/theme/`                                    | Visual source of truth — spacing, colors, sizes, layout                                                                                      |
+| `docs/REVIEW_CHECKLIST.md`                                   | Pre-commit review checklist — run before every push                                                                                          |
+| `docs/APP_LOG.md`                                            | This file — full project context, attach at start of every session                                                                           |
 
 ---
 
@@ -459,6 +533,18 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 - **Phase 2**: Live price feed (WebSocket → `usePriceFeed` → `marketStore`)
 - **Phase 2**: Paper trading v1 — `paperStore` (market orders), `TradingPanel` (market-only), `PaperTradingPanel` (Positions + Order History + Balance History + Journal tabs), TP/SL monitor, commission accounting
 - **Phase 2**: Review infrastructure — `REVIEW_CHECKLIST.md`, `APP_LOG.md`, CI-passing tests (148 total)
+
+### ✅ Completed (added 2026-04-12)
+
+- **Multi-chart split layout** — `layoutStore`, `paneStore` (4 vanilla Zustand stores), `usePaneFeeds` (4 independent WS+REST connections), `ChartLayoutPicker`, `PaneHeader`, `MultiChartArea`
+- Supported layouts: `1` (single), `2h` (side-by-side), `2v` (stacked), `3h` (3 columns), `4` (2×2 grid)
+- Per-pane symbol + interval selection (each pane has its own `PaneHeader` with mini symbol picker + interval quick-switch)
+- Cross-pane sync options (toggleable per-session): symbol, interval, crosshair (time axis via `timeToCoordinate`), time range (`setVisibleRange`) — all with circular-event guard refs
+- Layout + sync options persisted to `localStorage` (`cd-layout`)
+- `SymbolBar` now reads from `layoutStore.panes[activePane]` + `paneStores[activePane]` (4 unconditional `useStore` calls, picks active)
+- `TradingPanel` + `useTPSLMonitor` migrated to `layoutStore` + `paneStores` (TP/SL monitors pane 0 — primary trading pane)
+- `src/lib/markets.ts` — shared `SYMBOLS`, `INTERVALS`, `INTERVAL_LABELS` constants (previously duplicated in `SymbolBar`)
+- Commit: `7dfd54a`
 
 ### 🔄 In Progress (current sprint — 2026-04-12)
 
@@ -503,7 +589,19 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 - **lightweight-charts + CSS vars**: canvas-based library cannot read CSS custom properties. All chart series colors **must** be plain hex strings — provided via `tokens.ts` `chart` group, never via `var(--...)`.
 - **Tailwind pseudo-class arbitrary values** (`hover:text-[#hex]`, `focus:border-[#hex]/50`) cannot be replaced with inline styles. They require named utilities — defined in `index.css` `@theme inline` as `--color-brand-*` and used as `hover:text-brand-*`, `focus:border-brand-*`.
 - **Two-surface token sync**: `tokens.ts` (JS/TS inline styles, canvas libs) and `index.css @theme inline` (Tailwind utilities) must be kept manually in sync — no single source can serve both. When updating a color token, update both surfaces in the same commit.
-- **`CRYPTO_ICON_URLS` type annotation**: switched from `Record<string, string>` annotation + `as const` to `satisfies Record<string, string>` (validates shape without widening). Lookup in `CryptoIcon.tsx` casts to `Record<string, string | undefined>` first — `satisfies` narrows keys to literal union, so bracket-access without cast would be a TS error.
+- **Multi-chart layout state**: `layoutStore` holds layout ID + pane configs; `paneStores[0..3]` are vanilla Zustand stores (`createStore()`) fed by `usePaneFeeds`. Components read per-pane data with `useStore(paneStores[i], selector)`. `SymbolBar`/`TradingPanel`/`useTPSLMonitor` use 4 unconditional `useStore` calls (hooks-rule compliant) and pick the active index.
+- **`marketStore` is retired at runtime** — `usePriceFeed` was superseded by `usePaneFeeds` and is no longer called anywhere. `marketStore` is kept intact for existing tests (all 75 pass). `TickerBar` and `PaperTradingPanel` previously read `useMarketStore` (permanently null after the migration); both now read from `paneStores[0]` directly. `marketStore` imports are gone from all runtime UI components.
+- **TP/SL monitoring** is scoped to `paneStores[0]` (primary trading pane). When the user has multiple charts open, TP/SL still monitors only the pane-0 symbol.
+- **`setCrossHairXY` removed in v5**: lightweight-charts v5 has NO `setCrossHairXY`. The public API is `setCrosshairPosition(price, time, seriesApi)` + `clearCrosshairPosition()`. The original implementation used a type-cast to call the removed method, which threw `TypeError` silently (caught by `try/catch`). Fixed in `fix/crosshair-sync` commit: `ChartPanel.onChartReady` now passes both chart + candlestick series; `MultiChartArea` stores `seriesRefs[0..3]` alongside `chartRefs[0..3]`; crosshair handler calls `setCrosshairPosition(followerPrice, time, followerSeries)` and `clearCrosshairPosition()` on mouse-leave.
+- **Crosshair Y-sync fix**: The original `setCrosshairPosition` Y value was `bar.close` — the bar's close price at that timestamp. This caused the follower's horizontal line to be fixed at the close level regardless of where the cursor's actual Y was on the source chart (cursor could be mid-wick, above/below close, etc.). Fixed by using `otherSeries.coordinateToPrice(param.point.y)` which maps the source cursor's Y pixel directly to the equivalent price on the follower chart's own price scale, placing the horizontal line at the same relative height. Falls back to `bar.close` only when `coordinateToPrice` returns `null` (cursor is in the MACD sub-pane, outside the main price pane).
+- **Crosshair sync + missing candles in 4-chart layout (two-part fix)**:
+  - _Root cause_: when a pane's symbol changes (e.g. ETH→BTC), `useSinglePaneFeed` calls `store.reset()` → `bars=[]`. `ChartPanel`'s data effect returned early on `bars.length===0` without resetting `prevLenRef.current`, so the next data load had `isFirstLoad=false`. `scrollToRealTime` and the new `autoScale: true` call never fired — the Y-axis stayed locked at the old symbol's price range (e.g. ETH ~2400). `coordinateToPrice` then returned ~2400 for what was now a BTC chart, feeding that stale price back into `setCrosshairPosition`, locking the scale indefinitely.
+  - _`ChartPanel.tsx`_: split the early-return guard so `bars.length===0` resets `prevLenRef.current=0` and clears all series data (removes stale candles). Added `chartRef.current?.priceScale('right').applyOptions({ autoScale: true })` in the `isFirstLoad || isOutOfRange` branch so the Y-axis always resets to fit the new symbol's data range.
+  - _`MultiChartArea.tsx`_: added `followerLatest===null` guard (skip `setCrosshairPosition` when pane has no data yet). Added range validation: if `coordinateToPrice` returns a price more than 50% away from `followerLatest`, the chart's scale is stale — discard the value and fall back to `bar.close` (breaking the feedback loop).
+- **`isMountedRef` stale-update pattern**: shared `useRef(true)` reset to `true` at the top of every effect run is unsafe. When a dependency changes, React runs the cleanup (sets ref to `false`) then immediately runs the new effect (sets ref back to `true`). Any in-flight Promise from the previous run sees `true` and writes stale data to the store. Fix: use a per-run closure variable `let cancelled = false` instead. Old closures keep their own `cancelled` flag; no cross-run interference. Applied to both `usePriceFeed` and `usePaneFeeds`.
+- **`usePriceFeed` retirement**: `usePriceFeed` was the original single-pane WebSocket hook feeding `marketStore`. It was superseded by `usePaneFeeds` (multi-pane) but never removed or disconnected cleanly — leaving `marketStore` permanently at its initial null state. `TickerBar` and `PaperTradingPanel` silently showed null prices as a result. Fixed: both components now read from `paneStores[0]`; `usePriceFeed` is kept (not deleted) in case single-pane mode ever returns, but is not called. `sourceEvent` is only set on real pointer events; programmatic `setCrosshairPosition` / `clearCrosshairPosition` calls fire the callback with `sourceEvent: undefined`. The old `isSyncingCrosshair` boolean ref was fragile — if lightweight-charts fires the callback asynchronously (after the current call stack), the guard would already be `false` and the echo would propagate, causing visible drift. The `sourceEvent` check is timing-independent and is the correct v5-API approach. `isSyncingTimeRange` guard ref is still needed for `subscribeVisibleTimeRangeChange` (no `sourceEvent` equivalent).
+- **`useStore` with dynamic store** — `SymbolBar` calls `useStore` 4 times (unconditional), picks `allData[activePane]`. Safe because hook call count never changes.
+- **`layoutStore` persistence**: `cd-layout` key, version 1. Layout + sync options survive page refresh; per-pane symbol/interval also persisted. (validates shape without widening). Lookup in `CryptoIcon.tsx` casts to `Record<string, string | undefined>` first — `satisfies` narrows keys to literal union, so bracket-access without cast would be a TS error.
 - **Framer Motion `key` on CSS-animated ticker**: `TickerBar` `doubled.map` uses `key={i}` (array index) — pre-existing. Safe here because the list is static and order never changes, but violates the checklist rule. Pending fix: `${item.symbol}-${i < items.length ? 'a' : 'b'}`.
 - **`motion.form` stagger timing**: `LoginPage` form fields use `delayChildren: 0.12` — fields start appearing before the card entrance (`duration: 0.35`) finishes. Intentional fast-start; bump to `0.28` if visual overlap is undesirable.
 
@@ -527,4 +625,4 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 
 ---
 
-_Last updated: 2026-04-12 — **PR review issues resolved** (`260d0f8` · `a298230`): added tests for `CryptoIcon` (8) and `cryptoIcons.ts` (5), fixed stable keys in `TickerBar`, applied `satisfies` + lookup cast in `cryptoIcons.ts`/`CryptoIcon.tsx`, added `noValidate` to `RegisterPage`. Client tests now 75 (5 files), total 161. 1 open item: garbled commit message on `7bc5bf6`. Previously: animation pass — `CryptoIcon` spring pop, ticker live pulse, symbol crossfade, staggered auth forms, position row exit animation (commits `705db2d` · `b95054a`). Design tokens + crypto icons + palette calibration (`7bc5bf6`)._
+_Last updated: 2026-04-12 — **fix: dead marketStore reads + isMountedRef stale-update** (`TickerBar`, `PaperTradingPanel`, `usePriceFeed`, `useTPSLMonitor`, `DashboardPage`): `usePriceFeed` was superseded by `usePaneFeeds` but `TickerBar` and `PaperTradingPanel` still imported `useMarketStore` — permanently null. Both now read from `paneStores[0]`. `usePriceFeed` gains the same per-run `cancelled` closure fix as `usePaneFeeds`. Stale JSDoc in `useTPSLMonitor` and `DashboardPage` updated. Previously: **fix: PR code-review issues** (`usePaneFeeds`, `layoutStore`, `APP_LOG`). Previously: **chore: code review cleanup + README corrections**. Previously: **fix: 4-chart layout — missing candles + crosshair sync** (`ChartPanel`, `MultiChartArea`). Previously: **fix: crosshair Y-sync** (`MultiChartArea`). Client tests 89 (6 files), total 175._

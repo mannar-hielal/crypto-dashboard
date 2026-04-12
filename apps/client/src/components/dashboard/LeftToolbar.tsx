@@ -46,7 +46,7 @@ export function LeftToolbar() {
 
   return (
     <aside
-      className="flex w-11 shrink-0 flex-col items-center gap-0.5 border-r border-white/[0.06] py-2 overflow-y-auto"
+      className="flex w-11 shrink-0 flex-col items-center gap-0.5 border-r border-white/6 py-2 overflow-y-auto"
       style={{ background: bg.page }}
     >
       {TOOLS.map((tool, i) => {
@@ -102,7 +102,7 @@ export function LeftToolbar() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -4 }}
                   transition={{ duration: 0.12 }}
-                  className="pointer-events-none absolute left-full ml-2.5 z-50 whitespace-nowrap rounded-md border border-white/[0.08] px-2 py-1 font-semibold text-white/80 shadow-xl"
+                  className="pointer-events-none absolute left-full ml-2.5 z-50 whitespace-nowrap rounded-md border border-white/8 px-2 py-1 font-semibold text-white/80 shadow-xl"
                   style={{ fontSize: fontSize.xs10, background: bg.surface }}
                 >
                   {tool.label}

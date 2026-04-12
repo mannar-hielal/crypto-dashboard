@@ -26,7 +26,7 @@ export function TopBar() {
 
   return (
     <header
-      className="flex h-12 w-full shrink-0 items-center justify-between border-b border-white/[0.06] px-4"
+      className="flex h-12 w-full shrink-0 items-center justify-between border-b border-white/6 px-4"
       style={{ background: bg.panel, zIndex: 20 }}
     >
       {/* ── Left: Logo + name + badge ──────────────────────────────────── */}
@@ -96,7 +96,7 @@ export function TopBar() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -6, scale: 0.97 }}
                 transition={{ duration: 0.15 }}
-                className="absolute right-0 top-full z-50 mt-1.5 w-36 overflow-hidden rounded-lg border border-white/[0.08] shadow-2xl"
+                className="absolute right-0 top-full z-50 mt-1.5 w-36 overflow-hidden rounded-lg border border-white/8 shadow-2xl"
                 style={{ background: bg.panel }}
               >
                 <motion.button

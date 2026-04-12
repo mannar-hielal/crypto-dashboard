@@ -8,7 +8,8 @@ A professional paper trading dashboard for cryptocurrency. Real-time charting, s
 
 ## ✨ Features
 
-- **Live Candlestick Charts** — EMA (9/21/200), MACD, and VWAP indicators via TradingView Lightweight Charts
+- **Live Candlestick Charts** — EMA (9/20/200), MACD, and VWAP indicators via TradingView Lightweight Charts
+- **Multi-Chart Layout** — 1, 2 (horizontal/vertical), 3, or 4 synchronized chart panes; crosshair and time-range sync across all active panes
 - **Paper Trading** — Simulated long/short market orders with $10,000 virtual balance and full P&L accounting
 - **TP/SL Auto-Monitor** — Positions close automatically when Take-Profit or Stop-Loss levels are hit
 - **Order & Balance History** — Full audit trail of every order, balance change, and commission
@@ -180,4 +181,4 @@ Deployments trigger automatically on push to `main` when CI passes.
 ---
 
 **Live:** [API Health](https://crypto-dashboard-api.fly.dev/health) · [App](https://crypto-dashboard-7yy.pages.dev)  
-**Last updated:** April 11, 2026
+**Last updated:** April 12, 2026

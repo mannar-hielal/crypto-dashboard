@@ -9,11 +9,27 @@ import {
   LineStyle,
 } from 'lightweight-charts';
 import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts';
-import { useMarketStore } from '@/store/marketStore';
+import { useStore } from 'zustand';
+import { paneStores } from '@/store/paneStore';
 import { calcEMA, calcVWAP, calcMACD } from '@/lib/indicators';
 import { bg, color, chart as chartColors, font, fontSize } from '@/lib/tokens';
 
 const CHART_BG = chartColors.bg;
+
+// ─── Props ────────────────────────────────────────────────────────────────────
+
+interface ChartPanelProps {
+  /** Which pane store to read data from (0–3) */
+  paneIndex: 0 | 1 | 2 | 3;
+  /**
+   * Called once when the lightweight-charts instance is ready.
+   * Receives both the chart API and the primary candlestick series so that
+   * MultiChartArea can use setCrosshairPosition (v5 API).
+   */
+  onChartReady?: (chart: IChartApi, series: ISeriesApi<'Candlestick'>) => void;
+  /** Called when the chart is destroyed (pane unmounts) */
+  onChartDestroy?: () => void;
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -49,7 +65,7 @@ function toUTC(ms: number): UTCTimestamp {
   return Math.floor(ms / 1000) as UTCTimestamp;
 }
 
-export function ChartPanel() {
+export function ChartPanel({ paneIndex, onChartReady, onChartDestroy }: ChartPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const prevLenRef = useRef(0); // tracks first-load to trigger scrollToRealTime()
@@ -64,8 +80,8 @@ export function ChartPanel() {
   const macdLineRef = useRef<ISeriesApi<'Line'> | null>(null);
   const signalRef = useRef<ISeriesApi<'Line'> | null>(null);
 
-  // Selector: only subscribe to bars — ChartPanel doesn't care about price/connection state
-  const bars = useMarketStore((s) => s.bars);
+  // Read bars from this pane's store
+  const bars = useStore(paneStores[paneIndex], (s) => s.bars);
 
   // ── Hover legend state ───────────────────────────────────────────────────
   const [hoverData, setHoverData] = useState<LegendData | null>(null);
@@ -234,17 +250,42 @@ export function ChartPanel() {
     });
     ro.observe(containerRef.current);
 
+    // Notify parent so MultiChartArea can wire up sync
+    onChartReady?.(chart, candleRef.current!);
+
     return () => {
       ro.disconnect();
       chart.remove();
       chartRef.current = null;
+      onChartDestroy?.();
     };
-  }, []); // empty dep array — create once
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // create once
 
-  // ── 2. Push updated data to every series whenever bars changes ───────────
+  // ── 2. Push data whenever bars changes ───────────────────────────────────
   useEffect(() => {
+    // When bars are wiped (symbol / interval change), reset the first-load
+    // tracker and clear stale series data so old candles don't linger.
+    // prevLenRef must be 0 so the next real data load is treated as a
+    // fresh first-load, causing autoScale + scrollToRealTime to fire.
+    if (bars.length === 0) {
+      prevLenRef.current = 0;
+      try {
+        candleRef.current?.setData([]);
+        ema9Ref.current?.setData([]);
+        ema20Ref.current?.setData([]);
+        ema200Ref.current?.setData([]);
+        vwapRef.current?.setData([]);
+        macdHistRef.current?.setData([]);
+        macdLineRef.current?.setData([]);
+        signalRef.current?.setData([]);
+      } catch {
+        // series may not be initialised on very first mount
+      }
+      return;
+    }
+
     if (
-      bars.length === 0 ||
       !candleRef.current ||
       !ema9Ref.current ||
       !ema20Ref.current ||
@@ -333,6 +374,12 @@ export function ChartPanel() {
       !visibleRange || lastTime < visibleRange.from || firstTime > visibleRange.to;
 
     if (isFirstLoad || isOutOfRange) {
+      // Re-enable Y-axis autoscale before scrolling. This is critical after a
+      // symbol change: if the previous symbol's price range was locked by a
+      // stale setCrosshairPosition call (e.g. ETH at 2 400 when pane switches
+      // to BTC at 71 000), re-enabling autoScale here ensures the chart
+      // immediately shows the new symbol's data range.
+      chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
       // scrollToRealTime() pins the view to the rightmost bar at the current
       // barSpacing — no squeeze, candles stay a consistent readable size.
       timeScale?.scrollToRealTime();
@@ -348,7 +395,7 @@ export function ChartPanel() {
       {/* ── Hover legend ─────────────────────────────────────────────────── */}
       {hoverData && (
         <div
-          className="pointer-events-none absolute left-3 top-3 z-10 rounded-lg border border-white/[0.06] px-3 py-2 backdrop-blur-md"
+          className="pointer-events-none absolute left-3 top-3 z-10 rounded-lg border border-white/6 px-3 py-2 backdrop-blur-md"
           style={{ background: `${bg.page}e6` }}
         >
           {/* Time */}
