@@ -8,10 +8,14 @@
  * Cross-pane sync:
  *   crosshair — when the crosshair moves in any pane, its time position is
  *               mirrored onto all other panes (vertical line only).
+ *               Uses `param.sourceEvent` to distinguish real mouse events from
+ *               programmatic setCrosshairPosition echoes (v5 API guarantee:
+ *               sourceEvent is undefined on programmatic calls), eliminating
+ *               the circular-loop problem without relying on timing.
  *   timeRange — when the visible range changes in the master pane, all
  *               follower panes are scrolled to match.
- *
- * Both sync channels use a guard ref to break circular event loops.
+ *               Uses an `isSyncingTimeRange` guard ref (no sourceEvent
+ *               equivalent on subscribeVisibleTimeRangeChange).
  */
 
 import { useRef, useCallback, useEffect } from 'react';
@@ -37,8 +41,9 @@ export function MultiChartArea() {
   // Candlestick series refs — required for setCrosshairPosition (v5 API)
   const seriesRefs = useRef<(ISeriesApi<'Candlestick'> | null)[]>([null, null, null, null]);
 
-  // Guard flags to prevent circular sync loops
-  const isSyncingCrosshair = useRef(false);
+  // Guard flag for time-range sync circular loop prevention.
+  // Crosshair sync does NOT need a guard — it uses param.sourceEvent instead
+  // (only defined on real mouse events, undefined on programmatic calls).
   const isSyncingTimeRange = useRef(false);
 
   // Keep sync options and pane count in refs so event handlers always read
@@ -62,9 +67,10 @@ export function MultiChartArea() {
       // ── Crosshair sync ────────────────────────────────────────────────
       chart.subscribeCrosshairMove((param) => {
         if (!syncRef.current.crosshair) return;
-        if (isSyncingCrosshair.current) return;
-
-        isSyncingCrosshair.current = true;
+        // sourceEvent is only defined for real pointer events; programmatic
+        // setCrosshairPosition / clearCrosshairPosition calls have it undefined.
+        // Skipping those calls is what breaks the circular-echo loop.
+        if (!param.sourceEvent) return;
 
         for (let i = 0; i < paneCountRef.current; i++) {
           if (i === paneIndex) continue;
@@ -92,8 +98,6 @@ export function MultiChartArea() {
             // Ignore — follower chart may not have data for this time yet
           }
         }
-
-        isSyncingCrosshair.current = false;
       });
 
       // ── Time range sync ───────────────────────────────────────────────
