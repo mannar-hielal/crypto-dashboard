@@ -264,8 +264,28 @@ export function ChartPanel({ paneIndex, onChartReady, onChartDestroy }: ChartPan
 
   // ── 2. Push data whenever bars changes ───────────────────────────────────
   useEffect(() => {
+    // When bars are wiped (symbol / interval change), reset the first-load
+    // tracker and clear stale series data so old candles don't linger.
+    // prevLenRef must be 0 so the next real data load is treated as a
+    // fresh first-load, causing autoScale + scrollToRealTime to fire.
+    if (bars.length === 0) {
+      prevLenRef.current = 0;
+      try {
+        candleRef.current?.setData([]);
+        ema9Ref.current?.setData([]);
+        ema20Ref.current?.setData([]);
+        ema200Ref.current?.setData([]);
+        vwapRef.current?.setData([]);
+        macdHistRef.current?.setData([]);
+        macdLineRef.current?.setData([]);
+        signalRef.current?.setData([]);
+      } catch {
+        // series may not be initialised on very first mount
+      }
+      return;
+    }
+
     if (
-      bars.length === 0 ||
       !candleRef.current ||
       !ema9Ref.current ||
       !ema20Ref.current ||
@@ -354,6 +374,12 @@ export function ChartPanel({ paneIndex, onChartReady, onChartDestroy }: ChartPan
       !visibleRange || lastTime < visibleRange.from || firstTime > visibleRange.to;
 
     if (isFirstLoad || isOutOfRange) {
+      // Re-enable Y-axis autoscale before scrolling. This is critical after a
+      // symbol change: if the previous symbol's price range was locked by a
+      // stale setCrosshairPosition call (e.g. ETH at 2 400 when pane switches
+      // to BTC at 71 000), re-enabling autoScale here ensures the chart
+      // immediately shows the new symbol's data range.
+      chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
       // scrollToRealTime() pins the view to the rightmost bar at the current
       // barSpacing — no squeeze, candles stay a consistent readable size.
       timeScale?.scrollToRealTime();

@@ -90,24 +90,44 @@ export function MultiChartArea() {
               // Cursor left the source chart — hide crosshair on followers
               other.clearCrosshairPosition();
             } else {
+              const followerStore = paneStores[i as 0 | 1 | 2 | 3].getState();
+              const followerLatest = followerStore.latestPrice;
+
+              // Guard: skip if the follower hasn't loaded data yet. Calling
+              // setCrosshairPosition on an empty/uninitialized chart can lock
+              // its Y-axis to a garbage default range, hiding candles after
+              // data arrives.
+              if (followerLatest === null) continue;
+
               // Map the source cursor's Y pixel coordinate to the equivalent
               // price on the follower chart's price scale, so the horizontal
               // crosshair line lands at the same relative height on both charts.
-              // coordinateToPrice returns null when the cursor is outside the
-              // price pane (e.g. hovering the MACD sub-pane) — in that case fall
-              // back to the bar's close price at this timestamp.
               let price: number | null = otherSeries.coordinateToPrice(param.point.y);
 
-              if (price === null) {
-                const timeSecs = param.time as number;
-                const otherBars = paneStores[i as 0 | 1 | 2 | 3].getState().bars;
-                const bar = otherBars.find((b) => Math.floor(b.timestamp / 1000) === timeSecs);
-                price = bar?.close ?? paneStores[i as 0 | 1 | 2 | 3].getState().latestPrice;
+              // Sanity-check: if coordinateToPrice returns a price more than
+              // 50% away from the follower's actual latest price, the chart's
+              // coordinate system is stale (e.g. pane was just switched from
+              // ETH at ~2 400 to BTC at ~71 000 — the scale hasn't updated
+              // yet). Discard the stale value to break the feedback loop that
+              // would otherwise keep the chart locked at the old symbol's range.
+              if (
+                price !== null &&
+                (price < followerLatest * 0.5 || price > followerLatest * 2)
+              ) {
+                price = null;
               }
 
-              if (price !== null && price !== undefined) {
-                other.setCrosshairPosition(price, param.time, otherSeries);
+              // Fallback: use the bar's close price at this timestamp when
+              // coordinateToPrice is null (cursor in MACD sub-pane) or stale.
+              if (price === null) {
+                const timeSecs = param.time as number;
+                const bar = followerStore.bars.find(
+                  (b) => Math.floor(b.timestamp / 1000) === timeSecs
+                );
+                price = bar?.close ?? followerLatest;
               }
+
+              other.setCrosshairPosition(price, param.time, otherSeries);
             }
           } catch {
             // Ignore — follower chart may not have data for this time yet
