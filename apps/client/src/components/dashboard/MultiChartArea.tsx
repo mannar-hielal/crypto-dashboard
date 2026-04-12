@@ -6,8 +6,15 @@
  * Clicking a pane makes it the active pane (purple border + SymbolBar focus).
  *
  * Cross-pane sync:
- *   crosshair — when the crosshair moves in any pane, its time position is
- *               mirrored onto all other panes (vertical line only).
+ *   crosshair — when the crosshair moves in any pane, both axes are mirrored
+ *               onto all other panes.
+ *               X (vertical line): param.time is forwarded directly.
+ *               Y (horizontal line): otherSeries.coordinateToPrice(param.point.y)
+ *               maps the source cursor's Y pixel to the equivalent price on the
+ *               follower chart's price scale, so the horizontal line lands at
+ *               the same relative height on both charts regardless of the
+ *               symbols' different price scales. Falls back to bar.close when
+ *               the cursor is in the MACD sub-pane (coordinateToPrice → null).
  *               Uses `param.sourceEvent` to distinguish real mouse events from
  *               programmatic setCrosshairPosition echoes (v5 API guarantee:
  *               sourceEvent is undefined on programmatic calls), eliminating
@@ -83,13 +90,21 @@ export function MultiChartArea() {
               // Cursor left the source chart — hide crosshair on followers
               other.clearCrosshairPosition();
             } else {
-              // Look up the follower's own close price at this timestamp so
-              // the horizontal crosshair line lands on a meaningful level.
-              // Fallback to latestPrice when the follower has no bar yet.
-              const timeSecs = param.time as number;
-              const otherBars = paneStores[i as 0 | 1 | 2 | 3].getState().bars;
-              const bar = otherBars.find((b) => Math.floor(b.timestamp / 1000) === timeSecs);
-              const price = bar?.close ?? paneStores[i as 0 | 1 | 2 | 3].getState().latestPrice;
+              // Map the source cursor's Y pixel coordinate to the equivalent
+              // price on the follower chart's price scale, so the horizontal
+              // crosshair line lands at the same relative height on both charts.
+              // coordinateToPrice returns null when the cursor is outside the
+              // price pane (e.g. hovering the MACD sub-pane) — in that case fall
+              // back to the bar's close price at this timestamp.
+              let price: number | null = otherSeries.coordinateToPrice(param.point.y);
+
+              if (price === null) {
+                const timeSecs = param.time as number;
+                const otherBars = paneStores[i as 0 | 1 | 2 | 3].getState().bars;
+                const bar = otherBars.find((b) => Math.floor(b.timestamp / 1000) === timeSecs);
+                price = bar?.close ?? paneStores[i as 0 | 1 | 2 | 3].getState().latestPrice;
+              }
+
               if (price !== null && price !== undefined) {
                 other.setCrosshairPosition(price, param.time, otherSeries);
               }
