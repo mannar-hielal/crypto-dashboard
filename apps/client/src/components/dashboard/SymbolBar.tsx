@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
 import NumberFlow from '@number-flow/react';
+import { useStore } from 'zustand';
+import { useShallow } from 'zustand/shallow';
 import {
   Star,
   ChevronDown,
@@ -11,40 +13,12 @@ import {
   PanelRightClose,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useMarketStore } from '@/store/marketStore';
+import { useLayoutStore } from '@/store/layoutStore';
+import { paneStores } from '@/store/paneStore';
+import { SYMBOLS, INTERVALS, INTERVAL_LABELS } from '@/lib/markets';
 import { bg, color, fontSize } from '@/lib/tokens';
 import { CryptoIcon } from '@/components/ui/CryptoIcon';
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const INTERVALS = ['1m', '5m', '15m', '1h', '4h', '1d'] as const;
-
-const INTERVAL_LABELS: Record<(typeof INTERVALS)[number], string> = {
-  '1m': '1 Minute',
-  '5m': '5 Minutes',
-  '15m': '15 Minutes',
-  '1h': '1 Hour',
-  '4h': '4 Hours',
-  '1d': '1 Day',
-};
-
-interface SymbolEntry {
-  symbol: string;
-  base: string;
-  label: string;
-}
-
-const SYMBOLS: SymbolEntry[] = [
-  { symbol: 'BTCUSDT', base: 'BTC', label: 'Bitcoin' },
-  { symbol: 'ETHUSDT', base: 'ETH', label: 'Ethereum' },
-  { symbol: 'SOLUSDT', base: 'SOL', label: 'Solana' },
-  { symbol: 'BNBUSDT', base: 'BNB', label: 'BNB' },
-  { symbol: 'XRPUSDT', base: 'XRP', label: 'XRP' },
-  { symbol: 'DOGEUSDT', base: 'DOGE', label: 'Dogecoin' },
-  { symbol: 'ADAUSDT', base: 'ADA', label: 'Cardano' },
-  { symbol: 'AVAXUSDT', base: 'AVAX', label: 'Avalanche' },
-  { symbol: 'LINKUSDT', base: 'LINK', label: 'Chainlink' },
-];
+import { ChartLayoutPicker } from '@/components/dashboard/ChartLayoutPicker';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -68,7 +42,6 @@ function StatItem({
 }) {
   const statColor =
     positive === true ? color.green : positive === false ? color.red : 'rgba(255,255,255,0.6)';
-
   return (
     <div className="flex flex-col gap-px">
       <span
@@ -90,29 +63,60 @@ function StatItem({
 // ─── SymbolBar ────────────────────────────────────────────────────────────────
 
 interface SymbolBarProps {
-  /** Whether the right-side TradingPanel is currently open */
   tradingPanelOpen: boolean;
-  /** Called when the user clicks the panel toggle button */
   onToggleTrading: () => void;
 }
 
-/**
- * SymbolBar — Trading sub-header (row 2)
- *
- * Contains all trading-specific controls:
- *   Left  : ⭐ · Symbol picker dropdown · Price · 24h change%
- *   Center: 24h stats (change, high, low, volume)
- *   Right : Timeframe buttons · Panel toggle · Connection status
- */
 export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps) {
-  const symbol = useMarketStore((s) => s.symbol);
-  const interval = useMarketStore((s) => s.interval);
-  const changeInterval = useMarketStore((s) => s.setInterval);
-  const changeSymbol = useMarketStore((s) => s.setSymbol);
-  const latestPrice = useMarketStore((s) => s.latestPrice);
-  const priceChange = useMarketStore((s) => s.priceChange);
-  const bars = useMarketStore((s) => s.bars);
-  const isConnected = useMarketStore((s) => s.isConnected);
+  // ── Active pane config from layoutStore ──────────────────────────────────
+  const activePane = useLayoutStore((s) => s.activePane);
+  const paneConfig = useLayoutStore((s) => s.panes[s.activePane]);
+  const setPaneSymbol = useLayoutStore((s) => s.setPaneSymbol);
+  const setPaneInterval = useLayoutStore((s) => s.setPaneInterval);
+
+  const { symbol, interval } = paneConfig;
+
+  // ── Market data — subscribe to all 4 pane stores, pick the active one ────
+  // (4 unconditional hook calls — hooks rule compliant)
+  const d0 = useStore(
+    paneStores[0],
+    useShallow((s) => ({
+      latestPrice: s.latestPrice,
+      priceChange: s.priceChange,
+      bars: s.bars,
+      isConnected: s.isConnected,
+    }))
+  );
+  const d1 = useStore(
+    paneStores[1],
+    useShallow((s) => ({
+      latestPrice: s.latestPrice,
+      priceChange: s.priceChange,
+      bars: s.bars,
+      isConnected: s.isConnected,
+    }))
+  );
+  const d2 = useStore(
+    paneStores[2],
+    useShallow((s) => ({
+      latestPrice: s.latestPrice,
+      priceChange: s.priceChange,
+      bars: s.bars,
+      isConnected: s.isConnected,
+    }))
+  );
+  const d3 = useStore(
+    paneStores[3],
+    useShallow((s) => ({
+      latestPrice: s.latestPrice,
+      priceChange: s.priceChange,
+      bars: s.bars,
+      isConnected: s.isConnected,
+    }))
+  );
+
+  const allData = [d0, d1, d2, d3];
+  const { latestPrice, priceChange, bars, isConnected } = allData[activePane];
 
   const [symbolOpen, setSymbolOpen] = useState(false);
   const [symbolSearch, setSymbolSearch] = useState('');
@@ -125,7 +129,7 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
       : null;
   const isPositive = (priceChange ?? 0) >= 0;
 
-  // ── Stats from loaded bars — single O(n) pass, memoized against bars reference ──
+  // ── Stats from loaded bars — single O(n) pass, memoized ──────────────────
   const { periodHigh, periodLow, periodVol } = useMemo(() => {
     if (bars.length === 0) return { periodHigh: null, periodLow: null, periodVol: null };
     let high = -Infinity;
@@ -147,14 +151,14 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
   );
 
   function handleSymbolSelect(sym: string) {
-    if (sym !== symbol) changeSymbol(sym);
+    if (sym !== symbol) setPaneSymbol(activePane, sym);
     setSymbolOpen(false);
     setSymbolSearch('');
   }
 
   return (
     <div
-      className="flex h-11 w-full shrink-0 items-center gap-3 border-b border-white/[0.06] px-3"
+      className="flex h-11 w-full shrink-0 items-center gap-3 border-b border-white/6 px-3"
       style={{ background: bg.panel }}
     >
       {/* ── Star ──────────────────────────────────────────────────────────── */}
@@ -194,19 +198,16 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
         <AnimatePresence>
           {symbolOpen && (
             <>
-              {/* Backdrop */}
               <div className="fixed inset-0 z-40" onClick={() => setSymbolOpen(false)} />
-
               <motion.div
                 initial={{ opacity: 0, y: -6, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -6, scale: 0.97 }}
                 transition={{ duration: 0.15 }}
-                className="absolute left-0 top-full z-50 mt-1.5 w-52 overflow-hidden rounded-xl border border-white/[0.08] shadow-2xl"
+                className="absolute left-0 top-full z-50 mt-1.5 w-52 overflow-hidden rounded-xl border border-white/8 shadow-2xl"
                 style={{ background: bg.panel }}
               >
-                {/* Search */}
-                <div className="flex items-center gap-2 border-b border-white/[0.06] px-3 py-2">
+                <div className="flex items-center gap-2 border-b border-white/6 px-3 py-2">
                   <Search className="h-3 w-3 shrink-0" style={{ color: color.muted }} />
                   <input
                     autoFocus
@@ -217,8 +218,6 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
                     style={{ caretColor: color.purple }}
                   />
                 </div>
-
-                {/* Symbol list */}
                 <div className="max-h-64 overflow-y-auto py-1">
                   {filteredSymbols.length === 0 ? (
                     <p
@@ -272,7 +271,7 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
       </div>
 
       {/* Divider */}
-      <span className="h-4 w-px shrink-0 bg-white/[0.08]" />
+      <span className="h-4 w-px shrink-0 bg-white/8" />
 
       {/* ── Live price + change% ──────────────────────────────────────────── */}
       <AnimatePresence mode="wait">
@@ -317,7 +316,7 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
       </AnimatePresence>
 
       {/* Divider */}
-      <span className="h-4 w-px shrink-0 bg-white/[0.08]" />
+      <span className="h-4 w-px shrink-0 bg-white/8" />
 
       {/* ── Stats ────────────────────────────────────────────────────────── */}
       <div className="hidden items-center gap-5 overflow-hidden lg:flex">
@@ -355,12 +354,18 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
 
       <div className="flex-1" />
 
+      {/* ── Layout picker ────────────────────────────────────────────────── */}
+      <ChartLayoutPicker />
+
+      {/* Divider */}
+      <span className="h-4 w-px shrink-0 bg-white/8" />
+
       {/* ── Timeframe buttons ─────────────────────────────────────────────── */}
       <div className="flex shrink-0 items-center gap-0.5">
         {INTERVALS.map((tf) => (
           <motion.button
             key={tf}
-            onClick={() => changeInterval(tf)}
+            onClick={() => setPaneInterval(activePane, tf)}
             title={INTERVAL_LABELS[tf]}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -386,7 +391,7 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
       </div>
 
       {/* Divider */}
-      <span className="h-4 w-px shrink-0 bg-white/[0.08]" />
+      <span className="h-4 w-px shrink-0 bg-white/8" />
 
       {/* ── Trade panel toggle ────────────────────────────────────────────── */}
       <motion.button
@@ -413,7 +418,7 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
       </motion.button>
 
       {/* Divider */}
-      <span className="h-4 w-px shrink-0 bg-white/[0.08]" />
+      <span className="h-4 w-px shrink-0 bg-white/8" />
 
       {/* ── Connection status ─────────────────────────────────────────────── */}
       <div className="flex shrink-0 items-center gap-1.5">

@@ -80,7 +80,7 @@ export function LoginPage() {
       >
         {/* Card */}
         <div
-          className="rounded-2xl border border-white/[0.08] p-8 shadow-2xl"
+          className="rounded-2xl border border-white/8 p-8 shadow-2xl"
           style={{ background: bg.panel }}
         >
           {/* Brand mark */}
@@ -153,7 +153,7 @@ export function LoginPage() {
                           placeholder="you@example.com"
                           autoComplete="email"
                           aria-invalid={!!form.formState.errors.email}
-                          className="border-white/[0.08] text-white focus-visible:ring-0 focus-visible:border-brand-purple-dark/50"
+                          className="border-white/8 text-white focus-visible:ring-0 focus-visible:border-brand-purple-dark/50"
                           style={{ background: bg.surface }}
                           {...field}
                         />
@@ -191,7 +191,7 @@ export function LoginPage() {
                           placeholder="••••••••"
                           autoComplete="current-password"
                           aria-invalid={!!form.formState.errors.password}
-                          className="border-white/[0.08] text-white focus-visible:ring-0 focus-visible:border-brand-purple-dark/50"
+                          className="border-white/8 text-white focus-visible:ring-0 focus-visible:border-brand-purple-dark/50"
                           style={{ background: bg.surface }}
                           {...field}
                         />

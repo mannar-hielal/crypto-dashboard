@@ -10,7 +10,7 @@
  * All data lands in marketStore — components just read from the store.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react'; // useRef kept for wsRef + reconnectTimerRef
 import { marketApi, type WsMessage } from '@crypto-dashboard/sdk';
 import { useMarketStore } from '@/store/marketStore';
 
@@ -28,19 +28,20 @@ export function usePriceFeed() {
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Tracks whether the hook is still mounted — prevents state updates after unmount
-  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    isMountedRef.current = true;
+    // Per-run cancellation flag — captured by closure, NOT a shared ref.
+    // isMountedRef.current was set to `true` at the START of each effect run,
+    // so when symbol/interval changed the cleanup set it false but the new run
+    // immediately set it back to true — letting the old REST .then() fire and
+    // overwrite the new symbol's data. A closure variable avoids this race.
+    let cancelled = false;
 
     // ── Step 1: fetch historical candles (fills chart before WS is ready) ──
     marketApi
       .getCandles(symbol, interval, 500)
       .then((res) => {
-        if (isMountedRef.current) {
-          setSnapshot(res.candles, null);
-        }
+        if (!cancelled) setSnapshot(res.candles, null);
       })
       .catch(() => {
         // Non-fatal — the WS snapshot will fill the chart once connected
@@ -48,19 +49,18 @@ export function usePriceFeed() {
 
     // ── Step 2: open WebSocket ──────────────────────────────────────────────
     function connect() {
-      if (!isMountedRef.current) return;
+      if (cancelled) return;
 
       const url = marketApi.wsUrl(symbol, interval);
       const ws = new WebSocket(url);
       wsRef.current = ws;
 
       ws.onopen = () => {
-        if (!isMountedRef.current) return;
-        setConnected(true);
+        if (!cancelled) setConnected(true);
       };
 
       ws.onmessage = (event: MessageEvent<string>) => {
-        if (!isMountedRef.current) return;
+        if (cancelled) return;
 
         try {
           const msg = JSON.parse(event.data) as WsMessage;
@@ -81,7 +81,7 @@ export function usePriceFeed() {
       };
 
       ws.onclose = () => {
-        if (!isMountedRef.current) return;
+        if (cancelled) return;
         setConnected(false);
 
         // Auto-reconnect after a delay
@@ -96,9 +96,9 @@ export function usePriceFeed() {
 
     connect();
 
-    // ── Cleanup: close WS and cancel any pending reconnect on unmount ───────
+    // ── Cleanup: close WS and cancel any pending reconnect ─────────────────
     return () => {
-      isMountedRef.current = false;
+      cancelled = true;
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       if (wsRef.current) {
         wsRef.current.onclose = null; // prevent reconnect firing during intentional close

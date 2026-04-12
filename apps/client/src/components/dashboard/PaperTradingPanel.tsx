@@ -10,7 +10,8 @@ import {
   Pencil,
   Check,
 } from 'lucide-react';
-import { useMarketStore } from '@/store/marketStore';
+import { useStore } from 'zustand';
+import { paneStores } from '@/store/paneStore';
 import { usePaperStore } from '@/store/paperStore';
 import type { JournalEntry } from '@/store/paperStore';
 import type { PanelSize } from '@/pages/DashboardPage';
@@ -72,7 +73,7 @@ function JournalRow({
   const isEditing = editingId === entry.id;
 
   return (
-    <tr className="group border-b border-white/[0.03] transition-colors hover:bg-white/[0.02]">
+    <tr className="group border-b border-white/3 transition-colors hover:bg-white/2">
       {/* Time */}
       <td
         className="shrink-0 whitespace-nowrap px-3 py-1.5 font-mono tabular-nums"
@@ -94,7 +95,7 @@ function JournalRow({
                 if (e.key === 'Escape') onCancelEdit();
               }}
               onBlur={onSaveEdit}
-              className="flex-1 rounded border border-white/[0.08] px-2 py-0.5 text-white focus:outline-none focus:border-brand-purple-dark/50"
+              className="flex-1 rounded border border-white/8 px-2 py-0.5 text-white focus:outline-none focus:border-brand-purple-dark/50"
               style={{ fontSize: fontSize.xs11, background: bg.surface }}
             />
             <button
@@ -151,7 +152,9 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
   const [editText, setEditText] = useState('');
 
   // ── Store ─────────────────────────────────────────────────────────────────
-  const latestPrice = useMarketStore((s) => s.latestPrice);
+  // Read from paneStores[0] (primary trading pane) — marketStore is no longer
+  // wired because usePriceFeed was superseded by usePaneFeeds.
+  const latestPrice = useStore(paneStores[0], (s) => s.latestPrice);
   const balance = usePaperStore((s) => s.balance);
   const positions = usePaperStore((s) => s.positions);
   const history = usePaperStore((s) => s.history);
@@ -212,18 +215,18 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div
-      className="flex h-full w-full flex-col border-t border-white/[0.06]"
+      className="flex h-full w-full flex-col border-t border-white/6"
       style={{ background: bg.page }}
     >
       {/* ── Header bar ────────────────────────────────────────────────────── */}
       <div
-        className="flex h-9 shrink-0 items-center justify-between border-b border-white/[0.05] px-3"
+        className="flex h-9 shrink-0 items-center justify-between border-b border-white/5 px-3"
         style={{ background: bg.panel }}
       >
         {/* Left: quick stats */}
         <div className="flex items-center gap-3 overflow-hidden">
           <span className="text-xs font-bold text-white/80 tracking-wide">Positions</span>
-          <span className="h-3 w-px bg-white/[0.08]" />
+          <span className="h-3 w-px bg-white/8" />
           <span className="tabular-nums" style={{ fontSize: fontSize.xs11, color: color.muted }}>
             <span className="mr-1" style={{ color: `${color.muted}99` }}>
               Balance
@@ -236,7 +239,7 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
               })}
             </span>
           </span>
-          <span className="h-3 w-px bg-white/[0.08]" />
+          <span className="h-3 w-px bg-white/8" />
           <span
             className="font-semibold tabular-nums"
             style={{ fontSize: fontSize.xs11, color: unrealizedPnl >= 0 ? color.green : color.red }}
@@ -338,7 +341,7 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
           >
             {/* ── Tab bar ─────────────────────────────────────────────────── */}
             <div
-              className="flex items-center border-b border-white/[0.06]"
+              className="flex items-center border-b border-white/6"
               style={{ background: bg.panel }}
             >
               {(['positions', 'history', 'journal'] as const).map((tab) => (
@@ -366,7 +369,7 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                   )}
                   {tab === 'history' && history.length > 0 && (
                     <span
-                      className="rounded-full bg-white/[0.08] px-1.5 py-px font-semibold"
+                      className="rounded-full bg-white/8 px-1.5 py-px font-semibold"
                       style={{ fontSize: fontSize.xxs, color: color.muted }}
                     >
                       {history.length}
@@ -374,7 +377,7 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                   )}
                   {tab === 'journal' && journal.length > 0 && (
                     <span
-                      className="rounded-full bg-white/[0.08] px-1.5 py-px font-semibold"
+                      className="rounded-full bg-white/8 px-1.5 py-px font-semibold"
                       style={{ fontSize: fontSize.xxs, color: color.muted }}
                     >
                       {journal.length}
@@ -411,7 +414,7 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                         <table className="w-full text-xs">
                           <thead>
                             <tr
-                              className="border-b border-white/[0.04]"
+                              className="border-b border-white/4"
                               style={{
                                 background: bg.panel,
                                 fontSize: fontSize.xs10,
@@ -458,7 +461,7 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                                     animate="visible"
                                     exit="exit"
                                     layout
-                                    className="border-b border-white/[0.03] transition-colors hover:bg-white/[0.02]"
+                                    className="border-b border-white/3 transition-colors hover:bg-white/2"
                                   >
                                     <td className="px-3 py-1.5 font-bold text-white">
                                       {pos.symbol}
@@ -557,7 +560,7 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                         <table className="w-full text-xs">
                           <thead>
                             <tr
-                              className="border-b border-white/[0.04]"
+                              className="border-b border-white/4"
                               style={{
                                 background: bg.panel,
                                 fontSize: fontSize.xs10,
@@ -586,7 +589,7 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                                     initial="hidden"
                                     animate="visible"
                                     exit="exit"
-                                    className="border-b border-white/[0.03] transition-colors hover:bg-white/[0.02]"
+                                    className="border-b border-white/3 transition-colors hover:bg-white/2"
                                   >
                                     <td className="px-3 py-1.5 font-bold text-white">
                                       {trade.symbol}
@@ -636,7 +639,7 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
                             transition={{ duration: 0.15 }}
-                            className="flex shrink-0 items-center gap-2 overflow-hidden border-b border-white/[0.06] px-3 py-2"
+                            className="flex shrink-0 items-center gap-2 overflow-hidden border-b border-white/6 px-3 py-2"
                             style={{ background: bg.panel }}
                           >
                             <input
@@ -651,7 +654,7 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                                 }
                               }}
                               placeholder="Type a journal note… (Enter to save)"
-                              className="flex-1 rounded border border-white/[0.08] px-2 py-1 text-white focus:outline-none focus:border-brand-purple-dark/50"
+                              className="flex-1 rounded border border-white/8 px-2 py-1 text-white focus:outline-none focus:border-brand-purple-dark/50"
                               style={{ fontSize: fontSize.xs11, background: bg.surface }}
                             />
                             <button
@@ -699,7 +702,7 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                           <table className="w-full">
                             <thead>
                               <tr
-                                className="border-b border-white/[0.04]"
+                                className="border-b border-white/4"
                                 style={{
                                   background: bg.panel,
                                   fontSize: fontSize.xs10,

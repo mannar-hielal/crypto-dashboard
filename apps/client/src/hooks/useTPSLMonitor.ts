@@ -1,9 +1,9 @@
 /**
  * useTPSLMonitor
  *
- * Watches `latestPrice` from marketStore every time it updates and
- * auto-closes any open paper-trading position whose Take-Profit or
- * Stop-Loss level has been breached.
+ * Watches `latestPrice` from paneStores[0] (primary trading pane) every time
+ * it updates and auto-closes any open paper-trading position whose
+ * Take-Profit or Stop-Loss level has been breached.
  *
  * Rules:
  *   Long  — TP hit when price >= takeProfit
@@ -12,11 +12,13 @@
  *           SL hit when price >= stopLoss
  *
  * A journal entry is automatically added describing the auto-close reason.
- * Must be mounted once at the app/dashboard level alongside usePriceFeed.
+ * Must be mounted once at the app/dashboard level alongside usePaneFeeds.
  */
 
 import { useEffect, useRef } from 'react';
-import { useMarketStore } from '@/store/marketStore';
+import { useStore } from 'zustand';
+import { useLayoutStore } from '@/store/layoutStore';
+import { paneStores } from '@/store/paneStore';
 import { usePaperStore } from '@/store/paperStore';
 
 // ─── Pure breach-check — exported for unit testing ───────────────────────────
@@ -43,8 +45,9 @@ export function checkTPSL(
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
 export function useTPSLMonitor() {
-  const latestPrice = useMarketStore((s) => s.latestPrice);
-  const symbol = useMarketStore((s) => s.symbol);
+  // Monitor pane 0 (primary trading pane) — scoped to active symbol only
+  const latestPrice = useStore(paneStores[0], (s) => s.latestPrice);
+  const symbol = useLayoutStore((s) => s.panes[0].symbol);
 
   // Use refs so the effect closure always reads the latest store state
   // without needing to re-subscribe and re-attach the effect.

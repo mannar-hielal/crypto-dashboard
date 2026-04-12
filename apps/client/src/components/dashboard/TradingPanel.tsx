@@ -2,7 +2,9 @@ import { useState } from 'react';
 import NumberFlow from '@number-flow/react';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { X } from 'lucide-react';
-import { useMarketStore } from '@/store/marketStore';
+import { useStore } from 'zustand';
+import { useLayoutStore } from '@/store/layoutStore';
+import { paneStores } from '@/store/paneStore';
 import { usePaperStore } from '@/store/paperStore';
 import { bg, color, fontSize } from '@/lib/tokens';
 
@@ -41,8 +43,15 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
   const [formError, setFormError] = useState<string | null>(null);
   const executeAnim = useAnimation();
 
-  const symbol = useMarketStore((s) => s.symbol);
-  const latestPrice = useMarketStore((s) => s.latestPrice);
+  const activePane = useLayoutStore((s) => s.activePane);
+  const symbol = useLayoutStore((s) => s.panes[s.activePane].symbol);
+
+  // Subscribe to all 4 pane stores for latestPrice, pick the active one
+  const lp0 = useStore(paneStores[0], (s) => s.latestPrice);
+  const lp1 = useStore(paneStores[1], (s) => s.latestPrice);
+  const lp2 = useStore(paneStores[2], (s) => s.latestPrice);
+  const lp3 = useStore(paneStores[3], (s) => s.latestPrice);
+  const latestPrice = [lp0, lp1, lp2, lp3][activePane];
 
   const balance = usePaperStore((s) => s.balance);
   const positions = usePaperStore((s) => s.positions);
@@ -165,12 +174,12 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
 
   return (
     <aside
-      className="flex w-64 shrink-0 flex-col overflow-y-auto border-l border-white/[0.06]"
+      className="flex w-64 shrink-0 flex-col overflow-y-auto border-l border-white/6"
       style={{ background: bg.panel }}
     >
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div
-        className="flex h-9 shrink-0 items-center justify-between border-b border-white/[0.05] px-3"
+        className="flex h-9 shrink-0 items-center justify-between border-b border-white/5 px-3"
         style={{ background: bg.page }}
       >
         <span className="text-xs font-bold tracking-wide text-white/80">Paper Trading</span>
@@ -208,7 +217,7 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
 
         {/* Equity row */}
         <div
-          className="flex items-center justify-between rounded-md border border-white/[0.06] px-2.5 py-1.5"
+          className="flex items-center justify-between rounded-md border border-white/6 px-2.5 py-1.5"
           style={{ background: bg.surface }}
         >
           <span
@@ -242,11 +251,11 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
         </div>
 
         {/* Divider */}
-        <div className="h-px w-full bg-white/[0.05]" />
+        <div className="h-px w-full bg-white/5" />
 
         {/* Buy / Sell toggle — shared layoutId pill slides between buttons */}
         <div
-          className="flex rounded-md p-0.5 border border-white/[0.06]"
+          className="flex rounded-md p-0.5 border border-white/6"
           style={{ background: bg.surface }}
         >
           <motion.button
@@ -309,7 +318,7 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
                 setFormError(null);
               }}
               placeholder="Amount"
-              className="w-full rounded-md border border-white/[0.08] px-2.5 py-1.5 pr-14 text-xs text-white transition-colors focus:outline-none focus:border-brand-purple-dark/50"
+              className="w-full rounded-md border border-white/8 px-2.5 py-1.5 pr-14 text-xs text-white transition-colors focus:outline-none focus:border-brand-purple-dark/50"
               style={{ background: bg.surface, fontSize: fontSize.xs }}
             />
             <span
@@ -343,7 +352,7 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
                 onClick={() => handlePreset(pct)}
                 whileHover={{ scale: 1.04 }}
                 whileTap={{ scale: 0.96 }}
-                className="flex-1 rounded border border-white/[0.08] py-0.5 font-semibold transition-colors hover:border-brand-purple-dark/40 hover:text-white"
+                className="flex-1 rounded border border-white/8 py-0.5 font-semibold transition-colors hover:border-brand-purple-dark/40 hover:text-white"
                 style={{ fontSize: fontSize.xs10, color: color.muted }}
               >
                 {pct}%
@@ -372,7 +381,7 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
                 setFormError(null);
               }}
               placeholder="Take Profit"
-              className="w-full rounded-md border border-white/[0.08] px-2.5 py-1.5 pr-12 text-xs text-white transition-colors focus:outline-none focus:border-brand-green/50"
+              className="w-full rounded-md border border-white/8 px-2.5 py-1.5 pr-12 text-xs text-white transition-colors focus:outline-none focus:border-brand-green/50"
               style={{ background: bg.surface }}
             />
             <span
@@ -394,7 +403,7 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
                 setFormError(null);
               }}
               placeholder="Stop Loss"
-              className="w-full rounded-md border border-white/[0.08] px-2.5 py-1.5 pr-12 text-xs text-white transition-colors focus:outline-none focus:border-brand-red/50"
+              className="w-full rounded-md border border-white/8 px-2.5 py-1.5 pr-12 text-xs text-white transition-colors focus:outline-none focus:border-brand-red/50"
               style={{ background: bg.surface }}
             />
             <span
@@ -442,7 +451,7 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
         {/* Mark price */}
         {latestPrice !== null && (
           <div
-            className="flex items-center justify-between rounded-md border border-white/[0.06] px-2.5 py-1.5"
+            className="flex items-center justify-between rounded-md border border-white/6 px-2.5 py-1.5"
             style={{ background: bg.surface }}
           >
             <span
