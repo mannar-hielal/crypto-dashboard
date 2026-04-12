@@ -59,7 +59,7 @@ export function PaneHeader({ paneIndex, isActive, onActivate }: PaneHeaderProps)
 
   return (
     <div
-      className="relative flex h-7 shrink-0 cursor-pointer items-center gap-2 border-b border-white/[0.05] px-2"
+      className="relative flex h-7 shrink-0 cursor-pointer items-center gap-2 border-b border-white/5 px-2"
       style={{ background: isActive ? `${color.purpleDark}15` : bg.page }}
       onClick={onActivate}
     >
@@ -82,7 +82,7 @@ export function PaneHeader({ paneIndex, isActive, onActivate }: PaneHeaderProps)
             setSymbolOpen((p) => !p);
             setSymbolSearch('');
           }}
-          className="flex items-center gap-1 rounded px-1 py-0.5 transition-colors hover:bg-white/[0.06]"
+          className="flex items-center gap-1 rounded px-1 py-0.5 transition-colors hover:bg-white/6"
         >
           <CryptoIcon symbol={baseAsset} size={13} />
           <span className="font-bold text-white" style={{ fontSize: fontSize.xs10 }}>
@@ -107,12 +107,12 @@ export function PaneHeader({ paneIndex, isActive, onActivate }: PaneHeaderProps)
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -4, scale: 0.97 }}
                 transition={{ duration: 0.13 }}
-                className="absolute left-0 top-full z-50 mt-1 w-44 overflow-hidden rounded-xl border border-white/[0.08] shadow-2xl"
+                className="absolute left-0 top-full z-50 mt-1 w-44 overflow-hidden rounded-xl border border-white/8 shadow-2xl"
                 style={{ background: bg.panel }}
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Search */}
-                <div className="flex items-center gap-1.5 border-b border-white/[0.06] px-2.5 py-1.5">
+                <div className="flex items-center gap-1.5 border-b border-white/6 px-2.5 py-1.5">
                   <Search className="h-2.5 w-2.5 shrink-0" style={{ color: color.muted }} />
                   <input
                     autoFocus
@@ -131,7 +131,7 @@ export function PaneHeader({ paneIndex, isActive, onActivate }: PaneHeaderProps)
                       <button
                         key={entry.symbol}
                         onClick={() => handleSymbolSelect(entry.symbol)}
-                        className="flex w-full items-center gap-2 px-2.5 py-1.5 transition-colors hover:bg-white/[0.05]"
+                        className="flex w-full items-center gap-2 px-2.5 py-1.5 transition-colors hover:bg-white/5"
                       >
                         <CryptoIcon symbol={entry.base} size={16} />
                         <span
@@ -154,7 +154,7 @@ export function PaneHeader({ paneIndex, isActive, onActivate }: PaneHeaderProps)
       </div>
 
       {/* Divider */}
-      <span className="h-3 w-px shrink-0 bg-white/[0.07]" />
+      <span className="h-3 w-px shrink-0 bg-white/7" />
 
       {/* Interval quick-switch */}
       <div className="flex shrink-0 items-center gap-px" onClick={(e) => e.stopPropagation()}>

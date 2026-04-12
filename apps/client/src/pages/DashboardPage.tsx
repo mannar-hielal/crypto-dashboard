@@ -48,8 +48,8 @@ const PANEL_HEIGHTS: Record<PanelSize, number> = {
  *   │   DashboardFooter    (h-7)                          │
  *   └──────────────────────────────────────────────────────┘
  *
- * usePriceFeed is called here (once) so the WebSocket lifecycle
- * is tied to the page, not to individual child components.
+ * usePaneFeeds is called here (once) so all WebSocket lifecycles are tied
+ * to the page, not to individual child components.
  */
 export function DashboardPage() {
   usePaneFeeds();
@@ -140,7 +140,7 @@ export function DashboardPage() {
 
       {/* ── Dashboard footer ─────────────────────────────────────────────── */}
       <div
-        className="flex h-7 w-full shrink-0 items-center justify-between border-t border-white/[0.05] px-4"
+        className="flex h-7 w-full shrink-0 items-center justify-between border-t border-white/5 px-4"
         style={{ background: bg.footer }}
       >
         <span style={{ fontSize: fontSize.xs10, color: `${color.muted}80` }}>

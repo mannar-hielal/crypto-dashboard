@@ -7,7 +7,9 @@
  */
 
 import { motion } from 'framer-motion';
-import { useMarketStore } from '@/store/marketStore';
+import { useStore } from 'zustand';
+import { useLayoutStore } from '@/store/layoutStore';
+import { paneStores } from '@/store/paneStore';
 import { bg, color, fontSize } from '@/lib/tokens';
 import { CryptoIcon } from '@/components/ui/CryptoIcon';
 
@@ -75,9 +77,12 @@ function TickerItem({
 }
 
 export function TickerBar() {
-  const latestPrice = useMarketStore((s) => s.latestPrice);
-  const priceChange = useMarketStore((s) => s.priceChange);
-  const symbol = useMarketStore((s) => s.symbol);
+  // pane 0 is the primary trading pane — feeds the live ticker item.
+  // marketStore is no longer wired (usePriceFeed is superseded by usePaneFeeds);
+  // reading from paneStores[0] + layoutStore ensures the live price is populated.
+  const latestPrice = useStore(paneStores[0], (s) => s.latestPrice);
+  const priceChange = useStore(paneStores[0], (s) => s.priceChange);
+  const symbol = useLayoutStore((s) => s.panes[0].symbol);
 
   // Build live ticker for the currently active symbol
   const prevClose = latestPrice !== null && priceChange !== null ? latestPrice - priceChange : null;
@@ -108,11 +113,11 @@ export function TickerBar() {
 
   return (
     <div
-      className="flex h-8 shrink-0 items-center overflow-hidden border-t border-white/[0.06]"
+      className="flex h-8 shrink-0 items-center overflow-hidden border-t border-white/6"
       style={{ background: bg.page }}
     >
       {/* "Popular" label — fixed left anchor */}
-      <div className="flex h-full shrink-0 items-center gap-1.5 border-r border-white/[0.06] bg-bg-panel px-3">
+      <div className="flex h-full shrink-0 items-center gap-1.5 border-r border-white/6 bg-bg-panel px-3">
         <span
           className="h-1.5 w-1.5 rounded-full"
           style={{ background: color.purpleDark, boxShadow: `0 0 6px 2px ${color.purpleDark}60` }}

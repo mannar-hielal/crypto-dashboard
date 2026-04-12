@@ -158,7 +158,7 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
 
   return (
     <div
-      className="flex h-11 w-full shrink-0 items-center gap-3 border-b border-white/[0.06] px-3"
+      className="flex h-11 w-full shrink-0 items-center gap-3 border-b border-white/6 px-3"
       style={{ background: bg.panel }}
     >
       {/* ── Star ──────────────────────────────────────────────────────────── */}
@@ -204,10 +204,10 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -6, scale: 0.97 }}
                 transition={{ duration: 0.15 }}
-                className="absolute left-0 top-full z-50 mt-1.5 w-52 overflow-hidden rounded-xl border border-white/[0.08] shadow-2xl"
+                className="absolute left-0 top-full z-50 mt-1.5 w-52 overflow-hidden rounded-xl border border-white/8 shadow-2xl"
                 style={{ background: bg.panel }}
               >
-                <div className="flex items-center gap-2 border-b border-white/[0.06] px-3 py-2">
+                <div className="flex items-center gap-2 border-b border-white/6 px-3 py-2">
                   <Search className="h-3 w-3 shrink-0" style={{ color: color.muted }} />
                   <input
                     autoFocus
@@ -271,7 +271,7 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
       </div>
 
       {/* Divider */}
-      <span className="h-4 w-px shrink-0 bg-white/[0.08]" />
+      <span className="h-4 w-px shrink-0 bg-white/8" />
 
       {/* ── Live price + change% ──────────────────────────────────────────── */}
       <AnimatePresence mode="wait">
@@ -316,7 +316,7 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
       </AnimatePresence>
 
       {/* Divider */}
-      <span className="h-4 w-px shrink-0 bg-white/[0.08]" />
+      <span className="h-4 w-px shrink-0 bg-white/8" />
 
       {/* ── Stats ────────────────────────────────────────────────────────── */}
       <div className="hidden items-center gap-5 overflow-hidden lg:flex">
@@ -358,7 +358,7 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
       <ChartLayoutPicker />
 
       {/* Divider */}
-      <span className="h-4 w-px shrink-0 bg-white/[0.08]" />
+      <span className="h-4 w-px shrink-0 bg-white/8" />
 
       {/* ── Timeframe buttons ─────────────────────────────────────────────── */}
       <div className="flex shrink-0 items-center gap-0.5">
@@ -391,7 +391,7 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
       </div>
 
       {/* Divider */}
-      <span className="h-4 w-px shrink-0 bg-white/[0.08]" />
+      <span className="h-4 w-px shrink-0 bg-white/8" />
 
       {/* ── Trade panel toggle ────────────────────────────────────────────── */}
       <motion.button
@@ -418,7 +418,7 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
       </motion.button>
 
       {/* Divider */}
-      <span className="h-4 w-px shrink-0 bg-white/[0.08]" />
+      <span className="h-4 w-px shrink-0 bg-white/8" />
 
       {/* ── Connection status ─────────────────────────────────────────────── */}
       <div className="flex shrink-0 items-center gap-1.5">

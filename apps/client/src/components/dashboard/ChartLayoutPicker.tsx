@@ -97,11 +97,11 @@ export function ChartLayoutPicker() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -6, scale: 0.97 }}
               transition={{ duration: 0.14 }}
-              className="absolute left-0 top-full z-50 mt-1.5 w-56 overflow-hidden rounded-xl border border-white/[0.08] shadow-2xl"
+              className="absolute left-0 top-full z-50 mt-1.5 w-56 overflow-hidden rounded-xl border border-white/8 shadow-2xl"
               style={{ background: bg.panel }}
             >
               {/* ── Layout grid ───────────────────────────────────────────── */}
-              <div className="border-b border-white/[0.06] px-3 pb-3 pt-2.5">
+              <div className="border-b border-white/6 px-3 pb-3 pt-2.5">
                 <p
                   className="mb-2 font-semibold uppercase tracking-widest"
                   style={{ fontSize: fontSize.xs10, color: color.muted }}
@@ -161,7 +161,7 @@ export function ChartLayoutPicker() {
                     <button
                       key={key}
                       onClick={() => toggleSync(key)}
-                      className="flex w-full items-center justify-between rounded px-1.5 py-1 transition-colors hover:bg-white/[0.04]"
+                      className="flex w-full items-center justify-between rounded px-1.5 py-1 transition-colors hover:bg-white/4"
                     >
                       <span style={{ fontSize: fontSize.xs11, color: color.muted }}>
                         {SYNC_LABELS[key]}

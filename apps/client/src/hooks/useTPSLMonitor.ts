@@ -1,9 +1,9 @@
 /**
  * useTPSLMonitor
  *
- * Watches `latestPrice` from marketStore every time it updates and
- * auto-closes any open paper-trading position whose Take-Profit or
- * Stop-Loss level has been breached.
+ * Watches `latestPrice` from paneStores[0] (primary trading pane) every time
+ * it updates and auto-closes any open paper-trading position whose
+ * Take-Profit or Stop-Loss level has been breached.
  *
  * Rules:
  *   Long  — TP hit when price >= takeProfit
@@ -12,7 +12,7 @@
  *           SL hit when price >= stopLoss
  *
  * A journal entry is automatically added describing the auto-close reason.
- * Must be mounted once at the app/dashboard level alongside usePriceFeed.
+ * Must be mounted once at the app/dashboard level alongside usePaneFeeds.
  */
 
 import { useEffect, useRef } from 'react';
