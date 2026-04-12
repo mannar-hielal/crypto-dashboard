@@ -122,7 +122,7 @@
 ```
 
 - `PanelSize = 'hidden' | 'collapsed' | 'open'` — exported from `DashboardPage.tsx`, used by `PaperTradingPanel`
-- `TradingPanel` uses `key={symbol}` — React remounts on symbol change, resetting all local form state
+- `TradingPanel` uses `key={`${activePane}-${symbol}`}` — React remounts on active pane OR symbol change, resetting all local form state
 - `TradingPanel` open/close is `AnimatePresence` animated (`width: 0 → 256`)
 - `inert` attribute on PaperTradingPanel wrapper when `size === 'hidden'` (removes from tab order + a11y tree)
 - When panel is `'hidden'`, a floating purple pill button appears bottom-left of chart to re-open it
@@ -214,6 +214,74 @@ Tab badge counts: purple pill for Positions count, gray pill for Order History c
 
 ---
 
+### Multi-Chart Layout System ✅ (current implementation)
+
+**Layout IDs and pane counts:**
+
+| ID   | Grid       | Panes |
+| ---- | ---------- | ----- |
+| `1`  | 1×1        | 1     |
+| `2h` | 2 columns  | 2     |
+| `2v` | 2 rows     | 2     |
+| `3h` | 3 columns  | 3     |
+| `4`  | 2×2 grid   | 4     |
+
+**`layoutStore`** (persisted `cd-layout` v1):
+
+- `layout: LayoutId` — active layout ID
+- `activePane: number` — pane that receives SymbolBar controls + TradingPanel focus
+- `panes: PaneConfig[]` — 4 entries; defaults: `BTC/1m · ETH/1m · SOL/1m · BNB/1m`
+- `syncOptions: SyncOptions` — defaults: `crosshair: true, timeRange: true, symbol: false, interval: false`
+- `setLayout()` clamps `activePane` to `paneCount − 1` when switching to a smaller layout
+- `setPaneSymbol()` / `setPaneInterval()` propagate to all panes when the matching sync flag is on
+
+**`paneStores[0..3]`** — vanilla `createStore()` instances (NOT `create()`), one per pane slot:
+
+- Each holds `bars`, `indicators`, `latestPrice`, `priceChange`, `isConnected`
+- `reset()` wipes all data — called before connecting to a new symbol/interval
+- Read in React via `useStore(paneStores[i], selector)` — always called unconditionally (hook-count stable)
+
+**`usePaneFeeds`** — always mounts 4 `useSinglePaneFeed` calls (hook-count never changes):
+
+- Inactive panes (outside current layout) → WS closed, store reset immediately
+- Active panes → REST fetch 500 bars first, then WebSocket live feed
+- WebSocket auto-reconnects after `3 000 ms` on close; blocked when component unmounts
+- Re-runs when `symbol`, `interval`, or `isActive` changes
+
+**`ChartLayoutPicker`** (rendered inside `SymbolBar`, right side):
+
+- Trigger: 7×7 icon reflecting active layout; highlights purple + border when popover is open
+- Popover (w-56): "Layout" row with 5 SVG icons (paths match TradingView `chart-layout.html`) + "Sync across panes" section
+- Sync section: 4 animated pill toggles (spring 600/35) — Sync Symbol / Sync Interval / Sync Crosshair / Sync Time Range
+- Selecting a layout closes the popover; sync toggles keep popover open until backdrop click
+
+**`MultiChartArea`:**
+
+- CSS `grid` element — applies `LAYOUT_GRID_CLASS[layout]` (Tailwind `grid-cols-*`/`grid-rows-*`)
+- `PaneHeader` is only rendered when `paneCount > 1` (hidden in single-chart mode)
+- Click anywhere on a pane area → `setActivePane(i)`; active pane gets animated purple border + inner glow
+- `chartRefs[0..3]` — `IChartApi | null`, registered via `ChartPanel.onChartReady` callback
+- **Crosshair sync**: `subscribeCrosshairMove` → `timeToCoordinate(time)` → `setCrossHairXY(x, y)` on each follower
+- **Time range sync**: `subscribeVisibleTimeRangeChange` → `setVisibleRange(range)` on each follower
+- Guard refs (`isSyncingCrosshair`, `isSyncingTimeRange`) break circular event loops
+- Sync options + pane count read via refs so event handlers stay up-to-date without re-registration
+
+**`PaneHeader`** (h-7, rendered only in multi-pane mode):
+
+- Animated left stripe (`layoutId="active-pane-stripe"`, spring 500/35) marks active pane
+- Symbol picker: `CryptoIcon` (13 px) · base name · `/USDT` · `ChevronDown` → popover with search input + scrollable list
+- Interval quick-switch: all 6 `INTERVALS` as 9 px buttons; active interval highlighted purple
+- Right side: live price (green/red) + `±x.xx%` change badge; connection dot (5 px, green pulse when connected)
+- Clicking the header row itself activates the pane (calls `onActivate`)
+
+**`markets.ts`** — shared constants (used by SymbolBar, PaneHeader, layoutStore defaults):
+
+- `SYMBOLS` (9): BTC, ETH, SOL, BNB, XRP, DOGE, ADA, AVAX, LINK — all vs USDT
+- `INTERVALS` (6): `1m · 5m · 15m · 1h · 4h · 1d`
+- `INTERVAL_LABELS` record maps each interval to its display name
+
+---
+
 ### Right Panel — `TradingPanel` ✅ (current implementation — market orders only)
 
 - Header: "Paper Trading" label + ✕ close (hides panel, state preserved)
@@ -223,7 +291,7 @@ Tab badge counts: purple pill for Positions count, gray pill for Order History c
 - TP / SL optional price inputs (directional validation)
 - Submit: `↑ Buy SYMBOL · Market` / `↓ Sell SYMBOL · Market`
 - Mark price display at bottom
-- Resets on symbol change via `key={symbol}` in `DashboardPage`
+- Resets on symbol or active pane change via `key={`${activePane}-${symbol}`}` in `DashboardPage`
 
 ---
 
@@ -415,7 +483,7 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 
 ### State reset pattern
 
-- Use `key={prop}` on parent to reset child state on prop change (`TradingPanel` uses `key={symbol}`)
+- Use `key={prop}` on parent to reset child state on prop change (`TradingPanel` uses `key={`${activePane}-${symbol}`}`)
 - Never use during-render `setState`, never use `useEffect` + `setState` for reset
 
 ---
@@ -441,7 +509,7 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 | `generated/CDSDK/types/index.ts`                             | Shared types (User, Account, CandleBar, WsMessage, etc.)                              |
 | `generated/CDSDK/api/auth.ts`                                | Client-side auth API calls                                                            |
 | `generated/CDSDK/api/market.ts`                              | Client-side market API + WS URL                                                       |
-| `apps/client/src/lib/markets.ts`                             | Shared SYMBOLS + INTERVALS constants (imported by SymbolBar, PaneHeader, layoutStore) |
+| `apps/client/src/lib/markets.ts`                             | Shared `SYMBOLS` (9 coins), `INTERVALS` (6), `INTERVAL_LABELS`, `SymbolEntry` type — imported by SymbolBar, PaneHeader, layoutStore defaults |
 | `apps/client/src/store/layoutStore.ts`                       | Layout config — layout ID, activePane, per-pane symbol/interval, sync options          |
 | `apps/client/src/store/paneStore.ts`                         | 4 independent vanilla Zustand stores (bars/price/connection per pane)                  |
 | `apps/client/src/hooks/usePaneFeeds.ts`                      | Manages 4 WS+REST connections (one per active pane) — replaces `usePriceFeed`          |
@@ -550,4 +618,4 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 
 ---
 
-_Last updated: 2026-04-12 — **Multi-chart layout feature** (`7dfd54a`): split view with 1/2h/2v/3h/4 layouts, per-pane symbol+interval, cross-pane crosshair+time-range sync, layout picker in SymbolBar, `layoutStore`+`paneStores` architecture. Previously: **PR review issues resolved** (`260d0f8` · `a298230`): tests for `CryptoIcon`/`cryptoIcons.ts`, stable keys in TickerBar, `satisfies`+lookup cast, `noValidate` on RegisterPage. Client tests 75 (5 files), total 161. 1 open item: garbled commit on `7bc5bf6`._
+_Last updated: 2026-04-12 — **Multi-chart layout feature** (`7dfd54a`): split view with 1/2h/2v/3h/4 layouts, per-pane symbol+interval, cross-pane crosshair+time-range sync, layout picker in SymbolBar, `layoutStore`+`paneStores` architecture. **Design Agreements** section now contains full per-component detail: `layoutStore` defaults, `paneStore` shape, `usePaneFeeds` reconnect behaviour, `ChartLayoutPicker`, `MultiChartArea`, `PaneHeader`, `markets.ts`. `TradingPanel` key corrected to `key={`${activePane}-${symbol}`}` throughout. Previously: **PR review issues resolved** (`260d0f8` · `a298230`): tests for `CryptoIcon`/`cryptoIcons.ts`, stable keys in TickerBar, `satisfies`+lookup cast, `noValidate` on RegisterPage. Client tests 75 (5 files), total 161. 1 open item: garbled commit on `7bc5bf6`._
