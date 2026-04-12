@@ -739,9 +739,8 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                   )}
                 </div>
               )}
-            </div>
             </motion.div>
-              </AnimatePresence>
+            </AnimatePresence>
             </div>
           </motion.div>
         )}
