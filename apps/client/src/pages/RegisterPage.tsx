@@ -93,6 +93,7 @@ export function RegisterPage() {
                 initial="hidden"
                 animate="visible"
                 onSubmit={form.handleSubmit(onSubmit)}
+                noValidate
                 className="space-y-4"
               >
                 <AnimatePresence>

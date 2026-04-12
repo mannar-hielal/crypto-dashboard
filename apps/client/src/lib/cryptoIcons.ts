@@ -23,7 +23,7 @@ import linkUrl from 'cryptocurrency-icons/svg/color/link.svg?url';
 
 // ─── Symbol → URL map ────────────────────────────────────────────────────────
 
-export const CRYPTO_ICON_URLS: Record<string, string> = {
+export const CRYPTO_ICON_URLS = {
   BTC: btcUrl,
   ETH: ethUrl,
   SOL: solUrl,
@@ -33,4 +33,4 @@ export const CRYPTO_ICON_URLS: Record<string, string> = {
   ADA: adaUrl,
   AVAX: avaxUrl,
   LINK: linkUrl,
-} as const;
+} satisfies Record<string, string>;

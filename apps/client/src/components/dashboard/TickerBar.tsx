@@ -140,7 +140,11 @@ export function TickerBar() {
         {/* The scrolling content — CSS animation avoids framer-motion overhead */}
         <div className="ticker-scroll flex items-center">
           {doubled.map((item, i) => (
-            <TickerItem key={i} {...item} isLive={i === 0 || i === items.length} />
+            <TickerItem
+              key={`${item.symbol}-${i < items.length ? 'a' : 'b'}`}
+              {...item}
+              isLive={i === 0 || i === items.length}
+            />
           ))}
         </div>
       </div>
