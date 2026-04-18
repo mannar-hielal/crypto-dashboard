@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart2 } from 'lucide-react';
 import { usePaneFeeds } from '@/hooks/usePaneFeeds';
 import { useTPSLMonitor } from '@/hooks/useTPSLMonitor';
+import { usePendingOrderMonitor } from '@/hooks/usePendingOrderMonitor';
 import { useLayoutStore } from '@/store/layoutStore';
 import { TopBar } from '@/components/dashboard/TopBar';
 import { LeftToolbar } from '@/components/dashboard/LeftToolbar';
@@ -54,6 +55,7 @@ const PANEL_HEIGHTS: Record<PanelSize, number> = {
 export function DashboardPage() {
   usePaneFeeds();
   useTPSLMonitor();
+  usePendingOrderMonitor();
 
   // Active pane symbol drives the TradingPanel key (resets form on symbol change)
   const activePane = useLayoutStore((s) => s.activePane);
