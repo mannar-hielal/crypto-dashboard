@@ -24,7 +24,7 @@ const RECONNECT_DELAY_MS = 3_000;
 function useSinglePaneFeed(
   paneIndex: 0 | 1 | 2 | 3,
   symbol: string,
-  interval: string,
+  interval: Interval,
   isActive: boolean
 ) {
   const wsRef = useRef<WebSocket | null>(null);
@@ -64,7 +64,7 @@ function useSinglePaneFeed(
 
     // Step 1: historical REST fetch (fills chart before WS is ready)
     marketApi
-      .getCandles(symbol, interval, INTERVAL_FETCH_LIMIT[interval as Interval] ?? 1000)
+      .getCandles(symbol, interval, INTERVAL_FETCH_LIMIT[interval])
       .then((res) => {
         if (!cancelled) store.getState().setSnapshot(res.candles, null);
       })

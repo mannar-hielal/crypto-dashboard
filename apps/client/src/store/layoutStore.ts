@@ -12,7 +12,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { SYMBOLS, INTERVALS } from '@/lib/markets';
+import { SYMBOLS, INTERVALS, type Interval } from '@/lib/markets';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -20,7 +20,7 @@ export type LayoutId = '1' | '2h' | '2v' | '3h' | '4';
 
 export interface PaneConfig {
   symbol: string;
-  interval: string;
+  interval: Interval;
 }
 
 export interface SyncOptions {
@@ -73,7 +73,7 @@ interface LayoutState {
   setLayout: (layout: LayoutId) => void;
   setActivePane: (index: number) => void;
   setPaneSymbol: (paneIndex: number, symbol: string) => void;
-  setPaneInterval: (paneIndex: number, interval: string) => void;
+  setPaneInterval: (paneIndex: number, interval: Interval) => void;
   toggleSync: (key: keyof SyncOptions) => void;
 }
 
@@ -133,7 +133,7 @@ export const useLayoutStore = create<LayoutState>()(
         // is currently focused on, making it the most intuitive source of truth
         // (mirrors the behaviour of TradingView / Bookmap multi-chart sync).
         if (turningOn && key === 'symbol') {
-          const sourceSymbol = panes[activePane].symbol;
+          const sourceSymbol = (panes[activePane] ?? DEFAULT_PANES[0]).symbol;
           set({
             syncOptions: newSyncOptions,
             panes: panes.map((p) => ({ ...p, symbol: sourceSymbol })),
@@ -141,7 +141,7 @@ export const useLayoutStore = create<LayoutState>()(
           return;
         }
         if (turningOn && key === 'interval') {
-          const sourceInterval = panes[activePane].interval;
+          const sourceInterval = (panes[activePane] ?? DEFAULT_PANES[0]).interval;
           set({
             syncOptions: newSyncOptions,
             panes: panes.map((p) => ({ ...p, interval: sourceInterval })),
@@ -166,6 +166,21 @@ export const useLayoutStore = create<LayoutState>()(
         } as LayoutState;
         const count = LAYOUT_PANE_COUNT[merged.layout] ?? 1;
         if (merged.activePane >= count) merged.activePane = count - 1;
+        // Ensure panes always has exactly 4 entries — a corrupted / older
+        // localStorage payload could have fewer, causing out-of-bounds reads
+        // in toggleSync, MultiChartArea, and usePaneFeeds.
+        if (!Array.isArray(merged.panes) || merged.panes.length < 4) {
+          const existing = Array.isArray(merged.panes) ? merged.panes : [];
+          merged.panes = DEFAULT_PANES.map((def, i) => {
+            const saved = existing[i];
+            if (!saved) return def;
+            // Validate interval is a known value; fall back to default otherwise
+            const interval = INTERVALS.includes(saved.interval as Interval)
+              ? (saved.interval as Interval)
+              : def.interval;
+            return { symbol: saved.symbol ?? def.symbol, interval };
+          }) as [PaneConfig, PaneConfig, PaneConfig, PaneConfig];
+        }
         return merged;
       },
     }

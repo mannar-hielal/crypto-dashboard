@@ -26,7 +26,7 @@ interface ChartPanelProps {
    * Current interval — used to set the TradingView-matched initial bar
    * spacing on first load and after every symbol/interval change.
    */
-  interval: string;
+  interval: Interval;
   /**
    * Called once when the lightweight-charts instance is ready.
    * Receives both the chart API and the primary candlestick series so that
@@ -387,7 +387,7 @@ export function ChartPanel({ paneIndex, interval, onChartReady, onChartDestroy }
       // initial view shows ~160–200 readable candles regardless of timeframe,
       // then anchor the right edge to the most recent bar.
       timeScale?.applyOptions({
-        barSpacing: INTERVAL_BAR_SPACING[interval as Interval] ?? 6,
+        barSpacing: INTERVAL_BAR_SPACING[interval],
       });
       timeScale?.scrollToRealTime();
     }
