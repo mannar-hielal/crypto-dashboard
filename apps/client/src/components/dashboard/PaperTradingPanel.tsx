@@ -11,6 +11,8 @@ import {
   Pencil,
   Check,
   Clock,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/shallow';
@@ -53,6 +55,9 @@ const rowVariants = {
 interface PaperTradingPanelProps {
   size: PanelSize;
   onSizeChange: (size: PanelSize) => void;
+  /** True when the panel is expanded to fill the full chart area */
+  isMaximized: boolean;
+  onToggleMaximize: () => void;
 }
 
 // ─── Sub-component: journal row ───────────────────────────────────────────────
@@ -139,7 +144,12 @@ function JournalRow({
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps) {
+export function PaperTradingPanel({
+  size,
+  onSizeChange,
+  isMaximized,
+  onToggleMaximize,
+}: PaperTradingPanelProps) {
   const [infoTab, setInfoTab] = useState<InfoTab>('positions');
   const [confirmingReset, setConfirmingReset] = useState(false);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -325,7 +335,9 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
             )}
           </AnimatePresence>
 
-          {size !== 'hidden' &&
+          {/* Collapse / Expand — hidden while maximized */}
+          {!isMaximized &&
+            size !== 'hidden' &&
             (size === 'open' ? (
               <motion.button
                 onClick={() => onSizeChange('collapsed')}
@@ -350,6 +362,23 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
               </motion.button>
             ))}
 
+          {/* Maximize / Restore */}
+          <motion.button
+            onClick={onToggleMaximize}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            title={isMaximized ? 'Restore panel' : 'Maximize panel'}
+            className="flex h-6 w-6 items-center justify-center rounded hover:text-white"
+            style={{ color: color.muted }}
+          >
+            {isMaximized ? (
+              <Minimize2 className="h-3.5 w-3.5" />
+            ) : (
+              <Maximize2 className="h-3.5 w-3.5" />
+            )}
+          </motion.button>
+
+          {/* Close */}
           <motion.button
             onClick={() => onSizeChange('hidden')}
             whileHover={{ scale: 1.1 }}
@@ -365,7 +394,7 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
 
       {/* ── Panel content ─────────────────────────────────────────────────── */}
       <AnimatePresence initial={false}>
-        {size !== 'collapsed' && (
+        {(size !== 'collapsed' || isMaximized) && (
           <motion.div
             key="panel-content"
             initial={{ opacity: 0 }}
