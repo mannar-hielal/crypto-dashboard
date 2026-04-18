@@ -23,6 +23,10 @@
  *               follower panes are scrolled to match.
  *               Uses an `isSyncingTimeRange` guard ref (no sourceEvent
  *               equivalent on subscribeVisibleTimeRangeChange).
+ *               Snap-on-enable: when timeRange transitions OFF → ON, all
+ *               follower panes are immediately snapped to the active pane's
+ *               current visible range (active pane wins — same precedence
+ *               rule as symbol/interval sync).
  */
 
 import { useRef, useCallback, useEffect } from 'react';
@@ -57,6 +61,8 @@ export function MultiChartArea() {
   // the latest value without needing to re-register chart subscriptions
   const syncRef = useRef(syncOptions);
   const paneCountRef = useRef(paneCount);
+  // Track previous timeRange flag so we can detect OFF → ON transitions
+  const prevTimeRangeSyncRef = useRef(syncOptions.timeRange);
 
   useEffect(() => {
     syncRef.current = syncOptions;
@@ -64,6 +70,36 @@ export function MultiChartArea() {
   useEffect(() => {
     paneCountRef.current = paneCount;
   });
+
+  // ── Snap-on-enable: timeRange ───────────────────────────────────────────
+  // When timeRange sync transitions OFF → ON, immediately snap all follower
+  // panes to the active pane's current visible range. Active pane wins —
+  // same precedence as symbol/interval sync.
+  useEffect(() => {
+    const wasOn = prevTimeRangeSyncRef.current;
+    prevTimeRangeSyncRef.current = syncOptions.timeRange;
+
+    if (!syncOptions.timeRange || wasOn) return; // only act on OFF → ON
+
+    const sourceChart = chartRefs.current[activePane];
+    if (!sourceChart) return;
+
+    const range = sourceChart.timeScale().getVisibleRange();
+    if (!range) return;
+
+    isSyncingTimeRange.current = true;
+    for (let i = 0; i < paneCount; i++) {
+      if (i === activePane) continue;
+      const other = chartRefs.current[i];
+      if (!other) continue;
+      try {
+        other.timeScale().setVisibleRange(range);
+      } catch {
+        // Ignore — follower may not have loaded data yet
+      }
+    }
+    isSyncingTimeRange.current = false;
+  }, [syncOptions.timeRange, activePane, paneCount]);
 
   // ── Called by ChartPanel when its chart instance is ready ───────────────
   const handleChartReady = useCallback(
