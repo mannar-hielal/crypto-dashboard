@@ -11,7 +11,7 @@
 import { createStore } from 'zustand';
 import type { CandleBar, IndicatorSnapshot, LiveBar } from '@crypto-dashboard/sdk';
 
-const MAX_BARS = 500;
+const MAX_BARS = 1000;
 
 // ─── State shape ─────────────────────────────────────────────────────────────
 

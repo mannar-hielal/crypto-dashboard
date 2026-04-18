@@ -181,4 +181,4 @@ Deployments trigger automatically on push to `main` when CI passes.
 ---
 
 **Live:** [API Health](https://crypto-dashboard-api.fly.dev/health) · [App](https://crypto-dashboard-7yy.pages.dev)  
-**Last updated:** April 12, 2026
+**Last updated:** April 18, 2026

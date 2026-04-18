@@ -5,7 +5,7 @@
  *   - setLayout(): activePane clamped to count-1 (not reset to 0) when out of range
  *   - setPaneSymbol(): single-pane update vs. sync.symbol broadcast
  *   - setPaneInterval(): single-pane update vs. sync.interval broadcast
- *   - toggleSync(): toggles individual sync flags
+ *   - toggleSync(): toggles individual sync flags + snap-on-enable for symbol/interval
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -145,6 +145,48 @@ describe('layoutStore', () => {
     it('toggles timeRange sync off (default is on)', () => {
       useLayoutStore.getState().toggleSync('timeRange');
       expect(useLayoutStore.getState().syncOptions.timeRange).toBe(false);
+    });
+
+    // ── snap-on-enable: symbol ───────────────────────────────────────────────
+
+    it('snaps all panes to active pane symbol when symbol sync is enabled', () => {
+      // pane 0 = BTC, pane 1 = ETH, pane 2 = SOL; active = 1 (ETH)
+      useLayoutStore.setState({ activePane: 1 });
+      useLayoutStore.getState().toggleSync('symbol');
+      const { panes, syncOptions } = useLayoutStore.getState();
+      expect(syncOptions.symbol).toBe(true);
+      expect(panes.every((p) => p.symbol === SYMBOLS[1].symbol)).toBe(true);
+    });
+
+    it('does NOT snap panes when symbol sync is disabled', () => {
+      // Turn on then off — panes should already be uniform from enable, but
+      // disabling should only flip the flag, not change symbols.
+      useLayoutStore.setState({ activePane: 0 });
+      useLayoutStore.getState().toggleSync('symbol'); // enable → snap to BTC
+      useLayoutStore.getState().toggleSync('symbol'); // disable
+      const { panes, syncOptions } = useLayoutStore.getState();
+      expect(syncOptions.symbol).toBe(false);
+      // Panes still carry the snapped symbol — disabling doesn't diverge them
+      expect(panes.every((p) => p.symbol === SYMBOLS[0].symbol)).toBe(true);
+    });
+
+    // ── snap-on-enable: interval ─────────────────────────────────────────────
+
+    it('snaps all panes to active pane interval when interval sync is enabled', () => {
+      // Give pane 2 a different interval, make it active
+      useLayoutStore.setState({
+        activePane: 2,
+        panes: [
+          { symbol: SYMBOLS[0].symbol, interval: '1m' },
+          { symbol: SYMBOLS[1].symbol, interval: '5m' },
+          { symbol: SYMBOLS[2].symbol, interval: '1h' },
+          { symbol: SYMBOLS[3].symbol, interval: '4h' },
+        ],
+      });
+      useLayoutStore.getState().toggleSync('interval');
+      const { panes, syncOptions } = useLayoutStore.getState();
+      expect(syncOptions.interval).toBe(true);
+      expect(panes.every((p) => p.interval === '1h')).toBe(true);
     });
   });
 });
