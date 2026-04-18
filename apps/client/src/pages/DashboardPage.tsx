@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Link } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart2 } from 'lucide-react';
@@ -65,15 +65,22 @@ function DashboardInner() {
   const sound = useTradingSoundCtx();
 
   usePaneFeeds();
-  useTPSLMonitor({
-    onClosed: (pnl) => {
+
+  // Stable callback refs — memoized so they don't change on every render
+  // and don't cause useTPSLMonitor / usePendingOrderMonitor effects to re-run.
+  const handleTPSLClosed = useCallback(
+    (pnl: number) => {
       if (pnl >= 0) sound.playProfit();
       else sound.playLoss();
     },
-  });
-  usePendingOrderMonitor({
-    onFilled: () => sound.playOrderFilled(),
-  });
+    [sound.playProfit, sound.playLoss],
+  );
+  const handleOrderFilled = useCallback(() => {
+    sound.playOrderFilled();
+  }, [sound.playOrderFilled]);
+
+  useTPSLMonitor({ onClosed: handleTPSLClosed });
+  usePendingOrderMonitor({ onFilled: handleOrderFilled });
 
   // Active pane symbol drives the TradingPanel key (resets form on symbol change)
   const activePane = useLayoutStore((s) => s.activePane);

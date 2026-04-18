@@ -12,6 +12,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { useStore } from 'zustand';
+import { useShallow } from 'zustand/shallow';
 import { paneStores } from '@/store/paneStore';
 import { usePaperStore } from '@/store/paperStore';
 import type { JournalEntry } from '@/store/paperStore';
@@ -162,7 +163,7 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
   const lp1 = useStore(paneStores[1], (s) => s.latestPrice);
   const lp2 = useStore(paneStores[2], (s) => s.latestPrice);
   const lp3 = useStore(paneStores[3], (s) => s.latestPrice);
-  const paneSymbols = useLayoutStore((s) => s.panes.map((p) => p.symbol));
+  const paneSymbols = useLayoutStore(useShallow((s) => s.panes.map((p) => p.symbol)));
   const priceBySymbol: Record<string, number> = {};
   [lp0, lp1, lp2, lp3].forEach((lp, i) => {
     if (lp !== null) priceBySymbol[paneSymbols[i]] = lp;
