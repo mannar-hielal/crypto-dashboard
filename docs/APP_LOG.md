@@ -285,58 +285,54 @@ Tab badge counts: purple pill for Positions count, gray pill for Order History c
 
 ---
 
-### Right Panel — `TradingPanel` ✅ (current implementation — market orders only)
+### Right Panel — `TradingPanel` ✅ (current implementation)
 
-- Header: "Paper Trading" label + ✕ close (hides panel, state preserved)
-- Buy / Sell toggle (green Buy / red Sell)
-- Balance + Equity + Unrealized P&L display
-- USDT amount input + 25/50/75/100% quick-fill presets
-- TP / SL optional price inputs (directional validation)
-- Submit: `↑ Buy SYMBOL · Market` / `↓ Sell SYMBOL · Market`
-- Mark price display at bottom
-- Resets on symbol or active pane change via ``key={`${activePane}-${symbol}`}`` in `DashboardPage`
+Based on TradingView markup reference. Not a 1:1 copy.
 
----
-
-### Right Panel — `TradingPanel` ⏳ (planned redesign)
-
-Based on TradingView markup reference. Adapt what fits — not a 1:1 copy.
-
-**Header:** Symbol name + ✕ (hides panel only — component stays mounted, local state preserved)
+**Header:** Symbol name (e.g. `BTCUSDT`) + ✕ close (hides panel only, component stays mounted, local state preserved). Resets on symbol or active pane change via ``key={`${activePane}-${symbol}`}`` in `DashboardPage`.
 
 **Side selector (always visible below header):**
 
-- Split button: `Sell {bidPrice}` (neutral/dark left) | `Buy {askPrice}` (blue right)
-- Spread badge centered between
-- Active side highlighted; clicking switches Buy ↔ Sell
+- Split button: `Sell {latestPrice}` (left) | `Buy {latestPrice}` (right)
+- Spread badge centered (shows `—` until bid/ask feed is implemented in a future phase)
+- Active side: colored bottom border + tinted background (green Buy / red Sell)
 
-**Order type tabs:** `Market` | `Limit` | `Stop` — underline animated indicator
+**Order type tabs:** `Market` | `Limit` | `Stop` — spring animated purple underline (framer-motion `layoutId="tab-underline"`)
 
-- **Market**: quantity USD input only
-- **Limit (extra)**: Price input — defaults to current ask (Buy) or bid (Sell)
-- **Stop (extra)**: Price input — defaults to current ask/bid
+- **Market**: no price input; executes at `latestPrice`
+- **Limit**: price input (pre-filled with `latestPrice` on tab switch); dispatches `placeLimitOrder`
+- **Stop**: price input (pre-filled with `latestPrice` on tab switch); dispatches `placeStopOrder`
 
-**Exits section** (collapsible, default expanded, all tabs):
+**Quantity input:**
 
-- `Take profit, price` — toggle switch + price input (disabled when off)
-- `Stop loss, price` — toggle switch + price input (disabled when off)
-- Existing TP/SL directional validation from `paperStore` applies
+- Primary mode toggle: `USD` ↔ `Units` (swap button top-right of input)
+- In USD mode: user enters USDT amount; shows equivalent base-asset units below
+- In Units mode: user enters base-asset quantity; shows equivalent USD below
+- Conversion uses `execPrice` (market = `latestPrice`, limit/stop = price input)
+- Value is converted numerically when swapping modes (no reset)
+- Available balance shown below input
 
-**Order info section** (all tabs):
+**Exits section** (collapsible ▲/▼, default expanded, all tabs):
 
-| Field       | Formula                                                             |
-| ----------- | ------------------------------------------------------------------- |
-| Margin      | `usdtAmount / 10` shown as `{margin} / {balance}` with progress bar |
-| Leverage    | `10:1` (fixed for crypto)                                           |
-| Trade value | `usdtAmount` USD                                                    |
-| Commission  | `usdtAmount * 0.0007` USD                                           |
+- `Take profit, price` — toggle switch; price input appears when enabled (green border); input hidden + cleared when disabled
+- `Stop loss, price` — toggle switch; price input appears when enabled (red border); input hidden + cleared when disabled
+- Directional validation: TP above entry price for Long / below for Short; SL the reverse
 
-**Submit button** (full-width, blue, sticky bottom):
+**Order info section** (all tabs, updates live as qty changes):
 
-- Primary: `Buy` / `Sell`
-- Secondary: `{qty} {symbol} MARKET` | `@ {price} LIMIT` | `@ {price} STOP`
+| Field       | Formula                                                                                                  |
+| ----------- | -------------------------------------------------------------------------------------------------------- |
+| Margin      | `usdtAmount / 10` shown as `{margin} / {balance}` with animated progress bar (red when margin > balance) |
+| Leverage    | `10:1` (fixed for crypto)                                                                                |
+| Trade value | `usdtAmount` USD                                                                                         |
+| Commission  | `usdtAmount × 0.0007` USD                                                                                |
 
-**Intentionally skipped vs TradingView:** DOM tab, "Risk % balance" mode, Tick value, Risk USD, Time in force
+**Submit button** (full-width, sticky bottom, colored by side):
+
+- Primary line: `Buy` / `Sell` (large)
+- Secondary line: `{qty} {baseAsset} · MARKET` | `{qty} {baseAsset} @ {price} LIMIT` | `{qty} {baseAsset} @ {price} STOP`
+
+**Intentionally skipped vs TradingView:** DOM tab, bid/ask spread (phase 2), Risk USD / Risk % balance, Tick value, Time in force
 
 ---
 
@@ -348,6 +344,7 @@ Persisted to `localStorage` key `cd-paper-trading`. No `version`/`migrate` yet (
 interface PaperState {
   balance: number; // free cash (entryUsdtAmount deducted at open)
   positions: Position[]; // open positions
+  pendingOrders: PendingOrder[]; // limit/stop orders awaiting execution
   history: ClosedTrade[]; // closed trades (MAX_HISTORY = 100)
   orders: HistoricalOrder[]; // all order history (MAX_HISTORY * 2)
   realizedPnl: number; // net of all commissions
@@ -355,40 +352,6 @@ interface PaperState {
   journal: JournalEntry[]; // trading journal (MAX_JOURNAL = 200)
 }
 
-interface Position {
-  id;
-  symbol;
-  side: 'long' | 'short';
-  quantity;
-  entryPrice;
-  entryUsdtAmount;
-  openedAt;
-  takeProfit?;
-  stopLoss?;
-}
-interface HistoricalOrder {
-  id;
-  symbol;
-  side: 'buy' | 'sell';
-  type: 'market' | 'limit' | 'stop';
-  qty;
-  limitPrice?;
-  stopPrice?;
-  fillPrice?;
-  status: 'filled' | 'cancelled' | 'rejected';
-  commission;
-  placingTime;
-  closingTime;
-}
-```
-
-Actions: `placeOrder`, `closePosition`, `addJournalNote`, `editJournalEntry`, `reset`
-
----
-
-### `paperStore` — planned additions ⏳ (Limit & Stop orders)
-
-```typescript
 interface PendingOrder {
   id;
   symbol;
@@ -401,11 +364,19 @@ interface PendingOrder {
   stopLoss?;
   placedAt;
 }
-// New field: pendingOrders: PendingOrder[]  (persisted)
-// New actions: placeLimitOrder, placeStopOrder, cancelPendingOrder
 ```
 
-**Execution rules (by `usePendingOrderMonitor`):**
+Actions: `placeOrder`, `placeLimitOrder`, `placeStopOrder`, `cancelPendingOrder`, `closePosition`, `addJournalNote`, `editJournalEntry`, `reset`
+
+**`placeLimitOrder` / `placeStopOrder`**: deducts `usdtAmount + commission` from balance immediately; adds to `pendingOrders`; adds a placeholder `HistoricalOrder` record.  
+**`cancelPendingOrder`**: removes from `pendingOrders`; refunds `usdtAmount + commission`; adds cancelled `HistoricalOrder`.  
+Actual execution (converting pending → open position) is handled by `usePendingOrderMonitor` (⏳ planned).
+
+---
+
+### `paperStore` — planned additions ⏳ (pending order execution)
+
+`usePendingOrderMonitor` hook — mirrors `useTPSLMonitor` pattern:
 
 - Limit Buy: `price <= triggerPrice` · Limit Sell: `price >= triggerPrice`
 - Stop Buy: `price >= triggerPrice` · Stop Sell: `price <= triggerPrice`
@@ -549,14 +520,12 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 - `src/lib/markets.ts` — shared `SYMBOLS`, `INTERVALS`, `INTERVAL_LABELS` constants (previously duplicated in `SymbolBar`)
 - Commit: `7dfd54a`
 
-### 🔄 In Progress (current sprint — 2026-04-12)
+### 🔄 In Progress (current sprint — 2026-04-18)
 
-- **Phase 2 cont.**: `TradingPanel` redesign — Bid/Ask side selector, Limit/Stop tabs, Exits section, Order info panel
 - **Phase 2 cont.**: `PaperTradingPanel` header redesign — Account Settings modal, Orders tab (pendingOrders), maximize button
-- **Phase 2 cont.**: `paperStore` — add `pendingOrders`, `placeLimitOrder`, `placeStopOrder`, `cancelPendingOrder`
-- **Phase 2 cont.**: `usePendingOrderMonitor` hook — mirrors `useTPSLMonitor` pattern
-- **Phase 2 cont.**: `marketStore` — add `bid`, `ask`, `prices` map, `setBidAsk`
-- **Phase 2 cont.**: Bid/Ask real-time feed — server `orderbook.1` + client ticker handling
+- **Phase 2 cont.**: `usePendingOrderMonitor` hook — mirrors `useTPSLMonitor`, executes pending limit/stop orders on price trigger
+- **Phase 2 cont.**: `marketStore` — add `bid`, `ask`, `prices` map, `setBidAsk` (phase 2 — not needed for current TradingPanel)
+- **Phase 2 cont.**: Bid/Ask real-time feed — server `orderbook.1` + client ticker handling (phase 2)
 
 ### 📋 Planned
 
@@ -628,4 +597,4 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 
 ---
 
-_Last updated: 2026-04-18 — **feat(chart): interval-aware initial view + 1 000-bar fetch limit** (`markets.ts`, `ChartPanel`, `MultiChartArea`, `usePaneFeeds`, `paneStore`): `INTERVAL_BAR_SPACING` maps each interval to an initial px/bar value targeting ~160–200 visible candles at 1 200 px viewport (TradingView density). Applied in `ChartPanel` on first load via `timeScale().applyOptions({ barSpacing })` before `scrollToRealTime()`. `INTERVAL_FETCH_LIMIT` (1 000, server max) replaces the hard-coded 500 fetch limit; `MAX_BARS` in `paneStore` raised to 1 000 to match. Previously: **feat(layout): snap all panes to active pane on timeRange sync enable** (`MultiChartArea`): `useEffect` watches `syncOptions.timeRange`; on OFF → ON reads active pane's visible range via `getVisibleRange()` and calls `setVisibleRange()` on all follower charts immediately. Active pane wins. Previously: **feat(layout): snap all panes to active pane on sync-symbol/interval enable** (`layoutStore`, `layoutStore.test.ts`): `toggleSync('symbol'|'interval')` now immediately snaps all panes to the active pane's value when the flag transitions OFF → ON. Active pane is the source of truth (TradingView/Bookmap convention). 3 new tests added; all 92 client tests pass. Previously: **fix: dead marketStore reads + isMountedRef stale-update** (`TickerBar`, `PaperTradingPanel`, `usePriceFeed`, `useTPSLMonitor`, `DashboardPage`): `usePriceFeed` was superseded by `usePaneFeeds` but `TickerBar` and `PaperTradingPanel` still imported `useMarketStore` — permanently null. Both now read from `paneStores[0]`. `usePriceFeed` gains the same per-run `cancelled` closure fix as `usePaneFeeds`. Stale JSDoc in `useTPSLMonitor` and `DashboardPage` updated. Previously: **fix: PR code-review issues** (`usePaneFeeds`, `layoutStore`, `APP_LOG`). Previously: **chore: code review cleanup + README corrections**. Previously: **fix: 4-chart layout — missing candles + crosshair sync** (`ChartPanel`, `MultiChartArea`). Previously: **fix: crosshair Y-sync** (`MultiChartArea`). Client tests 92 (6 files), total 178._
+_Last updated: 2026-04-18 — **feat(trading-panel): full TradingPanel redesign + paperStore limit/stop orders** (`TradingPanel.tsx`, `paperStore.ts`): TradingPanel rebuilt to match TradingView layout — symbol header, Sell/Buy split side selector with latestPrice, Market/Limit/Stop animated underline tabs, Units↔USD swap quantity input (converts value on swap), collapsible Exits section with per-toggle TP/SL inputs, Order Info panel (margin progress bar, leverage, trade value, commission), two-line sticky submit button. `paperStore` gains `PendingOrder` interface, `pendingOrders: PendingOrder[]`, `placeLimitOrder`, `placeStopOrder`, `cancelPendingOrder` actions — balance reserved at placement, refunded on cancel. Bid/Ask feed and `usePendingOrderMonitor` deferred to next phase. Previously: **feat(chart): interval-aware initial view + 1 000-bar fetch limit** (`markets.ts`, `ChartPanel`, `MultiChartArea`, `usePaneFeeds`, `paneStore`): `INTERVAL_BAR_SPACING` maps each interval to an initial px/bar value targeting ~160–200 visible candles at 1 200 px viewport (TradingView density). Applied in `ChartPanel` on first load via `timeScale().applyOptions({ barSpacing })` before `scrollToRealTime()`. `INTERVAL_FETCH_LIMIT` (1 000, server max) replaces the hard-coded 500 fetch limit; `MAX_BARS` in `paneStore` raised to 1 000 to match. Previously: **feat(layout): snap all panes to active pane on timeRange sync enable** (`MultiChartArea`): `useEffect` watches `syncOptions.timeRange`; on OFF → ON reads active pane's visible range via `getVisibleRange()` and calls `setVisibleRange()` on all follower charts immediately. Active pane wins. Previously: **feat(layout): snap all panes to active pane on sync-symbol/interval enable** (`layoutStore`, `layoutStore.test.ts`): `toggleSync('symbol'|'interval')` now immediately snaps all panes to the active pane's value when the flag transitions OFF → ON. Active pane is the source of truth (TradingView/Bookmap convention). 3 new tests added; all 92 client tests pass. Previously: **fix: dead marketStore reads + isMountedRef stale-update** (`TickerBar`, `PaperTradingPanel`, `usePriceFeed`, `useTPSLMonitor`, `DashboardPage`): `usePriceFeed` was superseded by `usePaneFeeds` but `TickerBar` and `PaperTradingPanel` still imported `useMarketStore` — permanently null. Both now read from `paneStores[0]`. `usePriceFeed` gains the same per-run `cancelled` closure fix as `usePaneFeeds`. Stale JSDoc in `useTPSLMonitor` and `DashboardPage` updated. Previously: **fix: PR code-review issues** (`usePaneFeeds`, `layoutStore`, `APP_LOG`). Previously: **chore: code review cleanup + README corrections**. Previously: **fix: 4-chart layout — missing candles + crosshair sync** (`ChartPanel`, `MultiChartArea`). Previously: **fix: crosshair Y-sync** (`MultiChartArea`). Client tests 92 (6 files), total 178._

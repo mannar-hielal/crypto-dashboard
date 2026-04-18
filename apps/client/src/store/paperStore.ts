@@ -49,6 +49,19 @@ export interface ClosedTrade {
 export type OrderStatus = 'filled' | 'cancelled' | 'rejected';
 export type OrderType = 'market' | 'limit' | 'stop';
 
+export interface PendingOrder {
+  id: string;
+  symbol: string;
+  side: 'buy' | 'sell';
+  type: 'limit' | 'stop';
+  usdtAmount: number; // reserved at placement (deducted from balance)
+  triggerPrice: number; // limit or stop trigger price
+  qty: number; // pre-calculated: usdtAmount / triggerPrice
+  takeProfit?: number;
+  stopLoss?: number;
+  placedAt: number;
+}
+
 export interface HistoricalOrder {
   id: string;
   symbol: string;
@@ -101,6 +114,7 @@ function fmtPrice(price: number): string {
 interface PaperState {
   balance: number;
   positions: Position[];
+  pendingOrders: PendingOrder[];
   history: ClosedTrade[];
   orders: HistoricalOrder[];
   realizedPnl: number;
@@ -137,6 +151,35 @@ interface PaperState {
 
   /** Reset the account back to the starting balance. */
   reset: () => void;
+
+  /**
+   * Place a limit order. Balance is reserved immediately.
+   * @returns order id on success, null on validation failure
+   */
+  placeLimitOrder: (
+    symbol: string,
+    side: 'buy' | 'sell',
+    triggerPrice: number,
+    usdtAmount: number,
+    takeProfit?: number,
+    stopLoss?: number
+  ) => string | null;
+
+  /**
+   * Place a stop order. Balance is reserved immediately.
+   * @returns order id on success, null on validation failure
+   */
+  placeStopOrder: (
+    symbol: string,
+    side: 'buy' | 'sell',
+    triggerPrice: number,
+    usdtAmount: number,
+    takeProfit?: number,
+    stopLoss?: number
+  ) => string | null;
+
+  /** Cancel a pending (limit or stop) order and refund the reserved amount. */
+  cancelPendingOrder: (orderId: string) => void;
 }
 
 export const usePaperStore = create<PaperState>()(
@@ -144,6 +187,7 @@ export const usePaperStore = create<PaperState>()(
     (set, get) => ({
       balance: STARTING_BALANCE,
       positions: [],
+      pendingOrders: [],
       history: [],
       orders: [],
       realizedPnl: 0,
@@ -352,12 +396,133 @@ export const usePaperStore = create<PaperState>()(
         set({
           balance: STARTING_BALANCE,
           positions: [],
+          pendingOrders: [],
           history: [],
           orders: [],
           realizedPnl: 0,
           balanceLog: [],
           journal: [],
         }),
+
+      placeLimitOrder: (symbol, side, triggerPrice, usdtAmount, takeProfit, stopLoss) => {
+        const { balance } = get();
+        if (usdtAmount <= 0 || triggerPrice <= 0) return null;
+        const totalCost = usdtAmount + usdtAmount * COMMISSION_RATE;
+        if (totalCost > balance) return null;
+
+        const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        const qty = usdtAmount / triggerPrice;
+        const now = Date.now();
+
+        const pending: PendingOrder = {
+          id,
+          symbol,
+          side,
+          type: 'limit',
+          usdtAmount,
+          triggerPrice,
+          qty,
+          placedAt: now,
+          ...(takeProfit && takeProfit > 0 ? { takeProfit } : {}),
+          ...(stopLoss && stopLoss > 0 ? { stopLoss } : {}),
+        };
+
+        const historicalOrder: HistoricalOrder = {
+          id: `o-${id}`,
+          symbol,
+          side,
+          type: 'limit',
+          qty,
+          limitPrice: triggerPrice,
+          status: 'filled', // will be updated on execution; kept here as placement record
+          commission: usdtAmount * COMMISSION_RATE,
+          placingTime: now,
+          closingTime: now,
+        };
+
+        set((s) => ({
+          balance: s.balance - totalCost,
+          pendingOrders: [...s.pendingOrders, pending],
+          orders: [historicalOrder, ...s.orders].slice(0, MAX_HISTORY * 2),
+        }));
+
+        return id;
+      },
+
+      placeStopOrder: (symbol, side, triggerPrice, usdtAmount, takeProfit, stopLoss) => {
+        const { balance } = get();
+        if (usdtAmount <= 0 || triggerPrice <= 0) return null;
+        const totalCost = usdtAmount + usdtAmount * COMMISSION_RATE;
+        if (totalCost > balance) return null;
+
+        const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        const qty = usdtAmount / triggerPrice;
+        const now = Date.now();
+
+        const pending: PendingOrder = {
+          id,
+          symbol,
+          side,
+          type: 'stop',
+          usdtAmount,
+          triggerPrice,
+          qty,
+          placedAt: now,
+          ...(takeProfit && takeProfit > 0 ? { takeProfit } : {}),
+          ...(stopLoss && stopLoss > 0 ? { stopLoss } : {}),
+        };
+
+        const historicalOrder: HistoricalOrder = {
+          id: `o-${id}`,
+          symbol,
+          side,
+          type: 'stop',
+          qty,
+          stopPrice: triggerPrice,
+          status: 'filled', // placeholder; updated on execution
+          commission: usdtAmount * COMMISSION_RATE,
+          placingTime: now,
+          closingTime: now,
+        };
+
+        set((s) => ({
+          balance: s.balance - totalCost,
+          pendingOrders: [...s.pendingOrders, pending],
+          orders: [historicalOrder, ...s.orders].slice(0, MAX_HISTORY * 2),
+        }));
+
+        return id;
+      },
+
+      cancelPendingOrder: (orderId) => {
+        const { pendingOrders } = get();
+        const order = pendingOrders.find((o) => o.id === orderId);
+        if (!order) return;
+
+        const refund = order.usdtAmount + order.usdtAmount * COMMISSION_RATE;
+        const now = Date.now();
+
+        const cancelledOrder: HistoricalOrder = {
+          id: `o-cancel-${orderId}`,
+          symbol: order.symbol,
+          side: order.side,
+          type: order.type,
+          qty: order.qty,
+          ...(order.type === 'limit'
+            ? { limitPrice: order.triggerPrice }
+            : { stopPrice: order.triggerPrice }),
+          status: 'cancelled',
+          commission: 0,
+          placingTime: order.placedAt,
+          closingTime: now,
+        };
+
+        set((s) => ({
+          balance: s.balance + refund,
+          pendingOrders: s.pendingOrders.filter((o) => o.id !== orderId),
+          orders: [cancelledOrder, ...s.orders].slice(0, MAX_HISTORY * 2),
+        }));
+      },
     }),
     {
       name: 'cd-paper-trading', // localStorage key
