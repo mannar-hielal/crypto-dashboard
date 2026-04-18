@@ -13,6 +13,7 @@ import { useStore } from 'zustand';
 import { paneStores } from '@/store/paneStore';
 import { calcEMA, calcVWAP, calcMACD } from '@/lib/indicators';
 import { bg, color, chart as chartColors, font, fontSize } from '@/lib/tokens';
+import { INTERVAL_BAR_SPACING, type Interval } from '@/lib/markets';
 
 const CHART_BG = chartColors.bg;
 
@@ -21,6 +22,11 @@ const CHART_BG = chartColors.bg;
 interface ChartPanelProps {
   /** Which pane store to read data from (0–3) */
   paneIndex: 0 | 1 | 2 | 3;
+  /**
+   * Current interval — used to set the TradingView-matched initial bar
+   * spacing on first load and after every symbol/interval change.
+   */
+  interval: Interval;
   /**
    * Called once when the lightweight-charts instance is ready.
    * Receives both the chart API and the primary candlestick series so that
@@ -65,7 +71,7 @@ function toUTC(ms: number): UTCTimestamp {
   return Math.floor(ms / 1000) as UTCTimestamp;
 }
 
-export function ChartPanel({ paneIndex, onChartReady, onChartDestroy }: ChartPanelProps) {
+export function ChartPanel({ paneIndex, interval, onChartReady, onChartDestroy }: ChartPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const prevLenRef = useRef(0); // tracks first-load to trigger scrollToRealTime()
@@ -107,7 +113,7 @@ export function ChartPanel({ paneIndex, onChartReady, onChartDestroy }: ChartPan
         borderColor: 'rgba(255,255,255,0.07)',
         timeVisible: true,
         secondsVisible: false,
-        barSpacing: 12,
+        barSpacing: 6, // overridden on first load via INTERVAL_BAR_SPACING
       },
       localization: {
         // Shows "Sun 05 Apr '26 17:32" on the time axis and crosshair tooltip
@@ -374,18 +380,19 @@ export function ChartPanel({ paneIndex, onChartReady, onChartDestroy }: ChartPan
       !visibleRange || lastTime < visibleRange.from || firstTime > visibleRange.to;
 
     if (isFirstLoad || isOutOfRange) {
-      // Re-enable Y-axis autoscale before scrolling. This is critical after a
-      // symbol change: if the previous symbol's price range was locked by a
-      // stale setCrosshairPosition call (e.g. ETH at 2 400 when pane switches
-      // to BTC at 71 000), re-enabling autoScale here ensures the chart
-      // immediately shows the new symbol's data range.
+      // Re-enable Y-axis autoscale before scrolling so that a stale price
+      // scale from a previous symbol/interval doesn't hide the new data.
       chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
-      // scrollToRealTime() pins the view to the rightmost bar at the current
-      // barSpacing — no squeeze, candles stay a consistent readable size.
+      // Apply the TradingView-matched bar spacing for this interval so the
+      // initial view shows ~160–200 readable candles regardless of timeframe,
+      // then anchor the right edge to the most recent bar.
+      timeScale?.applyOptions({
+        barSpacing: INTERVAL_BAR_SPACING[interval],
+      });
       timeScale?.scrollToRealTime();
     }
     prevLenRef.current = bars.length;
-  }, [bars]);
+  }, [bars, interval]);
 
   return (
     <div className="relative h-full w-full" style={{ background: CHART_BG }}>
