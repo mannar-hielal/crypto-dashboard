@@ -15,6 +15,7 @@ import { useEffect, useRef } from 'react';
 import { marketApi, type WsMessage } from '@crypto-dashboard/sdk';
 import { useLayoutStore, LAYOUT_PANE_COUNT } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
+import { INTERVAL_FETCH_LIMIT, type Interval } from '@/lib/markets';
 
 const RECONNECT_DELAY_MS = 3_000;
 
@@ -63,7 +64,7 @@ function useSinglePaneFeed(
 
     // Step 1: historical REST fetch (fills chart before WS is ready)
     marketApi
-      .getCandles(symbol, interval, 500)
+      .getCandles(symbol, interval, INTERVAL_FETCH_LIMIT[interval as Interval] ?? 1000)
       .then((res) => {
         if (!cancelled) store.getState().setSnapshot(res.candles, null);
       })

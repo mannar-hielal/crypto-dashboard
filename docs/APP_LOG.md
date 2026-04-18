@@ -244,7 +244,7 @@ Tab badge counts: purple pill for Positions count, gray pill for Order History c
 **`usePaneFeeds`** — always mounts 4 `useSinglePaneFeed` calls (hook-count never changes):
 
 - Inactive panes (outside current layout) → WS closed, store reset immediately
-- Active panes → REST fetch 500 bars first, then WebSocket live feed
+- Active panes → REST fetch `INTERVAL_FETCH_LIMIT[interval]` bars (1 000, server max) first, then WebSocket live feed
 - WebSocket auto-reconnects after `3 000 ms` on close; blocked when component unmounts
 - Re-runs when `symbol`, `interval`, or `isActive` changes
 
@@ -267,6 +267,7 @@ Tab badge counts: purple pill for Positions count, gray pill for Order History c
 - Sync options + pane count read via refs so event handlers stay up-to-date without re-registration
 - **Snap-on-enable (symbol / interval)**: `toggleSync('symbol' | 'interval')` — when the flag transitions from OFF → ON, all panes are immediately snapped to the **active pane's** current symbol/interval. Active pane is the source of truth (mirrors TradingView/Bookmap convention: the chart the user is focused on wins). Toggling OFF only flips the flag; panes retain their (now-uniform) values. Crosshair has no snap (event-driven pointer only).
 - **Snap-on-enable (timeRange)**: a `useEffect` in `MultiChartArea` watches `syncOptions.timeRange`; on OFF → ON it reads `chartRefs[activePane].timeScale().getVisibleRange()` and calls `setVisibleRange(range)` on all other active chart refs. Active pane wins. Uses the same `isSyncingTimeRange` guard to prevent cascade. Crosshair has no snap — it is purely pointer-driven.
+- **Interval-aware initial view** (TradingView-matched): `INTERVAL_BAR_SPACING` in `markets.ts` maps each interval to an initial px/bar spacing targeting ~160–200 visible candles at a ~1 200 px viewport (same visual density as TradingView). Applied in `ChartPanel` on `isFirstLoad || isOutOfRange` via `timeScale().applyOptions({ barSpacing })` before `scrollToRealTime()`. Fetch limit bumped to `INTERVAL_FETCH_LIMIT` (1 000 bars = server max) for deep scrollback buffer. `MAX_BARS` in `paneStore` raised to 1 000 to match.
 
 **`PaneHeader`** (h-7, rendered only in multi-pane mode):
 
@@ -628,3 +629,5 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 ---
 
 _Last updated: 2026-04-18 — **feat(layout): snap all panes to active pane on timeRange sync enable** (`MultiChartArea`): `useEffect` watches `syncOptions.timeRange`; on OFF → ON reads active pane's visible range via `getVisibleRange()` and calls `setVisibleRange()` on all follower charts immediately. Active pane wins. Previously: **feat(layout): snap all panes to active pane on sync-symbol/interval enable** (`layoutStore`, `layoutStore.test.ts`): `toggleSync('symbol'|'interval')` now immediately snaps all panes to the active pane's value when the flag transitions OFF → ON. Active pane is the source of truth (TradingView/Bookmap convention). 3 new tests added; all 92 client tests pass. Previously: **fix: dead marketStore reads + isMountedRef stale-update** (`TickerBar`, `PaperTradingPanel`, `usePriceFeed`, `useTPSLMonitor`, `DashboardPage`): `usePriceFeed` was superseded by `usePaneFeeds` but `TickerBar` and `PaperTradingPanel` still imported `useMarketStore` — permanently null. Both now read from `paneStores[0]`. `usePriceFeed` gains the same per-run `cancelled` closure fix as `usePaneFeeds`. Stale JSDoc in `useTPSLMonitor` and `DashboardPage` updated. Previously: **fix: PR code-review issues** (`usePaneFeeds`, `layoutStore`, `APP_LOG`). Previously: **chore: code review cleanup + README corrections**. Previously: **fix: 4-chart layout — missing candles + crosshair sync** (`ChartPanel`, `MultiChartArea`). Previously: **fix: crosshair Y-sync** (`MultiChartArea`). Client tests 92 (6 files), total 178._
+
+

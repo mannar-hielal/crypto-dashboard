@@ -43,6 +43,7 @@ export function MultiChartArea() {
   const activePane = useLayoutStore((s) => s.activePane);
   const syncOptions = useLayoutStore((s) => s.syncOptions);
   const setActivePane = useLayoutStore((s) => s.setActivePane);
+  const panes = useLayoutStore((s) => s.panes);
 
   const paneCount = LAYOUT_PANE_COUNT[layout];
   const gridClass = LAYOUT_GRID_CLASS[layout];
@@ -229,6 +230,7 @@ export function MultiChartArea() {
             >
               <ChartPanel
                 paneIndex={paneIndex}
+                interval={panes[paneIndex].interval}
                 onChartReady={(chart, series) => handleChartReady(paneIndex, chart, series)}
                 onChartDestroy={() => handleChartDestroy(paneIndex)}
               />
