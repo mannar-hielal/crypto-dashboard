@@ -14,7 +14,7 @@
 import { useEffect, useRef } from 'react';
 import { marketApi, type WsMessage } from '@crypto-dashboard/sdk';
 import { useLayoutStore, LAYOUT_PANE_COUNT } from '@/store/layoutStore';
-import { paneStores } from '@/store/paneStore';
+import { paneStores, lastKnownPrices } from '@/store/paneStore';
 import { INTERVAL_FETCH_LIMIT, type Interval } from '@/lib/markets';
 
 const RECONNECT_DELAY_MS = 3_000;
@@ -66,7 +66,11 @@ function useSinglePaneFeed(
     marketApi
       .getCandles(symbol, interval, INTERVAL_FETCH_LIMIT[interval])
       .then((res) => {
-        if (!cancelled) store.getState().setSnapshot(res.candles, null);
+        if (!cancelled) {
+          const last = res.candles[res.candles.length - 1];
+          if (last) lastKnownPrices.set(symbol, last.close);
+          store.getState().setSnapshot(res.candles, null);
+        }
       })
       .catch(() => {});
 
@@ -87,11 +91,13 @@ function useSinglePaneFeed(
           const msg = JSON.parse(e.data) as WsMessage;
           if (msg.type === 'snapshot') {
             const last = msg.bars[msg.bars.length - 1];
+            if (last) lastKnownPrices.set(symbol, last.kline.close);
             store.getState().setSnapshot(
               msg.bars.map((b) => b.kline),
               last?.indicators ?? null
             );
           } else if (msg.type === 'bar') {
+            lastKnownPrices.set(symbol, msg.bar.kline.close);
             store.getState().addBar(msg.bar);
           }
         } catch {

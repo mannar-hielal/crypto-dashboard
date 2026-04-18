@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { CryptoIcon } from '@/components/ui/CryptoIcon';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -13,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/shallow';
-import { paneStores } from '@/store/paneStore';
+import { paneStores, lastKnownPrices } from '@/store/paneStore';
 import { usePaperStore } from '@/store/paperStore';
 import type { JournalEntry } from '@/store/paperStore';
 import type { PanelSize } from '@/pages/DashboardPage';
@@ -168,6 +169,11 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
   [lp0, lp1, lp2, lp3].forEach((lp, i) => {
     if (lp !== null) priceBySymbol[paneSymbols[i]] = lp;
   });
+  // Helper: get the best available price for a symbol — live pane price first,
+  // then the last known price (persisted across symbol switches), then null.
+  function getPriceForSymbol(sym: string): number | null {
+    return priceBySymbol[sym] ?? lastKnownPrices.get(sym) ?? null;
+  }
   // latestPrice from pane 0 was previously used for the active trading form;
   // now all pricing goes through priceBySymbol — so lp0 is accessed only via the map.
   const balance = usePaperStore((s) => s.balance);
@@ -183,7 +189,7 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
   const sound = useTradingSoundCtx();
 
   const unrealizedPnl = positions.reduce((sum, pos) => {
-    const markPrice = priceBySymbol[pos.symbol] ?? null;
+    const markPrice = getPriceForSymbol(pos.symbol);
     if (!markPrice) return sum;
     const pnl =
       pos.side === 'long'
@@ -196,7 +202,7 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
   function handleClose(positionId: string) {
     const pos = positions.find((p) => p.id === positionId);
     if (!pos) return;
-    const markPrice = priceBySymbol[pos.symbol] ?? null;
+    const markPrice = getPriceForSymbol(pos.symbol);
     if (!markPrice) return;
     const pnl =
       pos.side === 'long'
@@ -481,7 +487,7 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                           <tbody>
                             <AnimatePresence>
                               {positions.map((pos, i) => {
-                                const markPrice = priceBySymbol[pos.symbol] ?? pos.entryPrice;
+                                const markPrice = getPriceForSymbol(pos.symbol) ?? pos.entryPrice;
                                 const pnl =
                                   pos.side === 'long'
                                     ? (markPrice - pos.entryPrice) * pos.quantity
@@ -500,8 +506,14 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                                     layout
                                     className="border-b border-white/3 transition-colors hover:bg-white/2"
                                   >
-                                    <td className="px-3 py-1.5 font-bold text-white">
-                                      {pos.symbol}
+                                    <td className="px-3 py-1.5">
+                                      <span className="flex items-center gap-1.5">
+                                        <CryptoIcon
+                                          symbol={pos.symbol.replace('USDT', '')}
+                                          size={16}
+                                        />
+                                        <span className="font-bold text-white">{pos.symbol}</span>
+                                      </span>
                                     </td>
                                     <td className="px-3 py-1.5">
                                       <span
@@ -644,8 +656,14 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                                   layout
                                   className="border-b border-white/3 transition-colors hover:bg-white/2"
                                 >
-                                  <td className="px-3 py-1.5 font-bold text-white">
-                                    {order.symbol}
+                                  <td className="px-3 py-1.5">
+                                    <span className="flex items-center gap-1.5">
+                                      <CryptoIcon
+                                        symbol={order.symbol.replace('USDT', '')}
+                                        size={16}
+                                      />
+                                      <span className="font-bold text-white">{order.symbol}</span>
+                                    </span>
                                   </td>
                                   <td className="px-3 py-1.5">
                                     <span
@@ -759,8 +777,14 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                                     exit="exit"
                                     className="border-b border-white/3 transition-colors hover:bg-white/2"
                                   >
-                                    <td className="px-3 py-1.5 font-bold text-white">
-                                      {trade.symbol}
+                                    <td className="px-3 py-1.5">
+                                      <span className="flex items-center gap-1.5">
+                                        <CryptoIcon
+                                          symbol={trade.symbol.replace('USDT', '')}
+                                          size={16}
+                                        />
+                                        <span className="font-bold text-white">{trade.symbol}</span>
+                                      </span>
                                     </td>
                                     <td
                                       className="px-3 py-1.5 font-bold"

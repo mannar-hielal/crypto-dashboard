@@ -13,6 +13,14 @@ import type { CandleBar, IndicatorSnapshot, LiveBar } from '@crypto-dashboard/sd
 
 const MAX_BARS = 1000;
 
+/**
+ * Global map of the last known price for each symbol.
+ * Updated by every pane feed, never cleared on pane reset.
+ * Used as a fallback so positions retain their mark price
+ * after switching away from a symbol.
+ */
+export const lastKnownPrices = new Map<string, number>();
+
 // ─── State shape ─────────────────────────────────────────────────────────────
 
 export interface PaneMarketState {
