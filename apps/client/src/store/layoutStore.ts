@@ -124,8 +124,32 @@ export const useLayoutStore = create<LayoutState>()(
       },
 
       toggleSync: (key) => {
-        const { syncOptions } = get();
-        set({ syncOptions: { ...syncOptions, [key]: !syncOptions[key] } });
+        const { syncOptions, panes, activePane } = get();
+        const turningOn = !syncOptions[key];
+        const newSyncOptions = { ...syncOptions, [key]: turningOn };
+
+        // When enabling symbol or interval sync, immediately snap all panes to
+        // the active pane's value.  Active pane wins — it is the chart the user
+        // is currently focused on, making it the most intuitive source of truth
+        // (mirrors the behaviour of TradingView / Bookmap multi-chart sync).
+        if (turningOn && key === 'symbol') {
+          const sourceSymbol = panes[activePane].symbol;
+          set({
+            syncOptions: newSyncOptions,
+            panes: panes.map((p) => ({ ...p, symbol: sourceSymbol })),
+          });
+          return;
+        }
+        if (turningOn && key === 'interval') {
+          const sourceInterval = panes[activePane].interval;
+          set({
+            syncOptions: newSyncOptions,
+            panes: panes.map((p) => ({ ...p, interval: sourceInterval })),
+          });
+          return;
+        }
+
+        set({ syncOptions: newSyncOptions });
       },
     }),
     {
