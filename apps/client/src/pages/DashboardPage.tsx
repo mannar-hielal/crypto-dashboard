@@ -5,6 +5,7 @@ import { BarChart2 } from 'lucide-react';
 import { usePaneFeeds } from '@/hooks/usePaneFeeds';
 import { useTPSLMonitor } from '@/hooks/useTPSLMonitor';
 import { usePendingOrderMonitor } from '@/hooks/usePendingOrderMonitor';
+import { TradingSoundProvider, useTradingSoundCtx } from '@/hooks/TradingSoundContext';
 import { useLayoutStore } from '@/store/layoutStore';
 import { TopBar } from '@/components/dashboard/TopBar';
 import { LeftToolbar } from '@/components/dashboard/LeftToolbar';
@@ -53,9 +54,26 @@ const PANEL_HEIGHTS: Record<PanelSize, number> = {
  * to the page, not to individual child components.
  */
 export function DashboardPage() {
+  return (
+    <TradingSoundProvider>
+      <DashboardInner />
+    </TradingSoundProvider>
+  );
+}
+
+function DashboardInner() {
+  const sound = useTradingSoundCtx();
+
   usePaneFeeds();
-  useTPSLMonitor();
-  usePendingOrderMonitor();
+  useTPSLMonitor({
+    onClosed: (pnl) => {
+      if (pnl >= 0) sound.playProfit();
+      else sound.playLoss();
+    },
+  });
+  usePendingOrderMonitor({
+    onFilled: () => sound.playOrderFilled(),
+  });
 
   // Active pane symbol drives the TradingPanel key (resets form on symbol change)
   const activePane = useLayoutStore((s) => s.activePane);

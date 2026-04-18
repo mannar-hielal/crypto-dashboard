@@ -17,6 +17,9 @@ import { usePaperStore } from '@/store/paperStore';
 import type { JournalEntry } from '@/store/paperStore';
 import type { PanelSize } from '@/pages/DashboardPage';
 import { bg, color, fontSize } from '@/lib/tokens';
+import { useLayoutStore } from '@/store/layoutStore';
+import { useTradingSoundCtx } from '@/hooks/TradingSoundContext';
+import { SoundSettings } from './SoundSettings';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -153,9 +156,19 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
   const [editText, setEditText] = useState('');
 
   // ── Store ─────────────────────────────────────────────────────────────────
-  // Read from paneStores[0] (primary trading pane) — marketStore is no longer
-  // wired because usePriceFeed was superseded by usePaneFeeds.
-  const latestPrice = useStore(paneStores[0], (s) => s.latestPrice);
+  // Build a per-symbol price map from all 4 pane stores so that positions in
+  // any symbol show the correct mark price regardless of which pane is active.
+  const lp0 = useStore(paneStores[0], (s) => s.latestPrice);
+  const lp1 = useStore(paneStores[1], (s) => s.latestPrice);
+  const lp2 = useStore(paneStores[2], (s) => s.latestPrice);
+  const lp3 = useStore(paneStores[3], (s) => s.latestPrice);
+  const paneSymbols = useLayoutStore((s) => s.panes.map((p) => p.symbol));
+  const priceBySymbol: Record<string, number> = {};
+  [lp0, lp1, lp2, lp3].forEach((lp, i) => {
+    if (lp !== null) priceBySymbol[paneSymbols[i]] = lp;
+  });
+  // latestPrice from pane 0 was previously used for the active trading form;
+  // now all pricing goes through priceBySymbol — so lp0 is accessed only via the map.
   const balance = usePaperStore((s) => s.balance);
   const positions = usePaperStore((s) => s.positions);
   const pendingOrders = usePaperStore((s) => s.pendingOrders);
@@ -166,20 +179,31 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
   const addJournalNote = usePaperStore((s) => s.addJournalNote);
   const editJournalEntry = usePaperStore((s) => s.editJournalEntry);
   const reset = usePaperStore((s) => s.reset);
+  const sound = useTradingSoundCtx();
 
   const unrealizedPnl = positions.reduce((sum, pos) => {
-    if (!latestPrice) return sum;
+    const markPrice = priceBySymbol[pos.symbol] ?? null;
+    if (!markPrice) return sum;
     const pnl =
       pos.side === 'long'
-        ? (latestPrice - pos.entryPrice) * pos.quantity
-        : (pos.entryPrice - latestPrice) * pos.quantity;
+        ? (markPrice - pos.entryPrice) * pos.quantity
+        : (pos.entryPrice - markPrice) * pos.quantity;
     return sum + pnl;
   }, 0);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   function handleClose(positionId: string) {
-    if (!latestPrice) return;
-    closePosition(positionId, latestPrice);
+    const pos = positions.find((p) => p.id === positionId);
+    if (!pos) return;
+    const markPrice = priceBySymbol[pos.symbol] ?? null;
+    if (!markPrice) return;
+    const pnl =
+      pos.side === 'long'
+        ? (markPrice - pos.entryPrice) * pos.quantity
+        : (pos.entryPrice - markPrice) * pos.quantity;
+    closePosition(positionId, markPrice);
+    if (pnl >= 0) sound.playProfit();
+    else sound.playLoss();
   }
 
   function handleResetClick() {
@@ -252,8 +276,9 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
           </span>
         </div>
 
-        {/* Right: gear (reset) + collapse + close */}
+        {/* Right: gear (reset) + sound + collapse + close */}
         <div className="flex items-center gap-0.5">
+          <SoundSettings />
           <AnimatePresence mode="wait">
             {confirmingReset ? (
               <motion.button
@@ -455,7 +480,7 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                           <tbody>
                             <AnimatePresence>
                               {positions.map((pos, i) => {
-                                const markPrice = latestPrice ?? pos.entryPrice;
+                                const markPrice = priceBySymbol[pos.symbol] ?? pos.entryPrice;
                                 const pnl =
                                   pos.side === 'long'
                                     ? (markPrice - pos.entryPrice) * pos.quantity

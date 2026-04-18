@@ -5,6 +5,7 @@ import { useStore } from 'zustand';
 import { useLayoutStore } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
 import { usePaperStore, COMMISSION_RATE } from '@/store/paperStore';
+import { useTradingSoundCtx } from '@/hooks/TradingSoundContext';
 import { bg, color, fontSize } from '@/lib/tokens';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -70,6 +71,8 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
   const placeOrder = usePaperStore((s) => s.placeOrder);
   const placeLimitOrder = usePaperStore((s) => s.placeLimitOrder);
   const placeStopOrder = usePaperStore((s) => s.placeStopOrder);
+  const sound = useTradingSoundCtx();
+
 
   // ── Local state ───────────────────────────────────────────────────────────
   const [side, setSide] = useState<OrderSide>('buy');
@@ -212,6 +215,10 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
       setFormError('Order could not be placed');
       return;
     }
+
+    // Play sound feedback
+    if (tab === 'market') sound.playOrderPlaced();
+    else sound.playOrderQueued();
 
     setQtyInput('');
     setPriceInput('');
@@ -580,10 +587,9 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
                 style={{ fontSize: fontSize.xs10, color: color.muted }}
               >
                 <span>Margin</span>
-                <Info
-                  className="h-3 w-3 opacity-60"
-                  title="Funds required to open this position (trade value ÷ leverage)"
-                />
+                <span title="Funds required to open this position (trade value ÷ leverage)">
+                  <Info className="h-3 w-3 opacity-60" />
+                </span>
               </div>
               <span
                 className="tabular-nums"

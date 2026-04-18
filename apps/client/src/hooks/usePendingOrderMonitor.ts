@@ -49,7 +49,12 @@ export function checkPendingTrigger(
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
-export function usePendingOrderMonitor() {
+interface PendingOrderMonitorOptions {
+  /** Called when a pending order is successfully filled. */
+  onFilled?: () => void;
+}
+
+export function usePendingOrderMonitor({ onFilled }: PendingOrderMonitorOptions = {}) {
   // Monitor pane 0 (primary trading pane) — scoped to active symbol only
   const latestPrice = useStore(paneStores[0], (s) => s.latestPrice);
   const symbol = useLayoutStore((s) => s.panes[0].symbol);
@@ -59,6 +64,8 @@ export function usePendingOrderMonitor() {
   const placeOrderRef = useRef(usePaperStore.getState().placeOrder);
   const cancelPendingRef = useRef(usePaperStore.getState().cancelPendingOrder);
   const addJournalNoteRef = useRef(usePaperStore.getState().addJournalNote);
+  const onFilledRef = useRef(onFilled);
+  onFilledRef.current = onFilled;
 
   useEffect(() => {
     if (latestPrice === null) return;
@@ -88,6 +95,7 @@ export function usePendingOrderMonitor() {
       const sideLabel = order.side === 'buy' ? 'Long' : 'Short';
 
       if (posId) {
+        onFilledRef.current?.();
         addJournalNoteRef.current(
           `${typeLabel} order filled — ${sideLabel} ${order.symbol} @ $${price.toFixed(4)} ` +
             `(trigger: $${order.triggerPrice.toFixed(4)}, qty: ${order.qty.toFixed(6)})`,

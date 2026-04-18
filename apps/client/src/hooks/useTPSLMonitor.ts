@@ -44,7 +44,12 @@ export function checkTPSL(
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
-export function useTPSLMonitor() {
+interface TPSLMonitorOptions {
+  /** Called when a position is auto-closed. pnl > 0 = profit, pnl < 0 = loss. */
+  onClosed?: (pnl: number) => void;
+}
+
+export function useTPSLMonitor({ onClosed }: TPSLMonitorOptions = {}) {
   // Monitor pane 0 (primary trading pane) — scoped to active symbol only
   const latestPrice = useStore(paneStores[0], (s) => s.latestPrice);
   const symbol = useLayoutStore((s) => s.panes[0].symbol);
@@ -53,6 +58,8 @@ export function useTPSLMonitor() {
   // without needing to re-subscribe and re-attach the effect.
   const closePosition = useRef(usePaperStore.getState().closePosition);
   const addJournalNote = useRef(usePaperStore.getState().addJournalNote);
+  const onClosedRef = useRef(onClosed);
+  onClosedRef.current = onClosed;
 
   useEffect(() => {
     if (latestPrice === null) return;
@@ -67,6 +74,12 @@ export function useTPSLMonitor() {
 
       if (triggered) {
         closePosition.current(pos.id, price);
+        // Calculate PnL to decide profit vs loss sound
+        const pnl =
+          pos.side === 'long'
+            ? (price - pos.entryPrice) * pos.quantity
+            : (pos.entryPrice - price) * pos.quantity;
+        onClosedRef.current?.(pnl);
         const label = triggered === 'TP' ? 'Take-Profit' : 'Stop-Loss';
         // isUserNote: false — system-generated entries must not be user-editable
         addJournalNote.current(

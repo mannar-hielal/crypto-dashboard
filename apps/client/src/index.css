@@ -324,3 +324,30 @@
 ::-webkit-scrollbar-thumb:hover {
   background: oklch(1 0 0 / 20%);
 }
+
+/* ── Sound volume slider ──────────────────────────────────────────────────── */
+.sound-vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #7c3aed;
+  cursor: pointer;
+  border: 2px solid #1a1d2e;
+  box-shadow: 0 0 6px rgba(124, 58, 237, 0.6);
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.sound-vol-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+  box-shadow: 0 0 10px rgba(124, 58, 237, 0.8);
+}
+.sound-vol-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #7c3aed;
+  cursor: pointer;
+  border: 2px solid #1a1d2e;
+}
+
