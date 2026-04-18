@@ -9,6 +9,7 @@ import {
   Settings,
   Pencil,
   Check,
+  Clock,
 } from 'lucide-react';
 import { useStore } from 'zustand';
 import { paneStores } from '@/store/paneStore';
@@ -19,7 +20,7 @@ import { bg, color, fontSize } from '@/lib/tokens';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type InfoTab = 'positions' | 'history' | 'journal';
+type InfoTab = 'positions' | 'orders' | 'history' | 'journal';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -157,9 +158,11 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
   const latestPrice = useStore(paneStores[0], (s) => s.latestPrice);
   const balance = usePaperStore((s) => s.balance);
   const positions = usePaperStore((s) => s.positions);
+  const pendingOrders = usePaperStore((s) => s.pendingOrders);
   const history = usePaperStore((s) => s.history);
   const journal = usePaperStore((s) => s.journal);
   const closePosition = usePaperStore((s) => s.closePosition);
+  const cancelPendingOrder = usePaperStore((s) => s.cancelPendingOrder);
   const addJournalNote = usePaperStore((s) => s.addJournalNote);
   const editJournalEntry = usePaperStore((s) => s.editJournalEntry);
   const reset = usePaperStore((s) => s.reset);
@@ -344,7 +347,7 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
               className="flex items-center border-b border-white/6"
               style={{ background: bg.panel }}
             >
-              {(['positions', 'history', 'journal'] as const).map((tab) => (
+              {(['positions', 'orders', 'history', 'journal'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setInfoTab(tab)}
@@ -365,6 +368,14 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                       style={{ fontSize: fontSize.xxs, background: color.purpleDark }}
                     >
                       {positions.length}
+                    </span>
+                  )}
+                  {tab === 'orders' && pendingOrders.length > 0 && (
+                    <span
+                      className="rounded-full px-1.5 py-px font-bold text-white"
+                      style={{ fontSize: fontSize.xxs, background: color.amber }}
+                    >
+                      {pendingOrders.length}
                     </span>
                   )}
                   {tab === 'history' && history.length > 0 && (
@@ -544,18 +555,149 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                       </div>
                     ))}
 
-                  {/* ════ History ══════════════════════════════════════════════════ */}
-                  {infoTab === 'history' &&
-                    (history.length === 0 ? (
+                  {/* ════ Pending Orders ═══════════════════════════════════════════ */}
+                  {infoTab === 'orders' &&
+                    (pendingOrders.length === 0 ? (
                       <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="flex h-full items-center justify-center text-xs"
+                        className="flex h-full flex-col items-center justify-center gap-1 text-xs"
                         style={{ color: color.muted }}
                       >
-                        No closed trades yet
+                        <Clock className="h-4 w-4 opacity-40" />
+                        No pending orders
                       </motion.div>
                     ) : (
+                      <div className="flex-1 overflow-y-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr
+                              className="border-b border-white/4"
+                              style={{
+                                background: bg.panel,
+                                fontSize: fontSize.xs10,
+                                color: color.muted,
+                              }}
+                            >
+                              {[
+                                'Symbol',
+                                'Type',
+                                'Side',
+                                'Qty',
+                                'Trigger',
+                                'TP',
+                                'SL',
+                                'Reserved',
+                                'Cancel',
+                              ].map((h) => (
+                                <th
+                                  key={h}
+                                  className={`px-3 py-1.5 font-semibold uppercase tracking-wider ${
+                                    h === 'Symbol' || h === 'Type' || h === 'Side'
+                                      ? 'text-left'
+                                      : h === 'Cancel'
+                                        ? 'text-center'
+                                        : 'text-right'
+                                  }`}
+                                >
+                                  {h}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <AnimatePresence>
+                              {pendingOrders.map((order, i) => (
+                                <motion.tr
+                                  key={order.id}
+                                  custom={i}
+                                  variants={rowVariants}
+                                  initial="hidden"
+                                  animate="visible"
+                                  exit="exit"
+                                  layout
+                                  className="border-b border-white/3 transition-colors hover:bg-white/2"
+                                >
+                                  <td className="px-3 py-1.5 font-bold text-white">
+                                    {order.symbol}
+                                  </td>
+                                  <td className="px-3 py-1.5">
+                                    <span
+                                      className="rounded px-1 py-px font-bold uppercase"
+                                      style={{
+                                        fontSize: fontSize.xs10,
+                                        background:
+                                          order.type === 'limit'
+                                            ? `${color.purpleDark}33`
+                                            : `${color.amber}22`,
+                                        color:
+                                          order.type === 'limit' ? color.purpleDark : color.amber,
+                                      }}
+                                    >
+                                      {order.type}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-1.5">
+                                    <span
+                                      className="font-bold uppercase"
+                                      style={{
+                                        fontSize: fontSize.xs10,
+                                        color: order.side === 'buy' ? color.green : color.red,
+                                      }}
+                                    >
+                                      {order.side === 'buy' ? 'BUY' : 'SELL'}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                    {order.qty.toFixed(6)}
+                                  </td>
+                                  <td className="px-3 py-1.5 text-right tabular-nums text-white/80">
+                                    ${order.triggerPrice.toFixed(2)}
+                                  </td>
+                                  <td
+                                    className="px-3 py-1.5 text-right tabular-nums"
+                                    style={{
+                                      fontSize: fontSize.xs10,
+                                      color: order.takeProfit ? color.green : color.muted,
+                                    }}
+                                  >
+                                    {order.takeProfit ? `$${order.takeProfit.toFixed(2)}` : '—'}
+                                  </td>
+                                  <td
+                                    className="px-3 py-1.5 text-right tabular-nums"
+                                    style={{
+                                      fontSize: fontSize.xs10,
+                                      color: order.stopLoss ? color.red : color.muted,
+                                    }}
+                                  >
+                                    {order.stopLoss ? `$${order.stopLoss.toFixed(2)}` : '—'}
+                                  </td>
+                                  <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                    ${order.usdtAmount.toFixed(2)}
+                                  </td>
+                                  <td className="px-3 py-1.5 text-center">
+                                    <motion.button
+                                      onClick={() => cancelPendingOrder(order.id)}
+                                      whileHover={{ scale: 1.2 }}
+                                      whileTap={{ scale: 0.9 }}
+                                      title="Cancel pending order (balance refunded)"
+                                      className="mx-auto flex h-5 w-5 items-center justify-center rounded transition-colors hover:text-brand-red"
+                                      style={{ color: color.muted }}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </motion.button>
+                                  </td>
+                                </motion.tr>
+                              ))}
+                            </AnimatePresence>
+                          </tbody>
+                        </table>
+                      </div>
+                    ))}
+
+                  {/* ════ History ══════════════════════════════════════════════════ */}
+                  {infoTab === 'history' &&
+                    (history.length > 0 ? (
                       <div className="flex-1 overflow-y-auto">
                         <table className="w-full text-xs">
                           <thead>
@@ -626,6 +768,15 @@ export function PaperTradingPanel({ size, onSizeChange }: PaperTradingPanelProps
                           </tbody>
                         </table>
                       </div>
+                    ) : (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="flex h-full items-center justify-center text-xs"
+                        style={{ color: color.muted }}
+                      >
+                        No closed trades yet
+                      </motion.div>
                     ))}
 
                   {/* ════ Journal ══════════════════════════════════════════════════ */}

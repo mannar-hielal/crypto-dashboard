@@ -1,0 +1,182 @@
+# Trading Panel — Manual UI Test Plan
+
+> Status legend: ⬜ Not tested · ✅ Pass · ❌ Fail · ⚠️ Partial
+
+**Test environment:** Local dev (`pnpm dev`). Symbol: BTCUSDT (live feed).  
+**Reset account between sections** using the ⚙️ gear → Reset? button.
+
+---
+
+## Setup checklist (run before every section)
+
+- [ ] Dev server running, live price updating in TradingPanel header
+- [ ] PaperTradingPanel expanded (open state), balance shows $10,000.00
+- [ ] Account reset (gear → Reset?) to start fresh
+- [ ] Journal tab is empty
+
+---
+
+## Section 1 — Market Orders
+
+### 1.1 Basic Buy (USD mode)
+
+| #     | Action                                                            | Expected                                                          | Status | Notes |
+| ----- | ----------------------------------------------------------------- | ----------------------------------------------------------------- | ------ | ----- |
+| 1.1.1 | Select **Buy**, tab = **Market**, qty mode = **USD**, enter `100` | Order info shows Margin ~$10, Trade value $100, Commission ~$0.07 | ⬜     |       |
+| 1.1.2 | Click **Buy** button                                              | Button pulses; qty input clears                                   | ⬜     |       |
+| 1.1.3 | Go to **Positions** tab                                           | 1 LONG row appears: Entry ≈ live price, Qty > 0, TP = —, SL = —   | ⬜     |       |
+| 1.1.4 | Check balance                                                     | Balance = $10,000 − $100 − commission                             | ⬜     |       |
+| 1.1.5 | Go to **Journal** tab                                             | Auto entry: `Opened LONG BTCUSDT @ $X.XX`                         | ⬜     |       |
+
+### 1.2 Basic Sell (USD mode)
+
+| #     | Action                                                                  | Expected                                                            | Status | Notes |
+| ----- | ----------------------------------------------------------------------- | ------------------------------------------------------------------- | ------ | ----- |
+| 1.2.1 | Reset account. Select **Sell**, tab = **Market**, USD mode, enter `200` | Order info updates for Sell side                                    | ⬜     |       |
+| 1.2.2 | Click **Sell** button                                                   | Position opens                                                      | ⬜     |       |
+| 1.2.3 | Positions tab                                                           | 1 SHORT row. PnL updates live (green if price dropped, red if rose) | ⬜     |       |
+
+### 1.3 Units mode
+
+| #     | Action                                 | Expected                                                  | Status | Notes |
+| ----- | -------------------------------------- | --------------------------------------------------------- | ------ | ----- |
+| 1.3.1 | Click `⇄ Units` button                 | Label changes to `Quantity (BTC)`, placeholder `0.000000` | ⬜     |       |
+| 1.3.2 | Enter `0.001` units                    | Equivalent below shows ≈ live_price × 0.001 USD           | ⬜     |       |
+| 1.3.3 | Click `⇄ USD`                          | Input converts to USD value; equivalent shows 0.001 BTC   | ⬜     |       |
+| 1.3.4 | Place order in Units mode with `0.001` | Position qty ≈ 0.001                                      | ⬜     |       |
+
+### 1.4 Buy with Take-Profit only
+
+| #     | Action                                                                               | Expected                                                           | Status | Notes |
+| ----- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------ | ------ | ----- |
+| 1.4.1 | Reset. Buy $500, enable TP toggle, enter a price **above** live price (e.g. live+5%) | TP input has green border                                          | ⬜     |       |
+| 1.4.2 | Submit                                                                               | Position appears with TP = your price, SL = —                      | ⬜     |       |
+| 1.4.3 | _(wait or set TP very close)_ When live price crosses TP                             | Position disappears from Positions; appears in History with profit | ⬜     |       |
+| 1.4.4 | Journal tab                                                                          | Entry: `Auto-closed LONG BTCUSDT — Take-Profit hit at $X`          | ⬜     |       |
+
+### 1.5 Sell with Stop-Loss only
+
+| #     | Action                                                                                          | Expected                            | Status | Notes |
+| ----- | ----------------------------------------------------------------------------------------------- | ----------------------------------- | ------ | ----- |
+| 1.5.1 | Reset. Sell $500, enable SL toggle, enter a price **above** live price (SHORT SL = above entry) | SL input has red border             | ⬜     |       |
+| 1.5.2 | Submit                                                                                          | SHORT position with SL = your price | ⬜     |       |
+| 1.5.3 | When price rises to SL                                                                          | Auto-closed, appears in History     | ⬜     |       |
+
+### 1.6 Buy with both TP and SL
+
+| #     | Action                                      | Expected                                                      | Status | Notes |
+| ----- | ------------------------------------------- | ------------------------------------------------------------- | ------ | ----- |
+| 1.6.1 | Reset. Buy $300, TP = live+3%, SL = live−2% | Both inputs active                                            | ⬜     |       |
+| 1.6.2 | Submit                                      | Position shows both TP and SL columns                         | ⬜     |       |
+| 1.6.3 | Manual close via **✕** in Positions tab     | Position removed; History row appears; PnL = (exit−entry)×qty | ⬜     |       |
+
+### 1.7 Edge cases
+
+| #      | Scenario                                              | Expected                                                 | Status | Notes |
+| ------ | ----------------------------------------------------- | -------------------------------------------------------- | ------ | ----- |
+| 1.7.1  | Submit with **empty** qty                             | Error: "Enter a USD amount"                              | ⬜     |       |
+| 1.7.2  | Submit with qty **> balance** (e.g. $99,999)          | Error: "Insufficient balance"                            | ⬜     |       |
+| 1.7.3  | TP below entry for a Buy (e.g. live−1%)               | Error: "Take-Profit must be above entry price for Long"  | ⬜     |       |
+| 1.7.4  | SL above entry for a Buy (e.g. live+1%)               | Error: "Stop-Loss must be below entry price for Long"    | ⬜     |       |
+| 1.7.5  | TP above entry for a Sell                             | Error: "Take-Profit must be below entry price for Short" | ⬜     |       |
+| 1.7.6  | SL below entry for a Sell                             | Error: "Stop-Loss must be above entry price for Short"   | ⬜     |       |
+| 1.7.7  | Enter qty `0` or negative                             | Submit button disabled (opacity 30%)                     | ⬜     |       |
+| 1.7.8  | Disconnect from internet, submit market order         | Error: "Waiting for live price…"                         | ⬜     |       |
+| 1.7.9  | Place multiple positions, close them in reverse order | Each closes at correct mark price; History accumulates   | ⬜     |       |
+| 1.7.10 | Reset account mid-open position                       | Positions cleared, balance = $10,000                     | ⬜     |       |
+
+---
+
+## Section 2 — Limit Orders _(run after Section 1 passes)_
+
+### 2.1 Limit Buy below market
+
+| #     | Action                                                          | Expected                                                                         | Status | Notes |
+| ----- | --------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------ | ----- |
+| 2.1.1 | Tab = **Limit**. Price input appears pre-filled with live price | Price field visible                                                              | ⬜     |       |
+| 2.1.2 | Set price to live − 2%, qty $200, click **Buy**                 | Pending order created; balance decreases by $200 + commission                    | ⬜     |       |
+| 2.1.3 | Go to **Orders** tab                                            | 1 row: LIMIT / BUY / Trigger = your price / Reserved = $200                      | ⬜     |       |
+| 2.1.4 | When price drops to trigger                                     | Order disappears from Orders; position appears in Positions; journal entry added | ⬜     |       |
+
+### 2.2 Limit Buy cancel
+
+| #     | Action                                        | Expected                                                               | Status | Notes |
+| ----- | --------------------------------------------- | ---------------------------------------------------------------------- | ------ | ----- |
+| 2.2.1 | Place limit buy far below market (live − 10%) | Order appears in Orders tab                                            | ⬜     |       |
+| 2.2.2 | Click **✕** cancel in Orders tab              | Order disappears; balance **fully refunded** (back to pre-order value) | ⬜     |       |
+
+### 2.3 Limit Sell above market
+
+| #     | Action                                    | Expected                          | Status | Notes |
+| ----- | ----------------------------------------- | --------------------------------- | ------ | ----- |
+| 2.3.1 | Tab = Limit, price = live + 2%, Sell $200 | Pending SHORT sell created        | ⬜     |       |
+| 2.3.2 | When price rises to trigger               | SHORT position opens in Positions | ⬜     |       |
+
+### 2.4 Limit with TP + SL
+
+| #     | Action                                                | Expected                                | Status | Notes |
+| ----- | ----------------------------------------------------- | --------------------------------------- | ------ | ----- |
+| 2.4.1 | Limit buy $300 at live−1%, TP = live+3%, SL = live−4% | Order shows TP/SL columns in Orders tab | ⬜     |       |
+| 2.4.2 | When triggered, position inherits TP and SL           | Position TP/SL match what was set       | ⬜     |       |
+
+### 2.5 Edge cases
+
+| #     | Scenario                                  | Expected                                             | Status | Notes |
+| ----- | ----------------------------------------- | ---------------------------------------------------- | ------ | ----- |
+| 2.5.1 | Limit Buy with TP **below** trigger price | Validation error before placement                    | ⬜     |       |
+| 2.5.2 | Limit Buy with SL **above** trigger price | Validation error before placement                    | ⬜     |       |
+| 2.5.3 | Place limit, then switch symbol           | Order stays in Orders tab (scoped to its own symbol) | ⬜     |       |
+| 2.5.4 | Place limit order that exceeds balance    | Error: "Insufficient balance"                        | ⬜     |       |
+
+---
+
+## Section 3 — Stop Orders _(run after Section 2 passes)_
+
+### 3.1 Stop Buy above market (breakout)
+
+| #     | Action                                      | Expected                                     | Status | Notes |
+| ----- | ------------------------------------------- | -------------------------------------------- | ------ | ----- |
+| 3.1.1 | Tab = **Stop**, price = live + 1%, Buy $200 | Pending order in Orders tab: STOP / BUY      | ⬜     |       |
+| 3.1.2 | When price rises to trigger                 | Position opens; journal: `Stop order filled` | ⬜     |       |
+
+### 3.2 Stop Sell below market (breakdown)
+
+| #     | Action                                   | Expected                   | Status | Notes |
+| ----- | ---------------------------------------- | -------------------------- | ------ | ----- |
+| 3.2.1 | Tab = Stop, price = live − 1%, Sell $200 | Pending order: STOP / SELL | ⬜     |       |
+| 3.2.2 | When price drops to trigger              | SHORT position opens       | ⬜     |       |
+
+### 3.3 Stop cancel
+
+| #     | Action                           | Expected            | Status | Notes |
+| ----- | -------------------------------- | ------------------- | ------ | ----- |
+| 3.3.1 | Place stop order far from market | Order in Orders tab | ⬜     |       |
+| 3.3.2 | Cancel it                        | Balance refunded    | ⬜     |       |
+
+### 3.4 Stop with TP + SL
+
+| #     | Action                                          | Expected        | Status | Notes |
+| ----- | ----------------------------------------------- | --------------- | ------ | ----- |
+| 3.4.1 | Stop Buy at live+1%, TP = live+4%, SL = live−1% | Placed OK       | ⬜     |       |
+| 3.4.2 | When triggered, position shows correct TP/SL    | TP/SL inherited | ⬜     |       |
+
+### 3.5 Edge cases
+
+| #     | Scenario                                      | Expected                                                                      | Status | Notes                     |
+| ----- | --------------------------------------------- | ----------------------------------------------------------------------------- | ------ | ------------------------- |
+| 3.5.1 | Stop Buy price **below** market               | Should still place (no restriction); will trigger immediately if already past | ⬜     | Document actual behaviour |
+| 3.5.2 | Multiple pending orders (mix of limit + stop) | All show in Orders tab; each cancels/fills independently                      | ⬜     |                           |
+| 3.5.3 | Reset account with pending orders             | All pending orders cleared; balance restored to $10,000                       | ⬜     |                           |
+
+---
+
+## Section 4 — Cross-cutting / Regression
+
+| #   | Scenario                                            | Expected                                                               | Status | Notes |
+| --- | --------------------------------------------------- | ---------------------------------------------------------------------- | ------ | ----- |
+| 4.1 | Switch pane symbol while TradingPanel open          | Header updates to new symbol; form resets                              | ⬜     |       |
+| 4.2 | Close TradingPanel (✕), reopen via SymbolBar button | Panel reopens; default state (Market, Buy, empty)                      | ⬜     |       |
+| 4.3 | Collapse PaperTradingPanel (↓), then expand         | All tabs still functional                                              | ⬜     |       |
+| 4.4 | Place order, refresh browser                        | Position/pending order persists (localStorage)                         | ⬜     |       |
+| 4.5 | History tab after mix of wins and losses            | PnL signs correct; green/red colors correct                            | ⬜     |       |
+| 4.6 | Journal tab shows all system entries in order       | Timestamps ascending, auto-entries not editable, manual notes editable | ⬜     |       |
