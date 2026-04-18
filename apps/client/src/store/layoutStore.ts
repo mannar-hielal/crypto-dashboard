@@ -129,7 +129,7 @@ export const useLayoutStore = create<LayoutState>()(
         const newSyncOptions = { ...syncOptions, [key]: turningOn };
 
         // When enabling symbol or interval sync, immediately snap all panes to
-        // the active pane's value.  Active pane wins — it is the chart the user
+        // the active pane's value. Active pane wins — it is the chart the user
         // is currently focused on, making it the most intuitive source of truth
         // (mirrors the behaviour of TradingView / Bookmap multi-chart sync).
         if (turningOn && key === 'symbol') {

@@ -1,6 +1,6 @@
 /**
- * Shared market constants — symbols list and interval definitions.
- * Imported by SymbolBar, PaneHeader, and layoutStore default config.
+ * Shared market constants — symbols list, interval definitions, bar-spacing, and fetch limits.
+ * Imported by SymbolBar, PaneHeader, layoutStore, ChartPanel, and usePaneFeeds.
  */
 
 export const INTERVALS = ['1m', '5m', '15m', '1h', '4h', '1d'] as const;
