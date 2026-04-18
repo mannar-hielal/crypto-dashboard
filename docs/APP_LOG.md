@@ -368,6 +368,15 @@ interface PaperState {
   journal: JournalEntry[]; // trading journal (MAX_JOURNAL = 200)
 }
 
+interface JournalEntry {
+  id: string;
+  time: number;
+  text: string;
+  isUserNote?: boolean; // true = user-added/editable; false = system-generated (read-only)
+  pnl?: number; // net PnL (USDT) on close entries only — gross PnL − exit commission
+                // undefined on open/pending entries and user notes
+}
+
 interface PendingOrder {
   id;
   symbol;
