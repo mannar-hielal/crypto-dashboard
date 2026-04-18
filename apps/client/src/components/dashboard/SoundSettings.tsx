@@ -12,17 +12,17 @@ import { useTradingSoundCtx } from '@/hooks/TradingSoundContext';
 // ─── Preview rows ─────────────────────────────────────────────────────────────
 
 const PREVIEWS = [
-  { label: 'Market order placed', fn: 'playOrderPlaced', color: '#60a5fa'  } as const,
+  { label: 'Market order placed', fn: 'playOrderPlaced', color: '#60a5fa' } as const,
   { label: 'Pending order queued', fn: 'playOrderQueued', color: '#fbbf24' } as const,
-  { label: 'Order filled',         fn: 'playOrderFilled', color: '#a78bfa' } as const,
-  { label: 'Closed with profit',   fn: 'playProfit',      color: '#34d399' } as const,
-  { label: 'Closed with loss',     fn: 'playLoss',        color: '#f87171' } as const,
+  { label: 'Order filled', fn: 'playOrderFilled', color: '#a78bfa' } as const,
+  { label: 'Closed with profit', fn: 'playProfit', color: '#34d399' } as const,
+  { label: 'Closed with loss', fn: 'playLoss', color: '#f87171' } as const,
 ] as const;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function SoundSettings() {
-  const sound   = useTradingSoundCtx();
+  const sound = useTradingSoundCtx();
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -51,9 +51,11 @@ export function SoundSettings() {
         }`}
         style={{ color: open ? undefined : 'rgba(255,255,255,0.35)' }}
       >
-        {sound.muted || vol < 0.01
-          ? <VolumeX className="h-3.5 w-3.5" />
-          : <Volume2 className="h-3.5 w-3.5" />}
+        {sound.muted || vol < 0.01 ? (
+          <VolumeX className="h-3.5 w-3.5" />
+        ) : (
+          <Volume2 className="h-3.5 w-3.5" />
+        )}
       </button>
 
       {/* ── Popover panel ──────────────────────────────────────────────── */}
@@ -82,12 +84,18 @@ export function SoundSettings() {
 
           {/* Volume slider */}
           <div className="mb-3 space-y-1.5">
-            <div className="flex justify-between" style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>
+            <div
+              className="flex justify-between"
+              style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}
+            >
               <span>Volume</span>
               <span>{Math.round(vol * 100)}%</span>
             </div>
             <div className="flex items-center gap-2">
-              <VolumeX className="h-2.5 w-2.5 shrink-0" style={{ color: 'rgba(255,255,255,0.3)' }} />
+              <VolumeX
+                className="h-2.5 w-2.5 shrink-0"
+                style={{ color: 'rgba(255,255,255,0.3)' }}
+              />
               <input
                 type="range"
                 min={0}
@@ -112,7 +120,15 @@ export function SoundSettings() {
           <div className="mb-3 border-t border-white/5" />
 
           {/* Preview sounds */}
-          <p className="mb-2" style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <p
+            className="mb-2"
+            style={{
+              fontSize: '10px',
+              color: 'rgba(255,255,255,0.3)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+            }}
+          >
             Preview
           </p>
           <div className="space-y-1">
@@ -125,13 +141,18 @@ export function SoundSettings() {
                 onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)')}
                 onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'transparent')}
               >
-                <span className="text-xs font-medium" style={{ color }}>{label}</span>
+                <span className="text-xs font-medium" style={{ color }}>
+                  {label}
+                </span>
                 <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)' }}>▶</span>
               </button>
             ))}
           </div>
 
-          <p className="mt-3 text-center" style={{ fontSize: '10px', color: 'rgba(255,255,255,0.2)' }}>
+          <p
+            className="mt-3 text-center"
+            style={{ fontSize: '10px', color: 'rgba(255,255,255,0.2)' }}
+          >
             Plays on order &amp; position events
           </p>
         </div>
@@ -139,4 +160,3 @@ export function SoundSettings() {
     </div>
   );
 }
-

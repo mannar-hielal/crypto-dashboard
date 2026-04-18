@@ -73,7 +73,6 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
   const placeStopOrder = usePaperStore((s) => s.placeStopOrder);
   const sound = useTradingSoundCtx();
 
-
   // ── Local state ───────────────────────────────────────────────────────────
   const [side, setSide] = useState<OrderSide>('buy');
   const [tab, setTab] = useState<OrderTab>('market');

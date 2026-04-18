@@ -92,6 +92,12 @@ export interface JournalEntry {
   text: string;
   /** true only for notes the user manually added/edited */
   isUserNote?: boolean;
+  /**
+   * Net realized PnL (USDT) attached to system close entries only.
+   * Positive = profit, negative = loss. Undefined for open/user entries.
+   * Net = gross PnL − exit commission (matches Balance History column).
+   */
+  pnl?: number;
 }
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -144,7 +150,7 @@ interface PaperState {
   closePosition: (positionId: string, exitPrice: number) => void;
 
   /** Add a note to the journal. Pass isUserNote=false for system-generated entries (not user-editable). */
-  addJournalNote: (text: string, isUserNote?: boolean) => void;
+  addJournalNote: (text: string, isUserNote?: boolean, pnl?: number) => void;
 
   /** Edit any journal entry (typically used for user notes). */
   editJournalEntry: (entryId: string, text: string) => void;
@@ -340,11 +346,15 @@ export const usePaperStore = create<PaperState>()(
         const closingQtyStr = fmtQty(pos.quantity);
         const closingPriceStr = fmtPrice(exitPrice);
         const closingSide = pos.side === 'long' ? 'sell' : 'buy';
+        // Net PnL = gross PnL − exit commission — same figure shown in Balance History.
+        // Attached only to the exec entry so the badge appears on the meaningful row.
+        const netPnl = pnl - commission;
         const closingJournalEntries: JournalEntry[] = [
           {
             id: `j-close-${closedId}-exec`,
             time: now,
             text: `Order ${closingOrderId} for symbol ${pos.symbol} has been executed at price ${closingPriceStr} for ${closingQtyStr} units`,
+            pnl: netPnl,
           },
           {
             id: `j-close-${closedId}-placed`,
@@ -369,13 +379,14 @@ export const usePaperStore = create<PaperState>()(
         }));
       },
 
-      addJournalNote: (text: string, isUserNote = true) => {
+      addJournalNote: (text: string, isUserNote = true, pnl?: number) => {
         const noteId = `j-note-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
         const entry: JournalEntry = {
           id: noteId,
           time: Date.now(),
           text,
           isUserNote,
+          ...(pnl !== undefined ? { pnl } : {}),
         };
         set((s) => ({
           journal: [entry, ...s.journal].slice(0, MAX_JOURNAL),

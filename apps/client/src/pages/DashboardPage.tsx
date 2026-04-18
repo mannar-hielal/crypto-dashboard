@@ -61,17 +61,19 @@ function DashboardInner() {
 
   usePaneFeeds();
 
-  // Stable callback refs — memoized so they don't change on every render
+  // Stable callback refs — memoized so they don't change on every render.
+  // Depend on `sound` (the whole object) — React Compiler infers the object-level
+  // dependency from property accesses and cannot preserve narrower method deps.
   const handleTPSLClosed = useCallback(
     (pnl: number) => {
       if (pnl >= 0) sound.playProfit();
       else sound.playLoss();
     },
-    [sound.playProfit, sound.playLoss]
+    [sound]
   );
   const handleOrderFilled = useCallback(() => {
     sound.playOrderFilled();
-  }, [sound.playOrderFilled]);
+  }, [sound]);
 
   useTPSLMonitor({ onClosed: handleTPSLClosed });
   usePendingOrderMonitor({ onFilled: handleOrderFilled });

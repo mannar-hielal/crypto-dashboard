@@ -121,7 +121,21 @@ function JournalRow({
             </button>
           </div>
         ) : (
-          <span>{entry.text}</span>
+          <span className="flex items-center gap-2 flex-wrap">
+            <span>{entry.text}</span>
+            {entry.pnl !== undefined && (
+              <span
+                className="shrink-0 rounded px-1.5 py-px font-semibold tabular-nums"
+                style={{
+                  fontSize: fontSize.xs10,
+                  color: entry.pnl >= 0 ? color.green : color.red,
+                  background: entry.pnl >= 0 ? `${color.green}18` : `${color.red}18`,
+                }}
+              >
+                {entry.pnl >= 0 ? '+' : ''}${entry.pnl.toFixed(2)}
+              </span>
+            )}
+          </span>
         )}
       </td>
 

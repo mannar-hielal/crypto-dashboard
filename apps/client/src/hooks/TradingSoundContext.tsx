@@ -47,7 +47,7 @@ export function TradingSoundProvider({ children }: { children: ReactNode }) {
       playOrderFilled,
       playProfit,
       playLoss,
-    ],
+    ]
   );
 
   return <TradingSoundContext.Provider value={value}>{children}</TradingSoundContext.Provider>;

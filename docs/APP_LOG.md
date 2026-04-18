@@ -167,7 +167,7 @@
 
 1. **Positions** ✅ — 15 columns: Symbol, Side, Qty, Avg Fill Price, TP, SL, Last Price, Unrealized P&L, P&L%,
    Trade Value, Market Value, Leverage (`1:1` — no leverage system yet), Margin, Expiration (`—`), Close (✕)
-   - Last Price: uses `latestPrice` (active symbol only — shows stale value for other symbols)
+   - Last Price: uses `lastKnownPrices` (falls back from live pane price — correct for all symbols)
    - Empty state: "There are no open positions in your trading account yet"
    - Row entrance: staggered framer-motion (`rowVariants`, 0.04s delay per row)
 
@@ -184,6 +184,9 @@
    - Inline edit: Enter saves, Escape cancels
    - Add-note button (pencil icon in Time header) → inline input row at top
    - System entries (`isUserNote: false`) read-only; user entries editable
+   - **Net PnL badge** ✅: close entries (manual ✕ and Auto-closed TP/SL) show a colored `+$X.XX` / `−$X.XX`
+     pill inline after the text. Green background tint for profit, red for loss. Net = gross − exit commission
+     (matches Balance History). Badge stored as `JournalEntry.pnl?: number`; open/user entries have no badge.
 
 Tab badge counts: purple pill for Positions count, gray pill for Order History count
 
@@ -212,7 +215,6 @@ Tab badge counts: purple pill for Positions count, gray pill for Order History c
   - Commission display: Others = `0.0007`, Fixed (display only)
   - Footer: "Reset account" (left) + "Save" (right, disabled — settings read-only for now)
   - Close ✕ dismisses modal
-
 
 ---
 
@@ -380,7 +382,7 @@ interface PendingOrder {
 }
 ```
 
-Actions: `placeOrder`, `placeLimitOrder`, `placeStopOrder`, `cancelPendingOrder`, `closePosition`, `addJournalNote`, `editJournalEntry`, `reset`
+Actions: `placeOrder`, `placeLimitOrder`, `placeStopOrder`, `cancelPendingOrder`, `closePosition`, `addJournalNote(text, isUserNote?, pnl?)`, `editJournalEntry`, `reset`
 
 **`placeLimitOrder` / `placeStopOrder`**: deducts `usdtAmount + commission` from balance immediately; adds to `pendingOrders`; adds a placeholder `HistoricalOrder` record.  
 **`cancelPendingOrder`**: removes from `pendingOrders`; refunds `usdtAmount + commission`; adds cancelled `HistoricalOrder`.  
@@ -544,6 +546,7 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 - **`lastKnownPrices` in `paneStore`** — persists mark prices across symbol switches; fixes PnL display for non-active-symbol positions (test 2.5.3)
 - **Crypto icons** in Positions / Orders / History tables — 16 px `CryptoIcon` beside symbol text
 - **`useShallow` selectors** — `paneSymbols` object selector wrapped in `useShallow` to prevent `getSnapshot` infinite loop
+- **Journal PnL badge** — `JournalEntry.pnl?: number` (net = gross − exit commission); `closePosition` attaches it to the exec entry; `useTPSLMonitor` passes it via `addJournalNote(text, false, netPnl)`; `JournalRow` renders a colored `+$X.XX` / `−$X.XX` pill inline after the text (green/red tint). Only close entries carry the badge; open and user-note entries do not.
 
 ### 🔄 In Progress (current sprint — 2026-04-19)
 
@@ -562,8 +565,8 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 ## 🧪 Test Counts (as of 2026-04-19)
 
 - **Server**: 86 tests (6 files)
-- **Client**: 108 tests (7 files — paperStore × 25, marketStore × 20, checkTPSL × 17, usePendingOrderMonitor × 16, cryptoIcons × 5, CryptoIcon × 8, layoutStore × 17)
-- **Total**: 194 tests, all green ✅
+- **Client**: 112 tests (7 files — paperStore × 29, marketStore × 20, checkTPSL × 17, usePendingOrderMonitor × 16, cryptoIcons × 5, CryptoIcon × 8, layoutStore × 17)
+- **Total**: 198 tests, all green ✅
 
 ---
 
@@ -621,4 +624,4 @@ prices: Record<string, number>; // last known close per symbol — NEVER wiped
 
 ---
 
-_Last updated: 2026-04-19 — **feat(layout): trading panel full height + maximize/restore** (`4928ac2`) — **fix(paper-trading): persist mark prices + crypto icons** (`46672ac`) — **feat(sound): Web Audio API sound alert system** (`01f03d6`) — **feat(panel): Orders tab in PaperTradingPanel** (`a6d4411`) — **feat(hooks): usePendingOrderMonitor** (`ac15974`) — Previously: feat(trading-panel): redesign + paperStore limit/stop orders (`e514119`) (`TradingPanel.tsx`, `paperStore.ts`): TradingPanel rebuilt to match TradingView layout — symbol header, Sell/Buy split side selector with latestPrice, Market/Limit/Stop animated underline tabs, Units↔USD swap quantity input (converts value on swap), collapsible Exits section with per-toggle TP/SL inputs, Order Info panel (margin progress bar, leverage, trade value, commission), two-line sticky submit button. `paperStore` gains `PendingOrder` interface, `pendingOrders: PendingOrder[]`, `placeLimitOrder`, `placeStopOrder`, `cancelPendingOrder` actions — balance reserved at placement, refunded on cancel. Bid/Ask feed and `usePendingOrderMonitor` deferred to next phase. Previously: **feat(chart): interval-aware initial view + 1 000-bar fetch limit** (`markets.ts`, `ChartPanel`, `MultiChartArea`, `usePaneFeeds`, `paneStore`): `INTERVAL_BAR_SPACING` maps each interval to an initial px/bar value targeting ~160–200 visible candles at 1 200 px viewport (TradingView density). Applied in `ChartPanel` on first load via `timeScale().applyOptions({ barSpacing })` before `scrollToRealTime()`. `INTERVAL_FETCH_LIMIT` (1 000, server max) replaces the hard-coded 500 fetch limit; `MAX_BARS` in `paneStore` raised to 1 000 to match. Previously: **feat(layout): snap all panes to active pane on timeRange sync enable** (`MultiChartArea`): `useEffect` watches `syncOptions.timeRange`; on OFF → ON reads active pane's visible range via `getVisibleRange()` and calls `setVisibleRange()` on all follower charts immediately. Active pane wins. Previously: **feat(layout): snap all panes to active pane on sync-symbol/interval enable** (`layoutStore`, `layoutStore.test.ts`): `toggleSync('symbol'|'interval')` now immediately snaps all panes to the active pane's value when the flag transitions OFF → ON. Active pane is the source of truth (TradingView/Bookmap convention). 3 new tests added; all 92 client tests pass. Previously: **fix: dead marketStore reads + isMountedRef stale-update** (`TickerBar`, `PaperTradingPanel`, `usePriceFeed`, `useTPSLMonitor`, `DashboardPage`): `usePriceFeed` was superseded by `usePaneFeeds` but `TickerBar` and `PaperTradingPanel` still imported `useMarketStore` — permanently null. Both now read from `paneStores[0]`. `usePriceFeed` gains the same per-run `cancelled` closure fix as `usePaneFeeds`. Stale JSDoc in `useTPSLMonitor` and `DashboardPage` updated. Previously: **fix: PR code-review issues** (`usePaneFeeds`, `layoutStore`, `APP_LOG`). Previously: **chore: code review cleanup + README corrections**. Previously: **fix: 4-chart layout — missing candles + crosshair sync** (`ChartPanel`, `MultiChartArea`). Previously: **fix: crosshair Y-sync** (`MultiChartArea`). Client tests 92 (6 files), total 178._
+_Last updated: 2026-04-19 — **feat(journal): PnL badge on close entries** — **feat(layout): trading panel full height + maximize/restore** (`4928ac2`) — **fix(paper-trading): persist mark prices + crypto icons** (`46672ac`) — **feat(sound): Web Audio API sound alert system** (`01f03d6`) — **feat(panel): Orders tab in PaperTradingPanel** (`a6d4411`) — **feat(hooks): usePendingOrderMonitor** (`ac15974`) — Previously: feat(trading-panel): redesign + paperStore limit/stop orders (`e514119`) (`TradingPanel.tsx`, `paperStore.ts`): TradingPanel rebuilt to match TradingView layout — symbol header, Sell/Buy split side selector with latestPrice, Market/Limit/Stop animated underline tabs, Units↔USD swap quantity input (converts value on swap), collapsible Exits section with per-toggle TP/SL inputs, Order Info panel (margin progress bar, leverage, trade value, commission), two-line sticky submit button. `paperStore` gains `PendingOrder` interface, `pendingOrders: PendingOrder[]`, `placeLimitOrder`, `placeStopOrder`, `cancelPendingOrder` actions — balance reserved at placement, refunded on cancel. Bid/Ask feed and `usePendingOrderMonitor` deferred to next phase. Previously: **feat(chart): interval-aware initial view + 1 000-bar fetch limit** (`markets.ts`, `ChartPanel`, `MultiChartArea`, `usePaneFeeds`, `paneStore`): `INTERVAL_BAR_SPACING` maps each interval to an initial px/bar value targeting ~160–200 visible candles at 1 200 px viewport (TradingView density). Applied in `ChartPanel` on first load via `timeScale().applyOptions({ barSpacing })` before `scrollToRealTime()`. `INTERVAL_FETCH_LIMIT` (1 000, server max) replaces the hard-coded 500 fetch limit; `MAX_BARS` in `paneStore` raised to 1 000 to match. Previously: **feat(layout): snap all panes to active pane on timeRange sync enable** (`MultiChartArea`): `useEffect` watches `syncOptions.timeRange`; on OFF → ON reads active pane's visible range via `getVisibleRange()` and calls `setVisibleRange()` on all follower charts immediately. Active pane wins. Previously: **feat(layout): snap all panes to active pane on sync-symbol/interval enable** (`layoutStore`, `layoutStore.test.ts`): `toggleSync('symbol'|'interval')` now immediately snaps all panes to the active pane's value when the flag transitions OFF → ON. Active pane is the source of truth (TradingView/Bookmap convention). 3 new tests added; all 92 client tests pass. Previously: **fix: dead marketStore reads + isMountedRef stale-update** (`TickerBar`, `PaperTradingPanel`, `usePriceFeed`, `useTPSLMonitor`, `DashboardPage`): `usePriceFeed` was superseded by `usePaneFeeds` but `TickerBar` and `PaperTradingPanel` still imported `useMarketStore` — permanently null. Both now read from `paneStores[0]`. `usePriceFeed` gains the same per-run `cancelled` closure fix as `usePaneFeeds`. Stale JSDoc in `useTPSLMonitor` and `DashboardPage` updated. Previously: **fix: PR code-review issues** (`usePaneFeeds`, `layoutStore`, `APP_LOG`). Previously: **chore: code review cleanup + README corrections**. Previously: **fix: 4-chart layout — missing candles + crosshair sync** (`ChartPanel`, `MultiChartArea`). Previously: **fix: crosshair Y-sync** (`MultiChartArea`). Client tests 92 (6 files), total 178._

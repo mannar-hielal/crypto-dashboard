@@ -70,11 +70,11 @@ function resumeCtx(ctx: AudioContext) {
 }
 
 interface NoteOptions {
-  freq: number;       // Hz
+  freq: number; // Hz
   type?: OscillatorType;
-  gain?: number;      // 0–1
-  startTime: number;  // AudioContext time
-  duration: number;   // seconds
+  gain?: number; // 0–1
+  startTime: number; // AudioContext time
+  duration: number; // seconds
   attackTime?: number;
   releaseTime?: number;
   masterGain: GainNode;
@@ -192,8 +192,24 @@ export function useTradingSound(): TradingSoundAPI {
     if (!ready) return;
     const { ctx, master } = ready;
     const now = ctx.currentTime;
-    scheduleNote({ freq: 523.25, type: 'triangle', gain: 0.55, startTime: now, duration: 0.06, releaseTime: 0.04, masterGain: master });
-    scheduleNote({ freq: 659.25, type: 'triangle', gain: 0.45, startTime: now + 0.07, duration: 0.06, releaseTime: 0.04, masterGain: master });
+    scheduleNote({
+      freq: 523.25,
+      type: 'triangle',
+      gain: 0.55,
+      startTime: now,
+      duration: 0.06,
+      releaseTime: 0.04,
+      masterGain: master,
+    });
+    scheduleNote({
+      freq: 659.25,
+      type: 'triangle',
+      gain: 0.45,
+      startTime: now + 0.07,
+      duration: 0.06,
+      releaseTime: 0.04,
+      masterGain: master,
+    });
   }, []);
 
   /**
@@ -205,7 +221,16 @@ export function useTradingSound(): TradingSoundAPI {
     if (!ready) return;
     const { ctx, master } = ready;
     const now = ctx.currentTime;
-    scheduleNote({ freq: 440, type: 'sine', gain: 0.4, startTime: now, duration: 0.22, attackTime: 0.01, releaseTime: 0.12, masterGain: master });
+    scheduleNote({
+      freq: 440,
+      type: 'sine',
+      gain: 0.4,
+      startTime: now,
+      duration: 0.22,
+      attackTime: 0.01,
+      releaseTime: 0.12,
+      masterGain: master,
+    });
   }, []);
 
   /**
@@ -219,11 +244,38 @@ export function useTradingSound(): TradingSoundAPI {
     const { ctx, master } = ready;
     const now = ctx.currentTime;
     // Fundamental
-    scheduleNote({ freq: 784, type: 'sine', gain: 0.6, startTime: now, duration: 0.38, attackTime: 0.004, releaseTime: 0.28, masterGain: master });
+    scheduleNote({
+      freq: 784,
+      type: 'sine',
+      gain: 0.6,
+      startTime: now,
+      duration: 0.38,
+      attackTime: 0.004,
+      releaseTime: 0.28,
+      masterGain: master,
+    });
     // 5th harmonic shimmer (quieter)
-    scheduleNote({ freq: 784 * 1.5, type: 'sine', gain: 0.2, startTime: now, duration: 0.24, attackTime: 0.004, releaseTime: 0.18, masterGain: master });
+    scheduleNote({
+      freq: 784 * 1.5,
+      type: 'sine',
+      gain: 0.2,
+      startTime: now,
+      duration: 0.24,
+      attackTime: 0.004,
+      releaseTime: 0.18,
+      masterGain: master,
+    });
     // Sparkle overtone
-    scheduleNote({ freq: 784 * 2, type: 'sine', gain: 0.08, startTime: now, duration: 0.15, attackTime: 0.002, releaseTime: 0.12, masterGain: master });
+    scheduleNote({
+      freq: 784 * 2,
+      type: 'sine',
+      gain: 0.08,
+      startTime: now,
+      duration: 0.15,
+      attackTime: 0.002,
+      releaseTime: 0.12,
+      masterGain: master,
+    });
   }, []);
 
   /**
@@ -277,8 +329,26 @@ export function useTradingSound(): TradingSoundAPI {
     if (!ready) return;
     const { ctx, master } = ready;
     const now = ctx.currentTime;
-    scheduleNote({ freq: 392, type: 'sine', gain: 0.35, startTime: now, duration: 0.18, attackTime: 0.008, releaseTime: 0.12, masterGain: master });
-    scheduleNote({ freq: 293.66, type: 'sine', gain: 0.28, startTime: now + 0.16, duration: 0.22, attackTime: 0.008, releaseTime: 0.16, masterGain: master });
+    scheduleNote({
+      freq: 392,
+      type: 'sine',
+      gain: 0.35,
+      startTime: now,
+      duration: 0.18,
+      attackTime: 0.008,
+      releaseTime: 0.12,
+      masterGain: master,
+    });
+    scheduleNote({
+      freq: 293.66,
+      type: 'sine',
+      gain: 0.28,
+      startTime: now + 0.16,
+      duration: 0.22,
+      attackTime: 0.008,
+      releaseTime: 0.16,
+      masterGain: master,
+    });
   }, []);
 
   return {
@@ -293,4 +363,3 @@ export function useTradingSound(): TradingSoundAPI {
     playLoss,
   };
 }
-

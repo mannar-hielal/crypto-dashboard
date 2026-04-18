@@ -336,7 +336,9 @@
   cursor: pointer;
   border: 2px solid #1a1d2e;
   box-shadow: 0 0 6px rgba(124, 58, 237, 0.6);
-  transition: transform 0.1s, box-shadow 0.1s;
+  transition:
+    transform 0.1s,
+    box-shadow 0.1s;
 }
 .sound-vol-slider::-webkit-slider-thumb:hover {
   transform: scale(1.25);
@@ -350,4 +352,3 @@
   cursor: pointer;
   border: 2px solid #1a1d2e;
 }
-
