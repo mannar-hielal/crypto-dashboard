@@ -1,6 +1,6 @@
 import { useState, useId } from 'react';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
-import { X, ChevronUp, ChevronDown, ArrowLeftRight, Info } from 'lucide-react';
+import { X, ChevronUp, ChevronDown, ArrowLeftRight, Info, AlertTriangle } from 'lucide-react';
 import { useStore } from 'zustand';
 import { useLayoutStore } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
@@ -39,7 +39,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
     >
       <span
         className="absolute top-0.5 h-3 w-3 rounded-full bg-white transition-transform"
-        style={{ transform: checked ? 'translateX(14px)' : 'translateX(2px)' }}
+        style={{ transform: checked ? 'translateX(-12px)' : 'translateX(0)' }}
       />
     </button>
   );
@@ -91,6 +91,7 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
   const [slInput, setSlInput] = useState('');
   const [exitsOpen, setExitsOpen] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
+  const [bypassWarning, setBypassWarning] = useState(false);
   const executeAnim = useAnimation();
 
   // ── Derived values ────────────────────────────────────────────────────────
@@ -110,6 +111,44 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
         : '';
 
   const execPrice = tab === 'market' ? latestPrice : parseFloat(displayPrice) || null;
+
+  /**
+   * True when a limit/stop order price is already past the market, meaning it
+   * will fill immediately rather than pend. Shows a non-blocking amber warning.
+   *
+   * Limit Buy  above market → fills immediately (normal Stop Buy territory)
+   * Limit Sell below market → fills immediately (normal Stop Sell territory)
+   * Stop  Buy  below market → fills immediately (already past trigger)
+   * Stop  Sell above market → fills immediately (already past trigger)
+   */
+  const immediateWarning: { message: string; suggestion: string } | null = (() => {
+    if (tab === 'market' || !execPrice || !latestPrice) return null;
+    if (tab === 'limit') {
+      if (side === 'buy' && execPrice >= latestPrice)
+        return {
+          message: `Limit Buy price ($${execPrice.toLocaleString()}) is at or above market ($${latestPrice.toLocaleString()}) — this order will fill immediately.`,
+          suggestion: 'Use a Stop Buy if you want to enter when price rises to this level.',
+        };
+      if (side === 'sell' && execPrice <= latestPrice)
+        return {
+          message: `Limit Sell price ($${execPrice.toLocaleString()}) is at or below market ($${latestPrice.toLocaleString()}) — this order will fill immediately.`,
+          suggestion: 'Use a Stop Sell if you want to enter when price falls to this level.',
+        };
+    }
+    if (tab === 'stop') {
+      if (side === 'buy' && execPrice <= latestPrice)
+        return {
+          message: `Stop Buy price ($${execPrice.toLocaleString()}) is at or below market ($${latestPrice.toLocaleString()}) — this order will fill immediately.`,
+          suggestion: 'Use a Limit Buy if you want to buy at a lower price.',
+        };
+      if (side === 'sell' && execPrice >= latestPrice)
+        return {
+          message: `Stop Sell price ($${execPrice.toLocaleString()}) is at or above market ($${latestPrice.toLocaleString()}) — this order will fill immediately.`,
+          suggestion: 'Use a Limit Sell if you want to sell at a higher price.',
+        };
+    }
+    return null;
+  })();
 
   /** USDT value of the current qty input */
   const usdtAmount: number | null = (() => {
@@ -142,6 +181,7 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
   function handleSideChange(s: OrderSide) {
     setSide(s);
     setFormError(null);
+    setBypassWarning(false);
     setTpInput('');
     setSlInput('');
   }
@@ -150,6 +190,7 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
     setTab(t);
     onTabChange?.(t);
     setFormError(null);
+    setBypassWarning(false);
     // Clear any manually typed price so displayPrice falls back to latestPrice
     // for the new tab — giving the user the current live price as the starting point.
     setPriceInput('');
@@ -221,6 +262,12 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
 
   function handleExecute() {
     setFormError(null);
+    // If an immediate-fill warning is active and hasn't been bypassed yet,
+    // require a second click ("Place anyway") instead of placing silently.
+    if (immediateWarning && !bypassWarning) {
+      setBypassWarning(true);
+      return;
+    }
     const v = validate();
     if (!v || !execPrice) return;
 
@@ -246,6 +293,7 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
     setSlInput('');
     setTpEnabled(false);
     setSlEnabled(false);
+    setBypassWarning(false);
     void executeAnim.start({ scale: [1, 1.04, 1], transition: { duration: 0.3, ease: 'easeOut' } });
   }
 
@@ -652,6 +700,44 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
           ))}
         </div>
 
+        {/* ── Immediate-fill warning callout ───────────────────────────── */}
+        <AnimatePresence>
+          {immediateWarning && (
+            <motion.div
+              key="immediate-warning"
+              initial={{ opacity: 0, y: -4, height: 0 }}
+              animate={{ opacity: 1, y: 0, height: 'auto' }}
+              exit={{ opacity: 0, y: -4, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden rounded-md border px-2.5 py-2"
+              style={{ borderColor: '#f59e0b55', background: '#f59e0b0d' }}
+            >
+              <div className="flex items-start gap-1.5">
+                <AlertTriangle
+                  className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                  style={{ color: '#f59e0b' }}
+                />
+                <div className="flex flex-col gap-1">
+                  <p style={{ fontSize: fontSize.xs10, color: '#fcd34d', lineHeight: 1.4 }}>
+                    {immediateWarning.message}
+                  </p>
+                  <p style={{ fontSize: fontSize.xs10, color: '#f59e0b99', lineHeight: 1.4 }}>
+                    {immediateWarning.suggestion}
+                  </p>
+                  {bypassWarning && (
+                    <p
+                      className="font-semibold"
+                      style={{ fontSize: fontSize.xs10, color: '#fcd34d' }}
+                    >
+                      Click the button below to confirm and place anyway.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* ── Form error ───────────────────────────────────────────────── */}
         <AnimatePresence>
           {formError && (
@@ -683,7 +769,7 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
           }}
         >
           <span className="text-sm font-bold" style={{ color: isBuy ? bg.page : '#fff' }}>
-            {isBuy ? 'Buy' : 'Sell'}
+            {bypassWarning && immediateWarning ? 'Place anyway' : isBuy ? 'Buy' : 'Sell'}
           </span>
           <span
             className="font-semibold opacity-80"

@@ -134,39 +134,39 @@
 
 ### 3.1 Stop Buy above market (breakout)
 
-| #     | Action                                      | Expected                                     | Status | Notes |
-| ----- | ------------------------------------------- | -------------------------------------------- | ------ | ----- |
-| 3.1.1 | Tab = **Stop**, price = live + 1%, Buy $200 | Pending order in Orders tab: STOP / BUY      | ⬜     |       |
-| 3.1.2 | When price rises to trigger                 | Position opens; journal: `Stop order filled` | ⬜     |       |
+| #     | Action                                      | Expected                                     | Status | Notes                                                                                                                   |
+| ----- | ------------------------------------------- | -------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------- |
+| 3.1.1 | Tab = **Stop**, price = live + 1%, Buy $200 | Pending order in Orders tab: STOP / BUY      | ✅     |                                                                                                                         |
+| 3.1.2 | When price rises to trigger                 | Position opens; journal: `Stop order filled` | ✅     | LONG opened @ $75,281.80 (trigger $75,270.00, qty: 0.002657); journal: `Stop order filled — Long BTCUSDT @ $75281.8000` |
 
 ### 3.2 Stop Sell below market (breakdown)
 
-| #     | Action                                   | Expected                   | Status | Notes |
-| ----- | ---------------------------------------- | -------------------------- | ------ | ----- |
-| 3.2.1 | Tab = Stop, price = live − 1%, Sell $200 | Pending order: STOP / SELL | ⬜     |       |
-| 3.2.2 | When price drops to trigger              | SHORT position opens       | ⬜     |       |
+| #     | Action                                   | Expected                   | Status | Notes                                                                                                                     |
+| ----- | ---------------------------------------- | -------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------- |
+| 3.2.1 | Tab = Stop, price = live − 1%, Sell $200 | Pending order: STOP / SELL | ✅     | STOP / SELL / Trigger $75,215.00 / Reserved $200.00                                                                       |
+| 3.2.2 | When price drops to trigger              | SHORT position opens       | ✅     | SHORT opened @ $75,200.00 (trigger $75,215.00, qty: 0.002660); journal: `Stop order filled — Short BTCUSDT @ $75200.0000` |
 
 ### 3.3 Stop cancel
 
-| #     | Action                           | Expected            | Status | Notes |
-| ----- | -------------------------------- | ------------------- | ------ | ----- |
-| 3.3.1 | Place stop order far from market | Order in Orders tab | ⬜     |       |
-| 3.3.2 | Cancel it                        | Balance refunded    | ⬜     |       |
+| #     | Action                           | Expected            | Status | Notes                                            |
+| ----- | -------------------------------- | ------------------- | ------ | ------------------------------------------------ |
+| 3.3.1 | Place stop order far from market | Order in Orders tab | ✅     |                                                  |
+| 3.3.2 | Cancel it                        | Balance refunded    | ✅     | Orders tab empty; balance restored to $10,000.00 |
 
 ### 3.4 Stop with TP + SL
 
-| #     | Action                                          | Expected        | Status | Notes |
-| ----- | ----------------------------------------------- | --------------- | ------ | ----- |
-| 3.4.1 | Stop Buy at live+1%, TP = live+4%, SL = live−1% | Placed OK       | ⬜     |       |
-| 3.4.2 | When triggered, position shows correct TP/SL    | TP/SL inherited | ⬜     |       |
+| #     | Action                                          | Expected        | Status | Notes                                                                                                                                                                   |
+| ----- | ----------------------------------------------- | --------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3.4.1 | Stop Buy at live+1%, TP = live+4%, SL = live−1% | Placed OK       | ✅     |                                                                                                                                                                         |
+| 3.4.2 | When triggered, position shows correct TP/SL    | TP/SL inherited | ✅     | Stop order filled → LONG opened; SL inherited and auto-triggered @ $75,188.70; journal: `Auto-closed LONG BTCUSDT — Stop-Loss hit at $75188.7000` with red badge −$1.65 |
 
 ### 3.5 Edge cases
 
-| #     | Scenario                                      | Expected                                                                      | Status | Notes                     |
-| ----- | --------------------------------------------- | ----------------------------------------------------------------------------- | ------ | ------------------------- |
-| 3.5.1 | Stop Buy price **below** market               | Should still place (no restriction); will trigger immediately if already past | ⬜     | Document actual behaviour |
-| 3.5.2 | Multiple pending orders (mix of limit + stop) | All show in Orders tab; each cancels/fills independently                      | ⬜     |                           |
-| 3.5.3 | Reset account with pending orders             | All pending orders cleared; balance restored to $10,000                       | ⬜     |                           |
+| #     | Scenario                                      | Expected                                                                      | Status | Notes                                                                                                      |
+| ----- | --------------------------------------------- | ----------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------- |
+| 3.5.1 | Stop Buy price **below** market               | Should still place (no restriction); will trigger immediately if already past | ✅     | Stop Buy @ $75,050 (below live); triggered almost immediately @ $75,069.30; LONG opened; balance $8,999.30 |
+| 3.5.2 | Multiple pending orders (mix of limit + stop) | All show in Orders tab; each cancels/fills independently                      | ⬜     |                                                                                                            |
+| 3.5.3 | Reset account with pending orders             | All pending orders cleared; balance restored to $10,000                       | ⬜     |                                                                                                            |
 
 ---
 
