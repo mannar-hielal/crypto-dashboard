@@ -1529,223 +1529,223 @@ export function PaperTradingPanel({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
-              className="fixed inset-0 z-40"
+              className="fixed inset-0 z-40 flex items-center justify-center"
               style={{ background: 'rgba(0,0,0,0.55)' }}
               onClick={() => {
                 setShowSettings(false);
                 setConfirmingReset(false);
                 if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
               }}
-            />
-
-            {/* Modal */}
-            <motion.div
-              key="settings-modal"
-              initial={{ opacity: 0, scale: 0.93, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.93, y: 8 }}
-              transition={{ duration: 0.18, ease: 'easeOut' }}
-              className="fixed z-50 w-80 rounded-lg shadow-2xl"
-              style={{
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                background: bg.panel,
-                border: '1px solid rgba(255,255,255,0.08)',
-              }}
             >
-              {/* Modal header */}
-              <div
-                className="flex items-center justify-between border-b px-4 py-3"
-                style={{ borderColor: 'rgba(255,255,255,0.07)' }}
+              {/* Modal — inside backdrop so it's naturally centered; stop-propagation prevents backdrop-click closing */}
+              <motion.div
+                key="settings-modal"
+                initial={{ opacity: 0, scale: 0.93, y: 8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.93, y: 8 }}
+                transition={{ duration: 0.18, ease: 'easeOut' }}
+                className="relative z-50 w-80 rounded-lg shadow-2xl"
+                style={{
+                  background: bg.panel,
+                  border: '1px solid rgba(255,255,255,0.08)',
+                }}
+                onClick={(e) => e.stopPropagation()}
               >
-                <span className="text-sm font-semibold text-white/90">Account Settings</span>
-                <button
-                  onClick={() => {
-                    setShowSettings(false);
-                    setConfirmingReset(false);
-                    if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
-                  }}
-                  className="flex h-6 w-6 items-center justify-center rounded hover:text-white"
-                  style={{ color: color.muted }}
+                {/* Modal header */}
+                <div
+                  className="flex items-center justify-between border-b px-4 py-3"
+                  style={{ borderColor: 'rgba(255,255,255,0.07)' }}
                 >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-
-              {/* Modal body */}
-              <div className="flex flex-col gap-4 px-4 py-4">
-                {/* Account name (read-only) */}
-                <div className="flex flex-col gap-1">
-                  <label
-                    className="text-xs font-medium"
-                    style={{ color: color.muted, fontSize: fontSize.xs11 }}
-                  >
-                    Account name
-                  </label>
-                  <div
-                    className="flex h-8 items-center rounded px-3 text-xs text-white/60"
-                    style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.07)',
-                      fontSize: fontSize.xs,
+                  <span className="text-sm font-semibold text-white/90">Account Settings</span>
+                  <button
+                    onClick={() => {
+                      setShowSettings(false);
+                      setConfirmingReset(false);
+                      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
                     }}
+                    className="flex h-6 w-6 items-center justify-center rounded hover:text-white"
+                    style={{ color: color.muted }}
                   >
-                    {username}
-                  </div>
+                    <X className="h-3.5 w-3.5" />
+                  </button>
                 </div>
 
-                {/* Leverage — Crypto (interactive) */}
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
+                {/* Modal body */}
+                <div className="flex flex-col gap-4 px-4 py-4">
+                  {/* Account name (read-only) */}
+                  <div className="flex flex-col gap-1">
                     <label
-                      className="font-semibold uppercase tracking-wider"
+                      className="text-xs font-medium"
                       style={{ color: color.muted, fontSize: fontSize.xs11 }}
                     >
-                      Leverage · Crypto
+                      Account name
                     </label>
-                    <span
-                      className="rounded px-1.5 py-px font-bold"
+                    <div
+                      className="flex h-8 items-center rounded px-3 text-xs text-white/60"
                       style={{
-                        fontSize: fontSize.xs10,
-                        background:
-                          draftLeverage > 1 ? `${color.amber}22` : 'rgba(255,255,255,0.06)',
-                        color: draftLeverage > 1 ? color.amber : color.muted,
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.07)',
+                        fontSize: fontSize.xs,
                       }}
                     >
-                      {draftLeverage}×
-                    </span>
+                      {username}
+                    </div>
                   </div>
-                  {/* 12-button grid — Bybit style */}
-                  <div className="grid grid-cols-6 gap-1">
-                    {CRYPTO_LEVERAGE_OPTIONS.map((opt) => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => setDraftLeverage(opt)}
-                        className="rounded py-1 text-center font-semibold transition-colors"
+
+                  {/* Leverage — Crypto (interactive) */}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <label
+                        className="font-semibold uppercase tracking-wider"
+                        style={{ color: color.muted, fontSize: fontSize.xs11 }}
+                      >
+                        Leverage · Crypto
+                      </label>
+                      <span
+                        className="rounded px-1.5 py-px font-bold"
                         style={{
                           fontSize: fontSize.xs10,
                           background:
-                            draftLeverage === opt ? `${color.purple}33` : 'rgba(255,255,255,0.05)',
-                          color: draftLeverage === opt ? color.purple : 'rgba(255,255,255,0.55)',
-                          border:
-                            draftLeverage === opt
-                              ? `1px solid ${color.purple}66`
-                              : '1px solid rgba(255,255,255,0.07)',
+                            draftLeverage > 1 ? `${color.amber}22` : 'rgba(255,255,255,0.06)',
+                          color: draftLeverage > 1 ? color.amber : color.muted,
                         }}
                       >
-                        {opt}×
-                      </button>
-                    ))}
+                        {draftLeverage}×
+                      </span>
+                    </div>
+                    {/* 12-button grid — Bybit style */}
+                    <div className="grid grid-cols-6 gap-1">
+                      {CRYPTO_LEVERAGE_OPTIONS.map((opt) => (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => setDraftLeverage(opt)}
+                          className="rounded py-1 text-center font-semibold transition-colors"
+                          style={{
+                            fontSize: fontSize.xs10,
+                            background:
+                              draftLeverage === opt
+                                ? `${color.purple}33`
+                                : 'rgba(255,255,255,0.05)',
+                            color: draftLeverage === opt ? color.purple : 'rgba(255,255,255,0.55)',
+                            border:
+                              draftLeverage === opt
+                                ? `1px solid ${color.purple}66`
+                                : '1px solid rgba(255,255,255,0.07)',
+                          }}
+                        >
+                          {opt}×
+                        </button>
+                      ))}
+                    </div>
+                    {draftLeverage > 25 && (
+                      <p
+                        className="flex items-center gap-1"
+                        style={{ fontSize: fontSize.xs10, color: color.red }}
+                      >
+                        <AlertTriangle className="h-3 w-3 shrink-0" />
+                        High leverage increases liquidation risk.
+                      </p>
+                    )}
                   </div>
-                  {draftLeverage > 25 && (
-                    <p
-                      className="flex items-center gap-1"
-                      style={{ fontSize: fontSize.xs10, color: color.red }}
+
+                  {/* Commission (read-only) */}
+                  <div className="flex flex-col gap-1">
+                    <label
+                      className="text-xs font-medium"
+                      style={{ color: color.muted, fontSize: fontSize.xs11 }}
                     >
-                      <AlertTriangle className="h-3 w-3 shrink-0" />
-                      High leverage increases liquidation risk.
-                    </p>
-                  )}
+                      Commission
+                    </label>
+                    <div
+                      className="flex h-8 items-center justify-between rounded px-3"
+                      style={{
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.07)',
+                      }}
+                    >
+                      <span style={{ fontSize: fontSize.xs, color: 'rgba(255,255,255,0.6)' }}>
+                        {(COMMISSION_RATE * 100).toFixed(2)}% ({COMMISSION_RATE})
+                      </span>
+                      <span style={{ fontSize: fontSize.xs11, color: color.muted }}>
+                        Fixed · Taker
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Commission (read-only) */}
-                <div className="flex flex-col gap-1">
-                  <label
-                    className="text-xs font-medium"
-                    style={{ color: color.muted, fontSize: fontSize.xs11 }}
-                  >
-                    Commission
-                  </label>
-                  <div
-                    className="flex h-8 items-center justify-between rounded px-3"
+                {/* Modal footer */}
+                <div
+                  className="flex items-center justify-between border-t px-4 py-3"
+                  style={{ borderColor: 'rgba(255,255,255,0.07)' }}
+                >
+                  {/* Reset account — 2-click confirm */}
+                  <AnimatePresence mode="wait">
+                    {confirmingReset ? (
+                      <motion.button
+                        key="confirm-reset"
+                        initial={{ opacity: 0, scale: 0.88 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.88 }}
+                        transition={{ duration: 0.12 }}
+                        onClick={() => {
+                          reset();
+                          setConfirmingReset(false);
+                          if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+                          setShowSettings(false);
+                        }}
+                        className="flex h-7 items-center gap-1.5 rounded px-3 text-xs font-bold"
+                        style={{
+                          background: `${color.red}22`,
+                          color: color.red,
+                          border: `1px solid ${color.red}50`,
+                          fontSize: fontSize.xs,
+                        }}
+                      >
+                        Confirm reset?
+                      </motion.button>
+                    ) : (
+                      <motion.button
+                        key="reset-btn"
+                        initial={{ opacity: 0, scale: 0.88 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.88 }}
+                        transition={{ duration: 0.12 }}
+                        onClick={() => {
+                          setConfirmingReset(true);
+                          resetTimerRef.current = setTimeout(() => setConfirmingReset(false), 3000);
+                        }}
+                        className="flex h-7 items-center gap-1.5 rounded px-3 text-xs"
+                        style={{
+                          background: 'rgba(255,255,255,0.05)',
+                          color: color.muted,
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          fontSize: fontSize.xs,
+                        }}
+                      >
+                        Reset account
+                      </motion.button>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Save */}
+                  <button
+                    onClick={() => {
+                      setLeverage(draftLeverage);
+                      setShowSettings(false);
+                      setConfirmingReset(false);
+                    }}
+                    className="flex h-7 items-center rounded px-4 text-xs font-semibold transition-opacity hover:opacity-90"
                     style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.07)',
+                      background: 'rgba(165,85,226,0.75)',
+                      color: '#fff',
+                      fontSize: fontSize.xs,
                     }}
                   >
-                    <span style={{ fontSize: fontSize.xs, color: 'rgba(255,255,255,0.6)' }}>
-                      {(COMMISSION_RATE * 100).toFixed(2)}% ({COMMISSION_RATE})
-                    </span>
-                    <span style={{ fontSize: fontSize.xs11, color: color.muted }}>
-                      Fixed · Taker
-                    </span>
-                  </div>
+                    Save
+                  </button>
                 </div>
-              </div>
-
-              {/* Modal footer */}
-              <div
-                className="flex items-center justify-between border-t px-4 py-3"
-                style={{ borderColor: 'rgba(255,255,255,0.07)' }}
-              >
-                {/* Reset account — 2-click confirm */}
-                <AnimatePresence mode="wait">
-                  {confirmingReset ? (
-                    <motion.button
-                      key="confirm-reset"
-                      initial={{ opacity: 0, scale: 0.88 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.88 }}
-                      transition={{ duration: 0.12 }}
-                      onClick={() => {
-                        reset();
-                        setConfirmingReset(false);
-                        if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
-                        setShowSettings(false);
-                      }}
-                      className="flex h-7 items-center gap-1.5 rounded px-3 text-xs font-bold"
-                      style={{
-                        background: `${color.red}22`,
-                        color: color.red,
-                        border: `1px solid ${color.red}50`,
-                        fontSize: fontSize.xs,
-                      }}
-                    >
-                      Confirm reset?
-                    </motion.button>
-                  ) : (
-                    <motion.button
-                      key="reset-btn"
-                      initial={{ opacity: 0, scale: 0.88 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.88 }}
-                      transition={{ duration: 0.12 }}
-                      onClick={() => {
-                        setConfirmingReset(true);
-                        resetTimerRef.current = setTimeout(() => setConfirmingReset(false), 3000);
-                      }}
-                      className="flex h-7 items-center gap-1.5 rounded px-3 text-xs"
-                      style={{
-                        background: 'rgba(255,255,255,0.05)',
-                        color: color.muted,
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        fontSize: fontSize.xs,
-                      }}
-                    >
-                      Reset account
-                    </motion.button>
-                  )}
-                </AnimatePresence>
-
-                {/* Save */}
-                <button
-                  onClick={() => {
-                    setLeverage(draftLeverage);
-                    setShowSettings(false);
-                    setConfirmingReset(false);
-                  }}
-                  className="flex h-7 items-center rounded px-4 text-xs font-semibold transition-opacity hover:opacity-90"
-                  style={{
-                    background: 'rgba(165,85,226,0.75)',
-                    color: '#fff',
-                    fontSize: fontSize.xs,
-                  }}
-                >
-                  Save
-                </button>
-              </div>
+              </motion.div>
             </motion.div>
           </>
         )}
