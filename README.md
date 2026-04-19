@@ -11,8 +11,12 @@ A professional paper trading dashboard for cryptocurrency. Real-time charting, s
 - **Live Candlestick Charts** — EMA (9/20/200), MACD, and VWAP indicators via TradingView Lightweight Charts
 - **Multi-Chart Layout** — 1, 2 (horizontal/vertical), 3, or 4 synchronized chart panes; crosshair and time-range sync across all active panes
 - **Paper Trading** — Simulated long/short market, limit, and stop orders with $10,000 virtual balance and full P&L accounting
+- **Account Summary Bar** — Live stats strip showing Balance, Equity, Unrealized P&L, Realized P&L, Available, Reserved, and Win Rate
 - **TP/SL Auto-Monitor** — Positions close automatically when Take-Profit or Stop-Loss levels are hit
 - **Pending Order Monitor** — Limit/stop orders execute automatically when the trigger price is reached
+- **Order Status Badges** — Colored "Working" / "Filled" pills on orders and history tables
+- **Placing & Closing Time Columns** — Timestamp columns on Orders and History tabs, on by default
+- **Orders Sub-Tabs** — Filter pending orders by All / Limit / Stop with live count badges
 - **Sound Alerts** — Web Audio API synthesised tones for order placed, TP/SL hit, limit/stop filled, and cancelled events
 - **Order & Balance History** — Full audit trail of every order, balance change, and commission
 - **Trading Journal** — Auto-generated trade events + personal editable notes
@@ -28,7 +32,7 @@ A professional paper trading dashboard for cryptocurrency. Real-time charting, s
 | Phase       | Status         | Scope                                                                                                                |
 | ----------- | -------------- | -------------------------------------------------------------------------------------------------------------------- |
 | **Phase 1** | ✅ Complete    | Auth, live chart, paper trading v1 (market orders), TP/SL monitor, journal, PWA                                      |
-| **Phase 2** | 🔄 In Progress | Limit/Stop orders, TradingPanel redesign, pending order monitor ✅, sound alerts ✅, maximize panel ✅, bid/ask feed |
+| **Phase 2** | 🔄 In Progress | Limit/Stop orders, TradingPanel redesign, pending order monitor ✅, sound alerts ✅, maximize panel ✅, bid/ask feed ✅, account summary bar ✅, order status badges ✅, placing/closing time cols ✅, orders sub-tabs ✅ |
 | **Phase 3** | 📋 Planned     | Sync trades to DB, user profile & account settings                                                                   |
 | **Phase 4** | 📋 Planned     | Advanced indicators, multi-symbol watchlist, price alerts                                                            |
 
