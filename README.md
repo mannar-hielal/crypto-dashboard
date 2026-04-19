@@ -19,6 +19,8 @@ A professional paper trading dashboard for cryptocurrency. Real-time charting, s
 - **Orders Sub-Tabs** — Filter pending orders by All / Limit / Stop with live count badges
 - **Sound Alerts** — Web Audio API synthesised tones for order placed, TP/SL hit, limit/stop filled, and cancelled events
 - **Order & Balance History** — Full audit trail of every order, balance change, and commission
+- **Rejected Order Icon** — ⚠️ inline error icon in the History tab when an order is rejected (e.g. insufficient funds), with a tooltip explaining the rejection reason
+- **Crypto Leverage Settings** — Bybit-style leverage selector (1×–125×) in the Account Settings dialog; affects position size across all order types; persisted across sessions
 - **Trading Journal** — Auto-generated trade events + personal editable notes
 - **Multi-Timeframe** — 1m / 5m / 15m / 1h / 4h / 1d intervals with live aggregation
 - **Real-Time Data** — Bybit V5 WebSocket feed with automatic reconnection
@@ -29,12 +31,12 @@ A professional paper trading dashboard for cryptocurrency. Real-time charting, s
 
 ## 🗺️ Roadmap
 
-| Phase       | Status         | Scope                                                                                                                                                                                                                     |
-| ----------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Phase 1** | ✅ Complete    | Auth, live chart, paper trading v1 (market orders), TP/SL monitor, journal, PWA                                                                                                                                           |
-| **Phase 2** | 🔄 In Progress | Limit/Stop orders, TradingPanel redesign, pending order monitor ✅, sound alerts ✅, maximize panel ✅, bid/ask feed ✅, account summary bar ✅, order status badges ✅, placing/closing time cols ✅, orders sub-tabs ✅ |
-| **Phase 3** | 📋 Planned     | Sync trades to DB, user profile & account settings                                                                                                                                                                        |
-| **Phase 4** | 📋 Planned     | Advanced indicators, multi-symbol watchlist, price alerts                                                                                                                                                                 |
+| Phase       | Status         | Scope                                                                                                                                                                                                                                                                   |
+| ----------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Phase 1** | ✅ Complete    | Auth, live chart, paper trading v1 (market orders), TP/SL monitor, journal, PWA                                                                                                                                                                                         |
+| **Phase 2** | 🔄 In Progress | Limit/Stop orders, TradingPanel redesign, pending order monitor ✅, sound alerts ✅, maximize panel ✅, bid/ask feed ✅, account summary bar ✅, order status badges ✅, placing/closing time cols ✅, orders sub-tabs ✅, rejected order icon ✅, leverage settings ✅ |
+| **Phase 3** | 📋 Planned     | Sync trades to DB, user profile & account settings                                                                                                                                                                                                                      |
+| **Phase 4** | 📋 Planned     | Advanced indicators, multi-symbol watchlist, price alerts                                                                                                                                                                                                               |
 
 ---
 
@@ -148,7 +150,7 @@ crypto-dashboard/
 pnpm lint             # ESLint
 pnpm format           # Prettier
 pnpm type-check       # TypeScript strict check
-pnpm test             # Run all tests (194 total)
+pnpm test             # Run all tests (198 total)
 pnpm test:coverage    # Tests with coverage report
 
 # Database
