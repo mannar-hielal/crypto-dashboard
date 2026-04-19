@@ -21,6 +21,7 @@ A professional paper trading dashboard for cryptocurrency. Real-time charting, s
 - **Order & Balance History** — Full audit trail of every order, balance change, and commission
 - **Rejected Order Icon** — ⚠️ inline error icon in the History tab when an order is rejected (e.g. insufficient funds), with a tooltip explaining the rejection reason
 - **Crypto Leverage Settings** — Bybit-style leverage selector (1×–125×) in the Account Settings dialog; affects position size across all order types; persisted across sessions
+- **Symbol Pair Icons** — stacked base/quote coin icons (TradingView style) in every Symbol cell of the Positions, Orders, and History tables, and in the SymbolBar symbol picker trigger and dropdown rows
 - **Trading Journal** — Auto-generated trade events + personal editable notes
 - **Multi-Timeframe** — 1m / 5m / 15m / 1h / 4h / 1d intervals with live aggregation
 - **Real-Time Data** — Bybit V5 WebSocket feed with automatic reconnection
@@ -31,12 +32,12 @@ A professional paper trading dashboard for cryptocurrency. Real-time charting, s
 
 ## 🗺️ Roadmap
 
-| Phase       | Status         | Scope                                                                                                                                                                                                                                                                   |
-| ----------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Phase 1** | ✅ Complete    | Auth, live chart, paper trading v1 (market orders), TP/SL monitor, journal, PWA                                                                                                                                                                                         |
-| **Phase 2** | 🔄 In Progress | Limit/Stop orders, TradingPanel redesign, pending order monitor ✅, sound alerts ✅, maximize panel ✅, bid/ask feed ✅, account summary bar ✅, order status badges ✅, placing/closing time cols ✅, orders sub-tabs ✅, rejected order icon ✅, leverage settings ✅ |
-| **Phase 3** | 📋 Planned     | Sync trades to DB, user profile & account settings                                                                                                                                                                                                                      |
-| **Phase 4** | 📋 Planned     | Advanced indicators, multi-symbol watchlist, price alerts                                                                                                                                                                                                               |
+| Phase       | Status         | Scope                                                                                                                                                                                                                                                                                         |
+| ----------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Phase 1** | ✅ Complete    | Auth, live chart, paper trading v1 (market orders), TP/SL monitor, journal, PWA                                                                                                                                                                                                               |
+| **Phase 2** | 🔄 In Progress | Limit/Stop orders, TradingPanel redesign, pending order monitor ✅, sound alerts ✅, maximize panel ✅, bid/ask feed ✅, account summary bar ✅, order status badges ✅, placing/closing time cols ✅, orders sub-tabs ✅, rejected order icon ✅, leverage settings ✅, symbol pair icons ✅ |
+| **Phase 3** | 📋 Planned     | Sync trades to DB, user profile & account settings                                                                                                                                                                                                                                            |
+| **Phase 4** | 📋 Planned     | Advanced indicators, multi-symbol watchlist, price alerts                                                                                                                                                                                                                                     |
 
 ---
 
