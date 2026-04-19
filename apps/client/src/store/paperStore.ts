@@ -21,6 +21,10 @@ const MAX_HISTORY = 100; // keep last 100 closed trades
 const MAX_JOURNAL = 200; // keep last 200 journal entries
 export const COMMISSION_RATE = 0.0007; // 0.07% taker fee
 
+/** Bybit-style crypto leverage options (cross-margin perpetuals, max 125×). */
+export const CRYPTO_LEVERAGE_OPTIONS = [1, 2, 3, 5, 10, 15, 20, 25, 50, 75, 100, 125] as const;
+export type CryptoLeverage = (typeof CRYPTO_LEVERAGE_OPTIONS)[number];
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface Position {
@@ -43,11 +47,25 @@ export interface ClosedTrade {
   entryPrice: number;
   exitPrice: number;
   pnl: number; // realized PnL in USDT (negative = loss)
+  openedAt: number;
   closedAt: number;
 }
 
 export type OrderStatus = 'filled' | 'cancelled' | 'rejected';
 export type OrderType = 'market' | 'limit' | 'stop';
+
+export interface PendingOrder {
+  id: string;
+  symbol: string;
+  side: 'buy' | 'sell';
+  type: 'limit' | 'stop';
+  usdtAmount: number; // reserved at placement (deducted from balance)
+  triggerPrice: number; // limit or stop trigger price
+  qty: number; // pre-calculated leveraged base-asset qty: (usdtAmount * leverage) / triggerPrice
+  takeProfit?: number;
+  stopLoss?: number;
+  placedAt: number;
+}
 
 export interface HistoricalOrder {
   id: string;
@@ -62,6 +80,8 @@ export interface HistoricalOrder {
   commission: number;
   placingTime: number;
   closingTime: number;
+  /** Human-readable reason why the order was rejected (only set when status === 'rejected') */
+  rejectionReason?: string;
 }
 
 export interface BalanceEvent {
@@ -79,6 +99,12 @@ export interface JournalEntry {
   text: string;
   /** true only for notes the user manually added/edited */
   isUserNote?: boolean;
+  /**
+   * Net realized PnL (USDT) attached to system close entries only.
+   * Positive = profit, negative = loss. Undefined for open/user entries.
+   * Net = gross PnL − exit commission (matches Balance History column).
+   */
+  pnl?: number;
 }
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -101,11 +127,21 @@ function fmtPrice(price: number): string {
 interface PaperState {
   balance: number;
   positions: Position[];
+  pendingOrders: PendingOrder[];
   history: ClosedTrade[];
   orders: HistoricalOrder[];
   realizedPnl: number;
   balanceLog: BalanceEvent[];
   journal: JournalEntry[];
+  /**
+   * Crypto leverage multiplier (Bybit-style). Default 1 = no leverage.
+   * Affects position size: qty = (usdtAmount × leverage) / price.
+   * The margin deducted from balance is always `usdtAmount`.
+   */
+  leverage: number;
+
+  /** Update the crypto leverage multiplier. */
+  setLeverage: (v: number) => void;
 
   /**
    * Open a new position.
@@ -130,13 +166,49 @@ interface PaperState {
   closePosition: (positionId: string, exitPrice: number) => void;
 
   /** Add a note to the journal. Pass isUserNote=false for system-generated entries (not user-editable). */
-  addJournalNote: (text: string, isUserNote?: boolean) => void;
+  addJournalNote: (text: string, isUserNote?: boolean, pnl?: number) => void;
 
   /** Edit any journal entry (typically used for user notes). */
   editJournalEntry: (entryId: string, text: string) => void;
 
   /** Reset the account back to the starting balance. */
   reset: () => void;
+
+  /**
+   * Place a limit order. Balance is reserved immediately.
+   * @returns order id on success, null on validation failure
+   */
+  placeLimitOrder: (
+    symbol: string,
+    side: 'buy' | 'sell',
+    triggerPrice: number,
+    usdtAmount: number,
+    takeProfit?: number,
+    stopLoss?: number
+  ) => string | null;
+
+  /**
+   * Place a stop order. Balance is reserved immediately.
+   * @returns order id on success, null on validation failure
+   */
+  placeStopOrder: (
+    symbol: string,
+    side: 'buy' | 'sell',
+    triggerPrice: number,
+    usdtAmount: number,
+    takeProfit?: number,
+    stopLoss?: number
+  ) => string | null;
+
+  /** Cancel a pending (limit or stop) order and refund the reserved amount. */
+  cancelPendingOrder: (orderId: string) => void;
+
+  /**
+   * Fill a pending order without recording a cancellation entry.
+   * Removes the order from pendingOrders and refunds the reserved amount so
+   * placeOrder can deduct it again. Intended only for use by usePendingOrderMonitor.
+   */
+  fillPendingOrder: (orderId: string) => void;
 }
 
 export const usePaperStore = create<PaperState>()(
@@ -144,22 +216,46 @@ export const usePaperStore = create<PaperState>()(
     (set, get) => ({
       balance: STARTING_BALANCE,
       positions: [],
+      pendingOrders: [],
       history: [],
       orders: [],
       realizedPnl: 0,
       balanceLog: [],
       journal: [],
+      leverage: 1,
+
+      setLeverage: (v) => set({ leverage: v }),
 
       placeOrder: (symbol, side, price, usdtAmount, takeProfit, stopLoss) => {
-        const { balance } = get();
+        const { balance, leverage } = get();
 
         // ── Validation ──────────────────────────────────────────────────────
         if (usdtAmount <= 0 || price <= 0) return null;
         // Include entry commission in the balance check — prevents going negative
         // when placing a 100%-of-balance order (usdtAmount + fee > balance).
-        if (usdtAmount + usdtAmount * COMMISSION_RATE > balance) return null;
+        if (usdtAmount + usdtAmount * COMMISSION_RATE > balance) {
+          // Record the rejection so it surfaces in the History tab with a warning icon
+          const rejId = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+          const now = Date.now();
+          const rejectedOrder: HistoricalOrder = {
+            id: `o-rej-${rejId}`,
+            symbol,
+            side,
+            type: 'market',
+            qty: price > 0 ? (usdtAmount * leverage) / price : 0,
+            status: 'rejected',
+            commission: 0,
+            placingTime: now,
+            closingTime: now,
+            rejectionReason: 'Not enough funds to complete the order.',
+          };
+          set((s) => ({
+            orders: [rejectedOrder, ...s.orders].slice(0, MAX_HISTORY * 2),
+          }));
+          return null;
+        }
 
-        const quantity = usdtAmount / price;
+        const quantity = (usdtAmount * leverage) / price;
         const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
         const commission = usdtAmount * COMMISSION_RATE;
         const now = Date.now();
@@ -263,6 +359,7 @@ export const usePaperStore = create<PaperState>()(
           entryPrice: pos.entryPrice,
           exitPrice,
           pnl,
+          openedAt: pos.openedAt,
           closedAt: now,
         };
 
@@ -296,11 +393,15 @@ export const usePaperStore = create<PaperState>()(
         const closingQtyStr = fmtQty(pos.quantity);
         const closingPriceStr = fmtPrice(exitPrice);
         const closingSide = pos.side === 'long' ? 'sell' : 'buy';
+        // Net PnL = gross PnL − exit commission — same figure shown in Balance History.
+        // Attached only to the exec entry so the badge appears on the meaningful row.
+        const netPnl = pnl - commission;
         const closingJournalEntries: JournalEntry[] = [
           {
             id: `j-close-${closedId}-exec`,
             time: now,
             text: `Order ${closingOrderId} for symbol ${pos.symbol} has been executed at price ${closingPriceStr} for ${closingQtyStr} units`,
+            pnl: netPnl,
           },
           {
             id: `j-close-${closedId}-placed`,
@@ -325,13 +426,14 @@ export const usePaperStore = create<PaperState>()(
         }));
       },
 
-      addJournalNote: (text: string, isUserNote = true) => {
+      addJournalNote: (text: string, isUserNote = true, pnl?: number) => {
         const noteId = `j-note-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
         const entry: JournalEntry = {
           id: noteId,
           time: Date.now(),
           text,
           isUserNote,
+          ...(pnl !== undefined ? { pnl } : {}),
         };
         set((s) => ({
           journal: [entry, ...s.journal].slice(0, MAX_JOURNAL),
@@ -352,12 +454,145 @@ export const usePaperStore = create<PaperState>()(
         set({
           balance: STARTING_BALANCE,
           positions: [],
+          pendingOrders: [],
           history: [],
           orders: [],
           realizedPnl: 0,
           balanceLog: [],
           journal: [],
         }),
+
+      placeLimitOrder: (symbol, side, triggerPrice, usdtAmount, takeProfit, stopLoss) => {
+        const { balance, leverage } = get();
+        if (usdtAmount <= 0 || triggerPrice <= 0) return null;
+        const totalCost = usdtAmount + usdtAmount * COMMISSION_RATE;
+        if (totalCost > balance) return null;
+
+        const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        const qty = (usdtAmount * leverage) / triggerPrice;
+        const now = Date.now();
+
+        const pending: PendingOrder = {
+          id,
+          symbol,
+          side,
+          type: 'limit',
+          usdtAmount,
+          triggerPrice,
+          qty,
+          placedAt: now,
+          ...(takeProfit && takeProfit > 0 ? { takeProfit } : {}),
+          ...(stopLoss && stopLoss > 0 ? { stopLoss } : {}),
+        };
+
+        const historicalOrder: HistoricalOrder = {
+          id: `o-${id}`,
+          symbol,
+          side,
+          type: 'limit',
+          qty,
+          limitPrice: triggerPrice,
+          status: 'filled', // will be updated on execution; kept here as placement record
+          commission: usdtAmount * COMMISSION_RATE,
+          placingTime: now,
+          closingTime: now,
+        };
+
+        set((s) => ({
+          balance: s.balance - totalCost,
+          pendingOrders: [...s.pendingOrders, pending],
+          orders: [historicalOrder, ...s.orders].slice(0, MAX_HISTORY * 2),
+        }));
+
+        return id;
+      },
+
+      placeStopOrder: (symbol, side, triggerPrice, usdtAmount, takeProfit, stopLoss) => {
+        const { balance, leverage } = get();
+        if (usdtAmount <= 0 || triggerPrice <= 0) return null;
+        const totalCost = usdtAmount + usdtAmount * COMMISSION_RATE;
+        if (totalCost > balance) return null;
+
+        const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        const qty = (usdtAmount * leverage) / triggerPrice;
+        const now = Date.now();
+
+        const pending: PendingOrder = {
+          id,
+          symbol,
+          side,
+          type: 'stop',
+          usdtAmount,
+          triggerPrice,
+          qty,
+          placedAt: now,
+          ...(takeProfit && takeProfit > 0 ? { takeProfit } : {}),
+          ...(stopLoss && stopLoss > 0 ? { stopLoss } : {}),
+        };
+
+        const historicalOrder: HistoricalOrder = {
+          id: `o-${id}`,
+          symbol,
+          side,
+          type: 'stop',
+          qty,
+          stopPrice: triggerPrice,
+          status: 'filled', // placeholder; updated on execution
+          commission: usdtAmount * COMMISSION_RATE,
+          placingTime: now,
+          closingTime: now,
+        };
+
+        set((s) => ({
+          balance: s.balance - totalCost,
+          pendingOrders: [...s.pendingOrders, pending],
+          orders: [historicalOrder, ...s.orders].slice(0, MAX_HISTORY * 2),
+        }));
+
+        return id;
+      },
+
+      cancelPendingOrder: (orderId) => {
+        const { pendingOrders } = get();
+        const order = pendingOrders.find((o) => o.id === orderId);
+        if (!order) return;
+
+        const refund = order.usdtAmount + order.usdtAmount * COMMISSION_RATE;
+        const now = Date.now();
+
+        const cancelledOrder: HistoricalOrder = {
+          id: `o-cancel-${orderId}`,
+          symbol: order.symbol,
+          side: order.side,
+          type: order.type,
+          qty: order.qty,
+          ...(order.type === 'limit'
+            ? { limitPrice: order.triggerPrice }
+            : { stopPrice: order.triggerPrice }),
+          status: 'cancelled',
+          commission: 0,
+          placingTime: order.placedAt,
+          closingTime: now,
+        };
+
+        set((s) => ({
+          balance: s.balance + refund,
+          pendingOrders: s.pendingOrders.filter((o) => o.id !== orderId),
+          orders: [cancelledOrder, ...s.orders].slice(0, MAX_HISTORY * 2),
+        }));
+      },
+
+      fillPendingOrder: (orderId) => {
+        const { pendingOrders } = get();
+        const order = pendingOrders.find((o) => o.id === orderId);
+        if (!order) return;
+        // Refund reserved amount so placeOrder can re-deduct it — no cancellation record.
+        const refund = order.usdtAmount + order.usdtAmount * COMMISSION_RATE;
+        set((s) => ({
+          balance: s.balance + refund,
+          pendingOrders: s.pendingOrders.filter((o) => o.id !== orderId),
+        }));
+      },
     }),
     {
       name: 'cd-paper-trading', // localStorage key

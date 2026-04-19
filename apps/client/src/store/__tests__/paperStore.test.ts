@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { usePaperStore } from '../paperStore';
+import { usePaperStore, COMMISSION_RATE } from '../paperStore';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -192,6 +192,36 @@ describe('paperStore', () => {
       const balanceBefore = usePaperStore.getState().balance;
       usePaperStore.getState().closePosition('non-existent-id', 50_000);
       expect(usePaperStore.getState().balance).toBe(balanceBefore);
+    });
+
+    it('attaches net PnL badge to the exec journal entry on a profitable close', () => {
+      const id = usePaperStore.getState().placeOrder(SYMBOL, 'buy', 40_000, 4_000)!;
+      // qty = 0.1; gross PnL = (50000-40000)*0.1 = 1000; exit commission = 0.1*50000*0.0007 = 3.5
+      usePaperStore.getState().closePosition(id, 50_000);
+      const journal = usePaperStore.getState().journal;
+      const execEntry = journal.find((e) => e.id.includes('-exec'));
+      expect(execEntry?.pnl).toBeCloseTo(1_000 - 0.1 * 50_000 * COMMISSION_RATE);
+    });
+
+    it('attaches negative net PnL badge to the exec journal entry on a losing close', () => {
+      const id = usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 5_000)!;
+      // qty = 0.1; gross PnL = (40000-50000)*0.1 = -1000; exit commission = 0.1*40000*0.0007 = 2.8
+      usePaperStore.getState().closePosition(id, 40_000);
+      const journal = usePaperStore.getState().journal;
+      const execEntry = journal.find((e) => e.id.includes('-exec'));
+      expect(execEntry?.pnl).toBeCloseTo(-1_000 - 0.1 * 40_000 * COMMISSION_RATE);
+    });
+
+    it('addJournalNote stores pnl when provided', () => {
+      usePaperStore.getState().addJournalNote('Auto-closed LONG BTCUSDT', false, 42.5);
+      const entry = usePaperStore.getState().journal[0];
+      expect(entry.pnl).toBeCloseTo(42.5);
+    });
+
+    it('addJournalNote pnl is undefined when not provided', () => {
+      usePaperStore.getState().addJournalNote('User note');
+      const entry = usePaperStore.getState().journal[0];
+      expect(entry.pnl).toBeUndefined();
     });
   });
 

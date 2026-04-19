@@ -10,9 +10,18 @@ A professional paper trading dashboard for cryptocurrency. Real-time charting, s
 
 - **Live Candlestick Charts** — EMA (9/20/200), MACD, and VWAP indicators via TradingView Lightweight Charts
 - **Multi-Chart Layout** — 1, 2 (horizontal/vertical), 3, or 4 synchronized chart panes; crosshair and time-range sync across all active panes
-- **Paper Trading** — Simulated long/short market orders with $10,000 virtual balance and full P&L accounting
+- **Paper Trading** — Simulated long/short market, limit, and stop orders with $10,000 virtual balance and full P&L accounting
+- **Account Summary Bar** — Live stats strip showing Balance, Equity, Unrealized P&L, Realized P&L, Available, Reserved, and Win Rate
 - **TP/SL Auto-Monitor** — Positions close automatically when Take-Profit or Stop-Loss levels are hit
+- **Pending Order Monitor** — Limit/stop orders execute automatically when the trigger price is reached
+- **Order Status Badges** — Colored "Working" / "Filled" pills on orders and history tables
+- **Placing & Closing Time Columns** — Timestamp columns on Orders and History tabs, on by default
+- **Orders Sub-Tabs** — Filter pending orders by All / Limit / Stop with live count badges
+- **Sound Alerts** — Web Audio API synthesised tones for order placed, TP/SL hit, limit/stop filled, and cancelled events
 - **Order & Balance History** — Full audit trail of every order, balance change, and commission
+- **Rejected Order Icon** — ⚠️ inline error icon in the History tab when an order is rejected (e.g. insufficient funds), with a tooltip explaining the rejection reason
+- **Crypto Leverage Settings** — Bybit-style leverage selector (1×–125×) in the Account Settings dialog; affects position size across all order types; persisted across sessions
+- **Symbol Pair Icons** — stacked base/quote coin icons (TradingView style) in every Symbol cell of the Positions, Orders, and History tables, and in the SymbolBar symbol picker trigger and dropdown rows
 - **Trading Journal** — Auto-generated trade events + personal editable notes
 - **Multi-Timeframe** — 1m / 5m / 15m / 1h / 4h / 1d intervals with live aggregation
 - **Real-Time Data** — Bybit V5 WebSocket feed with automatic reconnection
@@ -23,12 +32,12 @@ A professional paper trading dashboard for cryptocurrency. Real-time charting, s
 
 ## 🗺️ Roadmap
 
-| Phase       | Status         | Scope                                                                                                           |
-| ----------- | -------------- | --------------------------------------------------------------------------------------------------------------- |
-| **Phase 1** | ✅ Complete    | Auth, live chart, paper trading v1 (market orders), TP/SL monitor, journal, PWA                                 |
-| **Phase 2** | 🔄 In Progress | Limit/Stop orders, TradingPanel redesign (bid/ask, order types), pending orders monitor, real-time bid/ask feed |
-| **Phase 3** | 📋 Planned     | Sync trades to DB, user profile & account settings                                                              |
-| **Phase 4** | 📋 Planned     | Advanced indicators, multi-symbol watchlist, price alerts                                                       |
+| Phase       | Status         | Scope                                                                                                                                                                                                                                                                                         |
+| ----------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Phase 1** | ✅ Complete    | Auth, live chart, paper trading v1 (market orders), TP/SL monitor, journal, PWA                                                                                                                                                                                                               |
+| **Phase 2** | 🔄 In Progress | Limit/Stop orders, TradingPanel redesign, pending order monitor ✅, sound alerts ✅, maximize panel ✅, bid/ask feed ✅, account summary bar ✅, order status badges ✅, placing/closing time cols ✅, orders sub-tabs ✅, rejected order icon ✅, leverage settings ✅, symbol pair icons ✅ |
+| **Phase 3** | 📋 Planned     | Sync trades to DB, user profile & account settings                                                                                                                                                                                                                                            |
+| **Phase 4** | 📋 Planned     | Advanced indicators, multi-symbol watchlist, price alerts                                                                                                                                                                                                                                     |
 
 ---
 
@@ -142,7 +151,7 @@ crypto-dashboard/
 pnpm lint             # ESLint
 pnpm format           # Prettier
 pnpm type-check       # TypeScript strict check
-pnpm test             # Run all tests (148 total)
+pnpm test             # Run all tests (198 total)
 pnpm test:coverage    # Tests with coverage report
 
 # Database
@@ -181,4 +190,4 @@ Deployments trigger automatically on push to `main` when CI passes.
 ---
 
 **Live:** [API Health](https://crypto-dashboard-api.fly.dev/health) · [App](https://crypto-dashboard-7yy.pages.dev)  
-**Last updated:** April 18, 2026
+**Last updated:** April 19, 2026
