@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { WebSocket } from '@fastify/websocket';
-import type { LiveBar } from '../../plugins/bybit.js';
+import type { LiveBar, TickerUpdate } from '../../plugins/bybit.js';
 import { config } from '../../config.js';
 import { logger } from '../../logger.js';
 import { ALLOWED_SYMBOLS } from '../../constants.js';
@@ -167,7 +167,7 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
         socket.send(JSON.stringify({ type: 'snapshot', bars: snapshot }));
       }
 
-      // ② Subscribe to live updates and forward to this client
+      // ② Subscribe to live bar updates and forward to this client
       const unsubscribe = fastify.bybit.subscribe((bar: LiveBar) => {
         if (bar.symbol !== symbol || bar.interval !== interval) return;
         if (socket.readyState === 1 /* WebSocket.OPEN */) {
@@ -175,15 +175,25 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
         }
       });
 
-      // ③ Clean up listener when client disconnects
+      // ③ Subscribe to ticker (bid/ask) updates and forward to this client
+      const unsubscribeTicker = fastify.bybit.subscribeTicker((update: TickerUpdate) => {
+        if (update.symbol !== symbol) return;
+        if (socket.readyState === 1 /* WebSocket.OPEN */) {
+          socket.send(JSON.stringify({ type: 'ticker', ...update }));
+        }
+      });
+
+      // ④ Clean up listeners when client disconnects
       socket.on('close', () => {
         unsubscribe();
+        unsubscribeTicker();
         log.info({ symbol, interval }, 'Client disconnected from live feed');
       });
 
       socket.on('error', (err: Error) => {
         log.error({ err }, 'Client WebSocket error');
         unsubscribe();
+        unsubscribeTicker();
       });
     }
   );

@@ -29,10 +29,15 @@ export interface PaneMarketState {
   latestPrice: number | null;
   priceChange: number | null;
   isConnected: boolean;
+  /** Best bid price from orderbook.1 stream */
+  bid: number | null;
+  /** Best ask price from orderbook.1 stream */
+  ask: number | null;
 
   setSnapshot: (bars: CandleBar[], indicators: IndicatorSnapshot | null) => void;
   addBar: (liveBar: LiveBar) => void;
   setConnected: (connected: boolean) => void;
+  setBidAsk: (bid: number, ask: number) => void;
   /** Wipe all data — called before a new symbol/interval connects */
   reset: () => void;
 }
@@ -46,6 +51,8 @@ function createPaneStore() {
     latestPrice: null,
     priceChange: null,
     isConnected: false,
+    bid: null,
+    ask: null,
 
     setSnapshot: (bars, indicators) => {
       const last = bars[bars.length - 1];
@@ -87,8 +94,18 @@ function createPaneStore() {
 
     setConnected: (isConnected) => set({ isConnected }),
 
+    setBidAsk: (bid, ask) => set({ bid, ask }),
+
     reset: () =>
-      set({ bars: [], indicators: null, latestPrice: null, priceChange: null, isConnected: false }),
+      set({
+        bars: [],
+        indicators: null,
+        latestPrice: null,
+        priceChange: null,
+        isConnected: false,
+        bid: null,
+        ask: null,
+      }),
   }));
 }
 

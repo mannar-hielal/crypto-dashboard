@@ -99,6 +99,8 @@ function useSinglePaneFeed(
           } else if (msg.type === 'bar') {
             lastKnownPrices.set(symbol, msg.bar.kline.close);
             store.getState().addBar(msg.bar);
+          } else if (msg.type === 'ticker') {
+            store.getState().setBidAsk(msg.bid, msg.ask);
           }
         } catch {
           // Ignore malformed messages

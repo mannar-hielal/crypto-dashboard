@@ -71,6 +71,18 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
   const lp3 = useStore(paneStores[3], (s) => s.latestPrice);
   const latestPrice = [lp0, lp1, lp2, lp3][activePane];
 
+  const bid0 = useStore(paneStores[0], (s) => s.bid);
+  const bid1 = useStore(paneStores[1], (s) => s.bid);
+  const bid2 = useStore(paneStores[2], (s) => s.bid);
+  const bid3 = useStore(paneStores[3], (s) => s.bid);
+  const ask0 = useStore(paneStores[0], (s) => s.ask);
+  const ask1 = useStore(paneStores[1], (s) => s.ask);
+  const ask2 = useStore(paneStores[2], (s) => s.ask);
+  const ask3 = useStore(paneStores[3], (s) => s.ask);
+  const bid = [bid0, bid1, bid2, bid3][activePane];
+  const ask = [ask0, ask1, ask2, ask3][activePane];
+  const spread = bid != null && ask != null ? ask - bid : null;
+
   const balance = usePaperStore((s) => s.balance);
   const placeOrder = usePaperStore((s) => s.placeOrder);
   const placeLimitOrder = usePaperStore((s) => s.placeLimitOrder);
@@ -176,6 +188,27 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
   const commission = usdtAmount !== null ? usdtAmount * COMMISSION_RATE : null;
   const marginPct = margin !== null ? Math.min(100, (margin / balance) * 100) : 0;
   const marginExceeds = margin !== null && margin > balance;
+
+  /** Estimated P&L if TP is hit */
+  const tpPnl: number | null = (() => {
+    const tp = parseFloat(tpInput);
+    if (!tpEnabled || isNaN(tp) || tp <= 0 || !execPrice || !units) return null;
+    return side === 'buy' ? (tp - execPrice) * units : (execPrice - tp) * units;
+  })();
+
+  /** Estimated P&L if SL is hit */
+  const slPnl: number | null = (() => {
+    const sl = parseFloat(slInput);
+    if (!slEnabled || isNaN(sl) || sl <= 0 || !execPrice || !units) return null;
+    return side === 'buy' ? (sl - execPrice) * units : (execPrice - sl) * units;
+  })();
+
+  /** Format a P&L number as "+$X.XX · +X.XX%" */
+  function formatPnl(pnl: number): string {
+    const sign = pnl >= 0 ? '+' : '';
+    const pct = usdtAmount ? (pnl / usdtAmount) * 100 : 0;
+    return `${sign}$${pnl.toFixed(2)} · ${sign}${pct.toFixed(2)}%`;
+  }
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   function handleSideChange(s: OrderSide) {
@@ -352,8 +385,8 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
             className="tabular-nums font-bold"
             style={{ fontSize: fontSize.xs11, color: !isBuy ? '#fff' : color.muted }}
           >
-            {latestPrice
-              ? latestPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })
+            {(bid ?? latestPrice)
+              ? (bid ?? latestPrice)!.toLocaleString(undefined, { maximumFractionDigits: 2 })
               : '—'}
           </span>
         </button>
@@ -367,8 +400,13 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
             color: color.muted,
             minWidth: 28,
           }}
+          title={
+            spread != null
+              ? `Bid: ${bid?.toLocaleString(undefined, { maximumFractionDigits: 4 })} · Ask: ${ask?.toLocaleString(undefined, { maximumFractionDigits: 4 })}`
+              : 'Spread — awaiting bid/ask feed'
+          }
         >
-          —
+          {spread != null ? spread.toFixed(spread < 1 ? 4 : 2) : '—'}
         </div>
 
         {/* Buy */}
@@ -390,8 +428,8 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
             className="tabular-nums font-bold"
             style={{ fontSize: fontSize.xs11, color: isBuy ? '#fff' : color.muted }}
           >
-            {latestPrice
-              ? latestPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })
+            {(ask ?? latestPrice)
+              ? (ask ?? latestPrice)!.toLocaleString(undefined, { maximumFractionDigits: 2 })
               : '—'}
           </span>
         </button>
@@ -591,6 +629,24 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
                         </span>
                       </div>
                     )}
+                    <AnimatePresence initial={false}>
+                      {tpPnl !== null && (
+                        <motion.p
+                          key="tp-pnl"
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.15 }}
+                          className="overflow-hidden tabular-nums"
+                          style={{
+                            fontSize: fontSize.xs10,
+                            color: tpPnl >= 0 ? color.green : color.red,
+                          }}
+                        >
+                          {formatPnl(tpPnl)}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                   {/* Stop Loss */}
@@ -631,6 +687,24 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
                         </span>
                       </div>
                     )}
+                    <AnimatePresence initial={false}>
+                      {slPnl !== null && (
+                        <motion.p
+                          key="sl-pnl"
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.15 }}
+                          className="overflow-hidden tabular-nums"
+                          style={{
+                            fontSize: fontSize.xs10,
+                            color: slPnl >= 0 ? color.green : color.red,
+                          }}
+                        >
+                          {formatPnl(slPnl)}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </div>
               </motion.div>

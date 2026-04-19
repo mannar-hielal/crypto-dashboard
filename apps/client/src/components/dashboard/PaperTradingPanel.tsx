@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CryptoIcon } from '@/components/ui/CryptoIcon';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuthStore } from '@/store/authStore';
 import {
   X,
   TrendingUp,
@@ -13,11 +14,12 @@ import {
   Clock,
   Maximize2,
   Minimize2,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/shallow';
 import { paneStores, lastKnownPrices } from '@/store/paneStore';
-import { usePaperStore } from '@/store/paperStore';
+import { usePaperStore, COMMISSION_RATE } from '@/store/paperStore';
 import type { JournalEntry } from '@/store/paperStore';
 import type { PanelSize } from '@/pages/DashboardPage';
 import { bg, color, fontSize } from '@/lib/tokens';
@@ -25,9 +27,14 @@ import { useLayoutStore } from '@/store/layoutStore';
 import { useTradingSoundCtx } from '@/hooks/TradingSoundContext';
 import { SoundSettings } from './SoundSettings';
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const LEVERAGE = 10;
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type InfoTab = 'positions' | 'orders' | 'history' | 'journal';
+type ColTab = 'positions' | 'orders' | 'history';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -36,6 +43,11 @@ function fmtTime(ts: number): string {
   const d = new Date(ts);
   const p = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+/** Truncate long IDs for display; full value shown on hover via title */
+function shortId(id: string): string {
+  return id.length > 10 ? `…${id.slice(-10)}` : id;
 }
 
 // ─── Stagger helpers ──────────────────────────────────────────────────────────
@@ -49,6 +61,89 @@ const rowVariants = {
   }),
   exit: { opacity: 0, x: -14, transition: { duration: 0.16, ease: 'easeIn' as const } },
 };
+
+// ─── Column definitions ───────────────────────────────────────────────────────
+
+interface ColDef {
+  id: string;
+  label: string;
+  align: 'left' | 'right' | 'center';
+  defaultOn: boolean;
+  /** Always shown — not toggleable */
+  sticky?: boolean;
+}
+
+const POSITION_COLS: ColDef[] = [
+  { id: 'symbol', label: 'Symbol', align: 'left', defaultOn: true, sticky: true },
+  { id: 'side', label: 'Side', align: 'left', defaultOn: true },
+  { id: 'qty', label: 'Qty', align: 'right', defaultOn: true },
+  { id: 'entry', label: 'Entry', align: 'right', defaultOn: true },
+  { id: 'mark', label: 'Mark', align: 'right', defaultOn: true },
+  { id: 'tp', label: 'TP', align: 'right', defaultOn: true },
+  { id: 'sl', label: 'SL', align: 'right', defaultOn: true },
+  { id: 'pnl', label: 'PnL (USDT)', align: 'right', defaultOn: true },
+  { id: 'orderId', label: 'Order ID', align: 'right', defaultOn: false },
+  { id: 'openedAt', label: 'Opened At', align: 'right', defaultOn: false },
+  { id: 'leverage', label: 'Leverage', align: 'right', defaultOn: false },
+  { id: 'margin', label: 'Margin', align: 'right', defaultOn: false },
+  { id: 'commission', label: 'Commission', align: 'right', defaultOn: false },
+  { id: 'close', label: 'Close', align: 'center', defaultOn: true, sticky: true },
+];
+
+const ORDER_COLS: ColDef[] = [
+  { id: 'symbol', label: 'Symbol', align: 'left', defaultOn: true, sticky: true },
+  { id: 'type', label: 'Type', align: 'left', defaultOn: true },
+  { id: 'side', label: 'Side', align: 'left', defaultOn: true },
+  { id: 'qty', label: 'Qty', align: 'right', defaultOn: true },
+  { id: 'trigger', label: 'Trigger', align: 'right', defaultOn: true },
+  { id: 'tp', label: 'TP', align: 'right', defaultOn: true },
+  { id: 'sl', label: 'SL', align: 'right', defaultOn: true },
+  { id: 'reserved', label: 'Reserved', align: 'right', defaultOn: true },
+  { id: 'orderId', label: 'Order ID', align: 'right', defaultOn: false },
+  { id: 'placedAt', label: 'Placed At', align: 'right', defaultOn: false },
+  { id: 'leverage', label: 'Leverage', align: 'right', defaultOn: false },
+  { id: 'margin', label: 'Margin', align: 'right', defaultOn: false },
+  { id: 'cancel', label: 'Cancel', align: 'center', defaultOn: true, sticky: true },
+];
+
+const HISTORY_COLS: ColDef[] = [
+  { id: 'symbol', label: 'Symbol', align: 'left', defaultOn: true, sticky: true },
+  { id: 'side', label: 'Side', align: 'left', defaultOn: true },
+  { id: 'qty', label: 'Qty', align: 'right', defaultOn: true },
+  { id: 'entry', label: 'Entry', align: 'right', defaultOn: true },
+  { id: 'exit', label: 'Exit', align: 'right', defaultOn: true },
+  { id: 'pnl', label: 'PnL (USDT)', align: 'right', defaultOn: true },
+  { id: 'closedAt', label: 'Closed At', align: 'right', defaultOn: false },
+  { id: 'orderId', label: 'Order ID', align: 'right', defaultOn: false },
+  { id: 'leverage', label: 'Leverage', align: 'right', defaultOn: false },
+];
+
+const COLS_BY_TAB: Record<ColTab, ColDef[]> = {
+  positions: POSITION_COLS,
+  orders: ORDER_COLS,
+  history: HISTORY_COLS,
+};
+
+// ─── Column prefs persistence ─────────────────────────────────────────────────
+
+const COL_PREFS_KEY = 'cd-paper-col-prefs';
+
+function loadColPrefs(): Record<string, string[]> {
+  try {
+    const raw = localStorage.getItem(COL_PREFS_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, string[]>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveColPrefs(prefs: Record<string, string[]>) {
+  try {
+    localStorage.setItem(COL_PREFS_KEY, JSON.stringify(prefs));
+  } catch {
+    // ignore storage errors
+  }
+}
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -165,8 +260,34 @@ export function PaperTradingPanel({
   onToggleMaximize,
 }: PaperTradingPanelProps) {
   const [infoTab, setInfoTab] = useState<InfoTab>('positions');
+  const [showSettings, setShowSettings] = useState(false);
   const [confirmingReset, setConfirmingReset] = useState(false);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Column picker state ────────────────────────────────────────────────────
+  const [colPickerOpen, setColPickerOpen] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  const [visibleCols, setVisibleCols] = useState<Record<string, string[]>>(() => {
+    const saved = loadColPrefs();
+    const result: Record<string, string[]> = {};
+    for (const [tab, cols] of Object.entries(COLS_BY_TAB) as [ColTab, ColDef[]][]) {
+      result[tab] = saved[tab] ?? cols.filter((c) => c.defaultOn).map((c) => c.id);
+    }
+    return result;
+  });
+
+  // Close picker on outside click
+  useEffect(() => {
+    if (!colPickerOpen) return;
+    function handleOutside(e: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setColPickerOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [colPickerOpen]);
 
   // Clear the reset confirmation timer on unmount to avoid state updates on an unmounted component
   useEffect(() => {
@@ -198,8 +319,7 @@ export function PaperTradingPanel({
   function getPriceForSymbol(sym: string): number | null {
     return priceBySymbol[sym] ?? lastKnownPrices.get(sym) ?? null;
   }
-  // latestPrice from pane 0 was previously used for the active trading form;
-  // now all pricing goes through priceBySymbol — so lp0 is accessed only via the map.
+
   const balance = usePaperStore((s) => s.balance);
   const positions = usePaperStore((s) => s.positions);
   const pendingOrders = usePaperStore((s) => s.pendingOrders);
@@ -211,6 +331,7 @@ export function PaperTradingPanel({
   const editJournalEntry = usePaperStore((s) => s.editJournalEntry);
   const reset = usePaperStore((s) => s.reset);
   const sound = useTradingSoundCtx();
+  const username = useAuthStore((s) => s.user?.username ?? 'Account');
 
   const unrealizedPnl = positions.reduce((sum, pos) => {
     const markPrice = getPriceForSymbol(pos.symbol);
@@ -221,6 +342,25 @@ export function PaperTradingPanel({
         : (pos.entryPrice - markPrice) * pos.quantity;
     return sum + pnl;
   }, 0);
+
+  // ── Column helpers ─────────────────────────────────────────────────────────
+  function isVisible(tab: ColTab, colId: string): boolean {
+    const def = COLS_BY_TAB[tab].find((c) => c.id === colId);
+    if (def?.sticky) return true;
+    return (visibleCols[tab] ?? []).includes(colId);
+  }
+
+  function toggleColVisibility(tab: ColTab, colId: string) {
+    setVisibleCols((prev) => {
+      const current = prev[tab] ?? [];
+      const next = current.includes(colId)
+        ? current.filter((id) => id !== colId)
+        : [...current, colId];
+      const updated = { ...prev, [tab]: next };
+      saveColPrefs(updated);
+      return updated;
+    });
+  }
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   function handleClose(positionId: string) {
@@ -235,17 +375,6 @@ export function PaperTradingPanel({
     closePosition(positionId, markPrice);
     if (pnl >= 0) sound.playProfit();
     else sound.playLoss();
-  }
-
-  function handleResetClick() {
-    if (confirmingReset) {
-      reset();
-      setConfirmingReset(false);
-      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
-    } else {
-      setConfirmingReset(true);
-      resetTimerRef.current = setTimeout(() => setConfirmingReset(false), 3000);
-    }
   }
 
   function handleSaveNote() {
@@ -307,47 +436,19 @@ export function PaperTradingPanel({
           </span>
         </div>
 
-        {/* Right: gear (reset) + sound + collapse + close */}
+        {/* Right: gear (settings) + sound + collapse + close */}
         <div className="flex items-center gap-0.5">
           <SoundSettings />
-          <AnimatePresence mode="wait">
-            {confirmingReset ? (
-              <motion.button
-                key="confirm"
-                initial={{ opacity: 0, scale: 0.85 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.85 }}
-                transition={{ duration: 0.12 }}
-                onClick={handleResetClick}
-                title="Click again to confirm reset"
-                className="flex h-6 items-center gap-1 rounded px-2 font-bold"
-                style={{
-                  fontSize: fontSize.xs10,
-                  background: `${color.red}1f`,
-                  color: color.red,
-                  border: `1px solid ${color.red}59`,
-                }}
-              >
-                Reset?
-              </motion.button>
-            ) : (
-              <motion.button
-                key="gear"
-                initial={{ opacity: 0, scale: 0.85 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.85 }}
-                transition={{ duration: 0.12 }}
-                onClick={handleResetClick}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                title="Account settings — reset paper account"
-                className="flex h-6 w-6 items-center justify-center rounded hover:text-white"
-                style={{ color: color.muted }}
-              >
-                <Settings className="h-3.5 w-3.5" />
-              </motion.button>
-            )}
-          </AnimatePresence>
+          <motion.button
+            onClick={() => setShowSettings(true)}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            title="Account settings"
+            className="flex h-6 w-6 items-center justify-center rounded hover:text-white"
+            style={{ color: color.muted }}
+          >
+            <Settings className="h-3.5 w-3.5" />
+          </motion.button>
 
           {/* Collapse / Expand — hidden while maximized */}
           {!isMaximized &&
@@ -419,13 +520,16 @@ export function PaperTradingPanel({
           >
             {/* ── Tab bar ─────────────────────────────────────────────────── */}
             <div
-              className="flex items-center border-b border-white/6"
+              className="relative flex items-center border-b border-white/6"
               style={{ background: bg.panel }}
             >
               {(['positions', 'orders', 'history', 'journal'] as const).map((tab) => (
                 <button
                   key={tab}
-                  onClick={() => setInfoTab(tab)}
+                  onClick={() => {
+                    setInfoTab(tab);
+                    setColPickerOpen(false);
+                  }}
                   className="relative flex items-center gap-1.5 px-4 py-2 text-xs font-semibold capitalize transition-colors"
                   style={{ color: infoTab === tab ? color.purple : color.muted }}
                 >
@@ -471,6 +575,73 @@ export function PaperTradingPanel({
                   )}
                 </button>
               ))}
+
+              {/* ── Column picker button — only for data tabs ─────────────── */}
+              {infoTab !== 'journal' && (
+                <div className="relative ml-auto pr-2" ref={pickerRef}>
+                  <motion.button
+                    onClick={() => setColPickerOpen((o) => !o)}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    title="Customize columns"
+                    className="flex h-6 w-6 items-center justify-center rounded transition-colors"
+                    style={{ color: colPickerOpen ? color.purple : color.muted }}
+                  >
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                  </motion.button>
+
+                  <AnimatePresence>
+                    {colPickerOpen && (
+                      <motion.div
+                        key="col-picker"
+                        initial={{ opacity: 0, y: -4, scale: 0.97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -4, scale: 0.97 }}
+                        transition={{ duration: 0.12 }}
+                        className="absolute right-0 top-full z-50 min-w-40 overflow-hidden rounded-md border border-white/10 py-1 shadow-xl"
+                        style={{ background: bg.panel }}
+                      >
+                        {COLS_BY_TAB[infoTab as ColTab]
+                          .filter((c) => !c.sticky)
+                          .map((col) => {
+                            const on = isVisible(infoTab as ColTab, col.id);
+                            return (
+                              <button
+                                key={col.id}
+                                onClick={() => toggleColVisibility(infoTab as ColTab, col.id)}
+                                className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left transition-colors hover:bg-white/5"
+                                style={{
+                                  fontSize: fontSize.xs11,
+                                  color: on ? '#fff' : color.muted,
+                                }}
+                              >
+                                {/* Checkbox */}
+                                <span
+                                  className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm border"
+                                  style={{
+                                    borderColor: on ? color.purpleDark : `${color.muted}60`,
+                                    background: on ? `${color.purpleDark}30` : 'transparent',
+                                  }}
+                                >
+                                  {on && (
+                                    <svg viewBox="0 0 11 9" width="9" height="7" fill="none">
+                                      <path
+                                        stroke={color.purpleDark}
+                                        strokeWidth="2"
+                                        d="M0.999878 4L3.99988 7L9.99988 1"
+                                      />
+                                    </svg>
+                                  )}
+                                </span>
+                                {col.label}
+                              </button>
+                            );
+                          })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
             </div>
 
             {/* ── Scrollable table area ────────────────────────────────────── */}
@@ -507,24 +678,16 @@ export function PaperTradingPanel({
                                 color: color.muted,
                               }}
                             >
-                              {[
-                                'Symbol',
-                                'Side',
-                                'Qty',
-                                'Entry',
-                                'Mark',
-                                'TP',
-                                'SL',
-                                'PnL (USDT)',
-                                'Close',
-                              ].map((h) => (
-                                <th
-                                  key={h}
-                                  className={`px-3 py-1.5 font-semibold uppercase tracking-wider ${h === 'Symbol' || h === 'Side' ? 'text-left' : h === 'Close' ? 'text-center' : 'text-right'}`}
-                                >
-                                  {h}
-                                </th>
-                              ))}
+                              {POSITION_COLS.filter((c) => isVisible('positions', c.id)).map(
+                                (col) => (
+                                  <th
+                                    key={col.id}
+                                    className={`px-3 py-1.5 font-semibold uppercase tracking-wider text-${col.align}`}
+                                  >
+                                    {col.label}
+                                  </th>
+                                )
+                              )}
                             </tr>
                           </thead>
                           <tbody>
@@ -537,6 +700,8 @@ export function PaperTradingPanel({
                                     : (pos.entryPrice - markPrice) * pos.quantity;
                                 const pnlPct = (pnl / pos.entryUsdtAmount) * 100;
                                 const isProfit = pnl >= 0;
+                                const margin = pos.entryUsdtAmount / LEVERAGE;
+                                const commission = pos.entryUsdtAmount * COMMISSION_RATE;
 
                                 return (
                                   <motion.tr
@@ -549,84 +714,143 @@ export function PaperTradingPanel({
                                     layout
                                     className="border-b border-white/3 transition-colors hover:bg-white/2"
                                   >
-                                    <td className="px-3 py-1.5">
-                                      <span className="flex items-center gap-1.5">
-                                        <CryptoIcon
-                                          symbol={pos.symbol.replace('USDT', '')}
-                                          size={16}
-                                        />
-                                        <span className="font-bold text-white">{pos.symbol}</span>
-                                      </span>
-                                    </td>
-                                    <td className="px-3 py-1.5">
-                                      <span
-                                        className="flex items-center gap-0.5 font-bold"
+                                    {isVisible('positions', 'symbol') && (
+                                      <td className="px-3 py-1.5">
+                                        <span className="flex items-center gap-1.5">
+                                          <CryptoIcon
+                                            symbol={pos.symbol.replace('USDT', '')}
+                                            size={16}
+                                          />
+                                          <span className="font-bold text-white">{pos.symbol}</span>
+                                        </span>
+                                      </td>
+                                    )}
+                                    {isVisible('positions', 'side') && (
+                                      <td className="px-3 py-1.5">
+                                        <span
+                                          className="flex items-center gap-0.5 font-bold"
+                                          style={{
+                                            fontSize: fontSize.xs10,
+                                            color: pos.side === 'long' ? color.green : color.red,
+                                          }}
+                                        >
+                                          {pos.side === 'long' ? (
+                                            <TrendingUp className="h-3 w-3" />
+                                          ) : (
+                                            <TrendingDown className="h-3 w-3" />
+                                          )}
+                                          {pos.side === 'long' ? 'LONG' : 'SHORT'}
+                                        </span>
+                                      </td>
+                                    )}
+                                    {isVisible('positions', 'qty') && (
+                                      <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                        {pos.quantity.toFixed(6)}
+                                      </td>
+                                    )}
+                                    {isVisible('positions', 'entry') && (
+                                      <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                        ${pos.entryPrice.toFixed(2)}
+                                      </td>
+                                    )}
+                                    {isVisible('positions', 'mark') && (
+                                      <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                        ${markPrice.toFixed(2)}
+                                      </td>
+                                    )}
+                                    {isVisible('positions', 'tp') && (
+                                      <td
+                                        className="px-3 py-1.5 text-right tabular-nums"
                                         style={{
                                           fontSize: fontSize.xs10,
-                                          color: pos.side === 'long' ? color.green : color.red,
+                                          color: pos.takeProfit ? color.green : color.muted,
                                         }}
                                       >
-                                        {pos.side === 'long' ? (
-                                          <TrendingUp className="h-3 w-3" />
-                                        ) : (
-                                          <TrendingDown className="h-3 w-3" />
-                                        )}
-                                        {pos.side === 'long' ? 'LONG' : 'SHORT'}
-                                      </span>
-                                    </td>
-                                    <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                      {pos.quantity.toFixed(6)}
-                                    </td>
-                                    <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                      ${pos.entryPrice.toFixed(2)}
-                                    </td>
-                                    <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                      ${markPrice.toFixed(2)}
-                                    </td>
-                                    <td
-                                      className="px-3 py-1.5 text-right tabular-nums"
-                                      style={{
-                                        fontSize: fontSize.xs10,
-                                        color: pos.takeProfit ? color.green : color.muted,
-                                      }}
-                                    >
-                                      {pos.takeProfit ? `$${pos.takeProfit.toFixed(2)}` : '—'}
-                                    </td>
-                                    <td
-                                      className="px-3 py-1.5 text-right tabular-nums"
-                                      style={{
-                                        fontSize: fontSize.xs10,
-                                        color: pos.stopLoss ? color.red : color.muted,
-                                      }}
-                                    >
-                                      {pos.stopLoss ? `$${pos.stopLoss.toFixed(2)}` : '—'}
-                                    </td>
-                                    <td
-                                      className="px-3 py-1.5 text-right tabular-nums font-semibold"
-                                      style={{ color: isProfit ? color.green : color.red }}
-                                    >
-                                      {isProfit ? '+' : ''}
-                                      {pnl.toFixed(2)}{' '}
-                                      <span
-                                        style={{ fontSize: fontSize.xs10 }}
-                                        className="opacity-70"
+                                        {pos.takeProfit ? `$${pos.takeProfit.toFixed(2)}` : '—'}
+                                      </td>
+                                    )}
+                                    {isVisible('positions', 'sl') && (
+                                      <td
+                                        className="px-3 py-1.5 text-right tabular-nums"
+                                        style={{
+                                          fontSize: fontSize.xs10,
+                                          color: pos.stopLoss ? color.red : color.muted,
+                                        }}
                                       >
-                                        ({isProfit ? '+' : ''}
-                                        {pnlPct.toFixed(2)}%)
-                                      </span>
-                                    </td>
-                                    <td className="px-3 py-1.5 text-center">
-                                      <motion.button
-                                        onClick={() => handleClose(pos.id)}
-                                        whileHover={{ scale: 1.2 }}
-                                        whileTap={{ scale: 0.9 }}
-                                        title="Close at market price"
-                                        className="mx-auto flex h-5 w-5 items-center justify-center rounded transition-colors hover:text-brand-red"
-                                        style={{ color: color.muted }}
+                                        {pos.stopLoss ? `$${pos.stopLoss.toFixed(2)}` : '—'}
+                                      </td>
+                                    )}
+                                    {isVisible('positions', 'pnl') && (
+                                      <td
+                                        className="px-3 py-1.5 text-right tabular-nums font-semibold"
+                                        style={{ color: isProfit ? color.green : color.red }}
                                       >
-                                        <X className="h-3 w-3" />
-                                      </motion.button>
-                                    </td>
+                                        {isProfit ? '+' : ''}
+                                        {pnl.toFixed(2)}{' '}
+                                        <span
+                                          style={{ fontSize: fontSize.xs10 }}
+                                          className="opacity-70"
+                                        >
+                                          ({isProfit ? '+' : ''}
+                                          {pnlPct.toFixed(2)}%)
+                                        </span>
+                                      </td>
+                                    )}
+                                    {isVisible('positions', 'orderId') && (
+                                      <td
+                                        className="px-3 py-1.5 text-right tabular-nums font-mono"
+                                        style={{ fontSize: fontSize.xs10, color: color.muted }}
+                                        title={pos.id}
+                                      >
+                                        {shortId(pos.id)}
+                                      </td>
+                                    )}
+                                    {isVisible('positions', 'openedAt') && (
+                                      <td
+                                        className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums"
+                                        style={{ fontSize: fontSize.xs10, color: color.muted }}
+                                      >
+                                        {fmtTime(pos.openedAt)}
+                                      </td>
+                                    )}
+                                    {isVisible('positions', 'leverage') && (
+                                      <td
+                                        className="px-3 py-1.5 text-right tabular-nums"
+                                        style={{ fontSize: fontSize.xs10, color: color.muted }}
+                                      >
+                                        {LEVERAGE}×
+                                      </td>
+                                    )}
+                                    {isVisible('positions', 'margin') && (
+                                      <td
+                                        className="px-3 py-1.5 text-right tabular-nums"
+                                        style={{ fontSize: fontSize.xs10, color: color.muted }}
+                                      >
+                                        ${margin.toFixed(2)}
+                                      </td>
+                                    )}
+                                    {isVisible('positions', 'commission') && (
+                                      <td
+                                        className="px-3 py-1.5 text-right tabular-nums"
+                                        style={{ fontSize: fontSize.xs10, color: color.muted }}
+                                      >
+                                        ${commission.toFixed(4)}
+                                      </td>
+                                    )}
+                                    {isVisible('positions', 'close') && (
+                                      <td className="px-3 py-1.5 text-center">
+                                        <motion.button
+                                          onClick={() => handleClose(pos.id)}
+                                          whileHover={{ scale: 1.2 }}
+                                          whileTap={{ scale: 0.9 }}
+                                          title="Close at market price"
+                                          className="mx-auto flex h-5 w-5 items-center justify-center rounded transition-colors hover:text-brand-red"
+                                          style={{ color: color.muted }}
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </motion.button>
+                                      </td>
+                                    )}
                                   </motion.tr>
                                 );
                               })}
@@ -660,122 +884,164 @@ export function PaperTradingPanel({
                                 color: color.muted,
                               }}
                             >
-                              {[
-                                'Symbol',
-                                'Type',
-                                'Side',
-                                'Qty',
-                                'Trigger',
-                                'TP',
-                                'SL',
-                                'Reserved',
-                                'Cancel',
-                              ].map((h) => (
+                              {ORDER_COLS.filter((c) => isVisible('orders', c.id)).map((col) => (
                                 <th
-                                  key={h}
-                                  className={`px-3 py-1.5 font-semibold uppercase tracking-wider ${
-                                    h === 'Symbol' || h === 'Type' || h === 'Side'
-                                      ? 'text-left'
-                                      : h === 'Cancel'
-                                        ? 'text-center'
-                                        : 'text-right'
-                                  }`}
+                                  key={col.id}
+                                  className={`px-3 py-1.5 font-semibold uppercase tracking-wider text-${col.align}`}
                                 >
-                                  {h}
+                                  {col.label}
                                 </th>
                               ))}
                             </tr>
                           </thead>
                           <tbody>
                             <AnimatePresence>
-                              {pendingOrders.map((order, i) => (
-                                <motion.tr
-                                  key={order.id}
-                                  custom={i}
-                                  variants={rowVariants}
-                                  initial="hidden"
-                                  animate="visible"
-                                  exit="exit"
-                                  layout
-                                  className="border-b border-white/3 transition-colors hover:bg-white/2"
-                                >
-                                  <td className="px-3 py-1.5">
-                                    <span className="flex items-center gap-1.5">
-                                      <CryptoIcon
-                                        symbol={order.symbol.replace('USDT', '')}
-                                        size={16}
-                                      />
-                                      <span className="font-bold text-white">{order.symbol}</span>
-                                    </span>
-                                  </td>
-                                  <td className="px-3 py-1.5">
-                                    <span
-                                      className="rounded px-1 py-px font-bold uppercase"
-                                      style={{
-                                        fontSize: fontSize.xs10,
-                                        background:
-                                          order.type === 'limit'
-                                            ? `${color.purpleDark}33`
-                                            : `${color.amber}22`,
-                                        color:
-                                          order.type === 'limit' ? color.purpleDark : color.amber,
-                                      }}
-                                    >
-                                      {order.type}
-                                    </span>
-                                  </td>
-                                  <td className="px-3 py-1.5">
-                                    <span
-                                      className="font-bold uppercase"
-                                      style={{
-                                        fontSize: fontSize.xs10,
-                                        color: order.side === 'buy' ? color.green : color.red,
-                                      }}
-                                    >
-                                      {order.side === 'buy' ? 'BUY' : 'SELL'}
-                                    </span>
-                                  </td>
-                                  <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                    {order.qty.toFixed(6)}
-                                  </td>
-                                  <td className="px-3 py-1.5 text-right tabular-nums text-white/80">
-                                    ${order.triggerPrice.toFixed(2)}
-                                  </td>
-                                  <td
-                                    className="px-3 py-1.5 text-right tabular-nums"
-                                    style={{
-                                      fontSize: fontSize.xs10,
-                                      color: order.takeProfit ? color.green : color.muted,
-                                    }}
+                              {pendingOrders.map((order, i) => {
+                                const margin = order.usdtAmount / LEVERAGE;
+                                return (
+                                  <motion.tr
+                                    key={order.id}
+                                    custom={i}
+                                    variants={rowVariants}
+                                    initial="hidden"
+                                    animate="visible"
+                                    exit="exit"
+                                    layout
+                                    className="border-b border-white/3 transition-colors hover:bg-white/2"
                                   >
-                                    {order.takeProfit ? `$${order.takeProfit.toFixed(2)}` : '—'}
-                                  </td>
-                                  <td
-                                    className="px-3 py-1.5 text-right tabular-nums"
-                                    style={{
-                                      fontSize: fontSize.xs10,
-                                      color: order.stopLoss ? color.red : color.muted,
-                                    }}
-                                  >
-                                    {order.stopLoss ? `$${order.stopLoss.toFixed(2)}` : '—'}
-                                  </td>
-                                  <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                    ${order.usdtAmount.toFixed(2)}
-                                  </td>
-                                  <td className="px-3 py-1.5 text-center">
-                                    <motion.button
-                                      onClick={() => cancelPendingOrder(order.id)}
-                                      whileHover={{ scale: 1.2 }}
-                                      whileTap={{ scale: 0.9 }}
-                                      title="Cancel pending order (balance refunded)"
-                                      className="mx-auto flex h-5 w-5 items-center justify-center rounded transition-colors hover:text-brand-red"
-                                      style={{ color: color.muted }}
-                                    >
-                                      <X className="h-3 w-3" />
-                                    </motion.button>
-                                  </td>
-                                </motion.tr>
-                              ))}
+                                    {isVisible('orders', 'symbol') && (
+                                      <td className="px-3 py-1.5">
+                                        <span className="flex items-center gap-1.5">
+                                          <CryptoIcon
+                                            symbol={order.symbol.replace('USDT', '')}
+                                            size={16}
+                                          />
+                                          <span className="font-bold text-white">
+                                            {order.symbol}
+                                          </span>
+                                        </span>
+                                      </td>
+                                    )}
+                                    {isVisible('orders', 'type') && (
+                                      <td className="px-3 py-1.5">
+                                        <span
+                                          className="rounded px-1 py-px font-bold uppercase"
+                                          style={{
+                                            fontSize: fontSize.xs10,
+                                            background:
+                                              order.type === 'limit'
+                                                ? `${color.purpleDark}33`
+                                                : `${color.amber}22`,
+                                            color:
+                                              order.type === 'limit'
+                                                ? color.purpleDark
+                                                : color.amber,
+                                          }}
+                                        >
+                                          {order.type}
+                                        </span>
+                                      </td>
+                                    )}
+                                    {isVisible('orders', 'side') && (
+                                      <td className="px-3 py-1.5">
+                                        <span
+                                          className="font-bold uppercase"
+                                          style={{
+                                            fontSize: fontSize.xs10,
+                                            color: order.side === 'buy' ? color.green : color.red,
+                                          }}
+                                        >
+                                          {order.side === 'buy' ? 'BUY' : 'SELL'}
+                                        </span>
+                                      </td>
+                                    )}
+                                    {isVisible('orders', 'qty') && (
+                                      <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                        {order.qty.toFixed(6)}
+                                      </td>
+                                    )}
+                                    {isVisible('orders', 'trigger') && (
+                                      <td className="px-3 py-1.5 text-right tabular-nums text-white/80">
+                                        ${order.triggerPrice.toFixed(2)}
+                                      </td>
+                                    )}
+                                    {isVisible('orders', 'tp') && (
+                                      <td
+                                        className="px-3 py-1.5 text-right tabular-nums"
+                                        style={{
+                                          fontSize: fontSize.xs10,
+                                          color: order.takeProfit ? color.green : color.muted,
+                                        }}
+                                      >
+                                        {order.takeProfit ? `$${order.takeProfit.toFixed(2)}` : '—'}
+                                      </td>
+                                    )}
+                                    {isVisible('orders', 'sl') && (
+                                      <td
+                                        className="px-3 py-1.5 text-right tabular-nums"
+                                        style={{
+                                          fontSize: fontSize.xs10,
+                                          color: order.stopLoss ? color.red : color.muted,
+                                        }}
+                                      >
+                                        {order.stopLoss ? `$${order.stopLoss.toFixed(2)}` : '—'}
+                                      </td>
+                                    )}
+                                    {isVisible('orders', 'reserved') && (
+                                      <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                        ${order.usdtAmount.toFixed(2)}
+                                      </td>
+                                    )}
+                                    {isVisible('orders', 'orderId') && (
+                                      <td
+                                        className="px-3 py-1.5 text-right tabular-nums font-mono"
+                                        style={{ fontSize: fontSize.xs10, color: color.muted }}
+                                        title={order.id}
+                                      >
+                                        {shortId(order.id)}
+                                      </td>
+                                    )}
+                                    {isVisible('orders', 'placedAt') && (
+                                      <td
+                                        className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums"
+                                        style={{ fontSize: fontSize.xs10, color: color.muted }}
+                                      >
+                                        {fmtTime(order.placedAt)}
+                                      </td>
+                                    )}
+                                    {isVisible('orders', 'leverage') && (
+                                      <td
+                                        className="px-3 py-1.5 text-right tabular-nums"
+                                        style={{ fontSize: fontSize.xs10, color: color.muted }}
+                                      >
+                                        {LEVERAGE}×
+                                      </td>
+                                    )}
+                                    {isVisible('orders', 'margin') && (
+                                      <td
+                                        className="px-3 py-1.5 text-right tabular-nums"
+                                        style={{ fontSize: fontSize.xs10, color: color.muted }}
+                                      >
+                                        ${margin.toFixed(2)}
+                                      </td>
+                                    )}
+                                    {isVisible('orders', 'cancel') && (
+                                      <td className="px-3 py-1.5 text-center">
+                                        <motion.button
+                                          onClick={() => cancelPendingOrder(order.id)}
+                                          whileHover={{ scale: 1.2 }}
+                                          whileTap={{ scale: 0.9 }}
+                                          title="Cancel pending order (balance refunded)"
+                                          className="mx-auto flex h-5 w-5 items-center justify-center rounded transition-colors hover:text-brand-red"
+                                          style={{ color: color.muted }}
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </motion.button>
+                                      </td>
+                                    )}
+                                  </motion.tr>
+                                );
+                              })}
                             </AnimatePresence>
                           </tbody>
                         </table>
@@ -796,12 +1062,12 @@ export function PaperTradingPanel({
                                 color: color.muted,
                               }}
                             >
-                              {['Symbol', 'Side', 'Qty', 'Entry', 'Exit', 'PnL (USDT)'].map((h) => (
+                              {HISTORY_COLS.filter((c) => isVisible('history', c.id)).map((col) => (
                                 <th
-                                  key={h}
-                                  className={`px-3 py-1.5 font-semibold uppercase tracking-wider ${h === 'Symbol' || h === 'Side' ? 'text-left' : 'text-right'}`}
+                                  key={col.id}
+                                  className={`px-3 py-1.5 font-semibold uppercase tracking-wider text-${col.align}`}
                                 >
-                                  {h}
+                                  {col.label}
                                 </th>
                               ))}
                             </tr>
@@ -820,40 +1086,79 @@ export function PaperTradingPanel({
                                     exit="exit"
                                     className="border-b border-white/3 transition-colors hover:bg-white/2"
                                   >
-                                    <td className="px-3 py-1.5">
-                                      <span className="flex items-center gap-1.5">
-                                        <CryptoIcon
-                                          symbol={trade.symbol.replace('USDT', '')}
-                                          size={16}
-                                        />
-                                        <span className="font-bold text-white">{trade.symbol}</span>
-                                      </span>
-                                    </td>
-                                    <td
-                                      className="px-3 py-1.5 font-bold"
-                                      style={{
-                                        fontSize: fontSize.xs10,
-                                        color: trade.side === 'long' ? color.green : color.red,
-                                      }}
-                                    >
-                                      {trade.side === 'long' ? 'LONG' : 'SHORT'}
-                                    </td>
-                                    <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                      {trade.quantity.toFixed(6)}
-                                    </td>
-                                    <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                      ${trade.entryPrice.toFixed(2)}
-                                    </td>
-                                    <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                      ${trade.exitPrice.toFixed(2)}
-                                    </td>
-                                    <td
-                                      className="px-3 py-1.5 text-right tabular-nums font-semibold"
-                                      style={{ color: isProfit ? color.green : color.red }}
-                                    >
-                                      {isProfit ? '+' : ''}
-                                      {trade.pnl.toFixed(2)}
-                                    </td>
+                                    {isVisible('history', 'symbol') && (
+                                      <td className="px-3 py-1.5">
+                                        <span className="flex items-center gap-1.5">
+                                          <CryptoIcon
+                                            symbol={trade.symbol.replace('USDT', '')}
+                                            size={16}
+                                          />
+                                          <span className="font-bold text-white">
+                                            {trade.symbol}
+                                          </span>
+                                        </span>
+                                      </td>
+                                    )}
+                                    {isVisible('history', 'side') && (
+                                      <td
+                                        className="px-3 py-1.5 font-bold"
+                                        style={{
+                                          fontSize: fontSize.xs10,
+                                          color: trade.side === 'long' ? color.green : color.red,
+                                        }}
+                                      >
+                                        {trade.side === 'long' ? 'LONG' : 'SHORT'}
+                                      </td>
+                                    )}
+                                    {isVisible('history', 'qty') && (
+                                      <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                        {trade.quantity.toFixed(6)}
+                                      </td>
+                                    )}
+                                    {isVisible('history', 'entry') && (
+                                      <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                        ${trade.entryPrice.toFixed(2)}
+                                      </td>
+                                    )}
+                                    {isVisible('history', 'exit') && (
+                                      <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                        ${trade.exitPrice.toFixed(2)}
+                                      </td>
+                                    )}
+                                    {isVisible('history', 'pnl') && (
+                                      <td
+                                        className="px-3 py-1.5 text-right tabular-nums font-semibold"
+                                        style={{ color: isProfit ? color.green : color.red }}
+                                      >
+                                        {isProfit ? '+' : ''}
+                                        {trade.pnl.toFixed(2)}
+                                      </td>
+                                    )}
+                                    {isVisible('history', 'closedAt') && (
+                                      <td
+                                        className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums"
+                                        style={{ fontSize: fontSize.xs10, color: color.muted }}
+                                      >
+                                        {fmtTime(trade.closedAt)}
+                                      </td>
+                                    )}
+                                    {isVisible('history', 'orderId') && (
+                                      <td
+                                        className="px-3 py-1.5 text-right tabular-nums font-mono"
+                                        style={{ fontSize: fontSize.xs10, color: color.muted }}
+                                        title={trade.id}
+                                      >
+                                        {shortId(trade.id)}
+                                      </td>
+                                    )}
+                                    {isVisible('history', 'leverage') && (
+                                      <td
+                                        className="px-3 py-1.5 text-right tabular-nums"
+                                        style={{ fontSize: fontSize.xs10, color: color.muted }}
+                                      >
+                                        {LEVERAGE}×
+                                      </td>
+                                    )}
                                   </motion.tr>
                                 );
                               })}
@@ -997,6 +1302,204 @@ export function PaperTradingPanel({
               </AnimatePresence>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Account Settings Modal ──────────────────────────────────────────── */}
+      <AnimatePresence>
+        {showSettings && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              key="settings-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 z-40"
+              style={{ background: 'rgba(0,0,0,0.55)' }}
+              onClick={() => {
+                setShowSettings(false);
+                setConfirmingReset(false);
+                if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+              }}
+            />
+
+            {/* Modal */}
+            <motion.div
+              key="settings-modal"
+              initial={{ opacity: 0, scale: 0.93, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.93, y: 8 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="fixed z-50 w-80 rounded-lg shadow-2xl"
+              style={{
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                background: bg.panel,
+                border: '1px solid rgba(255,255,255,0.08)',
+              }}
+            >
+              {/* Modal header */}
+              <div
+                className="flex items-center justify-between border-b px-4 py-3"
+                style={{ borderColor: 'rgba(255,255,255,0.07)' }}
+              >
+                <span className="text-sm font-semibold text-white/90">Account Settings</span>
+                <button
+                  onClick={() => {
+                    setShowSettings(false);
+                    setConfirmingReset(false);
+                    if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+                  }}
+                  className="flex h-6 w-6 items-center justify-center rounded hover:text-white"
+                  style={{ color: color.muted }}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+
+              {/* Modal body */}
+              <div className="flex flex-col gap-4 px-4 py-4">
+                {/* Account name (read-only) */}
+                <div className="flex flex-col gap-1">
+                  <label
+                    className="text-xs font-medium"
+                    style={{ color: color.muted, fontSize: fontSize.xs11 }}
+                  >
+                    Account name
+                  </label>
+                  <div
+                    className="flex h-8 items-center rounded px-3 text-xs text-white/60"
+                    style={{
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                      fontSize: fontSize.xs,
+                    }}
+                  >
+                    {username}
+                  </div>
+                </div>
+
+                {/* Leverage (read-only) */}
+                <div className="flex flex-col gap-1">
+                  <label
+                    className="text-xs font-medium"
+                    style={{ color: color.muted, fontSize: fontSize.xs11 }}
+                  >
+                    Leverage
+                  </label>
+                  <div
+                    className="flex h-8 items-center justify-between rounded px-3"
+                    style={{
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                    }}
+                  >
+                    <span style={{ fontSize: fontSize.xs, color: 'rgba(255,255,255,0.6)' }}>
+                      10:1
+                    </span>
+                    <span style={{ fontSize: fontSize.xs11, color: color.muted }}>
+                      Crypto · Display only
+                    </span>
+                  </div>
+                </div>
+
+                {/* Commission (read-only) */}
+                <div className="flex flex-col gap-1">
+                  <label
+                    className="text-xs font-medium"
+                    style={{ color: color.muted, fontSize: fontSize.xs11 }}
+                  >
+                    Commission
+                  </label>
+                  <div
+                    className="flex h-8 items-center justify-between rounded px-3"
+                    style={{
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                    }}
+                  >
+                    <span style={{ fontSize: fontSize.xs, color: 'rgba(255,255,255,0.6)' }}>
+                      {(COMMISSION_RATE * 100).toFixed(2)}% ({COMMISSION_RATE})
+                    </span>
+                    <span style={{ fontSize: fontSize.xs11, color: color.muted }}>
+                      Fixed · Taker
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal footer */}
+              <div
+                className="flex items-center justify-between border-t px-4 py-3"
+                style={{ borderColor: 'rgba(255,255,255,0.07)' }}
+              >
+                {/* Reset account — 2-click confirm */}
+                <AnimatePresence mode="wait">
+                  {confirmingReset ? (
+                    <motion.button
+                      key="confirm-reset"
+                      initial={{ opacity: 0, scale: 0.88 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.88 }}
+                      transition={{ duration: 0.12 }}
+                      onClick={() => {
+                        reset();
+                        setConfirmingReset(false);
+                        if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+                        setShowSettings(false);
+                      }}
+                      className="flex h-7 items-center gap-1.5 rounded px-3 text-xs font-bold"
+                      style={{
+                        background: `${color.red}22`,
+                        color: color.red,
+                        border: `1px solid ${color.red}50`,
+                        fontSize: fontSize.xs,
+                      }}
+                    >
+                      Confirm reset?
+                    </motion.button>
+                  ) : (
+                    <motion.button
+                      key="reset-btn"
+                      initial={{ opacity: 0, scale: 0.88 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.88 }}
+                      transition={{ duration: 0.12 }}
+                      onClick={() => {
+                        setConfirmingReset(true);
+                        resetTimerRef.current = setTimeout(() => setConfirmingReset(false), 3000);
+                      }}
+                      className="flex h-7 items-center gap-1.5 rounded px-3 text-xs"
+                      style={{
+                        background: 'rgba(255,255,255,0.05)',
+                        color: color.muted,
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        fontSize: fontSize.xs,
+                      }}
+                    >
+                      Reset account
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+
+                {/* Save — disabled (settings are read-only) */}
+                <button
+                  disabled
+                  className="flex h-7 items-center rounded px-4 text-xs font-semibold opacity-35 cursor-not-allowed"
+                  style={{
+                    background: 'rgba(165,85,226,0.35)',
+                    color: '#fff',
+                    fontSize: fontSize.xs,
+                  }}
+                >
+                  Save
+                </button>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>
