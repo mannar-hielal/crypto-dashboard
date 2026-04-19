@@ -14,6 +14,7 @@ import { PaperTradingPanel } from '@/components/dashboard/PaperTradingPanel';
 import { TickerBar } from '@/components/dashboard/TickerBar';
 import { SymbolBar } from '@/components/dashboard/SymbolBar';
 import { TradingPanel } from '@/components/dashboard/TradingPanel';
+import type { OrderTab } from '@/components/dashboard/TradingPanel';
 import { bg, color, fontSize } from '@/lib/tokens';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -84,6 +85,8 @@ function DashboardInner() {
 
   const [panelSize, setPanelSize] = useState<PanelSize>('open');
   const [tradingPanelOpen, setTradingPanelOpen] = useState(true);
+  /** Persisted across symbol changes so the user stays on their chosen tab */
+  const [tradingTab, setTradingTab] = useState<OrderTab>('market');
   /** When true the PaperTradingPanel fills the entire center column */
   const [isMaximized, setIsMaximized] = useState(false);
 
@@ -176,10 +179,13 @@ function DashboardInner() {
               transition={{ duration: 0.2, ease: 'easeInOut' }}
               className="shrink-0 overflow-hidden"
             >
-              {/* key={`${activePane}-${symbol}`} resets form when active pane or symbol changes */}
+              {/* key={`${activePane}-${symbol}`} resets form inputs when active pane or symbol
+                  changes. Tab selection is preserved via initialTab + onTabChange (lifted state). */}
               <TradingPanel
                 key={`${activePane}-${symbol}`}
                 onClose={() => setTradingPanelOpen(false)}
+                initialTab={tradingTab}
+                onTabChange={setTradingTab}
               />
             </motion.div>
           )}

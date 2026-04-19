@@ -47,28 +47,28 @@
 
 ### 1.4 Buy with Take-Profit only
 
-| #     | Action                                                                               | Expected                                                           | Status | Notes                                                       |
-| ----- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------ | ------ | ----------------------------------------------------------- |
-| 1.4.1 | Reset. Buy $500, enable TP toggle, enter a price **above** live price (e.g. live+5%) | TP input has green border                                          | ✅     |                                                             |
-| 1.4.2 | Submit                                                                               | Position appears with TP = your price, SL = —                      | ✅     |                                                             |
-| 1.4.3 | _(wait or set TP very close)_ When live price crosses TP                             | Position disappears from Positions; appears in History with profit | ✅     | History count = 1; Positions cleared                        |
-| 1.4.4 | Journal tab | Entry: `Auto-closed LONG BTCUSDT — Take-Profit hit at $X` with green PnL badge `+$X.XX` | ✅ | `Auto-closed LONG BTCUSDT — Take-Profit hit at $76228.0000` |
+| #     | Action                                                                               | Expected                                                                                | Status | Notes                                                       |
+| ----- | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------- |
+| 1.4.1 | Reset. Buy $500, enable TP toggle, enter a price **above** live price (e.g. live+5%) | TP input has green border                                                               | ✅     |                                                             |
+| 1.4.2 | Submit                                                                               | Position appears with TP = your price, SL = —                                           | ✅     |                                                             |
+| 1.4.3 | _(wait or set TP very close)_ When live price crosses TP                             | Position disappears from Positions; appears in History with profit                      | ✅     | History count = 1; Positions cleared                        |
+| 1.4.4 | Journal tab                                                                          | Entry: `Auto-closed LONG BTCUSDT — Take-Profit hit at $X` with green PnL badge `+$X.XX` | ✅     | `Auto-closed LONG BTCUSDT — Take-Profit hit at $76228.0000` |
 
 ### 1.5 Sell with Stop-Loss only
 
-| #     | Action                                                                                          | Expected                            | Status | Notes                         |
-| ----- | ----------------------------------------------------------------------------------------------- | ----------------------------------- | ------ | ----------------------------- |
-| 1.5.1 | Reset. Sell $500, enable SL toggle, enter a price **above** live price (SHORT SL = above entry) | SL input has red border             | ✅     |                               |
-| 1.5.2 | Submit                                                                                          | SHORT position with SL = your price | ✅     | Entry @ $76,194.40            |
-| 1.5.3 | When price rises to SL | Auto-closed, appears in History; Journal shows red PnL badge `−$X.XX` on Auto-closed entry | ✅ | Exit @ $76,200.30; PnL −$0.04 |
+| #     | Action                                                                                          | Expected                                                                                   | Status | Notes                         |
+| ----- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------ | ----------------------------- |
+| 1.5.1 | Reset. Sell $500, enable SL toggle, enter a price **above** live price (SHORT SL = above entry) | SL input has red border                                                                    | ✅     |                               |
+| 1.5.2 | Submit                                                                                          | SHORT position with SL = your price                                                        | ✅     | Entry @ $76,194.40            |
+| 1.5.3 | When price rises to SL                                                                          | Auto-closed, appears in History; Journal shows red PnL badge `−$X.XX` on Auto-closed entry | ✅     | Exit @ $76,200.30; PnL −$0.04 |
 
 ### 1.6 Buy with both TP and SL
 
-| #     | Action                                      | Expected                                                      | Status | Notes                                                                               |
-| ----- | ------------------------------------------- | ------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------- |
-| 1.6.1 | Reset. Buy $300, TP = live+3%, SL = live−2% | Both inputs active                                            | ✅     |                                                                                     |
-| 1.6.2 | Submit                                      | Position shows both TP and SL columns                         | ✅     | LONG Entry @ $76,144.90                                                             |
-| 1.6.3 | Manual close via **✕** in Positions tab | Position removed; History row appears; PnL = (exit−entry)×qty; Journal exec entry shows PnL badge | ✅ | Manually closed @ $76,043.40 (entry $76,023.90); Positions cleared; History updated |
+| #     | Action                                      | Expected                                                                                          | Status | Notes                                                                               |
+| ----- | ------------------------------------------- | ------------------------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------- |
+| 1.6.1 | Reset. Buy $300, TP = live+3%, SL = live−2% | Both inputs active                                                                                | ✅     |                                                                                     |
+| 1.6.2 | Submit                                      | Position shows both TP and SL columns                                                             | ✅     | LONG Entry @ $76,144.90                                                             |
+| 1.6.3 | Manual close via **✕** in Positions tab     | Position removed; History row appears; PnL = (exit−entry)×qty; Journal exec entry shows PnL badge | ✅     | Manually closed @ $76,043.40 (entry $76,023.90); Positions cleared; History updated |
 
 ### 1.7 Edge cases
 
@@ -114,10 +114,10 @@
 
 ### 2.4 Limit with TP + SL
 
-| #     | Action                                                | Expected                                | Status | Notes                                                                                                                                              |
-| ----- | ----------------------------------------------------- | --------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2.4.1 | Limit buy $300 at live−1%, TP = live+3%, SL = live−4% | Order shows TP/SL columns in Orders tab | ✅     | TP/SL columns visible in Orders tab                                                                                                                |
-| 2.4.2 | When triggered, position inherits TP and SL | Position TP/SL match what was set; Auto-closed journal entry shows PnL badge | ✅ | Limit order filled → LONG opened; SL inherited and auto-triggered @ $75,720.00; journal: `Auto-closed LONG BTCUSDT — Stop-Loss hit at $75720.0000` |
+| #     | Action                                                | Expected                                                                     | Status | Notes                                                                                                                                              |
+| ----- | ----------------------------------------------------- | ---------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2.4.1 | Limit buy $300 at live−1%, TP = live+3%, SL = live−4% | Order shows TP/SL columns in Orders tab                                      | ✅     | TP/SL columns visible in Orders tab                                                                                                                |
+| 2.4.2 | When triggered, position inherits TP and SL           | Position TP/SL match what was set; Auto-closed journal entry shows PnL badge | ✅     | Limit order filled → LONG opened; SL inherited and auto-triggered @ $75,720.00; journal: `Auto-closed LONG BTCUSDT — Stop-Loss hit at $75720.0000` |
 
 ### 2.5 Edge cases
 
@@ -172,19 +172,21 @@
 
 ## Section 4 — Cross-cutting / Regression
 
-| #   | Scenario                                            | Expected                                                                                                              | Status | Notes |
-| --- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------ | ----- |
-| 4.1 | Switch pane symbol while TradingPanel open          | Header updates to new symbol; form resets                                                                             | ⬜     |       |
-| 4.2 | Close TradingPanel (✕), reopen via SymbolBar button | Panel reopens; default state (Market, Buy, empty)                                                                     | ⬜     |       |
-| 4.3 | Collapse PaperTradingPanel (↓), then expand         | All tabs still functional                                                                                             | ⬜     |       |
-| 4.4 | Place order, refresh browser                        | Position/pending order persists (localStorage)                                                                        | ⬜     |       |
-| 4.5 | History tab after mix of wins and losses            | PnL signs correct; green/red colors correct                                                                           | ⬜     |       |
-| 4.6 | Journal tab shows all system entries in order       | Timestamps ascending, auto-entries not editable, manual notes editable                                                | ⬜     |       |
-| 4.7 | Journal PnL badge — profitable close                | Manual ✕ close: exec journal entry shows green `+$X.XX` pill inline after text; no badge on open/pending entries     | ⬜     |       |
-| 4.8 | Journal PnL badge — losing close                    | Auto-closed TP/SL entry shows red `−$X.XX` pill; badge value matches Balance History net PnL for that trade          | ⬜     |       |
-| 4.9 | Journal PnL badge — user note                       | Manually added journal note has no PnL badge regardless of balance state                                              | ⬜     |       |
-| 4.10 | Maximize PaperTradingPanel (⤢)                      | Chart area collapses (height → 0); panel fills full center column; Minimize2 icon shown; TradingPanel still visible  | ⬜     |       |
-| 4.11 | Restore PaperTradingPanel (⤡)                       | Chart area expands back; panel returns to previous height; Maximize2 icon shown                                       | ⬜     |       |
-| 4.12 | Sound — order placed                                | Crisp double-tick plays when a market/limit/stop order is submitted                                                   | ⬜     |       |
-| 4.13 | Sound — TP/SL auto-close                            | Ascending jingle (profit) or descending beep (loss) plays when position auto-closes                                   | ⬜     |       |
-| 4.14 | Sound — mute toggle                                 | Clicking mute in SoundSettings silences all subsequent sounds; unmuting restores them                                 | ⬜     |       |
+| #    | Scenario                                            | Expected                                                                                                                        | Status | Notes |
+| ---- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------ | ----- |
+| 4.1  | Switch pane symbol while TradingPanel open          | Header updates to new symbol; form resets (qty/price cleared); **tab stays on current selection** (Market/Limit/Stop preserved) | ⬜     |       |
+| 4.2  | Switch symbol while on **Limit** tab                | Tab remains Limit; price input updates to new symbol's live price                                                               | ⬜     |       |
+| 4.3  | Switch symbol while on **Stop** tab                 | Tab remains Stop; price input updates to new symbol's live price                                                                | ⬜     |       |
+| 4.4  | Close TradingPanel (✕), reopen via SymbolBar button | Panel reopens; default state (Market, Buy, empty)                                                                               | ⬜     |       |
+| 4.5  | Collapse PaperTradingPanel (↓), then expand         | All tabs still functional                                                                                                       | ⬜     |       |
+| 4.6  | Place order, refresh browser                        | Position/pending order persists (localStorage)                                                                                  | ⬜     |       |
+| 4.7  | History tab after mix of wins and losses            | PnL signs correct; green/red colors correct                                                                                     | ⬜     |       |
+| 4.8  | Journal tab shows all system entries in order       | Timestamps ascending, auto-entries not editable, manual notes editable                                                          | ⬜     |       |
+| 4.9  | Journal PnL badge — profitable close                | Manual ✕ close: exec journal entry shows green `+$X.XX` pill inline after text; no badge on open/pending entries                | ⬜     |       |
+| 4.10 | Journal PnL badge — losing close                    | Auto-closed TP/SL entry shows red `−$X.XX` pill; badge value matches Balance History net PnL for that trade                     | ⬜     |       |
+| 4.11 | Journal PnL badge — user note                       | Manually added journal note has no PnL badge regardless of balance state                                                        | ⬜     |       |
+| 4.12 | Maximize PaperTradingPanel (⤢)                      | Chart area collapses (height → 0); panel fills full center column; Minimize2 icon shown; TradingPanel still visible             | ⬜     |       |
+| 4.13 | Restore PaperTradingPanel (⤡)                       | Chart area expands back; panel returns to previous height; Maximize2 icon shown                                                 | ⬜     |       |
+| 4.14 | Sound — order placed                                | Crisp double-tick plays when a market/limit/stop order is submitted                                                             | ⬜     |       |
+| 4.15 | Sound — TP/SL auto-close                            | Ascending jingle (profit) or descending beep (loss) plays when position auto-closes                                             | ⬜     |       |
+| 4.16 | Sound — mute toggle                                 | Clicking mute in SoundSettings silences all subsequent sounds; unmuting restores them                                           | ⬜     |       |

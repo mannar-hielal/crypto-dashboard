@@ -11,7 +11,7 @@ import { bg, color, fontSize } from '@/lib/tokens';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type OrderSide = 'buy' | 'sell';
-type OrderTab = 'market' | 'limit' | 'stop';
+export type OrderTab = 'market' | 'limit' | 'stop';
 /** Whether the quantity input is expressed in base-asset units or USD */
 type QtyMode = 'units' | 'usd';
 
@@ -49,11 +49,15 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 
 interface TradingPanelProps {
   onClose: () => void;
+  /** Tab selected before the symbol changed — preserved across remounts */
+  initialTab?: OrderTab;
+  /** Called whenever the user switches tabs so the parent can persist the selection */
+  onTabChange?: (tab: OrderTab) => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function TradingPanel({ onClose }: TradingPanelProps) {
+export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: TradingPanelProps) {
   const priceInputId = useId();
 
   // ── Store reads ───────────────────────────────────────────────────────────
@@ -75,10 +79,13 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
 
   // ── Local state ───────────────────────────────────────────────────────────
   const [side, setSide] = useState<OrderSide>('buy');
-  const [tab, setTab] = useState<OrderTab>('market');
+  const [tab, setTab] = useState<OrderTab>(initialTab);
   const [qtyMode, setQtyMode] = useState<QtyMode>('usd');
   const [qtyInput, setQtyInput] = useState('');
-  const [priceInput, setPriceInput] = useState('');
+  // Pre-fill price input when mounting on a Limit/Stop tab (symbol just changed)
+  const [priceInput, setPriceInput] = useState<string>(() =>
+    initialTab !== 'market' && latestPrice ? latestPrice.toFixed(2) : ''
+  );
   const [tpEnabled, setTpEnabled] = useState(false);
   const [slEnabled, setSlEnabled] = useState(false);
   const [tpInput, setTpInput] = useState('');
@@ -127,6 +134,7 @@ export function TradingPanel({ onClose }: TradingPanelProps) {
 
   function handleTabChange(t: OrderTab) {
     setTab(t);
+    onTabChange?.(t);
     setFormError(null);
     // Pre-fill price field with current market price when switching to Limit/Stop
     if (t !== 'market' && latestPrice) {
