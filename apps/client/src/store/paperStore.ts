@@ -21,6 +21,10 @@ const MAX_HISTORY = 100; // keep last 100 closed trades
 const MAX_JOURNAL = 200; // keep last 200 journal entries
 export const COMMISSION_RATE = 0.0007; // 0.07% taker fee
 
+/** Bybit-style crypto leverage options (cross-margin perpetuals, max 125×). */
+export const CRYPTO_LEVERAGE_OPTIONS = [1, 2, 3, 5, 10, 15, 20, 25, 50, 75, 100, 125] as const;
+export type CryptoLeverage = (typeof CRYPTO_LEVERAGE_OPTIONS)[number];
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface Position {
@@ -129,6 +133,15 @@ interface PaperState {
   realizedPnl: number;
   balanceLog: BalanceEvent[];
   journal: JournalEntry[];
+  /**
+   * Crypto leverage multiplier (Bybit-style). Default 1 = no leverage.
+   * Affects position size: qty = (usdtAmount × leverage) / price.
+   * The margin deducted from balance is always `usdtAmount`.
+   */
+  leverage: number;
+
+  /** Update the crypto leverage multiplier. */
+  setLeverage: (v: number) => void;
 
   /**
    * Open a new position.
@@ -202,9 +215,12 @@ export const usePaperStore = create<PaperState>()(
       realizedPnl: 0,
       balanceLog: [],
       journal: [],
+      leverage: 1,
+
+      setLeverage: (v) => set({ leverage: v }),
 
       placeOrder: (symbol, side, price, usdtAmount, takeProfit, stopLoss) => {
-        const { balance } = get();
+        const { balance, leverage } = get();
 
         // ── Validation ──────────────────────────────────────────────────────
         if (usdtAmount <= 0 || price <= 0) return null;
@@ -219,7 +235,7 @@ export const usePaperStore = create<PaperState>()(
             symbol,
             side,
             type: 'market',
-            qty: price > 0 ? usdtAmount / price : 0,
+            qty: price > 0 ? (usdtAmount * leverage) / price : 0,
             status: 'rejected',
             commission: 0,
             placingTime: now,
@@ -232,7 +248,7 @@ export const usePaperStore = create<PaperState>()(
           return null;
         }
 
-        const quantity = usdtAmount / price;
+        const quantity = (usdtAmount * leverage) / price;
         const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
         const commission = usdtAmount * COMMISSION_RATE;
         const now = Date.now();
@@ -440,13 +456,13 @@ export const usePaperStore = create<PaperState>()(
         }),
 
       placeLimitOrder: (symbol, side, triggerPrice, usdtAmount, takeProfit, stopLoss) => {
-        const { balance } = get();
+        const { balance, leverage } = get();
         if (usdtAmount <= 0 || triggerPrice <= 0) return null;
         const totalCost = usdtAmount + usdtAmount * COMMISSION_RATE;
         if (totalCost > balance) return null;
 
         const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-        const qty = usdtAmount / triggerPrice;
+        const qty = (usdtAmount * leverage) / triggerPrice;
         const now = Date.now();
 
         const pending: PendingOrder = {
@@ -485,13 +501,13 @@ export const usePaperStore = create<PaperState>()(
       },
 
       placeStopOrder: (symbol, side, triggerPrice, usdtAmount, takeProfit, stopLoss) => {
-        const { balance } = get();
+        const { balance, leverage } = get();
         if (usdtAmount <= 0 || triggerPrice <= 0) return null;
         const totalCost = usdtAmount + usdtAmount * COMMISSION_RATE;
         if (totalCost > balance) return null;
 
         const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-        const qty = usdtAmount / triggerPrice;
+        const qty = (usdtAmount * leverage) / triggerPrice;
         const now = Date.now();
 
         const pending: PendingOrder = {

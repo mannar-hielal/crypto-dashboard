@@ -20,7 +20,7 @@ import {
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/shallow';
 import { paneStores, lastKnownPrices } from '@/store/paneStore';
-import { usePaperStore, COMMISSION_RATE } from '@/store/paperStore';
+import { usePaperStore, COMMISSION_RATE, CRYPTO_LEVERAGE_OPTIONS } from '@/store/paperStore';
 import type { JournalEntry, HistoricalOrder } from '@/store/paperStore';
 import type { PanelSize } from '@/pages/DashboardPage';
 import { bg, color, fontSize } from '@/lib/tokens';
@@ -29,8 +29,6 @@ import { useTradingSoundCtx } from '@/hooks/TradingSoundContext';
 import { SoundSettings } from './SoundSettings';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const LEVERAGE = 10;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -268,6 +266,9 @@ export function PaperTradingPanel({
   const [orderSubTab, setOrderSubTab] = useState<OrderSubTab>('all');
   const [showSettings, setShowSettings] = useState(false);
   const [confirmingReset, setConfirmingReset] = useState(false);
+  // Draft leverage is reset to the stored value each time the dialog mounts
+  // (showSettings controls conditional rendering, so this re-initialises naturally)
+  const [draftLeverage, setDraftLeverage] = useState(() => usePaperStore.getState().leverage);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Column picker state ────────────────────────────────────────────────────
@@ -337,6 +338,8 @@ export function PaperTradingPanel({
   const addJournalNote = usePaperStore((s) => s.addJournalNote);
   const editJournalEntry = usePaperStore((s) => s.editJournalEntry);
   const reset = usePaperStore((s) => s.reset);
+  const leverage = usePaperStore((s) => s.leverage);
+  const setLeverage = usePaperStore((s) => s.setLeverage);
   const sound = useTradingSoundCtx();
   const username = useAuthStore((s) => s.user?.username ?? 'Account');
 
@@ -826,7 +829,7 @@ export function PaperTradingPanel({
                                     : (pos.entryPrice - markPrice) * pos.quantity;
                                 const pnlPct = (pnl / pos.entryUsdtAmount) * 100;
                                 const isProfit = pnl >= 0;
-                                const margin = pos.entryUsdtAmount / LEVERAGE;
+                                const margin = pos.entryUsdtAmount;
                                 const commission = pos.entryUsdtAmount * COMMISSION_RATE;
 
                                 return (
@@ -944,7 +947,7 @@ export function PaperTradingPanel({
                                         className="px-3 py-1.5 text-right tabular-nums"
                                         style={{ fontSize: fontSize.xs10, color: color.muted }}
                                       >
-                                        {LEVERAGE}×
+                                        {leverage}×
                                       </td>
                                     )}
                                     {isVisible('positions', 'margin') && (
@@ -1023,7 +1026,7 @@ export function PaperTradingPanel({
                           <tbody>
                             <AnimatePresence>
                               {filteredOrders.map((order, i) => {
-                                const margin = order.usdtAmount / LEVERAGE;
+                                const margin = order.usdtAmount;
                                 return (
                                   <motion.tr
                                     key={order.id}
@@ -1154,7 +1157,7 @@ export function PaperTradingPanel({
                                         className="px-3 py-1.5 text-right tabular-nums"
                                         style={{ fontSize: fontSize.xs10, color: color.muted }}
                                       >
-                                        {LEVERAGE}×
+                                        {leverage}×
                                       </td>
                                     )}
                                     {isVisible('orders', 'margin') && (
@@ -1366,7 +1369,7 @@ export function PaperTradingPanel({
                                         className="px-3 py-1.5 text-right tabular-nums"
                                         style={{ fontSize: fontSize.xs10, color: color.muted }}
                                       >
-                                        {LEVERAGE}×
+                                        {leverage}×
                                       </td>
                                     )}
                                   </motion.tr>
@@ -1592,28 +1595,59 @@ export function PaperTradingPanel({
                   </div>
                 </div>
 
-                {/* Leverage (read-only) */}
-                <div className="flex flex-col gap-1">
-                  <label
-                    className="text-xs font-medium"
-                    style={{ color: color.muted, fontSize: fontSize.xs11 }}
-                  >
-                    Leverage
-                  </label>
-                  <div
-                    className="flex h-8 items-center justify-between rounded px-3"
-                    style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.07)',
-                    }}
-                  >
-                    <span style={{ fontSize: fontSize.xs, color: 'rgba(255,255,255,0.6)' }}>
-                      10:1
-                    </span>
-                    <span style={{ fontSize: fontSize.xs11, color: color.muted }}>
-                      Crypto · Display only
+                {/* Leverage — Crypto (interactive) */}
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <label
+                      className="font-semibold uppercase tracking-wider"
+                      style={{ color: color.muted, fontSize: fontSize.xs11 }}
+                    >
+                      Leverage · Crypto
+                    </label>
+                    <span
+                      className="rounded px-1.5 py-px font-bold"
+                      style={{
+                        fontSize: fontSize.xs10,
+                        background:
+                          draftLeverage > 1 ? `${color.amber}22` : 'rgba(255,255,255,0.06)',
+                        color: draftLeverage > 1 ? color.amber : color.muted,
+                      }}
+                    >
+                      {draftLeverage}×
                     </span>
                   </div>
+                  {/* 12-button grid — Bybit style */}
+                  <div className="grid grid-cols-6 gap-1">
+                    {CRYPTO_LEVERAGE_OPTIONS.map((opt) => (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setDraftLeverage(opt)}
+                        className="rounded py-1 text-center font-semibold transition-colors"
+                        style={{
+                          fontSize: fontSize.xs10,
+                          background:
+                            draftLeverage === opt ? `${color.purple}33` : 'rgba(255,255,255,0.05)',
+                          color: draftLeverage === opt ? color.purple : 'rgba(255,255,255,0.55)',
+                          border:
+                            draftLeverage === opt
+                              ? `1px solid ${color.purple}66`
+                              : '1px solid rgba(255,255,255,0.07)',
+                        }}
+                      >
+                        {opt}×
+                      </button>
+                    ))}
+                  </div>
+                  {draftLeverage > 25 && (
+                    <p
+                      className="flex items-center gap-1"
+                      style={{ fontSize: fontSize.xs10, color: color.red }}
+                    >
+                      <AlertTriangle className="h-3 w-3 shrink-0" />
+                      High leverage increases liquidation risk.
+                    </p>
+                  )}
                 </div>
 
                 {/* Commission (read-only) */}
@@ -1695,12 +1729,16 @@ export function PaperTradingPanel({
                   )}
                 </AnimatePresence>
 
-                {/* Save — disabled (settings are read-only) */}
+                {/* Save */}
                 <button
-                  disabled
-                  className="flex h-7 items-center rounded px-4 text-xs font-semibold opacity-35 cursor-not-allowed"
+                  onClick={() => {
+                    setLeverage(draftLeverage);
+                    setShowSettings(false);
+                    setConfirmingReset(false);
+                  }}
+                  className="flex h-7 items-center rounded px-4 text-xs font-semibold transition-opacity hover:opacity-90"
                   style={{
-                    background: 'rgba(165,85,226,0.35)',
+                    background: 'rgba(165,85,226,0.75)',
                     color: '#fff',
                     fontSize: fontSize.xs,
                   }}
