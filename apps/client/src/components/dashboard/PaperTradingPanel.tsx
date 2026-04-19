@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { CryptoIcon } from '@/components/ui/CryptoIcon';
+import { SymbolPair } from '@/components/ui/CryptoIcon';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 import {
@@ -845,10 +845,11 @@ export function PaperTradingPanel({
                                   >
                                     {isVisible('positions', 'symbol') && (
                                       <td className="px-3 py-1.5">
-                                        <span className="flex items-center gap-1.5">
-                                          <CryptoIcon
-                                            symbol={pos.symbol.replace('USDT', '')}
-                                            size={16}
+                                        <span className="flex items-center gap-2">
+                                          <SymbolPair
+                                            base={pos.symbol.replace('USDT', '')}
+                                            quote="USDT"
+                                            baseSize={16}
                                           />
                                           <span className="font-bold text-white">{pos.symbol}</span>
                                         </span>
@@ -1040,10 +1041,11 @@ export function PaperTradingPanel({
                                   >
                                     {isVisible('orders', 'symbol') && (
                                       <td className="px-3 py-1.5">
-                                        <span className="flex items-center gap-1.5">
-                                          <CryptoIcon
-                                            symbol={order.symbol.replace('USDT', '')}
-                                            size={16}
+                                        <span className="flex items-center gap-2">
+                                          <SymbolPair
+                                            base={order.symbol.replace('USDT', '')}
+                                            quote="USDT"
+                                            baseSize={16}
                                           />
                                           <span className="font-bold text-white">
                                             {order.symbol}
@@ -1239,10 +1241,11 @@ export function PaperTradingPanel({
                                   >
                                     {isVisible('history', 'symbol') && (
                                       <td className="px-3 py-1.5">
-                                        <span className="flex items-center gap-1.5">
-                                          <CryptoIcon
-                                            symbol={symbol.replace('USDT', '')}
-                                            size={16}
+                                        <span className="flex items-center gap-2">
+                                          <SymbolPair
+                                            base={symbol.replace('USDT', '')}
+                                            quote="USDT"
+                                            baseSize={16}
                                           />
                                           <span className="font-bold text-white">{symbol}</span>
                                         </span>

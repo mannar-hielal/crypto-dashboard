@@ -2,7 +2,7 @@
  * cryptoIcons tests
  *
  * Verifies the structure of CRYPTO_ICON_URLS:
- *   - Exactly the 9 expected base symbols are present
+ *   - Exactly the 10 expected base symbols are present
  *   - All keys are uppercase strings
  *   - All values are non-empty strings (Vite resolves ?url imports to asset paths in tests)
  */
@@ -21,18 +21,19 @@ vi.mock('cryptocurrency-icons/svg/color/doge.svg?url', () => ({ default: '/icons
 vi.mock('cryptocurrency-icons/svg/color/ada.svg?url', () => ({ default: '/icons/ada.svg' }));
 vi.mock('cryptocurrency-icons/svg/color/avax.svg?url', () => ({ default: '/icons/avax.svg' }));
 vi.mock('cryptocurrency-icons/svg/color/link.svg?url', () => ({ default: '/icons/link.svg' }));
+vi.mock('cryptocurrency-icons/svg/color/usdt.svg?url', () => ({ default: '/icons/usdt.svg' }));
 
 import { CRYPTO_ICON_URLS } from '../cryptoIcons';
 
 // ─── Expected symbols ─────────────────────────────────────────────────────────
 
-const EXPECTED_SYMBOLS = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'DOGE', 'ADA', 'AVAX', 'LINK'];
+const EXPECTED_SYMBOLS = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'DOGE', 'ADA', 'AVAX', 'LINK', 'USDT'];
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('CRYPTO_ICON_URLS', () => {
-  it('should contain exactly 9 entries', () => {
-    expect(Object.keys(CRYPTO_ICON_URLS)).toHaveLength(9);
+  it('should contain exactly 10 entries', () => {
+    expect(Object.keys(CRYPTO_ICON_URLS)).toHaveLength(10);
   });
 
   it('should have all expected symbol keys', () => {
