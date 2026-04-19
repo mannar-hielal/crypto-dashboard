@@ -428,31 +428,8 @@ export function PaperTradingPanel({
         className="flex h-9 shrink-0 items-center justify-between border-b border-white/5 px-3"
         style={{ background: bg.panel }}
       >
-        {/* Left: quick stats */}
-        <div className="flex items-center gap-3 overflow-hidden">
-          <span className="text-xs font-bold text-white/80 tracking-wide">Positions</span>
-          <span className="h-3 w-px bg-white/8" />
-          <span className="tabular-nums" style={{ fontSize: fontSize.xs11, color: color.muted }}>
-            <span className="mr-1" style={{ color: `${color.muted}99` }}>
-              Balance
-            </span>
-            <span className="text-white/70">
-              $
-              {balance.toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </span>
-          </span>
-          <span className="h-3 w-px bg-white/8" />
-          <span
-            className="font-semibold tabular-nums"
-            style={{ fontSize: fontSize.xs11, color: unrealizedPnl >= 0 ? color.green : color.red }}
-          >
-            {unrealizedPnl >= 0 ? '+' : ''}
-            {unrealizedPnl.toFixed(2)} P&amp;L
-          </span>
-        </div>
+        {/* Left: panel label */}
+        <span className="text-xs font-bold text-white/80 tracking-wide">Paper Trading</span>
 
         {/* Right: gear (settings) + sound + collapse + close */}
         <div className="flex items-center gap-0.5">
