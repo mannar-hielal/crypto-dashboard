@@ -61,7 +61,9 @@ async function fetchHistoricalCandles(
   const data = (await res.json()) as BybitKlineResponse;
 
   if (data.retCode !== 0) {
-    throw new Error(`Bybit API error: ${data.retMsg}`);
+    throw new Error(
+      `Bybit API error: ${data.retMsg} [symbol=${symbol}, interval=${bybitInterval}, limit=${limit}]`
+    );
   }
 
   // Bybit returns newest first — reverse for chronological chart order

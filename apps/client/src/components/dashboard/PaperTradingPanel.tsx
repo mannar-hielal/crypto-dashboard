@@ -276,7 +276,9 @@ export function PaperTradingPanel({
   // the effect only runs when showSettings transitions to true.
   const prevShowSettingsRef = useRef(showSettings);
   if (showSettings && !prevShowSettingsRef.current) {
-    setDraftLeverage(leverage);
+    // Read directly from the store (not the reactive selector — leverage is
+    // declared further down the component and can't be used here yet).
+    setDraftLeverage(usePaperStore.getState().leverage);
   }
   prevShowSettingsRef.current = showSettings;
 
