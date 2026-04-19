@@ -17,7 +17,7 @@ import { useLayoutStore } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
 import { SYMBOLS, INTERVALS, INTERVAL_LABELS } from '@/lib/markets';
 import { bg, color, fontSize } from '@/lib/tokens';
-import { CryptoIcon } from '@/components/ui/CryptoIcon';
+import { SymbolPair } from '@/components/ui/CryptoIcon';
 import { ChartLayoutPicker } from '@/components/dashboard/ChartLayoutPicker';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -185,7 +185,11 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
             border: '1px solid rgba(255,255,255,0.06)',
           }}
         >
-          <CryptoIcon symbol={activeEntry?.base ?? symbol.replace('USDT', '')} size={18} />
+          <SymbolPair
+            base={activeEntry?.base ?? symbol.replace('USDT', '')}
+            quote="USDT"
+            baseSize={18}
+          />
           <span className="tracking-wide">{activeEntry?.base ?? symbol.replace('USDT', '')}</span>
           <span style={{ fontSize: fontSize.xs11, color: color.muted }}>/USDT</span>
           {symbolOpen ? (
@@ -237,7 +241,7 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
                           className="flex w-full items-center justify-between px-3 py-1.5 text-left transition-colors"
                         >
                           <div className="flex items-center gap-2">
-                            <CryptoIcon symbol={entry.base} size={20} />
+                            <SymbolPair base={entry.base} quote="USDT" baseSize={20} />
                             <div>
                               <p
                                 className="text-xs font-bold"
