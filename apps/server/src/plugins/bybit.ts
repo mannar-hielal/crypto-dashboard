@@ -156,7 +156,7 @@ async function bybitPlugin(fastify: FastifyInstance): Promise<void> {
       const symbol = streamData.symbol;
       const bid = ob.bids?.[0]?.[0];
       const ask = ob.asks?.[0]?.[0];
-      if (!bid || !ask) return;
+      if (bid === null || bid === undefined || ask === null || ask === undefined || !Number.isFinite(bid) || !Number.isFinite(ask)) return;
 
       const now = Date.now();
       const lastSent = tickerThrottle.get(symbol) ?? 0;

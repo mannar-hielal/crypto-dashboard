@@ -62,7 +62,7 @@ export function usePendingOrderMonitor({ onFilled }: PendingOrderMonitorOptions 
   // Stable refs so the effect closure always reads the latest store state
   // without re-attaching the effect on every store mutation.
   const placeOrderRef = useRef(usePaperStore.getState().placeOrder);
-  const cancelPendingRef = useRef(usePaperStore.getState().cancelPendingOrder);
+  const fillPendingRef = useRef(usePaperStore.getState().fillPendingOrder);
   const addJournalNoteRef = useRef(usePaperStore.getState().addJournalNote);
   const onFilledRef = useRef(onFilled);
   onFilledRef.current = onFilled;
@@ -77,9 +77,9 @@ export function usePendingOrderMonitor({ onFilled }: PendingOrderMonitorOptions 
     for (const order of pending) {
       if (!checkPendingTrigger(order, price)) continue;
 
-      // Cancel first — this refunds the reserved balance so we can immediately
-      // re-spend it via placeOrder (which deducts it again).
-      cancelPendingRef.current(order.id);
+      // Remove from pending without creating a cancellation record — refunds
+      // the reserved balance so placeOrder can deduct it again immediately.
+      fillPendingRef.current(order.id);
 
       // Re-open as a live market position at the execution price.
       const posId = placeOrderRef.current(

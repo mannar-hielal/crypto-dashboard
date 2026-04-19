@@ -266,10 +266,19 @@ export function PaperTradingPanel({
   const [orderSubTab, setOrderSubTab] = useState<OrderSubTab>('all');
   const [showSettings, setShowSettings] = useState(false);
   const [confirmingReset, setConfirmingReset] = useState(false);
-  // Draft leverage is reset to the stored value each time the dialog mounts
-  // (showSettings controls conditional rendering, so this re-initialises naturally)
+  // Keep a local draft for the settings dialog, but refresh it from the
+  // persisted store value each time the dialog is opened.
   const [draftLeverage, setDraftLeverage] = useState(() => usePaperStore.getState().leverage);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync draftLeverage with the stored value whenever the settings dialog opens.
+  // We read from the `leverage` reactive selector (already subscribed above) so
+  // the effect only runs when showSettings transitions to true.
+  const prevShowSettingsRef = useRef(showSettings);
+  if (showSettings && !prevShowSettingsRef.current) {
+    setDraftLeverage(leverage);
+  }
+  prevShowSettingsRef.current = showSettings;
 
   // ── Column picker state ────────────────────────────────────────────────────
   const [colPickerOpen, setColPickerOpen] = useState(false);
@@ -370,8 +379,11 @@ export function PaperTradingPanel({
 
   // ── Derived account stats ──────────────────────────────────────────────────
   const reserved = pendingOrders.reduce((s, o) => s + o.usdtAmount, 0);
-  const available = balance - reserved;
-  const equity = balance + unrealizedPnl;
+  // lockedPositionCapital = sum of all open-position margins (already deducted from balance)
+  const lockedPositionCapital = positions.reduce((sum, pos) => sum + pos.entryUsdtAmount, 0);
+  // balance is already free cash (margin + commissions already deducted at open)
+  const available = balance;
+  const equity = balance + lockedPositionCapital + unrealizedPnl;
   const totalTrades = history.length;
   const winningTrades = history.filter((t) => t.pnl > 0).length;
   const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : null;

@@ -61,7 +61,7 @@ export interface PendingOrder {
   type: 'limit' | 'stop';
   usdtAmount: number; // reserved at placement (deducted from balance)
   triggerPrice: number; // limit or stop trigger price
-  qty: number; // pre-calculated: usdtAmount / triggerPrice
+  qty: number; // pre-calculated leveraged base-asset qty: (usdtAmount * leverage) / triggerPrice
   takeProfit?: number;
   stopLoss?: number;
   placedAt: number;
@@ -202,6 +202,13 @@ interface PaperState {
 
   /** Cancel a pending (limit or stop) order and refund the reserved amount. */
   cancelPendingOrder: (orderId: string) => void;
+
+  /**
+   * Fill a pending order without recording a cancellation entry.
+   * Removes the order from pendingOrders and refunds the reserved amount so
+   * placeOrder can deduct it again. Intended only for use by usePendingOrderMonitor.
+   */
+  fillPendingOrder: (orderId: string) => void;
 }
 
 export const usePaperStore = create<PaperState>()(
@@ -572,6 +579,18 @@ export const usePaperStore = create<PaperState>()(
           balance: s.balance + refund,
           pendingOrders: s.pendingOrders.filter((o) => o.id !== orderId),
           orders: [cancelledOrder, ...s.orders].slice(0, MAX_HISTORY * 2),
+        }));
+      },
+
+      fillPendingOrder: (orderId) => {
+        const { pendingOrders } = get();
+        const order = pendingOrders.find((o) => o.id === orderId);
+        if (!order) return;
+        // Refund reserved amount so placeOrder can re-deduct it — no cancellation record.
+        const refund = order.usdtAmount + order.usdtAmount * COMMISSION_RATE;
+        set((s) => ({
+          balance: s.balance + refund,
+          pendingOrders: s.pendingOrders.filter((o) => o.id !== orderId),
         }));
       },
     }),
