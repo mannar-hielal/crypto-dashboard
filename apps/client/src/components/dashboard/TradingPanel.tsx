@@ -23,8 +23,6 @@ const TABS: { id: OrderTab; label: string }[] = [
   { id: 'stop', label: 'Stop' },
 ];
 
-const LEVERAGE = 10; // fixed 10:1 for crypto
-
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 /** Small toggle switch (checkbox-style) */
@@ -84,6 +82,7 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
   const spread = bid != null && ask != null ? ask - bid : null;
 
   const balance = usePaperStore((s) => s.balance);
+  const leverage = usePaperStore((s) => s.leverage);
   const placeOrder = usePaperStore((s) => s.placeOrder);
   const placeLimitOrder = usePaperStore((s) => s.placeLimitOrder);
   const placeStopOrder = usePaperStore((s) => s.placeStopOrder);
@@ -184,7 +183,9 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
     return null;
   })();
 
-  const margin = usdtAmount !== null ? usdtAmount / LEVERAGE : null;
+  // margin = the user's input amount (deducted from balance); tradeValue = notional exposure
+  const margin = usdtAmount;
+  const tradeValue = usdtAmount !== null ? usdtAmount * leverage : null;
   const commission = usdtAmount !== null ? usdtAmount * COMMISSION_RATE : null;
   const marginPct = margin !== null ? Math.min(100, (margin / balance) * 100) : 0;
   const marginExceeds = margin !== null && margin > balance;
@@ -729,7 +730,7 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
                 style={{ fontSize: fontSize.xs10, color: color.muted }}
               >
                 <span>Margin</span>
-                <span title="Funds required to open this position (trade value ÷ leverage)">
+                <span title="Margin required to open this position (your input amount, deducted from balance)">
                   <Info className="h-3 w-3 opacity-60" />
                 </span>
               </div>
@@ -758,10 +759,10 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
 
           {/* Info rows */}
           {[
-            { label: 'Leverage', value: `${LEVERAGE}:1` },
+            { label: 'Leverage', value: `${leverage}:1` },
             {
               label: 'Trade value',
-              value: usdtAmount !== null ? `$${usdtAmount.toFixed(2)}` : '—',
+              value: tradeValue !== null ? `$${tradeValue.toFixed(2)}` : '—',
             },
             { label: 'Commission', value: commission !== null ? `$${commission.toFixed(4)}` : '—' },
           ].map(({ label, value }) => (
