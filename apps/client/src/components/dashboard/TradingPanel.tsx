@@ -82,10 +82,9 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
   const [tab, setTab] = useState<OrderTab>(initialTab);
   const [qtyMode, setQtyMode] = useState<QtyMode>('usd');
   const [qtyInput, setQtyInput] = useState('');
-  // Pre-fill price input when mounting on a Limit/Stop tab (symbol just changed)
-  const [priceInput, setPriceInput] = useState<string>(() =>
-    initialTab !== 'market' && latestPrice ? latestPrice.toFixed(2) : ''
-  );
+  // Empty on every key-reset mount — displayPrice (below) falls back to latestPrice
+  // so the field always reflects the new symbol's live price without useEffect.
+  const [priceInput, setPriceInput] = useState('');
   const [tpEnabled, setTpEnabled] = useState(false);
   const [slEnabled, setSlEnabled] = useState(false);
   const [tpInput, setTpInput] = useState('');
@@ -95,7 +94,22 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
   const executeAnim = useAnimation();
 
   // ── Derived values ────────────────────────────────────────────────────────
-  const execPrice = tab === 'market' ? latestPrice : parseFloat(priceInput) || null;
+
+  /**
+   * The price shown and used for Limit/Stop orders.
+   * While the user hasn't typed anything (priceInput === ''), we fall back to
+   * latestPrice so the field always shows the current symbol's live price —
+   * even immediately after a key-reset remount when paneStore hasn't synced yet.
+   * Once the user types, their value takes over.
+   */
+  const displayPrice: string =
+    priceInput !== ''
+      ? priceInput
+      : tab !== 'market' && latestPrice !== null
+        ? latestPrice.toFixed(2)
+        : '';
+
+  const execPrice = tab === 'market' ? latestPrice : parseFloat(displayPrice) || null;
 
   /** USDT value of the current qty input */
   const usdtAmount: number | null = (() => {
@@ -136,10 +150,9 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
     setTab(t);
     onTabChange?.(t);
     setFormError(null);
-    // Pre-fill price field with current market price when switching to Limit/Stop
-    if (t !== 'market' && latestPrice) {
-      setPriceInput(latestPrice.toFixed(2));
-    }
+    // Clear any manually typed price so displayPrice falls back to latestPrice
+    // for the new tab — giving the user the current live price as the starting point.
+    setPriceInput('');
   }
 
   function handleSwapQtyMode() {
@@ -385,7 +398,7 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
                   type="number"
                   min="0"
                   step="0.01"
-                  value={priceInput}
+                  value={displayPrice}
                   onChange={(e) => {
                     setPriceInput(e.target.value);
                     setFormError(null);
