@@ -43,6 +43,7 @@ export interface ClosedTrade {
   entryPrice: number;
   exitPrice: number;
   pnl: number; // realized PnL in USDT (negative = loss)
+  openedAt: number;
   closedAt: number;
 }
 
@@ -313,6 +314,7 @@ export const usePaperStore = create<PaperState>()(
           entryPrice: pos.entryPrice,
           exitPrice,
           pnl,
+          openedAt: pos.openedAt,
           closedAt: now,
         };
 
