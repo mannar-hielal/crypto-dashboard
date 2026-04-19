@@ -76,6 +76,8 @@ export interface HistoricalOrder {
   commission: number;
   placingTime: number;
   closingTime: number;
+  /** Human-readable reason why the order was rejected (only set when status === 'rejected') */
+  rejectionReason?: string;
 }
 
 export interface BalanceEvent {
@@ -208,7 +210,27 @@ export const usePaperStore = create<PaperState>()(
         if (usdtAmount <= 0 || price <= 0) return null;
         // Include entry commission in the balance check — prevents going negative
         // when placing a 100%-of-balance order (usdtAmount + fee > balance).
-        if (usdtAmount + usdtAmount * COMMISSION_RATE > balance) return null;
+        if (usdtAmount + usdtAmount * COMMISSION_RATE > balance) {
+          // Record the rejection so it surfaces in the History tab with a warning icon
+          const rejId = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+          const now = Date.now();
+          const rejectedOrder: HistoricalOrder = {
+            id: `o-rej-${rejId}`,
+            symbol,
+            side,
+            type: 'market',
+            qty: price > 0 ? usdtAmount / price : 0,
+            status: 'rejected',
+            commission: 0,
+            placingTime: now,
+            closingTime: now,
+            rejectionReason: 'Not enough funds to complete the order.',
+          };
+          set((s) => ({
+            orders: [rejectedOrder, ...s.orders].slice(0, MAX_HISTORY * 2),
+          }));
+          return null;
+        }
 
         const quantity = usdtAmount / price;
         const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;

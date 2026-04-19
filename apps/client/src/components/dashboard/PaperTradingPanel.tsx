@@ -15,12 +15,13 @@ import {
   Maximize2,
   Minimize2,
   SlidersHorizontal,
+  AlertTriangle,
 } from 'lucide-react';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/shallow';
 import { paneStores, lastKnownPrices } from '@/store/paneStore';
 import { usePaperStore, COMMISSION_RATE } from '@/store/paperStore';
-import type { JournalEntry } from '@/store/paperStore';
+import type { JournalEntry, HistoricalOrder } from '@/store/paperStore';
 import type { PanelSize } from '@/pages/DashboardPage';
 import { bg, color, fontSize } from '@/lib/tokens';
 import { useLayoutStore } from '@/store/layoutStore';
@@ -329,6 +330,7 @@ export function PaperTradingPanel({
   const positions = usePaperStore((s) => s.positions);
   const pendingOrders = usePaperStore((s) => s.pendingOrders);
   const history = usePaperStore((s) => s.history);
+  const orders = usePaperStore((s) => s.orders);
   const journal = usePaperStore((s) => s.journal);
   const closePosition = usePaperStore((s) => s.closePosition);
   const cancelPendingOrder = usePaperStore((s) => s.cancelPendingOrder);
@@ -337,6 +339,21 @@ export function PaperTradingPanel({
   const reset = usePaperStore((s) => s.reset);
   const sound = useTradingSoundCtx();
   const username = useAuthStore((s) => s.user?.username ?? 'Account');
+
+  // ── Merged history rows (closed trades + rejected orders) ─────────────────
+  type HistoryRow =
+    | { kind: 'trade'; data: (typeof history)[number] }
+    | { kind: 'rejected'; data: HistoricalOrder };
+
+  const rejectedOrders = orders.filter((o) => o.status === 'rejected');
+  const historyRows: HistoryRow[] = [
+    ...history.map((t) => ({ kind: 'trade' as const, data: t })),
+    ...rejectedOrders.map((o) => ({ kind: 'rejected' as const, data: o })),
+  ].sort((a, b) => {
+    const ta = a.kind === 'trade' ? a.data.closedAt : a.data.closingTime;
+    const tb = b.kind === 'trade' ? b.data.closedAt : b.data.closingTime;
+    return tb - ta;
+  });
 
   const unrealizedPnl = positions.reduce((sum, pos) => {
     const markPrice = getPriceForSymbol(pos.symbol);
@@ -520,17 +537,48 @@ export function PaperTradingPanel({
             >
               {(
                 [
-                  { label: 'Balance', value: `$${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, col: undefined },
-                  { label: 'Equity', value: `$${equity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, col: undefined },
-                  { label: 'Unrealized P&L', value: `${unrealizedPnl >= 0 ? '+' : ''}$${unrealizedPnl.toFixed(2)}`, col: unrealizedPnl >= 0 ? color.green : color.red },
-                  { label: 'Realized P&L', value: `${realizedPnl >= 0 ? '+' : ''}$${realizedPnl.toFixed(2)}`, col: realizedPnl >= 0 ? color.green : color.red },
-                  { label: 'Available', value: `$${available.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, col: undefined },
-                  { label: 'Reserved', value: reserved > 0 ? `$${reserved.toFixed(2)}` : '—', col: undefined },
-                  { label: 'Win Rate', value: winRate !== null ? `${winRate.toFixed(0)}%` : '—', col: winRate !== null ? (winRate >= 50 ? color.green : color.red) : undefined },
+                  {
+                    label: 'Balance',
+                    value: `$${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                    col: undefined,
+                  },
+                  {
+                    label: 'Equity',
+                    value: `$${equity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                    col: undefined,
+                  },
+                  {
+                    label: 'Unrealized P&L',
+                    value: `${unrealizedPnl >= 0 ? '+' : ''}$${unrealizedPnl.toFixed(2)}`,
+                    col: unrealizedPnl >= 0 ? color.green : color.red,
+                  },
+                  {
+                    label: 'Realized P&L',
+                    value: `${realizedPnl >= 0 ? '+' : ''}$${realizedPnl.toFixed(2)}`,
+                    col: realizedPnl >= 0 ? color.green : color.red,
+                  },
+                  {
+                    label: 'Available',
+                    value: `$${available.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                    col: undefined,
+                  },
+                  {
+                    label: 'Reserved',
+                    value: reserved > 0 ? `$${reserved.toFixed(2)}` : '—',
+                    col: undefined,
+                  },
+                  {
+                    label: 'Win Rate',
+                    value: winRate !== null ? `${winRate.toFixed(0)}%` : '—',
+                    col: winRate !== null ? (winRate >= 50 ? color.green : color.red) : undefined,
+                  },
                 ] as { label: string; value: string; col: string | undefined }[]
               ).map(({ label, value, col }) => (
                 <div key={label} className="flex shrink-0 flex-col gap-px">
-                  <span style={{ fontSize: fontSize.xs10, color: color.muted }} className="whitespace-nowrap font-medium uppercase tracking-wider">
+                  <span
+                    style={{ fontSize: fontSize.xs10, color: color.muted }}
+                    className="whitespace-nowrap font-medium uppercase tracking-wider"
+                  >
                     {label}
                   </span>
                   <span
@@ -582,12 +630,12 @@ export function PaperTradingPanel({
                       {pendingOrders.length}
                     </span>
                   )}
-                  {tab === 'history' && history.length > 0 && (
+                  {tab === 'history' && historyRows.length > 0 && (
                     <span
                       className="rounded-full bg-white/8 px-1.5 py-px font-semibold"
                       style={{ fontSize: fontSize.xxs, color: color.muted }}
                     >
-                      {history.length}
+                      {historyRows.length}
                     </span>
                   )}
                   {tab === 'journal' && journal.length > 0 && (
@@ -677,7 +725,9 @@ export function PaperTradingPanel({
               >
                 {(['all', 'limit', 'stop'] as OrderSubTab[]).map((sub) => {
                   const count =
-                    sub === 'all' ? pendingOrders.length : pendingOrders.filter((o) => o.type === sub).length;
+                    sub === 'all'
+                      ? pendingOrders.length
+                      : pendingOrders.filter((o) => o.type === sub).length;
                   return (
                     <button
                       key={sub}
@@ -696,13 +746,18 @@ export function PaperTradingPanel({
                           style={{ background: color.purpleDark }}
                         />
                       )}
-                      <span className="capitalize">{sub === 'all' ? 'All' : sub.charAt(0).toUpperCase() + sub.slice(1)}</span>
+                      <span className="capitalize">
+                        {sub === 'all' ? 'All' : sub.charAt(0).toUpperCase() + sub.slice(1)}
+                      </span>
                       {count > 0 && (
                         <span
                           className="rounded-full px-1 py-px tabular-nums"
                           style={{
                             fontSize: fontSize.xxs,
-                            background: orderSubTab === sub ? `${color.purpleDark}40` : 'rgba(255,255,255,0.07)',
+                            background:
+                              orderSubTab === sub
+                                ? `${color.purpleDark}40`
+                                : 'rgba(255,255,255,0.07)',
                             color: orderSubTab === sub ? color.purple : color.muted,
                           }}
                         >
@@ -1135,7 +1190,7 @@ export function PaperTradingPanel({
 
                   {/* ════ History ══════════════════════════════════════════════════ */}
                   {infoTab === 'history' &&
-                    (history.length > 0 ? (
+                    (historyRows.length > 0 ? (
                       <div className="flex-1 overflow-y-auto">
                         <table className="w-full text-xs">
                           <thead>
@@ -1159,11 +1214,19 @@ export function PaperTradingPanel({
                           </thead>
                           <tbody>
                             <AnimatePresence>
-                              {history.map((trade, i) => {
-                                const isProfit = trade.pnl >= 0;
+                              {historyRows.map((row, i) => {
+                                const isRejected = row.kind === 'rejected';
+                                const rowId = row.kind === 'trade' ? row.data.id : row.data.id;
+                                const symbol = row.data.symbol;
+                                const side =
+                                  row.kind === 'trade'
+                                    ? row.data.side
+                                    : row.data.side === 'buy'
+                                      ? 'long'
+                                      : 'short';
                                 return (
                                   <motion.tr
-                                    key={trade.id}
+                                    key={rowId}
                                     custom={i}
                                     variants={rowVariants}
                                     initial="hidden"
@@ -1171,91 +1234,131 @@ export function PaperTradingPanel({
                                     exit="exit"
                                     className="border-b border-white/3 transition-colors hover:bg-white/2"
                                   >
-                                     {isVisible('history', 'symbol') && (
-                                       <td className="px-3 py-1.5">
-                                         <span className="flex items-center gap-1.5">
-                                           <CryptoIcon
-                                             symbol={trade.symbol.replace('USDT', '')}
-                                             size={16}
-                                           />
-                                           <span className="font-bold text-white">
-                                             {trade.symbol}
-                                           </span>
-                                         </span>
-                                       </td>
-                                     )}
-                                     {isVisible('history', 'status') && (
-                                       <td className="px-3 py-1.5">
-                                         <span
-                                           className="rounded px-1.5 py-px font-bold uppercase"
-                                           style={{
-                                             fontSize: fontSize.xs10,
-                                             background: `${color.green}22`,
-                                             color: color.green,
-                                           }}
-                                         >
-                                           Filled
-                                         </span>
-                                       </td>
-                                     )}
+                                    {isVisible('history', 'symbol') && (
+                                      <td className="px-3 py-1.5">
+                                        <span className="flex items-center gap-1.5">
+                                          <CryptoIcon
+                                            symbol={symbol.replace('USDT', '')}
+                                            size={16}
+                                          />
+                                          <span className="font-bold text-white">{symbol}</span>
+                                        </span>
+                                      </td>
+                                    )}
+                                    {isVisible('history', 'status') && (
+                                      <td className="px-3 py-1.5">
+                                        {isRejected ? (
+                                          <span
+                                            className="inline-flex items-center gap-1"
+                                            title={
+                                              (row.data as HistoricalOrder).rejectionReason ??
+                                              'Order rejected'
+                                            }
+                                            style={{ color: color.red, cursor: 'default' }}
+                                          >
+                                            <AlertTriangle
+                                              className="shrink-0"
+                                              style={{ width: 12, height: 12 }}
+                                            />
+                                            <span
+                                              className="font-bold uppercase"
+                                              style={{ fontSize: fontSize.xs10 }}
+                                            >
+                                              Rejected
+                                            </span>
+                                          </span>
+                                        ) : (
+                                          <span
+                                            className="rounded px-1.5 py-px font-bold uppercase"
+                                            style={{
+                                              fontSize: fontSize.xs10,
+                                              background: `${color.green}22`,
+                                              color: color.green,
+                                            }}
+                                          >
+                                            Filled
+                                          </span>
+                                        )}
+                                      </td>
+                                    )}
                                     {isVisible('history', 'side') && (
                                       <td
                                         className="px-3 py-1.5 font-bold"
                                         style={{
                                           fontSize: fontSize.xs10,
-                                          color: trade.side === 'long' ? color.green : color.red,
+                                          color: side === 'long' ? color.green : color.red,
                                         }}
                                       >
-                                        {trade.side === 'long' ? 'LONG' : 'SHORT'}
+                                        {side === 'long' ? 'LONG' : 'SHORT'}
                                       </td>
                                     )}
                                     {isVisible('history', 'qty') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                        {trade.quantity.toFixed(6)}
+                                        {row.kind === 'trade'
+                                          ? row.data.quantity.toFixed(6)
+                                          : row.data.qty > 0
+                                            ? row.data.qty.toFixed(6)
+                                            : '—'}
                                       </td>
                                     )}
                                     {isVisible('history', 'entry') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                        ${trade.entryPrice.toFixed(2)}
+                                        {row.kind === 'trade'
+                                          ? `$${row.data.entryPrice.toFixed(2)}`
+                                          : '—'}
                                       </td>
                                     )}
                                     {isVisible('history', 'exit') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                        ${trade.exitPrice.toFixed(2)}
+                                        {row.kind === 'trade'
+                                          ? `$${row.data.exitPrice.toFixed(2)}`
+                                          : '—'}
                                       </td>
                                     )}
                                     {isVisible('history', 'pnl') && (
                                       <td
                                         className="px-3 py-1.5 text-right tabular-nums font-semibold"
-                                        style={{ color: isProfit ? color.green : color.red }}
+                                        style={{
+                                          color:
+                                            row.kind === 'trade'
+                                              ? row.data.pnl >= 0
+                                                ? color.green
+                                                : color.red
+                                              : color.muted,
+                                        }}
                                       >
-                                        {isProfit ? '+' : ''}
-                                        {trade.pnl.toFixed(2)}
+                                        {row.kind === 'trade'
+                                          ? `${row.data.pnl >= 0 ? '+' : ''}${row.data.pnl.toFixed(2)}`
+                                          : '—'}
                                       </td>
                                     )}
-                                     {isVisible('history', 'openedAt') && (
-                                       <td
-                                         className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums"
-                                         style={{ fontSize: fontSize.xs10, color: color.muted }}
-                                       >
-                                         {fmtTime(trade.openedAt)}
-                                       </td>
-                                     )}
-                                     {isVisible('history', 'closedAt') && (
-                                       <td
-                                         className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums"
-                                         style={{ fontSize: fontSize.xs10, color: color.muted }}
-                                       >
-                                         {fmtTime(trade.closedAt)}
-                                       </td>
-                                     )}
+                                    {isVisible('history', 'openedAt') && (
+                                      <td
+                                        className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums"
+                                        style={{ fontSize: fontSize.xs10, color: color.muted }}
+                                      >
+                                        {row.kind === 'trade'
+                                          ? fmtTime(row.data.openedAt)
+                                          : fmtTime(row.data.placingTime)}
+                                      </td>
+                                    )}
+                                    {isVisible('history', 'closedAt') && (
+                                      <td
+                                        className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums"
+                                        style={{ fontSize: fontSize.xs10, color: color.muted }}
+                                      >
+                                        {row.kind === 'trade'
+                                          ? fmtTime(row.data.closedAt)
+                                          : fmtTime(row.data.closingTime)}
+                                      </td>
+                                    )}
                                     {isVisible('history', 'orderId') && (
                                       <td
                                         className="px-3 py-1.5 text-right tabular-nums font-mono"
                                         style={{ fontSize: fontSize.xs10, color: color.muted }}
-                                        title={trade.id}
+                                        title={row.data.id}
                                       >
-                                        {shortId(trade.id)}
+                                        {shortId(row.data.id)}
                                       </td>
                                     )}
                                     {isVisible('history', 'leverage') && (

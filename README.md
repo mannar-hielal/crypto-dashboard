@@ -29,12 +29,12 @@ A professional paper trading dashboard for cryptocurrency. Real-time charting, s
 
 ## 🗺️ Roadmap
 
-| Phase       | Status         | Scope                                                                                                                |
-| ----------- | -------------- | -------------------------------------------------------------------------------------------------------------------- |
-| **Phase 1** | ✅ Complete    | Auth, live chart, paper trading v1 (market orders), TP/SL monitor, journal, PWA                                      |
+| Phase       | Status         | Scope                                                                                                                                                                                                                     |
+| ----------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Phase 1** | ✅ Complete    | Auth, live chart, paper trading v1 (market orders), TP/SL monitor, journal, PWA                                                                                                                                           |
 | **Phase 2** | 🔄 In Progress | Limit/Stop orders, TradingPanel redesign, pending order monitor ✅, sound alerts ✅, maximize panel ✅, bid/ask feed ✅, account summary bar ✅, order status badges ✅, placing/closing time cols ✅, orders sub-tabs ✅ |
-| **Phase 3** | 📋 Planned     | Sync trades to DB, user profile & account settings                                                                   |
-| **Phase 4** | 📋 Planned     | Advanced indicators, multi-symbol watchlist, price alerts                                                            |
+| **Phase 3** | 📋 Planned     | Sync trades to DB, user profile & account settings                                                                                                                                                                        |
+| **Phase 4** | 📋 Planned     | Advanced indicators, multi-symbol watchlist, price alerts                                                                                                                                                                 |
 
 ---
 
