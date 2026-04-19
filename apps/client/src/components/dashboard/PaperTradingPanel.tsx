@@ -513,6 +513,36 @@ export function PaperTradingPanel({
             transition={{ duration: 0.15 }}
             className="flex min-h-0 flex-1 flex-col"
           >
+            {/* ── Account Summary Bar ─────────────────────────────────────── */}
+            <div
+              className="flex shrink-0 items-center gap-4 overflow-x-auto border-b border-white/4 px-3 py-1.5 scrollbar-none"
+              style={{ background: bg.panel }}
+            >
+              {(
+                [
+                  { label: 'Balance', value: `$${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, col: undefined },
+                  { label: 'Equity', value: `$${equity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, col: undefined },
+                  { label: 'Unrealized P&L', value: `${unrealizedPnl >= 0 ? '+' : ''}$${unrealizedPnl.toFixed(2)}`, col: unrealizedPnl >= 0 ? color.green : color.red },
+                  { label: 'Realized P&L', value: `${realizedPnl >= 0 ? '+' : ''}$${realizedPnl.toFixed(2)}`, col: realizedPnl >= 0 ? color.green : color.red },
+                  { label: 'Available', value: `$${available.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, col: undefined },
+                  { label: 'Reserved', value: reserved > 0 ? `$${reserved.toFixed(2)}` : '—', col: undefined },
+                  { label: 'Win Rate', value: winRate !== null ? `${winRate.toFixed(0)}%` : '—', col: winRate !== null ? (winRate >= 50 ? color.green : color.red) : undefined },
+                ] as { label: string; value: string; col: string | undefined }[]
+              ).map(({ label, value, col }) => (
+                <div key={label} className="flex shrink-0 flex-col gap-px">
+                  <span style={{ fontSize: fontSize.xs10, color: color.muted }} className="whitespace-nowrap font-medium uppercase tracking-wider">
+                    {label}
+                  </span>
+                  <span
+                    className="whitespace-nowrap tabular-nums font-semibold"
+                    style={{ fontSize: fontSize.xs11, color: col ?? 'rgba(255,255,255,0.75)' }}
+                  >
+                    {value}
+                  </span>
+                </div>
+              ))}
+            </div>
+
             {/* ── Tab bar ─────────────────────────────────────────────────── */}
             <div
               className="relative flex items-center border-b border-white/6"
@@ -637,36 +667,6 @@ export function PaperTradingPanel({
                   </AnimatePresence>
                 </div>
               )}
-            </div>
-
-            {/* ── Account Summary Bar ─────────────────────────────────────── */}
-            <div
-              className="flex shrink-0 items-center gap-4 overflow-x-auto border-b border-white/4 px-3 py-1.5 scrollbar-none"
-              style={{ background: bg.panel }}
-            >
-              {(
-                [
-                  { label: 'Balance', value: `$${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, col: undefined },
-                  { label: 'Equity', value: `$${equity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, col: undefined },
-                  { label: 'Unrealized P&L', value: `${unrealizedPnl >= 0 ? '+' : ''}$${unrealizedPnl.toFixed(2)}`, col: unrealizedPnl >= 0 ? color.green : color.red },
-                  { label: 'Realized P&L', value: `${realizedPnl >= 0 ? '+' : ''}$${realizedPnl.toFixed(2)}`, col: realizedPnl >= 0 ? color.green : color.red },
-                  { label: 'Available', value: `$${available.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, col: undefined },
-                  { label: 'Reserved', value: reserved > 0 ? `$${reserved.toFixed(2)}` : '—', col: undefined },
-                  { label: 'Win Rate', value: winRate !== null ? `${winRate.toFixed(0)}%` : '—', col: winRate !== null ? (winRate >= 50 ? color.green : color.red) : undefined },
-                ] as { label: string; value: string; col: string | undefined }[]
-              ).map(({ label, value, col }) => (
-                <div key={label} className="flex shrink-0 flex-col gap-px">
-                  <span style={{ fontSize: fontSize.xs10, color: color.muted }} className="whitespace-nowrap font-medium uppercase tracking-wider">
-                    {label}
-                  </span>
-                  <span
-                    className="whitespace-nowrap tabular-nums font-semibold"
-                    style={{ fontSize: fontSize.xs11, color: col ?? 'rgba(255,255,255,0.75)' }}
-                  >
-                    {value}
-                  </span>
-                </div>
-              ))}
             </div>
 
             {/* ── Orders sub-tab bar ──────────────────────────────────────── */}
