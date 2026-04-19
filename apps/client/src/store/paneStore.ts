@@ -13,6 +13,14 @@ import type { CandleBar, IndicatorSnapshot, LiveBar } from '@crypto-dashboard/sd
 
 const MAX_BARS = 1000;
 
+/**
+ * Global map of the last known price for each symbol.
+ * Updated by every pane feed, never cleared on pane reset.
+ * Used as a fallback so positions retain their mark price
+ * after switching away from a symbol.
+ */
+export const lastKnownPrices = new Map<string, number>();
+
 // ─── State shape ─────────────────────────────────────────────────────────────
 
 export interface PaneMarketState {
@@ -21,10 +29,15 @@ export interface PaneMarketState {
   latestPrice: number | null;
   priceChange: number | null;
   isConnected: boolean;
+  /** Best bid price from orderbook.1 stream */
+  bid: number | null;
+  /** Best ask price from orderbook.1 stream */
+  ask: number | null;
 
   setSnapshot: (bars: CandleBar[], indicators: IndicatorSnapshot | null) => void;
   addBar: (liveBar: LiveBar) => void;
   setConnected: (connected: boolean) => void;
+  setBidAsk: (bid: number, ask: number) => void;
   /** Wipe all data — called before a new symbol/interval connects */
   reset: () => void;
 }
@@ -38,6 +51,8 @@ function createPaneStore() {
     latestPrice: null,
     priceChange: null,
     isConnected: false,
+    bid: null,
+    ask: null,
 
     setSnapshot: (bars, indicators) => {
       const last = bars[bars.length - 1];
@@ -79,8 +94,18 @@ function createPaneStore() {
 
     setConnected: (isConnected) => set({ isConnected }),
 
+    setBidAsk: (bid, ask) => set({ bid, ask }),
+
     reset: () =>
-      set({ bars: [], indicators: null, latestPrice: null, priceChange: null, isConnected: false }),
+      set({
+        bars: [],
+        indicators: null,
+        latestPrice: null,
+        priceChange: null,
+        isConnected: false,
+        bid: null,
+        ask: null,
+      }),
   }));
 }
 

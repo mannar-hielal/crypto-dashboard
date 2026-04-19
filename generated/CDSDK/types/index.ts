@@ -72,7 +72,10 @@ export interface LiveBar {
 }
 
 // Discriminated union — what the server sends over /api/market/ws
-export type WsMessage = { type: 'snapshot'; bars: LiveBar[] } | { type: 'bar'; bar: LiveBar };
+export type WsMessage =
+  | { type: 'snapshot'; bars: LiveBar[] }
+  | { type: 'bar'; bar: LiveBar }
+  | { type: 'ticker'; symbol: string; bid: number; ask: number };
 
 export interface CandleHistoryResponse {
   symbol: string;

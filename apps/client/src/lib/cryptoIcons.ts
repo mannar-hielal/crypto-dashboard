@@ -20,6 +20,7 @@ import dogeUrl from 'cryptocurrency-icons/svg/color/doge.svg?url';
 import adaUrl from 'cryptocurrency-icons/svg/color/ada.svg?url';
 import avaxUrl from 'cryptocurrency-icons/svg/color/avax.svg?url';
 import linkUrl from 'cryptocurrency-icons/svg/color/link.svg?url';
+import usdtUrl from 'cryptocurrency-icons/svg/color/usdt.svg?url';
 
 // ─── Symbol → URL map ────────────────────────────────────────────────────────
 
@@ -33,4 +34,5 @@ export const CRYPTO_ICON_URLS = {
   ADA: adaUrl,
   AVAX: avaxUrl,
   LINK: linkUrl,
+  USDT: usdtUrl,
 } satisfies Record<string, string>;

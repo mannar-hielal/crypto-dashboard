@@ -32,6 +32,15 @@ export interface BybitService {
   getSnapshot(symbol: string, interval: string): LiveBar[];
   /** Subscribe to live bar updates. Returns an unsubscribe function. */
   subscribe(listener: (bar: LiveBar) => void): () => void;
+  /** Subscribe to best bid/ask updates (throttled ~500ms). Returns an unsubscribe function. */
+  subscribeTicker(listener: (update: TickerUpdate) => void): () => void;
+}
+
+/** Best bid/ask for a symbol, broadcast from orderbook.1 stream */
+export interface TickerUpdate {
+  symbol: string;
+  bid: number;
+  ask: number;
 }
 
 // Extend FastifyInstance so TypeScript knows about fastify.bybit
@@ -53,6 +62,7 @@ async function bybitPlugin(fastify: FastifyInstance): Promise<void> {
     const noopService: BybitService = {
       getSnapshot: () => [],
       subscribe: () => () => undefined,
+      subscribeTicker: () => () => undefined,
     };
     fastify.decorate('bybit', noopService);
     return;
@@ -67,6 +77,11 @@ async function bybitPlugin(fastify: FastifyInstance): Promise<void> {
   const snapshots = new Map<string, LiveBar[]>();
   // Active browser WebSocket listeners
   const listeners = new Set<(bar: LiveBar) => void>();
+  // Ticker (bid/ask) listeners
+  const tickerListeners = new Set<(update: TickerUpdate) => void>();
+  // Throttle: last broadcast time per symbol (prevent >2/s per symbol)
+  const tickerThrottle = new Map<string, number>();
+  const TICKER_THROTTLE_MS = 500;
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -93,44 +108,75 @@ async function bybitPlugin(fastify: FastifyInstance): Promise<void> {
   // ─── Data pipeline: Bybit → Aggregator → Indicators → Broadcast ───────────
 
   manager.on('data', (streamData) => {
-    if (streamData.dataType !== 'kline') return;
+    // ── Kline → bars pipeline ─────────────────────────────────────────────
+    if (streamData.dataType === 'kline') {
+      const kline = streamData.data as Kline;
+      const symbol = streamData.symbol;
 
-    const kline = streamData.data as Kline;
-    const symbol = streamData.symbol;
+      const aggregated = aggregator.process(kline, symbol);
 
-    // Aggregator converts the incoming 1m kline into all intervals
-    const aggregated = aggregator.process(kline, symbol);
+      for (const [interval, aggregatedKline] of aggregated) {
+        const key = `${symbol}:${interval}`;
+        const indicatorManager = getOrCreateManager(key);
+        const iv = indicatorManager.update(aggregatedKline);
 
-    for (const [interval, aggregatedKline] of aggregated) {
-      const key = `${symbol}:${interval}`;
-      const indicatorManager = getOrCreateManager(key);
-      const iv = indicatorManager.update(aggregatedKline);
-
-      const bar: LiveBar = {
-        symbol,
-        interval,
-        kline: aggregatedKline,
-        indicators: {
-          ema9: iv.ema9.value,
-          ema21: iv.ema21.value,
-          ema200: iv.ema200.value,
-          macd: {
-            macd: iv.macd.macd,
-            signal: iv.macd.signal,
-            histogram: iv.macd.histogram,
+        const bar: LiveBar = {
+          symbol,
+          interval,
+          kline: aggregatedKline,
+          indicators: {
+            ema9: iv.ema9.value,
+            ema21: iv.ema21.value,
+            ema200: iv.ema200.value,
+            macd: {
+              macd: iv.macd.macd,
+              signal: iv.macd.signal,
+              histogram: iv.macd.histogram,
+            },
+            vwap: iv.vwap.vwap,
           },
-          vwap: iv.vwap.vwap,
-        },
-      };
+        };
 
-      upsertSnapshot(key, bar);
+        upsertSnapshot(key, bar);
 
-      // Broadcast to all connected WebSocket clients
-      for (const listener of listeners) {
+        for (const listener of listeners) {
+          try {
+            listener(bar);
+          } catch (err) {
+            log.error({ err }, 'Broadcast listener error');
+          }
+        }
+      }
+      return;
+    }
+
+    // ── OrderBook → bid/ask ticker (throttled) ────────────────────────────
+    if (streamData.dataType === 'orderBook') {
+      const ob = streamData.data as { bids: [number, number][]; asks: [number, number][] };
+      const symbol = streamData.symbol;
+      const bid = ob.bids?.[0]?.[0];
+      const ask = ob.asks?.[0]?.[0];
+      if (
+        bid === null ||
+        bid === undefined ||
+        ask === null ||
+        ask === undefined ||
+        !Number.isFinite(bid) ||
+        !Number.isFinite(ask)
+      )
+        return;
+
+      const now = Date.now();
+      const lastSent = tickerThrottle.get(symbol) ?? 0;
+      if (now - lastSent < TICKER_THROTTLE_MS) return;
+      tickerThrottle.set(symbol, now);
+
+      const update: TickerUpdate = { symbol, bid, ask };
+      for (const listener of tickerListeners) {
         try {
-          listener(bar);
+          listener(update);
         } catch (err) {
-          log.error({ err }, 'Broadcast listener error');
+          log.error({ err }, 'Ticker listener error');
         }
       }
     }
@@ -151,10 +197,11 @@ async function bybitPlugin(fastify: FastifyInstance): Promise<void> {
     .then(() => {
       for (const sym of ALLOWED_SYMBOLS) {
         manager.subscribe('kline', sym, '1');
+        manager.subscribe('orderbook', sym, '1'); // orderbook.1.{symbol} — best bid/ask
       }
       log.info(
         { testnet: config.bybitTestnet, symbols: ALLOWED_SYMBOLS },
-        `Bybit connected — subscribed to 1m klines for ${ALLOWED_SYMBOLS.length} symbols`
+        `Bybit connected — subscribed to 1m klines + orderbook.1 for ${ALLOWED_SYMBOLS.length} symbols`
       );
     })
     .catch((err: unknown) => {
@@ -169,6 +216,10 @@ async function bybitPlugin(fastify: FastifyInstance): Promise<void> {
     subscribe: (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);
+    },
+    subscribeTicker: (listener) => {
+      tickerListeners.add(listener);
+      return () => tickerListeners.delete(listener);
     },
   };
 

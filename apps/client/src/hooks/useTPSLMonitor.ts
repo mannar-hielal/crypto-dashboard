@@ -19,7 +19,7 @@ import { useEffect, useRef } from 'react';
 import { useStore } from 'zustand';
 import { useLayoutStore } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
-import { usePaperStore } from '@/store/paperStore';
+import { usePaperStore, COMMISSION_RATE } from '@/store/paperStore';
 
 // ─── Pure breach-check — exported for unit testing ───────────────────────────
 
@@ -44,7 +44,12 @@ export function checkTPSL(
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
-export function useTPSLMonitor() {
+interface TPSLMonitorOptions {
+  /** Called when a position is auto-closed. pnl > 0 = profit, pnl < 0 = loss. */
+  onClosed?: (pnl: number) => void;
+}
+
+export function useTPSLMonitor({ onClosed }: TPSLMonitorOptions = {}) {
   // Monitor pane 0 (primary trading pane) — scoped to active symbol only
   const latestPrice = useStore(paneStores[0], (s) => s.latestPrice);
   const symbol = useLayoutStore((s) => s.panes[0].symbol);
@@ -53,6 +58,8 @@ export function useTPSLMonitor() {
   // without needing to re-subscribe and re-attach the effect.
   const closePosition = useRef(usePaperStore.getState().closePosition);
   const addJournalNote = useRef(usePaperStore.getState().addJournalNote);
+  const onClosedRef = useRef(onClosed);
+  onClosedRef.current = onClosed;
 
   useEffect(() => {
     if (latestPrice === null) return;
@@ -67,11 +74,22 @@ export function useTPSLMonitor() {
 
       if (triggered) {
         closePosition.current(pos.id, price);
+        // Gross PnL (same formula as closePosition)
+        const grossPnl =
+          pos.side === 'long'
+            ? (price - pos.entryPrice) * pos.quantity
+            : (pos.entryPrice - price) * pos.quantity;
+        // Net PnL = gross − exit commission — matches Balance History and the
+        // badge shown on the manual-close exec journal entry.
+        const exitCommission = pos.quantity * price * COMMISSION_RATE;
+        const netPnl = grossPnl - exitCommission;
+        onClosedRef.current?.(grossPnl);
         const label = triggered === 'TP' ? 'Take-Profit' : 'Stop-Loss';
         // isUserNote: false — system-generated entries must not be user-editable
         addJournalNote.current(
           `Auto-closed ${pos.side.toUpperCase()} ${pos.symbol} — ${label} hit at $${price.toFixed(4)}`,
-          false
+          false,
+          netPnl
         );
       }
     }
