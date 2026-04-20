@@ -177,7 +177,7 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
         }
       });
 
-      // ③ Subscribe to ticker (bid/ask) updates and forward to this client
+      // ③ Subscribe to ticker (lastPrice/bid/ask) updates and forward to this client
       const unsubscribeTicker = fastify.bybit.subscribeTicker((update: TickerUpdate) => {
         if (update.symbol !== symbol) return;
         if (socket.readyState === 1 /* WebSocket.OPEN */) {

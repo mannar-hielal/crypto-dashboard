@@ -3,7 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { BybitWebSocketManager } from '../services/BybitWebSocketManager.js';
 import { CandleAggregator } from '../services/CandleAggregator.js';
 import { IndicatorManager } from '../services/IndicatorCalculator.js';
-import type { Kline } from '../types/index.js';
+import type { Kline, TickerData } from '../types/index.js';
 import { config } from '../config.js';
 import { logger } from '../logger.js';
 import { ALLOWED_SYMBOLS } from '../constants.js';
@@ -32,13 +32,14 @@ export interface BybitService {
   getSnapshot(symbol: string, interval: string): LiveBar[];
   /** Subscribe to live bar updates. Returns an unsubscribe function. */
   subscribe(listener: (bar: LiveBar) => void): () => void;
-  /** Subscribe to best bid/ask updates (throttled ~500ms). Returns an unsubscribe function. */
+  /** Subscribe to best bid/ask + last-price updates in real time (no throttle). Returns an unsubscribe function. */
   subscribeTicker(listener: (update: TickerUpdate) => void): () => void;
 }
 
-/** Best bid/ask for a symbol, broadcast from orderbook.1 stream */
+/** Best bid/ask + last trade price for a symbol, broadcast from tickers stream */
 export interface TickerUpdate {
   symbol: string;
+  lastPrice: number;
   bid: number;
   ask: number;
 }
@@ -77,11 +78,8 @@ async function bybitPlugin(fastify: FastifyInstance): Promise<void> {
   const snapshots = new Map<string, LiveBar[]>();
   // Active browser WebSocket listeners
   const listeners = new Set<(bar: LiveBar) => void>();
-  // Ticker (bid/ask) listeners
+  // Ticker (lastPrice/bid/ask) listeners
   const tickerListeners = new Set<(update: TickerUpdate) => void>();
-  // Throttle: last broadcast time per symbol (prevent >2/s per symbol)
-  const tickerThrottle = new Map<string, number>();
-  const TICKER_THROTTLE_MS = 500;
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -150,28 +148,15 @@ async function bybitPlugin(fastify: FastifyInstance): Promise<void> {
       return;
     }
 
-    // ── OrderBook → bid/ask ticker (throttled) ────────────────────────────
-    if (streamData.dataType === 'orderBook') {
-      const ob = streamData.data as { bids: [number, number][]; asks: [number, number][] };
-      const symbol = streamData.symbol;
-      const bid = ob.bids?.[0]?.[0];
-      const ask = ob.asks?.[0]?.[0];
-      if (
-        bid === null ||
-        bid === undefined ||
-        ask === null ||
-        ask === undefined ||
-        !Number.isFinite(bid) ||
-        !Number.isFinite(ask)
-      )
-        return;
-
-      const now = Date.now();
-      const lastSent = tickerThrottle.get(symbol) ?? 0;
-      if (now - lastSent < TICKER_THROTTLE_MS) return;
-      tickerThrottle.set(symbol, now);
-
-      const update: TickerUpdate = { symbol, bid, ask };
+    // ── Tickers → lastPrice / bid / ask (real-time, no throttle) ─────────
+    if (streamData.dataType === 'ticker') {
+      const td = streamData.data as TickerData;
+      const update: TickerUpdate = {
+        symbol: td.symbol,
+        lastPrice: td.lastPrice,
+        bid: td.bid,
+        ask: td.ask,
+      };
       for (const listener of tickerListeners) {
         try {
           listener(update);
@@ -197,11 +182,11 @@ async function bybitPlugin(fastify: FastifyInstance): Promise<void> {
     .then(() => {
       for (const sym of ALLOWED_SYMBOLS) {
         manager.subscribe('kline', sym, '1');
-        manager.subscribe('orderbook', sym, '1'); // orderbook.1.{symbol} — best bid/ask
+        manager.subscribe('tickers', sym); // tickers.{symbol} — real-time lastPrice + bid1/ask1
       }
       log.info(
         { testnet: config.bybitTestnet, symbols: ALLOWED_SYMBOLS },
-        `Bybit connected — subscribed to 1m klines + orderbook.1 for ${ALLOWED_SYMBOLS.length} symbols`
+        `Bybit connected — subscribed to 1m klines + tickers for ${ALLOWED_SYMBOLS.length} symbols`
       );
     })
     .catch((err: unknown) => {

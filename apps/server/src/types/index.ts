@@ -33,12 +33,19 @@ export interface Trade {
 
 // ─── STREAMING ────────────────────────────────────────────────────────────────
 
-export type StreamDataType = 'kline' | 'orderBook' | 'trade';
+export interface TickerData {
+  symbol: string;
+  lastPrice: number;
+  bid: number;
+  ask: number;
+}
+
+export type StreamDataType = 'kline' | 'orderBook' | 'trade' | 'ticker';
 
 export interface StreamData {
   symbol: string;
   dataType: StreamDataType;
-  data: Kline | OrderBook | Trade;
+  data: Kline | OrderBook | Trade | TickerData;
   timestamp: number;
 }
 
