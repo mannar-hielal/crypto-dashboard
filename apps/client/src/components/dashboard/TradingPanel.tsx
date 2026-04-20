@@ -6,6 +6,7 @@ import { useLayoutStore } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
 import { usePaperStore, COMMISSION_RATE } from '@/store/paperStore';
 import { useTradingSoundCtx } from '@/hooks/TradingSoundContext';
+import { floorToLot } from '@/lib/markets';
 import { bg, color, fontSize } from '@/lib/tokens';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -170,23 +171,42 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
     return null;
   })();
 
-  /** Base-asset units */
-  const units: number | null = (() => {
+  /** Raw base-asset units (before lot rounding) */
+  const rawUnits: number | null = (() => {
     if (!usdtAmount || !execPrice) return null;
     return usdtAmount / execPrice;
+  })();
+
+  /**
+   * Lot-size rounded qty — mirrors TradingView's behaviour.
+   * In USD mode:  floor(inputUSD / price, lotDecimals) → actual filled qty
+   * In units mode: floor(inputQty, lotDecimals)
+   */
+  const units: number | null = (() => {
+    if (rawUnits === null) return null;
+    return floorToLot(rawUnits, symbol);
+  })();
+
+  /**
+   * Actual USD value that will be filled after lot rounding.
+   * This is what TV shows as "Trade value" and what gets deducted from balance.
+   */
+  const actualUsdAmount: number | null = (() => {
+    if (units === null || !execPrice) return null;
+    return units * execPrice;
   })();
 
   /** Equivalent display (opposite of qtyMode) */
   const equivalent: string | null = (() => {
     if (qtyMode === 'usd' && units !== null) return `${units.toFixed(6)} ${baseAsset}`;
-    if (qtyMode === 'units' && usdtAmount !== null) return `$${usdtAmount.toFixed(2)}`;
+    if (qtyMode === 'units' && actualUsdAmount !== null) return `$${actualUsdAmount.toFixed(2)}`;
     return null;
   })();
 
-  // margin = the user's input amount (deducted from balance); tradeValue = notional exposure
-  const margin = usdtAmount;
-  const tradeValue = usdtAmount !== null ? usdtAmount * leverage : null;
-  const commission = usdtAmount !== null ? usdtAmount * COMMISSION_RATE : null;
+  // margin/tradeValue/commission are all based on the lot-rounded actual filled amount
+  const margin = actualUsdAmount;
+  const tradeValue = actualUsdAmount !== null ? actualUsdAmount * leverage : null;
+  const commission = actualUsdAmount !== null ? actualUsdAmount * COMMISSION_RATE : null;
   const marginPct = margin !== null ? Math.min(100, (margin / balance) * 100) : 0;
   const marginExceeds = margin !== null && margin > balance;
 
@@ -236,9 +256,14 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
       const v = parseFloat(qtyInput);
       if (!isNaN(v)) {
         if (qtyMode === 'usd') {
-          setQtyInput((v / execPrice).toFixed(6));
+          // Show lot-rounded qty when switching to units mode
+          const rounded = floorToLot(v / execPrice, symbol);
+          setQtyInput(rounded.toFixed(6));
         } else {
-          setQtyInput((v * execPrice).toFixed(2));
+          // actualUsdAmount already reflects rounded qty × price
+          setQtyInput(
+            actualUsdAmount !== null ? actualUsdAmount.toFixed(2) : (v * execPrice).toFixed(2)
+          );
         }
       }
     }
@@ -255,7 +280,11 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
       setFormError(`Enter a ${qtyMode === 'usd' ? 'USD' : baseAsset} amount`);
       return null;
     }
-    if (usdtAmount + usdtAmount * COMMISSION_RATE > balance) {
+    if (!actualUsdAmount || actualUsdAmount <= 0) {
+      setFormError('Amount too small for minimum lot size');
+      return null;
+    }
+    if (actualUsdAmount + actualUsdAmount * COMMISSION_RATE > balance) {
       setFormError('Insufficient balance');
       return null;
     }
@@ -291,7 +320,7 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
         return null;
       }
     }
-    return { amount: usdtAmount, tp, sl };
+    return { amount: actualUsdAmount, tp, sl };
   }
 
   function handleExecute() {
