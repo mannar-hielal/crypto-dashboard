@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart2 } from 'lucide-react';
 import { usePaneFeeds } from '@/hooks/usePaneFeeds';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useTPSLMonitor } from '@/hooks/useTPSLMonitor';
 import { usePendingOrderMonitor } from '@/hooks/usePendingOrderMonitor';
 import { TradingSoundProvider, useTradingSoundCtx } from '@/hooks/TradingSoundContext';
@@ -61,6 +62,7 @@ function DashboardInner() {
   const sound = useTradingSoundCtx();
 
   usePaneFeeds();
+  useDocumentTitle();
 
   // Stable callback refs — memoized so they don't change on every render.
   // Depend on `sound` (the whole object) — React Compiler infers the object-level

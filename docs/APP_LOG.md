@@ -550,6 +550,29 @@ ask: number | null; // best ask from Bybit orderbook.1
 - **`PaperTradingPanel`**: Symbol cells in Positions, Orders, and History tables now use `SymbolPair` (16 px base) instead of single `CryptoIcon`.
 - **`SymbolBar`**: Symbol picker trigger button (18 px base) and every dropdown row (20 px base) now use `SymbolPair`. `CryptoIcon` import removed from both files (unused after migration).
 
+### ✅ Completed (added 2026-04-20 — live price in browser tab title)
+
+- **`useDocumentTitle` hook** (`apps/client/src/hooks/useDocumentTitle.ts`) — updates `document.title` on every ticker tick using the active pane's `latestPrice` and `priceChange`.
+  - Format: `▲ BTC/USDT 75,249.90 +1.96% · CryptoDash` / `▼ BTC/USDT 75,249.90 −0.03% · CryptoDash`
+  - `▲`/`▼` solid Unicode triangles — universally rendered in browser tabs, direction is immediately readable without color
+  - `splitSymbol()` converts `BTCUSDT` → `BTC/USDT`; `formatPrice()` scales decimal places by magnitude (≥1000 → 2dp, ≥1 → 4dp, <1 → 6dp)
+  - % change derived from `priceChange / prevClose × 100`; omitted when `priceChange` is null (first tick)
+  - Restores to `CryptoDash` on unmount (navigating away from dashboard)
+  - **Infinite loop fix**: uses 8 separate primitive `useStore` selectors (4 × `latestPrice` + 4 × `priceChange`) instead of object selectors. Object selectors return a new reference on every call → Zustand `getSnapshot` never stable → infinite render loop. Primitive selectors compare by value. Same root cause as the `paneSymbols` `useShallow` fix (APP_LOG Known Gotchas).
+- Called in `DashboardInner` after `usePaneFeeds()`.
+
+### ✅ Completed (added 2026-04-20 — real-time price feed fix)
+
+- **Root cause**: `latestPrice` was derived from kline candle closes; bid/ask came from `orderbook.1` throttled at 500 ms server-side. Both introduced up to ~$11 lag vs TradingView's direct Bybit connection during active markets.
+- **Fix — server `BybitWebSocketManager.ts`**: Added `'tickers'` to `VALID_CHANNELS`. Added `parseTicker()` method — parses `lastPrice`, `bid1Price`, `ask1Price` from Bybit v5 `tickers.{symbol}` stream. Emits `StreamData` with `dataType: 'ticker'`.
+- **Fix — server `types/index.ts`**: Added `TickerData` interface (`symbol`, `lastPrice`, `bid`, `ask`). Added `'ticker'` to `StreamDataType` union.
+- **Fix — server `plugins/bybit.ts`**: Replaced `orderbook.1` subscriptions with `tickers.{symbol}` for all `ALLOWED_SYMBOLS`. Removed `tickerThrottle` map and `TICKER_THROTTLE_MS` constant entirely — tickers stream already pushes at a sensible rate. Extended `TickerUpdate` interface with `lastPrice: number`. Handler now reads from `TickerData` instead of `OrderBook`.
+- **Fix — SDK `types/index.ts`**: Added `lastPrice: number` to the `ticker` `WsMessage` union variant.
+- **Fix — client `paneStore.ts`**: `setBidAsk(bid, ask, lastPrice?)` — optional third arg updates `latestPrice` in store so the header/TradingPanel reflect the ticker's `lastPrice`, not just the last kline close.
+- **Fix — client `usePaneFeeds.ts`**: On `ticker` message, updates `lastKnownPrices` from `msg.lastPrice` and calls `setBidAsk(msg.bid, msg.ask, msg.lastPrice)`.
+- **Result**: `latestPrice`, bid, and ask in the TradingPanel now update at the same rate as TradingView's direct feed. Price lag eliminated.
+- **Known gotcha added**: See "Tickers stream replaces orderbook.1" in Known Gotchas below.
+
 ### 🔄 In Progress (current sprint — 2026-04-19)
 
 - ~~**Phase 2 cont.**: `PaperTradingPanel` header — Account Settings modal~~ ✅ Done
@@ -605,6 +628,7 @@ ask: number | null; // best ask from Bybit orderbook.1
   - _`MultiChartArea.tsx`_: added `followerLatest===null` guard (skip `setCrosshairPosition` when pane has no data yet). Added range validation: if `coordinateToPrice` returns a price more than 50% away from `followerLatest`, the chart's scale is stale — discard the value and fall back to `bar.close` (breaking the feedback loop).
 - **`isMountedRef` stale-update pattern**: shared `useRef(true)` reset to `true` at the top of every effect run is unsafe. When a dependency changes, React runs the cleanup (sets ref to `false`) then immediately runs the new effect (sets ref back to `true`). Any in-flight Promise from the previous run sees `true` and writes stale data to the store. Fix: use a per-run closure variable `let cancelled = false` instead. Old closures keep their own `cancelled` flag; no cross-run interference. Applied to both `usePriceFeed` and `usePaneFeeds`.
 - **`usePriceFeed` retirement**: `usePriceFeed` was the original single-pane WebSocket hook feeding `marketStore`. It was superseded by `usePaneFeeds` (multi-pane) but never removed or disconnected cleanly — leaving `marketStore` permanently at its initial null state. `TickerBar` and `PaperTradingPanel` silently showed null prices as a result. Fixed: both components now read from `paneStores[0]`; `usePriceFeed` is kept (not deleted) in case single-pane mode ever returns, but is not called. `sourceEvent` is only set on real pointer events; programmatic `setCrosshairPosition` / `clearCrosshairPosition` calls fire the callback with `sourceEvent: undefined`. The old `isSyncingCrosshair` boolean ref was fragile — if lightweight-charts fires the callback asynchronously (after the current call stack), the guard would already be `false` and the echo would propagate, causing visible drift. The `sourceEvent` check is timing-independent and is the correct v5-API approach. `isSyncingTimeRange` guard ref is still needed for `subscribeVisibleTimeRangeChange` (no `sourceEvent` equivalent).
+- **`useStore` object selectors → infinite loop**: any `useStore(store, (s) => ({ a: s.x, b: s.y }))` selector creates a new object reference on every call. Zustand's `useSyncExternalStore` compares snapshots by reference; a new object is always "different", causing an infinite render loop. **Fix**: use one `useStore` call per primitive value, or wrap with `useShallow`. Applied in `useDocumentTitle` (8 primitive selectors) and `SymbolBar` (`useShallow` on `paneSymbols`). Never use object/array literals in `useStore` selectors without `useShallow`.
 - **`useStore` with dynamic store** — `SymbolBar` calls `useStore` 4 times (unconditional), picks `allData[activePane]`. Safe because hook call count never changes.
 - **`layoutStore` persistence**: `cd-layout` key, version 1. Layout + sync options survive page refresh; per-pane symbol/interval also persisted. (validates shape without widening). Lookup in `CryptoIcon.tsx` casts to `Record<string, string | undefined>` first — `satisfies` narrows keys to literal union, so bracket-access without cast would be a TS error.
 - **Bid/Ask in `paneStore` not `marketStore`**: The APP_LOG originally planned `bid`/`ask` on `marketStore`, but `marketStore` is retired at runtime. Fields were added to `paneStore.PaneMarketState` instead (`bid`, `ask`, `setBidAsk`). `reset()` clears them. `TradingPanel` reads from the active pane store (8 extra unconditional `useStore` calls — hook-count always 4×2=8, never conditional).
@@ -614,9 +638,10 @@ ask: number | null; // best ask from Bybit orderbook.1
 - **Framer Motion `key` on CSS-animated ticker**: `TickerBar` `doubled.map` uses `key={i}` (array index) — pre-existing. Safe here because the list is static and order never changes, but violates the checklist rule. Pending fix: `${item.symbol}-${i < items.length ? 'a' : 'b'}`.
 - **`motion.form` stagger timing**: `LoginPage` form fields use `delayChildren: 0.12` — fields start appearing before the card entrance (`duration: 0.35`) finishes. Intentional fast-start; bump to `0.28` if visual overlap is undesirable.
 
----
+- **Tickers stream replaces orderbook.1**: Server now subscribes to `tickers.{symbol}` (not `orderbook.1.{symbol}`) for bid/ask/lastPrice. Bybit v5 tickers payload fields: `lastPrice`, `bid1Price`, `ask1Price`. `TickerUpdate` now carries `lastPrice`. `WsMessage` ticker variant carries `lastPrice`. `setBidAsk(bid, ask, lastPrice?)` — passing `lastPrice` updates `latestPrice` in the pane store so TradingPanel header and order buttons stay in sync with the real-time last trade price, not the previous candle close.
+- **`latestPrice` dual-update**: `latestPrice` is still updated by `addBar` (kline close) as a fallback, and also updated by every ticker message (higher frequency, true last trade price). The ticker update takes precedence for display during active markets.
 
-## 🗂️ Pending Tasks (from review 2026-04-12)
+--- (from review 2026-04-12)
 
 > Items raised by the code review of `fix/chart-area` branch — address before merging.
 
@@ -634,4 +659,4 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 ---
 
-_Last updated: 2026-04-19 — **feat(ui): SymbolPair component + symbol picker update** (`10ff43a`→`927604c`): (1) **`SymbolPair` component** added to `CryptoIcon.tsx`: stacked base/quote coin icons in TradingView style — base coin full size (front), quote coin at 65% overlapping bottom-right with panel-colour ring separator; falls back to `CryptoIcon` text badge for unknown symbols. (2) **`USDT` added to `CRYPTO_ICON_URLS`** (10 symbols total; `cryptoIcons.test.ts` updated: count 9→10, USDT mock + expected-symbols entry). (3) **`PaperTradingPanel`** Symbol cells in Positions, Orders, History replaced with `SymbolPair` (16 px base). (4) **`SymbolBar`** symbol picker trigger (18 px base) and dropdown rows (20 px base) replaced with `SymbolPair`. `CryptoIcon` import removed from both components (unused). Previously: **feat: crypto leverage settings + rejected order icon + dialog centering** (`c5827a5`→`da54503`)._
+_Last updated: 2026-04-20 — **feat: live ▲/▼ price in browser tab title + infinite loop fix** (`b73f113`): `useDocumentTitle` hook updates `document.title` on every ticker tick — format `▲ BTC/USDT 75,249.90 +1.96% · CryptoDash`; 8 primitive `useStore` selectors prevent getSnapshot infinite loop. Previously: **feat(ui): SymbolPair component + symbol picker update** (`10ff43a`→`927604c`): (1) **`SymbolPair` component** added to `CryptoIcon.tsx`: stacked base/quote coin icons in TradingView style — base coin full size (front), quote coin at 65% overlapping bottom-right with panel-colour ring separator; falls back to `CryptoIcon` text badge for unknown symbols. (2) **`USDT` added to `CRYPTO_ICON_URLS`** (10 symbols total; `cryptoIcons.test.ts` updated: count 9→10, USDT mock + expected-symbols entry). (3) **`PaperTradingPanel`** Symbol cells in Positions, Orders, History replaced with `SymbolPair` (16 px base). (4) **`SymbolBar`** symbol picker trigger (18 px base) and dropdown rows (20 px base) replaced with `SymbolPair`. `CryptoIcon` import removed from both components (unused). Previously: **feat: crypto leverage settings + rejected order icon + dialog centering** (`c5827a5`→`da54503`)._

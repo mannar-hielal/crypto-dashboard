@@ -75,7 +75,7 @@ export interface LiveBar {
 export type WsMessage =
   | { type: 'snapshot'; bars: LiveBar[] }
   | { type: 'bar'; bar: LiveBar }
-  | { type: 'ticker'; symbol: string; bid: number; ask: number };
+  | { type: 'ticker'; symbol: string; lastPrice: number; bid: number; ask: number };
 
 export interface CandleHistoryResponse {
   symbol: string;

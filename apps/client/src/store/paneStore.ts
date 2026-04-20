@@ -37,7 +37,7 @@ export interface PaneMarketState {
   setSnapshot: (bars: CandleBar[], indicators: IndicatorSnapshot | null) => void;
   addBar: (liveBar: LiveBar) => void;
   setConnected: (connected: boolean) => void;
-  setBidAsk: (bid: number, ask: number) => void;
+  setBidAsk: (bid: number, ask: number, lastPrice?: number) => void;
   /** Wipe all data — called before a new symbol/interval connects */
   reset: () => void;
 }
@@ -94,7 +94,26 @@ function createPaneStore() {
 
     setConnected: (isConnected) => set({ isConnected }),
 
-    setBidAsk: (bid, ask) => set({ bid, ask }),
+    setBidAsk: (bid, ask, lastPrice) =>
+      set((s) => {
+        // If no lastPrice was provided, only update bid/ask; leave latestPrice and
+        // priceChange untouched so the direction indicator stays consistent.
+        if (lastPrice == null) {
+          return { bid, ask };
+        }
+
+        // Recompute priceChange relative to the previous confirmed candle close
+        // so that latestPrice = previousClose + priceChange invariant holds.
+        const previousClose =
+          s.bars.length >= 2 ? (s.bars[s.bars.length - 2]?.close ?? null) : null;
+
+        return {
+          bid,
+          ask,
+          latestPrice: lastPrice,
+          priceChange: previousClose == null ? s.priceChange : lastPrice - previousClose,
+        };
+      }),
 
     reset: () =>
       set({
