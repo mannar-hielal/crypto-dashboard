@@ -51,6 +51,20 @@ function shortId(id: string): string {
   return id.length > 10 ? `…${id.slice(-10)}` : id;
 }
 
+/**
+ * Format a market price the TradingView way:
+ *   75495.1  → "75,495.1"
+ *   0.000234 → "0.000234"
+ * Thousands separator, trailing zeros stripped, precision auto-scaled.
+ */
+function fmtMktPrice(price: number): string {
+  const maxDp = price >= 1000 ? 2 : price >= 1 ? 4 : 6;
+  return price.toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: maxDp,
+  });
+}
+
 // ─── Stagger helpers ──────────────────────────────────────────────────────────
 
 const rowVariants = {
@@ -1022,7 +1036,7 @@ export function PaperTradingPanel({
                                     )}
                                     {isVisible('positions', 'entry') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                        ${pos.entryPrice.toFixed(2)}
+                                        ${fmtMktPrice(pos.entryPrice)}
                                       </td>
                                     )}
                                     {isVisible('positions', 'tp') && (
@@ -1033,7 +1047,7 @@ export function PaperTradingPanel({
                                           color: pos.takeProfit ? color.green : color.muted,
                                         }}
                                       >
-                                        {pos.takeProfit ? `$${pos.takeProfit.toFixed(2)}` : '—'}
+                                        {pos.takeProfit ? `$${fmtMktPrice(pos.takeProfit)}` : '—'}
                                       </td>
                                     )}
                                     {isVisible('positions', 'sl') && (
@@ -1044,12 +1058,12 @@ export function PaperTradingPanel({
                                           color: pos.stopLoss ? color.red : color.muted,
                                         }}
                                       >
-                                        {pos.stopLoss ? `$${pos.stopLoss.toFixed(2)}` : '—'}
+                                        {pos.stopLoss ? `$${fmtMktPrice(pos.stopLoss)}` : '—'}
                                       </td>
                                     )}
                                     {isVisible('positions', 'mark') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                        ${markPrice.toFixed(2)}
+                                        ${fmtMktPrice(markPrice)}
                                       </td>
                                     )}
                                     {isVisible('positions', 'pnl') && (
@@ -1332,10 +1346,10 @@ export function PaperTradingPanel({
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/80">
                                         {isPending
                                           ? type === 'limit'
-                                            ? `$${p!.triggerPrice.toFixed(2)}`
+                                            ? `$${fmtMktPrice(p!.triggerPrice)}`
                                             : '—'
                                           : h!.limitPrice != null
-                                            ? `$${h!.limitPrice.toFixed(2)}`
+                                            ? `$${fmtMktPrice(h!.limitPrice)}`
                                             : '—'}
                                       </td>
                                     )}
@@ -1343,17 +1357,17 @@ export function PaperTradingPanel({
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/80">
                                         {isPending
                                           ? type === 'stop'
-                                            ? `$${p!.triggerPrice.toFixed(2)}`
+                                            ? `$${fmtMktPrice(p!.triggerPrice)}`
                                             : '—'
                                           : h!.stopPrice != null
-                                            ? `$${h!.stopPrice.toFixed(2)}`
+                                            ? `$${fmtMktPrice(h!.stopPrice)}`
                                             : '—'}
                                       </td>
                                     )}
                                     {isVisible('orders', 'fillPrice') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/80">
                                         {!isPending && h!.fillPrice != null
-                                          ? `$${h!.fillPrice.toFixed(2)}`
+                                          ? `$${fmtMktPrice(h!.fillPrice)}`
                                           : '—'}
                                       </td>
                                     )}
@@ -1367,7 +1381,7 @@ export function PaperTradingPanel({
                                         }}
                                       >
                                         {isPending && p!.takeProfit
-                                          ? `$${p!.takeProfit.toFixed(2)}`
+                                          ? `$${fmtMktPrice(p!.takeProfit)}`
                                           : '—'}
                                       </td>
                                     )}
@@ -1380,7 +1394,7 @@ export function PaperTradingPanel({
                                         }}
                                       >
                                         {isPending && p!.stopLoss
-                                          ? `$${p!.stopLoss.toFixed(2)}`
+                                          ? `$${fmtMktPrice(p!.stopLoss)}`
                                           : '—'}
                                       </td>
                                     )}
@@ -1574,17 +1588,19 @@ export function PaperTradingPanel({
                                     )}
                                     {isVisible('orderhistory', 'limitPrice') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/80">
-                                        {o.limitPrice != null ? `$${o.limitPrice.toFixed(2)}` : '—'}
+                                        {o.limitPrice != null
+                                          ? `$${fmtMktPrice(o.limitPrice)}`
+                                          : '—'}
                                       </td>
                                     )}
                                     {isVisible('orderhistory', 'stopPrice') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/80">
-                                        {o.stopPrice != null ? `$${o.stopPrice.toFixed(2)}` : '—'}
+                                        {o.stopPrice != null ? `$${fmtMktPrice(o.stopPrice)}` : '—'}
                                       </td>
                                     )}
                                     {isVisible('orderhistory', 'fillPrice') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/80">
-                                        {o.fillPrice != null ? `$${o.fillPrice.toFixed(2)}` : '—'}
+                                        {o.fillPrice != null ? `$${fmtMktPrice(o.fillPrice)}` : '—'}
                                       </td>
                                     )}
                                     {isVisible('orderhistory', 'status') && (
@@ -1795,14 +1811,14 @@ export function PaperTradingPanel({
                                     {isVisible('history', 'entry') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
                                         {row.kind === 'trade'
-                                          ? `$${row.data.entryPrice.toFixed(2)}`
+                                          ? `$${fmtMktPrice(row.data.entryPrice)}`
                                           : '—'}
                                       </td>
                                     )}
                                     {isVisible('history', 'exit') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
                                         {row.kind === 'trade'
-                                          ? `$${row.data.exitPrice.toFixed(2)}`
+                                          ? `$${fmtMktPrice(row.data.exitPrice)}`
                                           : '—'}
                                       </td>
                                     )}
