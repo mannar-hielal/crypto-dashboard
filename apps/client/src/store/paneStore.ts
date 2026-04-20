@@ -37,7 +37,7 @@ export interface PaneMarketState {
   setSnapshot: (bars: CandleBar[], indicators: IndicatorSnapshot | null) => void;
   addBar: (liveBar: LiveBar) => void;
   setConnected: (connected: boolean) => void;
-  setBidAsk: (bid: number, ask: number) => void;
+  setBidAsk: (bid: number, ask: number, lastPrice?: number) => void;
   /** Wipe all data — called before a new symbol/interval connects */
   reset: () => void;
 }
@@ -94,7 +94,12 @@ function createPaneStore() {
 
     setConnected: (isConnected) => set({ isConnected }),
 
-    setBidAsk: (bid, ask) => set({ bid, ask }),
+    setBidAsk: (bid, ask, lastPrice) =>
+      set((s) => ({
+        bid,
+        ask,
+        latestPrice: lastPrice ?? s.latestPrice,
+      })),
 
     reset: () =>
       set({

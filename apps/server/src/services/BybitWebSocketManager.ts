@@ -5,7 +5,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { Kline, OrderBook, Trade, StreamData } from '../types/index.js';
+import { Kline, OrderBook, Trade, TickerData, StreamData } from '../types/index.js';
 import { logger } from '../logger.js';
 
 const log = logger.child({ service: 'BybitWebSocketManager' });
@@ -105,7 +105,12 @@ export class BybitWebSocketManager extends EventEmitter {
   // 🔐 Valid Bybit symbol format: uppercase letters + digits (e.g. BTCUSDT, ETH1000USDT)
   private static readonly VALID_SYMBOL = /^[A-Z0-9]{3,20}$/;
   // 🔐 Valid channels for Phase 1 only
-  private static readonly VALID_CHANNELS = new Set(['kline', 'orderbook', 'publicTrade']);
+  private static readonly VALID_CHANNELS = new Set([
+    'kline',
+    'orderbook',
+    'publicTrade',
+    'tickers',
+  ]);
   // 🔐 Max subscriptions to prevent memory exhaustion
   private static readonly MAX_SUBSCRIPTIONS = 50;
 
@@ -272,6 +277,8 @@ export class BybitWebSocketManager extends EventEmitter {
         );
       } else if (channelType === 'publicTrade') {
         eventData = this.parseTrade(streamData, symbol);
+      } else if (channelType === 'tickers') {
+        eventData = this.parseTicker(streamData, symbol);
       }
 
       if (eventData) {
@@ -371,6 +378,31 @@ export class BybitWebSocketManager extends EventEmitter {
       };
     } catch (error) {
       log.error({ err: error }, 'Failed to parse order book');
+      return null;
+    }
+  }
+
+  /**
+   * Private: Parse ticker data from Bybit v5 tickers stream
+   * Provides real-time lastPrice, best bid, and best ask — no aggregation lag.
+   */
+  private parseTicker(data: unknown, symbol: string): StreamData | null {
+    try {
+      if (!data || typeof data !== 'object') return null;
+      const raw = data as Record<string, unknown>;
+
+      const lastPrice = parseFloat(String(raw.lastPrice));
+      const bid = parseFloat(String(raw.bid1Price));
+      const ask = parseFloat(String(raw.ask1Price));
+
+      if (!Number.isFinite(lastPrice) || !Number.isFinite(bid) || !Number.isFinite(ask)) {
+        return null;
+      }
+
+      const ticker: TickerData = { symbol, lastPrice, bid, ask };
+      return { symbol, dataType: 'ticker', data: ticker, timestamp: Date.now() };
+    } catch (error) {
+      log.error({ err: error }, 'Failed to parse ticker');
       return null;
     }
   }
