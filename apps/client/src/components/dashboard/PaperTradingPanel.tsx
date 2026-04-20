@@ -78,15 +78,19 @@ const POSITION_COLS: ColDef[] = [
   { id: 'symbol', label: 'Symbol', align: 'left', defaultOn: true, sticky: true },
   { id: 'side', label: 'Side', align: 'left', defaultOn: true },
   { id: 'qty', label: 'Qty', align: 'right', defaultOn: true },
-  { id: 'entry', label: 'Entry', align: 'right', defaultOn: true },
-  { id: 'mark', label: 'Mark', align: 'right', defaultOn: true },
-  { id: 'tp', label: 'TP', align: 'right', defaultOn: true },
-  { id: 'sl', label: 'SL', align: 'right', defaultOn: true },
-  { id: 'pnl', label: 'PnL (USDT)', align: 'right', defaultOn: true },
+  { id: 'entry', label: 'Avg Fill Price', align: 'right', defaultOn: true },
+  { id: 'tp', label: 'Take Profit', align: 'right', defaultOn: true },
+  { id: 'sl', label: 'Stop Loss', align: 'right', defaultOn: true },
+  { id: 'mark', label: 'Last Price', align: 'right', defaultOn: true },
+  { id: 'pnl', label: 'Unrealized P&L', align: 'right', defaultOn: true },
+  { id: 'pnlPct', label: 'Unrealized P&L %', align: 'right', defaultOn: true },
+  { id: 'tradeValue', label: 'Trade Value', align: 'right', defaultOn: true },
+  { id: 'marketValue', label: 'Market Value', align: 'right', defaultOn: true },
+  { id: 'leverage', label: 'Leverage', align: 'right', defaultOn: true },
+  { id: 'margin', label: 'Margin', align: 'right', defaultOn: true },
+  { id: 'expiry', label: 'Expiration Date', align: 'right', defaultOn: false },
   { id: 'orderId', label: 'Order ID', align: 'right', defaultOn: false },
   { id: 'openedAt', label: 'Opened At', align: 'right', defaultOn: false },
-  { id: 'leverage', label: 'Leverage', align: 'right', defaultOn: false },
-  { id: 'margin', label: 'Margin', align: 'right', defaultOn: false },
   { id: 'commission', label: 'Commission', align: 'right', defaultOn: false },
   { id: 'close', label: 'Close', align: 'center', defaultOn: true, sticky: true },
 ];
@@ -967,6 +971,8 @@ export function PaperTradingPanel({
                                 const isProfit = pnl >= 0;
                                 const margin = pos.entryUsdtAmount;
                                 const commission = pos.entryUsdtAmount * COMMISSION_RATE;
+                                const tradeValue = pos.entryPrice * pos.quantity;
+                                const marketValue = markPrice * pos.quantity;
 
                                 return (
                                   <motion.tr
@@ -1005,7 +1011,7 @@ export function PaperTradingPanel({
                                           ) : (
                                             <TrendingDown className="h-3 w-3" />
                                           )}
-                                          {pos.side === 'long' ? 'LONG' : 'SHORT'}
+                                          {pos.side === 'long' ? 'Long' : 'Short'}
                                         </span>
                                       </td>
                                     )}
@@ -1017,11 +1023,6 @@ export function PaperTradingPanel({
                                     {isVisible('positions', 'entry') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
                                         ${pos.entryPrice.toFixed(2)}
-                                      </td>
-                                    )}
-                                    {isVisible('positions', 'mark') && (
-                                      <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                        ${markPrice.toFixed(2)}
                                       </td>
                                     )}
                                     {isVisible('positions', 'tp') && (
@@ -1046,20 +1047,101 @@ export function PaperTradingPanel({
                                         {pos.stopLoss ? `$${pos.stopLoss.toFixed(2)}` : '—'}
                                       </td>
                                     )}
+                                    {isVisible('positions', 'mark') && (
+                                      <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                        ${markPrice.toFixed(2)}
+                                      </td>
+                                    )}
                                     {isVisible('positions', 'pnl') && (
                                       <td
                                         className="px-3 py-1.5 text-right tabular-nums font-semibold"
                                         style={{ color: isProfit ? color.green : color.red }}
                                       >
-                                        {isProfit ? '+' : ''}
-                                        {pnl.toFixed(2)}{' '}
-                                        <span
-                                          style={{ fontSize: fontSize.xs10 }}
-                                          className="opacity-70"
-                                        >
-                                          ({isProfit ? '+' : ''}
-                                          {pnlPct.toFixed(2)}%)
+                                        <span className="inline-flex items-center gap-1">
+                                          <span>
+                                            {isProfit ? '+' : ''}
+                                            {pnl.toFixed(2)}
+                                          </span>
+                                          <span
+                                            style={{
+                                              fontSize: fontSize.xs10,
+                                              color: isProfit ? color.green : color.red,
+                                              opacity: 0.7,
+                                            }}
+                                          >
+                                            USD
+                                          </span>
                                         </span>
+                                      </td>
+                                    )}
+                                    {isVisible('positions', 'pnlPct') && (
+                                      <td
+                                        className="px-3 py-1.5 text-right tabular-nums font-semibold"
+                                        style={{ color: isProfit ? color.green : color.red }}
+                                      >
+                                        {isProfit ? '+' : ''}
+                                        {pnlPct.toFixed(2)}%
+                                      </td>
+                                    )}
+                                    {isVisible('positions', 'tradeValue') && (
+                                      <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                        <span className="inline-flex items-center gap-1">
+                                          <span>{tradeValue.toFixed(2)}</span>
+                                          <span
+                                            style={{
+                                              fontSize: fontSize.xs10,
+                                              color: color.muted,
+                                            }}
+                                          >
+                                            USD
+                                          </span>
+                                        </span>
+                                      </td>
+                                    )}
+                                    {isVisible('positions', 'marketValue') && (
+                                      <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                        <span className="inline-flex items-center gap-1">
+                                          <span>{marketValue.toFixed(2)}</span>
+                                          <span
+                                            style={{
+                                              fontSize: fontSize.xs10,
+                                              color: color.muted,
+                                            }}
+                                          >
+                                            USD
+                                          </span>
+                                        </span>
+                                      </td>
+                                    )}
+                                    {isVisible('positions', 'leverage') && (
+                                      <td
+                                        className="px-3 py-1.5 text-right tabular-nums"
+                                        style={{ fontSize: fontSize.xs10, color: color.muted }}
+                                      >
+                                        1:{leverage}
+                                      </td>
+                                    )}
+                                    {isVisible('positions', 'margin') && (
+                                      <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                        <span className="inline-flex items-center gap-1">
+                                          <span>{margin.toFixed(2)}</span>
+                                          <span
+                                            style={{
+                                              fontSize: fontSize.xs10,
+                                              color: color.muted,
+                                            }}
+                                          >
+                                            USD
+                                          </span>
+                                        </span>
+                                      </td>
+                                    )}
+                                    {isVisible('positions', 'expiry') && (
+                                      <td
+                                        className="px-3 py-1.5 text-right tabular-nums"
+                                        style={{ fontSize: fontSize.xs10, color: color.muted }}
+                                      >
+                                        —
                                       </td>
                                     )}
                                     {isVisible('positions', 'orderId') && (
@@ -1077,22 +1159,6 @@ export function PaperTradingPanel({
                                         style={{ fontSize: fontSize.xs10, color: color.muted }}
                                       >
                                         {fmtTime(pos.openedAt)}
-                                      </td>
-                                    )}
-                                    {isVisible('positions', 'leverage') && (
-                                      <td
-                                        className="px-3 py-1.5 text-right tabular-nums"
-                                        style={{ fontSize: fontSize.xs10, color: color.muted }}
-                                      >
-                                        {leverage}×
-                                      </td>
-                                    )}
-                                    {isVisible('positions', 'margin') && (
-                                      <td
-                                        className="px-3 py-1.5 text-right tabular-nums"
-                                        style={{ fontSize: fontSize.xs10, color: color.muted }}
-                                      >
-                                        ${margin.toFixed(2)}
                                       </td>
                                     )}
                                     {isVisible('positions', 'commission') && (
@@ -1348,7 +1414,7 @@ export function PaperTradingPanel({
                                         className="px-3 py-1.5 text-right tabular-nums"
                                         style={{ fontSize: fontSize.xs10, color: color.muted }}
                                       >
-                                        {leverage}×
+                                        1:{leverage}
                                       </td>
                                     )}
                                     {isVisible('orders', 'margin') && (
@@ -1356,7 +1422,13 @@ export function PaperTradingPanel({
                                         className="px-3 py-1.5 text-right tabular-nums"
                                         style={{ fontSize: fontSize.xs10, color: color.muted }}
                                       >
-                                        {isPending ? `$${p!.usdtAmount.toFixed(2)}` : '—'}
+                                        {isPending
+                                          ? p!.usdtAmount != null
+                                            ? `$${p!.usdtAmount.toFixed(2)}`
+                                            : '—'
+                                          : h!.margin != null
+                                            ? `$${h!.margin.toFixed(2)}`
+                                            : '—'}
                                       </td>
                                     )}
                                     {isVisible('orders', 'cancel') && (
@@ -1586,7 +1658,7 @@ export function PaperTradingPanel({
                                         className="px-3 py-1.5 text-right tabular-nums"
                                         style={{ fontSize: fontSize.xs10, color: color.muted }}
                                       >
-                                        {leverage}×
+                                        1:{leverage}
                                       </td>
                                     )}
                                     {isVisible('orderhistory', 'margin') && (
@@ -1594,7 +1666,7 @@ export function PaperTradingPanel({
                                         className="px-3 py-1.5 text-right tabular-nums"
                                         style={{ fontSize: fontSize.xs10, color: color.muted }}
                                       >
-                                        —
+                                        {o.margin != null ? `$${o.margin.toFixed(2)}` : '—'}
                                       </td>
                                     )}
                                   </motion.tr>
@@ -1785,7 +1857,7 @@ export function PaperTradingPanel({
                                         className="px-3 py-1.5 text-right tabular-nums"
                                         style={{ fontSize: fontSize.xs10, color: color.muted }}
                                       >
-                                        {leverage}×
+                                        1:{leverage}
                                       </td>
                                     )}
                                   </motion.tr>
@@ -1806,7 +1878,7 @@ export function PaperTradingPanel({
                       </motion.div>
                     ))}
 
-                  {/* ════ Journal ══════════════════════════════════════════════════ */}
+                  {/* ════ Journal ════════════════════════════════════════════ */}
                   {infoTab === 'journal' && (
                     <div className="flex min-h-0 flex-1 flex-col">
                       <AnimatePresence initial={false}>

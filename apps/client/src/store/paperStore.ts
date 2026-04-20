@@ -78,6 +78,8 @@ export interface HistoricalOrder {
   fillPrice?: number;
   status: OrderStatus;
   commission: number;
+  /** USDT margin used for this order entry (= usdtAmount at placement; omitted for closing orders) */
+  margin?: number;
   placingTime: number;
   closingTime: number;
   /** Human-readable reason why the order was rejected (only set when status === 'rejected') */
@@ -238,6 +240,7 @@ export const usePaperStore = create<PaperState>()(
             qty: price > 0 ? (usdtAmount * leverage) / price : 0,
             status: 'rejected',
             commission: 0,
+            margin: usdtAmount,
             placingTime: now,
             closingTime: now,
             rejectionReason: 'Not enough funds to complete the order.',
@@ -274,6 +277,7 @@ export const usePaperStore = create<PaperState>()(
           fillPrice: price,
           status: 'filled',
           commission,
+          margin: usdtAmount,
           placingTime: now,
           closingTime: now,
         };
@@ -470,8 +474,9 @@ export const usePaperStore = create<PaperState>()(
           type: 'limit',
           qty,
           limitPrice: triggerPrice,
-          status: 'filled', // will be updated on execution; kept here as placement record
+          status: 'filled',
           commission: usdtAmount * COMMISSION_RATE,
+          margin: usdtAmount,
           placingTime: now,
           closingTime: now,
         };
@@ -515,8 +520,9 @@ export const usePaperStore = create<PaperState>()(
           type: 'stop',
           qty,
           stopPrice: triggerPrice,
-          status: 'filled', // placeholder; updated on execution
+          status: 'filled',
           commission: usdtAmount * COMMISSION_RATE,
+          margin: usdtAmount,
           placingTime: now,
           closingTime: now,
         };
