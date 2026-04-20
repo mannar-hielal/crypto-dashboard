@@ -21,7 +21,7 @@ import { useStore } from 'zustand';
 import { useShallow } from 'zustand/shallow';
 import { paneStores, lastKnownPrices } from '@/store/paneStore';
 import { usePaperStore, COMMISSION_RATE, CRYPTO_LEVERAGE_OPTIONS } from '@/store/paperStore';
-import type { JournalEntry, HistoricalOrder } from '@/store/paperStore';
+import type { JournalEntry, HistoricalOrder, PendingOrder } from '@/store/paperStore';
 import type { PanelSize } from '@/pages/DashboardPage';
 import { bg, color, fontSize } from '@/lib/tokens';
 import { useLayoutStore } from '@/store/layoutStore';
@@ -34,7 +34,7 @@ import { SoundSettings } from './SoundSettings';
 
 type InfoTab = 'positions' | 'orders' | 'history' | 'journal';
 type ColTab = 'positions' | 'orders' | 'history';
-type OrderSubTab = 'all' | 'limit' | 'stop';
+type OrderSubTab = 'all' | 'working' | 'filled' | 'cancelled' | 'rejected';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -91,20 +91,22 @@ const POSITION_COLS: ColDef[] = [
 ];
 
 const ORDER_COLS: ColDef[] = [
-  { id: 'symbol', label: 'Symbol', align: 'left', defaultOn: true, sticky: true },
-  { id: 'status', label: 'Status', align: 'left', defaultOn: true },
-  { id: 'type', label: 'Type', align: 'left', defaultOn: true },
-  { id: 'side', label: 'Side', align: 'left', defaultOn: true },
-  { id: 'qty', label: 'Qty', align: 'right', defaultOn: true },
-  { id: 'trigger', label: 'Trigger', align: 'right', defaultOn: true },
-  { id: 'tp', label: 'TP', align: 'right', defaultOn: true },
-  { id: 'sl', label: 'SL', align: 'right', defaultOn: true },
-  { id: 'reserved', label: 'Reserved', align: 'right', defaultOn: true },
-  { id: 'placedAt', label: 'Placing Time', align: 'right', defaultOn: true },
-  { id: 'orderId', label: 'Order ID', align: 'right', defaultOn: false },
-  { id: 'leverage', label: 'Leverage', align: 'right', defaultOn: false },
-  { id: 'margin', label: 'Margin', align: 'right', defaultOn: false },
-  { id: 'cancel', label: 'Cancel', align: 'center', defaultOn: true, sticky: true },
+  { id: 'symbol',     label: 'Symbol',       align: 'left',   defaultOn: true,  sticky: true },
+  { id: 'status',     label: 'Status',       align: 'left',   defaultOn: true  },
+  { id: 'type',       label: 'Type',         align: 'left',   defaultOn: true  },
+  { id: 'side',       label: 'Side',         align: 'left',   defaultOn: true  },
+  { id: 'qty',        label: 'Qty',          align: 'right',  defaultOn: true  },
+  { id: 'limitPrice', label: 'Limit Price',  align: 'right',  defaultOn: true  },
+  { id: 'stopPrice',  label: 'Stop Price',   align: 'right',  defaultOn: true  },
+  { id: 'fillPrice',  label: 'Fill Price',   align: 'right',  defaultOn: true  },
+  { id: 'tp',         label: 'TP',           align: 'right',  defaultOn: true  },
+  { id: 'sl',         label: 'SL',           align: 'right',  defaultOn: true  },
+  { id: 'commission', label: 'Commission',   align: 'right',  defaultOn: true  },
+  { id: 'placedAt',   label: 'Placing Time', align: 'right',  defaultOn: true  },
+  { id: 'orderId',    label: 'Order ID',     align: 'right',  defaultOn: false },
+  { id: 'leverage',   label: 'Leverage',     align: 'right',  defaultOn: false },
+  { id: 'margin',     label: 'Margin',       align: 'right',  defaultOn: false },
+  { id: 'cancel',     label: 'Cancel',       align: 'center', defaultOn: true,  sticky: true },
 ];
 
 const HISTORY_COLS: ColDef[] = [
@@ -391,9 +393,37 @@ export function PaperTradingPanel({
   const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : null;
   const realizedPnl = history.reduce((s, t) => s + t.pnl, 0);
 
-  // ── Filtered orders list (for sub-tabs) ───────────────────────────────────
-  const filteredOrders =
-    orderSubTab === 'all' ? pendingOrders : pendingOrders.filter((o) => o.type === orderSubTab);
+
+  // ── Unified order display rows (pending + historical) ─────────────────────
+  type OrderDisplayRow =
+    | { kind: 'pending';    data: PendingOrder }
+    | { kind: 'historical'; data: HistoricalOrder };
+
+  const allOrderDisplayRows: OrderDisplayRow[] = [
+    ...pendingOrders.map((o) => ({ kind: 'pending' as const,    data: o })),
+    ...orders.map((o)         => ({ kind: 'historical' as const, data: o })),
+  ].sort((a, b) => {
+    const ta = a.kind === 'pending' ? a.data.placedAt     : a.data.placingTime;
+    const tb = b.kind === 'pending' ? b.data.placedAt     : b.data.placingTime;
+    return tb - ta;
+  });
+
+  const filteredOrderRows: OrderDisplayRow[] =
+    orderSubTab === 'all'
+      ? allOrderDisplayRows
+      : orderSubTab === 'working'
+        ? allOrderDisplayRows.filter((r) => r.kind === 'pending')
+        : orderSubTab === 'filled'
+          ? allOrderDisplayRows.filter(
+              (r) => r.kind === 'historical' && r.data.status === 'filled',
+            )
+          : orderSubTab === 'cancelled'
+            ? allOrderDisplayRows.filter(
+                (r) => r.kind === 'historical' && r.data.status === 'cancelled',
+              )
+            : allOrderDisplayRows.filter(
+                (r) => r.kind === 'historical' && r.data.status === 'rejected',
+              );
 
   // ── Column helpers ─────────────────────────────────────────────────────────
   function isVisible(tab: ColTab, colId: string): boolean {
@@ -740,11 +770,15 @@ export function PaperTradingPanel({
                 className="flex shrink-0 items-center gap-0 border-b border-white/4 px-2"
                 style={{ background: bg.panel }}
               >
-                {(['all', 'limit', 'stop'] as OrderSubTab[]).map((sub) => {
+                {(['all', 'working', 'filled', 'cancelled', 'rejected'] as OrderSubTab[]).map((sub) => {
                   const count =
                     sub === 'all'
-                      ? pendingOrders.length
-                      : pendingOrders.filter((o) => o.type === sub).length;
+                      ? allOrderDisplayRows.length
+                      : sub === 'working'
+                        ? allOrderDisplayRows.filter((r) => r.kind === 'pending').length
+                        : allOrderDisplayRows.filter(
+                            (r) => r.kind === 'historical' && r.data.status === sub,
+                          ).length;
                   return (
                     <button
                       key={sub}
@@ -1006,7 +1040,7 @@ export function PaperTradingPanel({
 
                   {/* ════ Pending Orders ═══════════════════════════════════════════ */}
                   {infoTab === 'orders' &&
-                    (filteredOrders.length === 0 ? (
+                    (filteredOrderRows.length === 0 ? (
                       <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -1014,7 +1048,7 @@ export function PaperTradingPanel({
                         style={{ color: color.muted }}
                       >
                         <Clock className="h-4 w-4 opacity-40" />
-                        No pending orders
+                        No orders
                       </motion.div>
                     ) : (
                       <div className="flex-1 overflow-y-auto">
@@ -1040,11 +1074,30 @@ export function PaperTradingPanel({
                           </thead>
                           <tbody>
                             <AnimatePresence>
-                              {filteredOrders.map((order, i) => {
-                                const margin = order.usdtAmount;
+                              {filteredOrderRows.map((row, i) => {
+                                const isPending = row.kind === 'pending';
+                                const p = isPending ? row.data : null;
+                                const h = !isPending ? row.data : null;
+                                const rowId   = row.data.id;
+                                const symbol  = row.data.symbol;
+                                const side    = row.data.side;
+                                const type    = row.data.type;
+                                const qty     = row.data.qty;
+                                const placingTs = isPending ? (p!).placedAt : (h!).placingTime;
+
+                                // status badge config
+                                const statusLabel = isPending ? 'Working'
+                                  : h!.status === 'filled'    ? 'Filled'
+                                  : h!.status === 'cancelled' ? 'Cancelled'
+                                  : 'Rejected';
+                                const statusColor = isPending ? color.amber
+                                  : h!.status === 'filled'    ? color.green
+                                  : h!.status === 'cancelled' ? color.muted
+                                  : color.red;
+
                                 return (
                                   <motion.tr
-                                    key={order.id}
+                                    key={rowId}
                                     custom={i}
                                     variants={rowVariants}
                                     initial="hidden"
@@ -1057,13 +1110,11 @@ export function PaperTradingPanel({
                                       <td className="px-3 py-1.5">
                                         <span className="flex items-center gap-2">
                                           <SymbolPair
-                                            base={order.symbol.replace('USDT', '')}
+                                            base={symbol.replace('USDT', '')}
                                             quote="USDT"
                                             baseSize={16}
                                           />
-                                          <span className="font-bold text-white">
-                                            {order.symbol}
-                                          </span>
+                                          <span className="font-bold text-white">{symbol}</span>
                                         </span>
                                       </td>
                                     )}
@@ -1073,11 +1124,11 @@ export function PaperTradingPanel({
                                           className="rounded px-1.5 py-px font-bold uppercase"
                                           style={{
                                             fontSize: fontSize.xs10,
-                                            background: `${color.amber}22`,
-                                            color: color.amber,
+                                            background: `${statusColor}22`,
+                                            color: statusColor,
                                           }}
                                         >
-                                          Working
+                                          {statusLabel}
                                         </span>
                                       </td>
                                     )}
@@ -1087,17 +1138,11 @@ export function PaperTradingPanel({
                                           className="rounded px-1 py-px font-bold uppercase"
                                           style={{
                                             fontSize: fontSize.xs10,
-                                            background:
-                                              order.type === 'limit'
-                                                ? `${color.purpleDark}33`
-                                                : `${color.amber}22`,
-                                            color:
-                                              order.type === 'limit'
-                                                ? color.purpleDark
-                                                : color.amber,
+                                            background: type === 'limit' ? `${color.purpleDark}33` : `${color.amber}22`,
+                                            color: type === 'limit' ? color.purpleDark : color.amber,
                                           }}
                                         >
-                                          {order.type}
+                                          {type}
                                         </span>
                                       </td>
                                     )}
@@ -1107,95 +1152,90 @@ export function PaperTradingPanel({
                                           className="font-bold uppercase"
                                           style={{
                                             fontSize: fontSize.xs10,
-                                            color: order.side === 'buy' ? color.green : color.red,
+                                            color: side === 'buy' ? color.green : color.red,
                                           }}
                                         >
-                                          {order.side === 'buy' ? 'BUY' : 'SELL'}
+                                          {side === 'buy' ? 'Buy' : 'Sell'}
                                         </span>
                                       </td>
                                     )}
                                     {isVisible('orders', 'qty') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                        {order.qty.toFixed(6)}
+                                        {qty > 0 ? qty.toFixed(6) : '—'}
                                       </td>
                                     )}
-                                    {isVisible('orders', 'trigger') && (
+                                    {isVisible('orders', 'limitPrice') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/80">
-                                        ${order.triggerPrice.toFixed(2)}
+                                        {isPending
+                                          ? (type === 'limit' ? `$${p!.triggerPrice.toFixed(2)}` : '—')
+                                          : (h!.limitPrice != null ? `$${h!.limitPrice.toFixed(2)}` : '—')}
+                                      </td>
+                                    )}
+                                    {isVisible('orders', 'stopPrice') && (
+                                      <td className="px-3 py-1.5 text-right tabular-nums text-white/80">
+                                        {isPending
+                                          ? (type === 'stop' ? `$${p!.triggerPrice.toFixed(2)}` : '—')
+                                          : (h!.stopPrice != null ? `$${h!.stopPrice.toFixed(2)}` : '—')}
+                                      </td>
+                                    )}
+                                    {isVisible('orders', 'fillPrice') && (
+                                      <td className="px-3 py-1.5 text-right tabular-nums text-white/80">
+                                        {!isPending && h!.fillPrice != null
+                                          ? `$${h!.fillPrice.toFixed(2)}`
+                                          : '—'}
                                       </td>
                                     )}
                                     {isVisible('orders', 'tp') && (
-                                      <td
-                                        className="px-3 py-1.5 text-right tabular-nums"
-                                        style={{
-                                          fontSize: fontSize.xs10,
-                                          color: order.takeProfit ? color.green : color.muted,
-                                        }}
-                                      >
-                                        {order.takeProfit ? `$${order.takeProfit.toFixed(2)}` : '—'}
+                                      <td className="px-3 py-1.5 text-right tabular-nums" style={{ fontSize: fontSize.xs10, color: (isPending && p!.takeProfit) ? color.green : color.muted }}>
+                                        {isPending && p!.takeProfit ? `$${p!.takeProfit.toFixed(2)}` : '—'}
                                       </td>
                                     )}
                                     {isVisible('orders', 'sl') && (
-                                      <td
-                                        className="px-3 py-1.5 text-right tabular-nums"
-                                        style={{
-                                          fontSize: fontSize.xs10,
-                                          color: order.stopLoss ? color.red : color.muted,
-                                        }}
-                                      >
-                                        {order.stopLoss ? `$${order.stopLoss.toFixed(2)}` : '—'}
+                                      <td className="px-3 py-1.5 text-right tabular-nums" style={{ fontSize: fontSize.xs10, color: (isPending && p!.stopLoss) ? color.red : color.muted }}>
+                                        {isPending && p!.stopLoss ? `$${p!.stopLoss.toFixed(2)}` : '—'}
                                       </td>
                                     )}
-                                    {isVisible('orders', 'reserved') && (
-                                      <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                        ${order.usdtAmount.toFixed(2)}
-                                      </td>
-                                    )}
-                                    {isVisible('orders', 'orderId') && (
-                                      <td
-                                        className="px-3 py-1.5 text-right tabular-nums font-mono"
-                                        style={{ fontSize: fontSize.xs10, color: color.muted }}
-                                        title={order.id}
-                                      >
-                                        {shortId(order.id)}
+                                    {isVisible('orders', 'commission') && (
+                                      <td className="px-3 py-1.5 text-right tabular-nums" style={{ fontSize: fontSize.xs10, color: color.muted }}>
+                                        {!isPending ? h!.commission.toFixed(4) : '—'}
                                       </td>
                                     )}
                                     {isVisible('orders', 'placedAt') && (
-                                      <td
-                                        className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums"
-                                        style={{ fontSize: fontSize.xs10, color: color.muted }}
-                                      >
-                                        {fmtTime(order.placedAt)}
+                                      <td className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums" style={{ fontSize: fontSize.xs10, color: color.muted }}>
+                                        {fmtTime(placingTs)}
+                                      </td>
+                                    )}
+                                    {isVisible('orders', 'orderId') && (
+                                      <td className="px-3 py-1.5 text-right tabular-nums font-mono" style={{ fontSize: fontSize.xs10, color: color.muted }} title={rowId}>
+                                        {shortId(rowId)}
                                       </td>
                                     )}
                                     {isVisible('orders', 'leverage') && (
-                                      <td
-                                        className="px-3 py-1.5 text-right tabular-nums"
-                                        style={{ fontSize: fontSize.xs10, color: color.muted }}
-                                      >
+                                      <td className="px-3 py-1.5 text-right tabular-nums" style={{ fontSize: fontSize.xs10, color: color.muted }}>
                                         {leverage}×
                                       </td>
                                     )}
                                     {isVisible('orders', 'margin') && (
-                                      <td
-                                        className="px-3 py-1.5 text-right tabular-nums"
-                                        style={{ fontSize: fontSize.xs10, color: color.muted }}
-                                      >
-                                        ${margin.toFixed(2)}
+                                      <td className="px-3 py-1.5 text-right tabular-nums" style={{ fontSize: fontSize.xs10, color: color.muted }}>
+                                        {isPending ? `$${p!.usdtAmount.toFixed(2)}` : '—'}
                                       </td>
                                     )}
                                     {isVisible('orders', 'cancel') && (
                                       <td className="px-3 py-1.5 text-center">
-                                        <motion.button
-                                          onClick={() => cancelPendingOrder(order.id)}
-                                          whileHover={{ scale: 1.2 }}
-                                          whileTap={{ scale: 0.9 }}
-                                          title="Cancel pending order (balance refunded)"
-                                          className="mx-auto flex h-5 w-5 items-center justify-center rounded transition-colors hover:text-brand-red"
-                                          style={{ color: color.muted }}
-                                        >
-                                          <X className="h-3 w-3" />
-                                        </motion.button>
+                                        {isPending ? (
+                                          <motion.button
+                                            onClick={() => cancelPendingOrder(rowId)}
+                                            whileHover={{ scale: 1.2 }}
+                                            whileTap={{ scale: 0.9 }}
+                                            title="Cancel pending order (balance refunded)"
+                                            className="mx-auto flex h-5 w-5 items-center justify-center rounded transition-colors hover:text-brand-red"
+                                            style={{ color: color.muted }}
+                                          >
+                                            <X className="h-3 w-3" />
+                                          </motion.button>
+                                        ) : (
+                                          <span style={{ color: color.muted, fontSize: fontSize.xs10 }}>—</span>
+                                        )}
                                       </td>
                                     )}
                                   </motion.tr>

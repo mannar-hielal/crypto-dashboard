@@ -19,7 +19,14 @@ import { useEffect, useRef } from 'react';
 import { useStore } from 'zustand';
 import { useLayoutStore } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
-import { usePaperStore, COMMISSION_RATE } from '@/store/paperStore';
+import { usePaperStore } from '@/store/paperStore';
+
+// Local price formatter (mirrors paperStore's fmtPrice)
+function fmtPrice(price: number): string {
+  if (price >= 1000) return price.toFixed(2);
+  if (price >= 1) return price.toFixed(4);
+  return price.toFixed(6);
+}
 
 // ─── Pure breach-check — exported for unit testing ───────────────────────────
 
@@ -57,7 +64,6 @@ export function useTPSLMonitor({ onClosed }: TPSLMonitorOptions = {}) {
   // Use refs so the effect closure always reads the latest store state
   // without needing to re-subscribe and re-attach the effect.
   const closePosition = useRef(usePaperStore.getState().closePosition);
-  const addJournalNote = useRef(usePaperStore.getState().addJournalNote);
   const onClosedRef = useRef(onClosed);
   onClosedRef.current = onClosed;
 
@@ -73,24 +79,16 @@ export function useTPSLMonitor({ onClosed }: TPSLMonitorOptions = {}) {
       const triggered = checkTPSL(pos, price);
 
       if (triggered) {
-        closePosition.current(pos.id, price);
+        const label = triggered === 'TP' ? 'Take-Profit' : 'Stop-Loss';
+        const reason = `Auto-closed ${pos.side.toUpperCase()} ${pos.symbol} — ${label} hit at $${fmtPrice(price)}`;
+        // Pass reason directly to closePosition — it writes 1 clean journal entry with PnL badge
+        closePosition.current(pos.id, price, reason);
         // Gross PnL (same formula as closePosition)
         const grossPnl =
           pos.side === 'long'
             ? (price - pos.entryPrice) * pos.quantity
             : (pos.entryPrice - price) * pos.quantity;
-        // Net PnL = gross − exit commission — matches Balance History and the
-        // badge shown on the manual-close exec journal entry.
-        const exitCommission = pos.quantity * price * COMMISSION_RATE;
-        const netPnl = grossPnl - exitCommission;
         onClosedRef.current?.(grossPnl);
-        const label = triggered === 'TP' ? 'Take-Profit' : 'Stop-Loss';
-        // isUserNote: false — system-generated entries must not be user-editable
-        addJournalNote.current(
-          `Auto-closed ${pos.side.toUpperCase()} ${pos.symbol} — ${label} hit at $${price.toFixed(4)}`,
-          false,
-          netPnl
-        );
       }
     }
   }, [latestPrice, symbol]);

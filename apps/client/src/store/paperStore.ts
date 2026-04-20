@@ -159,11 +159,12 @@ interface PaperState {
     price: number,
     usdtAmount: number,
     takeProfit?: number,
-    stopLoss?: number
+    stopLoss?: number,
+    skipJournal?: boolean // new param to skip journal entry
   ) => string | null;
 
   /** Close an open position at the given exit price. */
-  closePosition: (positionId: string, exitPrice: number) => void;
+  closePosition: (positionId: string, exitPrice: number, reason?: string) => void;
 
   /** Add a note to the journal. Pass isUserNote=false for system-generated entries (not user-editable). */
   addJournalNote: (text: string, isUserNote?: boolean, pnl?: number) => void;
@@ -226,7 +227,7 @@ export const usePaperStore = create<PaperState>()(
 
       setLeverage: (v) => set({ leverage: v }),
 
-      placeOrder: (symbol, side, price, usdtAmount, takeProfit, stopLoss) => {
+      placeOrder: (symbol, side, price, usdtAmount, takeProfit, stopLoss, skipJournal) => {
         const { balance, leverage } = get();
 
         // ── Validation ──────────────────────────────────────────────────────
@@ -297,27 +298,16 @@ export const usePaperStore = create<PaperState>()(
           action: `Enter ${side === 'buy' ? 'long' : 'short'} position for ${symbol} at price ${price.toFixed(4)} for ${quantity.toFixed(6)} units`,
         };
 
-        // ── Journal entries (TradingView style: 3 entries per market order) ──
-        const readableOrderId = Math.floor(1000000000 + Math.random() * 9000000000);
-        const qtyStr = fmtQty(quantity);
-        const priceStr = fmtPrice(price);
-        const journalEntries: JournalEntry[] = [
-          {
-            id: `j-${id}-exec`,
+        // ── Journal entry ─────────────────────────────────────────────────────
+        const journalEntries: JournalEntry[] = [];
+        if (!skipJournal) {
+          const positionSide = side === 'buy' ? 'LONG' : 'SHORT';
+          journalEntries.push({
+            id: `j-${id}-open`,
             time: now,
-            text: `Order ${readableOrderId} for symbol ${symbol} has been executed at price ${priceStr} for ${qtyStr} units`,
-          },
-          {
-            id: `j-${id}-placed`,
-            time: now,
-            text: `Order ${readableOrderId} successfully placed`,
-          },
-          {
-            id: `j-${id}-call`,
-            time: now,
-            text: `Call to place market order to ${side} ${qtyStr} units of symbol ${symbol}`,
-          },
-        ];
+            text: `Opened ${positionSide} ${symbol} @ $${fmtPrice(price)}`,
+          });
+        }
 
         set((s) => ({
           balance: s.balance - usdtAmount - commission,
@@ -330,7 +320,7 @@ export const usePaperStore = create<PaperState>()(
         return id;
       },
 
-      closePosition: (positionId, exitPrice) => {
+      closePosition: (positionId, exitPrice, reason) => {
         const { positions } = get();
         const pos = positions.find((p) => p.id === positionId);
         if (!pos) return;
@@ -388,32 +378,28 @@ export const usePaperStore = create<PaperState>()(
           action: `Close ${pos.side} position for ${pos.symbol} at price ${exitPrice.toFixed(4)} for ${pos.quantity.toFixed(6)} units`,
         };
 
-        // ── Journal entries (TradingView style: 3 entries per closing order) ──
-        const closingOrderId = Math.floor(1000000000 + Math.random() * 9000000000);
-        const closingQtyStr = fmtQty(pos.quantity);
-        const closingPriceStr = fmtPrice(exitPrice);
-        const closingSide = pos.side === 'long' ? 'sell' : 'buy';
+        // ── Journal entry ─────────────────────────────────────────────────────
         // Net PnL = gross PnL − exit commission — same figure shown in Balance History.
-        // Attached only to the exec entry so the badge appears on the meaningful row.
         const netPnl = pnl - commission;
-        const closingJournalEntries: JournalEntry[] = [
-          {
+        const closingJournalEntries: JournalEntry[] = [];
+        if (reason) {
+          // Caller-supplied reason (e.g. TP/SL auto-close) — use it as the entry text
+          closingJournalEntries.push({
+            id: `j-close-${closedId}-reason`,
+            time: now,
+            text: reason,
+            pnl: netPnl,
+          });
+        } else {
+          // Manual close — generic "Closed" entry with PnL badge
+          const closedSide = pos.side === 'long' ? 'LONG' : 'SHORT';
+          closingJournalEntries.push({
             id: `j-close-${closedId}-exec`,
             time: now,
-            text: `Order ${closingOrderId} for symbol ${pos.symbol} has been executed at price ${closingPriceStr} for ${closingQtyStr} units`,
+            text: `Closed ${closedSide} ${pos.symbol} @ $${fmtPrice(exitPrice)}`,
             pnl: netPnl,
-          },
-          {
-            id: `j-close-${closedId}-placed`,
-            time: now,
-            text: `Order ${closingOrderId} successfully placed`,
-          },
-          {
-            id: `j-close-${closedId}-call`,
-            time: now,
-            text: `Call to place market order to ${closingSide} ${closingQtyStr} units of symbol ${pos.symbol}`,
-          },
-        ];
+          });
+        }
 
         set((s) => ({
           balance: s.balance + returnAmount,

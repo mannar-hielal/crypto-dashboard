@@ -65,12 +65,12 @@ export const font = {
 } as const;
 
 export const fontSize = {
-  xxs: '9px', // badge counts, tiny labels
-  xs10: '10px', // chart legend, table headers, small secondary labels
-  xs11: '11px', // standard panel / table body text
-  xs: '12px', // Tailwind text-xs equivalent
-  sm: '14px', // Tailwind text-sm equivalent
-  base: '16px', // Tailwind text-base equivalent
+  xxs: '11px',  // badge counts, tiny labels          (14px × 0.75 ≈ 11px)
+  xs10: '11px', // chart legend, table headers         (15px × 0.75 ≈ 11px)
+  xs11: '13px', // standard panel / table body text    (17px × 0.75 ≈ 13px)
+  xs: '14px',   // Tailwind text-xs equivalent          (18px × 0.75 ≈ 14px)
+  sm: '16px',   // Tailwind text-sm equivalent          (21px × 0.75 ≈ 16px)
+  base: '18px', // Tailwind text-base equivalent        (24px × 0.75)
 } as const;
 
 export const lineHeight = {

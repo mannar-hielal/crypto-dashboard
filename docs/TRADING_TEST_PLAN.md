@@ -38,11 +38,11 @@
 
 | #     | Action                                                            | Expected                                                                                                | Status | TV ✓ | Notes |
 | ----- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------ | ---- | ----- |
-| 1.1.1 | Select **Buy**, tab = **Market**, qty mode = **USD**, enter `100` | Order info shows Margin ≈ lot-rounded fill (e.g. ~$97 for BTC), Trade value = same, Commission ≈ $0.068 | ⬜     |      |       |
-| 1.1.2 | Click **Buy** button                                              | Button pulses; qty input clears                                                                         | ⬜     |      |       |
-| 1.1.3 | Go to **Positions** tab                                           | 1 LONG row appears: Entry ≈ live price, Qty > 0, TP = —, SL = —                                         | ⬜     | ⬜   |       |
-| 1.1.4 | Check balance                                                     | Balance = $10,000 − actualFillAmount − commission (lot-rounded, not exactly $100)                       | ⬜     | ⬜   |       |
-| 1.1.5 | Go to **Journal** tab                                             | Auto entry: `Opened LONG BTCUSDT @ $X.XX`                                                               | ⬜     |      |       |
+| 1.1.1 | Select **Buy**, tab = **Market**, qty mode = **USD**, enter `100` | Order info shows Margin ≈ lot-rounded fill (e.g. ~$97 for BTC), Trade value = same, Commission ≈ $0.068 | ✅     |      | Margin $98.31, Commission $0.0688 |
+| 1.1.2 | Click **Buy** button                                              | Button pulses; qty input clears                                                                         | ✅     |      |       |
+| 1.1.3 | Go to **Positions** tab                                           | 1 LONG row appears: Entry ≈ live price, Qty > 0, TP = —, SL = —                                         | ✅     | ✅   | Entry $75,625.20, Qty 0.001300, TP=—, SL=—. TV: $75,625.20, 1 s apart — within $1 ✓ |
+| 1.1.4 | Check balance                                                     | Balance = $10,000 − actualFillAmount − commission (lot-rounded, not exactly $100)                       | ✅     | ✅   | $10,000 − $98.31 − $0.0688 = $9,901.62 ✓. TV Available $9,901.65 — diff $0.03 ✓ |
+| 1.1.5 | Go to **Journal** tab                                             | Auto entry: `Opened LONG BTCUSDT @ $X.XX`                                                               | ✅     |      | Implemented: single clean entry `"Opened LONG BTCUSDT @ $75,625.20"` matching spec |
 
 > **TV cross-check 1.1.3:** Entry price in CryptoDash vs TradingView should differ by ≤ $1 (one bid/ask spread).
 > **TV cross-check 1.1.4:** Available balance after commission deduction should match within $0.10.
@@ -123,8 +123,8 @@
 | ----- | --------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------ | ---- | ----- |
 | 2.1.1 | Tab = **Limit**. Price input appears pre-filled with live price | Price field visible                                                              | ⬜     |      |       |
 | 2.1.2 | Set price to live − 2%, qty $200, click **Buy**                 | Pending order created; balance decreases by $200 + commission                    | ⬜     |      |       |
-| 2.1.3 | Go to **Orders** tab                                            | 1 row: LIMIT / BUY / Trigger = your price / Reserved = $200                      | ⬜     |      |       |
-| 2.1.4 | When price drops to trigger                                     | Order disappears from Orders; position appears in Positions; journal entry added | ⬜     | ⬜   |       |
+| 2.1.3 | Go to **Orders** tab → **Working** sub-tab                      | 1 row: LIMIT / BUY / Limit Price = your price; Status = Working (amber)          | ⬜     |      |       |
+| 2.1.4 | When price drops to trigger                                     | Order disappears from Working; appears in **Filled** sub-tab; journal entry added | ⬜     | ⬜   |       |
 
 > **TV cross-check 2.1.4:** Both apps should fill on the same candle; entry prices should be within $1.
 
@@ -132,8 +132,8 @@
 
 | #     | Action                                        | Expected                                                               | Status | Notes |
 | ----- | --------------------------------------------- | ---------------------------------------------------------------------- | ------ | ----- |
-| 2.2.1 | Place limit buy far below market (live − 10%) | Order appears in Orders tab                                            | ⬜     |       |
-| 2.2.2 | Click **✕** cancel in Orders tab              | Order disappears; balance **fully refunded** (back to pre-order value) | ⬜     |       |
+| 2.2.1 | Place limit buy far below market (live − 10%) | Order appears in **Working** sub-tab                                           | ⬜     |       |
+| 2.2.2 | Click **✕** cancel in Working sub-tab          | Order disappears; appears in **Cancelled** sub-tab; balance **fully refunded** | ⬜     |       |
 
 ### 2.3 Limit Sell above market
 
