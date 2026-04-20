@@ -56,6 +56,14 @@ export function useDocumentTitle() {
   const latestPrice = prices[activePane];
   const priceChange = changes[activePane];
 
+  // Restore default title on unmount only (navigating away from dashboard).
+  // Kept in its own effect so it doesn't run as a cleanup on every ticker update.
+  useEffect(() => {
+    return () => {
+      document.title = DEFAULT_TITLE;
+    };
+  }, []);
+
   useEffect(() => {
     if (latestPrice === null) {
       document.title = DEFAULT_TITLE;
@@ -78,10 +86,5 @@ export function useDocumentTitle() {
     }
 
     document.title = `${arrow} ${splitSymbol(symbol)} ${priceStr}${pctStr} · ${APP_NAME}`;
-
-    // Restore on unmount (user navigates away from dashboard)
-    return () => {
-      document.title = DEFAULT_TITLE;
-    };
   }, [symbol, latestPrice, priceChange]);
 }

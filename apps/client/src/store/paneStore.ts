@@ -95,11 +95,25 @@ function createPaneStore() {
     setConnected: (isConnected) => set({ isConnected }),
 
     setBidAsk: (bid, ask, lastPrice) =>
-      set((s) => ({
-        bid,
-        ask,
-        latestPrice: lastPrice ?? s.latestPrice,
-      })),
+      set((s) => {
+        // If no lastPrice was provided, only update bid/ask; leave latestPrice and
+        // priceChange untouched so the direction indicator stays consistent.
+        if (lastPrice == null) {
+          return { bid, ask };
+        }
+
+        // Recompute priceChange relative to the previous confirmed candle close
+        // so that latestPrice = previousClose + priceChange invariant holds.
+        const previousClose =
+          s.bars.length >= 2 ? (s.bars[s.bars.length - 2]?.close ?? null) : null;
+
+        return {
+          bid,
+          ask,
+          latestPrice: lastPrice,
+          priceChange: previousClose == null ? s.priceChange : lastPrice - previousClose,
+        };
+      }),
 
     reset: () =>
       set({

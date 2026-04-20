@@ -32,7 +32,7 @@ export interface BybitService {
   getSnapshot(symbol: string, interval: string): LiveBar[];
   /** Subscribe to live bar updates. Returns an unsubscribe function. */
   subscribe(listener: (bar: LiveBar) => void): () => void;
-  /** Subscribe to best bid/ask updates (throttled ~500ms). Returns an unsubscribe function. */
+  /** Subscribe to best bid/ask + last-price updates in real time (no throttle). Returns an unsubscribe function. */
   subscribeTicker(listener: (update: TickerUpdate) => void): () => void;
 }
 
