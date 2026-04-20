@@ -36,13 +36,13 @@
 
 ### 1.1 Basic Buy (USD mode)
 
-| #     | Action                                                            | Expected                                                          | Status | TV ✓ | Notes |
-| ----- | ----------------------------------------------------------------- | ----------------------------------------------------------------- | ------ | ---- | ----- |
-| 1.1.1 | Select **Buy**, tab = **Market**, qty mode = **USD**, enter `100` | Order info shows Margin ~$10, Trade value $100, Commission ~$0.07 | ⬜     |      |       |
-| 1.1.2 | Click **Buy** button                                              | Button pulses; qty input clears                                   | ⬜     |      |       |
-| 1.1.3 | Go to **Positions** tab                                           | 1 LONG row appears: Entry ≈ live price, Qty > 0, TP = —, SL = —   | ⬜     | ⬜   |       |
-| 1.1.4 | Check balance                                                     | Balance = $10,000 − $100 − commission                             | ⬜     | ⬜   |       |
-| 1.1.5 | Go to **Journal** tab                                             | Auto entry: `Opened LONG BTCUSDT @ $X.XX`                         | ⬜     |      |       |
+| #     | Action                                                            | Expected                                                                                                | Status | TV ✓ | Notes |
+| ----- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------ | ---- | ----- |
+| 1.1.1 | Select **Buy**, tab = **Market**, qty mode = **USD**, enter `100` | Order info shows Margin ≈ lot-rounded fill (e.g. ~$97 for BTC), Trade value = same, Commission ≈ $0.068 | ⬜     |      |       |
+| 1.1.2 | Click **Buy** button                                              | Button pulses; qty input clears                                                                         | ⬜     |      |       |
+| 1.1.3 | Go to **Positions** tab                                           | 1 LONG row appears: Entry ≈ live price, Qty > 0, TP = —, SL = —                                         | ⬜     | ⬜   |       |
+| 1.1.4 | Check balance                                                     | Balance = $10,000 − actualFillAmount − commission (lot-rounded, not exactly $100)                       | ⬜     | ⬜   |       |
+| 1.1.5 | Go to **Journal** tab                                             | Auto entry: `Opened LONG BTCUSDT @ $X.XX`                                                               | ⬜     |      |       |
 
 > **TV cross-check 1.1.3:** Entry price in CryptoDash vs TradingView should differ by ≤ $1 (one bid/ask spread).
 > **TV cross-check 1.1.4:** Available balance after commission deduction should match within $0.10.
@@ -241,6 +241,7 @@
 
 > Run this section to validate the price feed fix end-to-end. Both apps open side by side.
 > Tolerance for all price comparisons: **≤ $1.00** (one bid/ask spread for BTC).
+> Lot-size note: CryptoDash now floors qty to the same step TV uses (BTC: 0.0001, ETH: 0.001, etc.) so Trade value and qty shown on the button should match TV within the spread tolerance.
 
 | #   | Scenario                                                            | Expected                                                                              | Status | Notes |
 | --- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------ | ----- |
