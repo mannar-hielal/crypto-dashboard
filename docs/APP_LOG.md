@@ -550,6 +550,18 @@ ask: number | null; // best ask from Bybit orderbook.1
 - **`PaperTradingPanel`**: Symbol cells in Positions, Orders, and History tables now use `SymbolPair` (16 px base) instead of single `CryptoIcon`.
 - **`SymbolBar`**: Symbol picker trigger button (18 px base) and every dropdown row (20 px base) now use `SymbolPair`. `CryptoIcon` import removed from both files (unused after migration).
 
+### ✅ Completed (added 2026-04-20 — real-time price feed fix)
+
+- **Root cause**: `latestPrice` was derived from kline candle closes; bid/ask came from `orderbook.1` throttled at 500 ms server-side. Both introduced up to ~$11 lag vs TradingView's direct Bybit connection during active markets.
+- **Fix — server `BybitWebSocketManager.ts`**: Added `'tickers'` to `VALID_CHANNELS`. Added `parseTicker()` method — parses `lastPrice`, `bid1Price`, `ask1Price` from Bybit v5 `tickers.{symbol}` stream. Emits `StreamData` with `dataType: 'ticker'`.
+- **Fix — server `types/index.ts`**: Added `TickerData` interface (`symbol`, `lastPrice`, `bid`, `ask`). Added `'ticker'` to `StreamDataType` union.
+- **Fix — server `plugins/bybit.ts`**: Replaced `orderbook.1` subscriptions with `tickers.{symbol}` for all `ALLOWED_SYMBOLS`. Removed `tickerThrottle` map and `TICKER_THROTTLE_MS` constant entirely — tickers stream already pushes at a sensible rate. Extended `TickerUpdate` interface with `lastPrice: number`. Handler now reads from `TickerData` instead of `OrderBook`.
+- **Fix — SDK `types/index.ts`**: Added `lastPrice: number` to the `ticker` `WsMessage` union variant.
+- **Fix — client `paneStore.ts`**: `setBidAsk(bid, ask, lastPrice?)` — optional third arg updates `latestPrice` in store so the header/TradingPanel reflect the ticker's `lastPrice`, not just the last kline close.
+- **Fix — client `usePaneFeeds.ts`**: On `ticker` message, updates `lastKnownPrices` from `msg.lastPrice` and calls `setBidAsk(msg.bid, msg.ask, msg.lastPrice)`.
+- **Result**: `latestPrice`, bid, and ask in the TradingPanel now update at the same rate as TradingView's direct feed. Price lag eliminated.
+- **Known gotcha added**: See "Tickers stream replaces orderbook.1" in Known Gotchas below.
+
 ### 🔄 In Progress (current sprint — 2026-04-19)
 
 - ~~**Phase 2 cont.**: `PaperTradingPanel` header — Account Settings modal~~ ✅ Done
@@ -614,9 +626,10 @@ ask: number | null; // best ask from Bybit orderbook.1
 - **Framer Motion `key` on CSS-animated ticker**: `TickerBar` `doubled.map` uses `key={i}` (array index) — pre-existing. Safe here because the list is static and order never changes, but violates the checklist rule. Pending fix: `${item.symbol}-${i < items.length ? 'a' : 'b'}`.
 - **`motion.form` stagger timing**: `LoginPage` form fields use `delayChildren: 0.12` — fields start appearing before the card entrance (`duration: 0.35`) finishes. Intentional fast-start; bump to `0.28` if visual overlap is undesirable.
 
----
+- **Tickers stream replaces orderbook.1**: Server now subscribes to `tickers.{symbol}` (not `orderbook.1.{symbol}`) for bid/ask/lastPrice. Bybit v5 tickers payload fields: `lastPrice`, `bid1Price`, `ask1Price`. `TickerUpdate` now carries `lastPrice`. `WsMessage` ticker variant carries `lastPrice`. `setBidAsk(bid, ask, lastPrice?)` — passing `lastPrice` updates `latestPrice` in the pane store so TradingPanel header and order buttons stay in sync with the real-time last trade price, not the previous candle close.
+- **`latestPrice` dual-update**: `latestPrice` is still updated by `addBar` (kline close) as a fallback, and also updated by every ticker message (higher frequency, true last trade price). The ticker update takes precedence for display during active markets.
 
-## 🗂️ Pending Tasks (from review 2026-04-12)
+--- (from review 2026-04-12)
 
 > Items raised by the code review of `fix/chart-area` branch — address before merging.
 
@@ -634,4 +647,4 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 ---
 
-_Last updated: 2026-04-19 — **feat(ui): SymbolPair component + symbol picker update** (`10ff43a`→`927604c`): (1) **`SymbolPair` component** added to `CryptoIcon.tsx`: stacked base/quote coin icons in TradingView style — base coin full size (front), quote coin at 65% overlapping bottom-right with panel-colour ring separator; falls back to `CryptoIcon` text badge for unknown symbols. (2) **`USDT` added to `CRYPTO_ICON_URLS`** (10 symbols total; `cryptoIcons.test.ts` updated: count 9→10, USDT mock + expected-symbols entry). (3) **`PaperTradingPanel`** Symbol cells in Positions, Orders, History replaced with `SymbolPair` (16 px base). (4) **`SymbolBar`** symbol picker trigger (18 px base) and dropdown rows (20 px base) replaced with `SymbolPair`. `CryptoIcon` import removed from both components (unused). Previously: **feat: crypto leverage settings + rejected order icon + dialog centering** (`c5827a5`→`da54503`)._
+_Last updated: 2026-04-20 — **fix: real-time price feed** (`8876dfa`): replaced `orderbook.1` with Bybit `tickers` stream — `lastPrice` + `bid1Price`/`ask1Price` now flow end-to-end (server → SDK → paneStore) without throttle, eliminating the ~$11 lag vs TradingView. Previously: **feat(ui): SymbolPair component + symbol picker update** (`10ff43a`→`927604c`): (1) **`SymbolPair` component** added to `CryptoIcon.tsx`: stacked base/quote coin icons in TradingView style — base coin full size (front), quote coin at 65% overlapping bottom-right with panel-colour ring separator; falls back to `CryptoIcon` text badge for unknown symbols. (2) **`USDT` added to `CRYPTO_ICON_URLS`** (10 symbols total; `cryptoIcons.test.ts` updated: count 9→10, USDT mock + expected-symbols entry). (3) **`PaperTradingPanel`** Symbol cells in Positions, Orders, History replaced with `SymbolPair` (16 px base). (4) **`SymbolBar`** symbol picker trigger (18 px base) and dropdown rows (20 px base) replaced with `SymbolPair`. `CryptoIcon` import removed from both components (unused). Previously: **feat: crypto leverage settings + rejected order icon + dialog centering** (`c5827a5`→`da54503`)._
