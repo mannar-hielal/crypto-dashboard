@@ -109,14 +109,6 @@ export interface JournalEntry {
 
 // ─── Store ────────────────────────────────────────────────────────────────────
 
-// Helper – format quantity to a readable precision
-function fmtQty(qty: number): string {
-  if (qty >= 1000) return qty.toFixed(0);
-  if (qty >= 1) return qty.toFixed(4);
-  if (qty >= 0.001) return qty.toFixed(6);
-  return qty.toFixed(8);
-}
-
 // Helper – format price to a readable precision
 function fmtPrice(price: number): string {
   if (price >= 1000) return price.toFixed(2);
