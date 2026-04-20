@@ -39,14 +39,22 @@ export function useDocumentTitle() {
   const activePane = useLayoutStore((s) => s.activePane);
   const symbol = useLayoutStore((s) => s.panes[s.activePane].symbol);
 
-  // 4 unconditional reads — hook count is always stable (mirrors SymbolBar pattern)
-  const d0 = useStore(paneStores[0], (s) => ({ price: s.latestPrice, change: s.priceChange }));
-  const d1 = useStore(paneStores[1], (s) => ({ price: s.latestPrice, change: s.priceChange }));
-  const d2 = useStore(paneStores[2], (s) => ({ price: s.latestPrice, change: s.priceChange }));
-  const d3 = useStore(paneStores[3], (s) => ({ price: s.latestPrice, change: s.priceChange }));
+  // Primitive selectors — each returns a number | null, not a new object.
+  // Object selectors (e.g. `(s) => ({ price: s.latestPrice })`) create a fresh
+  // reference on every call, making Zustand's getSnapshot never stable → infinite loop.
+  const p0 = useStore(paneStores[0], (s) => s.latestPrice);
+  const p1 = useStore(paneStores[1], (s) => s.latestPrice);
+  const p2 = useStore(paneStores[2], (s) => s.latestPrice);
+  const p3 = useStore(paneStores[3], (s) => s.latestPrice);
+  const c0 = useStore(paneStores[0], (s) => s.priceChange);
+  const c1 = useStore(paneStores[1], (s) => s.priceChange);
+  const c2 = useStore(paneStores[2], (s) => s.priceChange);
+  const c3 = useStore(paneStores[3], (s) => s.priceChange);
 
-  const allData = [d0, d1, d2, d3] as const;
-  const { price: latestPrice, change: priceChange } = allData[activePane];
+  const prices = [p0, p1, p2, p3] as const;
+  const changes = [c0, c1, c2, c3] as const;
+  const latestPrice = prices[activePane];
+  const priceChange = changes[activePane];
 
   useEffect(() => {
     if (latestPrice === null) {
