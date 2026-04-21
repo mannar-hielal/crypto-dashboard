@@ -233,13 +233,12 @@ export const usePaperStore = create<PaperState>()(
         if (usdtAmount <= 0 || price <= 0) return null;
 
         // ── Position netting (TV-style) ─────────────────────────────────────
-        // If there is an existing opposite-side position for this symbol, net
-        // against it instead of opening a new position.  Mirrors how TradingView
-        // (and real exchanges) handle market orders:
-        //   • incoming qty ≤ existing qty → reduce / fully close the existing position
-        //   • incoming qty > existing qty → close existing, open remainder as new
         const oppositeSide = side === 'buy' ? 'short' : 'long';
         const existingOpp = positions.filter((p) => p.symbol === symbol && p.side === oppositeSide);
+
+        // skipOrderRecord: true when the netting path already wrote the single
+        // order record for this user action (close+open-remainder case).
+        let skipOrderRecord = false;
 
         if (existingOpp.length > 0) {
           const incomingQty = (usdtAmount * leverage) / price;
@@ -346,7 +345,9 @@ export const usePaperStore = create<PaperState>()(
           }
 
           // Record the single incoming order (TV-style: 1 order per user action).
-          // This covers the full-close, partial-close, and close+open-remainder cases.
+          // Commission covers the closed portion; the remainder's open commission is
+          // added here too so the total commission matches the full incomingQty fill.
+          const remainderCommission = Math.max(0, remainingQty) * price * COMMISSION_RATE;
           const incomingOrderId = `net-${now}-${Math.random().toString(36).slice(2, 7)}`;
           const closedQty = incomingQty - Math.max(0, remainingQty);
           const incomingOrder: HistoricalOrder = {
@@ -357,8 +358,7 @@ export const usePaperStore = create<PaperState>()(
             qty: incomingQty,
             fillPrice: price,
             status: 'filled',
-            // Commission proportional to the closed portion only (remainder will get its own entry below)
-            commission: closedQty * price * COMMISSION_RATE,
+            commission: closedQty * price * COMMISSION_RATE + remainderCommission,
             placingTime: now,
             closingTime: now,
           };
@@ -372,7 +372,8 @@ export const usePaperStore = create<PaperState>()(
           }
 
           // Otherwise, fall through to open a new position with the remaining qty.
-          // Convert remaining qty back to a usdtAmount so the rest of the function works.
+          // The order record is already written above — skip writing another one.
+          skipOrderRecord = true;
           usdtAmount = (remainingQty * price) / leverage;
         }
 
@@ -458,7 +459,7 @@ export const usePaperStore = create<PaperState>()(
         set((s) => ({
           balance: s.balance - usdtAmount - commission,
           positions: [...s.positions, position],
-          orders: [order, ...s.orders].slice(0, MAX_HISTORY * 2),
+          orders: skipOrderRecord ? s.orders : [order, ...s.orders].slice(0, MAX_HISTORY * 2),
           balanceLog: [logEntry, ...s.balanceLog].slice(0, MAX_HISTORY * 2),
           journal: [...journalEntries, ...s.journal].slice(0, MAX_JOURNAL),
         }));
