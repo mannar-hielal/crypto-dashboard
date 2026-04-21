@@ -43,6 +43,9 @@
 | 1.1.3 | Go to **Positions** tab                                           | 1 LONG row appears: Entry ≈ live price, Qty > 0, TP = —, SL = —                                         | ✅     | ✅   | Entry $75,625.20, Qty 0.001300, TP=—, SL=—. TV: $75,625.20, 1 s apart — within $1 ✓ |
 | 1.1.4 | Check balance                                                     | Balance = $10,000 − actualFillAmount − commission (lot-rounded, not exactly $100)                       | ✅     | ✅   | $10,000 − $98.31 − $0.0688 = $9,901.62 ✓. TV Available $9,901.65 — diff $0.03 ✓     |
 | 1.1.5 | Go to **Journal** tab                                             | Auto entry: `Opened LONG BTCUSDT @ $X.XX`                                                               | ✅     |      | Implemented: single clean entry `"Opened LONG BTCUSDT @ $75,625.20"` matching spec  |
+| 1.1.6 | Go to **Orders** tab → **Filled** sub-tab                         | 1 row: Type = MARKET / Side = BUY / Fill Price ≈ entry price / Status = Filled (green)                  | ⬜     |      |       |
+| 1.1.7 | Check **Orders** tab → **All** sub-tab                            | Same row visible; count badge = 1                                                                        | ⬜     |      |       |
+| 1.1.8 | Check **Orders** tab → **Working** sub-tab                        | Empty — market orders are instantly filled, never Working                                                | ⬜     |      |       |
 
 > **TV cross-check 1.1.3:** Entry price in CryptoDash vs TradingView should differ by ≤ $1 (one bid/ask spread).
 > **TV cross-check 1.1.4:** Available balance after commission deduction should match within $0.10.
