@@ -158,7 +158,12 @@ interface PaperState {
   ) => string | null;
 
   /** Close an open position at the given exit price. */
-  closePosition: (positionId: string, exitPrice: number, reason?: string, closeType?: OrderType) => void;
+  closePosition: (
+    positionId: string,
+    exitPrice: number,
+    reason?: string,
+    closeType?: OrderType
+  ) => void;
 
   /** Add a note to the journal. Pass isUserNote=false for system-generated entries (not user-editable). */
   addJournalNote: (text: string, isUserNote?: boolean, pnl?: number) => void;
