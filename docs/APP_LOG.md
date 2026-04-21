@@ -158,7 +158,7 @@
 
 2. **Orders** ✅ — unified limit/stop order lifecycle table (TV-style). Columns: Symbol, Status, Type, Side, Qty, Limit Price, Stop Price, Fill Price, TP, SL, Commission, Placing Time (on by default) · optional: Order ID, Leverage, Margin · sticky: Cancel (✕)
    - **Sub-tabs**: `All | Working | Filled | Cancelled | Rejected` filter bar; each shows live count badge; animated purple underline indicator
-   - **Market orders are excluded** — they execute instantly and are recorded in History (ClosedTrade), not here. Only limit/stop order records (`HistoricalOrder`) appear in this tab.
+   - **All order types appear here** — market orders land in the **Filled** sub-tab immediately; limit/stop orders go through Working → Filled/Cancelled. Mirrors TradingView behaviour exactly.
    - Amber count badge on tab (pending/working orders only). Empty state: Clock icon + "No orders"
    - Cancelling a pending order refunds `usdtAmount + commission` in full
    - `OrderDisplayRow` union type: `{ kind: 'pending'; data: PendingOrder } | { kind: 'historical'; data: HistoricalOrder }` — unifies both for one table render

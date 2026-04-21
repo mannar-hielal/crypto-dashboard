@@ -429,13 +429,12 @@ export function PaperTradingPanel({
     | { kind: 'pending'; data: PendingOrder }
     | { kind: 'historical'; data: HistoricalOrder };
 
-  // Market orders execute instantly and are recorded in History (ClosedTrade).
-  // The Orders tab mirrors TradingView: only limit/stop order lifecycle is shown here.
+  // All order types (market, limit, stop) appear in the Orders tab — matching TradingView.
+  // Market orders land in the Filled sub-tab immediately (no Working entry).
+  // Pending orders (limit/stop awaiting trigger) land in the Working sub-tab.
   const allOrderDisplayRows: OrderDisplayRow[] = [
     ...pendingOrders.map((o) => ({ kind: 'pending' as const, data: o })),
-    ...orders
-      .filter((o) => o.type !== 'market') // market orders belong in History, not Orders tab
-      .map((o) => ({ kind: 'historical' as const, data: o })),
+    ...orders.map((o) => ({ kind: 'historical' as const, data: o })),
   ].sort((a, b) => {
     const ta = a.kind === 'pending' ? a.data.placedAt : a.data.placingTime;
     const tb = b.kind === 'pending' ? b.data.placedAt : b.data.placingTime;

@@ -271,7 +271,7 @@
 | 7.1.1 | Reset account. Place a market Buy $100        | Go to **Order History** tab — 1 row: Type = MARKET / Side = BUY / Status = Filled (green) | ⬜     |       |
 | 7.1.2 | Check **All** and **Filled** sub-tabs         | Row visible in both; count badge on tab shows 1                                            | ⬜     |       |
 | 7.1.3 | Check **Cancelled** and **Rejected** sub-tabs | Empty (no rows)                                                                            | ⬜     |       |
-| 7.1.4 | Check Orders tab                              | Market order does **not** appear here                                                      | ⬜     |       |
+| 7.1.4 | Check **Orders** tab → **Filled** sub-tab     | Market order **also** appears here (Type = MARKET / Status = Filled) — mirrors TradingView | ⬜     |       |
 
 ### 7.2 Limit order fill appears in Order History
 
