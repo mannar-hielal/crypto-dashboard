@@ -107,14 +107,14 @@
 
 | #      | Scenario                                              | Expected                                                 | Status | Notes |
 | ------ | ----------------------------------------------------- | -------------------------------------------------------- | ------ | ----- |
-| 1.7.1  | Submit with **empty** qty                             | Error: "Enter a USD amount"                              | ⬜     |       |
-| 1.7.2  | Submit with qty **> balance** (e.g. $99,999)          | Error: "Insufficient balance"                            | ⬜     |       |
-| 1.7.3  | TP below entry for a Buy (e.g. live−1%)               | Error: "Take-Profit must be above entry price for Long"  | ⬜     |       |
-| 1.7.4  | SL above entry for a Buy (e.g. live+1%)               | Error: "Stop-Loss must be below entry price for Long"    | ⬜     |       |
-| 1.7.5  | TP above entry for a Sell                             | Error: "Take-Profit must be below entry price for Short" | ⬜     |       |
-| 1.7.6  | SL below entry for a Sell                             | Error: "Stop-Loss must be above entry price for Short"   | ⬜     |       |
-| 1.7.7  | Enter qty `0` or negative                             | Submit button disabled (opacity 30%)                     | ⬜     |       |
-| 1.7.8  | Disconnect from internet, submit market order         | Error: "Waiting for live price…"                         | ⬜     |       |
+| 1.7.1  | Submit with **empty** qty                             | Error: "Enter a USD amount"                              | ✅     |       |
+| 1.7.2  | Submit with qty **> balance** (e.g. $99,999)          | Error: "Insufficient balance"                            | ✅     |       |
+| 1.7.3  | TP below entry for a Buy (e.g. live−1%)               | Error: "Take-Profit must be above entry price for Long"  | ✅     |       |
+| 1.7.4  | SL above entry for a Buy (e.g. live+1%)               | Error: "Stop-Loss must be below entry price for Long"    | ✅     |       |
+| 1.7.5  | TP above entry for a Sell                             | Error: "Take-Profit must be below entry price for Short" | ✅     |       |
+| 1.7.6  | SL below entry for a Sell                             | Error: "Stop-Loss must be above entry price for Short"   | ✅     |       |
+| 1.7.7  | Enter qty `0` or negative                             | Submit button disabled (opacity 30%)                     | ✅     |       |
+| 1.7.8  | Disconnect from internet, submit market order         | Error: "Waiting for live price…"                         | ✅     | **Fixed:** Added `isConnected` check — market orders now block with "Waiting for live price…" when WebSocket is disconnected, even if a cached `latestPrice` exists. |
 | 1.7.9  | Place multiple positions, close them in reverse order | Each closes at correct mark price; History accumulates   | ⬜     |       |
 | 1.7.10 | Reset account mid-open position                       | Positions cleared, balance = $10,000                     | ⬜     |       |
 

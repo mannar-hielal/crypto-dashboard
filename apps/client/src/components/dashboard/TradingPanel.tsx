@@ -70,6 +70,12 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
   const lp3 = useStore(paneStores[3], (s) => s.latestPrice);
   const latestPrice = [lp0, lp1, lp2, lp3][activePane];
 
+  const ic0 = useStore(paneStores[0], (s) => s.isConnected);
+  const ic1 = useStore(paneStores[1], (s) => s.isConnected);
+  const ic2 = useStore(paneStores[2], (s) => s.isConnected);
+  const ic3 = useStore(paneStores[3], (s) => s.isConnected);
+  const isConnected = [ic0, ic1, ic2, ic3][activePane];
+
   const bid0 = useStore(paneStores[0], (s) => s.bid);
   const bid1 = useStore(paneStores[1], (s) => s.bid);
   const bid2 = useStore(paneStores[2], (s) => s.bid);
@@ -272,7 +278,7 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
   }
 
   function validate(): { amount: number; tp?: number; sl?: number } | null {
-    if (!execPrice) {
+    if (!execPrice || (tab === 'market' && !isConnected)) {
       setFormError('Waiting for live price…');
       return null;
     }
