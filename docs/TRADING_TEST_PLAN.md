@@ -64,10 +64,10 @@
 
 | #     | Action                                 | Expected                                                  | Status | Notes |
 | ----- | -------------------------------------- | --------------------------------------------------------- | ------ | ----- |
-| 1.3.1 | Click `⇄ Units` button                 | Label changes to `Quantity (BTC)`, placeholder `0.000000` | ⬜     |       |
-| 1.3.2 | Enter `0.001` units                    | Equivalent below shows ≈ live_price × 0.001 USD           | ⬜     |       |
-| 1.3.3 | Click `⇄ USD`                          | Input converts to USD value; equivalent shows 0.001 BTC   | ⬜     |       |
-| 1.3.4 | Place order in Units mode with `0.001` | Position qty ≈ 0.001                                      | ⬜     |       |
+| 1.3.1 | Click `⇄ Units` button                 | Label changes to `Quantity (BTC)`, placeholder `0.000000` | ✅     |       |
+| 1.3.2 | Enter `0.001` units                    | Equivalent below shows ≈ live_price × 0.001 USD           | ✅     |       |
+| 1.3.3 | Click `⇄ USD`                          | Input converts to USD value; equivalent shows 0.001 BTC   | ✅     |       |
+| 1.3.4 | Place order in Units mode with `0.001` | Position qty ≈ 0.001                                      | ✅     | Qty now displays `0.001` (trailing zeros stripped, matches TV format) |
 
 ### 1.4 Buy with Take-Profit only
 

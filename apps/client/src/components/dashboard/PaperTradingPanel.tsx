@@ -24,6 +24,9 @@ import { usePaperStore, COMMISSION_RATE, CRYPTO_LEVERAGE_OPTIONS } from '@/store
 import type { JournalEntry, HistoricalOrder, PendingOrder } from '@/store/paperStore';
 import type { PanelSize } from '@/pages/DashboardPage';
 import { bg, color, fontSize } from '@/lib/tokens';
+
+/** Format a crypto quantity the same way TradingView does — trim trailing zeros, max 6 dp */
+const fmtQty = (n: number) => parseFloat(n.toFixed(6)).toString();
 import { useLayoutStore } from '@/store/layoutStore';
 import { useTradingSoundCtx } from '@/hooks/TradingSoundContext';
 import { SoundSettings } from './SoundSettings';
@@ -1024,7 +1027,7 @@ export function PaperTradingPanel({
                                     )}
                                     {isVisible('positions', 'qty') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                        {pos.quantity.toFixed(6)}
+                                        {fmtQty(pos.quantity)}
                                       </td>
                                     )}
                                     {isVisible('positions', 'entry') && (
@@ -1332,7 +1335,7 @@ export function PaperTradingPanel({
                                     )}
                                     {isVisible('orders', 'qty') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                        {qty > 0 ? qty.toFixed(6) : '—'}
+                                        {qty > 0 ? fmtQty(qty) : '—'}
                                       </td>
                                     )}
                                     {isVisible('orders', 'limitPrice') && (
@@ -1576,7 +1579,7 @@ export function PaperTradingPanel({
                                     )}
                                     {isVisible('orderhistory', 'qty') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                        {o.qty > 0 ? o.qty.toFixed(6) : '—'}
+                                        {o.qty > 0 ? fmtQty(o.qty) : '—'}
                                       </td>
                                     )}
                                     {isVisible('orderhistory', 'limitPrice') && (
