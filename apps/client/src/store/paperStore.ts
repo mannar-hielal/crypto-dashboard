@@ -227,7 +227,7 @@ export const usePaperStore = create<PaperState>()(
       setLeverage: (v) => set({ leverage: v }),
 
       placeOrder: (symbol, side, price, usdtAmount, takeProfit, stopLoss, skipJournal) => {
-        const { balance, leverage, positions } = get();
+        const { leverage, positions } = get();
 
         // ── Validation ──────────────────────────────────────────────────────
         if (usdtAmount <= 0 || price <= 0) return null;
@@ -433,8 +433,11 @@ export const usePaperStore = create<PaperState>()(
           closingTime: now,
         };
 
-        const balBefore = balance;
-        const balAfter = balance - usdtAmount - commission;
+        // Use get().balance here (not the `balance` captured at function start) so that
+        // any netting set() calls are reflected in the balance log correctly.
+        const currentBalance = get().balance;
+        const balBefore = currentBalance;
+        const balAfter = currentBalance - usdtAmount - commission;
 
         const logEntry: BalanceEvent = {
           id: `bl-${id}`,
