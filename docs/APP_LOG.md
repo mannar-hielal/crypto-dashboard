@@ -156,21 +156,26 @@
    - Empty state: "No open positions"
    - Row entrance: staggered framer-motion (`rowVariants`, 0.04 s delay per row)
 
-2. **Orders** ✅ — pending orders table. Columns: Symbol, **Status** (amber "Working" pill), Type (LIMIT/STOP pill), Side, Qty, Trigger, TP, SL, Reserved, **Placing Time** (on by default) · optional: Order ID, Leverage, Margin · sticky: Cancel (✕)
-   - **Sub-tabs**: `All | Limit | Stop` filter bar below the tab bar; each shows live count badge; animated purple underline indicator
-   - Amber count badge on tab. Empty state: Clock icon + "No pending orders"
+2. **Orders** ✅ — unified limit/stop order lifecycle table (TV-style). Columns: Symbol, Status, Type, Side, Qty, Limit Price, Stop Price, Fill Price, TP, SL, Commission, Placing Time (on by default) · optional: Order ID, Leverage, Margin · sticky: Cancel (✕)
+   - **Sub-tabs**: `All | Working | Filled | Cancelled | Rejected` filter bar; each shows live count badge; animated purple underline indicator
+   - **All order types appear here** — market orders land in the **Filled** sub-tab immediately; limit/stop orders go through Working → Filled/Cancelled. Mirrors TradingView behaviour exactly.
+   - Amber count badge on tab (pending/working orders only). Empty state: Clock icon + "No orders"
    - Cancelling a pending order refunds `usdtAmount + commission` in full
+   - `OrderDisplayRow` union type: `{ kind: 'pending'; data: PendingOrder } | { kind: 'historical'; data: HistoricalOrder }` — unifies both for one table render
 
-3. **History** ✅ — closed trades. Columns: Symbol, **Status** (green "Filled" pill), Side, Qty, Entry, Exit, PnL (USDT), **Placing Time** (on by default), **Closing Time** (on by default) · optional: Order ID, Leverage
+3. **Order History** ✅ — TV-style order history table showing all `HistoricalOrder[]` records (market + limit + stop, all statuses). Columns: Symbol, Side, Type, Qty, Limit Price, Stop Price, Fill Price, Status, Commission, Placing Time, Closing Time (on by default) · optional: Order ID, Leverage, Margin
+   - **Sub-tabs**: `All | Filled | Cancelled | Rejected` filter bar; each shows live count badge; animated purple underline indicator
+   - Includes market order fills, limit/stop fills, cancellations, and rejected orders
+   - Status badge: Filled = green, Cancelled = muted, Rejected = red with ⚠ icon + hover tooltip
+   - Rejected orders moved here from the History/Trade History tab
+
+4. **History** ✅ — closed positions (ClosedTrade) only. Columns: Symbol, **Status** (green "Filled" pill), Side, Qty, Entry, Exit, PnL (USDT), **Placing Time** (on by default), **Closing Time** (on by default) · optional: Order ID, Leverage
    - `ClosedTrade` now carries `openedAt` (copied from `Position.openedAt` at close time)
+   - Rejected orders removed from here — they now live in Order History tab
 
-4. **Trading Journal** ✅ — 3 columns: Time, Text, Edit (pencil on hover for user notes)
-   - Inline edit: Enter saves, Escape cancels
-   - Add-note button (pencil icon in Time header) → inline input row at top
-   - System entries (`isUserNote: false`) read-only; user entries editable
-   - **Net PnL badge** ✅: close entries show a colored `+$X.XX` / `−$X.XX` pill inline after text
+5. **Trading Journal** ✅ — 3 columns: Time, Text, Edit (pencil on hover for user notes)
 
-Tab badge counts: purple pill for Positions count, amber pill for Orders count, gray pill for History/Journal count
+Tab badge counts: purple pill for Positions count, amber pill for Orders count (working only), gray pill for Order History/History/Journal count
 
 **Column picker** (⊟ SlidersHorizontal icon, top-right of tab bar for all data tabs): togglable non-sticky columns; preferences persisted to `localStorage` key `cd-paper-col-prefs`.
 
@@ -385,19 +390,6 @@ Actual execution (converting pending → open position) is handled by `usePendin
 
 ---
 
-### `paperStore` — `usePendingOrderMonitor` ✅ (implemented)
-
-`usePendingOrderMonitor` hook — mirrors `useTPSLMonitor` pattern:
-
-- Limit Buy: `price <= triggerPrice` · Limit Sell: `price >= triggerPrice`
-- Stop Buy: `price >= triggerPrice` · Stop Sell: `price <= triggerPrice`
-- Scoped to active symbol only (mirrors `useTPSLMonitor`)
-- On trigger: `cancelPendingOrder` (refunds balance), then `placeOrder` at fill price, then journal entry: `Limit order filled — Long/Short {symbol} @ {price}`
-- Pure function `checkPendingTrigger` — fully unit-tested (16 tests in `usePendingOrderMonitor.test.ts`): all 4 order types, exact boundary, one-tick-away no-trigger cases
-- Mounted in `DashboardPage` alongside `usePaneFeeds` + `useTPSLMonitor`
-
----
-
 ### `marketStore` — current state ✅
 
 ```typescript
@@ -458,7 +450,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 ### State reset pattern
 
-- Use `key={prop}` on parent to reset child state on prop change (`TradingPanel` uses ``key={`${activePane}-${symbol}`}``)
+- Use `key={prop}` on parent to reset child state on prop change (`TradingPanel` uses ``key={`${activePane}-${symbol}`}`)
 - Never use during-render `setState`, never use `useEffect` + `setState` for reset
 
 ---
@@ -533,7 +525,7 @@ ask: number | null; // best ask from Bybit orderbook.1
   - **Client `TradingPanel.tsx`**: reads `bid`/`ask` from active pane store (8 unconditional `useStore` calls — 4 bid + 4 ask, picks `[activePane]`). Spread badge shows live `ask − bid` value (4 decimal places if < 1, 2 otherwise), tooltip shows raw bid/ask. Sell button price shows `bid ?? latestPrice`; Buy button shows `ask ?? latestPrice`.
 
 - **`usePendingOrderMonitor`** — limit/stop order execution on price trigger; 16 unit tests; mounted in `DashboardPage` alongside `useTPSLMonitor`
-- **Orders tab** in `PaperTradingPanel` — pending orders table with LIMIT/STOP type pills, TP/SL columns, cancel button (refunds reserved balance), amber count badge
+- **Orders tab** in `PaperTradingPanel` — unified order lifecycle table; **all order types** (market + limit + stop) appear here, matching TradingView exactly: market orders land instantly in the **Filled** sub-tab; limit/stop go through Working → Filled/Cancelled. Sub-tabs: `All | Working | Filled | Cancelled | Rejected` with live count badges. Cancel button refunds reserved balance; amber badge on tab counts working orders only.
 - **Sound alert system** — Web Audio API (`useTradingSound` + `TradingSoundContext` + `SoundSettings`): synthesised tones for order placed, TP/SL hit, limit/stop filled, cancelled
 - **TradingPanel full-height layout** — `TradingPanel` is now a sibling of the center column (chart + bottom panel) so it spans from SymbolBar to TickerBar without being cut by the bottom panel
 - **PaperTradingPanel maximize/restore** — `Maximize2`/`Minimize2` button; chart area collapses via framer-motion `flex: 0 0 0px`; panel content shown when maximized regardless of `PanelSize`
@@ -543,120 +535,220 @@ ask: number | null; // best ask from Bybit orderbook.1
 - **Journal PnL badge** — `JournalEntry.pnl?: number` (net = gross − exit commission); `closePosition` attaches it to the exec entry; `useTPSLMonitor` passes it via `addJournalNote(text, false, netPnl)`; `JournalRow` renders a colored `+$X.XX` / `−$X.XX` pill inline after the text (green/red tint). Only close entries carry the badge; open and user-note entries do not.
 - **Tab persistence across symbol changes** — `OrderTab` exported from `TradingPanel.tsx`; `tradingTab` lifted to `DashboardPage`; passed as `initialTab` + `onTabChange` props so Market/Limit/Stop selection survives the `key`-reset remount. Price input lazily initialised to new symbol's `latestPrice` when mounting on Limit/Stop.
 
-### ✅ Completed (added 2026-04-19 — symbol pair icons)
-
-- **`SymbolPair` component** (`CryptoIcon.tsx`) ✅: stacked base + quote coin icons in TradingView style. Base coin sits at full size (front); quote coin overlaps at bottom-right at ~65% size with a 1 px panel-colour ring. Falls back to `CryptoIcon` text badge for unknown symbols. Props: `base`, `quote` (default `'USDT'`), `baseSize` (default `16`).
-- **`CRYPTO_ICON_URLS`** updated: `USDT` entry added (10 symbols total). `cryptoIcons.test.ts` count assertion updated 9 → 10; USDT vi.mock + expected-symbols entry added.
-- **`PaperTradingPanel`**: Symbol cells in Positions, Orders, and History tables now use `SymbolPair` (16 px base) instead of single `CryptoIcon`.
-- **`SymbolBar`**: Symbol picker trigger button (18 px base) and every dropdown row (20 px base) now use `SymbolPair`. `CryptoIcon` import removed from both files (unused after migration).
-
-### ✅ Completed (added 2026-04-20 — live price in browser tab title)
-
-- **`useDocumentTitle` hook** (`apps/client/src/hooks/useDocumentTitle.ts`) — updates `document.title` on every ticker tick using the active pane's `latestPrice` and `priceChange`.
-  - Format: `▲ BTC/USDT 75,249.90 +1.96% · CryptoDash` / `▼ BTC/USDT 75,249.90 −0.03% · CryptoDash`
-  - `▲`/`▼` solid Unicode triangles — universally rendered in browser tabs, direction is immediately readable without color
-  - `splitSymbol()` converts `BTCUSDT` → `BTC/USDT`; `formatPrice()` scales decimal places by magnitude (≥1000 → 2dp, ≥1 → 4dp, <1 → 6dp)
-  - % change derived from `priceChange / prevClose × 100`; omitted when `priceChange` is null (first tick)
-  - Restores to `CryptoDash` on unmount (navigating away from dashboard)
-  - **Infinite loop fix**: uses 8 separate primitive `useStore` selectors (4 × `latestPrice` + 4 × `priceChange`) instead of object selectors. Object selectors return a new reference on every call → Zustand `getSnapshot` never stable → infinite render loop. Primitive selectors compare by value. Same root cause as the `paneSymbols` `useShallow` fix (APP_LOG Known Gotchas).
-- Called in `DashboardInner` after `usePaneFeeds()`.
-
-### ✅ Completed (added 2026-04-20 — real-time price feed fix)
-
-- **Root cause**: `latestPrice` was derived from kline candle closes; bid/ask came from `orderbook.1` throttled at 500 ms server-side. Both introduced up to ~$11 lag vs TradingView's direct Bybit connection during active markets.
-- **Fix — server `BybitWebSocketManager.ts`**: Added `'tickers'` to `VALID_CHANNELS`. Added `parseTicker()` method — parses `lastPrice`, `bid1Price`, `ask1Price` from Bybit v5 `tickers.{symbol}` stream. Emits `StreamData` with `dataType: 'ticker'`.
-- **Fix — server `types/index.ts`**: Added `TickerData` interface (`symbol`, `lastPrice`, `bid`, `ask`). Added `'ticker'` to `StreamDataType` union.
-- **Fix — server `plugins/bybit.ts`**: Replaced `orderbook.1` subscriptions with `tickers.{symbol}` for all `ALLOWED_SYMBOLS`. Removed `tickerThrottle` map and `TICKER_THROTTLE_MS` constant entirely — tickers stream already pushes at a sensible rate. Extended `TickerUpdate` interface with `lastPrice: number`. Handler now reads from `TickerData` instead of `OrderBook`.
-- **Fix — SDK `types/index.ts`**: Added `lastPrice: number` to the `ticker` `WsMessage` union variant.
-- **Fix — client `paneStore.ts`**: `setBidAsk(bid, ask, lastPrice?)` — optional third arg updates `latestPrice` in store so the header/TradingPanel reflect the ticker's `lastPrice`, not just the last kline close.
-- **Fix — client `usePaneFeeds.ts`**: On `ticker` message, updates `lastKnownPrices` from `msg.lastPrice` and calls `setBidAsk(msg.bid, msg.ask, msg.lastPrice)`.
-- **Result**: `latestPrice`, bid, and ask in the TradingPanel now update at the same rate as TradingView's direct feed. Price lag eliminated.
-- **Known gotcha added**: See "Tickers stream replaces orderbook.1" in Known Gotchas below.
-
-### 🔄 In Progress (current sprint — 2026-04-19)
-
-- ~~**Phase 2 cont.**: `PaperTradingPanel` header — Account Settings modal~~ ✅ Done
-- ~~**Phase 2 cont.**: `marketStore` — add `bid`, `ask`, `prices` map, `setBidAsk`~~ ✅ Done (added to `paneStore` instead — `marketStore` retired)
-- ~~**Phase 2 cont.**: Bid/Ask real-time feed — server `orderbook.1` + client ticker handling~~ ✅ Done
-- ~~**Phase 2 cont.**: Account Summary Bar~~ ✅ Done
-- ~~**Phase 2 cont.**: Order status badges (Working/Filled)~~ ✅ Done
-- ~~**Phase 2 cont.**: Placing & Closing time columns (default-on)~~ ✅ Done
-- ~~**Phase 2 cont.**: Orders sub-tabs (All / Limit / Stop)~~ ✅ Done
-
 ### 📋 Planned
 
 - **Phase 3**: Sync paper trading state to DB (Account, Order, Trade models already in schema)
 - **Phase 3**: User profile / account settings (change username, change password)
 - **Phase 4**: Advanced indicators, alerts, multi-symbol watchlist
+- **Phase 5**: Live broker integration — Bybit real-money trading (see full spec below)
+- **Phase 6**: AI trading bot — 3-role system: Scanner + Analyst + Executor, paper mode only (see full spec below)
+- **Phase 6b**: AI bot connected to Bybit live trading — bot places real orders autonomously (requires Phase 5 + Phase 6 proven; see full spec below)
 
 ---
 
-## 🧪 Test Counts (as of 2026-04-19)
+## 🔌 Phase 5 — Live Broker Integration (Bybit)
 
-- **Server**: 86 tests (6 files)
-- **Client**: 112 tests (7 files — paperStore × 29, marketStore × 20, checkTPSL × 17, usePendingOrderMonitor × 16, cryptoIcons × 5, CryptoIcon × 8, layoutStore × 17)
-- **Total**: 198 tests, all green ✅
+> **Status**: Planned · Not started · No implementation until explicitly instructed.
+
+### Summary
+
+Enable users to connect their personal Bybit account via API keys and execute real trades directly from CryptoDash. The app acts purely as a UI client — it never holds funds. All money stays in the user's own Bybit account. The architecture mirrors how TradingView's broker bridge works: Client → CryptoDash server (signs + validates) → Bybit REST API → user's account.
+
+### Cost Model
+
+- **Bybit API access**: free (public API, no partnership required).
+- **Trading fees**: paid by the user to Bybit directly (~0.055% taker / ~0.01% maker) — same as on Bybit.com. CryptoDash charges nothing.
+
+### Legal / Compliance Position
+
+- Building on Bybit's public API does **not** require a broker-dealer license — the app is a UI, not a money transmitter. Identical legal position to 3Commas, Altrady, and other third-party terminals.
+- Bybit ToS explicitly permits third-party API clients.
+- Users in jurisdictions where Bybit is restricted (e.g. the US) use the platform at their own legal risk — ToS disclaimer required.
+- GDPR / data privacy: API keys are sensitive personal data — encrypted storage + clear privacy policy mandatory.
+- A **ToS / liability disclaimer** must gate Live mode activation (user acknowledges real-money risk).
+
+### Architecture
+
+```
+User clicks "Buy" (Live mode)
+        ↓
+CryptoDash client → POST /api/trading/order (authenticated)
+        ↓
+Fastify server: validates symbol, looks up encrypted API key, signs request (HMAC-SHA256)
+        ↓
+Bybit REST API v5 (/v5/order/create)
+        ↓
+Bybit executes in user's account → response returned to client
+        ↓
+liveStore updated; positions polled / streamed via Bybit private WebSocket
+```
+
+### Steps to Implement
+
+| #   | Task                                                                                                              | Files                               |
+| --- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| 1   | `BybitApiKey` Prisma model — encrypted `apiKey` + `apiSecret` (AES-256-GCM), `testnet: boolean`, linked to `User` | `prisma/schema.prisma`, `config.ts` |
+| 2   | `/api/account/api-keys` CRUD routes — save, delete, verify (ping `/v5/account/info`)                              | `routes/account/index.ts`           |
+| 3   | `BybitRestClient.ts` — HMAC-SHA256 signing, place/cancel order, fetch positions                                   | `services/BybitRestClient.ts`       |
+| 4   | `BrokerAdapter` interface — abstraction layer for Bybit; enables future Binance/OKX support                       | `services/BrokerAdapter.ts`         |
+| 5   | Live trading routes — `POST /api/trading/order`, `DELETE /api/trading/order`, `GET /api/trading/positions`        | `routes/trading/index.ts`           |
+| 6   | SDK types for live orders + positions                                                                             | `generated/CDSDK/types/index.ts`    |
+| 7   | `liveStore.ts` (Zustand, mirrors `paperStore` shape) — holds live positions/orders                                | `store/liveStore.ts`                |
+| 8   | Paper ↔ Live mode toggle pill in `TradingPanel` — "LIVE — Real Money" warning banner                              | `TradingPanel.tsx`                  |
+| 9   | API Key settings page / modal — paste keys, pick testnet vs mainnet, verify connectivity                          | new settings page                   |
+
+### Key Design Decisions (to confirm before implementation)
+
+| Decision     | Options                                                                        |
+| ------------ | ------------------------------------------------------------------------------ |
+| Default mode | Testnet (safe default) vs. mainnet opt-in                                      |
+| Key storage  | Encrypted in DB (convenient) vs. session-only in memory (safer, more friction) |
+
+### Risks
+
+| Risk                                                      | Severity    | Mitigation                                                          |
+| --------------------------------------------------------- | ----------- | ------------------------------------------------------------------- |
+| Bug places wrong order                                    | 🔴 Critical | Server validation + order preview confirmation modal                |
+| API key leaked in a breach                                | 🔴 Critical | AES-256-GCM at rest, never logged, HTTPS only                       |
+| User loses money due to a bug                             | 🔴 Critical | Clear ToS disclaimer; no liability assumed by CryptoDash            |
+| Rate limit exceeded                                       | 🟡 Medium   | Respect Bybit rate limits (10 req/s), queue with backpressure       |
+| Stale positions (user trades on Bybit.com simultaneously) | 🟡 Medium   | Poll positions every 5–10 s or subscribe to Bybit private WebSocket |
+| Double order on network retry                             | 🟡 Medium   | `orderLinkId` idempotency key per order                             |
 
 ---
 
-## ⚠️ Known Gotchas
+## 🤖 Phase 6 — AI Trading Bot (3-Role System, Paper Only)
 
-- `pnpm format` reformats `REVIEW_CHECKLIST.md` and `APP_LOG.md` on every run — expected
-- DB `Account` model has `resetCount` and `lastReset` fields — not yet used by client
-- `MAX_HISTORY = 100`, `MAX_JOURNAL = 200` — arrays sliced on every `set` call
-- `ALLOWED_SYMBOLS` in `constants.ts` = single source of truth for WS subscriptions and route validation
-- Rate limits skipped in non-production (`skip: () => process.env.NODE_ENV !== 'production'`)
-- `refreshInitiated` is a module-level flag (not `useRef`) — survives React StrictMode double-invoke
-- **`equity = balance + accountMargin + unrealizedPnl`** — NOT `balance + unrealizedPnl`. `balance` is free cash only; locked margin must be added back.
-- **`availableFunds = balance`** — balance already excludes locked margin; no subtraction needed
-- **Leverage is a persisted account setting** — stored in `paperStore.leverage` (default `1`). `CRYPTO_LEVERAGE_OPTIONS = [1,2,3,5,10,15,20,25,50,75,100,125]`. All three order placement actions (`placeOrder`, `placeLimitOrder`, `placeStopOrder`) apply `qty = (usdtAmount × leverage) / price`. `reset()` does NOT reset leverage. Both `PaperTradingPanel` and `TradingPanel` read leverage reactively from the store — no hardcoded constants remain.
-- `useTPSLMonitor` and `usePendingOrderMonitor` (planned) are both scoped to active symbol only
-- **EMA 200 bar starvation**: `calcEMA(closes, 200)` needs >200 bars to produce a visible line. With exactly 200 bars, only one data point is generated (the very last index) — invisible on chart. Fixed: `usePriceFeed` now fetches 500 bars on mount.
-- **EMA 200 color source**: `#9c27b0` — taken from `docs/markup-reference/layout-area-center/chart.html` (`rgb(156, 39, 176)`). Screenshots/theme did not show EMA lines, so markup-reference was the fallback per visual rule.
-- **`CHART_BG` typo fixed**: was `'#0b0d18'` (wrong), corrected to `chart.bg` → `'#050212'` (matches bg.page token, sampled from screenshots).
-- **lightweight-charts + CSS vars**: canvas-based library cannot read CSS custom properties. All chart series colors **must** be plain hex strings — provided via `tokens.ts` `chart` group, never via `var(--...)`.
-- **Tailwind pseudo-class arbitrary values** (`hover:text-[#hex]`, `focus:border-[#hex]/50`) cannot be replaced with inline styles. They require named utilities — defined in `index.css` `@theme inline` as `--color-brand-*` and used as `hover:text-brand-*`, `focus:border-brand-*`.
-- **Two-surface token sync**: `tokens.ts` (JS/TS inline styles, canvas libs) and `index.css @theme inline` (Tailwind utilities) must be kept manually in sync — no single source can serve both. When updating a color token, update both surfaces in the same commit.
-- **Multi-chart layout state**: `layoutStore` holds layout ID + pane configs; `paneStores[0..3]` are vanilla Zustand stores (`createStore()`) fed by `usePaneFeeds`. Components read per-pane data with `useStore(paneStores[i], selector)`. `SymbolBar`/`TradingPanel`/`useTPSLMonitor` use 4 unconditional `useStore` calls (hooks-rule compliant) and pick the active index.
-- **`marketStore` is retired at runtime** — `usePriceFeed` was superseded by `usePaneFeeds` and is no longer called anywhere. `marketStore` is kept intact for existing tests (all 75 pass). `TickerBar` and `PaperTradingPanel` previously read `useMarketStore` (permanently null after the migration); both now read from `paneStores[0]` directly. `marketStore` imports are gone from all runtime UI components.
-- **TP/SL monitoring** is scoped to `paneStores[0]` (primary trading pane). When the user has multiple charts open, TP/SL still monitors only the pane-0 symbol.
-- **`setCrossHairXY` removed in v5**: lightweight-charts v5 has NO `setCrossHairXY`. The public API is `setCrosshairPosition(price, time, seriesApi)` + `clearCrosshairPosition()`. The original implementation used a type-cast to call the removed method, which threw `TypeError` silently (caught by `try/catch`). Fixed in `fix/crosshair-sync` commit: `ChartPanel.onChartReady` now passes both chart + candlestick series; `MultiChartArea` stores `seriesRefs[0..3]` alongside `chartRefs[0..3]`; crosshair handler calls `setCrosshairPosition(followerPrice, time, followerSeries)` and `clearCrosshairPosition()` on mouse-leave.
-- **Crosshair Y-sync fix**: The original `setCrosshairPosition` Y value was `bar.close` — the bar's close price at that timestamp. This caused the follower's horizontal line to be fixed at the close level regardless of where the cursor's actual Y was on the source chart (cursor could be mid-wick, above/below close, etc.). Fixed by using `otherSeries.coordinateToPrice(param.point.y)` which maps the source cursor's Y pixel directly to the equivalent price on the follower chart's own price scale, placing the horizontal line at the same relative height. Falls back to `bar.close` only when `coordinateToPrice` returns `null` (cursor is in the MACD sub-pane, outside the main price pane).
-- **Crosshair sync + missing candles in 4-chart layout (two-part fix)**:
-  - _Root cause_: when a pane's symbol changes (e.g. ETH→BTC), `useSinglePaneFeed` calls `store.reset()` → `bars=[]`. `ChartPanel`'s data effect returned early on `bars.length===0` without resetting `prevLenRef.current`, so the next data load had `isFirstLoad=false`. `scrollToRealTime` and the new `autoScale: true` call never fired — the Y-axis stayed locked at the old symbol's price range (e.g. ETH ~2400). `coordinateToPrice` then returned ~2400 for what was now a BTC chart, feeding that stale price back into `setCrosshairPosition`, locking the scale indefinitely.
-  - _`ChartPanel.tsx`_: split the early-return guard so `bars.length===0` resets `prevLenRef.current=0` and clears all series data (removes stale candles). Added `chartRef.current?.priceScale('right').applyOptions({ autoScale: true })` in the `isFirstLoad || isOutOfRange` branch so the Y-axis always resets to fit the new symbol's data range.
-  - _`MultiChartArea.tsx`_: added `followerLatest===null` guard (skip `setCrosshairPosition` when pane has no data yet). Added range validation: if `coordinateToPrice` returns a price more than 50% away from `followerLatest`, the chart's scale is stale — discard the value and fall back to `bar.close` (breaking the feedback loop).
-- **`isMountedRef` stale-update pattern**: shared `useRef(true)` reset to `true` at the top of every effect run is unsafe. When a dependency changes, React runs the cleanup (sets ref to `false`) then immediately runs the new effect (sets ref back to `true`). Any in-flight Promise from the previous run sees `true` and writes stale data to the store. Fix: use a per-run closure variable `let cancelled = false` instead. Old closures keep their own `cancelled` flag; no cross-run interference. Applied to both `usePriceFeed` and `usePaneFeeds`.
-- **`usePriceFeed` retirement**: `usePriceFeed` was the original single-pane WebSocket hook feeding `marketStore`. It was superseded by `usePaneFeeds` (multi-pane) but never removed or disconnected cleanly — leaving `marketStore` permanently at its initial null state. `TickerBar` and `PaperTradingPanel` silently showed null prices as a result. Fixed: both components now read from `paneStores[0]`; `usePriceFeed` is kept (not deleted) in case single-pane mode ever returns, but is not called. `sourceEvent` is only set on real pointer events; programmatic `setCrosshairPosition` / `clearCrosshairPosition` calls fire the callback with `sourceEvent: undefined`. The old `isSyncingCrosshair` boolean ref was fragile — if lightweight-charts fires the callback asynchronously (after the current call stack), the guard would already be `false` and the echo would propagate, causing visible drift. The `sourceEvent` check is timing-independent and is the correct v5-API approach. `isSyncingTimeRange` guard ref is still needed for `subscribeVisibleTimeRangeChange` (no `sourceEvent` equivalent).
-- **`useStore` object selectors → infinite loop**: any `useStore(store, (s) => ({ a: s.x, b: s.y }))` selector creates a new object reference on every call. Zustand's `useSyncExternalStore` compares snapshots by reference; a new object is always "different", causing an infinite render loop. **Fix**: use one `useStore` call per primitive value, or wrap with `useShallow`. Applied in `useDocumentTitle` (8 primitive selectors) and `SymbolBar` (`useShallow` on `paneSymbols`). Never use object/array literals in `useStore` selectors without `useShallow`.
-- **`useStore` with dynamic store** — `SymbolBar` calls `useStore` 4 times (unconditional), picks `allData[activePane]`. Safe because hook call count never changes.
-- **`layoutStore` persistence**: `cd-layout` key, version 1. Layout + sync options survive page refresh; per-pane symbol/interval also persisted. (validates shape without widening). Lookup in `CryptoIcon.tsx` casts to `Record<string, string | undefined>` first — `satisfies` narrows keys to literal union, so bracket-access without cast would be a TS error.
-- **Bid/Ask in `paneStore` not `marketStore`**: The APP_LOG originally planned `bid`/`ask` on `marketStore`, but `marketStore` is retired at runtime. Fields were added to `paneStore.PaneMarketState` instead (`bid`, `ask`, `setBidAsk`). `reset()` clears them. `TradingPanel` reads from the active pane store (8 extra unconditional `useStore` calls — hook-count always 4×2=8, never conditional).
-- **`orderbook` channel key in `BybitWebSocketManager`**: `subscribe('orderbook', sym, '1')` generates key `orderbook|BTCUSDT|1` and sends topic `orderbook.1.BTCUSDT` to Bybit. The manager's `VALID_CHANNELS` set already includes `'orderbook'` — no change needed.
-- **Ticker throttle is per-symbol server-side**: each symbol's bid/ask updates at most every 500 ms. The throttle Map is reset on server restart (acceptable — in-memory only).
-- **Spread display format**: `spread.toFixed(spread < 1 ? 4 : 2)` — BTC spread (e.g. `0.5`) shows as `0.5000`; a $2 spread shows as `2.00`. Adjust precision if needed.
-- **Framer Motion `key` on CSS-animated ticker**: `TickerBar` `doubled.map` uses `key={i}` (array index) — pre-existing. Safe here because the list is static and order never changes, but violates the checklist rule. Pending fix: `${item.symbol}-${i < items.length ? 'a' : 'b'}`.
-- **`motion.form` stagger timing**: `LoginPage` form fields use `delayChildren: 0.12` — fields start appearing before the card entrance (`duration: 0.35`) finishes. Intentional fast-start; bump to `0.28` if visual overlap is undesirable.
+> **Status**: Planned · Not started · No implementation until explicitly instructed.
+> **Prerequisite**: Paper trading (Phase 2) ✅ complete — bot trades paper only in Phase 6. Live bot execution requires Phase 5 first.
 
-- **Tickers stream replaces orderbook.1**: Server now subscribes to `tickers.{symbol}` (not `orderbook.1.{symbol}`) for bid/ask/lastPrice. Bybit v5 tickers payload fields: `lastPrice`, `bid1Price`, `ask1Price`. `TickerUpdate` now carries `lastPrice`. `WsMessage` ticker variant carries `lastPrice`. `setBidAsk(bid, ask, lastPrice?)` — passing `lastPrice` updates `latestPrice` in the pane store so TradingPanel header and order buttons stay in sync with the real-time last trade price, not the previous candle close.
-- **`latestPrice` dual-update**: `latestPrice` is still updated by `addBar` (kline close) as a fallback, and also updated by every ticker message (higher frequency, true last trade price). The ticker update takes precedence for display during active markets.
+### Summary
 
---- (from review 2026-04-12)
+An intelligent, communicative trading bot in two modes — **Supervised** (alerts + awaits approval) and **Autonomous** (full self-execution). Three simultaneous roles: **Scanner** (news + sentiment), **Analyst** (technicals + LLM reasoning in plain English), and **Executor** (order placement, TP/SL, trailing stop, exit logic). Explains every decision like a senior trader.
 
-> Items raised by the code review of `fix/chart-area` branch — address before merging.
+### Agreed Design Decisions
 
-| Priority  | Task                                                                          | File(s)     | Checklist ref  |
-| --------- | ----------------------------------------------------------------------------- | ----------- | -------------- |
-| 🟡 Should | Amend / reword garbled commit message on `7bc5bf6` (contains shell artifacts) | git history | §11 Code Style |
+| Decision                   | Choice                                                    | Rationale                                                                                           |
+| -------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Trading mode               | **Paper trading only** (Phase 6)                          | Prove bot before touching real money                                                                |
+| Bot modes                  | **Supervised** + **Autonomous**                           | User picks per-session or per-symbol                                                                |
+| Primary test timeframe     | **15m**                                                   | ~10 clear signals/day; patterns reliable; commission-safe; LLM has time to reason                   |
+| Secondary timeframe        | **1h swing** (added once 15m is proven)                   | Cleaner signals, fewer trades, better R:R                                                           |
+| Why not 1m scalping        | **Skipped**                                               | 0.07% commission requires >0.14% move to break even — statistically unfavourable; too noisy for LLM |
+| News sources (start)       | **CryptoPanic free + CoinDesk/CoinTelegraph RSS = $0/mo** | Free tier sufficient to validate the pipeline                                                       |
+| LLM — sentiment pre-filter | **GLM-4-Flash (free)**                                    | Genuinely $0; filters irrelevant headlines before spending a DeepSeek call                          |
+| LLM — analysis loop        | **DeepSeek-V3** (~$0.60/mo)                               | GPT-4o-class quality; cheapest frontier model                                                       |
+| LLM — final trade decision | **DeepSeek-R1** (~$0.30/mo)                               | Chain-of-thought — shows reasoning step by step; ideal for trade rationale                          |
+| Total LLM cost             | **~$0.90/mo** (9 symbols, 24/7)                           | Two-stage pipeline keeps costs minimal                                                              |
 
-**Resolved (260d0f8 · a298230):**
+### Two-Stage LLM Pipeline
 
-- ✅ Tests for `CryptoIcon` (8 tests — renders img for known symbol, fallback badge for unknown)
-- ✅ Tests for `cryptoIcons.ts` (5 tests — 9 entries, uppercase keys, non-empty string values)
-- ✅ `key={i}` → `${item.symbol}-${i < items.length ? 'a' : 'b'}` stable keys in `TickerBar.tsx`
-- ✅ `satisfies Record<string, string>` applied to `cryptoIcons.ts`; lookup cast fixed in `CryptoIcon.tsx`
-- ✅ `noValidate` added to `motion.form` in `RegisterPage.tsx`
+```
+News headlines arrive
+        ↓
+GLM-4-Flash (free): "Is this headline relevant to {symbol}? Yes/No"
+        ↓ only if Yes
+DeepSeek-V3: full sentiment + market state analysis
+        ↓ only when confidence threshold met
+DeepSeek-R1: final trade decision (chain-of-thought)
+```
+
+### Indicators Already on Server (reusable ✅)
+
+- EMA 9, 21, 200 · MACD 12/26/9 · VWAP — all in `IndicatorCalculator.ts`
+
+### New Indicators to Add
+
+| Indicator                | Purpose                                     |
+| ------------------------ | ------------------------------------------- |
+| RSI (14)                 | Overbought/oversold detection               |
+| Bollinger Bands (20, 2σ) | Volatility squeeze + breakout               |
+| ATR (14)                 | Dynamic TP/SL sizing (TP = entry ± 1.5×ATR) |
+| Volume MA (20)           | Conviction confirmation                     |
+| Swing High/Low detector  | Support/resistance levels                   |
+
+### Candlestick Patterns (`PatternAnalyzer` — new)
+
+Doji · Hammer · Inverted Hammer · Shooting Star · Bullish/Bearish Engulfing · Morning/Evening Star · Marubozu · Inside Bar
+
+### What Needs to Be Built
+
+| Component                            | Location                            | Purpose                                                                              |
+| ------------------------------------ | ----------------------------------- | ------------------------------------------------------------------------------------ |
+| `BotOrchestrator`                    | `services/BotOrchestrator.ts`       | Scheduler — coordinates all 3 roles on candle close                                  |
+| `NewsScanner`                        | `services/NewsScanner.ts`           | Polls CryptoPanic / RSS; 5 min TTL cache                                             |
+| `PatternAnalyzer`                    | `services/PatternAnalyzer.ts`       | 8-pattern candlestick detection                                                      |
+| Extended `IndicatorCalculator`       | `services/IndicatorCalculator.ts`   | Add RSI, BB, ATR, Volume MA, Swing H/L                                               |
+| `LLMReasoner`                        | `services/LLMReasoner.ts`           | Provider-agnostic wrapper (DeepSeek / GLM / OpenAI / Ollama)                         |
+| `BotExecutor`                        | `services/BotExecutor.ts`           | Applies decisions to paperStore; trailing stop; exit conditions                      |
+| `BotConfig` + `BotLog` Prisma models | `prisma/schema.prisma`              | Per-user config + full reasoning log                                                 |
+| Bot WebSocket channel                | `routes/market/index.ts`            | Streams `BotLogEntry` to client in real time                                         |
+| `botStore`                           | `store/botStore.ts`                 | Client: running/stopped, reasoning log, pending approvals                            |
+| `BotPanel` component                 | `components/dashboard/BotPanel.tsx` | Live reasoning feed, enable/disable, Approve/Reject buttons                          |
+| Bot API routes                       | `routes/bot/index.ts`               | `POST /bot/config`, `GET /bot/logs`, `POST /bot/approve/:id`, `POST /bot/reject/:id` |
+| SDK types                            | `generated/CDSDK/types/index.ts`    | `BotConfig`, `BotLogEntry`, `TradeRecommendation`, `SentimentSignal`                 |
+
+### Risks
+
+| Risk                           | Severity    | Mitigation                                                               |
+| ------------------------------ | ----------- | ------------------------------------------------------------------------ |
+| Bot loses large paper balance  | 🟡 Medium   | Max 1% risk/trade; max 3 open positions; auto-pause at 5% daily loss     |
+| LLM returns invalid JSON       | 🔴 Critical | Strict JSON schema validation; parse failure → WAIT, never force a trade |
+| LLM provider outage            | 🟡 Medium   | Bot pauses gracefully; retries after 5 min                               |
+| News API down                  | 🟢 Low      | Analyst proceeds on technicals only                                      |
+| Prompt injection via headlines | 🟡 Medium   | Headlines as JSON data only; system prompt immutable                     |
+| GLM-5/5.1 adopted prematurely  | 🟢 Low      | Deferred — pricing/API stability not confirmed as of 2026-04-20          |
 
 ---
 
-_Last updated: 2026-04-20 — **feat: live ▲/▼ price in browser tab title + infinite loop fix** (`b73f113`): `useDocumentTitle` hook updates `document.title` on every ticker tick — format `▲ BTC/USDT 75,249.90 +1.96% · CryptoDash`; 8 primitive `useStore` selectors prevent getSnapshot infinite loop. Previously: **feat(ui): SymbolPair component + symbol picker update** (`10ff43a`→`927604c`): (1) **`SymbolPair` component** added to `CryptoIcon.tsx`: stacked base/quote coin icons in TradingView style — base coin full size (front), quote coin at 65% overlapping bottom-right with panel-colour ring separator; falls back to `CryptoIcon` text badge for unknown symbols. (2) **`USDT` added to `CRYPTO_ICON_URLS`** (10 symbols total; `cryptoIcons.test.ts` updated: count 9→10, USDT mock + expected-symbols entry). (3) **`PaperTradingPanel`** Symbol cells in Positions, Orders, History replaced with `SymbolPair` (16 px base). (4) **`SymbolBar`** symbol picker trigger (18 px base) and dropdown rows (20 px base) replaced with `SymbolPair`. `CryptoIcon` import removed from both components (unused). Previously: **feat: crypto leverage settings + rejected order icon + dialog centering** (`c5827a5`→`da54503`)._
+## 🤖 Phase 6b — AI Bot Connected to Bybit Live Trading
+
+> **Status**: Planned · Not started · No implementation until explicitly instructed.
+> **Prerequisites**: Phase 5 (Bybit live trading) ✅ + Phase 6 (bot paper-proven, positive results over ≥7 days / ≥50 trades) ✅
+
+### Summary
+
+The paper-proven 15m bot switches its Executor target from `paperStore` to the `BrokerAdapter` (Phase 5), placing real orders in the user's Bybit account. The Scanner, Analyst, LLM pipeline, reasoning log, and BotPanel UI are **identical to Phase 6** — only the Executor's final action changes. This is ~20% additional work on top of Phase 6.
+
+### What Changes vs Phase 6 (Very Little)
+
+| Component               | Phase 6 (paper)                    | Phase 6b (live)                                    |
+| ----------------------- | ---------------------------------- | -------------------------------------------------- |
+| `BotExecutor.execute()` | calls `paperStore.placeOrder()`    | calls `BrokerAdapter.placeOrder()` → Bybit REST    |
+| Trailing stop           | modifies `paperStore` position     | polls Bybit position + amends SL via REST          |
+| Exit                    | calls `paperStore.closePosition()` | calls `BrokerAdapter.closePosition()` → Bybit REST |
+| Everything else         | identical                          | identical                                          |
+
+### Architecture (full chain)
+
+```
+Phase 2 ✅         Phase 5             Phase 6             Phase 6b
+Paper trading  →  Real order      →  Proven bot      →  Full autonomous
+(paperStore)      routing             logic               live trading
+                  (BrokerAdapter)     (paper only)        (BrokerAdapter)
+```
+
+### Safety Gates — All Required Before Live Bot Activation
+
+| Gate                        | Detail                                                                                                                                                |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Phase 5 prerequisite        | User must have connected + verified Bybit API keys — enforced in code, not just UI                                                                    |
+| Paper mode proven           | Bot must have run paper mode for configurable minimum (default: 7 days + 50 trades) with positive results — stats summary shown before upgrade prompt |
+| Explicit confirmation modal | Multi-step: "This bot will place REAL orders with REAL money. Your losses are your own." — user must type confirmation phrase                         |
+| Hard daily loss limit       | Bot auto-kills + sends alert if real account drops >X% in a day — cannot be disabled                                                                  |
+| Max position size cap       | Never risk more than Y% per trade or Z USDT total across open positions — requires re-confirmation to increase                                        |
+| Supervised mode warm-up     | When first switching paper→live, Supervised mode is forced for a configurable warm-up period before Autonomous is unlocked                            |
+
+### Risks
+
+| Risk                                    | Severity    | Mitigation                                                          |
+| --------------------------------------- | ----------- | ------------------------------------------------------------------- |
+| Bot loses real money due to bad signal  | 🔴 Critical | All Phase 6 safeguards + hard daily loss limit + supervised warm-up |
+| Bug in BrokerAdapter routes wrong order | 🔴 Critical | End-to-end tested on testnet first; order preview confirmation      |
+| User disables safety gates              | 🔴 Critical | Hard limits enforced server-side — client cannot bypass them        |
+| Bybit API outage mid-trade              | 🟡 Medium   | Bot pauses; open positions monitored via polling; user alerted      |
+| Phase 6 bot not actually proven         | 🟡 Medium   | Minimum paper period enforced in code before upgrade is offered     |
+
+---
+
+_Last updated: 2026-04-21 — **test: Section 1 Market Orders fully passed** — All 10 edge cases (1.7.1–1.7.10) ✅. Completed fixes this session: (1.7.8) `navigator.onLine` guard in `TradingPanel` blocks orders immediately on disconnect; (1.7.9) TV-style position netting in `paperStore.placeOrder` — opposite-side orders close/reduce existing positions; (balance history) stale `balance` variable replaced with `get().balance` in fall-through open code so Balance History ledger is sequential; (order dedup) `skipOrderRecord` flag prevents double order writes in close+open-remainder netting case — 1 order per user action matching TV exactly. `TRADING_TEST_PLAN.md` Section 1 complete: 1.7.8 ✅, 1.7.9 ✅, 1.7.10 ✅. Previously: **fix: 1.7.8 + 1.7.9 — offline guard & position netting**._

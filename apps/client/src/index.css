@@ -70,6 +70,11 @@
   --color-brand-grad-from: #fe4bd1; /* pink-magenta — gradient start */
   --color-brand-grad-to: #3f5ff5; /* blue-purple  — gradient end   */
 
+  /* ── Font-size overrides — mirrors fontSize tokens in tokens.ts (×1.5 then ×0.75 = ×1.125 of originals) */
+  --text-xs: 0.875rem; /* 14px — 18px × 0.75 */
+  --text-sm: 1rem; /* 16px — 21px × 0.75 */
+  --text-base: 1.125rem; /* 18px — 24px × 0.75 */
+
   /* Border radii */
   --radius-btn: 25px; /* primary CTA / pill buttons — generates rounded-btn */
   --color-sidebar-ring: var(--sidebar-ring);

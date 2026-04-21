@@ -303,25 +303,31 @@ export function ChartPanel({ paneIndex, interval, onChartReady, onChartDestroy }
     )
       return;
 
-    const closes = bars.map((b) => b.close);
+    // lightweight-charts requires data to be strictly ascending by time.
+    // De-duplicate by timestamp (keep last) then sort ascending.
+    const dedupMap = new Map<number, (typeof bars)[0]>();
+    for (const b of bars) dedupMap.set(b.timestamp, b);
+    const sortedBars = Array.from(dedupMap.values()).sort((a, b) => a.timestamp - b.timestamp);
+
+    const closes = sortedBars.map((b) => b.close);
     const ema9 = calcEMA(closes, 9);
     const ema20 = calcEMA(closes, 20);
     const ema200 = calcEMA(closes, 200);
-    const vwap = calcVWAP(bars);
+    const vwap = calcVWAP(sortedBars);
     const { macd, signal, histogram } = calcMACD(closes);
 
     // Build [{time, value}] skipping null entries (not enough history yet)
     function linePoints(vals: (number | null)[]) {
       const pts: { time: UTCTimestamp; value: number }[] = [];
-      for (let i = 0; i < bars.length; i++) {
-        if (vals[i] !== null) pts.push({ time: toUTC(bars[i].timestamp), value: vals[i]! });
+      for (let i = 0; i < sortedBars.length; i++) {
+        if (vals[i] !== null) pts.push({ time: toUTC(sortedBars[i].timestamp), value: vals[i]! });
       }
       return pts;
     }
 
     // Candlestick
     candleRef.current.setData(
-      bars.map((b) => ({
+      sortedBars.map((b) => ({
         time: toUTC(b.timestamp),
         open: b.open,
         high: b.high,
@@ -342,7 +348,7 @@ export function ChartPanel({ paneIndex, interval, onChartReady, onChartDestroy }
     //   <0 & rising  → #f6465d66 (weak bear, muted red)
     //   <0 & falling → #f6465d (strong bear, EXGEN red)
     const histPts: { time: UTCTimestamp; value: number; color: string }[] = [];
-    for (let i = 0; i < bars.length; i++) {
+    for (let i = 0; i < sortedBars.length; i++) {
       if (histogram[i] !== null) {
         const val = histogram[i]!;
         const prev = i > 0 ? (histogram[i - 1] ?? val) : val;
@@ -353,7 +359,7 @@ export function ChartPanel({ paneIndex, interval, onChartReady, onChartDestroy }
         } else {
           color = rising ? `${chartColors.macdHistBear}66` : chartColors.macdHistBear;
         }
-        histPts.push({ time: toUTC(bars[i].timestamp), value: val, color });
+        histPts.push({ time: toUTC(sortedBars[i].timestamp), value: val, color });
       }
     }
     macdHistRef.current.setData(histPts);
@@ -366,8 +372,8 @@ export function ChartPanel({ paneIndex, interval, onChartReady, onChartDestroy }
     // control how many candles are visible — same behaviour as TradingView.
     // For ordinary incremental tick updates we leave the user's zoom/pan alone.
     const timeScale = chartRef.current?.timeScale();
-    const firstTime = toUTC(bars[0].timestamp);
-    const lastTime = toUTC(bars[bars.length - 1].timestamp);
+    const firstTime = toUTC(sortedBars[0].timestamp);
+    const lastTime = toUTC(sortedBars[sortedBars.length - 1].timestamp);
     // getVisibleRange() returns Time (a union), but we only ever feed UTCTimestamp
     // values so it's safe to cast here for the comparison below.
     const visibleRange = timeScale?.getVisibleRange() as
@@ -391,7 +397,7 @@ export function ChartPanel({ paneIndex, interval, onChartReady, onChartDestroy }
       });
       timeScale?.scrollToRealTime();
     }
-    prevLenRef.current = bars.length;
+    prevLenRef.current = sortedBars.length;
   }, [bars, interval]);
 
   return (

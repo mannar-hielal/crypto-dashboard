@@ -55,10 +55,17 @@ function createPaneStore() {
     ask: null,
 
     setSnapshot: (bars, indicators) => {
-      const last = bars[bars.length - 1];
-      const prev = bars[bars.length - 2];
+      // Deduplicate by timestamp (keep last occurrence) then sort ascending.
+      // lightweight-charts requires strictly ascending time order.
+      const dedupMap = new Map<number, CandleBar>();
+      for (const b of bars) dedupMap.set(b.timestamp, b);
+      const sorted = Array.from(dedupMap.values())
+        .sort((a, b) => a.timestamp - b.timestamp)
+        .slice(-MAX_BARS);
+      const last = sorted[sorted.length - 1];
+      const prev = sorted[sorted.length - 2];
       set({
-        bars: bars.slice(-MAX_BARS),
+        bars: sorted,
         indicators,
         latestPrice: last?.close ?? null,
         priceChange: last && prev ? last.close - prev.close : null,

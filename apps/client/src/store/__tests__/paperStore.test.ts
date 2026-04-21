@@ -91,9 +91,15 @@ describe('paperStore', () => {
       expect(usePaperStore.getState().placeOrder(SYMBOL, 'buy', 0, 100)).toBeNull();
     });
 
-    it('allows opening multiple positions', () => {
+    it('nets opposite-side positions: buy then equal sell closes the long (0 positions)', () => {
       usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 500);
       usePaperStore.getState().placeOrder(SYMBOL, 'sell', 50_000, 500);
+      expect(usePaperStore.getState().positions).toHaveLength(0);
+    });
+
+    it('allows opening multiple same-side positions', () => {
+      usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 500);
+      usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 300);
       expect(usePaperStore.getState().positions).toHaveLength(2);
     });
   });
