@@ -227,13 +227,150 @@ export const usePaperStore = create<PaperState>()(
       setLeverage: (v) => set({ leverage: v }),
 
       placeOrder: (symbol, side, price, usdtAmount, takeProfit, stopLoss, skipJournal) => {
-        const { balance, leverage } = get();
+        const { balance, leverage, positions } = get();
 
         // ── Validation ──────────────────────────────────────────────────────
         if (usdtAmount <= 0 || price <= 0) return null;
+
+        // ── Position netting (TV-style) ─────────────────────────────────────
+        // If there is an existing opposite-side position for this symbol, net
+        // against it instead of opening a new position.  Mirrors how TradingView
+        // (and real exchanges) handle market orders:
+        //   • incoming qty ≤ existing qty → reduce / fully close the existing position
+        //   • incoming qty > existing qty → close existing, open remainder as new
+        const oppositeSide = side === 'buy' ? 'short' : 'long';
+        const existingOpp = positions.filter((p) => p.symbol === symbol && p.side === oppositeSide);
+
+        if (existingOpp.length > 0) {
+          const incomingQty = (usdtAmount * leverage) / price;
+          let remainingQty = incomingQty;
+          const now = Date.now();
+          const newOrders: HistoricalOrder[] = [];
+          const newHistory: ClosedTrade[] = [];
+          const newBalanceLogs: BalanceEvent[] = [];
+          const newJournalEntries: JournalEntry[] = [];
+
+          for (const pos of existingOpp) {
+            if (remainingQty <= 0) break;
+
+            const closeQty = Math.min(remainingQty, pos.quantity);
+            const isFullClose = closeQty >= pos.quantity - 1e-10;
+            const fraction = closeQty / pos.quantity;
+
+            // PnL for the closed portion
+            const pnlPartial =
+              pos.side === 'long'
+                ? (price - pos.entryPrice) * closeQty
+                : (pos.entryPrice - price) * closeQty;
+            const exitCommission = closeQty * price * COMMISSION_RATE;
+            const entryCommissionPartial = pos.entryUsdtAmount * fraction * COMMISSION_RATE;
+            const marginPartial = pos.entryUsdtAmount * fraction;
+            const returnAmt = Math.max(0, marginPartial + pnlPartial - exitCommission);
+
+            const closeId = `${now}-${Math.random().toString(36).slice(2, 7)}`;
+
+            newOrders.push({
+              id: `o-close-${closeId}`,
+              symbol: pos.symbol,
+              side: pos.side === 'long' ? 'sell' : 'buy',
+              type: 'market',
+              qty: closeQty,
+              fillPrice: price,
+              status: 'filled',
+              commission: exitCommission,
+              placingTime: now,
+              closingTime: now,
+            });
+
+            newHistory.push({
+              id: pos.id,
+              symbol: pos.symbol,
+              side: pos.side,
+              quantity: closeQty,
+              entryPrice: pos.entryPrice,
+              exitPrice: price,
+              pnl: pnlPartial,
+              openedAt: pos.openedAt,
+              closedAt: now,
+            });
+
+            const netPnl = pnlPartial - exitCommission;
+            const closedSide = pos.side === 'long' ? 'LONG' : 'SHORT';
+            if (!skipJournal) {
+              newJournalEntries.push({
+                id: `j-close-${closeId}-exec`,
+                time: now,
+                text: `Closed ${closedSide} ${pos.symbol} @ $${fmtPrice(price)}`,
+                pnl: netPnl,
+              });
+            }
+
+            const curBal = get().balance;
+            newBalanceLogs.push({
+              id: `bl-close-${closeId}`,
+              time: now,
+              balanceBefore: curBal,
+              balanceAfter: curBal + returnAmt,
+              pnl: netPnl,
+              action: `Close ${pos.side} position for ${pos.symbol} at price ${price.toFixed(4)} for ${closeQty.toFixed(6)} units`,
+            });
+
+            remainingQty -= closeQty;
+
+            // Update or remove the existing position in state
+            set((s) => {
+              if (isFullClose) {
+                return {
+                  balance: s.balance + returnAmt,
+                  positions: s.positions.filter((p) => p.id !== pos.id),
+                  history: [newHistory[newHistory.length - 1], ...s.history].slice(0, MAX_HISTORY),
+                  orders: [newOrders[newOrders.length - 1], ...s.orders].slice(0, MAX_HISTORY * 2),
+                  realizedPnl: s.realizedPnl + pnlPartial - exitCommission - entryCommissionPartial,
+                  balanceLog: [newBalanceLogs[newBalanceLogs.length - 1], ...s.balanceLog].slice(
+                    0,
+                    MAX_HISTORY * 2
+                  ),
+                  journal: [...newJournalEntries.slice(-1), ...s.journal].slice(0, MAX_JOURNAL),
+                };
+              } else {
+                // Partial close — reduce quantity and proportional margin
+                return {
+                  balance: s.balance + returnAmt,
+                  positions: s.positions.map((p) =>
+                    p.id !== pos.id
+                      ? p
+                      : {
+                          ...p,
+                          quantity: p.quantity - closeQty,
+                          entryUsdtAmount: p.entryUsdtAmount * (1 - fraction),
+                        }
+                  ),
+                  history: [newHistory[newHistory.length - 1], ...s.history].slice(0, MAX_HISTORY),
+                  orders: [newOrders[newOrders.length - 1], ...s.orders].slice(0, MAX_HISTORY * 2),
+                  realizedPnl: s.realizedPnl + pnlPartial - exitCommission - entryCommissionPartial,
+                  balanceLog: [newBalanceLogs[newBalanceLogs.length - 1], ...s.balanceLog].slice(
+                    0,
+                    MAX_HISTORY * 2
+                  ),
+                  journal: [...newJournalEntries.slice(-1), ...s.journal].slice(0, MAX_JOURNAL),
+                };
+              }
+            });
+          }
+
+          // If the incoming order was fully consumed closing existing positions, done.
+          if (remainingQty <= 1e-10) {
+            return `net-close-${Date.now()}`;
+          }
+
+          // Otherwise, fall through to open a new position with the remaining qty.
+          // Convert remaining qty back to a usdtAmount so the rest of the function works.
+          usdtAmount = (remainingQty * price) / leverage;
+        }
+
         // Include entry commission in the balance check — prevents going negative
         // when placing a 100%-of-balance order (usdtAmount + fee > balance).
-        if (usdtAmount + usdtAmount * COMMISSION_RATE > balance) {
+        if (usdtAmount + usdtAmount * COMMISSION_RATE > get().balance) {
           // Record the rejection so it surfaces in the History tab with a warning icon
           const rejId = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
           const now = Date.now();

@@ -278,7 +278,7 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
   }
 
   function validate(): { amount: number; tp?: number; sl?: number } | null {
-    if (!execPrice || (tab === 'market' && !isConnected)) {
+    if (!execPrice || (tab === 'market' && (!isConnected || !navigator.onLine))) {
       setFormError('Waiting for live price…');
       return null;
     }
@@ -869,7 +869,12 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
         <motion.button
           onClick={handleExecute}
           animate={executeAnim}
-          disabled={!latestPrice || !qtyInput || parseFloat(qtyInput) <= 0}
+          disabled={
+            !latestPrice ||
+            !qtyInput ||
+            parseFloat(qtyInput) <= 0 ||
+            (tab === 'market' && (!isConnected || !navigator.onLine))
+          }
           whileHover={{ filter: 'brightness(1.1)' }}
           whileTap={{ scale: 0.98 }}
           className="flex w-full flex-col items-center justify-center rounded-md py-2.5 transition-all disabled:cursor-not-allowed disabled:opacity-30"
