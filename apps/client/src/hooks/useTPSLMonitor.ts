@@ -81,8 +81,9 @@ export function useTPSLMonitor({ onClosed }: TPSLMonitorOptions = {}) {
       if (triggered) {
         const label = triggered === 'TP' ? 'Take-Profit' : 'Stop-Loss';
         const reason = `Auto-closed ${pos.side.toUpperCase()} ${pos.symbol} — ${label} hit at $${fmtPrice(price)}`;
-        // Pass reason directly to closePosition — it writes 1 clean journal entry with PnL badge
-        closePosition.current(pos.id, price, reason);
+        const closeType = triggered === 'TP' ? 'take-profit' : 'stop-loss';
+        // Pass reason and closeType to closePosition — it writes 1 clean journal entry with PnL badge
+        closePosition.current(pos.id, price, reason, closeType);
         // Gross PnL (same formula as closePosition)
         const grossPnl =
           pos.side === 'long'

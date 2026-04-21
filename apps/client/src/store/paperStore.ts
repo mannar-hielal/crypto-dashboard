@@ -52,7 +52,7 @@ export interface ClosedTrade {
 }
 
 export type OrderStatus = 'filled' | 'cancelled' | 'rejected';
-export type OrderType = 'market' | 'limit' | 'stop';
+export type OrderType = 'market' | 'limit' | 'stop' | 'take-profit' | 'stop-loss';
 
 export interface PendingOrder {
   id: string;
@@ -158,7 +158,7 @@ interface PaperState {
   ) => string | null;
 
   /** Close an open position at the given exit price. */
-  closePosition: (positionId: string, exitPrice: number, reason?: string) => void;
+  closePosition: (positionId: string, exitPrice: number, reason?: string, closeType?: OrderType) => void;
 
   /** Add a note to the journal. Pass isUserNote=false for system-generated entries (not user-editable). */
   addJournalNote: (text: string, isUserNote?: boolean, pnl?: number) => void;
@@ -316,7 +316,7 @@ export const usePaperStore = create<PaperState>()(
         return id;
       },
 
-      closePosition: (positionId, exitPrice, reason) => {
+      closePosition: (positionId, exitPrice, reason, closeType) => {
         const { positions } = get();
         const pos = positions.find((p) => p.id === positionId);
         if (!pos) return;
@@ -353,7 +353,7 @@ export const usePaperStore = create<PaperState>()(
           id: `o-close-${closedId}`,
           symbol: pos.symbol,
           side: pos.side === 'long' ? 'sell' : 'buy',
-          type: 'market',
+          type: closeType ?? 'market',
           qty: pos.quantity,
           fillPrice: exitPrice,
           status: 'filled',

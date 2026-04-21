@@ -73,23 +73,25 @@
 
 | #     | Action                                                                               | Expected                                                                                | Status | TV ✓ | Notes |
 | ----- | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- | ------ | ---- | ----- |
-| 1.4.1 | Reset. Buy $500, enable TP toggle, enter a price **above** live price (e.g. live+5%) | TP input has green border                                                               | ⬜     |      |       |
-| 1.4.2 | Submit                                                                               | Position appears with TP = your price, SL = —                                           | ⬜     |      |       |
-| 1.4.3 | _(wait or set TP very close)_ When live price crosses TP                             | Position disappears from Positions; appears in History with profit                      | ⬜     | ⬜   |       |
-| 1.4.4 | Journal tab                                                                          | Entry: `Auto-closed LONG BTCUSDT — Take-Profit hit at $X` with green PnL badge `+$X.XX` | ⬜     | ⬜   |       |
+| 1.4.1 | Reset. Buy $500, enable TP toggle, enter a price **above** live price (e.g. live+5%) | TP input has green border                                                               | ✅     |      |       |
+| 1.4.2 | Submit                                                                               | Position appears with TP = your price, SL = —                                           | ✅     |      |       |
+| 1.4.3 | _(wait or set TP very close)_ When live price crosses TP                             | Position disappears from Positions; appears in History with profit                      | ✅     | ✅   | TP triggered and closed position correctly. Orders tab → Filled shows 2 entries (entry + exit). Order History → Filled shows 2. Balance History shows 2 entries. ⚠️ **Cosmetic gap:** exit order Type = `MARKET` in Order History; TV stamps it as `Take Profit` — labelling only, not blocking. |
+| 1.4.4 | Journal tab                                                                          | Entry: `Auto-closed LONG BTCUSDT — Take-Profit hit at $X` with green PnL badge `+$X.XX` | ✅     | ✅   | Clean 2-line audit trail (Open + Auto-close entries). Realised P&L sign matches expectations (commission > small gain → net negative is expected given fill-price timing, not a bug). TV shows verbose system log — **intentional divergence**. |
 
 > **TV cross-check 1.4.3:** TP should trigger at the same price level in both apps (same candle).
 > **TV cross-check 1.4.4:** Net PnL in Journal badge should match TradingView's realised PnL within $0.10.
+> **Known cosmetic gap (non-blocking):** Exit order Type in Order History shows `MARKET` in CryptoDash vs `Take Profit` in TradingView. Fix labelling in a future pass.
 
 ### 1.5 Sell with Stop-Loss only
 
 | #     | Action                                                                                          | Expected                                                                                   | Status | TV ✓ | Notes |
 | ----- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------ | ---- | ----- |
 | 1.5.1 | Reset. Sell $500, enable SL toggle, enter a price **above** live price (SHORT SL = above entry) | SL input has red border                                                                    | ⬜     |      |       |
-| 1.5.2 | Submit                                                                                          | SHORT position with SL = your price                                                        | ⬜     |      |       |
-| 1.5.3 | When price rises to SL                                                                          | Auto-closed, appears in History; Journal shows red PnL badge `−$X.XX` on Auto-closed entry | ⬜     | ⬜   |       |
+| 1.5.2 | Submit                                                                                          | SHORT position with SL = your price; **Orders tab → Working shows 1 synthetic "Stop Loss" BUY order** (mirrors TV) | ⬜     |      | **Fixed:** TP/SL now appear as synthetic Working orders in the Orders tab, matching TV behaviour. When position closes the working order disappears. |
+| 1.5.3 | When price rises to SL                                                                          | Auto-closed, appears in History; Journal shows red PnL badge `−$X.XX` on Auto-closed entry; Working order disappears | ⬜     | ⬜   |       |
 
 > **TV cross-check 1.5.3:** Loss magnitude should match TradingView's realised PnL within $0.10.
+> **TV parity note (1.5.2):** TV shows TP/SL as separate child "Working" orders in the Orders tab (Type = "Take Profit" or "Stop Loss"). CryptoDash now does the same — synthetic exit orders are derived from open positions and shown in Working sub-tab with correct Type label, Side (opposite of position), and price in Limit/Stop Price column. They disappear automatically when the position closes.
 
 ### 1.6 Buy with both TP and SL
 

@@ -395,24 +395,40 @@ export function PaperTradingPanel({
   // ── Balance history rows (sorted newest first) ────────────────────────────
   const balanceHistoryRows = [...balanceLog].sort((a, b) => b.time - a.time);
 
-  // ── Order History rows (all HistoricalOrder records, sorted newest first) ──────────
-  const orderHistoryRows: HistoricalOrder[] = [...orders].sort(
-    (a, b) => b.placingTime - a.placingTime
-  );
-  const filteredOrderHistoryRows: HistoricalOrder[] =
-    orderHistorySubTab === 'all'
-      ? orderHistoryRows
-      : orderHistoryRows.filter((o) => o.status === orderHistorySubTab);
-
-  const unrealizedPnl = positions.reduce((sum, pos) => {
-    const markPrice = getPriceForSymbol(pos.symbol);
-    if (!markPrice) return sum;
-    const pnl =
-      pos.side === 'long'
-        ? (markPrice - pos.entryPrice) * pos.quantity
-        : (pos.entryPrice - markPrice) * pos.quantity;
-    return sum + pnl;
-  }, 0);
+  // ── Order type pill helpers ───────────────────────────────────────────────
+  function orderTypeLabel(type: string): string {
+    switch (type) {
+      case 'take-profit':
+        return 'Take Profit';
+      case 'stop-loss':
+        return 'Stop Loss';
+      case 'market':
+        return 'Market';
+      case 'limit':
+        return 'Limit';
+      case 'stop':
+        return 'Stop';
+      default:
+        return type;
+    }
+  }
+  function orderTypePillStyle(
+    type: string,
+    colorMap: typeof color
+  ): { background: string; color: string } {
+    switch (type) {
+      case 'limit':
+        return { background: `${colorMap.purpleDark}33`, color: colorMap.purpleDark };
+      case 'stop':
+        return { background: `${colorMap.amber}22`, color: colorMap.amber };
+      case 'take-profit':
+        return { background: `${colorMap.green}22`, color: colorMap.green };
+      case 'stop-loss':
+        return { background: `${colorMap.red}22`, color: colorMap.red };
+      default:
+        return { background: 'rgba(255,255,255,0.08)', color: colorMap.muted };
+    }
+  }
 
   // ── Derived account stats ──────────────────────────────────────────────────
   const reserved = pendingOrders.reduce((s, o) => s + o.usdtAmount, 0);
@@ -427,20 +443,79 @@ export function PaperTradingPanel({
   const winningTrades = closedPnlEntries.filter((e) => e.pnl > 0).length;
   const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : null;
 
-  // ── Unified order display rows (pending + historical) ─────────────────────
+  // ── Unified order display rows (pending + historical + synthetic exit orders) ─
+  /** Synthetic exit order derived from a live position's TP or SL level — mirrors TV "Working" orders */
+  interface SyntheticExitOrder {
+    id: string; // unique: `exit-tp-{posId}` or `exit-sl-{posId}`
+    positionId: string;
+    symbol: string;
+    side: 'buy' | 'sell'; // opposite of position side
+    exitType: 'Take Profit' | 'Stop Loss';
+    price: number; // TP or SL price
+    qty: number;
+    placedAt: number; // position openedAt
+  }
+
   type OrderDisplayRow =
     | { kind: 'pending'; data: PendingOrder }
-    | { kind: 'historical'; data: HistoricalOrder };
+    | { kind: 'historical'; data: HistoricalOrder }
+    | { kind: 'exit-order'; data: SyntheticExitOrder };
+
+  // Synthetic working orders for each open position that has TP or SL — matches TV behaviour
+  const exitOrderRows: OrderDisplayRow[] = [];
+  for (const pos of positions) {
+    if (pos.takeProfit) {
+      exitOrderRows.push({
+        kind: 'exit-order',
+        data: {
+          id: `exit-tp-${pos.id}`,
+          positionId: pos.id,
+          symbol: pos.symbol,
+          side: pos.side === 'long' ? 'sell' : 'buy',
+          exitType: 'Take Profit',
+          price: pos.takeProfit,
+          qty: pos.quantity,
+          placedAt: pos.openedAt,
+        },
+      });
+    }
+    if (pos.stopLoss) {
+      exitOrderRows.push({
+        kind: 'exit-order',
+        data: {
+          id: `exit-sl-${pos.id}`,
+          positionId: pos.id,
+          symbol: pos.symbol,
+          side: pos.side === 'long' ? 'sell' : 'buy',
+          exitType: 'Stop Loss',
+          price: pos.stopLoss,
+          qty: pos.quantity,
+          placedAt: pos.openedAt,
+        },
+      });
+    }
+  }
 
   // All order types (market, limit, stop) appear in the Orders tab — matching TradingView.
   // Market orders land in the Filled sub-tab immediately (no Working entry).
-  // Pending orders (limit/stop awaiting trigger) land in the Working sub-tab.
+  // Pending orders (limit/stop awaiting trigger) + exit orders land in the Working sub-tab.
   const allOrderDisplayRows: OrderDisplayRow[] = [
+    ...exitOrderRows,
     ...pendingOrders.map((o) => ({ kind: 'pending' as const, data: o })),
     ...orders.map((o) => ({ kind: 'historical' as const, data: o })),
   ].sort((a, b) => {
-    const ta = a.kind === 'pending' ? a.data.placedAt : a.data.placingTime;
-    const tb = b.kind === 'pending' ? b.data.placedAt : b.data.placingTime;
+    const ta =
+      a.kind === 'pending'
+        ? a.data.placedAt
+        : a.kind === 'exit-order'
+          ? a.data.placedAt
+          : a.data.placingTime;
+    const tb =
+      b.kind === 'pending'
+        ? b.data.placedAt
+        : b.kind === 'exit-order'
+          ? b.data.placedAt
+          : b.data.placingTime;
     return tb - ta;
   });
 
@@ -448,7 +523,7 @@ export function PaperTradingPanel({
     orderSubTab === 'all'
       ? allOrderDisplayRows
       : orderSubTab === 'working'
-        ? allOrderDisplayRows.filter((r) => r.kind === 'pending')
+        ? allOrderDisplayRows.filter((r) => r.kind === 'pending' || r.kind === 'exit-order')
         : orderSubTab === 'filled'
           ? allOrderDisplayRows.filter((r) => r.kind === 'historical' && r.data.status === 'filled')
           : orderSubTab === 'cancelled'
@@ -824,7 +899,9 @@ export function PaperTradingPanel({
                       sub === 'all'
                         ? allOrderDisplayRows.length
                         : sub === 'working'
-                          ? allOrderDisplayRows.filter((r) => r.kind === 'pending').length
+                          ? allOrderDisplayRows.filter(
+                              (r) => r.kind === 'pending' || r.kind === 'exit-order'
+                            ).length
                           : allOrderDisplayRows.filter(
                               (r) => r.kind === 'historical' && r.data.status === sub
                             ).length;
@@ -907,7 +984,7 @@ export function PaperTradingPanel({
                         <span
                           className="rounded-full px-1 py-px tabular-nums"
                           style={{
-                            fontSize: fontSize.xxs,
+                            fontSize: fontSize.xsxxs,
                             background:
                               orderHistorySubTab === sub
                                 ? `${color.purpleDark}40`
@@ -1239,31 +1316,41 @@ export function PaperTradingPanel({
                           <tbody>
                             <AnimatePresence>
                               {filteredOrderRows.map((row, i) => {
+                                const isExitOrder = row.kind === 'exit-order';
                                 const isPending = row.kind === 'pending';
                                 const p = isPending ? row.data : null;
-                                const h = !isPending ? row.data : null;
+                                const h = !isPending && !isExitOrder ? row.data : null;
+                                const ex = isExitOrder ? row.data : null;
                                 const rowId = row.data.id;
                                 const symbol = row.data.symbol;
-                                const side = row.data.side;
-                                const type = row.data.type;
-                                const qty = row.data.qty;
-                                const placingTs = isPending ? p!.placedAt : h!.placingTime;
+                                const side = isExitOrder ? ex!.side : row.data.side;
+                                const type = isExitOrder
+                                  ? ex!.exitType.toLowerCase().replace(' ', '-')
+                                  : row.data.type;
+                                const qty = isExitOrder ? ex!.qty : row.data.qty;
+                                const placingTs = isPending
+                                  ? p!.placedAt
+                                  : isExitOrder
+                                    ? ex!.placedAt
+                                    : h!.placingTime;
 
                                 // status badge config
-                                const statusLabel = isPending
-                                  ? 'Working'
-                                  : h!.status === 'filled'
-                                    ? 'Filled'
-                                    : h!.status === 'cancelled'
-                                      ? 'Cancelled'
-                                      : 'Rejected';
-                                const statusColor = isPending
-                                  ? color.amber
-                                  : h!.status === 'filled'
-                                    ? color.green
-                                    : h!.status === 'cancelled'
-                                      ? color.muted
-                                      : color.red;
+                                const statusLabel =
+                                  isPending || isExitOrder
+                                    ? 'Working'
+                                    : h!.status === 'filled'
+                                      ? 'Filled'
+                                      : h!.status === 'cancelled'
+                                        ? 'Cancelled'
+                                        : 'Rejected';
+                                const statusColor =
+                                  isPending || isExitOrder
+                                    ? color.amber
+                                    : h!.status === 'filled'
+                                      ? color.green
+                                      : h!.status === 'cancelled'
+                                        ? color.muted
+                                        : color.red;
 
                                 return (
                                   <motion.tr
@@ -1308,15 +1395,23 @@ export function PaperTradingPanel({
                                           className="rounded px-1 py-px font-bold uppercase"
                                           style={{
                                             fontSize: fontSize.xs10,
-                                            background:
-                                              type === 'limit'
+                                            background: isExitOrder
+                                              ? ex!.exitType === 'Take Profit'
+                                                ? `${color.green}22`
+                                                : `${color.red}22`
+                                              : type === 'limit'
                                                 ? `${color.purpleDark}33`
                                                 : `${color.amber}22`,
-                                            color:
-                                              type === 'limit' ? color.purpleDark : color.amber,
+                                            color: isExitOrder
+                                              ? ex!.exitType === 'Take Profit'
+                                                ? color.green
+                                                : color.red
+                                              : type === 'limit'
+                                                ? color.purpleDark
+                                                : color.amber,
                                           }}
                                         >
-                                          {type}
+                                          {isExitOrder ? ex!.exitType : type}
                                         </span>
                                       </td>
                                     )}
@@ -1340,29 +1435,37 @@ export function PaperTradingPanel({
                                     )}
                                     {isVisible('orders', 'limitPrice') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/80">
-                                        {isPending
-                                          ? type === 'limit'
-                                            ? `$${fmtMktPrice(p!.triggerPrice)}`
+                                        {isExitOrder
+                                          ? ex!.exitType === 'Take Profit'
+                                            ? `$${fmtMktPrice(ex!.price)}`
                                             : '—'
-                                          : h!.limitPrice != null
-                                            ? `$${fmtMktPrice(h!.limitPrice)}`
-                                            : '—'}
+                                          : isPending
+                                            ? type === 'limit'
+                                              ? `$${fmtMktPrice(p!.triggerPrice)}`
+                                              : '—'
+                                            : h!.limitPrice != null
+                                              ? `$${fmtMktPrice(h!.limitPrice)}`
+                                              : '—'}
                                       </td>
                                     )}
                                     {isVisible('orders', 'stopPrice') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/80">
-                                        {isPending
-                                          ? type === 'stop'
-                                            ? `$${fmtMktPrice(p!.triggerPrice)}`
+                                        {isExitOrder
+                                          ? ex!.exitType === 'Stop Loss'
+                                            ? `$${fmtMktPrice(ex!.price)}`
                                             : '—'
-                                          : h!.stopPrice != null
-                                            ? `$${fmtMktPrice(h!.stopPrice)}`
-                                            : '—'}
+                                          : isPending
+                                            ? type === 'stop'
+                                              ? `$${fmtMktPrice(p!.triggerPrice)}`
+                                              : '—'
+                                            : h!.stopPrice != null
+                                              ? `$${fmtMktPrice(h!.stopPrice)}`
+                                              : '—'}
                                       </td>
                                     )}
                                     {isVisible('orders', 'fillPrice') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/80">
-                                        {!isPending && h!.fillPrice != null
+                                        {!isPending && !isExitOrder && h!.fillPrice != null
                                           ? `$${fmtMktPrice(h!.fillPrice)}`
                                           : '—'}
                                       </td>
@@ -1399,7 +1502,9 @@ export function PaperTradingPanel({
                                         className="px-3 py-1.5 text-right tabular-nums"
                                         style={{ fontSize: fontSize.xs10, color: color.muted }}
                                       >
-                                        {!isPending ? h!.commission.toFixed(4) : '—'}
+                                        {!isPending && !isExitOrder
+                                          ? h!.commission.toFixed(4)
+                                          : '—'}
                                       </td>
                                     )}
                                     {isVisible('orders', 'placedAt') && (
@@ -1436,9 +1541,11 @@ export function PaperTradingPanel({
                                           ? p!.usdtAmount != null
                                             ? `$${p!.usdtAmount.toFixed(2)}`
                                             : '—'
-                                          : h!.margin != null
-                                            ? `$${h!.margin.toFixed(2)}`
-                                            : '—'}
+                                          : isExitOrder
+                                            ? '—'
+                                            : h!.margin != null
+                                              ? `$${h!.margin.toFixed(2)}`
+                                              : '—'}
                                       </td>
                                     )}
                                     {isVisible('orders', 'cancel') && (
@@ -1556,24 +1663,13 @@ export function PaperTradingPanel({
                                     {isVisible('orderhistory', 'type') && (
                                       <td className="px-3 py-1.5">
                                         <span
-                                          className="rounded px-1 py-px font-bold uppercase"
+                                          className="rounded px-1 py-px font-bold"
                                           style={{
                                             fontSize: fontSize.xs10,
-                                            background:
-                                              o.type === 'limit'
-                                                ? `${color.purpleDark}33`
-                                                : o.type === 'stop'
-                                                  ? `${color.amber}22`
-                                                  : 'rgba(255,255,255,0.08)',
-                                            color:
-                                              o.type === 'limit'
-                                                ? color.purpleDark
-                                                : o.type === 'stop'
-                                                  ? color.amber
-                                                  : color.muted,
+                                            ...orderTypePillStyle(o.type, color),
                                           }}
                                         >
-                                          {o.type}
+                                          {orderTypeLabel(o.type)}
                                         </span>
                                       </td>
                                     )}
