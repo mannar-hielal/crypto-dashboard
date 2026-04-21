@@ -380,6 +380,10 @@ export function PaperTradingPanel({
   const pendingOrders = usePaperStore((s) => s.pendingOrders);
   const orders = usePaperStore((s) => s.orders);
   const orderHistoryRows = orders;
+  const filteredOrderHistoryRows =
+    orderHistorySubTab === 'all'
+      ? orderHistoryRows
+      : orderHistoryRows.filter((o) => o.status === orderHistorySubTab);
   const balanceLog = usePaperStore((s) => s.balanceLog);
   const realizedPnl = usePaperStore((s) => s.realizedPnl);
   const journal = usePaperStore((s) => s.journal);
