@@ -379,6 +379,7 @@ export function PaperTradingPanel({
   const positions = usePaperStore((s) => s.positions);
   const pendingOrders = usePaperStore((s) => s.pendingOrders);
   const orders = usePaperStore((s) => s.orders);
+  const orderHistoryRows = orders;
   const balanceLog = usePaperStore((s) => s.balanceLog);
   const realizedPnl = usePaperStore((s) => s.realizedPnl);
   const journal = usePaperStore((s) => s.journal);
@@ -434,6 +435,16 @@ export function PaperTradingPanel({
   const reserved = pendingOrders.reduce((s, o) => s + o.usdtAmount, 0);
   // lockedPositionCapital = sum of all open-position margins (already deducted from balance)
   const lockedPositionCapital = positions.reduce((sum, pos) => sum + pos.entryUsdtAmount, 0);
+  // unrealizedPnl = sum of mark-to-market PnL for all open positions
+  const unrealizedPnl = positions.reduce((sum, pos) => {
+    const markPrice = getPriceForSymbol(pos.symbol);
+    if (markPrice === null) return sum;
+    const rawPnl =
+      pos.side === 'long'
+        ? (markPrice - pos.entryPrice) * pos.quantity
+        : (pos.entryPrice - markPrice) * pos.quantity;
+    return sum + rawPnl;
+  }, 0);
   // balance is already free cash (margin + commissions already deducted at open)
   const available = balance;
   const equity = balance + lockedPositionCapital + unrealizedPnl;
