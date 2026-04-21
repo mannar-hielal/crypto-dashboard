@@ -124,16 +124,18 @@
 | 2.1.1 | Tab = **Limit**. Price input appears pre-filled with live price | Price field visible                                                               | ⬜     |      |       |
 | 2.1.2 | Set price to live − 2%, qty $200, click **Buy**                 | Pending order created; balance decreases by $200 + commission                     | ⬜     |      |       |
 | 2.1.3 | Go to **Orders** tab → **Working** sub-tab                      | 1 row: LIMIT / BUY / Limit Price = your price; Status = Working (amber)           | ⬜     |      |       |
-| 2.1.4 | When price drops to trigger                                     | Order disappears from Working; appears in **Filled** sub-tab; journal entry added | ⬜     | ⬜   |       |
+| 2.1.4 | Check **All** sub-tab count badge                               | Badge shows **1**; row visible under All                                          | ⬜     |      |       |
+| 2.1.5 | When price drops to trigger                                     | Order disappears from Working; appears in **Filled** sub-tab; journal entry added | ⬜     | ⬜   |       |
+| 2.1.6 | Check **All** sub-tab after fill                                | Badge count unchanged (1); row now shows status = Filled (green)                  | ⬜     |      |       |
 
-> **TV cross-check 2.1.4:** Both apps should fill on the same candle; entry prices should be within $1.
+> **TV cross-check 2.1.5:** Both apps should fill on the same candle; entry prices should be within $1.
 
 ### 2.2 Limit Buy cancel
 
 | #     | Action                                        | Expected                                                                       | Status | Notes |
 | ----- | --------------------------------------------- | ------------------------------------------------------------------------------ | ------ | ----- |
-| 2.2.1 | Place limit buy far below market (live − 10%) | Order appears in **Working** sub-tab                                           | ⬜     |       |
-| 2.2.2 | Click **✕** cancel in Working sub-tab         | Order disappears; appears in **Cancelled** sub-tab; balance **fully refunded** | ⬜     |       |
+| 2.2.1 | Place limit buy far below market (live − 10%) | Order appears in **Working** sub-tab; amber tab badge shows 1                   | ⬜     |       |
+| 2.2.2 | Click **✕** cancel in Working sub-tab         | Order disappears; appears in **Cancelled** sub-tab; balance **fully refunded**; amber badge disappears | ⬜     |       |
 
 ### 2.3 Limit Sell above market
 
@@ -164,17 +166,18 @@
 
 ### 3.1 Stop Buy above market (breakout)
 
-| #     | Action                                      | Expected                                     | Status | TV ✓ | Notes |
-| ----- | ------------------------------------------- | -------------------------------------------- | ------ | ---- | ----- |
-| 3.1.1 | Tab = **Stop**, price = live + 1%, Buy $200 | Pending order in Orders tab: STOP / BUY      | ⬜     |      |       |
-| 3.1.2 | When price rises to trigger                 | Position opens; journal: `Stop order filled` | ⬜     | ⬜   |       |
+| #     | Action                                      | Expected                                                                | Status | TV ✓ | Notes |
+| ----- | ------------------------------------------- | ----------------------------------------------------------------------- | ------ | ---- | ----- |
+| 3.1.1 | Tab = **Stop**, price = live + 1%, Buy $200 | Pending order in Orders tab: STOP / BUY; amber tab badge shows 1        | ⬜     |      |       |
+| 3.1.2 | Check **Working** sub-tab                   | 1 row visible with STOP type pill                                       | ⬜     |      |       |
+| 3.1.3 | When price rises to trigger                 | Order moves to **Filled** sub-tab; amber badge disappears; position opens; journal: `Stop order filled` | ⬜     | ⬜   |       |
 
 ### 3.2 Stop Sell below market (breakdown)
 
-| #     | Action                                   | Expected                   | Status | TV ✓ | Notes |
-| ----- | ---------------------------------------- | -------------------------- | ------ | ---- | ----- |
-| 3.2.1 | Tab = Stop, price = live − 1%, Sell $200 | Pending order: STOP / SELL | ⬜     |      |       |
-| 3.2.2 | When price drops to trigger              | SHORT position opens       | ⬜     | ⬜   |       |
+| #     | Action                                   | Expected                                                       | Status | TV ✓ | Notes |
+| ----- | ---------------------------------------- | -------------------------------------------------------------- | ------ | ---- | ----- |
+| 3.2.1 | Tab = Stop, price = live − 1%, Sell $200 | Pending order: STOP / SELL; amber badge shows 1                | ⬜     |      |       |
+| 3.2.2 | When price drops to trigger              | SHORT position opens; order in Filled sub-tab                  | ⬜     | ⬜   |       |
 
 ### 3.3 Stop cancel
 
@@ -254,3 +257,168 @@
 | 6.7 | Place identical Limit Buy at live − 1% in both apps                 | Both fill on the same candle; entry prices within $1                                  | ⬜     |       |
 | 6.8 | Place identical Stop Buy at live + 0.5% in both apps                | Both trigger on the same candle; entry prices within $1                               | ⬜     |       |
 | 6.9 | Browser tab title during test                                       | Tab shows `▲ BTC/USDT {price} +x.xx%` or `▼ …` updating live; arrow flips on reversal | ⬜     |       |
+
+---
+
+## Section 7 — Order History Tab _(run after Sections 2 & 3 pass)_
+
+> Covers the **Order History** tab (5th tab in PaperTradingPanel). Shows all `HistoricalOrder[]` records — market + limit + stop, all statuses. **Market orders appear here** (not in the Orders tab).
+
+### 7.1 Market order appears in Order History
+
+| #     | Action                                        | Expected                                                                                   | Status | Notes |
+| ----- | --------------------------------------------- | ------------------------------------------------------------------------------------------ | ------ | ----- |
+| 7.1.1 | Reset account. Place a market Buy $100        | Go to **Order History** tab — 1 row: Type = MARKET / Side = BUY / Status = Filled (green) | ⬜     |       |
+| 7.1.2 | Check **All** and **Filled** sub-tabs         | Row visible in both; count badge on tab shows 1                                            | ⬜     |       |
+| 7.1.3 | Check **Cancelled** and **Rejected** sub-tabs | Empty (no rows)                                                                            | ⬜     |       |
+| 7.1.4 | Check Orders tab                              | Market order does **not** appear here                                                      | ⬜     |       |
+
+### 7.2 Limit order fill appears in Order History
+
+| #     | Action                                             | Expected                                                                                | Status | Notes |
+| ----- | -------------------------------------------------- | --------------------------------------------------------------------------------------- | ------ | ----- |
+| 7.2.1 | Place limit buy at live − 2%; wait for fill        | Order History → Filled sub-tab: 1 row LIMIT / BUY / Fill Price ≈ trigger price         | ⬜     |       |
+| 7.2.2 | Verify columns: Limit Price, Fill Price, Commission | Limit Price = your trigger; Fill Price ≈ trigger; Commission ≈ usdtAmount × 0.0007     | ⬜     |       |
+| 7.2.3 | Orders tab → Filled sub-tab                        | Same record also appears in the Orders tab's Filled sub-tab (two views, same data)     | ⬜     |       |
+
+### 7.3 Cancelled order appears in Order History
+
+| #     | Action                                                        | Expected                                                                    | Status | Notes |
+| ----- | ------------------------------------------------------------- | --------------------------------------------------------------------------- | ------ | ----- |
+| 7.3.1 | Place limit buy far below market; cancel via Orders tab (✕)  | Order History → Cancelled sub-tab: 1 row, Status = Cancelled (muted)        | ⬜     |       |
+| 7.3.2 | Check All sub-tab count                                       | Count includes this cancelled record                                        | ⬜     |       |
+
+### 7.4 Rejected orders (if any) appear in Order History, not History tab
+
+| #     | Action                                               | Expected                                                                              | Status | Notes |
+| ----- | ---------------------------------------------------- | ------------------------------------------------------------------------------------- | ------ | ----- |
+| 7.4.1 | Simulate rejection (e.g. submit order with 0 balance) | If order reaches rejected state: Order History → Rejected sub-tab shows red ⚠ badge  | ⬜     |       |
+| 7.4.2 | Check History tab (closed trades)                    | Rejected orders do **not** appear in the History / Trade History tab                  | ⬜     |       |
+
+### 7.5 Placing Time and Closing Time columns
+
+| #     | Action                                           | Expected                                                                     | Status | Notes |
+| ----- | ------------------------------------------------ | ---------------------------------------------------------------------------- | ------ | ----- |
+| 7.5.1 | Open column picker (⊟ icon) in Order History tab | Placing Time and Closing Time are on by default; other columns toggleable    | ⬜     |       |
+| 7.5.2 | Disable Closing Time; re-enable it               | Column disappears then reappears; preference persists after browser refresh  | ⬜     |       |
+
+### 7.6 Mix of all order types
+
+| #     | Action                                                                       | Expected                                                                        | Status | Notes |
+| ----- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------ | ----- |
+| 7.6.1 | Place market buy, limit buy (fill), stop sell (cancel) in sequence           | Order History All sub-tab shows 3 rows: MARKET/Filled, LIMIT/Filled, STOP/Cancelled | ⬜     |       |
+| 7.6.2 | Each status badge uses correct color: Filled = green, Cancelled = muted      | Visual check                                                                    | ⬜     |       |
+
+---
+
+## Section 8 — Account Settings Modal
+
+> Open via the **⚙️ gear** button in the PaperTradingPanel header.
+
+| #    | Action                                                                | Expected                                                                                              | Status | Notes |
+| ---- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------ | ----- |
+| 8.1  | Click ⚙️ gear button                                                  | Modal opens; "Paper Trading Account" title visible                                                    | ⬜     |       |
+| 8.2  | Account name field                                                    | Shows logged-in username; field is **read-only** (cannot type)                                        | ⬜     |       |
+| 8.3  | Leverage field                                                        | Displays `10:1 Crypto` — read-only / display only                                                     | ⬜     |       |
+| 8.4  | Commission field                                                       | Displays `0.07% Fixed · Taker` — read-only                                                            | ⬜     |       |
+| 8.5  | "Save" button                                                         | Button is disabled (greyed out — all fields are read-only)                                            | ⬜     |       |
+| 8.6  | Click "Reset account" once                                            | Button changes to a confirm state (e.g. "Confirm reset?"); 3 s auto-cancel timer starts               | ⬜     |       |
+| 8.7  | Wait 3 s without confirming                                           | Button reverts to default "Reset account" text; no reset occurred                                     | ⬜     |       |
+| 8.8  | Click "Reset account" → immediately click confirm within 3 s          | Modal closes; balance resets to $10,000; positions/orders/journal cleared                              | ⬜     |       |
+| 8.9  | Click ✕ (close) button on modal                                       | Modal dismisses; no reset; no changes                                                                  | ⬜     |       |
+| 8.10 | Click backdrop (outside modal)                                        | Modal dismisses; confirm state cleared if it was pending                                               | ⬜     |       |
+| 8.11 | Open modal while in mid-confirm state; dismiss via backdrop; re-open  | Confirm state is cleared on re-open — button shows default "Reset account"                             | ⬜     |       |
+
+---
+
+## Section 9 — Bid/Ask Spread in TradingPanel
+
+| #    | Action                                                                   | Expected                                                                                    | Status | Notes |
+| ---- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- | ------ | ----- |
+| 9.1  | Open TradingPanel with a live symbol (e.g. BTCUSDT)                      | Spread badge between Sell/Buy buttons shows a numeric value (e.g. `0.10`)                   | ⬜     |       |
+| 9.2  | Hover spread badge                                                        | Tooltip shows raw bid and ask values (e.g. `Bid: 75,000.00 · Ask: 75,000.10`)               | ⬜     |       |
+| 9.3  | Sell button price                                                         | Shows the **bid** price, not mid-price                                                      | ⬜     |       |
+| 9.4  | Buy button price                                                          | Shows the **ask** price, not mid-price                                                      | ⬜     |       |
+| 9.5  | Spread value decimal places                                               | If spread < 1: 4 decimal places (e.g. `0.1000`); if ≥ 1: 2 decimal places (e.g. `1.25`)    | ⬜     |       |
+| 9.6  | Disconnect WebSocket (network tab block) — wait for bid/ask to go stale  | Sell/Buy prices fall back to `latestPrice`; spread badge shows `—`                          | ⬜     |       |
+| 9.7  | Switch active pane symbol (e.g. BTC → ETH in multi-pane mode)            | Sell/Buy prices update to ETH bid/ask immediately; spread re-renders for ETH                | ⬜     |       |
+| 9.8  | Compare bid/ask vs TradingView orderbook at rest                          | CryptoDash bid/ask within $1 of TradingView best bid/ask at the same moment                 | ⬜     |       |
+
+---
+
+## Section 10.1 — Multi-Chart Layout: Layout switching
+
+> Run with single-chart `1` layout first, then test each split layout. No TV cross-check column needed.
+
+| #      | Action                                                             | Expected                                                                                    | Status | Notes |
+| ------ | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- | ------ | ----- |
+| 10.1.1 | Open `ChartLayoutPicker` (grid icon in SymbolBar, right side)      | Popover shows 5 SVG layout icons: `1 · 2h · 2v · 3h · 4`                                   | ⬜     |       |
+| 10.1.2 | Select **2h** (2 columns)                                          | Chart area splits into 2 side-by-side panes; PaneHeader visible on each                     | ⬜     |       |
+| 10.1.3 | Select **2v** (2 rows)                                             | 2 stacked panes                                                                             | ⬜     |       |
+| 10.1.4 | Select **3h** (3 columns)                                          | 3 side-by-side panes                                                                        | ⬜     |       |
+| 10.1.5 | Select **4** (2×2 grid)                                            | 4 panes in grid                                                                             | ⬜     |       |
+| 10.1.6 | Switch back to **1** (single)                                      | Single pane; PaneHeader hidden                                                              | ⬜     |       |
+| 10.1.7 | Refresh browser with 2h layout active                              | Layout persists (loaded from `cd-layout` localStorage)                                      | ⬜     |       |
+
+---
+
+## Section 10.2 — Multi-Chart Layout: Active pane selection
+
+| #      | Action                                              | Expected                                                                                           | Status | Notes |
+| ------ | --------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------ | ----- |
+| 10.2.1 | In 2h layout: click right pane                      | Right pane gets animated purple border + inner glow; TradingPanel reacts to right pane's symbol   | ⬜     |       |
+| 10.2.2 | Click left pane                                     | Purple border moves to left pane (animated)                                                        | ⬜     |       |
+| 10.2.3 | Switch to 4-pane layout; click pane 3               | Pane 3 becomes active; animated left stripe in PaneHeader moves to pane 3                          | ⬜     |       |
+| 10.2.4 | Switch to a smaller layout while active pane = 3    | `activePane` clamps to `paneCount − 1`; no crash                                                   | ⬜     |       |
+
+---
+
+## Section 10.3 — Multi-Chart Layout: Per-pane symbol + interval
+
+| #      | Action                                                                   | Expected                                                                               | Status | Notes |
+| ------ | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- | ------ | ----- |
+| 10.3.1 | In 2h layout: open PaneHeader symbol picker for pane 0; select ETH       | Pane 0 switches to ETH; pane 1 stays on BTC; each shows correct price                 | ⬜     |       |
+| 10.3.2 | Use interval buttons in PaneHeader for pane 1: click 5m                   | Pane 1 fetches 5m bars; pane 0 stays on its interval                                   | ⬜     |       |
+| 10.3.3 | Use SymbolBar to change active pane symbol                                | Only the active pane updates                                                            | ⬜     |       |
+
+---
+
+## Section 10.4 — Multi-Chart Layout: Sync options
+
+| #      | Action                                                                              | Expected                                                                                                         | Status | Notes |
+| ------ | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------ | ----- |
+| 10.4.1 | Enable **Sync Symbol** toggle (in ChartLayoutPicker)                                | All panes immediately snap to the active pane's symbol                                                          | ⬜     |       |
+| 10.4.2 | Disable **Sync Symbol**; change pane 0 symbol                                       | Other panes remain on their current symbols                                                                      | ⬜     |       |
+| 10.4.3 | Enable **Sync Interval** toggle                                                     | All panes immediately snap to the active pane's interval                                                         | ⬜     |       |
+| 10.4.4 | Enable **Sync Crosshair**; hover over pane 0 chart                                  | Crosshair line appears on all other panes at the same time position; Y position maps to each pane's price scale  | ⬜     |       |
+| 10.4.5 | Move cursor off chart (pane 0 loses cursor)                                         | Crosshair clears from all follower panes                                                                         | ⬜     |       |
+| 10.4.6 | Enable **Sync Time Range**; pan or zoom pane 0                                      | All other panes adjust visible range to match                                                                    | ⬜     |       |
+| 10.4.7 | Enable Sync Time Range while panes are at different zoom levels                     | All panes snap to active pane's visible range immediately on toggle-on                                           | ⬜     |       |
+| 10.4.8 | Sync options persist after browser refresh                                          | Toggle states restored from `cd-layout` localStorage                                                            | ⬜     |       |
+
+---
+
+## Section 10.5 — Multi-Chart Layout: PaneHeader visual elements
+
+| #      | Action                                              | Expected                                                                                     | Status | Notes |
+| ------ | --------------------------------------------------- | -------------------------------------------------------------------------------------------- | ------ | ----- |
+| 10.5.1 | Multi-pane mode: each PaneHeader shows              | Symbol name, interval buttons (1m/5m/15m/1h/4h/1d), live price, ±% change badge, 5 px dot    | ⬜     |       |
+| 10.5.2 | Connection dot state                                | Green pulse when connected; grey/off when disconnected                                        | ⬜     |       |
+| 10.5.3 | Single-pane mode (`1` layout)                       | PaneHeader is **hidden** (not rendered)                                                       | ⬜     |       |
+
+---
+
+## Section 11 — Multi-Symbol PnL (`lastKnownPrices`)
+
+> Verifies that positions in non-active symbols retain correct mark price and PnL display.
+
+| #     | Action                                                                        | Expected                                                                                              | Status | Notes |
+| ----- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------ | ----- |
+| 11.1  | In 2h layout: set pane 0 = BTCUSDT, pane 1 = ETHUSDT. Set pane 0 as active   | TradingPanel shows BTCUSDT                                                                            | ⬜     |       |
+| 11.2  | Place a market Buy $100 on BTCUSDT (active pane)                              | BTCUSDT position appears in Positions tab                                                             | ⬜     |       |
+| 11.3  | Switch active pane to pane 1 (ETHUSDT). Place a market Buy $100 on ETHUSDT   | ETHUSDT position appears; Positions tab now shows 2 rows                                              | ⬜     |       |
+| 11.4  | Switch active pane back to pane 0 (BTCUSDT)                                   | Both positions still visible; ETHUSDT row shows a valid mark price (not $0 or stale)                  | ⬜     |       |
+| 11.5  | Watch ETHUSDT PnL while BTCUSDT is the active pane                            | ETHUSDT PnL updates live (from `lastKnownPrices`, not the active pane price)                          | ⬜     |       |
+| 11.6  | Switch to single-pane layout (`1`) showing only BTCUSDT                        | ETHUSDT position mark price still updates (pane WS closes but `lastKnownPrices` retains last value)   | ⬜     |       |
+| 11.7  | Account Summary Bar — Unrealized P&L                                          | Reflects the **combined** PnL of BTC + ETH positions, not just the active pane's position             | ⬜     |       |
+| 11.8  | Close ETHUSDT position manually while BTCUSDT is active                        | ETHUSDT position closes; History tab shows the correct exit price and PnL                             | ⬜     |       |
