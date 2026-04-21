@@ -82,13 +82,15 @@ export function usePendingOrderMonitor({ onFilled }: PendingOrderMonitorOptions 
       fillPendingRef.current(order.id);
 
       // Re-open as a live market position at the execution price.
+      // Pass skipJournal=true — this hook adds its own human-readable journal entry below.
       const posId = placeOrderRef.current(
         order.symbol,
         order.side,
         price, // fill at current market price
         order.usdtAmount,
         order.takeProfit,
-        order.stopLoss
+        order.stopLoss,
+        true // skipJournal
       );
 
       const typeLabel = order.type === 'limit' ? 'Limit' : 'Stop';

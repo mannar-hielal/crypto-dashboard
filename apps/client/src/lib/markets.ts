@@ -80,3 +80,39 @@ export const SYMBOLS: SymbolEntry[] = [
   { symbol: 'AVAXUSDT', base: 'AVAX', label: 'Avalanche' },
   { symbol: 'LINKUSDT', base: 'LINK', label: 'Chainlink' },
 ];
+
+/**
+ * Quantity precision (decimal places) per symbol — mirrors Bybit Spot lot sizes.
+ * Used to floor raw qty to the exchange minimum step, matching TradingView's
+ * "trade value" calculation (input USD → floor qty → actual filled value).
+ *
+ * Example: 100 USD at 74,825 → raw 0.001337 BTC → floor to 4dp → 0.0013 BTC
+ *          → actual trade value = 0.0013 × 74,825 = 97.27 USD  (matches TV)
+ */
+export const SYMBOL_QTY_DECIMALS: Record<string, number> = {
+  BTCUSDT: 4, // 0.0001 BTC step
+  ETHUSDT: 3, // 0.001  ETH step
+  SOLUSDT: 2, // 0.01   SOL step
+  BNBUSDT: 2, // 0.01   BNB step
+  XRPUSDT: 1, // 0.1    XRP step
+  DOGEUSDT: 0, // 1      DOGE step
+  ADAUSDT: 0, // 1      ADA step
+  AVAXUSDT: 1, // 0.1    AVAX step
+  LINKUSDT: 1, // 0.1    LINK step
+};
+
+/** Default precision for any symbol not in the map. */
+const DEFAULT_QTY_DECIMALS = 4;
+
+/**
+ * Floor a raw qty to the symbol's lot-size step.
+ *
+ * @param qty   Raw quantity in base-asset units
+ * @param symbol  e.g. "BTCUSDT"
+ * @returns Quantity truncated down to the nearest valid lot
+ */
+export function floorToLot(qty: number, symbol: string): number {
+  const decimals = SYMBOL_QTY_DECIMALS[symbol] ?? DEFAULT_QTY_DECIMALS;
+  const factor = Math.pow(10, decimals);
+  return Math.floor(qty * factor) / factor;
+}

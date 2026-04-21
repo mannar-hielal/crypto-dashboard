@@ -52,7 +52,7 @@ export interface ClosedTrade {
 }
 
 export type OrderStatus = 'filled' | 'cancelled' | 'rejected';
-export type OrderType = 'market' | 'limit' | 'stop';
+export type OrderType = 'market' | 'limit' | 'stop' | 'take-profit' | 'stop-loss';
 
 export interface PendingOrder {
   id: string;
@@ -78,6 +78,8 @@ export interface HistoricalOrder {
   fillPrice?: number;
   status: OrderStatus;
   commission: number;
+  /** USDT margin used for this order entry (= usdtAmount at placement; omitted for closing orders) */
+  margin?: number;
   placingTime: number;
   closingTime: number;
   /** Human-readable reason why the order was rejected (only set when status === 'rejected') */
@@ -108,14 +110,6 @@ export interface JournalEntry {
 }
 
 // ─── Store ────────────────────────────────────────────────────────────────────
-
-// Helper – format quantity to a readable precision
-function fmtQty(qty: number): string {
-  if (qty >= 1000) return qty.toFixed(0);
-  if (qty >= 1) return qty.toFixed(4);
-  if (qty >= 0.001) return qty.toFixed(6);
-  return qty.toFixed(8);
-}
 
 // Helper – format price to a readable precision
 function fmtPrice(price: number): string {
@@ -159,11 +153,17 @@ interface PaperState {
     price: number,
     usdtAmount: number,
     takeProfit?: number,
-    stopLoss?: number
+    stopLoss?: number,
+    skipJournal?: boolean // new param to skip journal entry
   ) => string | null;
 
   /** Close an open position at the given exit price. */
-  closePosition: (positionId: string, exitPrice: number) => void;
+  closePosition: (
+    positionId: string,
+    exitPrice: number,
+    reason?: string,
+    closeType?: OrderType
+  ) => void;
 
   /** Add a note to the journal. Pass isUserNote=false for system-generated entries (not user-editable). */
   addJournalNote: (text: string, isUserNote?: boolean, pnl?: number) => void;
@@ -226,14 +226,160 @@ export const usePaperStore = create<PaperState>()(
 
       setLeverage: (v) => set({ leverage: v }),
 
-      placeOrder: (symbol, side, price, usdtAmount, takeProfit, stopLoss) => {
-        const { balance, leverage } = get();
+      placeOrder: (symbol, side, price, usdtAmount, takeProfit, stopLoss, skipJournal) => {
+        const { leverage, positions } = get();
 
         // ── Validation ──────────────────────────────────────────────────────
         if (usdtAmount <= 0 || price <= 0) return null;
+
+        // ── Position netting (TV-style) ─────────────────────────────────────
+        const oppositeSide = side === 'buy' ? 'short' : 'long';
+        const existingOpp = positions.filter((p) => p.symbol === symbol && p.side === oppositeSide);
+
+        // skipOrderRecord: true when the netting path already wrote the single
+        // order record for this user action (close+open-remainder case).
+        let skipOrderRecord = false;
+
+        if (existingOpp.length > 0) {
+          const incomingQty = (usdtAmount * leverage) / price;
+          let remainingQty = incomingQty;
+          const now = Date.now();
+          const newHistory: ClosedTrade[] = [];
+          const newBalanceLogs: BalanceEvent[] = [];
+          const newJournalEntries: JournalEntry[] = [];
+
+          for (const pos of existingOpp) {
+            if (remainingQty <= 0) break;
+
+            const closeQty = Math.min(remainingQty, pos.quantity);
+            const isFullClose = closeQty >= pos.quantity - 1e-10;
+            const fraction = closeQty / pos.quantity;
+
+            // PnL for the closed portion
+            const pnlPartial =
+              pos.side === 'long'
+                ? (price - pos.entryPrice) * closeQty
+                : (pos.entryPrice - price) * closeQty;
+            const exitCommission = closeQty * price * COMMISSION_RATE;
+            const entryCommissionPartial = pos.entryUsdtAmount * fraction * COMMISSION_RATE;
+            const marginPartial = pos.entryUsdtAmount * fraction;
+            const returnAmt = Math.max(0, marginPartial + pnlPartial - exitCommission);
+
+            const closeId = `${now}-${Math.random().toString(36).slice(2, 7)}`;
+
+            // NOTE: No separate close order added to `orders` here — TV records only 1
+            // order per user action (the incoming order). The netting is silent position math.
+
+            newHistory.push({
+              id: closeId,
+              symbol: pos.symbol,
+              side: pos.side,
+              quantity: closeQty,
+              entryPrice: pos.entryPrice,
+              exitPrice: price,
+              pnl: pnlPartial,
+              openedAt: pos.openedAt,
+              closedAt: now,
+            });
+
+            const netPnl = pnlPartial - exitCommission;
+            const closedSide = pos.side === 'long' ? 'LONG' : 'SHORT';
+            if (!skipJournal) {
+              newJournalEntries.push({
+                id: `j-close-${closeId}-exec`,
+                time: now,
+                text: `Closed ${closedSide} ${pos.symbol} @ $${fmtPrice(price)}`,
+                pnl: netPnl,
+              });
+            }
+
+            const curBal = get().balance;
+            newBalanceLogs.push({
+              id: `bl-close-${closeId}`,
+              time: now,
+              balanceBefore: curBal,
+              balanceAfter: curBal + returnAmt,
+              pnl: netPnl,
+              action: `Close ${pos.side} position for ${pos.symbol} at price ${price.toFixed(4)} for ${closeQty.toFixed(6)} units`,
+            });
+
+            remainingQty -= closeQty;
+
+            // Update or remove the existing position in state
+            set((s) => {
+              if (isFullClose) {
+                return {
+                  balance: s.balance + returnAmt,
+                  positions: s.positions.filter((p) => p.id !== pos.id),
+                  history: [newHistory[newHistory.length - 1], ...s.history].slice(0, MAX_HISTORY),
+                  realizedPnl: s.realizedPnl + pnlPartial - exitCommission - entryCommissionPartial,
+                  balanceLog: [newBalanceLogs[newBalanceLogs.length - 1], ...s.balanceLog].slice(
+                    0,
+                    MAX_HISTORY * 2
+                  ),
+                  journal: [...newJournalEntries.slice(-1), ...s.journal].slice(0, MAX_JOURNAL),
+                };
+              } else {
+                // Partial close — reduce quantity and proportional margin
+                return {
+                  balance: s.balance + returnAmt,
+                  positions: s.positions.map((p) =>
+                    p.id !== pos.id
+                      ? p
+                      : {
+                          ...p,
+                          quantity: p.quantity - closeQty,
+                          entryUsdtAmount: p.entryUsdtAmount * (1 - fraction),
+                        }
+                  ),
+                  history: [newHistory[newHistory.length - 1], ...s.history].slice(0, MAX_HISTORY),
+                  realizedPnl: s.realizedPnl + pnlPartial - exitCommission - entryCommissionPartial,
+                  balanceLog: [newBalanceLogs[newBalanceLogs.length - 1], ...s.balanceLog].slice(
+                    0,
+                    MAX_HISTORY * 2
+                  ),
+                  journal: [...newJournalEntries.slice(-1), ...s.journal].slice(0, MAX_JOURNAL),
+                };
+              }
+            });
+          }
+
+          // Record the single incoming order (TV-style: 1 order per user action).
+          // Commission covers the closed portion; the remainder's open commission is
+          // added here too so the total commission matches the full incomingQty fill.
+          const remainderCommission = Math.max(0, remainingQty) * price * COMMISSION_RATE;
+          const incomingOrderId = `net-${now}-${Math.random().toString(36).slice(2, 7)}`;
+          const closedQty = incomingQty - Math.max(0, remainingQty);
+          const incomingOrder: HistoricalOrder = {
+            id: `o-${incomingOrderId}`,
+            symbol,
+            side,
+            type: 'market',
+            qty: incomingQty,
+            fillPrice: price,
+            status: 'filled',
+            commission: closedQty * price * COMMISSION_RATE + remainderCommission,
+            placingTime: now,
+            closingTime: now,
+          };
+          set((s) => ({
+            orders: [incomingOrder, ...s.orders].slice(0, MAX_HISTORY * 2),
+          }));
+
+          // If the incoming order was fully consumed closing existing positions, done.
+          if (remainingQty <= 1e-10) {
+            return incomingOrderId;
+          }
+
+          // Otherwise, fall through to open a new position with the remaining qty.
+          // The order record is already written above — skip writing another one.
+          skipOrderRecord = true;
+          usdtAmount = (remainingQty * price) / leverage;
+        }
+
         // Include entry commission in the balance check — prevents going negative
         // when placing a 100%-of-balance order (usdtAmount + fee > balance).
-        if (usdtAmount + usdtAmount * COMMISSION_RATE > balance) {
+        if (usdtAmount + usdtAmount * COMMISSION_RATE > get().balance) {
           // Record the rejection so it surfaces in the History tab with a warning icon
           const rejId = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
           const now = Date.now();
@@ -245,6 +391,7 @@ export const usePaperStore = create<PaperState>()(
             qty: price > 0 ? (usdtAmount * leverage) / price : 0,
             status: 'rejected',
             commission: 0,
+            margin: usdtAmount,
             placingTime: now,
             closingTime: now,
             rejectionReason: 'Not enough funds to complete the order.',
@@ -281,12 +428,16 @@ export const usePaperStore = create<PaperState>()(
           fillPrice: price,
           status: 'filled',
           commission,
+          margin: usdtAmount,
           placingTime: now,
           closingTime: now,
         };
 
-        const balBefore = balance;
-        const balAfter = balance - usdtAmount - commission;
+        // Use get().balance here (not the `balance` captured at function start) so that
+        // any netting set() calls are reflected in the balance log correctly.
+        const currentBalance = get().balance;
+        const balBefore = currentBalance;
+        const balAfter = currentBalance - usdtAmount - commission;
 
         const logEntry: BalanceEvent = {
           id: `bl-${id}`,
@@ -297,32 +448,21 @@ export const usePaperStore = create<PaperState>()(
           action: `Enter ${side === 'buy' ? 'long' : 'short'} position for ${symbol} at price ${price.toFixed(4)} for ${quantity.toFixed(6)} units`,
         };
 
-        // ── Journal entries (TradingView style: 3 entries per market order) ──
-        const readableOrderId = Math.floor(1000000000 + Math.random() * 9000000000);
-        const qtyStr = fmtQty(quantity);
-        const priceStr = fmtPrice(price);
-        const journalEntries: JournalEntry[] = [
-          {
-            id: `j-${id}-exec`,
+        // ── Journal entry ─────────────────────────────────────────────────────
+        const journalEntries: JournalEntry[] = [];
+        if (!skipJournal) {
+          const positionSide = side === 'buy' ? 'LONG' : 'SHORT';
+          journalEntries.push({
+            id: `j-${id}-open`,
             time: now,
-            text: `Order ${readableOrderId} for symbol ${symbol} has been executed at price ${priceStr} for ${qtyStr} units`,
-          },
-          {
-            id: `j-${id}-placed`,
-            time: now,
-            text: `Order ${readableOrderId} successfully placed`,
-          },
-          {
-            id: `j-${id}-call`,
-            time: now,
-            text: `Call to place market order to ${side} ${qtyStr} units of symbol ${symbol}`,
-          },
-        ];
+            text: `Opened ${positionSide} ${symbol} @ $${fmtPrice(price)}`,
+          });
+        }
 
         set((s) => ({
           balance: s.balance - usdtAmount - commission,
           positions: [...s.positions, position],
-          orders: [order, ...s.orders].slice(0, MAX_HISTORY * 2),
+          orders: skipOrderRecord ? s.orders : [order, ...s.orders].slice(0, MAX_HISTORY * 2),
           balanceLog: [logEntry, ...s.balanceLog].slice(0, MAX_HISTORY * 2),
           journal: [...journalEntries, ...s.journal].slice(0, MAX_JOURNAL),
         }));
@@ -330,7 +470,7 @@ export const usePaperStore = create<PaperState>()(
         return id;
       },
 
-      closePosition: (positionId, exitPrice) => {
+      closePosition: (positionId, exitPrice, reason, closeType) => {
         const { positions } = get();
         const pos = positions.find((p) => p.id === positionId);
         if (!pos) return;
@@ -367,7 +507,7 @@ export const usePaperStore = create<PaperState>()(
           id: `o-close-${closedId}`,
           symbol: pos.symbol,
           side: pos.side === 'long' ? 'sell' : 'buy',
-          type: 'market',
+          type: closeType ?? 'market',
           qty: pos.quantity,
           fillPrice: exitPrice,
           status: 'filled',
@@ -388,32 +528,28 @@ export const usePaperStore = create<PaperState>()(
           action: `Close ${pos.side} position for ${pos.symbol} at price ${exitPrice.toFixed(4)} for ${pos.quantity.toFixed(6)} units`,
         };
 
-        // ── Journal entries (TradingView style: 3 entries per closing order) ──
-        const closingOrderId = Math.floor(1000000000 + Math.random() * 9000000000);
-        const closingQtyStr = fmtQty(pos.quantity);
-        const closingPriceStr = fmtPrice(exitPrice);
-        const closingSide = pos.side === 'long' ? 'sell' : 'buy';
+        // ── Journal entry ─────────────────────────────────────────────────────
         // Net PnL = gross PnL − exit commission — same figure shown in Balance History.
-        // Attached only to the exec entry so the badge appears on the meaningful row.
         const netPnl = pnl - commission;
-        const closingJournalEntries: JournalEntry[] = [
-          {
+        const closingJournalEntries: JournalEntry[] = [];
+        if (reason) {
+          // Caller-supplied reason (e.g. TP/SL auto-close) — use it as the entry text
+          closingJournalEntries.push({
+            id: `j-close-${closedId}-reason`,
+            time: now,
+            text: reason,
+            pnl: netPnl,
+          });
+        } else {
+          // Manual close — generic "Closed" entry with PnL badge
+          const closedSide = pos.side === 'long' ? 'LONG' : 'SHORT';
+          closingJournalEntries.push({
             id: `j-close-${closedId}-exec`,
             time: now,
-            text: `Order ${closingOrderId} for symbol ${pos.symbol} has been executed at price ${closingPriceStr} for ${closingQtyStr} units`,
+            text: `Closed ${closedSide} ${pos.symbol} @ $${fmtPrice(exitPrice)}`,
             pnl: netPnl,
-          },
-          {
-            id: `j-close-${closedId}-placed`,
-            time: now,
-            text: `Order ${closingOrderId} successfully placed`,
-          },
-          {
-            id: `j-close-${closedId}-call`,
-            time: now,
-            text: `Call to place market order to ${closingSide} ${closingQtyStr} units of symbol ${pos.symbol}`,
-          },
-        ];
+          });
+        }
 
         set((s) => ({
           balance: s.balance + returnAmount,
@@ -485,23 +621,9 @@ export const usePaperStore = create<PaperState>()(
           ...(stopLoss && stopLoss > 0 ? { stopLoss } : {}),
         };
 
-        const historicalOrder: HistoricalOrder = {
-          id: `o-${id}`,
-          symbol,
-          side,
-          type: 'limit',
-          qty,
-          limitPrice: triggerPrice,
-          status: 'filled', // will be updated on execution; kept here as placement record
-          commission: usdtAmount * COMMISSION_RATE,
-          placingTime: now,
-          closingTime: now,
-        };
-
         set((s) => ({
           balance: s.balance - totalCost,
           pendingOrders: [...s.pendingOrders, pending],
-          orders: [historicalOrder, ...s.orders].slice(0, MAX_HISTORY * 2),
         }));
 
         return id;
@@ -530,23 +652,9 @@ export const usePaperStore = create<PaperState>()(
           ...(stopLoss && stopLoss > 0 ? { stopLoss } : {}),
         };
 
-        const historicalOrder: HistoricalOrder = {
-          id: `o-${id}`,
-          symbol,
-          side,
-          type: 'stop',
-          qty,
-          stopPrice: triggerPrice,
-          status: 'filled', // placeholder; updated on execution
-          commission: usdtAmount * COMMISSION_RATE,
-          placingTime: now,
-          closingTime: now,
-        };
-
         set((s) => ({
           balance: s.balance - totalCost,
           pendingOrders: [...s.pendingOrders, pending],
-          orders: [historicalOrder, ...s.orders].slice(0, MAX_HISTORY * 2),
         }));
 
         return id;
