@@ -245,7 +245,6 @@ export const usePaperStore = create<PaperState>()(
           const incomingQty = (usdtAmount * leverage) / price;
           let remainingQty = incomingQty;
           const now = Date.now();
-          const newOrders: HistoricalOrder[] = [];
           const newHistory: ClosedTrade[] = [];
           const newBalanceLogs: BalanceEvent[] = [];
           const newJournalEntries: JournalEntry[] = [];
@@ -269,18 +268,8 @@ export const usePaperStore = create<PaperState>()(
 
             const closeId = `${now}-${Math.random().toString(36).slice(2, 7)}`;
 
-            newOrders.push({
-              id: `o-close-${closeId}`,
-              symbol: pos.symbol,
-              side: pos.side === 'long' ? 'sell' : 'buy',
-              type: 'market',
-              qty: closeQty,
-              fillPrice: price,
-              status: 'filled',
-              commission: exitCommission,
-              placingTime: now,
-              closingTime: now,
-            });
+            // NOTE: No separate close order added to `orders` here — TV records only 1
+            // order per user action (the incoming order). The netting is silent position math.
 
             newHistory.push({
               id: pos.id,
@@ -324,7 +313,6 @@ export const usePaperStore = create<PaperState>()(
                   balance: s.balance + returnAmt,
                   positions: s.positions.filter((p) => p.id !== pos.id),
                   history: [newHistory[newHistory.length - 1], ...s.history].slice(0, MAX_HISTORY),
-                  orders: [newOrders[newOrders.length - 1], ...s.orders].slice(0, MAX_HISTORY * 2),
                   realizedPnl: s.realizedPnl + pnlPartial - exitCommission - entryCommissionPartial,
                   balanceLog: [newBalanceLogs[newBalanceLogs.length - 1], ...s.balanceLog].slice(
                     0,
@@ -346,7 +334,6 @@ export const usePaperStore = create<PaperState>()(
                         }
                   ),
                   history: [newHistory[newHistory.length - 1], ...s.history].slice(0, MAX_HISTORY),
-                  orders: [newOrders[newOrders.length - 1], ...s.orders].slice(0, MAX_HISTORY * 2),
                   realizedPnl: s.realizedPnl + pnlPartial - exitCommission - entryCommissionPartial,
                   balanceLog: [newBalanceLogs[newBalanceLogs.length - 1], ...s.balanceLog].slice(
                     0,
@@ -358,9 +345,30 @@ export const usePaperStore = create<PaperState>()(
             });
           }
 
+          // Record the single incoming order (TV-style: 1 order per user action).
+          // This covers the full-close, partial-close, and close+open-remainder cases.
+          const incomingOrderId = `net-${now}-${Math.random().toString(36).slice(2, 7)}`;
+          const closedQty = incomingQty - Math.max(0, remainingQty);
+          const incomingOrder: HistoricalOrder = {
+            id: `o-${incomingOrderId}`,
+            symbol,
+            side,
+            type: 'market',
+            qty: incomingQty,
+            fillPrice: price,
+            status: 'filled',
+            // Commission proportional to the closed portion only (remainder will get its own entry below)
+            commission: closedQty * price * COMMISSION_RATE,
+            placingTime: now,
+            closingTime: now,
+          };
+          set((s) => ({
+            orders: [incomingOrder, ...s.orders].slice(0, MAX_HISTORY * 2),
+          }));
+
           // If the incoming order was fully consumed closing existing positions, done.
           if (remainingQty <= 1e-10) {
-            return `net-close-${Date.now()}`;
+            return incomingOrderId;
           }
 
           // Otherwise, fall through to open a new position with the remaining qty.
