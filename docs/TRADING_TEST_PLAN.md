@@ -54,9 +54,9 @@
 
 | #     | Action                                                                  | Expected                                                            | Status | TV ✓ | Notes |
 | ----- | ----------------------------------------------------------------------- | ------------------------------------------------------------------- | ------ | ---- | ----- |
-| 1.2.1 | Reset account. Select **Sell**, tab = **Market**, USD mode, enter `200` | Order info updates for Sell side                                    | ⬜     |      |       |
-| 1.2.2 | Click **Sell** button                                                   | Position opens                                                      | ⬜     |      |       |
-| 1.2.3 | Positions tab                                                           | 1 SHORT row. PnL updates live (green if price dropped, red if rose) | ⬜     | ⬜   |       |
+| 1.2.1 | Reset account. Select **Sell**, tab = **Market**, USD mode, enter `200` | Order info updates for Sell side                                    | ✅     |      |       |
+| 1.2.2 | Click **Sell** button                                                   | Position opens                                                      | ✅     |      |       |
+| 1.2.3 | Positions tab                                                           | 1 SHORT row. PnL updates live (green if price dropped, red if rose) | ✅     | ⬜   |       |
 
 > **TV cross-check 1.2.3:** Unrealised PnL sign and approximate magnitude should match TradingView's SHORT position PnL.
 
