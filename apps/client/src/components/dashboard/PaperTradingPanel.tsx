@@ -798,12 +798,12 @@ export function PaperTradingPanel({
                         {positions.length}
                       </span>
                     )}
-                    {tab === 'orders' && pendingOrders.length > 0 && (
+                    {tab === 'orders' && pendingOrders.length + exitOrderRows.length > 0 && (
                       <span
                         className="rounded-full px-1.5 py-px font-bold text-white"
                         style={{ fontSize: fontSize.xxs, background: color.amber }}
                       >
-                        {pendingOrders.length}
+                        {pendingOrders.length + exitOrderRows.length}
                       </span>
                     )}
                     {tab === 'orderhistory' && orderHistoryRows.length > 0 && (

@@ -1,4 +1,4 @@
-import { useState, useId } from 'react';
+import { useState, useId, useEffect } from 'react';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { X, ChevronUp, ChevronDown, ArrowLeftRight, Info, AlertTriangle } from 'lucide-react';
 import { useStore } from 'zustand';
@@ -23,6 +23,25 @@ const TABS: { id: OrderTab; label: string }[] = [
   { id: 'limit', label: 'Limit' },
   { id: 'stop', label: 'Stop' },
 ];
+
+// ─── useOnlineStatus ──────────────────────────────────────────────────────────
+// Tracks navigator.onLine reactively so the submit button re-renders on
+// offline/online transitions without waiting for another state change.
+
+function useOnlineStatus(): boolean {
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
+  useEffect(() => {
+    const on = () => setIsOnline(true);
+    const off = () => setIsOnline(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => {
+      window.removeEventListener('online', on);
+      window.removeEventListener('offline', off);
+    };
+  }, []);
+  return isOnline;
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -75,6 +94,7 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
   const ic2 = useStore(paneStores[2], (s) => s.isConnected);
   const ic3 = useStore(paneStores[3], (s) => s.isConnected);
   const isConnected = [ic0, ic1, ic2, ic3][activePane];
+  const isOnline = useOnlineStatus();
 
   const bid0 = useStore(paneStores[0], (s) => s.bid);
   const bid1 = useStore(paneStores[1], (s) => s.bid);
@@ -278,7 +298,7 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
   }
 
   function validate(): { amount: number; tp?: number; sl?: number } | null {
-    if (!execPrice || (tab === 'market' && (!isConnected || !navigator.onLine))) {
+    if (!execPrice || (tab === 'market' && (!isConnected || !isOnline))) {
       setFormError('Waiting for live price…');
       return null;
     }
@@ -873,7 +893,7 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
             !latestPrice ||
             !qtyInput ||
             parseFloat(qtyInput) <= 0 ||
-            (tab === 'market' && (!isConnected || !navigator.onLine))
+            (tab === 'market' && (!isConnected || !isOnline))
           }
           whileHover={{ filter: 'brightness(1.1)' }}
           whileTap={{ scale: 0.98 }}

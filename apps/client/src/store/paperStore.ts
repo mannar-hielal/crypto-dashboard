@@ -271,7 +271,7 @@ export const usePaperStore = create<PaperState>()(
             // order per user action (the incoming order). The netting is silent position math.
 
             newHistory.push({
-              id: pos.id,
+              id: closeId,
               symbol: pos.symbol,
               side: pos.side,
               quantity: closeQty,
@@ -621,24 +621,9 @@ export const usePaperStore = create<PaperState>()(
           ...(stopLoss && stopLoss > 0 ? { stopLoss } : {}),
         };
 
-        const historicalOrder: HistoricalOrder = {
-          id: `o-${id}`,
-          symbol,
-          side,
-          type: 'limit',
-          qty,
-          limitPrice: triggerPrice,
-          status: 'filled',
-          commission: usdtAmount * COMMISSION_RATE,
-          margin: usdtAmount,
-          placingTime: now,
-          closingTime: now,
-        };
-
         set((s) => ({
           balance: s.balance - totalCost,
           pendingOrders: [...s.pendingOrders, pending],
-          orders: [historicalOrder, ...s.orders].slice(0, MAX_HISTORY * 2),
         }));
 
         return id;
@@ -667,24 +652,9 @@ export const usePaperStore = create<PaperState>()(
           ...(stopLoss && stopLoss > 0 ? { stopLoss } : {}),
         };
 
-        const historicalOrder: HistoricalOrder = {
-          id: `o-${id}`,
-          symbol,
-          side,
-          type: 'stop',
-          qty,
-          stopPrice: triggerPrice,
-          status: 'filled',
-          commission: usdtAmount * COMMISSION_RATE,
-          margin: usdtAmount,
-          placingTime: now,
-          closingTime: now,
-        };
-
         set((s) => ({
           balance: s.balance - totalCost,
           pendingOrders: [...s.pendingOrders, pending],
-          orders: [historicalOrder, ...s.orders].slice(0, MAX_HISTORY * 2),
         }));
 
         return id;
