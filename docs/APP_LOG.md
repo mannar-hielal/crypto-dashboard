@@ -70,9 +70,9 @@
 
 | Item                                                                                                                          | File                   | Type            | Status     |
 | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------- | --------------- | ---------- |
-| `JWT_SECRET` entropy check — `Buffer.byteLength(secret) >= 32` at startup                                                     | `config.ts`            | Code change     | ⬜ Pending |
-| Explicit `algorithms: ['HS256']` on `@fastify/jwt` registration                                                               | `app.ts`               | Code change     | ⬜ Pending |
-| Token-theft full-revocation: when `/refresh` detects `count=0`, call `deleteMany({ where: { userId } })` to kill all sessions | `routes/auth/index.ts` | Code change     | ⬜ Pending |
+| `JWT_SECRET` entropy check — `Buffer.byteLength(secret) >= 32` at startup                                                     | `config.ts`            | Code change     | ✅ Done    |
+| Explicit `algorithms: ['HS256']` on `@fastify/jwt` registration                                                               | `app.ts`               | Code change     | ✅ Done    |
+| Token-theft full-revocation: when `/refresh` detects `count=0`, call `deleteMany({ where: { userId } })` to kill all sessions | `routes/auth/index.ts` | Code change     | ✅ Done    |
 | `pnpm audit` added to pre-release CI gate                                                                                     | CI config              | Process change  | ⬜ Pending |
 | No JWT in URL params, CSRF docs, error-handler URL audit, HSTS/CSP/CORS wildcard check                                        | `REVIEW_CHECKLIST.md`  | Checklist items | ✅ Added   |
 
@@ -81,7 +81,7 @@
 | Item                                                                                 | File                  | Type           | Status     |
 | ------------------------------------------------------------------------------------ | --------------------- | -------------- | ---------- |
 | `dangerouslySetInnerHTML` prohibition + user content as plain text                   | `REVIEW_CHECKLIST.md` | Checklist item | ✅ Added   |
-| `paperStore` `persist()` — add `version` + `migrate` for safe localStorage hydration | `paperStore.ts`       | Code change    | ⬜ Pending |
+| `paperStore` `persist()` — add `version` + `migrate` for safe localStorage hydration | `paperStore.ts`       | Code change    | ✅ Done    |
 
 ### Phase 3+ — Future
 
@@ -345,7 +345,7 @@ Based on TradingView markup reference. Not a 1:1 copy.
 
 ### `paperStore` — current state ✅
 
-Persisted to `localStorage` key `cd-paper-trading`. No `version`/`migrate` yet (⬜ pending).
+Persisted to `localStorage` key `cd-paper-trading`. Version `1` with `migrate` guard ✅.
 
 ```typescript
 interface PaperState {
@@ -469,7 +469,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 | `apps/client/src/components/dashboard/PaperTradingPanel.tsx` | Bottom panel (positions/orders/journal)                                                                                                      |
 | `apps/client/src/components/dashboard/TradingPanel.tsx`      | Right sidebar order entry                                                                                                                    |
 | `apps/client/src/pages/DashboardPage.tsx`                    | Dashboard orchestrator — exports `PanelSize` type, mounts hooks                                                                              |
-| `apps/server/src/routes/auth/index.ts`                       | All auth routes (register/login/logout/refresh/me/reset-password)                                                                            |
+| `apps/server/src/routes/auth/index.ts`                       | All auth routes (register/login/logout/refresh/me/reset-password),                                                                            |
 | `apps/server/src/routes/market/index.ts`                     | REST + WebSocket market data routes                                                                                                          |
 | `apps/server/src/services/BybitWebSocketManager.ts`          | Bybit WS connection singleton                                                                                                                |
 | `apps/server/src/constants.ts`                               | `ALLOWED_SYMBOLS` — source of truth for WS subscriptions + routes                                                                            |
@@ -690,8 +690,8 @@ Doji · Hammer · Inverted Hammer · Shooting Star · Bullish/Bearish Engulfing 
 
 ### Risks
 
-| Risk                           | Severity    | Mitigation                                                               |
-| ------------------------------ | ----------- | ------------------------------------------------------------------------ |
+| Risk                                    | Severity    | Mitigation                                                          |
+| --------------------------------------- | ----------- | ------------------------------------------------------------------- |
 | Bot loses large paper balance  | 🟡 Medium   | Max 1% risk/trade; max 3 open positions; auto-pause at 5% daily loss     |
 | LLM returns invalid JSON       | 🔴 Critical | Strict JSON schema validation; parse failure → WAIT, never force a trade |
 | LLM provider outage            | 🟡 Medium   | Bot pauses gracefully; retries after 5 min                               |
@@ -751,4 +751,4 @@ Paper trading  →  Real order      →  Proven bot      →  Full autonomous
 
 ---
 
-_Last updated: 2026-04-21 — **test: Section 1 Market Orders fully passed** — All 10 edge cases (1.7.1–1.7.10) ✅. Completed fixes this session: (1.7.8) `navigator.onLine` guard in `TradingPanel` blocks orders immediately on disconnect; (1.7.9) TV-style position netting in `paperStore.placeOrder` — opposite-side orders close/reduce existing positions; (balance history) stale `balance` variable replaced with `get().balance` in fall-through open code so Balance History ledger is sequential; (order dedup) `skipOrderRecord` flag prevents double order writes in close+open-remainder netting case — 1 order per user action matching TV exactly. `TRADING_TEST_PLAN.md` Section 1 complete: 1.7.8 ✅, 1.7.9 ✅, 1.7.10 ✅. Previously: **fix: 1.7.8 + 1.7.9 — offline guard & position netting**._
+_Last updated: 2026-04-22 — **fix: two browser console issues resolved** — (1) Qty input in `TradingPanel` now has `id="trading-qty" name="qty"` — eliminates the "form field missing id/name" browser issue. (2) `vite.config.ts` now sets `server.headers` with a dev-only `Content-Security-Policy` that includes `'unsafe-eval'` in `script-src` — fixes Vite 8's built-in CSP blocking esbuild source maps and animation libs; header only applies to the Vite dev server, never deployed. Previously: **fix: BybitWebSocketManager frozen price**

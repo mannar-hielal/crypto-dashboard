@@ -126,10 +126,10 @@
 
 | #     | Action                                                          | Expected                                                                          | Status | TV ✓ | Notes |
 | ----- | --------------------------------------------------------------- | --------------------------------------------------------------------------------- | ------ | ---- | ----- |
-| 2.1.1 | Tab = **Limit**. Price input appears pre-filled with live price | Price field visible                                                               | ⬜     |      |       |
-| 2.1.2 | Set price to live − 2%, qty $200, click **Buy**                 | Pending order created; balance decreases by $200 + commission                     | ⬜     |      |       |
-| 2.1.3 | Go to **Orders** tab → **Working** sub-tab                      | 1 row: LIMIT / BUY / Limit Price = your price; Status = Working (amber)           | ⬜     |      |       |
-| 2.1.4 | Check **All** sub-tab count badge                               | Badge shows **1**; row visible under All                                          | ⬜     |      |       |
+| 2.1.1 | Tab = **Limit**. Price input appears pre-filled with live price | Price field visible and pre-filled slightly **below** live price (bid when available, else live × 0.9999); no immediate-fill warning shown | ✅     |      | Pre-fill defaults to bid price; no amber warning on open. After fix: immediate-fill warning no longer fires on tab switch. |
+| 2.1.2 | Set price to live − 2%, qty $200, click **Buy**                 | Pending order created; balance decreases by $200 + commission                     | ✅     | ✅   | CryptoDash: LIMIT BUY 0.025 @ $78,800, Reserved $197.00, balance $9,802.86 @ 20:38:00. TV: Working order placed @ 20:36:25, Order ID 3000667764 — both pending on same session. |
+| 2.1.3 | Go to **Orders** tab → **Working** sub-tab                      | 1 row: LIMIT / BUY / Limit Price = your price; Status = Working (amber)           | ✅     |      | Row shows Type=LIMIT, Side=BUY, Qty=0.025, Limit Price=$78,800, Status=WORKING (amber badge). Matches TV Working sub-tab layout. |
+| 2.1.4 | Check **All** sub-tab count badge                               | Badge shows **1**; row visible under All                                          | ✅     |      | "Orders 1" tab badge and "All 1" / "Working 1" sub-tab badges all show 1. ✅ |
 | 2.1.5 | When price drops to trigger                                     | Order disappears from Working; appears in **Filled** sub-tab; journal entry added | ⬜     | ⬜   |       |
 | 2.1.6 | Check **All** sub-tab after fill                                | Badge count unchanged (1); row now shows status = Filled (green)                  | ⬜     |      |       |
 

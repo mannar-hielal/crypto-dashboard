@@ -108,7 +108,6 @@ export interface JournalEntry {
    */
   pnl?: number;
 }
-
 // ─── Store ────────────────────────────────────────────────────────────────────
 
 // Helper – format price to a readable precision
@@ -704,6 +703,52 @@ export const usePaperStore = create<PaperState>()(
     }),
     {
       name: 'cd-paper-trading', // localStorage key
+      // 🔐 version + migrate: any malformed or tampered localStorage snapshot from an
+      //    older schema is safely discarded (migrate returns fresh state) instead of
+      //    crashing the app on hydration. Increment `version` whenever a new required
+      //    state field is added so old snapshots are migrated rather than used as-is.
+      version: 1,
+      migrate: (persisted: unknown, fromVersion: number) => {
+        // ── Fresh-state fallback ───────────────────────────────────────────────
+        // Used when the snapshot is completely unrecognisable (null, non-object,
+        // or missing the minimum fields we need to trust it).
+        const fresh = {
+          balance: STARTING_BALANCE,
+          positions: [] as Position[],
+          pendingOrders: [] as PendingOrder[],
+          history: [] as ClosedTrade[],
+          orders: [] as HistoricalOrder[],
+          realizedPnl: 0,
+          balanceLog: [] as BalanceEvent[],
+          journal: [] as JournalEntry[],
+          leverage: 10,
+        };
+
+        if (!persisted || typeof persisted !== 'object') return fresh;
+        const p = persisted as Record<string, unknown>;
+
+        // ── v0 → v1 ───────────────────────────────────────────────────────────
+        // v0 had: balance, positions, history, realizedPnl
+        // v1 adds: pendingOrders, orders, balanceLog, journal, leverage
+        // Preserve every valid v0 field; fill missing v1 fields with defaults.
+        if (fromVersion === 0) {
+          return {
+            balance: typeof p['balance'] === 'number' && p['balance'] >= 0 ? p['balance'] : STARTING_BALANCE,
+            positions: Array.isArray(p['positions']) ? (p['positions'] as Position[]) : [],
+            history: Array.isArray(p['history']) ? (p['history'] as ClosedTrade[]) : [],
+            realizedPnl: typeof p['realizedPnl'] === 'number' ? p['realizedPnl'] : 0,
+            // Fields added in v1 — not present in v0 snapshots
+            pendingOrders: [],
+            orders: [],
+            balanceLog: [],
+            journal: [],
+            leverage: 10,
+          };
+        }
+
+        // Unknown future version or unrecognised shape → fresh state
+        return fresh;
+      },
     }
   )
 );

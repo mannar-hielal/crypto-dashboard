@@ -389,7 +389,11 @@ export async function authRoutes(app: FastifyInstance) {
     //    gets count=0 and is treated as an invalid token — no 500 race condition.
     const { count: deleted } = await app.prisma.refreshToken.deleteMany({ where: { tokenHash } });
     if (deleted === 0) {
-      // Another concurrent request already consumed this token
+      // 🔐 Token-theft full-revocation (Option A): count=0 means this token was already
+      //    consumed — possible token theft or replay attack. Revoke ALL refresh tokens for
+      //    this user so the attacker's newly issued token is also killed immediately.
+      //    `stored.userId` is still available from the earlier findUnique.
+      await app.prisma.refreshToken.deleteMany({ where: { userId: stored.userId } });
       void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
       return reply.status(401).send({ error: 'Invalid or expired refresh token' });
     }

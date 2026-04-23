@@ -81,4 +81,30 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    headers: {
+      // 🔐 Dev-only CSP — applies ONLY to the Vite dev server, never deployed.
+      // Production CSP is enforced by @fastify/helmet on the server side.
+      //
+      // 'unsafe-eval' is required by two specific dev-only tools:
+      //   1. esbuild (Vite's bundler) — uses eval() to reconstruct source maps
+      //      in development. Removed automatically in production builds.
+      //   2. Framer Motion — its WAAPI polyfill uses new Function() at runtime
+      //      for keyframe interpolation. No safer alternative exists in v12.
+      //   No safer alternative (nonces/hashes) is viable here because both tools
+      //   generate code dynamically at runtime rather than at build time.
+      //
+      // 'unsafe-inline' is intentionally excluded — Vite 8 uses ES modules for
+      // HMR and does not require inline script injection.
+      'Content-Security-Policy': [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-eval'",
+        "style-src 'self' 'unsafe-inline'",
+        "connect-src 'self' ws://localhost:3001 http://localhost:3001",
+        "img-src 'self' data: blob:",
+        "font-src 'self' data:",
+        "worker-src 'self' blob:",
+      ].join('; '),
+    },
+  },
 });
