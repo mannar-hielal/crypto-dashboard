@@ -117,6 +117,46 @@ function fmtPrice(price: number): string {
   return price.toFixed(6);
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function isPositiveNumber(value: unknown): value is number {
+  return isFiniteNumber(value) && value > 0;
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === 'string';
+}
+
+function isPositionSnapshot(value: unknown): value is Position {
+  if (!isRecord(value)) return false;
+  if (!isString(value['id']) || !isString(value['symbol'])) return false;
+  if (value['side'] !== 'long' && value['side'] !== 'short') return false;
+  if (!isPositiveNumber(value['quantity'])) return false;
+  if (!isPositiveNumber(value['entryPrice'])) return false;
+  if (!isPositiveNumber(value['entryUsdtAmount'])) return false;
+  if (!isFiniteNumber(value['openedAt'])) return false;
+  if (value['takeProfit'] !== undefined && !isPositiveNumber(value['takeProfit'])) return false;
+  if (value['stopLoss'] !== undefined && !isPositiveNumber(value['stopLoss'])) return false;
+  return true;
+}
+
+function isClosedTradeSnapshot(value: unknown): value is ClosedTrade {
+  if (!isRecord(value)) return false;
+  if (!isString(value['id']) || !isString(value['symbol'])) return false;
+  if (value['side'] !== 'long' && value['side'] !== 'short') return false;
+  if (!isPositiveNumber(value['quantity'])) return false;
+  if (!isPositiveNumber(value['entryPrice']) || !isPositiveNumber(value['exitPrice'])) return false;
+  if (!isFiniteNumber(value['pnl'])) return false;
+  if (!isFiniteNumber(value['openedAt']) || !isFiniteNumber(value['closedAt'])) return false;
+  return true;
+}
+
 interface PaperState {
   balance: number;
   positions: Position[];
@@ -840,8 +880,10 @@ export const usePaperStore = create<PaperState>()(
               typeof p['balance'] === 'number' && p['balance'] >= 0
                 ? p['balance']
                 : STARTING_BALANCE,
-            positions: Array.isArray(p['positions']) ? (p['positions'] as Position[]) : [],
-            history: Array.isArray(p['history']) ? (p['history'] as ClosedTrade[]) : [],
+            positions: Array.isArray(p['positions'])
+              ? p['positions'].filter(isPositionSnapshot)
+              : [],
+            history: Array.isArray(p['history']) ? p['history'].filter(isClosedTradeSnapshot) : [],
             realizedPnl: typeof p['realizedPnl'] === 'number' ? p['realizedPnl'] : 0,
             // Fields added in v1 — not present in v0 snapshots
             pendingOrders: [],
