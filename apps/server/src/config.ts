@@ -75,7 +75,9 @@ function loadConfig(): Config {
     console.error(
       '❌ JWT_SECRET is too short. It must be at least 32 bytes (256 bits) of entropy.'
     );
-    console.error('   Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+    console.error(
+      "   Generate one with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
+    );
     process.exit(1);
   }
 

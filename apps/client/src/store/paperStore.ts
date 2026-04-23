@@ -202,6 +202,9 @@ interface PaperState {
   /** Cancel a pending (limit or stop) order and refund the reserved amount. */
   cancelPendingOrder: (orderId: string) => void;
 
+  /** Cancel one active TP/SL exit leg for an open position. */
+  cancelExitOrder: (positionId: string, exitType: 'take-profit' | 'stop-loss') => void;
+
   /**
    * Fill a pending order without recording a cancellation entry.
    * Removes the order from pendingOrders and refunds the reserved amount so
@@ -515,6 +518,32 @@ export const usePaperStore = create<PaperState>()(
           closingTime: now,
         };
 
+        const siblingCancelOrders: HistoricalOrder[] = [];
+        const pushCancelExit = (exitType: 'take-profit' | 'stop-loss', price: number) => {
+          siblingCancelOrders.push({
+            id: `o-cancel-${exitType}-${positionId}-${now}`,
+            symbol: pos.symbol,
+            side: pos.side === 'long' ? 'sell' : 'buy',
+            type: exitType,
+            qty: pos.quantity,
+            ...(exitType === 'take-profit' ? { limitPrice: price } : { stopPrice: price }),
+            status: 'cancelled',
+            commission: 0,
+            placingTime: pos.openedAt,
+            closingTime: now,
+          });
+        };
+
+        if (closeType === 'take-profit') {
+          if (pos.stopLoss) pushCancelExit('stop-loss', pos.stopLoss);
+        } else if (closeType === 'stop-loss') {
+          if (pos.takeProfit) pushCancelExit('take-profit', pos.takeProfit);
+        } else {
+          // Manual close (or generic close) cancels all remaining exit legs.
+          if (pos.takeProfit) pushCancelExit('take-profit', pos.takeProfit);
+          if (pos.stopLoss) pushCancelExit('stop-loss', pos.stopLoss);
+        }
+
         const balBefore = get().balance;
         const balAfter = balBefore + returnAmount;
 
@@ -554,7 +583,7 @@ export const usePaperStore = create<PaperState>()(
           balance: s.balance + returnAmount,
           positions: s.positions.filter((p) => p.id !== positionId),
           history: [closed, ...s.history].slice(0, MAX_HISTORY),
-          orders: [closingOrder, ...s.orders].slice(0, MAX_HISTORY * 2),
+          orders: [closingOrder, ...siblingCancelOrders, ...s.orders].slice(0, MAX_HISTORY * 2),
           realizedPnl: s.realizedPnl + pnl - commission - entryCommission,
           balanceLog: [logEntry, ...s.balanceLog].slice(0, MAX_HISTORY * 2),
           journal: [...closingJournalEntries, ...s.journal].slice(0, MAX_JOURNAL),
@@ -682,10 +711,84 @@ export const usePaperStore = create<PaperState>()(
           closingTime: now,
         };
 
+        const childCancelledOrders: HistoricalOrder[] = [];
+        if (order.takeProfit) {
+          childCancelledOrders.push({
+            id: `o-cancel-tp-${orderId}`,
+            symbol: order.symbol,
+            side: order.side === 'buy' ? 'sell' : 'buy',
+            type: 'take-profit',
+            qty: order.qty,
+            limitPrice: order.takeProfit,
+            status: 'cancelled',
+            commission: 0,
+            placingTime: order.placedAt,
+            closingTime: now,
+          });
+        }
+        if (order.stopLoss) {
+          childCancelledOrders.push({
+            id: `o-cancel-sl-${orderId}`,
+            symbol: order.symbol,
+            side: order.side === 'buy' ? 'sell' : 'buy',
+            type: 'stop-loss',
+            qty: order.qty,
+            stopPrice: order.stopLoss,
+            status: 'cancelled',
+            commission: 0,
+            placingTime: order.placedAt,
+            closingTime: now,
+          });
+        }
+
         set((s) => ({
           balance: s.balance + refund,
           pendingOrders: s.pendingOrders.filter((o) => o.id !== orderId),
-          orders: [cancelledOrder, ...s.orders].slice(0, MAX_HISTORY * 2),
+          orders: [cancelledOrder, ...childCancelledOrders, ...s.orders].slice(0, MAX_HISTORY * 2),
+        }));
+      },
+
+      cancelExitOrder: (positionId, exitType) => {
+        const { positions } = get();
+        const pos = positions.find((p) => p.id === positionId);
+        if (!pos) return;
+
+        const targetPrice = exitType === 'take-profit' ? pos.takeProfit : pos.stopLoss;
+        if (!targetPrice) return;
+
+        const now = Date.now();
+        const cancelRow: HistoricalOrder = {
+          id: `o-cancel-${exitType}-${positionId}-${now}`,
+          symbol: pos.symbol,
+          side: pos.side === 'long' ? 'sell' : 'buy',
+          type: exitType,
+          qty: pos.quantity,
+          ...(exitType === 'take-profit'
+            ? { limitPrice: targetPrice }
+            : { stopPrice: targetPrice }),
+          status: 'cancelled',
+          commission: 0,
+          placingTime: pos.openedAt,
+          closingTime: now,
+        };
+
+        const note: JournalEntry = {
+          id: `j-cancel-${exitType}-${positionId}-${now}`,
+          time: now,
+          text:
+            `${exitType === 'take-profit' ? 'Take-Profit' : 'Stop-Loss'} cancelled for ` +
+            `${pos.side.toUpperCase()} ${pos.symbol} @ $${fmtPrice(targetPrice)}`,
+        };
+
+        set((s) => ({
+          positions: s.positions.map((p) => {
+            if (p.id !== positionId) return p;
+            return exitType === 'take-profit'
+              ? { ...p, takeProfit: undefined }
+              : { ...p, stopLoss: undefined };
+          }),
+          orders: [cancelRow, ...s.orders].slice(0, MAX_HISTORY * 2),
+          journal: [note, ...s.journal].slice(0, MAX_JOURNAL),
         }));
       },
 
@@ -733,7 +836,10 @@ export const usePaperStore = create<PaperState>()(
         // Preserve every valid v0 field; fill missing v1 fields with defaults.
         if (fromVersion === 0) {
           return {
-            balance: typeof p['balance'] === 'number' && p['balance'] >= 0 ? p['balance'] : STARTING_BALANCE,
+            balance:
+              typeof p['balance'] === 'number' && p['balance'] >= 0
+                ? p['balance']
+                : STARTING_BALANCE,
             positions: Array.isArray(p['positions']) ? (p['positions'] as Position[]) : [],
             history: Array.isArray(p['history']) ? (p['history'] as ClosedTrade[]) : [],
             realizedPnl: typeof p['realizedPnl'] === 'number' ? p['realizedPnl'] : 0,

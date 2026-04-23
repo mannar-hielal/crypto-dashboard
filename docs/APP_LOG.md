@@ -78,10 +78,10 @@
 
 ### Phase 2 — Current Sprint
 
-| Item                                                                                 | File                  | Type           | Status     |
-| ------------------------------------------------------------------------------------ | --------------------- | -------------- | ---------- |
-| `dangerouslySetInnerHTML` prohibition + user content as plain text                   | `REVIEW_CHECKLIST.md` | Checklist item | ✅ Added   |
-| `paperStore` `persist()` — add `version` + `migrate` for safe localStorage hydration | `paperStore.ts`       | Code change    | ✅ Done    |
+| Item                                                                                 | File                  | Type           | Status   |
+| ------------------------------------------------------------------------------------ | --------------------- | -------------- | -------- |
+| `dangerouslySetInnerHTML` prohibition + user content as plain text                   | `REVIEW_CHECKLIST.md` | Checklist item | ✅ Added |
+| `paperStore` `persist()` — add `version` + `migrate` for safe localStorage hydration | `paperStore.ts`       | Code change    | ✅ Done  |
 
 ### Phase 3+ — Future
 
@@ -156,12 +156,13 @@
    - Empty state: "No open positions"
    - Row entrance: staggered framer-motion (`rowVariants`, 0.04 s delay per row)
 
-2. **Orders** ✅ — unified limit/stop order lifecycle table (TV-style). Columns: Symbol, Status, Type, Side, Qty, Limit Price, Stop Price, Fill Price, TP, SL, Commission, Placing Time (on by default) · optional: Order ID, Leverage, Margin · sticky: Cancel (✕)
-   - **Sub-tabs**: `All | Working | Filled | Cancelled | Rejected` filter bar; each shows live count badge; animated purple underline indicator
-   - **All order types appear here** — market orders land in the **Filled** sub-tab immediately; limit/stop orders go through Working → Filled/Cancelled. Mirrors TradingView behaviour exactly.
-   - Amber count badge on tab (pending/working orders only). Empty state: Clock icon + "No orders"
-   - Cancelling a pending order refunds `usdtAmount + commission` in full
-   - `OrderDisplayRow` union type: `{ kind: 'pending'; data: PendingOrder } | { kind: 'historical'; data: HistoricalOrder }` — unifies both for one table render
+2. **Orders** ✅ — unified order lifecycle table (market + parent pending + child TP/SL legs). Columns: Symbol, Status, Type, Side, Qty, Limit Price, Stop Price, Fill Price, TP, SL, Commission, Placing Time (on by default) · optional: Order ID, Leverage, Margin · sticky: Cancel (✕)
+   - **Sub-tabs**: `All | Working | Inactive | Filled | Cancelled | Rejected` filter bar; each shows live count badge; animated purple underline indicator
+   - **Bracket lifecycle (TV-style)**: placing limit/stop with TP+SL creates 3 linked rows: parent order + TP child + SL child.
+   - **Pre-fill/trigger**: parent row = Working, TP/SL child rows = Inactive; cancelling parent cancels all 3.
+   - **Post-fill/trigger**: parent row is historical (Filled, non-cancellable); child exits become Working and can be cancelled individually.
+   - **Position close**: closing from Positions tab cancels all remaining child exit legs.
+   - `OrderDisplayRow` union: `{ kind: 'pending'; data: PendingOrder } | { kind: 'historical'; data: HistoricalOrder } | { kind: 'exit-order'; data: SyntheticExitOrder }`.
 
 3. **Order History** ✅ — TV-style order history table showing all `HistoricalOrder[]` records (market + limit + stop, all statuses). Columns: Symbol, Side, Type, Qty, Limit Price, Stop Price, Fill Price, Status, Commission, Placing Time, Closing Time (on by default) · optional: Order ID, Leverage, Margin
    - **Sub-tabs**: `All | Filled | Cancelled | Rejected` filter bar; each shows live count badge; animated purple underline indicator
@@ -382,10 +383,12 @@ interface PendingOrder {
 }
 ```
 
-Actions: `placeOrder`, `placeLimitOrder`, `placeStopOrder`, `cancelPendingOrder`, `closePosition`, `addJournalNote(text, isUserNote?, pnl?)`, `editJournalEntry`, `reset`
+Actions: `placeOrder`, `placeLimitOrder`, `placeStopOrder`, `cancelPendingOrder`, `cancelExitOrder`, `closePosition`, `addJournalNote(text, isUserNote?, pnl?)`, `editJournalEntry`, `reset`
 
-**`placeLimitOrder` / `placeStopOrder`**: deducts `usdtAmount + commission` from balance immediately; adds to `pendingOrders`; adds a placeholder `HistoricalOrder` record.  
-**`cancelPendingOrder`**: removes from `pendingOrders`; refunds `usdtAmount + commission`; adds cancelled `HistoricalOrder`.  
+**`placeLimitOrder` / `placeStopOrder`**: deducts `usdtAmount + commission` from balance immediately; adds to `pendingOrders` (no historical fill row yet).  
+**`cancelPendingOrder`**: removes from `pendingOrders`; refunds `usdtAmount + commission`; writes cancelled parent `HistoricalOrder` and cancelled child TP/SL rows when present.  
+**`cancelExitOrder`**: cancels one active exit leg (`take-profit` or `stop-loss`) for an open position; writes cancelled `HistoricalOrder`; keeps the sibling leg active.  
+**`closePosition`**: writes filled close order and cancelled sibling exit rows (or both remaining exit rows on manual close).  
 Actual execution (converting pending → open position) is handled by `usePendingOrderMonitor` ✅ (implemented).
 
 ---
@@ -435,13 +438,15 @@ ask: number | null; // best ask from Bybit orderbook.1
 - `realizedPnl` = `gross_pnl - exitCommission - entryCommission`
 - `BalanceEvent.pnl` = `pnl - exitCommission` (net impact on balance at close)
 
-### TP/SL rules (implemented in `checkTPSL()`)
+### TP/SL rules (implemented in `checkTPSL()` + bracket lifecycle)
 
 - **Long**: TP when `price >= takeProfit`; SL when `price <= stopLoss`
 - **Short**: TP when `price <= takeProfit`; SL when `price >= stopLoss`
 - `checkTPSL` is a pure exported function — unit-tested
 - `useTPSLMonitor` scoped to active symbol only
 - Auto-close journal entries: `isUserNote: false` (read-only)
+- Bracket exits are first-class child orders: pre-fill/trigger children are Inactive; post-fill children are Working and independently cancellable
+- Manual position close cancels any remaining child exits
 
 ### Journal system
 
@@ -469,7 +474,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 | `apps/client/src/components/dashboard/PaperTradingPanel.tsx` | Bottom panel (positions/orders/journal)                                                                                                      |
 | `apps/client/src/components/dashboard/TradingPanel.tsx`      | Right sidebar order entry                                                                                                                    |
 | `apps/client/src/pages/DashboardPage.tsx`                    | Dashboard orchestrator — exports `PanelSize` type, mounts hooks                                                                              |
-| `apps/server/src/routes/auth/index.ts`                       | All auth routes (register/login/logout/refresh/me/reset-password),                                                                            |
+| `apps/server/src/routes/auth/index.ts`                       | All auth routes (register/login/logout/refresh/me/reset-password),                                                                           |
 | `apps/server/src/routes/market/index.ts`                     | REST + WebSocket market data routes                                                                                                          |
 | `apps/server/src/services/BybitWebSocketManager.ts`          | Bybit WS connection singleton                                                                                                                |
 | `apps/server/src/constants.ts`                               | `ALLOWED_SYMBOLS` — source of truth for WS subscriptions + routes                                                                            |
@@ -690,8 +695,8 @@ Doji · Hammer · Inverted Hammer · Shooting Star · Bullish/Bearish Engulfing 
 
 ### Risks
 
-| Risk                                    | Severity    | Mitigation                                                          |
-| --------------------------------------- | ----------- | ------------------------------------------------------------------- |
+| Risk                           | Severity    | Mitigation                                                               |
+| ------------------------------ | ----------- | ------------------------------------------------------------------------ |
 | Bot loses large paper balance  | 🟡 Medium   | Max 1% risk/trade; max 3 open positions; auto-pause at 5% daily loss     |
 | LLM returns invalid JSON       | 🔴 Critical | Strict JSON schema validation; parse failure → WAIT, never force a trade |
 | LLM provider outage            | 🟡 Medium   | Bot pauses gracefully; retries after 5 min                               |
@@ -751,4 +756,4 @@ Paper trading  →  Real order      →  Proven bot      →  Full autonomous
 
 ---
 
-_Last updated: 2026-04-22 — **fix: two browser console issues resolved** — (1) Qty input in `TradingPanel` now has `id="trading-qty" name="qty"` — eliminates the "form field missing id/name" browser issue. (2) `vite.config.ts` now sets `server.headers` with a dev-only `Content-Security-Policy` that includes `'unsafe-eval'` in `script-src` — fixes Vite 8's built-in CSP blocking esbuild source maps and animation libs; header only applies to the Vite dev server, never deployed. Previously: **fix: BybitWebSocketManager frozen price**
+_Last updated: 2026-04-23 — **feat: bracket child-order lifecycle parity** — Orders tab now models linked parent+TP+SL rows with `Inactive` and `Working` states, supports individual post-fill TP/SL cancellation, and writes cancellation history for pending-parent cancels and position-close sibling cleanup. Also updated test plan expectations for limit/stop bracket behavior. Previously: **fix: two browser console issues resolved**_

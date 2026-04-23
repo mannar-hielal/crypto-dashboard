@@ -124,14 +124,14 @@
 
 ### 2.1 Limit Buy below market
 
-| #     | Action                                                          | Expected                                                                          | Status | TV ✓ | Notes |
-| ----- | --------------------------------------------------------------- | --------------------------------------------------------------------------------- | ------ | ---- | ----- |
-| 2.1.1 | Tab = **Limit**. Price input appears pre-filled with live price | Price field visible and pre-filled slightly **below** live price (bid when available, else live × 0.9999); no immediate-fill warning shown | ✅     |      | Pre-fill defaults to bid price; no amber warning on open. After fix: immediate-fill warning no longer fires on tab switch. |
-| 2.1.2 | Set price to live − 2%, qty $200, click **Buy**                 | Pending order created; balance decreases by $200 + commission                     | ✅     | ✅   | CryptoDash: LIMIT BUY 0.025 @ $78,800, Reserved $197.00, balance $9,802.86 @ 20:38:00. TV: Working order placed @ 20:36:25, Order ID 3000667764 — both pending on same session. |
-| 2.1.3 | Go to **Orders** tab → **Working** sub-tab                      | 1 row: LIMIT / BUY / Limit Price = your price; Status = Working (amber)           | ✅     |      | Row shows Type=LIMIT, Side=BUY, Qty=0.025, Limit Price=$78,800, Status=WORKING (amber badge). Matches TV Working sub-tab layout. |
-| 2.1.4 | Check **All** sub-tab count badge                               | Badge shows **1**; row visible under All                                          | ✅     |      | "Orders 1" tab badge and "All 1" / "Working 1" sub-tab badges all show 1. ✅ |
-| 2.1.5 | When price drops to trigger                                     | Order disappears from Working; appears in **Filled** sub-tab; journal entry added | ⬜     | ⬜   |       |
-| 2.1.6 | Check **All** sub-tab after fill                                | Badge count unchanged (1); row now shows status = Filled (green)                  | ⬜     |      |       |
+| #     | Action                                                          | Expected                                                                                                                                   | Status | TV ✓ | Notes                                                                                                                                                                                            |
+| ----- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2.1.1 | Tab = **Limit**. Price input appears pre-filled with live price | Price field visible and pre-filled slightly **below** live price (bid when available, else live × 0.9999); no immediate-fill warning shown | ✅     |      | Pre-fill defaults to bid price; no amber warning on open. After fix: immediate-fill warning no longer fires on tab switch.                                                                       |
+| 2.1.2 | Set price to live − 2%, qty $200, click **Buy**                 | Pending order created; balance decreases by $200 + commission                                                                              | ✅     | ✅   | CryptoDash: LIMIT BUY 0.025 @ $78,800, Reserved $197.00, balance $9,802.86 @ 20:38:00. TV: Working order placed @ 20:36:25, Order ID 3000667764 — both pending on same session.                  |
+| 2.1.3 | Go to **Orders** tab → **Working** sub-tab                      | 1 row: LIMIT / BUY / Limit Price = your price; Status = Working (amber)                                                                    | ✅     |      | Row shows Type=LIMIT, Side=BUY, Qty=0.025, Limit Price=$78,800, Status=WORKING (amber badge). Matches TV Working sub-tab layout.                                                                 |
+| 2.1.4 | Check **All** sub-tab count badge                               | Badge shows **1**; row visible under All                                                                                                   | ✅     |      | "Orders 1" tab badge and "All 1" / "Working 1" sub-tab badges all show 1. ✅                                                                                                                     |
+| 2.1.5 | When price drops to trigger                                     | Order disappears from Working; appears in **Filled** sub-tab; journal entry added                                                          | ✅     | ✅   | CryptoDash: LIMIT BUY filled @ $77,673.8, moved from Working → Filled. TV: Filled @ 77,677.4, same session. Both filled on same candle; prices within $4 (spread + timing). Journal entry added. |
+| 2.1.6 | Check **All** sub-tab after fill                                | Badge count unchanged (1); row now shows status = Filled (green)                                                                           | ✅     |      | All sub-tab still shows 1 row; status pill changed from amber WORKING to green FILLED. ✅                                                                                                        |
 
 > **TV cross-check 2.1.5:** Both apps should fill on the same candle; entry prices should be within $1.
 
@@ -139,22 +139,24 @@
 
 | #     | Action                                        | Expected                                                                                               | Status | Notes |
 | ----- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------ | ----- |
-| 2.2.1 | Place limit buy far below market (live − 10%) | Order appears in **Working** sub-tab; amber tab badge shows 1                                          | ⬜     |       |
-| 2.2.2 | Click **✕** cancel in Working sub-tab         | Order disappears; appears in **Cancelled** sub-tab; balance **fully refunded**; amber badge disappears | ⬜     |       |
+| 2.2.1 | Place limit buy far below market (live − 10%) | Order appears in **Working** sub-tab; amber tab badge shows 1                                          | ✅     |       |
+| 2.2.2 | Click **✕** cancel in Working sub-tab         | Order disappears; appears in **Cancelled** sub-tab; balance **fully refunded**; amber badge disappears | ✅     |       |
 
 ### 2.3 Limit Sell above market
 
-| #     | Action                                    | Expected                          | Status | TV ✓ | Notes |
-| ----- | ----------------------------------------- | --------------------------------- | ------ | ---- | ----- |
-| 2.3.1 | Tab = Limit, price = live + 2%, Sell $200 | Pending SHORT sell created        | ⬜     |      |       |
-| 2.3.2 | When price rises to trigger               | SHORT position opens in Positions | ⬜     | ⬜   |       |
+| #     | Action                                    | Expected                          | Status | TV ✓ | Notes                                                                                                                                                                                  |
+| ----- | ----------------------------------------- | --------------------------------- | ------ | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2.3.1 | Tab = Limit, price = live + 2%, Sell $200 | Pending SHORT sell created        | ✅     | ✅   | Confirmed in Orders -> Working: LIMIT / SELL, Qty 0.0025, Limit Price $77,750, Status = Working. CryptoDash and TV both show matching pending order details (margin/reserved ~$194.4). |
+| 2.3.2 | When price rises to trigger               | SHORT position opens in Positions | ✅     | ✅   | Confirmed fill path: order moved to Filled with Fill Price ~$77,754.5 in CryptoDash; TV shows corresponding Filled SELL execution in same test flow.                                   |
 
 ### 2.4 Limit with TP + SL
 
-| #     | Action                                                | Expected                                                                     | Status | TV ✓ | Notes |
-| ----- | ----------------------------------------------------- | ---------------------------------------------------------------------------- | ------ | ---- | ----- |
-| 2.4.1 | Limit buy $300 at live−1%, TP = live+3%, SL = live−4% | Order shows TP/SL columns in Orders tab                                      | ⬜     |      |       |
-| 2.4.2 | When triggered, position inherits TP and SL           | Position TP/SL match what was set; Auto-closed journal entry shows PnL badge | ⬜     | ⬜   |       |
+| #     | Action                                                | Expected                                                                                       | Status | TV ✓ | Notes                                                                                                                                                                                    |
+| ----- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------ | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2.4.1 | Limit buy $300 at live−1%, TP = live+3%, SL = live−4% | Orders creates a 3-row bracket: parent LIMIT BUY + TP child + SL child (linked)                | ⬜     |      | Pre-fill: Working = 1 (parent), Inactive = 2 (TP/SL child legs). Cancelling the parent before fill cancels all 3 rows.                                                                   |
+| 2.4.2 | When triggered, position inherits TP and SL           | Parent moves to Filled; TP/SL children become active exits; position closes from Positions tab | ⬜     | ⬜   | Post-fill: parent is historical (not cancellable). Cancelling TP moves only TP leg to Cancelled; SL remains Working (and vice versa). Closing the position cancels remaining child legs. |
+
+> **Bracket lifecycle note (2.4):** Treat entry, TP, and SL as three linked orders. Parent cancel before fill cancels the entire bracket. After fill, manage the trade from **Positions** and manage exits from **Orders** child legs.
 
 ### 2.5 Edge cases
 
@@ -193,10 +195,10 @@
 
 ### 3.4 Stop with TP + SL
 
-| #     | Action                                          | Expected        | Status | TV ✓ | Notes |
-| ----- | ----------------------------------------------- | --------------- | ------ | ---- | ----- |
-| 3.4.1 | Stop Buy at live+1%, TP = live+4%, SL = live−1% | Placed OK       | ⬜     |      |       |
-| 3.4.2 | When triggered, position shows correct TP/SL    | TP/SL inherited | ⬜     | ⬜   |       |
+| #     | Action                                          | Expected                                                                                       | Status | TV ✓ | Notes                                                                                                                                                                                    |
+| ----- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------ | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3.4.1 | Stop Buy at live+1%, TP = live+4%, SL = live−1% | Orders creates a 3-row bracket: parent STOP BUY + TP child + SL child (linked)                 | ⬜     |      | Pre-trigger: Working = 1 (parent), Inactive = 2 (TP/SL child legs). Cancelling parent before trigger cancels all 3 rows.                                                                 |
+| 3.4.2 | When triggered, position shows correct TP/SL    | Parent moves to Filled; TP/SL children become active exits; position closes from Positions tab | ⬜     | ⬜   | Post-trigger: parent is historical (not cancellable). Cancelling TP moves only TP to Cancelled and SL stays Working (and vice versa). Closing the position cancels remaining child legs. |
 
 ### 3.5 Edge cases
 
@@ -210,24 +212,24 @@
 
 ## Section 4 — Cross-cutting / Regression
 
-| #    | Scenario                                            | Expected                                                                                                                        | Status | Notes |
-| ---- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------ | ----- |
-| 4.1  | Switch pane symbol while TradingPanel open          | Header updates to new symbol; form resets (qty/price cleared); **tab stays on current selection** (Market/Limit/Stop preserved) | ⬜     |       |
-| 4.2  | Switch symbol while on **Limit** tab                | Tab remains Limit; price input updates to new symbol's live price                                                               | ⬜     |       |
-| 4.3  | Switch symbol while on **Stop** tab                 | Tab remains Stop; price input updates to new symbol's live price                                                                | ⬜     |       |
-| 4.4  | Close TradingPanel (✕), reopen via SymbolBar button | Panel reopens; default state (Market, Buy, empty)                                                                               | ⬜     |       |
-| 4.5  | Collapse PaperTradingPanel (↓), then expand         | All tabs still functional                                                                                                       | ⬜     |       |
-| 4.6  | Place order, refresh browser                        | Position/pending order persists (localStorage)                                                                                  | ⬜     |       |
-| 4.7  | History tab after mix of wins and losses            | PnL signs correct; green/red colors correct                                                                                     | ⬜     |       |
-| 4.8  | Journal tab shows all system entries in order       | Timestamps ascending, auto-entries not editable, manual notes editable                                                          | ⬜     |       |
-| 4.9  | Journal PnL badge — profitable close                | Manual ✕ close: exec journal entry shows green `+$X.XX` pill inline after text; no badge on open/pending entries                | ⬜     |       |
-| 4.10 | Journal PnL badge — losing close                    | Auto-closed TP/SL entry shows red `−$X.XX` pill; badge value matches Balance History net PnL for that trade                     | ⬜     |       |
-| 4.11 | Journal PnL badge — user note                       | Manually added journal note has no PnL badge regardless of balance state                                                        | ⬜     |       |
-| 4.12 | Maximize PaperTradingPanel (⤢)                      | Chart area collapses (height → 0); panel fills full center column; Minimize2 icon shown; TradingPanel still visible             | ⬜     |       |
-| 4.13 | Restore PaperTradingPanel (⤡)                       | Chart area expands back; panel returns to previous height; Maximize2 icon shown                                                 | ⬜     |       |
-| 4.14 | Sound — order placed                                | Crisp double-tick plays when a market/limit/stop order is submitted                                                             | ⬜     |       |
-| 4.15 | Sound — TP/SL auto-close                            | Ascending jingle (profit) or descending beep (loss) plays when position auto-closes                                             | ⬜     |       |
-| 4.16 | Sound — mute toggle                                 | Clicking mute in SoundSettings silences all subsequent sounds; unmuting restores them                                           | ⬜     |       |
+| #    | Scenario                                            | Expected                                                                                                                                                                                        | Status | Notes |
+| ---- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ----- |
+| 4.1  | Switch pane symbol while TradingPanel open          | Header updates to new symbol; form resets (qty/price cleared); **tab stays on current selection** (Market/Limit/Stop preserved)                                                                 | ⬜     |       |
+| 4.2  | Switch symbol while on **Limit** tab                | Tab remains Limit; price input updates to new symbol's live price                                                                                                                               | ⬜     |       |
+| 4.3  | Switch symbol while on **Stop** tab                 | Tab remains Stop; price input updates to new symbol's live price                                                                                                                                | ⬜     |       |
+| 4.4  | Close TradingPanel (✕), reopen via SymbolBar button | Panel reopens; default state (Market, Buy, empty)                                                                                                                                               | ⬜     |       |
+| 4.5  | Collapse PaperTradingPanel (↓), then expand         | All tabs still functional                                                                                                                                                                       | ⬜     |       |
+| 4.6  | Place order, refresh browser                        | Position/pending order persists (localStorage)                                                                                                                                                  | ⬜     |       |
+| 4.7  | History tab after mix of wins and losses            | PnL signs correct; green/red colors correct                                                                                                                                                     | ⬜     |       |
+| 4.8  | Journal tab shows all system entries in order       | Timestamps ascending; system entries for bracket lifecycle are logged (`...successfully placed`, `...activated`, `...successfully cancelled`); auto-entries not editable, manual notes editable | ⬜     |       |
+| 4.9  | Journal PnL badge — profitable close                | Manual ✕ close: exec journal entry shows green `+$X.XX` pill inline after text; no badge on open/pending entries                                                                                | ⬜     |       |
+| 4.10 | Journal PnL badge — losing close                    | Auto-closed TP/SL entry shows red `−$X.XX` pill; badge value matches Balance History net PnL for that trade                                                                                     | ⬜     |       |
+| 4.11 | Journal PnL badge — user note                       | Manually added journal note has no PnL badge regardless of balance state                                                                                                                        | ⬜     |       |
+| 4.12 | Maximize PaperTradingPanel (⤢)                      | Chart area collapses (height → 0); panel fills full center column; Minimize2 icon shown; TradingPanel still visible                                                                             | ⬜     |       |
+| 4.13 | Restore PaperTradingPanel (⤡)                       | Chart area expands back; panel returns to previous height; Maximize2 icon shown                                                                                                                 | ⬜     |       |
+| 4.14 | Sound — order placed                                | Crisp double-tick plays when a market/limit/stop order is submitted                                                                                                                             | ⬜     |       |
+| 4.15 | Sound — TP/SL auto-close                            | Ascending jingle (profit) or descending beep (loss) plays when position auto-closes                                                                                                             | ⬜     |       |
+| 4.16 | Sound — mute toggle                                 | Clicking mute in SoundSettings silences all subsequent sounds; unmuting restores them                                                                                                           | ⬜     |       |
 
 ---
 

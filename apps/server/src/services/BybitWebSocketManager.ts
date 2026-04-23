@@ -169,9 +169,7 @@ export class BybitWebSocketManager extends EventEmitter {
 
     // Remove cached ticker state if no remaining subscriptions reference this symbol
     // — prevents unbounded memory growth when symbols are rotated at runtime.
-    const symbolStillActive = [...this.subscriptions.keys()].some((k) =>
-      k.includes(`|${symbol}`)
-    );
+    const symbolStillActive = [...this.subscriptions.keys()].some((k) => k.includes(`|${symbol}`));
     if (!symbolStillActive) {
       this.tickerState.delete(symbol);
     }
@@ -409,10 +407,8 @@ export class BybitWebSocketManager extends EventEmitter {
 
       const lastPrice =
         raw.lastPrice !== undefined ? parseFloat(String(raw.lastPrice)) : prev?.lastPrice;
-      const bid =
-        raw.bid1Price !== undefined ? parseFloat(String(raw.bid1Price)) : prev?.bid;
-      const ask =
-        raw.ask1Price !== undefined ? parseFloat(String(raw.ask1Price)) : prev?.ask;
+      const bid = raw.bid1Price !== undefined ? parseFloat(String(raw.bid1Price)) : prev?.bid;
+      const ask = raw.ask1Price !== undefined ? parseFloat(String(raw.ask1Price)) : prev?.ask;
 
       if (
         lastPrice === undefined ||
@@ -491,10 +487,7 @@ export class BybitWebSocketManager extends EventEmitter {
     this.reconnectAttempts++;
     const delay = Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1), 30000);
 
-    log.info(
-      { delay, attempt: this.reconnectAttempts },
-      'Reconnecting'
-    );
+    log.info({ delay, attempt: this.reconnectAttempts }, 'Reconnecting');
 
     setTimeout(() => {
       this.connect().catch((error) => {

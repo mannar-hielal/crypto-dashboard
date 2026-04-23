@@ -149,8 +149,7 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
     if (priceInput !== '') return priceInput;
     if (tab === 'market' || latestPrice === null) return '';
     // Determine which side of the market this order should sit on when pending.
-    const wantBelow =
-      (tab === 'limit' && side === 'buy') || (tab === 'stop' && side === 'sell');
+    const wantBelow = (tab === 'limit' && side === 'buy') || (tab === 'stop' && side === 'sell');
     if (wantBelow) {
       const p = bid != null ? bid : latestPrice * 0.9999;
       return p.toFixed(2);

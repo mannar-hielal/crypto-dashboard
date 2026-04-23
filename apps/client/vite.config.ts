@@ -94,11 +94,15 @@ export default defineConfig({
       //   No safer alternative (nonces/hashes) is viable here because both tools
       //   generate code dynamically at runtime rather than at build time.
       //
-      // 'unsafe-inline' is intentionally excluded — Vite 8 uses ES modules for
-      // HMR and does not require inline script injection.
+      // 'unsafe-inline' is required by @vitejs/plugin-react (all versions) — it
+      // injects an inline <script type="module"> preamble that sets up the React
+      // Fast Refresh globals ($RefreshReg$, $RefreshSig$, __vite_plugin_react_preamble_installed__).
+      // Without it the browser blocks the preamble and every React component file
+      // throws "can't detect preamble" which breaks HMR entirely.
+      // This header is ONLY served by the Vite dev server — never in production.
       'Content-Security-Policy': [
         "default-src 'self'",
-        "script-src 'self' 'unsafe-eval'",
+        "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
         "style-src 'self' 'unsafe-inline'",
         "connect-src 'self' ws://localhost:3001 http://localhost:3001",
         "img-src 'self' data: blob:",
