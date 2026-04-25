@@ -253,4 +253,62 @@ describe('paperStore', () => {
       expect(usePaperStore.getState().history).toHaveLength(0);
     });
   });
+
+  describe('persist migrate()', () => {
+    it('filters malformed v0 positions/history items before hydration', () => {
+      const migrate = usePaperStore.persist.getOptions().migrate!;
+
+      const migrated = migrate(
+        {
+          balance: 9_500,
+          positions: [
+            {
+              id: 'p-1',
+              symbol: 'BTCUSDT',
+              side: 'long',
+              quantity: 0.1,
+              entryPrice: 50_000,
+              entryUsdtAmount: 5_000,
+              openedAt: Date.now(),
+            },
+            { id: 'bad-position', quantity: 'oops' },
+          ],
+          history: [
+            {
+              id: 'h-1',
+              symbol: 'BTCUSDT',
+              side: 'short',
+              quantity: 0.05,
+              entryPrice: 60_000,
+              exitPrice: 58_000,
+              pnl: 100,
+              openedAt: Date.now() - 1000,
+              closedAt: Date.now(),
+            },
+            { id: 'bad-history', pnl: 'oops' },
+            // zero exitPrice must be rejected (prices must be positive)
+            {
+              id: 'bad-zero-exit',
+              symbol: 'BTCUSDT',
+              side: 'long',
+              quantity: 0.1,
+              entryPrice: 50_000,
+              exitPrice: 0,
+              pnl: -5_000,
+              openedAt: Date.now() - 1000,
+              closedAt: Date.now(),
+            },
+          ],
+          realizedPnl: 123,
+        },
+        0
+      ) as {
+        positions: unknown[];
+        history: unknown[];
+      };
+
+      expect(migrated.positions).toHaveLength(1);
+      expect(migrated.history).toHaveLength(1);
+    });
+  });
 });

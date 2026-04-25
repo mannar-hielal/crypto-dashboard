@@ -81,4 +81,34 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    headers: {
+      // 🔐 Dev-only CSP — applies ONLY to the Vite dev server, never deployed.
+      // Production CSP is enforced by @fastify/helmet on the server side.
+      //
+      // 'unsafe-eval' is required by two specific dev-only tools:
+      //   1. esbuild (Vite's bundler) — uses eval() to reconstruct source maps
+      //      in development. Removed automatically in production builds.
+      //   2. Framer Motion — its WAAPI polyfill uses new Function() at runtime
+      //      for keyframe interpolation. No safer alternative exists in v12.
+      //   No safer alternative (nonces/hashes) is viable here because both tools
+      //   generate code dynamically at runtime rather than at build time.
+      //
+      // 'unsafe-inline' is required by @vitejs/plugin-react (all versions) — it
+      // injects an inline <script type="module"> preamble that sets up the React
+      // Fast Refresh globals ($RefreshReg$, $RefreshSig$, __vite_plugin_react_preamble_installed__).
+      // Without it the browser blocks the preamble and every React component file
+      // throws "can't detect preamble" which breaks HMR entirely.
+      // This header is ONLY served by the Vite dev server — never in production.
+      'Content-Security-Policy': [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+        "style-src 'self' 'unsafe-inline'",
+        "connect-src 'self' ws://localhost:3001 http://localhost:3001",
+        "img-src 'self' data: blob:",
+        "font-src 'self' data:",
+        "worker-src 'self' blob:",
+      ].join('; '),
+    },
+  },
 });

@@ -136,17 +136,28 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
 
   /**
    * The price shown and used for Limit/Stop orders.
-   * While the user hasn't typed anything (priceInput === ''), we fall back to
-   * latestPrice so the field always shows the current symbol's live price —
-   * even immediately after a key-reset remount when paneStore hasn't synced yet.
+   * While the user hasn't typed anything (priceInput === ''), we compute a
+   * default that mirrors TradingView's behaviour: always start slightly on the
+   * "pending" side of the market so the order queues rather than fills immediately.
+   *
+   *   Limit Buy  / Stop Sell → use bid  (below market) — fallback latestPrice × 0.9999
+   *   Limit Sell / Stop Buy  → use ask  (above market) — fallback latestPrice × 1.0001
+   *
    * Once the user types, their value takes over.
    */
-  const displayPrice: string =
-    priceInput !== ''
-      ? priceInput
-      : tab !== 'market' && latestPrice !== null
-        ? latestPrice.toFixed(2)
-        : '';
+  const displayPrice: string = (() => {
+    if (priceInput !== '') return priceInput;
+    if (tab === 'market' || latestPrice === null) return '';
+    // Determine which side of the market this order should sit on when pending.
+    const wantBelow = (tab === 'limit' && side === 'buy') || (tab === 'stop' && side === 'sell');
+    if (wantBelow) {
+      const p = bid != null ? bid : latestPrice * 0.9999;
+      return p.toFixed(2);
+    } else {
+      const p = ask != null ? ask : latestPrice * 1.0001;
+      return p.toFixed(2);
+    }
+  })();
 
   const execPrice = tab === 'market' ? latestPrice : parseFloat(displayPrice) || null;
 
@@ -262,6 +273,8 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
     setSide(s);
     setFormError(null);
     setBypassWarning(false);
+    // Reset typed price so the new default (bid for Buy, ask for Sell) takes over.
+    setPriceInput('');
     setTpInput('');
     setSlInput('');
   }
@@ -582,6 +595,8 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
 
           <div className="relative">
             <input
+              id="trading-qty"
+              name="qty"
               type="number"
               min="0"
               step={qtyMode === 'usd' ? '0.01' : '0.000001'}

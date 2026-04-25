@@ -32,11 +32,64 @@
 import { useRef, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import type { IChartApi, ISeriesApi } from 'lightweight-charts';
-import { useLayoutStore, LAYOUT_PANE_COUNT, LAYOUT_GRID_CLASS } from '@/store/layoutStore';
+import { useLayoutStore, LAYOUT_PANE_COUNT, DEFAULT_PANE_SIZES } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
 import { ChartPanel } from '@/components/dashboard/ChartPanel';
 import { PaneHeader } from '@/components/dashboard/PaneHeader';
 import { color } from '@/lib/tokens';
+
+// ─── ResizeSplitter ───────────────────────────────────────────────────────────
+
+interface SplitterProps {
+  axis: 'col' | 'row';
+  /** 0–1 cumulative fraction where this splitter sits */
+  position: number;
+  splitterRef: (el: HTMLDivElement | null) => void;
+  onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => void;
+}
+
+function ResizeSplitter({ axis, position, splitterRef, onPointerDown }: SplitterProps) {
+  const isCol = axis === 'col';
+  return (
+    <div
+      ref={splitterRef}
+      aria-hidden="true"
+      className="absolute z-10 group"
+      style={
+        isCol
+          ? {
+              left: `calc(${position * 100}% - 6px)`,
+              top: 0,
+              width: 12,
+              height: '100%',
+              cursor: 'ew-resize',
+              touchAction: 'none',
+            }
+          : {
+              top: `calc(${position * 100}% - 6px)`,
+              left: 0,
+              height: 12,
+              width: '100%',
+              cursor: 'ns-resize',
+              touchAction: 'none',
+            }
+      }
+      onPointerDown={onPointerDown}
+    >
+      {/* Thin accent line — only visible on hover */}
+      <div
+        className="pointer-events-none absolute opacity-0 transition-opacity group-hover:opacity-100"
+        style={
+          isCol
+            ? { left: 5, top: 0, width: 2, height: '100%', background: `${color.purpleDark}70` }
+            : { top: 5, left: 0, height: 2, width: '100%', background: `${color.purpleDark}70` }
+        }
+      />
+    </div>
+  );
+}
+
+// ─── MultiChartArea ───────────────────────────────────────────────────────────
 
 export function MultiChartArea() {
   const layout = useLayoutStore((s) => s.layout);
@@ -44,25 +97,24 @@ export function MultiChartArea() {
   const syncOptions = useLayoutStore((s) => s.syncOptions);
   const setActivePane = useLayoutStore((s) => s.setActivePane);
   const panes = useLayoutStore((s) => s.panes);
+  const paneSizes = useLayoutStore((s) => s.paneSizes);
+  const setPaneSizes = useLayoutStore((s) => s.setPaneSizes);
 
   const paneCount = LAYOUT_PANE_COUNT[layout];
-  const gridClass = LAYOUT_GRID_CLASS[layout];
+  const { colFracs, rowFracs } = paneSizes[layout] ?? DEFAULT_PANE_SIZES[layout];
 
   // ── Chart instance refs ─────────────────────────────────────────────────
   const chartRefs = useRef<(IChartApi | null)[]>([null, null, null, null]);
-  // Candlestick series refs — required for setCrosshairPosition (v5 API)
   const seriesRefs = useRef<(ISeriesApi<'Candlestick'> | null)[]>([null, null, null, null]);
 
-  // Guard flag for time-range sync circular loop prevention.
-  // Crosshair sync does NOT need a guard — it uses param.sourceEvent instead
-  // (only defined on real mouse events, undefined on programmatic calls).
-  const isSyncingTimeRange = useRef(false);
+  // ── Grid + splitter DOM refs (direct mutation during drag) ──────────────
+  const gridRef = useRef<HTMLDivElement>(null);
+  const colSplitterRefs = useRef<(HTMLDivElement | null)[]>([null, null]);
+  const rowSplitterRefs = useRef<(HTMLDivElement | null)[]>([null]);
 
-  // Keep sync options and pane count in refs so event handlers always read
-  // the latest value without needing to re-register chart subscriptions
+  const isSyncingTimeRange = useRef(false);
   const syncRef = useRef(syncOptions);
   const paneCountRef = useRef(paneCount);
-  // Track previous timeRange flag so we can detect OFF → ON transitions
   const prevTimeRangeSyncRef = useRef(syncOptions.timeRange);
 
   useEffect(() => {
@@ -73,18 +125,13 @@ export function MultiChartArea() {
   });
 
   // ── Snap-on-enable: timeRange ───────────────────────────────────────────
-  // When timeRange sync transitions OFF → ON, immediately snap all follower
-  // panes to the active pane's current visible range. Active pane wins —
-  // same precedence as symbol/interval sync.
   useEffect(() => {
     const wasOn = prevTimeRangeSyncRef.current;
     prevTimeRangeSyncRef.current = syncOptions.timeRange;
-
-    if (!syncOptions.timeRange || wasOn) return; // only act on OFF → ON
+    if (!syncOptions.timeRange || wasOn) return;
 
     const sourceChart = chartRefs.current[activePane];
     if (!sourceChart) return;
-
     const range = sourceChart.timeScale().getVisibleRange();
     if (!range) return;
 
@@ -96,7 +143,7 @@ export function MultiChartArea() {
       try {
         other.timeScale().setVisibleRange(range);
       } catch {
-        // Ignore — follower may not have loaded data yet
+        /* ignore */
       }
     }
     isSyncingTimeRange.current = false;
@@ -108,51 +155,24 @@ export function MultiChartArea() {
       chartRefs.current[paneIndex] = chart;
       seriesRefs.current[paneIndex] = series;
 
-      // ── Crosshair sync ────────────────────────────────────────────────
       chart.subscribeCrosshairMove((param) => {
         if (!syncRef.current.crosshair) return;
-        // sourceEvent is only defined for real pointer events; programmatic
-        // setCrosshairPosition / clearCrosshairPosition calls have it undefined.
-        // Skipping those calls is what breaks the circular-echo loop.
         if (!param.sourceEvent) return;
-
         for (let i = 0; i < paneCountRef.current; i++) {
           if (i === paneIndex) continue;
           const other = chartRefs.current[i];
           const otherSeries = seriesRefs.current[i];
           if (!other || !otherSeries) continue;
-
           try {
             if (!param.point || !param.time) {
-              // Cursor left the source chart — hide crosshair on followers
               other.clearCrosshairPosition();
             } else {
               const followerStore = paneStores[i as 0 | 1 | 2 | 3].getState();
               const followerLatest = followerStore.latestPrice;
-
-              // Guard: skip if the follower hasn't loaded data yet. Calling
-              // setCrosshairPosition on an empty/uninitialized chart can lock
-              // its Y-axis to a garbage default range, hiding candles after
-              // data arrives.
               if (followerLatest === null) continue;
-
-              // Map the source cursor's Y pixel coordinate to the equivalent
-              // price on the follower chart's price scale, so the horizontal
-              // crosshair line lands at the same relative height on both charts.
               let price: number | null = otherSeries.coordinateToPrice(param.point.y);
-
-              // Sanity-check: if coordinateToPrice returns a price more than
-              // 50% away from the follower's actual latest price, the chart's
-              // coordinate system is stale (e.g. pane was just switched from
-              // ETH at ~2 400 to BTC at ~71 000 — the scale hasn't updated
-              // yet). Discard the stale value to break the feedback loop that
-              // would otherwise keep the chart locked at the old symbol's range.
-              if (price !== null && (price < followerLatest * 0.5 || price > followerLatest * 2)) {
+              if (price !== null && (price < followerLatest * 0.5 || price > followerLatest * 2))
                 price = null;
-              }
-
-              // Fallback: use the bar's close price at this timestamp when
-              // coordinateToPrice is null (cursor in MACD sub-pane) or stale.
               if (price === null) {
                 const timeSecs = param.time as number;
                 const bar = followerStore.bars.find(
@@ -160,39 +180,33 @@ export function MultiChartArea() {
                 );
                 price = bar?.close ?? followerLatest;
               }
-
               other.setCrosshairPosition(price, param.time, otherSeries);
             }
           } catch {
-            // Ignore — follower chart may not have data for this time yet
+            /* ignore */
           }
         }
       });
 
-      // ── Time range sync ───────────────────────────────────────────────
       chart.timeScale().subscribeVisibleTimeRangeChange((range) => {
         if (!syncRef.current.timeRange) return;
         if (isSyncingTimeRange.current) return;
         if (!range) return;
-
         isSyncingTimeRange.current = true;
-
         for (let i = 0; i < paneCountRef.current; i++) {
           if (i === paneIndex) continue;
           const other = chartRefs.current[i];
           if (!other) continue;
-
           try {
             other.timeScale().setVisibleRange(range);
           } catch {
-            // Ignore — follower may not have loaded data yet
+            /* ignore */
           }
         }
-
         isSyncingTimeRange.current = false;
       });
     },
-    [] // stable — reads everything via refs
+    []
   );
 
   const handleChartDestroy = useCallback((paneIndex: number) => {
@@ -200,21 +214,137 @@ export function MultiChartArea() {
     seriesRefs.current[paneIndex] = null;
   }, []);
 
+  // ── Splitter drag helpers ───────────────────────────────────────────────
+
+  /** Rebuild cumulative splitter positions and push to DOM refs */
+  function applyColFracsToDom(fracs: number[]) {
+    if (gridRef.current) {
+      gridRef.current.style.gridTemplateColumns = fracs.map((f) => `${f}fr`).join(' ');
+    }
+    let cum = 0;
+    for (let k = 0; k < fracs.length - 1; k++) {
+      cum += fracs[k];
+      const el = colSplitterRefs.current[k];
+      if (el) el.style.left = `calc(${cum * 100}% - 6px)`;
+    }
+  }
+
+  function applyRowFracsToDom(fracs: number[]) {
+    if (gridRef.current) {
+      gridRef.current.style.gridTemplateRows = fracs.map((f) => `${f}fr`).join(' ');
+    }
+    let cum = 0;
+    for (let k = 0; k < fracs.length - 1; k++) {
+      cum += fracs[k];
+      const el = rowSplitterRefs.current[k];
+      if (el) el.style.top = `calc(${cum * 100}% - 6px)`;
+    }
+  }
+
+  function handleColSplitterPointerDown(
+    e: React.PointerEvent<HTMLDivElement>,
+    splitterIdx: number
+  ) {
+    e.preventDefault();
+    e.stopPropagation();
+    const el = e.currentTarget;
+    el.setPointerCapture(e.pointerId);
+
+    const containerW = gridRef.current?.clientWidth ?? 1;
+    const startX = e.clientX;
+    const startFracs = [...colFracs];
+    const finalFracs = [...colFracs];
+
+    const onMove = (ev: PointerEvent) => {
+      const deltaFrac = (ev.clientX - startX) / containerW;
+      const total = startFracs[splitterIdx] + startFracs[splitterIdx + 1];
+      const newA = Math.max(0.1, Math.min(total - 0.1, startFracs[splitterIdx] + deltaFrac));
+      const next = [...startFracs];
+      next[splitterIdx] = newA;
+      next[splitterIdx + 1] = total - newA;
+      Object.assign(finalFracs, next);
+      applyColFracsToDom(next);
+    };
+
+    const onUp = () => {
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onUp);
+      setPaneSizes(layout, { colFracs: [...finalFracs], rowFracs });
+    };
+
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onUp);
+  }
+
+  function handleRowSplitterPointerDown(
+    e: React.PointerEvent<HTMLDivElement>,
+    splitterIdx: number
+  ) {
+    e.preventDefault();
+    e.stopPropagation();
+    const el = e.currentTarget;
+    el.setPointerCapture(e.pointerId);
+
+    const containerH = gridRef.current?.clientHeight ?? 1;
+    const startY = e.clientY;
+    const startFracs = [...rowFracs];
+    const finalFracs = [...rowFracs];
+
+    const onMove = (ev: PointerEvent) => {
+      const deltaFrac = (ev.clientY - startY) / containerH;
+      const total = startFracs[splitterIdx] + startFracs[splitterIdx + 1];
+      const newA = Math.max(0.1, Math.min(total - 0.1, startFracs[splitterIdx] + deltaFrac));
+      const next = [...startFracs];
+      next[splitterIdx] = newA;
+      next[splitterIdx + 1] = total - newA;
+      Object.assign(finalFracs, next);
+      applyRowFracsToDom(next);
+    };
+
+    const onUp = () => {
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onUp);
+      setPaneSizes(layout, { colFracs, rowFracs: [...finalFracs] });
+    };
+
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onUp);
+  }
+
+  // ── Computed grid template strings ─────────────────────────────────────
+  const gridTemplateColumns = colFracs.map((f) => `${f}fr`).join(' ');
+  const gridTemplateRows = rowFracs.map((f) => `${f}fr`).join(' ');
+
+  // ── Splitter positions: cumulative fracs ────────────────────────────────
+  const colSplitterPositions: number[] = [];
+  {
+    let cum = 0;
+    for (let k = 0; k < colFracs.length - 1; k++) {
+      cum += colFracs[k];
+      colSplitterPositions.push(cum);
+    }
+  }
+  const rowSplitterPositions: number[] = [];
+  {
+    let cum = 0;
+    for (let k = 0; k < rowFracs.length - 1; k++) {
+      cum += rowFracs[k];
+      rowSplitterPositions.push(cum);
+    }
+  }
+
   return (
-    <div className={`grid h-full w-full ${gridClass}`}>
+    <div
+      ref={gridRef}
+      className="relative grid h-full w-full"
+      style={{ gridTemplateColumns, gridTemplateRows }}
+    >
       {(Array.from({ length: paneCount }) as undefined[]).map((_, i) => {
         const paneIndex = i as 0 | 1 | 2 | 3;
         const isActive = activePane === paneIndex;
 
         return (
-          <div
-            key={paneIndex}
-            className="relative flex min-h-0 min-w-0 flex-col overflow-hidden"
-            style={{
-              borderRight: i % 2 === 0 && paneCount > 1 && layout !== '2v' ? 'none' : undefined,
-            }}
-          >
-            {/* Per-pane header — only visible in multi-pane mode */}
+          <div key={paneIndex} className="relative flex min-h-0 min-w-0 flex-col overflow-hidden">
             {paneCount > 1 && (
               <PaneHeader
                 paneIndex={paneIndex}
@@ -223,7 +353,6 @@ export function MultiChartArea() {
               />
             )}
 
-            {/* Chart area */}
             <div
               className="relative flex-1 overflow-hidden"
               onClick={() => setActivePane(paneIndex)}
@@ -235,7 +364,6 @@ export function MultiChartArea() {
                 onChartDestroy={() => handleChartDestroy(paneIndex)}
               />
 
-              {/* Active pane highlight border */}
               {isActive && paneCount > 1 && (
                 <motion.div
                   key={`border-${paneIndex}`}
@@ -253,6 +381,34 @@ export function MultiChartArea() {
           </div>
         );
       })}
+
+      {/* ── Column splitters (2h, 3h, 4) ─────────────────────────────────── */}
+      {paneCount > 1 &&
+        colSplitterPositions.map((pos, k) => (
+          <ResizeSplitter
+            key={`col-split-${k}`}
+            axis="col"
+            position={pos}
+            splitterRef={(el) => {
+              colSplitterRefs.current[k] = el;
+            }}
+            onPointerDown={(e) => handleColSplitterPointerDown(e, k)}
+          />
+        ))}
+
+      {/* ── Row splitters (2v, 4) ─────────────────────────────────────────── */}
+      {paneCount > 1 &&
+        rowSplitterPositions.map((pos, k) => (
+          <ResizeSplitter
+            key={`row-split-${k}`}
+            axis="row"
+            position={pos}
+            splitterRef={(el) => {
+              rowSplitterRefs.current[k] = el;
+            }}
+            onPointerDown={(e) => handleRowSplitterPointerDown(e, k)}
+          />
+        ))}
     </div>
   );
 }

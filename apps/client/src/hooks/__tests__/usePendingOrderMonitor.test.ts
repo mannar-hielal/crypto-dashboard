@@ -1,20 +1,26 @@
 /**
- * checkPendingTrigger unit tests
+ * checkPendingTrigger + effectiveCheckPrice unit tests
  *
- * The trigger-check logic is extracted as a pure function so it can be
+ * Both functions are extracted as pure functions so they can be
  * tested in isolation — no React, no store, no side effects.
  *
- * Coverage:
+ * checkPendingTrigger coverage:
  *   - Limit Buy:  triggers when price <= triggerPrice
  *   - Limit Sell: triggers when price >= triggerPrice
  *   - Stop  Buy:  triggers when price >= triggerPrice
  *   - Stop  Sell: triggers when price <= triggerPrice
  *   - Boundary conditions (price exactly at triggerPrice)
  *   - No-trigger cases for all four combinations
+ *
+ * effectiveCheckPrice coverage:
+ *   - Limit Buy  → uses min(latestPrice, candleLow)  — price fell into trigger
+ *   - Stop  Buy  → uses max(latestPrice, candleHigh) — price rose into trigger
+ *   - Limit Sell → uses max(latestPrice, candleHigh) — price rose into trigger
+ *   - Stop  Sell → uses min(latestPrice, candleLow)  — price fell into trigger
  */
 
 import { describe, it, expect } from 'vitest';
-import { checkPendingTrigger } from '../usePendingOrderMonitor';
+import { checkPendingTrigger, effectiveCheckPrice } from '../usePendingOrderMonitor';
 
 // ─── Limit Buy ────────────────────────────────────────────────────────────────
 
@@ -113,5 +119,53 @@ describe('checkPendingTrigger() — one tick away (should NOT trigger)', () => {
     expect(checkPendingTrigger({ side: 'sell', type: 'stop', triggerPrice: 45_000 }, 45_001)).toBe(
       false
     );
+  });
+});
+
+// ─── effectiveCheckPrice ──────────────────────────────────────────────────────
+
+describe('effectiveCheckPrice()', () => {
+  // Limit Buy + Stop Sell → "buy direction" → use candleLow
+  it('Limit Buy: returns min(latestPrice, candleLow)', () => {
+    expect(effectiveCheckPrice({ side: 'buy', type: 'limit' }, 50_100, 49_500, 50_200)).toBe(
+      49_500
+    ); // candleLow < latestPrice
+  });
+
+  it('Limit Buy: returns latestPrice when it is already below candleLow', () => {
+    expect(effectiveCheckPrice({ side: 'buy', type: 'limit' }, 49_000, 49_500, 50_200)).toBe(
+      49_000
+    );
+  });
+
+  it('Stop Sell: returns min(latestPrice, candleLow)', () => {
+    expect(effectiveCheckPrice({ side: 'sell', type: 'stop' }, 50_100, 49_500, 50_200)).toBe(
+      49_500
+    );
+  });
+
+  // Limit Sell + Stop Buy → "sell direction" → use candleHigh
+  it('Limit Sell: returns max(latestPrice, candleHigh)', () => {
+    expect(effectiveCheckPrice({ side: 'sell', type: 'limit' }, 59_800, 59_500, 60_200)).toBe(
+      60_200
+    ); // candleHigh > latestPrice
+  });
+
+  it('Limit Sell: returns latestPrice when it is already above candleHigh', () => {
+    expect(effectiveCheckPrice({ side: 'sell', type: 'limit' }, 60_500, 59_500, 60_200)).toBe(
+      60_500
+    );
+  });
+
+  it('Stop Buy: returns max(latestPrice, candleHigh)', () => {
+    expect(effectiveCheckPrice({ side: 'buy', type: 'stop' }, 55_100, 54_800, 55_800)).toBe(55_800);
+  });
+
+  // Candle sweep: latestPrice above trigger but candleLow below — Limit Buy triggers
+  it('Limit Buy candle sweep: latestPrice above trigger, candleLow below → effectiveCheckPrice triggers', () => {
+    const order = { side: 'buy' as const, type: 'limit' as const, triggerPrice: 50_000 };
+    const eff = effectiveCheckPrice(order, 50_100 /* above */, 49_900 /* below */, 50_200);
+    expect(eff).toBe(49_900);
+    expect(checkPendingTrigger(order, eff)).toBe(true);
   });
 });

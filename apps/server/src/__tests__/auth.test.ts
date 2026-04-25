@@ -360,6 +360,29 @@ describe('POST /api/auth/refresh', () => {
 
     expect(res.statusCode).toBe(401);
   });
+
+  it('returns 401 on already-consumed refresh token without global user revocation', async () => {
+    const deleteManyMock = app.prisma.refreshToken.deleteMany as ReturnType<typeof vi.fn>;
+    deleteManyMock.mockClear();
+    deleteManyMock.mockResolvedValueOnce({ count: 0 });
+
+    (app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'rt-race',
+      tokenHash: 'hashed',
+      userId: 'user-1',
+      expiresAt: FUTURE,
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/refresh',
+      headers: { cookie: `refresh_token=${RAW_TOKEN}` },
+    });
+
+    expect(res.statusCode).toBe(401);
+    // Only the token-hash delete attempt should run; no second deleteMany({ userId }) call.
+    expect(deleteManyMock).toHaveBeenCalledTimes(1);
+  });
 });
 
 // ─── LOGOUT ──────────────────────────────────────────────────────────────────

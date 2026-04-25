@@ -13,6 +13,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { fmtPrice } from '@/lib/utils';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -108,14 +109,46 @@ export interface JournalEntry {
    */
   pnl?: number;
 }
-
 // ─── Store ────────────────────────────────────────────────────────────────────
 
-// Helper – format price to a readable precision
-function fmtPrice(price: number): string {
-  if (price >= 1000) return price.toFixed(2);
-  if (price >= 1) return price.toFixed(4);
-  return price.toFixed(6);
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function isPositiveNumber(value: unknown): value is number {
+  return isFiniteNumber(value) && value > 0;
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === 'string';
+}
+
+function isPositionSnapshot(value: unknown): value is Position {
+  if (!isRecord(value)) return false;
+  if (!isString(value['id']) || !isString(value['symbol'])) return false;
+  if (value['side'] !== 'long' && value['side'] !== 'short') return false;
+  if (!isPositiveNumber(value['quantity'])) return false;
+  if (!isPositiveNumber(value['entryPrice'])) return false;
+  if (!isPositiveNumber(value['entryUsdtAmount'])) return false;
+  if (!isFiniteNumber(value['openedAt'])) return false;
+  if (value['takeProfit'] !== undefined && !isPositiveNumber(value['takeProfit'])) return false;
+  if (value['stopLoss'] !== undefined && !isPositiveNumber(value['stopLoss'])) return false;
+  return true;
+}
+
+function isClosedTradeSnapshot(value: unknown): value is ClosedTrade {
+  if (!isRecord(value)) return false;
+  if (!isString(value['id']) || !isString(value['symbol'])) return false;
+  if (value['side'] !== 'long' && value['side'] !== 'short') return false;
+  if (!isPositiveNumber(value['quantity'])) return false;
+  if (!isPositiveNumber(value['entryPrice']) || !isPositiveNumber(value['exitPrice'])) return false;
+  if (!isFiniteNumber(value['pnl'])) return false;
+  if (!isFiniteNumber(value['openedAt']) || !isFiniteNumber(value['closedAt'])) return false;
+  return true;
 }
 
 interface PaperState {
@@ -202,6 +235,12 @@ interface PaperState {
 
   /** Cancel a pending (limit or stop) order and refund the reserved amount. */
   cancelPendingOrder: (orderId: string) => void;
+
+  /** Cancel one active TP/SL exit leg for an open position. */
+  cancelExitOrder: (positionId: string, exitType: 'take-profit' | 'stop-loss') => void;
+
+  /** Cancel one inactive TP/SL exit leg attached to a pending (unfilled) order bracket. No balance refund — the parent order still holds the margin. */
+  cancelPendingExitLeg: (pendingOrderId: string, exitType: 'take-profit' | 'stop-loss') => void;
 
   /**
    * Fill a pending order without recording a cancellation entry.
@@ -516,6 +555,32 @@ export const usePaperStore = create<PaperState>()(
           closingTime: now,
         };
 
+        const siblingCancelOrders: HistoricalOrder[] = [];
+        const pushCancelExit = (exitType: 'take-profit' | 'stop-loss', price: number) => {
+          siblingCancelOrders.push({
+            id: `o-cancel-${exitType}-${positionId}-${now}`,
+            symbol: pos.symbol,
+            side: pos.side === 'long' ? 'sell' : 'buy',
+            type: exitType,
+            qty: pos.quantity,
+            ...(exitType === 'take-profit' ? { limitPrice: price } : { stopPrice: price }),
+            status: 'cancelled',
+            commission: 0,
+            placingTime: pos.openedAt,
+            closingTime: now,
+          });
+        };
+
+        if (closeType === 'take-profit') {
+          if (pos.stopLoss) pushCancelExit('stop-loss', pos.stopLoss);
+        } else if (closeType === 'stop-loss') {
+          if (pos.takeProfit) pushCancelExit('take-profit', pos.takeProfit);
+        } else {
+          // Manual close (or generic close) cancels all remaining exit legs.
+          if (pos.takeProfit) pushCancelExit('take-profit', pos.takeProfit);
+          if (pos.stopLoss) pushCancelExit('stop-loss', pos.stopLoss);
+        }
+
         const balBefore = get().balance;
         const balAfter = balBefore + returnAmount;
 
@@ -555,7 +620,7 @@ export const usePaperStore = create<PaperState>()(
           balance: s.balance + returnAmount,
           positions: s.positions.filter((p) => p.id !== positionId),
           history: [closed, ...s.history].slice(0, MAX_HISTORY),
-          orders: [closingOrder, ...s.orders].slice(0, MAX_HISTORY * 2),
+          orders: [closingOrder, ...siblingCancelOrders, ...s.orders].slice(0, MAX_HISTORY * 2),
           realizedPnl: s.realizedPnl + pnl - commission - entryCommission,
           balanceLog: [logEntry, ...s.balanceLog].slice(0, MAX_HISTORY * 2),
           journal: [...closingJournalEntries, ...s.journal].slice(0, MAX_JOURNAL),
@@ -621,9 +686,19 @@ export const usePaperStore = create<PaperState>()(
           ...(stopLoss && stopLoss > 0 ? { stopLoss } : {}),
         };
 
+        const placementSide = side === 'buy' ? 'Long' : 'Short';
+        const placementNote: JournalEntry = {
+          id: `j-place-limit-${id}`,
+          time: now,
+          text:
+            `Placed LIMIT ${placementSide} ${symbol} @ $${fmtPrice(triggerPrice)}` +
+            ` (qty: ${qty.toFixed(6)}, reserved: $${usdtAmount.toFixed(2)})`,
+        };
+
         set((s) => ({
           balance: s.balance - totalCost,
           pendingOrders: [...s.pendingOrders, pending],
+          journal: [placementNote, ...s.journal].slice(0, MAX_JOURNAL),
         }));
 
         return id;
@@ -652,9 +727,19 @@ export const usePaperStore = create<PaperState>()(
           ...(stopLoss && stopLoss > 0 ? { stopLoss } : {}),
         };
 
+        const stopPlacementSide = side === 'buy' ? 'Long' : 'Short';
+        const stopPlacementNote: JournalEntry = {
+          id: `j-place-stop-${id}`,
+          time: now,
+          text:
+            `Placed STOP ${stopPlacementSide} ${symbol} @ $${fmtPrice(triggerPrice)}` +
+            ` (qty: ${qty.toFixed(6)}, reserved: $${usdtAmount.toFixed(2)})`,
+        };
+
         set((s) => ({
           balance: s.balance - totalCost,
           pendingOrders: [...s.pendingOrders, pending],
+          journal: [stopPlacementNote, ...s.journal].slice(0, MAX_JOURNAL),
         }));
 
         return id;
@@ -683,10 +768,140 @@ export const usePaperStore = create<PaperState>()(
           closingTime: now,
         };
 
+        const childCancelledOrders: HistoricalOrder[] = [];
+        if (order.takeProfit) {
+          childCancelledOrders.push({
+            id: `o-cancel-tp-${orderId}`,
+            symbol: order.symbol,
+            side: order.side === 'buy' ? 'sell' : 'buy',
+            type: 'take-profit',
+            qty: order.qty,
+            limitPrice: order.takeProfit,
+            status: 'cancelled',
+            commission: 0,
+            placingTime: order.placedAt,
+            closingTime: now,
+          });
+        }
+        if (order.stopLoss) {
+          childCancelledOrders.push({
+            id: `o-cancel-sl-${orderId}`,
+            symbol: order.symbol,
+            side: order.side === 'buy' ? 'sell' : 'buy',
+            type: 'stop-loss',
+            qty: order.qty,
+            stopPrice: order.stopLoss,
+            status: 'cancelled',
+            commission: 0,
+            placingTime: order.placedAt,
+            closingTime: now,
+          });
+        }
+
+        const cancelTypeLabel = order.type === 'limit' ? 'LIMIT' : 'STOP';
+        const cancelSideLabel = order.side === 'buy' ? 'Long' : 'Short';
+        const cancelNote: JournalEntry = {
+          id: `j-cancel-pending-${orderId}-${now}`,
+          time: now,
+          text:
+            `Cancelled ${cancelTypeLabel} ${cancelSideLabel} ${order.symbol} @ $${fmtPrice(order.triggerPrice)}` +
+            ` (refunded: $${refund.toFixed(2)})`,
+        };
+
         set((s) => ({
           balance: s.balance + refund,
           pendingOrders: s.pendingOrders.filter((o) => o.id !== orderId),
-          orders: [cancelledOrder, ...s.orders].slice(0, MAX_HISTORY * 2),
+          orders: [cancelledOrder, ...childCancelledOrders, ...s.orders].slice(0, MAX_HISTORY * 2),
+          journal: [cancelNote, ...s.journal].slice(0, MAX_JOURNAL),
+        }));
+      },
+
+      cancelExitOrder: (positionId, exitType) => {
+        const { positions } = get();
+        const pos = positions.find((p) => p.id === positionId);
+        if (!pos) return;
+
+        const targetPrice = exitType === 'take-profit' ? pos.takeProfit : pos.stopLoss;
+        if (!targetPrice) return;
+
+        const now = Date.now();
+        const cancelRow: HistoricalOrder = {
+          id: `o-cancel-${exitType}-${positionId}-${now}`,
+          symbol: pos.symbol,
+          side: pos.side === 'long' ? 'sell' : 'buy',
+          type: exitType,
+          qty: pos.quantity,
+          ...(exitType === 'take-profit'
+            ? { limitPrice: targetPrice }
+            : { stopPrice: targetPrice }),
+          status: 'cancelled',
+          commission: 0,
+          placingTime: pos.openedAt,
+          closingTime: now,
+        };
+
+        const note: JournalEntry = {
+          id: `j-cancel-${exitType}-${positionId}-${now}`,
+          time: now,
+          text:
+            `${exitType === 'take-profit' ? 'Take-Profit' : 'Stop-Loss'} cancelled for ` +
+            `${pos.side.toUpperCase()} ${pos.symbol} @ $${fmtPrice(targetPrice)}`,
+        };
+
+        set((s) => ({
+          positions: s.positions.map((p) => {
+            if (p.id !== positionId) return p;
+            return exitType === 'take-profit'
+              ? { ...p, takeProfit: undefined }
+              : { ...p, stopLoss: undefined };
+          }),
+          orders: [cancelRow, ...s.orders].slice(0, MAX_HISTORY * 2),
+          journal: [note, ...s.journal].slice(0, MAX_JOURNAL),
+        }));
+      },
+
+      cancelPendingExitLeg: (pendingOrderId, exitType) => {
+        const { pendingOrders } = get();
+        const order = pendingOrders.find((o) => o.id === pendingOrderId);
+        if (!order) return;
+
+        const targetPrice = exitType === 'take-profit' ? order.takeProfit : order.stopLoss;
+        if (!targetPrice) return;
+
+        const now = Date.now();
+        const cancelRow: HistoricalOrder = {
+          id: `o-cancel-pending-${exitType}-${pendingOrderId}-${now}`,
+          symbol: order.symbol,
+          side: order.side === 'buy' ? 'sell' : 'buy',
+          type: exitType,
+          qty: order.qty,
+          ...(exitType === 'take-profit'
+            ? { limitPrice: targetPrice }
+            : { stopPrice: targetPrice }),
+          status: 'cancelled',
+          commission: 0,
+          placingTime: order.placedAt,
+          closingTime: now,
+        };
+
+        const pendingSide = order.side === 'buy' ? 'Long' : 'Short';
+        const note: JournalEntry = {
+          id: `j-cancel-pending-${exitType}-${pendingOrderId}-${now}`,
+          time: now,
+          text:
+            `${exitType === 'take-profit' ? 'Take-Profit' : 'Stop-Loss'} cancelled for ` +
+            `pending ${pendingSide} ${order.symbol} @ $${fmtPrice(targetPrice)}`,
+        };
+
+        set((s) => ({
+          pendingOrders: s.pendingOrders.map((o) => {
+            if (o.id !== pendingOrderId) return o;
+            return exitType === 'take-profit'
+              ? { ...o, takeProfit: undefined }
+              : { ...o, stopLoss: undefined };
+          }),
+          orders: [cancelRow, ...s.orders].slice(0, MAX_HISTORY * 2),
+          journal: [note, ...s.journal].slice(0, MAX_JOURNAL),
         }));
       },
 
@@ -704,6 +919,57 @@ export const usePaperStore = create<PaperState>()(
     }),
     {
       name: 'cd-paper-trading', // localStorage key
+      // 🔐 version + migrate: any malformed or tampered localStorage snapshot from an
+      //    older schema is safely discarded (migrate returns fresh state) instead of
+      //    crashing the app on hydration. Increment `version` whenever a new required
+      //    state field is added so old snapshots are migrated rather than used as-is.
+      version: 1,
+      migrate: (persisted: unknown, fromVersion: number) => {
+        // ── Fresh-state fallback ───────────────────────────────────────────────
+        // Used when the snapshot is completely unrecognisable (null, non-object,
+        // or missing the minimum fields we need to trust it).
+        const fresh = {
+          balance: STARTING_BALANCE,
+          positions: [] as Position[],
+          pendingOrders: [] as PendingOrder[],
+          history: [] as ClosedTrade[],
+          orders: [] as HistoricalOrder[],
+          realizedPnl: 0,
+          balanceLog: [] as BalanceEvent[],
+          journal: [] as JournalEntry[],
+          leverage: 1,
+        };
+
+        if (!persisted || typeof persisted !== 'object') return fresh;
+        const p = persisted as Record<string, unknown>;
+
+        // ── v0 → v1 ───────────────────────────────────────────────────────────
+        // v0 had: balance, positions, history, realizedPnl
+        // v1 adds: pendingOrders, orders, balanceLog, journal, leverage
+        // Preserve every valid v0 field; fill missing v1 fields with defaults.
+        if (fromVersion === 0) {
+          return {
+            balance:
+              typeof p['balance'] === 'number' && p['balance'] >= 0
+                ? p['balance']
+                : STARTING_BALANCE,
+            positions: Array.isArray(p['positions'])
+              ? p['positions'].filter(isPositionSnapshot)
+              : [],
+            history: Array.isArray(p['history']) ? p['history'].filter(isClosedTradeSnapshot) : [],
+            realizedPnl: typeof p['realizedPnl'] === 'number' ? p['realizedPnl'] : 0,
+            // Fields added in v1 — not present in v0 snapshots
+            pendingOrders: [],
+            orders: [],
+            balanceLog: [],
+            journal: [],
+            leverage: 1,
+          };
+        }
+
+        // Unknown future version or unrecognised shape → fresh state
+        return fresh;
+      },
     }
   )
 );

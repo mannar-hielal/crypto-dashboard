@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { BarChart2 } from 'lucide-react';
 import { usePaneFeeds } from '@/hooks/usePaneFeeds';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -27,8 +27,11 @@ export type PanelSize = 'hidden' | 'collapsed' | 'open';
 const PANEL_HEIGHTS: Record<PanelSize, number> = {
   hidden: 0,
   collapsed: 36,
-  open: 208,
+  open: 208, // default open height — overridden by panelHeightPx after user drags
 };
+
+/** Minimum panel height while dragging (keeps at least one content row visible) */
+const MIN_PANEL_HEIGHT = 80;
 
 /**
  * DashboardPage
@@ -92,8 +95,81 @@ function DashboardInner() {
   /** When true the PaperTradingPanel fills the entire center column */
   const [isMaximized, setIsMaximized] = useState(false);
 
+  // ── Bottom-panel drag-to-resize ─────────────────────────────────────────
+
+  /**
+   * panelHeightPx — committed open-state height (written on drag end or size change).
+   * Only used when panelSize === 'open' && !isMaximized.
+   */
+  const [panelHeightPx, setPanelHeightPx] = useState(PANEL_HEIGHTS.open);
+
+  /**
+   * panelHeightMV — Framer MotionValue that directly drives style.height on the
+   * panel wrapper. Updated instantly during drag via .set() — zero React re-renders
+   * per frame. Spring-animated by the useEffect below on size/maximize transitions.
+   */
+  const panelHeightMV = useMotionValue(PANEL_HEIGHTS.open);
+
+  /**
+   * handleBottom keeps the 12 px drag handle centred on the panel boundary without
+   * any React re-renders during drag — useTransform maps panelHeightMV → bottom px.
+   */
+  const handleBottom = useTransform(panelHeightMV, (h) => h - 6);
+
+  /** Ref on the center column so we can read clientHeight for drag clamping */
+  const centerColRef = useRef<HTMLDivElement>(null);
+
+  /** Drag state — purely imperative, never triggers re-renders */
+  const isDraggingPanel = useRef(false);
+  const dragStartY = useRef(0);
+  const dragStartH = useRef(0);
+
+  /**
+   * Spring-animate panelHeightMV on every state transition:
+   *   • panelSize change  → spring to target height (hidden=0, collapsed=36, open=panelHeightPx)
+   *   • isMaximized off   → spring back to panelHeightPx
+   *   • panelHeightPx set → effectively a no-op spring (MV already at that value after drag)
+   *
+   * During drag panelHeightMV.set() fires directly so this effect never runs.
+   */
+  useEffect(() => {
+    if (isMaximized) return; // flex-1 handles height when maximized
+    const target = panelSize === 'open' ? panelHeightPx : PANEL_HEIGHTS[panelSize];
+    animate(panelHeightMV, target, { type: 'spring', stiffness: 340, damping: 34 });
+    // panelHeightMV is a stable MotionValue ref — intentionally omitted from deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [panelSize, isMaximized, panelHeightPx]);
+
   function handleToggleMaximize() {
     setIsMaximized((v) => !v);
+  }
+
+  // ── Drag pointer handlers ───────────────────────────────────────────────
+
+  function handlePanelHandlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (panelSize !== 'open' || isMaximized) return;
+    e.preventDefault();
+    isDraggingPanel.current = true;
+    dragStartY.current = e.clientY;
+    dragStartH.current = panelHeightMV.get();
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function handlePanelHandlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!isDraggingPanel.current) return;
+    const delta = dragStartY.current - e.clientY; // drag up → positive → taller
+    const containerH = centerColRef.current?.clientHeight ?? 600;
+    const maxH = Math.floor(containerH * 0.85); // chart always keeps ≥15%
+    panelHeightMV.set(Math.max(MIN_PANEL_HEIGHT, Math.min(maxH, dragStartH.current + delta)));
+  }
+
+  function handlePanelHandlePointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    if (!isDraggingPanel.current) return;
+    isDraggingPanel.current = false;
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    // Commit to React state — triggers the spring effect but as a no-op
+    // (MV is already at this value so no visible animation occurs).
+    setPanelHeightPx(Math.round(panelHeightMV.get()));
   }
 
   return (
@@ -111,7 +187,7 @@ function DashboardInner() {
         {/* Center column: chart on top + paper trading panel on bottom.
             By making this a flex-col sibling of TradingPanel, the TradingPanel
             now spans the full height of this row (chart + bottom panel). */}
-        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+        <div ref={centerColRef} className="relative flex min-h-0 min-w-0 flex-1 flex-col">
           {/* Chart area — animates flex-shrink to 0 when the panel is maximized */}
           <motion.div
             className="relative min-h-0 min-w-0 overflow-hidden"
@@ -153,10 +229,38 @@ function DashboardInner() {
           {/* Paper trading panel.
               Normal: fixed pixel height animated via spring.
               Maximized: flex-1 fills the center column (chart has collapsed to 0). */}
+          {/* ── bottom-widgetbar-handle ────────────────────────────────────────
+              12 px absolutely-positioned strip centred on the chart/panel boundary.
+              Mirrors the TradingView `bottom-widgetbar-handle` pattern:
+                • touch-action: none  — prevents scroll interference on touch
+                • cursor: ns-resize   — signals the vertical drag affordance
+                • aria-hidden         — decorative; excluded from the a11y tree
+              Only rendered when the panel is open and not maximized.              */}
+          {panelSize === 'open' && !isMaximized && (
+            <motion.div
+              aria-hidden="true"
+              className="absolute left-0 right-0 z-20 group"
+              style={{
+                bottom: handleBottom,
+                height: 12,
+                touchAction: 'none',
+                cursor: 'ns-resize',
+              }}
+              onPointerDown={handlePanelHandlePointerDown}
+              onPointerMove={handlePanelHandlePointerMove}
+              onPointerUp={handlePanelHandlePointerUp}
+            >
+              {/* 2 px accent line — fades in on hover to confirm the drag zone */}
+              <div
+                className="pointer-events-none absolute inset-x-0 opacity-0 transition-opacity duration-100 group-hover:opacity-100"
+                style={{ top: 5, height: 2, background: `${color.purpleDark}80` }}
+              />
+            </motion.div>
+          )}
+
           <motion.div
             className={`shrink-0 overflow-hidden${isMaximized ? ' flex-1' : ''}`}
-            animate={{ height: isMaximized ? 'auto' : PANEL_HEIGHTS[panelSize] }}
-            transition={{ type: 'spring', stiffness: 340, damping: 34 }}
+            style={isMaximized ? {} : { height: panelHeightMV }}
             // @ts-expect-error inert is a valid HTML attribute not yet typed in React
             inert={!isMaximized && panelSize === 'hidden' ? '' : undefined}
           >

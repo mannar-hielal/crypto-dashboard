@@ -83,7 +83,13 @@ export async function buildApp() {
 
   // ─── CORE PLUGINS ─────────────────────────────────────────────────────────────
   await app.register(cookie);
-  await app.register(jwt, { secret: config.jwtSecret });
+  // 🔐 Explicitly declare HS256 — prevents `alg: none` downgrade attacks if
+  //    library defaults ever change (RFC 8725 §2.1).
+  await app.register(jwt, {
+    secret: config.jwtSecret,
+    sign: { algorithm: 'HS256' },
+    verify: { algorithms: ['HS256'] },
+  });
   await app.register(prismaPlugin);
   await app.register(authPlugin);
 

@@ -24,20 +24,20 @@ import { usePaperStore, COMMISSION_RATE, CRYPTO_LEVERAGE_OPTIONS } from '@/store
 import type { JournalEntry, HistoricalOrder, PendingOrder } from '@/store/paperStore';
 import type { PanelSize } from '@/pages/DashboardPage';
 import { bg, color, fontSize } from '@/lib/tokens';
-
-/** Format a crypto quantity the same way TradingView does — trim trailing zeros, max 6 dp */
-const fmtQty = (n: number) => parseFloat(n.toFixed(6)).toString();
 import { useLayoutStore } from '@/store/layoutStore';
 import { useTradingSoundCtx } from '@/hooks/TradingSoundContext';
 import { SoundSettings } from './SoundSettings';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+/** Format a crypto quantity the same way TradingView does — trim trailing zeros, max 6 dp */
+const fmtQty = (n: number) => parseFloat(n.toFixed(6)).toString();
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type InfoTab = 'positions' | 'orders' | 'orderhistory' | 'balancehistory' | 'journal';
 type ColTab = 'positions' | 'orders' | 'orderhistory' | 'balancehistory';
-type OrderSubTab = 'all' | 'working' | 'filled' | 'cancelled' | 'rejected';
+// 'filled' is intentionally absent — filled orders are routed directly to
+// Order History (TV-style) and never appear in the Orders tab.
+type OrderSubTab = 'all' | 'working' | 'inactive' | 'cancelled' | 'rejected';
 type OrderHistorySubTab = 'all' | 'filled' | 'cancelled' | 'rejected';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -389,6 +389,8 @@ export function PaperTradingPanel({
   const journal = usePaperStore((s) => s.journal);
   const closePosition = usePaperStore((s) => s.closePosition);
   const cancelPendingOrder = usePaperStore((s) => s.cancelPendingOrder);
+  const cancelExitOrder = usePaperStore((s) => s.cancelExitOrder);
+  const cancelPendingExitLeg = usePaperStore((s) => s.cancelPendingExitLeg);
   const addJournalNote = usePaperStore((s) => s.addJournalNote);
   const editJournalEntry = usePaperStore((s) => s.editJournalEntry);
   const reset = usePaperStore((s) => s.reset);
@@ -466,6 +468,7 @@ export function PaperTradingPanel({
     symbol: string;
     side: 'buy' | 'sell'; // opposite of position side
     exitType: 'Take Profit' | 'Stop Loss';
+    status: 'working' | 'inactive';
     price: number; // TP or SL price
     qty: number;
     placedAt: number; // position openedAt
@@ -476,7 +479,7 @@ export function PaperTradingPanel({
     | { kind: 'historical'; data: HistoricalOrder }
     | { kind: 'exit-order'; data: SyntheticExitOrder };
 
-  // Synthetic working orders for each open position that has TP or SL — matches TV behaviour
+  // Synthetic child orders for open positions (working) and pending brackets (inactive).
   const exitOrderRows: OrderDisplayRow[] = [];
   for (const pos of positions) {
     if (pos.takeProfit) {
@@ -488,6 +491,7 @@ export function PaperTradingPanel({
           symbol: pos.symbol,
           side: pos.side === 'long' ? 'sell' : 'buy',
           exitType: 'Take Profit',
+          status: 'working',
           price: pos.takeProfit,
           qty: pos.quantity,
           placedAt: pos.openedAt,
@@ -503,6 +507,7 @@ export function PaperTradingPanel({
           symbol: pos.symbol,
           side: pos.side === 'long' ? 'sell' : 'buy',
           exitType: 'Stop Loss',
+          status: 'working',
           price: pos.stopLoss,
           qty: pos.quantity,
           placedAt: pos.openedAt,
@@ -511,13 +516,53 @@ export function PaperTradingPanel({
     }
   }
 
+  const inactivePendingExitRows: OrderDisplayRow[] = [];
+  for (const pending of pendingOrders) {
+    if (pending.takeProfit) {
+      inactivePendingExitRows.push({
+        kind: 'exit-order',
+        data: {
+          id: `pending-exit-tp-${pending.id}`,
+          positionId: pending.id,
+          symbol: pending.symbol,
+          side: pending.side === 'buy' ? 'sell' : 'buy',
+          exitType: 'Take Profit',
+          status: 'inactive',
+          price: pending.takeProfit,
+          qty: pending.qty,
+          placedAt: pending.placedAt,
+        },
+      });
+    }
+    if (pending.stopLoss) {
+      inactivePendingExitRows.push({
+        kind: 'exit-order',
+        data: {
+          id: `pending-exit-sl-${pending.id}`,
+          positionId: pending.id,
+          symbol: pending.symbol,
+          side: pending.side === 'buy' ? 'sell' : 'buy',
+          exitType: 'Stop Loss',
+          status: 'inactive',
+          price: pending.stopLoss,
+          qty: pending.qty,
+          placedAt: pending.placedAt,
+        },
+      });
+    }
+  }
+
   // All order types (market, limit, stop) appear in the Orders tab — matching TradingView.
-  // Market orders land in the Filled sub-tab immediately (no Working entry).
-  // Pending orders (limit/stop awaiting trigger) + exit orders land in the Working sub-tab.
+  // Filled orders are excluded entirely from the Orders tab; they go straight to
+  // Order History (TV-style immediate archive — no time delay).
+  // Only Working, Inactive, Cancelled, and Rejected records remain here.
   const allOrderDisplayRows: OrderDisplayRow[] = [
+    ...inactivePendingExitRows,
     ...exitOrderRows,
     ...pendingOrders.map((o) => ({ kind: 'pending' as const, data: o })),
-    ...orders.map((o) => ({ kind: 'historical' as const, data: o })),
+    ...orders
+      .filter((o) => o.status !== 'filled')
+      .map((o) => ({ kind: 'historical' as const, data: o })),
   ].sort((a, b) => {
     const ta =
       a.kind === 'pending'
@@ -538,9 +583,13 @@ export function PaperTradingPanel({
     orderSubTab === 'all'
       ? allOrderDisplayRows
       : orderSubTab === 'working'
-        ? allOrderDisplayRows.filter((r) => r.kind === 'pending' || r.kind === 'exit-order')
-        : orderSubTab === 'filled'
-          ? allOrderDisplayRows.filter((r) => r.kind === 'historical' && r.data.status === 'filled')
+        ? allOrderDisplayRows.filter(
+            (r) => r.kind === 'pending' || (r.kind === 'exit-order' && r.data.status === 'working')
+          )
+        : orderSubTab === 'inactive'
+          ? allOrderDisplayRows.filter(
+              (r) => r.kind === 'exit-order' && r.data.status === 'inactive'
+            )
           : orderSubTab === 'cancelled'
             ? allOrderDisplayRows.filter(
                 (r) => r.kind === 'historical' && r.data.status === 'cancelled'
@@ -798,14 +847,18 @@ export function PaperTradingPanel({
                         {positions.length}
                       </span>
                     )}
-                    {tab === 'orders' && pendingOrders.length + exitOrderRows.length > 0 && (
-                      <span
-                        className="rounded-full px-1.5 py-px font-bold text-white"
-                        style={{ fontSize: fontSize.xxs, background: color.amber }}
-                      >
-                        {pendingOrders.length + exitOrderRows.length}
-                      </span>
-                    )}
+                    {tab === 'orders' &&
+                      pendingOrders.length + exitOrderRows.length + inactivePendingExitRows.length >
+                        0 && (
+                        <span
+                          className="rounded-full px-1.5 py-px font-bold text-white"
+                          style={{ fontSize: fontSize.xxs, background: color.amber }}
+                        >
+                          {pendingOrders.length +
+                            exitOrderRows.length +
+                            inactivePendingExitRows.length}
+                        </span>
+                      )}
                     {tab === 'orderhistory' && orderHistoryRows.length > 0 && (
                       <span
                         className="rounded-full bg-white/8 px-1.5 py-px font-semibold"
@@ -908,18 +961,24 @@ export function PaperTradingPanel({
                 className="flex shrink-0 items-center gap-0 border-b border-white/4 px-2"
                 style={{ background: bg.panel }}
               >
-                {(['all', 'working', 'filled', 'cancelled', 'rejected'] as OrderSubTab[]).map(
+                {(['all', 'working', 'inactive', 'cancelled', 'rejected'] as OrderSubTab[]).map(
                   (sub) => {
                     const count =
                       sub === 'all'
                         ? allOrderDisplayRows.length
                         : sub === 'working'
                           ? allOrderDisplayRows.filter(
-                              (r) => r.kind === 'pending' || r.kind === 'exit-order'
+                              (r) =>
+                                r.kind === 'pending' ||
+                                (r.kind === 'exit-order' && r.data.status === 'working')
                             ).length
-                          : allOrderDisplayRows.filter(
-                              (r) => r.kind === 'historical' && r.data.status === sub
-                            ).length;
+                          : sub === 'inactive'
+                            ? allOrderDisplayRows.filter(
+                                (r) => r.kind === 'exit-order' && r.data.status === 'inactive'
+                              ).length
+                            : allOrderDisplayRows.filter(
+                                (r) => r.kind === 'historical' && r.data.status === sub
+                              ).length;
                     return (
                       <button
                         key={sub}
@@ -1350,17 +1409,23 @@ export function PaperTradingPanel({
                                     : h!.placingTime;
 
                                 // status badge config
-                                const statusLabel =
-                                  isPending || isExitOrder
-                                    ? 'Working'
+                                const statusLabel = isPending
+                                  ? 'Working'
+                                  : isExitOrder
+                                    ? ex!.status === 'inactive'
+                                      ? 'Inactive'
+                                      : 'Working'
                                     : h!.status === 'filled'
                                       ? 'Filled'
                                       : h!.status === 'cancelled'
                                         ? 'Cancelled'
                                         : 'Rejected';
-                                const statusColor =
-                                  isPending || isExitOrder
-                                    ? color.amber
+                                const statusColor = isPending
+                                  ? color.amber
+                                  : isExitOrder
+                                    ? ex!.status === 'inactive'
+                                      ? color.muted
+                                      : color.amber
                                     : h!.status === 'filled'
                                       ? color.green
                                       : h!.status === 'cancelled'
@@ -1571,6 +1636,42 @@ export function PaperTradingPanel({
                                             whileHover={{ scale: 1.2 }}
                                             whileTap={{ scale: 0.9 }}
                                             title="Cancel pending order (balance refunded)"
+                                            className="mx-auto flex h-5 w-5 items-center justify-center rounded transition-colors hover:text-brand-red"
+                                            style={{ color: color.muted }}
+                                          >
+                                            <X className="h-3 w-3" />
+                                          </motion.button>
+                                        ) : isExitOrder && ex!.status === 'working' ? (
+                                          <motion.button
+                                            onClick={() =>
+                                              cancelExitOrder(
+                                                ex!.positionId,
+                                                ex!.exitType === 'Take Profit'
+                                                  ? 'take-profit'
+                                                  : 'stop-loss'
+                                              )
+                                            }
+                                            whileHover={{ scale: 1.2 }}
+                                            whileTap={{ scale: 0.9 }}
+                                            title={`Cancel ${ex!.exitType}`}
+                                            className="mx-auto flex h-5 w-5 items-center justify-center rounded transition-colors hover:text-brand-red"
+                                            style={{ color: color.muted }}
+                                          >
+                                            <X className="h-3 w-3" />
+                                          </motion.button>
+                                        ) : isExitOrder && ex!.status === 'inactive' ? (
+                                          <motion.button
+                                            onClick={() =>
+                                              cancelPendingExitLeg(
+                                                ex!.positionId,
+                                                ex!.exitType === 'Take Profit'
+                                                  ? 'take-profit'
+                                                  : 'stop-loss'
+                                              )
+                                            }
+                                            whileHover={{ scale: 1.2 }}
+                                            whileTap={{ scale: 0.9 }}
+                                            title={`Cancel ${ex!.exitType} (no balance refund)`}
                                             className="mx-auto flex h-5 w-5 items-center justify-center rounded transition-colors hover:text-brand-red"
                                             style={{ color: color.muted }}
                                           >

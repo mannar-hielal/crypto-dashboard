@@ -70,18 +70,18 @@
 
 | Item                                                                                                                          | File                   | Type            | Status     |
 | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------- | --------------- | ---------- |
-| `JWT_SECRET` entropy check — `Buffer.byteLength(secret) >= 32` at startup                                                     | `config.ts`            | Code change     | ⬜ Pending |
-| Explicit `algorithms: ['HS256']` on `@fastify/jwt` registration                                                               | `app.ts`               | Code change     | ⬜ Pending |
-| Token-theft full-revocation: when `/refresh` detects `count=0`, call `deleteMany({ where: { userId } })` to kill all sessions | `routes/auth/index.ts` | Code change     | ⬜ Pending |
+| `JWT_SECRET` entropy check — `Buffer.byteLength(secret) >= 32` at startup                                                     | `config.ts`            | Code change     | ✅ Done    |
+| Explicit `algorithms: ['HS256']` on `@fastify/jwt` registration                                                               | `app.ts`               | Code change     | ✅ Done    |
+| Token-theft full-revocation: when `/refresh` detects `count=0`, call `deleteMany({ where: { userId } })` to kill all sessions | `routes/auth/index.ts` | Code change     | ✅ Done    |
 | `pnpm audit` added to pre-release CI gate                                                                                     | CI config              | Process change  | ⬜ Pending |
 | No JWT in URL params, CSRF docs, error-handler URL audit, HSTS/CSP/CORS wildcard check                                        | `REVIEW_CHECKLIST.md`  | Checklist items | ✅ Added   |
 
 ### Phase 2 — Current Sprint
 
-| Item                                                                                 | File                  | Type           | Status     |
-| ------------------------------------------------------------------------------------ | --------------------- | -------------- | ---------- |
-| `dangerouslySetInnerHTML` prohibition + user content as plain text                   | `REVIEW_CHECKLIST.md` | Checklist item | ✅ Added   |
-| `paperStore` `persist()` — add `version` + `migrate` for safe localStorage hydration | `paperStore.ts`       | Code change    | ⬜ Pending |
+| Item                                                                                 | File                  | Type           | Status   |
+| ------------------------------------------------------------------------------------ | --------------------- | -------------- | -------- |
+| `dangerouslySetInnerHTML` prohibition + user content as plain text                   | `REVIEW_CHECKLIST.md` | Checklist item | ✅ Added |
+| `paperStore` `persist()` — add `version` + `migrate` for safe localStorage hydration | `paperStore.ts`       | Code change    | ✅ Done  |
 
 ### Phase 3+ — Future
 
@@ -156,12 +156,14 @@
    - Empty state: "No open positions"
    - Row entrance: staggered framer-motion (`rowVariants`, 0.04 s delay per row)
 
-2. **Orders** ✅ — unified limit/stop order lifecycle table (TV-style). Columns: Symbol, Status, Type, Side, Qty, Limit Price, Stop Price, Fill Price, TP, SL, Commission, Placing Time (on by default) · optional: Order ID, Leverage, Margin · sticky: Cancel (✕)
-   - **Sub-tabs**: `All | Working | Filled | Cancelled | Rejected` filter bar; each shows live count badge; animated purple underline indicator
-   - **All order types appear here** — market orders land in the **Filled** sub-tab immediately; limit/stop orders go through Working → Filled/Cancelled. Mirrors TradingView behaviour exactly.
-   - Amber count badge on tab (pending/working orders only). Empty state: Clock icon + "No orders"
-   - Cancelling a pending order refunds `usdtAmount + commission` in full
-   - `OrderDisplayRow` union type: `{ kind: 'pending'; data: PendingOrder } | { kind: 'historical'; data: HistoricalOrder }` — unifies both for one table render
+2. **Orders** ✅ — unified order lifecycle table (market + parent pending + child TP/SL legs). Columns: Symbol, Status, Type, Side, Qty, Limit Price, Stop Price, Fill Price, TP, SL, Commission, Placing Time (on by default) · optional: Order ID, Leverage, Margin · sticky: Cancel (✕)
+   - **Sub-tabs**: `All | Working | Inactive | Cancelled | Rejected` filter bar; each shows live count badge; animated purple underline indicator. **`Filled` sub-tab has been removed** — filled orders are routed directly to Order History (TV-style, immediate archive).
+   - **Bracket lifecycle (TV-style)**: placing limit/stop with TP+SL creates 3 linked rows: parent order + TP child + SL child.
+   - **Pre-fill/trigger**: parent row = Working, TP/SL child rows = Inactive; cancelling parent cancels all 3.
+   - **Post-fill/trigger**: parent row is historical (Filled, non-cancellable); child exits become Working and can be cancelled individually.
+   - **Position close — sibling cancel** ✅: `closePosition` builds a `siblingCancelOrders: HistoricalOrder[]` array at close time. Rules: if `closeType === 'take-profit'` → cancel SL; if `closeType === 'stop-loss'` → cancel TP; manual close (no closeType) → cancel both. Each cancelled record: `type = 'take-profit' | 'stop-loss'`, `status = 'cancelled'`, `commission = 0`, `placingTime = pos.openedAt`, `closingTime = now`, `limitPrice` or `stopPrice` filled with the exit level. They land in `orders[]` alongside the fill record, making them appear in **Order History → Cancelled** and **Orders → Cancelled** — mirrors TradingView exactly. No journal note is added for auto-cancelled siblings (kept silent to avoid noise next to the main TP/SL close entry).
+   - **Immediate archive (TV-style)** ✅: filled orders (`status === 'filled'`) are **excluded from the Orders tab entirely** and are only visible in the permanent Order History tab. The Orders tab is immediately clean after every fill — no time delay, no `setInterval`. `ORDER_FILLED_ARCHIVE_MS` constant and `now` ticker removed. `'filled'` sub-tab removed from Orders tab bar. Orders tab only ever shows Working, Inactive, Cancelled, and Rejected entries.
+   - `OrderDisplayRow` union: `{ kind: 'pending'; data: PendingOrder } | { kind: 'historical'; data: HistoricalOrder } | { kind: 'exit-order'; data: SyntheticExitOrder }`.
 
 3. **Order History** ✅ — TV-style order history table showing all `HistoricalOrder[]` records (market + limit + stop, all statuses). Columns: Symbol, Side, Type, Qty, Limit Price, Stop Price, Fill Price, Status, Commission, Placing Time, Closing Time (on by default) · optional: Order ID, Leverage, Margin
    - **Sub-tabs**: `All | Filled | Cancelled | Rejected` filter bar; each shows live count badge; animated purple underline indicator
@@ -197,6 +199,16 @@ Tab badge counts: purple pill for Positions count, amber pill for Orders count (
   - `Maximize2` / `Minimize2` lucide icons; Collapse/Expand buttons hidden while maximized
   - Panel content shown whenever `isMaximized`, regardless of `PanelSize` state
 
+- **`bottom-widgetbar-handle` drag-to-resize** ✅ (TV-style):
+  - A 12 px absolutely-positioned strip lives at the chart/panel boundary in `DashboardPage`, centred via `useTransform(panelHeightMV, h => h - 6)` — zero React re-renders while dragging
+  - `touch-action: none; cursor: ns-resize; aria-hidden="true"` — matches TV `bottom-widgetbar-handle` exactly
+  - Drag uses `setPointerCapture` for reliable tracking outside the element
+  - `panelHeightMV` (Framer `MotionValue`) drives `style.height` directly during drag; `panelHeightPx` state commits on `pointerup`
+  - Spring transitions (open ↔ collapsed ↔ hidden ↔ maximize/restore) handled by imperative `animate(panelHeightMV, target, spring)` in `useEffect`
+  - Bounds: **min 80 px** (useful minimum) · **max 85% of center column height** (chart always visible)
+  - Thin purple accent line (2 px) fades in on hover to confirm the drag zone
+  - Hidden when `isMaximized` or `panelSize !== 'open'`; existing open/collapsed/hidden/maximize behaviour **unchanged**
+
 - **`ordersMargin` stat** ✅: `sum(pendingOrders[].usdtAmount)` (live now that pendingOrders is implemented)
 
 - **Last Price column** ✅: `lastKnownPrices` map in `paneStore` — updated on every WS snapshot/bar, never cleared on reset. `getPriceForSymbol()` helper in `PaperTradingPanel` tries live pane price first, falls back to `lastKnownPrices` so positions in non-active symbols retain correct mark price and PnL.
@@ -227,8 +239,10 @@ Tab badge counts: purple pill for Positions count, amber pill for Orders count (
 - `activePane: number` — pane that receives SymbolBar controls + TradingPanel focus
 - `panes: PaneConfig[]` — 4 entries; defaults: `BTC/1m · ETH/1m · SOL/1m · BNB/1m`
 - `syncOptions: SyncOptions` — defaults: `crosshair: true, timeRange: true, symbol: false, interval: false`
+- `paneSizes: Record<LayoutId, PaneSizes>` — per-layout `{ colFracs: number[]; rowFracs: number[] }` (fractions sum to 1.0 per axis). Persisted. Defaults: equal splits. Hydration guard in `merge()` ensures all layout IDs present even when loading old localStorage snapshots.
 - `setLayout()` clamps `activePane` to `paneCount − 1` when switching to a smaller layout
 - `setPaneSymbol()` / `setPaneInterval()` propagate to all panes when the matching sync flag is on
+- `setPaneSizes(layout, sizes)` — updates column/row fracs for a specific layout ID
 
 **`paneStores[0..3]`** — vanilla `createStore()` instances (NOT `create()`), one per pane slot:
 
@@ -252,7 +266,11 @@ Tab badge counts: purple pill for Positions count, amber pill for Orders count (
 
 **`MultiChartArea`:**
 
-- CSS `grid` element — applies `LAYOUT_GRID_CLASS[layout]` (Tailwind `grid-cols-*`/`grid-rows-*`)
+- CSS `grid` element — `gridTemplateColumns` / `gridTemplateRows` inline styles driven by `paneSizes[layout].colFracs` / `rowFracs` (replaced static Tailwind `grid-cols-*` classes)
+- **`ResizeSplitter`** absolutely-positioned overlays (matching TV `chartsSplitter` pattern): 12 px hit zone, `aria-hidden`, `touch-action: none`. Thin purple accent line appears on hover. Zero React re-renders during drag — direct DOM mutation of `style.gridTemplateColumns`/`Rows` + splitter `style.left`/`top` via `setPointerCapture`. Zustand `setPaneSizes` called once on `pointerup` to commit + persist.
+  - Col splitters: `cursor: ew-resize` — rendered for `2h`, `3h`, `4` layouts
+  - Row splitters: `cursor: ns-resize` — rendered for `2v`, `4` layouts
+  - Each splitter only redistributes its two adjacent panes (min 10% each); other panes untouched
 - `PaneHeader` is only rendered when `paneCount > 1` (hidden in single-chart mode)
 - Click anywhere on a pane area → `setActivePane(i)`; active pane gets animated purple border + inner glow
 - `chartRefs[0..3]` — `IChartApi | null`, registered via `ChartPanel.onChartReady` callback
@@ -345,7 +363,7 @@ Based on TradingView markup reference. Not a 1:1 copy.
 
 ### `paperStore` — current state ✅
 
-Persisted to `localStorage` key `cd-paper-trading`. No `version`/`migrate` yet (⬜ pending).
+Persisted to `localStorage` key `cd-paper-trading`. Version `1` with `migrate` guard ✅.
 
 ```typescript
 interface PaperState {
@@ -382,10 +400,12 @@ interface PendingOrder {
 }
 ```
 
-Actions: `placeOrder`, `placeLimitOrder`, `placeStopOrder`, `cancelPendingOrder`, `closePosition`, `addJournalNote(text, isUserNote?, pnl?)`, `editJournalEntry`, `reset`
+Actions: `placeOrder`, `placeLimitOrder`, `placeStopOrder`, `cancelPendingOrder`, `cancelExitOrder`, `closePosition`, `addJournalNote(text, isUserNote?, pnl?)`, `editJournalEntry`, `reset`
 
-**`placeLimitOrder` / `placeStopOrder`**: deducts `usdtAmount + commission` from balance immediately; adds to `pendingOrders`; adds a placeholder `HistoricalOrder` record.  
-**`cancelPendingOrder`**: removes from `pendingOrders`; refunds `usdtAmount + commission`; adds cancelled `HistoricalOrder`.  
+**`placeLimitOrder` / `placeStopOrder`**: deducts `usdtAmount + commission` from balance immediately; adds to `pendingOrders` (no historical fill row yet).  
+**`cancelPendingOrder`**: removes from `pendingOrders`; refunds `usdtAmount + commission`; writes cancelled parent `HistoricalOrder` and cancelled child TP/SL rows when present.  
+**`cancelExitOrder`**: cancels one active exit leg (`take-profit` or `stop-loss`) for an open position; writes cancelled `HistoricalOrder`; keeps the sibling leg active.  
+**`closePosition`**: writes filled close order and cancelled sibling exit rows (or both remaining exit rows on manual close).  
 Actual execution (converting pending → open position) is handled by `usePendingOrderMonitor` ✅ (implemented).
 
 ---
@@ -435,13 +455,15 @@ ask: number | null; // best ask from Bybit orderbook.1
 - `realizedPnl` = `gross_pnl - exitCommission - entryCommission`
 - `BalanceEvent.pnl` = `pnl - exitCommission` (net impact on balance at close)
 
-### TP/SL rules (implemented in `checkTPSL()`)
+### TP/SL rules (implemented in `checkTPSL()` + bracket lifecycle)
 
 - **Long**: TP when `price >= takeProfit`; SL when `price <= stopLoss`
 - **Short**: TP when `price <= takeProfit`; SL when `price >= stopLoss`
 - `checkTPSL` is a pure exported function — unit-tested
 - `useTPSLMonitor` scoped to active symbol only
 - Auto-close journal entries: `isUserNote: false` (read-only)
+- Bracket exits are first-class child orders: pre-fill/trigger children are Inactive; post-fill children are Working and independently cancellable
+- Manual position close cancels any remaining child exits
 
 ### Journal system
 
@@ -469,7 +491,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 | `apps/client/src/components/dashboard/PaperTradingPanel.tsx` | Bottom panel (positions/orders/journal)                                                                                                      |
 | `apps/client/src/components/dashboard/TradingPanel.tsx`      | Right sidebar order entry                                                                                                                    |
 | `apps/client/src/pages/DashboardPage.tsx`                    | Dashboard orchestrator — exports `PanelSize` type, mounts hooks                                                                              |
-| `apps/server/src/routes/auth/index.ts`                       | All auth routes (register/login/logout/refresh/me/reset-password)                                                                            |
+| `apps/server/src/routes/auth/index.ts`                       | All auth routes (register/login/logout/refresh/me/reset-password),                                                                           |
 | `apps/server/src/routes/market/index.ts`                     | REST + WebSocket market data routes                                                                                                          |
 | `apps/server/src/services/BybitWebSocketManager.ts`          | Bybit WS connection singleton                                                                                                                |
 | `apps/server/src/constants.ts`                               | `ALLOWED_SYMBOLS` — source of truth for WS subscriptions + routes                                                                            |
@@ -525,7 +547,7 @@ ask: number | null; // best ask from Bybit orderbook.1
   - **Client `TradingPanel.tsx`**: reads `bid`/`ask` from active pane store (8 unconditional `useStore` calls — 4 bid + 4 ask, picks `[activePane]`). Spread badge shows live `ask − bid` value (4 decimal places if < 1, 2 otherwise), tooltip shows raw bid/ask. Sell button price shows `bid ?? latestPrice`; Buy button shows `ask ?? latestPrice`.
 
 - **`usePendingOrderMonitor`** — limit/stop order execution on price trigger; 16 unit tests; mounted in `DashboardPage` alongside `useTPSLMonitor`
-- **Orders tab** in `PaperTradingPanel` — unified order lifecycle table; **all order types** (market + limit + stop) appear here, matching TradingView exactly: market orders land instantly in the **Filled** sub-tab; limit/stop go through Working → Filled/Cancelled. Sub-tabs: `All | Working | Filled | Cancelled | Rejected` with live count badges. Cancel button refunds reserved balance; amber badge on tab counts working orders only.
+- **Orders tab** in `PaperTradingPanel` — unified order lifecycle table; pending limit/stop orders (Working/Inactive) and cancelled/rejected records; **filled records route directly to Order History** (TV-style, immediate archive). Sub-tabs: `All | Working | Inactive | Cancelled | Rejected` with live count badges. Cancel button refunds reserved balance; amber badge on tab counts working orders only.
 - **Sound alert system** — Web Audio API (`useTradingSound` + `TradingSoundContext` + `SoundSettings`): synthesised tones for order placed, TP/SL hit, limit/stop filled, cancelled
 - **TradingPanel full-height layout** — `TradingPanel` is now a sibling of the center column (chart + bottom panel) so it spans from SymbolBar to TickerBar without being cut by the bottom panel
 - **PaperTradingPanel maximize/restore** — `Maximize2`/`Minimize2` button; chart area collapses via framer-motion `flex: 0 0 0px`; panel content shown when maximized regardless of `PanelSize`
@@ -751,4 +773,34 @@ Paper trading  →  Real order      →  Proven bot      →  Full autonomous
 
 ---
 
-_Last updated: 2026-04-21 — **test: Section 1 Market Orders fully passed** — All 10 edge cases (1.7.1–1.7.10) ✅. Completed fixes this session: (1.7.8) `navigator.onLine` guard in `TradingPanel` blocks orders immediately on disconnect; (1.7.9) TV-style position netting in `paperStore.placeOrder` — opposite-side orders close/reduce existing positions; (balance history) stale `balance` variable replaced with `get().balance` in fall-through open code so Balance History ledger is sequential; (order dedup) `skipOrderRecord` flag prevents double order writes in close+open-remainder netting case — 1 order per user action matching TV exactly. `TRADING_TEST_PLAN.md` Section 1 complete: 1.7.8 ✅, 1.7.9 ✅, 1.7.10 ✅. Previously: **fix: 1.7.8 + 1.7.9 — offline guard & position netting**._
+_Last updated: 2026-04-25_
+
+- **fix: bracket Orders badge + TV-style activation journal entries** ✅
+  - `PaperTradingPanel` — Orders tab badge now counts **all** active order rows:
+    `pendingOrders.length + inactivePendingExitRows.length + exitOrderRows.length`
+    (previously `inactivePendingExitRows` was excluded — badge showed 1 instead of 3 for a bracket).
+  - `usePendingOrderMonitor` — after a bracket limit/stop order fills, two additional system
+    journal notes are appended (one per activated exit leg):
+    `Take-Profit order activated — {sideLabel} {symbol} @ ${price}`
+    `Stop-Loss order activated — {sideLabel} {symbol} @ ${price}`
+    These are read-only system entries (isUserNote: false), mirroring TradingView's activation log.
+    Journal order: fill entry first, then TP activation, then SL activation (newest-first in view).
+
+- **feat: drag-to-resize bottom panel + chart pane splitters**
+  - Added TV-style `bottom-widgetbar-handle` resize for `PaperTradingPanel` via Framer `MotionValue`.
+  - Added `ResizeSplitter` overlays for `2h`, `2v`, `3h`, and `4` layouts.
+  - Persisted per-layout pane sizes in `layoutStore.paneSizes`.
+
+- **fix: Orders tab — TV-style immediate archive (25.04.2026)**
+  - Removed `ORDER_FILLED_ARCHIVE_MS` constant and the 60 s `now` ticker (`setInterval`).
+  - Filled orders (`status === 'filled'`) are now unconditionally excluded from `allOrderDisplayRows`; they are accessible only via the permanent Order History tab.
+  - Removed the `'filled'` sub-tab from the Orders tab bar. Orders tab now shows only: `All | Working | Inactive | Cancelled | Rejected`.
+  - `OrderSubTab` type updated accordingly (removed `'filled'` from union).
+  - Dead `orderSubTab === 'filled'` branch removed from `filteredOrderRows`.
+  - Test plan: 2.4.8 action + expected updated; 2.4.10 marked ✅; 1.1.6 and 7.1.4 updated to reflect Order History as the only home for fills; Auto-archive note updated.
+
+- **fix: PR code review issues (25.04.2026)** ✅
+  - `BybitWebSocketManager.ts` — `unsubscribe()` now calls `sendUnsubscription(key)` **before** `this.subscriptions.delete(key)`. Previously the key was removed from the map first, causing `sendUnsubscription` to no-op (it reads from the map) — Bybit would never receive the unsubscribe message.
+  - `paperStore.ts` — `leverage` in the `fresh` fallback object and the v0→v1 migration both corrected from `10` to `1`, matching the store's initial state (`leverage: 1`) and the interface docs ("Default 1 = no leverage"). Previously users migrating from v0 or falling back to `fresh` would unexpectedly get 10× leverage.
+  - `PaperTradingPanel.tsx` — Collapse/Expand button gate changed from `size !== 'collapsed'` to `size !== 'hidden'`. The old condition hid the button exactly when the panel was collapsed, making it impossible to re-expand without another UI path. Now the Expand button is visible when collapsed.
+  - `vite.config.ts` — `unsafe-inline` in `script-src` is intentional and required: `@vitejs/plugin-react` injects an inline `<script type="module">` preamble for React Fast Refresh globals; removing it breaks HMR entirely with "can't detect preamble". The existing comment already documents this accurately. Dev CSP is served only by the Vite dev server — never in production.
