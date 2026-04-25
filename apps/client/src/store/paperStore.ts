@@ -937,7 +937,7 @@ export const usePaperStore = create<PaperState>()(
           realizedPnl: 0,
           balanceLog: [] as BalanceEvent[],
           journal: [] as JournalEntry[],
-          leverage: 10,
+          leverage: 1,
         };
 
         if (!persisted || typeof persisted !== 'object') return fresh;
@@ -963,7 +963,7 @@ export const usePaperStore = create<PaperState>()(
             orders: [],
             balanceLog: [],
             journal: [],
-            leverage: 10,
+            leverage: 1,
           };
         }
 

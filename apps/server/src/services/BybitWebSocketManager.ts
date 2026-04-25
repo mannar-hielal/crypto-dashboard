@@ -161,11 +161,11 @@ export class BybitWebSocketManager extends EventEmitter {
       return;
     }
 
-    this.subscriptions.delete(key);
-
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.sendUnsubscription(key);
     }
+
+    this.subscriptions.delete(key);
 
     // Remove cached ticker state if no remaining subscriptions reference this symbol
     // — prevents unbounded memory growth when symbols are rotated at runtime.

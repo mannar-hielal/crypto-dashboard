@@ -684,7 +684,7 @@ export function PaperTradingPanel({
 
           {/* Collapse / Expand — hidden while maximized */}
           {!isMaximized &&
-            size !== 'collapsed' &&
+            size !== 'hidden' &&
             (size === 'open' ? (
               <motion.button
                 onClick={() => onSizeChange('collapsed')}
