@@ -6,6 +6,7 @@
  *   - Which pane is "active" (receives SymbolBar controls + TradingPanel)
  *   - Per-pane symbol + interval config (up to 4 panes)
  *   - Sync options: which axes are mirrored across all panes
+ *   - Per-layout pane size fractions (drag-to-resize)
  *
  * Persisted to localStorage under "cd-layout".
  */
@@ -34,6 +35,12 @@ export interface SyncOptions {
   timeRange: boolean;
 }
 
+/** Column and row fractional sizes for a layout (each axis sums to 1.0) */
+export interface PaneSizes {
+  colFracs: number[];
+  rowFracs: number[];
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 /** How many chart panes each layout uses */
@@ -45,13 +52,22 @@ export const LAYOUT_PANE_COUNT: Record<LayoutId, number> = {
   '4': 4,
 };
 
-/** Tailwind grid classes for each layout */
+/** Tailwind grid classes for each layout (kept for reference) */
 export const LAYOUT_GRID_CLASS: Record<LayoutId, string> = {
   '1': 'grid-cols-1 grid-rows-1',
   '2h': 'grid-cols-2 grid-rows-1',
   '2v': 'grid-cols-1 grid-rows-2',
   '3h': 'grid-cols-3 grid-rows-1',
   '4': 'grid-cols-2 grid-rows-2',
+};
+
+/** Default equal-split pane sizes per layout */
+export const DEFAULT_PANE_SIZES: Record<LayoutId, PaneSizes> = {
+  '1': { colFracs: [1], rowFracs: [1] },
+  '2h': { colFracs: [0.5, 0.5], rowFracs: [1] },
+  '2v': { colFracs: [1], rowFracs: [0.5, 0.5] },
+  '3h': { colFracs: [1 / 3, 1 / 3, 1 / 3], rowFracs: [1] },
+  '4': { colFracs: [0.5, 0.5], rowFracs: [0.5, 0.5] },
 };
 
 /** Default symbol/interval for each pane slot */
@@ -69,12 +85,15 @@ interface LayoutState {
   activePane: number;
   panes: PaneConfig[];
   syncOptions: SyncOptions;
+  /** Per-layout drag-resized pane fractions — persisted */
+  paneSizes: Record<LayoutId, PaneSizes>;
 
   setLayout: (layout: LayoutId) => void;
   setActivePane: (index: number) => void;
   setPaneSymbol: (paneIndex: number, symbol: string) => void;
   setPaneInterval: (paneIndex: number, interval: Interval) => void;
   toggleSync: (key: keyof SyncOptions) => void;
+  setPaneSizes: (layout: LayoutId, sizes: PaneSizes) => void;
 }
 
 export const useLayoutStore = create<LayoutState>()(
@@ -89,13 +108,11 @@ export const useLayoutStore = create<LayoutState>()(
         crosshair: true,
         timeRange: true,
       },
+      paneSizes: { ...DEFAULT_PANE_SIZES },
 
       setLayout: (layout) => {
         const count = LAYOUT_PANE_COUNT[layout];
         const { activePane } = get();
-        // Clamp to the last valid index — e.g. pane 3 on a 4→2 switch → pane 1,
-        // not pane 0. Resetting to 0 discards the user's active-pane choice when
-        // a nearer pane (e.g. 1) would still be valid in the new layout.
         set({ layout, activePane: activePane >= count ? count - 1 : activePane });
       },
 
@@ -151,6 +168,9 @@ export const useLayoutStore = create<LayoutState>()(
 
         set({ syncOptions: newSyncOptions });
       },
+
+      setPaneSizes: (layout, sizes) =>
+        set((s) => ({ paneSizes: { ...s.paneSizes, [layout]: sizes } })),
     }),
     {
       name: 'cd-layout',
@@ -180,6 +200,14 @@ export const useLayoutStore = create<LayoutState>()(
               : def.interval;
             return { symbol: saved.symbol ?? def.symbol, interval };
           }) as [PaneConfig, PaneConfig, PaneConfig, PaneConfig];
+        }
+        // Ensure paneSizes is present and has all layout IDs (added after v1)
+        if (!merged.paneSizes || typeof merged.paneSizes !== 'object') {
+          merged.paneSizes = { ...DEFAULT_PANE_SIZES };
+        } else {
+          for (const lid of Object.keys(DEFAULT_PANE_SIZES) as LayoutId[]) {
+            if (!merged.paneSizes[lid]) merged.paneSizes[lid] = DEFAULT_PANE_SIZES[lid];
+          }
         }
         return merged;
       },

@@ -198,6 +198,16 @@ Tab badge counts: purple pill for Positions count, amber pill for Orders count (
   - `Maximize2` / `Minimize2` lucide icons; Collapse/Expand buttons hidden while maximized
   - Panel content shown whenever `isMaximized`, regardless of `PanelSize` state
 
+- **`bottom-widgetbar-handle` drag-to-resize** ✅ (TV-style):
+  - A 12 px absolutely-positioned strip lives at the chart/panel boundary in `DashboardPage`, centred via `useTransform(panelHeightMV, h => h - 6)` — zero React re-renders while dragging
+  - `touch-action: none; cursor: ns-resize; aria-hidden="true"` — matches TV `bottom-widgetbar-handle` exactly
+  - Drag uses `setPointerCapture` for reliable tracking outside the element
+  - `panelHeightMV` (Framer `MotionValue`) drives `style.height` directly during drag; `panelHeightPx` state commits on `pointerup`
+  - Spring transitions (open ↔ collapsed ↔ hidden ↔ maximize/restore) handled by imperative `animate(panelHeightMV, target, spring)` in `useEffect`
+  - Bounds: **min 80 px** (useful minimum) · **max 85% of center column height** (chart always visible)
+  - Thin purple accent line (2 px) fades in on hover to confirm the drag zone
+  - Hidden when `isMaximized` or `panelSize !== 'open'`; existing open/collapsed/hidden/maximize behaviour **unchanged**
+
 - **`ordersMargin` stat** ✅: `sum(pendingOrders[].usdtAmount)` (live now that pendingOrders is implemented)
 
 - **Last Price column** ✅: `lastKnownPrices` map in `paneStore` — updated on every WS snapshot/bar, never cleared on reset. `getPriceForSymbol()` helper in `PaperTradingPanel` tries live pane price first, falls back to `lastKnownPrices` so positions in non-active symbols retain correct mark price and PnL.
@@ -228,8 +238,10 @@ Tab badge counts: purple pill for Positions count, amber pill for Orders count (
 - `activePane: number` — pane that receives SymbolBar controls + TradingPanel focus
 - `panes: PaneConfig[]` — 4 entries; defaults: `BTC/1m · ETH/1m · SOL/1m · BNB/1m`
 - `syncOptions: SyncOptions` — defaults: `crosshair: true, timeRange: true, symbol: false, interval: false`
+- `paneSizes: Record<LayoutId, PaneSizes>` — per-layout `{ colFracs: number[]; rowFracs: number[] }` (fractions sum to 1.0 per axis). Persisted. Defaults: equal splits. Hydration guard in `merge()` ensures all layout IDs present even when loading old localStorage snapshots.
 - `setLayout()` clamps `activePane` to `paneCount − 1` when switching to a smaller layout
 - `setPaneSymbol()` / `setPaneInterval()` propagate to all panes when the matching sync flag is on
+- `setPaneSizes(layout, sizes)` — updates column/row fracs for a specific layout ID
 
 **`paneStores[0..3]`** — vanilla `createStore()` instances (NOT `create()`), one per pane slot:
 
@@ -253,7 +265,11 @@ Tab badge counts: purple pill for Positions count, amber pill for Orders count (
 
 **`MultiChartArea`:**
 
-- CSS `grid` element — applies `LAYOUT_GRID_CLASS[layout]` (Tailwind `grid-cols-*`/`grid-rows-*`)
+- CSS `grid` element — `gridTemplateColumns` / `gridTemplateRows` inline styles driven by `paneSizes[layout].colFracs` / `rowFracs` (replaced static Tailwind `grid-cols-*` classes)
+- **`ResizeSplitter`** absolutely-positioned overlays (matching TV `chartsSplitter` pattern): 12 px hit zone, `aria-hidden`, `touch-action: none`. Thin purple accent line appears on hover. Zero React re-renders during drag — direct DOM mutation of `style.gridTemplateColumns`/`Rows` + splitter `style.left`/`top` via `setPointerCapture`. Zustand `setPaneSizes` called once on `pointerup` to commit + persist.
+  - Col splitters: `cursor: ew-resize` — rendered for `2h`, `3h`, `4` layouts
+  - Row splitters: `cursor: ns-resize` — rendered for `2v`, `4` layouts
+  - Each splitter only redistributes its two adjacent panes (min 10% each); other panes untouched
 - `PaneHeader` is only rendered when `paneCount > 1` (hidden in single-chart mode)
 - Click anywhere on a pane area → `setActivePane(i)`; active pane gets animated purple border + inner glow
 - `chartRefs[0..3]` — `IChartApi | null`, registered via `ChartPanel.onChartReady` callback
@@ -756,4 +772,4 @@ Paper trading  →  Real order      →  Proven bot      →  Full autonomous
 
 ---
 
-_Last updated: 2026-04-23 — **feat: bracket child-order lifecycle parity** — Orders tab now models linked parent+TP+SL rows with `Inactive` and `Working` states, supports individual post-fill TP/SL cancellation, and writes cancellation history for pending-parent cancels and position-close sibling cleanup. Also updated test plan expectations for limit/stop bracket behavior. Previously: **fix: two browser console issues resolved**_
+_Last updated: 2026-04-25 — **feat: drag-to-resize bottom panel + chart pane splitters** — `bottom-widgetbar-handle` at the chart/panel boundary resizes `PaperTradingPanel` height via Framer `MotionValue` (zero React re-renders during drag, spring animation on size transitions). `ResizeSplitter` overlays between chart panes in all multi-pane layouts (`2h`, `2v`, `3h`, `4`) with direct DOM mutation for jank-free dragging; sizes persisted per layout in `layoutStore.paneSizes`. Previously: **feat: bracket child-order lifecycle parity**_
