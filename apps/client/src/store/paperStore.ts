@@ -248,6 +248,32 @@ interface PaperState {
    * placeOrder can deduct it again. Intended only for use by usePendingOrderMonitor.
    */
   fillPendingOrder: (orderId: string) => void;
+
+  /**
+   * Update TP/SL exits for an open position.
+   * Pass null to remove a leg. Writes cancel HistoricalOrder records for any
+   * leg being removed or replaced, and adds a journal entry.
+   */
+  updatePositionExits: (
+    positionId: string,
+    takeProfit: number | null,
+    stopLoss: number | null
+  ) => void;
+
+  /**
+   * Edit a pending limit/stop order.
+   * Refunds the old reserved margin, checks the new cost against available balance.
+   *   'ok'       — order updated in-place, balance settled
+   *   'rejected' — new cost exceeds balance; order marked rejected, child TP/SL cancelled
+   *   'not-found' — orderId not in pendingOrders
+   */
+  editPendingOrder: (
+    orderId: string,
+    newTriggerPrice: number,
+    newUsdtAmount: number,
+    newTakeProfit: number | null,
+    newStopLoss: number | null
+  ) => 'ok' | 'rejected' | 'not-found';
 }
 
 export const usePaperStore = create<PaperState>()(
@@ -915,6 +941,200 @@ export const usePaperStore = create<PaperState>()(
           balance: s.balance + refund,
           pendingOrders: s.pendingOrders.filter((o) => o.id !== orderId),
         }));
+      },
+
+      updatePositionExits: (positionId, takeProfit, stopLoss) => {
+        const { positions } = get();
+        const pos = positions.find((p) => p.id === positionId);
+        if (!pos) return;
+
+        const now = Date.now();
+        const cancelRows: HistoricalOrder[] = [];
+
+        // Legs being removed or replaced → write cancel records
+        const tpChanging = takeProfit !== (pos.takeProfit ?? null);
+        const slChanging = stopLoss !== (pos.stopLoss ?? null);
+
+        if (tpChanging && pos.takeProfit) {
+          cancelRows.push({
+            id: `o-cancel-tp-edit-${positionId}-${now}`,
+            symbol: pos.symbol,
+            side: pos.side === 'long' ? 'sell' : 'buy',
+            type: 'take-profit',
+            qty: pos.quantity,
+            limitPrice: pos.takeProfit,
+            status: 'cancelled',
+            commission: 0,
+            placingTime: pos.openedAt,
+            closingTime: now,
+          });
+        }
+        if (slChanging && pos.stopLoss) {
+          cancelRows.push({
+            id: `o-cancel-sl-edit-${positionId}-${now}`,
+            symbol: pos.symbol,
+            side: pos.side === 'long' ? 'sell' : 'buy',
+            type: 'stop-loss',
+            qty: pos.quantity,
+            stopPrice: pos.stopLoss,
+            status: 'cancelled',
+            commission: 0,
+            placingTime: pos.openedAt,
+            closingTime: now,
+          });
+        }
+
+        const tpLabel =
+          takeProfit != null ? `TP: $${fmtPrice(takeProfit)}` : 'TP: —';
+        const slLabel =
+          stopLoss != null ? `SL: $${fmtPrice(stopLoss)}` : 'SL: —';
+        const journalEntry: JournalEntry = {
+          id: `j-edit-exits-${positionId}-${now}`,
+          time: now,
+          text: `Updated exits for ${pos.side.toUpperCase()} ${pos.symbol} — ${tpLabel} / ${slLabel}`,
+        };
+
+        set((s) => ({
+          positions: s.positions.map((p) => {
+            if (p.id !== positionId) return p;
+            const updated = { ...p };
+            if (takeProfit != null) updated.takeProfit = takeProfit;
+            else delete updated.takeProfit;
+            if (stopLoss != null) updated.stopLoss = stopLoss;
+            else delete updated.stopLoss;
+            return updated;
+          }),
+          orders: cancelRows.length
+            ? [...cancelRows, ...s.orders].slice(0, MAX_HISTORY * 2)
+            : s.orders,
+          journal: [journalEntry, ...s.journal].slice(0, MAX_JOURNAL),
+        }));
+      },
+
+      editPendingOrder: (orderId, newTriggerPrice, newUsdtAmount, newTakeProfit, newStopLoss) => {
+        const { pendingOrders, balance, leverage } = get();
+        const order = pendingOrders.find((o) => o.id === orderId);
+        if (!order) return 'not-found';
+
+        const now = Date.now();
+        const oldReserved = order.usdtAmount + order.usdtAmount * COMMISSION_RATE;
+        const scratchBalance = balance + oldReserved;
+        const newRequired = newUsdtAmount + newUsdtAmount * COMMISSION_RATE;
+
+        if (newRequired > scratchBalance) {
+          // ── Insufficient funds — reject + cancel children ─────────────────
+          const rejectedOrder: HistoricalOrder = {
+            id: `o-rej-edit-${orderId}-${now}`,
+            symbol: order.symbol,
+            side: order.side,
+            type: order.type,
+            qty: newTriggerPrice > 0 ? (newUsdtAmount * leverage) / newTriggerPrice : order.qty,
+            ...(order.type === 'limit'
+              ? { limitPrice: newTriggerPrice }
+              : { stopPrice: newTriggerPrice }),
+            status: 'rejected',
+            commission: 0,
+            margin: newUsdtAmount,
+            placingTime: order.placedAt,
+            closingTime: now,
+            rejectionReason: 'Not enough funds to complete the order.',
+          };
+
+          const childCancels: HistoricalOrder[] = [];
+          if (order.takeProfit) {
+            childCancels.push({
+              id: `o-cancel-tp-rej-${orderId}-${now}`,
+              symbol: order.symbol,
+              side: order.side === 'buy' ? 'sell' : 'buy',
+              type: 'take-profit',
+              qty: order.qty,
+              limitPrice: order.takeProfit,
+              status: 'cancelled',
+              commission: 0,
+              placingTime: order.placedAt,
+              closingTime: now,
+            });
+          }
+          if (order.stopLoss) {
+            childCancels.push({
+              id: `o-cancel-sl-rej-${orderId}-${now}`,
+              symbol: order.symbol,
+              side: order.side === 'buy' ? 'sell' : 'buy',
+              type: 'stop-loss',
+              qty: order.qty,
+              stopPrice: order.stopLoss,
+              status: 'cancelled',
+              commission: 0,
+              placingTime: order.placedAt,
+              closingTime: now,
+            });
+          }
+
+          const typeLabel = order.type === 'limit' ? 'LIMIT' : 'STOP';
+          const sideLabel = order.side === 'buy' ? 'Long' : 'Short';
+          const journalEntries: JournalEntry[] = [
+            {
+              id: `j-rej-edit-${orderId}-${now}`,
+              time: now,
+              text: `${typeLabel} ${sideLabel} ${order.symbol} order rejected — Not enough funds ($${newUsdtAmount.toFixed(2)} required, $${scratchBalance.toFixed(2)} available)`,
+            },
+            ...(order.takeProfit
+              ? [{
+                  id: `j-cancel-tp-rej-${orderId}-${now}`,
+                  time: now,
+                  text: `Take-Profit cancelled for pending ${sideLabel} ${order.symbol} @ $${fmtPrice(order.takeProfit)}`,
+                }]
+              : []),
+            ...(order.stopLoss
+              ? [{
+                  id: `j-cancel-sl-rej-${orderId}-${now}`,
+                  time: now,
+                  text: `Stop-Loss cancelled for pending ${sideLabel} ${order.symbol} @ $${fmtPrice(order.stopLoss)}`,
+                }]
+              : []),
+          ];
+
+          set((s) => ({
+            balance: s.balance + oldReserved, // refund the original reserved amount
+            pendingOrders: s.pendingOrders.filter((o) => o.id !== orderId),
+            orders: [rejectedOrder, ...childCancels, ...s.orders].slice(0, MAX_HISTORY * 2),
+            journal: [...journalEntries, ...s.journal].slice(0, MAX_JOURNAL),
+          }));
+
+          return 'rejected';
+        }
+
+        // ── Valid edit — update in-place ────────────────────────────────────
+        const newQty = newTriggerPrice > 0 ? (newUsdtAmount * leverage) / newTriggerPrice : order.qty;
+        const balanceDelta = oldReserved - newRequired; // positive = freed up, negative = cost more
+
+        const typeLabel = order.type === 'limit' ? 'LIMIT' : 'STOP';
+        const sideLabel = order.side === 'buy' ? 'Long' : 'Short';
+        const journalEntry: JournalEntry = {
+          id: `j-edit-${orderId}-${now}`,
+          time: now,
+          text:
+            `Edited ${typeLabel} ${sideLabel} ${order.symbol} @ $${fmtPrice(newTriggerPrice)}` +
+            ` (qty: ${newQty.toFixed(6)}, reserved: $${newUsdtAmount.toFixed(2)})`,
+        };
+
+        set((s) => ({
+          balance: s.balance + balanceDelta,
+          pendingOrders: s.pendingOrders.map((o) => {
+            if (o.id !== orderId) return o;
+            return {
+              ...o,
+              triggerPrice: newTriggerPrice,
+              usdtAmount: newUsdtAmount,
+              qty: newQty,
+              ...(newTakeProfit != null ? { takeProfit: newTakeProfit } : { takeProfit: undefined }),
+              ...(newStopLoss != null ? { stopLoss: newStopLoss } : { stopLoss: undefined }),
+            };
+          }),
+          journal: [journalEntry, ...s.journal].slice(0, MAX_JOURNAL),
+        }));
+
+        return 'ok';
       },
     }),
     {

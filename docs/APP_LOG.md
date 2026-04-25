@@ -773,7 +773,16 @@ Paper trading  →  Real order      →  Proven bot      →  Full autonomous
 
 ---
 
-_Last updated: 2026-04-25_
+_Last updated: 2026-04-26_
+
+- **feat: edit panels for open positions and pending orders (26.04.2026)**
+  - **`paperStore.ts`** — two new store actions:
+    - `updatePositionExits(positionId, takeProfit | null, stopLoss | null)`: mutates position TP/SL in-place; writes `HistoricalOrder` `'cancelled'` records for any leg being removed or replaced; journal entry *"Updated exits for LONG BTCUSDT — TP: $X / SL: $Y"*.
+    - `editPendingOrder(orderId, newTriggerPrice, newUsdtAmount, newTakeProfit, newStopLoss)`: refunds old reserved margin to a scratch balance, recomputes new cost; **insufficient funds path** → moves order to `HistoricalOrder` as `'rejected'` + child TP/SL as `'cancelled'`, journal entries, balance refunded; **valid path** → updates `PendingOrder` in-place, settles balance delta, journal entry.
+  - **`PositionEditPanel.tsx`** — new right-column TV-style panel for editing open position TP/SL; header (symbol + "Long 0.0037 @ $77,440"), Exits section (TP/SL toggles + price inputs, direction-aware `AlertTriangle` warnings), Position info block (Leverage, Trade value, Reward, Risk), Confirm + Discard buttons.
+  - **`PendingOrderEditPanel.tsx`** — new right-column TV-style panel for editing pending limit/stop orders; header ("BTCUSDT, order …{id}" + "Buy Limit 2 @ 77,500.0"), Price input, Quantity input (units + live USD equivalent), Exits section (TP/SL toggles + inputs), Order info block, inline insufficient-funds `AlertTriangle` banner, Confirm + Discard buttons.
+  - **`DashboardPage.tsx`** — new `editTarget` state (`null | { kind: 'position'; positionId } | { kind: 'pending'; orderId }`); right column conditionally renders `PositionEditPanel` or `PendingOrderEditPanel` instead of `TradingPanel` using the same width-spring `AnimatePresence` pattern; `onEditPosition` / `onEditPendingOrder` callbacks passed to `PaperTradingPanel`; Discard/close restores prior state.
+  - **`PaperTradingPanel.tsx`** — new optional props `onEditPosition` / `onEditPendingOrder`; hover-reveal `Pencil` icons added to **TP** and **SL** cells in the Positions table (calls `onEditPosition`); hover-reveal `Pencil` added to the limit/stop-price cell for `kind === 'pending'` rows in the Orders table (calls `onEditPendingOrder`).
 
 - **fix: bracket Orders badge + TV-style activation journal entries** ✅
   - `PaperTradingPanel` — Orders tab badge now counts **all** active order rows:
