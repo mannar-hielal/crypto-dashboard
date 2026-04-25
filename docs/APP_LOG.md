@@ -798,4 +798,3 @@ _Last updated: 2026-04-25_
   - `OrderSubTab` type updated accordingly (removed `'filled'` from union).
   - Dead `orderSubTab === 'filled'` branch removed from `filteredOrderRows`.
   - Test plan: 2.4.8 action + expected updated; 2.4.10 marked ✅; 1.1.6 and 7.1.4 updated to reflect Order History as the only home for fills; Auto-archive note updated.
-
