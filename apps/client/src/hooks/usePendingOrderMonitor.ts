@@ -111,16 +111,15 @@ export function usePendingOrderMonitor({ onFilled }: PendingOrderMonitorOptions 
       const candleHigh = currentBar?.high ?? latestPrice;
 
       for (const order of pending) {
-        const checkPrice = effectiveCheckPrice(order, latestPrice, candleLow, candleHigh);
+        // Fast path: real-time tick already crosses the trigger — fill at latestPrice.
+        // Slow path: candle extreme crosses the trigger (sweep) — fill at triggerPrice.
+        const triggeredByLatest = checkPendingTrigger(order, latestPrice);
+        if (!triggeredByLatest) {
+          const checkPrice = effectiveCheckPrice(order, latestPrice, candleLow, candleHigh);
+          if (!checkPendingTrigger(order, checkPrice)) continue;
+        }
 
-        if (!checkPendingTrigger(order, checkPrice)) continue;
-
-        // Fill price: use latestPrice if it alone crosses the trigger
-        // (real-time tick fill). Fall back to triggerPrice for candle-sweep fills
-        // so the position opens at the order's requested price.
-        const fillPrice = checkPendingTrigger(order, latestPrice)
-          ? latestPrice
-          : order.triggerPrice;
+        const fillPrice = triggeredByLatest ? latestPrice : order.triggerPrice;
 
         // Remove from pending without creating a cancellation record — refunds
         // the reserved balance so placeOrder can deduct it again immediately.
@@ -146,8 +145,8 @@ export function usePendingOrderMonitor({ onFilled }: PendingOrderMonitorOptions 
           usePaperStore
             .getState()
             .addJournalNote(
-              `${typeLabel} order filled — ${sideLabel} ${order.symbol} @ $${fillPrice.toFixed(4)} ` +
-                `(trigger: $${order.triggerPrice.toFixed(4)}, qty: ${order.qty.toFixed(6)})`,
+              `${typeLabel} order filled — ${sideLabel} ${order.symbol} @ $${fmtPrice(fillPrice)} ` +
+                `(trigger: $${fmtPrice(order.triggerPrice)}, qty: ${order.qty.toFixed(6)})`,
               false
             );
           // TV-style activation entries for bracket TP/SL legs
@@ -172,7 +171,7 @@ export function usePendingOrderMonitor({ onFilled }: PendingOrderMonitorOptions 
           usePaperStore
             .getState()
             .addJournalNote(
-              `${typeLabel} order for ${order.symbol} triggered @ $${fillPrice.toFixed(4)} but could not be filled`,
+              `${typeLabel} order for ${order.symbol} triggered @ $${fmtPrice(fillPrice)} but could not be filled`,
               false
             );
         }
