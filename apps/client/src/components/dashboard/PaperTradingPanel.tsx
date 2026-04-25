@@ -1058,7 +1058,7 @@ export function PaperTradingPanel({
                         <span
                           className="rounded-full px-1 py-px tabular-nums"
                           style={{
-                            fontSize: fontSize.xsxs,
+                            fontSize: fontSize.xxs,
                             background:
                               orderHistorySubTab === sub
                                 ? `${color.purpleDark}40`
