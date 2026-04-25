@@ -772,4 +772,15 @@ Paper trading  →  Real order      →  Proven bot      →  Full autonomous
 
 ---
 
-_Last updated: 2026-04-25 — **feat: drag-to-resize bottom panel + chart pane splitters** — `bottom-widgetbar-handle` at the chart/panel boundary resizes `PaperTradingPanel` height via Framer `MotionValue` (zero React re-renders during drag, spring animation on size transitions). `ResizeSplitter` overlays between chart panes in all multi-pane layouts (`2h`, `2v`, `3h`, `4`) with direct DOM mutation for jank-free dragging; sizes persisted per layout in `layoutStore.paneSizes`. Previously: **feat: bracket child-order lifecycle parity**_
+_Last updated: 2026-04-25_
+
+- **fix: bracket Orders badge + TV-style activation journal entries**
+  - Orders badge now counts all active order rows:
+    `pendingOrders.length + inactivePendingExitRows.length + exitOrderRows.length`.
+  - `usePendingOrderMonitor` now appends two system notes on bracket fill:
+    `Take-Profit order activated — …` and `Stop-Loss order activated — …`.
+
+- **feat: drag-to-resize bottom panel + chart pane splitters**
+  - Added TV-style `bottom-widgetbar-handle` resize for `PaperTradingPanel` via Framer `MotionValue`.
+  - Added `ResizeSplitter` overlays for `2h`, `2v`, `3h`, and `4` layouts.
+  - Persisted per-layout pane sizes in `layoutStore.paneSizes`.
