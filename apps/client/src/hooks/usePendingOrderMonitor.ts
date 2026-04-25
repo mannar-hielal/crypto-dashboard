@@ -88,6 +88,11 @@ interface PendingOrderMonitorOptions {
   onFilled?: () => void;
 }
 
+/** Format a price for TV-style activation journal entries. */
+function fmtActivationPrice(p: number): string {
+  return p >= 1000 ? p.toFixed(2) : p >= 1 ? p.toFixed(4) : p.toFixed(6);
+}
+
 export function usePendingOrderMonitor({ onFilled }: PendingOrderMonitorOptions = {}) {
   const onFilledRef = useRef(onFilled);
   useLayoutEffect(() => {
@@ -150,8 +155,6 @@ export function usePendingOrderMonitor({ onFilled }: PendingOrderMonitorOptions 
               false
             );
           // TV-style activation entries for bracket TP/SL legs
-          const fmtActivationPrice = (p: number) =>
-            p >= 1000 ? p.toFixed(2) : p >= 1 ? p.toFixed(4) : p.toFixed(6);
           if (order.takeProfit) {
             usePaperStore
               .getState()

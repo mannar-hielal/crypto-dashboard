@@ -86,13 +86,15 @@ export function useTPSLMonitor({ onClosed }: TPSLMonitorOptions = {}) {
       const candleLow = currentBar?.low ?? latestPrice;
       const candleHigh = currentBar?.high ?? latestPrice;
 
+      // Compute candle extremes once — shared across all position checks this tick.
+      const checkHigh = Math.max(latestPrice, candleHigh);
+      const checkLow = Math.min(latestPrice, candleLow);
+
       for (const pos of positions) {
         // For long positions: TP uses high path, SL uses low path.
         // For short positions: TP uses low path, SL uses high path.
         // We check with the candle extreme first; if triggered, determine
         // whether it was a real-time tick or a candle-sweep for the close price.
-        const checkHigh = Math.max(latestPrice, candleHigh);
-        const checkLow = Math.min(latestPrice, candleLow);
 
         // Build a synthetic "worst case" position view for breach detection.
         // Use high for TP-long / SL-short, low for TP-short / SL-long.
