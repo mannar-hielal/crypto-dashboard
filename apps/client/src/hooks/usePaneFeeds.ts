@@ -19,6 +19,14 @@ import { INTERVAL_FETCH_LIMIT, type Interval } from '@/lib/markets';
 
 const RECONNECT_DELAY_MS = 3_000;
 
+/**
+ * If no bar or ticker message arrives within this window the client-side WS is
+ * force-closed so the onclose handler can trigger a reconnect and pick up a
+ * fresh snapshot.  This handles the case where the server's upstream Bybit
+ * connection is dead (no data flows but the client TCP socket stays open).
+ */
+const DATA_TIMEOUT_MS = 30_000; // 30 s — well below any proxy idle-timeout
+
 // ─── Single pane feed ─────────────────────────────────────────────────────────
 
 function useSinglePaneFeed(
@@ -29,6 +37,7 @@ function useSinglePaneFeed(
 ) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dataWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // Per-run cancellation flag captured by closure — NOT a shared ref.
@@ -45,8 +54,16 @@ function useSinglePaneFeed(
     // ── Pane is not visible in current layout → disconnect + clear ──────────
     if (!isActive) {
       if (wsRef.current) {
-        wsRef.current.onclose = null;
-        wsRef.current.close();
+        const ws = wsRef.current;
+        ws.onopen = null;
+        ws.onmessage = null;
+        ws.onerror = null;
+        ws.onclose = null;
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.close();
+        } else if (ws.readyState === WebSocket.CONNECTING) {
+          ws.onopen = () => ws.close();
+        }
         wsRef.current = null;
       }
       if (reconnectTimerRef.current) {
@@ -81,12 +98,28 @@ function useSinglePaneFeed(
       const ws = new WebSocket(marketApi.wsUrl(symbol, interval));
       wsRef.current = ws;
 
+      // ── Data-staleness watchdog ──────────────────────────────────────────────
+      // If no bar/ticker message arrives within DATA_TIMEOUT_MS the upstream
+      // Bybit connection on the server is likely dead.  Force-close so onclose
+      // triggers a reconnect and fetches a fresh snapshot.
+      // A self-resetting setTimeout is used instead of setInterval — it only
+      // fires once after a period of silence, eliminating continuous polling.
+      function scheduleWatchdog() {
+        dataWatchdogRef.current = setTimeout(() => {
+          ws.close(); // onclose → reconnect
+        }, DATA_TIMEOUT_MS);
+      }
+      scheduleWatchdog();
+
       ws.onopen = () => {
         if (!cancelled) store.getState().setConnected(true);
       };
 
       ws.onmessage = (e: MessageEvent<string>) => {
         if (cancelled) return;
+        // Reset the watchdog on every message — push the deadline forward.
+        clearTimeout(dataWatchdogRef.current ?? undefined);
+        scheduleWatchdog();
         try {
           const msg = JSON.parse(e.data) as WsMessage;
           if (msg.type === 'snapshot') {
@@ -109,6 +142,10 @@ function useSinglePaneFeed(
       };
 
       ws.onclose = () => {
+        if (dataWatchdogRef.current) {
+          clearTimeout(dataWatchdogRef.current);
+          dataWatchdogRef.current = null;
+        }
         if (cancelled) return;
         store.getState().setConnected(false);
         reconnectTimerRef.current = setTimeout(connect, RECONNECT_DELAY_MS);
@@ -122,9 +159,31 @@ function useSinglePaneFeed(
     return () => {
       cancelled = true;
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      if (dataWatchdogRef.current) {
+        clearTimeout(dataWatchdogRef.current);
+        dataWatchdogRef.current = null;
+      }
       if (wsRef.current) {
-        wsRef.current.onclose = null; // 🔐 prevent reconnect on intentional close
-        wsRef.current.close();
+        // 🔐 Null ALL handlers before closing so no stale callback (onopen,
+        // onmessage, onerror, onclose) can fire on the old socket after cleanup.
+        // onclose = null specifically prevents the auto-reconnect timer from
+        // firing after an intentional teardown.
+        const ws = wsRef.current;
+        ws.onopen = null;
+        ws.onmessage = null;
+        ws.onerror = null;
+        ws.onclose = null; // prevents reconnect; dataWatchdog already cleared above
+        // For OPEN sockets, close immediately.
+        // For CONNECTING sockets, setting a one-shot onopen that closes after
+        // the handshake avoids the "WebSocket closed before the connection is
+        // established" warning that browsers (and MetaMask's inpage.js) emit
+        // when .close() is called while readyState is still 0.
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.close();
+        } else if (ws.readyState === WebSocket.CONNECTING) {
+          ws.onopen = () => ws.close(); // close cleanly once handshake completes
+        }
+        wsRef.current = null;
       }
       store.getState().setConnected(false);
     };

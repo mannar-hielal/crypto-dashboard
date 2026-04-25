@@ -21,10 +21,11 @@ export class BybitWebSocketManager extends EventEmitter {
   private url: string;
   private subscriptions: Map<string, WebSocketSubscription> = new Map();
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 15;
   private reconnectDelay = 1000; // Start with 1s
   private isManuallyClosed = false;
   private heartbeatTimeout: NodeJS.Timeout | null = null;
+  /** Last known ticker state per symbol — used to merge Bybit delta updates */
+  private tickerState: Map<string, { lastPrice: number; bid: number; ask: number }> = new Map();
 
   constructor(useTestnet: boolean = true) {
     super();
@@ -96,6 +97,7 @@ export class BybitWebSocketManager extends EventEmitter {
     }
 
     this.subscriptions.clear();
+    this.tickerState.clear(); // free cached ticker state for all symbols
     log.info('Manually closed');
   }
 
@@ -159,10 +161,17 @@ export class BybitWebSocketManager extends EventEmitter {
       return;
     }
 
-    this.subscriptions.delete(key);
-
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.sendUnsubscription(key);
+    }
+
+    this.subscriptions.delete(key);
+
+    // Remove cached ticker state if no remaining subscriptions reference this symbol
+    // — prevents unbounded memory growth when symbols are rotated at runtime.
+    const symbolStillActive = [...this.subscriptions.keys()].some((k) => k.includes(`|${symbol}`));
+    if (!symbolStillActive) {
+      this.tickerState.delete(symbol);
     }
   }
 
@@ -391,13 +400,28 @@ export class BybitWebSocketManager extends EventEmitter {
       if (!data || typeof data !== 'object') return null;
       const raw = data as Record<string, unknown>;
 
-      const lastPrice = parseFloat(String(raw.lastPrice));
-      const bid = parseFloat(String(raw.bid1Price));
-      const ask = parseFloat(String(raw.ask1Price));
+      // Bybit sends a full snapshot first, then partial DELTA updates where
+      // only changed fields are present.  Merge into last known state so we
+      // never drop a delta that omits bid1Price or ask1Price.
+      const prev = this.tickerState.get(symbol);
 
-      if (!Number.isFinite(lastPrice) || !Number.isFinite(bid) || !Number.isFinite(ask)) {
+      const lastPrice =
+        raw.lastPrice !== undefined ? parseFloat(String(raw.lastPrice)) : prev?.lastPrice;
+      const bid = raw.bid1Price !== undefined ? parseFloat(String(raw.bid1Price)) : prev?.bid;
+      const ask = raw.ask1Price !== undefined ? parseFloat(String(raw.ask1Price)) : prev?.ask;
+
+      if (
+        lastPrice === undefined ||
+        bid === undefined ||
+        ask === undefined ||
+        !Number.isFinite(lastPrice) ||
+        !Number.isFinite(bid) ||
+        !Number.isFinite(ask)
+      ) {
         return null;
       }
+
+      this.tickerState.set(symbol, { lastPrice, bid, ask });
 
       const ticker: TickerData = { symbol, lastPrice, bid, ask };
       return { symbol, dataType: 'ticker', data: ticker, timestamp: Date.now() };
@@ -449,27 +473,21 @@ export class BybitWebSocketManager extends EventEmitter {
   }
 
   /**
-   * Private: Reconnect with exponential backoff
+   * Private: Reconnect with exponential backoff.
+   *
+   * Reconnection is intentionally unbounded — this manager runs inside a
+   * long-lived server process that must stay connected to Bybit 24/7.
+   * Bybit can close the connection for any reason (maintenance, rate-limit,
+   * network blip) and we want to recover automatically every time.
+   * The delay is capped at 30 s so recovery is prompt even after many failures.
    */
   private reconnect(): void {
     if (this.isManuallyClosed) return;
 
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      log.error(
-        { maxAttempts: this.maxReconnectAttempts },
-        'Max reconnection attempts reached, giving up'
-      );
-      this.emit('reconnectFailed');
-      return;
-    }
-
     this.reconnectAttempts++;
     const delay = Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1), 30000);
 
-    log.info(
-      { delay, attempt: this.reconnectAttempts, maxAttempts: this.maxReconnectAttempts },
-      'Reconnecting'
-    );
+    log.info({ delay, attempt: this.reconnectAttempts }, 'Reconnecting');
 
     setTimeout(() => {
       this.connect().catch((error) => {
@@ -488,17 +506,18 @@ export class BybitWebSocketManager extends EventEmitter {
   }
 
   /**
-   * Private: Start heartbeat to detect stale connections
+   * Private: Start heartbeat — sends { op: "ping" } every 20 s.
+   * Bybit v5 public streams require the client to ping at least every 20 s
+   * or the server closes the connection without warning.
    */
   private startHeartbeat(): void {
     this.stopHeartbeat();
 
     this.heartbeatTimeout = setInterval(() => {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-        // Bybit's public streams automatically send pings, but we can also ping
-        // This is mostly for keeping the connection alive
+        this.ws.send(JSON.stringify({ op: 'ping' }));
       }
-    }, 30000); // Every 30 seconds
+    }, 20_000); // Every 20 seconds — required by Bybit v5
   }
 
   /**

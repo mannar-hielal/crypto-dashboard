@@ -1,32 +1,33 @@
 /**
  * useTPSLMonitor
  *
- * Watches `latestPrice` from paneStores[0] (primary trading pane) every time
- * it updates and auto-closes any open paper-trading position whose
- * Take-Profit or Stop-Loss level has been breached.
+ * Subscribes directly to paneStores[0] (vanilla Zustand, outside React's
+ * render cycle) so EVERY price tick is evaluated — React 18 automatic batching
+ * can coalesce rapid ticks into a single render and cause the useEffect-based
+ * approach to skip over a TP/SL level entirely.
+ *
+ * Two-price check per tick:
+ *   1. latestPrice  — most recent last-trade / ticker price
+ *   2. currentBar.high / .low — forming candle extremes so a sweep through the
+ *      TP or SL level within a single candle is never missed
  *
  * Rules:
- *   Long  — TP hit when price >= takeProfit
- *           SL hit when price <= stopLoss
- *   Short — TP hit when price <= takeProfit
- *           SL hit when price >= stopLoss
+ *   Long  — TP hit when effective high  >= takeProfit
+ *           SL hit when effective low   <= stopLoss
+ *   Short — TP hit when effective low   <= takeProfit
+ *           SL hit when effective high  >= stopLoss
  *
- * A journal entry is automatically added describing the auto-close reason.
+ * Close price used: latestPrice if it already satisfies the breach, otherwise
+ * the exact TP/SL level (candle-sweep — best approximation).
+ *
  * Must be mounted once at the app/dashboard level alongside usePaneFeeds.
  */
 
-import { useEffect, useRef } from 'react';
-import { useStore } from 'zustand';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useLayoutStore } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
 import { usePaperStore } from '@/store/paperStore';
-
-// Local price formatter (mirrors paperStore's fmtPrice)
-function fmtPrice(price: number): string {
-  if (price >= 1000) return price.toFixed(2);
-  if (price >= 1) return price.toFixed(4);
-  return price.toFixed(6);
-}
+import { fmtPrice } from '@/lib/utils';
 
 // ─── Pure breach-check — exported for unit testing ───────────────────────────
 
@@ -57,40 +58,70 @@ interface TPSLMonitorOptions {
 }
 
 export function useTPSLMonitor({ onClosed }: TPSLMonitorOptions = {}) {
-  // Monitor pane 0 (primary trading pane) — scoped to active symbol only
-  const latestPrice = useStore(paneStores[0], (s) => s.latestPrice);
-  const symbol = useLayoutStore((s) => s.panes[0].symbol);
-
-  // Use refs so the effect closure always reads the latest store state
-  // without needing to re-subscribe and re-attach the effect.
-  const closePosition = useRef(usePaperStore.getState().closePosition);
   const onClosedRef = useRef(onClosed);
-  onClosedRef.current = onClosed;
+  useLayoutEffect(() => {
+    onClosedRef.current = onClosed;
+  }, [onClosed]);
 
   useEffect(() => {
-    if (latestPrice === null) return;
+    // Subscribe directly to the vanilla Zustand store — bypasses React 18
+    // automatic batching so every individual price tick is evaluated.
+    const unsubscribe = paneStores[0].subscribe((state) => {
+      const { latestPrice, bars } = state;
+      if (latestPrice === null) return;
 
-    const price = latestPrice;
-    // Only evaluate positions for the currently active symbol — other symbols
-    // have no live price feed active so we must not close them on a different ticker.
-    const positions = usePaperStore.getState().positions.filter((p) => p.symbol === symbol);
+      const symbol = useLayoutStore.getState().panes[0].symbol;
+      // Only evaluate positions for the currently active symbol — other symbols
+      // have no live price feed active so we must not close them on a different ticker.
+      const positions = usePaperStore.getState().positions.filter((p) => p.symbol === symbol);
+      if (positions.length === 0) return;
 
-    for (const pos of positions) {
-      const triggered = checkTPSL(pos, price);
+      const currentBar = bars[bars.length - 1];
+      const candleLow = currentBar?.low ?? latestPrice;
+      const candleHigh = currentBar?.high ?? latestPrice;
 
-      if (triggered) {
+      // Compute candle extremes once — shared across all position checks this tick.
+      const checkHigh = Math.max(latestPrice, candleHigh);
+      const checkLow = Math.min(latestPrice, candleLow);
+
+      for (const pos of positions) {
+        // For long positions: TP uses high path, SL uses low path.
+        // For short positions: TP uses low path, SL uses high path.
+        // We check with the candle extreme first; if triggered, determine
+        // whether it was a real-time tick or a candle-sweep for the close price.
+
+        // Build a synthetic "worst case" position view for breach detection.
+        // Use high for TP-long / SL-short, low for TP-short / SL-long.
+        let triggered: 'TP' | 'SL' | null = null;
+        if (pos.side === 'long') {
+          if (pos.takeProfit !== undefined && checkHigh >= pos.takeProfit) triggered = 'TP';
+          else if (pos.stopLoss !== undefined && checkLow <= pos.stopLoss) triggered = 'SL';
+        } else {
+          if (pos.takeProfit !== undefined && checkLow <= pos.takeProfit) triggered = 'TP';
+          else if (pos.stopLoss !== undefined && checkHigh >= pos.stopLoss) triggered = 'SL';
+        }
+
+        if (!triggered) continue;
+
+        // Determine close price: use latestPrice if it satisfies the breach,
+        // else use the exact TP/SL level (candle-sweep approximation).
+        const level = triggered === 'TP' ? pos.takeProfit! : pos.stopLoss!;
+        const closePrice = checkTPSL(pos, latestPrice) ? latestPrice : level;
+
         const label = triggered === 'TP' ? 'Take-Profit' : 'Stop-Loss';
-        const reason = `Auto-closed ${pos.side.toUpperCase()} ${pos.symbol} — ${label} hit at $${fmtPrice(price)}`;
+        const reason = `Auto-closed ${pos.side.toUpperCase()} ${pos.symbol} — ${label} hit at $${fmtPrice(closePrice)}`;
         const closeType = triggered === 'TP' ? 'take-profit' : 'stop-loss';
-        // Pass reason and closeType to closePosition — it writes 1 clean journal entry with PnL badge
-        closePosition.current(pos.id, price, reason, closeType);
-        // Gross PnL (same formula as closePosition)
+
+        usePaperStore.getState().closePosition(pos.id, closePrice, reason, closeType);
+
         const grossPnl =
           pos.side === 'long'
-            ? (price - pos.entryPrice) * pos.quantity
-            : (pos.entryPrice - price) * pos.quantity;
+            ? (closePrice - pos.entryPrice) * pos.quantity
+            : (pos.entryPrice - closePrice) * pos.quantity;
         onClosedRef.current?.(grossPnl);
       }
-    }
-  }, [latestPrice, symbol]);
+    });
+
+    return unsubscribe;
+  }, []); // Mount once — reads fresh state from getState() on every tick
 }
