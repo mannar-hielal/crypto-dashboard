@@ -27,13 +27,7 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useLayoutStore } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
 import { usePaperStore } from '@/store/paperStore';
-
-// Local price formatter (mirrors paperStore's fmtPrice)
-function fmtPrice(price: number): string {
-  if (price >= 1000) return price.toFixed(2);
-  if (price >= 1) return price.toFixed(4);
-  return price.toFixed(6);
-}
+import { fmtPrice } from '@/lib/utils';
 
 // ─── Pure breach-check — exported for unit testing ───────────────────────────
 

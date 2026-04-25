@@ -13,6 +13,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { fmtPrice } from '@/lib/utils';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -110,12 +111,6 @@ export interface JournalEntry {
 }
 // ─── Store ────────────────────────────────────────────────────────────────────
 
-// Helper – format price to a readable precision
-function fmtPrice(price: number): string {
-  if (price >= 1000) return price.toFixed(2);
-  if (price >= 1) return price.toFixed(4);
-  return price.toFixed(6);
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);

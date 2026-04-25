@@ -32,6 +32,7 @@ import { useLayoutStore } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
 import { usePaperStore } from '@/store/paperStore';
 import type { PendingOrder } from '@/store/paperStore';
+import { fmtPrice } from '@/lib/utils';
 
 // ─── Pure trigger-check — exported for unit testing ──────────────────────────
 
@@ -88,10 +89,6 @@ interface PendingOrderMonitorOptions {
   onFilled?: () => void;
 }
 
-/** Format a price for TV-style activation journal entries. */
-function fmtActivationPrice(p: number): string {
-  return p >= 1000 ? p.toFixed(2) : p >= 1 ? p.toFixed(4) : p.toFixed(6);
-}
 
 export function usePendingOrderMonitor({ onFilled }: PendingOrderMonitorOptions = {}) {
   const onFilledRef = useRef(onFilled);
@@ -159,7 +156,7 @@ export function usePendingOrderMonitor({ onFilled }: PendingOrderMonitorOptions 
             usePaperStore
               .getState()
               .addJournalNote(
-                `Take-Profit order activated — ${sideLabel} ${order.symbol} @ $${fmtActivationPrice(order.takeProfit)}`,
+                `Take-Profit order activated — ${sideLabel} ${order.symbol} @ $${fmtPrice(order.takeProfit)}`,
                 false
               );
           }
@@ -167,7 +164,7 @@ export function usePendingOrderMonitor({ onFilled }: PendingOrderMonitorOptions 
             usePaperStore
               .getState()
               .addJournalNote(
-                `Stop-Loss order activated — ${sideLabel} ${order.symbol} @ $${fmtActivationPrice(order.stopLoss)}`,
+                `Stop-Loss order activated — ${sideLabel} ${order.symbol} @ $${fmtPrice(order.stopLoss)}`,
                 false
               );
           }
