@@ -89,7 +89,6 @@ interface PendingOrderMonitorOptions {
   onFilled?: () => void;
 }
 
-
 export function usePendingOrderMonitor({ onFilled }: PendingOrderMonitorOptions = {}) {
   const onFilledRef = useRef(onFilled);
   useLayoutEffect(() => {
