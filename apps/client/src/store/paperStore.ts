@@ -245,6 +245,9 @@ interface PaperState {
   /** Cancel one active TP/SL exit leg for an open position. */
   cancelExitOrder: (positionId: string, exitType: 'take-profit' | 'stop-loss') => void;
 
+  /** Cancel one inactive TP/SL exit leg attached to a pending (unfilled) order bracket. No balance refund — the parent order still holds the margin. */
+  cancelPendingExitLeg: (pendingOrderId: string, exitType: 'take-profit' | 'stop-loss') => void;
+
   /**
    * Fill a pending order without recording a cancellation entry.
    * Removes the order from pendingOrders and refunds the reserved amount so
@@ -689,9 +692,19 @@ export const usePaperStore = create<PaperState>()(
           ...(stopLoss && stopLoss > 0 ? { stopLoss } : {}),
         };
 
+        const placementSide = side === 'buy' ? 'Long' : 'Short';
+        const placementNote: JournalEntry = {
+          id: `j-place-limit-${id}`,
+          time: now,
+          text:
+            `Placed LIMIT ${placementSide} ${symbol} @ $${fmtPrice(triggerPrice)}` +
+            ` (qty: ${qty.toFixed(6)}, reserved: $${usdtAmount.toFixed(2)})`,
+        };
+
         set((s) => ({
           balance: s.balance - totalCost,
           pendingOrders: [...s.pendingOrders, pending],
+          journal: [placementNote, ...s.journal].slice(0, MAX_JOURNAL),
         }));
 
         return id;
@@ -720,9 +733,19 @@ export const usePaperStore = create<PaperState>()(
           ...(stopLoss && stopLoss > 0 ? { stopLoss } : {}),
         };
 
+        const stopPlacementSide = side === 'buy' ? 'Long' : 'Short';
+        const stopPlacementNote: JournalEntry = {
+          id: `j-place-stop-${id}`,
+          time: now,
+          text:
+            `Placed STOP ${stopPlacementSide} ${symbol} @ $${fmtPrice(triggerPrice)}` +
+            ` (qty: ${qty.toFixed(6)}, reserved: $${usdtAmount.toFixed(2)})`,
+        };
+
         set((s) => ({
           balance: s.balance - totalCost,
           pendingOrders: [...s.pendingOrders, pending],
+          journal: [stopPlacementNote, ...s.journal].slice(0, MAX_JOURNAL),
         }));
 
         return id;
@@ -781,10 +804,21 @@ export const usePaperStore = create<PaperState>()(
           });
         }
 
+        const cancelTypeLabel = order.type === 'limit' ? 'LIMIT' : 'STOP';
+        const cancelSideLabel = order.side === 'buy' ? 'Long' : 'Short';
+        const cancelNote: JournalEntry = {
+          id: `j-cancel-pending-${orderId}-${now}`,
+          time: now,
+          text:
+            `Cancelled ${cancelTypeLabel} ${cancelSideLabel} ${order.symbol} @ $${fmtPrice(order.triggerPrice)}` +
+            ` (refunded: $${refund.toFixed(2)})`,
+        };
+
         set((s) => ({
           balance: s.balance + refund,
           pendingOrders: s.pendingOrders.filter((o) => o.id !== orderId),
           orders: [cancelledOrder, ...childCancelledOrders, ...s.orders].slice(0, MAX_HISTORY * 2),
+          journal: [cancelNote, ...s.journal].slice(0, MAX_JOURNAL),
         }));
       },
 
@@ -826,6 +860,51 @@ export const usePaperStore = create<PaperState>()(
             return exitType === 'take-profit'
               ? { ...p, takeProfit: undefined }
               : { ...p, stopLoss: undefined };
+          }),
+          orders: [cancelRow, ...s.orders].slice(0, MAX_HISTORY * 2),
+          journal: [note, ...s.journal].slice(0, MAX_JOURNAL),
+        }));
+      },
+
+      cancelPendingExitLeg: (pendingOrderId, exitType) => {
+        const { pendingOrders } = get();
+        const order = pendingOrders.find((o) => o.id === pendingOrderId);
+        if (!order) return;
+
+        const targetPrice = exitType === 'take-profit' ? order.takeProfit : order.stopLoss;
+        if (!targetPrice) return;
+
+        const now = Date.now();
+        const cancelRow: HistoricalOrder = {
+          id: `o-cancel-pending-${exitType}-${pendingOrderId}-${now}`,
+          symbol: order.symbol,
+          side: order.side === 'buy' ? 'sell' : 'buy',
+          type: exitType,
+          qty: order.qty,
+          ...(exitType === 'take-profit'
+            ? { limitPrice: targetPrice }
+            : { stopPrice: targetPrice }),
+          status: 'cancelled',
+          commission: 0,
+          placingTime: order.placedAt,
+          closingTime: now,
+        };
+
+        const pendingSide = order.side === 'buy' ? 'Long' : 'Short';
+        const note: JournalEntry = {
+          id: `j-cancel-pending-${exitType}-${pendingOrderId}-${now}`,
+          time: now,
+          text:
+            `${exitType === 'take-profit' ? 'Take-Profit' : 'Stop-Loss'} cancelled for ` +
+            `pending ${pendingSide} ${order.symbol} @ $${fmtPrice(targetPrice)}`,
+        };
+
+        set((s) => ({
+          pendingOrders: s.pendingOrders.map((o) => {
+            if (o.id !== pendingOrderId) return o;
+            return exitType === 'take-profit'
+              ? { ...o, takeProfit: undefined }
+              : { ...o, stopLoss: undefined };
           }),
           orders: [cancelRow, ...s.orders].slice(0, MAX_HISTORY * 2),
           journal: [note, ...s.journal].slice(0, MAX_JOURNAL),

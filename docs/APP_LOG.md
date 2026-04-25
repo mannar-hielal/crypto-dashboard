@@ -157,11 +157,12 @@
    - Row entrance: staggered framer-motion (`rowVariants`, 0.04 s delay per row)
 
 2. **Orders** ✅ — unified order lifecycle table (market + parent pending + child TP/SL legs). Columns: Symbol, Status, Type, Side, Qty, Limit Price, Stop Price, Fill Price, TP, SL, Commission, Placing Time (on by default) · optional: Order ID, Leverage, Margin · sticky: Cancel (✕)
-   - **Sub-tabs**: `All | Working | Inactive | Filled | Cancelled | Rejected` filter bar; each shows live count badge; animated purple underline indicator
+   - **Sub-tabs**: `All | Working | Inactive | Cancelled | Rejected` filter bar; each shows live count badge; animated purple underline indicator. **`Filled` sub-tab has been removed** — filled orders are routed directly to Order History (TV-style, immediate archive).
    - **Bracket lifecycle (TV-style)**: placing limit/stop with TP+SL creates 3 linked rows: parent order + TP child + SL child.
    - **Pre-fill/trigger**: parent row = Working, TP/SL child rows = Inactive; cancelling parent cancels all 3.
    - **Post-fill/trigger**: parent row is historical (Filled, non-cancellable); child exits become Working and can be cancelled individually.
-   - **Position close**: closing from Positions tab cancels all remaining child exit legs.
+   - **Position close — sibling cancel** ✅: `closePosition` builds a `siblingCancelOrders: HistoricalOrder[]` array at close time. Rules: if `closeType === 'take-profit'` → cancel SL; if `closeType === 'stop-loss'` → cancel TP; manual close (no closeType) → cancel both. Each cancelled record: `type = 'take-profit' | 'stop-loss'`, `status = 'cancelled'`, `commission = 0`, `placingTime = pos.openedAt`, `closingTime = now`, `limitPrice` or `stopPrice` filled with the exit level. They land in `orders[]` alongside the fill record, making them appear in **Order History → Cancelled** and **Orders → Cancelled** — mirrors TradingView exactly. No journal note is added for auto-cancelled siblings (kept silent to avoid noise next to the main TP/SL close entry).
+   - **Immediate archive (TV-style)** ✅: filled orders (`status === 'filled'`) are **excluded from the Orders tab entirely** and are only visible in the permanent Order History tab. The Orders tab is immediately clean after every fill — no time delay, no `setInterval`. `ORDER_FILLED_ARCHIVE_MS` constant and `now` ticker removed. `'filled'` sub-tab removed from Orders tab bar. Orders tab only ever shows Working, Inactive, Cancelled, and Rejected entries.
    - `OrderDisplayRow` union: `{ kind: 'pending'; data: PendingOrder } | { kind: 'historical'; data: HistoricalOrder } | { kind: 'exit-order'; data: SyntheticExitOrder }`.
 
 3. **Order History** ✅ — TV-style order history table showing all `HistoricalOrder[]` records (market + limit + stop, all statuses). Columns: Symbol, Side, Type, Qty, Limit Price, Stop Price, Fill Price, Status, Commission, Placing Time, Closing Time (on by default) · optional: Order ID, Leverage, Margin
@@ -546,7 +547,7 @@ ask: number | null; // best ask from Bybit orderbook.1
   - **Client `TradingPanel.tsx`**: reads `bid`/`ask` from active pane store (8 unconditional `useStore` calls — 4 bid + 4 ask, picks `[activePane]`). Spread badge shows live `ask − bid` value (4 decimal places if < 1, 2 otherwise), tooltip shows raw bid/ask. Sell button price shows `bid ?? latestPrice`; Buy button shows `ask ?? latestPrice`.
 
 - **`usePendingOrderMonitor`** — limit/stop order execution on price trigger; 16 unit tests; mounted in `DashboardPage` alongside `useTPSLMonitor`
-- **Orders tab** in `PaperTradingPanel` — unified order lifecycle table; **all order types** (market + limit + stop) appear here, matching TradingView exactly: market orders land instantly in the **Filled** sub-tab; limit/stop go through Working → Filled/Cancelled. Sub-tabs: `All | Working | Filled | Cancelled | Rejected` with live count badges. Cancel button refunds reserved balance; amber badge on tab counts working orders only.
+- **Orders tab** in `PaperTradingPanel` — unified order lifecycle table; pending limit/stop orders (Working/Inactive) and cancelled/rejected records; **filled records route directly to Order History** (TV-style, immediate archive). Sub-tabs: `All | Working | Inactive | Cancelled | Rejected` with live count badges. Cancel button refunds reserved balance; amber badge on tab counts working orders only.
 - **Sound alert system** — Web Audio API (`useTradingSound` + `TradingSoundContext` + `SoundSettings`): synthesised tones for order placed, TP/SL hit, limit/stop filled, cancelled
 - **TradingPanel full-height layout** — `TradingPanel` is now a sibling of the center column (chart + bottom panel) so it spans from SymbolBar to TickerBar without being cut by the bottom panel
 - **PaperTradingPanel maximize/restore** — `Maximize2`/`Minimize2` button; chart area collapses via framer-motion `flex: 0 0 0px`; panel content shown when maximized regardless of `PanelSize`
@@ -774,13 +775,27 @@ Paper trading  →  Real order      →  Proven bot      →  Full autonomous
 
 _Last updated: 2026-04-25_
 
-- **fix: bracket Orders badge + TV-style activation journal entries**
-  - Orders badge now counts all active order rows:
-    `pendingOrders.length + inactivePendingExitRows.length + exitOrderRows.length`.
-  - `usePendingOrderMonitor` now appends two system notes on bracket fill:
-    `Take-Profit order activated — …` and `Stop-Loss order activated — …`.
+- **fix: bracket Orders badge + TV-style activation journal entries** ✅
+  - `PaperTradingPanel` — Orders tab badge now counts **all** active order rows:
+    `pendingOrders.length + inactivePendingExitRows.length + exitOrderRows.length`
+    (previously `inactivePendingExitRows` was excluded — badge showed 1 instead of 3 for a bracket).
+  - `usePendingOrderMonitor` — after a bracket limit/stop order fills, two additional system
+    journal notes are appended (one per activated exit leg):
+    `Take-Profit order activated — {sideLabel} {symbol} @ ${price}`
+    `Stop-Loss order activated — {sideLabel} {symbol} @ ${price}`
+    These are read-only system entries (isUserNote: false), mirroring TradingView's activation log.
+    Journal order: fill entry first, then TP activation, then SL activation (newest-first in view).
 
 - **feat: drag-to-resize bottom panel + chart pane splitters**
   - Added TV-style `bottom-widgetbar-handle` resize for `PaperTradingPanel` via Framer `MotionValue`.
   - Added `ResizeSplitter` overlays for `2h`, `2v`, `3h`, and `4` layouts.
   - Persisted per-layout pane sizes in `layoutStore.paneSizes`.
+
+- **fix: Orders tab — TV-style immediate archive (25.04.2026)**
+  - Removed `ORDER_FILLED_ARCHIVE_MS` constant and the 60 s `now` ticker (`setInterval`).
+  - Filled orders (`status === 'filled'`) are now unconditionally excluded from `allOrderDisplayRows`; they are accessible only via the permanent Order History tab.
+  - Removed the `'filled'` sub-tab from the Orders tab bar. Orders tab now shows only: `All | Working | Inactive | Cancelled | Rejected`.
+  - `OrderSubTab` type updated accordingly (removed `'filled'` from union).
+  - Dead `orderSubTab === 'filled'` branch removed from `filteredOrderRows`.
+  - Test plan: 2.4.8 action + expected updated; 2.4.10 marked ✅; 1.1.6 and 7.1.4 updated to reflect Order History as the only home for fills; Auto-archive note updated.
+

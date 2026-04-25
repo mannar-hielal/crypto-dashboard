@@ -24,20 +24,20 @@ import { usePaperStore, COMMISSION_RATE, CRYPTO_LEVERAGE_OPTIONS } from '@/store
 import type { JournalEntry, HistoricalOrder, PendingOrder } from '@/store/paperStore';
 import type { PanelSize } from '@/pages/DashboardPage';
 import { bg, color, fontSize } from '@/lib/tokens';
-
-/** Format a crypto quantity the same way TradingView does — trim trailing zeros, max 6 dp */
-const fmtQty = (n: number) => parseFloat(n.toFixed(6)).toString();
 import { useLayoutStore } from '@/store/layoutStore';
 import { useTradingSoundCtx } from '@/hooks/TradingSoundContext';
 import { SoundSettings } from './SoundSettings';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+/** Format a crypto quantity the same way TradingView does — trim trailing zeros, max 6 dp */
+const fmtQty = (n: number) => parseFloat(n.toFixed(6)).toString();
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type InfoTab = 'positions' | 'orders' | 'orderhistory' | 'balancehistory' | 'journal';
 type ColTab = 'positions' | 'orders' | 'orderhistory' | 'balancehistory';
-type OrderSubTab = 'all' | 'working' | 'inactive' | 'filled' | 'cancelled' | 'rejected';
+// 'filled' is intentionally absent — filled orders are routed directly to
+// Order History (TV-style) and never appear in the Orders tab.
+type OrderSubTab = 'all' | 'working' | 'inactive' | 'cancelled' | 'rejected';
 type OrderHistorySubTab = 'all' | 'filled' | 'cancelled' | 'rejected';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -390,6 +390,7 @@ export function PaperTradingPanel({
   const closePosition = usePaperStore((s) => s.closePosition);
   const cancelPendingOrder = usePaperStore((s) => s.cancelPendingOrder);
   const cancelExitOrder = usePaperStore((s) => s.cancelExitOrder);
+  const cancelPendingExitLeg = usePaperStore((s) => s.cancelPendingExitLeg);
   const addJournalNote = usePaperStore((s) => s.addJournalNote);
   const editJournalEntry = usePaperStore((s) => s.editJournalEntry);
   const reset = usePaperStore((s) => s.reset);
@@ -552,13 +553,16 @@ export function PaperTradingPanel({
   }
 
   // All order types (market, limit, stop) appear in the Orders tab — matching TradingView.
-  // Market orders land in the Filled sub-tab immediately (no Working entry).
-  // Pending orders (limit/stop awaiting trigger) + exit orders land in the Working sub-tab.
+  // Filled orders are excluded entirely from the Orders tab; they go straight to
+  // Order History (TV-style immediate archive — no time delay).
+  // Only Working, Inactive, Cancelled, and Rejected records remain here.
   const allOrderDisplayRows: OrderDisplayRow[] = [
     ...inactivePendingExitRows,
     ...exitOrderRows,
     ...pendingOrders.map((o) => ({ kind: 'pending' as const, data: o })),
-    ...orders.map((o) => ({ kind: 'historical' as const, data: o })),
+    ...orders
+      .filter((o) => o.status !== 'filled')
+      .map((o) => ({ kind: 'historical' as const, data: o })),
   ].sort((a, b) => {
     const ta =
       a.kind === 'pending'
@@ -586,17 +590,13 @@ export function PaperTradingPanel({
           ? allOrderDisplayRows.filter(
               (r) => r.kind === 'exit-order' && r.data.status === 'inactive'
             )
-          : orderSubTab === 'filled'
+          : orderSubTab === 'cancelled'
             ? allOrderDisplayRows.filter(
-                (r) => r.kind === 'historical' && r.data.status === 'filled'
+                (r) => r.kind === 'historical' && r.data.status === 'cancelled'
               )
-            : orderSubTab === 'cancelled'
-              ? allOrderDisplayRows.filter(
-                  (r) => r.kind === 'historical' && r.data.status === 'cancelled'
-                )
-              : allOrderDisplayRows.filter(
-                  (r) => r.kind === 'historical' && r.data.status === 'rejected'
-                );
+            : allOrderDisplayRows.filter(
+                (r) => r.kind === 'historical' && r.data.status === 'rejected'
+              );
 
   // ── Column helpers ─────────────────────────────────────────────────────────
   function isVisible(tab: ColTab, colId: string): boolean {
@@ -684,7 +684,7 @@ export function PaperTradingPanel({
 
           {/* Collapse / Expand — hidden while maximized */}
           {!isMaximized &&
-            size !== 'hidden' &&
+            size !== 'collapsed' &&
             (size === 'open' ? (
               <motion.button
                 onClick={() => onSizeChange('collapsed')}
@@ -847,14 +847,18 @@ export function PaperTradingPanel({
                         {positions.length}
                       </span>
                     )}
-                    {tab === 'orders' && pendingOrders.length + exitOrderRows.length > 0 && (
-                      <span
-                        className="rounded-full px-1.5 py-px font-bold text-white"
-                        style={{ fontSize: fontSize.xxs, background: color.amber }}
-                      >
-                        {pendingOrders.length + exitOrderRows.length}
-                      </span>
-                    )}
+                    {tab === 'orders' &&
+                      pendingOrders.length + exitOrderRows.length + inactivePendingExitRows.length >
+                        0 && (
+                        <span
+                          className="rounded-full px-1.5 py-px font-bold text-white"
+                          style={{ fontSize: fontSize.xxs, background: color.amber }}
+                        >
+                          {pendingOrders.length +
+                            exitOrderRows.length +
+                            inactivePendingExitRows.length}
+                        </span>
+                      )}
                     {tab === 'orderhistory' && orderHistoryRows.length > 0 && (
                       <span
                         className="rounded-full bg-white/8 px-1.5 py-px font-semibold"
@@ -957,64 +961,64 @@ export function PaperTradingPanel({
                 className="flex shrink-0 items-center gap-0 border-b border-white/4 px-2"
                 style={{ background: bg.panel }}
               >
-                {(
-                  ['all', 'working', 'inactive', 'filled', 'cancelled', 'rejected'] as OrderSubTab[]
-                ).map((sub) => {
-                  const count =
-                    sub === 'all'
-                      ? allOrderDisplayRows.length
-                      : sub === 'working'
-                        ? allOrderDisplayRows.filter(
-                            (r) =>
-                              r.kind === 'pending' ||
-                              (r.kind === 'exit-order' && r.data.status === 'working')
-                          ).length
-                        : sub === 'inactive'
+                {(['all', 'working', 'inactive', 'cancelled', 'rejected'] as OrderSubTab[]).map(
+                  (sub) => {
+                    const count =
+                      sub === 'all'
+                        ? allOrderDisplayRows.length
+                        : sub === 'working'
                           ? allOrderDisplayRows.filter(
-                              (r) => r.kind === 'exit-order' && r.data.status === 'inactive'
+                              (r) =>
+                                r.kind === 'pending' ||
+                                (r.kind === 'exit-order' && r.data.status === 'working')
                             ).length
-                          : allOrderDisplayRows.filter(
-                              (r) => r.kind === 'historical' && r.data.status === sub
-                            ).length;
-                  return (
-                    <button
-                      key={sub}
-                      onClick={() => setOrderSubTab(sub)}
-                      className="relative flex items-center gap-1 px-3 py-1.5 transition-colors"
-                      style={{
-                        fontSize: fontSize.xs11,
-                        fontWeight: orderSubTab === sub ? 600 : 400,
-                        color: orderSubTab === sub ? color.purple : color.muted,
-                      }}
-                    >
-                      {orderSubTab === sub && (
-                        <motion.span
-                          layoutId="order-sub-tab"
-                          className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t"
-                          style={{ background: color.purpleDark }}
-                        />
-                      )}
-                      <span className="capitalize">
-                        {sub === 'all' ? 'All' : sub.charAt(0).toUpperCase() + sub.slice(1)}
-                      </span>
-                      {count > 0 && (
-                        <span
-                          className="rounded-full px-1 py-px tabular-nums"
-                          style={{
-                            fontSize: fontSize.xxs,
-                            background:
-                              orderSubTab === sub
-                                ? `${color.purpleDark}40`
-                                : 'rgba(255,255,255,0.07)',
-                            color: orderSubTab === sub ? color.purple : color.muted,
-                          }}
-                        >
-                          {count}
+                          : sub === 'inactive'
+                            ? allOrderDisplayRows.filter(
+                                (r) => r.kind === 'exit-order' && r.data.status === 'inactive'
+                              ).length
+                            : allOrderDisplayRows.filter(
+                                (r) => r.kind === 'historical' && r.data.status === sub
+                              ).length;
+                    return (
+                      <button
+                        key={sub}
+                        onClick={() => setOrderSubTab(sub)}
+                        className="relative flex items-center gap-1 px-3 py-1.5 transition-colors"
+                        style={{
+                          fontSize: fontSize.xs11,
+                          fontWeight: orderSubTab === sub ? 600 : 400,
+                          color: orderSubTab === sub ? color.purple : color.muted,
+                        }}
+                      >
+                        {orderSubTab === sub && (
+                          <motion.span
+                            layoutId="order-sub-tab"
+                            className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t"
+                            style={{ background: color.purpleDark }}
+                          />
+                        )}
+                        <span className="capitalize">
+                          {sub === 'all' ? 'All' : sub.charAt(0).toUpperCase() + sub.slice(1)}
                         </span>
-                      )}
-                    </button>
-                  );
-                })}
+                        {count > 0 && (
+                          <span
+                            className="rounded-full px-1 py-px tabular-nums"
+                            style={{
+                              fontSize: fontSize.xxs,
+                              background:
+                                orderSubTab === sub
+                                  ? `${color.purpleDark}40`
+                                  : 'rgba(255,255,255,0.07)',
+                              color: orderSubTab === sub ? color.purple : color.muted,
+                            }}
+                          >
+                            {count}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  }
+                )}
               </div>
             )}
 
@@ -1054,7 +1058,7 @@ export function PaperTradingPanel({
                         <span
                           className="rounded-full px-1 py-px tabular-nums"
                           style={{
-                            fontSize: fontSize.xxs,
+                            fontSize: fontSize.xsxs,
                             background:
                               orderHistorySubTab === sub
                                 ? `${color.purpleDark}40`
@@ -1650,6 +1654,24 @@ export function PaperTradingPanel({
                                             whileHover={{ scale: 1.2 }}
                                             whileTap={{ scale: 0.9 }}
                                             title={`Cancel ${ex!.exitType}`}
+                                            className="mx-auto flex h-5 w-5 items-center justify-center rounded transition-colors hover:text-brand-red"
+                                            style={{ color: color.muted }}
+                                          >
+                                            <X className="h-3 w-3" />
+                                          </motion.button>
+                                        ) : isExitOrder && ex!.status === 'inactive' ? (
+                                          <motion.button
+                                            onClick={() =>
+                                              cancelPendingExitLeg(
+                                                ex!.positionId,
+                                                ex!.exitType === 'Take Profit'
+                                                  ? 'take-profit'
+                                                  : 'stop-loss'
+                                              )
+                                            }
+                                            whileHover={{ scale: 1.2 }}
+                                            whileTap={{ scale: 0.9 }}
+                                            title={`Cancel ${ex!.exitType} (no balance refund)`}
                                             className="mx-auto flex h-5 w-5 items-center justify-center rounded transition-colors hover:text-brand-red"
                                             style={{ color: color.muted }}
                                           >
