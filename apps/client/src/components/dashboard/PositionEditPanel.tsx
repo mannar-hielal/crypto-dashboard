@@ -39,7 +39,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
     >
       <span
         className="absolute top-0.5 h-3 w-3 rounded-full bg-white transition-transform"
-        style={{ transform: checked ? 'translateX(12px)' : 'translateX(2px)' }}
+        style={{ right: '2px', transform: checked ? 'translateX(-12px)' : 'translateX(0px)' }}
       />
     </button>
   );
@@ -70,7 +70,9 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
     if (lp !== null) priceBySymbol[paneSymbols[i]] = lp;
   });
   const markPrice = position
-    ? (priceBySymbol[position.symbol] ?? lastKnownPrices.get(position.symbol) ?? position.entryPrice)
+    ? (priceBySymbol[position.symbol] ??
+      lastKnownPrices.get(position.symbol) ??
+      position.entryPrice)
     : 0;
 
   // ── Local state ─────────────────────────────────────────────────────────────
@@ -90,7 +92,11 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
         style={{ background: bg.panel, color: color.muted, fontSize: fontSize.xs11 }}
       >
         <span>Position not found.</span>
-        <button onClick={onClose} className="underline hover:text-white" style={{ fontSize: fontSize.xs11 }}>
+        <button
+          onClick={onClose}
+          className="underline hover:text-white"
+          style={{ fontSize: fontSize.xs11 }}
+        >
           Close
         </button>
       </div>
@@ -133,13 +139,9 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
   const tradeValue = position.entryPrice * position.quantity;
   const commission = position.entryUsdtAmount * COMMISSION_RATE;
   const rewardUsd =
-    tpEnabled && tpVal
-      ? Math.abs(tpVal - position.entryPrice) * position.quantity
-      : null;
+    tpEnabled && tpVal ? Math.abs(tpVal - position.entryPrice) * position.quantity : null;
   const riskUsd =
-    slEnabled && slVal
-      ? Math.abs(slVal - position.entryPrice) * position.quantity
-      : null;
+    slEnabled && slVal ? Math.abs(slVal - position.entryPrice) * position.quantity : null;
   const rewardPct = rewardUsd != null ? (rewardUsd / position.entryUsdtAmount) * 100 : null;
   const riskPct = riskUsd != null ? (riskUsd / position.entryUsdtAmount) * 100 : null;
 
@@ -166,10 +168,7 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span
-              className="font-bold text-white"
-              style={{ fontSize: fontSize.sm }}
-            >
+            <span className="font-bold text-white" style={{ fontSize: fontSize.sm }}>
               {position.symbol}
             </span>
           </div>
@@ -182,7 +181,10 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
-        <div className="flex items-center gap-1.5" style={{ fontSize: fontSize.xs11, color: color.muted }}>
+        <div
+          className="flex items-center gap-1.5"
+          style={{ fontSize: fontSize.xs11, color: color.muted }}
+        >
           {isLong ? (
             <TrendingUp className="h-3 w-3" style={{ color: color.green }} />
           ) : (
@@ -199,7 +201,6 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
 
       {/* ── Scrollable content ────────────────────────────────────────────── */}
       <div className="flex flex-1 flex-col gap-0 overflow-y-auto">
-
         {/* ── Divider ───────────────────────────────────────────────────── */}
         <div className="shrink-0 px-3 pt-3">
           <hr style={{ borderColor: 'rgba(255,255,255,0.07)' }} />
@@ -217,8 +218,7 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
             </span>
             {rrRatio && (
               <span style={{ fontSize: fontSize.xs10, color: color.muted }}>
-                Risk / Reward{' '}
-                <span className="font-semibold text-white/80">{rrRatio}</span>
+                Risk / Reward <span className="font-semibold text-white/80">{rrRatio}</span>
               </span>
             )}
           </div>
@@ -227,12 +227,17 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <Toggle checked={tpEnabled} onChange={setTpEnabled} />
-              <span style={{ fontSize: fontSize.xs11, color: tpEnabled ? 'rgba(255,255,255,0.8)' : color.muted }}>
+              <span
+                style={{
+                  fontSize: fontSize.xs11,
+                  color: tpEnabled ? 'rgba(255,255,255,0.8)' : color.muted,
+                }}
+              >
                 Take profit, price
               </span>
             </div>
             <input
-              type="number"
+              type="text"
               disabled={!tpEnabled}
               value={tpInput}
               onChange={(e) => setTpInput(e.target.value)}
@@ -259,12 +264,17 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <Toggle checked={slEnabled} onChange={setSlEnabled} />
-              <span style={{ fontSize: fontSize.xs11, color: slEnabled ? 'rgba(255,255,255,0.8)' : color.muted }}>
+              <span
+                style={{
+                  fontSize: fontSize.xs11,
+                  color: slEnabled ? 'rgba(255,255,255,0.8)' : color.muted,
+                }}
+              >
                 Stop loss, price
               </span>
             </div>
             <input
-              type="number"
+              type="text"
               disabled={!slEnabled}
               value={slInput}
               onChange={(e) => setSlInput(e.target.value)}
@@ -379,4 +389,3 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
     </div>
   );
 }
-

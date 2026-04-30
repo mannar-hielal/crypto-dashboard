@@ -9,7 +9,7 @@
  */
 
 import { useState } from 'react';
-import { X, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
+import { X, AlertTriangle, TrendingUp, TrendingDown, ArrowLeftRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { usePaperStore, COMMISSION_RATE } from '@/store/paperStore';
 import { bg, color, fontSize } from '@/lib/tokens';
@@ -41,7 +41,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
     >
       <span
         className="absolute top-0.5 h-3 w-3 rounded-full bg-white transition-transform"
-        style={{ transform: checked ? 'translateX(12px)' : 'translateX(2px)' }}
+        style={{ right: '2px', transform: checked ? 'translateX(-12px)' : 'translateX(0px)' }}
       />
     </button>
   );
@@ -66,7 +66,10 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
   const [priceInput, setPriceInput] = useState(() =>
     order ? fmtMktPrice(order.triggerPrice) : ''
   );
+  // Qty mode: 'units' = enter base-asset qty; 'usd' = enter margin (USDT)
+  const [qtyMode, setQtyMode] = useState<'units' | 'usd'>('units');
   const [qtyInput, setQtyInput] = useState(() => (order ? order.qty.toFixed(6) : ''));
+  const [usdInput, setUsdInput] = useState(() => (order ? order.usdtAmount.toFixed(2) : ''));
   const [tpEnabled, setTpEnabled] = useState(() => !!order?.takeProfit);
   const [slEnabled, setSlEnabled] = useState(() => !!order?.stopLoss);
   const [tpInput, setTpInput] = useState(() =>
@@ -84,7 +87,11 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
         style={{ background: bg.panel, color: color.muted, fontSize: fontSize.xs11 }}
       >
         <span>Order not found.</span>
-        <button onClick={onClose} className="underline hover:text-white" style={{ fontSize: fontSize.xs11 }}>
+        <button
+          onClick={onClose}
+          className="underline hover:text-white"
+          style={{ fontSize: fontSize.xs11 }}
+        >
           Close
         </button>
       </div>
@@ -96,8 +103,22 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
   const typeLabel = order.type === 'limit' ? 'Limit' : 'Stop';
 
   const newPrice = parseFloat(priceInput.replace(/,/g, '')) || order.triggerPrice;
-  const newQty = parseFloat(qtyInput.replace(/,/g, '')) || order.qty;
-  const newUsdtAmount = newPrice > 0 && leverage > 0 ? (newQty * newPrice) / leverage : order.usdtAmount;
+
+  // Resolve qty and margin based on active input mode
+  const newQty =
+    qtyMode === 'units'
+      ? parseFloat(qtyInput.replace(/,/g, '')) || order.qty
+      : newPrice > 0 && leverage > 0
+        ? ((parseFloat(usdInput.replace(/,/g, '')) || order.usdtAmount) * leverage) / newPrice
+        : order.qty;
+
+  const newUsdtAmount =
+    qtyMode === 'units'
+      ? newPrice > 0 && leverage > 0
+        ? (newQty * newPrice) / leverage
+        : order.usdtAmount
+      : parseFloat(usdInput.replace(/,/g, '')) || order.usdtAmount;
+
   const usdEquivalent = newQty * newPrice; // notional trade value
 
   const oldReserved = order.usdtAmount + order.usdtAmount * COMMISSION_RATE;
@@ -131,6 +152,22 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
   const descLabel = `${isBuy ? 'Buy' : 'Sell'} ${typeLabel} ${fmtMktPrice(newQty)} @ ${fmtMktPrice(order.triggerPrice)}`;
 
   // ── Handlers ────────────────────────────────────────────────────────────────
+  function handleSwapMode() {
+    if (qtyMode === 'units') {
+      // Convert current units → USD margin
+      const qty = parseFloat(qtyInput.replace(/,/g, '')) || order.qty;
+      const usd = newPrice > 0 && leverage > 0 ? (qty * newPrice) / leverage : order.usdtAmount;
+      setUsdInput(usd.toFixed(2));
+      setQtyMode('usd');
+    } else {
+      // Convert current USD margin → units
+      const usd = parseFloat(usdInput.replace(/,/g, '')) || order.usdtAmount;
+      const qty = newPrice > 0 && leverage > 0 ? (usd * leverage) / newPrice : order.qty;
+      setQtyInput(qty.toFixed(6));
+      setQtyMode('units');
+    }
+  }
+
   function handleConfirm() {
     const result = editPendingOrder(
       orderId,
@@ -177,7 +214,10 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
-        <div className="flex items-center gap-1.5" style={{ fontSize: fontSize.xs11, color: color.muted }}>
+        <div
+          className="flex items-center gap-1.5"
+          style={{ fontSize: fontSize.xs11, color: color.muted }}
+        >
           {isBuy ? (
             <TrendingUp className="h-3 w-3" style={{ color: color.green }} />
           ) : (
@@ -191,15 +231,11 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
 
       {/* ── Scrollable content ─────────────────────────────────────────────── */}
       <div className="flex flex-1 flex-col gap-0 overflow-y-auto">
-
         {/* ── Insufficient-funds banner ──────────────────────────────────── */}
         {(insufficientFunds || submitResult === 'rejected') && (
           <div
             className="mx-3 mt-3 flex items-start gap-2 rounded p-2"
-            style={{
-              background: `${color.red}18`,
-              border: `1px solid ${color.red}44`,
-            }}
+            style={{ background: `${color.red}18`, border: `1px solid ${color.red}44` }}
           >
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: color.red }} />
             <p style={{ fontSize: fontSize.xs10, color: color.red }}>
@@ -217,11 +253,10 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
 
         {/* ── Price ─────────────────────────────────────────────────────── */}
         <div className="flex flex-col gap-1 px-3 py-3">
-          <label style={{ fontSize: fontSize.xs10, color: color.muted }}>
-            Price
-          </label>
+          <label style={{ fontSize: fontSize.xs10, color: color.muted }}>Price</label>
           <input
-            type="number"
+            type="text"
+            inputMode="decimal"
             value={priceInput}
             onChange={(e) => setPriceInput(e.target.value)}
             className="w-full rounded px-2.5 py-1.5 text-right tabular-nums text-white outline-none"
@@ -233,30 +268,57 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
           />
         </div>
 
-        {/* ── Quantity ──────────────────────────────────────────────────── */}
+        {/* ── Quantity (USD ↔ Units) ─────────────────────────────────────── */}
         <div className="flex flex-col gap-1 px-3 pb-3">
           <div className="flex items-center justify-between">
-            <label style={{ fontSize: fontSize.xs10, color: color.muted }}>
-              Units
-            </label>
-            <span
-              className="tabular-nums"
-              style={{ fontSize: fontSize.xs10, color: color.muted }}
-            >
-              ≈ {usdEquivalent.toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
+            <div className="flex items-center gap-1.5">
+              <label style={{ fontSize: fontSize.xs10, color: color.muted }}>
+                {qtyMode === 'units' ? 'Units' : 'Amount (USD)'}
+              </label>
+              {/* Mode swap button */}
+              <button
+                type="button"
+                onClick={handleSwapMode}
+                title="Switch between Units and USD"
+                className="flex items-center justify-center rounded transition-colors hover:text-white"
+                style={{ color: color.muted }}
+              >
+                <ArrowLeftRight className="h-2.5 w-2.5" />
+              </button>
+            </div>
+            <span className="tabular-nums" style={{ fontSize: fontSize.xs10, color: color.muted }}>
+              {qtyMode === 'units'
+                ? `≈ ${usdEquivalent.toLocaleString(undefined, { maximumFractionDigits: 2 })} USD`
+                : `≈ ${newQty.toLocaleString(undefined, { maximumFractionDigits: 6 })} units`}
             </span>
           </div>
-          <input
-            type="number"
-            value={qtyInput}
-            onChange={(e) => setQtyInput(e.target.value)}
-            className="w-full rounded px-2.5 py-1.5 text-right tabular-nums text-white outline-none"
-            style={{
-              fontSize: fontSize.xs11,
-              background: 'rgba(255,255,255,0.06)',
-              border: `1px solid ${insufficientFunds ? color.red : 'rgba(255,255,255,0.1)'}`,
-            }}
-          />
+          {qtyMode === 'units' ? (
+            <input
+              type="text"
+              inputMode="decimal"
+              value={qtyInput}
+              onChange={(e) => setQtyInput(e.target.value)}
+              className="w-full rounded px-2.5 py-1.5 text-right tabular-nums text-white outline-none"
+              style={{
+                fontSize: fontSize.xs11,
+                background: 'rgba(255,255,255,0.06)',
+                border: `1px solid ${insufficientFunds ? color.red : 'rgba(255,255,255,0.1)'}`,
+              }}
+            />
+          ) : (
+            <input
+              type="text"
+              inputMode="decimal"
+              value={usdInput}
+              onChange={(e) => setUsdInput(e.target.value)}
+              className="w-full rounded px-2.5 py-1.5 text-right tabular-nums text-white outline-none"
+              style={{
+                fontSize: fontSize.xs11,
+                background: 'rgba(255,255,255,0.06)',
+                border: `1px solid ${insufficientFunds ? color.red : 'rgba(255,255,255,0.1)'}`,
+              }}
+            />
+          )}
         </div>
 
         {/* ── Divider ───────────────────────────────────────────────────── */}
@@ -277,12 +339,18 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <Toggle checked={tpEnabled} onChange={setTpEnabled} />
-              <span style={{ fontSize: fontSize.xs11, color: tpEnabled ? 'rgba(255,255,255,0.8)' : color.muted }}>
+              <span
+                style={{
+                  fontSize: fontSize.xs11,
+                  color: tpEnabled ? 'rgba(255,255,255,0.8)' : color.muted,
+                }}
+              >
                 Take profit, price
               </span>
             </div>
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               disabled={!tpEnabled}
               value={tpInput}
               onChange={(e) => setTpInput(e.target.value)}
@@ -295,7 +363,10 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
               }}
             />
             {tpWarning && (
-              <p className="flex items-center gap-1" style={{ fontSize: fontSize.xs10, color: color.amber }}>
+              <p
+                className="flex items-center gap-1"
+                style={{ fontSize: fontSize.xs10, color: color.amber }}
+              >
                 <AlertTriangle className="h-3 w-3 shrink-0" />
                 {tpWarning}
               </p>
@@ -306,12 +377,18 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <Toggle checked={slEnabled} onChange={setSlEnabled} />
-              <span style={{ fontSize: fontSize.xs11, color: slEnabled ? 'rgba(255,255,255,0.8)' : color.muted }}>
+              <span
+                style={{
+                  fontSize: fontSize.xs11,
+                  color: slEnabled ? 'rgba(255,255,255,0.8)' : color.muted,
+                }}
+              >
                 Stop loss, price
               </span>
             </div>
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               disabled={!slEnabled}
               value={slInput}
               onChange={(e) => setSlInput(e.target.value)}
@@ -324,7 +401,10 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
               }}
             />
             {slWarning && (
-              <p className="flex items-center gap-1" style={{ fontSize: fontSize.xs10, color: color.amber }}>
+              <p
+                className="flex items-center gap-1"
+                style={{ fontSize: fontSize.xs10, color: color.amber }}
+              >
                 <AlertTriangle className="h-3 w-3 shrink-0" />
                 {slWarning}
               </p>
@@ -348,13 +428,19 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
           {(
             [
               { label: 'Leverage', value: `1:${leverage}` },
-              { label: 'Trade value', value: `${usdEquivalent.toLocaleString(undefined, { maximumFractionDigits: 2 })} USD` },
+              {
+                label: 'Trade value',
+                value: `${usdEquivalent.toLocaleString(undefined, { maximumFractionDigits: 2 })} USD`,
+              },
               { label: 'Margin (reserved)', value: `$${newUsdtAmount.toFixed(2)} USD` },
             ] as { label: string; value: string }[]
           ).map(({ label, value }) => (
             <div key={label} className="flex items-center justify-between">
               <span style={{ fontSize: fontSize.xs11, color: color.muted }}>{label}</span>
-              <span className="tabular-nums" style={{ fontSize: fontSize.xs11, color: 'rgba(255,255,255,0.75)' }}>
+              <span
+                className="tabular-nums"
+                style={{ fontSize: fontSize.xs11, color: 'rgba(255,255,255,0.75)' }}
+              >
                 {value}
               </span>
             </div>
@@ -393,4 +479,3 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
     </div>
   );
 }
-

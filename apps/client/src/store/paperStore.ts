@@ -127,6 +127,161 @@ function isString(value: unknown): value is string {
   return typeof value === 'string';
 }
 
+function isSameNumber(a: number, b: number): boolean {
+  return Math.abs(a - b) < 1e-9;
+}
+
+function isSameOptionalNumber(a: number | null, b: number | null): boolean {
+  if (a === null || b === null) return a === b;
+  return isSameNumber(a, b);
+}
+
+function getPendingSideLabel(side: PendingOrder['side']): 'Long' | 'Short' {
+  return side === 'buy' ? 'Long' : 'Short';
+}
+
+function getPendingTypeLabel(type: PendingOrder['type']): 'LIMIT' | 'STOP' {
+  return type === 'limit' ? 'LIMIT' : 'STOP';
+}
+
+function buildExitSummaryPart(
+  label: 'TP' | 'SL',
+  previousPrice: number | null,
+  nextPrice: number | null
+): string | null {
+  if (isSameOptionalNumber(previousPrice, nextPrice)) return null;
+  if (previousPrice === null && nextPrice !== null)
+    return `${label} set to $${fmtPrice(nextPrice)}`;
+  if (previousPrice !== null && nextPrice === null) return `${label} removed`;
+  if (previousPrice !== null && nextPrice !== null) {
+    return `${label} $${fmtPrice(previousPrice)} → $${fmtPrice(nextPrice)}`;
+  }
+  return null;
+}
+
+function buildPositionExitJournalEntries(
+  pos: Position,
+  takeProfit: number | null,
+  stopLoss: number | null,
+  now: number
+): JournalEntry[] {
+  const previousTp = pos.takeProfit ?? null;
+  const previousSl = pos.stopLoss ?? null;
+  const tpChanged = !isSameOptionalNumber(previousTp, takeProfit);
+  const slChanged = !isSameOptionalNumber(previousSl, stopLoss);
+  const summaryParts = [
+    buildExitSummaryPart('TP', previousTp, takeProfit),
+    buildExitSummaryPart('SL', previousSl, stopLoss),
+  ].filter((part): part is string => !!part);
+
+  if (!tpChanged && !slChanged) return [];
+
+  const entries: JournalEntry[] = [];
+
+  if (slChanged) {
+    entries.push({
+      id: `j-edit-exits-sl-${pos.id}-${now}`,
+      time: now,
+      text:
+        stopLoss === null
+          ? `Stop-Loss cancelled for ${pos.side.toUpperCase()} ${pos.symbol} @ $${fmtPrice(previousSl!)}`
+          : previousSl === null
+            ? `Stop-Loss order added for ${pos.side.toUpperCase()} ${pos.symbol} @ $${fmtPrice(stopLoss)}`
+            : `Stop-Loss modification confirmed — ${pos.side.toUpperCase()} ${pos.symbol} @ $${fmtPrice(stopLoss)}`,
+    });
+  }
+
+  if (tpChanged) {
+    entries.push({
+      id: `j-edit-exits-tp-${pos.id}-${now}`,
+      time: now,
+      text:
+        takeProfit === null
+          ? `Take-Profit cancelled for ${pos.side.toUpperCase()} ${pos.symbol} @ $${fmtPrice(previousTp!)}`
+          : previousTp === null
+            ? `Take-Profit order added for ${pos.side.toUpperCase()} ${pos.symbol} @ $${fmtPrice(takeProfit)}`
+            : `Take-Profit modification confirmed — ${pos.side.toUpperCase()} ${pos.symbol} @ $${fmtPrice(takeProfit)}`,
+    });
+  }
+
+  if (summaryParts.length) {
+    entries.push({
+      id: `j-edit-exits-summary-${pos.id}-${now}`,
+      time: now,
+      text: `Modified ${pos.side.toUpperCase()} ${pos.symbol} exits — ${summaryParts.join(', ')}`,
+    });
+  }
+
+  return entries;
+}
+
+function buildPendingOrderEditJournalEntries(
+  order: PendingOrder,
+  newTriggerPrice: number,
+  newUsdtAmount: number,
+  newQty: number,
+  newTakeProfit: number | null,
+  newStopLoss: number | null,
+  now: number
+): JournalEntry[] {
+  const previousTp = order.takeProfit ?? null;
+  const previousSl = order.stopLoss ?? null;
+  const pendingSideLabel = getPendingSideLabel(order.side);
+  const entries: JournalEntry[] = [];
+  const summaryParts: string[] = [];
+
+  if (!isSameNumber(order.triggerPrice, newTriggerPrice)) {
+    summaryParts.push(`price $${fmtPrice(order.triggerPrice)} → $${fmtPrice(newTriggerPrice)}`);
+  }
+  if (!isSameNumber(order.qty, newQty)) {
+    summaryParts.push(`qty ${order.qty.toFixed(6)} → ${newQty.toFixed(6)}`);
+  }
+  if (!isSameNumber(order.usdtAmount, newUsdtAmount)) {
+    summaryParts.push(`reserved $${order.usdtAmount.toFixed(2)} → $${newUsdtAmount.toFixed(2)}`);
+  }
+
+  const tpSummary = buildExitSummaryPart('TP', previousTp, newTakeProfit);
+  if (tpSummary) summaryParts.push(tpSummary);
+  const slSummary = buildExitSummaryPart('SL', previousSl, newStopLoss);
+  if (slSummary) summaryParts.push(slSummary);
+
+  if (!isSameOptionalNumber(previousSl, newStopLoss)) {
+    entries.push({
+      id: `j-edit-pending-sl-${order.id}-${now}`,
+      time: now,
+      text:
+        newStopLoss === null
+          ? `Stop-Loss cancelled for pending ${pendingSideLabel} ${order.symbol} @ $${fmtPrice(previousSl!)}`
+          : previousSl === null
+            ? `Stop-Loss order added for pending ${pendingSideLabel} ${order.symbol} @ $${fmtPrice(newStopLoss)}`
+            : `Stop-Loss modification confirmed for pending ${pendingSideLabel} ${order.symbol} @ $${fmtPrice(newStopLoss)}`,
+    });
+  }
+
+  if (!isSameOptionalNumber(previousTp, newTakeProfit)) {
+    entries.push({
+      id: `j-edit-pending-tp-${order.id}-${now}`,
+      time: now,
+      text:
+        newTakeProfit === null
+          ? `Take-Profit cancelled for pending ${pendingSideLabel} ${order.symbol} @ $${fmtPrice(previousTp!)}`
+          : previousTp === null
+            ? `Take-Profit order added for pending ${pendingSideLabel} ${order.symbol} @ $${fmtPrice(newTakeProfit)}`
+            : `Take-Profit modification confirmed for pending ${pendingSideLabel} ${order.symbol} @ $${fmtPrice(newTakeProfit)}`,
+    });
+  }
+
+  if (summaryParts.length) {
+    entries.push({
+      id: `j-edit-pending-summary-${order.id}-${now}`,
+      time: now,
+      text: `Modified ${getPendingTypeLabel(order.type)} ${pendingSideLabel} ${order.symbol} — ${summaryParts.join(', ')}`,
+    });
+  }
+
+  return entries;
+}
+
 function isPositionSnapshot(value: unknown): value is Position {
   if (!isRecord(value)) return false;
   if (!isString(value['id']) || !isString(value['symbol'])) return false;
@@ -951,11 +1106,13 @@ export const usePaperStore = create<PaperState>()(
         const now = Date.now();
         const cancelRows: HistoricalOrder[] = [];
 
-        // Legs being removed or replaced → write cancel records
-        const tpChanging = takeProfit !== (pos.takeProfit ?? null);
-        const slChanging = stopLoss !== (pos.stopLoss ?? null);
+        // Only write cancel records when a leg is explicitly REMOVED (value → null).
+        // Editing to a new price is a silent in-place update — no cancel record needed.
+        // Use !! to handle both undefined and null (loose != null fails when value is undefined).
+        const tpRemoving = takeProfit === null && !!pos.takeProfit;
+        const slRemoving = stopLoss === null && !!pos.stopLoss;
 
-        if (tpChanging && pos.takeProfit) {
+        if (tpRemoving) {
           cancelRows.push({
             id: `o-cancel-tp-edit-${positionId}-${now}`,
             symbol: pos.symbol,
@@ -969,7 +1126,7 @@ export const usePaperStore = create<PaperState>()(
             closingTime: now,
           });
         }
-        if (slChanging && pos.stopLoss) {
+        if (slRemoving) {
           cancelRows.push({
             id: `o-cancel-sl-edit-${positionId}-${now}`,
             symbol: pos.symbol,
@@ -984,15 +1141,7 @@ export const usePaperStore = create<PaperState>()(
           });
         }
 
-        const tpLabel =
-          takeProfit != null ? `TP: $${fmtPrice(takeProfit)}` : 'TP: —';
-        const slLabel =
-          stopLoss != null ? `SL: $${fmtPrice(stopLoss)}` : 'SL: —';
-        const journalEntry: JournalEntry = {
-          id: `j-edit-exits-${positionId}-${now}`,
-          time: now,
-          text: `Updated exits for ${pos.side.toUpperCase()} ${pos.symbol} — ${tpLabel} / ${slLabel}`,
-        };
+        const journalEntries = buildPositionExitJournalEntries(pos, takeProfit, stopLoss, now);
 
         set((s) => ({
           positions: s.positions.map((p) => {
@@ -1007,7 +1156,9 @@ export const usePaperStore = create<PaperState>()(
           orders: cancelRows.length
             ? [...cancelRows, ...s.orders].slice(0, MAX_HISTORY * 2)
             : s.orders,
-          journal: [journalEntry, ...s.journal].slice(0, MAX_JOURNAL),
+          journal: journalEntries.length
+            ? [...journalEntries, ...s.journal].slice(0, MAX_JOURNAL)
+            : s.journal,
         }));
       },
 
@@ -1079,18 +1230,22 @@ export const usePaperStore = create<PaperState>()(
               text: `${typeLabel} ${sideLabel} ${order.symbol} order rejected — Not enough funds ($${newUsdtAmount.toFixed(2)} required, $${scratchBalance.toFixed(2)} available)`,
             },
             ...(order.takeProfit
-              ? [{
-                  id: `j-cancel-tp-rej-${orderId}-${now}`,
-                  time: now,
-                  text: `Take-Profit cancelled for pending ${sideLabel} ${order.symbol} @ $${fmtPrice(order.takeProfit)}`,
-                }]
+              ? [
+                  {
+                    id: `j-cancel-tp-rej-${orderId}-${now}`,
+                    time: now,
+                    text: `Take-Profit cancelled for pending ${sideLabel} ${order.symbol} @ $${fmtPrice(order.takeProfit)}`,
+                  },
+                ]
               : []),
             ...(order.stopLoss
-              ? [{
-                  id: `j-cancel-sl-rej-${orderId}-${now}`,
-                  time: now,
-                  text: `Stop-Loss cancelled for pending ${sideLabel} ${order.symbol} @ $${fmtPrice(order.stopLoss)}`,
-                }]
+              ? [
+                  {
+                    id: `j-cancel-sl-rej-${orderId}-${now}`,
+                    time: now,
+                    text: `Stop-Loss cancelled for pending ${sideLabel} ${order.symbol} @ $${fmtPrice(order.stopLoss)}`,
+                  },
+                ]
               : []),
           ];
 
@@ -1105,18 +1260,52 @@ export const usePaperStore = create<PaperState>()(
         }
 
         // ── Valid edit — update in-place ────────────────────────────────────
-        const newQty = newTriggerPrice > 0 ? (newUsdtAmount * leverage) / newTriggerPrice : order.qty;
+        const newQty =
+          newTriggerPrice > 0 ? (newUsdtAmount * leverage) / newTriggerPrice : order.qty;
         const balanceDelta = oldReserved - newRequired; // positive = freed up, negative = cost more
 
-        const typeLabel = order.type === 'limit' ? 'LIMIT' : 'STOP';
-        const sideLabel = order.side === 'buy' ? 'Long' : 'Short';
-        const journalEntry: JournalEntry = {
-          id: `j-edit-${orderId}-${now}`,
-          time: now,
-          text:
-            `Edited ${typeLabel} ${sideLabel} ${order.symbol} @ $${fmtPrice(newTriggerPrice)}` +
-            ` (qty: ${newQty.toFixed(6)}, reserved: $${newUsdtAmount.toFixed(2)})`,
-        };
+        // Write cancel records for any exit leg that is being explicitly removed.
+        const tpRemoving = newTakeProfit === null && !!order.takeProfit;
+        const slRemoving = newStopLoss === null && !!order.stopLoss;
+        const exitCancelOrders: HistoricalOrder[] = [];
+        if (tpRemoving) {
+          exitCancelOrders.push({
+            id: `o-cancel-tp-edit-pending-${orderId}-${now}`,
+            symbol: order.symbol,
+            side: order.side === 'buy' ? 'sell' : 'buy',
+            type: 'take-profit',
+            qty: order.qty,
+            limitPrice: order.takeProfit,
+            status: 'cancelled',
+            commission: 0,
+            placingTime: order.placedAt,
+            closingTime: now,
+          });
+        }
+        if (slRemoving) {
+          exitCancelOrders.push({
+            id: `o-cancel-sl-edit-pending-${orderId}-${now}`,
+            symbol: order.symbol,
+            side: order.side === 'buy' ? 'sell' : 'buy',
+            type: 'stop-loss',
+            qty: order.qty,
+            stopPrice: order.stopLoss,
+            status: 'cancelled',
+            commission: 0,
+            placingTime: order.placedAt,
+            closingTime: now,
+          });
+        }
+
+        const journalEntries = buildPendingOrderEditJournalEntries(
+          order,
+          newTriggerPrice,
+          newUsdtAmount,
+          newQty,
+          newTakeProfit,
+          newStopLoss,
+          now
+        );
 
         set((s) => ({
           balance: s.balance + balanceDelta,
@@ -1127,11 +1316,18 @@ export const usePaperStore = create<PaperState>()(
               triggerPrice: newTriggerPrice,
               usdtAmount: newUsdtAmount,
               qty: newQty,
-              ...(newTakeProfit != null ? { takeProfit: newTakeProfit } : { takeProfit: undefined }),
+              ...(newTakeProfit != null
+                ? { takeProfit: newTakeProfit }
+                : { takeProfit: undefined }),
               ...(newStopLoss != null ? { stopLoss: newStopLoss } : { stopLoss: undefined }),
             };
           }),
-          journal: [journalEntry, ...s.journal].slice(0, MAX_JOURNAL),
+          orders: exitCancelOrders.length
+            ? [...exitCancelOrders, ...s.orders].slice(0, MAX_HISTORY * 2)
+            : s.orders,
+          journal: journalEntries.length
+            ? [...journalEntries, ...s.journal].slice(0, MAX_JOURNAL)
+            : s.journal,
         }));
 
         return 'ok';
