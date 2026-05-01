@@ -5,6 +5,8 @@
  *   - placeOrder(): validation, balance deduction, position creation
  *   - closePosition(): PnL calculation, balance return, history
  *   - reset(): restores starting balance
+ *   - Section 1 — Market Orders (T1 · Vitest)
+ *   - Section 2 — Limit Orders  (T1 · Vitest)
  *
  * jsdom environment (from vitest.config.ts) provides localStorage so Zustand's
  * persist middleware can initialise without errors.
@@ -392,6 +394,565 @@ describe('paperStore', () => {
 
       expect(migrated.positions).toHaveLength(1);
       expect(migrated.history).toHaveLength(1);
+    });
+  });
+
+  // ── Section 1 — Market Orders (T1 · Vitest) ───────────────────────────────────
+
+  describe('Section 1 — Market Orders', () => {
+    // ── 1.1 Basic Buy: journal + orders array + no pending ──────────────────────
+
+    describe('1.1 Basic Buy', () => {
+      it('1.1.5: writes "Opened LONG BTCUSDT @ $50000.00" journal entry on buy', () => {
+        usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 1_000);
+        const journal = usePaperStore.getState().journal;
+        expect(journal[0].text).toBe('Opened LONG BTCUSDT @ $50000.00');
+      });
+
+      it('1.1.6: market buy appears in orders[] as type=market, side=buy, status=filled', () => {
+        usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 1_000);
+        const { orders } = usePaperStore.getState();
+        expect(orders).toHaveLength(1);
+        expect(orders[0]).toMatchObject({
+          type: 'market',
+          side: 'buy',
+          status: 'filled',
+          fillPrice: 50_000,
+        });
+      });
+
+      it('1.1.8: pendingOrders is empty after a market buy (market orders are instantly filled)', () => {
+        usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 1_000);
+        expect(usePaperStore.getState().pendingOrders).toHaveLength(0);
+      });
+    });
+
+    // ── 1.2 Basic Sell ──────────────────────────────────────────────────────────
+
+    describe('1.2 Basic Sell', () => {
+      it('1.2.2: sell order returns a non-null position id', () => {
+        const id = usePaperStore.getState().placeOrder(SYMBOL, 'sell', 50_000, 1_000);
+        expect(id).not.toBeNull();
+      });
+
+      it('1.2.3: sell order creates a SHORT position', () => {
+        usePaperStore.getState().placeOrder(SYMBOL, 'sell', 50_000, 1_000);
+        const pos = usePaperStore.getState().positions[0];
+        expect(pos.side).toBe('short');
+      });
+    });
+
+    // ── 1.3 Units mode ──────────────────────────────────────────────────────────
+
+    describe('1.3 Units mode', () => {
+      it('1.3.4: position qty ≈ 0.001 when USD amount equals 0.001 × price (leverage=1)', () => {
+        // USD amount = 0.001 × 50_000 = 50; qty = 50 / 50_000 = 0.001
+        usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 50);
+        expect(usePaperStore.getState().positions[0].quantity).toBeCloseTo(0.001);
+      });
+    });
+
+    // ── 1.4 Buy with Take-Profit only ──────────────────────────────────────────
+
+    describe('1.4 Buy with Take-Profit only', () => {
+      it('1.4.2: position has takeProfit set; stopLoss is undefined', () => {
+        const id = usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 1_000, 55_000)!;
+        const pos = usePaperStore.getState().positions.find((p) => p.id === id)!;
+        expect(pos.takeProfit).toBe(55_000);
+        expect(pos.stopLoss).toBeUndefined();
+      });
+
+      it('1.4.3: TP trigger removes position and adds profitable history entry', () => {
+        const id = usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 1_000, 55_000)!;
+        usePaperStore
+          .getState()
+          .closePosition(
+            id,
+            55_000,
+            'Auto-closed LONG BTCUSDT — Take-Profit hit at $55000.00',
+            'take-profit'
+          );
+        expect(usePaperStore.getState().positions).toHaveLength(0);
+        // qty = 1000 / 50000 = 0.02; gross PnL = (55000 - 50000) × 0.02 = 100
+        expect(usePaperStore.getState().history[0].pnl).toBeCloseTo(100);
+      });
+
+      it('1.4.4: auto-close journal entry has TP text and a positive PnL badge', () => {
+        const id = usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 1_000, 55_000)!;
+        usePaperStore
+          .getState()
+          .closePosition(
+            id,
+            55_000,
+            'Auto-closed LONG BTCUSDT — Take-Profit hit at $55000.00',
+            'take-profit'
+          );
+        const closeEntry = usePaperStore
+          .getState()
+          .journal.find((e) => e.text.includes('Take-Profit hit'))!;
+        expect(closeEntry.text).toBe('Auto-closed LONG BTCUSDT — Take-Profit hit at $55000.00');
+        expect(closeEntry.pnl).toBeDefined();
+        expect(closeEntry.pnl!).toBeGreaterThan(0);
+      });
+    });
+
+    // ── 1.5 Sell with Stop-Loss only ────────────────────────────────────────────
+
+    describe('1.5 Sell with Stop-Loss only', () => {
+      it('1.5.2: SHORT position has stopLoss set; takeProfit is undefined', () => {
+        const id = usePaperStore
+          .getState()
+          .placeOrder(SYMBOL, 'sell', 50_000, 1_000, undefined, 52_000)!;
+        const pos = usePaperStore.getState().positions.find((p) => p.id === id)!;
+        expect(pos.side).toBe('short');
+        expect(pos.stopLoss).toBe(52_000);
+        expect(pos.takeProfit).toBeUndefined();
+      });
+
+      it('1.5.3: SL trigger auto-closes SHORT and journal entry has a negative PnL badge', () => {
+        // SHORT: SL above entry (52k > 50k) → price rose → loss
+        const id = usePaperStore
+          .getState()
+          .placeOrder(SYMBOL, 'sell', 50_000, 1_000, undefined, 52_000)!;
+        usePaperStore
+          .getState()
+          .closePosition(
+            id,
+            52_000,
+            'Auto-closed SHORT BTCUSDT — Stop-Loss hit at $52000.00',
+            'stop-loss'
+          );
+        expect(usePaperStore.getState().positions).toHaveLength(0);
+        const closeEntry = usePaperStore
+          .getState()
+          .journal.find((e) => e.text.includes('Stop-Loss hit'))!;
+        expect(closeEntry.pnl).toBeDefined();
+        expect(closeEntry.pnl!).toBeLessThan(0);
+      });
+    });
+
+    // ── 1.6 Buy with both TP and SL ─────────────────────────────────────────────
+
+    describe('1.6 Buy with both TP and SL', () => {
+      it('1.6.2: LONG position has both takeProfit and stopLoss set', () => {
+        const id = usePaperStore
+          .getState()
+          .placeOrder(SYMBOL, 'buy', 50_000, 1_000, 55_000, 48_000)!;
+        const pos = usePaperStore.getState().positions.find((p) => p.id === id)!;
+        expect(pos.takeProfit).toBe(55_000);
+        expect(pos.stopLoss).toBe(48_000);
+      });
+
+      it('1.6.3: manual close cancels both TP and SL — two sibling Cancelled orders added', () => {
+        const id = usePaperStore
+          .getState()
+          .placeOrder(SYMBOL, 'buy', 50_000, 1_000, 55_000, 48_000)!;
+        usePaperStore.getState().closePosition(id, 50_500); // no closeType → manual
+        const cancelledOrders = usePaperStore
+          .getState()
+          .orders.filter((o) => o.status === 'cancelled');
+        expect(cancelledOrders).toHaveLength(2);
+        const types = cancelledOrders.map((o) => o.type).sort();
+        expect(types).toEqual(['stop-loss', 'take-profit']);
+      });
+    });
+  });
+
+  // ── Section 2 — Limit Orders (T1 · Vitest) ────────────────────────────────────
+
+  describe('Section 2 — Limit Orders', () => {
+    // ── 2.1 Limit Buy below market ──────────────────────────────────────────────
+
+    describe('2.1 Limit Buy below market', () => {
+      it('2.1.2: placeLimitOrder creates a pending order and reserves balance', () => {
+        const balanceBefore = usePaperStore.getState().balance;
+        const id = usePaperStore.getState().placeLimitOrder(SYMBOL, 'buy', 48_000, 1_000);
+        expect(id).not.toBeNull();
+        const { pendingOrders, balance } = usePaperStore.getState();
+        expect(pendingOrders).toHaveLength(1);
+        expect(pendingOrders[0]).toMatchObject({
+          symbol: SYMBOL,
+          side: 'buy',
+          type: 'limit',
+          triggerPrice: 48_000,
+          usdtAmount: 1_000,
+        });
+        // Balance decreases by margin + entry commission
+        expect(balance).toBeCloseTo(balanceBefore - 1_000 - 1_000 * COMMISSION_RATE);
+      });
+
+      it('2.1.5: filling a limit order creates a position and writes a fill journal entry', () => {
+        const orderId = usePaperStore.getState().placeLimitOrder(SYMBOL, 'buy', 48_000, 1_000)!;
+        const order = usePaperStore.getState().pendingOrders[0];
+
+        // Step 1: free reserved balance
+        usePaperStore.getState().fillPendingOrder(orderId);
+        // Step 2: open position (skipJournal=true — caller writes the entry below)
+        const posId = usePaperStore
+          .getState()
+          .placeOrder(
+            order.symbol,
+            order.side,
+            48_000,
+            order.usdtAmount,
+            order.takeProfit,
+            order.stopLoss,
+            true
+          );
+        // Step 3: write journal note (mirrors usePendingOrderMonitor)
+        usePaperStore
+          .getState()
+          .addJournalNote(
+            `Limit order filled — Long ${order.symbol} @ $48000.00 (trigger: $48000.00, qty: ${order.qty.toFixed(6)})`,
+            false
+          );
+
+        expect(posId).not.toBeNull();
+        expect(usePaperStore.getState().positions).toHaveLength(1);
+        expect(usePaperStore.getState().pendingOrders).toHaveLength(0);
+        expect(
+          usePaperStore.getState().journal.some((e) => e.text.includes('Limit order filled'))
+        ).toBe(true);
+      });
+    });
+
+    // ── 2.2 Limit Buy cancel ────────────────────────────────────────────────────
+
+    describe('2.2 Limit Buy cancel', () => {
+      it('2.2.1: placeLimitOrder adds to pendingOrders and immediately writes a Placed journal entry', () => {
+        usePaperStore.getState().placeLimitOrder(SYMBOL, 'buy', 45_000, 500);
+        const { pendingOrders, journal } = usePaperStore.getState();
+        expect(pendingOrders).toHaveLength(1);
+        expect(journal[0].text).toContain('Placed LIMIT Long BTCUSDT @ $45000.00');
+      });
+
+      it('2.2.2: cancelPendingOrder fully refunds balance, moves order to Cancelled, and writes journal', () => {
+        const balanceBefore = usePaperStore.getState().balance;
+        const orderId = usePaperStore.getState().placeLimitOrder(SYMBOL, 'buy', 45_000, 500)!;
+        usePaperStore.getState().cancelPendingOrder(orderId);
+
+        expect(usePaperStore.getState().pendingOrders).toHaveLength(0);
+        expect(usePaperStore.getState().balance).toBeCloseTo(balanceBefore);
+
+        const cancelledOrder = usePaperStore
+          .getState()
+          .orders.find((o) => o.status === 'cancelled' && o.type === 'limit');
+        expect(cancelledOrder).toBeDefined();
+
+        expect(
+          usePaperStore.getState().journal.some((e) => e.text.includes('Cancelled LIMIT Long'))
+        ).toBe(true);
+      });
+    });
+
+    // ── 2.3 Limit Sell above market ─────────────────────────────────────────────
+
+    describe('2.3 Limit Sell above market', () => {
+      it('2.3.1: sell limit order creates a pending order with side=sell', () => {
+        usePaperStore.getState().placeLimitOrder(SYMBOL, 'sell', 52_000, 1_000);
+        const order = usePaperStore.getState().pendingOrders[0];
+        expect(order.side).toBe('sell');
+        expect(order.triggerPrice).toBe(52_000);
+      });
+
+      it('2.3.2: filling a sell limit order opens a SHORT position', () => {
+        const orderId = usePaperStore.getState().placeLimitOrder(SYMBOL, 'sell', 52_000, 1_000)!;
+        const order = usePaperStore.getState().pendingOrders[0];
+        usePaperStore.getState().fillPendingOrder(orderId);
+        usePaperStore
+          .getState()
+          .placeOrder(order.symbol, order.side, 52_000, order.usdtAmount, undefined, undefined, true);
+        const positions = usePaperStore.getState().positions;
+        expect(positions).toHaveLength(1);
+        expect(positions[0].side).toBe('short');
+      });
+    });
+
+    // ── 2.4 Limit with TP + SL — Pre-fill ──────────────────────────────────────
+
+    describe('2.4 Limit with TP + SL — Pre-fill', () => {
+      it('2.4.1: bracket limit buy stores TP + SL on the pending order and writes placement journal', () => {
+        usePaperStore
+          .getState()
+          .placeLimitOrder(SYMBOL, 'buy', 48_000, 1_000, 53_000, 46_000);
+        const order = usePaperStore.getState().pendingOrders[0];
+        expect(order.takeProfit).toBe(53_000);
+        expect(order.stopLoss).toBe(46_000);
+        // Journal written immediately at placement (before fill)
+        expect(
+          usePaperStore
+            .getState()
+            .journal.some((e) => e.text.includes('Placed LIMIT Long BTCUSDT @ $48000.00'))
+        ).toBe(true);
+      });
+
+      it('2.4.2: cancelPendingExitLeg(stop-loss) removes SL from order; adds Cancelled row; balance unchanged', () => {
+        const orderId = usePaperStore
+          .getState()
+          .placeLimitOrder(SYMBOL, 'buy', 48_000, 1_000, 53_000, 46_000)!;
+        const balanceAfterPlacement = usePaperStore.getState().balance;
+
+        usePaperStore.getState().cancelPendingExitLeg(orderId, 'stop-loss');
+
+        const order = usePaperStore.getState().pendingOrders[0];
+        expect(order.stopLoss).toBeUndefined();
+        expect(order.takeProfit).toBe(53_000); // TP unaffected
+
+        const cancelledSl = usePaperStore
+          .getState()
+          .orders.find((o) => o.type === 'stop-loss' && o.status === 'cancelled');
+        expect(cancelledSl).toBeDefined();
+
+        expect(
+          usePaperStore
+            .getState()
+            .journal.some((e) => e.text.includes('Stop-Loss cancelled for pending'))
+        ).toBe(true);
+
+        // Balance unchanged — no refund for child legs
+        expect(usePaperStore.getState().balance).toBeCloseTo(balanceAfterPlacement);
+      });
+
+      it('2.4.3: cancelPendingExitLeg(take-profit) removes TP from order; adds Cancelled row; balance unchanged', () => {
+        const orderId = usePaperStore
+          .getState()
+          .placeLimitOrder(SYMBOL, 'buy', 48_000, 1_000, 53_000, 46_000)!;
+        const balanceAfterPlacement = usePaperStore.getState().balance;
+
+        usePaperStore.getState().cancelPendingExitLeg(orderId, 'take-profit');
+
+        const order = usePaperStore.getState().pendingOrders[0];
+        expect(order.takeProfit).toBeUndefined();
+        expect(order.stopLoss).toBe(46_000); // SL unaffected
+
+        const cancelledTp = usePaperStore
+          .getState()
+          .orders.find((o) => o.type === 'take-profit' && o.status === 'cancelled');
+        expect(cancelledTp).toBeDefined();
+
+        expect(
+          usePaperStore
+            .getState()
+            .journal.some((e) => e.text.includes('Take-Profit cancelled for pending'))
+        ).toBe(true);
+
+        expect(usePaperStore.getState().balance).toBeCloseTo(balanceAfterPlacement);
+      });
+
+      it('2.4.4: cancelPendingOrder (bracket) produces 3 Cancelled rows and fully refunds balance', () => {
+        const balanceBefore = usePaperStore.getState().balance;
+        const orderId = usePaperStore
+          .getState()
+          .placeLimitOrder(SYMBOL, 'buy', 48_000, 1_000, 53_000, 46_000)!;
+
+        usePaperStore.getState().cancelPendingOrder(orderId);
+
+        expect(usePaperStore.getState().pendingOrders).toHaveLength(0);
+        expect(usePaperStore.getState().balance).toBeCloseTo(balanceBefore);
+
+        const cancelledOrders = usePaperStore
+          .getState()
+          .orders.filter((o) => o.status === 'cancelled');
+        expect(cancelledOrders).toHaveLength(3);
+        const types = cancelledOrders.map((o) => o.type).sort();
+        expect(types).toEqual(['limit', 'stop-loss', 'take-profit']);
+
+        expect(
+          usePaperStore
+            .getState()
+            .journal.some((e) => e.text.includes('Cancelled LIMIT Long'))
+        ).toBe(true);
+      });
+    });
+
+    // ── 2.4 Limit with TP + SL — Post-fill ─────────────────────────────────────
+
+    describe('2.4 Limit with TP + SL — Post-fill', () => {
+      /** Helper: place + fill a bracket limit Buy with given TP and SL prices. */
+      function fillBracket(tp: number, sl: number): string {
+        const orderId = usePaperStore
+          .getState()
+          .placeLimitOrder(SYMBOL, 'buy', 48_000, 1_000, tp, sl)!;
+        const order = usePaperStore.getState().pendingOrders[0];
+        usePaperStore.getState().fillPendingOrder(orderId);
+        const posId = usePaperStore
+          .getState()
+          .placeOrder(
+            order.symbol,
+            order.side,
+            48_000,
+            order.usdtAmount,
+            order.takeProfit,
+            order.stopLoss,
+            true
+          )!;
+        return posId;
+      }
+
+      it('2.4.5: limit fill → position has TP + SL; pendingOrders empty; journal has 3 activation entries', () => {
+        const orderId = usePaperStore
+          .getState()
+          .placeLimitOrder(SYMBOL, 'buy', 48_000, 1_000, 53_000, 46_000)!;
+        const order = usePaperStore.getState().pendingOrders[0];
+        usePaperStore.getState().fillPendingOrder(orderId);
+        const posId = usePaperStore
+          .getState()
+          .placeOrder(
+            order.symbol,
+            order.side,
+            48_000,
+            order.usdtAmount,
+            order.takeProfit,
+            order.stopLoss,
+            true
+          )!;
+        // Simulate the 3 journal entries written by usePendingOrderMonitor
+        usePaperStore
+          .getState()
+          .addJournalNote(
+            `Limit order filled — Long ${order.symbol} @ $48000.00 (trigger: $48000.00, qty: ${order.qty.toFixed(6)})`,
+            false
+          );
+        usePaperStore
+          .getState()
+          .addJournalNote(
+            `Take-Profit order activated — Long ${order.symbol} @ $53000.00`,
+            false
+          );
+        usePaperStore
+          .getState()
+          .addJournalNote(
+            `Stop-Loss order activated — Long ${order.symbol} @ $46000.00`,
+            false
+          );
+
+        expect(usePaperStore.getState().pendingOrders).toHaveLength(0);
+        const pos = usePaperStore.getState().positions.find((p) => p.id === posId)!;
+        expect(pos.takeProfit).toBe(53_000);
+        expect(pos.stopLoss).toBe(46_000);
+
+        const journal = usePaperStore.getState().journal;
+        expect(journal.some((e) => e.text.includes('Limit order filled'))).toBe(true);
+        expect(journal.some((e) => e.text.includes('Take-Profit order activated'))).toBe(true);
+        expect(journal.some((e) => e.text.includes('Stop-Loss order activated'))).toBe(true);
+      });
+
+      it('2.4.6: cancelExitOrder(take-profit) cancels TP; adds Cancelled row; position retains SL', () => {
+        const posId = fillBracket(53_000, 46_000);
+        usePaperStore.getState().cancelExitOrder(posId, 'take-profit');
+
+        const pos = usePaperStore.getState().positions.find((p) => p.id === posId)!;
+        expect(pos.takeProfit).toBeUndefined();
+        expect(pos.stopLoss).toBe(46_000);
+
+        const cancelledTp = usePaperStore
+          .getState()
+          .orders.find((o) => o.type === 'take-profit' && o.status === 'cancelled');
+        expect(cancelledTp).toBeDefined();
+
+        expect(
+          usePaperStore
+            .getState()
+            .journal.some((e) => e.text.includes('Take-Profit cancelled for LONG'))
+        ).toBe(true);
+      });
+
+      it('2.4.7: cancelExitOrder(stop-loss) cancels SL; adds Cancelled row; position retains TP', () => {
+        const posId = fillBracket(53_000, 46_000);
+        usePaperStore.getState().cancelExitOrder(posId, 'stop-loss');
+
+        const pos = usePaperStore.getState().positions.find((p) => p.id === posId)!;
+        expect(pos.stopLoss).toBeUndefined();
+        expect(pos.takeProfit).toBe(53_000);
+
+        const cancelledSl = usePaperStore
+          .getState()
+          .orders.find((o) => o.type === 'stop-loss' && o.status === 'cancelled');
+        expect(cancelledSl).toBeDefined();
+
+        expect(
+          usePaperStore
+            .getState()
+            .journal.some((e) => e.text.includes('Stop-Loss cancelled for LONG'))
+        ).toBe(true);
+      });
+
+      it('2.4.8: after fillPendingOrder, parent limit order is no longer in pendingOrders', () => {
+        const orderId = usePaperStore
+          .getState()
+          .placeLimitOrder(SYMBOL, 'buy', 48_000, 1_000, 53_000, 46_000)!;
+        usePaperStore.getState().fillPendingOrder(orderId);
+        expect(usePaperStore.getState().pendingOrders).toHaveLength(0);
+      });
+
+      it('2.4.9: TP triggers (closeType=take-profit) → sibling SL Cancelled + position closed', () => {
+        const posId = fillBracket(53_000, 46_000);
+        usePaperStore
+          .getState()
+          .closePosition(
+            posId,
+            53_000,
+            'Auto-closed LONG BTCUSDT — Take-Profit hit at $53000.00',
+            'take-profit'
+          );
+        expect(usePaperStore.getState().positions).toHaveLength(0);
+        const siblingCancel = usePaperStore
+          .getState()
+          .orders.find((o) => o.type === 'stop-loss' && o.status === 'cancelled');
+        expect(siblingCancel).toBeDefined();
+        expect(siblingCancel!.commission).toBe(0);
+      });
+
+      it('2.4.10: SL triggers (closeType=stop-loss) → sibling TP Cancelled + position closed', () => {
+        const posId = fillBracket(53_000, 46_000);
+        usePaperStore
+          .getState()
+          .closePosition(
+            posId,
+            46_000,
+            'Auto-closed LONG BTCUSDT — Stop-Loss hit at $46000.00',
+            'stop-loss'
+          );
+        expect(usePaperStore.getState().positions).toHaveLength(0);
+        const siblingCancel = usePaperStore
+          .getState()
+          .orders.find((o) => o.type === 'take-profit' && o.status === 'cancelled');
+        expect(siblingCancel).toBeDefined();
+        expect(siblingCancel!.commission).toBe(0);
+      });
+
+      it('2.4.11: manual close with both TP + SL active → 2 sibling Cancelled rows (commission = 0 each)', () => {
+        const posId = fillBracket(53_000, 46_000);
+        usePaperStore.getState().closePosition(posId, 50_000); // no closeType → manual
+        const cancelledOrders = usePaperStore
+          .getState()
+          .orders.filter((o) => o.status === 'cancelled');
+        expect(cancelledOrders).toHaveLength(2);
+        const types = cancelledOrders.map((o) => o.type).sort();
+        expect(types).toEqual(['stop-loss', 'take-profit']);
+        cancelledOrders.forEach((o) => expect(o.commission).toBe(0));
+      });
+    });
+
+    // ── 2.5 Edge cases ──────────────────────────────────────────────────────────
+
+    describe('2.5 Edge cases', () => {
+      it('2.5.3: pending orders remain symbol-scoped when a second order is placed for a different symbol', () => {
+        usePaperStore.getState().placeLimitOrder(SYMBOL, 'buy', 48_000, 500);
+        usePaperStore.getState().placeLimitOrder('ETHUSDT', 'buy', 3_000, 200);
+
+        const btcOrder = usePaperStore
+          .getState()
+          .pendingOrders.find((o) => o.symbol === SYMBOL);
+        const ethOrder = usePaperStore
+          .getState()
+          .pendingOrders.find((o) => o.symbol === 'ETHUSDT');
+        expect(btcOrder).toBeDefined();
+        expect(ethOrder).toBeDefined();
+        // Each order is scoped to its own symbol
+        expect(btcOrder!.triggerPrice).toBe(48_000);
+        expect(ethOrder!.triggerPrice).toBe(3_000);
+      });
     });
   });
 });
