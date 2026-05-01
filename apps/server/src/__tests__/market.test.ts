@@ -159,6 +159,53 @@ describe('GET /api/market/candles', () => {
     expect(calledUrl).toContain('limit=1000');
   });
 
+  it('maps app intervals to Bybit format and uses spot category first', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ retCode: 0, retMsg: 'OK', result: { list: SAMPLE_LIST } }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/market/candles?symbol=BTCUSDT&interval=1h&limit=200',
+    });
+
+    expect(res.statusCode).toBe(200);
+    const calledUrl = (fetchMock.mock.calls[0] as [string])[0];
+    expect(calledUrl).toContain('category=spot');
+    expect(calledUrl).toContain('interval=60');
+  });
+
+  it('retries with linear category when spot kline returns params error', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ retCode: 10001, retMsg: 'params error', result: { list: [] } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ retCode: 0, retMsg: 'OK', result: { list: SAMPLE_LIST } }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/market/candles?symbol=BTCUSDT&interval=1m',
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const firstUrl = (fetchMock.mock.calls[0] as [string])[0];
+    const secondUrl = (fetchMock.mock.calls[1] as [string])[0];
+    expect(firstUrl).toContain('category=spot');
+    expect(secondUrl).toContain('category=linear');
+  });
+
   // ── Validation (🔐 allowlist enforcement) ──────────────────────────────────
 
   it('returns 400 for an unsupported symbol', async () => {

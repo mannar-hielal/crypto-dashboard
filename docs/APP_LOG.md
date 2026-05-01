@@ -773,7 +773,16 @@ Paper trading  →  Real order      →  Proven bot      →  Full autonomous
 
 ---
 
-_Last updated: 2026-04-25_
+_Last updated: 2026-05-01 (evening)_
+
+- **feat: edit panels for open positions and pending orders (26.04.2026)**
+  - **`paperStore.ts`** — two new store actions:
+    - `updatePositionExits(positionId, takeProfit | null, stopLoss | null)`: mutates position TP/SL in-place; writes `HistoricalOrder` `'cancelled'` records for any leg being removed or replaced; journal entry _"Updated exits for LONG BTCUSDT — TP: $X / SL: $Y"_.
+    - `editPendingOrder(orderId, newTriggerPrice, newUsdtAmount, newTakeProfit, newStopLoss)`: refunds old reserved margin to a scratch balance, recomputes new cost; **insufficient funds path** → moves order to `HistoricalOrder` as `'rejected'` + child TP/SL as `'cancelled'`, journal entries, balance refunded; **valid path** → updates `PendingOrder` in-place, settles balance delta, journal entry.
+  - **`PositionEditPanel.tsx`** — new right-column TV-style panel for editing open position TP/SL; header (symbol + "Long 0.0037 @ $77,440"), Exits section (TP/SL toggles + price inputs, direction-aware `AlertTriangle` warnings), Position info block (Leverage, Trade value, Reward, Risk), Confirm + Discard buttons.
+  - **`PendingOrderEditPanel.tsx`** — new right-column TV-style panel for editing pending limit/stop orders; header ("BTCUSDT, order …{id}" + "Buy Limit 2 @ 77,500.0"), Price input, Quantity input (units + live USD equivalent), Exits section (TP/SL toggles + inputs), Order info block, inline insufficient-funds `AlertTriangle` banner, Confirm + Discard buttons.
+  - **`DashboardPage.tsx`** — new `editTarget` state (`null | { kind: 'position'; positionId } | { kind: 'pending'; orderId }`); right column conditionally renders `PositionEditPanel` or `PendingOrderEditPanel` instead of `TradingPanel` using the same width-spring `AnimatePresence` pattern; `onEditPosition` / `onEditPendingOrder` callbacks passed to `PaperTradingPanel`; Discard/close restores prior state.
+  - **`PaperTradingPanel.tsx`** — new optional props `onEditPosition` / `onEditPendingOrder`; hover-reveal `Pencil` icons added to **TP** and **SL** cells in the Positions table (calls `onEditPosition`); hover-reveal `Pencil` added to the limit/stop-price cell for `kind === 'pending'` rows in the Orders table (calls `onEditPendingOrder`).
 
 - **fix: bracket Orders badge + TV-style activation journal entries** ✅
   - `PaperTradingPanel` — Orders tab badge now counts **all** active order rows:
@@ -804,3 +813,86 @@ _Last updated: 2026-04-25_
   - `paperStore.ts` — `leverage` in the `fresh` fallback object and the v0→v1 migration both corrected from `10` to `1`, matching the store's initial state (`leverage: 1`) and the interface docs ("Default 1 = no leverage"). Previously users migrating from v0 or falling back to `fresh` would unexpectedly get 10× leverage.
   - `PaperTradingPanel.tsx` — Collapse/Expand button gate changed from `size !== 'collapsed'` to `size !== 'hidden'`. The old condition hid the button exactly when the panel was collapsed, making it impossible to re-expand without another UI path. Now the Expand button is visible when collapsed.
   - `vite.config.ts` — `unsafe-inline` in `script-src` is intentional and required: `@vitejs/plugin-react` injects an inline `<script type="module">` preamble for React Fast Refresh globals; removing it breaks HMR entirely with "can't detect preamble". The existing comment already documents this accurately. Dev CSP is served only by the Vite dev server — never in production.
+
+- **feat: TV-style edit pencils — pre-fill & post-fill orders (30.04.2026)** ✅
+  - `PaperTradingPanel.tsx` — added `group` class to `motion.tr` elements in both the Positions table and Orders table so `group-hover:opacity-100` transitions work correctly on hover.
+  - **Post-fill (open positions)**: pencil icons on the **Take Profit** and **Stop Loss** columns in the Positions tab call `onEditPosition(pos.id)` to open `PositionEditPanel` (TP/SL edit for that position).
+  - **Orders tab — Working exit rows** (synthetic TP/SL rows from open positions): pencils on the **Limit Price** cell (TP row) and **Stop Price** cell (SL row) also call `onEditPosition(ex.positionId)` → same `PositionEditPanel`.
+  - **Pre-fill (pending orders)**: pencils added to the **TP** and **SL** columns for pending order rows (call `onEditPendingOrder(orderId)` → `PendingOrderEditPanel` to edit price, qty, and exits).
+  - **Orders tab — Inactive exit rows** (pre-fill TP/SL attached to pending orders): pencils on the **Limit Price** cell (TP row) and **Stop Price** cell (SL row) call `onEditPendingOrder(ex.positionId)` (positionId stores the parent pending order ID), opening the same `PendingOrderEditPanel`.
+  - Result: every editable row type — pending main orders, their inactive TP/SL pre-fills, and Working TP/SL rows from open positions — now has a hover-reveal pencil that routes to the correct edit panel.
+
+- **fix: edit panel UX — pre-fill, toggle direction, qty mode, cancel records (30.04.2026)** ✅
+  - **Pre-filled inputs** — `PositionEditPanel` and `PendingOrderEditPanel` price/qty inputs changed from `type="number"` to `type="text"` + `inputMode="decimal"`. Root cause: `fmtMktPrice` uses `toLocaleString` which produces comma-formatted strings like `"77,495"` — `type="number"` inputs reject the comma and show blank. The existing `.replace(/,/g, '')` parse already handled commas, so switching to `type="text"` was the only fix needed.
+  - **Toggle direction** — `Toggle` component `<span>` thumb anchor changed to `right: '2px'` with `transform: translateX(-12px)` when ON (green visible, thumb slides left) and `transform: translateX(0px)` when OFF (gray visible, thumb sits right). Previously `left`-anchored with `translateX(12px)`/`translateX(2px)` — visually reversed from the intended green-left/gray-right pattern.
+  - **USD ↔ Units mode in `PendingOrderEditPanel`** — added `qtyMode: 'units' | 'usd'` state and `usdInput` state (initialised from `order.usdtAmount`). `ArrowLeftRight` swap button converts the current value numerically to the other unit on click (no reset). Derived `newQty` / `newUsdtAmount` computed from whichever mode is active; the equivalent in the other unit is shown below the input as a hint.
+  - **Cancel records on TP/SL removal** (`paperStore.ts`, `updatePositionExits` + `editPendingOrder`):
+    - Changed condition from `pos.takeProfit != null` (loose equality — fails when value is `undefined` because `undefined == null` is `true` in JS) to `!!pos.takeProfit` (strict truthy check handles both `undefined` and `null`).
+    - This fixes: toggling the TP or SL off in the edit panel and confirming now correctly writes a `'cancelled'` `HistoricalOrder` record, making it appear in **Orders → Cancelled** and **Order History → Cancelled**.
+    - Same fix applied to the `editPendingOrder` path for pending orders.
+    - Net rule: cancel record is written **only when a leg is explicitly removed** (toggle off → `null`). Editing to a new price is a silent in-place update — no cancel record written.
+
+- **test: Section 2 (Limit Orders) — full manual pass complete (01.05.2026)** ✅
+  - All 19 limit-order test cases (2.1–2.5) now marked ✅ in `TRADING_TEST_PLAN.md`.
+  - **2.4.6** — Cancel Working TP after fill: TP moved to Cancelled; SL remains Working; Journal logs `Take-Profit cancelled for LONG BTCUSDT @ $X`. ✅
+  - **2.4.7** — Cancel Working SL after fill: SL moved to Cancelled; TP remains Working; Journal logs `Stop-Loss cancelled for LONG BTCUSDT @ $X`. ✅
+  - **2.4.8** — Filled parent row absent from Orders tab immediately after fill; visible only in Order History → Filled. ✅ (TV cross-check ✅)
+  - **2.4.9** — TP triggers: position closed, SL sibling-cancelled in Order History → Cancelled (commission = 0), Journal shows auto-close PnL badge. ✅ (TV cross-check ✅)
+  - **2.4.11** — Manual close with both TP + SL active: position closed, **two** sibling cancel rows (TP + SL) appear in Order History → Cancelled; TV Trading Journal confirms matching TP + SL cancel confirmations; Balance History shows correct close entry. ✅ (TV cross-check ✅)
+  - **2.5.1** — TP below limit trigger price: inline error `"Take-Profit must be above entry price for Long"` shown; submit blocked. ✅ (TV cross-check ✅)
+  - **2.5.2** — SL above limit trigger price: inline error `"Stop-Loss must be below entry price for Long"` shown. ✅ (TV cross-check ✅)
+  - **2.5.3** — Symbol switch after placing limit: existing order stays correctly symbol-scoped; multi-symbol positions (BTCUSDT + ETHUSDT) render independently in Positions tab. ✅
+  - **2.5.4** — Limit order exceeding balance: `"Insufficient balance"` inline error + red margin-over-balance state. ✅
+
+- **fix: PR code review issues — Bybit params error, TS18048, linting, a11y, UX guards (01.05.2026)** ✅
+
+  ### Bybit `/market/kline` params error (`apps/server/src/routes/market/index.ts`)
+  - `BYBIT_INTERVAL_MAP` converted to a `const` object so TypeScript can narrow its value type.
+  - `AllowedInterval` = `keyof typeof BYBIT_INTERVAL_MAP`; `ALLOWED_INTERVALS_SET` and `isAllowedInterval()` type-guard derived from the map — single source of truth, no drift between validation and upstream values.
+  - **Category fallback retry**: `fetchHistoricalCandles` now iterates `['spot', 'linear']`. If Bybit returns `retCode 10001` (`params error`) for `spot` it retries immediately with `category=linear`, logs a warning, and returns the successful result. Any other error or exhausted retries throws as before, resulting in a `502` to the client.
+  - `BybitKlineResponse.result` typed as optional to match actual Bybit error payloads.
+  - URL built with `URLSearchParams` (safer query construction).
+  - Two new tests added to `market.test.ts`: interval mapping + `category=spot` first; fallback to `category=linear` on params error.
+
+  ### TypeScript TS18048 (`apps/client/src/components/dashboard/PendingOrderEditPanel.tsx`)
+  - After the existing `if (!order) return ...` guard, a `const activeOrder = order` binding is introduced. All closure-based and derived references (swap-mode handler, qty/margin calculations, desc label) now use `activeOrder` — TypeScript can prove non-null without additional assertions.
+
+  ### ESLint ignore patterns (`eslint.config.js`)
+  - Changed bare-string patterns (`'dist'`, `'node_modules'`) to glob patterns (`'**/dist/**'`, `'**/node_modules/**'`) so they match nested paths (e.g. `apps/server/dist/`).
+  - Added `'generated/**'` to ignore the workspace-root `generated/CDSDK/` directory.
+  - Eliminates all 219 false-positive lint errors in `apps/server/dist/` and the Prisma-generated type declarations.
+
+  ### `PositionEditPanel.tsx` — accessibility, `inputMode`, Confirm guard
+  - `Toggle` component: added `label: string` prop wired to `aria-label`; caller passes `"Enable take profit"` / `"Enable stop loss"` so screen readers can distinguish the two switches.
+  - TP and SL `<input>` elements: added `inputMode="decimal"` for correct mobile numeric keyboard (was missing unlike other fields in the app).
+  - `confirmDisabled` derived value: `true` when `tpWarning || slWarning || (tpEnabled && !tpVal) || (slEnabled && !slVal)`. Confirm button wired to `disabled={confirmDisabled}` — prevents silently removing a leg when the toggle is ON but the input is empty/zero, and blocks submission when a direction warning is active.
+
+  ### `PendingOrderEditPanel.tsx` — accessibility, dynamic labels, Confirm guard
+  - `Toggle` component: same `aria-label` fix as `PositionEditPanel`.
+  - TP/SL warning messages: replaced hardcoded `"limit price"` with `priceReferenceLabel = activeOrder.type === 'stop' ? 'stop price' : 'limit price'` so stop orders show the correct field name in the error text.
+  - `confirmDisabled` guard: covers `insufficientFunds || tpWarning || slWarning || (tpEnabled && !tpVal) || (slEnabled && !slVal)`. Replaces the old `disabled={insufficientFunds}`-only check.
+
+  ### `PaperTradingPanel.tsx` — duplicate pencils, phantom buttons
+  - **Duplicate pencil on STOP rows**: `limitPrice` column pencil was rendered for all pending orders (`isPending`). STOP orders have their trigger price in the `stopPrice` column, which already had its own pencil. Fixed: `limitPrice` pencil now only renders when `isPending && type === 'limit'`; `stopPrice` pencil unchanged at `isPending && type === 'stop'`.
+  - **Phantom buttons when callbacks undefined**: all `onEditPosition?.(...)` and `onEditPendingOrder?.(...)` optional-chain patterns replaced by explicit `onEditPosition && <button onClick={() => onEditPosition(...)} ...>` guards. Pencil buttons are not rendered at all when the parent has not wired up the edit callbacks — no focusable controls that silently do nothing.
+
+- **feat: TradingView-style journal detail for edited parent/child orders (01.05.2026)** ✅
+  - **`paperStore.ts`** — replaced the single generic edit journal line with **delta-aware multi-entry logs** for both `updatePositionExits()` and `editPendingOrder()`.
+  - **Open position exit edits** now produce:
+    - a summary entry describing exactly what changed, e.g. `Modified LONG BTCUSDT exits — TP $55,000.00 → $56,000.00, SL $48,000.00 → $47,000.00`
+    - per-leg confirmation entries for changed children, e.g. `Take-Profit modification confirmed — LONG BTCUSDT @ $56,000.00`
+    - cancel-style entries when a leg is removed, e.g. `Stop-Loss cancelled for LONG BTCUSDT @ $47,000.00`
+  - **Pending parent-order edits** now produce the same richer structure:
+    - parent summary includes **price / qty / reserved margin / TP / SL** deltas
+    - child TP/SL legs get their own **added / modification confirmed / cancelled** entries when changed
+    - if the edit is a true no-op (no numeric changes), no extra journal noise is written
+  - **Helper functions** added in `paperStore.ts`:
+    - optional-number equality guards to avoid floating-point noise
+    - shared formatters for pending side/type labels and exit labels
+    - small journal builders for position-exit edits and pending-order edits
+  - **Tests** — `paperStore.test.ts` now covers:
+    - editing TP/SL on an open position
+    - removing a TP child from an open position
+    - editing a pending order's parent + child exits together
+    - removing a pending TP child
+    - confirming that no-op pending edits do **not** add journal noise

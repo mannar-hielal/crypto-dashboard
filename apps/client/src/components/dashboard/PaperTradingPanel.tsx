@@ -192,6 +192,10 @@ interface PaperTradingPanelProps {
   /** True when the panel is expanded to fill the full chart area */
   isMaximized: boolean;
   onToggleMaximize: () => void;
+  /** Called when the user clicks the pencil on a position's TP/SL cell */
+  onEditPosition?: (positionId: string) => void;
+  /** Called when the user clicks the pencil on a pending order's price cell */
+  onEditPendingOrder?: (orderId: string) => void;
 }
 
 // ─── Sub-component: journal row ───────────────────────────────────────────────
@@ -297,6 +301,8 @@ export function PaperTradingPanel({
   onSizeChange,
   isMaximized,
   onToggleMaximize,
+  onEditPosition,
+  onEditPendingOrder,
 }: PaperTradingPanelProps) {
   const [infoTab, setInfoTab] = useState<InfoTab>('positions');
   const [orderSubTab, setOrderSubTab] = useState<OrderSubTab>('all');
@@ -1144,7 +1150,7 @@ export function PaperTradingPanel({
                                     animate="visible"
                                     exit="exit"
                                     layout
-                                    className="border-b border-white/3 transition-colors hover:bg-white/2"
+                                    className="group border-b border-white/3 transition-colors hover:bg-white/2"
                                   >
                                     {isVisible('positions', 'symbol') && (
                                       <td className="px-3 py-1.5">
@@ -1194,7 +1200,19 @@ export function PaperTradingPanel({
                                           color: pos.takeProfit ? color.green : color.muted,
                                         }}
                                       >
-                                        {pos.takeProfit ? `$${fmtMktPrice(pos.takeProfit)}` : '—'}
+                                        <span className="inline-flex items-center justify-end gap-1">
+                                          {onEditPosition && (
+                                            <button
+                                              onClick={() => onEditPosition(pos.id)}
+                                              title="Edit exits"
+                                              className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
+                                              style={{ color: color.muted }}
+                                            >
+                                              <Pencil className="h-2.5 w-2.5" />
+                                            </button>
+                                          )}
+                                          {pos.takeProfit ? `$${fmtMktPrice(pos.takeProfit)}` : '—'}
+                                        </span>
                                       </td>
                                     )}
                                     {isVisible('positions', 'sl') && (
@@ -1205,7 +1223,19 @@ export function PaperTradingPanel({
                                           color: pos.stopLoss ? color.red : color.muted,
                                         }}
                                       >
-                                        {pos.stopLoss ? `$${fmtMktPrice(pos.stopLoss)}` : '—'}
+                                        <span className="inline-flex items-center justify-end gap-1">
+                                          {onEditPosition && (
+                                            <button
+                                              onClick={() => onEditPosition(pos.id)}
+                                              title="Edit exits"
+                                              className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
+                                              style={{ color: color.muted }}
+                                            >
+                                              <Pencil className="h-2.5 w-2.5" />
+                                            </button>
+                                          )}
+                                          {pos.stopLoss ? `$${fmtMktPrice(pos.stopLoss)}` : '—'}
+                                        </span>
                                       </td>
                                     )}
                                     {isVisible('positions', 'mark') && (
@@ -1441,7 +1471,7 @@ export function PaperTradingPanel({
                                     animate="visible"
                                     exit="exit"
                                     layout
-                                    className="border-b border-white/3 transition-colors hover:bg-white/2"
+                                    className="group border-b border-white/3 transition-colors hover:bg-white/2"
                                   >
                                     {isVisible('orders', 'symbol') && (
                                       <td className="px-3 py-1.5">
@@ -1515,32 +1545,115 @@ export function PaperTradingPanel({
                                     )}
                                     {isVisible('orders', 'limitPrice') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/80">
-                                        {isExitOrder
-                                          ? ex!.exitType === 'Take Profit'
-                                            ? `$${fmtMktPrice(ex!.price)}`
-                                            : '—'
-                                          : isPending
-                                            ? type === 'limit'
-                                              ? `$${fmtMktPrice(p!.triggerPrice)}`
+                                        <span className="inline-flex items-center justify-end gap-1">
+                                          {/* Pencil: pending main order — limit orders only
+                                              (stop orders have their pencil in the stopPrice column) */}
+                                          {isPending && type === 'limit' && onEditPendingOrder && (
+                                            <button
+                                              onClick={() => onEditPendingOrder(rowId)}
+                                              title="Edit order"
+                                              className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
+                                              style={{ color: color.muted }}
+                                            >
+                                              <Pencil className="h-2.5 w-2.5" />
+                                            </button>
+                                          )}
+                                          {/* Pencil: Working TP row → edit open position exits */}
+                                          {isExitOrder &&
+                                            ex!.status === 'working' &&
+                                            ex!.exitType === 'Take Profit' &&
+                                            onEditPosition && (
+                                              <button
+                                                onClick={() => onEditPosition(ex!.positionId)}
+                                                title="Edit exits"
+                                                className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
+                                                style={{ color: color.muted }}
+                                              >
+                                                <Pencil className="h-2.5 w-2.5" />
+                                              </button>
+                                            )}
+                                          {/* Pencil: Inactive TP row → edit the parent pending order */}
+                                          {isExitOrder &&
+                                            ex!.status === 'inactive' &&
+                                            ex!.exitType === 'Take Profit' &&
+                                            onEditPendingOrder && (
+                                              <button
+                                                onClick={() => onEditPendingOrder(ex!.positionId)}
+                                                title="Edit pending order"
+                                                className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
+                                                style={{ color: color.muted }}
+                                              >
+                                                <Pencil className="h-2.5 w-2.5" />
+                                              </button>
+                                            )}
+                                          {isExitOrder
+                                            ? ex!.exitType === 'Take Profit'
+                                              ? `$${fmtMktPrice(ex!.price)}`
                                               : '—'
-                                            : h!.limitPrice != null
-                                              ? `$${fmtMktPrice(h!.limitPrice)}`
-                                              : '—'}
+                                            : isPending
+                                              ? type === 'limit'
+                                                ? `$${fmtMktPrice(p!.triggerPrice)}`
+                                                : '—'
+                                              : h!.limitPrice != null
+                                                ? `$${fmtMktPrice(h!.limitPrice)}`
+                                                : '—'}
+                                        </span>
                                       </td>
                                     )}
                                     {isVisible('orders', 'stopPrice') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/80">
-                                        {isExitOrder
-                                          ? ex!.exitType === 'Stop Loss'
-                                            ? `$${fmtMktPrice(ex!.price)}`
-                                            : '—'
-                                          : isPending
-                                            ? type === 'stop'
-                                              ? `$${fmtMktPrice(p!.triggerPrice)}`
+                                        <span className="inline-flex items-center justify-end gap-1">
+                                          {/* Pencil: pending main order (stop) */}
+                                          {isPending && type === 'stop' && onEditPendingOrder && (
+                                            <button
+                                              onClick={() => onEditPendingOrder(rowId)}
+                                              title="Edit order"
+                                              className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
+                                              style={{ color: color.muted }}
+                                            >
+                                              <Pencil className="h-2.5 w-2.5" />
+                                            </button>
+                                          )}
+                                          {/* Pencil: Working SL row → edit open position exits */}
+                                          {isExitOrder &&
+                                            ex!.status === 'working' &&
+                                            ex!.exitType === 'Stop Loss' &&
+                                            onEditPosition && (
+                                              <button
+                                                onClick={() => onEditPosition(ex!.positionId)}
+                                                title="Edit exits"
+                                                className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
+                                                style={{ color: color.muted }}
+                                              >
+                                                <Pencil className="h-2.5 w-2.5" />
+                                              </button>
+                                            )}
+                                          {/* Pencil: Inactive SL row → edit the parent pending order */}
+                                          {isExitOrder &&
+                                            ex!.status === 'inactive' &&
+                                            ex!.exitType === 'Stop Loss' &&
+                                            onEditPendingOrder && (
+                                              <button
+                                                onClick={() => onEditPendingOrder(ex!.positionId)}
+                                                title="Edit pending order"
+                                                className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
+                                                style={{ color: color.muted }}
+                                              >
+                                                <Pencil className="h-2.5 w-2.5" />
+                                              </button>
+                                            )}
+                                          {isExitOrder
+                                            ? ex!.exitType === 'Stop Loss'
+                                              ? `$${fmtMktPrice(ex!.price)}`
                                               : '—'
-                                            : h!.stopPrice != null
-                                              ? `$${fmtMktPrice(h!.stopPrice)}`
-                                              : '—'}
+                                            : isPending
+                                              ? type === 'stop'
+                                                ? `$${fmtMktPrice(p!.triggerPrice)}`
+                                                : '—'
+                                              : h!.stopPrice != null
+                                                ? `$${fmtMktPrice(h!.stopPrice)}`
+                                                : '—'}
+                                        </span>
                                       </td>
                                     )}
                                     {isVisible('orders', 'fillPrice') && (
@@ -1559,9 +1672,21 @@ export function PaperTradingPanel({
                                             isPending && p!.takeProfit ? color.green : color.muted,
                                         }}
                                       >
-                                        {isPending && p!.takeProfit
-                                          ? `$${fmtMktPrice(p!.takeProfit)}`
-                                          : '—'}
+                                        <span className="inline-flex items-center justify-end gap-1">
+                                          {isPending && (
+                                            <button
+                                              onClick={() => onEditPendingOrder?.(rowId)}
+                                              title="Edit TP"
+                                              className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
+                                              style={{ color: color.muted }}
+                                            >
+                                              <Pencil className="h-2.5 w-2.5" />
+                                            </button>
+                                          )}
+                                          {isPending && p!.takeProfit
+                                            ? `$${fmtMktPrice(p!.takeProfit)}`
+                                            : '—'}
+                                        </span>
                                       </td>
                                     )}
                                     {isVisible('orders', 'sl') && (
@@ -1572,9 +1697,21 @@ export function PaperTradingPanel({
                                           color: isPending && p!.stopLoss ? color.red : color.muted,
                                         }}
                                       >
-                                        {isPending && p!.stopLoss
-                                          ? `$${fmtMktPrice(p!.stopLoss)}`
-                                          : '—'}
+                                        <span className="inline-flex items-center justify-end gap-1">
+                                          {isPending && (
+                                            <button
+                                              onClick={() => onEditPendingOrder?.(rowId)}
+                                              title="Edit SL"
+                                              className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
+                                              style={{ color: color.muted }}
+                                            >
+                                              <Pencil className="h-2.5 w-2.5" />
+                                            </button>
+                                          )}
+                                          {isPending && p!.stopLoss
+                                            ? `$${fmtMktPrice(p!.stopLoss)}`
+                                            : '—'}
+                                        </span>
                                       </td>
                                     )}
                                     {isVisible('orders', 'commission') && (

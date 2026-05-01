@@ -16,7 +16,15 @@ import { TickerBar } from '@/components/dashboard/TickerBar';
 import { SymbolBar } from '@/components/dashboard/SymbolBar';
 import { TradingPanel } from '@/components/dashboard/TradingPanel';
 import type { OrderTab } from '@/components/dashboard/TradingPanel';
+import { PositionEditPanel } from '@/components/dashboard/PositionEditPanel';
+import { PendingOrderEditPanel } from '@/components/dashboard/PendingOrderEditPanel';
 import { bg, color, fontSize } from '@/lib/tokens';
+
+// ─── Edit target type ────────────────────────────────────────────────────────
+type EditTarget =
+  | { kind: 'position'; positionId: string }
+  | { kind: 'pending'; orderId: string }
+  | null;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -94,6 +102,8 @@ function DashboardInner() {
   const [tradingTab, setTradingTab] = useState<OrderTab>('market');
   /** When true the PaperTradingPanel fills the entire center column */
   const [isMaximized, setIsMaximized] = useState(false);
+  /** When set, an edit panel replaces the TradingPanel in the right column */
+  const [editTarget, setEditTarget] = useState<EditTarget>(null);
 
   // ── Bottom-panel drag-to-resize ─────────────────────────────────────────
 
@@ -269,14 +279,46 @@ function DashboardInner() {
               onSizeChange={setPanelSize}
               isMaximized={isMaximized}
               onToggleMaximize={handleToggleMaximize}
+              onEditPosition={(positionId) => setEditTarget({ kind: 'position', positionId })}
+              onEditPendingOrder={(orderId) => setEditTarget({ kind: 'pending', orderId })}
             />
           </motion.div>
         </div>
 
-        {/* Trading panel — sibling of the entire center column so it spans
+        {/* Trading panel / Edit panels — sibling of the entire center column so it spans
             the full height from SymbolBar down to TickerBar */}
         <AnimatePresence initial={false}>
-          {tradingPanelOpen && (
+          {editTarget?.kind === 'position' && (
+            <motion.div
+              key={`edit-pos-${editTarget.positionId}`}
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 256, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              className="shrink-0 overflow-hidden"
+            >
+              <PositionEditPanel
+                positionId={editTarget.positionId}
+                onClose={() => setEditTarget(null)}
+              />
+            </motion.div>
+          )}
+          {editTarget?.kind === 'pending' && (
+            <motion.div
+              key={`edit-pending-${editTarget.orderId}`}
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 256, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              className="shrink-0 overflow-hidden"
+            >
+              <PendingOrderEditPanel
+                orderId={editTarget.orderId}
+                onClose={() => setEditTarget(null)}
+              />
+            </motion.div>
+          )}
+          {!editTarget && tradingPanelOpen && (
             <motion.div
               key="trading-panel"
               initial={{ width: 0, opacity: 0 }}

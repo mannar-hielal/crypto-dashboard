@@ -15,70 +15,112 @@ type AllowedSymbol = (typeof ALLOWED_SYMBOLS)[number];
 // 🔐 Allowlist: single source of truth lives in src/constants.ts
 // Typed as Set<string> so .has() accepts any string without TypeScript complaints.
 const ALLOWED_SYMBOLS_SET = new Set<string>(ALLOWED_SYMBOLS);
-const ALLOWED_INTERVALS = new Set(['1m', '5m', '15m', '1h', '4h', '1d']);
-
-/** Type guard: narrows a raw string to AllowedSymbol after the Set check. */
-function isAllowedSymbol(s: string): s is AllowedSymbol {
-  return ALLOWED_SYMBOLS_SET.has(s);
-}
-
 // Maps our interval notation → Bybit REST API notation
-const BYBIT_INTERVAL_MAP: Record<string, string> = {
+const BYBIT_INTERVAL_MAP = {
   '1m': '1',
   '5m': '5',
   '15m': '15',
   '1h': '60',
   '4h': '240',
   '1d': 'D',
-};
+} as const;
+
+type AllowedInterval = keyof typeof BYBIT_INTERVAL_MAP;
+const ALLOWED_INTERVALS = Object.keys(BYBIT_INTERVAL_MAP) as AllowedInterval[];
+const ALLOWED_INTERVALS_SET = new Set<string>(ALLOWED_INTERVALS);
+
+/** Type guard: narrows a raw string to AllowedSymbol after the Set check. */
+function isAllowedSymbol(s: string): s is AllowedSymbol {
+  return ALLOWED_SYMBOLS_SET.has(s);
+}
+
+/** Type guard: narrows a raw string to AllowedInterval after the Set check. */
+function isAllowedInterval(interval: string): interval is AllowedInterval {
+  return ALLOWED_INTERVALS_SET.has(interval);
+}
+
+type BybitCategory = 'spot' | 'linear';
+const BYBIT_KLINE_CATEGORY_ORDER: readonly BybitCategory[] = ['spot', 'linear'];
 
 // ─── Bybit REST helper ────────────────────────────────────────────────────────
 
 interface BybitKlineResponse {
   retCode: number;
   retMsg: string;
-  result: {
-    list: string[][];
+  result?: {
+    list?: string[][];
   };
 }
 
 async function fetchHistoricalCandles(
   symbol: string,
-  interval: string,
+  interval: AllowedInterval,
   limit: number
 ): Promise<LiveBar['kline'][]> {
   const bybitInterval = BYBIT_INTERVAL_MAP[interval];
   const baseUrl = config.bybitTestnet ? 'https://api-testnet.bybit.com' : 'https://api.bybit.com';
 
-  const url = `${baseUrl}/v5/market/kline?category=spot&symbol=${symbol}&interval=${bybitInterval}&limit=${limit}`;
+  for (const category of BYBIT_KLINE_CATEGORY_ORDER) {
+    const params = new URLSearchParams({
+      category,
+      symbol,
+      interval: bybitInterval,
+      limit: String(limit),
+    });
+    const url = `${baseUrl}/v5/market/kline?${params.toString()}`;
 
-  const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+    const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
 
-  if (!res.ok) {
-    throw new Error(`Bybit REST error: ${res.status}`);
-  }
+    if (!res.ok) {
+      throw new Error(`Bybit REST error: ${res.status}`);
+    }
 
-  const data = (await res.json()) as BybitKlineResponse;
+    const data = (await res.json()) as BybitKlineResponse;
+    const list = data.result?.list;
 
-  if (data.retCode !== 0) {
+    if (data.retCode === 0 && Array.isArray(list)) {
+      // Bybit returns newest first — reverse for chronological chart order
+      // Each item: [startTime, open, high, low, close, volume, turnover]
+      return list
+        .map((item) => ({
+          timestamp: parseInt(item[0], 10),
+          open: parseFloat(item[1]),
+          high: parseFloat(item[2]),
+          low: parseFloat(item[3]),
+          close: parseFloat(item[4]),
+          volume: parseFloat(item[5]),
+          quoteAssetVolume: parseFloat(item[6]),
+        }))
+        .reverse();
+    }
+
+    const isParamsError = data.retCode === 10001 || /params error/i.test(data.retMsg ?? '');
+    const hasFallback =
+      category !== BYBIT_KLINE_CATEGORY_ORDER[BYBIT_KLINE_CATEGORY_ORDER.length - 1];
+    if (isParamsError && hasFallback) {
+      log.warn(
+        {
+          symbol,
+          interval,
+          bybitInterval,
+          limit,
+          category,
+          retCode: data.retCode,
+          retMsg: data.retMsg,
+        },
+        'Bybit kline rejected params for category; retrying with fallback category'
+      );
+      continue;
+    }
+
     throw new Error(
-      `Bybit API error: ${data.retMsg} [symbol=${symbol}, interval=${bybitInterval}, limit=${limit}]`
+      `Bybit API error: ${data.retMsg ?? 'unknown'} [symbol=${symbol}, interval=${bybitInterval}, limit=${limit}, category=${category}]`
     );
   }
 
-  // Bybit returns newest first — reverse for chronological chart order
-  // Each item: [startTime, open, high, low, close, volume, turnover]
-  return data.result.list
-    .map((item) => ({
-      timestamp: parseInt(item[0], 10),
-      open: parseFloat(item[1]),
-      high: parseFloat(item[2]),
-      low: parseFloat(item[3]),
-      close: parseFloat(item[4]),
-      volume: parseFloat(item[5]),
-      quoteAssetVolume: parseFloat(item[6]),
-    }))
-    .reverse();
+  throw new Error(
+    `Bybit API error: no valid kline response [symbol=${symbol}, interval=${bybitInterval}, limit=${limit}]`
+  );
 }
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
@@ -124,17 +166,18 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
     },
     async (request, reply) => {
       const symbolRaw = (request.query.symbol ?? 'BTCUSDT').toUpperCase();
-      const interval = request.query.interval ?? '1m';
+      const intervalRaw = request.query.interval ?? '1m';
       const limit = Math.min(Math.max(1, parseInt(request.query.limit ?? '200', 10) || 200), 1000);
 
       // 🔐 Validate against allowlist — guard also narrows type to AllowedSymbol
       if (!isAllowedSymbol(symbolRaw)) {
         return reply.status(400).send({ error: `Symbol not supported: ${symbolRaw}` });
       }
-      if (!ALLOWED_INTERVALS.has(interval)) {
-        return reply.status(400).send({ error: `Interval not supported: ${interval}` });
+      if (!isAllowedInterval(intervalRaw)) {
+        return reply.status(400).send({ error: `Interval not supported: ${intervalRaw}` });
       }
       const symbol = symbolRaw; // AllowedSymbol
+      const interval = intervalRaw; // AllowedInterval
 
       try {
         const candles = await fetchHistoricalCandles(symbol, interval, limit);
@@ -152,14 +195,15 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
     { websocket: true },
     (socket: WebSocket, request: FastifyRequest<{ Querystring: WsQuerystring }>) => {
       const symbolRaw = (request.query.symbol ?? 'BTCUSDT').toUpperCase();
-      const interval = request.query.interval ?? '1m';
+      const intervalRaw = request.query.interval ?? '1m';
 
       // 🔐 Validate against allowlist — guard also narrows type to AllowedSymbol
-      if (!isAllowedSymbol(symbolRaw) || !ALLOWED_INTERVALS.has(interval)) {
+      if (!isAllowedSymbol(symbolRaw) || !isAllowedInterval(intervalRaw)) {
         socket.close(1008, 'Invalid symbol or interval');
         return;
       }
       const symbol = symbolRaw; // AllowedSymbol
+      const interval = intervalRaw; // AllowedInterval
 
       log.info({ symbol, interval }, 'Client connected to live feed');
 
