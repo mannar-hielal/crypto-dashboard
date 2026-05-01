@@ -39,6 +39,8 @@
 
 ## Section 1 — Market Orders
 
+> **Automation status (01.05.2026):** All T1 and T2 cases automated — `paperStore.test.ts` + `TradingPanel.test.tsx`; 20 T2 RTL + ~20 T1 Vitest tests green. T3 (Playwright) cases pending framework setup.
+
 ### 1.1 Basic Buy (USD mode)
 
 | #     | Action                                                            | Expected                                                                                                                                                                                                | Status | TV ✓ | Tier        | Notes                                                                                                                                                                                          |
@@ -112,7 +114,7 @@
 
 | #      | Scenario                                              | Expected                                                 | Status | Tier            | Notes                                                                                                                                                                                                                                                         |
 | ------ | ----------------------------------------------------- | -------------------------------------------------------- | ------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1.7.1  | Submit with **empty** qty                             | Error: "Enter a USD amount"                              | ✅     | T2 · RTL        |                                                                                                                                                                                                                                                               |
+| 1.7.1  | Submit with **empty** qty                             | Submit button disabled (no inline error text)            | ✅     | T2 · RTL        | **Behaviour clarification (01.05.2026):** empty qty disables the submit button; there is no inline "Enter a USD amount" text. Automated T2 test asserts `button[disabled]` rather than error string.                                                          |
 | 1.7.2  | Submit with qty **> balance** (e.g. $99,999)          | Error: "Insufficient balance"                            | ✅     | T1+T2           | T1: `placeOrder` returns `null`. T2: error message renders in component.                                                                                                                                                                                      |
 | 1.7.3  | TP below entry for a Buy (e.g. live−1%)               | Error: "Take-Profit must be above entry price for Long"  | ✅     | T2 · RTL        |                                                                                                                                                                                                                                                               |
 | 1.7.4  | SL above entry for a Buy (e.g. live+1%)               | Error: "Stop-Loss must be below entry price for Long"    | ✅     | T2 · RTL        |                                                                                                                                                                                                                                                               |
@@ -126,6 +128,8 @@
 ---
 
 ## Section 2 — Limit Orders _(run after Section 1 passes)_
+
+> **Automation status (01.05.2026):** All T1 and T2 cases automated — `paperStore.test.ts` + `TradingPanel.test.tsx`; ~20 T2 RTL + ~25 T1 Vitest tests green. T3 (Playwright) cases pending framework setup.
 
 ### 2.1 Limit Buy below market
 

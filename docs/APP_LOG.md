@@ -885,6 +885,18 @@ _Last updated: 2026-05-01 (evening — test automation planning)_
   - **Test plan updated**: `Tier` column added to every table across all 11 sections + tier legend added to file header. Also corrected stale 7.2.3 wording (the "Orders Filled sub-tab" was removed 25.04.2026 — test now verifies TV-style behaviour: no Filled sub-tab in Orders at all).
   - **Files changed**: `docs/TRADING_TEST_PLAN.md`, `docs/APP_LOG.md`
 
+- **test: T1 (Vitest) + T2 (RTL) automated tests for Sections 1 & 2 — 277 tests green (01.05.2026)** ✅
+  - **Scope**: Sections 1 (Market Orders) and 2 (Limit Orders) of `TRADING_TEST_PLAN.md` — all T1 and T2 cases automated; T3 cases remain as `// TODO: Playwright`.
+  - **`paperStore.test.ts`** extended with two new `describe` blocks totalling ~40 new T1 unit tests:
+    - Section 1: journal entry format, SHORT sell, qty calculation, TP-only / SL-only auto-close, both-legs manual close
+    - Section 2: `placeLimitOrder` balance reservation, fill sequence, cancel refund, sell-limit SHORT, full bracket lifecycle (pre-fill leg cancels, parent cancel, post-fill activation, TP/SL auto-close, manual close with 2 sibling cancels), symbol-scope isolation
+  - **`TradingPanel.test.tsx`** (new file) with ~20 T2 RTL component tests:
+    - Section 1: Margin/Commission preview, Buy clears input, Sell side, Units toggle, TP/SL toggle reveals bordered input, button disabled when qty empty, Insufficient balance error, all four TP/SL directional validation errors, qty=0 keeps button disabled
+    - Section 2: Limit tab shows pre-filled price, TP below/above trigger validation, limit > balance error
+  - **All 277 tests pass** (188 client + 89 server); lint clean after removing unused helpers.
+  - **Behaviour clarification captured**: 1.7.1 — the app disables the submit button when qty is empty (no inline error text); test plan Notes updated to reflect this.
+  - **Files changed**: `apps/client/src/store/__tests__/paperStore.test.ts`, `apps/client/src/components/dashboard/__tests__/TradingPanel.test.tsx`, `docs/TRADING_TEST_PLAN.md`, `docs/APP_LOG.md`
+
 - **feat: TradingView-style journal detail for edited parent/child orders (01.05.2026)** ✅
   - **`paperStore.ts`** — replaced the single generic edit journal line with **delta-aware multi-entry logs** for both `updatePositionExits()` and `editPendingOrder()`.
   - **Open position exit edits** now produce:
