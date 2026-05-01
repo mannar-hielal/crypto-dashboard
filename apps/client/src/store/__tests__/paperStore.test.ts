@@ -949,4 +949,260 @@ describe('paperStore', () => {
       });
     });
   });
+
+  // ── Section 3 — Stop Orders (T1 · Vitest) ─────────────────────────────────────
+
+  describe('Section 3 — Stop Orders', () => {
+    /**
+     * Simulates what usePendingOrderMonitor does when a stop order triggers.
+     * fillPendingOrder() → placeOrder(skipJournal=true) → addJournalNote().
+     * Returns the new position id (or null if the fill was rejected).
+     */
+    function fillStop(orderId: string, fillPrice: number): string | null {
+      const order = usePaperStore.getState().pendingOrders.find((o) => o.id === orderId)!;
+      usePaperStore.getState().fillPendingOrder(orderId);
+      const posId = usePaperStore.getState().placeOrder(
+        order.symbol,
+        order.side,
+        fillPrice,
+        order.usdtAmount,
+        order.takeProfit,
+        order.stopLoss,
+        true // skipJournal — monitor writes its own entry
+      );
+      const sideLabel = order.side === 'buy' ? 'Long' : 'Short';
+      if (posId) {
+        usePaperStore
+          .getState()
+          .addJournalNote(
+            `Stop order filled — ${sideLabel} ${order.symbol} @ $${fillPrice.toFixed(2)} ` +
+              `(trigger: $${order.triggerPrice.toFixed(2)}, qty: ${order.qty.toFixed(6)})`,
+            false
+          );
+        if (order.takeProfit) {
+          usePaperStore
+            .getState()
+            .addJournalNote(
+              `Take-Profit order activated — ${sideLabel} ${order.symbol} @ $${order.takeProfit.toFixed(2)}`,
+              false
+            );
+        }
+        if (order.stopLoss) {
+          usePaperStore
+            .getState()
+            .addJournalNote(
+              `Stop-Loss order activated — ${sideLabel} ${order.symbol} @ $${order.stopLoss.toFixed(2)}`,
+              false
+            );
+        }
+      }
+      return posId;
+    }
+
+    // ── 3.1 Stop Buy placement and fill ────────────────────────────────────────
+
+    describe('3.1 Stop Buy placement and fill', () => {
+      it('3.1.1: placeStopOrder creates pending stop buy with correct type/side/triggerPrice and reserves balance', () => {
+        const balanceBefore = usePaperStore.getState().balance;
+        const id = usePaperStore.getState().placeStopOrder(SYMBOL, 'buy', 55_000, 1_000);
+
+        expect(id).not.toBeNull();
+
+        const { pendingOrders, balance } = usePaperStore.getState();
+        expect(pendingOrders).toHaveLength(1);
+        expect(pendingOrders[0]).toMatchObject({
+          symbol: SYMBOL,
+          side: 'buy',
+          type: 'stop',
+          triggerPrice: 55_000,
+          usdtAmount: 1_000,
+        });
+        // Balance reduced by margin + entry commission (reserved upfront)
+        expect(balance).toBeCloseTo(balanceBefore - 1_000 - 1_000 * COMMISSION_RATE);
+      });
+
+      it('3.1.2: stop buy fill opens a Long position, clears pendingOrders, journal has fill entry', () => {
+        const orderId = usePaperStore.getState().placeStopOrder(SYMBOL, 'buy', 55_000, 1_000)!;
+        fillStop(orderId, 55_000);
+
+        const { positions, pendingOrders } = usePaperStore.getState();
+        expect(positions).toHaveLength(1);
+        expect(positions[0].side).toBe('long');
+        expect(pendingOrders).toHaveLength(0);
+        expect(
+          usePaperStore.getState().journal.some((e) => e.text.includes('Stop order filled — Long'))
+        ).toBe(true);
+      });
+
+      it('3.1.3: Order History after stop fill has status=filled, type=market, side=buy, fillPrice and commission > 0', () => {
+        const orderId = usePaperStore.getState().placeStopOrder(SYMBOL, 'buy', 55_000, 1_000)!;
+        fillStop(orderId, 55_000);
+
+        const filledOrders = usePaperStore
+          .getState()
+          .orders.filter((o) => o.status === 'filled' && o.type === 'market' && o.side === 'buy');
+        expect(filledOrders).toHaveLength(1);
+        expect(filledOrders[0].fillPrice).toBe(55_000);
+        expect(filledOrders[0].commission).toBeGreaterThan(0);
+      });
+
+      it('3.1.2 slippage: fill at price above trigger still creates the position at fill price', () => {
+        // When price races through the stop, the fill price > triggerPrice (slippage)
+        const orderId = usePaperStore.getState().placeStopOrder(SYMBOL, 'buy', 55_000, 1_000)!;
+        const fillPrice = 55_100; // slightly above trigger
+        fillStop(orderId, fillPrice);
+
+        const pos = usePaperStore.getState().positions[0];
+        expect(pos.entryPrice).toBe(fillPrice);
+      });
+    });
+
+    // ── 3.2 Stop Sell placement and fill ───────────────────────────────────────
+
+    describe('3.2 Stop Sell placement and fill', () => {
+      it('3.2.1: placeStopOrder sell creates pending stop sell with side=sell, type=stop, triggerPrice correct', () => {
+        usePaperStore.getState().placeStopOrder(SYMBOL, 'sell', 45_000, 1_000);
+
+        const order = usePaperStore.getState().pendingOrders[0];
+        expect(order.side).toBe('sell');
+        expect(order.type).toBe('stop');
+        expect(order.triggerPrice).toBe(45_000);
+      });
+
+      it('3.2.2: stop sell fill opens a Short position and journal has "Stop order filled — Short" entry', () => {
+        const orderId = usePaperStore.getState().placeStopOrder(SYMBOL, 'sell', 45_000, 1_000)!;
+        fillStop(orderId, 45_000);
+
+        const { positions } = usePaperStore.getState();
+        expect(positions).toHaveLength(1);
+        expect(positions[0].side).toBe('short');
+        expect(
+          usePaperStore.getState().journal.some((e) => e.text.includes('Stop order filled — Short'))
+        ).toBe(true);
+      });
+
+      it('3.2.2 slippage: fill at price below trigger still creates the position at fill price', () => {
+        const orderId = usePaperStore.getState().placeStopOrder(SYMBOL, 'sell', 45_000, 1_000)!;
+        const fillPrice = 44_950; // slightly below trigger
+        fillStop(orderId, fillPrice);
+
+        const pos = usePaperStore.getState().positions[0];
+        expect(pos.entryPrice).toBe(fillPrice);
+      });
+    });
+
+    // ── 3.3 Cancel stop order ──────────────────────────────────────────────────
+
+    describe('3.3 Cancel stop order', () => {
+      it('3.3.1: cancelPendingOrder fully refunds reserved balance, removes from pendingOrders, writes journal', () => {
+        const balanceBefore = usePaperStore.getState().balance;
+        const orderId = usePaperStore.getState().placeStopOrder(SYMBOL, 'sell', 45_000, 1_000)!;
+
+        usePaperStore.getState().cancelPendingOrder(orderId);
+
+        expect(usePaperStore.getState().pendingOrders).toHaveLength(0);
+        // Balance fully restored (margin + entry commission refunded)
+        expect(usePaperStore.getState().balance).toBeCloseTo(balanceBefore);
+        expect(
+          usePaperStore.getState().journal.some((e) => e.text.includes('Cancelled STOP'))
+        ).toBe(true);
+      });
+
+      it('3.3.2: cancelled stop in orders[] has status=cancelled, type=stop, stopPrice preserved, timestamps set', () => {
+        const orderId = usePaperStore.getState().placeStopOrder(SYMBOL, 'sell', 45_000, 1_000)!;
+        usePaperStore.getState().cancelPendingOrder(orderId);
+
+        const cancelledOrder = usePaperStore
+          .getState()
+          .orders.find((o) => o.status === 'cancelled' && o.type === 'stop');
+        expect(cancelledOrder).toBeDefined();
+        expect(cancelledOrder!.stopPrice).toBe(45_000);
+        expect(cancelledOrder!.placingTime).toBeGreaterThan(0);
+        expect(cancelledOrder!.closingTime).toBeGreaterThanOrEqual(cancelledOrder!.placingTime);
+      });
+    });
+
+    // ── 3.4 Stop with TP + SL bracket ─────────────────────────────────────────
+
+    describe('3.4 Stop buy with TP + SL bracket', () => {
+      it('3.4.1: placeStopOrder with TP=78k SL=76k stores both exits on the pending order', () => {
+        usePaperStore.getState().placeStopOrder(SYMBOL, 'buy', 77_350, 1_000, 78_000, 76_000);
+
+        const order = usePaperStore.getState().pendingOrders[0];
+        expect(order.takeProfit).toBe(78_000);
+        expect(order.stopLoss).toBe(76_000);
+      });
+
+      it('3.4.2: stop fill with TP+SL → position has takeProfit+stopLoss and pendingOrders is empty', () => {
+        const orderId = usePaperStore
+          .getState()
+          .placeStopOrder(SYMBOL, 'buy', 77_350, 1_000, 78_000, 76_000)!;
+        const posId = fillStop(orderId, 77_350);
+
+        expect(usePaperStore.getState().pendingOrders).toHaveLength(0);
+        const pos = usePaperStore.getState().positions.find((p) => p.id === posId)!;
+        expect(pos.takeProfit).toBe(78_000);
+        expect(pos.stopLoss).toBe(76_000);
+      });
+
+      it('3.4.2: stop fill with TP+SL writes Take-Profit and Stop-Loss activation journal entries', () => {
+        const orderId = usePaperStore
+          .getState()
+          .placeStopOrder(SYMBOL, 'buy', 77_350, 1_000, 78_000, 76_000)!;
+        fillStop(orderId, 77_350);
+
+        const journal = usePaperStore.getState().journal;
+        expect(journal.some((e) => e.text.includes('Take-Profit order activated'))).toBe(true);
+        expect(journal.some((e) => e.text.includes('Stop-Loss order activated'))).toBe(true);
+      });
+
+      it('3.4.2: cancel bracket stop order creates 3 Cancelled rows (STOP + TP child + SL child) and fully refunds balance', () => {
+        const balanceBefore = usePaperStore.getState().balance;
+        const orderId = usePaperStore
+          .getState()
+          .placeStopOrder(SYMBOL, 'buy', 77_350, 1_000, 78_000, 76_000)!;
+
+        usePaperStore.getState().cancelPendingOrder(orderId);
+
+        expect(usePaperStore.getState().pendingOrders).toHaveLength(0);
+        expect(usePaperStore.getState().balance).toBeCloseTo(balanceBefore);
+
+        const cancelledOrders = usePaperStore
+          .getState()
+          .orders.filter((o) => o.status === 'cancelled');
+        expect(cancelledOrders).toHaveLength(3);
+        const types = cancelledOrders.map((o) => o.type).sort();
+        expect(types).toEqual(['stop', 'stop-loss', 'take-profit']);
+      });
+    });
+
+    // ── 3.5 Multiple concurrent stop orders ───────────────────────────────────
+
+    describe('3.5 Multiple stop orders coexist', () => {
+      it('3.5.3: 4 concurrent stop orders all appear in pendingOrders, balance debited for all 4, journal has 4 placed entries', () => {
+        const margin = 250;
+        const costEach = margin + margin * COMMISSION_RATE;
+        const initialBalance = usePaperStore.getState().balance;
+
+        usePaperStore.getState().placeStopOrder(SYMBOL, 'buy', 55_000, margin); // buy 1
+        usePaperStore.getState().placeStopOrder(SYMBOL, 'buy', 56_000, margin); // buy 2
+        usePaperStore.getState().placeStopOrder(SYMBOL, 'sell', 45_000, margin); // sell 1
+        usePaperStore.getState().placeStopOrder(SYMBOL, 'sell', 44_000, margin); // sell 2
+
+        expect(usePaperStore.getState().pendingOrders).toHaveLength(4);
+        expect(usePaperStore.getState().balance).toBeCloseTo(initialBalance - 4 * costEach);
+
+        const placedEntries = usePaperStore
+          .getState()
+          .journal.filter((e) => e.text.includes('Placed STOP'));
+        expect(placedEntries).toHaveLength(4);
+      });
+
+      it('3.5.3: placeStopOrder returns null and does not add to pendingOrders when balance is insufficient', () => {
+        const id = usePaperStore.getState().placeStopOrder(SYMBOL, 'buy', 55_000, 15_000);
+        expect(id).toBeNull();
+        expect(usePaperStore.getState().pendingOrders).toHaveLength(0);
+      });
+    });
+  });
 });

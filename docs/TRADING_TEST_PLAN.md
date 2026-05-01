@@ -198,7 +198,12 @@
 
 ## Section 3 — Stop Orders _(run after Section 2 passes)_
 
-> **Manual verification status (01.05.2026):** 3.1.1–3.5.3 manually verified against TradingView Paper Trading (Bybit BTCUSDT Spot · 1m) — all ✅. T1/T2 automation not yet written for Section 3.
+> **Manual verification status (01.05.2026):** 3.1.1–3.5.3 manually verified against TradingView Paper Trading (Bybit BTCUSDT Spot · 1m) — all ✅.
+>
+> **Automation status (01.05.2026):** T1 + T2 tests written and passing (211/211 total suite). New tests live in:
+>
+> - `paperStore.test.ts` — `Section 3 — Stop Orders` describe block (15 T1 tests): placement, fill flow with slippage, cancel, bracket TP/SL, multiple concurrent orders, insufficient-balance guard.
+> - `TradingPanel.test.tsx` — `Section 3 — Stop Orders (T2 · RTL)` describe block (5 T2 tests): direction warning banners (3.5.1 / 3.5.2), no-warning negatives, insufficient balance on stop tab.
 
 ### 3.1 Stop Buy above market (breakout)
 

@@ -948,3 +948,37 @@ _Last updated: 2026-05-01 (consistency sweep)_
     - **7.1.4** — expected result and notes updated: Orders tab **does** have a `Filled` sub-tab; market fill appears in Orders → Filled + Order History → Filled; Orders top badge = 0.
     - **7.2.3** — heading and expected result updated: verify filled limit row appears in both Orders → Filled and Order History → Filled; Orders badge = 0 after fill.
   - **Total tests: 280 green** (191 client · 89 server — incremented from 277 by the 3 PaperTradingPanel RTL tests).
+
+---
+
+### test: automate Section 3 stop-order tests — T1 + T2 (01.05.2026)
+
+**Context:** All Section 3 stop-order test cases were previously manually verified. This session writes the T1 + T2 automation layer, bringing the full test suite to **211 client tests (all green)**.
+
+**New tests added:**
+
+#### `paperStore.test.ts` — `Section 3 — Stop Orders` describe block (15 T1 tests)
+
+| Group                            | Tests | What they cover                                                                                                                                                                                                                                |
+| -------------------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3.1 Stop Buy placement and fill  | 4     | `placeStopOrder` creates correct pending order + debits balance; fill flow → Long position + empty pendingOrders + journal entry; Order History entry has `status=filled`, `type=market`, `commission>0`; slippage fill at price above trigger |
+| 3.2 Stop Sell placement and fill | 3     | Pending stop sell (`side=sell`, `type=stop`, correct `triggerPrice`); fill opens Short; journal "Stop order filled — Short…"; slippage fill at price below trigger                                                                             |
+| 3.3 Cancel stop order            | 2     | `cancelPendingOrder` fully refunds balance, clears `pendingOrders`, journal "Cancelled STOP…"; cancelled order entry has `stopPrice` preserved + timestamps                                                                                    |
+| 3.4 Stop with TP+SL bracket      | 4     | `pendingOrder.takeProfit`/`.stopLoss` stored; fill → position has both + pendingOrders empty; activation journal entries written; cancel bracket → 3 Cancelled rows + full balance refund                                                      |
+| 3.5 Multiple stops coexist       | 2     | 4 concurrent `placeStopOrder` calls → all 4 in `pendingOrders`, balance = `10000 − 4×(margin+commission)`, 4 "Placed STOP…" journal entries; insufficient-balance guard returns `null` without adding to `pendingOrders`                       |
+
+**Helper:** `fillStop(orderId, fillPrice)` extracted inside the describe block — mirrors `usePendingOrderMonitor` fill sequence (`fillPendingOrder` → `placeOrder(skipJournal=true)` → `addJournalNote` + TP/SL activation entries).
+
+#### `TradingPanel.test.tsx` — `Section 3 — Stop Orders (T2 · RTL)` describe block (5 T2 tests)
+
+| Test                        | What it covers                                                                                                            |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 3.5.1 warning               | Switch to Stop tab, Buy side, type price below market → amber banner contains "will fill immediately" + "Use a Limit Buy" |
+| 3.5.2 warning               | Switch to Stop tab, Sell side, type price above market → banner contains "will fill immediately" + "Use a Limit Sell"     |
+| 3.5.1 no-warning            | Stop Buy above market (correct direction) → `queryByText(/will fill immediately/)` returns null                           |
+| 3.5.2 no-warning            | Stop Sell below market (correct direction) → no warning banner                                                            |
+| Insufficient balance (stop) | Enter 20000 USD on Stop tab → "Insufficient balance" validation error                                                     |
+
+**TRADING_TEST_PLAN.md updated:** Section 3 preamble note changed from "automation not yet written" to automation status summary with file names and test counts.
+
+**Total client tests: 211 green** (up from 196 before this session).

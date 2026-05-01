@@ -475,3 +475,85 @@ describe('Section 2 — Limit Orders (T2 · RTL)', () => {
     });
   });
 });
+
+// ─── Section 3 — Stop Orders ──────────────────────────────────────────────────
+
+describe('Section 3 — Stop Orders (T2 · RTL)', () => {
+  /** Switch to Stop tab */
+  function switchToStopTab() {
+    const stopTab = screen.getByRole('tab', { name: /stop/i });
+    fireEvent.click(stopTab);
+  }
+
+  /** Switch side to Sell */
+  function switchToSell() {
+    const sellBtn = screen.getAllByRole('button').find((b) => b.textContent?.startsWith('Sell'))!;
+    fireEvent.click(sellBtn);
+  }
+
+  // ── 3.5 Stop order price-direction warning ───────────────────────────────────
+
+  describe('3.5 Stop order direction warnings', () => {
+    it('3.5.1: Stop Buy below market price shows immediate-fill warning with "will fill immediately" and "Use a Limit Buy"', () => {
+      renderPanel();
+      switchToStopTab();
+      // Default side = Buy; type a price below the live price (50 000) → triggers warning
+      const priceInput = screen.getAllByRole('spinbutton')[0];
+      fireEvent.change(priceInput, { target: { value: '49000' } });
+
+      expect(screen.getByText(/will fill immediately/)).toBeTruthy();
+      expect(screen.getByText(/Use a Limit Buy/)).toBeTruthy();
+    });
+
+    it('3.5.2: Stop Sell above market price shows immediate-fill warning with "will fill immediately" and "Use a Limit Sell"', () => {
+      renderPanel();
+      switchToStopTab();
+      switchToSell();
+      // Type a price above the live price (50 000) → triggers warning
+      const priceInput = screen.getAllByRole('spinbutton')[0];
+      fireEvent.change(priceInput, { target: { value: '51000' } });
+
+      expect(screen.getByText(/will fill immediately/)).toBeTruthy();
+      expect(screen.getByText(/Use a Limit Sell/)).toBeTruthy();
+    });
+
+    it('3.5.1 no-warning: Stop Buy above market does NOT show the warning banner', () => {
+      renderPanel();
+      switchToStopTab();
+      // On Stop+Buy, the default pre-fill is ask=50010 (above market) — no warning.
+      // Confirm by explicitly typing a price above market.
+      const priceInput = screen.getAllByRole('spinbutton')[0];
+      fireEvent.change(priceInput, { target: { value: '51000' } });
+
+      expect(screen.queryByText(/will fill immediately/)).toBeNull();
+    });
+
+    it('3.5.2 no-warning: Stop Sell below market does NOT show the warning banner', () => {
+      renderPanel();
+      switchToStopTab();
+      switchToSell();
+      // Default pre-fill for Stop+Sell is bid=49990 (below market) — no warning.
+      const priceInput = screen.getAllByRole('spinbutton')[0];
+      fireEvent.change(priceInput, { target: { value: '49000' } });
+
+      expect(screen.queryByText(/will fill immediately/)).toBeNull();
+    });
+  });
+
+  // ── 3.5 Insufficient balance for stop order ──────────────────────────────────
+
+  describe('3.5 Edge cases', () => {
+    it('3.x: Stop order that exceeds balance shows "Insufficient balance"', () => {
+      renderPanel();
+      switchToStopTab();
+
+      // qty input is allInputs[1] (allInputs[0] is the price input on Stop tab)
+      const allInputs = screen.getAllByRole('spinbutton');
+      fireEvent.change(allInputs[1], { target: { value: '20000' } });
+
+      clickExecuteBtn();
+
+      expect(screen.getByText('Insufficient balance')).toBeTruthy();
+    });
+  });
+});
