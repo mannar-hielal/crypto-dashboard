@@ -579,10 +579,9 @@ describe('Section 4 — Cross-cutting / Regression (T2 · RTL)', () => {
       const qtyInput = screen.getAllByRole('spinbutton')[0];
       fireEvent.change(qtyInput, { target: { value: '300' } });
 
-      // Enable both TP and SL toggles
-      const [tpToggle, slToggle] = screen.getAllByRole('switch');
-      fireEvent.click(tpToggle);
-      fireEvent.click(slToggle);
+      // Enable both TP and SL toggles — re-query after each click to avoid stale element references
+      fireEvent.click(screen.getAllByRole('switch')[0]); // enable TP
+      fireEvent.click(screen.getAllByRole('switch')[1]); // enable SL
 
       // Re-render same component (same key) — simulates parent re-render without symbol change
       rerender(<TradingPanel onClose={vi.fn()} />);

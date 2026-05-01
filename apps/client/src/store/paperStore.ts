@@ -676,6 +676,7 @@ export const usePaperStore = create<PaperState>()(
             id: `j-${id}-open`,
             time: now,
             text: `Opened ${positionSide} ${symbol} @ $${fmtPrice(price)}`,
+            isUserNote: false,
           });
         }
 
