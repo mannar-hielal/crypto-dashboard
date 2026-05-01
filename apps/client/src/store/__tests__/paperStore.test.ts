@@ -661,7 +661,15 @@ describe('paperStore', () => {
         usePaperStore.getState().fillPendingOrder(orderId);
         usePaperStore
           .getState()
-          .placeOrder(order.symbol, order.side, 52_000, order.usdtAmount, undefined, undefined, true);
+          .placeOrder(
+            order.symbol,
+            order.side,
+            52_000,
+            order.usdtAmount,
+            undefined,
+            undefined,
+            true
+          );
         const positions = usePaperStore.getState().positions;
         expect(positions).toHaveLength(1);
         expect(positions[0].side).toBe('short');
@@ -672,9 +680,7 @@ describe('paperStore', () => {
 
     describe('2.4 Limit with TP + SL — Pre-fill', () => {
       it('2.4.1: bracket limit buy stores TP + SL on the pending order and writes placement journal', () => {
-        usePaperStore
-          .getState()
-          .placeLimitOrder(SYMBOL, 'buy', 48_000, 1_000, 53_000, 46_000);
+        usePaperStore.getState().placeLimitOrder(SYMBOL, 'buy', 48_000, 1_000, 53_000, 46_000);
         const order = usePaperStore.getState().pendingOrders[0];
         expect(order.takeProfit).toBe(53_000);
         expect(order.stopLoss).toBe(46_000);
@@ -758,9 +764,7 @@ describe('paperStore', () => {
         expect(types).toEqual(['limit', 'stop-loss', 'take-profit']);
 
         expect(
-          usePaperStore
-            .getState()
-            .journal.some((e) => e.text.includes('Cancelled LIMIT Long'))
+          usePaperStore.getState().journal.some((e) => e.text.includes('Cancelled LIMIT Long'))
         ).toBe(true);
       });
     });
@@ -815,16 +819,10 @@ describe('paperStore', () => {
           );
         usePaperStore
           .getState()
-          .addJournalNote(
-            `Take-Profit order activated — Long ${order.symbol} @ $53000.00`,
-            false
-          );
+          .addJournalNote(`Take-Profit order activated — Long ${order.symbol} @ $53000.00`, false);
         usePaperStore
           .getState()
-          .addJournalNote(
-            `Stop-Loss order activated — Long ${order.symbol} @ $46000.00`,
-            false
-          );
+          .addJournalNote(`Stop-Loss order activated — Long ${order.symbol} @ $46000.00`, false);
 
         expect(usePaperStore.getState().pendingOrders).toHaveLength(0);
         const pos = usePaperStore.getState().positions.find((p) => p.id === posId)!;
@@ -941,12 +939,8 @@ describe('paperStore', () => {
         usePaperStore.getState().placeLimitOrder(SYMBOL, 'buy', 48_000, 500);
         usePaperStore.getState().placeLimitOrder('ETHUSDT', 'buy', 3_000, 200);
 
-        const btcOrder = usePaperStore
-          .getState()
-          .pendingOrders.find((o) => o.symbol === SYMBOL);
-        const ethOrder = usePaperStore
-          .getState()
-          .pendingOrders.find((o) => o.symbol === 'ETHUSDT');
+        const btcOrder = usePaperStore.getState().pendingOrders.find((o) => o.symbol === SYMBOL);
+        const ethOrder = usePaperStore.getState().pendingOrders.find((o) => o.symbol === 'ETHUSDT');
         expect(btcOrder).toBeDefined();
         expect(ethOrder).toBeDefined();
         // Each order is scoped to its own symbol

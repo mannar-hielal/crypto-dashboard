@@ -47,8 +47,11 @@ vi.mock('framer-motion', () => ({
     {},
     {
       get: (_target, tag: string) =>
-        React.forwardRef(({ children, ...props }: React.PropsWithChildren<React.HTMLAttributes<HTMLElement>>, ref: React.Ref<HTMLElement>) =>
-          React.createElement(tag, { ...props, ref }, children)
+        React.forwardRef(
+          (
+            { children, ...props }: React.PropsWithChildren<React.HTMLAttributes<HTMLElement>>,
+            ref: React.Ref<HTMLElement>
+          ) => React.createElement(tag, { ...props, ref }, children)
         ),
     }
   ),
@@ -95,7 +98,6 @@ function setupStores() {
 function renderPanel(props: Partial<React.ComponentProps<typeof TradingPanel>> = {}) {
   return render(<TradingPanel onClose={vi.fn()} {...props} />);
 }
-
 
 /**
  * Click the execute (Buy/Sell) button — always the last <button> in the panel.
@@ -340,9 +342,7 @@ describe('Section 1 — Market Orders (T2 · RTL)', () => {
 
       clickExecuteBtn();
 
-      expect(
-        screen.getByText('Take-Profit must be below entry price for Short')
-      ).toBeTruthy();
+      expect(screen.getByText('Take-Profit must be below entry price for Short')).toBeTruthy();
     });
 
     it('1.7.6: Sell with SL below entry price shows "Stop-Loss must be above entry price for Short"', () => {
@@ -364,9 +364,7 @@ describe('Section 1 — Market Orders (T2 · RTL)', () => {
 
       clickExecuteBtn();
 
-      expect(
-        screen.getByText('Stop-Loss must be above entry price for Short')
-      ).toBeTruthy();
+      expect(screen.getByText('Stop-Loss must be above entry price for Short')).toBeTruthy();
     });
 
     it('1.7.7: submit button is disabled when qty input is 0', () => {
@@ -438,9 +436,7 @@ describe('Section 2 — Limit Orders (T2 · RTL)', () => {
 
       clickExecuteBtn();
 
-      expect(
-        screen.getByText('Take-Profit must be above entry price for Long')
-      ).toBeTruthy();
+      expect(screen.getByText('Take-Profit must be above entry price for Long')).toBeTruthy();
     });
 
     it('2.5.2: Limit Buy with SL above trigger price → "Stop-Loss must be below entry price for Long"', () => {
@@ -461,9 +457,7 @@ describe('Section 2 — Limit Orders (T2 · RTL)', () => {
 
       clickExecuteBtn();
 
-      expect(
-        screen.getByText('Stop-Loss must be below entry price for Long')
-      ).toBeTruthy();
+      expect(screen.getByText('Stop-Loss must be below entry price for Long')).toBeTruthy();
     });
 
     it('2.5.4: Limit order that exceeds balance shows "Insufficient balance"', () => {
@@ -481,4 +475,3 @@ describe('Section 2 — Limit Orders (T2 · RTL)', () => {
     });
   });
 });
-
