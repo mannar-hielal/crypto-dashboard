@@ -244,8 +244,7 @@ function DashboardInner() {
           <motion.div
             className={`shrink-0 overflow-hidden${isMaximized ? ' flex-1' : ''}`}
             style={isMaximized ? {} : { height: panelHeightMV }}
-            // @ts-expect-error inert is a valid HTML attribute not yet typed in React
-            inert={!isMaximized && panelSize === 'hidden' ? '' : undefined}
+            inert={!isMaximized && panelSize === 'hidden' ? true : undefined}
           >
             <PaperTradingPanel
               size={panelSize}
@@ -306,8 +305,7 @@ function DashboardInner() {
           transition={{ duration: 0.2, ease: 'easeInOut' }}
           className="shrink-0 overflow-hidden"
           aria-hidden={!isTradingPanelVisible}
-          // @ts-expect-error inert is a valid HTML attribute not yet typed in React
-          inert={!isTradingPanelVisible ? '' : undefined}
+          inert={!isTradingPanelVisible ? true : undefined}
           style={{ pointerEvents: isTradingPanelVisible ? 'auto' : 'none' }}
         >
           <TradingPanel

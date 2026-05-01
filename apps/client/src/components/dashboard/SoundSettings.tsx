@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
-import ReactDOM from 'react-dom';
+import { createPortal } from 'react-dom';
 import { Volume2, VolumeX } from 'lucide-react';
 import { useTradingSoundCtx } from '@/hooks/TradingSoundContext';
 
@@ -87,7 +87,7 @@ export function SoundSettings() {
   const vol = sound.volume;
 
   const popover = open
-    ? ReactDOM.createPortal(
+    ? createPortal(
         <div
           ref={panelRef}
           className="w-60 rounded-xl border border-white/10 p-4 shadow-2xl"

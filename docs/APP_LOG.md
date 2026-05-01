@@ -124,8 +124,8 @@
 - `PanelSize = 'hidden' | 'collapsed' | 'open'` — exported from `DashboardPage.tsx`, used by `PaperTradingPanel`
 - `TradingPanel` uses `key={`${activePane}-${symbol}`}` — React remounts on active pane OR symbol change, resetting all local form state
 - `TradingPanel` open/close: wrapper `motion.div` **always rendered** (never unmounted at close); `animate={{ width: 0, opacity: 0 }}` hides it. Component stays mounted so **form state (qty, price, TP/SL, tab, side) is fully preserved across close/reopen**; only a symbol/pane key change resets form inputs.
-- `inert` attribute on PaperTradingPanel wrapper when `size === 'hidden'` (removes from tab order + a11y tree)
-- When panel is `'hidden'`, a floating purple pill button appears bottom-left of chart to re-open it
+- `inert` attribute is applied to hidden wrappers (`PaperTradingPanel` and right `TradingPanel`) to remove hidden content from keyboard/a11y interaction
+- Current panel header UI exposes `open`/`collapsed` controls; no floating re-open pill is rendered for a `hidden` state
 
 ---
 
