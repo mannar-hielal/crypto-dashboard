@@ -774,7 +774,7 @@ Paper trading  →  Real order      →  Proven bot      →  Full autonomous
 
 ---
 
-_Last updated: 2026-05-01 (form state preservation across TradingPanel close/reopen)_
+_Last updated: 2026-05-01 (review follow-ups + SymbolBar trade-toggle semantics)_
 
 - **feat: edit panels for open positions and pending orders (26.04.2026)**
   - **`paperStore.ts`** — two new store actions:
@@ -850,7 +850,7 @@ _Last updated: 2026-05-01 (form state preservation across TradingPanel close/reo
   ### Bybit `/market/kline` params error (`apps/server/src/routes/market/index.ts`)
   - `BYBIT_INTERVAL_MAP` converted to a `const` object so TypeScript can narrow its value type.
   - `AllowedInterval` = `keyof typeof BYBIT_INTERVAL_MAP`; `ALLOWED_INTERVALS_SET` and `isAllowedInterval()` type-guard derived from the map — single source of truth, no drift between validation and upstream values.
-  - **Category fallback retry**: `fetchHistoricalCandles` now iterates `['spot', 'linear']`. If Bybit returns `retCode 10001` (`params error`) for `spot` it retries immediately with `category=linear`, logs a warning, and returns the successful result. Any other error or exhausted retries throws as before, resulting in a `502` to the client.
+  - **Category fallback retry**: `fetchHistoricalCandles` iterates `['linear', 'spot']`. If Bybit returns `retCode 10001` (`params error`) for `linear` it retries with `category=spot`, logs a warning, and returns the successful result. Any other error or exhausted retries throws as before, resulting in a `502` to the client.
   - `BybitKlineResponse.result` typed as optional to match actual Bybit error payloads.
   - URL built with `URLSearchParams` (safer query construction).
   - Two new tests added to `market.test.ts`: interval mapping + `category=spot` first; fallback to `category=linear` on params error.
@@ -997,19 +997,6 @@ _Last updated: 2026-05-01 (form state preservation across TradingPanel close/reo
 ---
 
 ### feat: preserve side across TradingPanel close/reopen — TV parity (01.05.2026)
-
-**Context:** TV's trading panel remembers the last-used tab **and** side (Buy/Sell) when the panel is closed and reopened. Our app preserved the tab but reset side to Buy on every remount.
-
-**Changes:**
-
-- `TradingPanel.tsx` — added `initialSide?: OrderSide` and `onSideChange?: (side: OrderSide) => void` props (mirrors the existing `initialTab`/`onTabChange` pattern); `useState<OrderSide>(initialSide)` replaces the hardcoded `'buy'`; `handleSideChange` calls `onSideChange?.(s)`
-- `DashboardPage.tsx` — added `const [tradingSide, setTradingSide] = useState<'buy' | 'sell'>('buy')`; passed as `initialSide={tradingSide}` / `onSideChange={setTradingSide}` on `<TradingPanel>`
-
-**Behaviour:** Tab + Side now both survive close → reopen and symbol changes (key remount). Form inputs still reset on remount as before.
-
-**TRADING_TEST_PLAN.md:** 4.4 marked ✅, expected result corrected from "default state (Market, Buy, empty)" to "last-used tab + side preserved; form inputs empty".
-
-**Tests: 211/211 green** (no new tests needed — behaviour fully covered by lifting pattern already tested in 4.1).
 
 ---
 
