@@ -390,13 +390,14 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
 
       {/* ── Trade panel toggle ────────────────────────────────────────────── */}
       <motion.button
-        onClick={() => {
-          if (!tradingPanelOpen) onToggleTrading();
-        }}
-        whileHover={{ scale: tradingPanelOpen ? 1 : 1.04 }}
-        whileTap={{ scale: tradingPanelOpen ? 1 : 0.96 }}
-        title="Open trade panel"
-        className="relative flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 font-bold text-white transition-all"
+        type="button"
+        onClick={onToggleTrading}
+        disabled={tradingPanelOpen}
+        aria-disabled={tradingPanelOpen}
+        whileHover={tradingPanelOpen ? undefined : { scale: 1.04 }}
+        whileTap={tradingPanelOpen ? undefined : { scale: 0.96 }}
+        title={tradingPanelOpen ? 'Trade panel already open' : 'Open trade panel'}
+        className="relative flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 font-bold text-white transition-all disabled:cursor-not-allowed disabled:opacity-70"
         style={{
           fontSize: fontSize.xs11,
           background: tradingPanelOpen
@@ -407,7 +408,6 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
             ? 'none'
             : `0 0 14px 3px ${color.purpleDark}60, 0 2px 8px rgba(0,0,0,0.5)`,
           color: tradingPanelOpen ? `${color.purple}cc` : 'white',
-          cursor: tradingPanelOpen ? 'default' : 'pointer',
         }}
       >
         {!tradingPanelOpen && (

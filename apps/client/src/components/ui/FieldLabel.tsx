@@ -9,30 +9,40 @@
  *   <FieldLabel as="p">Order info</FieldLabel>
  */
 
+import type { ReactNode } from 'react';
 import { color, fontSize } from '@/lib/tokens';
 
-interface FieldLabelProps {
-  children: React.ReactNode;
-  /** Optional extra class names. */
-  className?: string;
-  /** Render tag. Defaults to 'span'. */
-  as?: 'span' | 'label' | 'p';
-  htmlFor?: string;
-}
+type FieldLabelProps =
+  | {
+      children: ReactNode;
+      className?: string;
+      as?: 'span' | 'p';
+      htmlFor?: never;
+    }
+  | {
+      children: ReactNode;
+      className?: string;
+      as: 'label';
+      htmlFor?: string;
+    };
 
-export function FieldLabel({
-  children,
-  className = '',
-  as: Tag = 'span',
-  htmlFor,
-}: FieldLabelProps) {
-  return (
-    <Tag
-      htmlFor={Tag === 'label' ? htmlFor : undefined}
-      className={`font-semibold uppercase tracking-wider ${className}`}
-      style={{ fontSize: fontSize.xs10, color: color.muted }}
-    >
-      {children}
-    </Tag>
-  );
+export function FieldLabel({ children, className = '', as = 'span', htmlFor }: FieldLabelProps) {
+  const commonProps = {
+    className: `font-semibold uppercase tracking-wider ${className}`,
+    style: { fontSize: fontSize.xs10, color: color.muted },
+  };
+
+  if (as === 'label') {
+    return (
+      <label htmlFor={htmlFor} {...commonProps}>
+        {children}
+      </label>
+    );
+  }
+
+  if (as === 'p') {
+    return <p {...commonProps}>{children}</p>;
+  }
+
+  return <span {...commonProps}>{children}</span>;
 }

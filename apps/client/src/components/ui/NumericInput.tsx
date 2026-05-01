@@ -12,11 +12,12 @@
  *    <NumericInput suffix="TP"   suffixColor={`${color.green}b3`} borderColor={`${color.green}60`} ... />
  */
 
+import type { ChangeEvent } from 'react';
 import { bg, color, fontSize } from '@/lib/tokens';
 
 interface NumericInputProps {
   value: string | number;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
   /** Text shown in the right suffix chip, e.g. "USDT", "USD", "BTC", "TP", "SL" */
   suffix: string;
   /** Colour of the suffix text. Defaults to color.muted. */

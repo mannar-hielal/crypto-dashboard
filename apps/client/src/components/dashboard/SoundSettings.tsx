@@ -5,7 +5,7 @@
  * user control the trading sound alert volume and preview each sound.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import ReactDOM from 'react-dom';
 import { Volume2, VolumeX } from 'lucide-react';
 import { useTradingSoundCtx } from '@/hooks/TradingSoundContext';
@@ -25,7 +25,7 @@ const PREVIEWS = [
 export function SoundSettings() {
   const sound = useTradingSoundCtx();
   const [open, setOpen] = useState(false);
-  const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({});
+  const [popoverStyle, setPopoverStyle] = useState<CSSProperties>({});
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 

@@ -949,6 +949,11 @@ _Last updated: 2026-05-01 (form state preservation across TradingPanel close/reo
     - **7.2.3** — heading and expected result updated: verify filled limit row appears in both Orders → Filled and Order History → Filled; Orders badge = 0 after fill.
   - **Total tests: 280 green** (191 client · 89 server — incremented from 277 by the 3 PaperTradingPanel RTL tests).
 
+- **fix: review follow-ups — shared UI typing + SymbolBar trade toggle semantics (01.05.2026)** ✅
+  - `WarningText.tsx`, `NumericInput.tsx`, `FieldLabel.tsx`, and `SoundSettings.tsx` now use explicit `import type` React types instead of `React.*` namespace references, avoiding TS namespace errors under the automatic JSX runtime.
+  - `FieldLabel.tsx` now renders dedicated `label` / `p` / `span` branches so `htmlFor` is only ever passed to a real `<label>` element.
+  - `SymbolBar.tsx` — the **Trade** pill now uses native `disabled` semantics when the trading panel is already open, instead of remaining a focusable clickable no-op. Result: cleaner keyboard/screen-reader behavior and clearer reopen semantics.
+
 ---
 
 ### test: automate Section 3 stop-order tests — T1 + T2 (01.05.2026)

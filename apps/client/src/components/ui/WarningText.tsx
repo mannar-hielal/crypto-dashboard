@@ -8,11 +8,12 @@
  *   {warning && <WarningText>{warning}</WarningText>}
  */
 
+import type { ReactNode } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { color, fontSize } from '@/lib/tokens';
 
 interface WarningTextProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export function WarningText({ children }: WarningTextProps) {
