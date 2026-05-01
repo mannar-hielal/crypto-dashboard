@@ -1201,14 +1201,16 @@ export function PaperTradingPanel({
                                         }}
                                       >
                                         <span className="inline-flex items-center justify-end gap-1">
-                                          <button
-                                            onClick={() => onEditPosition?.(pos.id)}
-                                            title="Edit exits"
-                                            className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
-                                            style={{ color: color.muted }}
-                                          >
-                                            <Pencil className="h-2.5 w-2.5" />
-                                          </button>
+                                          {onEditPosition && (
+                                            <button
+                                              onClick={() => onEditPosition(pos.id)}
+                                              title="Edit exits"
+                                              className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
+                                              style={{ color: color.muted }}
+                                            >
+                                              <Pencil className="h-2.5 w-2.5" />
+                                            </button>
+                                          )}
                                           {pos.takeProfit ? `$${fmtMktPrice(pos.takeProfit)}` : '—'}
                                         </span>
                                       </td>
@@ -1222,14 +1224,16 @@ export function PaperTradingPanel({
                                         }}
                                       >
                                         <span className="inline-flex items-center justify-end gap-1">
-                                          <button
-                                            onClick={() => onEditPosition?.(pos.id)}
-                                            title="Edit exits"
-                                            className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
-                                            style={{ color: color.muted }}
-                                          >
-                                            <Pencil className="h-2.5 w-2.5" />
-                                          </button>
+                                          {onEditPosition && (
+                                            <button
+                                              onClick={() => onEditPosition(pos.id)}
+                                              title="Edit exits"
+                                              className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
+                                              style={{ color: color.muted }}
+                                            >
+                                              <Pencil className="h-2.5 w-2.5" />
+                                            </button>
+                                          )}
                                           {pos.stopLoss ? `$${fmtMktPrice(pos.stopLoss)}` : '—'}
                                         </span>
                                       </td>
@@ -1542,10 +1546,11 @@ export function PaperTradingPanel({
                                     {isVisible('orders', 'limitPrice') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/80">
                                         <span className="inline-flex items-center justify-end gap-1">
-                                          {/* Pencil: pending main order (limit) */}
-                                          {isPending && (
+                                          {/* Pencil: pending main order — limit orders only
+                                              (stop orders have their pencil in the stopPrice column) */}
+                                          {isPending && type === 'limit' && onEditPendingOrder && (
                                             <button
-                                              onClick={() => onEditPendingOrder?.(rowId)}
+                                              onClick={() => onEditPendingOrder(rowId)}
                                               title="Edit order"
                                               className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
                                               style={{ color: color.muted }}
@@ -1556,9 +1561,10 @@ export function PaperTradingPanel({
                                           {/* Pencil: Working TP row → edit open position exits */}
                                           {isExitOrder &&
                                             ex!.status === 'working' &&
-                                            ex!.exitType === 'Take Profit' && (
+                                            ex!.exitType === 'Take Profit' &&
+                                            onEditPosition && (
                                               <button
-                                                onClick={() => onEditPosition?.(ex!.positionId)}
+                                                onClick={() => onEditPosition(ex!.positionId)}
                                                 title="Edit exits"
                                                 className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
                                                 style={{ color: color.muted }}
@@ -1569,9 +1575,10 @@ export function PaperTradingPanel({
                                           {/* Pencil: Inactive TP row → edit the parent pending order */}
                                           {isExitOrder &&
                                             ex!.status === 'inactive' &&
-                                            ex!.exitType === 'Take Profit' && (
+                                            ex!.exitType === 'Take Profit' &&
+                                            onEditPendingOrder && (
                                               <button
-                                                onClick={() => onEditPendingOrder?.(ex!.positionId)}
+                                                onClick={() => onEditPendingOrder(ex!.positionId)}
                                                 title="Edit pending order"
                                                 className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
                                                 style={{ color: color.muted }}
@@ -1597,9 +1604,9 @@ export function PaperTradingPanel({
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/80">
                                         <span className="inline-flex items-center justify-end gap-1">
                                           {/* Pencil: pending main order (stop) */}
-                                          {isPending && type === 'stop' && (
+                                          {isPending && type === 'stop' && onEditPendingOrder && (
                                             <button
-                                              onClick={() => onEditPendingOrder?.(rowId)}
+                                              onClick={() => onEditPendingOrder(rowId)}
                                               title="Edit order"
                                               className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
                                               style={{ color: color.muted }}
@@ -1610,9 +1617,10 @@ export function PaperTradingPanel({
                                           {/* Pencil: Working SL row → edit open position exits */}
                                           {isExitOrder &&
                                             ex!.status === 'working' &&
-                                            ex!.exitType === 'Stop Loss' && (
+                                            ex!.exitType === 'Stop Loss' &&
+                                            onEditPosition && (
                                               <button
-                                                onClick={() => onEditPosition?.(ex!.positionId)}
+                                                onClick={() => onEditPosition(ex!.positionId)}
                                                 title="Edit exits"
                                                 className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
                                                 style={{ color: color.muted }}
@@ -1623,9 +1631,10 @@ export function PaperTradingPanel({
                                           {/* Pencil: Inactive SL row → edit the parent pending order */}
                                           {isExitOrder &&
                                             ex!.status === 'inactive' &&
-                                            ex!.exitType === 'Stop Loss' && (
+                                            ex!.exitType === 'Stop Loss' &&
+                                            onEditPendingOrder && (
                                               <button
-                                                onClick={() => onEditPendingOrder?.(ex!.positionId)}
+                                                onClick={() => onEditPendingOrder(ex!.positionId)}
                                                 title="Edit pending order"
                                                 className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
                                                 style={{ color: color.muted }}

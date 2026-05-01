@@ -29,12 +29,21 @@ function shortId(id: string): string {
 }
 
 /** Small toggle switch */
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+function Toggle({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+}) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
+      aria-label={label}
       onClick={() => onChange(!checked)}
       className="relative h-4 w-7 shrink-0 rounded-full transition-colors"
       style={{ background: checked ? color.green : `${color.muted}40` }}
@@ -132,23 +141,36 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
   const slVal = parseFloat(slInput.replace(/,/g, '')) || null;
 
   // Direction-aware TP/SL warnings
+  // Use the correct price reference name so stop orders don't say "limit price".
+  const priceReferenceLabel = activeOrder.type === 'stop' ? 'stop price' : 'limit price';
+
   const tpWarning: string | null =
     tpEnabled && tpVal != null
       ? isBuy && tpVal <= newPrice
-        ? 'Take Profit must be above limit price for a buy order.'
+        ? `Take Profit must be above ${priceReferenceLabel} for a buy order.`
         : !isBuy && tpVal >= newPrice
-          ? 'Take Profit must be below limit price for a sell order.'
+          ? `Take Profit must be below ${priceReferenceLabel} for a sell order.`
           : null
       : null;
 
   const slWarning: string | null =
     slEnabled && slVal != null
       ? isBuy && slVal >= newPrice
-        ? 'Stop Loss must be below limit price for a buy order.'
+        ? `Stop Loss must be below ${priceReferenceLabel} for a buy order.`
         : !isBuy && slVal <= newPrice
-          ? 'Stop Loss must be above limit price for a sell order.'
+          ? `Stop Loss must be above ${priceReferenceLabel} for a sell order.`
           : null
       : null;
+
+  // Confirm is disabled when: insufficient funds, a direction warning is active,
+  // or a toggle is on but the parsed value is missing/zero (would silently remove the leg).
+  const confirmDisabled = !!(
+    insufficientFunds ||
+    tpWarning ||
+    slWarning ||
+    (tpEnabled && !tpVal) ||
+    (slEnabled && !slVal)
+  );
 
   // Description line (TV-style)
   const descLabel = `${isBuy ? 'Buy' : 'Sell'} ${typeLabel} ${fmtMktPrice(newQty)} @ ${fmtMktPrice(activeOrder.triggerPrice)}`;
@@ -172,6 +194,7 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
   }
 
   function handleConfirm() {
+    if (confirmDisabled) return;
     const result = editPendingOrder(
       orderId,
       newPrice,
@@ -341,7 +364,7 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
           {/* Take Profit */}
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              <Toggle checked={tpEnabled} onChange={setTpEnabled} />
+              <Toggle checked={tpEnabled} onChange={setTpEnabled} label="Enable take profit" />
               <span
                 style={{
                   fontSize: fontSize.xs11,
@@ -379,7 +402,7 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
           {/* Stop Loss */}
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              <Toggle checked={slEnabled} onChange={setSlEnabled} />
+              <Toggle checked={slEnabled} onChange={setSlEnabled} label="Enable stop loss" />
               <span
                 style={{
                   fontSize: fontSize.xs11,
@@ -458,8 +481,8 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
       >
         <motion.button
           onClick={handleConfirm}
-          disabled={insufficientFunds}
-          whileTap={!insufficientFunds ? { scale: 0.97 } : {}}
+          disabled={confirmDisabled}
+          whileTap={!confirmDisabled ? { scale: 0.97 } : {}}
           className="w-full rounded py-2 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           style={{ background: 'rgba(105,91,236,0.85)', fontSize: fontSize.xs }}
         >

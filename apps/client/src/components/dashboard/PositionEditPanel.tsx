@@ -27,12 +27,21 @@ function fmtMktPrice(price: number): string {
 }
 
 /** Small toggle switch */
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+function Toggle({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+}) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
+      aria-label={label}
       onClick={() => onChange(!checked)}
       className="relative h-4 w-7 shrink-0 rounded-full transition-colors"
       style={{ background: checked ? color.green : `${color.muted}40` }}
@@ -145,8 +154,19 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
   const rewardPct = rewardUsd != null ? (rewardUsd / position.entryUsdtAmount) * 100 : null;
   const riskPct = riskUsd != null ? (riskUsd / position.entryUsdtAmount) * 100 : null;
 
+  // ── Confirm guard ────────────────────────────────────────────────────────────
+  // Disabled when: a direction warning is active, or a toggle is on but the
+  // parsed value is missing/zero (would silently remove the leg).
+  const confirmDisabled = !!(
+    tpWarning ||
+    slWarning ||
+    (tpEnabled && !tpVal) ||
+    (slEnabled && !slVal)
+  );
+
   // ── Handlers ────────────────────────────────────────────────────────────────
   function handleConfirm() {
+    if (confirmDisabled) return;
     updatePositionExits(
       positionId,
       tpEnabled && tpVal ? tpVal : null,
@@ -226,7 +246,7 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
           {/* ── Take Profit row ─────────────────────────────────────────── */}
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              <Toggle checked={tpEnabled} onChange={setTpEnabled} />
+              <Toggle checked={tpEnabled} onChange={setTpEnabled} label="Enable take profit" />
               <span
                 style={{
                   fontSize: fontSize.xs11,
@@ -238,6 +258,7 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
             </div>
             <input
               type="text"
+              inputMode="decimal"
               disabled={!tpEnabled}
               value={tpInput}
               onChange={(e) => setTpInput(e.target.value)}
@@ -263,7 +284,7 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
           {/* ── Stop Loss row ────────────────────────────────────────────── */}
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              <Toggle checked={slEnabled} onChange={setSlEnabled} />
+              <Toggle checked={slEnabled} onChange={setSlEnabled} label="Enable stop loss" />
               <span
                 style={{
                   fontSize: fontSize.xs11,
@@ -275,6 +296,7 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
             </div>
             <input
               type="text"
+              inputMode="decimal"
               disabled={!slEnabled}
               value={slInput}
               onChange={(e) => setSlInput(e.target.value)}
@@ -366,8 +388,9 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
       >
         <motion.button
           onClick={handleConfirm}
-          whileTap={{ scale: 0.97 }}
-          className="w-full rounded py-2 text-sm font-bold text-white transition-opacity hover:opacity-90"
+          disabled={confirmDisabled}
+          whileTap={!confirmDisabled ? { scale: 0.97 } : {}}
+          className="w-full rounded py-2 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           style={{ background: 'rgba(105,91,236,0.85)', fontSize: fontSize.xs }}
         >
           Confirm
