@@ -5,7 +5,7 @@
  * user control the trading sound alert volume and preview each sound.
  */
 
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import ReactDOM from 'react-dom';
 import { Volume2, VolumeX } from 'lucide-react';
 import { useTradingSoundCtx } from '@/hooks/TradingSoundContext';
@@ -30,7 +30,7 @@ export function SoundSettings() {
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Position popover above the trigger button using fixed coords so it escapes overflow:hidden parents
-  const updatePosition = () => {
+  const updatePosition = useCallback(() => {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
     setPopoverStyle({
@@ -39,7 +39,7 @@ export function SoundSettings() {
       bottom: window.innerHeight - rect.top + 8,
       zIndex: 9999,
     });
-  };
+  }, []);
 
   const handleOpen = () => {
     updatePosition();
@@ -62,6 +62,27 @@ export function SoundSettings() {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
+
+  // Re-anchor the portal popover while open as viewport/layout changes.
+  useEffect(() => {
+    if (!open) return;
+
+    const onReposition = () => updatePosition();
+    window.addEventListener('resize', onReposition);
+    // Capture scroll events from nested scroll containers too.
+    window.addEventListener('scroll', onReposition, true);
+
+    const triggerEl = triggerRef.current;
+    const observer =
+      triggerEl && 'ResizeObserver' in window ? new ResizeObserver(() => updatePosition()) : null;
+    if (triggerEl && observer) observer.observe(triggerEl);
+
+    return () => {
+      window.removeEventListener('resize', onReposition);
+      window.removeEventListener('scroll', onReposition, true);
+      observer?.disconnect();
+    };
+  }, [open, updatePosition]);
 
   const vol = sound.volume;
 

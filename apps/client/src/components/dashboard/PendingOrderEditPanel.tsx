@@ -8,7 +8,7 @@
  * icon on a pending order row in PaperTradingPanel.
  */
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { X, TrendingUp, TrendingDown, ArrowLeftRight, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { usePaperStore, COMMISSION_RATE } from '@/store/paperStore';
@@ -35,6 +35,7 @@ interface PendingOrderEditPanelProps {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPanelProps) {
+  const priceInputId = useId();
   const order = usePaperStore((s) => s.pendingOrders.find((o) => o.id === orderId));
   const balance = usePaperStore((s) => s.balance);
   const leverage = usePaperStore((s) => s.leverage);
@@ -251,8 +252,12 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
 
         {/* ── Price ─────────────────────────────────────────────────────── */}
         <div className="flex flex-col gap-1 px-3 py-3">
-          <FieldLabel as="label">Price</FieldLabel>
+          <FieldLabel as="label" htmlFor={priceInputId}>
+            Price
+          </FieldLabel>
           <NumericInput
+            id={priceInputId}
+            ariaLabel="Order price"
             suffix="USDT"
             step={0.01}
             min={0}

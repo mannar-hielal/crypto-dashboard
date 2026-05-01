@@ -641,6 +641,7 @@ export function TradingPanel({
                     <div className="flex items-center gap-2">
                       <Toggle
                         checked={tpEnabled}
+                        label="Enable take profit"
                         onChange={(v) => {
                           setTpEnabled(v);
                           if (!v) setTpInput('');
@@ -693,6 +694,7 @@ export function TradingPanel({
                     <div className="flex items-center gap-2">
                       <Toggle
                         checked={slEnabled}
+                        label="Enable stop loss"
                         onChange={(v) => {
                           setSlEnabled(v);
                           if (!v) setSlInput('');

@@ -315,19 +315,19 @@ Tab badge counts: purple pill for Positions count, amber pill for Orders count (
 
 Based on TradingView markup reference. Not a 1:1 copy.
 
-**Header:** Symbol name (e.g. `BTCUSDT`) + ✕ close (hides panel only, component stays mounted, **all form state preserved** — qty, price, TP/SL, tab, side). Resets **form inputs** (qty, price, TP, SL) on symbol or active pane change via ``key={`${activePane}-${symbol}`}`` in `DashboardPage`. **Tab selection (Market/Limit/Stop) and side (Buy/Sell) survive symbol changes** — `tradingTab` and `tradingSide` are lifted state in `DashboardPage`, passed as `initialTab`/`initialSide` props; `OrderTab` is exported from `TradingPanel.tsx`. When remounting on Limit/Stop, `priceInput` is lazily initialised to the new symbol's `latestPrice`.
+**Header:** Symbol name (e.g. `BTCUSDT`) + ✕ close (hides panel only, component stays mounted, **all form state preserved** — qty, price, TP/SL, tab, side). Resets **form inputs** (qty, price, TP, SL) on symbol or active pane change via ``key={`${activePane}-${symbol}`}`` in `DashboardPage`. **Tab selection (Market/Limit/Stop) and side (Buy/Sell) survive symbol changes** — `tradingTab` and `tradingSide` are lifted state in `DashboardPage`, passed as `initialTab`/`initialSide` props; `OrderTab` is exported from `TradingPanel.tsx`.
 
 **Side selector (always visible below header):**
 
-- Split button: `Sell {latestPrice}` (left) | `Buy {latestPrice}` (right)
-- Spread badge centered (shows `—` until bid/ask feed is implemented in a future phase)
+- Split button: `Sell {bid ?? latestPrice}` (left) | `Buy {ask ?? latestPrice}` (right)
+- Spread badge centered: live `ask − bid` when bid/ask are present (`4 dp` if spread < 1, else `2 dp`); shows `—` while ticker bid/ask are unavailable
 - Active side: colored bottom border + tinted background (green Buy / red Sell)
 
 **Order type tabs:** `Market` | `Limit` | `Stop` — spring animated purple underline (framer-motion `layoutId="tab-underline"`)
 
 - **Market**: no price input; executes at `latestPrice`
-- **Limit**: price input (pre-filled with `latestPrice` on tab switch); dispatches `placeLimitOrder`
-- **Stop**: price input (pre-filled with `latestPrice` on tab switch); dispatches `placeStopOrder`
+- **Limit**: price input defaults to the pending side of market (Buy → bid / fallback `latest×0.9999`, Sell → ask / fallback `latest×1.0001`); dispatches `placeLimitOrder`
+- **Stop**: price input defaults to the pending side of market (Buy → ask / fallback `latest×1.0001`, Sell → bid / fallback `latest×0.9999`); dispatches `placeStopOrder`
 
 **Quantity input:**
 
@@ -358,7 +358,7 @@ Based on TradingView markup reference. Not a 1:1 copy.
 - Primary line: `Buy` / `Sell` (large)
 - Secondary line: `{qty} {baseAsset} · MARKET` | `{qty} {baseAsset} @ {price} LIMIT` | `{qty} {baseAsset} @ {price} STOP`
 
-**Intentionally skipped vs TradingView:** DOM tab, bid/ask spread (phase 2), Risk USD / Risk % balance, Tick value, Time in force
+**Intentionally skipped vs TradingView:** DOM tab, Risk USD / Risk % balance, Tick value, Time in force
 
 ---
 
@@ -853,7 +853,7 @@ _Last updated: 2026-05-01 (review follow-ups + SymbolBar trade-toggle semantics)
   - **Category fallback retry**: `fetchHistoricalCandles` iterates `['linear', 'spot']`. If Bybit returns `retCode 10001` (`params error`) for `linear` it retries with `category=spot`, logs a warning, and returns the successful result. Any other error or exhausted retries throws as before, resulting in a `502` to the client.
   - `BybitKlineResponse.result` typed as optional to match actual Bybit error payloads.
   - URL built with `URLSearchParams` (safer query construction).
-  - Two new tests added to `market.test.ts`: interval mapping + `category=spot` first; fallback to `category=linear` on params error.
+  - Two new tests added to `market.test.ts`: interval mapping + `category=linear` first; fallback to `category=spot` on params error.
 
   ### TypeScript TS18048 (`apps/client/src/components/dashboard/PendingOrderEditPanel.tsx`)
   - After the existing `if (!order) return ...` guard, a `const activeOrder = order` binding is introduced. All closure-based and derived references (swap-mode handler, qty/margin calculations, desc label) now use `activeOrder` — TypeScript can prove non-null without additional assertions.
@@ -883,7 +883,7 @@ _Last updated: 2026-05-01 (review follow-ups + SymbolBar trade-toggle semantics)
   - **T2 · RTL** (new file `components/__tests__/*.test.tsx`): component integration tests — Vitest + `@testing-library/react` (already installed as dev dep). Renders components in jsdom and asserts rendered HTML / simulates events. Covers: form validation error messages, toggle label changes, badge counts, sub-tab filtering, modal open/close, button disabled states, column picker localStorage pref. Uses `vi.useFakeTimers()` for the 3 s reset-confirm auto-cancel (Section 8.7).
   - **T3 · Playwright** (install with `pnpm dlx create-playwright` scoped to `apps/client` when Section 5+ is ready): real Chromium against the running dev server. Covers: live WebSocket price feed (Sections 6, 9.1–9.4, 9.6–9.8), network offline states (1.7.8, 9.6), CSS animations / maximize-restore (4.12–4.13), Web Audio API sounds (4.14–4.16), visual regression for icon sizes and pixel layout (Section 5), chart crosshair / time-range sync (10.4.4–10.4.7), PaneHeader live price (10.5.1–10.5.2), browser tab title (6.9).
   - **Workflow** (repeating after each manually-passed section): map each test case to T1/T2/T3; write all T1 cases as new `describe('Section N ...')` blocks in `paperStore.test.ts`; write T2 cases in `components/__tests__/TradingPanel.test.tsx` or `PaperTradingPanel.test.tsx`; mark T3 as `// TODO: Playwright` until the framework is set up; run `pnpm test` — all tests must be green before moving to the next section.
-  - **Test plan updated**: `Tier` column added to every table across all 11 sections + tier legend added to file header. Also corrected stale 7.2.3 wording (the "Orders Filled sub-tab" was removed 25.04.2026 — test now verifies TV-style behaviour: no Filled sub-tab in Orders at all).
+  - **Test plan updated**: `Tier` column added to every table across all 11 sections + tier legend added to file header. Also corrected stale 7.2.3 wording to reflect current behavior: filled rows are visible in **Orders → Filled** and **Order History → Filled** while the top Orders badge remains active-only.
   - **Files changed**: `docs/TRADING_TEST_PLAN.md`, `docs/APP_LOG.md`
 
 - **test: T1 (Vitest) + T2 (RTL) automated tests for Sections 1 & 2 — 277 tests green (01.05.2026)** ✅
@@ -996,10 +996,6 @@ _Last updated: 2026-05-01 (review follow-ups + SymbolBar trade-toggle semantics)
 
 ---
 
-### feat: preserve side across TradingPanel close/reopen — TV parity (01.05.2026)
-
----
-
 ### feat: preserve all form state (amount, price, TP/SL) across TradingPanel close/reopen (01.05.2026)
 
 **Context:** Closing the TradingPanel (✕) then reopening it caused all form inputs — amount, price, TP, SL and their toggles — to reset, forcing the user to re-enter their order setup. Tab and side were already preserved (lifted state), but the form fields lived in local component state and were lost on unmount.
@@ -1027,15 +1023,4 @@ _Last updated: 2026-05-01 (review follow-ups + SymbolBar trade-toggle semantics)
 
 **Tests: 211/211 green** (no new tests written — behaviour is a mount/unmount architectural change; existing T2 tests verify the rendered state).
 
-**Context:** TV's trading panel remembers the last-used tab **and** side (Buy/Sell) when the panel is closed and reopened. Our app preserved the tab but reset side to Buy on every remount.
-
-**Changes:**
-
-- `TradingPanel.tsx` — added `initialSide?: OrderSide` and `onSideChange?: (side: OrderSide) => void` props (mirrors the existing `initialTab`/`onTabChange` pattern); `useState<OrderSide>(initialSide)` replaces the hardcoded `'buy'`; `handleSideChange` calls `onSideChange?.(s)`
-- `DashboardPage.tsx` — added `const [tradingSide, setTradingSide] = useState<'buy' | 'sell'>('buy')`; passed as `initialSide={tradingSide}` / `onSideChange={setTradingSide}` on `<TradingPanel>`
-
-**Behaviour:** Tab + Side now both survive close → reopen and symbol changes (key remount). Form inputs still reset on remount as before.
-
-**TRADING_TEST_PLAN.md:** 4.4 marked ✅, expected result corrected from "default state (Market, Buy, empty)" to "last-used tab + side preserved; form inputs empty".
-
-**Tests: 211/211 green** (no new tests needed — behaviour fully covered by lifting pattern already tested in 4.1).
+**Note:** Side persistence (`initialSide`/`onSideChange`) landed in the same 01.05.2026 pass. Combined with the always-mounted TradingPanel wrapper, close/reopen now preserves tab + side + form inputs; symbol change still resets via `key={`${activePane}-${symbol}`}`.
