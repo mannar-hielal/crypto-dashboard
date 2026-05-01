@@ -231,6 +231,89 @@ describe('paperStore', () => {
     });
   });
 
+  describe('edit journal entries', () => {
+    it('writes detailed confirmation entries when editing position TP/SL', () => {
+      const id = usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 1_000, 55_000, 48_000)!;
+
+      usePaperStore.getState().updatePositionExits(id, 56_000, 47_000);
+
+      const journalTexts = usePaperStore
+        .getState()
+        .journal.slice(0, 3)
+        .map((entry) => entry.text);
+
+      expect(journalTexts).toEqual([
+        'Stop-Loss modification confirmed — LONG BTCUSDT @ $47000.00',
+        'Take-Profit modification confirmed — LONG BTCUSDT @ $56000.00',
+        'Modified LONG BTCUSDT exits — TP $55000.00 → $56000.00, SL $48000.00 → $47000.00',
+      ]);
+    });
+
+    it('writes cancel history and a descriptive journal entry when removing a position TP', () => {
+      const id = usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 1_000, 55_000)!;
+
+      usePaperStore.getState().updatePositionExits(id, null, null);
+
+      const state = usePaperStore.getState();
+      expect(state.orders[0]).toMatchObject({
+        type: 'take-profit',
+        status: 'cancelled',
+        limitPrice: 55_000,
+      });
+      expect(state.journal[0].text).toBe('Take-Profit cancelled for LONG BTCUSDT @ $55000.00');
+      expect(state.journal[1].text).toBe('Modified LONG BTCUSDT exits — TP removed');
+    });
+
+    it('writes detailed parent and child journal entries when editing a pending order', () => {
+      const orderId = usePaperStore
+        .getState()
+        .placeLimitOrder(SYMBOL, 'buy', 50_000, 1_000, 55_000, 48_000)!;
+
+      usePaperStore.getState().editPendingOrder(orderId, 49_000, 1_200, 56_000, 47_000);
+
+      const journalTexts = usePaperStore
+        .getState()
+        .journal.slice(0, 3)
+        .map((entry) => entry.text);
+
+      expect(journalTexts).toEqual([
+        'Stop-Loss modification confirmed for pending Long BTCUSDT @ $47000.00',
+        'Take-Profit modification confirmed for pending Long BTCUSDT @ $56000.00',
+        'Modified LIMIT Long BTCUSDT — price $50000.00 → $49000.00, qty 0.020000 → 0.024490, reserved $1000.00 → $1200.00, TP $55000.00 → $56000.00, SL $48000.00 → $47000.00',
+      ]);
+    });
+
+    it('writes cancel history and a descriptive journal entry when removing a pending TP child', () => {
+      const orderId = usePaperStore
+        .getState()
+        .placeLimitOrder(SYMBOL, 'buy', 50_000, 1_000, 55_000)!;
+
+      usePaperStore.getState().editPendingOrder(orderId, 50_000, 1_000, null, null);
+
+      const state = usePaperStore.getState();
+      expect(state.orders[0]).toMatchObject({
+        type: 'take-profit',
+        status: 'cancelled',
+        limitPrice: 55_000,
+      });
+      expect(state.journal[0].text).toBe(
+        'Take-Profit cancelled for pending Long BTCUSDT @ $55000.00'
+      );
+      expect(state.journal[1].text).toBe('Modified LIMIT Long BTCUSDT — TP removed');
+    });
+
+    it('does not add journal noise when a pending-order edit makes no actual changes', () => {
+      const orderId = usePaperStore
+        .getState()
+        .placeLimitOrder(SYMBOL, 'buy', 50_000, 1_000, 55_000, 48_000)!;
+      const journalCountBefore = usePaperStore.getState().journal.length;
+
+      usePaperStore.getState().editPendingOrder(orderId, 50_000, 1_000, 55_000, 48_000);
+
+      expect(usePaperStore.getState().journal).toHaveLength(journalCountBefore);
+    });
+  });
+
   // ── reset() ────────────────────────────────────────────────────────────────
 
   describe('reset()', () => {

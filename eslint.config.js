@@ -4,13 +4,14 @@ import tseslint from 'typescript-eslint';
 export default [
   {
     ignores: [
-      'node_modules',
-      'dist',
-      '.next',
-      'build',
-      '.turbo',
+      '**/node_modules/**',
+      '**/dist/**', // compiled build output — never lint generated JS/d.ts
+      '**/.next/**',
+      '**/build/**',
+      '**/.turbo/**',
       'pnpm-lock.yaml',
       'apps/server/generated/**', // 🔐 never lint auto-generated Prisma client
+      'generated/**', // 🔐 never lint workspace-root generated/ (CDSDK)
     ],
   },
   js.configs.recommended,
