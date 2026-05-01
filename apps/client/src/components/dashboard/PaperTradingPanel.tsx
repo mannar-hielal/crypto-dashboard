@@ -35,9 +35,7 @@ const fmtQty = (n: number) => parseFloat(n.toFixed(6)).toString();
 
 type InfoTab = 'positions' | 'orders' | 'orderhistory' | 'balancehistory' | 'journal';
 type ColTab = 'positions' | 'orders' | 'orderhistory' | 'balancehistory';
-// 'filled' is intentionally absent — filled orders are routed directly to
-// Order History (TV-style) and never appear in the Orders tab.
-type OrderSubTab = 'all' | 'working' | 'inactive' | 'cancelled' | 'rejected';
+type OrderSubTab = 'all' | 'working' | 'inactive' | 'filled' | 'cancelled' | 'rejected';
 type OrderHistorySubTab = 'all' | 'filled' | 'cancelled' | 'rejected';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -558,17 +556,13 @@ export function PaperTradingPanel({
     }
   }
 
-  // All order types (market, limit, stop) appear in the Orders tab — matching TradingView.
-  // Filled orders are excluded entirely from the Orders tab; they go straight to
-  // Order History (TV-style immediate archive — no time delay).
-  // Only Working, Inactive, Cancelled, and Rejected records remain here.
+  // Orders tab mirrors TV-style lifecycle buckets; historical filled rows remain
+  // visible in Orders (Filled sub-tab) and Order History.
   const allOrderDisplayRows: OrderDisplayRow[] = [
     ...inactivePendingExitRows,
     ...exitOrderRows,
     ...pendingOrders.map((o) => ({ kind: 'pending' as const, data: o })),
-    ...orders
-      .filter((o) => o.status !== 'filled')
-      .map((o) => ({ kind: 'historical' as const, data: o })),
+    ...orders.map((o) => ({ kind: 'historical' as const, data: o })),
   ].sort((a, b) => {
     const ta =
       a.kind === 'pending'
@@ -596,13 +590,23 @@ export function PaperTradingPanel({
           ? allOrderDisplayRows.filter(
               (r) => r.kind === 'exit-order' && r.data.status === 'inactive'
             )
-          : orderSubTab === 'cancelled'
+          : orderSubTab === 'filled'
             ? allOrderDisplayRows.filter(
-                (r) => r.kind === 'historical' && r.data.status === 'cancelled'
+                (r) => r.kind === 'historical' && r.data.status === 'filled'
               )
-            : allOrderDisplayRows.filter(
-                (r) => r.kind === 'historical' && r.data.status === 'rejected'
-              );
+            : orderSubTab === 'cancelled'
+              ? allOrderDisplayRows.filter(
+                  (r) => r.kind === 'historical' && r.data.status === 'cancelled'
+                )
+              : allOrderDisplayRows.filter(
+                  (r) => r.kind === 'historical' && r.data.status === 'rejected'
+                );
+
+  // Top-level Orders badge mirrors TV: active rows only (working/inactive),
+  // not historical filled/cancelled/rejected rows.
+  const activeOrdersBadgeCount = allOrderDisplayRows.filter(
+    (r) => r.kind === 'pending' || r.kind === 'exit-order'
+  ).length;
 
   // ── Column helpers ─────────────────────────────────────────────────────────
   function isVisible(tab: ColTab, colId: string): boolean {
@@ -853,18 +857,14 @@ export function PaperTradingPanel({
                         {positions.length}
                       </span>
                     )}
-                    {tab === 'orders' &&
-                      pendingOrders.length + exitOrderRows.length + inactivePendingExitRows.length >
-                        0 && (
-                        <span
-                          className="rounded-full px-1.5 py-px font-bold text-white"
-                          style={{ fontSize: fontSize.xxs, background: color.amber }}
-                        >
-                          {pendingOrders.length +
-                            exitOrderRows.length +
-                            inactivePendingExitRows.length}
-                        </span>
-                      )}
+                    {tab === 'orders' && activeOrdersBadgeCount > 0 && (
+                      <span
+                        className="rounded-full px-1.5 py-px font-bold text-white"
+                        style={{ fontSize: fontSize.xxs, background: color.amber }}
+                      >
+                        {activeOrdersBadgeCount}
+                      </span>
+                    )}
                     {tab === 'orderhistory' && orderHistoryRows.length > 0 && (
                       <span
                         className="rounded-full bg-white/8 px-1.5 py-px font-semibold"
@@ -967,64 +967,64 @@ export function PaperTradingPanel({
                 className="flex shrink-0 items-center gap-0 border-b border-white/4 px-2"
                 style={{ background: bg.panel }}
               >
-                {(['all', 'working', 'inactive', 'cancelled', 'rejected'] as OrderSubTab[]).map(
-                  (sub) => {
-                    const count =
-                      sub === 'all'
-                        ? allOrderDisplayRows.length
-                        : sub === 'working'
+                {(
+                  ['all', 'working', 'inactive', 'filled', 'cancelled', 'rejected'] as OrderSubTab[]
+                ).map((sub) => {
+                  const count =
+                    sub === 'all'
+                      ? allOrderDisplayRows.length
+                      : sub === 'working'
+                        ? allOrderDisplayRows.filter(
+                            (r) =>
+                              r.kind === 'pending' ||
+                              (r.kind === 'exit-order' && r.data.status === 'working')
+                          ).length
+                        : sub === 'inactive'
                           ? allOrderDisplayRows.filter(
-                              (r) =>
-                                r.kind === 'pending' ||
-                                (r.kind === 'exit-order' && r.data.status === 'working')
+                              (r) => r.kind === 'exit-order' && r.data.status === 'inactive'
                             ).length
-                          : sub === 'inactive'
-                            ? allOrderDisplayRows.filter(
-                                (r) => r.kind === 'exit-order' && r.data.status === 'inactive'
-                              ).length
-                            : allOrderDisplayRows.filter(
-                                (r) => r.kind === 'historical' && r.data.status === sub
-                              ).length;
-                    return (
-                      <button
-                        key={sub}
-                        onClick={() => setOrderSubTab(sub)}
-                        className="relative flex items-center gap-1 px-3 py-1.5 transition-colors"
-                        style={{
-                          fontSize: fontSize.xs11,
-                          fontWeight: orderSubTab === sub ? 600 : 400,
-                          color: orderSubTab === sub ? color.purple : color.muted,
-                        }}
-                      >
-                        {orderSubTab === sub && (
-                          <motion.span
-                            layoutId="order-sub-tab"
-                            className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t"
-                            style={{ background: color.purpleDark }}
-                          />
-                        )}
-                        <span className="capitalize">
-                          {sub === 'all' ? 'All' : sub.charAt(0).toUpperCase() + sub.slice(1)}
+                          : allOrderDisplayRows.filter(
+                              (r) => r.kind === 'historical' && r.data.status === sub
+                            ).length;
+                  return (
+                    <button
+                      key={sub}
+                      onClick={() => setOrderSubTab(sub)}
+                      className="relative flex items-center gap-1 px-3 py-1.5 transition-colors"
+                      style={{
+                        fontSize: fontSize.xs11,
+                        fontWeight: orderSubTab === sub ? 600 : 400,
+                        color: orderSubTab === sub ? color.purple : color.muted,
+                      }}
+                    >
+                      {orderSubTab === sub && (
+                        <motion.span
+                          layoutId="order-sub-tab"
+                          className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t"
+                          style={{ background: color.purpleDark }}
+                        />
+                      )}
+                      <span className="capitalize">
+                        {sub === 'all' ? 'All' : sub.charAt(0).toUpperCase() + sub.slice(1)}
+                      </span>
+                      {count > 0 && (
+                        <span
+                          className="rounded-full px-1 py-px tabular-nums"
+                          style={{
+                            fontSize: fontSize.xxs,
+                            background:
+                              orderSubTab === sub
+                                ? `${color.purpleDark}40`
+                                : 'rgba(255,255,255,0.07)',
+                            color: orderSubTab === sub ? color.purple : color.muted,
+                          }}
+                        >
+                          {count}
                         </span>
-                        {count > 0 && (
-                          <span
-                            className="rounded-full px-1 py-px tabular-nums"
-                            style={{
-                              fontSize: fontSize.xxs,
-                              background:
-                                orderSubTab === sub
-                                  ? `${color.purpleDark}40`
-                                  : 'rgba(255,255,255,0.07)',
-                              color: orderSubTab === sub ? color.purple : color.muted,
-                            }}
-                          >
-                            {count}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  }
-                )}
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
 
