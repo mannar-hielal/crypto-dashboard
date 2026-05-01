@@ -953,6 +953,12 @@ _Last updated: 2026-05-01 (form state preservation across TradingPanel close/reo
   - `WarningText.tsx`, `NumericInput.tsx`, `FieldLabel.tsx`, and `SoundSettings.tsx` now use explicit `import type` React types instead of `React.*` namespace references, avoiding TS namespace errors under the automatic JSX runtime.
   - `FieldLabel.tsx` now renders dedicated `label` / `p` / `span` branches so `htmlFor` is only ever passed to a real `<label>` element.
   - `SymbolBar.tsx` — the **Trade** pill now uses native `disabled` semantics when the trading panel is already open, instead of remaining a focusable clickable no-op. Result: cleaner keyboard/screen-reader behavior and clearer reopen semantics.
+  - Added `apps/client/src/components/dashboard/__tests__/SymbolBar.test.tsx` (2 RTL tests):
+    - Trade button is disabled (and does not call `onToggleTrading`) when the panel is already open.
+    - Trade button is enabled and calls `onToggleTrading` when the panel is closed.
+  - Local verification run after these fixes:
+    - `pnpm --filter client build` ✅
+    - `pnpm --filter client test --run` ✅ (**266/266 client tests green**)
 
 ---
 
