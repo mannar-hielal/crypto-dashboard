@@ -773,7 +773,7 @@ Paper trading  →  Real order      →  Proven bot      →  Full autonomous
 
 ---
 
-_Last updated: 2026-05-01_
+_Last updated: 2026-05-01 (evening)_
 
 - **feat: edit panels for open positions and pending orders (26.04.2026)**
   - **`paperStore.ts`** — two new store actions:
@@ -843,6 +843,38 @@ _Last updated: 2026-05-01_
   - **2.5.2** — SL above limit trigger price: inline error `"Stop-Loss must be below entry price for Long"` shown. ✅ (TV cross-check ✅)
   - **2.5.3** — Symbol switch after placing limit: existing order stays correctly symbol-scoped; multi-symbol positions (BTCUSDT + ETHUSDT) render independently in Positions tab. ✅
   - **2.5.4** — Limit order exceeding balance: `"Insufficient balance"` inline error + red margin-over-balance state. ✅
+
+- **fix: PR code review issues — Bybit params error, TS18048, linting, a11y, UX guards (01.05.2026)** ✅
+
+  ### Bybit `/market/kline` params error (`apps/server/src/routes/market/index.ts`)
+  - `BYBIT_INTERVAL_MAP` converted to a `const` object so TypeScript can narrow its value type.
+  - `AllowedInterval` = `keyof typeof BYBIT_INTERVAL_MAP`; `ALLOWED_INTERVALS_SET` and `isAllowedInterval()` type-guard derived from the map — single source of truth, no drift between validation and upstream values.
+  - **Category fallback retry**: `fetchHistoricalCandles` now iterates `['spot', 'linear']`. If Bybit returns `retCode 10001` (`params error`) for `spot` it retries immediately with `category=linear`, logs a warning, and returns the successful result. Any other error or exhausted retries throws as before, resulting in a `502` to the client.
+  - `BybitKlineResponse.result` typed as optional to match actual Bybit error payloads.
+  - URL built with `URLSearchParams` (safer query construction).
+  - Two new tests added to `market.test.ts`: interval mapping + `category=spot` first; fallback to `category=linear` on params error.
+
+  ### TypeScript TS18048 (`apps/client/src/components/dashboard/PendingOrderEditPanel.tsx`)
+  - After the existing `if (!order) return ...` guard, a `const activeOrder = order` binding is introduced. All closure-based and derived references (swap-mode handler, qty/margin calculations, desc label) now use `activeOrder` — TypeScript can prove non-null without additional assertions.
+
+  ### ESLint ignore patterns (`eslint.config.js`)
+  - Changed bare-string patterns (`'dist'`, `'node_modules'`) to glob patterns (`'**/dist/**'`, `'**/node_modules/**'`) so they match nested paths (e.g. `apps/server/dist/`).
+  - Added `'generated/**'` to ignore the workspace-root `generated/CDSDK/` directory.
+  - Eliminates all 219 false-positive lint errors in `apps/server/dist/` and the Prisma-generated type declarations.
+
+  ### `PositionEditPanel.tsx` — accessibility, `inputMode`, Confirm guard
+  - `Toggle` component: added `label: string` prop wired to `aria-label`; caller passes `"Enable take profit"` / `"Enable stop loss"` so screen readers can distinguish the two switches.
+  - TP and SL `<input>` elements: added `inputMode="decimal"` for correct mobile numeric keyboard (was missing unlike other fields in the app).
+  - `confirmDisabled` derived value: `true` when `tpWarning || slWarning || (tpEnabled && !tpVal) || (slEnabled && !slVal)`. Confirm button wired to `disabled={confirmDisabled}` — prevents silently removing a leg when the toggle is ON but the input is empty/zero, and blocks submission when a direction warning is active.
+
+  ### `PendingOrderEditPanel.tsx` — accessibility, dynamic labels, Confirm guard
+  - `Toggle` component: same `aria-label` fix as `PositionEditPanel`.
+  - TP/SL warning messages: replaced hardcoded `"limit price"` with `priceReferenceLabel = activeOrder.type === 'stop' ? 'stop price' : 'limit price'` so stop orders show the correct field name in the error text.
+  - `confirmDisabled` guard: covers `insufficientFunds || tpWarning || slWarning || (tpEnabled && !tpVal) || (slEnabled && !slVal)`. Replaces the old `disabled={insufficientFunds}`-only check.
+
+  ### `PaperTradingPanel.tsx` — duplicate pencils, phantom buttons
+  - **Duplicate pencil on STOP rows**: `limitPrice` column pencil was rendered for all pending orders (`isPending`). STOP orders have their trigger price in the `stopPrice` column, which already had its own pencil. Fixed: `limitPrice` pencil now only renders when `isPending && type === 'limit'`; `stopPrice` pencil unchanged at `isPending && type === 'stop'`.
+  - **Phantom buttons when callbacks undefined**: all `onEditPosition?.(...)` and `onEditPendingOrder?.(...)` optional-chain patterns replaced by explicit `onEditPosition && <button onClick={() => onEditPosition(...)} ...>` guards. Pencil buttons are not rendered at all when the parent has not wired up the edit callbacks — no focusable controls that silently do nothing.
 
 - **feat: TradingView-style journal detail for edited parent/child orders (01.05.2026)** ✅
   - **`paperStore.ts`** — replaced the single generic edit journal line with **delta-aware multi-entry logs** for both `updatePositionExits()` and `editPendingOrder()`.
