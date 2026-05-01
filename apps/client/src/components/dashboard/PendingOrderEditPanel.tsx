@@ -98,30 +98,32 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
     );
   }
 
-  // ── Derived ─────────────────────────────────────────────────────────────────
-  const isBuy = order.side === 'buy';
-  const typeLabel = order.type === 'limit' ? 'Limit' : 'Stop';
+  const activeOrder = order;
 
-  const newPrice = parseFloat(priceInput.replace(/,/g, '')) || order.triggerPrice;
+  // ── Derived ─────────────────────────────────────────────────────────────────
+  const isBuy = activeOrder.side === 'buy';
+  const typeLabel = activeOrder.type === 'limit' ? 'Limit' : 'Stop';
+
+  const newPrice = parseFloat(priceInput.replace(/,/g, '')) || activeOrder.triggerPrice;
 
   // Resolve qty and margin based on active input mode
   const newQty =
     qtyMode === 'units'
       ? parseFloat(qtyInput.replace(/,/g, '')) || order.qty
       : newPrice > 0 && leverage > 0
-        ? ((parseFloat(usdInput.replace(/,/g, '')) || order.usdtAmount) * leverage) / newPrice
-        : order.qty;
+        ? ((parseFloat(usdInput.replace(/,/g, '')) || activeOrder.usdtAmount) * leverage) / newPrice
+        : activeOrder.qty;
 
   const newUsdtAmount =
     qtyMode === 'units'
       ? newPrice > 0 && leverage > 0
         ? (newQty * newPrice) / leverage
-        : order.usdtAmount
-      : parseFloat(usdInput.replace(/,/g, '')) || order.usdtAmount;
+        : activeOrder.usdtAmount
+      : parseFloat(usdInput.replace(/,/g, '')) || activeOrder.usdtAmount;
 
   const usdEquivalent = newQty * newPrice; // notional trade value
 
-  const oldReserved = order.usdtAmount + order.usdtAmount * COMMISSION_RATE;
+  const oldReserved = activeOrder.usdtAmount + activeOrder.usdtAmount * COMMISSION_RATE;
   const scratchBalance = balance + oldReserved;
   const newRequired = newUsdtAmount + newUsdtAmount * COMMISSION_RATE;
   const insufficientFunds = newRequired > scratchBalance;
@@ -149,20 +151,21 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
       : null;
 
   // Description line (TV-style)
-  const descLabel = `${isBuy ? 'Buy' : 'Sell'} ${typeLabel} ${fmtMktPrice(newQty)} @ ${fmtMktPrice(order.triggerPrice)}`;
+  const descLabel = `${isBuy ? 'Buy' : 'Sell'} ${typeLabel} ${fmtMktPrice(newQty)} @ ${fmtMktPrice(activeOrder.triggerPrice)}`;
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   function handleSwapMode() {
     if (qtyMode === 'units') {
       // Convert current units → USD margin
-      const qty = parseFloat(qtyInput.replace(/,/g, '')) || order.qty;
-      const usd = newPrice > 0 && leverage > 0 ? (qty * newPrice) / leverage : order.usdtAmount;
+      const qty = parseFloat(qtyInput.replace(/,/g, '')) || activeOrder.qty;
+      const usd =
+        newPrice > 0 && leverage > 0 ? (qty * newPrice) / leverage : activeOrder.usdtAmount;
       setUsdInput(usd.toFixed(2));
       setQtyMode('usd');
     } else {
       // Convert current USD margin → units
-      const usd = parseFloat(usdInput.replace(/,/g, '')) || order.usdtAmount;
-      const qty = newPrice > 0 && leverage > 0 ? (usd * leverage) / newPrice : order.qty;
+      const usd = parseFloat(usdInput.replace(/,/g, '')) || activeOrder.usdtAmount;
+      const qty = newPrice > 0 && leverage > 0 ? (usd * leverage) / newPrice : activeOrder.qty;
       setQtyInput(qty.toFixed(6));
       setQtyMode('units');
     }
