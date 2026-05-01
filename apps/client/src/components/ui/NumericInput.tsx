@@ -32,6 +32,8 @@ interface NumericInputProps {
   suffixPadding?: 'pr-12' | 'pr-14' | 'pr-16';
   id?: string;
   name?: string;
+  ariaLabel?: string;
+  testId?: string;
 }
 
 export function NumericInput({
@@ -48,6 +50,8 @@ export function NumericInput({
   suffixPadding = 'pr-14',
   id,
   name,
+  ariaLabel,
+  testId,
 }: NumericInputProps) {
   return (
     <div className="relative">
@@ -60,6 +64,8 @@ export function NumericInput({
         step={step}
         value={value}
         onChange={onChange}
+        aria-label={ariaLabel}
+        data-testid={testId}
         placeholder={placeholder}
         disabled={disabled}
         className={`w-full rounded-md border border-white/8 px-2.5 py-1.5 ${suffixPadding} text-xs text-white transition-colors focus:outline-none focus:border-brand-purple-dark/50 disabled:opacity-40`}

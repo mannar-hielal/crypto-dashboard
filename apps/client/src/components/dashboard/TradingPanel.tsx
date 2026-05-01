@@ -543,6 +543,8 @@ export function TradingPanel({
               </label>
               <NumericInput
                 id={priceInputId}
+                ariaLabel="Order price"
+                testId="trading-price-input"
                 suffix="USDT"
                 step={0.01}
                 min={0}
@@ -576,6 +578,8 @@ export function TradingPanel({
           <NumericInput
             id="trading-qty"
             name="qty"
+            ariaLabel="Order amount"
+            testId="trading-qty-input"
             step={qtyMode === 'usd' ? '0.01' : '0.000001'}
             min={0}
             value={qtyInput}
@@ -649,6 +653,8 @@ export function TradingPanel({
                     </div>
                     {tpEnabled && (
                       <NumericInput
+                        ariaLabel="Take profit price"
+                        testId="trading-tp-input"
                         suffix="TP"
                         suffixColor={`${color.green}b3`}
                         borderColor={`${color.green}60`}
@@ -699,6 +705,8 @@ export function TradingPanel({
                     </div>
                     {slEnabled && (
                       <NumericInput
+                        ariaLabel="Stop loss price"
+                        testId="trading-sl-input"
                         suffix="SL"
                         suffixColor={`${color.red}b3`}
                         borderColor={`${color.red}60`}
@@ -855,6 +863,7 @@ export function TradingPanel({
         <motion.button
           onClick={handleExecute}
           animate={executeAnim}
+          aria-label={`Execute ${isBuy ? 'buy' : 'sell'} ${tab} order`}
           disabled={
             !latestPrice ||
             !qtyInput ||

@@ -14,7 +14,7 @@
  *     1.4.1  TP enabled → input has green border                 (T2)
  *     1.5.1  SL enabled → input has red border                   (T2)
  *     1.6.1  Both TP and SL inputs active                        (T2)
- *     1.7.1  Submit with empty qty → error "Enter a USD amount"   (T2)
+ *     1.7.1  Submit with empty qty → submit button disabled         (T2)
  *     1.7.2  Submit with qty > balance → "Insufficient balance"   (T2)
  *     1.7.3  Buy TP below entry → error "…must be above…"        (T2)
  *     1.7.4  Buy SL above entry → error "…must be below…"        (T2)
@@ -99,14 +99,33 @@ function renderPanel(props: Partial<React.ComponentProps<typeof TradingPanel>> =
   return render(<TradingPanel onClose={vi.fn()} {...props} />);
 }
 
-/**
- * Click the execute (Buy/Sell) button — always the last <button> in the panel.
- * We cannot use { name: /buy/i } because the side-selector "Buy" button also
- * matches. The execute button is the last button in DOM order.
- */
+/** Click the primary execute button in the order form. */
+function getExecuteBtn(): HTMLButtonElement {
+  return screen.getByRole('button', {
+    name: /execute\s+(buy|sell)\s+(market|limit|stop)\s+order/i,
+  });
+}
+
+/** Quantity/margin input shared across Market/Limit/Stop tabs. */
+function getQtyInput(): HTMLInputElement {
+  return screen.getByLabelText('Order amount') as HTMLInputElement;
+}
+
+/** Price input shown in Limit/Stop tabs. */
+function getPriceInput(): HTMLInputElement {
+  return screen.getByLabelText('Order price') as HTMLInputElement;
+}
+
+function getTpInput(): HTMLInputElement {
+  return screen.getByLabelText('Take profit price') as HTMLInputElement;
+}
+
+function getSlInput(): HTMLInputElement {
+  return screen.getByLabelText('Stop loss price') as HTMLInputElement;
+}
+
 function clickExecuteBtn() {
-  const buttons = screen.getAllByRole('button');
-  fireEvent.click(buttons[buttons.length - 1]);
+  fireEvent.click(getExecuteBtn());
 }
 
 // ─── Setup / Teardown ─────────────────────────────────────────────────────────
@@ -129,7 +148,7 @@ describe('Section 1 — Market Orders (T2 · RTL)', () => {
   describe('1.1 Basic Buy', () => {
     it('1.1.1: order info shows Margin and Commission when qty is entered', () => {
       renderPanel();
-      const qtyInput = screen.getAllByRole('spinbutton')[0];
+      const qtyInput = getQtyInput();
       fireEvent.change(qtyInput, { target: { value: '100' } });
 
       // Margin label + value
@@ -143,7 +162,7 @@ describe('Section 1 — Market Orders (T2 · RTL)', () => {
 
     it('1.1.2: clicking Buy clears the qty input', () => {
       renderPanel();
-      const qtyInput = screen.getAllByRole('spinbutton')[0];
+      const qtyInput = getQtyInput();
       fireEvent.change(qtyInput, { target: { value: '100' } });
 
       clickExecuteBtn();
@@ -186,7 +205,7 @@ describe('Section 1 — Market Orders (T2 · RTL)', () => {
       const unitsBtn = screen.getByRole('button', { name: /units/i });
       fireEvent.click(unitsBtn);
 
-      const qtyInput = screen.getAllByRole('spinbutton')[0];
+      const qtyInput = getQtyInput();
       // 0.002 BTC × $50,000 = $100 USD
       fireEvent.change(qtyInput, { target: { value: '0.002' } });
 
@@ -201,7 +220,7 @@ describe('Section 1 — Market Orders (T2 · RTL)', () => {
       const unitsBtn = screen.getByRole('button', { name: /units/i });
       fireEvent.click(unitsBtn);
 
-      const qtyInput = screen.getAllByRole('spinbutton')[0];
+      const qtyInput = getQtyInput();
       fireEvent.change(qtyInput, { target: { value: '0.002' } });
 
       // Switch back to USD
@@ -223,8 +242,7 @@ describe('Section 1 — Market Orders (T2 · RTL)', () => {
 
       // TP input should now be in the DOM
       // The TP input has a green borderColor inline style
-      const allInputs = screen.getAllByRole('spinbutton');
-      const tpInput = allInputs[allInputs.length - 1]; // last input is TP
+      const tpInput = getTpInput();
       const style = (tpInput as HTMLInputElement).style;
       // #2ccd78 + alpha "60" hex → jsdom converts to rgba(44, 205, 120, …)
       expect(style.borderColor).toMatch(/44,\s*205,\s*120/);
@@ -241,8 +259,7 @@ describe('Section 1 — Market Orders (T2 · RTL)', () => {
       fireEvent.click(slToggle);
 
       // SL input should now be in the DOM with red border
-      const allInputs = screen.getAllByRole('spinbutton');
-      const slInput = allInputs[allInputs.length - 1];
+      const slInput = getSlInput();
       const style = (slInput as HTMLInputElement).style;
       // #d5455c + alpha "60" hex → jsdom converts to rgba(213, 69, 92, …)
       expect(style.borderColor).toMatch(/213,\s*69,\s*92/);
@@ -274,14 +291,13 @@ describe('Section 1 — Market Orders (T2 · RTL)', () => {
       // Qty is empty by default — the component disables the button rather than
       // showing a text error, which is the correct UX (error-on-submit pattern
       // cannot apply when the button is already gated by disabled state).
-      const buttons = screen.getAllByRole('button');
-      const executeBtn = buttons[buttons.length - 1] as HTMLButtonElement;
+      const executeBtn = getExecuteBtn();
       expect(executeBtn.disabled).toBe(true);
     });
 
     it('1.7.2: submitting with qty > balance shows "Insufficient balance"', () => {
       renderPanel();
-      const qtyInput = screen.getAllByRole('spinbutton')[0];
+      const qtyInput = getQtyInput();
       // 20000 + commission is well above the $10,000 balance (lot-rounding safe)
       fireEvent.change(qtyInput, { target: { value: '20000' } });
       clickExecuteBtn();
@@ -290,15 +306,14 @@ describe('Section 1 — Market Orders (T2 · RTL)', () => {
 
     it('1.7.3: Buy with TP below entry price shows "Take-Profit must be above entry price for Long"', () => {
       renderPanel();
-      const qtyInput = screen.getAllByRole('spinbutton')[0];
+      const qtyInput = getQtyInput();
       fireEvent.change(qtyInput, { target: { value: '100' } });
 
       const [tpToggle] = screen.getAllByRole('switch');
       fireEvent.click(tpToggle);
 
       // TP input is now the last spinbutton; set it below live price (50000)
-      const allInputs = screen.getAllByRole('spinbutton');
-      const tpInput = allInputs[allInputs.length - 1];
+      const tpInput = getTpInput();
       fireEvent.change(tpInput, { target: { value: '49000' } });
 
       clickExecuteBtn();
@@ -308,14 +323,13 @@ describe('Section 1 — Market Orders (T2 · RTL)', () => {
 
     it('1.7.4: Buy with SL above entry price shows "Stop-Loss must be below entry price for Long"', () => {
       renderPanel();
-      const qtyInput = screen.getAllByRole('spinbutton')[0];
+      const qtyInput = getQtyInput();
       fireEvent.change(qtyInput, { target: { value: '100' } });
 
       const [, slToggle] = screen.getAllByRole('switch');
       fireEvent.click(slToggle);
 
-      const allInputs = screen.getAllByRole('spinbutton');
-      const slInput = allInputs[allInputs.length - 1];
+      const slInput = getSlInput();
       fireEvent.change(slInput, { target: { value: '51000' } }); // above entry 50000
 
       clickExecuteBtn();
@@ -330,14 +344,13 @@ describe('Section 1 — Market Orders (T2 · RTL)', () => {
       const sellSideBtn = sideButtons.find((b) => b.textContent?.startsWith('Sell'));
       fireEvent.click(sellSideBtn!);
 
-      const qtyInput = screen.getAllByRole('spinbutton')[0];
+      const qtyInput = getQtyInput();
       fireEvent.change(qtyInput, { target: { value: '100' } });
 
       const [tpToggle] = screen.getAllByRole('switch');
       fireEvent.click(tpToggle);
 
-      const allInputs = screen.getAllByRole('spinbutton');
-      const tpInput = allInputs[allInputs.length - 1];
+      const tpInput = getTpInput();
       fireEvent.change(tpInput, { target: { value: '51000' } }); // above entry 50000
 
       clickExecuteBtn();
@@ -352,14 +365,13 @@ describe('Section 1 — Market Orders (T2 · RTL)', () => {
         .filter((b) => b.textContent?.startsWith('Sell'));
       fireEvent.click(sellSideEl!);
 
-      const qtyInput = screen.getAllByRole('spinbutton')[0];
+      const qtyInput = getQtyInput();
       fireEvent.change(qtyInput, { target: { value: '100' } });
 
       const [, slToggle] = screen.getAllByRole('switch');
       fireEvent.click(slToggle);
 
-      const allInputs = screen.getAllByRole('spinbutton');
-      const slInput = allInputs[allInputs.length - 1];
+      const slInput = getSlInput();
       fireEvent.change(slInput, { target: { value: '49000' } }); // below entry 50000 → SHORT SL must be above
 
       clickExecuteBtn();
@@ -369,14 +381,10 @@ describe('Section 1 — Market Orders (T2 · RTL)', () => {
 
     it('1.7.7: submit button is disabled when qty input is 0', () => {
       renderPanel();
-      const qtyInput = screen.getAllByRole('spinbutton')[0];
+      const qtyInput = getQtyInput();
       fireEvent.change(qtyInput, { target: { value: '0' } });
 
-      const submitButton = screen
-        .getAllByRole('button')
-        .reverse()
-        .find((b) => b.textContent?.includes('MARKET'));
-      expect((submitButton as HTMLButtonElement)?.disabled).toBe(true);
+      expect(getExecuteBtn().disabled).toBe(true);
     });
   });
 });
@@ -397,9 +405,7 @@ describe('Section 2 — Limit Orders (T2 · RTL)', () => {
       // Price label should appear
       expect(screen.getByText('Price')).toBeTruthy();
       // The price input spinbutton should exist and have a non-empty value
-      const allInputs = screen.getAllByRole('spinbutton');
-      // First spinbutton after Limit tab switch is the price input
-      const priceInput = allInputs[0];
+      const priceInput = getPriceInput();
       const val = parseFloat((priceInput as HTMLInputElement).value);
       // Pre-fill is bid (50000 - 10 = 49990) or latestPrice * 0.9999
       expect(val).toBeGreaterThan(0);
@@ -414,8 +420,7 @@ describe('Section 2 — Limit Orders (T2 · RTL)', () => {
       const limitTab = screen.getByRole('tab', { name: /limit/i });
       fireEvent.click(limitTab);
       // Set the price input to a specific value
-      const allInputs = screen.getAllByRole('spinbutton');
-      fireEvent.change(allInputs[0], { target: { value: String(triggerPrice) } });
+      fireEvent.change(getPriceInput(), { target: { value: String(triggerPrice) } });
     }
 
     it('2.5.1: Limit Buy with TP below trigger price → "Take-Profit must be above entry price for Long"', () => {
@@ -423,16 +428,14 @@ describe('Section 2 — Limit Orders (T2 · RTL)', () => {
       setupLimitBuy(48_000); // trigger below PRICE
 
       // Enter qty
-      const allInputs = screen.getAllByRole('spinbutton');
-      fireEvent.change(allInputs[1], { target: { value: '200' } }); // qty input
+      fireEvent.change(getQtyInput(), { target: { value: '200' } });
 
       // Enable TP
       const [tpToggle] = screen.getAllByRole('switch');
       fireEvent.click(tpToggle);
 
       // Set TP below trigger
-      const inputsAfterTp = screen.getAllByRole('spinbutton');
-      fireEvent.change(inputsAfterTp[inputsAfterTp.length - 1], { target: { value: '47000' } });
+      fireEvent.change(getTpInput(), { target: { value: '47000' } });
 
       clickExecuteBtn();
 
@@ -444,16 +447,14 @@ describe('Section 2 — Limit Orders (T2 · RTL)', () => {
       setupLimitBuy(48_000);
 
       // Enter qty
-      const allInputs = screen.getAllByRole('spinbutton');
-      fireEvent.change(allInputs[1], { target: { value: '200' } });
+      fireEvent.change(getQtyInput(), { target: { value: '200' } });
 
       // Enable SL
       const [, slToggle] = screen.getAllByRole('switch');
       fireEvent.click(slToggle);
 
       // Set SL above trigger
-      const inputsAfterSl = screen.getAllByRole('spinbutton');
-      fireEvent.change(inputsAfterSl[inputsAfterSl.length - 1], { target: { value: '49000' } });
+      fireEvent.change(getSlInput(), { target: { value: '49000' } });
 
       clickExecuteBtn();
 
@@ -466,8 +467,7 @@ describe('Section 2 — Limit Orders (T2 · RTL)', () => {
       fireEvent.click(limitTab);
 
       // Enter qty well above balance — 20000 is 2× balance, safe after lot-rounding
-      const allInputs = screen.getAllByRole('spinbutton');
-      fireEvent.change(allInputs[1], { target: { value: '20000' } });
+      fireEvent.change(getQtyInput(), { target: { value: '20000' } });
 
       clickExecuteBtn();
 
@@ -488,17 +488,14 @@ describe('Section 4 — Cross-cutting / Regression (T2 · RTL)', () => {
       );
 
       // Type a qty value
-      const allInputs = screen.getAllByRole('spinbutton');
-      fireEvent.change(allInputs[1], { target: { value: '200' } }); // qty is second spinbutton on Limit tab
+      fireEvent.change(getQtyInput(), { target: { value: '200' } });
 
       // Simulate symbol change by remounting with a new key + new initialTab (lifted state)
       paneStores[0].setState({ latestPrice: 3_000, bid: 2_990, ask: 3_010 });
       rerender(<TradingPanel key="ETHUSDT" onClose={vi.fn()} initialTab="limit" />);
 
       // After key remount: qty should be empty (form reset), Limit tab preserved
-      const inputsAfter = screen.getAllByRole('spinbutton');
-      // qty input value should be empty after key remount
-      expect((inputsAfter[1] as HTMLInputElement).value).toBe('');
+      expect(getQtyInput().value).toBe('');
       // Limit tab still active: "Price" label visible
       expect(screen.getByText('Price')).toBeTruthy();
     });
@@ -513,7 +510,7 @@ describe('Section 4 — Cross-cutting / Regression (T2 · RTL)', () => {
       // Market tab active — no "Price" label (that's only on Limit/Stop)
       expect(screen.queryByText('Price')).toBeNull();
       // MARKET button visible in submit button
-      const submitBtn = screen.getAllByRole('button').at(-1)!;
+      const submitBtn = getExecuteBtn();
       expect(submitBtn.textContent).toMatch(/MARKET/);
     });
   });
@@ -527,7 +524,7 @@ describe('Section 4 — Cross-cutting / Regression (T2 · RTL)', () => {
 
       renderPanel({ initialTab: 'limit' });
 
-      const priceInput = screen.getAllByRole('spinbutton')[0];
+      const priceInput = getPriceInput();
       const val = parseFloat((priceInput as HTMLInputElement).value);
       // Pre-fill = bid (2990) for Buy/Limit
       expect(val).toBeCloseTo(2_990, 0);
@@ -542,7 +539,7 @@ describe('Section 4 — Cross-cutting / Regression (T2 · RTL)', () => {
 
       renderPanel({ initialTab: 'stop' });
 
-      const priceInput = screen.getAllByRole('spinbutton')[0];
+      const priceInput = getPriceInput();
       const val = parseFloat((priceInput as HTMLInputElement).value);
       // Stop+Buy default is ask (3010)
       expect(val).toBeCloseTo(3_010, 0);
@@ -558,7 +555,7 @@ describe('Section 4 — Cross-cutting / Regression (T2 · RTL)', () => {
       // Limit tab should be active (Price label present)
       expect(screen.getByText('Price')).toBeTruthy();
       // Sell side button appears — check the execute button text contains "Sell"
-      const submitBtn = screen.getAllByRole('button').at(-1)!;
+      const submitBtn = getExecuteBtn();
       expect(submitBtn.textContent?.toLowerCase()).toMatch(/sell/);
     });
 
@@ -567,7 +564,7 @@ describe('Section 4 — Cross-cutting / Regression (T2 · RTL)', () => {
 
       // Stop tab active — price input exists
       expect(screen.getByText('Price')).toBeTruthy();
-      const submitBtn = screen.getAllByRole('button').at(-1)!;
+      const submitBtn = getExecuteBtn();
       expect(submitBtn.textContent?.toLowerCase()).toMatch(/buy/);
       expect(submitBtn.textContent).toMatch(/STOP/i);
     });
@@ -576,7 +573,7 @@ describe('Section 4 — Cross-cutting / Regression (T2 · RTL)', () => {
       const { rerender } = renderPanel();
 
       // Enter qty
-      const qtyInput = screen.getAllByRole('spinbutton')[0];
+      const qtyInput = getQtyInput();
       fireEvent.change(qtyInput, { target: { value: '300' } });
 
       // Enable both TP and SL toggles — re-query after each click to avoid stale element references
@@ -587,7 +584,7 @@ describe('Section 4 — Cross-cutting / Regression (T2 · RTL)', () => {
       rerender(<TradingPanel onClose={vi.fn()} />);
 
       // qty should still be 300
-      const qtyAfter = screen.getAllByRole('spinbutton')[0];
+      const qtyAfter = getQtyInput();
       expect((qtyAfter as HTMLInputElement).value).toBe('300');
       // TP + SL inputs should still be present (toggles preserved)
       const inputCount = screen.getAllByRole('spinbutton').length;
@@ -618,7 +615,7 @@ describe('Section 3 — Stop Orders (T2 · RTL)', () => {
       renderPanel();
       switchToStopTab();
       // Default side = Buy; type a price below the live price (50 000) → triggers warning
-      const priceInput = screen.getAllByRole('spinbutton')[0];
+      const priceInput = getPriceInput();
       fireEvent.change(priceInput, { target: { value: '49000' } });
 
       expect(screen.getByText(/will fill immediately/)).toBeTruthy();
@@ -630,7 +627,7 @@ describe('Section 3 — Stop Orders (T2 · RTL)', () => {
       switchToStopTab();
       switchToSell();
       // Type a price above the live price (50 000) → triggers warning
-      const priceInput = screen.getAllByRole('spinbutton')[0];
+      const priceInput = getPriceInput();
       fireEvent.change(priceInput, { target: { value: '51000' } });
 
       expect(screen.getByText(/will fill immediately/)).toBeTruthy();
@@ -642,7 +639,7 @@ describe('Section 3 — Stop Orders (T2 · RTL)', () => {
       switchToStopTab();
       // On Stop+Buy, the default pre-fill is ask=50010 (above market) — no warning.
       // Confirm by explicitly typing a price above market.
-      const priceInput = screen.getAllByRole('spinbutton')[0];
+      const priceInput = getPriceInput();
       fireEvent.change(priceInput, { target: { value: '51000' } });
 
       expect(screen.queryByText(/will fill immediately/)).toBeNull();
@@ -653,7 +650,7 @@ describe('Section 3 — Stop Orders (T2 · RTL)', () => {
       switchToStopTab();
       switchToSell();
       // Default pre-fill for Stop+Sell is bid=49990 (below market) — no warning.
-      const priceInput = screen.getAllByRole('spinbutton')[0];
+      const priceInput = getPriceInput();
       fireEvent.change(priceInput, { target: { value: '49000' } });
 
       expect(screen.queryByText(/will fill immediately/)).toBeNull();
@@ -667,9 +664,7 @@ describe('Section 3 — Stop Orders (T2 · RTL)', () => {
       renderPanel();
       switchToStopTab();
 
-      // qty input is allInputs[1] (allInputs[0] is the price input on Stop tab)
-      const allInputs = screen.getAllByRole('spinbutton');
-      fireEvent.change(allInputs[1], { target: { value: '20000' } });
+      fireEvent.change(getQtyInput(), { target: { value: '20000' } });
 
       clickExecuteBtn();
 

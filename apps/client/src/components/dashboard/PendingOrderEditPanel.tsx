@@ -9,7 +9,7 @@
  */
 
 import { useState } from 'react';
-import { X, TrendingUp, TrendingDown, ArrowLeftRight } from 'lucide-react';
+import { X, TrendingUp, TrendingDown, ArrowLeftRight, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { usePaperStore, COMMISSION_RATE } from '@/store/paperStore';
 import { bg, color, fontSize } from '@/lib/tokens';
