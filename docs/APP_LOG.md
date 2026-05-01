@@ -773,7 +773,7 @@ Paper trading  →  Real order      →  Proven bot      →  Full autonomous
 
 ---
 
-_Last updated: 2026-05-01 (evening)_
+_Last updated: 2026-05-01 (evening — test automation planning)_
 
 - **feat: edit panels for open positions and pending orders (26.04.2026)**
   - **`paperStore.ts`** — two new store actions:
@@ -875,6 +875,15 @@ _Last updated: 2026-05-01 (evening)_
   ### `PaperTradingPanel.tsx` — duplicate pencils, phantom buttons
   - **Duplicate pencil on STOP rows**: `limitPrice` column pencil was rendered for all pending orders (`isPending`). STOP orders have their trigger price in the `stopPrice` column, which already had its own pencil. Fixed: `limitPrice` pencil now only renders when `isPending && type === 'limit'`; `stopPrice` pencil unchanged at `isPending && type === 'stop'`.
   - **Phantom buttons when callbacks undefined**: all `onEditPosition?.(...)` and `onEditPendingOrder?.(...)` optional-chain patterns replaced by explicit `onEditPosition && <button onClick={() => onEditPosition(...)} ...>` guards. Pencil buttons are not rendered at all when the parent has not wired up the edit callbacks — no focusable controls that silently do nothing.
+
+- **docs: test automation tier mapping — full test plan annotated (01.05.2026)** ✅
+  - **Decision: three-tier test pyramid adopted for all current and future test plan sections.**
+  - **T1 · Vitest** (`paperStore.test.ts` / `layoutStore.test.ts`): pure Zustand store unit tests — Vitest + jsdom, no DOM rendering. Covers all business logic: balance math, order lifecycle, TP/SL triggers, bracket cancellations, cancel records, journal content, sibling-cancel logic, pending order fills, localStorage hydration. Approx. 80% of test cases across Sections 1–4, 7, 10 (store sync), 11.
+  - **T2 · RTL** (new file `components/__tests__/*.test.tsx`): component integration tests — Vitest + `@testing-library/react` (already installed as dev dep). Renders components in jsdom and asserts rendered HTML / simulates events. Covers: form validation error messages, toggle label changes, badge counts, sub-tab filtering, modal open/close, button disabled states, column picker localStorage pref. Uses `vi.useFakeTimers()` for the 3 s reset-confirm auto-cancel (Section 8.7).
+  - **T3 · Playwright** (install with `pnpm dlx create-playwright` scoped to `apps/client` when Section 5+ is ready): real Chromium against the running dev server. Covers: live WebSocket price feed (Sections 6, 9.1–9.4, 9.6–9.8), network offline states (1.7.8, 9.6), CSS animations / maximize-restore (4.12–4.13), Web Audio API sounds (4.14–4.16), visual regression for icon sizes and pixel layout (Section 5), chart crosshair / time-range sync (10.4.4–10.4.7), PaneHeader live price (10.5.1–10.5.2), browser tab title (6.9).
+  - **Workflow** (repeating after each manually-passed section): map each test case to T1/T2/T3; write all T1 cases as new `describe('Section N ...')` blocks in `paperStore.test.ts`; write T2 cases in `components/__tests__/TradingPanel.test.tsx` or `PaperTradingPanel.test.tsx`; mark T3 as `// TODO: Playwright` until the framework is set up; run `pnpm test` — all tests must be green before moving to the next section.
+  - **Test plan updated**: `Tier` column added to every table across all 11 sections + tier legend added to file header. Also corrected stale 7.2.3 wording (the "Orders Filled sub-tab" was removed 25.04.2026 — test now verifies TV-style behaviour: no Filled sub-tab in Orders at all).
+  - **Files changed**: `docs/TRADING_TEST_PLAN.md`, `docs/APP_LOG.md`
 
 - **feat: TradingView-style journal detail for edited parent/child orders (01.05.2026)** ✅
   - **`paperStore.ts`** — replaced the single generic edit journal line with **delta-aware multi-entry logs** for both `updatePositionExits()` and `editPendingOrder()`.
