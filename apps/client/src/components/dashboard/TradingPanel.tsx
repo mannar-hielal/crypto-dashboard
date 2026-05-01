@@ -8,6 +8,9 @@ import { usePaperStore, COMMISSION_RATE } from '@/store/paperStore';
 import { useTradingSoundCtx } from '@/hooks/TradingSoundContext';
 import { floorToLot } from '@/lib/markets';
 import { bg, color, fontSize } from '@/lib/tokens';
+import { Toggle } from '@/components/ui/Toggle';
+import { NumericInput } from '@/components/ui/NumericInput';
+import { FieldLabel } from '@/components/ui/FieldLabel';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,26 +46,6 @@ function useOnlineStatus(): boolean {
   return isOnline;
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-/** Small toggle switch (checkbox-style) */
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className="relative h-4 w-7 shrink-0 rounded-full transition-colors"
-      style={{ background: checked ? color.green : `${color.muted}40` }}
-    >
-      <span
-        className="absolute top-0.5 h-3 w-3 rounded-full bg-white transition-transform"
-        style={{ transform: checked ? 'translateX(-12px)' : 'translateX(0)' }}
-      />
-    </button>
-  );
-}
-
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface TradingPanelProps {
@@ -71,11 +54,21 @@ interface TradingPanelProps {
   initialTab?: OrderTab;
   /** Called whenever the user switches tabs so the parent can persist the selection */
   onTabChange?: (tab: OrderTab) => void;
+  /** Side (buy/sell) preserved across remounts — mirrors TV behaviour */
+  initialSide?: OrderSide;
+  /** Called whenever the user switches side so the parent can persist the selection */
+  onSideChange?: (side: OrderSide) => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: TradingPanelProps) {
+export function TradingPanel({
+  onClose,
+  initialTab = 'market',
+  onTabChange,
+  initialSide = 'buy',
+  onSideChange,
+}: TradingPanelProps) {
   const priceInputId = useId();
 
   // ── Store reads ───────────────────────────────────────────────────────────
@@ -116,7 +109,7 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
   const sound = useTradingSoundCtx();
 
   // ── Local state ───────────────────────────────────────────────────────────
-  const [side, setSide] = useState<OrderSide>('buy');
+  const [side, setSide] = useState<OrderSide>(initialSide);
   const [tab, setTab] = useState<OrderTab>(initialTab);
   const [qtyMode, setQtyMode] = useState<QtyMode>('usd');
   const [qtyInput, setQtyInput] = useState('');
@@ -271,6 +264,7 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
   // ── Handlers ──────────────────────────────────────────────────────────────
   function handleSideChange(s: OrderSide) {
     setSide(s);
+    onSideChange?.(s);
     setFormError(null);
     setBypassWarning(false);
     // Reset typed price so the new default (bid for Buy, ask for Sell) takes over.
@@ -547,28 +541,17 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
               >
                 Price
               </label>
-              <div className="relative">
-                <input
-                  id={priceInputId}
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={displayPrice}
-                  onChange={(e) => {
-                    setPriceInput(e.target.value);
-                    setFormError(null);
-                  }}
-                  placeholder="0.00"
-                  className="w-full rounded-md border border-white/8 px-2.5 py-1.5 pr-14 text-xs text-white transition-colors focus:outline-none focus:border-brand-purple-dark/50"
-                  style={{ background: bg.surface, fontSize: fontSize.xs }}
-                />
-                <span
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 font-semibold"
-                  style={{ fontSize: fontSize.xs10, color: color.muted }}
-                >
-                  USDT
-                </span>
-              </div>
+              <NumericInput
+                id={priceInputId}
+                suffix="USDT"
+                step={0.01}
+                min={0}
+                value={displayPrice}
+                onChange={(e) => {
+                  setPriceInput(e.target.value);
+                  setFormError(null);
+                }}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -576,12 +559,9 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
         {/* Quantity input with Units ↔ USD swap */}
         <div>
           <div className="mb-1 flex items-center justify-between">
-            <span
-              className="font-semibold uppercase tracking-wider"
-              style={{ fontSize: fontSize.xs10, color: color.muted }}
-            >
+            <FieldLabel>
               {qtyMode === 'usd' ? 'Amount (USD)' : `Quantity (${baseAsset})`}
-            </span>
+            </FieldLabel>
             <button
               onClick={handleSwapQtyMode}
               className="flex items-center gap-1 rounded px-1 py-0.5 transition-colors hover:text-white"
@@ -593,29 +573,19 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
             </button>
           </div>
 
-          <div className="relative">
-            <input
-              id="trading-qty"
-              name="qty"
-              type="number"
-              min="0"
-              step={qtyMode === 'usd' ? '0.01' : '0.000001'}
-              value={qtyInput}
-              onChange={(e) => {
-                setQtyInput(e.target.value);
-                setFormError(null);
-              }}
-              placeholder={qtyMode === 'usd' ? '0.00' : '0.000000'}
-              className="w-full rounded-md border border-white/8 px-2.5 py-1.5 pr-14 text-xs text-white transition-colors focus:outline-none focus:border-brand-purple-dark/50"
-              style={{ background: bg.surface, fontSize: fontSize.xs }}
-            />
-            <span
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 font-semibold"
-              style={{ fontSize: fontSize.xs10, color: color.muted }}
-            >
-              {qtyMode === 'usd' ? 'USD' : baseAsset}
-            </span>
-          </div>
+          <NumericInput
+            id="trading-qty"
+            name="qty"
+            step={qtyMode === 'usd' ? '0.01' : '0.000001'}
+            min={0}
+            value={qtyInput}
+            placeholder={qtyMode === 'usd' ? '0.00' : '0.000000'}
+            suffix={qtyMode === 'usd' ? 'USD' : baseAsset}
+            onChange={(e) => {
+              setQtyInput(e.target.value);
+              setFormError(null);
+            }}
+          />
 
           {/* Equivalent display */}
           {equivalent && (
@@ -678,27 +648,19 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
                       </span>
                     </div>
                     {tpEnabled && (
-                      <div className="relative">
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={tpInput}
-                          onChange={(e) => {
-                            setTpInput(e.target.value);
-                            setFormError(null);
-                          }}
-                          placeholder="0.00"
-                          className="w-full rounded-md border border-white/8 px-2.5 py-1.5 pr-12 text-xs text-white transition-colors focus:outline-none"
-                          style={{ background: bg.surface, borderColor: `${color.green}60` }}
-                        />
-                        <span
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 font-semibold"
-                          style={{ fontSize: fontSize.xs10, color: `${color.green}b3` }}
-                        >
-                          TP
-                        </span>
-                      </div>
+                      <NumericInput
+                        suffix="TP"
+                        suffixColor={`${color.green}b3`}
+                        borderColor={`${color.green}60`}
+                        suffixPadding="pr-12"
+                        step={0.01}
+                        min={0}
+                        value={tpInput}
+                        onChange={(e) => {
+                          setTpInput(e.target.value);
+                          setFormError(null);
+                        }}
+                      />
                     )}
                     <AnimatePresence initial={false}>
                       {tpPnl !== null && (
@@ -736,27 +698,19 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
                       </span>
                     </div>
                     {slEnabled && (
-                      <div className="relative">
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={slInput}
-                          onChange={(e) => {
-                            setSlInput(e.target.value);
-                            setFormError(null);
-                          }}
-                          placeholder="0.00"
-                          className="w-full rounded-md border border-white/8 px-2.5 py-1.5 pr-12 text-xs text-white transition-colors focus:outline-none"
-                          style={{ background: bg.surface, borderColor: `${color.red}60` }}
-                        />
-                        <span
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 font-semibold"
-                          style={{ fontSize: fontSize.xs10, color: `${color.red}b3` }}
-                        >
-                          SL
-                        </span>
-                      </div>
+                      <NumericInput
+                        suffix="SL"
+                        suffixColor={`${color.red}b3`}
+                        borderColor={`${color.red}60`}
+                        suffixPadding="pr-12"
+                        step={0.01}
+                        min={0}
+                        value={slInput}
+                        onChange={(e) => {
+                          setSlInput(e.target.value);
+                          setFormError(null);
+                        }}
+                      />
                     )}
                     <AnimatePresence initial={false}>
                       {slPnl !== null && (
@@ -785,12 +739,9 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
 
         {/* ── Order Info ───────────────────────────────────────────────── */}
         <div className="rounded-md border border-white/6 p-2.5" style={{ background: bg.page }}>
-          <p
-            className="mb-2 font-semibold uppercase tracking-wider"
-            style={{ fontSize: fontSize.xs10, color: color.muted }}
-          >
+          <FieldLabel as="p" className="mb-2">
             Order info
-          </p>
+          </FieldLabel>
 
           {/* Margin row + progress bar */}
           <div className="mb-2">

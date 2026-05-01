@@ -24,6 +24,7 @@ import { usePaperStore, COMMISSION_RATE, CRYPTO_LEVERAGE_OPTIONS } from '@/store
 import type { JournalEntry, HistoricalOrder, PendingOrder } from '@/store/paperStore';
 import type { PanelSize } from '@/pages/DashboardPage';
 import { bg, color, fontSize } from '@/lib/tokens';
+import { fmtMktPrice } from '@/lib/utils';
 import { useLayoutStore } from '@/store/layoutStore';
 import { useTradingSoundCtx } from '@/hooks/TradingSoundContext';
 import { SoundSettings } from './SoundSettings';
@@ -53,18 +54,9 @@ function shortId(id: string): string {
 }
 
 /**
- * Format a market price the TradingView way:
- *   75495.1  → "75,495.1"
- *   0.000234 → "0.000234"
- * Thousands separator, trailing zeros stripped, precision auto-scaled.
+ * Format a market price the TradingView way — imported from @/lib/utils.
+ * Kept as a local re-export alias so all existing call-sites work unchanged.
  */
-function fmtMktPrice(price: number): string {
-  const maxDp = price >= 1000 ? 2 : price >= 1 ? 4 : 6;
-  return price.toLocaleString(undefined, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: maxDp,
-  });
-}
 
 // ─── Stagger helpers ──────────────────────────────────────────────────────────
 
@@ -676,7 +668,9 @@ export function PaperTradingPanel({
         style={{ background: bg.panel }}
       >
         {/* Left: panel label */}
-        <span className="text-xs font-bold text-white/80 tracking-wide">Paper Trading</span>
+        <span className="text-xs font-bold text-white/80 tracking-wide">
+          Order &amp; Account Management
+        </span>
 
         {/* Right: gear (settings) + sound + collapse + close */}
         <div className="flex items-center gap-0.5">
@@ -733,18 +727,6 @@ export function PaperTradingPanel({
             ) : (
               <Maximize2 className="h-3.5 w-3.5" />
             )}
-          </motion.button>
-
-          {/* Close */}
-          <motion.button
-            onClick={() => onSizeChange('hidden')}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            title="Close panel"
-            className="flex h-6 w-6 items-center justify-center rounded hover:text-brand-red"
-            style={{ color: color.muted }}
-          >
-            <X className="h-3.5 w-3.5" />
           </motion.button>
         </div>
       </div>

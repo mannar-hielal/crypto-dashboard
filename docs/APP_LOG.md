@@ -123,7 +123,7 @@
 
 - `PanelSize = 'hidden' | 'collapsed' | 'open'` — exported from `DashboardPage.tsx`, used by `PaperTradingPanel`
 - `TradingPanel` uses `key={`${activePane}-${symbol}`}` — React remounts on active pane OR symbol change, resetting all local form state
-- `TradingPanel` open/close is `AnimatePresence` animated (`width: 0 → 256`)
+- `TradingPanel` open/close: wrapper `motion.div` **always rendered** (never unmounted at close); `animate={{ width: 0, opacity: 0 }}` hides it. Component stays mounted so **form state (qty, price, TP/SL, tab, side) is fully preserved across close/reopen**; only a symbol/pane key change resets form inputs.
 - `inert` attribute on PaperTradingPanel wrapper when `size === 'hidden'` (removes from tab order + a11y tree)
 - When panel is `'hidden'`, a floating purple pill button appears bottom-left of chart to re-open it
 
@@ -315,7 +315,7 @@ Tab badge counts: purple pill for Positions count, amber pill for Orders count (
 
 Based on TradingView markup reference. Not a 1:1 copy.
 
-**Header:** Symbol name (e.g. `BTCUSDT`) + ✕ close (hides panel only, component stays mounted, local state preserved). Resets **form inputs** (qty, price, TP, SL) on symbol or active pane change via ``key={`${activePane}-${symbol}`}`` in `DashboardPage`. **Tab selection (Market/Limit/Stop) and side (Buy/Sell) survive symbol changes** — `tradingTab` is lifted state in `DashboardPage`, passed as `initialTab` prop; `OrderTab` is exported from `TradingPanel.tsx`. When remounting on Limit/Stop, `priceInput` is lazily initialised to the new symbol's `latestPrice`.
+**Header:** Symbol name (e.g. `BTCUSDT`) + ✕ close (hides panel only, component stays mounted, **all form state preserved** — qty, price, TP/SL, tab, side). Resets **form inputs** (qty, price, TP, SL) on symbol or active pane change via ``key={`${activePane}-${symbol}`}`` in `DashboardPage`. **Tab selection (Market/Limit/Stop) and side (Buy/Sell) survive symbol changes** — `tradingTab` and `tradingSide` are lifted state in `DashboardPage`, passed as `initialTab`/`initialSide` props; `OrderTab` is exported from `TradingPanel.tsx`. When remounting on Limit/Stop, `priceInput` is lazily initialised to the new symbol's `latestPrice`.
 
 **Side selector (always visible below header):**
 
@@ -774,7 +774,7 @@ Paper trading  →  Real order      →  Proven bot      →  Full autonomous
 
 ---
 
-_Last updated: 2026-05-01 (consistency sweep)_
+_Last updated: 2026-05-01 (form state preservation across TradingPanel close/reopen)_
 
 - **feat: edit panels for open positions and pending orders (26.04.2026)**
   - **`paperStore.ts`** — two new store actions:
@@ -982,3 +982,62 @@ _Last updated: 2026-05-01 (consistency sweep)_
 **TRADING_TEST_PLAN.md updated:** Section 3 preamble note changed from "automation not yet written" to automation status summary with file names and test counts.
 
 **Total client tests: 211 green** (up from 196 before this session).
+
+---
+
+### feat: preserve side across TradingPanel close/reopen — TV parity (01.05.2026)
+
+**Context:** TV's trading panel remembers the last-used tab **and** side (Buy/Sell) when the panel is closed and reopened. Our app preserved the tab but reset side to Buy on every remount.
+
+**Changes:**
+
+- `TradingPanel.tsx` — added `initialSide?: OrderSide` and `onSideChange?: (side: OrderSide) => void` props (mirrors the existing `initialTab`/`onTabChange` pattern); `useState<OrderSide>(initialSide)` replaces the hardcoded `'buy'`; `handleSideChange` calls `onSideChange?.(s)`
+- `DashboardPage.tsx` — added `const [tradingSide, setTradingSide] = useState<'buy' | 'sell'>('buy')`; passed as `initialSide={tradingSide}` / `onSideChange={setTradingSide}` on `<TradingPanel>`
+
+**Behaviour:** Tab + Side now both survive close → reopen and symbol changes (key remount). Form inputs still reset on remount as before.
+
+**TRADING_TEST_PLAN.md:** 4.4 marked ✅, expected result corrected from "default state (Market, Buy, empty)" to "last-used tab + side preserved; form inputs empty".
+
+**Tests: 211/211 green** (no new tests needed — behaviour fully covered by lifting pattern already tested in 4.1).
+
+---
+
+### feat: preserve all form state (amount, price, TP/SL) across TradingPanel close/reopen (01.05.2026)
+
+**Context:** Closing the TradingPanel (✕) then reopening it caused all form inputs — amount, price, TP, SL and their toggles — to reset, forcing the user to re-enter their order setup. Tab and side were already preserved (lifted state), but the form fields lived in local component state and were lost on unmount.
+
+**Root cause:** `TradingPanel` was rendered inside `AnimatePresence` and fully unmounted when `tradingPanelOpen` became `false`. Every reopen was a fresh mount with empty initial state.
+
+**Fix (`DashboardPage.tsx`):**
+
+- Removed `TradingPanel` from the `AnimatePresence`/conditional-render block
+- `TradingPanel` is now **always mounted** (when `!editTarget`) in a standalone `motion.div`
+- The wrapper animates `width` and `opacity` between `256/1` (open) and `0/0` (closed) — identical visual transition, no unmount
+- Edit panels (PositionEditPanel / PendingOrderEditPanel) remain in their own separate `AnimatePresence` block, unchanged
+- The `key={`${activePane}-${symbol}`}` prop on `TradingPanel` itself is untouched — a symbol or pane switch still triggers React to unmount + remount, resetting all form inputs as intended
+
+**What is preserved across close/reopen (same symbol):**
+
+- Amount / qty and qty mode (USD vs units)
+- Price input (Limit/Stop orders)
+- TP and SL values + their enabled/disabled toggle state
+- Tab (Market / Limit / Stop) and Side (Buy / Sell)
+
+**What still resets on symbol change:** Everything (key remount).
+
+**TRADING_TEST_PLAN.md:** 4.4 expected result updated — "form inputs (qty/price/TP/SL) are empty" corrected to "all form inputs preserved exactly as left".
+
+**Tests: 211/211 green** (no new tests written — behaviour is a mount/unmount architectural change; existing T2 tests verify the rendered state).
+
+**Context:** TV's trading panel remembers the last-used tab **and** side (Buy/Sell) when the panel is closed and reopened. Our app preserved the tab but reset side to Buy on every remount.
+
+**Changes:**
+
+- `TradingPanel.tsx` — added `initialSide?: OrderSide` and `onSideChange?: (side: OrderSide) => void` props (mirrors the existing `initialTab`/`onTabChange` pattern); `useState<OrderSide>(initialSide)` replaces the hardcoded `'buy'`; `handleSideChange` calls `onSideChange?.(s)`
+- `DashboardPage.tsx` — added `const [tradingSide, setTradingSide] = useState<'buy' | 'sell'>('buy')`; passed as `initialSide={tradingSide}` / `onSideChange={setTradingSide}` on `<TradingPanel>`
+
+**Behaviour:** Tab + Side now both survive close → reopen and symbol changes (key remount). Form inputs still reset on remount as before.
+
+**TRADING_TEST_PLAN.md:** 4.4 marked ✅, expected result corrected from "default state (Market, Buy, empty)" to "last-used tab + side preserved; form inputs empty".
+
+**Tests: 211/211 green** (no new tests needed — behaviour fully covered by lifting pattern already tested in 4.1).

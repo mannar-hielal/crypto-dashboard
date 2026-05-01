@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+import ReactDOM from 'react-dom';
 import { Volume2, VolumeX } from 'lucide-react';
 import { useTradingSoundCtx } from '@/hooks/TradingSoundContext';
 
@@ -24,13 +25,37 @@ const PREVIEWS = [
 export function SoundSettings() {
   const sound = useTradingSoundCtx();
   const [open, setOpen] = useState(false);
+  const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({});
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  // Position popover above the trigger button using fixed coords so it escapes overflow:hidden parents
+  const updatePosition = () => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    setPopoverStyle({
+      position: 'fixed',
+      right: window.innerWidth - rect.right,
+      bottom: window.innerHeight - rect.top + 8,
+      zIndex: 9999,
+    });
+  };
+
+  const handleOpen = () => {
+    updatePosition();
+    setOpen((o) => !o);
+  };
 
   // Close on outside click
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+      if (
+        panelRef.current &&
+        !panelRef.current.contains(e.target as Node) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(e.target as Node)
+      ) {
         setOpen(false);
       }
     };
@@ -40,29 +65,12 @@ export function SoundSettings() {
 
   const vol = sound.volume;
 
-  return (
-    <div className="relative" ref={panelRef}>
-      {/* ── Trigger button ──────────────────────────────────────────────── */}
-      <button
-        onClick={() => setOpen((o) => !o)}
-        title="Sound alert settings"
-        className={`flex h-6 w-6 items-center justify-center rounded transition-colors ${
-          open ? 'text-white/80' : 'hover:text-white/70'
-        }`}
-        style={{ color: open ? undefined : 'rgba(255,255,255,0.35)' }}
-      >
-        {sound.muted || vol < 0.01 ? (
-          <VolumeX className="h-3.5 w-3.5" />
-        ) : (
-          <Volume2 className="h-3.5 w-3.5" />
-        )}
-      </button>
-
-      {/* ── Popover panel ──────────────────────────────────────────────── */}
-      {open && (
+  const popover = open
+    ? ReactDOM.createPortal(
         <div
-          className="absolute right-0 bottom-full mb-2 z-50 w-60 rounded-xl border border-white/10 p-4 shadow-2xl"
-          style={{ background: '#1a1d2e' }}
+          ref={panelRef}
+          className="w-60 rounded-xl border border-white/10 p-4 shadow-2xl"
+          style={{ background: '#1a1d2e', ...popoverStyle }}
         >
           {/* Header */}
           <div className="mb-3 flex items-center justify-between">
@@ -155,8 +163,32 @@ export function SoundSettings() {
           >
             Plays on order &amp; position events
           </p>
-        </div>
-      )}
+        </div>,
+        document.body
+      )
+    : null;
+
+  return (
+    <div className="relative">
+      {/* ── Trigger button ──────────────────────────────────────────────── */}
+      <button
+        ref={triggerRef}
+        onClick={handleOpen}
+        title="Sound alert settings"
+        className={`flex h-6 w-6 items-center justify-center rounded transition-colors ${
+          open ? 'text-white/80' : 'hover:text-white/70'
+        }`}
+        style={{ color: open ? undefined : 'rgba(255,255,255,0.35)' }}
+      >
+        {sound.muted || vol < 0.01 ? (
+          <VolumeX className="h-3.5 w-3.5" />
+        ) : (
+          <Volume2 className="h-3.5 w-3.5" />
+        )}
+      </button>
+
+      {/* ── Popover rendered via portal so it escapes overflow:hidden parents ── */}
+      {popover}
     </div>
   );
 }

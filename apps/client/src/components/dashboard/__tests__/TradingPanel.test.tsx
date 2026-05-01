@@ -476,6 +476,127 @@ describe('Section 2 — Limit Orders (T2 · RTL)', () => {
   });
 });
 
+// ─── Section 4 — Cross-cutting / Regression (T2 · RTL) ───────────────────────
+
+describe('Section 4 — Cross-cutting / Regression (T2 · RTL)', () => {
+  // ── 4.1 Symbol change resets form but preserves tab ──────────────────────
+
+  describe('4.1 Symbol change (key remount) resets form, preserves tab', () => {
+    it('4.1: switching to Limit tab then re-rendering with a new key (symbol change) clears qty, preserves initialTab=limit', () => {
+      const { rerender } = render(
+        <TradingPanel key="BTCUSDT" onClose={vi.fn()} initialTab="limit" />
+      );
+
+      // Type a qty value
+      const allInputs = screen.getAllByRole('spinbutton');
+      fireEvent.change(allInputs[1], { target: { value: '200' } }); // qty is second spinbutton on Limit tab
+
+      // Simulate symbol change by remounting with a new key + new initialTab (lifted state)
+      paneStores[0].setState({ latestPrice: 3_000, bid: 2_990, ask: 3_010 });
+      rerender(<TradingPanel key="ETHUSDT" onClose={vi.fn()} initialTab="limit" />);
+
+      // After key remount: qty should be empty (form reset), Limit tab preserved
+      const inputsAfter = screen.getAllByRole('spinbutton');
+      // qty input value should be empty after key remount
+      expect((inputsAfter[1] as HTMLInputElement).value).toBe('');
+      // Limit tab still active: "Price" label visible
+      expect(screen.getByText('Price')).toBeTruthy();
+    });
+
+    it('4.1: Market tab is preserved on symbol change (initialTab=market remount)', () => {
+      const { rerender } = render(
+        <TradingPanel key="BTCUSDT" onClose={vi.fn()} initialTab="market" />
+      );
+
+      rerender(<TradingPanel key="ETHUSDT" onClose={vi.fn()} initialTab="market" />);
+
+      // Market tab active — no "Price" label (that's only on Limit/Stop)
+      expect(screen.queryByText('Price')).toBeNull();
+      // MARKET button visible in submit button
+      const submitBtn = screen.getAllByRole('button').at(-1)!;
+      expect(submitBtn.textContent).toMatch(/MARKET/);
+    });
+  });
+
+  // ── 4.2 Symbol change on Limit tab ───────────────────────────────────────
+
+  describe('4.2 Symbol change while on Limit tab updates price pre-fill', () => {
+    it('4.2: mounting on Limit tab pre-fills price from the new symbol live price', () => {
+      // New symbol: ETH at 3 000
+      paneStores[0].setState({ latestPrice: 3_000, bid: 2_990, ask: 3_010 });
+
+      renderPanel({ initialTab: 'limit' });
+
+      const priceInput = screen.getAllByRole('spinbutton')[0];
+      const val = parseFloat((priceInput as HTMLInputElement).value);
+      // Pre-fill = bid (2990) for Buy/Limit
+      expect(val).toBeCloseTo(2_990, 0);
+    });
+  });
+
+  // ── 4.3 Symbol change on Stop tab ────────────────────────────────────────
+
+  describe('4.3 Symbol change while on Stop tab updates price pre-fill', () => {
+    it('4.3: mounting on Stop tab pre-fills price from the new symbol ask (Buy) or bid (Sell)', () => {
+      paneStores[0].setState({ latestPrice: 3_000, bid: 2_990, ask: 3_010 });
+
+      renderPanel({ initialTab: 'stop' });
+
+      const priceInput = screen.getAllByRole('spinbutton')[0];
+      const val = parseFloat((priceInput as HTMLInputElement).value);
+      // Stop+Buy default is ask (3010)
+      expect(val).toBeCloseTo(3_010, 0);
+    });
+  });
+
+  // ── 4.4 Close/reopen: tab + side + form state preserved ──────────────────
+
+  describe('4.4 TradingPanel tab + side preserved via props (close/reopen parity)', () => {
+    it('4.4: panel mounted with initialTab=limit and initialSide=sell shows Limit tab + Sell side active', () => {
+      renderPanel({ initialTab: 'limit', initialSide: 'sell' });
+
+      // Limit tab should be active (Price label present)
+      expect(screen.getByText('Price')).toBeTruthy();
+      // Sell side button appears — check the execute button text contains "Sell"
+      const submitBtn = screen.getAllByRole('button').at(-1)!;
+      expect(submitBtn.textContent?.toLowerCase()).toMatch(/sell/);
+    });
+
+    it('4.4: panel mounted with initialTab=stop and initialSide=buy shows Stop tab + Buy side active', () => {
+      renderPanel({ initialTab: 'stop', initialSide: 'buy' });
+
+      // Stop tab active — price input exists
+      expect(screen.getByText('Price')).toBeTruthy();
+      const submitBtn = screen.getAllByRole('button').at(-1)!;
+      expect(submitBtn.textContent?.toLowerCase()).toMatch(/buy/);
+      expect(submitBtn.textContent).toMatch(/STOP/i);
+    });
+
+    it('4.4: form state (qty, TP/SL toggles) survives a normal re-render (same key = same instance, no unmount)', () => {
+      const { rerender } = renderPanel();
+
+      // Enter qty
+      const qtyInput = screen.getAllByRole('spinbutton')[0];
+      fireEvent.change(qtyInput, { target: { value: '300' } });
+
+      // Enable both TP and SL toggles
+      const [tpToggle, slToggle] = screen.getAllByRole('switch');
+      fireEvent.click(tpToggle);
+      fireEvent.click(slToggle);
+
+      // Re-render same component (same key) — simulates parent re-render without symbol change
+      rerender(<TradingPanel onClose={vi.fn()} />);
+
+      // qty should still be 300
+      const qtyAfter = screen.getAllByRole('spinbutton')[0];
+      expect((qtyAfter as HTMLInputElement).value).toBe('300');
+      // TP + SL inputs should still be present (toggles preserved)
+      const inputCount = screen.getAllByRole('spinbutton').length;
+      expect(inputCount).toBeGreaterThanOrEqual(3); // qty + TP + SL
+    });
+  });
+});
+
 // ─── Section 3 — Stop Orders ──────────────────────────────────────────────────
 
 describe('Section 3 — Stop Orders (T2 · RTL)', () => {

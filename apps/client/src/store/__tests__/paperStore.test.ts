@@ -950,6 +950,315 @@ describe('paperStore', () => {
     });
   });
 
+  // ── Section 4 — Cross-cutting / Regression (T1 · Vitest) ────────────────────
+
+  describe('Section 4 — Cross-cutting / Regression', () => {
+    // ── 4.6 localStorage persist ─────────────────────────────────────────────
+
+    describe('4.6 Position persists in localStorage', () => {
+      it('4.6: after placing a market buy, localStorage contains the position', () => {
+        usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 1_000);
+
+        const raw = localStorage.getItem('cd-paper-trading');
+        expect(raw).not.toBeNull();
+        const persisted = JSON.parse(raw!);
+        // Zustand persist wraps state as { state: { ... }, version: N }
+        expect(persisted.state.positions).toHaveLength(1);
+        expect(persisted.state.positions[0].symbol).toBe(SYMBOL);
+        expect(persisted.state.positions[0].side).toBe('long');
+      });
+
+      it('4.6: after reset(), localStorage state has empty positions and balance = $10,000', () => {
+        usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 1_000);
+        usePaperStore.getState().reset();
+
+        const raw = localStorage.getItem('cd-paper-trading');
+        expect(raw).not.toBeNull();
+        const persisted = JSON.parse(raw!);
+        expect(persisted.state.positions).toHaveLength(0);
+        expect(persisted.state.balance).toBe(10_000);
+      });
+
+      it('4.6: pending orders also persist in localStorage', () => {
+        usePaperStore.getState().placeLimitOrder(SYMBOL, 'buy', 48_000, 500);
+
+        const raw = localStorage.getItem('cd-paper-trading');
+        const persisted = JSON.parse(raw!);
+        expect(persisted.state.pendingOrders).toHaveLength(1);
+        expect(persisted.state.pendingOrders[0].triggerPrice).toBe(48_000);
+      });
+    });
+
+    // ── 4.7 History PnL signs ────────────────────────────────────────────────
+
+    describe('4.7 History PnL signs after mix of wins and losses', () => {
+      it('4.7: profitable close → positive PnL in history', () => {
+        const posId = usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 1_000)!;
+        // Close above entry for a Long = profit
+        usePaperStore.getState().closePosition(posId, 55_000, 'Closed LONG BTCUSDT @ $55000');
+
+        const trade = usePaperStore.getState().history[0];
+        expect(trade).toBeDefined();
+        const grossPnl = (55_000 - trade.entryPrice) * trade.quantity;
+        expect(grossPnl).toBeGreaterThan(0);
+      });
+
+      it('4.7: losing close → negative PnL in history', () => {
+        const posId = usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 1_000)!;
+        // Close below entry for a Long = loss
+        usePaperStore.getState().closePosition(posId, 45_000, 'Closed LONG BTCUSDT @ $45000');
+
+        const trade = usePaperStore.getState().history[0];
+        expect(trade).toBeDefined();
+        const grossPnl = (45_000 - trade.entryPrice) * trade.quantity;
+        expect(grossPnl).toBeLessThan(0);
+      });
+
+      it('4.7: multiple closes accumulate in history in correct order; PnL signs are independent', () => {
+        const pos1 = usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 500)!;
+        usePaperStore.getState().closePosition(pos1, 55_000); // profit
+        const pos2 = usePaperStore.getState().placeOrder(SYMBOL, 'sell', 50_000, 500)!;
+        usePaperStore.getState().closePosition(pos2, 45_000); // SHORT profit (price dropped)
+
+        expect(usePaperStore.getState().history).toHaveLength(2);
+      });
+    });
+
+    // ── 4.8 Journal entries newest-first ────────────────────────────────────
+
+    describe('4.8 Journal entries are newest-first and cover full lifecycle', () => {
+      it('4.8: journal entries are stored newest-first (journal[0].time >= journal[N-1].time)', () => {
+        // Place, then close — generates at least 2 journal entries
+        const posId = usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 1_000)!;
+        usePaperStore.getState().closePosition(posId, 55_000, 'Closed LONG BTCUSDT @ $55000');
+
+        const journal = usePaperStore.getState().journal;
+        expect(journal.length).toBeGreaterThanOrEqual(2);
+        // Each entry must have a time >= the next entry (newest at index 0)
+        for (let i = 0; i < journal.length - 1; i++) {
+          expect(journal[i].time).toBeGreaterThanOrEqual(journal[i + 1].time);
+        }
+      });
+
+      it('4.8: journal covers lifecycle — open entry + close entry for a market order trade', () => {
+        const posId = usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 1_000)!;
+        usePaperStore.getState().closePosition(posId, 55_000, 'Closed LONG BTCUSDT @ $55000.00');
+
+        const journal = usePaperStore.getState().journal;
+        const openEntry = journal.find((e) => e.text.includes('Opened LONG'));
+        const closeEntry = journal.find((e) => e.text.includes('Closed LONG'));
+        expect(openEntry).toBeDefined();
+        expect(closeEntry).toBeDefined();
+      });
+
+      it('4.8: system auto-entries are read-only (isUserNote=false); manual notes are editable (isUserNote=true)', () => {
+        usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 1_000);
+        usePaperStore.getState().addJournalNote('My manual note', true);
+
+        const journal = usePaperStore.getState().journal;
+        const systemEntry = journal.find((e) => e.text.includes('Opened LONG'));
+        const userEntry = journal.find((e) => e.text === 'My manual note');
+
+        expect(systemEntry!.isUserNote).toBe(false);
+        expect(userEntry!.isUserNote).toBe(true);
+      });
+    });
+
+    // ── 4.9 Journal PnL badge — profitable close ─────────────────────────────
+
+    describe('4.9 Journal PnL badge — profitable close', () => {
+      it('4.9: profitable manual close attaches a positive pnl to the exec journal entry', () => {
+        const posId = usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 1_000)!;
+        const pos = usePaperStore.getState().positions.find((p) => p.id === posId)!;
+        // Close at 55 000 — Long position from 50 000 → profit
+        usePaperStore.getState().closePosition(posId, 55_000, 'Closed LONG BTCUSDT @ $55000.00');
+
+        const closeEntry = usePaperStore
+          .getState()
+          .journal.find((e) => e.text.includes('Closed LONG'));
+        expect(closeEntry).toBeDefined();
+        expect(closeEntry!.pnl).toBeDefined();
+        // Net PnL = gross_pnl - exit_commission; gross > 0 when exit > entry
+        const grossPnl = (55_000 - pos.entryPrice) * pos.quantity;
+        expect(grossPnl).toBeGreaterThan(0);
+        // After commission, it should still be positive (5 000-point move >> 0.07% fee)
+        expect(closeEntry!.pnl!).toBeGreaterThan(0);
+      });
+
+      it('4.9: no PnL badge on the open/placement journal entry (only close entries carry it)', () => {
+        usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 1_000);
+
+        const openEntry = usePaperStore
+          .getState()
+          .journal.find((e) => e.text.includes('Opened LONG'));
+        expect(openEntry).toBeDefined();
+        expect(openEntry!.pnl).toBeUndefined();
+      });
+    });
+
+    // ── 4.10 Journal PnL badge — losing close ────────────────────────────────
+
+    describe('4.10 Journal PnL badge — losing close', () => {
+      it('4.10: losing close attaches a negative pnl to the exec journal entry', () => {
+        const posId = usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 1_000)!;
+        usePaperStore.getState().closePosition(posId, 45_000, 'Closed LONG BTCUSDT @ $45000.00');
+
+        const closeEntry = usePaperStore
+          .getState()
+          .journal.find((e) => e.text.includes('Closed LONG'));
+        expect(closeEntry).toBeDefined();
+        expect(closeEntry!.pnl).toBeDefined();
+        expect(closeEntry!.pnl!).toBeLessThan(0);
+      });
+
+      it('4.10: TP auto-close → journal entry pnl badge present', () => {
+        const posId = usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 1_000, 55_000)!;
+        usePaperStore
+          .getState()
+          .closePosition(
+            posId,
+            55_000,
+            'Auto-closed LONG BTCUSDT — Take-Profit hit at $55000.00',
+            'take-profit'
+          );
+
+        const tpEntry = usePaperStore
+          .getState()
+          .journal.find((e) => e.text.includes('Take-Profit hit'));
+        expect(tpEntry).toBeDefined();
+        expect(tpEntry!.pnl).toBeDefined();
+      });
+    });
+
+    // ── 4.11 Journal PnL badge — user note ──────────────────────────────────
+
+    describe('4.11 Journal PnL badge — user note has no badge', () => {
+      it('4.11: addJournalNote with isUserNote=true results in pnl=undefined', () => {
+        usePaperStore.getState().addJournalNote('Observation note', true);
+
+        const entry = usePaperStore.getState().journal[0];
+        expect(entry.isUserNote).toBe(true);
+        expect(entry.pnl).toBeUndefined();
+      });
+
+      it('4.11: addJournalNote pnl is undefined when not provided', () => {
+        usePaperStore.getState().addJournalNote('Test note');
+
+        const entry = usePaperStore.getState().journal[0];
+        expect(entry.pnl).toBeUndefined();
+      });
+    });
+
+    // ── 4.17 Edit pending bracket order — rich journal entries ───────────────
+
+    describe('4.17 Edit pending bracket order — rich journal entries', () => {
+      it('4.17: editing pending order price + exits writes summary + child-leg confirmation journal entries', () => {
+        const orderId = usePaperStore
+          .getState()
+          .placeLimitOrder(SYMBOL, 'buy', 48_000, 1_000, 53_000, 46_000)!;
+
+        usePaperStore.getState().editPendingOrder(orderId, 48_500, 1_000, 54_000, 45_500);
+
+        const journal = usePaperStore.getState().journal;
+        // Summary entry should describe the price change
+        expect(
+          journal.some(
+            (e) =>
+              e.text.includes('Modified LIMIT Long') &&
+              e.text.includes('48000') &&
+              e.text.includes('48500')
+          )
+        ).toBe(true);
+        // Child-leg confirmation entries
+        expect(journal.some((e) => e.text.includes('Take-Profit modification confirmed'))).toBe(
+          true
+        );
+        expect(journal.some((e) => e.text.includes('Stop-Loss modification confirmed'))).toBe(true);
+      });
+
+      it('4.17: removing a pending TP child writes a cancel-style journal entry and Cancelled order record', () => {
+        const orderId = usePaperStore
+          .getState()
+          .placeLimitOrder(SYMBOL, 'buy', 48_000, 1_000, 53_000, 46_000)!;
+
+        // Remove TP by passing null, keep SL
+        usePaperStore.getState().editPendingOrder(orderId, 48_000, 1_000, null, 46_000);
+
+        const journal = usePaperStore.getState().journal;
+        expect(
+          journal.some((e) => e.text.includes('Take-Profit') && e.text.includes('cancelled'))
+        ).toBe(true);
+
+        const cancelledTp = usePaperStore
+          .getState()
+          .orders.find((o) => o.type === 'take-profit' && o.status === 'cancelled');
+        expect(cancelledTp).toBeDefined();
+      });
+
+      it('4.17: no-op edit (same price, same exits) does not add additional journal noise', () => {
+        const orderId = usePaperStore
+          .getState()
+          .placeLimitOrder(SYMBOL, 'buy', 48_000, 1_000, 53_000, 46_000)!;
+        const journalSizeBefore = usePaperStore.getState().journal.length;
+
+        // Edit with identical values → no-op
+        usePaperStore.getState().editPendingOrder(orderId, 48_000, 1_000, 53_000, 46_000);
+
+        expect(usePaperStore.getState().journal.length).toBe(journalSizeBefore);
+      });
+    });
+
+    // ── 4.18 Edit open position TP/SL — rich journal entries ─────────────────
+
+    describe('4.18 Edit open position TP/SL — rich journal entries', () => {
+      it('4.18: editing both TP and SL on an open position writes summary + modification-confirmed child entries', () => {
+        const posId = usePaperStore
+          .getState()
+          .placeOrder(SYMBOL, 'buy', 50_000, 1_000, 53_000, 47_000)!;
+
+        usePaperStore.getState().updatePositionExits(posId, 54_000, 46_000);
+
+        const journal = usePaperStore.getState().journal;
+        expect(journal.some((e) => e.text.includes('Modified LONG BTCUSDT exits'))).toBe(true);
+        expect(journal.some((e) => e.text.includes('Take-Profit modification confirmed'))).toBe(
+          true
+        );
+        expect(journal.some((e) => e.text.includes('Stop-Loss modification confirmed'))).toBe(true);
+      });
+
+      it('4.18: removing TP from an open position writes a cancel-style journal entry and Cancelled HistoricalOrder', () => {
+        const posId = usePaperStore
+          .getState()
+          .placeOrder(SYMBOL, 'buy', 50_000, 1_000, 53_000, 47_000)!;
+
+        // Remove TP, keep SL
+        usePaperStore.getState().updatePositionExits(posId, null, 47_000);
+
+        const journal = usePaperStore.getState().journal;
+        expect(
+          journal.some((e) => e.text.includes('Take-Profit') && e.text.includes('cancelled'))
+        ).toBe(true);
+
+        const cancelledTp = usePaperStore
+          .getState()
+          .orders.find((o) => o.type === 'take-profit' && o.status === 'cancelled');
+        expect(cancelledTp).toBeDefined();
+      });
+
+      it('4.18: position TP/SL values are updated in-place after updatePositionExits', () => {
+        const posId = usePaperStore
+          .getState()
+          .placeOrder(SYMBOL, 'buy', 50_000, 1_000, 53_000, 47_000)!;
+
+        usePaperStore.getState().updatePositionExits(posId, 55_000, 46_000);
+
+        const pos = usePaperStore.getState().positions.find((p) => p.id === posId)!;
+        expect(pos.takeProfit).toBe(55_000);
+        expect(pos.stopLoss).toBe(46_000);
+      });
+    });
+  });
+
   // ── Section 3 — Stop Orders (T1 · Vitest) ─────────────────────────────────────
 
   describe('Section 3 — Stop Orders', () => {

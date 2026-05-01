@@ -7,7 +7,7 @@
  */
 
 import { useState } from 'react';
-import { X, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
+import { X, TrendingUp, TrendingDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { usePaperStore, COMMISSION_RATE } from '@/store/paperStore';
 import { paneStores, lastKnownPrices } from '@/store/paneStore';
@@ -15,44 +15,11 @@ import { useLayoutStore } from '@/store/layoutStore';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/shallow';
 import { bg, color, fontSize } from '@/lib/tokens';
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function fmtMktPrice(price: number): string {
-  const maxDp = price >= 1000 ? 2 : price >= 1 ? 4 : 6;
-  return price.toLocaleString(undefined, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: maxDp,
-  });
-}
-
-/** Small toggle switch */
-function Toggle({
-  checked,
-  onChange,
-  label,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      onClick={() => onChange(!checked)}
-      className="relative h-4 w-7 shrink-0 rounded-full transition-colors"
-      style={{ background: checked ? color.green : `${color.muted}40` }}
-    >
-      <span
-        className="absolute top-0.5 h-3 w-3 rounded-full bg-white transition-transform"
-        style={{ right: '2px', transform: checked ? 'translateX(-12px)' : 'translateX(0px)' }}
-      />
-    </button>
-  );
-}
+import { fmtMktPrice } from '@/lib/utils';
+import { Toggle } from '@/components/ui/Toggle';
+import { NumericInput } from '@/components/ui/NumericInput';
+import { FieldLabel } from '@/components/ui/FieldLabel';
+import { WarningText } from '@/components/ui/WarningText';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -88,10 +55,10 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
   const [tpEnabled, setTpEnabled] = useState(() => !!position?.takeProfit);
   const [slEnabled, setSlEnabled] = useState(() => !!position?.stopLoss);
   const [tpInput, setTpInput] = useState(() =>
-    position?.takeProfit ? fmtMktPrice(position.takeProfit) : ''
+    position?.takeProfit ? fmtMktPrice(position.takeProfit).replace(/,/g, '') : ''
   );
   const [slInput, setSlInput] = useState(() =>
-    position?.stopLoss ? fmtMktPrice(position.stopLoss) : ''
+    position?.stopLoss ? fmtMktPrice(position.stopLoss).replace(/,/g, '') : ''
   );
 
   if (!position) {
@@ -247,76 +214,46 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <Toggle checked={tpEnabled} onChange={setTpEnabled} label="Enable take profit" />
-              <span
-                style={{
-                  fontSize: fontSize.xs11,
-                  color: tpEnabled ? 'rgba(255,255,255,0.8)' : color.muted,
-                }}
-              >
+              <span style={{ fontSize: fontSize.xs, color: tpEnabled ? '#fff' : color.muted }}>
                 Take profit, price
               </span>
             </div>
-            <input
-              type="text"
-              inputMode="decimal"
-              disabled={!tpEnabled}
-              value={tpInput}
-              onChange={(e) => setTpInput(e.target.value)}
-              placeholder="—"
-              className="w-full rounded px-2.5 py-1.5 text-right tabular-nums text-white outline-none transition-opacity disabled:opacity-40"
-              style={{
-                fontSize: fontSize.xs11,
-                background: 'rgba(255,255,255,0.06)',
-                border: `1px solid ${tpWarning ? color.red : 'rgba(255,255,255,0.1)'}`,
-              }}
-            />
-            {tpWarning && (
-              <p
-                className="flex items-center gap-1"
-                style={{ fontSize: fontSize.xs10, color: color.amber }}
-              >
-                <AlertTriangle className="h-3 w-3 shrink-0" />
-                {tpWarning}
-              </p>
+            {tpEnabled && (
+              <NumericInput
+                suffix="TP"
+                suffixColor={`${color.green}b3`}
+                borderColor={tpWarning ? color.red : `${color.green}60`}
+                suffixPadding="pr-12"
+                step={0.01}
+                min={0}
+                value={tpInput}
+                onChange={(e) => setTpInput(e.target.value)}
+              />
             )}
+            {tpWarning && <WarningText>{tpWarning}</WarningText>}
           </div>
 
           {/* ── Stop Loss row ────────────────────────────────────────────── */}
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <Toggle checked={slEnabled} onChange={setSlEnabled} label="Enable stop loss" />
-              <span
-                style={{
-                  fontSize: fontSize.xs11,
-                  color: slEnabled ? 'rgba(255,255,255,0.8)' : color.muted,
-                }}
-              >
+              <span style={{ fontSize: fontSize.xs, color: slEnabled ? '#fff' : color.muted }}>
                 Stop loss, price
               </span>
             </div>
-            <input
-              type="text"
-              inputMode="decimal"
-              disabled={!slEnabled}
-              value={slInput}
-              onChange={(e) => setSlInput(e.target.value)}
-              placeholder="—"
-              className="w-full rounded px-2.5 py-1.5 text-right tabular-nums text-white outline-none transition-opacity disabled:opacity-40"
-              style={{
-                fontSize: fontSize.xs11,
-                background: 'rgba(255,255,255,0.06)',
-                border: `1px solid ${slWarning ? color.red : 'rgba(255,255,255,0.1)'}`,
-              }}
-            />
-            {slWarning && (
-              <p
-                className="flex items-center gap-1"
-                style={{ fontSize: fontSize.xs10, color: color.amber }}
-              >
-                <AlertTriangle className="h-3 w-3 shrink-0" />
-                {slWarning}
-              </p>
+            {slEnabled && (
+              <NumericInput
+                suffix="SL"
+                suffixColor={`${color.red}b3`}
+                borderColor={slWarning ? color.red : `${color.red}60`}
+                suffixPadding="pr-12"
+                step={0.01}
+                min={0}
+                value={slInput}
+                onChange={(e) => setSlInput(e.target.value)}
+              />
             )}
+            {slWarning && <WarningText>{slWarning}</WarningText>}
           </div>
         </div>
 
@@ -326,28 +263,19 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
         </div>
 
         {/* ── Position info ─────────────────────────────────────────────── */}
-        <div className="flex flex-col gap-2 px-3 py-3">
-          <span
-            className="font-semibold uppercase tracking-wider"
-            style={{ fontSize: fontSize.xs10, color: color.muted }}
-          >
+        <div
+          className="mx-3 my-3 rounded-md border border-white/6 p-2.5"
+          style={{ background: bg.page }}
+        >
+          <FieldLabel as="p" className="mb-2">
             Position info
-          </span>
+          </FieldLabel>
           {(
             [
               { label: 'Leverage', value: `1:${leverage}` },
-              {
-                label: 'Mark price',
-                value: `$${fmtMktPrice(markPrice)} USD`,
-              },
-              {
-                label: 'Trade value',
-                value: `${tradeValue.toFixed(2)} USD`,
-              },
-              {
-                label: 'Commission',
-                value: `$${commission.toFixed(4)} USD`,
-              },
+              { label: 'Mark price', value: `$${fmtMktPrice(markPrice)} USD` },
+              { label: 'Trade value', value: `${tradeValue.toFixed(2)} USD` },
+              { label: 'Commission', value: `$${commission.toFixed(4)} USD` },
               ...(rewardUsd != null && rewardPct != null
                 ? [
                     {
@@ -368,11 +296,11 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
                 : []),
             ] as { label: string; value: string; col?: string }[]
           ).map(({ label, value, col }) => (
-            <div key={label} className="flex items-center justify-between">
-              <span style={{ fontSize: fontSize.xs11, color: color.muted }}>{label}</span>
+            <div key={label} className="flex items-center justify-between py-0.5">
+              <span style={{ fontSize: fontSize.xs10, color: color.muted }}>{label}</span>
               <span
                 className="tabular-nums"
-                style={{ fontSize: fontSize.xs11, color: col ?? 'rgba(255,255,255,0.75)' }}
+                style={{ fontSize: fontSize.xs10, color: col ?? '#fff' }}
               >
                 {value}
               </span>

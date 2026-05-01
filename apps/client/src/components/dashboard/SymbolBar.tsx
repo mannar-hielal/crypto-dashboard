@@ -2,16 +2,7 @@ import { useState, useMemo } from 'react';
 import NumberFlow from '@number-flow/react';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/shallow';
-import {
-  Star,
-  ChevronDown,
-  ChevronUp,
-  Search,
-  TrendingUp,
-  TrendingDown,
-  PanelRightOpen,
-  PanelRightClose,
-} from 'lucide-react';
+import { Star, ChevronDown, ChevronUp, Search, TrendingUp, TrendingDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLayoutStore } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
@@ -399,26 +390,41 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
 
       {/* ── Trade panel toggle ────────────────────────────────────────────── */}
       <motion.button
-        onClick={onToggleTrading}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        title={tradingPanelOpen ? 'Hide trade panel' : 'Show trade panel'}
-        className="relative flex shrink-0 items-center justify-center rounded p-1 transition-colors"
-        style={{ color: tradingPanelOpen ? color.purple : color.muted }}
+        onClick={() => {
+          if (!tradingPanelOpen) onToggleTrading();
+        }}
+        whileHover={{ scale: tradingPanelOpen ? 1 : 1.04 }}
+        whileTap={{ scale: tradingPanelOpen ? 1 : 0.96 }}
+        title="Open trade panel"
+        className="relative flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 font-bold text-white transition-all"
+        style={{
+          fontSize: fontSize.xs11,
+          background: tradingPanelOpen
+            ? 'transparent'
+            : `linear-gradient(135deg, ${color.purpleDark} 0%, ${color.purple} 100%)`,
+          border: tradingPanelOpen ? `1px solid ${color.purple}40` : `1px solid ${color.purple}80`,
+          boxShadow: tradingPanelOpen
+            ? 'none'
+            : `0 0 14px 3px ${color.purpleDark}60, 0 2px 8px rgba(0,0,0,0.5)`,
+          color: tradingPanelOpen ? `${color.purple}cc` : 'white',
+          cursor: tradingPanelOpen ? 'default' : 'pointer',
+        }}
       >
-        {tradingPanelOpen ? (
-          <PanelRightClose className="h-4 w-4" />
-        ) : (
-          <PanelRightOpen className="h-4 w-4" />
-        )}
         {!tradingPanelOpen && (
+          /* pulse glow when closed */
           <motion.span
-            className="absolute inset-0 rounded"
-            animate={{ opacity: [0.4, 0.9, 0.4] }}
+            className="absolute inset-0 rounded-full"
+            animate={{ opacity: [0.5, 1, 0.5] }}
             transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ background: `${color.purple}1f`, pointerEvents: 'none' }}
+            style={{
+              background: `linear-gradient(135deg, ${color.purpleDark} 0%, ${color.purple} 100%)`,
+              filter: 'blur(6px)',
+              pointerEvents: 'none',
+            }}
           />
         )}
+        {/* Trade label */}
+        <span className="relative">Trade</span>
       </motion.button>
 
       {/* Divider */}
