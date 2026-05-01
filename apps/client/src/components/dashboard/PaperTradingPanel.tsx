@@ -672,7 +672,7 @@ export function PaperTradingPanel({
           Order &amp; Account Management
         </span>
 
-        {/* Right: gear (settings) + sound + collapse + close */}
+        {/* Right: sound + settings + collapse/expand + maximize/restore */}
         <div className="flex items-center gap-0.5">
           <SoundSettings />
           <motion.button

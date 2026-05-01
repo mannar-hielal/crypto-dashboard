@@ -50,6 +50,8 @@ function useOnlineStatus(): boolean {
 
 interface TradingPanelProps {
   onClose: () => void;
+  /** Whether the panel is currently visible (non-zero width/opacity in the parent wrapper) */
+  isVisible?: boolean;
   /** Tab selected before the symbol changed — preserved across remounts */
   initialTab?: OrderTab;
   /** Called whenever the user switches tabs so the parent can persist the selection */
@@ -64,6 +66,7 @@ interface TradingPanelProps {
 
 export function TradingPanel({
   onClose,
+  isVisible = true,
   initialTab = 'market',
   onTabChange,
   initialSide = 'buy',
@@ -76,29 +79,13 @@ export function TradingPanel({
   const symbol = useLayoutStore((s) => s.panes[s.activePane].symbol);
   const baseAsset = symbol.replace('USDT', '');
 
-  const lp0 = useStore(paneStores[0], (s) => s.latestPrice);
-  const lp1 = useStore(paneStores[1], (s) => s.latestPrice);
-  const lp2 = useStore(paneStores[2], (s) => s.latestPrice);
-  const lp3 = useStore(paneStores[3], (s) => s.latestPrice);
-  const latestPrice = [lp0, lp1, lp2, lp3][activePane];
-
-  const ic0 = useStore(paneStores[0], (s) => s.isConnected);
-  const ic1 = useStore(paneStores[1], (s) => s.isConnected);
-  const ic2 = useStore(paneStores[2], (s) => s.isConnected);
-  const ic3 = useStore(paneStores[3], (s) => s.isConnected);
-  const isConnected = [ic0, ic1, ic2, ic3][activePane];
+  const activePaneStore = paneStores[activePane];
+  const latestPrice = useStore(activePaneStore, (s) => (isVisible ? s.latestPrice : null));
+  const isConnected = useStore(activePaneStore, (s) => (isVisible ? s.isConnected : false));
   const isOnline = useOnlineStatus();
 
-  const bid0 = useStore(paneStores[0], (s) => s.bid);
-  const bid1 = useStore(paneStores[1], (s) => s.bid);
-  const bid2 = useStore(paneStores[2], (s) => s.bid);
-  const bid3 = useStore(paneStores[3], (s) => s.bid);
-  const ask0 = useStore(paneStores[0], (s) => s.ask);
-  const ask1 = useStore(paneStores[1], (s) => s.ask);
-  const ask2 = useStore(paneStores[2], (s) => s.ask);
-  const ask3 = useStore(paneStores[3], (s) => s.ask);
-  const bid = [bid0, bid1, bid2, bid3][activePane];
-  const ask = [ask0, ask1, ask2, ask3][activePane];
+  const bid = useStore(activePaneStore, (s) => (isVisible ? s.bid : null));
+  const ask = useStore(activePaneStore, (s) => (isVisible ? s.ask : null));
   const spread = bid != null && ask != null ? ask - bid : null;
 
   const balance = usePaperStore((s) => s.balance);

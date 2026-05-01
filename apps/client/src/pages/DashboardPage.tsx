@@ -310,6 +310,7 @@ function DashboardInner() {
         >
           <TradingPanel
             key={`${activePane}-${symbol}`}
+            isVisible={isTradingPanelVisible}
             onClose={() => setTradingPanelOpen(false)}
             initialTab={tradingTab}
             onTabChange={setTradingTab}
