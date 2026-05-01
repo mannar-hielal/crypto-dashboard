@@ -96,12 +96,6 @@ function renderPanel(props: Partial<React.ComponentProps<typeof TradingPanel>> =
   return render(<TradingPanel onClose={vi.fn()} {...props} />);
 }
 
-/** Type qty into the quantity input */
-function typeQty(value: string) {
-  // qty input is the first spinbutton when on Market tab (no price input)
-  const allInputs = screen.getAllByRole('spinbutton');
-  fireEvent.change(allInputs[0], { target: { value } });
-}
 
 /**
  * Click the execute (Buy/Sell) button — always the last <button> in the panel.
@@ -380,16 +374,8 @@ describe('Section 1 — Market Orders (T2 · RTL)', () => {
       const qtyInput = screen.getAllByRole('spinbutton')[0];
       fireEvent.change(qtyInput, { target: { value: '0' } });
 
-      // Find the main execute button (Buy/Sell at the bottom)
-      // It is the button that contains a span with text "Buy"
-      const allButtons = screen.getAllByRole('button');
-      const executeBtn = allButtons.find(
-        (b) => b.classList.contains('w-full') || b.getAttribute('disabled') !== null
-      );
-
-      // The motion.button is disabled when qty <= 0
-      // We'll find it by checking all buttons that have a child span with "Buy"
-      const submitButton = allButtons
+      const submitButton = screen
+        .getAllByRole('button')
         .reverse()
         .find((b) => b.textContent?.includes('MARKET'));
       expect((submitButton as HTMLButtonElement)?.disabled).toBe(true);
