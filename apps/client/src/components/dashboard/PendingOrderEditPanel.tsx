@@ -42,7 +42,7 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
 
   // ── Local state (initialised from the live order) ───────────────────────────
   const [priceInput, setPriceInput] = useState(() =>
-    order ? fmtMktPrice(order.triggerPrice).replace(/,/g, '') : ''
+    order ? fmtMktPrice(order.triggerPrice, { useGrouping: false }) : ''
   );
   // Qty mode: 'units' = enter base-asset qty; 'usd' = enter margin (USDT)
   const [qtyMode, setQtyMode] = useState<'units' | 'usd'>('units');
@@ -51,10 +51,10 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
   const [tpEnabled, setTpEnabled] = useState(() => !!order?.takeProfit);
   const [slEnabled, setSlEnabled] = useState(() => !!order?.stopLoss);
   const [tpInput, setTpInput] = useState(() =>
-    order?.takeProfit ? fmtMktPrice(order.takeProfit).replace(/,/g, '') : ''
+    order?.takeProfit ? fmtMktPrice(order.takeProfit, { useGrouping: false }) : ''
   );
   const [slInput, setSlInput] = useState(() =>
-    order?.stopLoss ? fmtMktPrice(order.stopLoss).replace(/,/g, '') : ''
+    order?.stopLoss ? fmtMktPrice(order.stopLoss, { useGrouping: false }) : ''
   );
   const [submitResult, setSubmitResult] = useState<'rejected' | null>(null);
 
@@ -85,14 +85,14 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
     ? activeOrder.symbol.slice(0, -4)
     : activeOrder.symbol;
 
-  const newPrice = parseFloat(priceInput.replace(/,/g, '')) || activeOrder.triggerPrice;
+  const newPrice = parseFloat(priceInput) || activeOrder.triggerPrice;
 
   // Resolve qty and margin based on active input mode
   const newQty =
     qtyMode === 'units'
-      ? parseFloat(qtyInput.replace(/,/g, '')) || order.qty
+      ? parseFloat(qtyInput) || order.qty
       : newPrice > 0 && leverage > 0
-        ? ((parseFloat(usdInput.replace(/,/g, '')) || activeOrder.usdtAmount) * leverage) / newPrice
+        ? ((parseFloat(usdInput) || activeOrder.usdtAmount) * leverage) / newPrice
         : activeOrder.qty;
 
   const newUsdtAmount =
@@ -100,7 +100,7 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
       ? newPrice > 0 && leverage > 0
         ? (newQty * newPrice) / leverage
         : activeOrder.usdtAmount
-      : parseFloat(usdInput.replace(/,/g, '')) || activeOrder.usdtAmount;
+      : parseFloat(usdInput) || activeOrder.usdtAmount;
 
   const usdEquivalent = newQty * newPrice; // notional trade value
 
@@ -109,8 +109,8 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
   const newRequired = newUsdtAmount + newUsdtAmount * COMMISSION_RATE;
   const insufficientFunds = newRequired > scratchBalance;
 
-  const tpVal = parseFloat(tpInput.replace(/,/g, '')) || null;
-  const slVal = parseFloat(slInput.replace(/,/g, '')) || null;
+  const tpVal = parseFloat(tpInput) || null;
+  const slVal = parseFloat(slInput) || null;
 
   // Direction-aware TP/SL warnings
   // Use the correct price reference name so stop orders don't say "limit price".
@@ -151,14 +151,14 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
   function handleSwapMode() {
     if (qtyMode === 'units') {
       // Convert current units → USD margin
-      const qty = parseFloat(qtyInput.replace(/,/g, '')) || activeOrder.qty;
+      const qty = parseFloat(qtyInput) || activeOrder.qty;
       const usd =
         newPrice > 0 && leverage > 0 ? (qty * newPrice) / leverage : activeOrder.usdtAmount;
       setUsdInput(usd.toFixed(2));
       setQtyMode('usd');
     } else {
       // Convert current USD margin → units
-      const usd = parseFloat(usdInput.replace(/,/g, '')) || activeOrder.usdtAmount;
+      const usd = parseFloat(usdInput) || activeOrder.usdtAmount;
       const qty = newPrice > 0 && leverage > 0 ? (usd * leverage) / newPrice : activeOrder.qty;
       setQtyInput(qty.toFixed(6));
       setQtyMode('units');

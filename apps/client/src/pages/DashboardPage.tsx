@@ -105,6 +105,7 @@ function DashboardInner() {
   const [isMaximized, setIsMaximized] = useState(false);
   /** When set, an edit panel replaces the TradingPanel in the right column */
   const [editTarget, setEditTarget] = useState<EditTarget>(null);
+  const isTradingPanelVisible = !editTarget && tradingPanelOpen;
 
   // ── Bottom-panel drag-to-resize ─────────────────────────────────────────
 
@@ -299,11 +300,15 @@ function DashboardInner() {
             key={`${activePane}-${symbol}`} still resets the form on symbol change. */}
         <motion.div
           animate={{
-            width: !editTarget && tradingPanelOpen ? 256 : 0,
-            opacity: !editTarget && tradingPanelOpen ? 1 : 0,
+            width: isTradingPanelVisible ? 256 : 0,
+            opacity: isTradingPanelVisible ? 1 : 0,
           }}
           transition={{ duration: 0.2, ease: 'easeInOut' }}
           className="shrink-0 overflow-hidden"
+          aria-hidden={!isTradingPanelVisible}
+          // @ts-expect-error inert is a valid HTML attribute not yet typed in React
+          inert={!isTradingPanelVisible ? '' : undefined}
+          style={{ pointerEvents: isTradingPanelVisible ? 'auto' : 'none' }}
         >
           <TradingPanel
             key={`${activePane}-${symbol}`}

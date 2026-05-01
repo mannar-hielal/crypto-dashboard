@@ -55,10 +55,10 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
   const [tpEnabled, setTpEnabled] = useState(() => !!position?.takeProfit);
   const [slEnabled, setSlEnabled] = useState(() => !!position?.stopLoss);
   const [tpInput, setTpInput] = useState(() =>
-    position?.takeProfit ? fmtMktPrice(position.takeProfit).replace(/,/g, '') : ''
+    position?.takeProfit ? fmtMktPrice(position.takeProfit, { useGrouping: false }) : ''
   );
   const [slInput, setSlInput] = useState(() =>
-    position?.stopLoss ? fmtMktPrice(position.stopLoss).replace(/,/g, '') : ''
+    position?.stopLoss ? fmtMktPrice(position.stopLoss, { useGrouping: false }) : ''
   );
 
   if (!position) {
@@ -81,8 +81,8 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
 
   // ── Derived ─────────────────────────────────────────────────────────────────
   const isLong = position.side === 'long';
-  const tpVal = parseFloat(tpInput.replace(/,/g, '')) || null;
-  const slVal = parseFloat(slInput.replace(/,/g, '')) || null;
+  const tpVal = parseFloat(tpInput) || null;
+  const slVal = parseFloat(slInput) || null;
 
   // Direction-aware TP/SL warnings
   const tpWarning: string | null =
