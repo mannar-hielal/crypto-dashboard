@@ -13,6 +13,12 @@ import {
 import { paneStores } from '@/store/paneStore';
 import { useLayoutStore } from '@/store/layoutStore';
 
+// Bench-compatible fixture timestamp — evaluated once at module load, which
+// happens after SESSION_START is evaluated in OrderAccountManagementPanel.tsx.
+// Any closingTime >= SESSION_START satisfies isBenchHistoricalOrder; using a
+// static value here keeps tests deterministic within a single run.
+const FIXTURE_NOW = Date.now();
+
 vi.mock('framer-motion', () => ({
   motion: new Proxy(
     {},
@@ -148,8 +154,8 @@ describe('OrderAccountManagementPanel Orders filled sub-tab', () => {
           status: 'filled',
           commission: 0.1354,
           margin: 193.38,
-          placingTime: 1_715_000_000_100,
-          closingTime: 1_715_000_000_200,
+          placingTime: FIXTURE_NOW,
+          closingTime: FIXTURE_NOW,
         },
         {
           id: 'cancelled-1',
@@ -161,8 +167,8 @@ describe('OrderAccountManagementPanel Orders filled sub-tab', () => {
           status: 'cancelled',
           commission: 0,
           margin: 193.1,
-          placingTime: 1_715_000_000_300,
-          closingTime: 1_715_000_000_400,
+          placingTime: FIXTURE_NOW,
+          closingTime: FIXTURE_NOW,
         },
       ],
     });
@@ -190,8 +196,8 @@ describe('OrderAccountManagementPanel Orders filled sub-tab', () => {
           status: 'filled',
           commission: 0.1354,
           margin: 193.38,
-          placingTime: 1_715_000_000_100,
-          closingTime: 1_715_000_000_200,
+          placingTime: FIXTURE_NOW,
+          closingTime: FIXTURE_NOW,
         },
       ],
     });
@@ -237,8 +243,8 @@ describe('OrderAccountManagementPanel Orders filled sub-tab', () => {
           status: 'filled',
           commission: 0.1354,
           margin: 193.38,
-          placingTime: 1_715_000_000_100,
-          closingTime: 1_715_000_000_200,
+          placingTime: FIXTURE_NOW,
+          closingTime: FIXTURE_NOW,
         },
       ],
     });

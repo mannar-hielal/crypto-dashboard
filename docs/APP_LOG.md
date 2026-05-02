@@ -1145,3 +1145,52 @@ The helper and test file introduced in the 4.18 safety-hardening fix were rename
 - Preamble updated: "5.1–5.6 manually verified — all ✅. 5.7 still pending."
 
 **Tests: 324/324 green** (`pnpm --filter client test --run`).
+
+---
+
+### test: automate Section 5 symbol pair icons — 5.1–5.5 + 5.7 (T2 · RTL) (02.05.2026) ✅
+
+**Context:** Sections 5.1–5.5 and 5.7 were marked T3 · Playwright (pixel-level) with no automated structural coverage. Now supplemented by T2 · RTL tests that verify the correct `base`/`quote` props are passed to `SymbolPair` across all rendering contexts.
+
+**New file:** `src/components/dashboard/__tests__/Section5SymbolPairIcons.test.tsx` (16 tests)
+
+**Mock strategy:** `@/components/ui/CryptoIcon` is mocked entirely — `SymbolPair` renders as `<span data-testid="symbol-pair" data-base={base} data-quote={quote} />`. This avoids framer-motion/SVG complexity in jsdom while still asserting the correct structural prop values.
+
+**Key fix during implementation:** 5.2 initial test set `paneStores[0].setState({ symbol: 'ETHUSDT' })` but `SymbolBar` reads symbol from `layoutStore.panes[activePane].symbol`, not paneStore. Fixed by using `useLayoutStore.setState((s) => ({ panes: s.panes.map((p, i) => i === 0 ? { ...p, symbol: 'ETHUSDT' } : p) }))`.
+
+**Coverage by sub-section:**
+
+- **5.1** — SymbolBar trigger renders `SymbolPair`, dropdown has one row per `SYMBOLS` entry, all use `quote="USDT"` (3 tests)
+- **5.2** — trigger shows `base="BTC"` for BTCUSDT; shows `base="ETH"` after `layoutStore` symbol change (2 tests)
+- **5.3** — Positions tab: BTC position shows `base="BTC"` + `quote="USDT"`, empty state doesn't crash (3 tests)
+- **5.4** — Orders tab: pending order row shows `base="BTC"` + `quote="USDT"` (2 tests)
+- **5.5** — Order History tab: filled order shows `SymbolPair`, `quote="USDT"`, cancelled row also renders it (3 tests)
+- **5.7** — BTC + ETH both present in Positions, BTC still shows `base="BTC"` when active pane is ETH, exactly 2 `SymbolPair`s for 2 positions (3 tests)
+
+**TRADING_TEST_PLAN.md + APP_LOG.md:** Section 5 preamble updated to "5.1–5.7 manually verified — all ✅". Rows 5.1–5.7 note T2 · RTL structural coverage via `Section5SymbolPairIcons.test.tsx`.
+
+**Tests: 340/340 green** (`pnpm --filter client test --run`).
+
+---
+
+### feat: TV-style Orders bench lifecycle — session-scoped TTL cleanup (02.05.2026) ✅
+
+**Context:** The Orders tab was showing all historical `filled`/`cancelled`/`rejected` records indefinitely — identical to Order History. TradingView treats Orders as a temporary working bench: terminal rows appear briefly after the event, then auto-evict. On page refresh the bench resets entirely.
+
+**Behaviour implemented (mirrors TV):**
+
+- **Working / Inactive** rows: always on the bench, never auto-expire.
+- **Filled / Cancelled / Rejected** rows: appear in Orders immediately after the event; auto-evict after **120 seconds (2 minutes)** measured from the row's `closingTime`.
+- **Page refresh**: bench resets entirely — terminal rows are gone from Orders but permanently visible in Order History.
+- **All sub-tab in Orders**: live reflection of the current bench (working + inactive + any terminal rows still within TTL). Count drops as rows expire.
+- **Main Orders badge** (tab bar): counts working + inactive only — never includes terminal bench rows.
+- **Order History tab**: completely unchanged — always shows the full persistent `orders` array.
+
+**Changes — `OrderAccountManagementPanel.tsx` only. Zero store changes.**
+
+- Added module-level constants: `SESSION_START = Date.now()` (session anchor; resets on every page load — gives the refresh-clean behaviour for free) and `BENCH_TTL_MS = 120_000`.
+- Added `now` clock state + 30-second `setInterval` inside the component to drive reactive expiry mid-session.
+- Added `isBenchHistoricalOrder(o: HistoricalOrder): boolean` helper: `o.closingTime >= SESSION_START && o.closingTime + BENCH_TTL_MS > now`.
+- `allOrderDisplayRows`: historical rows pre-filtered through `isBenchHistoricalOrder` — terminal rows outside the TTL window are simply not in the bench array, so all sub-tab counts are automatically correct.
+- `activeOrdersBadgeCount` on the main tab bar: unchanged — already counted only `pending` + `exit-order` kinds (working + inactive).
+- **Visual treatment for bench terminal rows**: row rendered at `opacity-60` + small amber `Clock` icon alongside the status pill — signals "this row is temporary and will clear shortly".

@@ -153,6 +153,19 @@ const COLS_BY_TAB: Record<ColTab, ColDef[]> = {
   balancehistory: BALANCE_HISTORY_COLS,
 };
 
+// ─── Orders bench lifecycle ───────────────────────────────────────────────────
+// The Orders tab is a session-scoped "working bench". Active rows (working /
+// inactive) stay as long as they're live. Terminal rows (filled / cancelled /
+// rejected) appear on the bench for BENCH_TTL_MS after their closingTime, then
+// auto-evict to Order History only.
+//
+// SESSION_START is evaluated ONCE at module load time — it naturally resets on
+// every page refresh, which is exactly why bench terminal rows disappear from
+// Orders after a reload (their closingTime < SESSION_START).
+
+const SESSION_START = Date.now();
+const BENCH_TTL_MS = 120_000; // 2 minutes, hardcoded — mirrors TV behaviour
+
 // ─── Column prefs persistence ─────────────────────────────────────────────────
 
 const COL_PREFS_KEY = 'cd-paper-col-prefs';
@@ -345,6 +358,15 @@ export function OrderAccountManagementPanel({
     return () => {
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     };
+  }, []);
+
+  // ── Bench clock — drives reactive TTL expiry of terminal rows in Orders tab ──
+  // Ticks every 30 s so the bench auto-clears within ±30 s of the 2-minute mark
+  // without hammering the reconciler on every second.
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
   }, []);
 
   // ── Journal UI state ──────────────────────────────────────────────────────
@@ -550,11 +572,24 @@ export function OrderAccountManagementPanel({
 
   // Orders tab mirrors TV-style lifecycle buckets; historical filled rows remain
   // visible in Orders (Filled sub-tab) and Order History.
+
+  // ── Bench predicate ─────────────────────────────────────────────────────────
+  // A HistoricalOrder is "on the bench" only if it was created in this session
+  // (closingTime >= SESSION_START) AND its 2-minute TTL has not yet elapsed.
+  // Orders from previous sessions never satisfy the first clause, so they vanish
+  // from the Orders tab immediately after a page refresh.
+  function isBenchHistoricalOrder(o: HistoricalOrder): boolean {
+    return o.closingTime >= SESSION_START && o.closingTime + BENCH_TTL_MS > now;
+  }
+
   const allOrderDisplayRows: OrderDisplayRow[] = [
     ...inactivePendingExitRows,
     ...exitOrderRows,
     ...pendingOrders.map((o) => ({ kind: 'pending' as const, data: o })),
-    ...orders.map((o) => ({ kind: 'historical' as const, data: o })),
+    // Historical rows are only included while they are "on the bench" (within the
+    // 2-minute TTL window for this session). Outside that window they exist only
+    // in Order History, not here.
+    ...orders.filter(isBenchHistoricalOrder).map((o) => ({ kind: 'historical' as const, data: o })),
   ].sort((a, b) => {
     const ta =
       a.kind === 'pending'
@@ -1454,6 +1489,11 @@ export function OrderAccountManagementPanel({
                                     exit="exit"
                                     layout
                                     className="group border-b border-white/3 transition-colors hover:bg-white/2"
+                                    // Bench terminal rows (filled/cancelled/rejected within TTL) are
+                                    // dimmed so users can distinguish them from live active rows.
+                                    style={
+                                      !isPending && !isExitOrder ? { opacity: 0.65 } : undefined
+                                    }
                                   >
                                     {isVisible('orders', 'symbol') && (
                                       <td className="px-3 py-1.5">
@@ -1469,15 +1509,31 @@ export function OrderAccountManagementPanel({
                                     )}
                                     {isVisible('orders', 'status') && (
                                       <td className="px-3 py-1.5">
-                                        <span
-                                          className="rounded px-1.5 py-px font-bold uppercase"
-                                          style={{
-                                            fontSize: fontSize.xs10,
-                                            background: `${statusColor}22`,
-                                            color: statusColor,
-                                          }}
-                                        >
-                                          {statusLabel}
+                                        <span className="inline-flex items-center gap-1">
+                                          <span
+                                            className="rounded px-1.5 py-px font-bold uppercase"
+                                            style={{
+                                              fontSize: fontSize.xs10,
+                                              background: `${statusColor}22`,
+                                              color: statusColor,
+                                            }}
+                                          >
+                                            {statusLabel}
+                                          </span>
+                                          {/* Clock icon signals this terminal row is temporary —
+                                              it will auto-evict from Orders after the 2-min TTL */}
+                                          {!isPending && !isExitOrder && (
+                                            <Clock
+                                              className="shrink-0"
+                                              style={{
+                                                width: 10,
+                                                height: 10,
+                                                color: color.amber,
+                                                opacity: 0.7,
+                                              }}
+                                              title="This row will clear from Orders in ~2 minutes. It stays permanently in Order History."
+                                            />
+                                          )}
                                         </span>
                                       </td>
                                     )}
