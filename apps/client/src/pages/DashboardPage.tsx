@@ -94,6 +94,7 @@ function DashboardInner() {
   // Active pane symbol drives the TradingPanel key (resets form on symbol change)
   const activePane = useLayoutStore((s) => s.activePane);
   const symbol = useLayoutStore((s) => s.panes[s.activePane].symbol);
+  const setBottomPanelHeight = useLayoutStore((s) => s.setBottomPanelHeight);
 
   const [panelSize, setPanelSize] = useState<PanelSize>('open');
   const [tradingPanelOpen, setTradingPanelOpen] = useState(true);
@@ -111,16 +112,20 @@ function DashboardInner() {
 
   /**
    * panelHeightPx — committed open-state height (written on drag end or size change).
+   * Seeded from layoutStore so it survives a page refresh.
    * Only used when panelSize === 'open' && !isMaximized.
    */
-  const [panelHeightPx, setPanelHeightPx] = useState(PANEL_HEIGHTS.open);
+  const [panelHeightPx, setPanelHeightPx] = useState(
+    () => useLayoutStore.getState().bottomPanelHeight
+  );
 
   /**
    * panelHeightMV — Framer MotionValue that directly drives style.height on the
    * panel wrapper. Updated instantly during drag via .set() — zero React re-renders
    * per frame. Spring-animated by the useEffect below on size/maximize transitions.
+   * Seeded from layoutStore so the panel opens at its last-used height immediately.
    */
-  const panelHeightMV = useMotionValue(PANEL_HEIGHTS.open);
+  const panelHeightMV = useMotionValue(useLayoutStore.getState().bottomPanelHeight);
 
   /**
    * handleBottom keeps the 12 px drag handle centred on the panel boundary without
@@ -181,7 +186,9 @@ function DashboardInner() {
     e.currentTarget.releasePointerCapture(e.pointerId);
     // Commit to React state — triggers the spring effect but as a no-op
     // (MV is already at this value so no visible animation occurs).
-    setPanelHeightPx(Math.round(panelHeightMV.get()));
+    const committed = Math.round(panelHeightMV.get());
+    setPanelHeightPx(committed);
+    setBottomPanelHeight(committed); // persist to cd-layout localStorage
   }
 
   return (

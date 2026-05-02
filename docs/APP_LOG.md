@@ -1194,3 +1194,26 @@ The helper and test file introduced in the 4.18 safety-hardening fix were rename
 - `allOrderDisplayRows`: historical rows pre-filtered through `isBenchHistoricalOrder` — terminal rows outside the TTL window are simply not in the bench array, so all sub-tab counts are automatically correct.
 - `activeOrdersBadgeCount` on the main tab bar: unchanged — already counted only `pending` + `exit-order` kinds (working + inactive).
 - **Visual treatment for bench terminal rows**: row rendered at `opacity-60` + small amber `Clock` icon alongside the status pill — signals "this row is temporary and will clear shortly".
+
+---
+
+### `fix: persist bottom-panel drag height across page refresh (02.05.2026)` ✅
+
+**Problem:** The drag-to-resize handle position reset to the default 208 px height on every page refresh because `panelHeightPx` was plain `useState(PANEL_HEIGHTS.open)` — never written to storage.
+
+**Solution:** Piggybacked on the existing `cd-layout` localStorage key (Zustand `layoutStore` with `persist` middleware — same store that already holds pane sizes).
+
+**Changes:**
+
+- **`layoutStore.ts`**
+  - Added `bottomPanelHeight: number` field (default `208`) to `LayoutState`.
+  - Added `setBottomPanelHeight(height: number)` action.
+  - Added merge guard in `persist.merge`: if `bottomPanelHeight` is missing or `< 80` (old `cd-layout` payload without this field), it falls back to `208` — safe zero-migration hydration.
+
+- **`DashboardPage.tsx`**
+  - Added `const setBottomPanelHeight = useLayoutStore((s) => s.setBottomPanelHeight)`.
+  - `panelHeightPx` `useState` initializer changed from `PANEL_HEIGHTS.open` to `() => useLayoutStore.getState().bottomPanelHeight` — reads the persisted value once at mount.
+  - `panelHeightMV` `useMotionValue` seed changed from `PANEL_HEIGHTS.open` to `useLayoutStore.getState().bottomPanelHeight` — panel opens at its last-used height immediately, before any spring animation fires.
+  - `handlePanelHandlePointerUp`: extracts committed height into `const committed = Math.round(panelHeightMV.get())`, passes it to both `setPanelHeightPx(committed)` and `setBottomPanelHeight(committed)`.
+
+**Result:** Drag the handle, refresh — panel reopens at exactly where it was left. 340/340 tests green (no test changes needed — no new user-visible branch, store change is additive).
