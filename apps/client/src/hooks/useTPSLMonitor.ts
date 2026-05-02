@@ -1,10 +1,22 @@
 /**
  * useTPSLMonitor
  *
- * Subscribes directly to paneStores[0] (vanilla Zustand, outside React's
+ * Subscribes directly to ALL four paneStores (vanilla Zustand, outside React's
  * render cycle) so EVERY price tick is evaluated — React 18 automatic batching
  * can coalesce rapid ticks into a single render and cause the useEffect-based
  * approach to skip over a TP/SL level entirely.
+ *
+ * Each pane store subscription is matched to the symbol of THAT pane
+ * (layoutStore.panes[i].symbol), not the active pane. This prevents a
+ * symbol-switch timing bug where switching away from a pane could leave
+ * positions in that symbol monitored against the wrong price feed.
+ *
+ * Root cause fix (4.18 incident):
+ *   The original hook subscribed only to paneStores[0]. After switching the
+ *   active pane away from BTC, paneStores[0] could be showing a different
+ *   symbol — meaning BTC positions were evaluated against a non-BTC price.
+ *   Combined with a manual SL typo (7800 instead of 78000), a non-BTC price
+ *   satisfied the wrong SL level and closed the BTC position incorrectly.
  *
  * Two-price check per tick:
  *   1. latestPrice  — most recent last-trade / ticker price
@@ -19,6 +31,9 @@
  *
  * Close price used: latestPrice if it already satisfies the breach, otherwise
  * the exact TP/SL level (candle-sweep — best approximation).
+ *
+ * NOTE: A symbol with no active pane showing it will NOT be evaluated in
+ * real-time. The SL/TP close requires a live pane feed for that symbol.
  *
  * Must be mounted once at the app/dashboard level alongside usePaneFeeds.
  */
@@ -50,6 +65,69 @@ export function checkTPSL(
   return null;
 }
 
+// ─── Per-pane evaluation helper ───────────────────────────────────────────────
+
+/**
+ * Evaluates TP/SL for all positions whose symbol matches the given pane's
+ * current symbol. Called on every price tick from that pane's store.
+ *
+ * Exported for unit testing — allows tests to directly invoke the evaluation
+ * logic without mounting the React hook or setting up store subscriptions.
+ *
+ * @param paneIndex  Index into paneStores[] and layoutStore.panes[]
+ * @param latestPrice  Latest trade price from this pane's store
+ * @param bars         Candle bars array from this pane's store
+ * @param onClosed     Optional callback invoked with gross PnL when a position closes
+ */
+export function evaluatePanePositions(
+  paneIndex: number,
+  latestPrice: number,
+  bars: { high: number; low: number }[],
+  onClosed?: (pnl: number) => void
+) {
+  const symbol = useLayoutStore.getState().panes[paneIndex].symbol;
+
+  // Only evaluate positions whose symbol matches THIS pane — prevents a
+  // cross-symbol SL trigger when panes show different symbols.
+  const positions = usePaperStore.getState().positions.filter((p) => p.symbol === symbol);
+  if (positions.length === 0) return;
+
+  const currentBar = bars[bars.length - 1];
+  const candleLow = currentBar?.low ?? latestPrice;
+  const candleHigh = currentBar?.high ?? latestPrice;
+
+  const checkHigh = Math.max(latestPrice, candleHigh);
+  const checkLow = Math.min(latestPrice, candleLow);
+
+  for (const pos of positions) {
+    let triggered: 'TP' | 'SL' | null = null;
+    if (pos.side === 'long') {
+      if (pos.takeProfit !== undefined && checkHigh >= pos.takeProfit) triggered = 'TP';
+      else if (pos.stopLoss !== undefined && checkLow <= pos.stopLoss) triggered = 'SL';
+    } else {
+      if (pos.takeProfit !== undefined && checkLow <= pos.takeProfit) triggered = 'TP';
+      else if (pos.stopLoss !== undefined && checkHigh >= pos.stopLoss) triggered = 'SL';
+    }
+
+    if (!triggered) continue;
+
+    const level = triggered === 'TP' ? pos.takeProfit! : pos.stopLoss!;
+    const closePrice = checkTPSL(pos, latestPrice) ? latestPrice : level;
+
+    const label = triggered === 'TP' ? 'Take-Profit' : 'Stop-Loss';
+    const reason = `Auto-closed ${pos.side.toUpperCase()} ${pos.symbol} — ${label} hit at $${fmtPrice(closePrice)}`;
+    const closeType = triggered === 'TP' ? 'take-profit' : 'stop-loss';
+
+    usePaperStore.getState().closePosition(pos.id, closePrice, reason, closeType);
+
+    const grossPnl =
+      pos.side === 'long'
+        ? (closePrice - pos.entryPrice) * pos.quantity
+        : (pos.entryPrice - closePrice) * pos.quantity;
+    onClosed?.(grossPnl);
+  }
+}
+
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
 interface TPSLMonitorOptions {
@@ -64,64 +142,19 @@ export function useTPSLMonitor({ onClosed }: TPSLMonitorOptions = {}) {
   }, [onClosed]);
 
   useEffect(() => {
-    // Subscribe directly to the vanilla Zustand store — bypasses React 18
-    // automatic batching so every individual price tick is evaluated.
-    const unsubscribe = paneStores[0].subscribe((state) => {
-      const { latestPrice, bars } = state;
-      if (latestPrice === null) return;
+    // Subscribe to ALL four pane stores independently — each subscription reads
+    // the symbol of ITS OWN pane (not the active pane) so BTC positions are
+    // always evaluated against the BTC price feed, never against ETH/SOL/etc.
+    const unsubscribers = paneStores.map((store, paneIndex) =>
+      store.subscribe((state) => {
+        const { latestPrice, bars } = state;
+        if (latestPrice === null) return;
+        evaluatePanePositions(paneIndex, latestPrice, bars, onClosedRef.current);
+      })
+    );
 
-      const symbol = useLayoutStore.getState().panes[0].symbol;
-      // Only evaluate positions for the currently active symbol — other symbols
-      // have no live price feed active so we must not close them on a different ticker.
-      const positions = usePaperStore.getState().positions.filter((p) => p.symbol === symbol);
-      if (positions.length === 0) return;
-
-      const currentBar = bars[bars.length - 1];
-      const candleLow = currentBar?.low ?? latestPrice;
-      const candleHigh = currentBar?.high ?? latestPrice;
-
-      // Compute candle extremes once — shared across all position checks this tick.
-      const checkHigh = Math.max(latestPrice, candleHigh);
-      const checkLow = Math.min(latestPrice, candleLow);
-
-      for (const pos of positions) {
-        // For long positions: TP uses high path, SL uses low path.
-        // For short positions: TP uses low path, SL uses high path.
-        // We check with the candle extreme first; if triggered, determine
-        // whether it was a real-time tick or a candle-sweep for the close price.
-
-        // Build a synthetic "worst case" position view for breach detection.
-        // Use high for TP-long / SL-short, low for TP-short / SL-long.
-        let triggered: 'TP' | 'SL' | null = null;
-        if (pos.side === 'long') {
-          if (pos.takeProfit !== undefined && checkHigh >= pos.takeProfit) triggered = 'TP';
-          else if (pos.stopLoss !== undefined && checkLow <= pos.stopLoss) triggered = 'SL';
-        } else {
-          if (pos.takeProfit !== undefined && checkLow <= pos.takeProfit) triggered = 'TP';
-          else if (pos.stopLoss !== undefined && checkHigh >= pos.stopLoss) triggered = 'SL';
-        }
-
-        if (!triggered) continue;
-
-        // Determine close price: use latestPrice if it satisfies the breach,
-        // else use the exact TP/SL level (candle-sweep approximation).
-        const level = triggered === 'TP' ? pos.takeProfit! : pos.stopLoss!;
-        const closePrice = checkTPSL(pos, latestPrice) ? latestPrice : level;
-
-        const label = triggered === 'TP' ? 'Take-Profit' : 'Stop-Loss';
-        const reason = `Auto-closed ${pos.side.toUpperCase()} ${pos.symbol} — ${label} hit at $${fmtPrice(closePrice)}`;
-        const closeType = triggered === 'TP' ? 'take-profit' : 'stop-loss';
-
-        usePaperStore.getState().closePosition(pos.id, closePrice, reason, closeType);
-
-        const grossPnl =
-          pos.side === 'long'
-            ? (closePrice - pos.entryPrice) * pos.quantity
-            : (pos.entryPrice - closePrice) * pos.quantity;
-        onClosedRef.current?.(grossPnl);
-      }
-    });
-
-    return unsubscribe;
+    return () => {
+      unsubscribers.forEach((unsub) => unsub());
+    };
   }, []); // Mount once — reads fresh state from getState() on every tick
 }

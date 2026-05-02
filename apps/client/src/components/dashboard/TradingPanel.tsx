@@ -11,6 +11,7 @@ import { bg, color, fontSize } from '@/lib/tokens';
 import { Toggle } from '@/components/ui/Toggle';
 import { NumericInput } from '@/components/ui/NumericInput';
 import { FieldLabel } from '@/components/ui/FieldLabel';
+import { computeSLTPWarnings } from '@/lib/slSanity';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -110,6 +111,10 @@ export function TradingPanel({
   const [exitsOpen, setExitsOpen] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
   const [bypassWarning, setBypassWarning] = useState(false);
+  /** True when a blocking SL/TP sanity modal is waiting for user confirmation */
+  const [slConfirmPending, setSlConfirmPending] = useState(false);
+  /** Set to true after user explicitly confirms a suspicious SL/TP — skips the gate next call */
+  const [slConfirmBypassed, setSlConfirmBypassed] = useState(false);
   const executeAnim = useAnimation();
 
   // ── Derived values ────────────────────────────────────────────────────────
@@ -248,12 +253,33 @@ export function TradingPanel({
     return `${sign}$${pnl.toFixed(2)} · ${sign}${pct.toFixed(2)}%`;
   }
 
+  // ── SL/TP sanity warnings ────────────────────────────────────────────────
+  const slSanity = computeSLTPWarnings(
+    slEnabled ? parseFloat(slInput) : NaN,
+    execPrice ?? 0,
+    latestPrice ?? 0,
+    'SL'
+  );
+  const tpSanity = computeSLTPWarnings(
+    tpEnabled ? parseFloat(tpInput) : NaN,
+    execPrice ?? 0,
+    latestPrice ?? 0,
+    'TP'
+  );
+  const hasSanityWarning =
+    slSanity.typoWarning !== null ||
+    slSanity.largeDistanceWarning !== null ||
+    tpSanity.typoWarning !== null ||
+    tpSanity.largeDistanceWarning !== null;
+
   // ── Handlers ──────────────────────────────────────────────────────────────
   function handleSideChange(s: OrderSide) {
     setSide(s);
     onSideChange?.(s);
     setFormError(null);
     setBypassWarning(false);
+    setSlConfirmPending(false);
+    setSlConfirmBypassed(false);
     // Reset typed price so the new default (bid for Buy, ask for Sell) takes over.
     setPriceInput('');
     setTpInput('');
@@ -265,6 +291,8 @@ export function TradingPanel({
     onTabChange?.(t);
     setFormError(null);
     setBypassWarning(false);
+    setSlConfirmPending(false);
+    setSlConfirmBypassed(false);
     // Clear any manually typed price so displayPrice falls back to latestPrice
     // for the new tab — giving the user the current live price as the starting point.
     setPriceInput('');
@@ -351,6 +379,16 @@ export function TradingPanel({
       setBypassWarning(true);
       return;
     }
+
+    // ── SL/TP sanity gate (Option B — blocking confirm modal) ────────────────
+    // If the SL or TP looks like a typo or is unusually far from entry, show a
+    // confirmation modal before proceeding. The user must explicitly click
+    // "Confirm anyway" to bypass — a second accidental click isn't enough.
+    if (hasSanityWarning && !slConfirmBypassed) {
+      setSlConfirmPending(true);
+      return;
+    }
+
     const v = validate();
     if (!v || !execPrice) return;
 
@@ -377,6 +415,8 @@ export function TradingPanel({
     setTpEnabled(false);
     setSlEnabled(false);
     setBypassWarning(false);
+    setSlConfirmPending(false);
+    setSlConfirmBypassed(false);
     void executeAnim.start({ scale: [1, 1.04, 1], transition: { duration: 0.3, ease: 'easeOut' } });
   }
 
@@ -825,6 +865,119 @@ export function TradingPanel({
                       Click the button below to confirm and place anyway.
                     </p>
                   )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── SL / TP sanity confirm modal (Option B — blocking) ───────── */}
+        <AnimatePresence>
+          {slConfirmPending && (
+            <motion.div
+              key="sl-confirm-modal"
+              data-testid="sl-confirm-modal"
+              initial={{ opacity: 0, y: -4, height: 0 }}
+              animate={{ opacity: 1, y: 0, height: 'auto' }}
+              exit={{ opacity: 0, y: -4, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden rounded-md border px-2.5 py-2.5"
+              style={{ borderColor: '#f59e0b88', background: '#f59e0b15' }}
+            >
+              <div className="flex items-start gap-1.5">
+                <AlertTriangle
+                  className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                  style={{ color: '#f59e0b' }}
+                />
+                <div className="flex flex-col gap-1.5 w-full">
+                  <p
+                    className="font-semibold"
+                    style={{ fontSize: fontSize.xs10, color: '#fcd34d', lineHeight: 1.4 }}
+                  >
+                    ⚠ Suspicious SL/TP value detected
+                  </p>
+
+                  {slSanity.typoWarning && (
+                    <p style={{ fontSize: fontSize.xs10, color: '#fcd34d99', lineHeight: 1.4 }}>
+                      {slSanity.typoWarning}
+                    </p>
+                  )}
+                  {slSanity.largeDistanceWarning && (
+                    <p style={{ fontSize: fontSize.xs10, color: '#fcd34d99', lineHeight: 1.4 }}>
+                      {slSanity.largeDistanceWarning}
+                    </p>
+                  )}
+                  {tpSanity.typoWarning && (
+                    <p style={{ fontSize: fontSize.xs10, color: '#fcd34d99', lineHeight: 1.4 }}>
+                      {tpSanity.typoWarning}
+                    </p>
+                  )}
+                  {tpSanity.largeDistanceWarning && (
+                    <p style={{ fontSize: fontSize.xs10, color: '#fcd34d99', lineHeight: 1.4 }}>
+                      {tpSanity.largeDistanceWarning}
+                    </p>
+                  )}
+
+                  <div className="flex gap-2 mt-1">
+                    <button
+                      onClick={() => {
+                        setSlConfirmPending(false);
+                        setSlConfirmBypassed(false);
+                      }}
+                      className="flex-1 rounded py-1 text-xs font-semibold transition-colors hover:opacity-80"
+                      style={{
+                        background: `${color.muted}33`,
+                        color: color.muted,
+                        fontSize: fontSize.xs10,
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      data-testid="sl-confirm-anyway"
+                      onClick={() => {
+                        setSlConfirmPending(false);
+                        setSlConfirmBypassed(true);
+                        // Re-run execute immediately — slConfirmBypassed is set above so
+                        // the gate will be skipped. We call validate + submit inline rather
+                        // than relying on state to flush, to avoid an extra render cycle.
+                        const v = validate();
+                        if (!v || !execPrice) return;
+                        const id =
+                          tab === 'market'
+                            ? placeOrder(symbol, side, execPrice, v.amount, v.tp, v.sl)
+                            : tab === 'limit'
+                              ? placeLimitOrder(symbol, side, execPrice, v.amount, v.tp, v.sl)
+                              : placeStopOrder(symbol, side, execPrice, v.amount, v.tp, v.sl);
+                        if (!id) {
+                          setFormError('Order could not be placed');
+                          return;
+                        }
+                        if (tab === 'market') sound.playOrderPlaced();
+                        else sound.playOrderQueued();
+                        setQtyInput('');
+                        setPriceInput('');
+                        setTpInput('');
+                        setSlInput('');
+                        setTpEnabled(false);
+                        setSlEnabled(false);
+                        setBypassWarning(false);
+                        setSlConfirmBypassed(false);
+                        void executeAnim.start({
+                          scale: [1, 1.04, 1],
+                          transition: { duration: 0.3, ease: 'easeOut' },
+                        });
+                      }}
+                      className="flex-1 rounded py-1 text-xs font-semibold transition-colors hover:opacity-80"
+                      style={{
+                        background: '#f59e0b33',
+                        color: '#fcd34d',
+                        fontSize: fontSize.xs10,
+                      }}
+                    >
+                      Confirm SL/TP anyway
+                    </button>
+                  </div>
                 </div>
               </div>
             </motion.div>

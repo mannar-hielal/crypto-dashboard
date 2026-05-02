@@ -33,7 +33,7 @@
 
 import React from 'react';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import { TradingPanel } from '../TradingPanel';
 import { useLayoutStore } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
@@ -670,5 +670,147 @@ describe('Section 3 — Stop Orders (T2 · RTL)', () => {
 
       expect(screen.getByText('Insufficient balance')).toBeTruthy();
     });
+  });
+});
+
+// ─── Section 1.7.11 — SL typo safety rails (T2 · RTL) ───────────────────────
+//
+// Regression tests for the 4.18 incident blocker:
+//   - Entering SL=7800 on a BTC order with live price ~78000 triggers the
+//     blocking confirm modal (typo guard).
+//   - Cancelling the modal returns focus without placing the order.
+//   - Confirming the modal places the order.
+//   - Entering a valid SL (e.g. 75000) does NOT show the modal.
+//   - Very large-distance SL (>10% from entry) shows the modal.
+
+const BTC_PRICE = 78_000;
+
+function setupBTCStores() {
+  paneStores[0].setState({
+    latestPrice: BTC_PRICE,
+    isConnected: true,
+    bid: BTC_PRICE - 10,
+    ask: BTC_PRICE + 10,
+  });
+  useLayoutStore.setState({ activePane: 0 });
+}
+
+describe('Section 1.7.11 — SL typo safety rails (T2 · RTL)', () => {
+  beforeEach(() => {
+    usePaperStore.getState().reset();
+    localStorage.clear();
+    setupBTCStores();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('1.7.11: entering SL=7800 for BTC at 78000 shows blocking confirm modal', () => {
+    renderPanel();
+
+    // Enter a valid qty and enable SL toggle
+    fireEvent.change(getQtyInput(), { target: { value: '100' } });
+    fireEvent.click(screen.getByLabelText('Enable stop loss'));
+
+    // Type the typo SL
+    fireEvent.change(getSlInput(), { target: { value: '7800' } });
+
+    // Click submit
+    clickExecuteBtn();
+
+    // Confirm modal should be present
+    const modal = screen.getByTestId('sl-confirm-modal');
+    expect(modal).toBeTruthy();
+    // Should contain warning text about the typo (scoped to modal to avoid false matches)
+    expect(within(modal).getByText(/7,800/)).toBeTruthy();
+    expect(within(modal).getAllByText(/78,000/).length).toBeGreaterThan(0);
+  });
+
+  it('1.7.11: clicking Cancel on the modal dismisses it without placing the order', () => {
+    renderPanel();
+
+    fireEvent.change(getQtyInput(), { target: { value: '100' } });
+    fireEvent.click(screen.getByLabelText('Enable stop loss'));
+    fireEvent.change(getSlInput(), { target: { value: '7800' } });
+    clickExecuteBtn();
+
+    // Modal is shown
+    expect(screen.getByTestId('sl-confirm-modal')).toBeTruthy();
+
+    // Click Cancel
+    fireEvent.click(screen.getByText('Cancel'));
+
+    // Modal dismissed, no order placed
+    expect(screen.queryByTestId('sl-confirm-modal')).toBeNull();
+    expect(usePaperStore.getState().positions).toHaveLength(0);
+  });
+
+  it('1.7.11: clicking submit again after Cancel re-shows the modal (not bypassed)', () => {
+    renderPanel();
+
+    fireEvent.change(getQtyInput(), { target: { value: '100' } });
+    fireEvent.click(screen.getByLabelText('Enable stop loss'));
+    fireEvent.change(getSlInput(), { target: { value: '7800' } });
+    clickExecuteBtn();
+
+    fireEvent.click(screen.getByText('Cancel'));
+    expect(screen.queryByTestId('sl-confirm-modal')).toBeNull();
+
+    // Click submit again — modal should re-appear
+    clickExecuteBtn();
+    expect(screen.getByTestId('sl-confirm-modal')).toBeTruthy();
+  });
+
+  it('1.7.11: clicking "Confirm SL/TP anyway" places the order and dismisses modal', () => {
+    renderPanel();
+
+    fireEvent.change(getQtyInput(), { target: { value: '100' } });
+    fireEvent.click(screen.getByLabelText('Enable stop loss'));
+    fireEvent.change(getSlInput(), { target: { value: '7800' } });
+    clickExecuteBtn();
+
+    expect(screen.getByTestId('sl-confirm-modal')).toBeTruthy();
+
+    // Confirm the suspicious SL
+    fireEvent.click(screen.getByTestId('sl-confirm-anyway'));
+
+    // Modal gone
+    expect(screen.queryByTestId('sl-confirm-modal')).toBeNull();
+    // Order placed (position created)
+    expect(usePaperStore.getState().positions).toHaveLength(1);
+    // Position has the typo SL as set
+    expect(usePaperStore.getState().positions[0].stopLoss).toBe(7_800);
+  });
+
+  it('1.7.11: valid SL (5% below entry) does NOT trigger the confirm modal', () => {
+    renderPanel();
+
+    fireEvent.change(getQtyInput(), { target: { value: '100' } });
+    fireEvent.click(screen.getByLabelText('Enable stop loss'));
+
+    // 5% below BTC_PRICE = 74100 — well within normal range
+    fireEvent.change(getSlInput(), { target: { value: '74100' } });
+
+    clickExecuteBtn();
+
+    // No modal — order should place directly (or show a different validation error)
+    expect(screen.queryByTestId('sl-confirm-modal')).toBeNull();
+  });
+
+  it('1.7.12: SL > 10% from entry triggers large-distance confirm modal', () => {
+    renderPanel();
+
+    fireEvent.change(getQtyInput(), { target: { value: '100' } });
+    fireEvent.click(screen.getByLabelText('Enable stop loss'));
+
+    // 11% below BTC_PRICE = ~69420 — exceeds SL_MAX_DISTANCE (10%)
+    const largeSl = Math.floor(BTC_PRICE * 0.89); // ~69420
+    fireEvent.change(getSlInput(), { target: { value: String(largeSl) } });
+
+    clickExecuteBtn();
+
+    // Confirm modal should appear (large-distance warning)
+    expect(screen.getByTestId('sl-confirm-modal')).toBeTruthy();
   });
 });

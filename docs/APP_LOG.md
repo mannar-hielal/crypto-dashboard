@@ -1051,3 +1051,54 @@ _Last updated: 2026-05-02 (consistency sweep — panel renamed to "Order & Accou
 - **Key Files table**: `OrderAccountManagementPanel.tsx` description updated to reflect the renamed panel label and full tab list.
 - **ASCII layout diagram**: updated to show `Order & Account Management (OrderAccountManagementPanel)`.
 - **marketStore bid/ask section note**: updated — `TradingPanel.tsx` now reads `bid`/`ask` unconditionally (no `isVisible` gating; 2 `useStore` calls, not 8).
+
+---
+
+### fix: wrong-symbol SL closure prevention — 4.18 incident safety hardening (02.05.2026) ✅
+
+**Incident summary (4.18):**
+During testing, a BTC LONG position with a manually typed SL of `7800` (intended `78000`) was incorrectly auto-closed. Root cause was two bugs compounding:
+
+1. **Symbol-switch bug** — `useTPSLMonitor` subscribed only to `paneStores[0]`. After switching pane 0 to ETHUSDT, BTC positions were evaluated against the ETH price feed instead of a BTC feed. An ETH price near `7500` satisfied the typo SL of `7800` and triggered a spurious close.
+2. **Typo guard absent** — there was no input-level check to block or warn when an SL/TP value was an order of magnitude away from the live price.
+
+**Fix 1 — `useTPSLMonitor.ts` (per-symbol feeds):**
+
+- Refactored from a single `paneStores[0]` subscription to **4 independent subscriptions** — one per pane store.
+- Each subscription reads `layoutStore.panes[i].symbol` and filters positions by that symbol only.
+- Extracted `evaluatePanePositions(paneIndex, latestPrice, bars, onClosed?)` as an **exported** pure helper for direct unit testing without mounting the hook.
+- `paneStores.map((store, i) => store.subscribe(...))` returns 4 unsubscribers, all cleaned up on unmount.
+
+**Fix 2 — `slSanity.ts` (new file — pure helper):**
+
+- `src/lib/slSanity.ts` — exports `computeSLTPWarnings(value, execPrice, livePrice, field)`.
+- **Typo guard**: flags when `|value − livePrice| / livePrice > TYPO_DEVIATION_THRESHOLD` (default `0.8` = 80%).
+- **Large-distance guard**: flags when `|execPrice − value| / execPrice > SL_MAX_DISTANCE` (default `0.1` = 10%, SL only).
+- Returns `{ typoWarning: string | null, largeDistanceWarning: string | null }`.
+- Guard for `livePrice ≤ 0`, `execPrice ≤ 0`, `NaN` and non-finite inputs — returns both null.
+
+**Fix 3 — `TradingPanel.tsx` (blocking confirm modal — Option B):**
+
+- Added import: `computeSLTPWarnings` from `@/lib/slSanity`.
+- Added state: `slConfirmPending` / `slConfirmBypassed`.
+- Added derived block: `slSanity`, `tpSanity`, `hasSanityWarning` (computed after `formatPnl`, before handlers).
+- `handleExecute` now gates on `hasSanityWarning && !slConfirmBypassed` — sets `slConfirmPending = true` and returns early on first click.
+- Confirm modal (`data-testid="sl-confirm-modal"`) renders inside `AnimatePresence` below the immediate-fill warning. Shows `typoWarning` and/or `largeDistanceWarning` text. "Confirm SL/TP anyway" button (`data-testid="sl-confirm-anyway"`) sets `slConfirmBypassed = true` and re-runs execute inline.
+- "Cancel" button sets `slConfirmPending = false` and `slConfirmBypassed = false` — resubmitting shows the modal again.
+- `handleSideChange` and `handleTabChange` reset both confirm state flags.
+
+**New files:**
+
+- `src/lib/slSanity.ts` — pure sanity helper (102 lines)
+- `src/lib/__tests__/slSanity.test.ts` — 21 unit tests, all green
+
+**Modified files:**
+
+- `src/hooks/useTPSLMonitor.ts` — full rewrite, per-symbol multi-pane subscriptions, `evaluatePanePositions` exported
+- `src/hooks/__tests__/useTPSLMonitor.test.ts` — extended with multi-pane isolation + 4.18 regression blocks (7 new tests)
+- `src/components/dashboard/TradingPanel.tsx` — SL/TP sanity gate + confirm modal added
+- `src/components/dashboard/__tests__/TradingPanel.test.tsx` — Section 1.7.11 block (7 new tests)
+
+**Tests: 317/317 green** (`pnpm --filter client test --run`).
+
+**TRADING_TEST_PLAN.md:** 1.7.11, 1.7.12, 4.19, 4.20 added.
