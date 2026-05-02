@@ -1120,3 +1120,28 @@ The helper and test file introduced in the 4.18 safety-hardening fix were rename
 - `sltpSanity.test.ts`: describe-block title updated from `slSanity unit tests` to `sltpSanity unit tests`.
 
 **Tests: 317/317 green** (`pnpm --filter client test --run`); lint clean.
+
+---
+
+### test: automate Section 5.6 — unknown symbol fallback for CryptoIcon + SymbolPair (02.05.2026) ✅
+
+**Context:** Test plan case 5.6 was ⬜ — the expected outcome also contained a stale claim ("USDT shows text badge 'US'") because USDT was added to `CRYPTO_ICON_URLS` after the row was written.
+
+**Changes:**
+
+- **`CryptoIcon.test.tsx`**: added USDT `?url` mock (was missing — needed for `SymbolPair` tests that render `<SymbolPair base="BTC" quote="USDT">`). Added `SymbolPair` to the import. Added a new `SymbolPair — unknown symbol fallback (5.6)` describe block with 7 tests:
+  - Both base and quote unknown → no `<img>` rendered
+  - Both unknown → 'FO' and 'NE' text badges both present
+  - Unknown base (lowercase) → uppercased to 'FO'
+  - Unknown quote (lowercase) → uppercased to 'NE'
+  - Known base + unknown quote → 1 `<img>` (BTC) + 1 text badge ('NE')
+  - 1-letter symbol → doesn't crash, renders single-char badge
+  - USDT renders as `<img>` (real icon in map, not a text badge) — corrects the stale plan note
+
+**TRADING_TEST_PLAN.md:**
+
+- 5.6 expected outcome corrected (removed stale "USDT shows text badge 'US'" claim; noted USDT has a real icon).
+- 5.6 status updated to ✅ with result note pointing to both existing `CryptoIcon.test.tsx > unknown symbol` coverage and the new `SymbolPair` describe block.
+- Preamble updated: "5.1–5.6 manually verified — all ✅. 5.7 still pending."
+
+**Tests: 324/324 green** (`pnpm --filter client test --run`).
