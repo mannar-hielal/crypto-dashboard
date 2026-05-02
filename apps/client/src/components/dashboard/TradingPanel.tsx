@@ -11,7 +11,7 @@ import { bg, color, fontSize } from '@/lib/tokens';
 import { Toggle } from '@/components/ui/Toggle';
 import { NumericInput } from '@/components/ui/NumericInput';
 import { FieldLabel } from '@/components/ui/FieldLabel';
-import { computeSLTPWarnings } from '@/lib/slSanity';
+import { computeSLTPWarnings } from '@/lib/sltpSanity';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -112,9 +112,9 @@ export function TradingPanel({
   const [formError, setFormError] = useState<string | null>(null);
   const [bypassWarning, setBypassWarning] = useState(false);
   /** True when a blocking SL/TP sanity modal is waiting for user confirmation */
-  const [slConfirmPending, setSlConfirmPending] = useState(false);
+  const [sltpConfirmPending, setSltpConfirmPending] = useState(false);
   /** Set to true after user explicitly confirms a suspicious SL/TP — skips the gate next call */
-  const [slConfirmBypassed, setSlConfirmBypassed] = useState(false);
+  const [sltpConfirmBypassed, setSltpConfirmBypassed] = useState(false);
   const executeAnim = useAnimation();
 
   // ── Derived values ────────────────────────────────────────────────────────
@@ -254,23 +254,23 @@ export function TradingPanel({
   }
 
   // ── SL/TP sanity warnings ────────────────────────────────────────────────
-  const slSanity = computeSLTPWarnings(
+  const slWarnings = computeSLTPWarnings(
     slEnabled ? parseFloat(slInput) : NaN,
     execPrice ?? 0,
     latestPrice ?? 0,
     'SL'
   );
-  const tpSanity = computeSLTPWarnings(
+  const tpWarnings = computeSLTPWarnings(
     tpEnabled ? parseFloat(tpInput) : NaN,
     execPrice ?? 0,
     latestPrice ?? 0,
     'TP'
   );
-  const hasSanityWarning =
-    slSanity.typoWarning !== null ||
-    slSanity.largeDistanceWarning !== null ||
-    tpSanity.typoWarning !== null ||
-    tpSanity.largeDistanceWarning !== null;
+  const hasSLTPWarning =
+    slWarnings.typoWarning !== null ||
+    slWarnings.largeDistanceWarning !== null ||
+    tpWarnings.typoWarning !== null ||
+    tpWarnings.largeDistanceWarning !== null;
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   function handleSideChange(s: OrderSide) {
@@ -278,8 +278,8 @@ export function TradingPanel({
     onSideChange?.(s);
     setFormError(null);
     setBypassWarning(false);
-    setSlConfirmPending(false);
-    setSlConfirmBypassed(false);
+    setSltpConfirmPending(false);
+    setSltpConfirmBypassed(false);
     // Reset typed price so the new default (bid for Buy, ask for Sell) takes over.
     setPriceInput('');
     setTpInput('');
@@ -291,8 +291,8 @@ export function TradingPanel({
     onTabChange?.(t);
     setFormError(null);
     setBypassWarning(false);
-    setSlConfirmPending(false);
-    setSlConfirmBypassed(false);
+    setSltpConfirmPending(false);
+    setSltpConfirmBypassed(false);
     // Clear any manually typed price so displayPrice falls back to latestPrice
     // for the new tab — giving the user the current live price as the starting point.
     setPriceInput('');
@@ -384,8 +384,8 @@ export function TradingPanel({
     // If the SL or TP looks like a typo or is unusually far from entry, show a
     // confirmation modal before proceeding. The user must explicitly click
     // "Confirm anyway" to bypass — a second accidental click isn't enough.
-    if (hasSanityWarning && !slConfirmBypassed) {
-      setSlConfirmPending(true);
+    if (hasSLTPWarning && !sltpConfirmBypassed) {
+      setSltpConfirmPending(true);
       return;
     }
 
@@ -415,8 +415,8 @@ export function TradingPanel({
     setTpEnabled(false);
     setSlEnabled(false);
     setBypassWarning(false);
-    setSlConfirmPending(false);
-    setSlConfirmBypassed(false);
+    setSltpConfirmPending(false);
+    setSltpConfirmBypassed(false);
     void executeAnim.start({ scale: [1, 1.04, 1], transition: { duration: 0.3, ease: 'easeOut' } });
   }
 
@@ -873,7 +873,7 @@ export function TradingPanel({
 
         {/* ── SL / TP sanity confirm modal (Option B — blocking) ───────── */}
         <AnimatePresence>
-          {slConfirmPending && (
+          {sltpConfirmPending && (
             <motion.div
               key="sl-confirm-modal"
               data-testid="sl-confirm-modal"
@@ -897,32 +897,32 @@ export function TradingPanel({
                     ⚠ Suspicious SL/TP value detected
                   </p>
 
-                  {slSanity.typoWarning && (
+                  {slWarnings.typoWarning && (
                     <p style={{ fontSize: fontSize.xs10, color: '#fcd34d99', lineHeight: 1.4 }}>
-                      {slSanity.typoWarning}
+                      {slWarnings.typoWarning}
                     </p>
                   )}
-                  {slSanity.largeDistanceWarning && (
+                  {slWarnings.largeDistanceWarning && (
                     <p style={{ fontSize: fontSize.xs10, color: '#fcd34d99', lineHeight: 1.4 }}>
-                      {slSanity.largeDistanceWarning}
+                      {slWarnings.largeDistanceWarning}
                     </p>
                   )}
-                  {tpSanity.typoWarning && (
+                  {tpWarnings.typoWarning && (
                     <p style={{ fontSize: fontSize.xs10, color: '#fcd34d99', lineHeight: 1.4 }}>
-                      {tpSanity.typoWarning}
+                      {tpWarnings.typoWarning}
                     </p>
                   )}
-                  {tpSanity.largeDistanceWarning && (
+                  {tpWarnings.largeDistanceWarning && (
                     <p style={{ fontSize: fontSize.xs10, color: '#fcd34d99', lineHeight: 1.4 }}>
-                      {tpSanity.largeDistanceWarning}
+                      {tpWarnings.largeDistanceWarning}
                     </p>
                   )}
 
                   <div className="flex gap-2 mt-1">
                     <button
                       onClick={() => {
-                        setSlConfirmPending(false);
-                        setSlConfirmBypassed(false);
+                        setSltpConfirmPending(false);
+                        setSltpConfirmBypassed(false);
                       }}
                       className="flex-1 rounded py-1 text-xs font-semibold transition-colors hover:opacity-80"
                       style={{
@@ -936,9 +936,9 @@ export function TradingPanel({
                     <button
                       data-testid="sl-confirm-anyway"
                       onClick={() => {
-                        setSlConfirmPending(false);
-                        setSlConfirmBypassed(true);
-                        // Re-run execute immediately — slConfirmBypassed is set above so
+                        setSltpConfirmPending(false);
+                        setSltpConfirmBypassed(true);
+                        // Re-run execute immediately — sltpConfirmBypassed is set above so
                         // the gate will be skipped. We call validate + submit inline rather
                         // than relying on state to flush, to avoid an extra render cycle.
                         const v = validate();
@@ -962,7 +962,7 @@ export function TradingPanel({
                         setTpEnabled(false);
                         setSlEnabled(false);
                         setBypassWarning(false);
-                        setSlConfirmBypassed(false);
+                        setSltpConfirmBypassed(false);
                         void executeAnim.start({
                           scale: [1, 1.04, 1],
                           transition: { duration: 0.3, ease: 'easeOut' },

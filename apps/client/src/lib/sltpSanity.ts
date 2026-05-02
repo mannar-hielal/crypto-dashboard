@@ -1,5 +1,5 @@
 /**
- * slSanity.ts
+ * sltpSanity.ts
  *
  * Pure helper for SL/TP input sanity checks in TradingPanel.
  * Catches two failure modes observed in the 4.18 incident:

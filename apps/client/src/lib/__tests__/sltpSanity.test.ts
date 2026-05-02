@@ -1,5 +1,5 @@
 /**
- * slSanity unit tests  (T1 · Vitest)
+ * sltpSanity unit tests  (T1 · Vitest)
  *
  * Tests the pure computeSLTPWarnings() helper for all guarded failure modes:
  *   - Typo guard: value deviates > TYPO_DEVIATION_THRESHOLD from live price
@@ -14,7 +14,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { computeSLTPWarnings, TYPO_DEVIATION_THRESHOLD, SL_MAX_DISTANCE } from '../slSanity';
+import { computeSLTPWarnings, TYPO_DEVIATION_THRESHOLD, SL_MAX_DISTANCE } from '../sltpSanity';
 
 // ─── Constants sanity check ───────────────────────────────────────────────────
 
