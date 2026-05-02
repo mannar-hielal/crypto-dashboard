@@ -113,7 +113,8 @@
 │ bar  │   maximized]            │   height, sibling  │
 │(w-11)│                         │   of center col)   │
 ├──────┴─────────────────────────┴────────────────────┤
-│   PaperTradingPanel  h-0/h-9/h-52 or full (maximize) │
+│  Order & Account Management (OrderAccountManagementPanel)      │
+│  h-0 / h-9 / h-52 or full (maximize)                │
 ├──────────────────────────────────────────────────────┤
 │   TickerBar                            (h-8)         │
 ├──────────────────────────────────────────────────────┤
@@ -121,19 +122,21 @@
 └──────────────────────────────────────────────────────┘
 ```
 
-- `PanelSize = 'hidden' | 'collapsed' | 'open'` — exported from `DashboardPage.tsx`, used by `PaperTradingPanel`
+- `PanelSize = 'hidden' | 'collapsed' | 'open'` — exported from `DashboardPage.tsx`, used by `OrderAccountManagementPanel`
 - `TradingPanel` uses `key={`${activePane}-${symbol}`}` — React remounts on active pane OR symbol change, resetting all local form state
 - `TradingPanel` open/close: wrapper `motion.div` **always rendered** (never unmounted at close); `animate={{ width: 0, opacity: 0 }}` hides it. Component stays mounted so **form state (qty, price, TP/SL, tab, side) is fully preserved across close/reopen**; only a symbol/pane key change resets form inputs.
-- `inert` attribute is applied to hidden wrappers (`PaperTradingPanel` and right `TradingPanel`) to remove hidden content from keyboard/a11y interaction
+- `inert` attribute is applied to hidden wrappers (`OrderAccountManagementPanel` and right `TradingPanel`) to remove hidden content from keyboard/a11y interaction
 - Current panel header UI exposes `open`/`collapsed` controls; no floating re-open pill is rendered for a `hidden` state
 
 ---
 
-### Bottom Panel — `PaperTradingPanel` ✅ (current implementation)
+### Bottom Panel — `OrderAccountManagementPanel` ✅ (current implementation)
+
+> **UI panel label**: "Order & Account Management" (displayed in the panel header bar). Component file: `OrderAccountManagementPanel.tsx`.
 
 **Header bar (top strip):**
 
-- Left: "Paper Trading" label
+- Left: "Order & Account Management" label
 - Right: Sound settings · ⚙️ Account Settings modal · Collapse/Expand · Maximize/Restore · Close
 
 **Account Summary Bar** (below header, above tabs — horizontally scrollable):
@@ -184,13 +187,13 @@ Tab badge counts: purple pill for Positions count, amber pill for Orders count (
 
 ---
 
-### Bottom Panel — `PaperTradingPanel` ✅ (additional features — implemented)
+### Bottom Panel — `OrderAccountManagementPanel` ✅ (additional features — implemented)
 
-- **⚙️ button → Account Settings modal** ✅ (replaces 2-click reset):
+- **⚙️ button → Account Settings modal** ✅:
   - Read-only account name field (shows `useAuthStore` username)
-  - Leverage: `10:1` Crypto · Display only
-  - Commission: `0.07%` (0.0007) Fixed · Taker · Display only
-  - Footer: "Reset account" (2-click confirm, 3 s auto-cancel) + "Save" (disabled — read-only)
+  - **Leverage · Crypto** — interactive 12-button selector (1× · 2× · 3× · 5× · 10× · 15× · 20× · 25× · 50× · 75× · 100× · 125×, Bybit style); amber badge shows current multiplier; warning shown when > 25×. Persisted to `paperStore.leverage` on Save.
+  - Commission: `0.07%` (0.0007) Fixed · Taker · Display only (read-only)
+  - Footer: "Reset account" (2-click confirm, 3 s auto-cancel, closes modal on confirm) + **"Save"** (enabled — commits `draftLeverage` to `paperStore.leverage`)
   - Backdrop click or ✕ dismisses; confirming-reset state cleared on dismiss
 
 - **Maximize button** (⤢/⤡) in header ✅:
@@ -212,11 +215,11 @@ Tab badge counts: purple pill for Positions count, amber pill for Orders count (
 
 - **`ordersMargin` stat** ✅: `sum(pendingOrders[].usdtAmount)` (live now that pendingOrders is implemented)
 
-- **Last Price column** ✅: `lastKnownPrices` map in `paneStore` — updated on every WS snapshot/bar, never cleared on reset. `getPriceForSymbol()` helper in `PaperTradingPanel` tries live pane price first, falls back to `lastKnownPrices` so positions in non-active symbols retain correct mark price and PnL.
+- **Last Price column** ✅: `lastKnownPrices` map in `paneStore` — updated on every WS snapshot/bar, never cleared on reset. `getPriceForSymbol()` helper in `OrderAccountManagementPanel` tries live pane price first, falls back to `lastKnownPrices` so positions in non-active symbols retain correct mark price and PnL.
 
 - **Symbol pair icons** (`SymbolPair`) in Positions / Orders / History symbol column ✅: stacked base + quote coin icons (base 16 px front, quote 10 px overlapping bottom-right with panel-colour ring separator) in the TradingView style. Also applied to the `SymbolBar` symbol picker — both the trigger button (18 px base) and every dropdown row (20 px base). `SymbolPair` is exported from `CryptoIcon.tsx`; `USDT` added to `CRYPTO_ICON_URLS` (falls back to text badge gracefully). `cryptoIcons.test.ts` updated: count 9 → 10, USDT mock + expected entry added.
 
-### Bottom Panel — `PaperTradingPanel` ⏳ (still planned)
+### Bottom Panel — `OrderAccountManagementPanel` ⏳ (still planned)
 
 - No remaining panel items — all implemented.
 
@@ -441,7 +444,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 ```
 
 - Updated on every `ticker` WS message via `usePaneFeeds` handler
-- `TradingPanel` reads from active pane store (8 unconditional `useStore` calls)
+- `TradingPanel` reads from active pane store unconditionally (4 `useStore` calls — `latestPrice`, `isConnected`, `bid`, `ask`; no selector gating)
 
 ---
 
@@ -480,36 +483,35 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 ## 📁 Key Files
 
-| File                                                         | Purpose                                                                                                                                      |
-| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/client/src/lib/tokens.ts`                              | **Design tokens** — single source of truth for all colors, fonts, sizes (JS/TS side)                                                         |
-| `apps/client/src/index.css`                                  | Tailwind v4 theme — `@theme inline` generates brand color utilities from tokens                                                              |
-| `apps/client/src/store/paperStore.ts`                        | All paper trading state + actions                                                                                                            |
-| `apps/client/src/store/marketStore.ts`                       | Live price feed state                                                                                                                        |
-| `apps/client/src/store/authStore.ts`                         | Auth token + user (in-memory, no persist)                                                                                                    |
-| `apps/client/src/hooks/useTPSLMonitor.ts`                    | Auto-close hook + exported `checkTPSL()`                                                                                                     |
-| `apps/client/src/hooks/usePriceFeed.ts`                      | WebSocket price feed lifecycle                                                                                                               |
-| `apps/client/src/components/dashboard/PaperTradingPanel.tsx` | Bottom panel (positions/orders/journal)                                                                                                      |
-| `apps/client/src/components/dashboard/TradingPanel.tsx`      | Right sidebar order entry                                                                                                                    |
-| `apps/client/src/pages/DashboardPage.tsx`                    | Dashboard orchestrator — exports `PanelSize` type, mounts hooks                                                                              |
-| `apps/server/src/routes/auth/index.ts`                       | All auth routes (register/login/logout/refresh/me/reset-password),                                                                           |
-| `apps/server/src/routes/market/index.ts`                     | REST + WebSocket market data routes                                                                                                          |
-| `apps/server/src/services/BybitWebSocketManager.ts`          | Bybit WS connection singleton                                                                                                                |
-| `apps/server/src/constants.ts`                               | `ALLOWED_SYMBOLS` — source of truth for WS subscriptions + routes                                                                            |
-| `generated/CDSDK/types/index.ts`                             | Shared types (User, Account, CandleBar, WsMessage, etc.)                                                                                     |
-| `generated/CDSDK/api/auth.ts`                                | Client-side auth API calls                                                                                                                   |
-| `generated/CDSDK/api/market.ts`                              | Client-side market API + WS URL                                                                                                              |
-| `apps/client/src/lib/markets.ts`                             | Shared `SYMBOLS` (9 coins), `INTERVALS` (6), `INTERVAL_LABELS`, `SymbolEntry` type — imported by SymbolBar, PaneHeader, layoutStore defaults |
-| `apps/client/src/store/layoutStore.ts`                       | Layout config — layout ID, activePane, per-pane symbol/interval, sync options                                                                |
-| `apps/client/src/store/paneStore.ts`                         | 4 independent vanilla Zustand stores (bars/price/connection per pane)                                                                        |
-| `apps/client/src/hooks/usePaneFeeds.ts`                      | Manages 4 WS+REST connections (one per active pane) — replaces `usePriceFeed`                                                                |
-| `apps/client/src/components/dashboard/ChartLayoutPicker.tsx` | Layout picker popover (5 SVG icons) + sync option toggles                                                                                    |
-| `apps/client/src/components/dashboard/PaneHeader.tsx`        | Per-pane mini header (symbol picker, interval buttons, live price, connection dot)                                                           |
-| `apps/client/src/components/dashboard/MultiChartArea.tsx`    | CSS grid renderer for all layouts; wires crosshair + time-range sync                                                                         |
-| `docs/markup-reference/`                                     | HTML UI reference files — component structure & interaction patterns (not 1:1 copies)                                                        |
-| `docs/screenshots/theme/`                                    | Visual source of truth — spacing, colors, sizes, layout                                                                                      |
-| `docs/REVIEW_CHECKLIST.md`                                   | Pre-commit review checklist — run before every push                                                                                          |
-| `docs/APP_LOG.md`                                            | This file — full project context, attach at start of every session                                                                           |
+| File                                                                   | Purpose                                                                                                                                        |
+| ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/client/src/lib/tokens.ts`                                        | **Design tokens** — single source of truth for all colors, fonts, sizes (JS/TS side)                                                           |
+| `apps/client/src/index.css`                                            | Tailwind v4 theme — `@theme inline` generates brand color utilities from tokens                                                                |
+| `apps/client/src/store/paperStore.ts`                                  | All paper trading state + actions                                                                                                              |
+| `apps/client/src/store/marketStore.ts`                                 | Live price feed state                                                                                                                          |
+| `apps/client/src/store/authStore.ts`                                   | Auth token + user (in-memory, no persist)                                                                                                      |
+| `apps/client/src/hooks/useTPSLMonitor.ts`                              | Auto-close hook + exported `checkTPSL()`                                                                                                       |
+| `apps/client/src/hooks/usePriceFeed.ts`                                | WebSocket price feed lifecycle                                                                                                                 |
+| `apps/client/src/components/dashboard/OrderAccountManagementPanel.tsx` | **"Order & Account Management"** bottom panel — Positions · Orders · Order History · Balance History · Trading Journal; Account Settings modal |
+| `apps/client/src/components/dashboard/TradingPanel.tsx`                | Right sidebar order entry                                                                                                                      |
+| `apps/server/src/routes/auth/index.ts`                                 | All auth routes (register/login/logout/refresh/me/reset-password),                                                                             |
+| `apps/server/src/routes/market/index.ts`                               | REST + WebSocket market data routes                                                                                                            |
+| `apps/server/src/services/BybitWebSocketManager.ts`                    | Bybit WS connection singleton                                                                                                                  |
+| `apps/server/src/constants.ts`                                         | `ALLOWED_SYMBOLS` — source of truth for WS subscriptions + routes                                                                              |
+| `generated/CDSDK/types/index.ts`                                       | Shared types (User, Account, CandleBar, WsMessage, etc.)                                                                                       |
+| `generated/CDSDK/api/auth.ts`                                          | Client-side auth API calls                                                                                                                     |
+| `generated/CDSDK/api/market.ts`                                        | Client-side market API + WS URL                                                                                                                |
+| `apps/client/src/lib/markets.ts`                                       | Shared `SYMBOLS` (9 coins), `INTERVALS` (6), `INTERVAL_LABELS`, `SymbolEntry` type — imported by SymbolBar, PaneHeader, layoutStore defaults   |
+| `apps/client/src/store/layoutStore.ts`                                 | Layout config — layout ID, activePane, per-pane symbol/interval, sync options                                                                  |
+| `apps/client/src/store/paneStore.ts`                                   | 4 independent vanilla Zustand stores (bars/price/connection per pane)                                                                          |
+| `apps/client/src/hooks/usePaneFeeds.ts`                                | Manages 4 WS+REST connections (one per active pane) — replaces `usePriceFeed`                                                                  |
+| `apps/client/src/components/dashboard/ChartLayoutPicker.tsx`           | Layout picker popover (5 SVG icons) + sync option toggles                                                                                      |
+| `apps/client/src/components/dashboard/PaneHeader.tsx`                  | Per-pane mini header (symbol picker, interval buttons, live price, connection dot)                                                             |
+| `apps/client/src/components/dashboard/MultiChartArea.tsx`              | CSS grid renderer for all layouts; wires crosshair + time-range sync                                                                           |
+| `docs/markup-reference/`                                               | HTML UI reference files — component structure & interaction patterns (not 1:1 copies)                                                          |
+| `docs/screenshots/theme/`                                              | Visual source of truth — spacing, colors, sizes, layout                                                                                        |
+| `docs/REVIEW_CHECKLIST.md`                                             | Pre-commit review checklist — run before every push                                                                                            |
+| `docs/APP_LOG.md`                                                      | This file — full project context, attach at start of every session                                                                             |
 
 ---
 
@@ -521,7 +523,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 - **Phase 1**: Market data — Bybit WebSocket, CandleAggregator, IndicatorCalculator, REST history endpoint
 - **Phase 1**: Client scaffold — React 19, Vite, Tailwind, PWA, React Router, Zustand
 - **Phase 2**: Live price feed (WebSocket → `usePriceFeed` → `marketStore`)
-- **Phase 2**: Paper trading v1 — `paperStore` (market orders), `TradingPanel` (market-only), `PaperTradingPanel` (Positions + Order History + Balance History + Journal tabs), TP/SL monitor, commission accounting
+- **Phase 2**: Paper trading v1 — `paperStore` (market orders), `TradingPanel` (market-only), `OrderAccountManagementPanel` (Positions + Order History + Balance History + Journal tabs), TP/SL monitor, commission accounting
 - **Phase 2**: Review infrastructure — `REVIEW_CHECKLIST.md`, `APP_LOG.md`, CI-passing tests (148 total)
 
 ### ✅ Completed (added 2026-04-12)
@@ -538,7 +540,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 ### ✅ Completed (added 2026-04-19 — bid/ask feed + account settings modal)
 
-- **Account Settings modal** — replaces 2-click reset on ⚙️ gear button in `PaperTradingPanel` header. Read-only fields: account name (username from `useAuthStore`), Leverage (`10:1`, Crypto), Commission (`0.07% / 0.0007`, Fixed · Taker). Footer: "Reset account" (2-click confirm, 3 s auto-cancel, closes modal on confirm) + "Save" (disabled — read-only). Backdrop click or ✕ dismisses; confirm state clears on dismiss.
+- **Account Settings modal** — replaces 2-click reset on ⚙️ gear button in `OrderAccountManagementPanel` header. Read-only fields: account name (username from `useAuthStore`), Leverage (`10:1`, Crypto), Commission (`0.07% / 0.0007`, Fixed · Taker). Footer: "Reset account" (2-click confirm, 3 s auto-cancel, closes modal on confirm) + "Save" (disabled — read-only). Backdrop click or ✕ dismisses; confirm state clears on dismiss.
 - **Bid/Ask real-time feed** — end-to-end:
   - **Server `bybit.ts`**: subscribes `orderbook.1.{symbol}` for all `ALLOWED_SYMBOLS`. Processes `orderBook` stream data, extracts `bids[0][0]`/`asks[0][0]`, throttles to 500 ms per symbol, broadcasts `TickerUpdate { symbol, bid, ask }` to a separate `tickerListeners` set. `BybitService` gains `subscribeTicker(listener)` method.
   - **Server `market/index.ts`**: WS handler subscribes to `subscribeTicker` filtered by symbol, forwards `{ type: 'ticker', symbol, bid, ask }` JSON to the client WebSocket.
@@ -548,10 +550,10 @@ ask: number | null; // best ask from Bybit orderbook.1
   - **Client `TradingPanel.tsx`**: reads `bid`/`ask` from active pane store (8 unconditional `useStore` calls — 4 bid + 4 ask, picks `[activePane]`). Spread badge shows live `ask − bid` value (4 decimal places if < 1, 2 otherwise), tooltip shows raw bid/ask. Sell button price shows `bid ?? latestPrice`; Buy button shows `ask ?? latestPrice`.
 
 - **`usePendingOrderMonitor`** — limit/stop order execution on price trigger; 16 unit tests; mounted in `DashboardPage` alongside `useTPSLMonitor`
-- **Orders tab** in `PaperTradingPanel` — unified order lifecycle table; pending limit/stop orders (Working/Inactive) and historical records; filled rows visible in Orders → Filled and Order History → Filled. Sub-tabs: `All | Working | Inactive | Filled | Cancelled | Rejected` with live count badges. Cancel button refunds reserved balance; top Orders badge counts active rows only (pending + exit-order, excludes historical).
+- **Orders tab** in `OrderAccountManagementPanel` — unified order lifecycle table; pending limit/stop orders (Working/Inactive) and historical records; filled rows visible in Orders → Filled and Order History → Filled. Sub-tabs: `All | Working | Inactive | Filled | Cancelled | Rejected` with live count badges. Cancel button refunds reserved balance; top Orders badge counts active rows only (pending + exit-order, excludes historical).
 - **Sound alert system** — Web Audio API (`useTradingSound` + `TradingSoundContext` + `SoundSettings`): synthesised tones for order placed, TP/SL hit, limit/stop filled, cancelled
 - **TradingPanel full-height layout** — `TradingPanel` is now a sibling of the center column (chart + bottom panel) so it spans from SymbolBar to TickerBar without being cut by the bottom panel
-- **PaperTradingPanel maximize/restore** — `Maximize2`/`Minimize2` button; chart area collapses via framer-motion `flex: 0 0 0px`; panel content shown when maximized regardless of `PanelSize`
+- **OrderAccountManagementPanel maximize/restore** — `Maximize2`/`Minimize2` button; chart area collapses via framer-motion `flex: 0 0 0px`; panel content shown when maximized regardless of `PanelSize`
 - **`lastKnownPrices` in `paneStore`** — persists mark prices across symbol switches; fixes PnL display for non-active-symbol positions (test 2.5.3)
 - **Crypto icons** in Positions / Orders / History tables — 16 px `CryptoIcon` beside symbol text
 - **`useShallow` selectors** — `paneSymbols` object selector wrapped in `useShallow` to prevent `getSnapshot` infinite loop
@@ -772,9 +774,7 @@ Paper trading  →  Real order      →  Proven bot      →  Full autonomous
 | Bybit API outage mid-trade              | 🟡 Medium   | Bot pauses; open positions monitored via polling; user alerted      |
 | Phase 6 bot not actually proven         | 🟡 Medium   | Minimum paper period enforced in code before upgrade is offered     |
 
----
-
-_Last updated: 2026-05-01 (review follow-ups + SymbolBar trade-toggle semantics)_
+_Last updated: 2026-05-02 (consistency sweep — panel renamed to "Order & Account Management" in docs; review fixes + form-state preserve logged)_
 
 - **feat: edit panels for open positions and pending orders (26.04.2026)**
   - **`paperStore.ts`** — two new store actions:
@@ -782,11 +782,11 @@ _Last updated: 2026-05-01 (review follow-ups + SymbolBar trade-toggle semantics)
     - `editPendingOrder(orderId, newTriggerPrice, newUsdtAmount, newTakeProfit, newStopLoss)`: refunds old reserved margin to a scratch balance, recomputes new cost; **insufficient funds path** → moves order to `HistoricalOrder` as `'rejected'` + child TP/SL as `'cancelled'`, journal entries, balance refunded; **valid path** → updates `PendingOrder` in-place, settles balance delta, journal entry.
   - **`PositionEditPanel.tsx`** — new right-column TV-style panel for editing open position TP/SL; header (symbol + "Long 0.0037 @ $77,440"), Exits section (TP/SL toggles + price inputs, direction-aware `AlertTriangle` warnings), Position info block (Leverage, Trade value, Reward, Risk), Confirm + Discard buttons.
   - **`PendingOrderEditPanel.tsx`** — new right-column TV-style panel for editing pending limit/stop orders; header ("BTCUSDT, order …{id}" + "Buy Limit 2 @ 77,500.0"), Price input, Quantity input (units + live USD equivalent), Exits section (TP/SL toggles + inputs), Order info block, inline insufficient-funds `AlertTriangle` banner, Confirm + Discard buttons.
-  - **`DashboardPage.tsx`** — new `editTarget` state (`null | { kind: 'position'; positionId } | { kind: 'pending'; orderId }`); right column conditionally renders `PositionEditPanel` or `PendingOrderEditPanel` instead of `TradingPanel` using the same width-spring `AnimatePresence` pattern; `onEditPosition` / `onEditPendingOrder` callbacks passed to `PaperTradingPanel`; Discard/close restores prior state.
-  - **`PaperTradingPanel.tsx`** — new optional props `onEditPosition` / `onEditPendingOrder`; hover-reveal `Pencil` icons added to **TP** and **SL** cells in the Positions table (calls `onEditPosition`); hover-reveal `Pencil` added to the limit/stop-price cell for `kind === 'pending'` rows in the Orders table (calls `onEditPendingOrder`).
+  - **`DashboardPage.tsx`** — new `editTarget` state (`null | { kind: 'position'; positionId } | { kind: 'pending'; orderId }`); right column conditionally renders `PositionEditPanel` or `PendingOrderEditPanel` instead of `TradingPanel` using the same width-spring `AnimatePresence` pattern; `onEditPosition` / `onEditPendingOrder` callbacks passed to `OrderAccountManagementPanel`; Discard/close restores prior state.
+  - **`OrderAccountManagementPanel.tsx`** — new optional props `onEditPosition` / `onEditPendingOrder`; hover-reveal `Pencil` icons added to **TP** and **SL** cells in the Positions table (calls `onEditPosition`); hover-reveal `Pencil` added to the limit/stop-price cell for `kind === 'pending'` rows in the Orders table (calls `onEditPendingOrder`).
 
 - **fix: bracket Orders badge + TV-style activation journal entries** ✅
-  - `PaperTradingPanel` — Orders tab badge now counts **all** active order rows:
+  - `OrderAccountManagementPanel` — Orders tab badge now counts **all** active order rows:
     `pendingOrders.length + inactivePendingExitRows.length + exitOrderRows.length`
     (previously `inactivePendingExitRows` was excluded — badge showed 1 instead of 3 for a bracket).
   - `usePendingOrderMonitor` — after a bracket limit/stop order fills, two additional system
@@ -797,7 +797,7 @@ _Last updated: 2026-05-01 (review follow-ups + SymbolBar trade-toggle semantics)
     Journal order: fill entry first, then TP activation, then SL activation (newest-first in view).
 
 - **feat: drag-to-resize bottom panel + chart pane splitters**
-  - Added TV-style `bottom-widgetbar-handle` resize for `PaperTradingPanel` via Framer `MotionValue`.
+  - Added TV-style `bottom-widgetbar-handle` resize for `OrderAccountManagementPanel` via Framer `MotionValue`.
   - Added `ResizeSplitter` overlays for `2h`, `2v`, `3h`, and `4` layouts.
   - Persisted per-layout pane sizes in `layoutStore.paneSizes`.
 
@@ -812,11 +812,11 @@ _Last updated: 2026-05-01 (review follow-ups + SymbolBar trade-toggle semantics)
 - **fix: PR code review issues (25.04.2026)** ✅
   - `BybitWebSocketManager.ts` — `unsubscribe()` now calls `sendUnsubscription(key)` **before** `this.subscriptions.delete(key)`. Previously the key was removed from the map first, causing `sendUnsubscription` to no-op (it reads from the map) — Bybit would never receive the unsubscribe message.
   - `paperStore.ts` — `leverage` in the `fresh` fallback object and the v0→v1 migration both corrected from `10` to `1`, matching the store's initial state (`leverage: 1`) and the interface docs ("Default 1 = no leverage"). Previously users migrating from v0 or falling back to `fresh` would unexpectedly get 10× leverage.
-  - `PaperTradingPanel.tsx` — Collapse/Expand button gate changed from `size !== 'collapsed'` to `size !== 'hidden'`. The old condition hid the button exactly when the panel was collapsed, making it impossible to re-expand without another UI path. Now the Expand button is visible when collapsed.
+  - `OrderAccountManagementPanel.tsx` — Collapse/Expand button gate changed from `size !== 'collapsed'` to `size !== 'hidden'`. The old condition hid the button exactly when the panel was collapsed, making it impossible to re-expand without another UI path. Now the Expand button is visible when collapsed.
   - `vite.config.ts` — `unsafe-inline` in `script-src` is intentional and required: `@vitejs/plugin-react` injects an inline `<script type="module">` preamble for React Fast Refresh globals; removing it breaks HMR entirely with "can't detect preamble". The existing comment already documents this accurately. Dev CSP is served only by the Vite dev server — never in production.
 
 - **feat: TV-style edit pencils — pre-fill & post-fill orders (30.04.2026)** ✅
-  - `PaperTradingPanel.tsx` — added `group` class to `motion.tr` elements in both the Positions table and Orders table so `group-hover:opacity-100` transitions work correctly on hover.
+  - `OrderAccountManagementPanel.tsx` — added `group` class to `motion.tr` elements in both the Positions table and Orders table so `group-hover:opacity-100` transitions work correctly on hover.
   - **Post-fill (open positions)**: pencil icons on the **Take Profit** and **Stop Loss** columns in the Positions tab call `onEditPosition(pos.id)` to open `PositionEditPanel` (TP/SL edit for that position).
   - **Orders tab — Working exit rows** (synthetic TP/SL rows from open positions): pencils on the **Limit Price** cell (TP row) and **Stop Price** cell (SL row) also call `onEditPosition(ex.positionId)` → same `PositionEditPanel`.
   - **Pre-fill (pending orders)**: pencils added to the **TP** and **SL** columns for pending order rows (call `onEditPendingOrder(orderId)` → `PendingOrderEditPanel` to edit price, qty, and exits).
@@ -873,7 +873,7 @@ _Last updated: 2026-05-01 (review follow-ups + SymbolBar trade-toggle semantics)
   - TP/SL warning messages: replaced hardcoded `"limit price"` with `priceReferenceLabel = activeOrder.type === 'stop' ? 'stop price' : 'limit price'` so stop orders show the correct field name in the error text.
   - `confirmDisabled` guard: covers `insufficientFunds || tpWarning || slWarning || (tpEnabled && !tpVal) || (slEnabled && !slVal)`. Replaces the old `disabled={insufficientFunds}`-only check.
 
-  ### `PaperTradingPanel.tsx` — duplicate pencils, phantom buttons
+  ### `OrderAccountManagementPanel.tsx` — duplicate pencils, phantom buttons
   - **Duplicate pencil on STOP rows**: `limitPrice` column pencil was rendered for all pending orders (`isPending`). STOP orders have their trigger price in the `stopPrice` column, which already had its own pencil. Fixed: `limitPrice` pencil now only renders when `isPending && type === 'limit'`; `stopPrice` pencil unchanged at `isPending && type === 'stop'`.
   - **Phantom buttons when callbacks undefined**: all `onEditPosition?.(...)` and `onEditPendingOrder?.(...)` optional-chain patterns replaced by explicit `onEditPosition && <button onClick={() => onEditPosition(...)} ...>` guards. Pencil buttons are not rendered at all when the parent has not wired up the edit callbacks — no focusable controls that silently do nothing.
 
@@ -882,7 +882,7 @@ _Last updated: 2026-05-01 (review follow-ups + SymbolBar trade-toggle semantics)
   - **T1 · Vitest** (`paperStore.test.ts` / `layoutStore.test.ts`): pure Zustand store unit tests — Vitest + jsdom, no DOM rendering. Covers all business logic: balance math, order lifecycle, TP/SL triggers, bracket cancellations, cancel records, journal content, sibling-cancel logic, pending order fills, localStorage hydration. Approx. 80% of test cases across Sections 1–4, 7, 10 (store sync), 11.
   - **T2 · RTL** (new file `components/__tests__/*.test.tsx`): component integration tests — Vitest + `@testing-library/react` (already installed as dev dep). Renders components in jsdom and asserts rendered HTML / simulates events. Covers: form validation error messages, toggle label changes, badge counts, sub-tab filtering, modal open/close, button disabled states, column picker localStorage pref. Uses `vi.useFakeTimers()` for the 3 s reset-confirm auto-cancel (Section 8.7).
   - **T3 · Playwright** (install with `pnpm dlx create-playwright` scoped to `apps/client` when Section 5+ is ready): real Chromium against the running dev server. Covers: live WebSocket price feed (Sections 6, 9.1–9.4, 9.6–9.8), network offline states (1.7.8, 9.6), CSS animations / maximize-restore (4.12–4.13), Web Audio API sounds (4.14–4.16), visual regression for icon sizes and pixel layout (Section 5), chart crosshair / time-range sync (10.4.4–10.4.7), PaneHeader live price (10.5.1–10.5.2), browser tab title (6.9).
-  - **Workflow** (repeating after each manually-passed section): map each test case to T1/T2/T3; write all T1 cases as new `describe('Section N ...')` blocks in `paperStore.test.ts`; write T2 cases in `components/__tests__/TradingPanel.test.tsx` or `PaperTradingPanel.test.tsx`; mark T3 as `// TODO: Playwright` until the framework is set up; run `pnpm test` — all tests must be green before moving to the next section.
+  - **Workflow** (repeating after each manually-passed section): map each test case to T1/T2/T3; write all T1 cases as new `describe('Section N ...')` blocks in `paperStore.test.ts`; write T2 cases in `components/__tests__/TradingPanel.test.tsx` or `OrderAccountManagementPanel.test.tsx`; mark T3 as `// TODO: Playwright` until the framework is set up; run `pnpm test` — all tests must be green before moving to the next section.
   - **Test plan updated**: `Tier` column added to every table across all 11 sections + tier legend added to file header. Also corrected stale 7.2.3 wording to reflect current behavior: filled rows are visible in **Orders → Filled** and **Order History → Filled** while the top Orders badge remains active-only.
   - **Files changed**: `docs/TRADING_TEST_PLAN.md`, `docs/APP_LOG.md`
 
@@ -920,24 +920,24 @@ _Last updated: 2026-05-01 (review follow-ups + SymbolBar trade-toggle semantics)
     - confirming that no-op pending edits do **not** add journal noise
 
 - **feat: Orders Filled sub-tab parity + active Orders badge count (01.05.2026)** ✅
-  - **`PaperTradingPanel.tsx`**
+  - **`OrderAccountManagementPanel.tsx`**
     - Added `filled` back to `OrderSubTab` so filled historical rows are visible in **Orders → Filled** (while still present in **Order History**).
     - Updated Orders data composition to include all historical statuses (`filled` / `cancelled` / `rejected`) together with pending + synthetic exit rows.
     - Added `activeOrdersBadgeCount` for the top Orders tab badge so it counts **active rows only** (`pending` + `exit-order`), excluding historical rows.
   - **Behavior parity verified**
     - Post-fill bracket state now mirrors TV expectation shown in screenshots: parent is historical filled, only TP/SL children remain active, and top badge shows **Orders 2** (not 3).
   - **Tests**
-    - Added `apps/client/src/components/dashboard/__tests__/PaperTradingPanel.test.tsx` with RTL coverage for:
+    - Added `apps/client/src/components/dashboard/__tests__/OrderAccountManagementPanel.test.tsx` with RTL coverage for:
       - Orders sub-tab counts including `Filled`
       - filled row visibility in both Orders and Order History
       - top Orders badge staying at `2` when parent is filled and only TP/SL children remain active
-    - Local run: `pnpm --filter client test -- PaperTradingPanel.test.tsx` passed.
+    - Local run: `pnpm --filter client test -- OrderAccountManagementPanel.test.tsx` passed.
   - **Docs**
     - Updated `docs/TRADING_TEST_PLAN.md` Section 3 manual status and marked **3.4.1 / 3.4.2** as ✅ with screenshot-backed notes.
 
 - **docs: consistency sweep — APP_LOG + TRADING_TEST_PLAN alignment (01.05.2026)** ✅
   - **APP_LOG.md — Design Agreements corrected to match current code:**
-    - `PaperTradingPanel` tab count corrected from **4** to **5** (Positions · Orders · Order History · Balance History · Trading Journal).
+    - `OrderAccountManagementPanel` tab count corrected from **4** to **5** (Positions · Orders · Order History · Balance History · Trading Journal).
     - Tab #4 renamed from `History (ClosedTrade)` to **Balance History** (`BalanceEvent[]`). The ClosedTrade `history` array exists in `paperStore` state but has no dedicated UI tab; the Balance History tab (`balancehistory`) shows `balanceLog` events (Time · Balance Before · Balance After · Realized P&L · Action).
     - Orders sub-tabs updated to `All | Working | Inactive | Filled | Cancelled | Rejected` — `Filled` was restored in the 01.05.2026 Orders parity feature, but the design section still listed the old 25.04.2026 set.
     - Removed the stale "**`Filled` sub-tab has been removed**" and "**excluded from the Orders tab entirely**" bullet (superseded by the Orders Filled sub-tab parity entry).
@@ -947,7 +947,7 @@ _Last updated: 2026-05-01 (review follow-ups + SymbolBar trade-toggle semantics)
   - **TRADING_TEST_PLAN.md — test cases updated:**
     - **7.1.4** — expected result and notes updated: Orders tab **does** have a `Filled` sub-tab; market fill appears in Orders → Filled + Order History → Filled; Orders top badge = 0.
     - **7.2.3** — heading and expected result updated: verify filled limit row appears in both Orders → Filled and Order History → Filled; Orders badge = 0 after fill.
-  - **Total tests: 280 green** (191 client · 89 server — incremented from 277 by the 3 PaperTradingPanel RTL tests).
+  - **Total tests: 280 green** (191 client · 89 server — incremented from 277 by the 3 OrderAccountManagementPanel RTL tests).
 
 - **fix: review follow-ups — shared UI typing + SymbolBar trade toggle semantics (01.05.2026)** ✅
   - `WarningText.tsx`, `NumericInput.tsx`, `FieldLabel.tsx`, and `SoundSettings.tsx` now use explicit `import type` React types instead of `React.*` namespace references, avoiding TS namespace errors under the automatic JSX runtime.
@@ -1024,3 +1024,30 @@ _Last updated: 2026-05-01 (review follow-ups + SymbolBar trade-toggle semantics)
 **Tests: 211/211 green** (no new tests written — behaviour is a mount/unmount architectural change; existing T2 tests verify the rendered state).
 
 **Note:** Side persistence (`initialSide`/`onSideChange`) landed in the same 01.05.2026 pass. Combined with the always-mounted TradingPanel wrapper, close/reopen now preserves tab + side + form inputs; symbol change still resets via `key={`${activePane}-${symbol}`}`.
+
+---
+
+### fix: PR code review issues — TradingPanel isVisible selector gating removed (02.05.2026) ✅
+
+**Issue 1 — `OrderAccountManagementPanel.tsx` JSDoc comment:** The JSDoc block above the `fmtMktPrice` usage was already correctly worded — no code change needed (confirmed correct in consistency sweep).
+
+**Issue 2 — `TradingPanel.tsx` `isVisible` selector gating:**
+
+- **Root cause**: the `isVisible` prop (passed from `DashboardPage`) was used to gate four pane-store selectors, returning `null`/`false` when the panel was hidden. Because the parent `motion.div` animates `width`/`opacity` over ~0.2 s, flipping `isVisible` to `false` at the moment of close caused `latestPrice`, `isConnected`, `bid`, and `ask` to blank out mid-animation — visually resetting prices and spread in the fade-out.
+- **Fix**:
+  - Removed `useRef` import (was only used for the `lastVisibleMarketRef` cache).
+  - Replaced the four gated `useStore` calls + the `lastVisibleMarketRef` cache pattern with four simple, unconditional `useStore` calls (`latestPrice`, `isConnected`, `bid`, `ask`). The panel is always mounted (never unmounted on close), so there is no reason to gate subscriptions.
+  - Removed the `isVisible` prop entirely from `TradingPanelProps` and the component destructuring — it served no purpose beyond the now-deleted selector gating.
+- **`DashboardPage.tsx`**: removed the `isVisible={isTradingPanelVisible}` prop from the `<TradingPanel>` call site. `isTradingPanelVisible` is still used for the wrapper `motion.div` animation and the `inert`/`aria-hidden` attributes.
+- **Result**: prices, spread badge, and order-info fields remain stable throughout the entire open/close animation.
+- **Tests**: 266/266 client tests green; `pnpm --filter client build` ✅.
+
+---
+
+### docs: consistency sweep — panel rename + stale info (02.05.2026) ✅
+
+- **Panel header label updated throughout**: `OrderAccountManagementPanel` UI label corrected from `"Paper Trading"` to `"Order & Account Management"` in all APP_LOG design-agreement sections. Note added: component file/code references remain `OrderAccountManagementPanel.tsx` / `OrderAccountManagementPanel`.
+- **Account Settings modal**: leverage field updated from `"Display only"` to **interactive 12-button selector** (1x–125x, Bybit style); amber badge shows current multiplier; high-leverage warning (>25x); **"Save" button is now functional** (commits `draftLeverage` to `paperStore.leverage`). Commission: read-only display only.
+- **Key Files table**: `OrderAccountManagementPanel.tsx` description updated to reflect the renamed panel label and full tab list.
+- **ASCII layout diagram**: updated to show `Order & Account Management (OrderAccountManagementPanel)`.
+- **marketStore bid/ask section note**: updated — `TradingPanel.tsx` now reads `bid`/`ask` unconditionally (no `isVisible` gating; 2 `useStore` calls, not 8).

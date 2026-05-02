@@ -1,7 +1,7 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { PaperTradingPanel } from '../PaperTradingPanel';
+import { OrderAccountManagementPanel } from '../OrderAccountManagementPanel';
 import {
   usePaperStore,
   type BalanceEvent,
@@ -45,7 +45,7 @@ vi.mock('@/hooks/TradingSoundContext', () => ({
 
 function renderPanel() {
   return render(
-    <PaperTradingPanel
+    <OrderAccountManagementPanel
       size="open"
       onSizeChange={vi.fn()}
       isMaximized={false}
@@ -83,7 +83,7 @@ afterEach(() => {
 
 // ─── Section 4.5 — Collapse/Expand panel, no ✕ close button ─────────────────
 
-describe('Section 4.5 — PaperTradingPanel header controls', () => {
+describe('Section 4.5 — OrderAccountManagementPanel header controls', () => {
   it('4.5: panel header does not contain a ✕ close button', () => {
     renderPanel();
     // The header should NOT have an X/close button — only Sound, ⚙️, Collapse/Expand, Maximize buttons
@@ -121,7 +121,7 @@ describe('Section 4.5 — PaperTradingPanel header controls', () => {
   });
 });
 
-describe('PaperTradingPanel Orders filled sub-tab', () => {
+describe('OrderAccountManagementPanel Orders filled sub-tab', () => {
   it('shows a Filled sub-tab with correct counts in Orders', () => {
     seedState({
       pendingOrders: [

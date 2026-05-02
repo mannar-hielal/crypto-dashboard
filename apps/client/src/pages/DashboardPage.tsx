@@ -10,7 +10,7 @@ import { useLayoutStore } from '@/store/layoutStore';
 import { TopBar } from '@/components/dashboard/TopBar';
 import { LeftToolbar } from '@/components/dashboard/LeftToolbar';
 import { MultiChartArea } from '@/components/dashboard/MultiChartArea';
-import { PaperTradingPanel } from '@/components/dashboard/PaperTradingPanel';
+import { OrderAccountManagementPanel } from '@/components/dashboard/OrderAccountManagementPanel';
 import { TickerBar } from '@/components/dashboard/TickerBar';
 import { SymbolBar } from '@/components/dashboard/SymbolBar';
 import { TradingPanel } from '@/components/dashboard/TradingPanel';
@@ -51,7 +51,7 @@ const MIN_PANEL_HEIGHT = 80;
  *   ├──────┬──────────────────────────────────┬────────────┤
  *   │      │  ChartPanel (flex-1)              │            │
  *   │ Left │  ──────────────────────────────  │ Trading    │
- *   │ Tool │  PaperTradingPanel               │ Panel      │
+ *   │ Tool │  OrderAccountManagementPanel     │ Panel      │
  *   │ bar  │  (animated height / flex-1 when  │ (w-64,     │
  *   │(w-11)│   maximized)                     │ full h) ✓  │
  *   ├──────┴──────────────────────────────────┴────────────┤
@@ -101,7 +101,7 @@ function DashboardInner() {
   const [tradingTab, setTradingTab] = useState<OrderTab>('market');
   /** Persisted across remounts so the user stays on their chosen side — mirrors TV */
   const [tradingSide, setTradingSide] = useState<'buy' | 'sell'>('buy');
-  /** When true the PaperTradingPanel fills the entire center column */
+  /** When true the OrderAccountManagementPanel fills the entire center column */
   const [isMaximized, setIsMaximized] = useState(false);
   /** When set, an edit panel replaces the TradingPanel in the right column */
   const [editTarget, setEditTarget] = useState<EditTarget>(null);
@@ -246,7 +246,7 @@ function DashboardInner() {
             style={isMaximized ? {} : { height: panelHeightMV }}
             inert={!isMaximized && panelSize === 'hidden' ? true : undefined}
           >
-            <PaperTradingPanel
+            <OrderAccountManagementPanel
               size={panelSize}
               onSizeChange={setPanelSize}
               isMaximized={isMaximized}
@@ -310,7 +310,6 @@ function DashboardInner() {
         >
           <TradingPanel
             key={`${activePane}-${symbol}`}
-            isVisible={isTradingPanelVisible}
             onClose={() => setTradingPanelOpen(false)}
             initialTab={tradingTab}
             onTabChange={setTradingTab}

@@ -3,7 +3,7 @@
  *
  * TV-style right-column panel for editing TP/SL exits on an open position.
  * Replaces the TradingPanel in the right slot when the user clicks the pencil
- * icon on a position's TP or SL cell in PaperTradingPanel.
+ * icon on a position's TP or SL cell in OrderAccountManagementPanel.
  */
 
 import { useState } from 'react';

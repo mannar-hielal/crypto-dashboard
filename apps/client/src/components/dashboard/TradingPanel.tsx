@@ -50,8 +50,6 @@ function useOnlineStatus(): boolean {
 
 interface TradingPanelProps {
   onClose: () => void;
-  /** Whether the panel is currently visible (non-zero width/opacity in the parent wrapper) */
-  isVisible?: boolean;
   /** Tab selected before the symbol changed — preserved across remounts */
   initialTab?: OrderTab;
   /** Called whenever the user switches tabs so the parent can persist the selection */
@@ -66,7 +64,6 @@ interface TradingPanelProps {
 
 export function TradingPanel({
   onClose,
-  isVisible = true,
   initialTab = 'market',
   onTabChange,
   initialSide = 'buy',
@@ -80,12 +77,15 @@ export function TradingPanel({
   const baseAsset = symbol.replace('USDT', '');
 
   const activePaneStore = paneStores[activePane];
-  const latestPrice = useStore(activePaneStore, (s) => (isVisible ? s.latestPrice : null));
-  const isConnected = useStore(activePaneStore, (s) => (isVisible ? s.isConnected : false));
+  // Always subscribe unconditionally so prices/spread/order-info are never
+  // blanked during the opacity/width fade-out animation on panel close.
+  const latestPrice = useStore(activePaneStore, (s) => s.latestPrice);
+  const isConnected = useStore(activePaneStore, (s) => s.isConnected);
   const isOnline = useOnlineStatus();
 
-  const bid = useStore(activePaneStore, (s) => (isVisible ? s.bid : null));
-  const ask = useStore(activePaneStore, (s) => (isVisible ? s.ask : null));
+  const bid = useStore(activePaneStore, (s) => s.bid);
+  const ask = useStore(activePaneStore, (s) => s.ask);
+
   const spread = bid != null && ask != null ? ask - bid : null;
 
   const balance = usePaperStore((s) => s.balance);

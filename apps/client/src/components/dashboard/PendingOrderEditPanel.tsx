@@ -5,7 +5,7 @@
  * Shows price, quantity (with live USD equivalent), TP/SL toggles, order info,
  * and an insufficient-funds banner when the new cost exceeds available balance.
  * Replaces the TradingPanel in the right slot when the user clicks the pencil
- * icon on a pending order row in PaperTradingPanel.
+ * icon on a pending order row in OrderAccountManagementPanel.
  */
 
 import { useId, useState } from 'react';

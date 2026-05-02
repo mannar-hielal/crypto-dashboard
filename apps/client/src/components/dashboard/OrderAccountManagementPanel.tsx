@@ -54,8 +54,8 @@ function shortId(id: string): string {
 }
 
 /**
- * Format a market price the TradingView way — imported from @/lib/utils.
- * Kept as a local re-export alias so all existing call-sites work unchanged.
+ * Format a market price the TradingView way using the imported helper from
+ * @/lib/utils.
  */
 
 // ─── Stagger helpers ──────────────────────────────────────────────────────────
@@ -176,7 +176,7 @@ function saveColPrefs(prefs: Record<string, string[]>) {
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
-interface PaperTradingPanelProps {
+interface OrderAccountManagementPanelProps {
   size: PanelSize;
   onSizeChange: (size: PanelSize) => void;
   /** True when the panel is expanded to fill the full chart area */
@@ -286,14 +286,14 @@ function JournalRow({
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function PaperTradingPanel({
+export function OrderAccountManagementPanel({
   size,
   onSizeChange,
   isMaximized,
   onToggleMaximize,
   onEditPosition,
   onEditPendingOrder,
-}: PaperTradingPanelProps) {
+}: OrderAccountManagementPanelProps) {
   const [infoTab, setInfoTab] = useState<InfoTab>('positions');
   const [orderSubTab, setOrderSubTab] = useState<OrderSubTab>('all');
   const [orderHistorySubTab, setOrderHistorySubTab] = useState<OrderHistorySubTab>('all');
