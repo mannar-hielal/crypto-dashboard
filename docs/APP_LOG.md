@@ -1069,9 +1069,9 @@ During testing, a BTC LONG position with a manually typed SL of `7800` (intended
 - Extracted `evaluatePanePositions(paneIndex, latestPrice, bars, onClosed?)` as an **exported** pure helper for direct unit testing without mounting the hook.
 - `paneStores.map((store, i) => store.subscribe(...))` returns 4 unsubscribers, all cleaned up on unmount.
 
-**Fix 2 — `slSanity.ts` (new file — pure helper):**
+**Fix 2 — `sltpSanity.ts` (new file — pure helper):**
 
-- `src/lib/slSanity.ts` — exports `computeSLTPWarnings(value, execPrice, livePrice, field)`.
+- `src/lib/sltpSanity.ts` — exports `computeSLTPWarnings(value, execPrice, livePrice, field)`.
 - **Typo guard**: flags when `|value − livePrice| / livePrice > TYPO_DEVIATION_THRESHOLD` (default `0.8` = 80%).
 - **Large-distance guard**: flags when `|execPrice − value| / execPrice > SL_MAX_DISTANCE` (default `0.1` = 10%, SL only).
 - Returns `{ typoWarning: string | null, largeDistanceWarning: string | null }`.
@@ -1079,7 +1079,7 @@ During testing, a BTC LONG position with a manually typed SL of `7800` (intended
 
 **Fix 3 — `TradingPanel.tsx` (blocking confirm modal — Option B):**
 
-- Added import: `computeSLTPWarnings` from `@/lib/slSanity`.
+- Added import: `computeSLTPWarnings` from `@/lib/sltpSanity`.
 - Added state: `slConfirmPending` / `slConfirmBypassed`.
 - Added derived block: `slSanity`, `tpSanity`, `hasSanityWarning` (computed after `formatPnl`, before handlers).
 - `handleExecute` now gates on `hasSanityWarning && !slConfirmBypassed` — sets `slConfirmPending = true` and returns early on first click.
@@ -1089,8 +1089,8 @@ During testing, a BTC LONG position with a manually typed SL of `7800` (intended
 
 **New files:**
 
-- `src/lib/slSanity.ts` — pure sanity helper (102 lines)
-- `src/lib/__tests__/slSanity.test.ts` — 21 unit tests, all green
+- `src/lib/sltpSanity.ts` — pure sanity helper (102 lines)
+- `src/lib/__tests__/sltpSanity.test.ts` — 21 unit tests, all green
 
 **Modified files:**
 
@@ -1102,3 +1102,21 @@ During testing, a BTC LONG position with a manually typed SL of `7800` (intended
 **Tests: 317/317 green** (`pnpm --filter client test --run`).
 
 **TRADING_TEST_PLAN.md:** 1.7.11, 1.7.12, 4.19, 4.20 added.
+
+---
+
+### refactor: rename slSanity → sltpSanity for clarity (02.05.2026) ✅
+
+The helper and test file introduced in the 4.18 safety-hardening fix were renamed to better reflect their scope — the module guards **both** SL and TP inputs, not just SL.
+
+**Renamed files:**
+
+- `src/lib/slSanity.ts` → `src/lib/sltpSanity.ts`
+- `src/lib/__tests__/slSanity.test.ts` → `src/lib/__tests__/sltpSanity.test.ts`
+
+**Updated references:**
+
+- `src/components/dashboard/TradingPanel.tsx`: import path updated to `@/lib/sltpSanity`; no logic changes.
+- `sltpSanity.test.ts`: describe-block title updated from `slSanity unit tests` to `sltpSanity unit tests`.
+
+**Tests: 317/317 green** (`pnpm --filter client test --run`); lint clean.

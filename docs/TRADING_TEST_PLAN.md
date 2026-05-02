@@ -39,7 +39,7 @@
 
 ## Section 1 — Market Orders
 
-> **Automation status (02.05.2026):** All T1 and T2 cases automated — `paperStore.test.ts` + `TradingPanel.test.tsx`; 317 tests green (38 T2 RTL + ~20 T1 Vitest + 21 slSanity unit tests + remaining). T3 (Playwright) cases pending framework setup. **New (02.05.2026):** 1.7.11–1.7.12 SL typo safety rail tests added (`TradingPanel.test.tsx` Section 1.7.11).
+> **Automation status (02.05.2026):** All T1 and T2 cases automated — `paperStore.test.ts` + `TradingPanel.test.tsx`; 317 tests green (38 T2 RTL + ~20 T1 Vitest + 21 sltpSanity unit tests + remaining). T3 (Playwright) cases pending framework setup. **New (02.05.2026):** 1.7.11–1.7.12 SL typo safety rail tests added (`TradingPanel.test.tsx` Section 1.7.11).
 
 ### 1.1 Basic Buy (USD mode)
 
