@@ -170,7 +170,6 @@ beforeEach(() => {
   localStorage.clear();
   usePaperStore.getState().reset();
   paneStores[0].setState({
-    symbol: 'BTCUSDT',
     latestPrice: 77_000,
     isConnected: true,
     bid: 76_990,
@@ -332,7 +331,7 @@ describe('Section 5.7 — multi-symbol positions: each row shows its own base ic
   });
 
   it('5.7: BTC row shows base="BTC" even when active pane is ETH', () => {
-    paneStores[0].setState({ symbol: 'ETHUSDT', latestPrice: 3_000 });
+    paneStores[0].setState({ latestPrice: 3_000 });
     usePaperStore.setState({ positions: [btcPosition, ethPosition] });
     renderPanel();
     const bases = getRenderedBases();

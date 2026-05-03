@@ -1523,16 +1523,17 @@ export function OrderAccountManagementPanel({
                                           {/* Clock icon signals this terminal row is temporary —
                                               it will auto-evict from Orders after the 2-min TTL */}
                                           {!isPending && !isExitOrder && (
-                                            <Clock
-                                              className="shrink-0"
-                                              style={{
-                                                width: 10,
-                                                height: 10,
-                                                color: color.amber,
-                                                opacity: 0.7,
-                                              }}
-                                              title="This row will clear from Orders in ~2 minutes. It stays permanently in Order History."
-                                            />
+                                            <span title="This row will clear from Orders in ~2 minutes. It stays permanently in Order History.">
+                                              <Clock
+                                                className="shrink-0"
+                                                style={{
+                                                  width: 10,
+                                                  height: 10,
+                                                  color: color.amber,
+                                                  opacity: 0.7,
+                                                }}
+                                              />
+                                            </span>
                                           )}
                                         </span>
                                       </td>
