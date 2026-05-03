@@ -1062,6 +1062,26 @@ describe('paperStore', () => {
         expect(systemEntry!.isUserNote).toBe(false);
         expect(userEntry!.isUserNote).toBe(true);
       });
+
+      it('4.8: common store-generated journal entries explicitly set isUserNote=false', () => {
+        const posId = usePaperStore.getState().placeOrder(SYMBOL, 'buy', 50_000, 1_000)!;
+        usePaperStore.getState().closePosition(posId, 51_000);
+
+        const limitId = usePaperStore.getState().placeLimitOrder(SYMBOL, 'buy', 45_000, 500)!;
+        usePaperStore.getState().cancelPendingOrder(limitId);
+
+        const journal = usePaperStore.getState().journal;
+        for (const text of [
+          'Opened LONG BTCUSDT',
+          'Closed LONG BTCUSDT',
+          'Placed LIMIT Long BTCUSDT',
+          'Cancelled LIMIT Long BTCUSDT',
+        ]) {
+          const entry = journal.find((e) => e.text.includes(text));
+          expect(entry).toBeDefined();
+          expect(entry!.isUserNote).toBe(false);
+        }
+      });
     });
 
     // ── 4.9 Journal PnL badge — profitable close ─────────────────────────────

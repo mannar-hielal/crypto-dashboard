@@ -100,7 +100,7 @@ export interface JournalEntry {
   id: string;
   time: number;
   text: string;
-  /** true only for notes the user manually added/edited */
+  /** true only for notes the user manually added/edited; false for system-generated entries */
   isUserNote?: boolean;
   /**
    * Net realized PnL (USDT) attached to system close entries only.
@@ -159,6 +159,10 @@ function buildExitSummaryPart(
   return null;
 }
 
+function createSystemJournalEntry(entry: Omit<JournalEntry, 'isUserNote'>): JournalEntry {
+  return { ...entry, isUserNote: false };
+}
+
 function buildPositionExitJournalEntries(
   pos: Position,
   takeProfit: number | null,
@@ -179,37 +183,43 @@ function buildPositionExitJournalEntries(
   const entries: JournalEntry[] = [];
 
   if (slChanged) {
-    entries.push({
-      id: `j-edit-exits-sl-${pos.id}-${now}`,
-      time: now,
-      text:
-        stopLoss === null
-          ? `Stop-Loss cancelled for ${pos.side.toUpperCase()} ${pos.symbol} @ $${fmtPrice(previousSl!)}`
-          : previousSl === null
-            ? `Stop-Loss order added for ${pos.side.toUpperCase()} ${pos.symbol} @ $${fmtPrice(stopLoss)}`
-            : `Stop-Loss modification confirmed — ${pos.side.toUpperCase()} ${pos.symbol} @ $${fmtPrice(stopLoss)}`,
-    });
+    entries.push(
+      createSystemJournalEntry({
+        id: `j-edit-exits-sl-${pos.id}-${now}`,
+        time: now,
+        text:
+          stopLoss === null
+            ? `Stop-Loss cancelled for ${pos.side.toUpperCase()} ${pos.symbol} @ $${fmtPrice(previousSl!)}`
+            : previousSl === null
+              ? `Stop-Loss order added for ${pos.side.toUpperCase()} ${pos.symbol} @ $${fmtPrice(stopLoss)}`
+              : `Stop-Loss modification confirmed — ${pos.side.toUpperCase()} ${pos.symbol} @ $${fmtPrice(stopLoss)}`,
+      })
+    );
   }
 
   if (tpChanged) {
-    entries.push({
-      id: `j-edit-exits-tp-${pos.id}-${now}`,
-      time: now,
-      text:
-        takeProfit === null
-          ? `Take-Profit cancelled for ${pos.side.toUpperCase()} ${pos.symbol} @ $${fmtPrice(previousTp!)}`
-          : previousTp === null
-            ? `Take-Profit order added for ${pos.side.toUpperCase()} ${pos.symbol} @ $${fmtPrice(takeProfit)}`
-            : `Take-Profit modification confirmed — ${pos.side.toUpperCase()} ${pos.symbol} @ $${fmtPrice(takeProfit)}`,
-    });
+    entries.push(
+      createSystemJournalEntry({
+        id: `j-edit-exits-tp-${pos.id}-${now}`,
+        time: now,
+        text:
+          takeProfit === null
+            ? `Take-Profit cancelled for ${pos.side.toUpperCase()} ${pos.symbol} @ $${fmtPrice(previousTp!)}`
+            : previousTp === null
+              ? `Take-Profit order added for ${pos.side.toUpperCase()} ${pos.symbol} @ $${fmtPrice(takeProfit)}`
+              : `Take-Profit modification confirmed — ${pos.side.toUpperCase()} ${pos.symbol} @ $${fmtPrice(takeProfit)}`,
+      })
+    );
   }
 
   if (summaryParts.length) {
-    entries.push({
-      id: `j-edit-exits-summary-${pos.id}-${now}`,
-      time: now,
-      text: `Modified ${pos.side.toUpperCase()} ${pos.symbol} exits — ${summaryParts.join(', ')}`,
-    });
+    entries.push(
+      createSystemJournalEntry({
+        id: `j-edit-exits-summary-${pos.id}-${now}`,
+        time: now,
+        text: `Modified ${pos.side.toUpperCase()} ${pos.symbol} exits — ${summaryParts.join(', ')}`,
+      })
+    );
   }
 
   return entries;
@@ -246,37 +256,43 @@ function buildPendingOrderEditJournalEntries(
   if (slSummary) summaryParts.push(slSummary);
 
   if (!isSameOptionalNumber(previousSl, newStopLoss)) {
-    entries.push({
-      id: `j-edit-pending-sl-${order.id}-${now}`,
-      time: now,
-      text:
-        newStopLoss === null
-          ? `Stop-Loss cancelled for pending ${pendingSideLabel} ${order.symbol} @ $${fmtPrice(previousSl!)}`
-          : previousSl === null
-            ? `Stop-Loss order added for pending ${pendingSideLabel} ${order.symbol} @ $${fmtPrice(newStopLoss)}`
-            : `Stop-Loss modification confirmed for pending ${pendingSideLabel} ${order.symbol} @ $${fmtPrice(newStopLoss)}`,
-    });
+    entries.push(
+      createSystemJournalEntry({
+        id: `j-edit-pending-sl-${order.id}-${now}`,
+        time: now,
+        text:
+          newStopLoss === null
+            ? `Stop-Loss cancelled for pending ${pendingSideLabel} ${order.symbol} @ $${fmtPrice(previousSl!)}`
+            : previousSl === null
+              ? `Stop-Loss order added for pending ${pendingSideLabel} ${order.symbol} @ $${fmtPrice(newStopLoss)}`
+              : `Stop-Loss modification confirmed for pending ${pendingSideLabel} ${order.symbol} @ $${fmtPrice(newStopLoss)}`,
+      })
+    );
   }
 
   if (!isSameOptionalNumber(previousTp, newTakeProfit)) {
-    entries.push({
-      id: `j-edit-pending-tp-${order.id}-${now}`,
-      time: now,
-      text:
-        newTakeProfit === null
-          ? `Take-Profit cancelled for pending ${pendingSideLabel} ${order.symbol} @ $${fmtPrice(previousTp!)}`
-          : previousTp === null
-            ? `Take-Profit order added for pending ${pendingSideLabel} ${order.symbol} @ $${fmtPrice(newTakeProfit)}`
-            : `Take-Profit modification confirmed for pending ${pendingSideLabel} ${order.symbol} @ $${fmtPrice(newTakeProfit)}`,
-    });
+    entries.push(
+      createSystemJournalEntry({
+        id: `j-edit-pending-tp-${order.id}-${now}`,
+        time: now,
+        text:
+          newTakeProfit === null
+            ? `Take-Profit cancelled for pending ${pendingSideLabel} ${order.symbol} @ $${fmtPrice(previousTp!)}`
+            : previousTp === null
+              ? `Take-Profit order added for pending ${pendingSideLabel} ${order.symbol} @ $${fmtPrice(newTakeProfit)}`
+              : `Take-Profit modification confirmed for pending ${pendingSideLabel} ${order.symbol} @ $${fmtPrice(newTakeProfit)}`,
+      })
+    );
   }
 
   if (summaryParts.length) {
-    entries.push({
-      id: `j-edit-pending-summary-${order.id}-${now}`,
-      time: now,
-      text: `Modified ${getPendingTypeLabel(order.type)} ${pendingSideLabel} ${order.symbol} — ${summaryParts.join(', ')}`,
-    });
+    entries.push(
+      createSystemJournalEntry({
+        id: `j-edit-pending-summary-${order.id}-${now}`,
+        time: now,
+        text: `Modified ${getPendingTypeLabel(order.type)} ${pendingSideLabel} ${order.symbol} — ${summaryParts.join(', ')}`,
+      })
+    );
   }
 
   return entries;
@@ -505,12 +521,14 @@ export const usePaperStore = create<PaperState>()(
             const netPnl = pnlPartial - exitCommission;
             const closedSide = pos.side === 'long' ? 'LONG' : 'SHORT';
             if (!skipJournal) {
-              newJournalEntries.push({
-                id: `j-close-${closeId}-exec`,
-                time: now,
-                text: `Closed ${closedSide} ${pos.symbol} @ $${fmtPrice(price)}`,
-                pnl: netPnl,
-              });
+              newJournalEntries.push(
+                createSystemJournalEntry({
+                  id: `j-close-${closeId}-exec`,
+                  time: now,
+                  text: `Closed ${closedSide} ${pos.symbol} @ $${fmtPrice(price)}`,
+                  pnl: netPnl,
+                })
+              );
             }
 
             const curBal = get().balance;
@@ -672,12 +690,13 @@ export const usePaperStore = create<PaperState>()(
         const journalEntries: JournalEntry[] = [];
         if (!skipJournal) {
           const positionSide = side === 'buy' ? 'LONG' : 'SHORT';
-          journalEntries.push({
-            id: `j-${id}-open`,
-            time: now,
-            text: `Opened ${positionSide} ${symbol} @ $${fmtPrice(price)}`,
-            isUserNote: false,
-          });
+          journalEntries.push(
+            createSystemJournalEntry({
+              id: `j-${id}-open`,
+              time: now,
+              text: `Opened ${positionSide} ${symbol} @ $${fmtPrice(price)}`,
+            })
+          );
         }
 
         set((s) => ({
@@ -781,21 +800,25 @@ export const usePaperStore = create<PaperState>()(
         const closingJournalEntries: JournalEntry[] = [];
         if (reason) {
           // Caller-supplied reason (e.g. TP/SL auto-close) — use it as the entry text
-          closingJournalEntries.push({
-            id: `j-close-${closedId}-reason`,
-            time: now,
-            text: reason,
-            pnl: netPnl,
-          });
+          closingJournalEntries.push(
+            createSystemJournalEntry({
+              id: `j-close-${closedId}-reason`,
+              time: now,
+              text: reason,
+              pnl: netPnl,
+            })
+          );
         } else {
           // Manual close — generic "Closed" entry with PnL badge
           const closedSide = pos.side === 'long' ? 'LONG' : 'SHORT';
-          closingJournalEntries.push({
-            id: `j-close-${closedId}-exec`,
-            time: now,
-            text: `Closed ${closedSide} ${pos.symbol} @ $${fmtPrice(exitPrice)}`,
-            pnl: netPnl,
-          });
+          closingJournalEntries.push(
+            createSystemJournalEntry({
+              id: `j-close-${closedId}-exec`,
+              time: now,
+              text: `Closed ${closedSide} ${pos.symbol} @ $${fmtPrice(exitPrice)}`,
+              pnl: netPnl,
+            })
+          );
         }
 
         set((s) => ({
@@ -869,13 +892,13 @@ export const usePaperStore = create<PaperState>()(
         };
 
         const placementSide = side === 'buy' ? 'Long' : 'Short';
-        const placementNote: JournalEntry = {
+        const placementNote = createSystemJournalEntry({
           id: `j-place-limit-${id}`,
           time: now,
           text:
             `Placed LIMIT ${placementSide} ${symbol} @ $${fmtPrice(triggerPrice)}` +
             ` (qty: ${qty.toFixed(6)}, reserved: $${usdtAmount.toFixed(2)})`,
-        };
+        });
 
         set((s) => ({
           balance: s.balance - totalCost,
@@ -910,13 +933,13 @@ export const usePaperStore = create<PaperState>()(
         };
 
         const stopPlacementSide = side === 'buy' ? 'Long' : 'Short';
-        const stopPlacementNote: JournalEntry = {
+        const stopPlacementNote = createSystemJournalEntry({
           id: `j-place-stop-${id}`,
           time: now,
           text:
             `Placed STOP ${stopPlacementSide} ${symbol} @ $${fmtPrice(triggerPrice)}` +
             ` (qty: ${qty.toFixed(6)}, reserved: $${usdtAmount.toFixed(2)})`,
-        };
+        });
 
         set((s) => ({
           balance: s.balance - totalCost,
@@ -982,13 +1005,13 @@ export const usePaperStore = create<PaperState>()(
 
         const cancelTypeLabel = order.type === 'limit' ? 'LIMIT' : 'STOP';
         const cancelSideLabel = order.side === 'buy' ? 'Long' : 'Short';
-        const cancelNote: JournalEntry = {
+        const cancelNote = createSystemJournalEntry({
           id: `j-cancel-pending-${orderId}-${now}`,
           time: now,
           text:
             `Cancelled ${cancelTypeLabel} ${cancelSideLabel} ${order.symbol} @ $${fmtPrice(order.triggerPrice)}` +
             ` (refunded: $${refund.toFixed(2)})`,
-        };
+        });
 
         set((s) => ({
           balance: s.balance + refund,
@@ -1022,13 +1045,13 @@ export const usePaperStore = create<PaperState>()(
           closingTime: now,
         };
 
-        const note: JournalEntry = {
+        const note = createSystemJournalEntry({
           id: `j-cancel-${exitType}-${positionId}-${now}`,
           time: now,
           text:
             `${exitType === 'take-profit' ? 'Take-Profit' : 'Stop-Loss'} cancelled for ` +
             `${pos.side.toUpperCase()} ${pos.symbol} @ $${fmtPrice(targetPrice)}`,
-        };
+        });
 
         set((s) => ({
           positions: s.positions.map((p) => {
@@ -1067,13 +1090,13 @@ export const usePaperStore = create<PaperState>()(
         };
 
         const pendingSide = order.side === 'buy' ? 'Long' : 'Short';
-        const note: JournalEntry = {
+        const note = createSystemJournalEntry({
           id: `j-cancel-pending-${exitType}-${pendingOrderId}-${now}`,
           time: now,
           text:
             `${exitType === 'take-profit' ? 'Take-Profit' : 'Stop-Loss'} cancelled for ` +
             `pending ${pendingSide} ${order.symbol} @ $${fmtPrice(targetPrice)}`,
-        };
+        });
 
         set((s) => ({
           pendingOrders: s.pendingOrders.map((o) => {
@@ -1225,27 +1248,27 @@ export const usePaperStore = create<PaperState>()(
           const typeLabel = order.type === 'limit' ? 'LIMIT' : 'STOP';
           const sideLabel = order.side === 'buy' ? 'Long' : 'Short';
           const journalEntries: JournalEntry[] = [
-            {
+            createSystemJournalEntry({
               id: `j-rej-edit-${orderId}-${now}`,
               time: now,
               text: `${typeLabel} ${sideLabel} ${order.symbol} order rejected — Not enough funds ($${newUsdtAmount.toFixed(2)} required, $${scratchBalance.toFixed(2)} available)`,
-            },
+            }),
             ...(order.takeProfit
               ? [
-                  {
+                  createSystemJournalEntry({
                     id: `j-cancel-tp-rej-${orderId}-${now}`,
                     time: now,
                     text: `Take-Profit cancelled for pending ${sideLabel} ${order.symbol} @ $${fmtPrice(order.takeProfit)}`,
-                  },
+                  }),
                 ]
               : []),
             ...(order.stopLoss
               ? [
-                  {
+                  createSystemJournalEntry({
                     id: `j-cancel-sl-rej-${orderId}-${now}`,
                     time: now,
                     text: `Stop-Loss cancelled for pending ${sideLabel} ${order.symbol} @ $${fmtPrice(order.stopLoss)}`,
-                  },
+                  }),
                 ]
               : []),
           ];

@@ -1,8 +1,8 @@
 /**
  * SoundSettings
  *
- * A compact popover button for the PaperTradingPanel header that lets the
- * user control the trading sound alert volume and preview each sound.
+ * A compact popover button used in the Order & Account Management header that
+ * lets the user control trading sound alert volume and preview each sound.
  */
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
