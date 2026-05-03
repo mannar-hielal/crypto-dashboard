@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
-import { BarChart2 } from 'lucide-react';
 import { usePaneFeeds } from '@/hooks/usePaneFeeds';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useTPSLMonitor } from '@/hooks/useTPSLMonitor';
@@ -11,7 +10,7 @@ import { useLayoutStore } from '@/store/layoutStore';
 import { TopBar } from '@/components/dashboard/TopBar';
 import { LeftToolbar } from '@/components/dashboard/LeftToolbar';
 import { MultiChartArea } from '@/components/dashboard/MultiChartArea';
-import { PaperTradingPanel } from '@/components/dashboard/PaperTradingPanel';
+import { OrderAccountManagementPanel } from '@/components/dashboard/OrderAccountManagementPanel';
 import { TickerBar } from '@/components/dashboard/TickerBar';
 import { SymbolBar } from '@/components/dashboard/SymbolBar';
 import { TradingPanel } from '@/components/dashboard/TradingPanel';
@@ -52,7 +51,7 @@ const MIN_PANEL_HEIGHT = 80;
  *   ├──────┬──────────────────────────────────┬────────────┤
  *   │      │  ChartPanel (flex-1)              │            │
  *   │ Left │  ──────────────────────────────  │ Trading    │
- *   │ Tool │  PaperTradingPanel               │ Panel      │
+ *   │ Tool │  OrderAccountManagementPanel     │ Panel      │
  *   │ bar  │  (animated height / flex-1 when  │ (w-64,     │
  *   │(w-11)│   maximized)                     │ full h) ✓  │
  *   ├──────┴──────────────────────────────────┴────────────┤
@@ -95,30 +94,38 @@ function DashboardInner() {
   // Active pane symbol drives the TradingPanel key (resets form on symbol change)
   const activePane = useLayoutStore((s) => s.activePane);
   const symbol = useLayoutStore((s) => s.panes[s.activePane].symbol);
+  const setBottomPanelHeight = useLayoutStore((s) => s.setBottomPanelHeight);
 
   const [panelSize, setPanelSize] = useState<PanelSize>('open');
   const [tradingPanelOpen, setTradingPanelOpen] = useState(true);
   /** Persisted across symbol changes so the user stays on their chosen tab */
   const [tradingTab, setTradingTab] = useState<OrderTab>('market');
-  /** When true the PaperTradingPanel fills the entire center column */
+  /** Persisted across remounts so the user stays on their chosen side — mirrors TV */
+  const [tradingSide, setTradingSide] = useState<'buy' | 'sell'>('buy');
+  /** When true the OrderAccountManagementPanel fills the entire center column */
   const [isMaximized, setIsMaximized] = useState(false);
   /** When set, an edit panel replaces the TradingPanel in the right column */
   const [editTarget, setEditTarget] = useState<EditTarget>(null);
+  const isTradingPanelVisible = !editTarget && tradingPanelOpen;
 
   // ── Bottom-panel drag-to-resize ─────────────────────────────────────────
 
   /**
    * panelHeightPx — committed open-state height (written on drag end or size change).
+   * Seeded from layoutStore so it survives a page refresh.
    * Only used when panelSize === 'open' && !isMaximized.
    */
-  const [panelHeightPx, setPanelHeightPx] = useState(PANEL_HEIGHTS.open);
+  const [panelHeightPx, setPanelHeightPx] = useState(
+    () => useLayoutStore.getState().bottomPanelHeight
+  );
 
   /**
    * panelHeightMV — Framer MotionValue that directly drives style.height on the
    * panel wrapper. Updated instantly during drag via .set() — zero React re-renders
    * per frame. Spring-animated by the useEffect below on size/maximize transitions.
+   * Seeded from layoutStore so the panel opens at its last-used height immediately.
    */
-  const panelHeightMV = useMotionValue(PANEL_HEIGHTS.open);
+  const panelHeightMV = useMotionValue(useLayoutStore.getState().bottomPanelHeight);
 
   /**
    * handleBottom keeps the 12 px drag handle centred on the panel boundary without
@@ -179,7 +186,9 @@ function DashboardInner() {
     e.currentTarget.releasePointerCapture(e.pointerId);
     // Commit to React state — triggers the spring effect but as a no-op
     // (MV is already at this value so no visible animation occurs).
-    setPanelHeightPx(Math.round(panelHeightMV.get()));
+    const committed = Math.round(panelHeightMV.get());
+    setPanelHeightPx(committed);
+    setBottomPanelHeight(committed); // persist to cd-layout localStorage
   }
 
   return (
@@ -205,35 +214,6 @@ function DashboardInner() {
             transition={{ type: 'spring', stiffness: 340, damping: 34 }}
           >
             <MultiChartArea />
-
-            <AnimatePresence>
-              {panelSize === 'hidden' && !isMaximized && (
-                <motion.button
-                  key="reopen-pill"
-                  initial={{ opacity: 0, y: 12, scale: 0.92 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 12, scale: 0.92 }}
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
-                  onClick={() => setPanelSize('collapsed')}
-                  title="Show positions panel"
-                  className="absolute bottom-4 left-4 flex items-center gap-2 rounded-full px-4 py-2 font-bold text-white transition-all hover:brightness-110 active:scale-95"
-                  style={{
-                    fontSize: fontSize.xs11,
-                    background: `linear-gradient(135deg, ${color.purpleDark} 0%, ${color.purple} 100%)`,
-                    border: `1px solid ${color.purple}80`,
-                    boxShadow: `0 0 18px 4px ${color.purpleDark}73, 0 4px 16px rgba(0,0,0,0.6)`,
-                  }}
-                >
-                  <motion.span
-                    animate={{ scale: [1, 1.4, 1], opacity: [1, 0.5, 1] }}
-                    transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-                    className="h-1.5 w-1.5 rounded-full bg-white"
-                  />
-                  <BarChart2 className="h-3.5 w-3.5" />
-                  Positions &amp; History
-                </motion.button>
-              )}
-            </AnimatePresence>
           </motion.div>
 
           {/* Paper trading panel.
@@ -271,10 +251,9 @@ function DashboardInner() {
           <motion.div
             className={`shrink-0 overflow-hidden${isMaximized ? ' flex-1' : ''}`}
             style={isMaximized ? {} : { height: panelHeightMV }}
-            // @ts-expect-error inert is a valid HTML attribute not yet typed in React
-            inert={!isMaximized && panelSize === 'hidden' ? '' : undefined}
+            inert={!isMaximized && panelSize === 'hidden' ? true : undefined}
           >
-            <PaperTradingPanel
+            <OrderAccountManagementPanel
               size={panelSize}
               onSizeChange={setPanelSize}
               isMaximized={isMaximized}
@@ -287,6 +266,8 @@ function DashboardInner() {
 
         {/* Trading panel / Edit panels — sibling of the entire center column so it spans
             the full height from SymbolBar down to TickerBar */}
+
+        {/* Edit panels (position / pending-order) */}
         <AnimatePresence initial={false}>
           {editTarget?.kind === 'position' && (
             <motion.div
@@ -318,26 +299,31 @@ function DashboardInner() {
               />
             </motion.div>
           )}
-          {!editTarget && tradingPanelOpen && (
-            <motion.div
-              key="trading-panel"
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 256, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
-              className="shrink-0 overflow-hidden"
-            >
-              {/* key={`${activePane}-${symbol}`} resets form inputs when active pane or symbol
-                  changes. Tab selection is preserved via initialTab + onTabChange (lifted state). */}
-              <TradingPanel
-                key={`${activePane}-${symbol}`}
-                onClose={() => setTradingPanelOpen(false)}
-                initialTab={tradingTab}
-                onTabChange={setTradingTab}
-              />
-            </motion.div>
-          )}
         </AnimatePresence>
+
+        {/* TradingPanel — always mounted so form state (amount, price, TP/SL) survives
+            close/reopen. Width is animated to 0 when hidden.
+            key={`${activePane}-${symbol}`} still resets the form on symbol change. */}
+        <motion.div
+          animate={{
+            width: isTradingPanelVisible ? 256 : 0,
+            opacity: isTradingPanelVisible ? 1 : 0,
+          }}
+          transition={{ duration: 0.2, ease: 'easeInOut' }}
+          className="shrink-0 overflow-hidden"
+          aria-hidden={!isTradingPanelVisible}
+          inert={!isTradingPanelVisible ? true : undefined}
+          style={{ pointerEvents: isTradingPanelVisible ? 'auto' : 'none' }}
+        >
+          <TradingPanel
+            key={`${activePane}-${symbol}`}
+            onClose={() => setTradingPanelOpen(false)}
+            initialTab={tradingTab}
+            onTabChange={setTradingTab}
+            initialSide={tradingSide}
+            onSideChange={setTradingSide}
+          />
+        </motion.div>
       </div>
 
       <TickerBar />

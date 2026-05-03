@@ -87,6 +87,8 @@ interface LayoutState {
   syncOptions: SyncOptions;
   /** Per-layout drag-resized pane fractions — persisted */
   paneSizes: Record<LayoutId, PaneSizes>;
+  /** Committed height (px) of the bottom panel after drag-to-resize — persisted */
+  bottomPanelHeight: number;
 
   setLayout: (layout: LayoutId) => void;
   setActivePane: (index: number) => void;
@@ -94,6 +96,7 @@ interface LayoutState {
   setPaneInterval: (paneIndex: number, interval: Interval) => void;
   toggleSync: (key: keyof SyncOptions) => void;
   setPaneSizes: (layout: LayoutId, sizes: PaneSizes) => void;
+  setBottomPanelHeight: (height: number) => void;
 }
 
 export const useLayoutStore = create<LayoutState>()(
@@ -109,6 +112,7 @@ export const useLayoutStore = create<LayoutState>()(
         timeRange: true,
       },
       paneSizes: { ...DEFAULT_PANE_SIZES },
+      bottomPanelHeight: 208,
 
       setLayout: (layout) => {
         const count = LAYOUT_PANE_COUNT[layout];
@@ -171,6 +175,8 @@ export const useLayoutStore = create<LayoutState>()(
 
       setPaneSizes: (layout, sizes) =>
         set((s) => ({ paneSizes: { ...s.paneSizes, [layout]: sizes } })),
+
+      setBottomPanelHeight: (height) => set({ bottomPanelHeight: height }),
     }),
     {
       name: 'cd-layout',
@@ -208,6 +214,10 @@ export const useLayoutStore = create<LayoutState>()(
           for (const lid of Object.keys(DEFAULT_PANE_SIZES) as LayoutId[]) {
             if (!merged.paneSizes[lid]) merged.paneSizes[lid] = DEFAULT_PANE_SIZES[lid];
           }
+        }
+        // Ensure bottomPanelHeight is a valid number (field added after initial release)
+        if (typeof merged.bottomPanelHeight !== 'number' || merged.bottomPanelHeight < 80) {
+          merged.bottomPanelHeight = 208;
         }
         return merged;
       },

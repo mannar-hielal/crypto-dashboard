@@ -159,7 +159,7 @@ describe('GET /api/market/candles', () => {
     expect(calledUrl).toContain('limit=1000');
   });
 
-  it('maps app intervals to Bybit format and uses spot category first', async () => {
+  it('maps app intervals to Bybit format and uses linear category first', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -174,11 +174,11 @@ describe('GET /api/market/candles', () => {
 
     expect(res.statusCode).toBe(200);
     const calledUrl = (fetchMock.mock.calls[0] as [string])[0];
-    expect(calledUrl).toContain('category=spot');
+    expect(calledUrl).toContain('category=linear');
     expect(calledUrl).toContain('interval=60');
   });
 
-  it('retries with linear category when spot kline returns params error', async () => {
+  it('retries with spot category when linear kline returns params error', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({
@@ -202,8 +202,8 @@ describe('GET /api/market/candles', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const firstUrl = (fetchMock.mock.calls[0] as [string])[0];
     const secondUrl = (fetchMock.mock.calls[1] as [string])[0];
-    expect(firstUrl).toContain('category=spot');
-    expect(secondUrl).toContain('category=linear');
+    expect(firstUrl).toContain('category=linear');
+    expect(secondUrl).toContain('category=spot');
   });
 
   // ── Validation (🔐 allowlist enforcement) ──────────────────────────────────

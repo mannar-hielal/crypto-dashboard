@@ -5,55 +5,24 @@
  * Shows price, quantity (with live USD equivalent), TP/SL toggles, order info,
  * and an insufficient-funds banner when the new cost exceeds available balance.
  * Replaces the TradingPanel in the right slot when the user clicks the pencil
- * icon on a pending order row in PaperTradingPanel.
+ * icon on a pending order row in OrderAccountManagementPanel.
  */
 
-import { useState } from 'react';
-import { X, AlertTriangle, TrendingUp, TrendingDown, ArrowLeftRight } from 'lucide-react';
+import { useId, useState } from 'react';
+import { X, TrendingUp, TrendingDown, ArrowLeftRight, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { usePaperStore, COMMISSION_RATE } from '@/store/paperStore';
 import { bg, color, fontSize } from '@/lib/tokens';
+import { fmtMktPrice } from '@/lib/utils';
+import { Toggle } from '@/components/ui/Toggle';
+import { NumericInput } from '@/components/ui/NumericInput';
+import { FieldLabel } from '@/components/ui/FieldLabel';
+import { WarningText } from '@/components/ui/WarningText';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function fmtMktPrice(price: number): string {
-  const maxDp = price >= 1000 ? 2 : price >= 1 ? 4 : 6;
-  return price.toLocaleString(undefined, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: maxDp,
-  });
-}
-
 function shortId(id: string): string {
   return id.length > 8 ? `…${id.slice(-8)}` : id;
-}
-
-/** Small toggle switch */
-function Toggle({
-  checked,
-  onChange,
-  label,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      onClick={() => onChange(!checked)}
-      className="relative h-4 w-7 shrink-0 rounded-full transition-colors"
-      style={{ background: checked ? color.green : `${color.muted}40` }}
-    >
-      <span
-        className="absolute top-0.5 h-3 w-3 rounded-full bg-white transition-transform"
-        style={{ right: '2px', transform: checked ? 'translateX(-12px)' : 'translateX(0px)' }}
-      />
-    </button>
-  );
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -66,6 +35,7 @@ interface PendingOrderEditPanelProps {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPanelProps) {
+  const priceInputId = useId();
   const order = usePaperStore((s) => s.pendingOrders.find((o) => o.id === orderId));
   const balance = usePaperStore((s) => s.balance);
   const leverage = usePaperStore((s) => s.leverage);
@@ -73,7 +43,7 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
 
   // ── Local state (initialised from the live order) ───────────────────────────
   const [priceInput, setPriceInput] = useState(() =>
-    order ? fmtMktPrice(order.triggerPrice) : ''
+    order ? fmtMktPrice(order.triggerPrice, { useGrouping: false }) : ''
   );
   // Qty mode: 'units' = enter base-asset qty; 'usd' = enter margin (USDT)
   const [qtyMode, setQtyMode] = useState<'units' | 'usd'>('units');
@@ -82,10 +52,10 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
   const [tpEnabled, setTpEnabled] = useState(() => !!order?.takeProfit);
   const [slEnabled, setSlEnabled] = useState(() => !!order?.stopLoss);
   const [tpInput, setTpInput] = useState(() =>
-    order?.takeProfit ? fmtMktPrice(order.takeProfit) : ''
+    order?.takeProfit ? fmtMktPrice(order.takeProfit, { useGrouping: false }) : ''
   );
   const [slInput, setSlInput] = useState(() =>
-    order?.stopLoss ? fmtMktPrice(order.stopLoss) : ''
+    order?.stopLoss ? fmtMktPrice(order.stopLoss, { useGrouping: false }) : ''
   );
   const [submitResult, setSubmitResult] = useState<'rejected' | null>(null);
 
@@ -112,15 +82,18 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
   // ── Derived ─────────────────────────────────────────────────────────────────
   const isBuy = activeOrder.side === 'buy';
   const typeLabel = activeOrder.type === 'limit' ? 'Limit' : 'Stop';
+  const baseAsset = activeOrder.symbol.endsWith('USDT')
+    ? activeOrder.symbol.slice(0, -4)
+    : activeOrder.symbol;
 
-  const newPrice = parseFloat(priceInput.replace(/,/g, '')) || activeOrder.triggerPrice;
+  const newPrice = parseFloat(priceInput) || activeOrder.triggerPrice;
 
   // Resolve qty and margin based on active input mode
   const newQty =
     qtyMode === 'units'
-      ? parseFloat(qtyInput.replace(/,/g, '')) || order.qty
+      ? parseFloat(qtyInput) || order.qty
       : newPrice > 0 && leverage > 0
-        ? ((parseFloat(usdInput.replace(/,/g, '')) || activeOrder.usdtAmount) * leverage) / newPrice
+        ? ((parseFloat(usdInput) || activeOrder.usdtAmount) * leverage) / newPrice
         : activeOrder.qty;
 
   const newUsdtAmount =
@@ -128,7 +101,7 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
       ? newPrice > 0 && leverage > 0
         ? (newQty * newPrice) / leverage
         : activeOrder.usdtAmount
-      : parseFloat(usdInput.replace(/,/g, '')) || activeOrder.usdtAmount;
+      : parseFloat(usdInput) || activeOrder.usdtAmount;
 
   const usdEquivalent = newQty * newPrice; // notional trade value
 
@@ -137,8 +110,8 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
   const newRequired = newUsdtAmount + newUsdtAmount * COMMISSION_RATE;
   const insufficientFunds = newRequired > scratchBalance;
 
-  const tpVal = parseFloat(tpInput.replace(/,/g, '')) || null;
-  const slVal = parseFloat(slInput.replace(/,/g, '')) || null;
+  const tpVal = parseFloat(tpInput) || null;
+  const slVal = parseFloat(slInput) || null;
 
   // Direction-aware TP/SL warnings
   // Use the correct price reference name so stop orders don't say "limit price".
@@ -179,14 +152,14 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
   function handleSwapMode() {
     if (qtyMode === 'units') {
       // Convert current units → USD margin
-      const qty = parseFloat(qtyInput.replace(/,/g, '')) || activeOrder.qty;
+      const qty = parseFloat(qtyInput) || activeOrder.qty;
       const usd =
         newPrice > 0 && leverage > 0 ? (qty * newPrice) / leverage : activeOrder.usdtAmount;
       setUsdInput(usd.toFixed(2));
       setQtyMode('usd');
     } else {
       // Convert current USD margin → units
-      const usd = parseFloat(usdInput.replace(/,/g, '')) || activeOrder.usdtAmount;
+      const usd = parseFloat(usdInput) || activeOrder.usdtAmount;
       const qty = newPrice > 0 && leverage > 0 ? (usd * leverage) / newPrice : activeOrder.qty;
       setQtyInput(qty.toFixed(6));
       setQtyMode('units');
@@ -279,72 +252,64 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
 
         {/* ── Price ─────────────────────────────────────────────────────── */}
         <div className="flex flex-col gap-1 px-3 py-3">
-          <label style={{ fontSize: fontSize.xs10, color: color.muted }}>Price</label>
-          <input
-            type="text"
-            inputMode="decimal"
+          <FieldLabel as="label" htmlFor={priceInputId}>
+            Price
+          </FieldLabel>
+          <NumericInput
+            id={priceInputId}
+            ariaLabel="Order price"
+            suffix="USDT"
+            step={0.01}
+            min={0}
             value={priceInput}
             onChange={(e) => setPriceInput(e.target.value)}
-            className="w-full rounded px-2.5 py-1.5 text-right tabular-nums text-white outline-none"
-            style={{
-              fontSize: fontSize.xs11,
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.1)',
-            }}
           />
         </div>
 
         {/* ── Quantity (USD ↔ Units) ─────────────────────────────────────── */}
         <div className="flex flex-col gap-1 px-3 pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <label style={{ fontSize: fontSize.xs10, color: color.muted }}>
-                {qtyMode === 'units' ? 'Units' : 'Amount (USD)'}
-              </label>
-              {/* Mode swap button */}
-              <button
-                type="button"
-                onClick={handleSwapMode}
-                title="Switch between Units and USD"
-                className="flex items-center justify-center rounded transition-colors hover:text-white"
-                style={{ color: color.muted }}
-              >
-                <ArrowLeftRight className="h-2.5 w-2.5" />
-              </button>
-            </div>
-            <span className="tabular-nums" style={{ fontSize: fontSize.xs10, color: color.muted }}>
-              {qtyMode === 'units'
-                ? `≈ ${usdEquivalent.toLocaleString(undefined, { maximumFractionDigits: 2 })} USD`
-                : `≈ ${newQty.toLocaleString(undefined, { maximumFractionDigits: 6 })} units`}
-            </span>
+          <div className="mb-1 flex items-center justify-between">
+            <FieldLabel>
+              {qtyMode === 'units' ? `Quantity (${baseAsset})` : 'Amount (USD)'}
+            </FieldLabel>
+            <button
+              type="button"
+              onClick={handleSwapMode}
+              title={`Switch to ${qtyMode === 'units' ? 'USD' : 'Units'}`}
+              className="flex items-center gap-1 rounded px-1 py-0.5 transition-colors hover:text-white"
+              style={{ fontSize: fontSize.xs10, color: color.muted }}
+            >
+              <ArrowLeftRight className="h-3 w-3" />
+              {qtyMode === 'units' ? 'USD' : 'Units'}
+            </button>
           </div>
           {qtyMode === 'units' ? (
-            <input
-              type="text"
-              inputMode="decimal"
+            <NumericInput
+              suffix={baseAsset}
+              step="0.000001"
+              min={0}
               value={qtyInput}
+              borderColor={insufficientFunds ? color.red : undefined}
               onChange={(e) => setQtyInput(e.target.value)}
-              className="w-full rounded px-2.5 py-1.5 text-right tabular-nums text-white outline-none"
-              style={{
-                fontSize: fontSize.xs11,
-                background: 'rgba(255,255,255,0.06)',
-                border: `1px solid ${insufficientFunds ? color.red : 'rgba(255,255,255,0.1)'}`,
-              }}
             />
           ) : (
-            <input
-              type="text"
-              inputMode="decimal"
+            <NumericInput
+              suffix="USD"
+              step="0.01"
+              min={0}
               value={usdInput}
+              borderColor={insufficientFunds ? color.red : undefined}
               onChange={(e) => setUsdInput(e.target.value)}
-              className="w-full rounded px-2.5 py-1.5 text-right tabular-nums text-white outline-none"
-              style={{
-                fontSize: fontSize.xs11,
-                background: 'rgba(255,255,255,0.06)',
-                border: `1px solid ${insufficientFunds ? color.red : 'rgba(255,255,255,0.1)'}`,
-              }}
             />
           )}
+          <p className="mt-1" style={{ fontSize: fontSize.xs10, color: color.muted }}>
+            ≈{' '}
+            <span className="text-white/60">
+              {qtyMode === 'units'
+                ? `${usdEquivalent.toLocaleString(undefined, { maximumFractionDigits: 2 })} USD`
+                : `${newQty.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${baseAsset}`}
+            </span>
+          </p>
         </div>
 
         {/* ── Divider ───────────────────────────────────────────────────── */}
@@ -354,87 +319,52 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
 
         {/* ── Exits section ─────────────────────────────────────────────── */}
         <div className="flex flex-col gap-2 px-3 py-3">
-          <span
-            className="font-semibold uppercase tracking-wider"
-            style={{ fontSize: fontSize.xs10, color: color.muted }}
-          >
-            Exits
-          </span>
+          <FieldLabel>Exits</FieldLabel>
 
           {/* Take Profit */}
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <Toggle checked={tpEnabled} onChange={setTpEnabled} label="Enable take profit" />
-              <span
-                style={{
-                  fontSize: fontSize.xs11,
-                  color: tpEnabled ? 'rgba(255,255,255,0.8)' : color.muted,
-                }}
-              >
+              <span style={{ fontSize: fontSize.xs, color: tpEnabled ? '#fff' : color.muted }}>
                 Take profit, price
               </span>
             </div>
-            <input
-              type="text"
-              inputMode="decimal"
-              disabled={!tpEnabled}
-              value={tpInput}
-              onChange={(e) => setTpInput(e.target.value)}
-              placeholder="—"
-              className="w-full rounded px-2.5 py-1.5 text-right tabular-nums text-white outline-none transition-opacity disabled:opacity-40"
-              style={{
-                fontSize: fontSize.xs11,
-                background: 'rgba(255,255,255,0.06)',
-                border: `1px solid ${tpWarning ? color.red : 'rgba(255,255,255,0.1)'}`,
-              }}
-            />
-            {tpWarning && (
-              <p
-                className="flex items-center gap-1"
-                style={{ fontSize: fontSize.xs10, color: color.amber }}
-              >
-                <AlertTriangle className="h-3 w-3 shrink-0" />
-                {tpWarning}
-              </p>
+            {tpEnabled && (
+              <NumericInput
+                suffix="TP"
+                suffixColor={`${color.green}b3`}
+                borderColor={tpWarning ? color.red : `${color.green}60`}
+                suffixPadding="pr-12"
+                step={0.01}
+                min={0}
+                value={tpInput}
+                onChange={(e) => setTpInput(e.target.value)}
+              />
             )}
+            {tpWarning && <WarningText>{tpWarning}</WarningText>}
           </div>
 
           {/* Stop Loss */}
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <Toggle checked={slEnabled} onChange={setSlEnabled} label="Enable stop loss" />
-              <span
-                style={{
-                  fontSize: fontSize.xs11,
-                  color: slEnabled ? 'rgba(255,255,255,0.8)' : color.muted,
-                }}
-              >
+              <span style={{ fontSize: fontSize.xs, color: slEnabled ? '#fff' : color.muted }}>
                 Stop loss, price
               </span>
             </div>
-            <input
-              type="text"
-              inputMode="decimal"
-              disabled={!slEnabled}
-              value={slInput}
-              onChange={(e) => setSlInput(e.target.value)}
-              placeholder="—"
-              className="w-full rounded px-2.5 py-1.5 text-right tabular-nums text-white outline-none transition-opacity disabled:opacity-40"
-              style={{
-                fontSize: fontSize.xs11,
-                background: 'rgba(255,255,255,0.06)',
-                border: `1px solid ${slWarning ? color.red : 'rgba(255,255,255,0.1)'}`,
-              }}
-            />
-            {slWarning && (
-              <p
-                className="flex items-center gap-1"
-                style={{ fontSize: fontSize.xs10, color: color.amber }}
-              >
-                <AlertTriangle className="h-3 w-3 shrink-0" />
-                {slWarning}
-              </p>
+            {slEnabled && (
+              <NumericInput
+                suffix="SL"
+                suffixColor={`${color.red}b3`}
+                borderColor={slWarning ? color.red : `${color.red}60`}
+                suffixPadding="pr-12"
+                step={0.01}
+                min={0}
+                value={slInput}
+                onChange={(e) => setSlInput(e.target.value)}
+              />
             )}
+            {slWarning && <WarningText>{slWarning}</WarningText>}
           </div>
         </div>
 
@@ -444,13 +374,13 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
         </div>
 
         {/* ── Order info ────────────────────────────────────────────────── */}
-        <div className="flex flex-col gap-2 px-3 py-3">
-          <span
-            className="font-semibold uppercase tracking-wider"
-            style={{ fontSize: fontSize.xs10, color: color.muted }}
-          >
+        <div
+          className="mx-3 my-3 rounded-md border border-white/6 p-2.5"
+          style={{ background: bg.page }}
+        >
+          <FieldLabel as="p" className="mb-2">
             Order info
-          </span>
+          </FieldLabel>
           {(
             [
               { label: 'Leverage', value: `1:${leverage}` },
@@ -461,12 +391,9 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
               { label: 'Margin (reserved)', value: `$${newUsdtAmount.toFixed(2)} USD` },
             ] as { label: string; value: string }[]
           ).map(({ label, value }) => (
-            <div key={label} className="flex items-center justify-between">
-              <span style={{ fontSize: fontSize.xs11, color: color.muted }}>{label}</span>
-              <span
-                className="tabular-nums"
-                style={{ fontSize: fontSize.xs11, color: 'rgba(255,255,255,0.75)' }}
-              >
+            <div key={label} className="flex items-center justify-between py-0.5">
+              <span style={{ fontSize: fontSize.xs10, color: color.muted }}>{label}</span>
+              <span className="tabular-nums" style={{ fontSize: fontSize.xs10, color: '#fff' }}>
                 {value}
               </span>
             </div>

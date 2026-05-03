@@ -102,6 +102,7 @@ export function ChartPanel({ paneIndex, interval, onChartReady, onChartDestroy }
         textColor: '#d1d4dc',
         fontFamily: font.sans,
         fontSize: 12,
+        attributionLogo: false,
       },
       grid: {
         vertLines: { color: 'rgba(255,255,255,0.04)' },
