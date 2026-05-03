@@ -23,6 +23,7 @@ vi.mock('cryptocurrency-icons/svg/color/doge.svg?url', () => ({ default: '/icons
 vi.mock('cryptocurrency-icons/svg/color/ada.svg?url', () => ({ default: '/icons/ada.svg' }));
 vi.mock('cryptocurrency-icons/svg/color/avax.svg?url', () => ({ default: '/icons/avax.svg' }));
 vi.mock('cryptocurrency-icons/svg/color/link.svg?url', () => ({ default: '/icons/link.svg' }));
+vi.mock('cryptocurrency-icons/svg/color/usdt.svg?url', () => ({ default: '/icons/usdt.svg' }));
 
 // ─── Mock framer-motion (avoids animation side-effects in jsdom) ──────────────
 
@@ -40,7 +41,7 @@ vi.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-import { CryptoIcon } from '../CryptoIcon';
+import { CryptoIcon, SymbolPair } from '../CryptoIcon';
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
@@ -97,5 +98,66 @@ describe('CryptoIcon', () => {
       expect(span?.style.width).toBe('24px');
       expect(span?.style.height).toBe('24px');
     });
+  });
+});
+
+// ─── SymbolPair fallback tests (T2 · RTL — test plan 5.6) ────────────────────
+
+describe('SymbolPair — unknown symbol fallback (5.6)', () => {
+  afterEach(cleanup);
+
+  it('renders no <img> elements when both base and quote are unknown', () => {
+    const { container } = render(<SymbolPair base="FOOBAR" quote="NEWCOIN" />);
+    expect(container.querySelectorAll('img')).toHaveLength(0);
+  });
+
+  it('renders exactly 2 fallback badge spans for an unknown base + unknown quote', () => {
+    const { container } = render(<SymbolPair base="FOOBAR" quote="NEWCOIN" />);
+    // Check that both fallback texts appear somewhere in the tree
+    const allSpans = Array.from(container.querySelectorAll('span'));
+    const hasFO = allSpans.some((el) => el.textContent === 'FO');
+    const hasNE = allSpans.some((el) => el.textContent === 'NE');
+    expect(hasFO).toBe(true);
+    expect(hasNE).toBe(true);
+  });
+
+  it('shows first 2 uppercase letters for an unknown base symbol', () => {
+    const { container } = render(<SymbolPair base="foobar" quote="NEWCOIN" />);
+    const textBadges = Array.from(container.querySelectorAll('span')).filter(
+      (el) => el.textContent === 'FO'
+    );
+    expect(textBadges.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('shows first 2 uppercase letters for an unknown quote symbol', () => {
+    const { container } = render(<SymbolPair base="FOOBAR" quote="newcoin" />);
+    const textBadges = Array.from(container.querySelectorAll('span')).filter(
+      (el) => el.textContent === 'NE'
+    );
+    expect(textBadges.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('renders an <img> for a known base and a fallback badge for an unknown quote', () => {
+    const { container } = render(<SymbolPair base="BTC" quote="NEWCOIN" />);
+    expect(container.querySelectorAll('img')).toHaveLength(1);
+    const textBadges = Array.from(container.querySelectorAll('span')).filter(
+      (el) => el.textContent === 'NE'
+    );
+    expect(textBadges.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('does not crash and renders correctly when base is a 1-letter symbol', () => {
+    const { container } = render(<SymbolPair base="X" quote="NEWCOIN" />);
+    expect(container.querySelectorAll('img')).toHaveLength(0);
+    const textBadges = Array.from(container.querySelectorAll('span')).filter(
+      (el) => el.textContent === 'X'
+    );
+    expect(textBadges.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('USDT renders as an <img> (has a real icon in the map, not a text badge)', () => {
+    const { container } = render(<SymbolPair base="BTC" quote="USDT" />);
+    // Both BTC and USDT are in CRYPTO_ICON_URLS — both should be <img>
+    expect(container.querySelectorAll('img')).toHaveLength(2);
   });
 });

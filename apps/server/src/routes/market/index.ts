@@ -40,7 +40,7 @@ function isAllowedInterval(interval: string): interval is AllowedInterval {
 }
 
 type BybitCategory = 'spot' | 'linear';
-const BYBIT_KLINE_CATEGORY_ORDER: readonly BybitCategory[] = ['spot', 'linear'];
+const BYBIT_KLINE_CATEGORY_ORDER: readonly BybitCategory[] = ['linear', 'spot'];
 
 // ─── Bybit REST helper ────────────────────────────────────────────────────────
 

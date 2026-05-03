@@ -24,6 +24,7 @@ import { usePaperStore, COMMISSION_RATE, CRYPTO_LEVERAGE_OPTIONS } from '@/store
 import type { JournalEntry, HistoricalOrder, PendingOrder } from '@/store/paperStore';
 import type { PanelSize } from '@/pages/DashboardPage';
 import { bg, color, fontSize } from '@/lib/tokens';
+import { fmtMktPrice } from '@/lib/utils';
 import { useLayoutStore } from '@/store/layoutStore';
 import { useTradingSoundCtx } from '@/hooks/TradingSoundContext';
 import { SoundSettings } from './SoundSettings';
@@ -35,9 +36,7 @@ const fmtQty = (n: number) => parseFloat(n.toFixed(6)).toString();
 
 type InfoTab = 'positions' | 'orders' | 'orderhistory' | 'balancehistory' | 'journal';
 type ColTab = 'positions' | 'orders' | 'orderhistory' | 'balancehistory';
-// 'filled' is intentionally absent — filled orders are routed directly to
-// Order History (TV-style) and never appear in the Orders tab.
-type OrderSubTab = 'all' | 'working' | 'inactive' | 'cancelled' | 'rejected';
+type OrderSubTab = 'all' | 'working' | 'inactive' | 'filled' | 'cancelled' | 'rejected';
 type OrderHistorySubTab = 'all' | 'filled' | 'cancelled' | 'rejected';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -55,18 +54,9 @@ function shortId(id: string): string {
 }
 
 /**
- * Format a market price the TradingView way:
- *   75495.1  → "75,495.1"
- *   0.000234 → "0.000234"
- * Thousands separator, trailing zeros stripped, precision auto-scaled.
+ * Format a market price the TradingView way using the imported helper from
+ * @/lib/utils.
  */
-function fmtMktPrice(price: number): string {
-  const maxDp = price >= 1000 ? 2 : price >= 1 ? 4 : 6;
-  return price.toLocaleString(undefined, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: maxDp,
-  });
-}
 
 // ─── Stagger helpers ──────────────────────────────────────────────────────────
 
@@ -163,6 +153,19 @@ const COLS_BY_TAB: Record<ColTab, ColDef[]> = {
   balancehistory: BALANCE_HISTORY_COLS,
 };
 
+// ─── Orders bench lifecycle ───────────────────────────────────────────────────
+// The Orders tab is a session-scoped "working bench". Active rows (working /
+// inactive) stay as long as they're live. Terminal rows (filled / cancelled /
+// rejected) appear on the bench for BENCH_TTL_MS after their closingTime, then
+// auto-evict to Order History only.
+//
+// SESSION_START is evaluated ONCE at module load time — it naturally resets on
+// every page refresh, which is exactly why bench terminal rows disappear from
+// Orders after a reload (their closingTime < SESSION_START).
+
+const SESSION_START = Date.now();
+const BENCH_TTL_MS = 120_000; // 2 minutes, hardcoded — mirrors TV behaviour
+
 // ─── Column prefs persistence ─────────────────────────────────────────────────
 
 const COL_PREFS_KEY = 'cd-paper-col-prefs';
@@ -186,7 +189,7 @@ function saveColPrefs(prefs: Record<string, string[]>) {
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
-interface PaperTradingPanelProps {
+interface OrderAccountManagementPanelProps {
   size: PanelSize;
   onSizeChange: (size: PanelSize) => void;
   /** True when the panel is expanded to fill the full chart area */
@@ -296,14 +299,14 @@ function JournalRow({
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function PaperTradingPanel({
+export function OrderAccountManagementPanel({
   size,
   onSizeChange,
   isMaximized,
   onToggleMaximize,
   onEditPosition,
   onEditPendingOrder,
-}: PaperTradingPanelProps) {
+}: OrderAccountManagementPanelProps) {
   const [infoTab, setInfoTab] = useState<InfoTab>('positions');
   const [orderSubTab, setOrderSubTab] = useState<OrderSubTab>('all');
   const [orderHistorySubTab, setOrderHistorySubTab] = useState<OrderHistorySubTab>('all');
@@ -355,6 +358,15 @@ export function PaperTradingPanel({
     return () => {
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     };
+  }, []);
+
+  // ── Bench clock — drives reactive TTL expiry of terminal rows in Orders tab ──
+  // Ticks every 30 s so the bench auto-clears within ±30 s of the 2-minute mark
+  // without hammering the reconciler on every second.
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
   }, []);
 
   // ── Journal UI state ──────────────────────────────────────────────────────
@@ -558,17 +570,26 @@ export function PaperTradingPanel({
     }
   }
 
-  // All order types (market, limit, stop) appear in the Orders tab — matching TradingView.
-  // Filled orders are excluded entirely from the Orders tab; they go straight to
-  // Order History (TV-style immediate archive — no time delay).
-  // Only Working, Inactive, Cancelled, and Rejected records remain here.
+  // Orders tab mirrors TV-style lifecycle buckets; historical filled rows remain
+  // visible in Orders (Filled sub-tab) and Order History.
+
+  // ── Bench predicate ─────────────────────────────────────────────────────────
+  // A HistoricalOrder is "on the bench" only if it was created in this session
+  // (closingTime >= SESSION_START) AND its 2-minute TTL has not yet elapsed.
+  // Orders from previous sessions never satisfy the first clause, so they vanish
+  // from the Orders tab immediately after a page refresh.
+  function isBenchHistoricalOrder(o: HistoricalOrder): boolean {
+    return o.closingTime >= SESSION_START && o.closingTime + BENCH_TTL_MS > now;
+  }
+
   const allOrderDisplayRows: OrderDisplayRow[] = [
     ...inactivePendingExitRows,
     ...exitOrderRows,
     ...pendingOrders.map((o) => ({ kind: 'pending' as const, data: o })),
-    ...orders
-      .filter((o) => o.status !== 'filled')
-      .map((o) => ({ kind: 'historical' as const, data: o })),
+    // Historical rows are only included while they are "on the bench" (within the
+    // 2-minute TTL window for this session). Outside that window they exist only
+    // in Order History, not here.
+    ...orders.filter(isBenchHistoricalOrder).map((o) => ({ kind: 'historical' as const, data: o })),
   ].sort((a, b) => {
     const ta =
       a.kind === 'pending'
@@ -596,13 +617,23 @@ export function PaperTradingPanel({
           ? allOrderDisplayRows.filter(
               (r) => r.kind === 'exit-order' && r.data.status === 'inactive'
             )
-          : orderSubTab === 'cancelled'
+          : orderSubTab === 'filled'
             ? allOrderDisplayRows.filter(
-                (r) => r.kind === 'historical' && r.data.status === 'cancelled'
+                (r) => r.kind === 'historical' && r.data.status === 'filled'
               )
-            : allOrderDisplayRows.filter(
-                (r) => r.kind === 'historical' && r.data.status === 'rejected'
-              );
+            : orderSubTab === 'cancelled'
+              ? allOrderDisplayRows.filter(
+                  (r) => r.kind === 'historical' && r.data.status === 'cancelled'
+                )
+              : allOrderDisplayRows.filter(
+                  (r) => r.kind === 'historical' && r.data.status === 'rejected'
+                );
+
+  // Top-level Orders badge mirrors TV: active rows only (working/inactive),
+  // not historical filled/cancelled/rejected rows.
+  const activeOrdersBadgeCount = allOrderDisplayRows.filter(
+    (r) => r.kind === 'pending' || r.kind === 'exit-order'
+  ).length;
 
   // ── Column helpers ─────────────────────────────────────────────────────────
   function isVisible(tab: ColTab, colId: string): boolean {
@@ -672,9 +703,11 @@ export function PaperTradingPanel({
         style={{ background: bg.panel }}
       >
         {/* Left: panel label */}
-        <span className="text-xs font-bold text-white/80 tracking-wide">Paper Trading</span>
+        <span className="text-xs font-bold text-white/80 tracking-wide">
+          Order &amp; Account Management
+        </span>
 
-        {/* Right: gear (settings) + sound + collapse + close */}
+        {/* Right: sound + settings + collapse/expand + maximize/restore */}
         <div className="flex items-center gap-0.5">
           <SoundSettings />
           <motion.button
@@ -729,18 +762,6 @@ export function PaperTradingPanel({
             ) : (
               <Maximize2 className="h-3.5 w-3.5" />
             )}
-          </motion.button>
-
-          {/* Close */}
-          <motion.button
-            onClick={() => onSizeChange('hidden')}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            title="Close panel"
-            className="flex h-6 w-6 items-center justify-center rounded hover:text-brand-red"
-            style={{ color: color.muted }}
-          >
-            <X className="h-3.5 w-3.5" />
           </motion.button>
         </div>
       </div>
@@ -853,18 +874,14 @@ export function PaperTradingPanel({
                         {positions.length}
                       </span>
                     )}
-                    {tab === 'orders' &&
-                      pendingOrders.length + exitOrderRows.length + inactivePendingExitRows.length >
-                        0 && (
-                        <span
-                          className="rounded-full px-1.5 py-px font-bold text-white"
-                          style={{ fontSize: fontSize.xxs, background: color.amber }}
-                        >
-                          {pendingOrders.length +
-                            exitOrderRows.length +
-                            inactivePendingExitRows.length}
-                        </span>
-                      )}
+                    {tab === 'orders' && activeOrdersBadgeCount > 0 && (
+                      <span
+                        className="rounded-full px-1.5 py-px font-bold text-white"
+                        style={{ fontSize: fontSize.xxs, background: color.amber }}
+                      >
+                        {activeOrdersBadgeCount}
+                      </span>
+                    )}
                     {tab === 'orderhistory' && orderHistoryRows.length > 0 && (
                       <span
                         className="rounded-full bg-white/8 px-1.5 py-px font-semibold"
@@ -967,64 +984,64 @@ export function PaperTradingPanel({
                 className="flex shrink-0 items-center gap-0 border-b border-white/4 px-2"
                 style={{ background: bg.panel }}
               >
-                {(['all', 'working', 'inactive', 'cancelled', 'rejected'] as OrderSubTab[]).map(
-                  (sub) => {
-                    const count =
-                      sub === 'all'
-                        ? allOrderDisplayRows.length
-                        : sub === 'working'
+                {(
+                  ['all', 'working', 'inactive', 'filled', 'cancelled', 'rejected'] as OrderSubTab[]
+                ).map((sub) => {
+                  const count =
+                    sub === 'all'
+                      ? allOrderDisplayRows.length
+                      : sub === 'working'
+                        ? allOrderDisplayRows.filter(
+                            (r) =>
+                              r.kind === 'pending' ||
+                              (r.kind === 'exit-order' && r.data.status === 'working')
+                          ).length
+                        : sub === 'inactive'
                           ? allOrderDisplayRows.filter(
-                              (r) =>
-                                r.kind === 'pending' ||
-                                (r.kind === 'exit-order' && r.data.status === 'working')
+                              (r) => r.kind === 'exit-order' && r.data.status === 'inactive'
                             ).length
-                          : sub === 'inactive'
-                            ? allOrderDisplayRows.filter(
-                                (r) => r.kind === 'exit-order' && r.data.status === 'inactive'
-                              ).length
-                            : allOrderDisplayRows.filter(
-                                (r) => r.kind === 'historical' && r.data.status === sub
-                              ).length;
-                    return (
-                      <button
-                        key={sub}
-                        onClick={() => setOrderSubTab(sub)}
-                        className="relative flex items-center gap-1 px-3 py-1.5 transition-colors"
-                        style={{
-                          fontSize: fontSize.xs11,
-                          fontWeight: orderSubTab === sub ? 600 : 400,
-                          color: orderSubTab === sub ? color.purple : color.muted,
-                        }}
-                      >
-                        {orderSubTab === sub && (
-                          <motion.span
-                            layoutId="order-sub-tab"
-                            className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t"
-                            style={{ background: color.purpleDark }}
-                          />
-                        )}
-                        <span className="capitalize">
-                          {sub === 'all' ? 'All' : sub.charAt(0).toUpperCase() + sub.slice(1)}
+                          : allOrderDisplayRows.filter(
+                              (r) => r.kind === 'historical' && r.data.status === sub
+                            ).length;
+                  return (
+                    <button
+                      key={sub}
+                      onClick={() => setOrderSubTab(sub)}
+                      className="relative flex items-center gap-1 px-3 py-1.5 transition-colors"
+                      style={{
+                        fontSize: fontSize.xs11,
+                        fontWeight: orderSubTab === sub ? 600 : 400,
+                        color: orderSubTab === sub ? color.purple : color.muted,
+                      }}
+                    >
+                      {orderSubTab === sub && (
+                        <motion.span
+                          layoutId="order-sub-tab"
+                          className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t"
+                          style={{ background: color.purpleDark }}
+                        />
+                      )}
+                      <span className="capitalize">
+                        {sub === 'all' ? 'All' : sub.charAt(0).toUpperCase() + sub.slice(1)}
+                      </span>
+                      {count > 0 && (
+                        <span
+                          className="rounded-full px-1 py-px tabular-nums"
+                          style={{
+                            fontSize: fontSize.xxs,
+                            background:
+                              orderSubTab === sub
+                                ? `${color.purpleDark}40`
+                                : 'rgba(255,255,255,0.07)',
+                            color: orderSubTab === sub ? color.purple : color.muted,
+                          }}
+                        >
+                          {count}
                         </span>
-                        {count > 0 && (
-                          <span
-                            className="rounded-full px-1 py-px tabular-nums"
-                            style={{
-                              fontSize: fontSize.xxs,
-                              background:
-                                orderSubTab === sub
-                                  ? `${color.purpleDark}40`
-                                  : 'rgba(255,255,255,0.07)',
-                              color: orderSubTab === sub ? color.purple : color.muted,
-                            }}
-                          >
-                            {count}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  }
-                )}
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
 
@@ -1472,6 +1489,11 @@ export function PaperTradingPanel({
                                     exit="exit"
                                     layout
                                     className="group border-b border-white/3 transition-colors hover:bg-white/2"
+                                    // Bench terminal rows (filled/cancelled/rejected within TTL) are
+                                    // dimmed so users can distinguish them from live active rows.
+                                    style={
+                                      !isPending && !isExitOrder ? { opacity: 0.65 } : undefined
+                                    }
                                   >
                                     {isVisible('orders', 'symbol') && (
                                       <td className="px-3 py-1.5">
@@ -1487,15 +1509,32 @@ export function PaperTradingPanel({
                                     )}
                                     {isVisible('orders', 'status') && (
                                       <td className="px-3 py-1.5">
-                                        <span
-                                          className="rounded px-1.5 py-px font-bold uppercase"
-                                          style={{
-                                            fontSize: fontSize.xs10,
-                                            background: `${statusColor}22`,
-                                            color: statusColor,
-                                          }}
-                                        >
-                                          {statusLabel}
+                                        <span className="inline-flex items-center gap-1">
+                                          <span
+                                            className="rounded px-1.5 py-px font-bold uppercase"
+                                            style={{
+                                              fontSize: fontSize.xs10,
+                                              background: `${statusColor}22`,
+                                              color: statusColor,
+                                            }}
+                                          >
+                                            {statusLabel}
+                                          </span>
+                                          {/* Clock icon signals this terminal row is temporary —
+                                              it will auto-evict from Orders after the 2-min TTL */}
+                                          {!isPending && !isExitOrder && (
+                                            <span title="This row will clear from Orders in ~2 minutes. It stays permanently in Order History.">
+                                              <Clock
+                                                className="shrink-0"
+                                                style={{
+                                                  width: 10,
+                                                  height: 10,
+                                                  color: color.amber,
+                                                  opacity: 0.7,
+                                                }}
+                                              />
+                                            </span>
+                                          )}
                                         </span>
                                       </td>
                                     )}

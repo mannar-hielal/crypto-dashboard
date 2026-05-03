@@ -8,6 +8,10 @@ import { usePaperStore, COMMISSION_RATE } from '@/store/paperStore';
 import { useTradingSoundCtx } from '@/hooks/TradingSoundContext';
 import { floorToLot } from '@/lib/markets';
 import { bg, color, fontSize } from '@/lib/tokens';
+import { Toggle } from '@/components/ui/Toggle';
+import { NumericInput } from '@/components/ui/NumericInput';
+import { FieldLabel } from '@/components/ui/FieldLabel';
+import { computeSLTPWarnings } from '@/lib/sltpSanity';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,26 +47,6 @@ function useOnlineStatus(): boolean {
   return isOnline;
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-/** Small toggle switch (checkbox-style) */
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className="relative h-4 w-7 shrink-0 rounded-full transition-colors"
-      style={{ background: checked ? color.green : `${color.muted}40` }}
-    >
-      <span
-        className="absolute top-0.5 h-3 w-3 rounded-full bg-white transition-transform"
-        style={{ transform: checked ? 'translateX(-12px)' : 'translateX(0)' }}
-      />
-    </button>
-  );
-}
-
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface TradingPanelProps {
@@ -71,11 +55,21 @@ interface TradingPanelProps {
   initialTab?: OrderTab;
   /** Called whenever the user switches tabs so the parent can persist the selection */
   onTabChange?: (tab: OrderTab) => void;
+  /** Side (buy/sell) preserved across remounts — mirrors TV behaviour */
+  initialSide?: OrderSide;
+  /** Called whenever the user switches side so the parent can persist the selection */
+  onSideChange?: (side: OrderSide) => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: TradingPanelProps) {
+export function TradingPanel({
+  onClose,
+  initialTab = 'market',
+  onTabChange,
+  initialSide = 'buy',
+  onSideChange,
+}: TradingPanelProps) {
   const priceInputId = useId();
 
   // ── Store reads ───────────────────────────────────────────────────────────
@@ -83,29 +77,16 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
   const symbol = useLayoutStore((s) => s.panes[s.activePane].symbol);
   const baseAsset = symbol.replace('USDT', '');
 
-  const lp0 = useStore(paneStores[0], (s) => s.latestPrice);
-  const lp1 = useStore(paneStores[1], (s) => s.latestPrice);
-  const lp2 = useStore(paneStores[2], (s) => s.latestPrice);
-  const lp3 = useStore(paneStores[3], (s) => s.latestPrice);
-  const latestPrice = [lp0, lp1, lp2, lp3][activePane];
-
-  const ic0 = useStore(paneStores[0], (s) => s.isConnected);
-  const ic1 = useStore(paneStores[1], (s) => s.isConnected);
-  const ic2 = useStore(paneStores[2], (s) => s.isConnected);
-  const ic3 = useStore(paneStores[3], (s) => s.isConnected);
-  const isConnected = [ic0, ic1, ic2, ic3][activePane];
+  const activePaneStore = paneStores[activePane];
+  // Always subscribe unconditionally so prices/spread/order-info are never
+  // blanked during the opacity/width fade-out animation on panel close.
+  const latestPrice = useStore(activePaneStore, (s) => s.latestPrice);
+  const isConnected = useStore(activePaneStore, (s) => s.isConnected);
   const isOnline = useOnlineStatus();
 
-  const bid0 = useStore(paneStores[0], (s) => s.bid);
-  const bid1 = useStore(paneStores[1], (s) => s.bid);
-  const bid2 = useStore(paneStores[2], (s) => s.bid);
-  const bid3 = useStore(paneStores[3], (s) => s.bid);
-  const ask0 = useStore(paneStores[0], (s) => s.ask);
-  const ask1 = useStore(paneStores[1], (s) => s.ask);
-  const ask2 = useStore(paneStores[2], (s) => s.ask);
-  const ask3 = useStore(paneStores[3], (s) => s.ask);
-  const bid = [bid0, bid1, bid2, bid3][activePane];
-  const ask = [ask0, ask1, ask2, ask3][activePane];
+  const bid = useStore(activePaneStore, (s) => s.bid);
+  const ask = useStore(activePaneStore, (s) => s.ask);
+
   const spread = bid != null && ask != null ? ask - bid : null;
 
   const balance = usePaperStore((s) => s.balance);
@@ -116,7 +97,7 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
   const sound = useTradingSoundCtx();
 
   // ── Local state ───────────────────────────────────────────────────────────
-  const [side, setSide] = useState<OrderSide>('buy');
+  const [side, setSide] = useState<OrderSide>(initialSide);
   const [tab, setTab] = useState<OrderTab>(initialTab);
   const [qtyMode, setQtyMode] = useState<QtyMode>('usd');
   const [qtyInput, setQtyInput] = useState('');
@@ -130,6 +111,10 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
   const [exitsOpen, setExitsOpen] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
   const [bypassWarning, setBypassWarning] = useState(false);
+  /** True when a blocking SL/TP sanity modal is waiting for user confirmation */
+  const [sltpConfirmPending, setSltpConfirmPending] = useState(false);
+  /** Set to true after user explicitly confirms a suspicious SL/TP — skips the gate next call */
+  const [sltpConfirmBypassed, setSltpConfirmBypassed] = useState(false);
   const executeAnim = useAnimation();
 
   // ── Derived values ────────────────────────────────────────────────────────
@@ -268,11 +253,33 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
     return `${sign}$${pnl.toFixed(2)} · ${sign}${pct.toFixed(2)}%`;
   }
 
+  // ── SL/TP sanity warnings ────────────────────────────────────────────────
+  const slWarnings = computeSLTPWarnings(
+    slEnabled ? parseFloat(slInput) : NaN,
+    execPrice ?? 0,
+    latestPrice ?? 0,
+    'SL'
+  );
+  const tpWarnings = computeSLTPWarnings(
+    tpEnabled ? parseFloat(tpInput) : NaN,
+    execPrice ?? 0,
+    latestPrice ?? 0,
+    'TP'
+  );
+  const hasSLTPWarning =
+    slWarnings.typoWarning !== null ||
+    slWarnings.largeDistanceWarning !== null ||
+    tpWarnings.typoWarning !== null ||
+    tpWarnings.largeDistanceWarning !== null;
+
   // ── Handlers ──────────────────────────────────────────────────────────────
   function handleSideChange(s: OrderSide) {
     setSide(s);
+    onSideChange?.(s);
     setFormError(null);
     setBypassWarning(false);
+    setSltpConfirmPending(false);
+    setSltpConfirmBypassed(false);
     // Reset typed price so the new default (bid for Buy, ask for Sell) takes over.
     setPriceInput('');
     setTpInput('');
@@ -284,6 +291,8 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
     onTabChange?.(t);
     setFormError(null);
     setBypassWarning(false);
+    setSltpConfirmPending(false);
+    setSltpConfirmBypassed(false);
     // Clear any manually typed price so displayPrice falls back to latestPrice
     // for the new tab — giving the user the current live price as the starting point.
     setPriceInput('');
@@ -370,6 +379,16 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
       setBypassWarning(true);
       return;
     }
+
+    // ── SL/TP sanity gate (Option B — blocking confirm modal) ────────────────
+    // If the SL or TP looks like a typo or is unusually far from entry, show a
+    // confirmation modal before proceeding. The user must explicitly click
+    // "Confirm anyway" to bypass — a second accidental click isn't enough.
+    if (hasSLTPWarning && !sltpConfirmBypassed) {
+      setSltpConfirmPending(true);
+      return;
+    }
+
     const v = validate();
     if (!v || !execPrice) return;
 
@@ -396,6 +415,8 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
     setTpEnabled(false);
     setSlEnabled(false);
     setBypassWarning(false);
+    setSltpConfirmPending(false);
+    setSltpConfirmBypassed(false);
     void executeAnim.start({ scale: [1, 1.04, 1], transition: { duration: 0.3, ease: 'easeOut' } });
   }
 
@@ -547,28 +568,19 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
               >
                 Price
               </label>
-              <div className="relative">
-                <input
-                  id={priceInputId}
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={displayPrice}
-                  onChange={(e) => {
-                    setPriceInput(e.target.value);
-                    setFormError(null);
-                  }}
-                  placeholder="0.00"
-                  className="w-full rounded-md border border-white/8 px-2.5 py-1.5 pr-14 text-xs text-white transition-colors focus:outline-none focus:border-brand-purple-dark/50"
-                  style={{ background: bg.surface, fontSize: fontSize.xs }}
-                />
-                <span
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 font-semibold"
-                  style={{ fontSize: fontSize.xs10, color: color.muted }}
-                >
-                  USDT
-                </span>
-              </div>
+              <NumericInput
+                id={priceInputId}
+                ariaLabel="Order price"
+                testId="trading-price-input"
+                suffix="USDT"
+                step={0.01}
+                min={0}
+                value={displayPrice}
+                onChange={(e) => {
+                  setPriceInput(e.target.value);
+                  setFormError(null);
+                }}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -576,12 +588,9 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
         {/* Quantity input with Units ↔ USD swap */}
         <div>
           <div className="mb-1 flex items-center justify-between">
-            <span
-              className="font-semibold uppercase tracking-wider"
-              style={{ fontSize: fontSize.xs10, color: color.muted }}
-            >
+            <FieldLabel>
               {qtyMode === 'usd' ? 'Amount (USD)' : `Quantity (${baseAsset})`}
-            </span>
+            </FieldLabel>
             <button
               onClick={handleSwapQtyMode}
               className="flex items-center gap-1 rounded px-1 py-0.5 transition-colors hover:text-white"
@@ -593,29 +602,21 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
             </button>
           </div>
 
-          <div className="relative">
-            <input
-              id="trading-qty"
-              name="qty"
-              type="number"
-              min="0"
-              step={qtyMode === 'usd' ? '0.01' : '0.000001'}
-              value={qtyInput}
-              onChange={(e) => {
-                setQtyInput(e.target.value);
-                setFormError(null);
-              }}
-              placeholder={qtyMode === 'usd' ? '0.00' : '0.000000'}
-              className="w-full rounded-md border border-white/8 px-2.5 py-1.5 pr-14 text-xs text-white transition-colors focus:outline-none focus:border-brand-purple-dark/50"
-              style={{ background: bg.surface, fontSize: fontSize.xs }}
-            />
-            <span
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 font-semibold"
-              style={{ fontSize: fontSize.xs10, color: color.muted }}
-            >
-              {qtyMode === 'usd' ? 'USD' : baseAsset}
-            </span>
-          </div>
+          <NumericInput
+            id="trading-qty"
+            name="qty"
+            ariaLabel="Order amount"
+            testId="trading-qty-input"
+            step={qtyMode === 'usd' ? '0.01' : '0.000001'}
+            min={0}
+            value={qtyInput}
+            placeholder={qtyMode === 'usd' ? '0.00' : '0.000000'}
+            suffix={qtyMode === 'usd' ? 'USD' : baseAsset}
+            onChange={(e) => {
+              setQtyInput(e.target.value);
+              setFormError(null);
+            }}
+          />
 
           {/* Equivalent display */}
           {equivalent && (
@@ -667,6 +668,7 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
                     <div className="flex items-center gap-2">
                       <Toggle
                         checked={tpEnabled}
+                        label="Enable take profit"
                         onChange={(v) => {
                           setTpEnabled(v);
                           if (!v) setTpInput('');
@@ -678,27 +680,21 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
                       </span>
                     </div>
                     {tpEnabled && (
-                      <div className="relative">
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={tpInput}
-                          onChange={(e) => {
-                            setTpInput(e.target.value);
-                            setFormError(null);
-                          }}
-                          placeholder="0.00"
-                          className="w-full rounded-md border border-white/8 px-2.5 py-1.5 pr-12 text-xs text-white transition-colors focus:outline-none"
-                          style={{ background: bg.surface, borderColor: `${color.green}60` }}
-                        />
-                        <span
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 font-semibold"
-                          style={{ fontSize: fontSize.xs10, color: `${color.green}b3` }}
-                        >
-                          TP
-                        </span>
-                      </div>
+                      <NumericInput
+                        ariaLabel="Take profit price"
+                        testId="trading-tp-input"
+                        suffix="TP"
+                        suffixColor={`${color.green}b3`}
+                        borderColor={`${color.green}60`}
+                        suffixPadding="pr-12"
+                        step={0.01}
+                        min={0}
+                        value={tpInput}
+                        onChange={(e) => {
+                          setTpInput(e.target.value);
+                          setFormError(null);
+                        }}
+                      />
                     )}
                     <AnimatePresence initial={false}>
                       {tpPnl !== null && (
@@ -725,6 +721,7 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
                     <div className="flex items-center gap-2">
                       <Toggle
                         checked={slEnabled}
+                        label="Enable stop loss"
                         onChange={(v) => {
                           setSlEnabled(v);
                           if (!v) setSlInput('');
@@ -736,27 +733,21 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
                       </span>
                     </div>
                     {slEnabled && (
-                      <div className="relative">
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={slInput}
-                          onChange={(e) => {
-                            setSlInput(e.target.value);
-                            setFormError(null);
-                          }}
-                          placeholder="0.00"
-                          className="w-full rounded-md border border-white/8 px-2.5 py-1.5 pr-12 text-xs text-white transition-colors focus:outline-none"
-                          style={{ background: bg.surface, borderColor: `${color.red}60` }}
-                        />
-                        <span
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 font-semibold"
-                          style={{ fontSize: fontSize.xs10, color: `${color.red}b3` }}
-                        >
-                          SL
-                        </span>
-                      </div>
+                      <NumericInput
+                        ariaLabel="Stop loss price"
+                        testId="trading-sl-input"
+                        suffix="SL"
+                        suffixColor={`${color.red}b3`}
+                        borderColor={`${color.red}60`}
+                        suffixPadding="pr-12"
+                        step={0.01}
+                        min={0}
+                        value={slInput}
+                        onChange={(e) => {
+                          setSlInput(e.target.value);
+                          setFormError(null);
+                        }}
+                      />
                     )}
                     <AnimatePresence initial={false}>
                       {slPnl !== null && (
@@ -785,12 +776,9 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
 
         {/* ── Order Info ───────────────────────────────────────────────── */}
         <div className="rounded-md border border-white/6 p-2.5" style={{ background: bg.page }}>
-          <p
-            className="mb-2 font-semibold uppercase tracking-wider"
-            style={{ fontSize: fontSize.xs10, color: color.muted }}
-          >
+          <FieldLabel as="p" className="mb-2">
             Order info
-          </p>
+          </FieldLabel>
 
           {/* Margin row + progress bar */}
           <div className="mb-2">
@@ -883,6 +871,119 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
           )}
         </AnimatePresence>
 
+        {/* ── SL / TP sanity confirm modal (Option B — blocking) ───────── */}
+        <AnimatePresence>
+          {sltpConfirmPending && (
+            <motion.div
+              key="sl-confirm-modal"
+              data-testid="sl-confirm-modal"
+              initial={{ opacity: 0, y: -4, height: 0 }}
+              animate={{ opacity: 1, y: 0, height: 'auto' }}
+              exit={{ opacity: 0, y: -4, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden rounded-md border px-2.5 py-2.5"
+              style={{ borderColor: '#f59e0b88', background: '#f59e0b15' }}
+            >
+              <div className="flex items-start gap-1.5">
+                <AlertTriangle
+                  className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                  style={{ color: '#f59e0b' }}
+                />
+                <div className="flex flex-col gap-1.5 w-full">
+                  <p
+                    className="font-semibold"
+                    style={{ fontSize: fontSize.xs10, color: '#fcd34d', lineHeight: 1.4 }}
+                  >
+                    ⚠ Suspicious SL/TP value detected
+                  </p>
+
+                  {slWarnings.typoWarning && (
+                    <p style={{ fontSize: fontSize.xs10, color: '#fcd34d99', lineHeight: 1.4 }}>
+                      {slWarnings.typoWarning}
+                    </p>
+                  )}
+                  {slWarnings.largeDistanceWarning && (
+                    <p style={{ fontSize: fontSize.xs10, color: '#fcd34d99', lineHeight: 1.4 }}>
+                      {slWarnings.largeDistanceWarning}
+                    </p>
+                  )}
+                  {tpWarnings.typoWarning && (
+                    <p style={{ fontSize: fontSize.xs10, color: '#fcd34d99', lineHeight: 1.4 }}>
+                      {tpWarnings.typoWarning}
+                    </p>
+                  )}
+                  {tpWarnings.largeDistanceWarning && (
+                    <p style={{ fontSize: fontSize.xs10, color: '#fcd34d99', lineHeight: 1.4 }}>
+                      {tpWarnings.largeDistanceWarning}
+                    </p>
+                  )}
+
+                  <div className="flex gap-2 mt-1">
+                    <button
+                      onClick={() => {
+                        setSltpConfirmPending(false);
+                        setSltpConfirmBypassed(false);
+                      }}
+                      className="flex-1 rounded py-1 text-xs font-semibold transition-colors hover:opacity-80"
+                      style={{
+                        background: `${color.muted}33`,
+                        color: color.muted,
+                        fontSize: fontSize.xs10,
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      data-testid="sl-confirm-anyway"
+                      onClick={() => {
+                        setSltpConfirmPending(false);
+                        setSltpConfirmBypassed(true);
+                        // Re-run execute immediately — sltpConfirmBypassed is set above so
+                        // the gate will be skipped. We call validate + submit inline rather
+                        // than relying on state to flush, to avoid an extra render cycle.
+                        const v = validate();
+                        if (!v || !execPrice) return;
+                        const id =
+                          tab === 'market'
+                            ? placeOrder(symbol, side, execPrice, v.amount, v.tp, v.sl)
+                            : tab === 'limit'
+                              ? placeLimitOrder(symbol, side, execPrice, v.amount, v.tp, v.sl)
+                              : placeStopOrder(symbol, side, execPrice, v.amount, v.tp, v.sl);
+                        if (!id) {
+                          setFormError('Order could not be placed');
+                          return;
+                        }
+                        if (tab === 'market') sound.playOrderPlaced();
+                        else sound.playOrderQueued();
+                        setQtyInput('');
+                        setPriceInput('');
+                        setTpInput('');
+                        setSlInput('');
+                        setTpEnabled(false);
+                        setSlEnabled(false);
+                        setBypassWarning(false);
+                        setSltpConfirmBypassed(false);
+                        void executeAnim.start({
+                          scale: [1, 1.04, 1],
+                          transition: { duration: 0.3, ease: 'easeOut' },
+                        });
+                      }}
+                      className="flex-1 rounded py-1 text-xs font-semibold transition-colors hover:opacity-80"
+                      style={{
+                        background: '#f59e0b33',
+                        color: '#fcd34d',
+                        fontSize: fontSize.xs10,
+                      }}
+                    >
+                      Confirm SL/TP anyway
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* ── Form error ───────────────────────────────────────────────── */}
         <AnimatePresence>
           {formError && (
@@ -904,6 +1005,7 @@ export function TradingPanel({ onClose, initialTab = 'market', onTabChange }: Tr
         <motion.button
           onClick={handleExecute}
           animate={executeAnim}
+          aria-label={`Execute ${isBuy ? 'buy' : 'sell'} ${tab} order`}
           disabled={
             !latestPrice ||
             !qtyInput ||
