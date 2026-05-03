@@ -28,18 +28,41 @@ export function SoundSettings() {
   const [popoverStyle, setPopoverStyle] = useState<CSSProperties>({});
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number | null>(null);
+  const lastAnchorRef = useRef<{ right: number; bottom: number } | null>(null);
 
   // Position popover above the trigger button using fixed coords so it escapes overflow:hidden parents
   const updatePosition = useCallback(() => {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
-    setPopoverStyle({
-      position: 'fixed',
+    const nextAnchor = {
       right: window.innerWidth - rect.right,
       bottom: window.innerHeight - rect.top + 8,
+    };
+    const prevAnchor = lastAnchorRef.current;
+    if (
+      prevAnchor &&
+      Math.abs(prevAnchor.right - nextAnchor.right) < 0.5 &&
+      Math.abs(prevAnchor.bottom - nextAnchor.bottom) < 0.5
+    ) {
+      return;
+    }
+    lastAnchorRef.current = nextAnchor;
+    setPopoverStyle({
+      position: 'fixed',
+      right: nextAnchor.right,
+      bottom: nextAnchor.bottom,
       zIndex: 9999,
     });
   }, []);
+
+  const schedulePositionUpdate = useCallback(() => {
+    if (rafRef.current !== null) return;
+    rafRef.current = window.requestAnimationFrame(() => {
+      rafRef.current = null;
+      updatePosition();
+    });
+  }, [updatePosition]);
 
   const handleOpen = () => {
     updatePosition();
@@ -67,22 +90,28 @@ export function SoundSettings() {
   useEffect(() => {
     if (!open) return;
 
-    const onReposition = () => updatePosition();
+    const onReposition = () => schedulePositionUpdate();
     window.addEventListener('resize', onReposition);
     // Capture scroll events from nested scroll containers too.
     window.addEventListener('scroll', onReposition, true);
 
     const triggerEl = triggerRef.current;
     const observer =
-      triggerEl && 'ResizeObserver' in window ? new ResizeObserver(() => updatePosition()) : null;
+      triggerEl && 'ResizeObserver' in window
+        ? new ResizeObserver(() => schedulePositionUpdate())
+        : null;
     if (triggerEl && observer) observer.observe(triggerEl);
 
     return () => {
       window.removeEventListener('resize', onReposition);
       window.removeEventListener('scroll', onReposition, true);
+      if (rafRef.current !== null) {
+        window.cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
       observer?.disconnect();
     };
-  }, [open, updatePosition]);
+  }, [open, schedulePositionUpdate]);
 
   const vol = sound.volume;
 

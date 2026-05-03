@@ -6,7 +6,7 @@
  *   - Large-distance guard: |entry − sl| / entry > SL_MAX_DISTANCE (SL only)
  *   - Well-formed inputs: both warnings null
  *   - Short position variants
- *   - Invalid inputs: null returned, no crash
+ *   - Invalid inputs: object returned with null fields, no crash
  *
  * Root cause test: the 4.18 incident involved BTC live price ~78 000 and a
  * manually entered SL of 7 800 (order-of-magnitude typo). This test suite
@@ -15,6 +15,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { computeSLTPWarnings, TYPO_DEVIATION_THRESHOLD, SL_MAX_DISTANCE } from '../sltpSanity';
+import { fmtMktPrice } from '../utils';
 
 // ─── Constants sanity check ───────────────────────────────────────────────────
 
@@ -37,8 +38,9 @@ describe('computeSLTPWarnings() — typo guard (SL field)', () => {
   it('4.18 incident: SL = 7800 on BTC at 78000 → typoWarning non-null', () => {
     const result = computeSLTPWarnings(7_800, EXEC, LIVE, 'SL');
     expect(result.typoWarning).not.toBeNull();
-    expect(result.typoWarning).toContain('7,800');
-    expect(result.typoWarning).toContain('78,000');
+    expect(result.typoWarning).toContain('looks like a typo');
+    expect(result.typoWarning).toContain(`$${fmtMktPrice(7_800)}`);
+    expect(result.typoWarning).toContain(`$${fmtMktPrice(78_000)}`);
   });
 
   it('BTC SL at one-tenth of price → typoWarning non-null', () => {

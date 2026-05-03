@@ -1,3 +1,5 @@
+import { fmtMktPrice } from './utils';
+
 /**
  * sltpSanity.ts
  *
@@ -74,10 +76,12 @@ export function computeSLTPWarnings(
   // ── Typo guard ──────────────────────────────────────────────────────────────
   // Flag when the entered value deviates from the live price by more than
   // TYPO_DEVIATION_THRESHOLD (e.g. 7800 vs 78000 → 90% deviation → typo).
+  const valueText = fmtMktPrice(value);
+  const livePriceText = fmtMktPrice(livePrice);
   const typoDeviation = Math.abs(value - livePrice) / livePrice;
   const typoWarning =
     typoDeviation > TYPO_DEVIATION_THRESHOLD
-      ? `${field} price $${value.toLocaleString()} looks like a typo — it deviates ${(typoDeviation * 100).toFixed(0)}% from the live price ($${livePrice.toLocaleString()}). Did you mean a price closer to $${livePrice.toLocaleString()}?`
+      ? `${field} price $${valueText} looks like a typo — it deviates ${(typoDeviation * 100).toFixed(0)}% from the live price ($${livePriceText}). Did you mean a price closer to $${livePriceText}?`
       : null;
 
   // ── Large-distance guard ─────────────────────────────────────────────────────
@@ -88,7 +92,7 @@ export function computeSLTPWarnings(
       ? (() => {
           const distance = Math.abs(execPrice - value) / execPrice;
           return distance > SL_MAX_DISTANCE
-            ? `${field} is ${(distance * 100).toFixed(1)}% away from your entry price ($${execPrice.toLocaleString()}), which is beyond the recommended ${(SL_MAX_DISTANCE * 100).toFixed(0)}% limit. Confirm you intend this large a risk stop.`
+            ? `${field} is ${(distance * 100).toFixed(1)}% away from your entry price ($${fmtMktPrice(execPrice)}), which is beyond the recommended ${(SL_MAX_DISTANCE * 100).toFixed(0)}% limit. Confirm you intend this large a risk stop.`
             : null;
         })()
       : null;
