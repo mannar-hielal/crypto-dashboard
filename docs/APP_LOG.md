@@ -191,7 +191,7 @@ Tab badge counts: purple pill for Positions count, amber pill for Orders count (
 
 - **⚙️ button → Account Settings modal** ✅:
   - Read-only account name field (shows `useAuthStore` username)
-  - **Leverage · Crypto** — interactive 12-button selector (1× · 2× · 3× · 5× · 10× · 15× · 20× · 25× · 50× · 75× · 100× · 125×, Bybit style); amber badge shows current multiplier; warning shown when > 25×. Persisted to `paperStore.leverage` on Save.
+  - **Leverage · Crypto** — interactive **5-button selector** (`1×` · `2×` · `3×` · `5×` · `10×`); **max 10× cap** (learning-app safety); amber badge shows current multiplier. Persisted to `paperStore.leverage` on Save.
   - Commission: `0.07%` (0.0007) Fixed · Taker · Display only (read-only)
   - Footer: "Reset account" (2-click confirm, 3 s auto-cancel, closes modal on confirm) + **"Save"** (enabled — commits `draftLeverage` to `paperStore.leverage`)
   - Backdrop click or ✕ dismisses; confirming-reset state cleared on dismiss
@@ -774,7 +774,7 @@ Paper trading  →  Real order      →  Proven bot      →  Full autonomous
 | Bybit API outage mid-trade              | 🟡 Medium   | Bot pauses; open positions monitored via polling; user alerted      |
 | Phase 6 bot not actually proven         | 🟡 Medium   | Minimum paper period enforced in code before upgrade is offered     |
 
-_Last updated: 2026-05-02 (consistency sweep — panel renamed to "Order & Account Management" in docs; review fixes + form-state preserve logged)_
+_Last updated: 2026-05-04 (TRADING_TEST_PLAN terminology alignment: SELL/BUY wording pass + parity notes consistency)_
 
 - **feat: edit panels for open positions and pending orders (26.04.2026)**
   - **`paperStore.ts`** — two new store actions:
@@ -1217,3 +1217,142 @@ The helper and test file introduced in the 4.18 safety-hardening fix were rename
   - `handlePanelHandlePointerUp`: extracts committed height into `const committed = Math.round(panelHeightMV.get())`, passes it to both `setPanelHeightPx(committed)` and `setBottomPanelHeight(committed)`.
 
 **Result:** Drag the handle, refresh — panel reopens at exactly where it was left. 340/340 tests green (no test changes needed — no new user-visible branch, store change is additive).
+
+---
+
+### docs: TRADING_TEST_PLAN SELL/BUY terminology alignment (03.05.2026) ✅
+
+- Updated `docs/TRADING_TEST_PLAN.md` wording to prioritize **user-facing** labels (`Sell` / `Buy`, `TV SELL` / `TV BUY`) in test execution steps and expectations.
+- Kept technical `bid`/`ask` terms only where they are explicitly helpful (quote mapping notes and spread tooltip context), so testers can match on-screen labels without losing precision.
+- Key sections aligned:
+  - **Dual-platform setup** + **Setup checklist** tolerance/parity language
+  - **Section 6** price-parity wording (`Sell/Buy` vs TradingView `SELL/BUY` at same timestamp)
+  - **Section 9** renamed to `Sell/Buy Prices & Spread in TradingPanel` with row wording updated to on-screen labels
+  - Minor consistency updates in regression notes where wording previously led with `bid/ask`
+- Scope: **documentation only** (no runtime logic change, no API/store changes, no behavior change).
+
+---
+
+### feat: cap leverage at 10× for learning-app safety (04.05.2026) ✅
+
+- **`paperStore.ts`**
+  - Added `export const MAX_LEVERAGE = 10` constant.
+  - `CRYPTO_LEVERAGE_OPTIONS` trimmed from `[1,2,3,5,10,15,20,25,50,75,100,125]` → `[1,2,3,5,10]`; `CryptoLeverage` union type updated automatically.
+  - Persist version bumped `1` → `2`; new `v1 → v2` migration clamps any stored `leverage > 10` to `Math.min(leverage, MAX_LEVERAGE)` on hydration — old snapshots with high leverage are silently corrected without data loss.
+- **`OrderAccountManagementPanel.tsx`**
+  - Button grid changed from 12-button `grid-cols-6` to 5-button `grid-cols-5`.
+  - Removed the `draftLeverage > 25` high-leverage warning block (unreachable with the new cap).
+- **`docs/TRADING_TEST_PLAN.md`** — row 8.3 updated to describe the 5-button selector with max 10×; row 8.5 rewritten to test leverage button selection (old "Save disabled" assertion no longer applies).
+- **`docs/APP_LOG.md`** — Design Agreements updated to reflect the 5-button selector and 10× cap.
+
+---
+
+### fix: code-review hardening — leverage validation & test-plan corrections (04.05.2026) ✅
+
+Four issues surfaced in a Copilot PR review and are now resolved.
+
+#### `apps/client/src/store/paperStore.ts`
+
+- **`CRYPTO_LEVERAGE_OPTIONS` single source of truth** — last element changed from the hardcoded literal `10` to `MAX_LEVERAGE`. If `MAX_LEVERAGE` is ever updated the options array updates automatically, eliminating the risk of the cap and the selector drifting apart.
+- **`setLeverage` runtime cap** — `setLeverage: (v) => set({ leverage: v })` replaced with a guarded version that clamps the incoming value to `[1, MAX_LEVERAGE]` and rejects non-finite inputs (`NaN`, `Infinity`, negative). The cap can no longer be bypassed via direct store calls at runtime.
+- **v1→v2 migration defensive validation** — the previous migration used `...p` spread, which silently preserved any corrupted field from the stored snapshot (e.g. `balance: -Infinity`, `positions: "broken"`). Replaced with the same field-by-field defensive validation pattern already used in the v0→v1 path:
+  - `balance` — validated `>= 0` finite number; falls back to `STARTING_BALANCE`.
+  - `positions` / `history` — filtered through `isPositionSnapshot` / `isClosedTradeSnapshot` guards.
+  - `pendingOrders` / `orders` / `balanceLog` / `journal` — Array check; falls back to `[]`.
+  - `realizedPnl` — `Number.isFinite` guard; falls back to `0`.
+  - `leverage` — `Number.isFinite && >= 1` guard + `Math.min(round(v), MAX_LEVERAGE)` clamp; falls back to `1`. Prevents 0, negative, NaN, and Infinity from corrupted snapshots reaching qty calculations.
+
+#### `docs/TRADING_TEST_PLAN.md`
+
+- **Section 2.1 table malformed** — a stray `1.1.2` row from Section 1.1 had leaked into the Section 2.1 table as its header row, making the separator row (`| ----- | ...`) be treated as the first data row. Removed the stray row and added the correct `| # | Action | Expected | Status | TV ✓ | Tier | Notes |` header.
+- **Section 2.1.5 tolerance `$1` → `$5`** — the "Within $1" claim in the Notes column and the `TV cross-check 2.1.5` callout were internally inconsistent with the example values shown ($77,673.8 vs $77,677.4 ≈ $3.6 apart). Updated to `Within $5` / `within $5` to match the observed data.
+
+---
+
+## 🔭 Future Release Ideas
+
+### idea: ATM-style bracket strategies (Pro tier) — research (04.05.2026) ⬜
+
+> **Status: research only — no implementation planned yet. Revisit when subscription tiers are defined.**
+
+#### Background
+
+NinjaTrader's ATM (Advanced Trade Management) is a bracket-template system. Before entry the user selects a named strategy; the moment the fill happens, the full exit plan (multiple profit targets + stop management) fires automatically.
+
+#### What CryptoDash currently has vs. ATM
+
+| Feature                             | CryptoDash now                                 |
+| ----------------------------------- | ---------------------------------------------- |
+| Single TP per position              | ✅ `position.takeProfit`                       |
+| Single SL per position              | ✅ `position.stopLoss`                         |
+| OCO sibling-cancel when TP/SL hits  | ✅ `closePosition` + `siblingCancelOrders`     |
+| Full 100% close when TP/SL triggers | ✅ `useTPSLMonitor`                            |
+| Partial close (netting path)        | ✅ exists when user places opposite-side order |
+| Multiple profit targets             | ❌ `Position` holds only one `takeProfit`      |
+| Trailing stop                       | ❌ not supported                               |
+| Auto Break-Even (ABE)               | ❌ not supported                               |
+| Named strategy templates            | ❌ not supported                               |
+| Scale-out by qty per target         | ❌ not supported                               |
+
+#### Proposed scoped version for a future Pro tier
+
+1. **Multiple profit targets (up to 3)** — replace `takeProfit?: number` on `Position` with `targets: { price: number; pct: number }[]`; `useTPSLMonitor` evaluates each target independently and calls a partial close for each hit.
+2. **Auto Break-Even (ABE)** — simple toggle on `Position`: after TP1 fires, stop auto-moves to `entryPrice + offset` (one-shot, then removes itself). Teaches the "risk-free trade" concept visually.
+3. **Named strategy templates** — a separate `strategyTemplatesStore` (Zustand + persist, key `cd-strategy-templates`); does NOT reset when the paper account resets. Stores named sets of targets + SL + ABE toggle. Template selector dropdown in `TradingPanel` pre-fills the exit section.
+
+#### Explicitly out of scope (defer or skip)
+
+- Trailing stop — complex monitor math, defer to a later iteration.
+- NinjaTrader tick/contract quantity model — not applicable; CryptoDash is USDT-denominated.
+- ATM strategy nesting / parent-child inheritance — too complex for a learning-app context.
+
+#### Open questions before planning
+
+1. **Tier model** — Free / Pro / Pro+? Does this feature define the first paid tier?
+2. **Max targets** — 3 enough, or N?
+3. **Trailing stop** — same tier as ABE, or later?
+
+---
+
+### idea: real Bybit account integration (live trading milestone) — research (04.05.2026) ⬜
+
+> **Status: research only — no implementation planned yet. Prerequisite: subscription/tier model must be in place first.**
+
+#### What this milestone is
+
+Allow users to connect their own Bybit API key and place **real orders with real money** directly from CryptoDash, using the same TradingPanel UI they already know from paper trading.
+
+#### Required features (all must ship together as an atomic milestone)
+
+| Feature                                             | Notes                                                                                                                                                                        |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **API key management**                              | Encrypted storage server-side (never in `localStorage`); user can add/revoke keys; scoped to `order` + `position` permissions only — no withdrawal permission ever requested |
+| **Bybit REST API — place / cancel real orders**     | `POST /v5/order/create`, `POST /v5/order/cancel`; map to existing `placeOrder` / `cancelPendingOrder` abstractions                                                           |
+| **Bybit WebSocket — live position & order updates** | `private` channel: `order`, `position`, `execution`; replaces `paperStore` state for live mode                                                                               |
+| **Separate live-mode state**                        | A new `liveStore` (or adapter layer) isolated from `paperStore` — paper and live accounts must never mix                                                                     |
+| **Real balance feed**                               | Bybit `wallet` WebSocket channel; replaces the paper `$10,000` starting balance                                                                                              |
+| **Real commission tiers**                           | Maker/taker rates from user's Bybit VIP level, not the fixed `0.07%` paper rate                                                                                              |
+| **Order book (depth ladder)**                       | See section below — becomes essential for real trading; tied to this milestone                                                                                               |
+| **Risk warnings & real-money disclaimers**          | Legal requirement before any real order can be placed; modal confirmation on first live order                                                                                |
+| **"Live mode" indicator**                           | Persistent badge in the UI so the user always knows they are in live mode, not paper mode                                                                                    |
+
+#### Order book — dependency of this milestone
+
+The order book is **not needed for paper trading** (fills are instant, no real liquidity), but becomes **essential for live trading**:
+
+- **Slippage visibility** — market orders fill through multiple price levels; depth shows the effective fill price before submission.
+- **Limit order placement** — users need to see stacked bids/asks to decide where to place TP/SL levels intelligently.
+- **Spread at size** — the current SELL/BUY widget shows top-of-book only; real orders larger than the top-of-book quantity face a wider effective spread.
+- **Stop-hunt zones** — thin areas in the book show where price is likely to spike and reverse; core educational value for real trading.
+
+**Implementation notes when the time comes:**
+
+- Bybit WebSocket topic: `orderbook.50.{symbol}` (50 levels) — sufficient for display; `orderbook.200` for deeper analysis.
+- Render as a depth ladder (price levels + cumulative volume bars) in a resizable panel, consistent with the existing panel system.
+- Add to `BybitWebSocketManager` as an opt-in subscription (only active in live mode or when the panel is visible) to avoid unnecessary bandwidth.
+
+#### Open questions before planning
+
+1. **API key security** — server-side encrypted storage (AES-256 + user-specific key derived from JWT) vs. user-managed (user stores key themselves, enters on each session)?
+2. **Scope of live mode** — full parity with paper (all order types) on day 1, or market orders only to start?
+3. **Paper + live simultaneously** — can a user run both accounts side-by-side (split panels), or is it one mode at a time?
