@@ -774,7 +774,7 @@ Paper trading  →  Real order      →  Proven bot      →  Full autonomous
 | Bybit API outage mid-trade              | 🟡 Medium   | Bot pauses; open positions monitored via polling; user alerted      |
 | Phase 6 bot not actually proven         | 🟡 Medium   | Minimum paper period enforced in code before upgrade is offered     |
 
-_Last updated: 2026-05-03 (TRADING_TEST_PLAN terminology alignment: SELL/BUY wording pass + parity notes consistency)_
+_Last updated: 2026-05-04 (TRADING_TEST_PLAN terminology alignment: SELL/BUY wording pass + parity notes consistency)_
 
 - **feat: edit panels for open positions and pending orders (26.04.2026)**
   - **`paperStore.ts`** — two new store actions:

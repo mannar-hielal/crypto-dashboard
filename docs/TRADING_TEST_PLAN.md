@@ -148,10 +148,10 @@
 
 ### 2.2 Limit Buy cancel
 
-| #     | Action                                        | Expected                                                                                                   | Status | Tier        | Notes                                                 |
-| ----- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------ | ----------- | ----------------------------------------------------- |
-| 2.2.1 | Place limit buy far below market (live − 10%) | Order in **Working**; badge shows 1; **Journal shows `"Placed LIMIT Long …`**                              | ✅     | T1+T2       | T1: pendingOrders + journal. T2: badge + Working row. |
-| 2.2.2 | Click **✕** cancel in Working sub-tab         | Order moves to **Cancelled**; balance fully refunded; badge disappears; **Journal shows cancel + refund`** | ✅     | T1 · Vitest | Refund, order array, journal entry all verified.      |
+| #     | Action                                        | Expected                                                                                                  | Status | Tier        | Notes                                                 |
+| ----- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------ | ----------- | ----------------------------------------------------- |
+| 2.2.1 | Place limit buy far below market (live − 10%) | Order in **Working**; badge shows 1; **Journal shows `"Placed LIMIT Long …`**                             | ✅     | T1+T2       | T1: pendingOrders + journal. T2: badge + Working row. |
+| 2.2.2 | Click **✕** cancel in Working sub-tab         | Order moves to **Cancelled**; balance fully refunded; badge disappears; **Journal shows cancel + refund** | ✅     | T1 · Vitest | Refund, order array, journal entry all verified.      |
 
 ### 2.3 Limit Sell above market
 
@@ -164,7 +164,7 @@
 
 | #     | Action                                                                                      | Expected                                                                                                                              | Status | TV ✓ | Tier        | Notes                                                                              |
 | ----- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------ | ---- | ----------- | ---------------------------------------------------------------------------------- |
-| 2.4.1 | Limit buy $300 at live−1%, TP = live+3%, SL = live−4%                                       | 3-row bracket: parent LIMIT BUY (Working) + TP (Inactive) + SL (Inactive). Journal: `"Placed LIMIT ...`\*\*                           | ✅     |      | T1 · Vitest | Working = 1 / Inactive = 2. Journal on placement (intentional divergence from TV). |
+| 2.4.1 | Limit buy $300 at live−1%, TP = live+3%, SL = live−4%                                       | 3-row bracket: parent LIMIT BUY (Working) + TP (Inactive) + SL (Inactive). Journal: `"Placed LIMIT …"`                                | ✅     |      | T1 · Vitest | Working = 1 / Inactive = 2. Journal on placement (intentional divergence from TV). |
 | 2.4.2 | Cancel the **SL** inactive child leg (✕ on SL row) while limit is still pending             | SL row gone. **Order History → Cancelled** gains 1 row (Stop Loss). **Journal**: cancel entry. Balance unchanged.                     | ✅     | ✅   | T1 · Vitest | `cancelPendingExitLeg`. When limit fills, position opens with TP only.             |
 | 2.4.3 | Cancel the **TP** inactive child leg (✕ on TP row) while limit is still pending             | TP row gone. **Order History → Cancelled** gains 1 row (Take Profit). **Journal**: cancel entry. Balance unchanged.                   | ✅     |      | T1 · Vitest | `cancelPendingExitLeg`. When limit fills, position opens with SL only.             |
 | 2.4.4 | Cancel the **parent** limit order (✕ on Working parent row) while both TP + SL are inactive | All 3 rows move to Cancelled. **Order History → Cancelled** gains 3 rows. **Journal**: cancel + refund entry. Balance fully refunded. | ✅     | ✅   | T1 · Vitest | `cancelPendingOrder`. Builds child cancel records. Only parent margin refunded.    |
