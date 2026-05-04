@@ -774,7 +774,7 @@ Paper trading  →  Real order      →  Proven bot      →  Full autonomous
 | Bybit API outage mid-trade              | 🟡 Medium   | Bot pauses; open positions monitored via polling; user alerted      |
 | Phase 6 bot not actually proven         | 🟡 Medium   | Minimum paper period enforced in code before upgrade is offered     |
 
-_Last updated: 2026-05-02 (consistency sweep — panel renamed to "Order & Account Management" in docs; review fixes + form-state preserve logged)_
+_Last updated: 2026-05-03 (TRADING_TEST_PLAN terminology alignment: SELL/BUY wording pass + parity notes consistency)_
 
 - **feat: edit panels for open positions and pending orders (26.04.2026)**
   - **`paperStore.ts`** — two new store actions:
@@ -1217,3 +1217,16 @@ The helper and test file introduced in the 4.18 safety-hardening fix were rename
   - `handlePanelHandlePointerUp`: extracts committed height into `const committed = Math.round(panelHeightMV.get())`, passes it to both `setPanelHeightPx(committed)` and `setBottomPanelHeight(committed)`.
 
 **Result:** Drag the handle, refresh — panel reopens at exactly where it was left. 340/340 tests green (no test changes needed — no new user-visible branch, store change is additive).
+
+---
+
+### docs: TRADING_TEST_PLAN SELL/BUY terminology alignment (03.05.2026) ✅
+
+- Updated `docs/TRADING_TEST_PLAN.md` wording to prioritize **user-facing** labels (`Sell` / `Buy`, `TV SELL` / `TV BUY`) in test execution steps and expectations.
+- Kept technical `bid`/`ask` terms only where they are explicitly helpful (quote mapping notes and spread tooltip context), so testers can match on-screen labels without losing precision.
+- Key sections aligned:
+  - **Dual-platform setup** + **Setup checklist** tolerance/parity language
+  - **Section 6** price-parity wording (`Sell/Buy` vs TradingView `SELL/BUY` at same timestamp)
+  - **Section 9** renamed to `Sell/Buy Prices & Spread in TradingPanel` with row wording updated to on-screen labels
+  - Minor consistency updates in regression notes where wording previously led with `bid/ask`
+- Scope: **documentation only** (no runtime logic change, no API/store changes, no behavior change).
