@@ -774,7 +774,17 @@ Paper trading  →  Real order      →  Proven bot      →  Full autonomous
 | Bybit API outage mid-trade              | 🟡 Medium   | Bot pauses; open positions monitored via polling; user alerted      |
 | Phase 6 bot not actually proven         | 🟡 Medium   | Minimum paper period enforced in code before upgrade is offered     |
 
-_Last updated: 2026-05-04 (TRADING_TEST_PLAN terminology alignment: SELL/BUY wording pass + parity notes consistency)_
+_Last updated: 2026-05-04 (under construction page + deployment to cryptopapertrade.com)_
+
+- **Public URL**: **https://cryptopapertrade.com/** (Cloudflare Pages, custom domain, production)
+  - API: `https://api.cryptopapertrade.com` → `crypto-dashboard-api.fly.dev` (Fly.io, Singapore region)
+  - Client env var: `VITE_API_URL=https://api.cryptopapertrade.com` (set in Cloudflare Pages → Settings → Variables)
+
+- **feat: under construction landing page (04.05.2026)** ✅
+  - Added `apps/client/src/pages/UnderConstructionPage.tsx` — uses `AuthLayout` (same deep-navy bg + ambient glow blobs + grid overlay as login page), design tokens from `@/lib/tokens` (no hardcoded hex values), `bg.panel` card, gradient text heading, `color.muted` subtext, brand `CD` mark.
+  - `AuthLayout` gained optional `hideFooter?: boolean` prop — under construction page passes `hideFooter` so the footer is suppressed; all other auth pages (Login, Register, etc.) remain unaffected (footer on by default).
+  - `App.tsx` — added `/` route pointing to `UnderConstructionPage` so visitors landing on `cryptopapertrade.com` see the page immediately; `*` catch-all also shows it. `Navigate` import removed (no longer used).
+  - No call-to-action, no links — intentionally minimal.
 
 - **feat: edit panels for open positions and pending orders (26.04.2026)**
   - **`paperStore.ts`** — two new store actions:

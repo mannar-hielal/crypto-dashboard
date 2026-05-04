@@ -4,13 +4,14 @@ import { bg, color } from '@/lib/tokens';
 
 interface AuthLayoutProps {
   children: ReactNode;
+  hideFooter?: boolean;
 }
 
 /**
  * Shared layout for all auth pages (Login, Register, ForgotPassword, ResetPassword).
  * EXGEN-inspired: deep navy background with animated ambient glow blobs.
  */
-export function AuthLayout({ children }: AuthLayoutProps) {
+export function AuthLayout({ children, hideFooter = false }: AuthLayoutProps) {
   return (
     <div
       className="relative flex min-h-screen flex-col overflow-hidden"
@@ -45,7 +46,7 @@ export function AuthLayout({ children }: AuthLayoutProps) {
       />
 
       <main className="relative z-10 flex flex-1 items-center justify-center p-4">{children}</main>
-      <Footer />
+      {!hideFooter && <Footer />}
     </div>
   );
 }
