@@ -22,8 +22,11 @@ const MAX_HISTORY = 100; // keep last 100 closed trades
 const MAX_JOURNAL = 200; // keep last 200 journal entries
 export const COMMISSION_RATE = 0.0007; // 0.07% taker fee
 
-/** Bybit-style crypto leverage options (cross-margin perpetuals, max 125×). */
-export const CRYPTO_LEVERAGE_OPTIONS = [1, 2, 3, 5, 10, 15, 20, 25, 50, 75, 100, 125] as const;
+/** Maximum allowed leverage for paper trading (learning-app safety cap). */
+export const MAX_LEVERAGE = 10;
+
+/** Leverage options available in the Account Settings selector (capped at MAX_LEVERAGE). */
+export const CRYPTO_LEVERAGE_OPTIONS = [1, 2, 3, 5, MAX_LEVERAGE] as const;
 export type CryptoLeverage = (typeof CRYPTO_LEVERAGE_OPTIONS)[number];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -460,7 +463,10 @@ export const usePaperStore = create<PaperState>()(
       journal: [],
       leverage: 1,
 
-      setLeverage: (v) => set({ leverage: v }),
+      setLeverage: (v) =>
+        set({
+          leverage: Math.min(Math.max(Number.isFinite(v) ? Math.round(v) : 1, 1), MAX_LEVERAGE),
+        }),
 
       placeOrder: (symbol, side, price, usdtAmount, takeProfit, stopLoss, skipJournal) => {
         const { leverage, positions } = get();
@@ -1363,7 +1369,7 @@ export const usePaperStore = create<PaperState>()(
       //    older schema is safely discarded (migrate returns fresh state) instead of
       //    crashing the app on hydration. Increment `version` whenever a new required
       //    state field is added so old snapshots are migrated rather than used as-is.
-      version: 1,
+      version: 2,
       migrate: (persisted: unknown, fromVersion: number) => {
         // ── Fresh-state fallback ───────────────────────────────────────────────
         // Used when the snapshot is completely unrecognisable (null, non-object,
@@ -1404,6 +1410,38 @@ export const usePaperStore = create<PaperState>()(
             balanceLog: [],
             journal: [],
             leverage: 1,
+          };
+        }
+
+        // ── v1 → v2 ───────────────────────────────────────────────────────────
+        // v2 caps leverage at MAX_LEVERAGE (10×). Any user who had saved a higher
+        // leverage value in localStorage will be silently clamped to 10 on hydration.
+        // Also validates defensively — NaN/Infinity/0/negative values from a corrupted
+        // snapshot are rejected and replaced with the safe default of 1.
+        if (fromVersion === 1) {
+          const rawLeverage = typeof p['leverage'] === 'number' ? p['leverage'] : 1;
+          const leverage =
+            Number.isFinite(rawLeverage) && rawLeverage >= 1
+              ? Math.min(Math.round(rawLeverage), MAX_LEVERAGE)
+              : 1;
+          return {
+            balance:
+              typeof p['balance'] === 'number' && p['balance'] >= 0
+                ? p['balance']
+                : STARTING_BALANCE,
+            positions: Array.isArray(p['positions'])
+              ? p['positions'].filter(isPositionSnapshot)
+              : [],
+            history: Array.isArray(p['history']) ? p['history'].filter(isClosedTradeSnapshot) : [],
+            realizedPnl:
+              typeof p['realizedPnl'] === 'number' && Number.isFinite(p['realizedPnl'])
+                ? p['realizedPnl']
+                : 0,
+            pendingOrders: Array.isArray(p['pendingOrders']) ? p['pendingOrders'] : [],
+            orders: Array.isArray(p['orders']) ? p['orders'] : [],
+            balanceLog: Array.isArray(p['balanceLog']) ? p['balanceLog'] : [],
+            journal: Array.isArray(p['journal']) ? p['journal'] : [],
+            leverage,
           };
         }
 
