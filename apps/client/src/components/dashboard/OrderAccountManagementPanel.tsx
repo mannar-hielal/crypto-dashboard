@@ -2420,8 +2420,8 @@ export function OrderAccountManagementPanel({
                         {draftLeverage}×
                       </span>
                     </div>
-                    {/* 12-button grid — Bybit style */}
-                    <div className="grid grid-cols-6 gap-1">
+                    {/* 5-button grid — max 10× cap (learning-app safety) */}
+                    <div className="grid grid-cols-5 gap-1">
                       {CRYPTO_LEVERAGE_OPTIONS.map((opt) => (
                         <button
                           key={opt}
@@ -2445,15 +2445,6 @@ export function OrderAccountManagementPanel({
                         </button>
                       ))}
                     </div>
-                    {draftLeverage > 25 && (
-                      <p
-                        className="flex items-center gap-1"
-                        style={{ fontSize: fontSize.xs10, color: color.red }}
-                      >
-                        <AlertTriangle className="h-3 w-3 shrink-0" />
-                        High leverage increases liquidation risk.
-                      </p>
-                    )}
                   </div>
 
                   {/* Commission (read-only) */}
