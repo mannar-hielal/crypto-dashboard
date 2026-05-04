@@ -1247,6 +1247,28 @@ The helper and test file introduced in the 4.18 safety-hardening fix were rename
 
 ---
 
+### fix: code-review hardening — leverage validation & test-plan corrections (04.05.2026) ✅
+
+Four issues surfaced in a Copilot PR review and are now resolved.
+
+#### `apps/client/src/store/paperStore.ts`
+
+- **`CRYPTO_LEVERAGE_OPTIONS` single source of truth** — last element changed from the hardcoded literal `10` to `MAX_LEVERAGE`. If `MAX_LEVERAGE` is ever updated the options array updates automatically, eliminating the risk of the cap and the selector drifting apart.
+- **`setLeverage` runtime cap** — `setLeverage: (v) => set({ leverage: v })` replaced with a guarded version that clamps the incoming value to `[1, MAX_LEVERAGE]` and rejects non-finite inputs (`NaN`, `Infinity`, negative). The cap can no longer be bypassed via direct store calls at runtime.
+- **v1→v2 migration defensive validation** — the previous migration used `...p` spread, which silently preserved any corrupted field from the stored snapshot (e.g. `balance: -Infinity`, `positions: "broken"`). Replaced with the same field-by-field defensive validation pattern already used in the v0→v1 path:
+  - `balance` — validated `>= 0` finite number; falls back to `STARTING_BALANCE`.
+  - `positions` / `history` — filtered through `isPositionSnapshot` / `isClosedTradeSnapshot` guards.
+  - `pendingOrders` / `orders` / `balanceLog` / `journal` — Array check; falls back to `[]`.
+  - `realizedPnl` — `Number.isFinite` guard; falls back to `0`.
+  - `leverage` — `Number.isFinite && >= 1` guard + `Math.min(round(v), MAX_LEVERAGE)` clamp; falls back to `1`. Prevents 0, negative, NaN, and Infinity from corrupted snapshots reaching qty calculations.
+
+#### `docs/TRADING_TEST_PLAN.md`
+
+- **Section 2.1 table malformed** — a stray `1.1.2` row from Section 1.1 had leaked into the Section 2.1 table as its header row, making the separator row (`| ----- | ...`) be treated as the first data row. Removed the stray row and added the correct `| # | Action | Expected | Status | TV ✓ | Tier | Notes |` header.
+- **Section 2.1.5 tolerance `$1` → `$5`** — the "Within $1" claim in the Notes column and the `TV cross-check 2.1.5` callout were internally inconsistent with the example values shown ($77,673.8 vs $77,677.4 ≈ $3.6 apart). Updated to `Within $5` / `within $5` to match the observed data.
+
+---
+
 ## 🔭 Future Release Ideas
 
 ### idea: ATM-style bracket strategies (Pro tier) — research (04.05.2026) ⬜

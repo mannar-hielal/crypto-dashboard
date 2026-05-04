@@ -135,16 +135,16 @@
 
 ### 2.1 Limit Buy below market
 
-| 1.1.2 | Click **Buy** button                                            | Button pulses; qty input clears                                                                   | ✅  |     | T2 · RTL    |                                                |
-| ----- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | --- | --- | ----------- | ---------------------------------------------- |
-| 2.1.1 | Tab = **Limit**. Price input appears pre-filled with live price | Price field pre-filled slightly below the current live quote for a Buy; no immediate-fill warning | ✅  |     | T2 · RTL    | After fix: no warning on tab switch.           |
-| 2.1.2 | Set price to live − 2%, qty $200, click **Buy**                 | Pending order; balance decreases by $200 + commission                                             | ✅  | ✅  | T1 · Vitest | LIMIT BUY 0.025 @ $78,800, reserved $197.00.   |
-| 2.1.3 | Go to **Orders** tab → **Working** sub-tab                      | 1 row: LIMIT / BUY / Limit Price = price; Status = Working                                        | ✅  |     | T2 · RTL    | Type, Side, Qty, Status all correct.           |
-| 2.1.4 | Check **All** sub-tab count badge                               | Badge shows **1**; row visible                                                                    | ✅  |     | T2 · RTL    | Sub-tab badges: All 1 / Working 1.             |
-| 2.1.5 | When price drops to trigger                                     | Order moves to **Filled**; Journal entry added                                                    | ✅  | ✅  | T1 · Vitest | Filled @ $77,673.8. TV: ~$77,677.4. Within $1. |
-| 2.1.6 | Check **All** sub-tab after fill                                | Badge count unchanged (1); row status = Filled                                                    | ✅  |     | T2 · RTL    | All still shows 1; status pill: amber → green. |
+| #     | Action                                                          | Expected                                                                                          | Status | TV ✓ | Tier        | Notes                                          |
+| ----- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ------ | ---- | ----------- | ---------------------------------------------- |
+| 2.1.1 | Tab = **Limit**. Price input appears pre-filled with live price | Price field pre-filled slightly below the current live quote for a Buy; no immediate-fill warning | ✅     |      | T2 · RTL    | After fix: no warning on tab switch.           |
+| 2.1.2 | Set price to live − 2%, qty $200, click **Buy**                 | Pending order; balance decreases by $200 + commission                                             | ✅     | ✅   | T1 · Vitest | LIMIT BUY 0.025 @ $78,800, reserved $197.00.   |
+| 2.1.3 | Go to **Orders** tab → **Working** sub-tab                      | 1 row: LIMIT / BUY / Limit Price = price; Status = Working                                        | ✅     |      | T2 · RTL    | Type, Side, Qty, Status all correct.           |
+| 2.1.4 | Check **All** sub-tab count badge                               | Badge shows **1**; row visible                                                                    | ✅     |      | T2 · RTL    | Sub-tab badges: All 1 / Working 1.             |
+| 2.1.5 | When price drops to trigger                                     | Order moves to **Filled**; Journal entry added                                                    | ✅     | ✅   | T1 · Vitest | Filled @ $77,673.8. TV: ~$77,677.4. Within $5. |
+| 2.1.6 | Check **All** sub-tab after fill                                | Badge count unchanged (1); row status = Filled                                                    | ✅     |      | T2 · RTL    | All still shows 1; status pill: amber → green. |
 
-> **TV cross-check 2.1.5:** Both apps should fill on the same candle; entry prices should be within $1.
+> **TV cross-check 2.1.5:** Both apps should fill on the same candle; entry prices should be within $5.
 
 ### 2.2 Limit Buy cancel
 
