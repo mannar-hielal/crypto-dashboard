@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router';
+import { Routes, Route, useLocation } from 'react-router';
 import { AnimatePresence } from 'framer-motion';
 import { authApi } from '@crypto-dashboard/sdk';
 import { useAuthStore } from '@/store/authStore';
@@ -13,6 +13,7 @@ import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { TermsPage } from '@/pages/TermsPage';
 import { PrivacyPage } from '@/pages/PrivacyPage';
+import { UnderConstructionPage } from '@/pages/UnderConstructionPage';
 
 // 🔐 Module-level flag — unlike useRef, this survives React StrictMode's
 // simulated mount → unmount → remount cycle, so only ONE /refresh fires
@@ -56,6 +57,9 @@ export default function App() {
           mode="wait" ensures the old page fully exits before the new one enters. */}
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
+          {/* Landing — show under construction for visitors */}
+          <Route path="/" element={<UnderConstructionPage />} />
+
           {/* Public routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -69,8 +73,8 @@ export default function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
           </Route>
 
-          {/* Default redirect */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          {/* Under construction — shown for any unmatched route */}
+          <Route path="*" element={<UnderConstructionPage />} />
         </Routes>
       </AnimatePresence>
     </>
