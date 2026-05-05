@@ -774,11 +774,17 @@ Paper trading  →  Real order      →  Proven bot      →  Full autonomous
 | Bybit API outage mid-trade              | 🟡 Medium   | Bot pauses; open positions monitored via polling; user alerted      |
 | Phase 6 bot not actually proven         | 🟡 Medium   | Minimum paper period enforced in code before upgrade is offered     |
 
-_Last updated: 2026-05-04 (under construction page + deployment to cryptopapertrade.com)_
+_Last updated: 2026-05-05 (fixed production API URL baked into client bundle)_
 
 - **Public URL**: **https://cryptopapertrade.com/** (Cloudflare Pages, custom domain, production)
   - API: `https://api.cryptopapertrade.com` → `crypto-dashboard-api.fly.dev` (Fly.io, Singapore region)
   - Client env var: `VITE_API_URL=https://api.cryptopapertrade.com` (set in Cloudflare Pages → Settings → Variables)
+
+- **fix: production API URL now correctly baked into client bundle (05.05.2026)** ✅
+  - **Root cause**: Cloudflare Pages "Create deployment" UI button was **redeploying the last build artifact** (same asset hash `b6siP-Yt`) rather than triggering a fresh build. The previous artifact had `https://crypto-dashboard-api.fly.dev` baked in from an older CI run.
+  - **Fix**: Created `apps/client/.env.production` with `VITE_API_URL=https://api.cryptopapertrade.com`. Vite automatically loads `.env.production` for every production build — the correct URL is now baked in at the source level regardless of what CI env vars are set. No more dependency on Cloudflare Pages → Settings → Variables being configured correctly.
+  - **Deployment**: Clean local build (`pnpm --filter client build`) + direct deploy via `wrangler pages deploy` CLI, bypassing the Pages UI redeploy trap entirely.
+  - **Verification**: New asset hash `D0pj68RE` deployed to `cryptopapertrade.com`. Network requests for `/api/auth/refresh`, `/api/auth/me`, `/api/auth/login`, and `/api/market/candles` all resolve to `https://api.cryptopapertrade.com`. `fly.dev` no longer appears anywhere in the live bundle.
 
 - **feat: under construction landing page (04.05.2026)** ✅
   - Added `apps/client/src/pages/UnderConstructionPage.tsx` — uses `AuthLayout` (same deep-navy bg + ambient glow blobs + grid overlay as login page), design tokens from `@/lib/tokens` (no hardcoded hex values), `bg.panel` card, gradient text heading, `color.muted` subtext, brand `CD` mark.
