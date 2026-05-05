@@ -571,6 +571,46 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 ---
 
+## ⚖️ Legal & Compliance Status
+
+> Full code-level legal scan performed: **May 5, 2026**
+> Snapshot is self-contained in this section for review portability.
+
+### ✅ Legal Clearances
+
+- **FINMA / Swiss financial regulation**: Not applicable. No real money, no financial intermediation. FinIA, FinSA, AMLA, Banking Act — all N/A for a pure paper trading simulator.
+- **Contact email**: `info@cryptopapertrade.com` — set in `TermsPage.tsx` and `PrivacyPage.tsx`.
+- **Privacy Policy §11**: GDPR user rights (Art. 15–22) fully enumerated.
+- **Privacy Policy §5**: Legal bases for each processing type documented.
+- **Tax (current)**: App is free — no Swiss MWST or EU VAT obligations triggered yet.
+
+### 🔴 Blocking — Must fix before any paying user
+
+| #   | Issue                                                               | File(s)                             | Priority |
+| --- | ------------------------------------------------------------------- | ----------------------------------- | -------- |
+| 1   | No Terms/Privacy acceptance checkbox at registration                | `RegisterPage.tsx`, `schema.prisma` | Critical |
+| 2   | No cookie/storage information banner                                | `App.tsx`                           | Critical |
+| 3   | No DPAs signed with Fly.io, Resend, Cloudflare                      | — (legal action)                    | Critical |
+| 4   | Bybit API terms and market-data commercial-use rights not confirmed | — (contact Bybit)                   | Critical |
+| 5   | EU VAT OSS (Non-Union scheme) not registered                        | — (tax action)                      | Critical |
+| 6   | No subscription/billing clauses in Terms                            | `TermsPage.tsx`                     | Critical |
+| 7   | No EU Right of Withdrawal clause                                    | `TermsPage.tsx`                     | Critical |
+| 8   | "Early access" language still in Terms §2                           | `TermsPage.tsx`                     | Critical |
+
+### 🟡 Important — Fix before/at launch
+
+| #   | Issue                                                    | File(s)           | Priority  |
+| --- | -------------------------------------------------------- | ----------------- | --------- |
+| 9   | localStorage not disclosed in Privacy §8                 | `PrivacyPage.tsx` | Important |
+| 10  | Phase 3 forward-looking note missing from Privacy §3     | `PrivacyPage.tsx` | Important |
+| 11  | Server log retention period vague in Privacy §7          | `PrivacyPage.tsx` | Important |
+| 12  | No Force Majeure clause in Terms                         | `TermsPage.tsx`   | Important |
+| 13  | No Account Termination clause for paid users             | `TermsPage.tsx`   | Important |
+| 14  | No "Delete my account" flow in the app                   | product build     | Important |
+| 15  | No legal entity registered (personal liability exposure) | — (legal action)  | Important |
+
+---
+
 ## 🔌 Phase 5 — Live Broker Integration (Bybit)
 
 > **Status**: Planned · Not started · No implementation until explicitly instructed.

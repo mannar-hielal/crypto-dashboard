@@ -1,6 +1,8 @@
 # Legal & Compliance — Action Items
 
-> Generated: 2026-05-02 · Validated: 2026-05-05
+> Generated: 2026-05-02 · Last reviewed: 2026-05-05
+> New items (§12–16) added from full codebase legal scan on 2026-05-05.
+> Summary of those items (self-contained): registration must capture Terms/Privacy acceptance; app must show a cookie/storage notice; DPAs must be signed with Fly.io/Resend/Cloudflare; Bybit commercial data licensing must be confirmed before monetization; Privacy §7 must state concrete server-log retention periods.
 > Priority: Complete all **Critical** items before any public launch.
 
 ---
@@ -19,18 +21,14 @@
 **Action:**
 
 - Register a custom domain (e.g. `cryptodash.app` — ~$14/year on Namecheap)
-- Set up a forwarding email: `legal@yourdomain.com`
-- Replace the `CONTACT_EMAIL` constant in both files:
+- Official contact email: `info@cryptopapertrade.com`
+- The `CONTACT_EMAIL` constant in both files has been updated:
 
 ```ts
-// Before
-const CONTACT_EMAIL = 'adminwithu@gmail.com';
-
-// After
-const CONTACT_EMAIL = 'legal@yourdomain.com';
+const CONTACT_EMAIL = 'info@cryptopapertrade.com';
 ```
 
-Also remove the `<p className="text-muted-foreground text-sm">Note: This email address is temporary...` disclaimer paragraphs from both pages once the real address is in place.
+The "email is temporary" disclaimer paragraphs have been removed from both pages.
 
 **Why:** A personal Gmail in public GDPR/nDSG legal documents is a compliance risk. The FDPIC and EU data protection authorities expect a stable, professional contact address. It is also a spam magnet.
 
@@ -220,12 +218,18 @@ Before Phase 3 (DB sync) is deployed to production:
 
 ### Before Public Launch (Critical)
 
-- [ ] Register custom domain and set up `legal@yourdomain.com`
-- [ ] Replace `adminwithu@gmail.com` in `TermsPage.tsx` and `PrivacyPage.tsx`
-- [ ] Remove the "email is temporary" disclaimer paragraphs from both pages
+- [x] Register custom domain and set up `info@cryptopapertrade.com`
+- [x] Replace `adminwithu@gmail.com` in `TermsPage.tsx` and `PrivacyPage.tsx`
+- [x] Remove the "email is temporary" disclaimer paragraphs from both pages
+- [ ] **Add Terms/Privacy acceptance checkbox to `RegisterPage.tsx`** ← NEW (May 2026 legal scan)
+- [ ] Add `termsAcceptedAt` field to `User` model in `schema.prisma` ← NEW
 - [ ] Update Terms Section 2 wording to reflect freemium launch state
 - [ ] Add Phase 3 forward-looking warning to Privacy Section 3 table
 - [ ] Add localStorage disclosure bullet to Privacy Section 8
+- [ ] **Add cookie/storage information banner to `App.tsx`** ← NEW (May 2026 legal scan)
+- [ ] **Sign DPAs with Fly.io, Resend, Cloudflare** ← NEW (May 2026 legal scan)
+- [ ] **Contact Bybit re: commercial API data licensing** ← NEW (May 2026 legal scan)
+- [ ] Update server log retention to concrete periods in Privacy §7 ← NEW (May 2026 legal scan)
 
 ### Shortly After Launch
 
@@ -242,4 +246,4 @@ Before Phase 3 (DB sync) is deployed to production:
 
 ---
 
-_Validated against current codebase on 2026-05-05. All items confirmed outstanding — none have been implemented yet._
+_Validated against current codebase on 2026-05-05. Items marked ← NEW were added from the May 2026 legal scan and are summarized in this document._

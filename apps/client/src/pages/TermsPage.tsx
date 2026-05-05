@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { LegalLayout } from '@/components/LegalLayout';
 
-const CONTACT_EMAIL = 'adminwithu@gmail.com'; // TODO: replace with legal@yourdomain.com once domain is live
+const CONTACT_EMAIL = 'info@cryptopapertrade.com';
 
 export function TermsPage() {
   return (
@@ -297,10 +297,6 @@ export function TermsPage() {
         <p>
           For questions or concerns about these Terms, contact us at:{' '}
           <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
-        </p>
-        <p className="text-muted-foreground text-sm">
-          Note: This email address is temporary. It will be updated to a dedicated legal address
-          once a custom domain is configured.
         </p>
       </section>
     </LegalLayout>

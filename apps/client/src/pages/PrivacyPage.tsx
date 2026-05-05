@@ -1,6 +1,6 @@
 import { LegalLayout } from '@/components/LegalLayout';
 
-const CONTACT_EMAIL = 'adminwithu@gmail.com'; // TODO: replace with legal@yourdomain.com once domain is live
+const CONTACT_EMAIL = 'info@cryptopapertrade.com';
 
 export function PrivacyPage() {
   return (
@@ -15,10 +15,6 @@ export function PrivacyPage() {
           Switzerland
           <br />
           Email: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
-        </p>
-        <p className="text-muted-foreground text-sm">
-          Note: This email address is temporary and will be updated to a dedicated privacy address
-          once a custom domain is configured.
         </p>
       </section>
 
