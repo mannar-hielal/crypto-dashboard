@@ -540,7 +540,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 ### ✅ Completed (added 2026-04-19 — bid/ask feed + account settings modal)
 
-- **Account Settings modal** — replaces 2-click reset on ⚙️ gear button in `OrderAccountManagementPanel` header. Read-only fields: account name (username from `useAuthStore`), Leverage (`10:1`, Crypto), Commission (`0.07% / 0.0007`, Fixed · Taker). Footer: "Reset account" (2-click confirm, 3 s auto-cancel, closes modal on confirm) + "Save" (disabled — read-only). Backdrop click or ✕ dismisses; confirm state clears on dismiss.
+- **Account Settings modal** — replaces 2-click reset on ⚙️ gear button in `OrderAccountManagementPanel` header. Read-only fields: account name (username from `useAuthStore`), Leverage (`10:1`, Crypto), Commission (`0.07% / 0.0007`, Fixed · Taker). Footer: "Reset account" (2-click confirm, 3 s auto-cancel, closes modal on confirm) + "Save" (disabled — read-only). Backdrop click or ✕ dismisses; confirm state cleared on dismiss.
 - **Bid/Ask real-time feed** — end-to-end:
   - **Server `bybit.ts`**: subscribes `orderbook.1.{symbol}` for all `ALLOWED_SYMBOLS`. Processes `orderBook` stream data, extracts `bids[0][0]`/`asks[0][0]`, throttles to 500 ms per symbol, broadcasts `TickerUpdate { symbol, bid, ask }` to a separate `tickerListeners` set. `BybitService` gains `subscribeTicker(listener)` method.
   - **Server `market/index.ts`**: WS handler subscribes to `subscribeTicker` filtered by symbol, forwards `{ type: 'ticker', symbol, bid, ask }` JSON to the client WebSocket.
@@ -797,12 +797,12 @@ Paper trading  →  Real order      →  Proven bot      →  Full autonomous
 
 | Gate                        | Detail                                                                                                                                                |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Phase 5 prerequisite        | User must have connected + verified Bybit API keys — enforced in code, not just UI                                                                    |
-| Paper mode proven           | Bot must have run paper mode for configurable minimum (default: 7 days + 50 trades) with positive results — stats summary shown before upgrade prompt |
-| Explicit confirmation modal | Multi-step: "This bot will place REAL orders with REAL money. Your losses are your own." — user must type confirmation phrase                         |
-| Hard daily loss limit       | Bot auto-kills + sends alert if real account drops >X% in a day — cannot be disabled                                                                  |
-| Max position size cap       | Never risk more than Y% per trade or Z USDT total across open positions — requires re-confirmation to increase                                        |
-| Supervised mode warm-up     | When first switching paper→live, Supervised mode is forced for a configurable warm-up period before Autonomous is unlocked                            |
+| Phase 5 prerequisite        | User must have connected + verified Bybit API keys — enforced in code, not just UI                                                                                                                       |
+| Paper mode proven           | Bot must have run paper mode for configurable minimum (default: 7 days + 50 trades) with positive results — stats summary shown before upgrade prompt                                                                 |
+| Explicit confirmation modal | Multi-step: "This bot will place REAL orders with REAL money. Your losses are your own." — user must type confirmation phrase                                                                                                                       |
+| Hard daily loss limit       | Bot auto-kills + sends alert if real account drops >X% in a day — cannot be disabled                                                                                                                       |
+| Max position size cap       | Never risk more than Y% per trade or Z USDT total across open positions — requires re-confirmation to increase                                                                                                                       |
+| Supervised mode warm-up     | When first switching paper→live, Supervised mode is forced for a configurable warm-up period before Autonomous is unlocked                                                                                                                       |
 
 ### Risks
 
@@ -1559,10 +1559,9 @@ Three visual sections (all use existing token system: `bg.panel`, `bg.surface`, 
 | `apps/server/src/services/EmailService.ts` | Add 4 deletion lifecycle email methods |
 | `apps/server/src/index.ts` | Register daily purge `setInterval` |
 | `generated/CDSDK/types/index.ts` | Add `deletionRequestedAt` to `User`; add `UpdateUserResponse` type |
-| `generated/CDSDK/api/auth.ts` | Add `updateUsername`, `updateEmail`, `requestDeletion`, `cancelDeletion` |
+| `generated/CDSDK/api/auth.ts` | Add `updateUsername`, `updateEmail`, `requestDeletion`, and `cancelDeletion` |
 | `apps/client/src/store/authStore.ts` | Add `updateUser` action |
 | `apps/client/src/components/dashboard/SettingsModal.tsx` | **New file** — full settings modal |
 | `apps/client/src/components/dashboard/TopBar.tsx` | Add Settings menu item + SettingsModal render |
 | `apps/client/src/pages/DashboardPage.tsx` | Add deletion-pending banner |
 | `apps/client/src/pages/PrivacyPage.tsx` | Update §7 account data retention wording |
-

@@ -1,13 +1,12 @@
 import { createHash, randomBytes } from 'node:crypto';
-import bcrypt from 'bcrypt';
+import * as argon2 from 'argon2';
 import { FastifyInstance, FastifyReply } from 'fastify';
 import { config } from '../../config.js';
 import { EmailService } from '../../services/EmailService.js';
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-// 🔐 Cost 12 in non-test environments = ~250ms per hash (brute-force resistant).
-//    Cost 1 in test = fast CI without compromising real security.
-const BCRYPT_ROUNDS = process.env.NODE_ENV === 'test' ? 1 : 12;
+// 🔐 argon2 is now the gold standard (OWASP recommendation) over bcrypt.
+//    It is memory-hard and computationally expensive (resistant to GPU cracking).
 const REFRESH_TOKEN_COOKIE = 'refresh_token';
 const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
 const ACCESS_TOKEN_EXPIRY = '15m'; // Short-lived — lives only in Zustand memory
@@ -68,7 +67,7 @@ const registerSchema = {
     properties: {
       email: {
         type: 'string',
-        pattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$',
+        format: 'email', // 🔐 AJV-native email validation
         maxLength: 255,
       },
       username: {
@@ -239,6 +238,90 @@ const resetPasswordSchema = {
   },
 };
 
+const updateUsernameSchema = {
+  tags: ['Auth'],
+  summary: 'Update username',
+  security: [{ bearerAuth: [] }],
+  body: {
+    type: 'object',
+    required: ['username'],
+    properties: {
+      username: {
+        type: 'string',
+        minLength: 3,
+        maxLength: 20,
+        pattern: '^[a-zA-Z0-9_]+$',
+      },
+    },
+  },
+  response: {
+    200: {
+      type: 'object',
+      properties: { user: userResponse },
+    },
+    400: errorResponse,
+    401: errorResponse,
+    409: errorResponse,
+  },
+};
+
+const updateEmailSchema = {
+  tags: ['Auth'],
+  summary: 'Update email',
+  security: [{ bearerAuth: [] }],
+  body: {
+    type: 'object',
+    required: ['email', 'currentPassword'],
+    properties: {
+      email: { type: 'string', format: 'email', maxLength: 255 },
+      currentPassword: { type: 'string' },
+    },
+  },
+  response: {
+    200: {
+      type: 'object',
+      properties: { user: userResponse },
+    },
+    400: errorResponse,
+    401: errorResponse,
+    409: errorResponse,
+  },
+};
+
+const requestDeletionSchema = {
+  tags: ['Auth'],
+  summary: 'Request account deletion',
+  security: [{ bearerAuth: [] }],
+  body: {
+    type: 'object',
+    required: ['password'],
+    properties: {
+      password: { type: 'string' },
+    },
+  },
+  response: {
+    200: {
+      type: 'object',
+      properties: { message: { type: 'string' } },
+    },
+    400: errorResponse,
+    401: errorResponse,
+  },
+};
+
+const cancelDeletionSchema = {
+  tags: ['Auth'],
+  summary: 'Cancel account deletion',
+  security: [{ bearerAuth: [] }],
+  response: {
+    200: {
+      type: 'object',
+      properties: { message: { type: 'string' } },
+    },
+    401: errorResponse,
+  },
+};
+
 // ─── COOKIE OPTIONS ───────────────────────────────────────────────────────────
 // Shared across setCookie and every clearCookie call — must be identical so browsers
 // can match and delete the cookie (mismatched options prevent deletion).
@@ -308,23 +391,30 @@ export async function authRoutes(app: FastifyInstance) {
         acceptedTerms: boolean;
       };
 
+      // 🔐 Normalize inputs before processing
+      const normalizedEmail = email.toLowerCase().trim();
+      const normalizedUsername = username.toLowerCase().trim();
+
       if (!acceptedTerms) {
         return reply.status(400).send({ error: 'Terms and conditions must be accepted' });
       }
 
+      // 🔐 Check normalized fields to prevent "j.doe@gm.com" vs "J.Doe@gm.com" bypasses
       const existing = await app.prisma.user.findFirst({
-        where: { OR: [{ email }, { username }] },
+        where: { OR: [{ email: normalizedEmail }, { username: normalizedUsername }] },
       });
       if (existing) {
+        // 🔐 Generic error for email/username to match enum-prevention logic,
+        // though 409 usually reveals existing account. Still better than naming which one.
         return reply.status(409).send({ error: 'Email or username already taken' });
       }
 
-      const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
+      const hashedPassword = await argon2.hash(password);
 
       const user = await app.prisma.user.create({
         data: {
-          email,
-          username,
+          email: normalizedEmail,
+          username: normalizedUsername,
           password: hashedPassword,
           termsAcceptedAt: new Date(),
           termsAcceptedIp: request.ip,
@@ -362,8 +452,12 @@ export async function authRoutes(app: FastifyInstance) {
 
       const user = await app.prisma.user.findUnique({ where: { email } });
 
-      // 🔐 Always run bcrypt even if user not found — prevents timing attacks
-      const passwordMatch = user ? await bcrypt.compare(password, user.password) : false;
+      // 🔐 Always run a verify-like check even if user not found — prevents timing attacks.
+      //    Argon2 verification against a dummy hash ensures CPU time is consistent.
+      const DUMMY_HASH = '$argon2id$v=19$m=65536,t=3,p=4$vO91vGis5E7A0wB8V9bsww$8C8LCHn7X3O5z/j2tU6F+g';
+      const passwordMatch = user
+        ? await argon2.verify(user.password, password)
+        : await argon2.verify(DUMMY_HASH, password).then(() => false);
 
       if (!user || !passwordMatch) {
         return reply.status(401).send({ error: 'Invalid email or password' });
@@ -501,7 +595,7 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: 'Invalid or expired reset token' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    const hashedPassword = await argon2.hash(password);
 
     // 🔐 Interactive transaction: consume the token FIRST so that if a concurrent
     //    request races through the findUnique check, its updateMany returns count=0
@@ -550,4 +644,139 @@ export async function authRoutes(app: FastifyInstance) {
 
     return { user };
   });
+
+  // ─── UPDATE USERNAME (protected) ─────────────────────────────────────────────
+  app.patch(
+    '/username',
+    { schema: updateUsernameSchema, onRequest: [app.authenticate] },
+    async (request, reply) => {
+      const { userId } = request.user as { userId: string };
+      const { username } = request.body as { username: string };
+
+      const normalizedUsername = username.toLowerCase().trim();
+
+      const existing = await app.prisma.user.findFirst({
+        where: { username: normalizedUsername, NOT: { id: userId } },
+      });
+
+      if (existing) {
+        return reply.status(409).send({ error: 'Username already taken' });
+      }
+
+      const user = await app.prisma.user.update({
+        where: { id: userId },
+        data: { username: normalizedUsername },
+        omit: { password: true },
+      });
+
+      return reply.send({ user });
+    }
+  );
+
+  // ─── UPDATE EMAIL (protected) ───────────────────────────────────────────────
+  app.patch(
+    '/email',
+    { schema: updateEmailSchema, onRequest: [app.authenticate] },
+    async (request, reply) => {
+      const { userId } = request.user as { userId: string };
+      const { email, currentPassword } = request.body as { email: string; currentPassword: string };
+
+      const normalizedEmail = email.toLowerCase().trim();
+
+      const user = await app.prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        return reply.status(401).send({ error: 'User no longer exists' });
+      }
+
+      const passwordMatch = await argon2.verify(user.password, currentPassword);
+      if (!passwordMatch) {
+        return reply.status(401).send({ error: 'Invalid current password' });
+      }
+
+      const existing = await app.prisma.user.findFirst({
+        where: { email: normalizedEmail, NOT: { id: userId } },
+      });
+
+      if (existing) {
+        return reply.status(409).send({ error: 'Email already taken' });
+      }
+
+      const updatedUser = await app.prisma.user.update({
+        where: { id: userId },
+        data: { email: normalizedEmail },
+        omit: { password: true },
+      });
+
+      return reply.send({ user: updatedUser });
+    }
+  );
+
+  // ─── DELETE ACCOUNT (protected) ──────────────────────────────────────────────
+  app.delete(
+    '/account',
+    {
+      schema: requestDeletionSchema,
+      onRequest: [app.authenticate],
+      config: {
+        rateLimit: {
+          max: 3,
+          timeWindow: '15 minutes',
+          skip: () => process.env.NODE_ENV !== 'production',
+        },
+      },
+    },
+    async (request, reply) => {
+      const { userId } = request.user as { userId: string };
+      const { password } = request.body as { password: string };
+
+      const user = await app.prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        return reply.status(401).send({ error: 'User no longer exists' });
+      }
+
+      const passwordMatch = await argon2.verify(user.password, password);
+      if (!passwordMatch) {
+        return reply.status(401).send({ error: 'Invalid password' });
+      }
+
+      const deletionRequestedAt = new Date();
+      const deletionDate = new Date(deletionRequestedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+      await app.prisma.user.update({
+        where: { id: userId },
+        data: { deletionRequestedAt },
+      });
+
+      await EmailService.sendDeletionRequestedEmail(user.email, user.username, deletionDate);
+
+      // 🔐 Force logout after deletion request
+      await app.prisma.refreshToken.deleteMany({ where: { userId } });
+      void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
+
+      return reply.send({ message: 'Account scheduled for deletion in 30 days.' });
+    }
+  );
+
+  // ─── CANCEL DELETION (protected) ─────────────────────────────────────────────
+  app.post(
+    '/cancel-deletion',
+    { schema: cancelDeletionSchema, onRequest: [app.authenticate] },
+    async (request, reply) => {
+      const { userId } = request.user as { userId: string };
+
+      const user = await app.prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        return reply.status(401).send({ error: 'User no longer exists' });
+      }
+
+      await app.prisma.user.update({
+        where: { id: userId },
+        data: { deletionRequestedAt: null, deletionWarningSentAt: null },
+      });
+
+      await EmailService.sendDeletionCancelledEmail(user.email, user.username);
+
+      return reply.send({ message: 'Account deletion request cancelled successfully.' });
+    }
+  );
 }

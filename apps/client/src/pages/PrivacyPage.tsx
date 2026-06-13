@@ -134,10 +134,11 @@ export function PrivacyPage() {
         <ul>
           <li>
             <strong>Account data</strong>: retained for as long as your account is active. Upon
-            receiving a verified deletion request, your account and all directly associated personal
-            data (email, username, password hash) will be permanently deleted within{' '}
-            <strong>30 days</strong>. Aggregated or anonymised statistical data that cannot
-            identify you individually may be retained beyond this period.
+            receiving a deletion request via the in-app flow, your account enters a 30-day
+            cancellation window during which you retain full access and can cancel at any time.
+            After 30 days with no cancellation, your account and all associated personal data are
+            permanently and irreversibly deleted. Aggregated or anonymised statistical data that
+            cannot identify you individually may be retained beyond this period.
           </li>
           <li>
             <strong>Refresh tokens</strong>: automatically expire and are deleted after 7 days.

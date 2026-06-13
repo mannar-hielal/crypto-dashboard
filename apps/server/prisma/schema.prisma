@@ -18,13 +18,17 @@ model User {
   id        String   @id @default(cuid())
   email     String   @unique
   username  String   @unique
-  password  String // bcrypt hashed
+  password  String // argon2id hashed
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // ⚖️ Legal Compliance (Phase 1)
   termsAcceptedAt DateTime? // captures exactly when user agreed
   termsAcceptedIp String?   // captures IP for legal audit trail
+
+  // 🗑️ Account Deletion (Phase 3)
+  deletionRequestedAt  DateTime? // null = active; non-null = pending deletion
+  deletionWarningSentAt DateTime? // null = warning not yet sent; non-null = already sent
 
   // Relations
   account             Account?

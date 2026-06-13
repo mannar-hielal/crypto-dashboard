@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import type { FastifyInstance } from 'fastify';
+import * as argon2 from 'argon2';
 
 // ─── Mock EmailService ────────────────────────────────────────────────────────
 // Prevent real Resend API calls during tests — RESEND_API_KEY is set in .env
@@ -82,7 +83,7 @@ describe('POST /api/auth/register', () => {
   it('returns 201 with token and user on valid registration', async () => {
     // No existing user found → proceed to create
     (app.prisma.user.findFirst as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
-    (app.prisma.user.create as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    const createSpy = vi.spyOn(app.prisma.user, 'create').mockResolvedValueOnce({
       id: 'user-1',
       email: validUser.email,
       username: validUser.username,
@@ -98,6 +99,30 @@ describe('POST /api/auth/register', () => {
     const body = res.json<{ accessToken: string; user: { email: string } }>();
     expect(typeof body.accessToken).toBe('string');
     expect(body.user.email).toBe(validUser.email);
+
+    // ⚖️ Verify Legal Compliance audit trail
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          email: validUser.email,
+          username: validUser.username,
+          termsAcceptedAt: expect.any(Date),
+          termsAcceptedIp: '127.0.0.1',
+          account: { create: {} }, // 💰 Verify paper trading account initialization
+        }),
+      })
+    );
+  });
+
+  it('returns 400 when terms are not accepted', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/register',
+      payload: { ...validUser, acceptedTerms: false },
+    });
+
+    // Fastify schema validation (const: true) will reject this
+    expect(res.statusCode).toBe(400);
   });
 
   it('returns 409 when email or username is already taken', async () => {
@@ -172,8 +197,7 @@ describe('POST /api/auth/login', () => {
   });
 
   it('returns 200 with token on valid credentials', async () => {
-    const bcrypt = await import('bcrypt');
-    const hashed = await bcrypt.hash(validUser.password, 1); // cost 1 = fast in tests
+    const hashed = await argon2.hash(validUser.password);
 
     (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       id: 'user-1',
@@ -193,8 +217,7 @@ describe('POST /api/auth/login', () => {
   });
 
   it('returns 401 on wrong password', async () => {
-    const bcrypt = await import('bcrypt');
-    const hashed = await bcrypt.hash('DifferentPass1!', 1);
+    const hashed = await argon2.hash('DifferentPass1!');
 
     (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       id: 'user-1',

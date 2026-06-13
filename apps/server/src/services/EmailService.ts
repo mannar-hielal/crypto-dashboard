@@ -59,4 +59,94 @@ export const EmailService = {
       logger.error({ err: error, to }, 'Failed to send password reset email');
     }
   },
+
+  async sendDeletionRequestedEmail(to: string, username: string, deletionDate: Date): Promise<void> {
+    const client = getResend();
+    const dateStr = deletionDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    if (!client) {
+      if (config.nodeEnv !== 'production') {
+        logger.info({ to, username, dateStr }, '📧 [DEV] Deletion requested email (no RESEND_API_KEY set)');
+      }
+      return;
+    }
+
+    await client.emails.send({
+      from: config.resendFromEmail,
+      to,
+      subject: 'Account deletion requested — cryptopapertrade.com',
+      html: `
+        <h2>Hi ${username},</h2>
+        <p>As requested, your account has been scheduled for permanent deletion on <strong>${dateStr}</strong>.</p>
+        <p>During this 30-day window, you can continue to log in and use the platform. If you change your mind, you can cancel the deletion at any time from your account settings.</p>
+        <p>If you did not request this, please log in immediately to cancel the request and change your password.</p>
+      `,
+    });
+  },
+
+  async sendDeletionCancelledEmail(to: string, username: string): Promise<void> {
+    const client = getResend();
+
+    if (!client) {
+      if (config.nodeEnv !== 'production') {
+        logger.info({ to, username }, '📧 [DEV] Deletion cancelled email (no RESEND_API_KEY set)');
+      }
+      return;
+    }
+
+    await client.emails.send({
+      from: config.resendFromEmail,
+      to,
+      subject: 'Account deletion cancelled — cryptopapertrade.com',
+      html: `
+        <h2>Hi ${username},</h2>
+        <p>Your account deletion request has been cancelled. Your account is now fully restored and will no longer be deleted.</p>
+      `,
+    });
+  },
+
+  async sendDeletionWarningEmail(to: string, username: string, deletionDate: Date): Promise<void> {
+    const client = getResend();
+    const dateStr = deletionDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    if (!client) {
+      if (config.nodeEnv !== 'production') {
+        logger.info({ to, username, dateStr }, '📧 [DEV] Deletion warning email (no RESEND_API_KEY set)');
+      }
+      return;
+    }
+
+    await client.emails.send({
+      from: config.resendFromEmail,
+      to,
+      subject: 'IMPORTANT: Your account will be deleted in 7 days',
+      html: `
+        <h2>Hi ${username},</h2>
+        <p>This is a reminder that your cryptopapertrade.com account is scheduled for permanent deletion in <strong>7 days</strong> on <strong>${dateStr}</strong>.</p>
+        <p>Once deleted, all your data will be permanently and irreversibly removed. If you wish to keep your account, please log in and cancel the deletion request now.</p>
+      `,
+    });
+  },
+
+  async sendDeletionCompletedEmail(to: string, username: string): Promise<void> {
+    const client = getResend();
+
+    if (!client) {
+      if (config.nodeEnv !== 'production') {
+        logger.info({ to, username }, '📧 [DEV] Deletion completed email (no RESEND_API_KEY set)');
+      }
+      return;
+    }
+
+    await client.emails.send({
+      from: config.resendFromEmail,
+      to,
+      subject: 'Your account has been deleted',
+      html: `
+        <h2>Hi ${username},</h2>
+        <p>As requested, your cryptopapertrade.com account and all associated personal data have been permanently deleted.</p>
+        <p>We're sorry to see you go. If you ever change your mind, you're always welcome to register a new account.</p>
+      `,
+    });
+  },
 };

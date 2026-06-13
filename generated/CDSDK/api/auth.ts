@@ -1,4 +1,4 @@
-import type { AuthResponse, MeResponse, RefreshResponse, MessageResponse } from '../types/index.js';
+import type { AuthResponse, MeResponse, RefreshResponse, MessageResponse, UpdateUserResponse } from '../types/index.js';
 
 const BASE_URL =
   (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL ?? 'http://localhost:3001';
@@ -68,5 +68,32 @@ export const authApi = {
     request<MessageResponse>('/api/auth/reset-password', {
       method: 'POST',
       body: JSON.stringify(body),
+    }),
+
+  updateUsername: (body: { username: string }, accessToken: string) =>
+    request<UpdateUserResponse>('/api/auth/username', {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify(body),
+    }),
+
+  updateEmail: (body: { email: string; currentPassword: string }, accessToken: string) =>
+    request<UpdateUserResponse>('/api/auth/email', {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify(body),
+    }),
+
+  requestDeletion: (body: { password: string }, accessToken: string) =>
+    request<MessageResponse>('/api/auth/account', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify(body),
+    }),
+
+  cancelDeletion: (accessToken: string) =>
+    request<MessageResponse>('/api/auth/cancel-deletion', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
     }),
 };

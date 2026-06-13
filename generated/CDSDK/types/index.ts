@@ -4,6 +4,7 @@ export interface User {
   id: string;
   email: string;
   username: string;
+  deletionRequestedAt?: string | null;
 }
 
 export interface Account {
@@ -81,4 +82,8 @@ export interface CandleHistoryResponse {
   symbol: string;
   interval: string;
   candles: CandleBar[];
+}
+
+export interface UpdateUserResponse {
+  user: User;
 }
