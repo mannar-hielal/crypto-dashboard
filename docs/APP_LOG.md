@@ -574,6 +574,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 ## ⚖️ Legal & Compliance Status
 
 > Full code-level legal scan performed: **May 5, 2026**
+> Updated for free-only launch: **June 13, 2026**
 > Snapshot is self-contained in this section for review portability.
 
 ### ✅ Legal Clearances
@@ -582,20 +583,16 @@ ask: number | null; // best ask from Bybit orderbook.1
 - **Contact email**: `info@cryptopapertrade.com` — set in `TermsPage.tsx` and `PrivacyPage.tsx`.
 - **Privacy Policy §11**: GDPR user rights (Art. 15–22) fully enumerated.
 - **Privacy Policy §5**: Legal bases for each processing type documented.
-- **Tax (current)**: App is free — no Swiss MWST or EU VAT obligations triggered yet.
+- **Tax (current)**: App is free — no Swiss MWST or EU VAT obligations.
 
-### 🔴 Blocking — Must fix before any paying user
+### 🔴 Blocking — Must fix before launch
 
 | #   | Issue                                                               | File(s)                             | Priority |
 | --- | ------------------------------------------------------------------- | ----------------------------------- | -------- |
 | 1   | No Terms/Privacy acceptance checkbox at registration                | `RegisterPage.tsx`, `schema.prisma` | Critical |
 | 2   | No cookie/storage information banner                                | `App.tsx`                           | Critical |
 | 3   | No DPAs signed with Fly.io, Resend, Cloudflare                      | — (legal action)                    | Critical |
-| 4   | Bybit API terms and market-data commercial-use rights not confirmed | — (contact Bybit)                   | Critical |
-| 5   | EU VAT OSS (Non-Union scheme) not registered                        | — (tax action)                      | Critical |
-| 6   | No subscription/billing clauses in Terms                            | `TermsPage.tsx`                     | Critical |
-| 7   | No EU Right of Withdrawal clause                                    | `TermsPage.tsx`                     | Critical |
-| 8   | "Early access" language still in Terms §2                           | `TermsPage.tsx`                     | Critical |
+| 4   | Bybit API terms for non-commercial use                              | — (verification)                    | Critical |
 
 ### 🟡 Important — Fix before/at launch
 
@@ -605,7 +602,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 | 10  | Phase 3 forward-looking note missing from Privacy §3     | `PrivacyPage.tsx` | Important |
 | 11  | Server log retention period vague in Privacy §7          | `PrivacyPage.tsx` | Important |
 | 12  | No Force Majeure clause in Terms                         | `TermsPage.tsx`   | Important |
-| 13  | No Account Termination clause for paid users             | `TermsPage.tsx`   | Important |
+| 13  | No Account Termination clause                            | `TermsPage.tsx`   | Important |
 | 14  | No "Delete my account" flow in the app                   | product build     | Important |
 | 15  | No legal entity registered (personal liability exposure) | — (legal action)  | Important |
 
@@ -1364,15 +1361,15 @@ NinjaTrader's ATM (Advanced Trade Management) is a bracket-template system. Befo
 
 #### Open questions before planning
 
-1. **Tier model** — Free / Pro / Pro+? Does this feature define the first paid tier?
-2. **Max targets** — 3 enough, or N?
-3. **Trailing stop** — same tier as ABE, or later?
+1. **Max targets** — 3 enough, or N?
+2. **Trailing stop** — same as ABE, or later?
 
 ---
 
 ### idea: real Bybit account integration (live trading milestone) — research (04.05.2026) ⬜
 
-> **Status: research only — no implementation planned yet. Prerequisite: subscription/tier model must be in place first.**
+> **Status: research only — no implementation planned yet.**
+> **Prerequisite**: Subscription/tier model must be in place first.
 
 #### What this milestone is
 
@@ -1565,3 +1562,16 @@ Three visual sections (all use existing token system: `bg.panel`, `bg.surface`, 
 | `apps/client/src/components/dashboard/TopBar.tsx` | Add Settings menu item + SettingsModal render |
 | `apps/client/src/pages/DashboardPage.tsx` | Add deletion-pending banner |
 | `apps/client/src/pages/PrivacyPage.tsx` | Update §7 account data retention wording |
+- **feat: Suggested Email Content Update and Compliance alignment (13.06.2026)** ✅
+  - **EmailService.ts**: Updated sendDeletionRequestedEmail to include legal disclosures regarding GDPR/nDSG, the 30-day cancellation window, and the 60-day backup persistence period for technical logs. Added portability reminder (data export).
+  - **PrivacyPage.tsx**: Updated §7 Data Retention to explicitly disclose the 60-day backup persistence period, ensuring consistency with transactional emails and meeting transparency requirements.
+
+- **feat: Legal & Compliance Hardening (13.06.2026)** ✅
+  - **Document Versioning**: Updated `LegalLayout.tsx`, `TermsPage.tsx`, and `PrivacyPage.tsx` to include and display version headers (starting at Version 1.0).
+  - **Terms of Use Hardening**: Updated §2 (Description of Service) for free launch model; added §7 (Data Scraping Prohibition); added §18 (Account Termination); added §19 (Force Majeure & Third-Party Dependencies); updated §8 (User Content Ownership).
+  - **Privacy Policy Alignment**: Added Phase 3 forward-looking warning to Section 3.
+  - **GDPR Art. 20 (Right to Portability)**: Implemented JSON Data Export in `SettingsModal.tsx`, merging server-side PII (including terms acceptance metadata) with client-side trading history.
+  - **Audit Trail**: Exposed `termsAcceptedAt` and `termsAcceptedIp` in `/me` API response and SDK types to support complete data portability.
+
+
+
