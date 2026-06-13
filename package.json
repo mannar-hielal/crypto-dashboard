@@ -45,6 +45,12 @@
     ]
   },
   "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/engines",
+      "argon2",
+      "esbuild",
+      "prisma"
+    ],
     "peerDependencyRules": {
       "ignoreMissing": [],
       "allowedVersions": {
