@@ -11,7 +11,7 @@ import { Navigate, Outlet } from 'react-router';
 import { useAuthStore } from '@/store/authStore';
 
 export function ProtectedRoute() {
-  const { accessToken, isLoading } = useAuthStore();
+  const { accessToken, user, isLoading } = useAuthStore();
 
   if (isLoading) {
     return (
@@ -23,6 +23,11 @@ export function ProtectedRoute() {
 
   if (!accessToken) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Redirect unverified users to the verification prompt
+  if (user && !user.emailVerifiedAt) {
+    return <Navigate to="/unverified" replace />;
   }
 
   // Renders the matched child route

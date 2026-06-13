@@ -54,6 +54,8 @@ export const ModelName = {
   User: 'User',
   RefreshToken: 'RefreshToken',
   PasswordResetToken: 'PasswordResetToken',
+  VerificationToken: 'VerificationToken',
+  EmailChangeToken: 'EmailChangeToken',
   Account: 'Account',
   Order: 'Order',
   Trade: 'Trade'
@@ -82,6 +84,7 @@ export const UserScalarFieldEnum = {
   password: 'password',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
+  emailVerifiedAt: 'emailVerifiedAt',
   termsAcceptedAt: 'termsAcceptedAt',
   termsAcceptedIp: 'termsAcceptedIp',
   deletionRequestedAt: 'deletionRequestedAt',
@@ -112,6 +115,29 @@ export const PasswordResetTokenScalarFieldEnum = {
 } as const
 
 export type PasswordResetTokenScalarFieldEnum = (typeof PasswordResetTokenScalarFieldEnum)[keyof typeof PasswordResetTokenScalarFieldEnum]
+
+
+export const VerificationTokenScalarFieldEnum = {
+  id: 'id',
+  tokenHash: 'tokenHash',
+  userId: 'userId',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt'
+} as const
+
+export type VerificationTokenScalarFieldEnum = (typeof VerificationTokenScalarFieldEnum)[keyof typeof VerificationTokenScalarFieldEnum]
+
+
+export const EmailChangeTokenScalarFieldEnum = {
+  id: 'id',
+  tokenHash: 'tokenHash',
+  userId: 'userId',
+  newEmail: 'newEmail',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt'
+} as const
+
+export type EmailChangeTokenScalarFieldEnum = (typeof EmailChangeTokenScalarFieldEnum)[keyof typeof EmailChangeTokenScalarFieldEnum]
 
 
 export const AccountScalarFieldEnum = {

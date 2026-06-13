@@ -8,6 +8,11 @@ import * as argon2 from 'argon2';
 vi.mock('../services/EmailService.js', () => ({
   EmailService: {
     sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
+    sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
+    sendEmailChangeVerification: vi.fn().mockResolvedValue(undefined),
+    sendEmailChangedSecurityAlert: vi.fn().mockResolvedValue(undefined),
+    sendDeletionRequestedEmail: vi.fn().mockResolvedValue(undefined),
+    sendDeletionCancelledEmail: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -30,6 +35,12 @@ vi.mock('../plugins/prisma.js', () => {
         create: vi.fn(),
         update: vi.fn().mockResolvedValue({}),
       },
+      verificationToken: {
+        create: vi.fn().mockResolvedValue({}),
+        findUnique: vi.fn(),
+        delete: vi.fn().mockResolvedValue({}),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
       refreshToken: {
         // Default: always succeeds — individual tests can override with mockResolvedValueOnce
         create: vi.fn().mockResolvedValue({}),
@@ -40,6 +51,11 @@ vi.mock('../plugins/prisma.js', () => {
         findUnique: vi.fn(),
         create: vi.fn().mockResolvedValue({}),
         updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+      emailChangeToken: {
+        create: vi.fn().mockResolvedValue({}),
+        findUnique: vi.fn(),
         deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       // Supports both transaction forms used in production code:
@@ -438,6 +454,35 @@ describe('POST /api/auth/logout', () => {
   it('returns 204 even when no cookie is present (idempotent logout)', async () => {
     const res = await app.inject({ method: 'POST', url: '/api/auth/logout' });
     expect(res.statusCode).toBe(204);
+  });
+});
+
+// ─── RESEND VERIFICATION ────────────────────────────────────────────────────
+describe('POST /api/auth/resend-verification', () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    app = await buildApp();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('returns 200 even for unverified users', async () => {
+    (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'user-1',
+      email: 'unverified@example.com',
+      emailVerifiedAt: null,
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/resend-verification',
+      payload: { email: 'unverified@example.com' },
+    });
+
+    expect(res.statusCode).toBe(200);
   });
 });
 

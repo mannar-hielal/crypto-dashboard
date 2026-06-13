@@ -15,6 +15,9 @@ import { DashboardPage } from '@/pages/DashboardPage';
 import { TermsPage } from '@/pages/TermsPage';
 import { PrivacyPage } from '@/pages/PrivacyPage';
 import { UnderConstructionPage } from '@/pages/UnderConstructionPage';
+import { UnverifiedPage } from '@/pages/UnverifiedPage';
+import { VerifyEmailPage } from '@/pages/VerifyEmailPage';
+import { VerifyEmailChangePage } from '@/pages/VerifyEmailChangePage';
 
 // 🔐 Module-level flag — unlike useRef, this survives React StrictMode's
 // simulated mount → unmount → remount cycle, so only ONE /refresh fires
@@ -69,6 +72,9 @@ export default function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/unverified" element={<UnverifiedPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/verify-email-change" element={<VerifyEmailChangePage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
 

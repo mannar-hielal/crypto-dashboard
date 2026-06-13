@@ -31,6 +31,7 @@ export type UserMinAggregateOutputType = {
   password: string | null
   createdAt: Date | null
   updatedAt: Date | null
+  emailVerifiedAt: Date | null
   termsAcceptedAt: Date | null
   termsAcceptedIp: string | null
   deletionRequestedAt: Date | null
@@ -44,6 +45,7 @@ export type UserMaxAggregateOutputType = {
   password: string | null
   createdAt: Date | null
   updatedAt: Date | null
+  emailVerifiedAt: Date | null
   termsAcceptedAt: Date | null
   termsAcceptedIp: string | null
   deletionRequestedAt: Date | null
@@ -57,6 +59,7 @@ export type UserCountAggregateOutputType = {
   password: number
   createdAt: number
   updatedAt: number
+  emailVerifiedAt: number
   termsAcceptedAt: number
   termsAcceptedIp: number
   deletionRequestedAt: number
@@ -72,6 +75,7 @@ export type UserMinAggregateInputType = {
   password?: true
   createdAt?: true
   updatedAt?: true
+  emailVerifiedAt?: true
   termsAcceptedAt?: true
   termsAcceptedIp?: true
   deletionRequestedAt?: true
@@ -85,6 +89,7 @@ export type UserMaxAggregateInputType = {
   password?: true
   createdAt?: true
   updatedAt?: true
+  emailVerifiedAt?: true
   termsAcceptedAt?: true
   termsAcceptedIp?: true
   deletionRequestedAt?: true
@@ -98,6 +103,7 @@ export type UserCountAggregateInputType = {
   password?: true
   createdAt?: true
   updatedAt?: true
+  emailVerifiedAt?: true
   termsAcceptedAt?: true
   termsAcceptedIp?: true
   deletionRequestedAt?: true
@@ -184,6 +190,7 @@ export type UserGroupByOutputType = {
   password: string
   createdAt: Date
   updatedAt: Date
+  emailVerifiedAt: Date | null
   termsAcceptedAt: Date | null
   termsAcceptedIp: string | null
   deletionRequestedAt: Date | null
@@ -218,6 +225,7 @@ export type UserWhereInput = {
   password?: Prisma.StringFilter<"User"> | string
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
+  emailVerifiedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   termsAcceptedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   termsAcceptedIp?: Prisma.StringNullableFilter<"User"> | string | null
   deletionRequestedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
@@ -227,6 +235,8 @@ export type UserWhereInput = {
   orders?: Prisma.OrderListRelationFilter
   refreshTokens?: Prisma.RefreshTokenListRelationFilter
   passwordResetTokens?: Prisma.PasswordResetTokenListRelationFilter
+  verificationTokens?: Prisma.VerificationTokenListRelationFilter
+  emailChangeTokens?: Prisma.EmailChangeTokenListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -236,6 +246,7 @@ export type UserOrderByWithRelationInput = {
   password?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  emailVerifiedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   termsAcceptedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   termsAcceptedIp?: Prisma.SortOrderInput | Prisma.SortOrder
   deletionRequestedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -245,6 +256,8 @@ export type UserOrderByWithRelationInput = {
   orders?: Prisma.OrderOrderByRelationAggregateInput
   refreshTokens?: Prisma.RefreshTokenOrderByRelationAggregateInput
   passwordResetTokens?: Prisma.PasswordResetTokenOrderByRelationAggregateInput
+  verificationTokens?: Prisma.VerificationTokenOrderByRelationAggregateInput
+  emailChangeTokens?: Prisma.EmailChangeTokenOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -257,6 +270,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   password?: Prisma.StringFilter<"User"> | string
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
+  emailVerifiedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   termsAcceptedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   termsAcceptedIp?: Prisma.StringNullableFilter<"User"> | string | null
   deletionRequestedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
@@ -266,6 +280,8 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   orders?: Prisma.OrderListRelationFilter
   refreshTokens?: Prisma.RefreshTokenListRelationFilter
   passwordResetTokens?: Prisma.PasswordResetTokenListRelationFilter
+  verificationTokens?: Prisma.VerificationTokenListRelationFilter
+  emailChangeTokens?: Prisma.EmailChangeTokenListRelationFilter
 }, "id" | "email" | "username">
 
 export type UserOrderByWithAggregationInput = {
@@ -275,6 +291,7 @@ export type UserOrderByWithAggregationInput = {
   password?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  emailVerifiedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   termsAcceptedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   termsAcceptedIp?: Prisma.SortOrderInput | Prisma.SortOrder
   deletionRequestedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -294,6 +311,7 @@ export type UserScalarWhereWithAggregatesInput = {
   password?: Prisma.StringWithAggregatesFilter<"User"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
+  emailVerifiedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
   termsAcceptedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
   termsAcceptedIp?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   deletionRequestedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
@@ -307,6 +325,7 @@ export type UserCreateInput = {
   password: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
   deletionRequestedAt?: Date | string | null
@@ -316,6 +335,8 @@ export type UserCreateInput = {
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  verificationTokens?: Prisma.VerificationTokenCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -325,6 +346,7 @@ export type UserUncheckedCreateInput = {
   password: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
   deletionRequestedAt?: Date | string | null
@@ -334,6 +356,8 @@ export type UserUncheckedCreateInput = {
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  verificationTokens?: Prisma.VerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserUpdateInput = {
@@ -343,6 +367,7 @@ export type UserUpdateInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -352,6 +377,8 @@ export type UserUpdateInput = {
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  verificationTokens?: Prisma.VerificationTokenUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -361,6 +388,7 @@ export type UserUncheckedUpdateInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -370,6 +398,8 @@ export type UserUncheckedUpdateInput = {
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  verificationTokens?: Prisma.VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -379,6 +409,7 @@ export type UserCreateManyInput = {
   password: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
   deletionRequestedAt?: Date | string | null
@@ -392,6 +423,7 @@ export type UserUpdateManyMutationInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -405,6 +437,7 @@ export type UserUncheckedUpdateManyInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -418,6 +451,7 @@ export type UserCountOrderByAggregateInput = {
   password?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  emailVerifiedAt?: Prisma.SortOrder
   termsAcceptedAt?: Prisma.SortOrder
   termsAcceptedIp?: Prisma.SortOrder
   deletionRequestedAt?: Prisma.SortOrder
@@ -431,6 +465,7 @@ export type UserMaxOrderByAggregateInput = {
   password?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  emailVerifiedAt?: Prisma.SortOrder
   termsAcceptedAt?: Prisma.SortOrder
   termsAcceptedIp?: Prisma.SortOrder
   deletionRequestedAt?: Prisma.SortOrder
@@ -444,6 +479,7 @@ export type UserMinOrderByAggregateInput = {
   password?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  emailVerifiedAt?: Prisma.SortOrder
   termsAcceptedAt?: Prisma.SortOrder
   termsAcceptedIp?: Prisma.SortOrder
   deletionRequestedAt?: Prisma.SortOrder
@@ -499,6 +535,34 @@ export type UserUpdateOneRequiredWithoutPasswordResetTokensNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutPasswordResetTokensInput, Prisma.UserUpdateWithoutPasswordResetTokensInput>, Prisma.UserUncheckedUpdateWithoutPasswordResetTokensInput>
 }
 
+export type UserCreateNestedOneWithoutVerificationTokensInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutVerificationTokensInput, Prisma.UserUncheckedCreateWithoutVerificationTokensInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutVerificationTokensInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutVerificationTokensNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutVerificationTokensInput, Prisma.UserUncheckedCreateWithoutVerificationTokensInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutVerificationTokensInput
+  upsert?: Prisma.UserUpsertWithoutVerificationTokensInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutVerificationTokensInput, Prisma.UserUpdateWithoutVerificationTokensInput>, Prisma.UserUncheckedUpdateWithoutVerificationTokensInput>
+}
+
+export type UserCreateNestedOneWithoutEmailChangeTokensInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutEmailChangeTokensInput, Prisma.UserUncheckedCreateWithoutEmailChangeTokensInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutEmailChangeTokensInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutEmailChangeTokensNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutEmailChangeTokensInput, Prisma.UserUncheckedCreateWithoutEmailChangeTokensInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutEmailChangeTokensInput
+  upsert?: Prisma.UserUpsertWithoutEmailChangeTokensInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutEmailChangeTokensInput, Prisma.UserUpdateWithoutEmailChangeTokensInput>, Prisma.UserUncheckedUpdateWithoutEmailChangeTokensInput>
+}
+
 export type UserCreateNestedOneWithoutAccountInput = {
   create?: Prisma.XOR<Prisma.UserCreateWithoutAccountInput, Prisma.UserUncheckedCreateWithoutAccountInput>
   connectOrCreate?: Prisma.UserCreateOrConnectWithoutAccountInput
@@ -548,6 +612,7 @@ export type UserCreateWithoutRefreshTokensInput = {
   password: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
   deletionRequestedAt?: Date | string | null
@@ -556,6 +621,8 @@ export type UserCreateWithoutRefreshTokensInput = {
   trades?: Prisma.TradeCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  verificationTokens?: Prisma.VerificationTokenCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutRefreshTokensInput = {
@@ -565,6 +632,7 @@ export type UserUncheckedCreateWithoutRefreshTokensInput = {
   password: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
   deletionRequestedAt?: Date | string | null
@@ -573,6 +641,8 @@ export type UserUncheckedCreateWithoutRefreshTokensInput = {
   trades?: Prisma.TradeUncheckedCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  verificationTokens?: Prisma.VerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutRefreshTokensInput = {
@@ -598,6 +668,7 @@ export type UserUpdateWithoutRefreshTokensInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -606,6 +677,8 @@ export type UserUpdateWithoutRefreshTokensInput = {
   trades?: Prisma.TradeUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  verificationTokens?: Prisma.VerificationTokenUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutRefreshTokensInput = {
@@ -615,6 +688,7 @@ export type UserUncheckedUpdateWithoutRefreshTokensInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -623,6 +697,8 @@ export type UserUncheckedUpdateWithoutRefreshTokensInput = {
   trades?: Prisma.TradeUncheckedUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  verificationTokens?: Prisma.VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutPasswordResetTokensInput = {
@@ -632,6 +708,7 @@ export type UserCreateWithoutPasswordResetTokensInput = {
   password: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
   deletionRequestedAt?: Date | string | null
@@ -640,6 +717,8 @@ export type UserCreateWithoutPasswordResetTokensInput = {
   trades?: Prisma.TradeCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  verificationTokens?: Prisma.VerificationTokenCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutPasswordResetTokensInput = {
@@ -649,6 +728,7 @@ export type UserUncheckedCreateWithoutPasswordResetTokensInput = {
   password: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
   deletionRequestedAt?: Date | string | null
@@ -657,6 +737,8 @@ export type UserUncheckedCreateWithoutPasswordResetTokensInput = {
   trades?: Prisma.TradeUncheckedCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  verificationTokens?: Prisma.VerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutPasswordResetTokensInput = {
@@ -682,6 +764,7 @@ export type UserUpdateWithoutPasswordResetTokensInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -690,6 +773,8 @@ export type UserUpdateWithoutPasswordResetTokensInput = {
   trades?: Prisma.TradeUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  verificationTokens?: Prisma.VerificationTokenUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutPasswordResetTokensInput = {
@@ -699,6 +784,7 @@ export type UserUncheckedUpdateWithoutPasswordResetTokensInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -707,6 +793,200 @@ export type UserUncheckedUpdateWithoutPasswordResetTokensInput = {
   trades?: Prisma.TradeUncheckedUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  verificationTokens?: Prisma.VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutVerificationTokensInput = {
+  id?: string
+  email: string
+  username: string
+  password: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  emailVerifiedAt?: Date | string | null
+  termsAcceptedAt?: Date | string | null
+  termsAcceptedIp?: string | null
+  deletionRequestedAt?: Date | string | null
+  deletionWarningSentAt?: Date | string | null
+  account?: Prisma.AccountCreateNestedOneWithoutUserInput
+  trades?: Prisma.TradeCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrderCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutVerificationTokensInput = {
+  id?: string
+  email: string
+  username: string
+  password: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  emailVerifiedAt?: Date | string | null
+  termsAcceptedAt?: Date | string | null
+  termsAcceptedIp?: string | null
+  deletionRequestedAt?: Date | string | null
+  deletionWarningSentAt?: Date | string | null
+  account?: Prisma.AccountUncheckedCreateNestedOneWithoutUserInput
+  trades?: Prisma.TradeUncheckedCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutVerificationTokensInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutVerificationTokensInput, Prisma.UserUncheckedCreateWithoutVerificationTokensInput>
+}
+
+export type UserUpsertWithoutVerificationTokensInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutVerificationTokensInput, Prisma.UserUncheckedUpdateWithoutVerificationTokensInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutVerificationTokensInput, Prisma.UserUncheckedCreateWithoutVerificationTokensInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutVerificationTokensInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutVerificationTokensInput, Prisma.UserUncheckedUpdateWithoutVerificationTokensInput>
+}
+
+export type UserUpdateWithoutVerificationTokensInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  account?: Prisma.AccountUpdateOneWithoutUserNestedInput
+  trades?: Prisma.TradeUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutVerificationTokensInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  account?: Prisma.AccountUncheckedUpdateOneWithoutUserNestedInput
+  trades?: Prisma.TradeUncheckedUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutEmailChangeTokensInput = {
+  id?: string
+  email: string
+  username: string
+  password: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  emailVerifiedAt?: Date | string | null
+  termsAcceptedAt?: Date | string | null
+  termsAcceptedIp?: string | null
+  deletionRequestedAt?: Date | string | null
+  deletionWarningSentAt?: Date | string | null
+  account?: Prisma.AccountCreateNestedOneWithoutUserInput
+  trades?: Prisma.TradeCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrderCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  verificationTokens?: Prisma.VerificationTokenCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutEmailChangeTokensInput = {
+  id?: string
+  email: string
+  username: string
+  password: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  emailVerifiedAt?: Date | string | null
+  termsAcceptedAt?: Date | string | null
+  termsAcceptedIp?: string | null
+  deletionRequestedAt?: Date | string | null
+  deletionWarningSentAt?: Date | string | null
+  account?: Prisma.AccountUncheckedCreateNestedOneWithoutUserInput
+  trades?: Prisma.TradeUncheckedCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  verificationTokens?: Prisma.VerificationTokenUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutEmailChangeTokensInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutEmailChangeTokensInput, Prisma.UserUncheckedCreateWithoutEmailChangeTokensInput>
+}
+
+export type UserUpsertWithoutEmailChangeTokensInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutEmailChangeTokensInput, Prisma.UserUncheckedUpdateWithoutEmailChangeTokensInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutEmailChangeTokensInput, Prisma.UserUncheckedCreateWithoutEmailChangeTokensInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutEmailChangeTokensInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutEmailChangeTokensInput, Prisma.UserUncheckedUpdateWithoutEmailChangeTokensInput>
+}
+
+export type UserUpdateWithoutEmailChangeTokensInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  account?: Prisma.AccountUpdateOneWithoutUserNestedInput
+  trades?: Prisma.TradeUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  verificationTokens?: Prisma.VerificationTokenUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutEmailChangeTokensInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  account?: Prisma.AccountUncheckedUpdateOneWithoutUserNestedInput
+  trades?: Prisma.TradeUncheckedUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  verificationTokens?: Prisma.VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutAccountInput = {
@@ -716,6 +996,7 @@ export type UserCreateWithoutAccountInput = {
   password: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
   deletionRequestedAt?: Date | string | null
@@ -724,6 +1005,8 @@ export type UserCreateWithoutAccountInput = {
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  verificationTokens?: Prisma.VerificationTokenCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutAccountInput = {
@@ -733,6 +1016,7 @@ export type UserUncheckedCreateWithoutAccountInput = {
   password: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
   deletionRequestedAt?: Date | string | null
@@ -741,6 +1025,8 @@ export type UserUncheckedCreateWithoutAccountInput = {
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  verificationTokens?: Prisma.VerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutAccountInput = {
@@ -766,6 +1052,7 @@ export type UserUpdateWithoutAccountInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -774,6 +1061,8 @@ export type UserUpdateWithoutAccountInput = {
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  verificationTokens?: Prisma.VerificationTokenUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAccountInput = {
@@ -783,6 +1072,7 @@ export type UserUncheckedUpdateWithoutAccountInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -791,6 +1081,8 @@ export type UserUncheckedUpdateWithoutAccountInput = {
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  verificationTokens?: Prisma.VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutOrdersInput = {
@@ -800,6 +1092,7 @@ export type UserCreateWithoutOrdersInput = {
   password: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
   deletionRequestedAt?: Date | string | null
@@ -808,6 +1101,8 @@ export type UserCreateWithoutOrdersInput = {
   trades?: Prisma.TradeCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  verificationTokens?: Prisma.VerificationTokenCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutOrdersInput = {
@@ -817,6 +1112,7 @@ export type UserUncheckedCreateWithoutOrdersInput = {
   password: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
   deletionRequestedAt?: Date | string | null
@@ -825,6 +1121,8 @@ export type UserUncheckedCreateWithoutOrdersInput = {
   trades?: Prisma.TradeUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  verificationTokens?: Prisma.VerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutOrdersInput = {
@@ -850,6 +1148,7 @@ export type UserUpdateWithoutOrdersInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -858,6 +1157,8 @@ export type UserUpdateWithoutOrdersInput = {
   trades?: Prisma.TradeUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  verificationTokens?: Prisma.VerificationTokenUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutOrdersInput = {
@@ -867,6 +1168,7 @@ export type UserUncheckedUpdateWithoutOrdersInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -875,6 +1177,8 @@ export type UserUncheckedUpdateWithoutOrdersInput = {
   trades?: Prisma.TradeUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  verificationTokens?: Prisma.VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutTradesInput = {
@@ -884,6 +1188,7 @@ export type UserCreateWithoutTradesInput = {
   password: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
   deletionRequestedAt?: Date | string | null
@@ -892,6 +1197,8 @@ export type UserCreateWithoutTradesInput = {
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  verificationTokens?: Prisma.VerificationTokenCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutTradesInput = {
@@ -901,6 +1208,7 @@ export type UserUncheckedCreateWithoutTradesInput = {
   password: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
   deletionRequestedAt?: Date | string | null
@@ -909,6 +1217,8 @@ export type UserUncheckedCreateWithoutTradesInput = {
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  verificationTokens?: Prisma.VerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutTradesInput = {
@@ -934,6 +1244,7 @@ export type UserUpdateWithoutTradesInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -942,6 +1253,8 @@ export type UserUpdateWithoutTradesInput = {
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  verificationTokens?: Prisma.VerificationTokenUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutTradesInput = {
@@ -951,6 +1264,7 @@ export type UserUncheckedUpdateWithoutTradesInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -959,6 +1273,8 @@ export type UserUncheckedUpdateWithoutTradesInput = {
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  verificationTokens?: Prisma.VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 
@@ -971,6 +1287,8 @@ export type UserCountOutputType = {
   orders: number
   refreshTokens: number
   passwordResetTokens: number
+  verificationTokens: number
+  emailChangeTokens: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -978,6 +1296,8 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   orders?: boolean | UserCountOutputTypeCountOrdersArgs
   refreshTokens?: boolean | UserCountOutputTypeCountRefreshTokensArgs
   passwordResetTokens?: boolean | UserCountOutputTypeCountPasswordResetTokensArgs
+  verificationTokens?: boolean | UserCountOutputTypeCountVerificationTokensArgs
+  emailChangeTokens?: boolean | UserCountOutputTypeCountEmailChangeTokensArgs
 }
 
 /**
@@ -1018,6 +1338,20 @@ export type UserCountOutputTypeCountPasswordResetTokensArgs<ExtArgs extends runt
   where?: Prisma.PasswordResetTokenWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountVerificationTokensArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.VerificationTokenWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountEmailChangeTokensArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.EmailChangeTokenWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1026,6 +1360,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   password?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  emailVerifiedAt?: boolean
   termsAcceptedAt?: boolean
   termsAcceptedIp?: boolean
   deletionRequestedAt?: boolean
@@ -1035,6 +1370,8 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   orders?: boolean | Prisma.User$ordersArgs<ExtArgs>
   refreshTokens?: boolean | Prisma.User$refreshTokensArgs<ExtArgs>
   passwordResetTokens?: boolean | Prisma.User$passwordResetTokensArgs<ExtArgs>
+  verificationTokens?: boolean | Prisma.User$verificationTokensArgs<ExtArgs>
+  emailChangeTokens?: boolean | Prisma.User$emailChangeTokensArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -1045,6 +1382,7 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   password?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  emailVerifiedAt?: boolean
   termsAcceptedAt?: boolean
   termsAcceptedIp?: boolean
   deletionRequestedAt?: boolean
@@ -1058,6 +1396,7 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   password?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  emailVerifiedAt?: boolean
   termsAcceptedAt?: boolean
   termsAcceptedIp?: boolean
   deletionRequestedAt?: boolean
@@ -1071,19 +1410,22 @@ export type UserSelectScalar = {
   password?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  emailVerifiedAt?: boolean
   termsAcceptedAt?: boolean
   termsAcceptedIp?: boolean
   deletionRequestedAt?: boolean
   deletionWarningSentAt?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "username" | "password" | "createdAt" | "updatedAt" | "termsAcceptedAt" | "termsAcceptedIp" | "deletionRequestedAt" | "deletionWarningSentAt", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "username" | "password" | "createdAt" | "updatedAt" | "emailVerifiedAt" | "termsAcceptedAt" | "termsAcceptedIp" | "deletionRequestedAt" | "deletionWarningSentAt", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   account?: boolean | Prisma.User$accountArgs<ExtArgs>
   trades?: boolean | Prisma.User$tradesArgs<ExtArgs>
   orders?: boolean | Prisma.User$ordersArgs<ExtArgs>
   refreshTokens?: boolean | Prisma.User$refreshTokensArgs<ExtArgs>
   passwordResetTokens?: boolean | Prisma.User$passwordResetTokensArgs<ExtArgs>
+  verificationTokens?: boolean | Prisma.User$verificationTokensArgs<ExtArgs>
+  emailChangeTokens?: boolean | Prisma.User$emailChangeTokensArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -1097,6 +1439,8 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     orders: Prisma.$OrderPayload<ExtArgs>[]
     refreshTokens: Prisma.$RefreshTokenPayload<ExtArgs>[]
     passwordResetTokens: Prisma.$PasswordResetTokenPayload<ExtArgs>[]
+    verificationTokens: Prisma.$VerificationTokenPayload<ExtArgs>[]
+    emailChangeTokens: Prisma.$EmailChangeTokenPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1105,6 +1449,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     password: string
     createdAt: Date
     updatedAt: Date
+    emailVerifiedAt: Date | null
     termsAcceptedAt: Date | null
     termsAcceptedIp: string | null
     deletionRequestedAt: Date | null
@@ -1508,6 +1853,8 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   orders<T extends Prisma.User$ordersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$ordersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   refreshTokens<T extends Prisma.User$refreshTokensArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$refreshTokensArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RefreshTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   passwordResetTokens<T extends Prisma.User$passwordResetTokensArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$passwordResetTokensArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PasswordResetTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  verificationTokens<T extends Prisma.User$verificationTokensArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$verificationTokensArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$VerificationTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  emailChangeTokens<T extends Prisma.User$emailChangeTokensArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$emailChangeTokensArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EmailChangeTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1543,6 +1890,7 @@ export interface UserFieldRefs {
   readonly password: Prisma.FieldRef<"User", 'String'>
   readonly createdAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"User", 'DateTime'>
+  readonly emailVerifiedAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly termsAcceptedAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly termsAcceptedIp: Prisma.FieldRef<"User", 'String'>
   readonly deletionRequestedAt: Prisma.FieldRef<"User", 'DateTime'>
@@ -2052,6 +2400,54 @@ export type User$passwordResetTokensArgs<ExtArgs extends runtime.Types.Extension
   take?: number
   skip?: number
   distinct?: Prisma.PasswordResetTokenScalarFieldEnum | Prisma.PasswordResetTokenScalarFieldEnum[]
+}
+
+/**
+ * User.verificationTokens
+ */
+export type User$verificationTokensArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the VerificationToken
+   */
+  select?: Prisma.VerificationTokenSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the VerificationToken
+   */
+  omit?: Prisma.VerificationTokenOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.VerificationTokenInclude<ExtArgs> | null
+  where?: Prisma.VerificationTokenWhereInput
+  orderBy?: Prisma.VerificationTokenOrderByWithRelationInput | Prisma.VerificationTokenOrderByWithRelationInput[]
+  cursor?: Prisma.VerificationTokenWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.VerificationTokenScalarFieldEnum | Prisma.VerificationTokenScalarFieldEnum[]
+}
+
+/**
+ * User.emailChangeTokens
+ */
+export type User$emailChangeTokensArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the EmailChangeToken
+   */
+  select?: Prisma.EmailChangeTokenSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the EmailChangeToken
+   */
+  omit?: Prisma.EmailChangeTokenOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EmailChangeTokenInclude<ExtArgs> | null
+  where?: Prisma.EmailChangeTokenWhereInput
+  orderBy?: Prisma.EmailChangeTokenOrderByWithRelationInput | Prisma.EmailChangeTokenOrderByWithRelationInput[]
+  cursor?: Prisma.EmailChangeTokenWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.EmailChangeTokenScalarFieldEnum | Prisma.EmailChangeTokenScalarFieldEnum[]
 }
 
 /**

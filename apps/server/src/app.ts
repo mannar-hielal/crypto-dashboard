@@ -9,6 +9,7 @@ import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import ajvFormats from 'ajv-formats';
 import { config } from './config.js';
 import { prismaPlugin } from './plugins/prisma.js';
 import { authPlugin } from './plugins/auth.js';
@@ -18,6 +19,16 @@ export async function buildApp() {
   const app = Fastify({
     // Disable Fastify's logger in tests to reduce terminal noise
     logger: config.nodeEnv === 'test' ? false : { level: config.logLevel },
+    ajv: {
+      customOptions: {
+        formats: {
+          email: true,
+          // 'date-time' is also used in schemas
+          'date-time': true,
+        },
+      },
+      plugins: [ajvFormats],
+    },
   });
 
   // ─── API DOCUMENTATION ────────────────────────────────────────────────────
@@ -76,6 +87,7 @@ export async function buildApp() {
   await app.register(cors, {
     origin: config.nodeEnv === 'production' ? config.corsOrigin : true,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
   // WebSocket support — must be registered before any websocket routes
@@ -120,7 +132,7 @@ export async function buildApp() {
     void reply.status(statusCode).send({ error: error.message ?? 'Bad Request' });
   });
 
-  // ─── HEALTH CHECK ─────────────────────────────────────────────────────────
+  // ─── HEALTH CHECK ───────────────────────────────────���─────────────────────
   app.get(
     '/health',
     {

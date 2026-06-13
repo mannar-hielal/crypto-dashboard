@@ -31,7 +31,14 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
   const [newEmail, setNewEmail] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
+  const [emailSuccess, setEmailSuccess] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
+
+  const [currentPasswordForNewPass, setCurrentPasswordForNewPass] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const [showPasswordConfirm, setShowPasswordConfirm] = useState<'none' | 'sending' | 'sent'>('none');
 
@@ -50,6 +57,9 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
       setUsernameError(null);
       setEmailError(null);
       setDeleteError(null);
+      setPasswordError(null);
+      setEmailSuccess(false);
+      setPasswordSuccess(false);
     }
   }, [open, user]);
 
@@ -75,10 +85,12 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
   const handleUpdateEmail = async () => {
     setIsUpdatingEmail(true);
     setEmailError(null);
+    setEmailSuccess(false);
 
     try {
-      const res = await authApi.updateEmail({ email: newEmail, currentPassword }, accessToken);
-      updateUser({ email: res.user.email });
+      await authApi.updateEmail({ email: newEmail, currentPassword }, accessToken);
+      setEmailSuccess(true);
+      setTimeout(() => setEmailSuccess(false), 5000);
       setShowEmailPanel(false);
       setNewEmail('');
       setCurrentPassword('');
@@ -86,6 +98,29 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
       setEmailError(err instanceof Error ? err.message : 'An unknown error occurred');
     } finally {
       setIsUpdatingEmail(false);
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    setIsUpdatingPassword(true);
+    setPasswordError(null);
+    setPasswordSuccess(false);
+
+    try {
+      await authApi.updatePassword(
+        { currentPassword: currentPasswordForNewPass, newPassword },
+        accessToken
+      );
+      setPasswordSuccess(true);
+      setTimeout(() => {
+        // Password change forces logout server-side
+        clearAuth();
+        window.location.href = '/login';
+      }, 2000);
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : 'An unknown error occurred');
+    } finally {
+      setIsUpdatingPassword(false);
     }
   };
 
@@ -190,7 +225,14 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                   <div className="flex items-center justify-between gap-4">
                     <div className="space-y-0.5">
                       <p className="text-[11px] font-medium text-white/50">Email address</p>
-                      <p className="text-sm text-white/80">{maskEmail(user.email)}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm text-white/80">{maskEmail(user.email)}</p>
+                        {emailSuccess && (
+                          <span className="flex items-center gap-1 text-[10px] font-bold text-green-400 uppercase tracking-tight">
+                            <Check className="w-3 h-3" /> Verification Sent
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <button
                       onClick={() => setShowEmailPanel(!showEmailPanel)}
@@ -253,48 +295,92 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                   <hr className="border-white/5" />
 
                   {/* Password Row */}
-                  <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center justify-between gap-4 pt-4 border-t border-white/5">
                     <div className="space-y-0.5">
                       <p className="text-[11px] font-medium text-white/50">Password</p>
-                      <p className="text-sm text-white/80">••••••••••••</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm text-white/80">••••••••••••</p>
+                        {passwordSuccess && (
+                          <span className="flex items-center gap-1 text-[10px] font-bold text-green-400 uppercase tracking-tight">
+                            <Check className="w-3 h-3" /> Updated
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <button
-                      onClick={handleRequestPasswordReset}
-                      className="text-xs font-semibold px-3 py-1.5 rounded transition-colors"
-                      style={{ background: 'rgba(255,255,255,0.05)', color: color.purple }}
-                    >
-                      Change password
-                    </button>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleRequestPasswordReset}
+                        disabled={showPasswordConfirm !== 'none'}
+                        className="text-[11px] font-bold text-purple-400 hover:text-purple-300 disabled:opacity-50 transition-colors uppercase tracking-tight"
+                      >
+                        {showPasswordConfirm === 'sending'
+                          ? 'Sending...'
+                          : showPasswordConfirm === 'sent'
+                            ? 'Link Sent'
+                            : 'Reset via email'}
+                      </button>
+                      <span className="text-white/10">|</span>
+                      <button
+                        onClick={() => setShowPasswordPanel(!showPasswordPanel)}
+                        className="text-[11px] font-bold text-purple-400 hover:text-purple-300 transition-colors uppercase tracking-tight"
+                      >
+                        {showPasswordPanel ? 'Cancel' : 'Change'}
+                      </button>
+                    </div>
                   </div>
 
-                  {showPasswordConfirm !== 'none' && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.98 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="p-3 rounded bg-purple-500/10 border border-purple-500/20 space-y-2"
-                    >
-                      {showPasswordConfirm === 'sending' ? (
-                        <p className="text-xs text-purple-200/70">Sending reset email...</p>
-                      ) : (
-                        <>
-                          <div className="flex items-start gap-2">
-                            <Check className="w-3.5 h-3.5 text-purple-400 mt-0.5" />
-                            <div className="space-y-2">
-                              <p className="text-xs text-purple-200/90 leading-relaxed">
-                                <strong>Email sent</strong> — We've sent instructions to reset your password to your email.
-                              </p>
-                              <button
-                                onClick={() => setShowPasswordConfirm('none')}
-                                className="text-[11px] font-bold text-purple-300 hover:text-purple-200 uppercase tracking-tight"
-                              >
-                                Got it
-                              </button>
-                            </div>
+                  <AnimatePresence>
+                    {showPasswordPanel && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="space-y-3 pt-2">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-white/30 uppercase tracking-wider">
+                              Current Password
+                            </label>
+                            <input
+                              type="password"
+                              value={currentPasswordForNewPass}
+                              onChange={(e) => setCurrentPasswordForNewPass(e.target.value)}
+                              placeholder="Confirm your current password"
+                              className="w-full h-9 px-3 rounded bg-black/40 border border-white/5 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors"
+                            />
                           </div>
-                        </>
-                      )}
-                    </motion.div>
-                  )}
+
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-white/30 uppercase tracking-wider">
+                              New Password
+                            </label>
+                            <input
+                              type="password"
+                              value={newPassword}
+                              onChange={(e) => setNewPassword(e.target.value)}
+                              placeholder="At least 8 characters"
+                              className="w-full h-9 px-3 rounded bg-black/40 border border-white/5 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors"
+                            />
+                          </div>
+
+                          {passwordError && <p className="text-[11px] text-red-400 font-medium">{passwordError}</p>}
+
+                          <button
+                            onClick={handleUpdatePassword}
+                            disabled={isUpdatingPassword || !newPassword || !currentPasswordForNewPass}
+                            className="w-full h-9 bg-purple-600 hover:bg-purple-500 disabled:opacity-30 rounded text-xs font-bold text-white transition-all uppercase tracking-wider shadow-lg shadow-purple-600/20"
+                          >
+                            {isUpdatingPassword ? 'Updating...' : 'Update Password'}
+                          </button>
+                          <p className="text-[10px] text-white/30 text-center leading-tight">
+                            Note: You will be logged out after a successful password change.
+                          </p>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </section>
 

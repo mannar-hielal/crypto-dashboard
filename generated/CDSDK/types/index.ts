@@ -4,6 +4,7 @@ export interface User {
   id: string;
   email: string;
   username: string;
+  emailVerifiedAt?: string | null;
   deletionRequestedAt?: string | null;
 }
 

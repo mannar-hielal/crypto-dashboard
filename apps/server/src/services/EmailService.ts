@@ -60,6 +60,89 @@ export const EmailService = {
     }
   },
 
+  async sendVerificationEmail(to: string, verificationUrl: string): Promise<void> {
+    const client = getResend();
+
+    if (!client) {
+      if (config.nodeEnv !== 'production') {
+        logger.info({ to, verificationUrl }, '📧 [DEV] Email verification link (no RESEND_API_KEY set)');
+      }
+      return;
+    }
+
+    await client.emails.send({
+      from: config.resendFromEmail,
+      to,
+      subject: 'Verify your cryptopapertrade.com email',
+      html: `
+        <h2>Welcome to cryptopapertrade.com!</h2>
+        <p>Please verify your email address by clicking the link below. This link expires in <strong>24 hours</strong>.</p>
+        <p>
+          <a href="${verificationUrl}"
+             style="background:#2563eb;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;">
+            Verify Email
+          </a>
+        </p>
+        <hr/>
+        <small>If you did not create an account, you can safely ignore this email.</small>
+      `,
+    });
+  },
+
+  async sendEmailChangeVerification(to: string, verificationUrl: string): Promise<void> {
+    const client = getResend();
+
+    if (!client) {
+      if (config.nodeEnv !== 'production') {
+        logger.info({ to, verificationUrl }, '📧 [DEV] Email change verification link (no RESEND_API_KEY set)');
+      }
+      return;
+    }
+
+    await client.emails.send({
+      from: config.resendFromEmail,
+      to,
+      subject: 'Verify your new email address',
+      html: `
+        <h2>Email Change Request</h2>
+        <p>You requested to change your email address. Please click the link below to verify your new email and complete the update.</p>
+        <p>
+          <a href="${verificationUrl}"
+             style="background:#2563eb;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;">
+            Verify New Email
+          </a>
+        </p>
+        <p><strong>Note:</strong> Once verified, you will be logged out of all active sessions for security.</p>
+        <hr/>
+        <small>If you did not request this change, please ignore this email.</small>
+      `,
+    });
+  },
+
+  async sendEmailChangedSecurityAlert(to: string, oldEmail: string, newEmail: string): Promise<void> {
+    const client = getResend();
+
+    if (!client) {
+      if (config.nodeEnv !== 'production') {
+        logger.info({ to, oldEmail, newEmail }, '📧 [DEV] Email changed security alert (no RESEND_API_KEY set)');
+      }
+      return;
+    }
+
+    await client.emails.send({
+      from: config.resendFromEmail,
+      to,
+      subject: 'Security Alert: Your email address has been changed',
+      html: `
+        <h2>Security Alert</h2>
+        <p>The email address associated with your cryptopapertrade.com account has been successfully changed.</p>
+        <p><strong>Old Email:</strong> ${oldEmail}</p>
+        <p><strong>New Email:</strong> ${newEmail}</p>
+        <p>If you did not perform this action, please contact support and reset your password immediately, as your account may be compromised.</p>
+      `,
+    });
+  },
+
   async sendDeletionRequestedEmail(to: string, username: string, deletionDate: Date): Promise<void> {
     const client = getResend();
     const dateStr = deletionDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
