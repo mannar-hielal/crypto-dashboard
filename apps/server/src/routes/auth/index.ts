@@ -110,7 +110,7 @@ const loginSchema = {
     properties: {
       email: {
         type: 'string',
-        pattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$',
+        format: 'email',
         maxLength: 255,
       },
       password: { type: 'string', minLength: 1, maxLength: 72 },
@@ -201,7 +201,7 @@ const forgotPasswordSchema = {
     properties: {
       email: {
         type: 'string',
-        pattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$',
+        format: 'email',
         maxLength: 255,
       },
     },

@@ -591,16 +591,16 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 ### 🔴 Blocking — Must fix before launch
 
-| #   | Issue                                          | File(s)          | Priority | Status      |
-| --- | ---------------------------------------------- | ---------------- | -------- | ----------- |
-| 1   | No DPAs signed with Fly.io, Resend, Cloudflare | — (legal action) | Critical | ⬜ Pending  |
-| 2   | Bybit API terms for non-commercial use         | — (verification) | Critical | ⬜ Pending  |
+| #   | Issue                                          | File(s)          | Priority | Status     |
+| --- | ---------------------------------------------- | ---------------- | -------- | ---------- |
+| 1   | No DPAs signed with Fly.io, Resend, Cloudflare | — (legal action) | Critical | ⬜ Pending |
+| 2   | Bybit API terms for non-commercial use         | — (verification) | Critical | ⬜ Pending |
 
 ### 🟡 Important — Fix before/at launch
 
-| #   | Issue                                                    | File(s)          | Priority  | Status      |
-| --- | -------------------------------------------------------- | ---------------- | --------- | ----------- |
-| 3   | No legal entity registered (personal liability exposure) | — (legal action) | Important | ⬜ Pending  |
+| #   | Issue                                                    | File(s)          | Priority  | Status     |
+| --- | -------------------------------------------------------- | ---------------- | --------- | ---------- |
+| 3   | No legal entity registered (personal liability exposure) | — (legal action) | Important | ⬜ Pending |
 
 ---
 
@@ -790,12 +790,12 @@ Paper trading  →  Real order      →  Proven bot      →  Full autonomous
 
 | Gate                        | Detail                                                                                                                                                |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Phase 5 prerequisite        | User must have connected + verified Bybit API keys — enforced in code, not just UI                                                                                                                       |
-| Paper mode proven           | Bot must have run paper mode for configurable minimum (default: 7 days + 50 trades) with positive results — stats summary shown before upgrade prompt                                                                 |
-| Explicit confirmation modal | Multi-step: "This bot will place REAL orders with REAL money. Your losses are your own." — user must type confirmation phrase                                                                                                                       |
-| Hard daily loss limit       | Bot auto-kills + sends alert if real account drops >X% in a day — cannot be disabled                                                                                                                       |
-| Max position size cap       | Never risk more than Y% per trade or Z USDT total across open positions — requires re-confirmation to increase                                                                                                                       |
-| Supervised mode warm-up     | When first switching paper→live, Supervised mode is forced for a configurable warm-up period before Autonomous is unlocked                                                                                                                       |
+| Phase 5 prerequisite        | User must have connected + verified Bybit API keys — enforced in code, not just UI                                                                    |
+| Paper mode proven           | Bot must have run paper mode for configurable minimum (default: 7 days + 50 trades) with positive results — stats summary shown before upgrade prompt |
+| Explicit confirmation modal | Multi-step: "This bot will place REAL orders with REAL money. Your losses are your own." — user must type confirmation phrase                         |
+| Hard daily loss limit       | Bot auto-kills + sends alert if real account drops >X% in a day — cannot be disabled                                                                  |
+| Max position size cap       | Never risk more than Y% per trade or Z USDT total across open positions — requires re-confirmation to increase                                        |
+| Supervised mode warm-up     | When first switching paper→live, Supervised mode is forced for a configurable warm-up period before Autonomous is unlocked                            |
 
 ### Risks
 
@@ -1580,5 +1580,3 @@ Three visual sections (all use existing token system: `bg.panel`, `bg.surface`, 
     - Improved `auth.test.ts` mock resilience for `Prisma` transactions and `EmailService`.
   - **Formatting & Linting**: Performed workspace-wide `pnpm format` and `pnpm lint` pass to ensure code quality and style consistency before push.
   - **Commit**: `fc3a472`
-
-
