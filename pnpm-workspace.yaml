@@ -3,3 +3,9 @@ packages:
   - 'apps/*'
   # Shared SDK (types + API functions) — like Guidewire's CDSDK
   - 'generated/*'
+
+onlyBuiltDependencies:
+  - '@prisma/engines'
+  - 'argon2'
+  - 'esbuild'
+  - 'prisma'
