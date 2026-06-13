@@ -532,7 +532,7 @@ export async function authRoutes(app: FastifyInstance) {
           email: user.email,
           username: user.username,
           emailVerifiedAt: null,
-          termsAcceptedAt: user.termsAcceptedAt.toISOString(),
+          termsAcceptedAt: user.termsAcceptedAt?.toISOString() ?? null,
           termsAcceptedIp: user.termsAcceptedIp,
         },
       });
@@ -708,7 +708,7 @@ export async function authRoutes(app: FastifyInstance) {
     return reply.status(204).send();
   });
 
-  // ─── FORGOT PASSWORD ─────────────────────────────────────────────────────────
+  // ─── FORGOT PASSWORD ────────────────────────────────────────────���────────────
   app.post(
     '/forgot-password',
     {
@@ -807,8 +807,8 @@ export async function authRoutes(app: FastifyInstance) {
     return reply.send({ message: 'Password updated successfully. Please log in again.' });
   });
 
-  // ─── ME (protected) ──────────────────────────────────────────────────────────
-  app.get('/me', { schema: meSchema }, async (request, reply) => {
+  // ─── ME (protected) ──────────────────────────────────────────���───────────────
+  app.get('/me', { schema: meSchema, onRequest: [app.authenticate] }, async (request, reply) => {
     const userId = (request.user as { userId: string }).userId;
 
     const user = await app.prisma.user.findUnique({
@@ -827,8 +827,8 @@ export async function authRoutes(app: FastifyInstance) {
         id: user.id,
         email: user.email,
         username: user.username,
-        emailVerifiedAt: user.emailVerifiedAt?.toISOString() || null,
-        termsAcceptedAt: user.termsAcceptedAt?.toISOString() || null,
+        emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
+        termsAcceptedAt: user.termsAcceptedAt?.toISOString() ?? null,
         termsAcceptedIp: user.termsAcceptedIp,
         account: user.account,
       },
