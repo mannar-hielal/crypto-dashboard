@@ -5,6 +5,7 @@ import { authApi } from '@crypto-dashboard/sdk';
 import { useAuthStore } from '@/store/authStore';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { PWAInstallBanner } from '@/components/PWAInstallBanner';
+import { CookieBanner } from '@/components/CookieBanner';
 
 import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
@@ -51,6 +52,9 @@ export default function App() {
     <>
       {/* PWA install hint — iOS Safari (manual) and Android Chrome (native prompt) */}
       <PWAInstallBanner />
+
+      {/* ⚖️ Legal cookie/storage notice — required by nDSG and GDPR */}
+      <CookieBanner />
 
       {/* AnimatePresence: detects route changes via location.pathname and plays
           enter/exit animations on the outgoing and incoming page components.

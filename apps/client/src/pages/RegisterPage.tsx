@@ -18,6 +18,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
 import { AuthLayout } from '@/components/AuthLayout';
 import { gradient, radius } from '@/lib/tokens';
 
@@ -48,6 +49,9 @@ const registerSchema = z.object({
     .regex(/(?=.*[A-Z])/, 'Must include an uppercase letter')
     .regex(/(?=.*[0-9])/, 'Must include a number')
     .regex(/(?=.*[^a-zA-Z0-9])/, 'Must include a special character'),
+  acceptedTerms: z.boolean().refine((val) => val === true, {
+    message: 'You must accept the terms and privacy policy',
+  }),
 });
 
 type RegisterForm = z.infer<typeof registerSchema>;
@@ -59,7 +63,7 @@ export function RegisterPage() {
 
   const form = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { email: '', username: '', password: '' },
+    defaultValues: { email: '', username: '', password: '', acceptedTerms: false },
   });
 
   async function onSubmit(data: RegisterForm) {
@@ -174,6 +178,33 @@ export function RegisterPage() {
                   />
                 </motion.div>
 
+                <motion.div variants={formFieldVariants}>
+                  <FormField
+                    control={form.control}
+                    name="acceptedTerms"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-2 space-y-0 p-1">
+                        <FormControl>
+                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                        <div className="grid gap-1.5 leading-none">
+                          <FormLabel className="text-xs font-medium text-muted-foreground cursor-pointer">
+                            I have read and agree to the{' '}
+                            <Link to="/terms" className="text-primary hover:underline">
+                              Terms of Use
+                            </Link>{' '}
+                            and{' '}
+                            <Link to="/privacy" className="text-primary hover:underline">
+                              Privacy Policy
+                            </Link>
+                          </FormLabel>
+                          <FormMessage />
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </motion.div>
+
                 <motion.div
                   variants={formFieldVariants}
                   whileHover={{ scale: 1.01 }}
@@ -194,6 +225,15 @@ export function RegisterPage() {
                     {form.formState.isSubmitting ? 'Creating account…' : 'Create account'}
                   </Button>
                 </motion.div>
+
+                <motion.p
+                  variants={formFieldVariants}
+                  className="text-center text-[10px] leading-tight text-muted-foreground/60"
+                >
+                  ⚠️ <strong>No Financial Advice:</strong> This is a paper trading simulator for
+                  educational purposes only. No real funds are involved. Simulated results do not
+                  guarantee future performance.
+                </motion.p>
 
                 <motion.p
                   variants={formFieldVariants}
