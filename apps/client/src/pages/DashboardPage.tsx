@@ -6,7 +6,7 @@ import { usePaneFeeds } from '@/hooks/usePaneFeeds';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useTPSLMonitor } from '@/hooks/useTPSLMonitor';
 import { usePendingOrderMonitor } from '@/hooks/usePendingOrderMonitor';
-import { TradingSoundProvider, useTradingSoundCtx } from '@/hooks/TradingSoundContext';
+import { TradingSoundProvider, useSoundActions } from '@/hooks/TradingSoundContext';
 import { useLayoutStore } from '@/store/layoutStore';
 import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@crypto-dashboard/sdk';
@@ -72,24 +72,22 @@ export function DashboardPage() {
 }
 
 function DashboardInner() {
-  const sound = useTradingSoundCtx();
+  const { playProfit, playLoss, playOrderFilled } = useSoundActions();
 
   usePaneFeeds();
   useDocumentTitle();
 
   // Stable callback refs — memoized so they don't change on every render.
-  // Depend on `sound` (the whole object) — React Compiler infers the object-level
-  // dependency from property accesses and cannot preserve narrower method deps.
   const handleTPSLClosed = useCallback(
     (pnl: number) => {
-      if (pnl >= 0) sound.playProfit();
-      else sound.playLoss();
+      if (pnl >= 0) playProfit();
+      else playLoss();
     },
-    [sound]
+    [playProfit, playLoss]
   );
   const handleOrderFilled = useCallback(() => {
-    sound.playOrderFilled();
-  }, [sound]);
+    playOrderFilled();
+  }, [playOrderFilled]);
 
   useTPSLMonitor({ onClosed: handleTPSLClosed });
   usePendingOrderMonitor({ onFilled: handleOrderFilled });

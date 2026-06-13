@@ -9,7 +9,16 @@
  */
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { useTradingSound, type TradingSoundAPI } from './useTradingSound';
+
 const TradingSoundContext = createContext<TradingSoundAPI | null>(null);
+
+/**
+ * Split sound API into separate contexts to prevent re-renders in components
+ * that only need to play sounds (actions) when settings (volume/mute) change.
+ */
+const SoundSettingsContext = createContext<{ volume: number; muted: boolean } | null>(null);
+const SoundActionsContext = createContext<Omit<TradingSoundAPI, 'volume' | 'muted'> | null>(null);
+
 export function TradingSoundProvider({ children }: { children: ReactNode }) {
   const {
     volume,
@@ -23,12 +32,9 @@ export function TradingSoundProvider({ children }: { children: ReactNode }) {
     playLoss,
   } = useTradingSound();
 
-  // Memoize so the context value reference is stable — avoids cascading
-  // re-renders of all context consumers on every TradingSoundProvider render.
-  const value = useMemo<TradingSoundAPI>(
+  const settings = useMemo(() => ({ volume, muted }), [volume, muted]);
+  const actions = useMemo(
     () => ({
-      volume,
-      muted,
       setVolume,
       toggleMute,
       playOrderPlaced,
@@ -38,8 +44,6 @@ export function TradingSoundProvider({ children }: { children: ReactNode }) {
       playLoss,
     }),
     [
-      volume,
-      muted,
       setVolume,
       toggleMute,
       playOrderPlaced,
@@ -50,12 +54,31 @@ export function TradingSoundProvider({ children }: { children: ReactNode }) {
     ]
   );
 
-  return <TradingSoundContext.Provider value={value}>{children}</TradingSoundContext.Provider>;
+  return (
+    <SoundSettingsContext.Provider value={settings}>
+      <SoundActionsContext.Provider value={actions}>{children}</SoundActionsContext.Provider>
+    </SoundSettingsContext.Provider>
+  );
 }
-/** Access the shared trading sound API inside <TradingSoundProvider>. */
+
+/** Access only the sound settings (volume, muted). */
+export function useSoundSettings() {
+  const ctx = useContext(SoundSettingsContext);
+  if (!ctx) throw new Error('useSoundSettings must be used within TradingSoundProvider');
+  return ctx;
+}
+
+/** Access sound playback actions (playProfit, etc.). Stable references. */
+export function useSoundActions() {
+  const ctx = useContext(SoundActionsContext);
+  if (!ctx) throw new Error('useSoundActions must be used within TradingSoundProvider');
+  return ctx;
+}
+
+/** Legacy hook for backwards compatibility. */
 // eslint-disable-next-line react-refresh/only-export-components
 export function useTradingSoundCtx(): TradingSoundAPI {
-  const ctx = useContext(TradingSoundContext);
-  if (!ctx) throw new Error('useTradingSoundCtx must be used within TradingSoundProvider');
-  return ctx;
+  const settings = useSoundSettings();
+  const actions = useSoundActions();
+  return { ...settings, ...actions };
 }
