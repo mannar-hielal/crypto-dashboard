@@ -5,7 +5,7 @@ const CONTACT_EMAIL = 'info@cryptopapertrade.com';
 
 export function TermsPage() {
   return (
-    <LegalLayout title="Terms of Use" lastUpdated="May 6, 2026">
+    <LegalLayout title="Terms of Use" lastUpdated="June 13, 2026" version="1.0">
       <section>
         <h2>1. Acceptance of Terms</h2>
         <p>
@@ -18,9 +18,10 @@ export function TermsPage() {
       <section>
         <h2>2. Description of Service</h2>
         <p>
-          https://cryptopapertrade.com/ is a <strong>paper trading simulation platform</strong> that provides
-          professional-grade charting and order management tools using real-time price data from the
-          Bybit API. All trading activity on this platform is simulated using virtual currency.
+          https://cryptopapertrade.com/ is a <strong>paper trading simulation platform</strong> that
+          provides professional-grade charting and order management tools using real-time price data
+          from the Bybit API. All trading activity on this platform is simulated using virtual
+          currency.
         </p>
         <p>
           <strong>
@@ -29,10 +30,9 @@ export function TermsPage() {
           </strong>
         </p>
         <p>
-          The Service is currently offered <strong>entirely for free</strong> during an early-access
-          period for educational and research purposes. We reserve the right to introduce
-          subscription-based pricing in the future. Registered users will be notified at least{' '}
-          <strong>30 days</strong> before any such changes take effect.
+          The Service is provided <strong>free of charge</strong> for educational and research purposes.
+          While we strive to keep the platform accessible, we reserve the right to modify or
+          discontinue features at any time.
         </p>
       </section>
 
@@ -40,6 +40,10 @@ export function TermsPage() {
         <h2>3. Eligibility</h2>
         <ul>
           <li>You must be at least 18 years old to use this Service.</li>
+          <li>
+            The Service is for <strong>personal, non-commercial use only</strong>. Sharing account
+            credentials is prohibited and may result in immediate termination.
+          </li>
           <li>
             By creating an account, you confirm that you meet this age requirement and that you have
             the legal capacity to enter into these Terms.
@@ -103,11 +107,15 @@ export function TermsPage() {
             Use data or outputs from this Service to train commercial AI models without our express
             written consent.
           </li>
+          <li>
+            Use automated tools, scripts, or bots to systematically extract, scrape, mirror, or
+            republish real-time or historical market data provided through the Service.
+          </li>
         </ul>
       </section>
 
       <section>
-        <h2>8. Intellectual Property</h2>
+        <h2>8. Intellectual Property & User Content</h2>
         <p>
           All code, design, content, and assets produced by this project are the exclusive
           proprietary property of Mannar Hielal. All rights reserved. No part of the Service may be
@@ -122,6 +130,13 @@ export function TermsPage() {
             Bybit's Terms of Service
           </a>
           .
+        </p>
+        <p>
+          <strong>User Content Ownership:</strong> You retain ownership of any content you create
+          within the Service (such as trading journal entries or notes). By using the Service, you
+          grant cryptopapertrade.com a limited, non-exclusive, worldwide, royalty-free license to
+          store, host, and display your content solely for the purpose of providing the Service to
+          you.
         </p>
       </section>
 
@@ -306,6 +321,49 @@ export function TermsPage() {
         <p>
           For questions or concerns about these Terms, contact us at:{' '}
           <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+        </p>
+      </section>
+
+      <section>
+        <h2>18. Account Termination</h2>
+        <p>
+          We reserve the right to suspend or terminate your access to the Service at our sole
+          discretion, without notice, for conduct that we believe violates these Terms of Use
+          or is harmful to other users of the Service, us, or third parties, or for any other reason.
+        </p>
+        <ul>
+          <li>
+            <strong>Grounds for Termination:</strong> Material breach of these Terms, abuse
+            of the platform, or any attempt to disrupt the Service.
+          </li>
+          <li>
+            <strong>Deletion Window:</strong> Upon requesting account deletion or upon termination
+            of an account, your data will enter a <strong>30-day deletion window</strong> as
+            specified in our Privacy Policy. During this window, you may request a data export
+            unless your account was terminated for illegal activity.
+          </li>
+          <li>
+            <strong>Data Export:</strong> Upon termination, you retain the right to request
+            exports of your data as described in our Privacy Policy, provided your account
+            was not terminated for fraudulent or illegal activity.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>19. Force Majeure & Third-Party Dependencies</h2>
+        <p>
+          <strong>Third-Party APIs:</strong> Our Service integrates with and depends on third-party
+          Application Programming Interfaces (APIs), primarily from Bybit for market data. You
+          acknowledge that we have no control over the availability, accuracy, or stability of these
+          third-party services. We make no warranty that the Service will be uninterrupted if these
+          third parties experience outages or change their terms of access.
+        </p>
+        <p>
+          <strong>Force Majeure:</strong> Mannar Hielal shall not be liable for any failure or delay
+          in performance due to circumstances beyond our reasonable control, including but not
+          limited to: acts of God, government actions, cyberattacks (DDoS), power outages, or
+          infrastructure failures by hosting providers (Fly.io, Cloudflare).
         </p>
       </section>
     </LegalLayout>

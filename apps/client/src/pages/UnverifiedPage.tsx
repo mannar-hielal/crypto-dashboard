@@ -4,9 +4,11 @@ import { motion } from 'framer-motion';
 import { authApi } from '@crypto-dashboard/sdk';
 import { useAuthStore } from '@/store/authStore';
 import { bg, color } from '@/lib/tokens';
+import { useNavigate } from 'react-router';
 
 export function UnverifiedPage() {
   const { user, clearAuth } = useAuthStore();
+  const navigate = useNavigate();
   const [status, setStatus] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle');
   const [message, setMessage] = useState('');
 
@@ -20,6 +22,15 @@ export function UnverifiedPage() {
     } catch (err) {
       setStatus('error');
       setMessage(err instanceof Error ? err.message : 'Failed to send verification email.');
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await authApi.logout();
+    } finally {
+      clearAuth();
+      void navigate('/login');
     }
   };
 
@@ -84,7 +95,7 @@ export function UnverifiedPage() {
 
           <div className="flex items-center justify-center gap-2 text-sm">
             <button
-              onClick={() => clearAuth()}
+              onClick={handleSignOut}
               className="flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" /> Use a different account
@@ -95,4 +106,3 @@ export function UnverifiedPage() {
     </div>
   );
 }
-

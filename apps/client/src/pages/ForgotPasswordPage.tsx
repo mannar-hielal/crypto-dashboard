@@ -7,7 +7,6 @@ import { motion } from 'framer-motion';
 import { authApi } from '@crypto-dashboard/sdk';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Form,
   FormControl,
@@ -16,14 +15,24 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AuthLayout } from '@/components/AuthLayout';
+import { bg, color, gradient, radius } from '@/lib/tokens';
 
 const forgotSchema = z.object({
   email: z.string().email('Please enter a valid email'),
 });
 
 type ForgotForm = z.infer<typeof forgotSchema>;
+
+const formContainerVariants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.08, delayChildren: 0.12 } },
+};
+
+const formFieldVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.28, ease: 'easeOut' as const } },
+};
 
 export function ForgotPasswordPage() {
   const [submitted, setSubmitted] = useState(false);
@@ -42,57 +51,129 @@ export function ForgotPasswordPage() {
   return (
     <AuthLayout>
       <motion.div
-        initial={{ opacity: 0, y: 16 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
+        transition={{ duration: 0.35, ease: 'easeOut' }}
         className="w-full max-w-sm"
       >
-        <Card>
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Forgot password?</CardTitle>
-            <CardDescription>Enter your email to receive a reset link</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <div
+          className="rounded-2xl border border-white/8 p-8 shadow-2xl"
+          style={{ background: bg.panel }}
+        >
+          {/* Brand mark */}
+          <div className="mb-6 flex flex-col items-center gap-3">
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="flex h-12 w-12 items-center justify-center rounded-xl"
+              style={{
+                background: `linear-gradient(135deg, ${color.purpleDark} 0%, ${color.purple} 100%)`,
+                boxShadow: `0 0 24px ${color.purpleDark}80`,
+              }}
+            >
+              <span className="text-lg font-black text-white">CPT</span>
+            </motion.div>
+            <div className="text-center">
+              <h1 className="text-xl font-bold text-white">Forgot password?</h1>
+              <p className="mt-0.5 text-sm" style={{ color: color.muted }}>
+                Enter your email to receive a reset link
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
             {submitted ? (
-              <Alert>
-                <AlertDescription>
-                  If that email exists, a reset link has been sent. Check your inbox.
-                </AlertDescription>
-              </Alert>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-lg border px-3 py-2.5 text-xs font-medium"
+                style={{
+                  borderColor: `${color.purpleDark}33`,
+                  background: `${color.purpleDark}1a`,
+                  color: color.muted,
+                }}
+              >
+                If that email exists, a reset link has been sent. Check your inbox.
+              </motion.div>
             ) : (
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="email"
-                            placeholder="you@example.com"
-                            autoComplete="email"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                    {form.formState.isSubmitting ? 'Sending…' : 'Send reset link'}
-                  </Button>
-                </form>
+                <motion.form
+                  variants={formContainerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  noValidate
+                  className="space-y-4"
+                >
+                  <motion.div variants={formFieldVariants}>
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel
+                            className="text-xs font-semibold uppercase tracking-widest"
+                            style={{ color: color.muted }}
+                          >
+                            Email
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="email"
+                              placeholder="you@example.com"
+                              autoComplete="email"
+                              className="border-white/8 text-white focus-visible:ring-0 focus-visible:border-brand-purple-dark/50"
+                              style={{ background: bg.surface }}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage style={{ color: color.red }} />
+                        </FormItem>
+                      )}
+                    />
+                  </motion.div>
+
+                  <motion.div
+                    variants={formFieldVariants}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                  >
+                    <button
+                      type="submit"
+                      className="w-full h-8 flex items-center justify-center font-bold tracking-wide text-white transition-all"
+                      style={{
+                        background: form.formState.isSubmitting
+                          ? `${color.purpleDark}80`
+                          : gradient.brand,
+                        borderRadius: radius.button,
+                        boxShadow: `0 0 20px ${gradient.brandFrom}55`,
+                        fontSize: '14px',
+                      }}
+                      disabled={form.formState.isSubmitting}
+                    >
+                      {form.formState.isSubmitting ? 'Sending…' : 'Send reset link'}
+                    </button>
+                  </motion.div>
+                </motion.form>
               </Form>
             )}
-            <p className="text-muted-foreground text-center text-sm">
-              <Link to="/login" className="underline">
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="text-center text-sm"
+              style={{ color: color.muted }}
+            >
+              <Link
+                to="/login"
+                className="font-semibold transition-colors hover:text-brand-purple"
+                style={{ color: color.purpleDark }}
+              >
                 Back to sign in
               </Link>
-            </p>
-          </CardContent>
-        </Card>
+            </motion.p>
+          </div>
+        </div>
       </motion.div>
     </AuthLayout>
   );

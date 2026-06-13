@@ -4,7 +4,7 @@ const CONTACT_EMAIL = 'info@cryptopapertrade.com';
 
 export function PrivacyPage() {
   return (
-    <LegalLayout title="Privacy Policy" lastUpdated="May 6, 2026">
+    <LegalLayout title="Privacy Policy" lastUpdated="June 13, 2026" version="1.0">
       <section>
         <h2>1. Data Controller</h2>
         <p>
@@ -70,14 +70,20 @@ export function PrivacyPage() {
               <td>
                 Your browser's localStorage on your device only — not transmitted to or stored on
                 our servers. Clearing your browser data will erase it.
+                <br />
+                <em>
+                  ⚠️ In a future update (Phase 3), paper trading state will be optionally synced to
+                  the server. Users will be notified by email before this change takes effect and
+                  will be given the choice to opt in.
+                </em>
               </td>
             </tr>
             <tr>
               <td>Server access logs</td>
               <td>Security monitoring, abuse prevention</td>
               <td>
-                IP address + request metadata — retained per hosting provider defaults (Fly.io /
-                Cloudflare)
+                IP address + request metadata — retained for 30 days (Fly.io) or 7 days (Cloudflare).
+                See Section 7 for details.
               </td>
             </tr>
           </tbody>
@@ -137,8 +143,10 @@ export function PrivacyPage() {
             receiving a deletion request via the in-app flow, your account enters a 30-day
             cancellation window during which you retain full access and can cancel at any time.
             After 30 days with no cancellation, your account and all associated personal data are
-            permanently and irreversibly deleted. Aggregated or anonymised statistical data that
-            cannot identify you individually may be retained beyond this period.
+            permanently and irreversibly deleted. Some encrypted or technical backup data and
+            security logs may persist for up to <strong>60 days</strong> before being purged or
+            overwritten. Aggregated or anonymised statistical data that cannot identify you
+            individually may be retained beyond this period.
           </li>
           <li>
             <strong>Refresh tokens</strong>: automatically expire and are deleted after 7 days.
@@ -188,6 +196,10 @@ export function PrivacyPage() {
               <li>
                 <code>cd-paper-col-prefs</code> — your column visibility preferences in the
                 trading tables.
+              </li>
+              <li>
+                <code>cd-cookie-notice-dismissed</code> — a simple flag to remember that you have
+                dismissed the cookie information banner.
               </li>
             </ul>
             This data exists entirely on your device. Clearing your browser data or using a

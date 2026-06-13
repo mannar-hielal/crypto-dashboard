@@ -6,6 +6,7 @@ import { bg, color } from '@/lib/tokens';
 interface LegalLayoutProps {
   title: string;
   lastUpdated: string;
+  version?: string;
   children: ReactNode;
 }
 
@@ -13,7 +14,7 @@ interface LegalLayoutProps {
  * Shared layout for legal pages (Terms of Use, Privacy Policy).
  * Matches the app's EXGEN dark theme — ambient blobs, brand tokens, panel header.
  */
-export function LegalLayout({ title, lastUpdated, children }: LegalLayoutProps) {
+export function LegalLayout({ title, lastUpdated, version, children }: LegalLayoutProps) {
   return (
     <div
       className="relative flex min-h-screen flex-col overflow-hidden"
@@ -78,7 +79,7 @@ export function LegalLayout({ title, lastUpdated, children }: LegalLayoutProps) 
 
           <h1 className="text-2xl font-bold tracking-tight text-white">{title}</h1>
           <p className="mt-1.5 text-sm" style={{ color: color.muted }}>
-            Last updated: {lastUpdated}
+            {version ? `Version ${version} — ` : ''}Last updated: {lastUpdated}
           </p>
 
           {/* Development notice */}
