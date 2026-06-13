@@ -14,6 +14,8 @@ import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { TermsPage } from '@/pages/TermsPage';
 import { PrivacyPage } from '@/pages/PrivacyPage';
+import { SecurityPage } from '@/pages/SecurityPage';
+import { AcceptableUsePolicyPage } from '@/pages/AcceptableUsePolicyPage';
 import { UnderConstructionPage } from '@/pages/UnderConstructionPage';
 import { UnverifiedPage } from '@/pages/UnverifiedPage';
 import { VerifyEmailPage } from '@/pages/VerifyEmailPage';
@@ -77,6 +79,8 @@ export default function App() {
           <Route path="/verify-email-change" element={<VerifyEmailChangePage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/security" element={<SecurityPage />} />
+          <Route path="/aup" element={<AcceptableUsePolicyPage />} />
 
           {/* Protected routes */}
           <Route element={<ProtectedRoute />}>

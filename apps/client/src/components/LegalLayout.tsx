@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { Link } from 'react-router';
+import { useNavigate } from 'react-router';
 import { Footer } from '@/components/Footer';
 import { bg, color } from '@/lib/tokens';
 
@@ -15,6 +15,8 @@ interface LegalLayoutProps {
  * Matches the app's EXGEN dark theme — ambient blobs, brand tokens, panel header.
  */
 export function LegalLayout({ title, lastUpdated, version, children }: LegalLayoutProps) {
+  const navigate = useNavigate();
+
   return (
     <div
       className="relative flex min-h-screen flex-col overflow-hidden"
@@ -50,13 +52,13 @@ export function LegalLayout({ title, lastUpdated, version, children }: LegalLayo
 
       <main className="relative z-10 mx-auto w-full max-w-3xl flex-1 px-6 py-12">
         {/* Back navigation */}
-        <Link
-          to="/login"
+        <button
+          onClick={() => navigate(-1)}
           className="mb-8 inline-flex items-center gap-1.5 text-sm transition-colors hover:text-white"
           style={{ color: color.muted }}
         >
           ← Back
-        </Link>
+        </button>
 
         {/* Page header */}
         <div

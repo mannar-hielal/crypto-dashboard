@@ -382,18 +382,24 @@ function DashboardInner() {
           ⚠️ Paper trading only — no real funds. For educational purposes.
         </span>
         <nav
-          className="flex items-center gap-3"
+          className="flex items-center gap-4"
           style={{ fontSize: fontSize.xs10, color: `${color.muted}60` }}
         >
           <Link to="/terms" className="transition-colors hover:text-white/50">
-            Terms of Use
+            Terms of Service
           </Link>
-          <span aria-hidden>·</span>
           <Link to="/privacy" className="transition-colors hover:text-white/50">
-            Privacy
+            Privacy Policy
           </Link>
-          <span aria-hidden>·</span>
-          <span>© {new Date().getFullYear()} cryptopapertrade.com</span>
+          <Link to="/security" className="transition-colors hover:text-white/50">
+            Security
+          </Link>
+          <Link to="/aup" className="transition-colors hover:text-white/50">
+            Acceptable Use Policy
+          </Link>
+          <span className="ml-2 font-medium">
+            © {new Date().getFullYear()} cryptopapertrade.com
+          </span>
         </nav>
       </div>
     </div>

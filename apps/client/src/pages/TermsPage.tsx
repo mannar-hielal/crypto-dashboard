@@ -5,7 +5,7 @@ const CONTACT_EMAIL = 'info@cryptopapertrade.com';
 
 export function TermsPage() {
   return (
-    <LegalLayout title="Terms of Use" lastUpdated="June 13, 2026" version="1.0">
+    <LegalLayout title="Terms of Service" lastUpdated="June 13, 2026" version="1.0">
       <section>
         <h2>1. Acceptance of Terms</h2>
         <p>
@@ -96,7 +96,13 @@ export function TermsPage() {
 
       <section>
         <h2>7. Prohibited Use</h2>
-        <p>You agree not to:</p>
+        <p>
+          Your use of the Service is subject to our{' '}
+          <Link to="/aup" className="underline hover:text-brand">
+            Acceptable Use Policy
+          </Link>
+          . In addition and without limitation, you agree not to:
+        </p>
         <ul>
           <li>Use the Service for any unlawful purpose or in violation of these Terms.</li>
           <li>Attempt to reverse-engineer, hack, or disrupt the platform or its infrastructure.</li>
@@ -123,7 +129,7 @@ export function TermsPage() {
           written permission of Mannar Hielal. Real-time price data is provided by Bybit and is
           subject to{' '}
           <a
-            href="https://www.bybit.com/en/terms-service/user-agreement/"
+            href="https://www.bybit.com/en/legal/terms-of-service/terms-of-service"
             target="_blank"
             rel="noopener noreferrer"
           >

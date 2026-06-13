@@ -232,13 +232,32 @@ export function PrivacyPage() {
               <td>Backend server hosting</td>
               <td>EU / US</td>
               <td>
-                <a
-                  href="https://fly.io/legal/privacy-policy"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  fly.io/legal/privacy-policy
-                </a>
+                <div className="flex flex-col gap-1">
+                  <a
+                    href="https://fly.io/legal/privacy-policy/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-brand"
+                  >
+                    Privacy Policy
+                  </a>
+                  <a
+                    href="https://fly.io/legal/terms-of-service/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-brand"
+                  >
+                    Terms of Service
+                  </a>
+                  <a
+                    href="https://fly.io/legal/acceptable-use-policy/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-brand"
+                  >
+                    Acceptable Use Policy
+                  </a>
+                </div>
               </td>
             </tr>
             <tr>
@@ -246,13 +265,40 @@ export function PrivacyPage() {
               <td>Frontend CDN, DDoS protection</td>
               <td>Global</td>
               <td>
-                <a
-                  href="https://www.cloudflare.com/privacypolicy/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  cloudflare.com/privacypolicy
-                </a>
+                <div className="flex flex-col gap-1">
+                  <a
+                    href="https://www.cloudflare.com/policies/privacy/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-brand"
+                  >
+                    Privacy Policy
+                  </a>
+                  <a
+                    href="https://www.cloudflare.com/policies/terms/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-brand"
+                  >
+                    Terms of Service
+                  </a>
+                  <a
+                    href="https://www.cloudflare.com/disclosure/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-brand"
+                  >
+                    Disclosure
+                  </a>
+                  <a
+                    href="https://www.cloudflare.com/trust-hub/abuse-approach/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-brand"
+                  >
+                    Abuse Policy
+                  </a>
+                </div>
               </td>
             </tr>
             <tr>
@@ -274,13 +320,24 @@ export function PrivacyPage() {
               <td>Real-time market data (mainnet — price feed only, no user data transmitted)</td>
               <td>Global</td>
               <td>
-                <a
-                  href="https://www.bybit.com/en/privacy-policy/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  bybit.com/en/privacy-policy
-                </a>
+                <div className="flex flex-col gap-1">
+                  <a
+                    href="https://www.bybit.com/en/legal/policies-and-rules/privacy-policy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-brand"
+                  >
+                    Privacy Policy
+                  </a>
+                  <a
+                    href="https://www.bybit.com/en/legal/terms-of-service/terms-of-service"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-brand"
+                  >
+                    Terms of Service
+                  </a>
+                </div>
               </td>
             </tr>
           </tbody>

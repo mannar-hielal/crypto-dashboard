@@ -102,22 +102,22 @@ them they have them.
 
 ## 🟠 Notable — Address before or shortly after launch
 
-### 8. Check Trademark Availability for "cryptopapertrade.com"
+### 8. Check Trademark Availability for "cryptopapertrade.com" (DONE)
 
-Run a search on [swissreg.ch](https://www.swissreg.ch) and
-[euipo.europa.eu](https://euipo.europa.eu/eSearch) before any marketing or paid launch.
-Consider a unique brand name with stronger trademark potential.
+- [x] Search performed on [swissreg.ch](https://www.swissreg.ch) (June 2026) — No results found.
+- [x] Search performed on [euipo.europa.eu](https://euipo.europa.eu/eSearch) (June 2026) — No results found.
+Consider a unique brand name with stronger trademark potential if transition to commercial SaaS is planned.
 
 ---
 
-### 9. Add Fair Use & Anti-Scraping Policy
+### 9. Add Fair Use & Anti-Scraping Policy (DONE)
 Add to Terms: 
 - "The service is for personal, non-commercial use only. Sharing account credentials is prohibited."
 - "Systematic extraction or scraping of market data via automated tools is strictly prohibited."
 
 ---
 
-### 10. Clarify User Data Ownership
+### 10. Clarify User Data Ownership (DONE)
 Add to Terms: "You retain ownership of content you create (journal entries, notes). By using the
 Service, you grant cryptopapertrade.com a limited, non-exclusive license to store and display your
 content solely for the purpose of providing the Service."
@@ -151,10 +151,19 @@ legal portal.
 
 **Action:**
 - Fly.io: sign DPA at fly.io/legal/dpa
+  - [x] Privacy: https://fly.io/legal/privacy-policy/
+  - [x] Terms: https://fly.io/legal/terms-of-service/
+  - [x] Use Policy: https://fly.io/legal/acceptable-use-policy/
 - Resend: sign DPA in the Resend dashboard (Settings → Legal)
 - Cloudflare: sign DPA at cloudflare.com/gdpr/dpa
+  - [x] Privacy: https://www.cloudflare.com/policies/privacy/
+  - [x] Disclosure: https://www.cloudflare.com/disclosure/
+  * [x] Abuse Policy: https://www.cloudflare.com/trust-hub/abuse-approach/
+  * [x] Terms: https://www.cloudflare.com/policies/terms/
 - Confirm Bybit receives no user PII (current code sends price-feed requests only — no user ID
   transmitted; this appears correct but should be re-verified before Phase 5)
+  - [x] Terms of Service: https://www.bybit.com/en/legal/terms-of-service/terms-of-service
+  - [x] Privacy Policy: https://www.bybit.com/en/legal/policies-and-rules/privacy-policy
 
 ---
 
@@ -213,7 +222,7 @@ Third-Party / Data Processing
   ☐ Sign DPA with Cloudflare (cloudflare.com/gdpr/dpa) (§14)
 
 Trademark
-  ☐ Search swissreg.ch and EUIPO for conflicting marks
+  ☑ Search swissreg.ch and EUIPO for conflicting marks (DONE June 2026)
   ☐ Decide on final brand name with trademark potential
 ```
 
