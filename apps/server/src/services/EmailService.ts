@@ -32,8 +32,14 @@ function logMissingResendKey(action: string, context: Record<string, unknown>) {
     return;
   }
 
+  // 🔐 Never log token-bearing URLs in production logs.
+  const safeContext = { ...context };
+  for (const key of Object.keys(safeContext)) {
+    if (key.toLowerCase().endsWith('url')) delete safeContext[key];
+  }
+
   logger.warn(
-    context,
+    safeContext,
     `RESEND_API_KEY not configured in production — ${action.toLowerCase()} not sent`
   );
 }

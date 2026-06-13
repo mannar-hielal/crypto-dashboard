@@ -239,7 +239,7 @@ export function RegisterPage() {
                             className="transition-colors hover:text-brand-purple"
                             style={{ color: color.purpleDark }}
                           >
-                            Terms of Use
+                            Terms of Service
                           </Link>{' '}
                           and{' '}
                           <Link
