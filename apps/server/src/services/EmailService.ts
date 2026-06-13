@@ -37,7 +37,7 @@ export const EmailService = {
     const { error } = await client.emails.send({
       from: config.resendFromEmail,
       to,
-      subject: 'Reset your Crypto Dashboard password',
+      subject: 'Reset your cryptopapertrade.com password',
       html: `
         <h2>Password Reset Request</h2>
         <p>Click the link below to reset your password. This link expires in <strong>1 hour</strong>.</p>

@@ -16,8 +16,8 @@ export default defineConfig({
 
       // Web App Manifest — controls how the app appears when installed on mobile/desktop
       manifest: {
-        name: 'Crypto Dashboard',
-        short_name: 'CryptoDash',
+        name: 'cryptopapertrade.com',
+        short_name: 'cryptopapertrade.com',
         description: 'Paper trade crypto with real-time Bybit price feeds',
         theme_color: '#080B14', // Browser chrome color on mobile
         background_color: '#080B14', // Splash screen background

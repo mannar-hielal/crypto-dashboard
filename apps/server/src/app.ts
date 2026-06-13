@@ -27,7 +27,7 @@ export async function buildApp() {
     openapi: {
       openapi: '3.0.0',
       info: {
-        title: 'Crypto Dashboard API',
+        title: 'cryptopapertrade.com API',
         description: 'Paper trading platform — Phase 1 API',
         version: '0.1.0',
       },

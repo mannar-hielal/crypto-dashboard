@@ -1,6 +1,6 @@
 # Pricing Strategy — Which Model to Use
 
-> Goal: Make CryptoDash the go-to tool for crypto traders — specialized in crypto, no stocks or options noise.
+> Goal: Make cryptopapertrade.com the go-to tool for crypto traders — specialized in crypto, no stocks or options noise.
 
 ---
 

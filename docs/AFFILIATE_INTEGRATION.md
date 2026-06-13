@@ -49,7 +49,7 @@ import { BYBIT_AFFILIATE_URL } from '@/lib/constants';
 <Modal title="Go Live with Real Trading">
   <p>
     Ready to trade with real money? Connect your Bybit account to execute real trades directly from
-    CryptoDash.
+    cryptopapertrade.com.
   </p>
   <p className="text-muted text-sm">Don't have a Bybit account yet?</p>
   <a href={BYBIT_AFFILIATE_URL} target="_blank" rel="noopener noreferrer" className="btn-primary">
@@ -144,8 +144,8 @@ import { BYBIT_AFFILIATE_URL } from '@/lib/constants';
 <section>
   <h3>Live Trading (Coming in Phase 5)</h3>
   <p>
-    Connect your Bybit account to execute real trades directly from CryptoDash. Your funds stay in
-    your Bybit account — CryptoDash never holds your money.
+    Connect your Bybit account to execute real trades directly from cryptopapertrade.com. Your funds stay in
+    your Bybit account — cryptopapertrade.com never holds your money.
   </p>
   <a href={BYBIT_AFFILIATE_URL} target="_blank" rel="noopener noreferrer" className="btn-secondary">
     Create a Bybit Account →

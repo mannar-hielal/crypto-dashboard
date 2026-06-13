@@ -27,7 +27,7 @@ export function Footer() {
         </Link>
       </nav>
       <p className="mt-2" style={{ fontSize: fontSize.xs, color: `${color.muted}60` }}>
-        © {new Date().getFullYear()} Crypto Dashboard
+        © {new Date().getFullYear()} cryptopapertrade.com
       </p>
     </footer>
   );

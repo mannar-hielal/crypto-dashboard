@@ -348,7 +348,7 @@ function DashboardInner() {
             Privacy
           </Link>
           <span aria-hidden>·</span>
-          <span>© {new Date().getFullYear()} Crypto Dashboard</span>
+          <span>© {new Date().getFullYear()} cryptopapertrade.com</span>
         </nav>
       </div>
     </div>

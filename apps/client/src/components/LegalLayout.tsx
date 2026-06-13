@@ -71,9 +71,9 @@ export function LegalLayout({ title, lastUpdated, children }: LegalLayoutProps) 
                 boxShadow: `0 0 18px ${color.purpleDark}60`,
               }}
             >
-              <span className="text-xs font-black text-white">CD</span>
+              <span className="text-xs font-black text-white">CPT</span>
             </div>
-            <span className="text-sm font-semibold tracking-wide text-white">Crypto Dashboard</span>
+            <span className="text-sm font-semibold tracking-wide text-white">cryptopapertrade.com</span>
           </div>
 
           <h1 className="text-2xl font-bold tracking-tight text-white">{title}</h1>

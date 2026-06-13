@@ -1,4 +1,4 @@
-# App Log — Crypto Dashboard
+# App Log — cryptopapertrade.com
 
 > **How to use this file**
 > This is your single source of truth for the entire project.
@@ -617,12 +617,12 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 ### Summary
 
-Enable users to connect their personal Bybit account via API keys and execute real trades directly from CryptoDash. The app acts purely as a UI client — it never holds funds. All money stays in the user's own Bybit account. The architecture mirrors how TradingView's broker bridge works: Client → CryptoDash server (signs + validates) → Bybit REST API → user's account.
+Enable users to connect their personal Bybit account via API keys and execute real trades directly from cryptopapertrade.com. The app acts purely as a UI client — it never holds funds. All money stays in the user's own Bybit account. The architecture mirrors how TradingView's broker bridge works: Client → cryptopapertrade.com server (signs + validates) → Bybit REST API → user's account.
 
 ### Cost Model
 
 - **Bybit API access**: free (public API, no partnership required).
-- **Trading fees**: paid by the user to Bybit directly (~0.055% taker / ~0.01% maker) — same as on Bybit.com. CryptoDash charges nothing.
+- **Trading fees**: paid by the user to Bybit directly (~0.055% taker / ~0.01% maker) — same as on Bybit.com. cryptopapertrade.com charges nothing.
 
 ### Legal / Compliance Position
 
@@ -637,7 +637,7 @@ Enable users to connect their personal Bybit account via API keys and execute re
 ```
 User clicks "Buy" (Live mode)
         ↓
-CryptoDash client → POST /api/trading/order (authenticated)
+cryptopapertrade.com client → POST /api/trading/order (authenticated)
         ↓
 Fastify server: validates symbol, looks up encrypted API key, signs request (HMAC-SHA256)
         ↓
@@ -675,7 +675,7 @@ liveStore updated; positions polled / streamed via Bybit private WebSocket
 | --------------------------------------------------------- | ----------- | ------------------------------------------------------------------- |
 | Bug places wrong order                                    | 🔴 Critical | Server validation + order preview confirmation modal                |
 | API key leaked in a breach                                | 🔴 Critical | AES-256-GCM at rest, never logged, HTTPS only                       |
-| User loses money due to a bug                             | 🔴 Critical | Clear ToS disclaimer; no liability assumed by CryptoDash            |
+| User loses money due to a bug                             | 🔴 Critical | Clear ToS disclaimer; no liability assumed by cryptopapertrade.com            |
 | Rate limit exceeded                                       | 🟡 Medium   | Respect Bybit rate limits (10 req/s), queue with backpressure       |
 | Stale positions (user trades on Bybit.com simultaneously) | 🟡 Medium   | Poll positions every 5–10 s or subscribe to Bybit private WebSocket |
 | Double order on network retry                             | 🟡 Medium   | `orderLinkId` idempotency key per order                             |
@@ -1335,9 +1335,9 @@ Four issues surfaced in a Copilot PR review and are now resolved.
 
 NinjaTrader's ATM (Advanced Trade Management) is a bracket-template system. Before entry the user selects a named strategy; the moment the fill happens, the full exit plan (multiple profit targets + stop management) fires automatically.
 
-#### What CryptoDash currently has vs. ATM
+#### What cryptopapertrade.com currently has vs. ATM
 
-| Feature                             | CryptoDash now                                 |
+| Feature                             | cryptopapertrade.com now                                 |
 | ----------------------------------- | ---------------------------------------------- |
 | Single TP per position              | ✅ `position.takeProfit`                       |
 | Single SL per position              | ✅ `position.stopLoss`                         |
@@ -1359,7 +1359,7 @@ NinjaTrader's ATM (Advanced Trade Management) is a bracket-template system. Befo
 #### Explicitly out of scope (defer or skip)
 
 - Trailing stop — complex monitor math, defer to a later iteration.
-- NinjaTrader tick/contract quantity model — not applicable; CryptoDash is USDT-denominated.
+- NinjaTrader tick/contract quantity model — not applicable; cryptopapertrade.com is USDT-denominated.
 - ATM strategy nesting / parent-child inheritance — too complex for a learning-app context.
 
 #### Open questions before planning
@@ -1376,7 +1376,7 @@ NinjaTrader's ATM (Advanced Trade Management) is a bracket-template system. Befo
 
 #### What this milestone is
 
-Allow users to connect their own Bybit API key and place **real orders with real money** directly from CryptoDash, using the same TradingPanel UI they already know from paper trading.
+Allow users to connect their own Bybit API key and place **real orders with real money** directly from cryptopapertrade.com, using the same TradingPanel UI they already know from paper trading.
 
 #### Required features (all must ship together as an atomic milestone)
 

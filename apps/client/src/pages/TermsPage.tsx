@@ -9,7 +9,7 @@ export function TermsPage() {
       <section>
         <h2>1. Acceptance of Terms</h2>
         <p>
-          By accessing or using Crypto Dashboard ("the Service", "we", "us"), you agree to be bound
+          By accessing or using https://cryptopapertrade.com/ ("the Service", "we", "us"), you agree to be bound
           by these Terms of Use and our <Link to="/privacy">Privacy Policy</Link>. If you do not
           agree, do not use the Service.
         </p>
@@ -18,7 +18,7 @@ export function TermsPage() {
       <section>
         <h2>2. Description of Service</h2>
         <p>
-          Crypto Dashboard is a <strong>paper trading simulation platform</strong> that provides
+          https://cryptopapertrade.com/ is a <strong>paper trading simulation platform</strong> that provides
           professional-grade charting and order management tools using real-time price data from the
           Bybit API. All trading activity on this platform is simulated using virtual currency.
         </p>

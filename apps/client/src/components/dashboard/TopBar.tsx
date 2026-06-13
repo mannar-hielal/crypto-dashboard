@@ -40,11 +40,11 @@ export function TopBar() {
             style={{ fontSize: fontSize.xs11 }}
             className="font-black tracking-tight text-white"
           >
-            CD
+            CPT
           </span>
         </motion.div>
 
-        <span className="text-sm font-bold tracking-tight text-white">CryptoDash</span>
+        <span className="text-sm font-bold tracking-tight text-white">cryptopapertrade.com</span>
 
         <span
           className="rounded px-1.5 py-0.5 font-bold uppercase tracking-widest"

@@ -18,7 +18,7 @@
 
 ## Dual-platform setup (run when doing cross-platform checks)
 
-1. Open CryptoDash at `localhost:5173/dashboard` — reset account
+1. Open cryptopapertrade.com at `localhost:5173/dashboard` — reset account
 2. Open TradingView → Paper Trading → Bybit BTCUSDT Spot · 1m
 3. Reset TradingView account
 4. Place identical orders in both apps within the same second
@@ -54,7 +54,7 @@
 | 1.1.7 | Check **Orders** tab → **All** sub-tab                            | Same row visible (within TTL); count badge = 1                                                                                                          | ✅     |      | T2 · RTL    | Badge drops to 0 after 2 min (only active rows).                                    |
 | 1.1.8 | Check **Orders** tab → **Working** sub-tab                        | Empty — market orders instantly filled, never Working                                                                                                   | ✅     |      | T1 · Vitest | Working only counts pending; market orders are historical.                          |
 
-> **TV cross-check 1.1.3:** Entry price in CryptoDash vs TradingView should differ by ≤ $1 (one SELL/BUY spread).
+> **TV cross-check 1.1.3:** Entry price in cryptopapertrade.com vs TradingView should differ by ≤ $1 (one SELL/BUY spread).
 > **TV cross-check 1.1.4:** Available balance after commission deduction should match within $0.10.
 
 ### 1.2 Basic Sell (USD mode)
@@ -87,7 +87,7 @@
 
 > **TV cross-check 1.4.3:** TP should trigger at the same price level in both apps (same candle).
 > **TV cross-check 1.4.4:** Net PnL in Journal badge should match TradingView's realised PnL within $0.10.
-> **Known cosmetic gap (non-blocking):** Exit order Type in Order History shows `MARKET` in CryptoDash vs `Take Profit` in TradingView. Fix labelling in a future pass.
+> **Known cosmetic gap (non-blocking):** Exit order Type in Order History shows `MARKET` in cryptopapertrade.com vs `Take Profit` in TradingView. Fix labelling in a future pass.
 
 ### 1.5 Sell with Stop-Loss only
 
@@ -98,7 +98,7 @@
 | 1.5.3 | When price rises to SL                                                                          | Auto-closed; Journal red PnL badge `−$X.XX`; Working order disappears               | ✅     | ✅   | T1 · Vitest | Position closed. SL order evicts from Working. Journal shows loss badge. |
 
 > **TV cross-check 1.5.3:** Loss magnitude should match TradingView's realised PnL within $0.10.
-> **TV parity note (1.5.2):** TV shows TP/SL as separate child "Working" orders in the Orders tab (Type = "Take Profit" or "Stop Loss"). CryptoDash now does the same — synthetic exit orders are derived from open positions and shown in Working sub-tab with correct Type label, Side (opposite of position), and price in Limit/Stop Price column. They disappear automatically when the position closes.
+> **TV parity note (1.5.2):** TV shows TP/SL as separate child "Working" orders in the Orders tab (Type = "Take Profit" or "Stop Loss"). cryptopapertrade.com now does the same — synthetic exit orders are derived from open positions and shown in Working sub-tab with correct Type label, Side (opposite of position), and price in Limit/Stop Price column. They disappear automatically when the position closes.
 
 ### 1.6 Buy with both TP and SL
 
@@ -185,7 +185,7 @@
 
 > **Bracket lifecycle note:** Entry, TP, and SL are three linked orders. Pre-fill: parent cancel kills the whole bracket. Post-fill: manage the trade from Positions; manage exits from the Working order rows.
 > **Auto-archive note (2.4.8):** Filled parent orders are visible in **Orders → Filled** for up to 2 minutes after fill (`closingTime + BENCH_TTL_MS > now`), and permanently in **Order History → Filled**. After 2 min the row auto-evicts from the Orders bench — no manual action required. The top Orders badge reflects only active rows (pending + active exits), so parent fills never inflate the headline count.
-> **Sibling-cancel note (2.4.9–2.4.11):** `closePosition` builds `siblingCancelOrders` — `placingTime = pos.openedAt`, `closingTime = close timestamp`. Known minor divergence vs TV: TV records Placing Time as original bracket placement (before limit fill); CryptoDash uses position `openedAt` (limit-fill time). Difference = limit order pending duration; cosmetic only.
+> **Sibling-cancel note (2.4.9–2.4.11):** `closePosition` builds `siblingCancelOrders` — `placingTime = pos.openedAt`, `closingTime = close timestamp`. Known minor divergence vs TV: TV records Placing Time as original bracket placement (before limit fill); cryptopapertrade.com uses position `openedAt` (limit-fill time). Difference = limit order pending duration; cosmetic only.
 
 ### 2.5 Edge cases
 
@@ -296,16 +296,16 @@
 
 > Run this section to validate the price feed fix end-to-end. Both apps open side by side.
 > Tolerance for all price comparisons: **<= $1.00** (one SELL/BUY spread for BTC).
-> Lot-size note: CryptoDash now floors qty to the same step TV uses (BTC: 0.0001, ETH: 0.001, etc.) so Trade value and qty shown on the button should match TV within the spread tolerance.
+> Lot-size note: cryptopapertrade.com now floors qty to the same step TV uses (BTC: 0.0001, ETH: 0.001, etc.) so Trade value and qty shown on the button should match TV within the spread tolerance.
 > **TradingView quote mapping:** `TV SELL` = best **bid**; `TV BUY` = best **ask**.
 > **Parity rule (same timestamp snapshot):** `abs(CD Sell - TV SELL) <= 1.00` and `abs(CD Buy - TV BUY) <= 1.00`.
 
 | #   | Scenario                                                            | Expected                                                                                                     | Status | Tier            | Notes                                                                                                                                           |
 | --- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------ | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | 6.1 | Compare TradingPanel Sell/Buy vs TradingView SELL/BUY at rest       | **Both** checks pass at the same moment: `abs(CD Sell - TV SELL) <= 1.00` and `abs(CD Buy - TV BUY) <= 1.00` | ⬜     | T3 · Playwright | In TradingView UI, `SELL` = bid and `BUY` = ask. All Section 6 tests require a live WebSocket feed and real-time clock — cannot be unit-tested. |
-| 6.2 | Watch both prices for 30 s during normal market activity            | CryptoDash tracks TradingView tick-for-tick; no sustained lag > $1                                           | ⬜     | T3 · Playwright |                                                                                                                                                 |
-| 6.3 | Watch both prices during a fast move (news spike or breakout)       | CryptoDash catches up within 1–2 s; no freeze or stuck price                                                 | ⬜     | T3 · Playwright |                                                                                                                                                 |
-| 6.4 | Place identical $200 market Buy in both apps within the same second | Entry prices differ by ≤ $1; qty in CryptoDash ≈ qty in TradingView                                          | ⬜     | T3 · Playwright |                                                                                                                                                 |
+| 6.2 | Watch both prices for 30 s during normal market activity            | cryptopapertrade.com tracks TradingView tick-for-tick; no sustained lag > $1                                           | ⬜     | T3 · Playwright |                                                                                                                                                 |
+| 6.3 | Watch both prices during a fast move (news spike or breakout)       | cryptopapertrade.com catches up within 1–2 s; no freeze or stuck price                                                 | ⬜     | T3 · Playwright |                                                                                                                                                 |
+| 6.4 | Place identical $200 market Buy in both apps within the same second | Entry prices differ by ≤ $1; qty in cryptopapertrade.com ≈ qty in TradingView                                          | ⬜     | T3 · Playwright |                                                                                                                                                 |
 | 6.5 | Let position run for 2 min, compare Unrealised PnL                  | PnL sign matches (both green or both red); magnitude within $0.50                                            | ⬜     | T3 · Playwright |                                                                                                                                                 |
 | 6.6 | Close both positions manually at the same moment                    | Realised PnL matches within $0.50; commission deducted in both                                               | ⬜     | T3 · Playwright |                                                                                                                                                 |
 | 6.7 | Place identical Limit Buy at live − 1% in both apps                 | Both fill on the same candle; entry prices within $1                                                         | ⬜     | T3 · Playwright |                                                                                                                                                 |

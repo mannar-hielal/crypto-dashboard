@@ -1,7 +1,7 @@
 {
   "name": "@crypto-dashboard/server",
   "version": "0.1.0",
-  "description": "Fastify backend for Crypto Dashboard paper trading platform",
+  "description": "Fastify backend for cryptopapertrade.com paper trading platform",
   "type": "module",
   "main": "dist/src/index.js",
   "scripts": {

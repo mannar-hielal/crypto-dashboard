@@ -1,4 +1,4 @@
-# Business Study — Making Money from CryptoDash
+# Business Study — Making Money from cryptopapertrade.com
 
 > As an individual developer in Switzerland with an unregistered app still in development and testing.
 

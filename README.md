@@ -1,4 +1,4 @@
-# Crypto Dashboard
+# cryptopapertrade.com
 
 A professional paper trading dashboard for cryptocurrency. Real-time charting, simulated long/short trading, and a full order management system — without risking real money.
 
@@ -58,7 +58,7 @@ A professional paper trading dashboard for cryptocurrency. Real-time charting, s
 ## 📋 Project Structure
 
 ```
-crypto-dashboard/
+cryptopapertrade.com/
 ├── apps/
 │   ├── client/          # React 19 frontend (PWA)
 │   │   └── src/
@@ -93,8 +93,8 @@ crypto-dashboard/
 1. **Clone & install**
 
    ```bash
-   git clone https://github.com/mannar-hielal/crypto-dashboard.git
-   cd crypto-dashboard
+   git clone https://github.com/mannar-hielal/cryptopapertrade.com.git
+   cd cryptopapertrade.com
    pnpm install
    ```
 

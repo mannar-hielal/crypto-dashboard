@@ -20,7 +20,7 @@ export function UnderConstructionPage() {
             boxShadow: `0 0 24px ${color.purpleDark}80`,
           }}
         >
-          <span className="text-lg font-black text-white">CD</span>
+          <span className="text-lg font-black text-white">CPT</span>
         </div>
 
         <div

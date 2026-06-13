@@ -1,6 +1,6 @@
 # Marketing & SEO Strategy
 
-> Goal: Grow CryptoDash as the go-to crypto-specialized trading tool — organic, community-driven, zero ad budget.
+> Goal: Grow cryptopapertrade.com as the go-to crypto-specialized trading tool — organic, community-driven, zero ad budget.
 
 ---
 
@@ -117,7 +117,7 @@ Before any channel, any content, any community post — you need a **landing pag
 
 Not the app — just a page that explains:
 
-- What CryptoDash does
+- What cryptopapertrade.com does
 - Why it's better than TradingView Plus for crypto traders
 - A single field to enter an email
 

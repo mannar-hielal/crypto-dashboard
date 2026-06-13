@@ -93,7 +93,7 @@ export function LoginPage() {
                 boxShadow: `0 0 24px ${color.purpleDark}80`,
               }}
             >
-              <span className="text-lg font-black text-white">CD</span>
+              <span className="text-lg font-black text-white">CPT</span>
             </motion.div>
             <div className="text-center">
               <h1 className="text-xl font-bold text-white">Welcome back</h1>
