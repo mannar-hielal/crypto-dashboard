@@ -524,7 +524,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 - **Phase 1**: Client scaffold — React 19, Vite, Tailwind, PWA, React Router, Zustand
 - **Phase 2**: Live price feed (WebSocket → `usePriceFeed` → `marketStore`)
 - **Phase 2**: Paper trading v1 — `paperStore` (market orders), `TradingPanel` (market-only), `OrderAccountManagementPanel` (Positions + Order History + Balance History + Journal tabs), TP/SL monitor, commission accounting
-- **Phase 2**: Review infrastructure — `REVIEW_CHECKLIST.md`, `APP_LOG.md`, CI-passing tests (148 total)
+- **Phase 2**: Review infrastructure — `REVIEW_CHECKLIST.md`, `APP_LOG.md`, CI-passing tests (421 total: 321 client + 100 server)
 
 ### ✅ Completed (added 2026-04-12)
 
@@ -584,27 +584,23 @@ ask: number | null; // best ask from Bybit orderbook.1
 - **Privacy Policy §11**: GDPR user rights (Art. 15–22) fully enumerated.
 - **Privacy Policy §5**: Legal bases for each processing type documented.
 - **Tax (current)**: App is free — no Swiss MWST or EU VAT obligations.
+- **Consent Audit Trail**: Capture of `termsAcceptedAt` and `termsAcceptedIp` fully implemented in `RegisterPage.tsx` and `schema.prisma`. 🔐
+- **Cookie & Storage Notice**: `<CookieBanner />` implemented in `App.tsx`; explicitly discloses `localStorage` and session cookie usage.
+- **Terms & Termination**: Force Majeure, Account Termination, and Anti-Scraping clauses added to `TermsPage.tsx`.
+- **Data Retention & Removal**: GDPR-compliant "Delete my account" flow and "Data export" (portability) implemented in `SettingsModal.tsx`. Concrete retention periods (30 days purge) documented in `PrivacyPage.tsx`.
 
 ### 🔴 Blocking — Must fix before launch
 
-| #   | Issue                                                | File(s)                             | Priority |
-| --- | ---------------------------------------------------- | ----------------------------------- | -------- |
-| 1   | No Terms/Privacy acceptance checkbox at registration | `RegisterPage.tsx`, `schema.prisma` | Critical |
-| 2   | No cookie/storage information banner                 | `App.tsx`                           | Critical |
-| 3   | No DPAs signed with Fly.io, Resend, Cloudflare       | — (legal action)                    | Critical |
-| 4   | Bybit API terms for non-commercial use               | — (verification)                    | Critical |
+| #   | Issue                                          | File(s)          | Priority | Status      |
+| --- | ---------------------------------------------- | ---------------- | -------- | ----------- |
+| 1   | No DPAs signed with Fly.io, Resend, Cloudflare | — (legal action) | Critical | ⬜ Pending  |
+| 2   | Bybit API terms for non-commercial use         | — (verification) | Critical | ⬜ Pending  |
 
 ### 🟡 Important — Fix before/at launch
 
-| #   | Issue                                                    | File(s)           | Priority  |
-| --- | -------------------------------------------------------- | ----------------- | --------- |
-| 9   | localStorage not disclosed in Privacy §8                 | `PrivacyPage.tsx` | Important |
-| 10  | Phase 3 forward-looking note missing from Privacy §3     | `PrivacyPage.tsx` | Important |
-| 11  | Server log retention period vague in Privacy §7          | `PrivacyPage.tsx` | Important |
-| 12  | No Force Majeure clause in Terms                         | `TermsPage.tsx`   | Important |
-| 13  | No Account Termination clause                            | `TermsPage.tsx`   | Important |
-| 14  | No "Delete my account" flow in the app                   | product build     | Important |
-| 15  | No legal entity registered (personal liability exposure) | — (legal action)  | Important |
+| #   | Issue                                                    | File(s)          | Priority  | Status      |
+| --- | -------------------------------------------------------- | ---------------- | --------- | ----------- |
+| 3   | No legal entity registered (personal liability exposure) | — (legal action) | Important | ⬜ Pending  |
 
 ---
 
@@ -794,12 +790,12 @@ Paper trading  →  Real order      →  Proven bot      →  Full autonomous
 
 | Gate                        | Detail                                                                                                                                                |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Phase 5 prerequisite        | User must have connected + verified Bybit API keys — enforced in code, not just UI                                                                    |
-| Paper mode proven           | Bot must have run paper mode for configurable minimum (default: 7 days + 50 trades) with positive results — stats summary shown before upgrade prompt |
-| Explicit confirmation modal | Multi-step: "This bot will place REAL orders with REAL money. Your losses are your own." — user must type confirmation phrase                         |
-| Hard daily loss limit       | Bot auto-kills + sends alert if real account drops >X% in a day — cannot be disabled                                                                  |
-| Max position size cap       | Never risk more than Y% per trade or Z USDT total across open positions — requires re-confirmation to increase                                        |
-| Supervised mode warm-up     | When first switching paper→live, Supervised mode is forced for a configurable warm-up period before Autonomous is unlocked                            |
+| Phase 5 prerequisite        | User must have connected + verified Bybit API keys — enforced in code, not just UI                                                                                                                       |
+| Paper mode proven           | Bot must have run paper mode for configurable minimum (default: 7 days + 50 trades) with positive results — stats summary shown before upgrade prompt                                                                 |
+| Explicit confirmation modal | Multi-step: "This bot will place REAL orders with REAL money. Your losses are your own." — user must type confirmation phrase                                                                                                                       |
+| Hard daily loss limit       | Bot auto-kills + sends alert if real account drops >X% in a day — cannot be disabled                                                                                                                       |
+| Max position size cap       | Never risk more than Y% per trade or Z USDT total across open positions — requires re-confirmation to increase                                                                                                                       |
+| Supervised mode warm-up     | When first switching paper→live, Supervised mode is forced for a configurable warm-up period before Autonomous is unlocked                                                                                                                       |
 
 ### Risks
 
@@ -1217,7 +1213,7 @@ The helper and test file introduced in the 4.18 safety-hardening fix were rename
 - **5.2** — trigger shows `base="BTC"` for BTCUSDT; shows `base="ETH"` after `layoutStore` symbol change (2 tests)
 - **5.3** — Positions tab: BTC position shows `base="BTC"` + `quote="USDT"`, empty state doesn't crash (3 tests)
 - **5.4** — Orders tab: pending order row shows `base="BTC"` + `quote="USDT"` (2 tests)
-- **5.5** — Order History tab: filled order shows `SymbolPair`, `quote="USDT"`, cancelled row also renders it (3 tests)
+- **5.5** �� Order History tab: filled order shows `SymbolPair`, `quote="USDT"`, cancelled row also renders it (3 tests)
 - **5.7** — BTC + ETH both present in Positions, BTC still shows `base="BTC"` when active pane is ETH, exactly 2 `SymbolPair`s for 2 positions (3 tests)
 
 **TRADING_TEST_PLAN.md + APP_LOG.md:** Section 5 preamble updated to "5.1–5.7 manually verified — all ✅". Rows 5.1–5.7 note T2 · RTL structural coverage via `Section5SymbolPairIcons.test.tsx`.
@@ -1324,9 +1320,9 @@ Four issues surfaced in a Copilot PR review and are now resolved.
 
 ## 🔭 Future Release Ideas
 
-### idea: ATM-style bracket strategies (Pro tier) — research (04.05.2026) ⬜
+### idea: ATM-style bracket strategies — research (04.05.2026) ⬜
 
-> **Status: research only — no implementation planned yet. Revisit when subscription tiers are defined.**
+> **Status: research only — no implementation planned yet.**
 
 #### Background
 
@@ -1347,7 +1343,7 @@ NinjaTrader's ATM (Advanced Trade Management) is a bracket-template system. Befo
 | Named strategy templates            | ❌ not supported                               |
 | Scale-out by qty per target         | ❌ not supported                               |
 
-#### Proposed scoped version for a future Pro tier
+#### Proposed scoped version for a future release
 
 1. **Multiple profit targets (up to 3)** — replace `takeProfit?: number` on `Position` with `targets: { price: number; pct: number }[]`; `useTPSLMonitor` evaluates each target independently and calls a partial close for each hit.
 2. **Auto Break-Even (ABE)** — simple toggle on `Position`: after TP1 fires, stop auto-moves to `entryPrice + offset` (one-shot, then removes itself). Teaches the "risk-free trade" concept visually.
@@ -1369,7 +1365,6 @@ NinjaTrader's ATM (Advanced Trade Management) is a bracket-template system. Befo
 ### idea: real Bybit account integration (live trading milestone) — research (04.05.2026) ⬜
 
 > **Status: research only — no implementation planned yet.**
-> **Prerequisite**: Subscription/tier model must be in place first.
 
 #### What this milestone is
 
@@ -1574,9 +1569,16 @@ Three visual sections (all use existing token system: `bg.panel`, `bg.surface`, 
   - **EmailService.ts**: Updated sendDeletionRequestedEmail to include legal disclosures regarding GDPR/nDSG, the 30-day cancellation window, and the 60-day backup persistence period for technical logs. Added portability reminder (data export).
   - **PrivacyPage.tsx**: Updated §7 Data Retention to explicitly disclose the 60-day backup persistence period, ensuring consistency with transactional emails and meeting transparency requirements.
 
-- **feat: Legal & Compliance Hardening (13.06.2026)** ✅
-  - **Document Versioning**: Updated `LegalLayout.tsx`, `TermsPage.tsx`, and `PrivacyPage.tsx` to include and display version headers (starting at Version 1.0).
-  - **Terms of Use Hardening**: Updated §2 (Description of Service) for free launch model; added §7 (Data Scraping Prohibition); added §18 (Account Termination); added §19 (Force Majeure & Third-Party Dependencies); updated §8 (User Content Ownership).
-  - **Privacy Policy Alignment**: Added Phase 3 forward-looking warning to Section 3.
-  - **GDPR Art. 20 (Right to Portability)**: Implemented JSON Data Export in `SettingsModal.tsx`, merging server-side PII (including terms acceptance metadata) with client-side trading history.
-  - **Audit Trail**: Exposed `termsAcceptedAt` and `termsAcceptedIp` in `/me` API response and SDK types to support complete data portability.
+- **feat: Auth Review Fixes & Email Strengthening (13.06.2026)** ✅
+  - **Email Template Refactoring**: Refactored `EmailService.ts` to use professional HTML templates with project branding (ambient navy theme), clear call-to-action buttons, and enhanced security recommendations for verification, password resets, and account changes.
+  - **Atomic Transactions**: Integrated Prisma `$transaction` in `/verify-email` and `/reset-password` routes to ensure verification/reset tokens are consumed atomically with user state updates. 🔐
+  - **AJV Formats & Type Hardening**: Fixed a critical type error in `app.ts` regarding `ajv-formats` registration. Properly typed the AJV plugin system and enabled the `email` format validation site-wide.
+  - **Auth Lifecycle Security**: Strengthened `auth.test.ts` to cover 38 discrete test cases (100% green), including email enumeration prevention, token rotation race conditions, and password update session invalidation. Corrected response structures for `email-change` and `username-update` endpoints.
+  - **Bug Fixes**:
+    - Fixed `CookieBanner.tsx` link path from `/privacy` to `/privacy-policy`.
+    - Corrected `index.ts` process exit logic to prevent premature shutdown in non-development environments.
+    - Improved `auth.test.ts` mock resilience for `Prisma` transactions and `EmailService`.
+  - **Formatting & Linting**: Performed workspace-wide `pnpm format` and `pnpm lint` pass to ensure code quality and style consistency before push.
+  - **Commit**: `fc3a472`
+
+
