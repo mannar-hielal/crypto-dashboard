@@ -588,15 +588,17 @@ ask: number | null; // best ask from Bybit orderbook.1
 - **Cookie & Storage Notice**: `<CookieBanner />` implemented in `App.tsx`; explicitly discloses `localStorage` and session cookie usage.
 - **Terms & Termination**: Force Majeure, Account Termination, and Anti-Scraping clauses added to `TermsPage.tsx`.
 - **Data Retention & Removal**: GDPR-compliant "Delete my account" flow and "Data export" (portability) implemented in `SettingsModal.tsx`. Concrete retention periods (30 days purge) documented in `PrivacyPage.tsx`.
+- **Third-Party / Data Processing**: DPAs signed with Fly.io, Resend, and Cloudflare. ✅
+- **Trademark**: Search performed on swissreg.ch and EUIPO; no conflicting marks for "cryptopapertrade.com". ✅
 
-### 🔴 Blocking — Must fix before launch
+### 🔴 Blocking — Resolved
 
-| #   | Issue                                          | File(s)          | Priority | Status     |
-| --- | ---------------------------------------------- | ---------------- | -------- | ---------- |
-| 1   | No DPAs signed with Fly.io, Resend, Cloudflare | — (legal action) | Critical | ⬜ Pending |
-| 2   | Bybit API terms for non-commercial use         | — (verification) | Critical | ⬜ Pending |
+| #   | Issue                                          | File(s)          | Priority | Status  |
+| --- | ---------------------------------------------- | ---------------- | -------- | ------- |
+| 1   | No DPAs signed with Fly.io, Resend, Cloudflare | — (legal action) | Critical | ✅ Done |
+| 2   | Bybit API terms for non-commercial use         | — (verification) | Critical | ✅ Done |
 
-### 🟡 Important — Fix before/at launch
+### 🟡 Important — Pending Phase 5
 
 | #   | Issue                                                    | File(s)          | Priority  | Status     |
 | --- | -------------------------------------------------------- | ---------------- | --------- | ---------- |
