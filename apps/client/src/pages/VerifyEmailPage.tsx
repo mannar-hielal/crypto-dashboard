@@ -23,8 +23,7 @@ export function VerifyEmailPage() {
         const res = await authApi.verifyEmail({ token });
         setStatus('success');
         setMessage(res.message);
-        // 🧪 Temporarily disabled auto-redirect to allow for easier debugging of Success state
-        // setTimeout(() => navigate('/login'), 3000);
+        setTimeout(() => navigate('/login'), 3000);
       } catch (err) {
         setStatus('error');
         setMessage(err instanceof Error ? err.message : 'Verification failed.');

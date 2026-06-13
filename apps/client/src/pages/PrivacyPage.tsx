@@ -52,7 +52,7 @@ export function PrivacyPage() {
             <tr>
               <td>Password</td>
               <td>Account authentication</td>
-              <td>bcrypt hash (cost 12) — never stored in plain text</td>
+              <td>argon2id hash — never stored in plain text</td>
             </tr>
             <tr>
               <td>Legal Audit Log</td>

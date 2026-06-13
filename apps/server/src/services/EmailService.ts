@@ -217,7 +217,7 @@ export const EmailService = {
         
         <p>If you wish to keep a copy of your trading data, please ensure you export or record your history before the deletion date.</p>
         
-        <p>If you did not request this deletion, please log in immediately to secure your account or contact our privacy team at ${config.resendFromEmail}.</p>
+        <p>If you did not request this deletion, please log in immediately to secure your account or contact our privacy team at info@cryptopapertrade.com.</p>
       `,
       },
       'Failed to send deletion requested email',
