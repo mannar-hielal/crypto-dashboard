@@ -2,9 +2,10 @@ import { buildApp } from './app.js';
 import { config } from './config.js';
 import { logger } from './logger.js';
 import { EmailService } from './services/EmailService.js';
-import { FastifyInstance } from 'fastify';
 
-async function startPurgeJob(app: FastifyInstance) {
+type AppInstance = Awaited<ReturnType<typeof buildApp>>;
+
+async function startPurgeJob(app: AppInstance) {
   const PURGE_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
 
   const runPurge = async () => {

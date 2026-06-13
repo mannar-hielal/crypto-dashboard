@@ -9,7 +9,6 @@ import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
-import ajvFormats from 'ajv-formats';
 import { config } from './config.js';
 import { prismaPlugin } from './plugins/prisma.js';
 import { authPlugin } from './plugins/auth.js';
@@ -27,7 +26,6 @@ export async function buildApp() {
           'date-time': true,
         },
       },
-      plugins: [ajvFormats],
     },
   });
 
