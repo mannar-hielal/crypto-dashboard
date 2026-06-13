@@ -347,7 +347,7 @@ const updateUsernameSchema = {
   response: {
     200: {
       type: 'object',
-      properties: { user: userResponse },
+      properties: { message: { type: 'string' } },
     },
     400: errorResponse,
     401: errorResponse,

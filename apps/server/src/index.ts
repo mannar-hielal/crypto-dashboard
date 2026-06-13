@@ -70,7 +70,10 @@ try {
   await app.listen({ port: config.port, host: '0.0.0.0' });
   app.log.info(`🚀 Server running on http://localhost:${config.port}`);
 
-  void startPurgeJob(app);
+  // Run the purge job only on a designated worker/instance.
+  if (process.env.RUN_PURGE_JOB === 'true') {
+    void startPurgeJob(app);
+  }
 } catch (err) {
   logger.error(err, 'Fatal startup error');
   process.exit(1);

@@ -4,6 +4,7 @@ import { marketRoutes } from './routes/market/index.js';
 import cookie from '@fastify/cookie';
 import Fastify, { type FastifyError } from 'fastify';
 import cors from '@fastify/cors';
+import ajvFormats from 'ajv-formats';
 import jwt from '@fastify/jwt';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
@@ -19,13 +20,8 @@ export async function buildApp() {
     // Disable Fastify's logger in tests to reduce terminal noise
     logger: config.nodeEnv === 'test' ? false : { level: config.logLevel },
     ajv: {
-      customOptions: {
-        formats: {
-          email: true,
-          // 'date-time' is also used in schemas
-          'date-time': true,
-        },
-      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Fastify's AJV plugin typing is incompatible with ajv-formats in this install.
+      plugins: [ajvFormats as any],
     },
   });
 
@@ -130,7 +126,7 @@ export async function buildApp() {
     void reply.status(statusCode).send({ error: error.message ?? 'Bad Request' });
   });
 
-  // ─── HEALTH CHECK ───────────────────────────────────���─────────────────────
+  // ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
   app.get(
     '/health',
     {

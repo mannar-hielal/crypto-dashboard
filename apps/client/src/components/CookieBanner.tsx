@@ -30,8 +30,8 @@ export function CookieBanner() {
             <div className="flex flex-col gap-3">
               <div className="flex items-start justify-between gap-2">
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  We use a single session cookie required for login and localStorage to save your
-                  paper trading data and layout. No tracking or advertising cookies are used.
+                  We use a secure cookie required for login and localStorage to save your paper
+                  trading data and layout. No tracking or advertising cookies are used.
                 </p>
                 <button
                   onClick={handleDismiss}
