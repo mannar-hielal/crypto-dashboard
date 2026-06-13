@@ -36,7 +36,7 @@ const maskEmail = (email: string) => {
 
 export function SettingsModal({ open, onClose }: SettingsModalProps) {
   const { user, accessToken, updateUser, clearAuth } = useAuthStore();
-  const paperState = usePaperStore();
+  const paperState = usePaperStore.getState();
 
   const [username, setUsername] = useState(user?.username ?? '');
   const [isUpdatingUsername, setIsUpdatingUsername] = useState(false);

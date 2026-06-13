@@ -158,9 +158,9 @@ export function TermsPage() {
           Under GDPR (EU/EEA residents) and nDSG (Swiss residents), you have legally enforceable
           rights over your personal data, including the right to access, correct, delete, and port
           your data, as well as the right to object to certain processing. These rights are fully
-          described in <Link to="/privacy#your-rights">Privacy Policy §11 — Your Rights</Link>,
-          together with instructions on how to exercise them. We will respond to any valid request
-          within <strong>30 calendar days</strong>.
+          described in <Link to="/privacy">Privacy Policy §11 — Your Rights</Link>, together with
+          instructions on how to exercise them. We will respond to any valid request within{' '}
+          <strong>30 calendar days</strong>.
         </p>
       </section>
 

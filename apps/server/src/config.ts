@@ -2,8 +2,8 @@
  * Environment Configuration & Validation
  * Ensures all required environment variables are set before app starts
  *
- * Note: console.* is intentional here — this module bootstraps before the
- * pino logger exists (logger.ts imports config, so we can't import logger here).
+ * Note: this module bootstraps before the shared app logger exists
+ * (logger.ts imports config), so it uses a lightweight `bootLogger` instance instead.
  */
 
 import { config as dotenvConfig } from 'dotenv';
@@ -119,12 +119,20 @@ function loadConfig(): Config {
     }
   })();
 
+  const redisHost = (() => {
+    try {
+      return new URL(config.redisUrl).host;
+    } catch {
+      return 'unknown';
+    }
+  })();
+
   bootLogger.info('✅ Environment configuration loaded successfully');
   bootLogger.info(
     {
       mode: config.nodeEnv,
       dbHost,
-      redis: 'localhost (connected)',
+      redisHost,
       bybitTestnet: config.bybitTestnet,
       logLevel: config.logLevel,
     },
