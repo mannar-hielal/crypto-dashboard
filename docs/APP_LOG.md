@@ -1,4 +1,4 @@
-# App Log — Crypto Dashboard
+# App Log — cryptopapertrade.com
 
 > **How to use this file**
 > This is your single source of truth for the entire project.
@@ -524,7 +524,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 - **Phase 1**: Client scaffold — React 19, Vite, Tailwind, PWA, React Router, Zustand
 - **Phase 2**: Live price feed (WebSocket → `usePriceFeed` → `marketStore`)
 - **Phase 2**: Paper trading v1 — `paperStore` (market orders), `TradingPanel` (market-only), `OrderAccountManagementPanel` (Positions + Order History + Balance History + Journal tabs), TP/SL monitor, commission accounting
-- **Phase 2**: Review infrastructure — `REVIEW_CHECKLIST.md`, `APP_LOG.md`, CI-passing tests (148 total)
+- **Phase 2**: Review infrastructure — `REVIEW_CHECKLIST.md`, `APP_LOG.md`, CI-passing tests (421 total: 321 client + 100 server)
 
 ### ✅ Completed (added 2026-04-12)
 
@@ -540,7 +540,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 ### ✅ Completed (added 2026-04-19 — bid/ask feed + account settings modal)
 
-- **Account Settings modal** — replaces 2-click reset on ⚙️ gear button in `OrderAccountManagementPanel` header. Read-only fields: account name (username from `useAuthStore`), Leverage (`10:1`, Crypto), Commission (`0.07% / 0.0007`, Fixed · Taker). Footer: "Reset account" (2-click confirm, 3 s auto-cancel, closes modal on confirm) + "Save" (disabled — read-only). Backdrop click or ✕ dismisses; confirm state clears on dismiss.
+- **Account Settings modal** — replaces 2-click reset on ⚙️ gear button in `OrderAccountManagementPanel` header. Read-only fields: account name (username from `useAuthStore`), Leverage (`10:1`, Crypto), Commission (`0.07% / 0.0007`, Fixed · Taker). Footer: "Reset account" (2-click confirm, 3 s auto-cancel, closes modal on confirm) + "Save" (disabled — read-only). Backdrop click or ✕ dismisses; confirm state cleared on dismiss.
 - **Bid/Ask real-time feed** — end-to-end:
   - **Server `bybit.ts`**: subscribes `orderbook.1.{symbol}` for all `ALLOWED_SYMBOLS`. Processes `orderBook` stream data, extracts `bids[0][0]`/`asks[0][0]`, throttles to 500 ms per symbol, broadcasts `TickerUpdate { symbol, bid, ask }` to a separate `tickerListeners` set. `BybitService` gains `subscribeTicker(listener)` method.
   - **Server `market/index.ts`**: WS handler subscribes to `subscribeTicker` filtered by symbol, forwards `{ type: 'ticker', symbol, bid, ask }` JSON to the client WebSocket.
@@ -571,18 +571,53 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 ---
 
+## ⚖️ Legal & Compliance Status
+
+> Full code-level legal scan performed: **May 5, 2026**
+> Updated for free-only launch: **June 13, 2026**
+> Snapshot is self-contained in this section for review portability.
+
+### ✅ Legal Clearances
+
+- **FINMA / Swiss financial regulation**: Not applicable. No real money, no financial intermediation. FinIA, FinSA, AMLA, Banking Act — all N/A for a pure paper trading simulator.
+- **Contact email**: `info@cryptopapertrade.com` — set in `TermsPage.tsx` and `PrivacyPage.tsx`.
+- **Privacy Policy §11**: GDPR user rights (Art. 15–22) fully enumerated.
+- **Privacy Policy §5**: Legal bases for each processing type documented.
+- **Tax (current)**: App is free — no Swiss MWST or EU VAT obligations.
+- **Consent Audit Trail**: Capture of `termsAcceptedAt` and `termsAcceptedIp` fully implemented in `RegisterPage.tsx` and `schema.prisma`. 🔐
+- **Cookie & Storage Notice**: `<CookieBanner />` implemented in `App.tsx`; explicitly discloses `localStorage` and session cookie usage.
+- **Terms & Termination**: Force Majeure, Account Termination, and Anti-Scraping clauses added to `TermsPage.tsx`.
+- **Data Retention & Removal**: GDPR-compliant "Delete my account" flow and "Data export" (portability) implemented in `SettingsModal.tsx`. Concrete retention periods (30 days purge) documented in `PrivacyPage.tsx`.
+- **Third-Party / Data Processing**: DPAs signed with Fly.io, Resend, and Cloudflare. ✅
+- **Trademark**: Search performed on swissreg.ch and EUIPO; no conflicting marks for "cryptopapertrade.com". ✅
+
+### 🔴 Blocking — Resolved
+
+| #   | Issue                                          | File(s)          | Priority | Status  |
+| --- | ---------------------------------------------- | ---------------- | -------- | ------- |
+| 1   | No DPAs signed with Fly.io, Resend, Cloudflare | — (legal action) | Critical | ✅ Done |
+| 2   | Bybit API terms for non-commercial use         | — (verification) | Critical | ✅ Done |
+
+### 🟡 Important — Pending Phase 5
+
+| #   | Issue                                                    | File(s)          | Priority  | Status     |
+| --- | -------------------------------------------------------- | ---------------- | --------- | ---------- |
+| 3   | No legal entity registered (personal liability exposure) | — (legal action) | Important | ⬜ Pending |
+
+---
+
 ## 🔌 Phase 5 — Live Broker Integration (Bybit)
 
 > **Status**: Planned · Not started · No implementation until explicitly instructed.
 
 ### Summary
 
-Enable users to connect their personal Bybit account via API keys and execute real trades directly from CryptoDash. The app acts purely as a UI client — it never holds funds. All money stays in the user's own Bybit account. The architecture mirrors how TradingView's broker bridge works: Client → CryptoDash server (signs + validates) → Bybit REST API → user's account.
+Enable users to connect their personal Bybit account via API keys and execute real trades directly from cryptopapertrade.com. The app acts purely as a UI client — it never holds funds. All money stays in the user's own Bybit account. The architecture mirrors how TradingView's broker bridge works: Client → cryptopapertrade.com server (signs + validates) → Bybit REST API → user's account.
 
 ### Cost Model
 
 - **Bybit API access**: free (public API, no partnership required).
-- **Trading fees**: paid by the user to Bybit directly (~0.055% taker / ~0.01% maker) — same as on Bybit.com. CryptoDash charges nothing.
+- **Trading fees**: paid by the user to Bybit directly (~0.055% taker / ~0.01% maker) — same as on Bybit.com. cryptopapertrade.com charges nothing.
 
 ### Legal / Compliance Position
 
@@ -597,7 +632,7 @@ Enable users to connect their personal Bybit account via API keys and execute re
 ```
 User clicks "Buy" (Live mode)
         ↓
-CryptoDash client → POST /api/trading/order (authenticated)
+cryptopapertrade.com client → POST /api/trading/order (authenticated)
         ↓
 Fastify server: validates symbol, looks up encrypted API key, signs request (HMAC-SHA256)
         ↓
@@ -635,7 +670,7 @@ liveStore updated; positions polled / streamed via Bybit private WebSocket
 | --------------------------------------------------------- | ----------- | ------------------------------------------------------------------- |
 | Bug places wrong order                                    | 🔴 Critical | Server validation + order preview confirmation modal                |
 | API key leaked in a breach                                | 🔴 Critical | AES-256-GCM at rest, never logged, HTTPS only                       |
-| User loses money due to a bug                             | 🔴 Critical | Clear ToS disclaimer; no liability assumed by CryptoDash            |
+| User loses money due to a bug                             | 🔴 Critical | Clear ToS disclaimer; no liability assumed by cryptopapertrade.com  |
 | Rate limit exceeded                                       | 🟡 Medium   | Respect Bybit rate limits (10 req/s), queue with backpressure       |
 | Stale positions (user trades on Bybit.com simultaneously) | 🟡 Medium   | Poll positions every 5–10 s or subscribe to Bybit private WebSocket |
 | Double order on network retry                             | 🟡 Medium   | `orderLinkId` idempotency key per order                             |
@@ -774,11 +809,17 @@ Paper trading  →  Real order      →  Proven bot      →  Full autonomous
 | Bybit API outage mid-trade              | 🟡 Medium   | Bot pauses; open positions monitored via polling; user alerted      |
 | Phase 6 bot not actually proven         | 🟡 Medium   | Minimum paper period enforced in code before upgrade is offered     |
 
-_Last updated: 2026-05-04 (under construction page + deployment to cryptopapertrade.com)_
+_Last updated: 2026-05-05 (fixed production API URL baked into client bundle)_
 
 - **Public URL**: **https://cryptopapertrade.com/** (Cloudflare Pages, custom domain, production)
   - API: `https://api.cryptopapertrade.com` → `crypto-dashboard-api.fly.dev` (Fly.io, Singapore region)
   - Client env var: `VITE_API_URL=https://api.cryptopapertrade.com` (set in Cloudflare Pages → Settings → Variables)
+
+- **fix: production API URL now correctly baked into client bundle (05.05.2026)** ✅
+  - **Root cause**: Cloudflare Pages "Create deployment" UI button was **redeploying the last build artifact** (same asset hash `b6siP-Yt`) rather than triggering a fresh build. The previous artifact had `https://crypto-dashboard-api.fly.dev` baked in from an older CI run.
+  - **Fix**: Created `apps/client/.env.production` with `VITE_API_URL=https://api.cryptopapertrade.com`. Vite automatically loads `.env.production` for every production build — the correct URL is now baked in at the source level regardless of what CI env vars are set. No more dependency on Cloudflare Pages → Settings → Variables being configured correctly.
+  - **Deployment**: Clean local build (`pnpm --filter client build`) + direct deploy via `wrangler pages deploy` CLI, bypassing the Pages UI redeploy trap entirely.
+  - **Verification**: New asset hash `D0pj68RE` deployed to `cryptopapertrade.com`. Network requests for `/api/auth/refresh`, `/api/auth/me`, `/api/auth/login`, and `/api/market/candles` all resolve to `https://api.cryptopapertrade.com`. `fly.dev` no longer appears anywhere in the live bundle.
 
 - **feat: under construction landing page (04.05.2026)** ✅
   - Added `apps/client/src/pages/UnderConstructionPage.tsx` — uses `AuthLayout` (same deep-navy bg + ambient glow blobs + grid overlay as login page), design tokens from `@/lib/tokens` (no hardcoded hex values), `bg.panel` card, gradient text heading, `color.muted` subtext, brand `CD` mark.
@@ -1174,7 +1215,7 @@ The helper and test file introduced in the 4.18 safety-hardening fix were rename
 - **5.2** — trigger shows `base="BTC"` for BTCUSDT; shows `base="ETH"` after `layoutStore` symbol change (2 tests)
 - **5.3** — Positions tab: BTC position shows `base="BTC"` + `quote="USDT"`, empty state doesn't crash (3 tests)
 - **5.4** — Orders tab: pending order row shows `base="BTC"` + `quote="USDT"` (2 tests)
-- **5.5** — Order History tab: filled order shows `SymbolPair`, `quote="USDT"`, cancelled row also renders it (3 tests)
+- **5.5** �� Order History tab: filled order shows `SymbolPair`, `quote="USDT"`, cancelled row also renders it (3 tests)
 - **5.7** — BTC + ETH both present in Positions, BTC still shows `base="BTC"` when active pane is ETH, exactly 2 `SymbolPair`s for 2 positions (3 tests)
 
 **TRADING_TEST_PLAN.md + APP_LOG.md:** Section 5 preamble updated to "5.1–5.7 manually verified — all ✅". Rows 5.1–5.7 note T2 · RTL structural coverage via `Section5SymbolPairIcons.test.tsx`.
@@ -1281,17 +1322,17 @@ Four issues surfaced in a Copilot PR review and are now resolved.
 
 ## 🔭 Future Release Ideas
 
-### idea: ATM-style bracket strategies (Pro tier) — research (04.05.2026) ⬜
+### idea: ATM-style bracket strategies — research (04.05.2026) ⬜
 
-> **Status: research only — no implementation planned yet. Revisit when subscription tiers are defined.**
+> **Status: research only — no implementation planned yet.**
 
 #### Background
 
 NinjaTrader's ATM (Advanced Trade Management) is a bracket-template system. Before entry the user selects a named strategy; the moment the fill happens, the full exit plan (multiple profit targets + stop management) fires automatically.
 
-#### What CryptoDash currently has vs. ATM
+#### What cryptopapertrade.com currently has vs. ATM
 
-| Feature                             | CryptoDash now                                 |
+| Feature                             | cryptopapertrade.com now                       |
 | ----------------------------------- | ---------------------------------------------- |
 | Single TP per position              | ✅ `position.takeProfit`                       |
 | Single SL per position              | ✅ `position.stopLoss`                         |
@@ -1304,7 +1345,7 @@ NinjaTrader's ATM (Advanced Trade Management) is a bracket-template system. Befo
 | Named strategy templates            | ❌ not supported                               |
 | Scale-out by qty per target         | ❌ not supported                               |
 
-#### Proposed scoped version for a future Pro tier
+#### Proposed scoped version for a future release
 
 1. **Multiple profit targets (up to 3)** — replace `takeProfit?: number` on `Position` with `targets: { price: number; pct: number }[]`; `useTPSLMonitor` evaluates each target independently and calls a partial close for each hit.
 2. **Auto Break-Even (ABE)** — simple toggle on `Position`: after TP1 fires, stop auto-moves to `entryPrice + offset` (one-shot, then removes itself). Teaches the "risk-free trade" concept visually.
@@ -1313,24 +1354,23 @@ NinjaTrader's ATM (Advanced Trade Management) is a bracket-template system. Befo
 #### Explicitly out of scope (defer or skip)
 
 - Trailing stop — complex monitor math, defer to a later iteration.
-- NinjaTrader tick/contract quantity model — not applicable; CryptoDash is USDT-denominated.
+- NinjaTrader tick/contract quantity model — not applicable; cryptopapertrade.com is USDT-denominated.
 - ATM strategy nesting / parent-child inheritance — too complex for a learning-app context.
 
 #### Open questions before planning
 
-1. **Tier model** — Free / Pro / Pro+? Does this feature define the first paid tier?
-2. **Max targets** — 3 enough, or N?
-3. **Trailing stop** — same tier as ABE, or later?
+1. **Max targets** — 3 enough, or N?
+2. **Trailing stop** — same as ABE, or later?
 
 ---
 
 ### idea: real Bybit account integration (live trading milestone) — research (04.05.2026) ⬜
 
-> **Status: research only — no implementation planned yet. Prerequisite: subscription/tier model must be in place first.**
+> **Status: research only — no implementation planned yet.**
 
 #### What this milestone is
 
-Allow users to connect their own Bybit API key and place **real orders with real money** directly from CryptoDash, using the same TradingPanel UI they already know from paper trading.
+Allow users to connect their own Bybit API key and place **real orders with real money** directly from cryptopapertrade.com, using the same TradingPanel UI they already know from paper trading.
 
 #### Required features (all must ship together as an atomic milestone)
 
@@ -1366,3 +1406,179 @@ The order book is **not needed for paper trading** (fills are instant, no real l
 1. **API key security** — server-side encrypted storage (AES-256 + user-specific key derived from JWT) vs. user-managed (user stores key themselves, enters on each session)?
 2. **Scope of live mode** — full parity with paper (all order types) on day 1, or market orders only to start?
 3. **Paper + live simultaneously** — can a user run both accounts side-by-side (split panels), or is it one mode at a time?
+
+---
+
+## 📋 Planned — Not Yet Implemented
+
+---
+
+### plan: user settings modal + account deletion lifecycle (06.05.2026) 🔲
+
+> **Session context**: Reviewed `PRE_LAUNCH_LEGAL.md` (May 2026 code review findings). Applied several
+> legal compliance fixes to `PrivacyPage.tsx` and `TermsPage.tsx`. Then planned the User Settings
+> feature. Implementation deferred to a future session.
+
+#### Legal compliance work completed this session ✅
+
+- **`PrivacyPage.tsx`** — `lastUpdated` bumped to May 6, 2026
+  - §7 Data Retention: replaced vague "per provider defaults" with concrete retention periods (Fly.io: 30 days; Cloudflare: 7 days; account data: deleted within 30 days of verified request; clarified refresh token expiry behaviour)
+  - §8 Cookies & Browser Storage: added third bullet for `localStorage` documenting all three keys (`cd-paper-trading`, `cd-layout`, `cd-paper-col-prefs`) with explicit note they are never transmitted to the server
+- **`TermsPage.tsx`** — `lastUpdated` bumped to May 6, 2026
+  - §9 Privacy & Data Protection: expanded from one-liner to include explicit GDPR/nDSG rights reference (access, correction, deletion, portability, objection) with link to Privacy §11 and 30-day response commitment
+- **`PRE_LAUNCH_LEGAL.md`** checklist: ticked off localStorage bullet, log retention periods, and account deletion retention period items
+
+#### Decisions locked ✅
+
+| Decision                      | Choice                                                                                                 | Rationale                                                                                                                |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| Profile fields                | **Username only** — no first/last name                                                                 | Platform has no social/public profile surface; username is the only display identifier                                   |
+| Profile icon                  | First letter of username, uppercase, `gradient.brand` background                                       | Already implemented in TopBar; keep consistent                                                                           |
+| Username change limit         | **Unlimited**                                                                                          | No public-facing profile pages, no URL permalinks to protect; zero squatting/impersonation risk                          |
+| Timezone                      | **Eliminated** — not in scope                                                                          | No server-side timezone logic needed; deferred to future if chart timestamps need localisation                           |
+| Password change UX            | **TradingView email-link flow** — reuse existing `/forgot-password` + `/reset-password` infrastructure | No new backend mechanism; user clicks "Change password" → receives reset email → existing `ResetPasswordPage` handles it |
+| Account deletion model        | **TV-style 30-day soft-delete with cancellation window**                                               | Matches existing Privacy Policy wording ("within 30 days"); users can change their mind; reduces support tickets         |
+| During 30-day deletion window | **Full access** — user can log back in and cancel at any time                                          | Same as TradingView; no read-only restriction                                                                            |
+| Deletion email notifications  | **4 transactional emails** (see below)                                                                 | Professional, legally respectful; reuses existing `EmailService` + Resend infrastructure                                 |
+| Settings entry point          | **TopBar dropdown → Settings item** opens a `SettingsModal` dialog                                     | No page navigation in a full-screen trading app; modal keeps the user in context                                         |
+
+#### Email notification lifecycle
+
+| Trigger                      | Email                                                                                          |
+| ---------------------------- | ---------------------------------------------------------------------------------------------- |
+| User requests deletion       | ✉️ "Deletion requested — account scheduled for permanent deletion on [D+30]. Cancel any time." |
+| Day 23 (7 days before purge) | ⚠️ "Last chance — your account will be permanently deleted in 7 days on [date]."               |
+| User cancels deletion        | ✅ "Deletion cancelled — your account has been fully restored."                                |
+| Day 30 purge fires           | 🗑️ "Your account has been permanently deleted. All data has been removed."                     |
+
+The 7-day warning email is tracked via `deletionWarningSentAt DateTime?` on the `User` model so the daily purge job fires it exactly once per deletion request.
+
+#### Schema changes required
+
+```prisma
+model User {
+  // ...existing fields...
+  deletionRequestedAt  DateTime? // null = active; non-null = pending deletion
+  deletionWarningSentAt DateTime? // null = warning not yet sent; non-null = already sent
+}
+```
+
+No migration for `termsAcceptedAt` in this plan — deferred; the Terms acceptance checkbox (§12 of `PRE_LAUNCH_LEGAL.md`) is a separate milestone.
+
+#### New server routes
+
+| Method   | Path                        | Auth      | Description                                                                                                                                |
+| -------- | --------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `PATCH`  | `/api/auth/username`        | ✅ Bearer | Validate uniqueness + alphanumeric rules; returns updated `User`                                                                           |
+| `PATCH`  | `/api/auth/email`           | ✅ Bearer | Requires `currentPassword` bcrypt verification; validates new email uniqueness                                                             |
+| `DELETE` | `/api/auth/account`         | ✅ Bearer | Requires `password` confirmation; sets `deletionRequestedAt = now()`; logs user out; sends deletion-requested email. Rate-limited 3/15 min |
+| `POST`   | `/api/auth/cancel-deletion` | ✅ Bearer | Clears `deletionRequestedAt` and `deletionWarningSentAt`; sends cancellation email                                                         |
+
+Password change: **no new route** — settings page calls existing `POST /api/auth/forgot-password` with the logged-in user's email directly.
+
+#### Daily purge job (server startup)
+
+Registered in `apps/server/src/index.ts` as a `setInterval` running every 24 hours:
+
+1. **7-day warning pass**: find users where `deletionRequestedAt ≤ now() − 23 days` AND `deletionWarningSentAt IS NULL` → send warning email → set `deletionWarningSentAt = now()`
+2. **Hard-delete pass**: find users where `deletionRequestedAt ≤ now() − 30 days` → capture `email` + `username` before delete → send deletion-completed email → hard-delete `User` row (cascades to all relations via existing `onDelete: Cascade`)
+
+#### SDK changes required
+
+**`generated/CDSDK/types/index.ts`**
+
+- Add `deletionRequestedAt?: string | null` to `User` interface
+
+**`generated/CDSDK/api/auth.ts`**
+
+- `updateUsername(body: { username: string }, accessToken: string)` → `PATCH /api/auth/username`
+- `updateEmail(body: { email: string; currentPassword: string }, accessToken: string)` → `PATCH /api/auth/email`
+- `requestDeletion(body: { password: string }, accessToken: string)` → `DELETE /api/auth/account`
+- `cancelDeletion(accessToken: string)` → `POST /api/auth/cancel-deletion`
+
+#### Store changes required
+
+**`apps/client/src/store/authStore.ts`**
+
+- Add `updateUser: (partial: Partial<User>) => void` action → `set(s => ({ user: { ...s.user!, ...partial } }))`
+
+#### EmailService changes required
+
+**`apps/server/src/services/EmailService.ts`** — add 4 methods:
+
+- `sendDeletionRequestedEmail(email, username, deletionDate: Date)`
+- `sendDeletionCancelledEmail(email, username)`
+- `sendDeletionWarningEmail(email, username, deletionDate: Date)`
+- `sendDeletionCompletedEmail(email, username)` — called with captured values before the DB row is deleted
+
+#### Client components required
+
+**`apps/client/src/components/dashboard/SettingsModal.tsx`** — new file
+
+Three visual sections (all use existing token system: `bg.panel`, `bg.surface`, `color.purple`, `color.muted`, etc.):
+
+1. **Profile section**
+   - Username input (pre-filled, same validation: 3–20 chars, `^[a-zA-Z0-9_]+$`)
+   - Save button with inline success/error feedback
+   - On save: calls `updateUsername`, dispatches `updateUser({ username })` to `authStore`
+
+2. **Sign-in credentials section**
+   - _Email row_: masked current email (`ad••••@gm•••` — client-side `maskEmail(email)` util), "Change email" button → inline sub-panel with new email + current password fields
+   - _Password row_: "Change password" button → TV-style two-step mini dialog:
+     - Screen 1: _"For your security, we'll send you an email explaining how to reset your password."_ + Cancel / Send link → calls `authApi.forgotPassword({ email: user.email })`
+     - Screen 2: _"Email was sent — The link to reset your password was sent to your email."_ + Got it
+
+3. **Danger Zone section** — red-bordered card
+   - Title: **"Account deletion"** with `?` help tooltip
+   - Body: _"If you ever want to delete your account, you can. The process will take 30 days and you can change your mind at any time and halt the process."_
+   - Button: red-outlined "Delete account" → password-confirmation sub-dialog → on confirm: calls `requestDeletion`, then `logout`, then `clearAuth()`, then wipes `cd-paper-trading`, `cd-layout`, `cd-paper-col-prefs`, `cd-cookie-notice-dismissed` from localStorage, then navigates to `/login`
+
+**`apps/client/src/components/dashboard/TopBar.tsx`** — changes
+
+- Import `Settings` icon from lucide-react
+- Add `settingsOpen` state
+- Add Settings item above Sign out in dropdown
+- Render `<SettingsModal open={settingsOpen} onClose={...} />` inside TopBar
+
+**`apps/client/src/pages/DashboardPage.tsx`** — changes
+
+- If `user.deletionRequestedAt` is set, render a dismissible amber top banner:
+  _"Your account is scheduled for deletion on [date]. [Cancel deletion]"_
+- Cancel deletion button calls `cancelDeletion`, then `updateUser({ deletionRequestedAt: null })`
+
+**`apps/client/src/pages/PrivacyPage.tsx`** — §7 update
+
+- Account data bullet: replace current wording with _"Upon receiving a deletion request via the in-app flow, your account enters a 30-day cancellation window during which you retain full access and can cancel at any time. After 30 days with no cancellation, your account and all associated personal data are permanently and irreversibly deleted."_
+
+#### Files to create / modify (full list for next session)
+
+| File                                                     | Action                                                                            |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `apps/server/prisma/schema.prisma`                       | Add `deletionRequestedAt`, `deletionWarningSentAt` to `User`                      |
+| `apps/server/prisma/migrations/`                         | New migration for schema changes                                                  |
+| `apps/server/src/routes/auth/index.ts`                   | Add `PATCH /username`, `PATCH /email`, `DELETE /account`, `POST /cancel-deletion` |
+| `apps/server/src/services/EmailService.ts`               | Add 4 deletion lifecycle email methods                                            |
+| `apps/server/src/index.ts`                               | Register daily purge `setInterval`                                                |
+| `generated/CDSDK/types/index.ts`                         | Add `deletionRequestedAt` to `User`; add `UpdateUserResponse` type                |
+| `generated/CDSDK/api/auth.ts`                            | Add `updateUsername`, `updateEmail`, `requestDeletion`, and `cancelDeletion`      |
+| `apps/client/src/store/authStore.ts`                     | Add `updateUser` action                                                           |
+| `apps/client/src/components/dashboard/SettingsModal.tsx` | **New file** — full settings modal                                                |
+| `apps/client/src/components/dashboard/TopBar.tsx`        | Add Settings menu item + SettingsModal render                                     |
+| `apps/client/src/pages/DashboardPage.tsx`                | Add deletion-pending banner                                                       |
+| `apps/client/src/pages/PrivacyPage.tsx`                  | Update §7 account data retention wording                                          |
+
+- **feat: Suggested Email Content Update and Compliance alignment (13.06.2026)** ✅
+  - **EmailService.ts**: Updated sendDeletionRequestedEmail to include legal disclosures regarding GDPR/nDSG, the 30-day cancellation window, and the 60-day backup persistence period for technical logs. Added portability reminder (data export).
+  - **PrivacyPage.tsx**: Updated §7 Data Retention to explicitly disclose the 60-day backup persistence period, ensuring consistency with transactional emails and meeting transparency requirements.
+
+- **feat: Auth Review Fixes & Email Strengthening (13.06.2026)** ✅
+  - **Email Template Refactoring**: Refactored `EmailService.ts` to use professional HTML templates with project branding (ambient navy theme), clear call-to-action buttons, and enhanced security recommendations for verification, password resets, and account changes.
+  - **Atomic Transactions**: Integrated Prisma `$transaction` in `/verify-email` and `/reset-password` routes to ensure verification/reset tokens are consumed atomically with user state updates. 🔐
+  - **AJV Formats & Type Hardening**: Fixed a critical type error in `app.ts` regarding `ajv-formats` registration. Properly typed the AJV plugin system and enabled the `email` format validation site-wide.
+  - **Auth Lifecycle Security**: Strengthened `auth.test.ts` to cover 38 discrete test cases (100% green), including email enumeration prevention, token rotation race conditions, and password update session invalidation. Corrected response structures for `email-change` and `username-update` endpoints.
+  - **Bug Fixes**:
+    - Fixed `CookieBanner.tsx` link path from `/privacy` to `/privacy-policy`.
+    - Corrected `index.ts` process exit logic to prevent premature shutdown in non-development environments.
+    - Improved `auth.test.ts` mock resilience for `Prisma` transactions and `EmailService`.
+  - **Formatting & Linting**: Performed workspace-wide `pnpm format` and `pnpm lint` pass to ensure code quality and style consistency before push.
+  - **Commit**: `fc3a472`

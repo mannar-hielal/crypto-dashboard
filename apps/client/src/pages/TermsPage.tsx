@@ -1,26 +1,27 @@
 import { Link } from 'react-router';
 import { LegalLayout } from '@/components/LegalLayout';
 
-const CONTACT_EMAIL = 'adminwithu@gmail.com'; // TODO: replace with legal@yourdomain.com once domain is live
+const CONTACT_EMAIL = 'info@cryptopapertrade.com';
 
 export function TermsPage() {
   return (
-    <LegalLayout title="Terms of Use" lastUpdated="April 11, 2026">
+    <LegalLayout title="Terms of Service" lastUpdated="June 13, 2026" version="1.0">
       <section>
         <h2>1. Acceptance of Terms</h2>
         <p>
-          By accessing or using Crypto Dashboard ("the Service", "we", "us"), you agree to be bound
-          by these Terms of Use and our <Link to="/privacy">Privacy Policy</Link>. If you do not
-          agree, do not use the Service.
+          By accessing or using https://cryptopapertrade.com/ ("the Service", "we", "us"), you agree
+          to be bound by these Terms of Use and our <Link to="/privacy">Privacy Policy</Link>. If
+          you do not agree, do not use the Service.
         </p>
       </section>
 
       <section>
         <h2>2. Description of Service</h2>
         <p>
-          Crypto Dashboard is a <strong>paper trading simulation platform</strong> that provides
-          professional-grade charting and order management tools using real-time price data from the
-          Bybit API. All trading activity on this platform is simulated using virtual currency.
+          https://cryptopapertrade.com/ is a <strong>paper trading simulation platform</strong> that
+          provides professional-grade charting and order management tools using real-time price data
+          from the Bybit API. All trading activity on this platform is simulated using virtual
+          currency.
         </p>
         <p>
           <strong>
@@ -29,9 +30,9 @@ export function TermsPage() {
           </strong>
         </p>
         <p>
-          The Service is currently offered during an early-access period. Subscription-based pricing
-          tiers will be introduced in a future release. Registered users will be notified of any
-          changes to the pricing model before they take effect.
+          The Service is provided <strong>free of charge</strong> for educational and research
+          purposes. While we strive to keep the platform accessible, we reserve the right to modify
+          or discontinue features at any time.
         </p>
       </section>
 
@@ -39,6 +40,10 @@ export function TermsPage() {
         <h2>3. Eligibility</h2>
         <ul>
           <li>You must be at least 18 years old to use this Service.</li>
+          <li>
+            The Service is for <strong>personal, non-commercial use only</strong>. Sharing account
+            credentials is prohibited and may result in immediate termination.
+          </li>
           <li>
             By creating an account, you confirm that you meet this age requirement and that you have
             the legal capacity to enter into these Terms.
@@ -91,7 +96,13 @@ export function TermsPage() {
 
       <section>
         <h2>7. Prohibited Use</h2>
-        <p>You agree not to:</p>
+        <p>
+          Your use of the Service is subject to our{' '}
+          <Link to="/aup" className="underline hover:text-brand">
+            Acceptable Use Policy
+          </Link>
+          . In addition and without limitation, you agree not to:
+        </p>
         <ul>
           <li>Use the Service for any unlawful purpose or in violation of these Terms.</li>
           <li>Attempt to reverse-engineer, hack, or disrupt the platform or its infrastructure.</li>
@@ -102,11 +113,15 @@ export function TermsPage() {
             Use data or outputs from this Service to train commercial AI models without our express
             written consent.
           </li>
+          <li>
+            Use automated tools, scripts, or bots to systematically extract, scrape, mirror, or
+            republish real-time or historical market data provided through the Service.
+          </li>
         </ul>
       </section>
 
       <section>
-        <h2>8. Intellectual Property</h2>
+        <h2>8. Intellectual Property & User Content</h2>
         <p>
           All code, design, content, and assets produced by this project are the exclusive
           proprietary property of Mannar Hielal. All rights reserved. No part of the Service may be
@@ -114,13 +129,20 @@ export function TermsPage() {
           written permission of Mannar Hielal. Real-time price data is provided by Bybit and is
           subject to{' '}
           <a
-            href="https://www.bybit.com/en/terms-service/user-agreement/"
+            href="https://www.bybit.com/en/legal/terms-of-service/terms-of-service"
             target="_blank"
             rel="noopener noreferrer"
           >
             Bybit's Terms of Service
           </a>
           .
+        </p>
+        <p>
+          <strong>User Content Ownership:</strong> You retain ownership of any content you create
+          within the Service (such as trading journal entries or notes). By using the Service, you
+          grant cryptopapertrade.com a limited, non-exclusive, worldwide, royalty-free license to
+          store, host, and display your content solely for the purpose of providing the Service to
+          you.
         </p>
       </section>
 
@@ -131,6 +153,14 @@ export function TermsPage() {
           which is incorporated into these Terms. We process your personal data in accordance with
           the Swiss Federal Act on Data Protection (nDSG) and, where applicable, the EU General Data
           Protection Regulation (GDPR).
+        </p>
+        <p>
+          Under GDPR (EU/EEA residents) and nDSG (Swiss residents), you have legally enforceable
+          rights over your personal data, including the right to access, correct, delete, and port
+          your data, as well as the right to object to certain processing. These rights are fully
+          described in <Link to="/privacy">Privacy Policy §11 — Your Rights</Link>, together with
+          instructions on how to exercise them. We will respond to any valid request within{' '}
+          <strong>30 calendar days</strong>.
         </p>
       </section>
 
@@ -182,9 +212,9 @@ export function TermsPage() {
         <p>
           TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, MANNAR HIELAL SHALL NOT BE LIABLE FOR
           ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING FROM YOUR
-          USE OF THE SERVICE. SINCE NO REAL FUNDS ARE INVOLVED IN THIS PLATFORM, OUR MAXIMUM
-          AGGREGATE LIABILITY TO YOU SHALL NOT EXCEED THE GREATER OF (A) THE TOTAL FEES PAID BY YOU
-          TO THE SERVICE IN THE THREE (3) MONTHS PRECEDING THE CLAIM, OR (B) CHF 100.
+          USE OF THE SERVICE. AS THE SERVICE IS CURRENTLY PROVIDED AT NO COST TO YOU FOR EDUCATIONAL
+          PURPOSES, OUR MAXIMUM AGGREGATE LIABILITY TO YOU SHALL NOT EXCEED <strong>CHF 100</strong>
+          .
         </p>
         <p>
           EU consumers may have additional rights under mandatory consumer protection laws of their
@@ -298,9 +328,48 @@ export function TermsPage() {
           For questions or concerns about these Terms, contact us at:{' '}
           <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
         </p>
-        <p className="text-muted-foreground text-sm">
-          Note: This email address is temporary. It will be updated to a dedicated legal address
-          once a custom domain is configured.
+      </section>
+
+      <section>
+        <h2>18. Account Termination</h2>
+        <p>
+          We reserve the right to suspend or terminate your access to the Service at our sole
+          discretion, without notice, for conduct that we believe violates these Terms of Use or is
+          harmful to other users of the Service, us, or third parties, or for any other reason.
+        </p>
+        <ul>
+          <li>
+            <strong>Grounds for Termination:</strong> Material breach of these Terms, abuse of the
+            platform, or any attempt to disrupt the Service.
+          </li>
+          <li>
+            <strong>Deletion Window:</strong> Upon requesting account deletion or upon termination
+            of an account, your data will enter a <strong>30-day deletion window</strong> as
+            specified in our Privacy Policy. During this window, you may request a data export
+            unless your account was terminated for illegal activity.
+          </li>
+          <li>
+            <strong>Data Export:</strong> Upon termination, you retain the right to request exports
+            of your data as described in our Privacy Policy, provided your account was not
+            terminated for fraudulent or illegal activity.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>19. Force Majeure & Third-Party Dependencies</h2>
+        <p>
+          <strong>Third-Party APIs:</strong> Our Service integrates with and depends on third-party
+          Application Programming Interfaces (APIs), primarily from Bybit for market data. You
+          acknowledge that we have no control over the availability, accuracy, or stability of these
+          third-party services. We make no warranty that the Service will be uninterrupted if these
+          third parties experience outages or change their terms of access.
+        </p>
+        <p>
+          <strong>Force Majeure:</strong> Mannar Hielal shall not be liable for any failure or delay
+          in performance due to circumstances beyond our reasonable control, including but not
+          limited to: acts of God, government actions, cyberattacks (DDoS), power outages, or
+          infrastructure failures by hosting providers (Fly.io, Cloudflare).
         </p>
       </section>
     </LegalLayout>

@@ -2,17 +2,27 @@
  * Environment Configuration & Validation
  * Ensures all required environment variables are set before app starts
  *
- * Note: console.* is intentional here — this module bootstraps before the
- * pino logger exists (logger.ts imports config, so we can't import logger here).
+ * Note: this module bootstraps before the shared app logger exists
+ * (logger.ts imports config), so it uses a lightweight `bootLogger` instance instead.
  */
-/* eslint-disable no-console */
 
 import { config as dotenvConfig } from 'dotenv';
 import { resolve } from 'path';
+import pino from 'pino';
 
 // Monorepo setup: load from local .env first, fallback to root .env
 dotenvConfig({ path: resolve(process.cwd(), '.env') });
 dotenvConfig({ path: resolve(process.cwd(), '../../.env') });
+
+const bootLogger = pino({
+  level: process.env.LOG_LEVEL || 'info',
+  ...(process.env.NODE_ENV !== 'production' && {
+    transport: {
+      target: 'pino-pretty',
+      options: { colorize: true },
+    },
+  }),
+});
 
 interface Config {
   port: number;
@@ -63,20 +73,15 @@ function loadConfig(): Config {
   const criticalMissing = criticalVars.filter((v) => !process.env[v]);
 
   if (criticalMissing.length > 0) {
-    console.error('❌ Missing required environment variables:', criticalMissing.join(', '));
-    console.error('\nPlease ensure your .env file contains:');
-    criticalMissing.forEach((v) => console.error(`  ${v}=<value>`));
+    bootLogger.error({ missing: criticalMissing }, '❌ Missing required environment variables');
     process.exit(1);
   }
 
   // 🔐 JWT_SECRET entropy check — require at least 32 bytes (256 bits) so the secret
   //    cannot be brute-forced or guessed. A short secret undermines HS256 security.
   if (Buffer.byteLength(config.jwtSecret, 'utf8') < 32) {
-    console.error(
+    bootLogger.error(
       '❌ JWT_SECRET is too short. It must be at least 32 bytes (256 bits) of entropy.'
-    );
-    console.error(
-      "   Generate one with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
     );
     process.exit(1);
   }
@@ -84,7 +89,7 @@ function loadConfig(): Config {
   // 🔐 In production, CLIENT_URL must be explicitly set — the localhost default would
   //    generate password reset links that are unreachable for real users.
   if (config.nodeEnv === 'production' && !process.env.CLIENT_URL) {
-    console.error(
+    bootLogger.error(
       '❌ CLIENT_URL is not set in production. Password reset links would point to localhost and be unusable.'
     );
     process.exit(1);
@@ -94,14 +99,14 @@ function loadConfig(): Config {
   try {
     new URL(config.databaseUrl);
   } catch {
-    console.error('❌ Invalid DATABASE_URL format. Check your .env file.');
+    bootLogger.error('❌ Invalid DATABASE_URL format. Check your .env file.');
     process.exit(1);
   }
 
   try {
     new URL(config.redisUrl);
   } catch {
-    console.error('❌ Invalid REDIS_URL format. Check your .env file.');
+    bootLogger.error('❌ Invalid REDIS_URL format. Check your .env file.');
     process.exit(1);
   }
 
@@ -114,12 +119,25 @@ function loadConfig(): Config {
     }
   })();
 
-  console.log('✅ Environment configuration loaded successfully');
-  console.log(`   Mode:           ${config.nodeEnv}`);
-  console.log(`   Database host:  ${dbHost}`);
-  console.log(`   Redis:          localhost (connected)`);
-  console.log(`   Bybit Testnet:  ${config.bybitTestnet}`);
-  console.log(`   Log level:      ${config.logLevel}`);
+  const redisHost = (() => {
+    try {
+      return new URL(config.redisUrl).host;
+    } catch {
+      return 'unknown';
+    }
+  })();
+
+  bootLogger.info('✅ Environment configuration loaded successfully');
+  bootLogger.info(
+    {
+      mode: config.nodeEnv,
+      dbHost,
+      redisHost,
+      bybitTestnet: config.bybitTestnet,
+      logLevel: config.logLevel,
+    },
+    '🚀 Server Startup Configuration'
+  );
 
   return config;
 }

@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { LogOut, ChevronDown } from 'lucide-react';
+import { LogOut, ChevronDown, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@crypto-dashboard/sdk';
 import { bg, color, fontSize, gradient } from '@/lib/tokens';
+import { SettingsModal } from './SettingsModal';
 
 /**
  * TopBar — App-level header (row 1)
@@ -18,6 +19,7 @@ export function TopBar() {
   const user = useAuthStore((s) => s.user);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   async function handleLogout() {
     await authApi.logout();
@@ -40,11 +42,11 @@ export function TopBar() {
             style={{ fontSize: fontSize.xs11 }}
             className="font-black tracking-tight text-white"
           >
-            CD
+            CPT
           </span>
         </motion.div>
 
-        <span className="text-sm font-bold tracking-tight text-white">CryptoDash</span>
+        <span className="text-sm font-bold tracking-tight text-white">cryptopapertrade.com</span>
 
         <span
           className="rounded px-1.5 py-0.5 font-bold uppercase tracking-widest"
@@ -96,9 +98,21 @@ export function TopBar() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -6, scale: 0.97 }}
                 transition={{ duration: 0.15 }}
-                className="absolute right-0 top-full z-50 mt-1.5 w-36 overflow-hidden rounded-lg border border-white/8 shadow-2xl"
+                className="absolute right-0 top-full z-50 mt-1.5 w-40 overflow-hidden rounded-lg border border-white/8 shadow-2xl"
                 style={{ background: bg.panel }}
               >
+                <motion.button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setSettingsOpen(true);
+                  }}
+                  whileHover={{ background: bg.surface }}
+                  className="flex w-full items-center gap-2 px-3 py-2.5 text-xs transition-colors hover:text-white"
+                  style={{ color: color.muted, borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+                >
+                  <Settings className="h-3.5 w-3.5" />
+                  Settings
+                </motion.button>
                 <motion.button
                   onClick={() => {
                     setMenuOpen(false);
@@ -116,6 +130,8 @@ export function TopBar() {
           )}
         </AnimatePresence>
       </div>
+
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </header>
   );
 }

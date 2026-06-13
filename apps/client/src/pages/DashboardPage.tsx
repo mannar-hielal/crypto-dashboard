@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
+import { AlertTriangle } from 'lucide-react';
 import { usePaneFeeds } from '@/hooks/usePaneFeeds';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useTPSLMonitor } from '@/hooks/useTPSLMonitor';
 import { usePendingOrderMonitor } from '@/hooks/usePendingOrderMonitor';
-import { TradingSoundProvider, useTradingSoundCtx } from '@/hooks/TradingSoundContext';
+import { TradingSoundProvider, useSoundActions } from '@/hooks/TradingSoundContext';
 import { useLayoutStore } from '@/store/layoutStore';
+import { useAuthStore } from '@/store/authStore';
+import { authApi } from '@crypto-dashboard/sdk';
 import { TopBar } from '@/components/dashboard/TopBar';
 import { LeftToolbar } from '@/components/dashboard/LeftToolbar';
 import { MultiChartArea } from '@/components/dashboard/MultiChartArea';
@@ -69,27 +72,29 @@ export function DashboardPage() {
 }
 
 function DashboardInner() {
-  const sound = useTradingSoundCtx();
+  const { playProfit, playLoss, playOrderFilled } = useSoundActions();
 
   usePaneFeeds();
   useDocumentTitle();
 
   // Stable callback refs — memoized so they don't change on every render.
-  // Depend on `sound` (the whole object) — React Compiler infers the object-level
-  // dependency from property accesses and cannot preserve narrower method deps.
   const handleTPSLClosed = useCallback(
     (pnl: number) => {
-      if (pnl >= 0) sound.playProfit();
-      else sound.playLoss();
+      if (pnl >= 0) playProfit();
+      else playLoss();
     },
-    [sound]
+    [playProfit, playLoss]
   );
   const handleOrderFilled = useCallback(() => {
-    sound.playOrderFilled();
-  }, [sound]);
+    playOrderFilled();
+  }, [playOrderFilled]);
 
   useTPSLMonitor({ onClosed: handleTPSLClosed });
   usePendingOrderMonitor({ onFilled: handleOrderFilled });
+
+  const user = useAuthStore((s) => s.user);
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const updateUser = useAuthStore((s) => s.updateUser);
 
   // Active pane symbol drives the TradingPanel key (resets form on symbol change)
   const activePane = useLayoutStore((s) => s.activePane);
@@ -191,9 +196,49 @@ function DashboardInner() {
     setBottomPanelHeight(committed); // persist to cd-layout localStorage
   }
 
+  async function handleCancelDeletion() {
+    if (!accessToken) return;
+    try {
+      await authApi.cancelDeletion(accessToken);
+      updateUser({ deletionRequestedAt: null });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'An unknown error occurred');
+    }
+  }
+
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden" style={{ background: bg.page }}>
       <TopBar />
+
+      {/* ⚠️ Deletion Pending Banner */}
+      <AnimatePresence>
+        {user?.deletionRequestedAt && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="flex items-center justify-center gap-3 bg-amber-500/10 border-b border-amber-500/20 py-2 px-4 shadow-lg"
+          >
+            <AlertTriangle className="w-4 h-4 text-amber-500" />
+            <p className="text-xs font-medium text-amber-200/90">
+              Your account is scheduled for deletion on{' '}
+              <strong className="text-amber-400">
+                {new Date(
+                  new Date(user.deletionRequestedAt).getTime() + 30 * 24 * 60 * 60 * 1000
+                ).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+              </strong>
+              .
+            </p>
+            <button
+              onClick={handleCancelDeletion}
+              className="ml-2 px-3 py-1 rounded bg-amber-500 text-[11px] font-bold text-black hover:bg-amber-400 transition-colors"
+            >
+              Cancel deletion
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <SymbolBar
         tradingPanelOpen={tradingPanelOpen}
         onToggleTrading={() => setTradingPanelOpen((v) => !v)}
@@ -337,18 +382,24 @@ function DashboardInner() {
           ⚠️ Paper trading only — no real funds. For educational purposes.
         </span>
         <nav
-          className="flex items-center gap-3"
+          className="flex items-center gap-4"
           style={{ fontSize: fontSize.xs10, color: `${color.muted}60` }}
         >
           <Link to="/terms" className="transition-colors hover:text-white/50">
-            Terms of Use
+            Terms of Service
           </Link>
-          <span aria-hidden>·</span>
           <Link to="/privacy" className="transition-colors hover:text-white/50">
-            Privacy
+            Privacy Policy
           </Link>
-          <span aria-hidden>·</span>
-          <span>© {new Date().getFullYear()} Crypto Dashboard</span>
+          <Link to="/security" className="transition-colors hover:text-white/50">
+            Security
+          </Link>
+          <Link to="/aup" className="transition-colors hover:text-white/50">
+            Acceptable Use Policy
+          </Link>
+          <span className="ml-2 font-medium">
+            © {new Date().getFullYear()} cryptopapertrade.com
+          </span>
         </nav>
       </div>
     </div>

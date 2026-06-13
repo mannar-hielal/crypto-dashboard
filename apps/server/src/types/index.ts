@@ -1,5 +1,5 @@
 /**
- * Shared domain types for the Crypto Dashboard server
+ * Shared domain types for the cryptopapertrade.com server
  * Phase 1: Market data, indicators, and streaming
  */
 

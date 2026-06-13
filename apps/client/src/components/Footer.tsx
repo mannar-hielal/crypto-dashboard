@@ -7,17 +7,17 @@ export function Footer() {
       <p style={{ fontSize: fontSize.xs, color: color.muted }}>
         ⚠️ Paper trading only — no real money involved. For educational purposes only.
       </p>
-      <nav className="mt-2 flex items-center justify-center gap-3" aria-label="Footer">
+      <nav
+        className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5"
+        aria-label="Footer"
+      >
         <Link
           to="/terms"
           className="underline-offset-4 transition-colors hover:underline hover:text-brand-muted"
           style={{ fontSize: fontSize.xs, color: color.muted }}
         >
-          Terms of Use
+          Terms of Service
         </Link>
-        <span style={{ color: `${color.muted}40` }} aria-hidden="true">
-          ·
-        </span>
         <Link
           to="/privacy"
           className="underline-offset-4 transition-colors hover:underline hover:text-brand-muted"
@@ -25,9 +25,23 @@ export function Footer() {
         >
           Privacy Policy
         </Link>
+        <Link
+          to="/security"
+          className="underline-offset-4 transition-colors hover:underline hover:text-brand-muted"
+          style={{ fontSize: fontSize.xs, color: color.muted }}
+        >
+          Security
+        </Link>
+        <Link
+          to="/aup"
+          className="underline-offset-4 transition-colors hover:underline hover:text-brand-muted"
+          style={{ fontSize: fontSize.xs, color: color.muted }}
+        >
+          Acceptable Use Policy
+        </Link>
       </nav>
       <p className="mt-2" style={{ fontSize: fontSize.xs, color: `${color.muted}60` }}>
-        © {new Date().getFullYear()} Crypto Dashboard
+        © {new Date().getFullYear()} cryptopapertrade.com
       </p>
     </footer>
   );

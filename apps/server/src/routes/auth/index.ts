@@ -1,13 +1,12 @@
 import { createHash, randomBytes } from 'node:crypto';
-import bcrypt from 'bcrypt';
+import * as argon2 from 'argon2';
 import { FastifyInstance, FastifyReply } from 'fastify';
 import { config } from '../../config.js';
 import { EmailService } from '../../services/EmailService.js';
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-// 🔐 Cost 12 in non-test environments = ~250ms per hash (brute-force resistant).
-//    Cost 1 in test = fast CI without compromising real security.
-const BCRYPT_ROUNDS = process.env.NODE_ENV === 'test' ? 1 : 12;
+// 🔐 argon2 is now the gold standard (OWASP recommendation) over bcrypt.
+//    It is memory-hard and computationally expensive (resistant to GPU cracking).
 const REFRESH_TOKEN_COOKIE = 'refresh_token';
 const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
 const ACCESS_TOKEN_EXPIRY = '15m'; // Short-lived — lives only in Zustand memory
@@ -32,6 +31,9 @@ const userResponse = {
     id: { type: 'string' },
     email: { type: 'string' },
     username: { type: 'string' },
+    emailVerifiedAt: { type: ['string', 'null'] },
+    termsAcceptedAt: { type: ['string', 'null'] },
+    termsAcceptedIp: { type: ['string', 'null'] },
   },
 };
 
@@ -63,12 +65,12 @@ const registerSchema = {
     'Creates a user account and a paper trading account. Returns a 15-min access token. A 7-day refresh token is set as an httpOnly cookie (sameSite: none + secure in production, lax in development).',
   body: {
     type: 'object',
-    required: ['email', 'username', 'password'],
+    required: ['email', 'username', 'password', 'acceptedTerms'],
     additionalProperties: false, // 🔐 rejects unknown/extra fields
     properties: {
       email: {
         type: 'string',
-        pattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$',
+        format: 'email', // 🔐 AJV-native email validation
         maxLength: 255,
       },
       username: {
@@ -82,6 +84,10 @@ const registerSchema = {
         minLength: 8,
         maxLength: 72, // 🔐 bcrypt silently ignores chars beyond 72
         pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).+$',
+      },
+      acceptedTerms: {
+        type: 'boolean',
+        const: true, // ⚖️ must be true
       },
     },
   },
@@ -104,7 +110,7 @@ const loginSchema = {
     properties: {
       email: {
         type: 'string',
-        pattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$',
+        format: 'email',
         maxLength: 255,
       },
       password: { type: 'string', minLength: 1, maxLength: 72 },
@@ -159,6 +165,9 @@ const meSchema = {
             id: { type: 'string' },
             email: { type: 'string' },
             username: { type: 'string' },
+            emailVerifiedAt: { type: ['string', 'null'] },
+            termsAcceptedAt: { type: ['string', 'null'] },
+            termsAcceptedIp: { type: ['string', 'null'] },
             account: {
               type: ['object', 'null'],
               properties: {
@@ -192,7 +201,7 @@ const forgotPasswordSchema = {
     properties: {
       email: {
         type: 'string',
-        pattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$',
+        format: 'email',
         maxLength: 255,
       },
     },
@@ -232,6 +241,174 @@ const resetPasswordSchema = {
       properties: { message: { type: 'string' } },
     },
     400: errorResponse,
+  },
+};
+
+const verifyEmailSchema = {
+  tags: ['Auth'],
+  summary: 'Verify email address',
+  body: {
+    type: 'object',
+    required: ['token'],
+    properties: {
+      token: { type: 'string', minLength: 64, maxLength: 64 },
+    },
+  },
+  response: {
+    200: {
+      type: 'object',
+      properties: { message: { type: 'string' } },
+    },
+    400: errorResponse,
+  },
+};
+
+const resendVerificationSchema = {
+  tags: ['Auth'],
+  summary: 'Resend verification email',
+  body: {
+    type: 'object',
+    required: ['email'],
+    properties: {
+      email: { type: 'string', format: 'email' },
+    },
+  },
+  response: {
+    200: {
+      type: 'object',
+      properties: { message: { type: 'string' } },
+    },
+    400: errorResponse,
+  },
+};
+
+const verifyEmailChangeSchema = {
+  tags: ['Auth'],
+  summary: 'Verify email change',
+  body: {
+    type: 'object',
+    required: ['token'],
+    properties: {
+      token: { type: 'string', minLength: 64, maxLength: 64 },
+    },
+  },
+  response: {
+    200: {
+      type: 'object',
+      properties: { message: { type: 'string' } },
+    },
+    400: errorResponse,
+  },
+};
+
+const updatePasswordSchema = {
+  tags: ['Auth'],
+  summary: 'Update password',
+  security: [{ bearerAuth: [] }],
+  body: {
+    type: 'object',
+    required: ['currentPassword', 'newPassword'],
+    properties: {
+      currentPassword: { type: 'string' },
+      newPassword: {
+        type: 'string',
+        minLength: 8,
+        maxLength: 72,
+        pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).+$',
+      },
+    },
+  },
+  response: {
+    200: {
+      type: 'object',
+      properties: { message: { type: 'string' } },
+    },
+    400: errorResponse,
+    401: errorResponse,
+  },
+};
+
+const updateUsernameSchema = {
+  tags: ['Auth'],
+  summary: 'Update username',
+  security: [{ bearerAuth: [] }],
+  body: {
+    type: 'object',
+    required: ['username'],
+    properties: {
+      username: {
+        type: 'string',
+        minLength: 3,
+        maxLength: 20,
+        pattern: '^[a-zA-Z0-9_]+$',
+      },
+    },
+  },
+  response: {
+    200: {
+      type: 'object',
+      properties: { message: { type: 'string' } },
+    },
+    400: errorResponse,
+    401: errorResponse,
+    409: errorResponse,
+  },
+};
+
+const updateEmailSchema = {
+  tags: ['Auth'],
+  summary: 'Update email',
+  security: [{ bearerAuth: [] }],
+  body: {
+    type: 'object',
+    required: ['email', 'currentPassword'],
+    properties: {
+      email: { type: 'string', format: 'email', maxLength: 255 },
+      currentPassword: { type: 'string' },
+    },
+  },
+  response: {
+    200: {
+      type: 'object',
+      properties: { user: userResponse },
+    },
+    400: errorResponse,
+    401: errorResponse,
+    409: errorResponse,
+  },
+};
+
+const requestDeletionSchema = {
+  tags: ['Auth'],
+  summary: 'Request account deletion',
+  security: [{ bearerAuth: [] }],
+  body: {
+    type: 'object',
+    required: ['password'],
+    properties: {
+      password: { type: 'string' },
+    },
+  },
+  response: {
+    200: {
+      type: 'object',
+      properties: { message: { type: 'string' } },
+    },
+    400: errorResponse,
+    401: errorResponse,
+  },
+};
+
+const cancelDeletionSchema = {
+  tags: ['Auth'],
+  summary: 'Cancel account deletion',
+  security: [{ bearerAuth: [] }],
+  response: {
+    200: {
+      type: 'object',
+      properties: { message: { type: 'string' } },
+    },
+    401: errorResponse,
   },
 };
 
@@ -292,41 +469,135 @@ export async function authRoutes(app: FastifyInstance) {
         rateLimit: {
           max: 5,
           timeWindow: '1 hour',
-          skip: () => process.env.NODE_ENV !== 'production',
         },
       },
     },
     async (request, reply) => {
-      const { email, username, password } = request.body as {
+      const { email, username, password, acceptedTerms } = request.body as {
         email: string;
         username: string;
         password: string;
+        acceptedTerms: boolean;
       };
 
+      // 🔐 Normalize inputs before processing
+      const normalizedEmail = email.toLowerCase().trim();
+      const normalizedUsername = username.toLowerCase().trim();
+
+      if (!acceptedTerms) {
+        return reply.status(400).send({ error: 'Terms and conditions must be accepted' });
+      }
+
+      // 🔐 Check normalized fields to prevent "j.doe@gm.com" vs "J.Doe@gm.com" bypasses
       const existing = await app.prisma.user.findFirst({
-        where: { OR: [{ email }, { username }] },
+        where: { OR: [{ email: normalizedEmail }, { username: normalizedUsername }] },
       });
       if (existing) {
+        // 🔐 Generic error for email/username to match enum-prevention logic,
+        // though 409 usually reveals existing account. Still better than naming which one.
         return reply.status(409).send({ error: 'Email or username already taken' });
       }
 
-      const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
+      const hashedPassword = await argon2.hash(password);
 
       const user = await app.prisma.user.create({
         data: {
-          email,
-          username,
+          email: normalizedEmail,
+          username: normalizedUsername,
           password: hashedPassword,
+          termsAcceptedAt: new Date(),
+          termsAcceptedIp: request.ip,
           account: { create: {} },
         },
       });
+
+      // 📧 Create verification token
+      const rawToken = generateRefreshToken();
+      const tokenHash = hashToken(rawToken);
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+      await app.prisma.verificationToken.create({
+        data: { tokenHash, userId: user.id, expiresAt },
+      });
+
+      const verificationUrl = `${config.clientUrl}/verify-email?token=${rawToken}`;
+      await EmailService.sendVerificationEmail(user.email, verificationUrl);
 
       const accessToken = await issueTokens(reply, user.id, user.email);
 
       return reply.status(201).send({
         accessToken,
-        user: { id: user.id, email: user.email, username: user.username },
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          emailVerifiedAt: null,
+          termsAcceptedAt: user.termsAcceptedAt?.toISOString() ?? null,
+          termsAcceptedIp: user.termsAcceptedIp,
+        },
       });
+    }
+  );
+
+  // ─── VERIFY EMAIL ───────────────────────────────────────────────────────────
+  app.post('/verify-email', { schema: verifyEmailSchema }, async (request, reply) => {
+    const { token } = request.body as { token: string };
+    const tokenHash = hashToken(token);
+
+    const stored = await app.prisma.verificationToken.findUnique({
+      where: { tokenHash },
+      include: { user: true },
+    });
+
+    if (!stored || stored.expiresAt < new Date()) {
+      return reply.status(400).send({ error: 'Invalid or expired verification token' });
+    }
+
+    await app.prisma.$transaction([
+      app.prisma.user.update({
+        where: { id: stored.userId },
+        data: { emailVerifiedAt: new Date() },
+      }),
+      app.prisma.verificationToken.delete({ where: { id: stored.id } }),
+    ]);
+
+    return reply.send({ message: 'Email verified successfully. You can now use all features.' });
+  });
+
+  // ─── RESEND VERIFICATION ────────────────────────────────────────────────────
+  app.post(
+    '/resend-verification',
+    {
+      schema: resendVerificationSchema,
+    },
+    async (request, reply) => {
+      const { email } = request.body as { email: string };
+      const normalizedEmail = email.toLowerCase().trim();
+
+      const user = await app.prisma.user.findUnique({ where: { email: normalizedEmail } });
+
+      // 🔐 Standard response even if email not found/already verified (anti-enumeration)
+      const SUCCESS_MSG = { message: 'If unverified, a new link has been sent.' };
+
+      if (!user || user.emailVerifiedAt) {
+        return reply.send(SUCCESS_MSG);
+      }
+
+      // Cleanup old tokens
+      await app.prisma.verificationToken.deleteMany({ where: { userId: user.id } });
+
+      const rawToken = generateRefreshToken();
+      const tokenHash = hashToken(rawToken);
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      await app.prisma.verificationToken.create({
+        data: { tokenHash, userId: user.id, expiresAt },
+      });
+
+      const verificationUrl = `${config.clientUrl}/verify-email?token=${rawToken}`;
+      await EmailService.sendVerificationEmail(user.email, verificationUrl);
+
+      return reply.send(SUCCESS_MSG);
     }
   );
 
@@ -339,7 +610,6 @@ export async function authRoutes(app: FastifyInstance) {
         rateLimit: {
           max: 10,
           timeWindow: '15 minutes',
-          skip: () => process.env.NODE_ENV !== 'production',
         },
       },
     },
@@ -351,8 +621,13 @@ export async function authRoutes(app: FastifyInstance) {
 
       const user = await app.prisma.user.findUnique({ where: { email } });
 
-      // 🔐 Always run bcrypt even if user not found — prevents timing attacks
-      const passwordMatch = user ? await bcrypt.compare(password, user.password) : false;
+      // 🔐 Always run a verify-like check even if user not found — prevents timing attacks.
+      //    Argon2 verification against a dummy hash ensures CPU time is consistent.
+      const DUMMY_HASH =
+        '$argon2id$v=19$m=65536,t=3,p=4$vO91vGis5E7A0wB8V9bsww$8C8LCHn7X3O5z/j2tU6F+g';
+      const passwordMatch = user
+        ? await argon2.verify(user.password, password)
+        : await argon2.verify(DUMMY_HASH, password).then(() => false);
 
       if (!user || !passwordMatch) {
         return reply.status(401).send({ error: 'Invalid email or password' });
@@ -362,7 +637,14 @@ export async function authRoutes(app: FastifyInstance) {
 
       return reply.send({
         accessToken,
-        user: { id: user.id, email: user.email, username: user.username },
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
+          termsAcceptedAt: user.termsAcceptedAt?.toISOString() ?? null,
+          termsAcceptedIp: user.termsAcceptedIp,
+        },
       });
     }
   );
@@ -426,18 +708,17 @@ export async function authRoutes(app: FastifyInstance) {
     return reply.status(204).send();
   });
 
-  // ─── FORGOT PASSWORD ─────────────────────────────────────────────────────────
+  // ─── FORGOT PASSWORD ────────────────────────────────────────────���────────────
   app.post(
     '/forgot-password',
     {
       schema: forgotPasswordSchema,
       config: {
         rateLimit: {
-          max: 3,
-          timeWindow: '15 minutes',
-          skip: () => process.env.NODE_ENV !== 'production',
+          max: config.nodeEnv === 'development' ? 20 : 3,
+          timeWindow: config.nodeEnv === 'development' ? '1 minute' : '15 minutes',
         },
-      }, // 🔐 strict rate limit — prevents email enumeration via timing
+      }, // 🔐 strict rate limit in prod — prevents email enumeration via timing
     },
     async (request, reply) => {
       const { email } = request.body as { email: string };
@@ -490,7 +771,7 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: 'Invalid or expired reset token' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    const hashedPassword = await argon2.hash(password);
 
     // 🔐 Interactive transaction: consume the token FIRST so that if a concurrent
     //    request races through the findUnique check, its updateMany returns count=0
@@ -507,7 +788,10 @@ export async function authRoutes(app: FastifyInstance) {
 
         await tx.user.update({
           where: { id: resetToken.userId },
-          data: { password: hashedPassword },
+          data: {
+            password: hashedPassword,
+            emailVerifiedAt: new Date(),
+          },
         });
       });
     } catch (err) {
@@ -523,20 +807,266 @@ export async function authRoutes(app: FastifyInstance) {
     return reply.send({ message: 'Password updated successfully. Please log in again.' });
   });
 
-  // ─── ME (protected) ──────────────────────────────────────────────────────────
+  // ─── ME (protected) ──────────────────────────────────────────���───────────────
   app.get('/me', { schema: meSchema, onRequest: [app.authenticate] }, async (request, reply) => {
-    const { userId } = request.user as { userId: string; email: string };
+    const userId = (request.user as { userId: string }).userId;
 
     const user = await app.prisma.user.findUnique({
       where: { id: userId },
-      include: { account: true },
-      omit: { password: true }, // 🔐 never expose password hash
+      include: {
+        account: true,
+      },
     });
 
     if (!user) {
-      return reply.status(401).send({ error: 'User no longer exists' });
+      return reply.status(401).send({ error: 'User not found' });
     }
 
-    return { user };
+    return reply.send({
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
+        termsAcceptedAt: user.termsAcceptedAt?.toISOString() ?? null,
+        termsAcceptedIp: user.termsAcceptedIp,
+        account: user.account,
+      },
+    });
   });
+
+  // ─── UPDATE PASSWORD (protected) ─────────────────────────────────────────────
+  app.patch(
+    '/password',
+    { schema: updatePasswordSchema, onRequest: [app.authenticate] },
+    async (request, reply) => {
+      const { userId } = request.user as { userId: string };
+      const { currentPassword, newPassword } = request.body as {
+        currentPassword?: string;
+        newPassword?: string;
+      };
+
+      if (!currentPassword || !newPassword) {
+        return reply.status(400).send({ error: 'Missing current or new password' });
+      }
+
+      const user = await app.prisma.user.findUnique({ where: { id: userId } });
+      if (!user) return reply.status(401).send({ error: 'User no longer exists' });
+
+      const match = await argon2.verify(user.password, currentPassword);
+      if (!match) return reply.status(401).send({ error: 'Invalid current password' });
+
+      const hashed = await argon2.hash(newPassword);
+      await app.prisma.user.update({
+        where: { id: userId },
+        data: { password: hashed },
+      });
+
+      // 🔐 Standards: Invalidate all other sessions (including the current one if not careful)
+      // Here we logout after password change for maximum security.
+      await app.prisma.refreshToken.deleteMany({ where: { userId } });
+      void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
+
+      return reply.send({ message: 'Password updated. Please log in again.' });
+    }
+  );
+
+  // ─── UPDATE USERNAME (protected) ─────────────────────────────────────────────
+  app.patch(
+    '/username',
+    { schema: updateUsernameSchema, onRequest: [app.authenticate] },
+    async (request, reply) => {
+      const { userId } = request.user as { userId: string };
+      const { username } = request.body as { username?: string };
+
+      if (!username) {
+        return reply.status(400).send({ error: 'Username is required' });
+      }
+
+      const normalizedUsername = username.toLowerCase().trim();
+
+      const existing = await app.prisma.user.findFirst({
+        where: { username: normalizedUsername, NOT: { id: userId } },
+      });
+
+      if (existing) {
+        return reply.status(409).send({ error: 'Username already taken' });
+      }
+
+      const user = await app.prisma.user.update({
+        where: { id: userId },
+        data: { username: normalizedUsername },
+        omit: { password: true },
+      });
+
+      return reply.send({ user });
+    }
+  );
+
+  // ─── UPDATE EMAIL (protected) ───────────────────────────────────────────────
+  app.patch(
+    '/email',
+    { schema: updateEmailSchema, onRequest: [app.authenticate] },
+    async (request, reply) => {
+      const { userId } = request.user as { userId: string };
+      const { email, currentPassword } = request.body as {
+        email?: string;
+        currentPassword?: string;
+      };
+
+      if (!email || !currentPassword) {
+        return reply.status(400).send({ error: 'Email and current password are required' });
+      }
+
+      const normalizedEmail = email.toLowerCase().trim();
+
+      const user = await app.prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        return reply.status(401).send({ error: 'User no longer exists' });
+      }
+
+      const passwordMatch = await argon2.verify(user.password, currentPassword);
+      if (!passwordMatch) {
+        return reply.status(401).send({ error: 'Invalid current password' });
+      }
+
+      const existing = await app.prisma.user.findFirst({
+        where: { email: normalizedEmail, NOT: { id: userId } },
+      });
+
+      if (existing) {
+        return reply.status(409).send({ error: 'Email already taken' });
+      }
+
+      // 🔐 Don't update immediately. Issue verification token for the NEW email.
+      const rawToken = generateRefreshToken();
+      const tokenHash = hashToken(rawToken);
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      await app.prisma.emailChangeToken.create({
+        data: { tokenHash, userId, newEmail: normalizedEmail, expiresAt },
+      });
+
+      const verificationUrl = `${config.clientUrl}/verify-email-change?token=${rawToken}`;
+      await EmailService.sendEmailChangeVerification(normalizedEmail, verificationUrl);
+
+      return reply.send({ message: 'Verification link sent to your new email address.' });
+    }
+  );
+
+  // ─── VERIFY EMAIL CHANGE ─────────────────────────────────────────────────────
+  app.post('/verify-email-change', { schema: verifyEmailChangeSchema }, async (request, reply) => {
+    const { token } = request.body as { token: string };
+    const tokenHash = hashToken(token);
+
+    const stored = await app.prisma.emailChangeToken.findUnique({
+      where: { tokenHash },
+      include: { user: true },
+    });
+
+    if (!stored || stored.expiresAt < new Date()) {
+      return reply.status(400).send({ error: 'Invalid or expired token' });
+    }
+
+    const oldEmail = stored.user.email;
+    const newEmail = stored.newEmail;
+
+    await app.prisma.$transaction([
+      app.prisma.user.update({
+        where: { id: stored.userId },
+        data: { email: newEmail, emailVerifiedAt: new Date() },
+      }),
+      app.prisma.emailChangeToken.delete({ where: { id: stored.id } }),
+      // 🔐 Standards: Security logout after email change
+      app.prisma.refreshToken.deleteMany({ where: { userId: stored.userId } }),
+    ]);
+
+    await EmailService.sendEmailChangedSecurityAlert(oldEmail, oldEmail, newEmail);
+    void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
+
+    return reply.send({ message: 'Email updated successfully. Please log in again.' });
+  });
+
+  // ─── DELETE ACCOUNT (protected) ──────────────────────────────────────────────
+  app.delete(
+    '/account',
+    {
+      schema: requestDeletionSchema,
+      onRequest: [app.authenticate],
+      config: {
+        rateLimit: {
+          max: 3,
+          timeWindow: '15 minutes',
+        },
+      },
+    },
+    async (request, reply) => {
+      const { userId } = request.user as { userId: string };
+      const { password } = request.body as { password?: string };
+
+      if (!password) {
+        return reply.status(400).send({ error: 'Password is required' });
+      }
+
+      const user = await app.prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        return reply.status(401).send({ error: 'User no longer exists' });
+      }
+
+      const passwordMatch = await argon2.verify(user.password, password);
+      if (!passwordMatch) {
+        return reply.status(401).send({ error: 'Invalid password' });
+      }
+
+      const deletionRequestedAt = new Date();
+      const deletionDate = new Date(deletionRequestedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+      // 🧪 TEST MODE: Immediate deletion in development + Test Policy Email
+      if (process.env.NODE_ENV === 'development') {
+        // Send the scheduled deletion email first so the user can test/verify it
+        await EmailService.sendDeletionRequestedEmail(user.email, user.username, deletionDate);
+
+        await app.prisma.user.delete({ where: { id: userId } });
+        await app.prisma.refreshToken.deleteMany({ where: { userId } });
+        void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
+        return reply.send({ message: 'Account deleted immediately & test email sent (dev mode).' });
+      }
+
+      await app.prisma.user.update({
+        where: { id: userId },
+        data: { deletionRequestedAt },
+      });
+
+      await EmailService.sendDeletionRequestedEmail(user.email, user.username, deletionDate);
+
+      // 🔐 Force logout after deletion request
+      await app.prisma.refreshToken.deleteMany({ where: { userId } });
+      void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
+
+      return reply.send({ message: 'Account scheduled for deletion in 30 days.' });
+    }
+  );
+
+  // ─── CANCEL DELETION (protected) ─────────────────────────────────────────────
+  app.post(
+    '/cancel-deletion',
+    { schema: cancelDeletionSchema, onRequest: [app.authenticate] },
+    async (request, reply) => {
+      const { userId } = request.user as { userId: string };
+
+      const user = await app.prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        return reply.status(401).send({ error: 'User no longer exists' });
+      }
+
+      await app.prisma.user.update({
+        where: { id: userId },
+        data: { deletionRequestedAt: null, deletionWarningSentAt: null },
+      });
+
+      await EmailService.sendDeletionCancelledEmail(user.email, user.username);
+
+      return reply.send({ message: 'Account deletion request cancelled successfully.' });
+    }
+  );
 }

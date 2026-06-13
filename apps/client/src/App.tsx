@@ -5,6 +5,7 @@ import { authApi } from '@crypto-dashboard/sdk';
 import { useAuthStore } from '@/store/authStore';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { PWAInstallBanner } from '@/components/PWAInstallBanner';
+import { CookieBanner } from '@/components/CookieBanner';
 
 import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
@@ -13,7 +14,12 @@ import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { TermsPage } from '@/pages/TermsPage';
 import { PrivacyPage } from '@/pages/PrivacyPage';
+import { SecurityPage } from '@/pages/SecurityPage';
+import { AcceptableUsePolicyPage } from '@/pages/AcceptableUsePolicyPage';
 import { UnderConstructionPage } from '@/pages/UnderConstructionPage';
+import { UnverifiedPage } from '@/pages/UnverifiedPage';
+import { VerifyEmailPage } from '@/pages/VerifyEmailPage';
+import { VerifyEmailChangePage } from '@/pages/VerifyEmailChangePage';
 
 // 🔐 Module-level flag — unlike useRef, this survives React StrictMode's
 // simulated mount → unmount → remount cycle, so only ONE /refresh fires
@@ -52,6 +58,9 @@ export default function App() {
       {/* PWA install hint — iOS Safari (manual) and Android Chrome (native prompt) */}
       <PWAInstallBanner />
 
+      {/* ⚖️ Legal cookie/storage notice — required by nDSG and GDPR */}
+      <CookieBanner />
+
       {/* AnimatePresence: detects route changes via location.pathname and plays
           enter/exit animations on the outgoing and incoming page components.
           mode="wait" ensures the old page fully exits before the new one enters. */}
@@ -65,8 +74,13 @@ export default function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/unverified" element={<UnverifiedPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/verify-email-change" element={<VerifyEmailChangePage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/security" element={<SecurityPage />} />
+          <Route path="/aup" element={<AcceptableUsePolicyPage />} />
 
           {/* Protected routes */}
           <Route element={<ProtectedRoute />}>
