@@ -167,11 +167,9 @@ export class CandleAggregator {
   }
 
   private getIntervalStart(timestamp: number, intervalMinutes: number): number {
-    const date = new Date(timestamp);
-    const minutes = date.getUTCMinutes();
-    const startMinutes = Math.floor(minutes / intervalMinutes) * intervalMinutes;
-    date.setUTCMinutes(startMinutes, 0, 0);
-    return date.getTime();
+    const msPerMinute = 60 * 1000;
+    const intervalMs = intervalMinutes * msPerMinute;
+    return Math.floor(timestamp / intervalMs) * intervalMs;
   }
 
   private storeCandle(state: AggregatorState, interval: ChartInterval, candle: Kline): void {

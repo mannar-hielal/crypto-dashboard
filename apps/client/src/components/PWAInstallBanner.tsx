@@ -153,12 +153,12 @@ export function PWAInstallBanner() {
           {/* App icon */}
           <img
             src="/pwa-192x192.png"
-            alt="Crypto Dashboard"
+            alt="cryptopapertrade.com"
             className="h-12 w-12 flex-shrink-0 rounded-xl"
           />
 
           <div className="flex-1">
-            <p className="text-sm font-semibold">Install Crypto Dashboard</p>
+            <p className="text-sm font-semibold">Install cryptopapertrade.com</p>
 
             {platform === 'ios' || platform === 'ipad' ? (
               // ── iOS / iPadOS Safari: visual step-by-step guide ────────────────

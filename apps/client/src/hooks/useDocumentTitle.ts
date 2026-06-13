@@ -2,8 +2,8 @@
  * useDocumentTitle
  *
  * Keeps document.title in sync with the active pane's live price.
- * Format: "▲ BTC/USDT 75,249.90 +1.96% · CryptoDash"
- *         "▼ BTC/USDT 75,249.90 −0.03% · CryptoDash"
+ * Format: "▲ BTC/USDT 75,249.90 +1.96% · cryptopapertrade.com"
+ *         "▼ BTC/USDT 75,249.90 −0.03% · cryptopapertrade.com"
  *
  * Uses the same 4-unconditional-useStore pattern as SymbolBar so hook
  * call count never changes regardless of activePane value.
@@ -30,7 +30,7 @@ function splitSymbol(symbol: string): string {
   return symbol;
 }
 
-const APP_NAME = 'CryptoDash';
+const APP_NAME = 'cryptopapertrade.com';
 const DEFAULT_TITLE = APP_NAME;
 
 // ─── Hook ────────────────────────────────────────────────────────────────────

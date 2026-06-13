@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import type { FastifyInstance } from 'fastify';
+import * as argon2 from 'argon2';
 
 // ─── Mock EmailService ────────────────────────────────────────────────────────
 // Prevent real Resend API calls during tests — RESEND_API_KEY is set in .env
@@ -7,6 +8,11 @@ import type { FastifyInstance } from 'fastify';
 vi.mock('../services/EmailService.js', () => ({
   EmailService: {
     sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
+    sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
+    sendEmailChangeVerification: vi.fn().mockResolvedValue(undefined),
+    sendEmailChangedSecurityAlert: vi.fn().mockResolvedValue(undefined),
+    sendDeletionRequestedEmail: vi.fn().mockResolvedValue(undefined),
+    sendDeletionCancelledEmail: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -28,6 +34,13 @@ vi.mock('../plugins/prisma.js', () => {
         findUnique: vi.fn(),
         create: vi.fn(),
         update: vi.fn().mockResolvedValue({}),
+        delete: vi.fn().mockResolvedValue({}),
+      },
+      verificationToken: {
+        create: vi.fn().mockResolvedValue({}),
+        findUnique: vi.fn(),
+        delete: vi.fn().mockResolvedValue({}),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       refreshToken: {
         // Default: always succeeds — individual tests can override with mockResolvedValueOnce
@@ -39,6 +52,12 @@ vi.mock('../plugins/prisma.js', () => {
         findUnique: vi.fn(),
         create: vi.fn().mockResolvedValue({}),
         updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+      emailChangeToken: {
+        create: vi.fn().mockResolvedValue({}),
+        findUnique: vi.fn(),
+        delete: vi.fn().mockResolvedValue({}),
         deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       // Supports both transaction forms used in production code:
@@ -64,6 +83,7 @@ const validUser = {
   email: 'test@example.com',
   username: 'testuser',
   password: 'Password1!',
+  acceptedTerms: true,
 };
 
 // ─── REGISTER ────────────────────────────────────────────────────────────────
@@ -81,7 +101,7 @@ describe('POST /api/auth/register', () => {
   it('returns 201 with token and user on valid registration', async () => {
     // No existing user found → proceed to create
     (app.prisma.user.findFirst as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
-    (app.prisma.user.create as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    const createSpy = vi.spyOn(app.prisma.user, 'create').mockResolvedValueOnce({
       id: 'user-1',
       email: validUser.email,
       username: validUser.username,
@@ -97,6 +117,30 @@ describe('POST /api/auth/register', () => {
     const body = res.json<{ accessToken: string; user: { email: string } }>();
     expect(typeof body.accessToken).toBe('string');
     expect(body.user.email).toBe(validUser.email);
+
+    // ⚖️ Verify Legal Compliance audit trail
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          email: validUser.email,
+          username: validUser.username,
+          termsAcceptedAt: expect.any(Date),
+          termsAcceptedIp: '127.0.0.1',
+          account: { create: {} }, // 💰 Verify paper trading account initialization
+        }),
+      })
+    );
+  });
+
+  it('returns 400 when terms are not accepted', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/register',
+      payload: { ...validUser, acceptedTerms: false },
+    });
+
+    // Fastify schema validation (const: true) will reject this
+    expect(res.statusCode).toBe(400);
   });
 
   it('returns 409 when email or username is already taken', async () => {
@@ -171,8 +215,7 @@ describe('POST /api/auth/login', () => {
   });
 
   it('returns 200 with token on valid credentials', async () => {
-    const bcrypt = await import('bcrypt');
-    const hashed = await bcrypt.hash(validUser.password, 1); // cost 1 = fast in tests
+    const hashed = await argon2.hash(validUser.password);
 
     (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       id: 'user-1',
@@ -192,8 +235,7 @@ describe('POST /api/auth/login', () => {
   });
 
   it('returns 401 on wrong password', async () => {
-    const bcrypt = await import('bcrypt');
-    const hashed = await bcrypt.hash('DifferentPass1!', 1);
+    const hashed = await argon2.hash('DifferentPass1!');
 
     (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       id: 'user-1',
@@ -414,6 +456,256 @@ describe('POST /api/auth/logout', () => {
   it('returns 204 even when no cookie is present (idempotent logout)', async () => {
     const res = await app.inject({ method: 'POST', url: '/api/auth/logout' });
     expect(res.statusCode).toBe(204);
+  });
+});
+
+// ─── RESEND VERIFICATION ────────────────────────────────────────────────────
+describe('POST /api/auth/resend-verification', () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    app = await buildApp();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('returns 200 even for unverified users', async () => {
+    (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'user-1',
+      email: 'unverified@example.com',
+      emailVerifiedAt: null,
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/resend-verification',
+      payload: { email: 'unverified@example.com' },
+    });
+
+    expect(res.statusCode).toBe(200);
+  });
+});
+
+// ─── EMAIL VERIFICATION ─────────────────────────────────────────────────────
+describe('POST /api/auth/verify-email', () => {
+  let app: FastifyInstance;
+  const VALID_TOKEN = 'd'.repeat(64);
+
+  beforeAll(async () => {
+    app = await buildApp();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('returns 200 when a verification token is valid', async () => {
+    (app.prisma.verificationToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'vt-1',
+      tokenHash: 'hashed',
+      userId: 'user-1',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      user: { id: 'user-1', email: 'verify@example.com' },
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/verify-email',
+      payload: { token: VALID_TOKEN },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json<{ message: string }>().message).toMatch(/verified successfully/i);
+  });
+
+  it('returns 400 for an invalid or expired verification token', async () => {
+    (app.prisma.verificationToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      null
+    );
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/verify-email',
+      payload: { token: VALID_TOKEN },
+    });
+
+    expect(res.statusCode).toBe(400);
+  });
+});
+
+describe('POST /api/auth/verify-email-change', () => {
+  let app: FastifyInstance;
+  const VALID_TOKEN = 'e'.repeat(64);
+
+  beforeAll(async () => {
+    app = await buildApp();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('returns 200 when the email change token is valid', async () => {
+    (app.prisma.emailChangeToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'ect-1',
+      tokenHash: 'hashed',
+      userId: 'user-1',
+      newEmail: 'new-email@example.com',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      user: { id: 'user-1', email: 'old-email@example.com', username: 'testuser' },
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/verify-email-change',
+      payload: { token: VALID_TOKEN },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json<{ message: string }>().message).toMatch(/email updated successfully/i);
+  });
+
+  it('returns 400 for an invalid email change token', async () => {
+    (app.prisma.emailChangeToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      null
+    );
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/verify-email-change',
+      payload: { token: VALID_TOKEN },
+    });
+
+    expect(res.statusCode).toBe(400);
+  });
+});
+
+// ─── PROFILE & SECURITY SETTINGS ─────────────────────────────────────────────
+describe('Protected auth lifecycle routes', () => {
+  let app: FastifyInstance;
+  const authHeaders = {
+    authorization: `Bearer token-placeholder`,
+  };
+
+  beforeAll(async () => {
+    app = await buildApp();
+    authHeaders.authorization = `Bearer ${app.jwt.sign({ userId: 'user-1', email: validUser.email })}`;
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('updates the username', async () => {
+    (app.prisma.user.findFirst as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
+    (app.prisma.user.update as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'user-1',
+      email: validUser.email,
+      username: 'new_name',
+    });
+
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/api/auth/username',
+      headers: authHeaders,
+      payload: { username: 'new_name' },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(app.prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'user-1' },
+        data: { username: 'new_name' },
+      })
+    );
+  });
+
+  it('updates the email and sends a verification link', async () => {
+    const hashed = await argon2.hash(validUser.password);
+    (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'user-1',
+      email: validUser.email,
+      password: hashed,
+    });
+    (app.prisma.user.findFirst as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
+
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/api/auth/email',
+      headers: authHeaders,
+      payload: { email: 'new@example.com', currentPassword: validUser.password },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(app.prisma.emailChangeToken.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: 'user-1',
+          newEmail: 'new@example.com',
+        }),
+      })
+    );
+  });
+
+  it('updates the password and clears sessions', async () => {
+    const hashed = await argon2.hash(validUser.password);
+    (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'user-1',
+      email: validUser.email,
+      password: hashed,
+    });
+
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/api/auth/password',
+      headers: authHeaders,
+      payload: {
+        currentPassword: validUser.password,
+        newPassword: 'NewPass1!@#',
+      },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json<{ message: string }>().message).toMatch(/log in again/i);
+  });
+
+  it('schedules account deletion in non-development environments', async () => {
+    const hashed = await argon2.hash(validUser.password);
+    (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'user-1',
+      email: validUser.email,
+      username: validUser.username,
+      password: hashed,
+    });
+
+    const res = await app.inject({
+      method: 'DELETE',
+      url: '/api/auth/account',
+      headers: authHeaders,
+      payload: { password: validUser.password },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json<{ message: string }>().message).toMatch(/scheduled for deletion/i);
+  });
+
+  it('cancels a pending deletion request', async () => {
+    (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'user-1',
+      email: validUser.email,
+      username: validUser.username,
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/cancel-deletion',
+      headers: authHeaders,
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json<{ message: string }>().message).toMatch(/cancelled successfully/i);
   });
 });
 

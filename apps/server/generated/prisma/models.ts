@@ -11,6 +11,8 @@
 export type * from './models/User.js'
 export type * from './models/RefreshToken.js'
 export type * from './models/PasswordResetToken.js'
+export type * from './models/VerificationToken.js'
+export type * from './models/EmailChangeToken.js'
 export type * from './models/Account.js'
 export type * from './models/Order.js'
 export type * from './models/Trade.js'

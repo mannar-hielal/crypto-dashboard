@@ -691,10 +691,6 @@ export type TradeUncheckedUpdateManyWithoutOrderNestedInput = {
   deleteMany?: Prisma.TradeScalarWhereInput | Prisma.TradeScalarWhereInput[]
 }
 
-export type NullableStringFieldUpdateOperationsInput = {
-  set?: string | null
-}
-
 export type TradeCreateWithoutUserInput = {
   id?: string
   symbol: string

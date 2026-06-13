@@ -1,4 +1,4 @@
-// Crypto Dashboard - Paper Trading Platform
+// cryptopapertrade.com - Paper Trading Platform
 // Phase 1 Database Schema
 
 generator client {
@@ -18,9 +18,20 @@ model User {
   id        String   @id @default(cuid())
   email     String   @unique
   username  String   @unique
-  password  String // bcrypt hashed
+  password  String // argon2id hashed
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // 📧 Email Verification
+  emailVerifiedAt DateTime? // null = unverified
+
+  // ⚖️ Legal Compliance (Phase 1)
+  termsAcceptedAt DateTime? // captures exactly when user agreed
+  termsAcceptedIp String?   // captures IP for legal audit trail
+
+  // 🗑️ Account Deletion (Phase 3)
+  deletionRequestedAt  DateTime? // null = active; non-null = pending deletion
+  deletionWarningSentAt DateTime? // null = warning not yet sent; non-null = already sent
 
   // Relations
   account             Account?
@@ -28,6 +39,8 @@ model User {
   orders              Order[]
   refreshTokens       RefreshToken[] // 🔐 active sessions
   passwordResetTokens PasswordResetToken[] // 🔐 pending resets
+  verificationTokens  VerificationToken[]  // 🔐 pending email verifications
+  emailChangeTokens   EmailChangeToken[]   // 🔐 pending email changes
 
   @@index([email])
   @@index([username])
@@ -54,6 +67,31 @@ model PasswordResetToken {
   expiresAt DateTime
   usedAt    DateTime? // null = unused, non-null = already consumed
   createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// 🔐 One-time use. Used for account registration / manual re-verification.
+model VerificationToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// 🔐 One-time use. Stores the "intended" new email until verified.
+model EmailChangeToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  newEmail  String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 
   @@index([userId])
 }

@@ -43,7 +43,7 @@ function buildTitle(symbol: string, latestPrice: number, priceChange: number | n
     }
   }
 
-  return `${arrow} ${splitSymbol(symbol)} ${priceStr}${pctStr} · CryptoDash`;
+  return `${arrow} ${splitSymbol(symbol)} ${priceStr}${pctStr} · cryptopapertrade.com`;
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -51,7 +51,7 @@ function buildTitle(symbol: string, latestPrice: number, priceChange: number | n
 describe('buildTitle()', () => {
   it('formats a BTC price with positive change', () => {
     const title = buildTitle('BTCUSDT', 75_000, 500);
-    expect(title).toMatch(/^▲ BTC\/USDT 75,000\.00 \+\d+\.\d+% · CryptoDash$/);
+    expect(title).toMatch(/^▲ BTC\/USDT 75,000\.00 \+\d+\.\d+% · cryptopapertrade\.com$/);
   });
 
   it('uses ▼ arrow for negative priceChange', () => {
@@ -61,7 +61,7 @@ describe('buildTitle()', () => {
 
   it('omits the % segment when priceChange is null', () => {
     const title = buildTitle('BTCUSDT', 75_000, null);
-    expect(title).toBe('▲ BTC/USDT 75,000.00 · CryptoDash');
+    expect(title).toBe('▲ BTC/USDT 75,000.00 · cryptopapertrade.com');
   });
 
   it('uses ▲ arrow when priceChange is exactly 0', () => {

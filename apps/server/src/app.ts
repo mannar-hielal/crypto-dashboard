@@ -4,6 +4,7 @@ import { marketRoutes } from './routes/market/index.js';
 import cookie from '@fastify/cookie';
 import Fastify, { type FastifyError } from 'fastify';
 import cors from '@fastify/cors';
+import ajvFormats from 'ajv-formats';
 import jwt from '@fastify/jwt';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
@@ -18,6 +19,10 @@ export async function buildApp() {
   const app = Fastify({
     // Disable Fastify's logger in tests to reduce terminal noise
     logger: config.nodeEnv === 'test' ? false : { level: config.logLevel },
+    ajv: {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Fastify's AJV plugin typing is incompatible with ajv-formats in this install.
+      plugins: [ajvFormats as any],
+    },
   });
 
   // ─── API DOCUMENTATION ────────────────────────────────────────────────────
@@ -27,7 +32,7 @@ export async function buildApp() {
     openapi: {
       openapi: '3.0.0',
       info: {
-        title: 'Crypto Dashboard API',
+        title: 'cryptopapertrade.com API',
         description: 'Paper trading platform — Phase 1 API',
         version: '0.1.0',
       },
@@ -76,6 +81,7 @@ export async function buildApp() {
   await app.register(cors, {
     origin: config.nodeEnv === 'production' ? config.corsOrigin : true,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
   // WebSocket support — must be registered before any websocket routes
@@ -120,7 +126,7 @@ export async function buildApp() {
     void reply.status(statusCode).send({ error: error.message ?? 'Bad Request' });
   });
 
-  // ─── HEALTH CHECK ─────────────────────────────────────────────────────────
+  // ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
   app.get(
     '/health',
     {

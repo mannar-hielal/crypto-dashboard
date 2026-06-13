@@ -16,6 +16,7 @@ interface AuthState {
   isLoading: boolean;
 
   setAuth: (accessToken: string, user: User) => void;
+  updateUser: (partial: Partial<User>) => void;
   clearAuth: () => void;
   setLoading: (loading: boolean) => void;
 }
@@ -26,6 +27,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: true, // boot state — assume loading until /refresh resolves or fails
 
   setAuth: (accessToken, user) => set({ accessToken, user, isLoading: false }),
+  updateUser: (partial) => set((s) => ({ user: s.user ? { ...s.user, ...partial } : null })),
   clearAuth: () => set({ accessToken: null, user: null, isLoading: false }),
   setLoading: (isLoading) => set({ isLoading }),
 }));

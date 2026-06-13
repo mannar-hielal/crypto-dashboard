@@ -1,10 +1,10 @@
 import { LegalLayout } from '@/components/LegalLayout';
 
-const CONTACT_EMAIL = 'adminwithu@gmail.com'; // TODO: replace with legal@yourdomain.com once domain is live
+const CONTACT_EMAIL = 'info@cryptopapertrade.com';
 
 export function PrivacyPage() {
   return (
-    <LegalLayout title="Privacy Policy" lastUpdated="April 11, 2026">
+    <LegalLayout title="Privacy Policy" lastUpdated="June 13, 2026" version="1.0">
       <section>
         <h2>1. Data Controller</h2>
         <p>
@@ -15,10 +15,6 @@ export function PrivacyPage() {
           Switzerland
           <br />
           Email: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
-        </p>
-        <p className="text-muted-foreground text-sm">
-          Note: This email address is temporary and will be updated to a dedicated privacy address
-          once a custom domain is configured.
         </p>
       </section>
 
@@ -56,7 +52,12 @@ export function PrivacyPage() {
             <tr>
               <td>Password</td>
               <td>Account authentication</td>
-              <td>bcrypt hash (cost 12) — never stored in plain text</td>
+              <td>argon2id hash — never stored in plain text</td>
+            </tr>
+            <tr>
+              <td>Legal Audit Log</td>
+              <td>Proof of agreement to Terms of Use (for legal compliance)</td>
+              <td>IP address and Timestamp stored in database upon registration</td>
             </tr>
             <tr>
               <td>Refresh tokens</td>
@@ -69,14 +70,20 @@ export function PrivacyPage() {
               <td>
                 Your browser's localStorage on your device only — not transmitted to or stored on
                 our servers. Clearing your browser data will erase it.
+                <br />
+                <em>
+                  ⚠️ In a future update (Phase 3), paper trading state will be optionally synced to
+                  the server. Users will be notified by email before this change takes effect and
+                  will be given the choice to opt in.
+                </em>
               </td>
             </tr>
             <tr>
               <td>Server access logs</td>
               <td>Security monitoring, abuse prevention</td>
               <td>
-                IP address + request metadata — retained per hosting provider defaults (Fly.io /
-                Cloudflare)
+                IP address + request metadata — retained for 30 days (Fly.io) or 7 days
+                (Cloudflare). See Section 7 for details.
               </td>
             </tr>
           </tbody>
@@ -103,11 +110,12 @@ export function PrivacyPage() {
             management, paper trade history, password reset.
           </li>
           <li>
-            <strong>Legitimate interest (Art. 6(1)(f) GDPR)</strong>: security logging, abuse
-            prevention, platform stability.
+            <strong>Legal obligation (Art. 6(1)(c) GDPR)</strong>: maintaining proof of your
+            acceptance of our legal terms (capturing IP and timestamp).
           </li>
           <li>
-            <strong>Legal obligation</strong>: where required by applicable Swiss or EU law.
+            <strong>Legitimate interest (Art. 6(1)(f) GDPR)</strong>: security logging, abuse
+            prevention, platform stability.
           </li>
         </ul>
       </section>
@@ -131,7 +139,14 @@ export function PrivacyPage() {
         <h2>7. Data Retention</h2>
         <ul>
           <li>
-            <strong>Account data</strong>: retained until you request deletion of your account.
+            <strong>Account data</strong>: retained for as long as your account is active. Upon
+            receiving a deletion request via the in-app flow, your account enters a 30-day
+            cancellation window during which you retain full access and can cancel at any time.
+            After 30 days with no cancellation, your account and all associated personal data are
+            permanently and irreversibly deleted. Some encrypted or technical backup data and
+            security logs may persist for up to <strong>60 days</strong> before being purged or
+            overwritten. Aggregated or anonymised statistical data that cannot identify you
+            individually may be retained beyond this period.
           </li>
           <li>
             <strong>Refresh tokens</strong>: automatically expire and are deleted after 7 days.
@@ -141,8 +156,14 @@ export function PrivacyPage() {
             hour, whichever comes first.
           </li>
           <li>
-            <strong>Server logs</strong>: retained per hosting provider defaults (Fly.io /
-            Cloudflare). We do not operate a custom log purge mechanism.
+            <strong>Application server logs (Fly.io)</strong>: retained for <strong>30 days</strong>{' '}
+            in Fly.io's built-in monitoring system, after which they are automatically purged. We do
+            not operate a custom log archive.
+          </li>
+          <li>
+            <strong>Edge / CDN logs (Cloudflare)</strong>: retained for <strong>7 days</strong> on
+            Cloudflare's infrastructure per their standard log retention policy. We do not export or
+            store these logs independently.
           </li>
         </ul>
       </section>
@@ -159,6 +180,30 @@ export function PrivacyPage() {
           <li>
             <strong>In-memory access token</strong>: your short-lived access token (15 minutes) is
             stored in browser memory only — never in localStorage or sessionStorage.
+          </li>
+          <li>
+            <strong>localStorage (device-local, never transmitted)</strong>: we store the following
+            keys in your browser's localStorage solely to preserve your UI preferences and paper
+            trading simulation state across sessions:
+            <ul>
+              <li>
+                <code>cd-paper-trading</code> — your virtual positions, order history, and simulated
+                account balance.
+              </li>
+              <li>
+                <code>cd-layout</code> — your saved dashboard panel layout.
+              </li>
+              <li>
+                <code>cd-paper-col-prefs</code> — your column visibility preferences in the trading
+                tables.
+              </li>
+              <li>
+                <code>cd-cookie-notice-dismissed</code> — a simple flag to remember that you have
+                dismissed the cookie information banner.
+              </li>
+            </ul>
+            This data exists entirely on your device. Clearing your browser data or using a
+            different device will erase it. It is never sent to our servers.
           </li>
         </ul>
         <p>
@@ -187,13 +232,32 @@ export function PrivacyPage() {
               <td>Backend server hosting</td>
               <td>EU / US</td>
               <td>
-                <a
-                  href="https://fly.io/legal/privacy-policy"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  fly.io/legal/privacy-policy
-                </a>
+                <div className="flex flex-col gap-1">
+                  <a
+                    href="https://fly.io/legal/privacy-policy/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-brand"
+                  >
+                    Privacy Policy
+                  </a>
+                  <a
+                    href="https://fly.io/legal/terms-of-service/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-brand"
+                  >
+                    Terms of Service
+                  </a>
+                  <a
+                    href="https://fly.io/legal/acceptable-use-policy/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-brand"
+                  >
+                    Acceptable Use Policy
+                  </a>
+                </div>
               </td>
             </tr>
             <tr>
@@ -201,13 +265,40 @@ export function PrivacyPage() {
               <td>Frontend CDN, DDoS protection</td>
               <td>Global</td>
               <td>
-                <a
-                  href="https://www.cloudflare.com/privacypolicy/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  cloudflare.com/privacypolicy
-                </a>
+                <div className="flex flex-col gap-1">
+                  <a
+                    href="https://www.cloudflare.com/policies/privacy/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-brand"
+                  >
+                    Privacy Policy
+                  </a>
+                  <a
+                    href="https://www.cloudflare.com/policies/terms/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-brand"
+                  >
+                    Terms of Service
+                  </a>
+                  <a
+                    href="https://www.cloudflare.com/disclosure/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-brand"
+                  >
+                    Disclosure
+                  </a>
+                  <a
+                    href="https://www.cloudflare.com/trust-hub/abuse-approach/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-brand"
+                  >
+                    Abuse Policy
+                  </a>
+                </div>
               </td>
             </tr>
             <tr>
@@ -229,13 +320,24 @@ export function PrivacyPage() {
               <td>Real-time market data (mainnet — price feed only, no user data transmitted)</td>
               <td>Global</td>
               <td>
-                <a
-                  href="https://www.bybit.com/en/privacy-policy/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  bybit.com/en/privacy-policy
-                </a>
+                <div className="flex flex-col gap-1">
+                  <a
+                    href="https://www.bybit.com/en/legal/policies-and-rules/privacy-policy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-brand"
+                  >
+                    Privacy Policy
+                  </a>
+                  <a
+                    href="https://www.bybit.com/en/legal/terms-of-service/terms-of-service"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-brand"
+                  >
+                    Terms of Service
+                  </a>
+                </div>
               </td>
             </tr>
           </tbody>
