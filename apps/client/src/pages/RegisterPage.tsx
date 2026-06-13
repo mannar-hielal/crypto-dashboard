@@ -6,9 +6,7 @@ import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import { authApi } from '@crypto-dashboard/sdk';
 import { useAuthStore } from '@/store/authStore';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Form,
   FormControl,
@@ -17,7 +15,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AuthLayout } from '@/components/AuthLayout';
 import { bg, color, gradient, radius } from '@/lib/tokens';

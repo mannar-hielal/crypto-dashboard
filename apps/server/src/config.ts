@@ -5,7 +5,6 @@
  * Note: console.* is intentional here — this module bootstraps before the
  * pino logger exists (logger.ts imports config, so we can't import logger here).
  */
-/* eslint-disable no-console */
 
 import { config as dotenvConfig } from 'dotenv';
 import { resolve } from 'path';
@@ -81,14 +80,18 @@ function loadConfig(): Config {
   // 🔐 JWT_SECRET entropy check — require at least 32 bytes (256 bits) so the secret
   //    cannot be brute-forced or guessed. A short secret undermines HS256 security.
   if (Buffer.byteLength(config.jwtSecret, 'utf8') < 32) {
-    bootLogger.error('❌ JWT_SECRET is too short. It must be at least 32 bytes (256 bits) of entropy.');
+    bootLogger.error(
+      '❌ JWT_SECRET is too short. It must be at least 32 bytes (256 bits) of entropy.'
+    );
     process.exit(1);
   }
 
   // 🔐 In production, CLIENT_URL must be explicitly set — the localhost default would
   //    generate password reset links that are unreachable for real users.
   if (config.nodeEnv === 'production' && !process.env.CLIENT_URL) {
-    bootLogger.error('❌ CLIENT_URL is not set in production. Password reset links would point to localhost and be unusable.');
+    bootLogger.error(
+      '❌ CLIENT_URL is not set in production. Password reset links would point to localhost and be unusable.'
+    );
     process.exit(1);
   }
 
@@ -117,13 +120,16 @@ function loadConfig(): Config {
   })();
 
   bootLogger.info('✅ Environment configuration loaded successfully');
-  bootLogger.info({
-    mode: config.nodeEnv,
-    dbHost,
-    redis: 'localhost (connected)',
-    bybitTestnet: config.bybitTestnet,
-    logLevel: config.logLevel,
-  }, '🚀 Server Startup Configuration');
+  bootLogger.info(
+    {
+      mode: config.nodeEnv,
+      dbHost,
+      redis: 'localhost (connected)',
+      bybitTestnet: config.bybitTestnet,
+      logLevel: config.logLevel,
+    },
+    '🚀 Server Startup Configuration'
+  );
 
   return config;
 }

@@ -3,9 +3,8 @@ import { Link } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { authApi } from '@crypto-dashboard/sdk';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Form,

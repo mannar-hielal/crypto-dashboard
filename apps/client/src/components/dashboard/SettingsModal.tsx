@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
+import { Settings, User, Bell, Shield, Wallet, X, Loader2, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, User as UserIcon, Mail, Trash2, Check, AlertTriangle, HelpCircle, Lock, Download, ShieldCheck } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@crypto-dashboard/sdk';
 import { bg, color, fontSize, gradient, radius } from '@/lib/tokens';
@@ -19,7 +19,8 @@ const maskEmail = (email: string) => {
   const maskedLocal = local.length > 2 ? local.substring(0, 2) + '••••' : local + '••••';
   const domainParts = domain.split('.');
   const domainName = domainParts[0];
-  const maskedDomain = domainName.length > 2 ? domainName.substring(0, 2) + '•••' : domainName + '•••';
+  const maskedDomain =
+    domainName.length > 2 ? domainName.substring(0, 2) + '•••' : domainName + '•••';
   return `${maskedLocal}@${maskedDomain}.${domainParts.slice(1).join('.')}`;
 };
 
@@ -46,7 +47,9 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
-  const [showPasswordConfirm, setShowPasswordConfirm] = useState<'none' | 'sending' | 'sent'>('none');
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState<'none' | 'sending' | 'sent'>(
+    'none'
+  );
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
@@ -187,7 +190,6 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
     }
   };
 
-
   const handleExportData = () => {
     const exportData = {
       profile: {
@@ -247,9 +249,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
             {/* Header */}
             <div className="flex items-center justify-between border-b border-white/5 p-6 bg-white/2">
               <div className="flex flex-col">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                  Settings
-                </h2>
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">Settings</h2>
                 <p className="text-sm" style={{ color: color.muted }}>
                   Manage your account and security
                 </p>
@@ -271,7 +271,10 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                 >
                   <UserIcon className="w-3.5 h-3.5" /> Profile Settings
                 </h3>
-                <div className="p-6 rounded-2xl border border-white/8 space-y-4 shadow-sm" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                <div
+                  className="p-6 rounded-2xl border border-white/8 space-y-4 shadow-sm"
+                  style={{ background: 'rgba(255,255,255,0.02)' }}
+                >
                   <div className="space-y-2">
                     <label
                       className="text-xs font-semibold uppercase tracking-widest block"
@@ -297,16 +300,31 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                           background: usernameSuccess
                             ? color.green
                             : isUpdatingUsername || username === user.username || !username
-                            ? `${color.purpleDark}40`
-                            : gradient.brand,
+                              ? `${color.purpleDark}40`
+                              : gradient.brand,
                           borderRadius: radius.button,
-                          boxShadow: !usernameSuccess && username !== user.username && username ? `0 0 15px ${gradient.brandFrom}44` : 'none',
+                          boxShadow:
+                            !usernameSuccess && username !== user.username && username
+                              ? `0 0 15px ${gradient.brandFrom}44`
+                              : 'none',
                         }}
                       >
-                        {isUpdatingUsername ? '...' : usernameSuccess ? <><Check className="w-4 h-4 mr-1" /> Saved</> : 'Save'}
+                        {isUpdatingUsername ? (
+                          '...'
+                        ) : usernameSuccess ? (
+                          <>
+                            <Check className="w-4 h-4 mr-1" /> Saved
+                          </>
+                        ) : (
+                          'Save'
+                        )}
                       </Button>
                     </div>
-                    {usernameError && <p className="text-xs font-medium mt-1" style={{ color: color.red }}>{usernameError}</p>}
+                    {usernameError && (
+                      <p className="text-xs font-medium mt-1" style={{ color: color.red }}>
+                        {usernameError}
+                      </p>
+                    )}
                   </div>
                 </div>
               </motion.section>
@@ -319,7 +337,10 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                 >
                   <Lock className="w-3.5 h-3.5" /> Security & Credentials
                 </h3>
-                <div className="p-6 rounded-2xl border border-white/8 space-y-6 shadow-sm" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                <div
+                  className="p-6 rounded-2xl border border-white/8 space-y-6 shadow-sm"
+                  style={{ background: 'rgba(255,255,255,0.02)' }}
+                >
                   {/* Email Row */}
                   <div className="space-y-4">
                     <div className="flex items-start justify-between">
@@ -331,7 +352,9 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                           Email address
                         </label>
                         <div className="flex items-center gap-2">
-                          <p className="text-base font-medium text-white">{maskEmail(user.email)}</p>
+                          <p className="text-base font-medium text-white">
+                            {maskEmail(user.email)}
+                          </p>
                           {emailSuccess && (
                             <span className="flex items-center gap-1 text-[10px] font-bold text-green-400 uppercase tracking-widest">
                               <Check className="w-3 h-3" /> Verification Sent
@@ -360,7 +383,9 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                           <div className="h-px bg-white/5" />
                           <div className="space-y-3">
                             <div className="space-y-1.5">
-                              <label className="text-[11px] font-bold text-white/40 uppercase tracking-wider">New email</label>
+                              <label className="text-[11px] font-bold text-white/40 uppercase tracking-wider">
+                                New email
+                              </label>
                               <Input
                                 type="email"
                                 value={newEmail}
@@ -370,7 +395,9 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                               />
                             </div>
                             <div className="space-y-1.5">
-                              <label className="text-[11px] font-bold text-white/40 uppercase tracking-wider">Current password</label>
+                              <label className="text-[11px] font-bold text-white/40 uppercase tracking-wider">
+                                Current password
+                              </label>
                               <Input
                                 type="password"
                                 value={currentPassword}
@@ -379,7 +406,11 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                                 style={{ background: bg.surface }}
                               />
                             </div>
-                            {emailError && <p className="text-xs font-medium" style={{ color: color.red }}>{emailError}</p>}
+                            {emailError && (
+                              <p className="text-xs font-medium" style={{ color: color.red }}>
+                                {emailError}
+                              </p>
+                            )}
                             <div className="flex gap-3 pt-1">
                               <Button
                                 onClick={handleUpdateEmail}
@@ -438,7 +469,11 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                           variant="ghost"
                           size="sm"
                           onClick={() => setShowPasswordPanel(!showPasswordPanel)}
-                          className={showPasswordPanel ? 'text-white' : 'text-purple-400 hover:text-purple-300'}
+                          className={
+                            showPasswordPanel
+                              ? 'text-white'
+                              : 'text-purple-400 hover:text-purple-300'
+                          }
                           style={{ fontSize: fontSize.xxs }}
                         >
                           {showPasswordPanel ? 'CANCEL CHANGE' : 'CHANGE PASSWORD'}
@@ -495,11 +530,17 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                               />
                             </div>
 
-                            {passwordError && <p className="text-xs font-medium" style={{ color: color.red }}>{passwordError}</p>}
+                            {passwordError && (
+                              <p className="text-xs font-medium" style={{ color: color.red }}>
+                                {passwordError}
+                              </p>
+                            )}
 
                             <Button
                               onClick={handleUpdatePassword}
-                              disabled={isUpdatingPassword || !newPassword || !currentPasswordForNewPass}
+                              disabled={
+                                isUpdatingPassword || !newPassword || !currentPasswordForNewPass
+                              }
                               className="w-full h-11 font-bold text-white"
                               style={{
                                 background: gradient.brand,
@@ -528,12 +569,16 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                 >
                   <ShieldCheck className="w-3.5 h-3.5" /> Data & Privacy
                 </h3>
-                <div className="p-6 rounded-2xl border border-white/8 space-y-4 shadow-sm" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                <div
+                  className="p-6 rounded-2xl border border-white/8 space-y-4 shadow-sm"
+                  style={{ background: 'rgba(255,255,255,0.02)' }}
+                >
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
                       <p className="text-sm font-bold text-white">Export My Data</p>
                       <p className="text-xs max-w-[240px]" style={{ color: color.muted }}>
-                        Download a machine-readable JSON file containing your profile and trading history (GDPR Art. 20).
+                        Download a machine-readable JSON file containing your profile and trading
+                        history (GDPR Art. 20).
                       </p>
                     </div>
                     <Button

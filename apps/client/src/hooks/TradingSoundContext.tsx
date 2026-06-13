@@ -1,18 +1,4 @@
 /**
- * TradingSoundContext
- *
- * Provides a single shared instance of useTradingSound() to all dashboard
- * components via React context — ensures one AudioContext + one GainNode.
- *
- * NOTE: This file intentionally exports both a component (TradingSoundProvider)
- * and a hook (useTradingSoundCtx) — standard React context co-location pattern.
- */
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
-import { useTradingSound, type TradingSoundAPI } from './useTradingSound';
-
-const TradingSoundContext = createContext<TradingSoundAPI | null>(null);
-
-/**
  * Split sound API into separate contexts to prevent re-renders in components
  * that only need to play sounds (actions) when settings (volume/mute) change.
  */
@@ -43,15 +29,7 @@ export function TradingSoundProvider({ children }: { children: ReactNode }) {
       playProfit,
       playLoss,
     }),
-    [
-      setVolume,
-      toggleMute,
-      playOrderPlaced,
-      playOrderQueued,
-      playOrderFilled,
-      playProfit,
-      playLoss,
-    ]
+    [setVolume, toggleMute, playOrderPlaced, playOrderQueued, playOrderFilled, playProfit, playLoss]
   );
 
   return (
