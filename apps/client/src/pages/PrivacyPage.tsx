@@ -82,8 +82,8 @@ export function PrivacyPage() {
               <td>Server access logs</td>
               <td>Security monitoring, abuse prevention</td>
               <td>
-                IP address + request metadata — retained for 30 days (Fly.io) or 7 days (Cloudflare).
-                See Section 7 for details.
+                IP address + request metadata — retained for 30 days (Fly.io) or 7 days
+                (Cloudflare). See Section 7 for details.
               </td>
             </tr>
           </tbody>
@@ -156,14 +156,14 @@ export function PrivacyPage() {
             hour, whichever comes first.
           </li>
           <li>
-            <strong>Application server logs (Fly.io)</strong>: retained for{' '}
-            <strong>30 days</strong> in Fly.io's built-in monitoring system, after which they are
-            automatically purged. We do not operate a custom log archive.
+            <strong>Application server logs (Fly.io)</strong>: retained for <strong>30 days</strong>{' '}
+            in Fly.io's built-in monitoring system, after which they are automatically purged. We do
+            not operate a custom log archive.
           </li>
           <li>
-            <strong>Edge / CDN logs (Cloudflare)</strong>: retained for{' '}
-            <strong>7 days</strong> on Cloudflare's infrastructure per their standard log retention
-            policy. We do not export or store these logs independently.
+            <strong>Edge / CDN logs (Cloudflare)</strong>: retained for <strong>7 days</strong> on
+            Cloudflare's infrastructure per their standard log retention policy. We do not export or
+            store these logs independently.
           </li>
         </ul>
       </section>
@@ -187,15 +187,15 @@ export function PrivacyPage() {
             trading simulation state across sessions:
             <ul>
               <li>
-                <code>cd-paper-trading</code> — your virtual positions, order history, and
-                simulated account balance.
+                <code>cd-paper-trading</code> — your virtual positions, order history, and simulated
+                account balance.
               </li>
               <li>
                 <code>cd-layout</code> — your saved dashboard panel layout.
               </li>
               <li>
-                <code>cd-paper-col-prefs</code> — your column visibility preferences in the
-                trading tables.
+                <code>cd-paper-col-prefs</code> — your column visibility preferences in the trading
+                tables.
               </li>
               <li>
                 <code>cd-cookie-notice-dismissed</code> — a simple flag to remember that you have
@@ -207,8 +207,7 @@ export function PrivacyPage() {
           </li>
         </ul>
         <p>
-          We do not use advertising cookies, analytics cookies, or any third-party tracking
-          scripts.
+          We do not use advertising cookies, analytics cookies, or any third-party tracking scripts.
         </p>
       </section>
 

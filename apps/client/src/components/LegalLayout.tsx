@@ -74,7 +74,9 @@ export function LegalLayout({ title, lastUpdated, version, children }: LegalLayo
             >
               <span className="text-xs font-black text-white">CPT</span>
             </div>
-            <span className="text-sm font-semibold tracking-wide text-white">cryptopapertrade.com</span>
+            <span className="text-sm font-semibold tracking-wide text-white">
+              cryptopapertrade.com
+            </span>
           </div>
 
           <h1 className="text-2xl font-bold tracking-tight text-white">{title}</h1>

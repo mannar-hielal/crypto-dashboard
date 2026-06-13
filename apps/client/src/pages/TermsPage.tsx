@@ -9,9 +9,9 @@ export function TermsPage() {
       <section>
         <h2>1. Acceptance of Terms</h2>
         <p>
-          By accessing or using https://cryptopapertrade.com/ ("the Service", "we", "us"), you agree to be bound
-          by these Terms of Use and our <Link to="/privacy">Privacy Policy</Link>. If you do not
-          agree, do not use the Service.
+          By accessing or using https://cryptopapertrade.com/ ("the Service", "we", "us"), you agree
+          to be bound by these Terms of Use and our <Link to="/privacy">Privacy Policy</Link>. If
+          you do not agree, do not use the Service.
         </p>
       </section>
 
@@ -30,9 +30,9 @@ export function TermsPage() {
           </strong>
         </p>
         <p>
-          The Service is provided <strong>free of charge</strong> for educational and research purposes.
-          While we strive to keep the platform accessible, we reserve the right to modify or
-          discontinue features at any time.
+          The Service is provided <strong>free of charge</strong> for educational and research
+          purposes. While we strive to keep the platform accessible, we reserve the right to modify
+          or discontinue features at any time.
         </p>
       </section>
 
@@ -145,17 +145,16 @@ export function TermsPage() {
         <p>
           Your use of the Service is governed by our <Link to="/privacy">Privacy Policy</Link>,
           which is incorporated into these Terms. We process your personal data in accordance with
-          the Swiss Federal Act on Data Protection (nDSG) and, where applicable, the EU General
-          Data Protection Regulation (GDPR).
+          the Swiss Federal Act on Data Protection (nDSG) and, where applicable, the EU General Data
+          Protection Regulation (GDPR).
         </p>
         <p>
           Under GDPR (EU/EEA residents) and nDSG (Swiss residents), you have legally enforceable
           rights over your personal data, including the right to access, correct, delete, and port
           your data, as well as the right to object to certain processing. These rights are fully
-          described in{' '}
-          <Link to="/privacy#your-rights">Privacy Policy §11 — Your Rights</Link>, together with
-          instructions on how to exercise them. We will respond to any valid request within{' '}
-          <strong>30 calendar days</strong>.
+          described in <Link to="/privacy#your-rights">Privacy Policy §11 — Your Rights</Link>,
+          together with instructions on how to exercise them. We will respond to any valid request
+          within <strong>30 calendar days</strong>.
         </p>
       </section>
 
@@ -208,7 +207,8 @@ export function TermsPage() {
           TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, MANNAR HIELAL SHALL NOT BE LIABLE FOR
           ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING FROM YOUR
           USE OF THE SERVICE. AS THE SERVICE IS CURRENTLY PROVIDED AT NO COST TO YOU FOR EDUCATIONAL
-          PURPOSES, OUR MAXIMUM AGGREGATE LIABILITY TO YOU SHALL NOT EXCEED <strong>CHF 100</strong>.
+          PURPOSES, OUR MAXIMUM AGGREGATE LIABILITY TO YOU SHALL NOT EXCEED <strong>CHF 100</strong>
+          .
         </p>
         <p>
           EU consumers may have additional rights under mandatory consumer protection laws of their
@@ -328,13 +328,13 @@ export function TermsPage() {
         <h2>18. Account Termination</h2>
         <p>
           We reserve the right to suspend or terminate your access to the Service at our sole
-          discretion, without notice, for conduct that we believe violates these Terms of Use
-          or is harmful to other users of the Service, us, or third parties, or for any other reason.
+          discretion, without notice, for conduct that we believe violates these Terms of Use or is
+          harmful to other users of the Service, us, or third parties, or for any other reason.
         </p>
         <ul>
           <li>
-            <strong>Grounds for Termination:</strong> Material breach of these Terms, abuse
-            of the platform, or any attempt to disrupt the Service.
+            <strong>Grounds for Termination:</strong> Material breach of these Terms, abuse of the
+            platform, or any attempt to disrupt the Service.
           </li>
           <li>
             <strong>Deletion Window:</strong> Upon requesting account deletion or upon termination
@@ -343,9 +343,9 @@ export function TermsPage() {
             unless your account was terminated for illegal activity.
           </li>
           <li>
-            <strong>Data Export:</strong> Upon termination, you retain the right to request
-            exports of your data as described in our Privacy Policy, provided your account
-            was not terminated for fraudulent or illegal activity.
+            <strong>Data Export:</strong> Upon termination, you retain the right to request exports
+            of your data as described in our Privacy Policy, provided your account was not
+            terminated for fraudulent or illegal activity.
           </li>
         </ul>
       </section>

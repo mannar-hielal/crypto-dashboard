@@ -1,3 +1,6 @@
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { useTradingSound, type TradingSoundAPI } from './useTradingSound';
+
 /**
  * Split sound API into separate contexts to prevent re-renders in components
  * that only need to play sounds (actions) when settings (volume/mute) change.
@@ -40,6 +43,7 @@ export function TradingSoundProvider({ children }: { children: ReactNode }) {
 }
 
 /** Access only the sound settings (volume, muted). */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useSoundSettings() {
   const ctx = useContext(SoundSettingsContext);
   if (!ctx) throw new Error('useSoundSettings must be used within TradingSoundProvider');
@@ -47,6 +51,7 @@ export function useSoundSettings() {
 }
 
 /** Access sound playback actions (playProfit, etc.). Stable references. */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useSoundActions() {
   const ctx = useContext(SoundActionsContext);
   if (!ctx) throw new Error('useSoundActions must be used within TradingSoundProvider');

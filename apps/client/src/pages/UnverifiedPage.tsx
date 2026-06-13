@@ -35,7 +35,10 @@ export function UnverifiedPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: bg.app }}>
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ background: bg.app }}
+    >
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -51,8 +54,9 @@ export function UnverifiedPage() {
         <div className="space-y-2">
           <h1 className="text-2xl font-bold text-white">Verify your email</h1>
           <p className="text-white/60">
-            We've sent a verification link to <span className="text-purple-400 font-medium">{user?.email}</span>.
-            Please check your inbox (and spam folder) to activate your account.
+            We've sent a verification link to{' '}
+            <span className="text-purple-400 font-medium">{user?.email}</span>. Please check your
+            inbox (and spam folder) to activate your account.
           </p>
         </div>
 

@@ -65,7 +65,10 @@ export const EmailService = {
 
     if (!client) {
       if (config.nodeEnv !== 'production') {
-        logger.info({ to, verificationUrl }, '📧 [DEV] Email verification link (no RESEND_API_KEY set)');
+        logger.info(
+          { to, verificationUrl },
+          '📧 [DEV] Email verification link (no RESEND_API_KEY set)'
+        );
       }
       return;
     }
@@ -94,7 +97,10 @@ export const EmailService = {
 
     if (!client) {
       if (config.nodeEnv !== 'production') {
-        logger.info({ to, verificationUrl }, '📧 [DEV] Email change verification link (no RESEND_API_KEY set)');
+        logger.info(
+          { to, verificationUrl },
+          '📧 [DEV] Email change verification link (no RESEND_API_KEY set)'
+        );
       }
       return;
     }
@@ -119,12 +125,19 @@ export const EmailService = {
     });
   },
 
-  async sendEmailChangedSecurityAlert(to: string, oldEmail: string, newEmail: string): Promise<void> {
+  async sendEmailChangedSecurityAlert(
+    to: string,
+    oldEmail: string,
+    newEmail: string
+  ): Promise<void> {
     const client = getResend();
 
     if (!client) {
       if (config.nodeEnv !== 'production') {
-        logger.info({ to, oldEmail, newEmail }, '📧 [DEV] Email changed security alert (no RESEND_API_KEY set)');
+        logger.info(
+          { to, oldEmail, newEmail },
+          '📧 [DEV] Email changed security alert (no RESEND_API_KEY set)'
+        );
       }
       return;
     }
@@ -143,13 +156,24 @@ export const EmailService = {
     });
   },
 
-  async sendDeletionRequestedEmail(to: string, username: string, deletionDate: Date): Promise<void> {
+  async sendDeletionRequestedEmail(
+    to: string,
+    username: string,
+    deletionDate: Date
+  ): Promise<void> {
     const client = getResend();
-    const dateStr = deletionDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    const dateStr = deletionDate.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
 
     if (!client) {
       if (config.nodeEnv !== 'production') {
-        logger.info({ to, username, dateStr }, '📧 [DEV] Deletion requested email (no RESEND_API_KEY set)');
+        logger.info(
+          { to, username, dateStr },
+          '📧 [DEV] Deletion requested email (no RESEND_API_KEY set)'
+        );
       }
       return;
     }
@@ -197,11 +221,18 @@ export const EmailService = {
 
   async sendDeletionWarningEmail(to: string, username: string, deletionDate: Date): Promise<void> {
     const client = getResend();
-    const dateStr = deletionDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    const dateStr = deletionDate.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
 
     if (!client) {
       if (config.nodeEnv !== 'production') {
-        logger.info({ to, username, dateStr }, '📧 [DEV] Deletion warning email (no RESEND_API_KEY set)');
+        logger.info(
+          { to, username, dateStr },
+          '📧 [DEV] Deletion warning email (no RESEND_API_KEY set)'
+        );
       }
       return;
     }

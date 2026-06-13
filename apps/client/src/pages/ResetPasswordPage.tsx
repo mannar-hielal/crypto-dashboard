@@ -73,7 +73,8 @@ export function ResetPasswordPage() {
           className="rounded-2xl border border-white/8 p-8 shadow-2xl w-full max-w-sm"
           style={{ background: bg.panel }}
         >
-          <div className="rounded-lg border px-3 py-2.5 text-xs font-medium text-center"
+          <div
+            className="rounded-lg border px-3 py-2.5 text-xs font-medium text-center"
             style={{
               borderColor: `${color.red}33`,
               background: `${color.red}1a`,
@@ -237,9 +238,7 @@ export function ResetPasswordPage() {
                     />
                   </motion.div>
 
-                  <motion.div
-                    variants={formFieldVariants}
-                  >
+                  <motion.div variants={formFieldVariants}>
                     <Button
                       type="submit"
                       className="w-full font-bold tracking-wide text-white"

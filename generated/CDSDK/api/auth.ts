@@ -1,4 +1,10 @@
-import type { AuthResponse, MeResponse, RefreshResponse, MessageResponse, UpdateUserResponse } from '../types/index.js';
+import type {
+  AuthResponse,
+  MeResponse,
+  RefreshResponse,
+  MessageResponse,
+  UpdateUserResponse,
+} from '../types/index.js';
 
 const BASE_URL =
   (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL ?? 'http://localhost:3001';

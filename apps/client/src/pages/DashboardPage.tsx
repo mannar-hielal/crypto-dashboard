@@ -223,8 +223,11 @@ function DashboardInner() {
             <p className="text-xs font-medium text-amber-200/90">
               Your account is scheduled for deletion on{' '}
               <strong className="text-amber-400">
-                {new Date(new Date(user.deletionRequestedAt).getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
-              </strong>.
+                {new Date(
+                  new Date(user.deletionRequestedAt).getTime() + 30 * 24 * 60 * 60 * 1000
+                ).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+              </strong>
+              .
             </p>
             <button
               onClick={handleCancelDeletion}

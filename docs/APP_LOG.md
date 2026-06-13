@@ -587,12 +587,12 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 ### 🔴 Blocking — Must fix before launch
 
-| #   | Issue                                                               | File(s)                             | Priority |
-| --- | ------------------------------------------------------------------- | ----------------------------------- | -------- |
-| 1   | No Terms/Privacy acceptance checkbox at registration                | `RegisterPage.tsx`, `schema.prisma` | Critical |
-| 2   | No cookie/storage information banner                                | `App.tsx`                           | Critical |
-| 3   | No DPAs signed with Fly.io, Resend, Cloudflare                      | — (legal action)                    | Critical |
-| 4   | Bybit API terms for non-commercial use                              | — (verification)                    | Critical |
+| #   | Issue                                                | File(s)                             | Priority |
+| --- | ---------------------------------------------------- | ----------------------------------- | -------- |
+| 1   | No Terms/Privacy acceptance checkbox at registration | `RegisterPage.tsx`, `schema.prisma` | Critical |
+| 2   | No cookie/storage information banner                 | `App.tsx`                           | Critical |
+| 3   | No DPAs signed with Fly.io, Resend, Cloudflare       | — (legal action)                    | Critical |
+| 4   | Bybit API terms for non-commercial use               | — (verification)                    | Critical |
 
 ### 🟡 Important — Fix before/at launch
 
@@ -672,7 +672,7 @@ liveStore updated; positions polled / streamed via Bybit private WebSocket
 | --------------------------------------------------------- | ----------- | ------------------------------------------------------------------- |
 | Bug places wrong order                                    | 🔴 Critical | Server validation + order preview confirmation modal                |
 | API key leaked in a breach                                | 🔴 Critical | AES-256-GCM at rest, never logged, HTTPS only                       |
-| User loses money due to a bug                             | 🔴 Critical | Clear ToS disclaimer; no liability assumed by cryptopapertrade.com            |
+| User loses money due to a bug                             | 🔴 Critical | Clear ToS disclaimer; no liability assumed by cryptopapertrade.com  |
 | Rate limit exceeded                                       | 🟡 Medium   | Respect Bybit rate limits (10 req/s), queue with backpressure       |
 | Stale positions (user trades on Bybit.com simultaneously) | 🟡 Medium   | Poll positions every 5–10 s or subscribe to Bybit private WebSocket |
 | Double order on network retry                             | 🟡 Medium   | `orderLinkId` idempotency key per order                             |
@@ -794,12 +794,12 @@ Paper trading  →  Real order      →  Proven bot      →  Full autonomous
 
 | Gate                        | Detail                                                                                                                                                |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Phase 5 prerequisite        | User must have connected + verified Bybit API keys — enforced in code, not just UI                                                                                                                       |
-| Paper mode proven           | Bot must have run paper mode for configurable minimum (default: 7 days + 50 trades) with positive results — stats summary shown before upgrade prompt                                                                 |
-| Explicit confirmation modal | Multi-step: "This bot will place REAL orders with REAL money. Your losses are your own." — user must type confirmation phrase                                                                                                                       |
-| Hard daily loss limit       | Bot auto-kills + sends alert if real account drops >X% in a day — cannot be disabled                                                                                                                       |
-| Max position size cap       | Never risk more than Y% per trade or Z USDT total across open positions — requires re-confirmation to increase                                                                                                                       |
-| Supervised mode warm-up     | When first switching paper→live, Supervised mode is forced for a configurable warm-up period before Autonomous is unlocked                                                                                                                       |
+| Phase 5 prerequisite        | User must have connected + verified Bybit API keys — enforced in code, not just UI                                                                    |
+| Paper mode proven           | Bot must have run paper mode for configurable minimum (default: 7 days + 50 trades) with positive results — stats summary shown before upgrade prompt |
+| Explicit confirmation modal | Multi-step: "This bot will place REAL orders with REAL money. Your losses are your own." — user must type confirmation phrase                         |
+| Hard daily loss limit       | Bot auto-kills + sends alert if real account drops >X% in a day — cannot be disabled                                                                  |
+| Max position size cap       | Never risk more than Y% per trade or Z USDT total across open positions — requires re-confirmation to increase                                        |
+| Supervised mode warm-up     | When first switching paper→live, Supervised mode is forced for a configurable warm-up period before Autonomous is unlocked                            |
 
 ### Risks
 
@@ -1334,7 +1334,7 @@ NinjaTrader's ATM (Advanced Trade Management) is a bracket-template system. Befo
 
 #### What cryptopapertrade.com currently has vs. ATM
 
-| Feature                             | cryptopapertrade.com now                                 |
+| Feature                             | cryptopapertrade.com now                       |
 | ----------------------------------- | ---------------------------------------------- |
 | Single TP per position              | ✅ `position.takeProfit`                       |
 | Single SL per position              | ✅ `position.stopLoss`                         |
@@ -1433,26 +1433,26 @@ The order book is **not needed for paper trading** (fills are instant, no real l
 
 #### Decisions locked ✅
 
-| Decision | Choice | Rationale |
-|---|---|---|
-| Profile fields | **Username only** — no first/last name | Platform has no social/public profile surface; username is the only display identifier |
-| Profile icon | First letter of username, uppercase, `gradient.brand` background | Already implemented in TopBar; keep consistent |
-| Username change limit | **Unlimited** | No public-facing profile pages, no URL permalinks to protect; zero squatting/impersonation risk |
-| Timezone | **Eliminated** — not in scope | No server-side timezone logic needed; deferred to future if chart timestamps need localisation |
-| Password change UX | **TradingView email-link flow** — reuse existing `/forgot-password` + `/reset-password` infrastructure | No new backend mechanism; user clicks "Change password" → receives reset email → existing `ResetPasswordPage` handles it |
-| Account deletion model | **TV-style 30-day soft-delete with cancellation window** | Matches existing Privacy Policy wording ("within 30 days"); users can change their mind; reduces support tickets |
-| During 30-day deletion window | **Full access** — user can log back in and cancel at any time | Same as TradingView; no read-only restriction |
-| Deletion email notifications | **4 transactional emails** (see below) | Professional, legally respectful; reuses existing `EmailService` + Resend infrastructure |
-| Settings entry point | **TopBar dropdown → Settings item** opens a `SettingsModal` dialog | No page navigation in a full-screen trading app; modal keeps the user in context |
+| Decision                      | Choice                                                                                                 | Rationale                                                                                                                |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| Profile fields                | **Username only** — no first/last name                                                                 | Platform has no social/public profile surface; username is the only display identifier                                   |
+| Profile icon                  | First letter of username, uppercase, `gradient.brand` background                                       | Already implemented in TopBar; keep consistent                                                                           |
+| Username change limit         | **Unlimited**                                                                                          | No public-facing profile pages, no URL permalinks to protect; zero squatting/impersonation risk                          |
+| Timezone                      | **Eliminated** — not in scope                                                                          | No server-side timezone logic needed; deferred to future if chart timestamps need localisation                           |
+| Password change UX            | **TradingView email-link flow** — reuse existing `/forgot-password` + `/reset-password` infrastructure | No new backend mechanism; user clicks "Change password" → receives reset email → existing `ResetPasswordPage` handles it |
+| Account deletion model        | **TV-style 30-day soft-delete with cancellation window**                                               | Matches existing Privacy Policy wording ("within 30 days"); users can change their mind; reduces support tickets         |
+| During 30-day deletion window | **Full access** — user can log back in and cancel at any time                                          | Same as TradingView; no read-only restriction                                                                            |
+| Deletion email notifications  | **4 transactional emails** (see below)                                                                 | Professional, legally respectful; reuses existing `EmailService` + Resend infrastructure                                 |
+| Settings entry point          | **TopBar dropdown → Settings item** opens a `SettingsModal` dialog                                     | No page navigation in a full-screen trading app; modal keeps the user in context                                         |
 
 #### Email notification lifecycle
 
-| Trigger | Email |
-|---|---|
-| User requests deletion | ✉️ "Deletion requested — account scheduled for permanent deletion on [D+30]. Cancel any time." |
-| Day 23 (7 days before purge) | ⚠️ "Last chance — your account will be permanently deleted in 7 days on [date]." |
-| User cancels deletion | ✅ "Deletion cancelled — your account has been fully restored." |
-| Day 30 purge fires | 🗑️ "Your account has been permanently deleted. All data has been removed." |
+| Trigger                      | Email                                                                                          |
+| ---------------------------- | ---------------------------------------------------------------------------------------------- |
+| User requests deletion       | ✉️ "Deletion requested — account scheduled for permanent deletion on [D+30]. Cancel any time." |
+| Day 23 (7 days before purge) | ⚠️ "Last chance — your account will be permanently deleted in 7 days on [date]."               |
+| User cancels deletion        | ✅ "Deletion cancelled — your account has been fully restored."                                |
+| Day 30 purge fires           | 🗑️ "Your account has been permanently deleted. All data has been removed."                     |
 
 The 7-day warning email is tracked via `deletionWarningSentAt DateTime?` on the `User` model so the daily purge job fires it exactly once per deletion request.
 
@@ -1470,12 +1470,12 @@ No migration for `termsAcceptedAt` in this plan — deferred; the Terms acceptan
 
 #### New server routes
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| `PATCH` | `/api/auth/username` | ✅ Bearer | Validate uniqueness + alphanumeric rules; returns updated `User` |
-| `PATCH` | `/api/auth/email` | ✅ Bearer | Requires `currentPassword` bcrypt verification; validates new email uniqueness |
-| `DELETE` | `/api/auth/account` | ✅ Bearer | Requires `password` confirmation; sets `deletionRequestedAt = now()`; logs user out; sends deletion-requested email. Rate-limited 3/15 min |
-| `POST` | `/api/auth/cancel-deletion` | ✅ Bearer | Clears `deletionRequestedAt` and `deletionWarningSentAt`; sends cancellation email |
+| Method   | Path                        | Auth      | Description                                                                                                                                |
+| -------- | --------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `PATCH`  | `/api/auth/username`        | ✅ Bearer | Validate uniqueness + alphanumeric rules; returns updated `User`                                                                           |
+| `PATCH`  | `/api/auth/email`           | ✅ Bearer | Requires `currentPassword` bcrypt verification; validates new email uniqueness                                                             |
+| `DELETE` | `/api/auth/account`         | ✅ Bearer | Requires `password` confirmation; sets `deletionRequestedAt = now()`; logs user out; sends deletion-requested email. Rate-limited 3/15 min |
+| `POST`   | `/api/auth/cancel-deletion` | ✅ Bearer | Clears `deletionRequestedAt` and `deletionWarningSentAt`; sends cancellation email                                                         |
 
 Password change: **no new route** — settings page calls existing `POST /api/auth/forgot-password` with the logged-in user's email directly.
 
@@ -1489,9 +1489,11 @@ Registered in `apps/server/src/index.ts` as a `setInterval` running every 24 hou
 #### SDK changes required
 
 **`generated/CDSDK/types/index.ts`**
+
 - Add `deletionRequestedAt?: string | null` to `User` interface
 
 **`generated/CDSDK/api/auth.ts`**
+
 - `updateUsername(body: { username: string }, accessToken: string)` → `PATCH /api/auth/username`
 - `updateEmail(body: { email: string; currentPassword: string }, accessToken: string)` → `PATCH /api/auth/email`
 - `requestDeletion(body: { password: string }, accessToken: string)` → `DELETE /api/auth/account`
@@ -1500,11 +1502,13 @@ Registered in `apps/server/src/index.ts` as a `setInterval` running every 24 hou
 #### Store changes required
 
 **`apps/client/src/store/authStore.ts`**
+
 - Add `updateUser: (partial: Partial<User>) => void` action → `set(s => ({ user: { ...s.user!, ...partial } }))`
 
 #### EmailService changes required
 
 **`apps/server/src/services/EmailService.ts`** — add 4 methods:
+
 - `sendDeletionRequestedEmail(email, username, deletionDate: Date)`
 - `sendDeletionCancelledEmail(email, username)`
 - `sendDeletionWarningEmail(email, username, deletionDate: Date)`
@@ -1522,46 +1526,50 @@ Three visual sections (all use existing token system: `bg.panel`, `bg.surface`, 
    - On save: calls `updateUsername`, dispatches `updateUser({ username })` to `authStore`
 
 2. **Sign-in credentials section**
-   - *Email row*: masked current email (`ad••••@gm•••` — client-side `maskEmail(email)` util), "Change email" button → inline sub-panel with new email + current password fields
-   - *Password row*: "Change password" button → TV-style two-step mini dialog:
-     - Screen 1: *"For your security, we'll send you an email explaining how to reset your password."* + Cancel / Send link → calls `authApi.forgotPassword({ email: user.email })`
-     - Screen 2: *"Email was sent — The link to reset your password was sent to your email."* + Got it
+   - _Email row_: masked current email (`ad••••@gm•••` — client-side `maskEmail(email)` util), "Change email" button → inline sub-panel with new email + current password fields
+   - _Password row_: "Change password" button → TV-style two-step mini dialog:
+     - Screen 1: _"For your security, we'll send you an email explaining how to reset your password."_ + Cancel / Send link → calls `authApi.forgotPassword({ email: user.email })`
+     - Screen 2: _"Email was sent — The link to reset your password was sent to your email."_ + Got it
 
 3. **Danger Zone section** — red-bordered card
    - Title: **"Account deletion"** with `?` help tooltip
-   - Body: *"If you ever want to delete your account, you can. The process will take 30 days and you can change your mind at any time and halt the process."*
+   - Body: _"If you ever want to delete your account, you can. The process will take 30 days and you can change your mind at any time and halt the process."_
    - Button: red-outlined "Delete account" → password-confirmation sub-dialog → on confirm: calls `requestDeletion`, then `logout`, then `clearAuth()`, then wipes `cd-paper-trading`, `cd-layout`, `cd-paper-col-prefs`, `cd-cookie-notice-dismissed` from localStorage, then navigates to `/login`
 
 **`apps/client/src/components/dashboard/TopBar.tsx`** — changes
+
 - Import `Settings` icon from lucide-react
 - Add `settingsOpen` state
 - Add Settings item above Sign out in dropdown
 - Render `<SettingsModal open={settingsOpen} onClose={...} />` inside TopBar
 
 **`apps/client/src/pages/DashboardPage.tsx`** — changes
+
 - If `user.deletionRequestedAt` is set, render a dismissible amber top banner:
-  *"Your account is scheduled for deletion on [date]. [Cancel deletion]"*
+  _"Your account is scheduled for deletion on [date]. [Cancel deletion]"_
 - Cancel deletion button calls `cancelDeletion`, then `updateUser({ deletionRequestedAt: null })`
 
 **`apps/client/src/pages/PrivacyPage.tsx`** — §7 update
-- Account data bullet: replace current wording with *"Upon receiving a deletion request via the in-app flow, your account enters a 30-day cancellation window during which you retain full access and can cancel at any time. After 30 days with no cancellation, your account and all associated personal data are permanently and irreversibly deleted."*
+
+- Account data bullet: replace current wording with _"Upon receiving a deletion request via the in-app flow, your account enters a 30-day cancellation window during which you retain full access and can cancel at any time. After 30 days with no cancellation, your account and all associated personal data are permanently and irreversibly deleted."_
 
 #### Files to create / modify (full list for next session)
 
-| File | Action |
-|---|---|
-| `apps/server/prisma/schema.prisma` | Add `deletionRequestedAt`, `deletionWarningSentAt` to `User` |
-| `apps/server/prisma/migrations/` | New migration for schema changes |
-| `apps/server/src/routes/auth/index.ts` | Add `PATCH /username`, `PATCH /email`, `DELETE /account`, `POST /cancel-deletion` |
-| `apps/server/src/services/EmailService.ts` | Add 4 deletion lifecycle email methods |
-| `apps/server/src/index.ts` | Register daily purge `setInterval` |
-| `generated/CDSDK/types/index.ts` | Add `deletionRequestedAt` to `User`; add `UpdateUserResponse` type |
-| `generated/CDSDK/api/auth.ts` | Add `updateUsername`, `updateEmail`, `requestDeletion`, and `cancelDeletion` |
-| `apps/client/src/store/authStore.ts` | Add `updateUser` action |
-| `apps/client/src/components/dashboard/SettingsModal.tsx` | **New file** — full settings modal |
-| `apps/client/src/components/dashboard/TopBar.tsx` | Add Settings menu item + SettingsModal render |
-| `apps/client/src/pages/DashboardPage.tsx` | Add deletion-pending banner |
-| `apps/client/src/pages/PrivacyPage.tsx` | Update §7 account data retention wording |
+| File                                                     | Action                                                                            |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `apps/server/prisma/schema.prisma`                       | Add `deletionRequestedAt`, `deletionWarningSentAt` to `User`                      |
+| `apps/server/prisma/migrations/`                         | New migration for schema changes                                                  |
+| `apps/server/src/routes/auth/index.ts`                   | Add `PATCH /username`, `PATCH /email`, `DELETE /account`, `POST /cancel-deletion` |
+| `apps/server/src/services/EmailService.ts`               | Add 4 deletion lifecycle email methods                                            |
+| `apps/server/src/index.ts`                               | Register daily purge `setInterval`                                                |
+| `generated/CDSDK/types/index.ts`                         | Add `deletionRequestedAt` to `User`; add `UpdateUserResponse` type                |
+| `generated/CDSDK/api/auth.ts`                            | Add `updateUsername`, `updateEmail`, `requestDeletion`, and `cancelDeletion`      |
+| `apps/client/src/store/authStore.ts`                     | Add `updateUser` action                                                           |
+| `apps/client/src/components/dashboard/SettingsModal.tsx` | **New file** — full settings modal                                                |
+| `apps/client/src/components/dashboard/TopBar.tsx`        | Add Settings menu item + SettingsModal render                                     |
+| `apps/client/src/pages/DashboardPage.tsx`                | Add deletion-pending banner                                                       |
+| `apps/client/src/pages/PrivacyPage.tsx`                  | Update §7 account data retention wording                                          |
+
 - **feat: Suggested Email Content Update and Compliance alignment (13.06.2026)** ✅
   - **EmailService.ts**: Updated sendDeletionRequestedEmail to include legal disclosures regarding GDPR/nDSG, the 30-day cancellation window, and the 60-day backup persistence period for technical logs. Added portability reminder (data export).
   - **PrivacyPage.tsx**: Updated §7 Data Retention to explicitly disclose the 60-day backup persistence period, ensuring consistency with transactional emails and meeting transparency requirements.
@@ -1572,6 +1580,3 @@ Three visual sections (all use existing token system: `bg.panel`, `bg.surface`, 
   - **Privacy Policy Alignment**: Added Phase 3 forward-looking warning to Section 3.
   - **GDPR Art. 20 (Right to Portability)**: Implemented JSON Data Export in `SettingsModal.tsx`, merging server-side PII (including terms acceptance metadata) with client-side trading history.
   - **Audit Trail**: Exposed `termsAcceptedAt` and `termsAcceptedIp` in `/me` API response and SDK types to support complete data portability.
-
-
-

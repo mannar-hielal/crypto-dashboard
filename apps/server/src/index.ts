@@ -23,7 +23,9 @@ async function startPurgeJob(app: AppInstance) {
       });
 
       for (const user of usersToWarn) {
-        const deletionDate = new Date(user.deletionRequestedAt!.getTime() + 30 * 24 * 60 * 60 * 1000);
+        const deletionDate = new Date(
+          user.deletionRequestedAt!.getTime() + 30 * 24 * 60 * 60 * 1000
+        );
         await EmailService.sendDeletionWarningEmail(user.email, user.username, deletionDate);
         await app.prisma.user.update({
           where: { id: user.id },
