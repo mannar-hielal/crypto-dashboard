@@ -10,7 +10,7 @@ import {
   HelpCircle,
   AlertTriangle,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@crypto-dashboard/sdk';
 import { bg, color, fontSize, gradient, radius } from '@/lib/tokens';
@@ -67,7 +67,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Animation variants (reused from LoginPage feel)
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0, scale: 0.95, y: 20 },
     visible: {
       opacity: 1,
@@ -87,7 +87,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
     },
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 10 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.28, ease: 'easeOut' } },
   };

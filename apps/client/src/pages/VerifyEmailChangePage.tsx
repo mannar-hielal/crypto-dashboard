@@ -34,7 +34,7 @@ export function VerifyEmailChangePage() {
   return (
     <div
       className="min-h-screen flex items-center justify-center p-4"
-      style={{ background: bg.app }}
+      style={{ background: bg.page }}
     >
       <motion.div
         initial={{ opacity: 0, y: 20 }}
