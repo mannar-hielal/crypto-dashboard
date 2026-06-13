@@ -5,7 +5,7 @@ const CONTACT_EMAIL = 'info@cryptopapertrade.com';
 
 export function TermsPage() {
   return (
-    <LegalLayout title="Terms of Use" lastUpdated="April 11, 2026">
+    <LegalLayout title="Terms of Use" lastUpdated="May 6, 2026">
       <section>
         <h2>1. Acceptance of Terms</h2>
         <p>
@@ -29,9 +29,10 @@ export function TermsPage() {
           </strong>
         </p>
         <p>
-          The Service is currently offered during an early-access period. Subscription-based pricing
-          tiers will be introduced in a future release. Registered users will be notified of any
-          changes to the pricing model before they take effect.
+          The Service is currently offered <strong>entirely for free</strong> during an early-access
+          period for educational and research purposes. We reserve the right to introduce
+          subscription-based pricing in the future. Registered users will be notified at least{' '}
+          <strong>30 days</strong> before any such changes take effect.
         </p>
       </section>
 
@@ -129,8 +130,17 @@ export function TermsPage() {
         <p>
           Your use of the Service is governed by our <Link to="/privacy">Privacy Policy</Link>,
           which is incorporated into these Terms. We process your personal data in accordance with
-          the Swiss Federal Act on Data Protection (nDSG) and, where applicable, the EU General Data
-          Protection Regulation (GDPR).
+          the Swiss Federal Act on Data Protection (nDSG) and, where applicable, the EU General
+          Data Protection Regulation (GDPR).
+        </p>
+        <p>
+          Under GDPR (EU/EEA residents) and nDSG (Swiss residents), you have legally enforceable
+          rights over your personal data, including the right to access, correct, delete, and port
+          your data, as well as the right to object to certain processing. These rights are fully
+          described in{' '}
+          <Link to="/privacy#your-rights">Privacy Policy §11 — Your Rights</Link>, together with
+          instructions on how to exercise them. We will respond to any valid request within{' '}
+          <strong>30 calendar days</strong>.
         </p>
       </section>
 
@@ -182,9 +192,8 @@ export function TermsPage() {
         <p>
           TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, MANNAR HIELAL SHALL NOT BE LIABLE FOR
           ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING FROM YOUR
-          USE OF THE SERVICE. SINCE NO REAL FUNDS ARE INVOLVED IN THIS PLATFORM, OUR MAXIMUM
-          AGGREGATE LIABILITY TO YOU SHALL NOT EXCEED THE GREATER OF (A) THE TOTAL FEES PAID BY YOU
-          TO THE SERVICE IN THE THREE (3) MONTHS PRECEDING THE CLAIM, OR (B) CHF 100.
+          USE OF THE SERVICE. AS THE SERVICE IS CURRENTLY PROVIDED AT NO COST TO YOU FOR EDUCATIONAL
+          PURPOSES, OUR MAXIMUM AGGREGATE LIABILITY TO YOU SHALL NOT EXCEED <strong>CHF 100</strong>.
         </p>
         <p>
           EU consumers may have additional rights under mandatory consumer protection laws of their

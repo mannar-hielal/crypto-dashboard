@@ -4,7 +4,7 @@ const CONTACT_EMAIL = 'info@cryptopapertrade.com';
 
 export function PrivacyPage() {
   return (
-    <LegalLayout title="Privacy Policy" lastUpdated="April 11, 2026">
+    <LegalLayout title="Privacy Policy" lastUpdated="May 6, 2026">
       <section>
         <h2>1. Data Controller</h2>
         <p>
@@ -55,6 +55,11 @@ export function PrivacyPage() {
               <td>bcrypt hash (cost 12) — never stored in plain text</td>
             </tr>
             <tr>
+              <td>Legal Audit Log</td>
+              <td>Proof of agreement to Terms of Use (for legal compliance)</td>
+              <td>IP address and Timestamp stored in database upon registration</td>
+            </tr>
+            <tr>
               <td>Refresh tokens</td>
               <td>Maintaining login sessions</td>
               <td>SHA-256 hash in database, 7-day TTL, then auto-deleted</td>
@@ -99,11 +104,12 @@ export function PrivacyPage() {
             management, paper trade history, password reset.
           </li>
           <li>
-            <strong>Legitimate interest (Art. 6(1)(f) GDPR)</strong>: security logging, abuse
-            prevention, platform stability.
+            <strong>Legal obligation (Art. 6(1)(c) GDPR)</strong>: maintaining proof of your
+            acceptance of our legal terms (capturing IP and timestamp).
           </li>
           <li>
-            <strong>Legal obligation</strong>: where required by applicable Swiss or EU law.
+            <strong>Legitimate interest (Art. 6(1)(f) GDPR)</strong>: security logging, abuse
+            prevention, platform stability.
           </li>
         </ul>
       </section>
@@ -127,7 +133,11 @@ export function PrivacyPage() {
         <h2>7. Data Retention</h2>
         <ul>
           <li>
-            <strong>Account data</strong>: retained until you request deletion of your account.
+            <strong>Account data</strong>: retained for as long as your account is active. Upon
+            receiving a verified deletion request, your account and all directly associated personal
+            data (email, username, password hash) will be permanently deleted within{' '}
+            <strong>30 days</strong>. Aggregated or anonymised statistical data that cannot
+            identify you individually may be retained beyond this period.
           </li>
           <li>
             <strong>Refresh tokens</strong>: automatically expire and are deleted after 7 days.
@@ -137,8 +147,14 @@ export function PrivacyPage() {
             hour, whichever comes first.
           </li>
           <li>
-            <strong>Server logs</strong>: retained per hosting provider defaults (Fly.io /
-            Cloudflare). We do not operate a custom log purge mechanism.
+            <strong>Application server logs (Fly.io)</strong>: retained for{' '}
+            <strong>30 days</strong> in Fly.io's built-in monitoring system, after which they are
+            automatically purged. We do not operate a custom log archive.
+          </li>
+          <li>
+            <strong>Edge / CDN logs (Cloudflare)</strong>: retained for{' '}
+            <strong>7 days</strong> on Cloudflare's infrastructure per their standard log retention
+            policy. We do not export or store these logs independently.
           </li>
         </ul>
       </section>
@@ -156,9 +172,30 @@ export function PrivacyPage() {
             <strong>In-memory access token</strong>: your short-lived access token (15 minutes) is
             stored in browser memory only — never in localStorage or sessionStorage.
           </li>
+          <li>
+            <strong>localStorage (device-local, never transmitted)</strong>: we store the following
+            keys in your browser's localStorage solely to preserve your UI preferences and paper
+            trading simulation state across sessions:
+            <ul>
+              <li>
+                <code>cd-paper-trading</code> — your virtual positions, order history, and
+                simulated account balance.
+              </li>
+              <li>
+                <code>cd-layout</code> — your saved dashboard panel layout.
+              </li>
+              <li>
+                <code>cd-paper-col-prefs</code> — your column visibility preferences in the
+                trading tables.
+              </li>
+            </ul>
+            This data exists entirely on your device. Clearing your browser data or using a
+            different device will erase it. It is never sent to our servers.
+          </li>
         </ul>
         <p>
-          We do not use advertising cookies, analytics cookies, or any third-party tracking scripts.
+          We do not use advertising cookies, analytics cookies, or any third-party tracking
+          scripts.
         </p>
       </section>
 

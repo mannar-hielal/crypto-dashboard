@@ -63,7 +63,7 @@ const registerSchema = {
     'Creates a user account and a paper trading account. Returns a 15-min access token. A 7-day refresh token is set as an httpOnly cookie (sameSite: none + secure in production, lax in development).',
   body: {
     type: 'object',
-    required: ['email', 'username', 'password'],
+    required: ['email', 'username', 'password', 'acceptedTerms'],
     additionalProperties: false, // 🔐 rejects unknown/extra fields
     properties: {
       email: {
@@ -82,6 +82,10 @@ const registerSchema = {
         minLength: 8,
         maxLength: 72, // 🔐 bcrypt silently ignores chars beyond 72
         pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).+$',
+      },
+      acceptedTerms: {
+        type: 'boolean',
+        const: true, // ⚖️ must be true
       },
     },
   },
@@ -297,11 +301,16 @@ export async function authRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const { email, username, password } = request.body as {
+      const { email, username, password, acceptedTerms } = request.body as {
         email: string;
         username: string;
         password: string;
+        acceptedTerms: boolean;
       };
+
+      if (!acceptedTerms) {
+        return reply.status(400).send({ error: 'Terms and conditions must be accepted' });
+      }
 
       const existing = await app.prisma.user.findFirst({
         where: { OR: [{ email }, { username }] },
@@ -317,6 +326,8 @@ export async function authRoutes(app: FastifyInstance) {
           email,
           username,
           password: hashedPassword,
+          termsAcceptedAt: new Date(),
+          termsAcceptedIp: request.ip,
           account: { create: {} },
         },
       });
