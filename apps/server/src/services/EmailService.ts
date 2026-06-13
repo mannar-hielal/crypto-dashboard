@@ -160,9 +160,16 @@ export const EmailService = {
       subject: 'Account deletion requested — cryptopapertrade.com',
       html: `
         <h2>Hi ${username},</h2>
-        <p>As requested, your account has been scheduled for permanent deletion on <strong>${dateStr}</strong>.</p>
-        <p>During this 30-day window, you can continue to log in and use the platform. If you change your mind, you can cancel the deletion at any time from your account settings.</p>
-        <p>If you did not request this, please log in immediately to cancel the request and change your password.</p>
+        <p>This email confirms that your account has been placed into a <strong>30-day deletion period</strong> per our account security policy and your right to erasure under GDPR/nDSG.</p>
+        
+        <p>Your account is scheduled for permanent removal on <strong>${dateStr}</strong>.</p>
+        
+        <p><strong>What happens next?</strong><br/>
+        During this 30-day window, your data remains intact and you can cancel this request at any time by logging in. After this period, your profile, paper trading history, and personal data will be <strong>permanently purged</strong> from our active databases. Some technical logs may persist for up to 60 days in our backups before being overwritten.</p>
+        
+        <p>If you wish to keep a copy of your trading data, please ensure you export or record your history before the deletion date.</p>
+        
+        <p>If you did not request this deletion, please log in immediately to secure your account or contact our privacy team at ${config.resendFromEmail}.</p>
       `,
     });
   },

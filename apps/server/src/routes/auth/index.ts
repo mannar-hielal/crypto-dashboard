@@ -31,6 +31,9 @@ const userResponse = {
     id: { type: 'string' },
     email: { type: 'string' },
     username: { type: 'string' },
+    emailVerifiedAt: { type: ['string', 'null'] },
+    termsAcceptedAt: { type: ['string', 'null'] },
+    termsAcceptedIp: { type: ['string', 'null'] },
   },
 };
 
@@ -162,6 +165,9 @@ const meSchema = {
             id: { type: 'string' },
             email: { type: 'string' },
             username: { type: 'string' },
+            emailVerifiedAt: { type: ['string', 'null'] },
+            termsAcceptedAt: { type: ['string', 'null'] },
+            termsAcceptedIp: { type: ['string', 'null'] },
             account: {
               type: ['object', 'null'],
               properties: {
@@ -463,7 +469,6 @@ export async function authRoutes(app: FastifyInstance) {
         rateLimit: {
           max: 5,
           timeWindow: '1 hour',
-
         },
       },
     },
@@ -522,7 +527,14 @@ export async function authRoutes(app: FastifyInstance) {
 
       return reply.status(201).send({
         accessToken,
-        user: { id: user.id, email: user.email, username: user.username, emailVerifiedAt: null },
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          emailVerifiedAt: null,
+          termsAcceptedAt: user.termsAcceptedAt.toISOString(),
+          termsAcceptedIp: user.termsAcceptedIp,
+        },
       });
     }
   );
@@ -598,7 +610,6 @@ export async function authRoutes(app: FastifyInstance) {
         rateLimit: {
           max: 10,
           timeWindow: '15 minutes',
-
         },
       },
     },
@@ -612,7 +623,8 @@ export async function authRoutes(app: FastifyInstance) {
 
       // 🔐 Always run a verify-like check even if user not found — prevents timing attacks.
       //    Argon2 verification against a dummy hash ensures CPU time is consistent.
-      const DUMMY_HASH = '$argon2id$v=19$m=65536,t=3,p=4$vO91vGis5E7A0wB8V9bsww$8C8LCHn7X3O5z/j2tU6F+g';
+      const DUMMY_HASH =
+        '$argon2id$v=19$m=65536,t=3,p=4$vO91vGis5E7A0wB8V9bsww$8C8LCHn7X3O5z/j2tU6F+g';
       const passwordMatch = user
         ? await argon2.verify(user.password, password)
         : await argon2.verify(DUMMY_HASH, password).then(() => false);
@@ -630,6 +642,8 @@ export async function authRoutes(app: FastifyInstance) {
           email: user.email,
           username: user.username,
           emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
+          termsAcceptedAt: user.termsAcceptedAt?.toISOString() ?? null,
+          termsAcceptedIp: user.termsAcceptedIp,
         },
       });
     }
@@ -701,11 +715,10 @@ export async function authRoutes(app: FastifyInstance) {
       schema: forgotPasswordSchema,
       config: {
         rateLimit: {
-          max: 3,
-          timeWindow: '15 minutes',
-
+          max: config.nodeEnv === 'development' ? 20 : 3,
+          timeWindow: config.nodeEnv === 'development' ? '1 minute' : '15 minutes',
         },
-      }, // 🔐 strict rate limit — prevents email enumeration via timing
+      }, // 🔐 strict rate limit in prod — prevents email enumeration via timing
     },
     async (request, reply) => {
       const { email } = request.body as { email: string };
@@ -775,7 +788,10 @@ export async function authRoutes(app: FastifyInstance) {
 
         await tx.user.update({
           where: { id: resetToken.userId },
-          data: { password: hashedPassword },
+          data: {
+            password: hashedPassword,
+            emailVerifiedAt: new Date(),
+          },
         });
       });
     } catch (err) {
@@ -792,20 +808,31 @@ export async function authRoutes(app: FastifyInstance) {
   });
 
   // ─── ME (protected) ──────────────────────────────────────────────────────────
-  app.get('/me', { schema: meSchema, onRequest: [app.authenticate] }, async (request, reply) => {
-    const { userId } = request.user as { userId: string; email: string };
+  app.get('/me', { schema: meSchema }, async (request, reply) => {
+    const userId = (request.user as { userId: string }).userId;
 
     const user = await app.prisma.user.findUnique({
       where: { id: userId },
-      include: { account: true },
-      omit: { password: true }, // 🔐 never expose password hash
+      include: {
+        account: true,
+      },
     });
 
     if (!user) {
-      return reply.status(401).send({ error: 'User no longer exists' });
+      return reply.status(401).send({ error: 'User not found' });
     }
 
-    return { user };
+    return reply.send({
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        emailVerifiedAt: user.emailVerifiedAt?.toISOString() || null,
+        termsAcceptedAt: user.termsAcceptedAt?.toISOString() || null,
+        termsAcceptedIp: user.termsAcceptedIp,
+        account: user.account,
+      },
+    });
   });
 
   // ─── UPDATE PASSWORD (protected) ─────────────────────────────────────────────
@@ -882,7 +909,10 @@ export async function authRoutes(app: FastifyInstance) {
     { schema: updateEmailSchema, onRequest: [app.authenticate] },
     async (request, reply) => {
       const { userId } = request.user as { userId: string };
-      const { email, currentPassword } = request.body as { email?: string; currentPassword?: string };
+      const { email, currentPassword } = request.body as {
+        email?: string;
+        currentPassword?: string;
+      };
 
       if (!email || !currentPassword) {
         return reply.status(400).send({ error: 'Email and current password are required' });
@@ -967,7 +997,6 @@ export async function authRoutes(app: FastifyInstance) {
         rateLimit: {
           max: 3,
           timeWindow: '15 minutes',
-
         },
       },
     },
@@ -991,6 +1020,17 @@ export async function authRoutes(app: FastifyInstance) {
 
       const deletionRequestedAt = new Date();
       const deletionDate = new Date(deletionRequestedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+      // 🧪 TEST MODE: Immediate deletion in development + Test Policy Email
+      if (process.env.NODE_ENV === 'development') {
+        // Send the scheduled deletion email first so the user can test/verify it
+        await EmailService.sendDeletionRequestedEmail(user.email, user.username, deletionDate);
+
+        await app.prisma.user.delete({ where: { id: userId } });
+        await app.prisma.refreshToken.deleteMany({ where: { userId } });
+        void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
+        return reply.send({ message: 'Account deleted immediately & test email sent (dev mode).' });
+      }
 
       await app.prisma.user.update({
         where: { id: userId },

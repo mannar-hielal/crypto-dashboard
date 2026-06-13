@@ -6,6 +6,8 @@ export interface User {
   username: string;
   emailVerifiedAt?: string | null;
   deletionRequestedAt?: string | null;
+  termsAcceptedAt?: string | null;
+  termsAcceptedIp?: string | null;
 }
 
 export interface Account {
