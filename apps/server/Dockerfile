@@ -55,8 +55,8 @@ USER nodejs
 # Force pnpm (and any Node lib) to use /tmp for temp files — always writable by any user
 ENV TMPDIR=/tmp
 
-# Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod
+# Install only the server production dependencies from the workspace root
+RUN pnpm --filter @crypto-dashboard/server install --frozen-lockfile --prod
 
 # Copy compiled output, Prisma assets, and runtime Prisma config from builder
 # --chown ensures nodejs owns all files (no root-owned files after USER switch)
