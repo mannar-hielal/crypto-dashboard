@@ -1,5 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Settings, User, Bell, Shield, Wallet, X, Loader2, Check } from 'lucide-react';
+import {
+  X,
+  Check,
+  User as UserIcon,
+  Lock,
+  ShieldCheck,
+  Download,
+  Trash2,
+  HelpCircle,
+  AlertTriangle,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@crypto-dashboard/sdk';
