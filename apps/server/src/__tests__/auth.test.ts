@@ -64,6 +64,7 @@ const validUser = {
   email: 'test@example.com',
   username: 'testuser',
   password: 'Password1!',
+  acceptedTerms: true,
 };
 
 // ─── REGISTER ────────────────────────────────────────────────────────────────
