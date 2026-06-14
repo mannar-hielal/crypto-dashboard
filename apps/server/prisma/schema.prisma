@@ -37,6 +37,7 @@ model User {
   account             Account?
   trades              Trade[]
   orders              Order[]
+  positions           Position[]
   refreshTokens       RefreshToken[] // 🔐 active sessions
   passwordResetTokens PasswordResetToken[] // 🔐 pending resets
   verificationTokens  VerificationToken[]  // 🔐 pending email verifications
@@ -120,6 +121,36 @@ model Account {
   // Relations
   trades Trade[]
   orders Order[]
+  positions Position[]
+}
+
+// ============================================================================
+// POSITIONS (Active open positions)
+// ============================================================================
+
+model Position {
+  id        String  @id @default(cuid())
+  refId     String? @unique // Client-side reference ID
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  symbol     String
+  side       String // "LONG" | "SHORT"
+  quantity   Decimal @db.Decimal(20, 8)
+  entryPrice Decimal @db.Decimal(20, 8)
+  margin     Decimal @db.Decimal(20, 8) // entryUsdtAmount
+
+  takeProfit Decimal? @db.Decimal(20, 8)
+  stopLoss   Decimal? @db.Decimal(20, 8)
+
+  openedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([accountId])
+  @@index([symbol])
 }
 
 // ============================================================================
@@ -128,6 +159,7 @@ model Account {
 
 model Order {
   id        String  @id @default(cuid())
+  refId     String? @unique // Client-side reference ID
   userId    String
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   accountId String
@@ -135,20 +167,28 @@ model Order {
 
   // Order details
   symbol    String
-  side      String // "BUY" | "SELL"
-  orderType String // "MARKET" | "LIMIT"
+  side      String // "BUY" | "SELL" (or "LONG" | "SHORT" for positions)
+  orderType String // "MARKET" | "LIMIT" | "STOP" | "TAKE_PROFIT" | "STOP_LOSS"
   quantity  Decimal @db.Decimal(20, 8)
 
   // Pricing
   limitPrice         Decimal? @db.Decimal(20, 8)
+  stopPrice          Decimal? @db.Decimal(20, 8)
+  takeProfit         Decimal? @db.Decimal(20, 8)
+  stopLoss           Decimal? @db.Decimal(20, 8)
   filledQuantity     Decimal  @default(0) @db.Decimal(20, 8)
   averageFilledPrice Decimal? @db.Decimal(20, 8)
 
-  // State machine: PENDING -> PARTIALLY_FILLED -> FILLED | CANCELLED
-  status      String    @default("PENDING")
-  createdAt   DateTime  @default(now())
-  filledAt    DateTime?
-  cancelledAt DateTime?
+  // Financials
+  margin     Decimal @default(0) @db.Decimal(20, 8)
+  commission Decimal @default(0) @db.Decimal(20, 8)
+
+  // State machine: PENDING -> PARTIALLY_FILLED -> FILLED | CANCELLED | REJECTED
+  status          String    @default("PENDING")
+  rejectionReason String?
+  createdAt       DateTime  @default(now())
+  filledAt        DateTime?
+  cancelledAt     DateTime?
 
   // Metadata
   updatedAt DateTime @updatedAt
@@ -169,6 +209,7 @@ model Order {
 
 model Trade {
   id        String  @id @default(cuid())
+  refId     String? @unique // Client-side reference ID
   userId    String
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   accountId String
@@ -181,13 +222,16 @@ model Trade {
   side          String // "BUY" | "SELL"
   quantity      Decimal @db.Decimal(20, 8)
   executedPrice Decimal @db.Decimal(20, 8)
+  entryPrice    Decimal? @db.Decimal(20, 8)
   totalCost     Decimal @db.Decimal(20, 8)
+  commission    Decimal @default(0) @db.Decimal(20, 8)
 
   // PnL
   pnl        Decimal @default(0) @db.Decimal(20, 8)
   pnlPercent Decimal @default(0) @db.Decimal(6, 4)
 
   // Metadata
+  openedAt   DateTime?
   executedAt DateTime @default(now())
   createdAt  DateTime @default(now())
 

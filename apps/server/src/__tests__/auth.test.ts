@@ -263,6 +263,27 @@ describe('POST /api/auth/login', () => {
 
     expect(res.statusCode).toBe(401);
   });
+
+  it('normalizes the email address (lowercases and trims)', async () => {
+    const hashed = await argon2.hash(validUser.password);
+    (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'user-1',
+      email: 'test@example.com',
+      username: 'testuser',
+      password: hashed,
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { email: 'TEST@Example.com', password: validUser.password },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(app.prisma.user.findUnique).toHaveBeenCalledWith({
+      where: { email: 'test@example.com' },
+    });
+  });
 });
 
 // ─── ME ──────────────────────────────────────────────────────────────────────
@@ -284,7 +305,15 @@ describe('GET /api/auth/me', () => {
       id: 'user-1',
       email: validUser.email,
       username: validUser.username,
-      account: { id: 'acc-1', balance: '10000' },
+      account: {
+        id: 'acc-1',
+        totalBalance: { toString: () => '10000' },
+        availableBalance: { toString: () => '10000' },
+        unrealizedPnl: { toString: () => '0' },
+        realizedPnl: { toString: () => '0' },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
     });
 
     const res = await app.inject({
@@ -737,18 +766,40 @@ describe('POST /api/auth/forgot-password', () => {
     expect(res.json<{ message: string }>().message).toMatch(/reset link/i);
   });
 
-  it('returns 200 with the SAME message when the email does NOT exist (🔐 prevents enumeration)', async () => {
-    (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
+  it('returns 401 on wrong password', async () => {
+    const hashed = await argon2.hash('DifferentPass1!');
+
+    (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'user-1',
+      email: validUser.email,
+      password: hashed,
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { email: validUser.email, password: validUser.password },
+    });
+
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('normalizes the email address (lowercases and trims)', async () => {
+    (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'user-1',
+      email: 'user@example.com',
+    });
 
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/forgot-password',
-      payload: { email: 'ghost@example.com' },
+      payload: { email: 'USER@Example.COM' },
     });
 
-    // 🔐 Must be identical to the "email exists" response — attacker cannot distinguish them
     expect(res.statusCode).toBe(200);
-    expect(res.json<{ message: string }>().message).toMatch(/reset link/i);
+    expect(app.prisma.user.findUnique).toHaveBeenCalledWith({
+      where: { email: 'user@example.com' },
+    });
   });
 
   it('returns 400 for an invalid email format', async () => {

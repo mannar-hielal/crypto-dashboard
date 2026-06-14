@@ -275,6 +275,7 @@ export type AccountWhereInput = {
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   trades?: Prisma.TradeListRelationFilter
   orders?: Prisma.OrderListRelationFilter
+  positions?: Prisma.PositionListRelationFilter
 }
 
 export type AccountOrderByWithRelationInput = {
@@ -291,6 +292,7 @@ export type AccountOrderByWithRelationInput = {
   user?: Prisma.UserOrderByWithRelationInput
   trades?: Prisma.TradeOrderByRelationAggregateInput
   orders?: Prisma.OrderOrderByRelationAggregateInput
+  positions?: Prisma.PositionOrderByRelationAggregateInput
 }
 
 export type AccountWhereUniqueInput = Prisma.AtLeast<{
@@ -310,6 +312,7 @@ export type AccountWhereUniqueInput = Prisma.AtLeast<{
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   trades?: Prisma.TradeListRelationFilter
   orders?: Prisma.OrderListRelationFilter
+  positions?: Prisma.PositionListRelationFilter
 }, "id" | "userId">
 
 export type AccountOrderByWithAggregationInput = {
@@ -359,6 +362,7 @@ export type AccountCreateInput = {
   user: Prisma.UserCreateNestedOneWithoutAccountInput
   trades?: Prisma.TradeCreateNestedManyWithoutAccountInput
   orders?: Prisma.OrderCreateNestedManyWithoutAccountInput
+  positions?: Prisma.PositionCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateInput = {
@@ -374,6 +378,7 @@ export type AccountUncheckedCreateInput = {
   updatedAt?: Date | string
   trades?: Prisma.TradeUncheckedCreateNestedManyWithoutAccountInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutAccountInput
+  positions?: Prisma.PositionUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUpdateInput = {
@@ -389,6 +394,7 @@ export type AccountUpdateInput = {
   user?: Prisma.UserUpdateOneRequiredWithoutAccountNestedInput
   trades?: Prisma.TradeUpdateManyWithoutAccountNestedInput
   orders?: Prisma.OrderUpdateManyWithoutAccountNestedInput
+  positions?: Prisma.PositionUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateInput = {
@@ -404,6 +410,7 @@ export type AccountUncheckedUpdateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   trades?: Prisma.TradeUncheckedUpdateManyWithoutAccountNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutAccountNestedInput
+  positions?: Prisma.PositionUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountCreateManyInput = {
@@ -557,6 +564,20 @@ export type IntFieldUpdateOperationsInput = {
   divide?: number
 }
 
+export type AccountCreateNestedOneWithoutPositionsInput = {
+  create?: Prisma.XOR<Prisma.AccountCreateWithoutPositionsInput, Prisma.AccountUncheckedCreateWithoutPositionsInput>
+  connectOrCreate?: Prisma.AccountCreateOrConnectWithoutPositionsInput
+  connect?: Prisma.AccountWhereUniqueInput
+}
+
+export type AccountUpdateOneRequiredWithoutPositionsNestedInput = {
+  create?: Prisma.XOR<Prisma.AccountCreateWithoutPositionsInput, Prisma.AccountUncheckedCreateWithoutPositionsInput>
+  connectOrCreate?: Prisma.AccountCreateOrConnectWithoutPositionsInput
+  upsert?: Prisma.AccountUpsertWithoutPositionsInput
+  connect?: Prisma.AccountWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.AccountUpdateToOneWithWhereWithoutPositionsInput, Prisma.AccountUpdateWithoutPositionsInput>, Prisma.AccountUncheckedUpdateWithoutPositionsInput>
+}
+
 export type AccountCreateNestedOneWithoutOrdersInput = {
   create?: Prisma.XOR<Prisma.AccountCreateWithoutOrdersInput, Prisma.AccountUncheckedCreateWithoutOrdersInput>
   connectOrCreate?: Prisma.AccountCreateOrConnectWithoutOrdersInput
@@ -597,6 +618,7 @@ export type AccountCreateWithoutUserInput = {
   updatedAt?: Date | string
   trades?: Prisma.TradeCreateNestedManyWithoutAccountInput
   orders?: Prisma.OrderCreateNestedManyWithoutAccountInput
+  positions?: Prisma.PositionCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutUserInput = {
@@ -611,6 +633,7 @@ export type AccountUncheckedCreateWithoutUserInput = {
   updatedAt?: Date | string
   trades?: Prisma.TradeUncheckedCreateNestedManyWithoutAccountInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutAccountInput
+  positions?: Prisma.PositionUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutUserInput = {
@@ -641,10 +664,88 @@ export type AccountUpdateWithoutUserInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   trades?: Prisma.TradeUpdateManyWithoutAccountNestedInput
   orders?: Prisma.OrderUpdateManyWithoutAccountNestedInput
+  positions?: Prisma.PositionUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  totalBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  availableBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  unrealizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  resetCount?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  trades?: Prisma.TradeUncheckedUpdateManyWithoutAccountNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutAccountNestedInput
+  positions?: Prisma.PositionUncheckedUpdateManyWithoutAccountNestedInput
+}
+
+export type AccountCreateWithoutPositionsInput = {
+  id?: string
+  totalBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  availableBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  unrealizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  lastReset?: Date | string
+  resetCount?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  user: Prisma.UserCreateNestedOneWithoutAccountInput
+  trades?: Prisma.TradeCreateNestedManyWithoutAccountInput
+  orders?: Prisma.OrderCreateNestedManyWithoutAccountInput
+}
+
+export type AccountUncheckedCreateWithoutPositionsInput = {
+  id?: string
+  userId: string
+  totalBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  availableBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  unrealizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  lastReset?: Date | string
+  resetCount?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  trades?: Prisma.TradeUncheckedCreateNestedManyWithoutAccountInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutAccountInput
+}
+
+export type AccountCreateOrConnectWithoutPositionsInput = {
+  where: Prisma.AccountWhereUniqueInput
+  create: Prisma.XOR<Prisma.AccountCreateWithoutPositionsInput, Prisma.AccountUncheckedCreateWithoutPositionsInput>
+}
+
+export type AccountUpsertWithoutPositionsInput = {
+  update: Prisma.XOR<Prisma.AccountUpdateWithoutPositionsInput, Prisma.AccountUncheckedUpdateWithoutPositionsInput>
+  create: Prisma.XOR<Prisma.AccountCreateWithoutPositionsInput, Prisma.AccountUncheckedCreateWithoutPositionsInput>
+  where?: Prisma.AccountWhereInput
+}
+
+export type AccountUpdateToOneWithWhereWithoutPositionsInput = {
+  where?: Prisma.AccountWhereInput
+  data: Prisma.XOR<Prisma.AccountUpdateWithoutPositionsInput, Prisma.AccountUncheckedUpdateWithoutPositionsInput>
+}
+
+export type AccountUpdateWithoutPositionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  totalBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  availableBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  unrealizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  resetCount?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  user?: Prisma.UserUpdateOneRequiredWithoutAccountNestedInput
+  trades?: Prisma.TradeUpdateManyWithoutAccountNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutAccountNestedInput
+}
+
+export type AccountUncheckedUpdateWithoutPositionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
   totalBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   availableBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -669,6 +770,7 @@ export type AccountCreateWithoutOrdersInput = {
   updatedAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutAccountInput
   trades?: Prisma.TradeCreateNestedManyWithoutAccountInput
+  positions?: Prisma.PositionCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutOrdersInput = {
@@ -683,6 +785,7 @@ export type AccountUncheckedCreateWithoutOrdersInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   trades?: Prisma.TradeUncheckedCreateNestedManyWithoutAccountInput
+  positions?: Prisma.PositionUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutOrdersInput = {
@@ -713,6 +816,7 @@ export type AccountUpdateWithoutOrdersInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutAccountNestedInput
   trades?: Prisma.TradeUpdateManyWithoutAccountNestedInput
+  positions?: Prisma.PositionUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutOrdersInput = {
@@ -727,6 +831,7 @@ export type AccountUncheckedUpdateWithoutOrdersInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   trades?: Prisma.TradeUncheckedUpdateManyWithoutAccountNestedInput
+  positions?: Prisma.PositionUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountCreateWithoutTradesInput = {
@@ -741,6 +846,7 @@ export type AccountCreateWithoutTradesInput = {
   updatedAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutAccountInput
   orders?: Prisma.OrderCreateNestedManyWithoutAccountInput
+  positions?: Prisma.PositionCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutTradesInput = {
@@ -755,6 +861,7 @@ export type AccountUncheckedCreateWithoutTradesInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutAccountInput
+  positions?: Prisma.PositionUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutTradesInput = {
@@ -785,6 +892,7 @@ export type AccountUpdateWithoutTradesInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutAccountNestedInput
   orders?: Prisma.OrderUpdateManyWithoutAccountNestedInput
+  positions?: Prisma.PositionUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutTradesInput = {
@@ -799,6 +907,7 @@ export type AccountUncheckedUpdateWithoutTradesInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   orders?: Prisma.OrderUncheckedUpdateManyWithoutAccountNestedInput
+  positions?: Prisma.PositionUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 
@@ -809,11 +918,13 @@ export type AccountUncheckedUpdateWithoutTradesInput = {
 export type AccountCountOutputType = {
   trades: number
   orders: number
+  positions: number
 }
 
 export type AccountCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   trades?: boolean | AccountCountOutputTypeCountTradesArgs
   orders?: boolean | AccountCountOutputTypeCountOrdersArgs
+  positions?: boolean | AccountCountOutputTypeCountPositionsArgs
 }
 
 /**
@@ -840,6 +951,13 @@ export type AccountCountOutputTypeCountOrdersArgs<ExtArgs extends runtime.Types.
   where?: Prisma.OrderWhereInput
 }
 
+/**
+ * AccountCountOutputType without action
+ */
+export type AccountCountOutputTypeCountPositionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.PositionWhereInput
+}
+
 
 export type AccountSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -855,6 +973,7 @@ export type AccountSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   trades?: boolean | Prisma.Account$tradesArgs<ExtArgs>
   orders?: boolean | Prisma.Account$ordersArgs<ExtArgs>
+  positions?: boolean | Prisma.Account$positionsArgs<ExtArgs>
   _count?: boolean | Prisma.AccountCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["account"]>
 
@@ -904,6 +1023,7 @@ export type AccountInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   trades?: boolean | Prisma.Account$tradesArgs<ExtArgs>
   orders?: boolean | Prisma.Account$ordersArgs<ExtArgs>
+  positions?: boolean | Prisma.Account$positionsArgs<ExtArgs>
   _count?: boolean | Prisma.AccountCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type AccountIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -919,6 +1039,7 @@ export type $AccountPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     user: Prisma.$UserPayload<ExtArgs>
     trades: Prisma.$TradePayload<ExtArgs>[]
     orders: Prisma.$OrderPayload<ExtArgs>[]
+    positions: Prisma.$PositionPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1328,6 +1449,7 @@ export interface Prisma__AccountClient<T, Null = never, ExtArgs extends runtime.
   user<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   trades<T extends Prisma.Account$tradesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Account$tradesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TradePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   orders<T extends Prisma.Account$ordersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Account$ordersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  positions<T extends Prisma.Account$positionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Account$positionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PositionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1813,6 +1935,30 @@ export type Account$ordersArgs<ExtArgs extends runtime.Types.Extensions.Internal
   take?: number
   skip?: number
   distinct?: Prisma.OrderScalarFieldEnum | Prisma.OrderScalarFieldEnum[]
+}
+
+/**
+ * Account.positions
+ */
+export type Account$positionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Position
+   */
+  select?: Prisma.PositionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Position
+   */
+  omit?: Prisma.PositionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PositionInclude<ExtArgs> | null
+  where?: Prisma.PositionWhereInput
+  orderBy?: Prisma.PositionOrderByWithRelationInput | Prisma.PositionOrderByWithRelationInput[]
+  cursor?: Prisma.PositionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.PositionScalarFieldEnum | Prisma.PositionScalarFieldEnum[]
 }
 
 /**

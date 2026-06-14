@@ -14,6 +14,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { fmtPrice } from '@/lib/utils';
+import { paperApi } from '@crypto-dashboard/sdk';
+import { useAuthStore } from './authStore';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -32,7 +34,7 @@ export type CryptoLeverage = (typeof CRYPTO_LEVERAGE_OPTIONS)[number];
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface Position {
-  id: string;
+  id: string; // local ID or server ID
   symbol: string;
   side: 'long' | 'short';
   quantity: number; // base-asset qty (e.g. BTC)
@@ -59,7 +61,7 @@ export type OrderStatus = 'filled' | 'cancelled' | 'rejected';
 export type OrderType = 'market' | 'limit' | 'stop' | 'take-profit' | 'stop-loss';
 
 export interface PendingOrder {
-  id: string;
+  id: string; // local ID or server ID
   symbol: string;
   side: 'buy' | 'sell';
   type: 'limit' | 'stop';
@@ -72,7 +74,7 @@ export interface PendingOrder {
 }
 
 export interface HistoricalOrder {
-  id: string;
+  id: string; // local ID or server ID
   symbol: string;
   side: 'buy' | 'sell';
   type: OrderType;
@@ -341,6 +343,14 @@ interface PaperState {
    */
   leverage: number;
 
+  /** Status of server-side data synchronization. */
+  isSyncing: boolean;
+  /** Last time the store was successfully synchronized with the server. */
+  lastSyncAt: number | null;
+
+  /** Synchronize the local state with the server if authenticated. */
+  syncWithServer: (accessToken: string) => Promise<void>;
+
   /** Update the crypto leverage multiplier. */
   setLeverage: (v: number) => void;
 
@@ -361,7 +371,8 @@ interface PaperState {
     usdtAmount: number,
     takeProfit?: number,
     stopLoss?: number,
-    skipJournal?: boolean // new param to skip journal entry
+    skipJournal?: boolean,
+    relatedOrderId?: string // ─── New param ─────────
   ) => string | null;
 
   /** Close an open position at the given exit price. */
@@ -463,12 +474,180 @@ export const usePaperStore = create<PaperState>()(
       journal: [],
       leverage: 1,
 
+      isSyncing: false,
+      lastSyncAt: null,
+
+      syncWithServer: async (accessToken) => {
+        if (get().isSyncing) return;
+        set({ isSyncing: true });
+
+        try {
+          const [acc, serverOrders, serverTrades, serverPositions] = await Promise.all([
+            paperApi.getAccount(accessToken),
+            paperApi.getOrders({ limit: 100 }, accessToken),
+            paperApi.getTrades({ limit: 100 }, accessToken),
+            paperApi.getPositions(accessToken),
+          ]);
+
+          // ── Legacy Migration ───────────────────────────────────────────
+          // If the server account is fresh ($10,000, no orders, no trades, no positions)
+          // BUT the local store has activity, push the local state to the server.
+          const isServerFresh =
+            parseFloat(acc.availableBalance) === STARTING_BALANCE &&
+            serverOrders.length === 0 &&
+            serverTrades.length === 0 &&
+            serverPositions.length === 0;
+
+          const isLocalActive =
+            get().balance !== STARTING_BALANCE ||
+            get().history.length > 0 ||
+            get().positions.length > 0;
+
+          if (isServerFresh && isLocalActive) {
+            if (import.meta.env.DEV)
+              console.log('Migrating local paper trading state to server...');
+            // In a full sync, we'd push EVERYTHING. For Phase 3.0, we prioritize balance.
+            await paperApi.updateAccount(
+              {
+                totalBalance: (get().balance + get().realizedPnl).toString(),
+                availableBalance: get().balance.toString(),
+                realizedPnl: get().realizedPnl.toString(),
+              },
+              accessToken
+            );
+
+            // Backfill positions if any
+            for (const pos of get().positions) {
+              await paperApi.createOrder(
+                {
+                  refId: pos.id,
+                  symbol: pos.symbol,
+                  side: pos.side === 'long' ? 'BUY' : 'SELL',
+                  orderType: 'MARKET',
+                  quantity: pos.quantity.toString(),
+                  limitPrice: pos.entryPrice.toString(),
+                  takeProfit: pos.takeProfit?.toString(),
+                  stopLoss: pos.stopLoss?.toString(),
+                  margin: pos.entryUsdtAmount.toString(),
+                },
+                accessToken
+              );
+
+              // 🔐 Explicitly create the position on the server during migration.
+              // This is now required because the server's POST /orders no longer creates positions.
+              await paperApi.createPosition(
+                {
+                  refId: pos.id,
+                  symbol: pos.symbol,
+                  side: pos.side === 'long' ? 'LONG' : 'SHORT',
+                  quantity: pos.quantity.toString(),
+                  entryPrice: pos.entryPrice.toString(),
+                  margin: pos.entryUsdtAmount.toString(),
+                  takeProfit: pos.takeProfit?.toString() ?? null,
+                  stopLoss: pos.stopLoss?.toString() ?? null,
+                },
+                accessToken
+              );
+            }
+          }
+
+          // Mapping server orders back to HistoricalOrder[]
+          // Filter out PENDING orders for the history tab; those go to pendingOrders
+          const pendingOrders: PendingOrder[] = serverOrders
+            .filter((o) => o.status === 'PENDING')
+            .map((o) => ({
+              id: o.refId || o.id, // Use refId if available to match local state
+              symbol: o.symbol,
+              side: o.side.toLowerCase() as 'buy' | 'sell',
+              type: o.orderType.toLowerCase() as 'limit' | 'stop',
+              usdtAmount: parseFloat(o.margin),
+              triggerPrice:
+                o.orderType === 'LIMIT' ? parseFloat(o.limitPrice!) : parseFloat(o.stopPrice!),
+              qty: parseFloat(o.quantity),
+              takeProfit: o.takeProfit ? parseFloat(o.takeProfit) : undefined,
+              stopLoss: o.stopLoss ? parseFloat(o.stopLoss) : undefined,
+              placedAt: new Date(o.createdAt).getTime(),
+            }));
+
+          const orders: HistoricalOrder[] = serverOrders
+            .filter((o) => o.status !== 'PENDING')
+            .map((o) => ({
+              id: o.refId || o.id,
+              symbol: o.symbol,
+              side: o.side.toLowerCase() as 'buy' | 'sell',
+              type: o.orderType.toLowerCase() as OrderType,
+              qty: parseFloat(o.quantity),
+              limitPrice: o.limitPrice ? parseFloat(o.limitPrice) : undefined,
+              stopPrice: o.stopPrice ? parseFloat(o.stopPrice) : undefined,
+              fillPrice: o.averageFilledPrice ? parseFloat(o.averageFilledPrice) : undefined,
+              status: o.status.toLowerCase() as OrderStatus,
+              commission: parseFloat(o.commission),
+              margin: o.margin ? parseFloat(o.margin) : undefined,
+              placingTime: new Date(o.createdAt).getTime(),
+              closingTime: o.filledAt
+                ? new Date(o.filledAt).getTime()
+                : o.cancelledAt
+                  ? new Date(o.cancelledAt).getTime()
+                  : new Date(o.updatedAt).getTime(),
+              rejectionReason: o.rejectionReason ?? undefined,
+            }));
+
+          // Mapping trades
+          const history: ClosedTrade[] = serverTrades.map((t) => ({
+            id: t.refId || t.id,
+            symbol: t.symbol,
+            side: t.side.toLowerCase() as 'long' | 'short',
+            quantity: parseFloat(t.quantity),
+            entryPrice: t.entryPrice ? parseFloat(t.entryPrice) : 0,
+            exitPrice: parseFloat(t.executedPrice),
+            pnl: parseFloat(t.pnl),
+            openedAt: t.openedAt ? new Date(t.openedAt).getTime() : 0,
+            closedAt: new Date(t.executedAt).getTime(),
+          }));
+
+          const positions: Position[] = serverPositions.map((p) => ({
+            id: p.refId || p.id,
+            symbol: p.symbol,
+            side: p.side.toLowerCase() as 'long' | 'short',
+            quantity: parseFloat(p.quantity),
+            entryPrice: parseFloat(p.entryPrice),
+            entryUsdtAmount: parseFloat(p.margin),
+            openedAt: new Date(p.openedAt).getTime(),
+            takeProfit: p.takeProfit ? parseFloat(p.takeProfit) : undefined,
+            stopLoss: p.stopLoss ? parseFloat(p.stopLoss) : undefined,
+          }));
+
+          set({
+            balance: parseFloat(acc.availableBalance),
+            realizedPnl: parseFloat(acc.realizedPnl),
+            orders,
+            history,
+            positions,
+            pendingOrders,
+            lastSyncAt: Date.now(),
+          });
+        } catch (err) {
+          if (import.meta.env.DEV) console.error('Failed to sync paper trading state:', err);
+        } finally {
+          set({ isSyncing: false });
+        }
+      },
+
       setLeverage: (v) =>
         set({
           leverage: Math.min(Math.max(Number.isFinite(v) ? Math.round(v) : 1, 1), MAX_LEVERAGE),
         }),
 
-      placeOrder: (symbol, side, price, usdtAmount, takeProfit, stopLoss, skipJournal) => {
+      placeOrder: (
+        symbol,
+        side,
+        price,
+        usdtAmount,
+        takeProfit,
+        stopLoss,
+        skipJournal,
+        relatedOrderId // ─── New param ─────────
+      ) => {
         const { leverage, positions } = get();
 
         // ── Validation ──────────────────────────────────────────────────────
@@ -586,6 +765,48 @@ export const usePaperStore = create<PaperState>()(
                 };
               }
             });
+
+            // ── Server Sync for Netting ──────────────────────────────────────
+            const token = useAuthStore.getState().accessToken;
+            if (token) {
+              const netPnl = pnlPartial - exitCommission;
+              paperApi
+                .recordTrade(
+                  {
+                    refId: closeId,
+                    symbol: pos.symbol,
+                    side: pos.side === 'long' ? 'SELL' : 'BUY',
+                    quantity: closeQty.toString(),
+                    executedPrice: price.toString(),
+                    entryPrice: pos.entryPrice.toString(),
+                    totalCost: (closeQty * price).toString(),
+                    commission: exitCommission.toString(),
+                    pnl: netPnl.toString(),
+                    pnlPercent: (netPnl / (marginPartial || 1)).toString(),
+                    orderId: relatedOrderId || pos.id, // Use the incoming order ID if available
+                    openedAt: new Date(pos.openedAt).toISOString(),
+                  },
+                  token
+                )
+                .then(async () => {
+                  if (isFullClose) {
+                    await paperApi.deletePosition(pos.id, token);
+                    return;
+                  }
+
+                  await paperApi.updatePosition(
+                    pos.id,
+                    {
+                      quantity: (pos.quantity - closeQty).toString(),
+                      margin: (pos.entryUsdtAmount * (1 - fraction)).toString(),
+                    },
+                    token
+                  );
+                })
+                .catch((e) => {
+                  if (import.meta.env.DEV) console.error('Failed to sync netting to server:', e);
+                });
+            }
           }
 
           // Record the single incoming order (TV-style: 1 order per user action).
@@ -692,7 +913,7 @@ export const usePaperStore = create<PaperState>()(
           action: `Enter ${side === 'buy' ? 'long' : 'short'} position for ${symbol} at price ${price.toFixed(4)} for ${quantity.toFixed(6)} units`,
         };
 
-        // ── Journal entry ─────────────────────────────────────────────────────
+        // ── Journal entry ───────────────────────────────────────────────────────
         const journalEntries: JournalEntry[] = [];
         if (!skipJournal) {
           const positionSide = side === 'buy' ? 'LONG' : 'SHORT';
@@ -712,6 +933,67 @@ export const usePaperStore = create<PaperState>()(
           balanceLog: [logEntry, ...s.balanceLog].slice(0, MAX_HISTORY * 2),
           journal: [...journalEntries, ...s.journal].slice(0, MAX_JOURNAL),
         }));
+
+        // ── Server Sync ──────────────────────────────────────────────────
+        const token = useAuthStore.getState().accessToken;
+        if (token) {
+          // If this was triggered by a fill, we don't create a new MARKET order.
+          // The monitor already marked the original limit/stop order as FILLED.
+          const syncPromise = relatedOrderId
+            ? Promise.resolve({ id: relatedOrderId }) // Already exists
+            : paperApi.createOrder(
+                {
+                  refId: id,
+                  symbol,
+                  side: side === 'buy' ? 'BUY' : 'SELL',
+                  orderType: 'MARKET',
+                  quantity: quantity.toString(),
+                  limitPrice: price.toString(),
+                  takeProfit: takeProfit?.toString(),
+                  stopLoss: stopLoss?.toString(),
+                  margin: usdtAmount.toString(),
+                },
+                token
+              );
+
+          syncPromise
+            .then((res) => {
+              // Keep local position IDs stable; server routes support lookup via refId.
+              set((s) => ({
+                orders: s.orders.map((o) => (o.id === `o-${id}` ? { ...o, id: `o-${res.id}` } : o)),
+              }));
+
+              // Explicitly create the position on the server.
+              // This is now required because the server's POST /orders no longer has side-effects.
+              return paperApi.createPosition(
+                {
+                  refId: id,
+                  symbol,
+                  side: (side === 'buy' ? 'LONG' : 'SHORT') as 'LONG' | 'SHORT',
+                  quantity: quantity.toString(),
+                  entryPrice: price.toString(),
+                  margin: usdtAmount.toString(),
+                  takeProfit: takeProfit?.toString() ?? null,
+                  stopLoss: stopLoss?.toString() ?? null,
+                },
+                token
+              );
+            })
+            .then(() => {
+              // Sync final balance stats to account for commission/margin accurately
+              const state = get();
+              return paperApi.updateAccount(
+                {
+                  totalBalance: (state.balance + state.realizedPnl).toString(),
+                  availableBalance: state.balance.toString(),
+                },
+                token
+              );
+            })
+            .catch((e) => {
+              if (import.meta.env.DEV) console.error('Failed to sync order/position to server:', e);
+            });
+        }
 
         return id;
       },
@@ -836,6 +1118,48 @@ export const usePaperStore = create<PaperState>()(
           balanceLog: [logEntry, ...s.balanceLog].slice(0, MAX_HISTORY * 2),
           journal: [...closingJournalEntries, ...s.journal].slice(0, MAX_JOURNAL),
         }));
+
+        // ── Server Sync ──────────────────────────────────────────────────
+        const token = useAuthStore.getState().accessToken;
+        if (token) {
+          // Record the closing trade
+          paperApi
+            .recordTrade(
+              {
+                refId: closedId, // refId for the trade
+                symbol: pos.symbol,
+                side: pos.side === 'long' ? 'SELL' : 'BUY',
+                quantity: pos.quantity.toString(),
+                executedPrice: exitPrice.toString(),
+                entryPrice: pos.entryPrice.toString(),
+                totalCost: (pos.quantity * exitPrice).toString(),
+                commission: commission.toString(),
+                pnl: netPnl.toString(),
+                pnlPercent: (netPnl / pos.entryUsdtAmount).toString(),
+                orderId: positionId, // Use positionId (could be refId or DB ID)
+                openedAt: new Date(pos.openedAt).toISOString(),
+              },
+              token
+            )
+            .then(() => {
+              // Server supports deleting by either DB id or refId.
+              return paperApi.deletePosition(positionId, token);
+            })
+            .then(() => {
+              const state = get();
+              return paperApi.updateAccount(
+                {
+                  totalBalance: (state.balance + state.realizedPnl).toString(),
+                  availableBalance: state.balance.toString(),
+                  realizedPnl: state.realizedPnl.toString(),
+                },
+                token
+              );
+            })
+            .catch((e) => {
+              if (import.meta.env.DEV) console.error('Failed to sync close position to server:', e);
+            });
+        }
       },
 
       addJournalNote: (text: string, isUserNote = true, pnl?: number) => {
@@ -912,6 +1236,29 @@ export const usePaperStore = create<PaperState>()(
           journal: [placementNote, ...s.journal].slice(0, MAX_JOURNAL),
         }));
 
+        // ── Server Sync ──────────────────────────────────────────────────
+        const token = useAuthStore.getState().accessToken;
+        if (token) {
+          paperApi
+            .createOrder(
+              {
+                refId: id,
+                symbol,
+                side: (side === 'buy' ? 'BUY' : 'SELL') as 'BUY' | 'SELL',
+                orderType: 'LIMIT',
+                quantity: qty.toString(),
+                limitPrice: triggerPrice.toString(),
+                takeProfit: takeProfit?.toString(),
+                stopLoss: stopLoss?.toString(),
+                margin: usdtAmount.toString(),
+              },
+              token
+            )
+            .catch((e) => {
+              if (import.meta.env.DEV) console.error('Failed to sync limit order:', e);
+            });
+        }
+
         return id;
       },
 
@@ -952,6 +1299,29 @@ export const usePaperStore = create<PaperState>()(
           pendingOrders: [...s.pendingOrders, pending],
           journal: [stopPlacementNote, ...s.journal].slice(0, MAX_JOURNAL),
         }));
+
+        // ── Server Sync ────���─────────────────────────────────────────────
+        const token = useAuthStore.getState().accessToken;
+        if (token) {
+          paperApi
+            .createOrder(
+              {
+                refId: id,
+                symbol,
+                side: (side === 'buy' ? 'BUY' : 'SELL') as 'BUY' | 'SELL',
+                orderType: 'STOP',
+                quantity: qty.toString(),
+                stopPrice: triggerPrice.toString(),
+                takeProfit: takeProfit?.toString(),
+                stopLoss: stopLoss?.toString(),
+                margin: usdtAmount.toString(),
+              },
+              token
+            )
+            .catch((e) => {
+              if (import.meta.env.DEV) console.error('Failed to sync stop order:', e);
+            });
+        }
 
         return id;
       },
@@ -1025,6 +1395,16 @@ export const usePaperStore = create<PaperState>()(
           orders: [cancelledOrder, ...childCancelledOrders, ...s.orders].slice(0, MAX_HISTORY * 2),
           journal: [cancelNote, ...s.journal].slice(0, MAX_JOURNAL),
         }));
+
+        // ── Server Sync ──────────────────────────────────────────────────
+        const token = useAuthStore.getState().accessToken;
+        if (token) {
+          // !orderId.includes('-') was a heuristic for server-side cuid vs local random ID.
+          // Now the server handles both via refId lookup.
+          paperApi.updateOrder(orderId, { status: 'CANCELLED' }, token).catch((e) => {
+            if (import.meta.env.DEV) console.error('Failed to cancel order on server:', e);
+          });
+        }
       },
 
       cancelExitOrder: (positionId, exitType) => {
@@ -1069,6 +1449,15 @@ export const usePaperStore = create<PaperState>()(
           orders: [cancelRow, ...s.orders].slice(0, MAX_HISTORY * 2),
           journal: [note, ...s.journal].slice(0, MAX_JOURNAL),
         }));
+
+        // ── Server Sync ──────────────────────────────────────────────────
+        const token = useAuthStore.getState().accessToken;
+        if (token) {
+          const body = exitType === 'take-profit' ? { takeProfit: null } : { stopLoss: null };
+          paperApi.updatePosition(positionId, body, token).catch((e) => {
+            if (import.meta.env.DEV) console.error('Failed to update position exits on server:', e);
+          });
+        }
       },
 
       cancelPendingExitLeg: (pendingOrderId, exitType) => {
@@ -1114,6 +1503,16 @@ export const usePaperStore = create<PaperState>()(
           orders: [cancelRow, ...s.orders].slice(0, MAX_HISTORY * 2),
           journal: [note, ...s.journal].slice(0, MAX_JOURNAL),
         }));
+
+        // ── Server Sync ──────────────────────────────────────────────────
+        const token = useAuthStore.getState().accessToken;
+        if (token) {
+          const body = exitType === 'take-profit' ? { takeProfit: null } : { stopLoss: null };
+          paperApi.updateOrder(pendingOrderId, body, token).catch((e) => {
+            if (import.meta.env.DEV)
+              console.error('Failed to update pending order exits on server:', e);
+          });
+        }
       },
 
       fillPendingOrder: (orderId) => {
@@ -1126,6 +1525,14 @@ export const usePaperStore = create<PaperState>()(
           balance: s.balance + refund,
           pendingOrders: s.pendingOrders.filter((o) => o.id !== orderId),
         }));
+
+        // ── Server Sync ────────────────────────────────────────────��─────
+        const token = useAuthStore.getState().accessToken;
+        if (token) {
+          paperApi.updateOrder(orderId, { status: 'FILLED' }, token).catch((e) => {
+            if (import.meta.env.DEV) console.error('Failed to mark order filled on server:', e);
+          });
+        }
       },
 
       updatePositionExits: (positionId, takeProfit, stopLoss) => {
@@ -1137,7 +1544,7 @@ export const usePaperStore = create<PaperState>()(
         const cancelRows: HistoricalOrder[] = [];
 
         // Only write cancel records when a leg is explicitly REMOVED (value → null).
-        // Editing to a new price is a silent in-place update — no cancel record needed.
+        // Editing to a new price is a silent in-place update  no cancel record needed.
         // Use !! to handle both undefined and null (loose != null fails when value is undefined).
         const tpRemoving = takeProfit === null && !!pos.takeProfit;
         const slRemoving = stopLoss === null && !!pos.stopLoss;
@@ -1190,6 +1597,24 @@ export const usePaperStore = create<PaperState>()(
             ? [...journalEntries, ...s.journal].slice(0, MAX_JOURNAL)
             : s.journal,
         }));
+
+        // ── Server Sync ──────────────────────────────────────────────────
+        const token = useAuthStore.getState().accessToken;
+        if (token) {
+          paperApi
+            .updatePosition(
+              positionId,
+              {
+                takeProfit: takeProfit?.toString() ?? null,
+                stopLoss: stopLoss?.toString() ?? null,
+              },
+              token
+            )
+            .catch((e) => {
+              if (import.meta.env.DEV)
+                console.error('Failed to update position exits on server:', e);
+            });
+        }
       },
 
       editPendingOrder: (orderId, newTriggerPrice, newUsdtAmount, newTakeProfit, newStopLoss) => {
@@ -1203,7 +1628,7 @@ export const usePaperStore = create<PaperState>()(
         const newRequired = newUsdtAmount + newUsdtAmount * COMMISSION_RATE;
 
         if (newRequired > scratchBalance) {
-          // ── Insufficient funds — reject + cancel children ─────────────────
+          // ── Insufficient funds — reject + cancel children ─��───────────────
           const rejectedOrder: HistoricalOrder = {
             id: `o-rej-edit-${orderId}-${now}`,
             symbol: order.symbol,
@@ -1360,6 +1785,29 @@ export const usePaperStore = create<PaperState>()(
             : s.journal,
         }));
 
+        // ── Server Sync ──────────────────────────────────────────────────
+        const token = useAuthStore.getState().accessToken;
+        if (token) {
+          const isLimit = order.type === 'limit';
+          paperApi
+            .updateOrder(
+              orderId,
+              {
+                limitPrice: isLimit ? newTriggerPrice.toString() : undefined,
+                stopPrice: !isLimit ? newTriggerPrice.toString() : undefined,
+                margin: newUsdtAmount.toString(),
+                quantity: newQty.toString(),
+                takeProfit: newTakeProfit?.toString() ?? null,
+                stopLoss: newStopLoss?.toString() ?? null,
+              },
+              token
+            )
+            .catch((e) => {
+              if (import.meta.env.DEV)
+                console.error('Failed to update pending order on server:', e);
+            });
+        }
+
         return 'ok';
       },
     }),
@@ -1371,7 +1819,7 @@ export const usePaperStore = create<PaperState>()(
       //    state field is added so old snapshots are migrated rather than used as-is.
       version: 2,
       migrate: (persisted: unknown, fromVersion: number) => {
-        // ── Fresh-state fallback ───────────────────────────────────────────────
+        // ── Fresh-state fallback ───────────────────────────────────────────
         // Used when the snapshot is completely unrecognisable (null, non-object,
         // or missing the minimum fields we need to trust it).
         const fresh = {

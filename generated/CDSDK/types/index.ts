@@ -90,3 +90,127 @@ export interface CandleHistoryResponse {
 export interface UpdateUserResponse {
   user: User;
 }
+
+export interface SyncAccountResponse {
+  id: string;
+  totalBalance: string;
+  availableBalance: string;
+  unrealizedPnl: string;
+  realizedPnl: string;
+  lastReset: string;
+  resetCount: number;
+}
+
+export interface SyncOrderResponse {
+  id: string;
+  refId: string | null;
+  symbol: string;
+  side: string;
+  orderType: string;
+  quantity: string;
+  limitPrice: string | null;
+  stopPrice: string | null;
+  takeProfit: string | null;
+  stopLoss: string | null;
+  status: string;
+  filledQuantity: string;
+  averageFilledPrice: string | null;
+  margin: string;
+  commission: string;
+  rejectionReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+  filledAt: string | null;
+  cancelledAt: string | null;
+}
+
+export interface SyncTradeResponse {
+  id: string;
+  refId: string | null;
+  symbol: string;
+  side: string;
+  quantity: string;
+  executedPrice: string;
+  entryPrice: string | null;
+  totalCost: string;
+  commission: string;
+  pnl: string;
+  pnlPercent: string;
+  openedAt: string | null;
+  executedAt: string;
+}
+
+export interface SyncPositionResponse {
+  id: string;
+  refId: string | null;
+  symbol: string;
+  side: string;
+  quantity: string;
+  entryPrice: string;
+  margin: string;
+  takeProfit: string | null;
+  stopLoss: string | null;
+  openedAt: string;
+  updatedAt: string;
+}
+
+// ─── Request Types ───────────────────────────────────────────────────────────
+
+export interface CreateOrderRequest {
+  refId?: string;
+  symbol: string;
+  side: 'BUY' | 'SELL';
+  orderType: 'MARKET' | 'LIMIT' | 'STOP';
+  quantity: string;
+  limitPrice?: string;
+  stopPrice?: string;
+  takeProfit?: string;
+  stopLoss?: string;
+  margin?: string;
+}
+
+export interface UpdateOrderRequest {
+  status?: 'FILLED' | 'CANCELLED' | 'REJECTED';
+  limitPrice?: string;
+  stopPrice?: string;
+  takeProfit?: string | null;
+  stopLoss?: string | null;
+  filledQuantity?: string;
+  averageFilledPrice?: string;
+  rejectionReason?: string;
+  quantity?: string;
+  margin?: string;
+}
+
+export interface CreateTradeRequest {
+  refId?: string;
+  symbol: string;
+  side: 'BUY' | 'SELL';
+  quantity: string;
+  executedPrice: string;
+  entryPrice?: string;
+  totalCost: string;
+  commission?: string;
+  pnl?: string;
+  pnlPercent?: string;
+  orderId?: string;
+  openedAt?: string;
+}
+
+export interface CreatePositionRequest {
+  refId?: string;
+  symbol: string;
+  side: 'LONG' | 'SHORT';
+  quantity: string;
+  entryPrice: string;
+  margin: string;
+  takeProfit?: string | null;
+  stopLoss?: string | null;
+}
+
+export interface UpdatePositionRequest {
+  quantity?: string;
+  margin?: string;
+  takeProfit?: string | null;
+  stopLoss?: string | null;
+}
