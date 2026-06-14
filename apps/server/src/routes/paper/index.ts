@@ -25,7 +25,7 @@ const accountResponse = {
     lastReset: { type: 'string', format: 'date-time' },
     resetCount: { type: 'integer' },
   },
-};
+} as const;
 
 const orderResponse = {
   type: 'object',
@@ -53,7 +53,7 @@ const orderResponse = {
     filledAt: { type: ['string', 'null'], format: 'date-time' },
     cancelledAt: { type: ['string', 'null'], format: 'date-time' },
   },
-};
+} as const;
 
 const tradeResponse = {
   type: 'object',
@@ -74,7 +74,7 @@ const tradeResponse = {
     openedAt: { type: ['string', 'null'], format: 'date-time' },
     executedAt: { type: 'string', format: 'date-time' },
   },
-};
+} as const;
 
 const positionResponse = {
   type: 'object',
@@ -93,7 +93,7 @@ const positionResponse = {
     openedAt: { type: 'string', format: 'date-time' },
     updatedAt: { type: 'string', format: 'date-time' },
   },
-};
+} as const;
 
 const errorResponse = {
   type: 'object',
@@ -103,7 +103,7 @@ const errorResponse = {
     error: { type: 'string' },
     message: { type: 'string' },
   },
-};
+} as const;
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 
@@ -181,8 +181,9 @@ export async function paperRoutes(app: FastifyInstance) {
         response: {
           200: accountResponse,
           401: errorResponse,
+          500: errorResponse,
         },
-      },
+      } as const,
     },
     async (request, reply) => {
       const { userId } = request.user as { userId: string };

@@ -36,7 +36,7 @@ const userResponse = {
     termsAcceptedAt: { type: ['string', 'null'] },
     termsAcceptedIp: { type: ['string', 'null'] },
   },
-};
+} as const;
 
 const tokenResponse = {
   type: 'object',
@@ -45,7 +45,7 @@ const tokenResponse = {
     accessToken: { type: 'string' },
     user: userResponse,
   },
-};
+} as const;
 
 const errorResponse = {
   type: 'object',
@@ -53,7 +53,7 @@ const errorResponse = {
   properties: {
     error: { type: 'string' },
   },
-};
+} as const;
 
 // ─── REQUEST SCHEMAS ──────────────────────────────────────────────────────────
 // Fastify validates ALL incoming data against these BEFORE your handler runs.
@@ -187,8 +187,9 @@ const meSchema = {
       },
     },
     401: errorResponse,
+    500: errorResponse,
   },
-};
+} as const;
 
 const forgotPasswordSchema = {
   tags: ['Auth'],
