@@ -305,7 +305,15 @@ describe('GET /api/auth/me', () => {
       id: 'user-1',
       email: validUser.email,
       username: validUser.username,
-      account: { id: 'acc-1', balance: '10000' },
+      account: {
+        id: 'acc-1',
+        totalBalance: { toString: () => '10000' },
+        availableBalance: { toString: () => '10000' },
+        unrealizedPnl: { toString: () => '0' },
+        realizedPnl: { toString: () => '0' },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
     });
 
     const res = await app.inject({

@@ -1,7 +1,27 @@
-import { PrismaClient } from './apps/server/generated/prisma/index.js';
+import { PrismaClient } from '@prisma/client';
+
 const prisma = new PrismaClient();
+
 async function main() {
-  const users = await prisma.user.findMany({ select: { email: true, username: true } });
-  console.log(JSON.stringify(users, null, 2));
+  const users = await prisma.user.findMany({
+    include: {
+      account: true,
+    },
+  });
+
+  /* eslint-disable no-console */
+  console.log(`Found ${users.length} users:`);
+  for (const user of users) {
+    console.log(
+      `- ${user.username} (${user.email}): ${user.account ? user.account.totalBalance : 'No account'}`
+    );
+  }
+  /* eslint-enable no-console */
 }
-main().catch(console.error).finally(() => prisma.$disconnect());
+main()
+  .catch((err) => {
+    /* eslint-disable no-console */
+    console.error(err);
+    /* eslint-enable no-console */
+  })
+  .finally(() => prisma.$disconnect());

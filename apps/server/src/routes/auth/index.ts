@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import * as argon2 from 'argon2';
 import { FastifyInstance, FastifyReply } from 'fastify';
+import { Prisma } from '../../../generated/prisma/client.js';
 import { config } from '../../config.js';
 import { EmailService } from '../../services/EmailService.js';
 
@@ -495,7 +496,10 @@ export async function authRoutes(app: FastifyInstance) {
         where: { OR: [{ email: normalizedEmail }, { username: normalizedUsername }] },
       });
       if (existing) {
-        app.log.warn({ email: normalizedEmail, username: normalizedUsername }, 'Registration failed: email or username already taken');
+        app.log.warn(
+          { email: normalizedEmail, username: normalizedUsername },
+          'Registration failed: email or username already taken'
+        );
         // 🔐 Generic error for email/username to match enum-prevention logic,
         // though 409 usually reveals existing account. Still better than naming which one.
         return reply.status(409).send({ error: 'Email or username already taken' });
@@ -546,8 +550,11 @@ export async function authRoutes(app: FastifyInstance) {
       } catch (err) {
         // Handle race conditions where two requests for the same user pass the findFirst check
         // but the second one fails at the DB unique constraint level.
-        if (err instanceof Error && (err as any).code === 'P2002') {
-          app.log.warn({ email: normalizedEmail, username: normalizedUsername }, 'Registration failed: Race condition unique constraint');
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+          app.log.warn(
+            { email: normalizedEmail, username: normalizedUsername },
+            'Registration failed: Race condition unique constraint'
+          );
           return reply.status(409).send({ error: 'Email or username already taken' });
         }
         throw err;
@@ -573,7 +580,10 @@ export async function authRoutes(app: FastifyInstance) {
     }
 
     if (stored.expiresAt < new Date()) {
-      app.log.warn({ tokenHash, expiresAt: stored.expiresAt }, 'Verification failed: token expired');
+      app.log.warn(
+        { tokenHash, expiresAt: stored.expiresAt },
+        'Verification failed: token expired'
+      );
       return reply.status(400).send({ error: 'Invalid or expired verification token' });
     }
 
@@ -839,38 +849,45 @@ export async function authRoutes(app: FastifyInstance) {
 
   // ─── ME (protected) ────────────────────────────────────────────────────────
   app.get('/me', { schema: meSchema, onRequest: [app.authenticate] }, async (request, reply) => {
-    const userId = (request.user as { userId: string }).userId;
+    try {
+      const userId = (request.user as { userId: string }).userId;
 
-    const user = await app.prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        account: true,
-      },
-    });
+      const user = await app.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          account: true,
+        },
+      });
 
-    if (!user) {
-      return reply.status(401).send({ error: 'User not found' });
+      if (!user) {
+        return reply.status(401).send({ error: 'User not found' });
+      }
+
+      return reply.send({
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
+          termsAcceptedAt: user.termsAcceptedAt?.toISOString() ?? null,
+          termsAcceptedIp: user.termsAcceptedIp,
+          account: user.account
+            ? {
+                ...user.account,
+                totalBalance: user.account.totalBalance.toString(),
+                availableBalance: user.account.availableBalance.toString(),
+                unrealizedPnl: user.account.unrealizedPnl.toString(),
+                realizedPnl: user.account.realizedPnl.toString(),
+                createdAt: user.account.createdAt.toISOString(),
+                updatedAt: user.account.updatedAt.toISOString(),
+              }
+            : null,
+        },
+      });
+    } catch (err) {
+      app.log.error({ err }, 'Failed to fetch me');
+      return reply.status(500).send({ error: 'Internal Server Error' });
     }
-
-    return reply.send({
-      user: {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
-        termsAcceptedAt: user.termsAcceptedAt?.toISOString() ?? null,
-        termsAcceptedIp: user.termsAcceptedIp,
-        account: user.account ? {
-          ...user.account,
-          totalBalance: user.account.totalBalance.toString(),
-          availableBalance: user.account.availableBalance.toString(),
-          unrealizedPnl: user.account.unrealizedPnl.toString(),
-          realizedPnl: user.account.realizedPnl.toString(),
-          createdAt: user.account.createdAt.toISOString(),
-          updatedAt: user.account.updatedAt.toISOString(),
-        } : null,
-      },
-    });
   });
 
   // ─── UPDATE PASSWORD (protected) ─────────────────────────────────────────────

@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { Account, Order, Trade, Position } from '../../../generated/prisma/client.js';
 import {
   CreateOrderRequest,
   UpdateOrderRequest,
@@ -106,7 +107,7 @@ const errorResponse = {
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 
-function serializeAccount(account: any) {
+function serializeAccount(account: Account) {
   return {
     ...account,
     totalBalance: account.totalBalance.toString(),
@@ -117,7 +118,7 @@ function serializeAccount(account: any) {
   };
 }
 
-function serializeOrder(order: any) {
+function serializeOrder(order: Order) {
   return {
     ...order,
     quantity: order.quantity.toString(),
@@ -136,7 +137,7 @@ function serializeOrder(order: any) {
   };
 }
 
-function serializeTrade(trade: any) {
+function serializeTrade(trade: Trade) {
   return {
     ...trade,
     quantity: trade.quantity.toString(),
@@ -152,7 +153,7 @@ function serializeTrade(trade: any) {
   };
 }
 
-function serializePosition(position: any) {
+function serializePosition(position: Position) {
   return {
     ...position,
     quantity: position.quantity.toString(),
@@ -203,7 +204,7 @@ export async function paperRoutes(app: FastifyInstance) {
         app.log.error({ err, userId }, 'Failed to fetch account');
         return reply.status(500).send({
           error: 'Internal Server Error',
-          message: err instanceof Error ? err.message : String(err)
+          message: err instanceof Error ? err.message : String(err),
         });
       }
     }
@@ -254,7 +255,7 @@ export async function paperRoutes(app: FastifyInstance) {
         app.log.error({ err, userId }, 'Failed to fetch orders');
         return reply.status(500).send({
           error: 'Internal Server Error',
-          message: err instanceof Error ? err.message : String(err)
+          message: err instanceof Error ? err.message : String(err),
         });
       }
     }
@@ -301,7 +302,7 @@ export async function paperRoutes(app: FastifyInstance) {
         app.log.error({ err, userId }, 'Failed to fetch trades');
         return reply.status(500).send({
           error: 'Internal Server Error',
-          message: err instanceof Error ? err.message : String(err)
+          message: err instanceof Error ? err.message : String(err),
         });
       }
     }
@@ -339,7 +340,7 @@ export async function paperRoutes(app: FastifyInstance) {
         app.log.error({ err, userId }, 'Failed to fetch positions');
         return reply.status(500).send({
           error: 'Internal Server Error',
-          message: err instanceof Error ? err.message : String(err)
+          message: err instanceof Error ? err.message : String(err),
         });
       }
     }
@@ -511,7 +512,7 @@ export async function paperRoutes(app: FastifyInstance) {
         app.log.error({ err, userId }, 'Failed to reset account');
         return reply.status(500).send({
           error: 'Internal Server Error',
-          message: err instanceof Error ? err.message : String(err)
+          message: err instanceof Error ? err.message : String(err),
         });
       }
     }
@@ -562,7 +563,7 @@ export async function paperRoutes(app: FastifyInstance) {
         app.log.error({ err, userId }, 'Failed to update account');
         return reply.status(500).send({
           error: 'Internal Server Error',
-          message: err instanceof Error ? err.message : String(err)
+          message: err instanceof Error ? err.message : String(err),
         });
       }
     }

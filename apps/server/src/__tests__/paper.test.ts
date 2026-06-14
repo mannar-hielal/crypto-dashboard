@@ -64,10 +64,11 @@ describe('Paper Trading Routes', () => {
       const mockAccount = {
         id: 'acc-1',
         userId,
-        totalBalance: '10000',
-        availableBalance: '10000',
-        unrealizedPnl: '0',
-        realizedPnl: '0',
+        totalBalance: { toString: () => '10000' },
+        availableBalance: { toString: () => '10000' },
+        unrealizedPnl: { toString: () => '0' },
+        realizedPnl: { toString: () => '0' },
+        lastReset: new Date(),
       };
       vi.mocked(app.prisma.account.findUnique).mockResolvedValueOnce(mockAccount as never);
 
@@ -91,12 +92,13 @@ describe('Paper Trading Routes', () => {
         symbol: 'BTCUSDT',
         side: 'BUY',
         orderType: 'MARKET',
-        quantity: '1.0',
+        quantity: { toString: () => '1.0' },
         status: 'FILLED',
-        createdAt: new Date().toISOString(),
-        filledQuantity: '1.0',
-        margin: '0',
-        commission: '0',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        filledQuantity: { toString: () => '1.0' },
+        margin: { toString: () => '0' },
+        commission: { toString: () => '0' },
       } as never);
 
       const res = await app.inject({
@@ -127,11 +129,11 @@ describe('Paper Trading Routes', () => {
         id: 'pos-1',
         symbol: 'BTCUSDT',
         side: 'LONG',
-        quantity: '1.0',
-        entryPrice: '50000',
-        margin: '1000',
-        openedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        quantity: { toString: () => '1.0' },
+        entryPrice: { toString: () => '50000' },
+        margin: { toString: () => '1000' },
+        openedAt: new Date(),
+        updatedAt: new Date(),
       } as never);
 
       const res = await app.inject({
@@ -160,13 +162,13 @@ describe('Paper Trading Routes', () => {
         symbol: 'BTCUSDT',
         side: 'BUY',
         orderType: 'MARKET',
-        quantity: '1.0',
+        quantity: { toString: () => '1.0' },
         status: 'FILLED',
-        createdAt: new Date().toISOString(),
-        filledQuantity: '1.0',
-        margin: '0',
-        commission: '0',
-        updatedAt: new Date().toISOString(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        filledQuantity: { toString: () => '1.0' },
+        margin: { toString: () => '0' },
+        commission: { toString: () => '0' },
       } as never);
 
       const res = await app.inject({
