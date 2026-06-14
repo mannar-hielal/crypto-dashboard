@@ -1,2 +1,5 @@
-pnpm test
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
 
+# Note: Tests now run in pre-commit
+exit 0
