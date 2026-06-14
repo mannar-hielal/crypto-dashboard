@@ -121,7 +121,11 @@ export async function buildApp() {
         'Unhandled server error'
       );
       // 🔐 Never leak internal details (DB errors, stack traces) to the client
-      void reply.status(statusCode).send({ error: 'Internal Server Error' });
+      // In development, we return the message to help debugging.
+      void reply.status(statusCode).send({
+        error: 'Internal Server Error',
+        ...(config.nodeEnv === 'development' && { message: error.message }),
+      });
       return;
     }
 

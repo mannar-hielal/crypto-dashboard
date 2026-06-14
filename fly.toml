@@ -10,6 +10,8 @@ dockerfile = "apps/server/Dockerfile"
 [env]
 NODE_ENV = "production"
 PORT     = "3001"
+CLIENT_URL = "https://cryptopapertrade.com"
+CORS_ORIGIN = "https://cryptopapertrade.com"
 # All secrets (DATABASE_URL, REDIS_URL, JWT_SECRET, etc.) are set via:
 #   fly secrets set KEY=value
 # Never put secrets in this file.

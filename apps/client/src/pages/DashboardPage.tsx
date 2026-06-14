@@ -83,6 +83,12 @@ function DashboardInner() {
   const updateUser = useAuthStore((s) => s.updateUser);
   const syncWithServer = usePaperStore((s) => s.syncWithServer);
 
+  const activePaneIndex = useLayoutStore((s) => s.activePane);
+  const panes = useLayoutStore((s) => s.panes);
+  const activePaneConfig = panes[activePaneIndex] ?? panes[0];
+  const symbol = activePaneConfig.symbol;
+  const setBottomPanelHeight = useLayoutStore((s) => s.setBottomPanelHeight);
+
   // 🔄 Sync paper trading state with DB on mount (if authenticated)
   useEffect(() => {
     if (accessToken) {
@@ -365,7 +371,7 @@ function DashboardInner() {
           style={{ pointerEvents: isTradingPanelVisible ? 'auto' : 'none' }}
         >
           <TradingPanel
-            key={`${activePane}-${symbol}`}
+            key={`${activePaneIndex}-${symbol}`}
             onClose={() => setTradingPanelOpen(false)}
             initialTab={tradingTab}
             onTabChange={setTradingTab}

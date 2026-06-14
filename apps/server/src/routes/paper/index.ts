@@ -100,8 +100,70 @@ const errorResponse = {
   additionalProperties: false,
   properties: {
     error: { type: 'string' },
+    message: { type: 'string' },
   },
 };
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+
+function serializeAccount(account: any) {
+  return {
+    ...account,
+    totalBalance: account.totalBalance.toString(),
+    availableBalance: account.availableBalance.toString(),
+    unrealizedPnl: account.unrealizedPnl.toString(),
+    realizedPnl: account.realizedPnl.toString(),
+    lastReset: account.lastReset.toISOString(),
+  };
+}
+
+function serializeOrder(order: any) {
+  return {
+    ...order,
+    quantity: order.quantity.toString(),
+    limitPrice: order.limitPrice?.toString() ?? null,
+    stopPrice: order.stopPrice?.toString() ?? null,
+    takeProfit: order.takeProfit?.toString() ?? null,
+    stopLoss: order.stopLoss?.toString() ?? null,
+    filledQuantity: order.filledQuantity.toString(),
+    averageFilledPrice: order.averageFilledPrice?.toString() ?? null,
+    margin: order.margin.toString(),
+    commission: order.commission.toString(),
+    createdAt: order.createdAt.toISOString(),
+    updatedAt: order.updatedAt.toISOString(),
+    filledAt: order.filledAt?.toISOString() ?? null,
+    cancelledAt: order.cancelledAt?.toISOString() ?? null,
+  };
+}
+
+function serializeTrade(trade: any) {
+  return {
+    ...trade,
+    quantity: trade.quantity.toString(),
+    executedPrice: trade.executedPrice.toString(),
+    entryPrice: trade.entryPrice?.toString() ?? null,
+    totalCost: trade.totalCost.toString(),
+    commission: trade.commission.toString(),
+    pnl: trade.pnl.toString(),
+    pnlPercent: trade.pnlPercent.toString(),
+    openedAt: trade.openedAt?.toISOString() ?? null,
+    executedAt: trade.executedAt.toISOString(),
+    createdAt: trade.createdAt.toISOString(),
+  };
+}
+
+function serializePosition(position: any) {
+  return {
+    ...position,
+    quantity: position.quantity.toString(),
+    entryPrice: position.entryPrice.toString(),
+    margin: position.margin.toString(),
+    takeProfit: position.takeProfit?.toString() ?? null,
+    stopLoss: position.stopLoss?.toString() ?? null,
+    openedAt: position.openedAt.toISOString(),
+    updatedAt: position.updatedAt.toISOString(),
+  };
+}
 
 // ─── ROUTES ───────────────────────────────────────────────────────────────────
 
@@ -124,18 +186,26 @@ export async function paperRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { userId } = request.user as { userId: string };
 
-      let account = await app.prisma.account.findUnique({
-        where: { userId },
-      });
+      try {
+        let account = await app.prisma.account.findUnique({
+          where: { userId },
+        });
 
-      // Lazy-create account if it doesn't exist (e.g. for users migrated from Phase 1)
-      if (!account) {
-        account = await app.prisma.account.create({
-          data: { userId },
+        // Lazy-create account if it doesn't exist (e.g. for users migrated from Phase 1)
+        if (!account) {
+          account = await app.prisma.account.create({
+            data: { userId },
+          });
+        }
+
+        return reply.send(serializeAccount(account));
+      } catch (err) {
+        app.log.error({ err, userId }, 'Failed to fetch account');
+        return reply.status(500).send({
+          error: 'Internal Server Error',
+          message: err instanceof Error ? err.message : String(err)
         });
       }
-
-      return reply.send(account);
     }
   );
 
@@ -161,6 +231,7 @@ export async function paperRoutes(app: FastifyInstance) {
             type: 'array',
             items: orderResponse,
           },
+          500: errorResponse,
         },
       },
     },
@@ -168,16 +239,24 @@ export async function paperRoutes(app: FastifyInstance) {
       const { userId } = request.user as { userId: string };
       const { status, limit } = request.query as { status?: string; limit: number };
 
-      const orders = await app.prisma.order.findMany({
-        where: {
-          userId,
-          ...(status ? { status } : {}),
-        },
-        orderBy: { createdAt: 'desc' },
-        take: limit,
-      });
+      try {
+        const orders = await app.prisma.order.findMany({
+          where: {
+            userId,
+            ...(status ? { status } : {}),
+          },
+          orderBy: { createdAt: 'desc' },
+          take: limit || 50,
+        });
 
-      return reply.send(orders);
+        return reply.send(orders.map(serializeOrder));
+      } catch (err) {
+        app.log.error({ err, userId }, 'Failed to fetch orders');
+        return reply.status(500).send({
+          error: 'Internal Server Error',
+          message: err instanceof Error ? err.message : String(err)
+        });
+      }
     }
   );
 
@@ -202,6 +281,7 @@ export async function paperRoutes(app: FastifyInstance) {
             type: 'array',
             items: tradeResponse,
           },
+          500: errorResponse,
         },
       },
     },
@@ -209,13 +289,21 @@ export async function paperRoutes(app: FastifyInstance) {
       const { userId } = request.user as { userId: string };
       const { limit } = request.query as { limit: number };
 
-      const trades = await app.prisma.trade.findMany({
-        where: { userId },
-        orderBy: { executedAt: 'desc' },
-        take: limit,
-      });
+      try {
+        const trades = await app.prisma.trade.findMany({
+          where: { userId },
+          orderBy: { executedAt: 'desc' },
+          take: limit || 50,
+        });
 
-      return reply.send(trades);
+        return reply.send(trades.map(serializeTrade));
+      } catch (err) {
+        app.log.error({ err, userId }, 'Failed to fetch trades');
+        return reply.status(500).send({
+          error: 'Internal Server Error',
+          message: err instanceof Error ? err.message : String(err)
+        });
+      }
     }
   );
 
@@ -233,18 +321,27 @@ export async function paperRoutes(app: FastifyInstance) {
             type: 'array',
             items: positionResponse,
           },
+          500: errorResponse,
         },
       },
     },
     async (request, reply) => {
       const { userId } = request.user as { userId: string };
 
-      const positions = await app.prisma.position.findMany({
-        where: { userId },
-        orderBy: { openedAt: 'desc' },
-      });
+      try {
+        const positions = await app.prisma.position.findMany({
+          where: { userId },
+          orderBy: { openedAt: 'desc' },
+        });
 
-      return reply.send(positions);
+        return reply.send(positions.map(serializePosition));
+      } catch (err) {
+        app.log.error({ err, userId }, 'Failed to fetch positions');
+        return reply.status(500).send({
+          error: 'Internal Server Error',
+          message: err instanceof Error ? err.message : String(err)
+        });
+      }
     }
   );
 
@@ -300,7 +397,7 @@ export async function paperRoutes(app: FastifyInstance) {
         },
       });
 
-      return reply.status(201).send(position);
+      return reply.status(201).send(serializePosition(position));
     }
   );
 
@@ -368,7 +465,7 @@ export async function paperRoutes(app: FastifyInstance) {
       // The client calls createPosition explicitly to ensure netting/merging logic
       // remains the single source of truth.
 
-      return reply.status(201).send(order);
+      return reply.status(201).send(serializeOrder(order));
     }
   );
 
@@ -383,31 +480,40 @@ export async function paperRoutes(app: FastifyInstance) {
         security: [{ bearerAuth: [] }],
         response: {
           200: accountResponse,
+          500: errorResponse,
         },
       },
     },
     async (request, reply) => {
       const { userId } = request.user as { userId: string };
 
-      const account = await app.prisma.account.update({
-        where: { userId },
-        data: {
-          totalBalance: 10000,
-          availableBalance: 10000,
-          unrealizedPnl: 0,
-          realizedPnl: 0,
-          lastReset: new Date(),
-          resetCount: { increment: 1 },
-        },
-      });
+      try {
+        const account = await app.prisma.account.update({
+          where: { userId },
+          data: {
+            totalBalance: 10000,
+            availableBalance: 10000,
+            unrealizedPnl: 0,
+            realizedPnl: 0,
+            lastReset: new Date(),
+            resetCount: { increment: 1 },
+          },
+        });
 
-      // Clear all active orders and trades on reset?
-      // In paper trading, usually yes.
-      await app.prisma.order.deleteMany({ where: { userId } });
-      await app.prisma.trade.deleteMany({ where: { userId } });
-      await app.prisma.position.deleteMany({ where: { userId } });
+        // Clear all active orders and trades on reset?
+        // In paper trading, usually yes.
+        await app.prisma.order.deleteMany({ where: { userId } });
+        await app.prisma.trade.deleteMany({ where: { userId } });
+        await app.prisma.position.deleteMany({ where: { userId } });
 
-      return reply.send(account);
+        return reply.send(serializeAccount(account));
+      } catch (err) {
+        app.log.error({ err, userId }, 'Failed to reset account');
+        return reply.status(500).send({
+          error: 'Internal Server Error',
+          message: err instanceof Error ? err.message : String(err)
+        });
+      }
     }
   );
 
@@ -432,6 +538,7 @@ export async function paperRoutes(app: FastifyInstance) {
         },
         response: {
           200: accountResponse,
+          500: errorResponse,
         },
       },
     },
@@ -439,17 +546,25 @@ export async function paperRoutes(app: FastifyInstance) {
       const { userId } = request.user as { userId: string };
       const body = request.body as Partial<SyncAccountResponse>;
 
-      const account = await app.prisma.account.update({
-        where: { userId },
-        data: {
-          totalBalance: body.totalBalance,
-          availableBalance: body.availableBalance,
-          unrealizedPnl: body.unrealizedPnl,
-          realizedPnl: body.realizedPnl,
-        },
-      });
+      try {
+        const account = await app.prisma.account.update({
+          where: { userId },
+          data: {
+            totalBalance: body.totalBalance,
+            availableBalance: body.availableBalance,
+            unrealizedPnl: body.unrealizedPnl,
+            realizedPnl: body.realizedPnl,
+          },
+        });
 
-      return reply.send(account);
+        return reply.send(serializeAccount(account));
+      } catch (err) {
+        app.log.error({ err, userId }, 'Failed to update account');
+        return reply.status(500).send({
+          error: 'Internal Server Error',
+          message: err instanceof Error ? err.message : String(err)
+        });
+      }
     }
   );
 
@@ -516,7 +631,7 @@ export async function paperRoutes(app: FastifyInstance) {
         },
       });
 
-      return reply.send(order);
+      return reply.send(serializeOrder(order));
     }
   );
 
@@ -580,7 +695,7 @@ export async function paperRoutes(app: FastifyInstance) {
         },
       });
 
-      return reply.status(201).send(trade);
+      return reply.status(201).send(serializeTrade(trade));
     }
   );
 
@@ -673,7 +788,7 @@ export async function paperRoutes(app: FastifyInstance) {
         data: body,
       });
 
-      return reply.send(position);
+      return reply.send(serializePosition(position));
     }
   );
 }

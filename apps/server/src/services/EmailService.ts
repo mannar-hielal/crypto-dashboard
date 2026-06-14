@@ -62,9 +62,14 @@ export const EmailService = {
     const client = getResend();
 
     // 🔧 Dev fallback: log to stdout so you can test the flow without a real key.
-    // 🔐 Gated to non-production — never log raw reset URLs (contain live tokens) in prod.
+    if (config.nodeEnv !== 'production') {
+      logger.info({ to, resetUrl }, '📧 [DEV] Password reset link');
+    }
+
     if (!client) {
-      logMissingResendKey('Password reset link', { to, resetUrl });
+      if (config.nodeEnv === 'production') {
+        logMissingResendKey('Password reset link', { to });
+      }
       return;
     }
 
