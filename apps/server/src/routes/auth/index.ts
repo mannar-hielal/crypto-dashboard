@@ -482,7 +482,7 @@ export async function authRoutes(app: FastifyInstance) {
         acceptedTerms: boolean;
       };
 
-      app.log.info({ email, username }, '📝 Registration attempt');
+      app.log.info('📝 Registration attempt');
 
       // 🔐 Normalize inputs before processing
       const normalizedEmail = email.toLowerCase().trim();

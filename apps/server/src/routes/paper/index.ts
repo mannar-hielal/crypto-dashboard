@@ -109,27 +109,34 @@ const errorResponse = {
 
 function serializeAccount(account: Account) {
   return {
-    ...account,
+    id: account.id,
     totalBalance: account.totalBalance.toString(),
     availableBalance: account.availableBalance.toString(),
     unrealizedPnl: account.unrealizedPnl.toString(),
     realizedPnl: account.realizedPnl.toString(),
     lastReset: account.lastReset.toISOString(),
+    resetCount: account.resetCount,
   };
 }
 
 function serializeOrder(order: Order) {
   return {
-    ...order,
+    id: order.id,
+    refId: order.refId,
+    symbol: order.symbol,
+    side: order.side,
+    orderType: order.orderType,
     quantity: order.quantity.toString(),
     limitPrice: order.limitPrice?.toString() ?? null,
     stopPrice: order.stopPrice?.toString() ?? null,
     takeProfit: order.takeProfit?.toString() ?? null,
     stopLoss: order.stopLoss?.toString() ?? null,
+    status: order.status,
     filledQuantity: order.filledQuantity.toString(),
     averageFilledPrice: order.averageFilledPrice?.toString() ?? null,
     margin: order.margin.toString(),
     commission: order.commission.toString(),
+    rejectionReason: order.rejectionReason,
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
     filledAt: order.filledAt?.toISOString() ?? null,
@@ -139,7 +146,10 @@ function serializeOrder(order: Order) {
 
 function serializeTrade(trade: Trade) {
   return {
-    ...trade,
+    id: trade.id,
+    refId: trade.refId,
+    symbol: trade.symbol,
+    side: trade.side,
     quantity: trade.quantity.toString(),
     executedPrice: trade.executedPrice.toString(),
     entryPrice: trade.entryPrice?.toString() ?? null,
@@ -149,13 +159,15 @@ function serializeTrade(trade: Trade) {
     pnlPercent: trade.pnlPercent.toString(),
     openedAt: trade.openedAt?.toISOString() ?? null,
     executedAt: trade.executedAt.toISOString(),
-    createdAt: trade.createdAt.toISOString(),
   };
 }
 
 function serializePosition(position: Position) {
   return {
-    ...position,
+    id: position.id,
+    refId: position.refId,
+    symbol: position.symbol,
+    side: position.side,
     quantity: position.quantity.toString(),
     entryPrice: position.entryPrice.toString(),
     margin: position.margin.toString(),
