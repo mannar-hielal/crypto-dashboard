@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router';
 import { motion } from 'framer-motion';
 import { CheckCircle2, AlertCircle, Loader2, ArrowLeft } from 'lucide-react';
@@ -9,6 +9,7 @@ export function VerifyEmailPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get('token');
+  const hasAttempted = useRef(false);
 
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>(() =>
     !token ? 'error' : 'loading'
@@ -16,9 +17,10 @@ export function VerifyEmailPage() {
   const [message, setMessage] = useState(() => (!token ? 'Missing verification token.' : ''));
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || status !== 'loading' || hasAttempted.current) return;
 
     const verify = async () => {
+      hasAttempted.current = true;
       try {
         const res = await authApi.verifyEmail({ token });
         setStatus('success');
@@ -31,7 +33,7 @@ export function VerifyEmailPage() {
     };
 
     verify();
-  }, [token, navigate]);
+  }, [token, navigate, status]);
 
   return (
     <div

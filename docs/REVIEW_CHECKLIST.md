@@ -241,3 +241,11 @@
 ---
 
 ## Quick Self-Checklist (run every time)
+
+- [ ] `pnpm type-check` passes (server + client)
+- [ ] `pnpm lint` and `pnpm format` pass
+- [ ] `pnpm test` passes (server + client)
+- [ ] No secrets committed (audited against `.env.example`)
+- [ ] Protected routes use `onRequest: [app.authenticate]`
+- [ ] API changes synced to `generated/CDSDK`
+- [ ] Database migrations committed

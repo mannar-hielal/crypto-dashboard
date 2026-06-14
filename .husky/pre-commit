@@ -1,14 +1,26 @@
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
 
-# 1. Type-check (catches TS errors ESLint misses)
-pnpm --filter server type-check
+# 1. Visual Reminder of Manual Checks
+echo "\033[0;33m📋 REVIEW CHECKLIST REMINDER\033[0m"
+echo "---------------------------------------"
+echo "- No secrets in code? Check .env.example"
+echo "- Security comments (🔐) added?"
+echo "- SDK types updated for API changes?"
+echo "Full list: docs/REVIEW_CHECKLIST.md"
+echo "---------------------------------------"
 
-# 2. Auto-fix + format staged files only (fast, per-file)
+# 2. Automated Enforcement Gates
+# Type-check catches errors ESLint misses
+pnpm --filter @crypto-dashboard/server type-check
+pnpm --filter @crypto-dashboard/client type-check
+
+# Run tests (Mirroring the 'Tests pass' checklist item)
+pnpm test
+
+# Auto-fix + format staged files
 pnpm lint-staged
 
-# 3. Full project lint — catches issues that only appear when ESLint walks
-#    the whole project (e.g. files missing from tsconfig, cross-file rules).
-#    This mirrors exactly what CI runs, so "works locally" = "passes CI".
+# Full project lint mirroring CI
 pnpm lint
 

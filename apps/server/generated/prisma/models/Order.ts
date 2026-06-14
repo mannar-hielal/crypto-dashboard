@@ -29,19 +29,30 @@ export type AggregateOrder = {
 export type OrderAvgAggregateOutputType = {
   quantity: runtime.Decimal | null
   limitPrice: runtime.Decimal | null
+  stopPrice: runtime.Decimal | null
+  takeProfit: runtime.Decimal | null
+  stopLoss: runtime.Decimal | null
   filledQuantity: runtime.Decimal | null
   averageFilledPrice: runtime.Decimal | null
+  margin: runtime.Decimal | null
+  commission: runtime.Decimal | null
 }
 
 export type OrderSumAggregateOutputType = {
   quantity: runtime.Decimal | null
   limitPrice: runtime.Decimal | null
+  stopPrice: runtime.Decimal | null
+  takeProfit: runtime.Decimal | null
+  stopLoss: runtime.Decimal | null
   filledQuantity: runtime.Decimal | null
   averageFilledPrice: runtime.Decimal | null
+  margin: runtime.Decimal | null
+  commission: runtime.Decimal | null
 }
 
 export type OrderMinAggregateOutputType = {
   id: string | null
+  refId: string | null
   userId: string | null
   accountId: string | null
   symbol: string | null
@@ -49,9 +60,15 @@ export type OrderMinAggregateOutputType = {
   orderType: string | null
   quantity: runtime.Decimal | null
   limitPrice: runtime.Decimal | null
+  stopPrice: runtime.Decimal | null
+  takeProfit: runtime.Decimal | null
+  stopLoss: runtime.Decimal | null
   filledQuantity: runtime.Decimal | null
   averageFilledPrice: runtime.Decimal | null
+  margin: runtime.Decimal | null
+  commission: runtime.Decimal | null
   status: string | null
+  rejectionReason: string | null
   createdAt: Date | null
   filledAt: Date | null
   cancelledAt: Date | null
@@ -60,6 +77,7 @@ export type OrderMinAggregateOutputType = {
 
 export type OrderMaxAggregateOutputType = {
   id: string | null
+  refId: string | null
   userId: string | null
   accountId: string | null
   symbol: string | null
@@ -67,9 +85,15 @@ export type OrderMaxAggregateOutputType = {
   orderType: string | null
   quantity: runtime.Decimal | null
   limitPrice: runtime.Decimal | null
+  stopPrice: runtime.Decimal | null
+  takeProfit: runtime.Decimal | null
+  stopLoss: runtime.Decimal | null
   filledQuantity: runtime.Decimal | null
   averageFilledPrice: runtime.Decimal | null
+  margin: runtime.Decimal | null
+  commission: runtime.Decimal | null
   status: string | null
+  rejectionReason: string | null
   createdAt: Date | null
   filledAt: Date | null
   cancelledAt: Date | null
@@ -78,6 +102,7 @@ export type OrderMaxAggregateOutputType = {
 
 export type OrderCountAggregateOutputType = {
   id: number
+  refId: number
   userId: number
   accountId: number
   symbol: number
@@ -85,9 +110,15 @@ export type OrderCountAggregateOutputType = {
   orderType: number
   quantity: number
   limitPrice: number
+  stopPrice: number
+  takeProfit: number
+  stopLoss: number
   filledQuantity: number
   averageFilledPrice: number
+  margin: number
+  commission: number
   status: number
+  rejectionReason: number
   createdAt: number
   filledAt: number
   cancelledAt: number
@@ -99,19 +130,30 @@ export type OrderCountAggregateOutputType = {
 export type OrderAvgAggregateInputType = {
   quantity?: true
   limitPrice?: true
+  stopPrice?: true
+  takeProfit?: true
+  stopLoss?: true
   filledQuantity?: true
   averageFilledPrice?: true
+  margin?: true
+  commission?: true
 }
 
 export type OrderSumAggregateInputType = {
   quantity?: true
   limitPrice?: true
+  stopPrice?: true
+  takeProfit?: true
+  stopLoss?: true
   filledQuantity?: true
   averageFilledPrice?: true
+  margin?: true
+  commission?: true
 }
 
 export type OrderMinAggregateInputType = {
   id?: true
+  refId?: true
   userId?: true
   accountId?: true
   symbol?: true
@@ -119,9 +161,15 @@ export type OrderMinAggregateInputType = {
   orderType?: true
   quantity?: true
   limitPrice?: true
+  stopPrice?: true
+  takeProfit?: true
+  stopLoss?: true
   filledQuantity?: true
   averageFilledPrice?: true
+  margin?: true
+  commission?: true
   status?: true
+  rejectionReason?: true
   createdAt?: true
   filledAt?: true
   cancelledAt?: true
@@ -130,6 +178,7 @@ export type OrderMinAggregateInputType = {
 
 export type OrderMaxAggregateInputType = {
   id?: true
+  refId?: true
   userId?: true
   accountId?: true
   symbol?: true
@@ -137,9 +186,15 @@ export type OrderMaxAggregateInputType = {
   orderType?: true
   quantity?: true
   limitPrice?: true
+  stopPrice?: true
+  takeProfit?: true
+  stopLoss?: true
   filledQuantity?: true
   averageFilledPrice?: true
+  margin?: true
+  commission?: true
   status?: true
+  rejectionReason?: true
   createdAt?: true
   filledAt?: true
   cancelledAt?: true
@@ -148,6 +203,7 @@ export type OrderMaxAggregateInputType = {
 
 export type OrderCountAggregateInputType = {
   id?: true
+  refId?: true
   userId?: true
   accountId?: true
   symbol?: true
@@ -155,9 +211,15 @@ export type OrderCountAggregateInputType = {
   orderType?: true
   quantity?: true
   limitPrice?: true
+  stopPrice?: true
+  takeProfit?: true
+  stopLoss?: true
   filledQuantity?: true
   averageFilledPrice?: true
+  margin?: true
+  commission?: true
   status?: true
+  rejectionReason?: true
   createdAt?: true
   filledAt?: true
   cancelledAt?: true
@@ -253,6 +315,7 @@ export type OrderGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalAr
 
 export type OrderGroupByOutputType = {
   id: string
+  refId: string | null
   userId: string
   accountId: string
   symbol: string
@@ -260,9 +323,15 @@ export type OrderGroupByOutputType = {
   orderType: string
   quantity: runtime.Decimal
   limitPrice: runtime.Decimal | null
+  stopPrice: runtime.Decimal | null
+  takeProfit: runtime.Decimal | null
+  stopLoss: runtime.Decimal | null
   filledQuantity: runtime.Decimal
   averageFilledPrice: runtime.Decimal | null
+  margin: runtime.Decimal
+  commission: runtime.Decimal
   status: string
+  rejectionReason: string | null
   createdAt: Date
   filledAt: Date | null
   cancelledAt: Date | null
@@ -294,6 +363,7 @@ export type OrderWhereInput = {
   OR?: Prisma.OrderWhereInput[]
   NOT?: Prisma.OrderWhereInput | Prisma.OrderWhereInput[]
   id?: Prisma.StringFilter<"Order"> | string
+  refId?: Prisma.StringNullableFilter<"Order"> | string | null
   userId?: Prisma.StringFilter<"Order"> | string
   accountId?: Prisma.StringFilter<"Order"> | string
   symbol?: Prisma.StringFilter<"Order"> | string
@@ -301,9 +371,15 @@ export type OrderWhereInput = {
   orderType?: Prisma.StringFilter<"Order"> | string
   quantity?: Prisma.DecimalFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: Prisma.DecimalNullableFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: Prisma.DecimalNullableFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: Prisma.DecimalNullableFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: Prisma.DecimalNullableFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: Prisma.DecimalFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: Prisma.DecimalNullableFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: Prisma.DecimalFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: Prisma.DecimalFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: Prisma.StringFilter<"Order"> | string
+  rejectionReason?: Prisma.StringNullableFilter<"Order"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Order"> | Date | string
   filledAt?: Prisma.DateTimeNullableFilter<"Order"> | Date | string | null
   cancelledAt?: Prisma.DateTimeNullableFilter<"Order"> | Date | string | null
@@ -315,6 +391,7 @@ export type OrderWhereInput = {
 
 export type OrderOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  refId?: Prisma.SortOrderInput | Prisma.SortOrder
   userId?: Prisma.SortOrder
   accountId?: Prisma.SortOrder
   symbol?: Prisma.SortOrder
@@ -322,9 +399,15 @@ export type OrderOrderByWithRelationInput = {
   orderType?: Prisma.SortOrder
   quantity?: Prisma.SortOrder
   limitPrice?: Prisma.SortOrderInput | Prisma.SortOrder
+  stopPrice?: Prisma.SortOrderInput | Prisma.SortOrder
+  takeProfit?: Prisma.SortOrderInput | Prisma.SortOrder
+  stopLoss?: Prisma.SortOrderInput | Prisma.SortOrder
   filledQuantity?: Prisma.SortOrder
   averageFilledPrice?: Prisma.SortOrderInput | Prisma.SortOrder
+  margin?: Prisma.SortOrder
+  commission?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  rejectionReason?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   filledAt?: Prisma.SortOrderInput | Prisma.SortOrder
   cancelledAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -336,6 +419,7 @@ export type OrderOrderByWithRelationInput = {
 
 export type OrderWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  refId?: string
   AND?: Prisma.OrderWhereInput | Prisma.OrderWhereInput[]
   OR?: Prisma.OrderWhereInput[]
   NOT?: Prisma.OrderWhereInput | Prisma.OrderWhereInput[]
@@ -346,9 +430,15 @@ export type OrderWhereUniqueInput = Prisma.AtLeast<{
   orderType?: Prisma.StringFilter<"Order"> | string
   quantity?: Prisma.DecimalFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: Prisma.DecimalNullableFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: Prisma.DecimalNullableFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: Prisma.DecimalNullableFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: Prisma.DecimalNullableFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: Prisma.DecimalFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: Prisma.DecimalNullableFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: Prisma.DecimalFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: Prisma.DecimalFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: Prisma.StringFilter<"Order"> | string
+  rejectionReason?: Prisma.StringNullableFilter<"Order"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Order"> | Date | string
   filledAt?: Prisma.DateTimeNullableFilter<"Order"> | Date | string | null
   cancelledAt?: Prisma.DateTimeNullableFilter<"Order"> | Date | string | null
@@ -356,10 +446,11 @@ export type OrderWhereUniqueInput = Prisma.AtLeast<{
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   account?: Prisma.XOR<Prisma.AccountScalarRelationFilter, Prisma.AccountWhereInput>
   trades?: Prisma.TradeListRelationFilter
-}, "id">
+}, "id" | "refId">
 
 export type OrderOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  refId?: Prisma.SortOrderInput | Prisma.SortOrder
   userId?: Prisma.SortOrder
   accountId?: Prisma.SortOrder
   symbol?: Prisma.SortOrder
@@ -367,9 +458,15 @@ export type OrderOrderByWithAggregationInput = {
   orderType?: Prisma.SortOrder
   quantity?: Prisma.SortOrder
   limitPrice?: Prisma.SortOrderInput | Prisma.SortOrder
+  stopPrice?: Prisma.SortOrderInput | Prisma.SortOrder
+  takeProfit?: Prisma.SortOrderInput | Prisma.SortOrder
+  stopLoss?: Prisma.SortOrderInput | Prisma.SortOrder
   filledQuantity?: Prisma.SortOrder
   averageFilledPrice?: Prisma.SortOrderInput | Prisma.SortOrder
+  margin?: Prisma.SortOrder
+  commission?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  rejectionReason?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   filledAt?: Prisma.SortOrderInput | Prisma.SortOrder
   cancelledAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -386,6 +483,7 @@ export type OrderScalarWhereWithAggregatesInput = {
   OR?: Prisma.OrderScalarWhereWithAggregatesInput[]
   NOT?: Prisma.OrderScalarWhereWithAggregatesInput | Prisma.OrderScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"Order"> | string
+  refId?: Prisma.StringNullableWithAggregatesFilter<"Order"> | string | null
   userId?: Prisma.StringWithAggregatesFilter<"Order"> | string
   accountId?: Prisma.StringWithAggregatesFilter<"Order"> | string
   symbol?: Prisma.StringWithAggregatesFilter<"Order"> | string
@@ -393,9 +491,15 @@ export type OrderScalarWhereWithAggregatesInput = {
   orderType?: Prisma.StringWithAggregatesFilter<"Order"> | string
   quantity?: Prisma.DecimalWithAggregatesFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: Prisma.DecimalNullableWithAggregatesFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: Prisma.DecimalNullableWithAggregatesFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: Prisma.DecimalNullableWithAggregatesFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: Prisma.DecimalNullableWithAggregatesFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: Prisma.DecimalWithAggregatesFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: Prisma.DecimalNullableWithAggregatesFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: Prisma.DecimalWithAggregatesFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: Prisma.DecimalWithAggregatesFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: Prisma.StringWithAggregatesFilter<"Order"> | string
+  rejectionReason?: Prisma.StringNullableWithAggregatesFilter<"Order"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Order"> | Date | string
   filledAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Order"> | Date | string | null
   cancelledAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Order"> | Date | string | null
@@ -404,14 +508,21 @@ export type OrderScalarWhereWithAggregatesInput = {
 
 export type OrderCreateInput = {
   id?: string
+  refId?: string | null
   symbol: string
   side: string
   orderType: string
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: string
+  rejectionReason?: string | null
   createdAt?: Date | string
   filledAt?: Date | string | null
   cancelledAt?: Date | string | null
@@ -423,6 +534,7 @@ export type OrderCreateInput = {
 
 export type OrderUncheckedCreateInput = {
   id?: string
+  refId?: string | null
   userId: string
   accountId: string
   symbol: string
@@ -430,9 +542,15 @@ export type OrderUncheckedCreateInput = {
   orderType: string
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: string
+  rejectionReason?: string | null
   createdAt?: Date | string
   filledAt?: Date | string | null
   cancelledAt?: Date | string | null
@@ -442,14 +560,21 @@ export type OrderUncheckedCreateInput = {
 
 export type OrderUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  refId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   symbol?: Prisma.StringFieldUpdateOperationsInput | string
   side?: Prisma.StringFieldUpdateOperationsInput | string
   orderType?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   filledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -461,6 +586,7 @@ export type OrderUpdateInput = {
 
 export type OrderUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  refId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   accountId?: Prisma.StringFieldUpdateOperationsInput | string
   symbol?: Prisma.StringFieldUpdateOperationsInput | string
@@ -468,9 +594,15 @@ export type OrderUncheckedUpdateInput = {
   orderType?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   filledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -480,6 +612,7 @@ export type OrderUncheckedUpdateInput = {
 
 export type OrderCreateManyInput = {
   id?: string
+  refId?: string | null
   userId: string
   accountId: string
   symbol: string
@@ -487,9 +620,15 @@ export type OrderCreateManyInput = {
   orderType: string
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: string
+  rejectionReason?: string | null
   createdAt?: Date | string
   filledAt?: Date | string | null
   cancelledAt?: Date | string | null
@@ -498,14 +637,21 @@ export type OrderCreateManyInput = {
 
 export type OrderUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  refId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   symbol?: Prisma.StringFieldUpdateOperationsInput | string
   side?: Prisma.StringFieldUpdateOperationsInput | string
   orderType?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   filledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -514,6 +660,7 @@ export type OrderUpdateManyMutationInput = {
 
 export type OrderUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  refId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   accountId?: Prisma.StringFieldUpdateOperationsInput | string
   symbol?: Prisma.StringFieldUpdateOperationsInput | string
@@ -521,9 +668,15 @@ export type OrderUncheckedUpdateManyInput = {
   orderType?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   filledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -542,6 +695,7 @@ export type OrderOrderByRelationAggregateInput = {
 
 export type OrderCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  refId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   accountId?: Prisma.SortOrder
   symbol?: Prisma.SortOrder
@@ -549,9 +703,15 @@ export type OrderCountOrderByAggregateInput = {
   orderType?: Prisma.SortOrder
   quantity?: Prisma.SortOrder
   limitPrice?: Prisma.SortOrder
+  stopPrice?: Prisma.SortOrder
+  takeProfit?: Prisma.SortOrder
+  stopLoss?: Prisma.SortOrder
   filledQuantity?: Prisma.SortOrder
   averageFilledPrice?: Prisma.SortOrder
+  margin?: Prisma.SortOrder
+  commission?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  rejectionReason?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   filledAt?: Prisma.SortOrder
   cancelledAt?: Prisma.SortOrder
@@ -561,12 +721,18 @@ export type OrderCountOrderByAggregateInput = {
 export type OrderAvgOrderByAggregateInput = {
   quantity?: Prisma.SortOrder
   limitPrice?: Prisma.SortOrder
+  stopPrice?: Prisma.SortOrder
+  takeProfit?: Prisma.SortOrder
+  stopLoss?: Prisma.SortOrder
   filledQuantity?: Prisma.SortOrder
   averageFilledPrice?: Prisma.SortOrder
+  margin?: Prisma.SortOrder
+  commission?: Prisma.SortOrder
 }
 
 export type OrderMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  refId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   accountId?: Prisma.SortOrder
   symbol?: Prisma.SortOrder
@@ -574,9 +740,15 @@ export type OrderMaxOrderByAggregateInput = {
   orderType?: Prisma.SortOrder
   quantity?: Prisma.SortOrder
   limitPrice?: Prisma.SortOrder
+  stopPrice?: Prisma.SortOrder
+  takeProfit?: Prisma.SortOrder
+  stopLoss?: Prisma.SortOrder
   filledQuantity?: Prisma.SortOrder
   averageFilledPrice?: Prisma.SortOrder
+  margin?: Prisma.SortOrder
+  commission?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  rejectionReason?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   filledAt?: Prisma.SortOrder
   cancelledAt?: Prisma.SortOrder
@@ -585,6 +757,7 @@ export type OrderMaxOrderByAggregateInput = {
 
 export type OrderMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  refId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   accountId?: Prisma.SortOrder
   symbol?: Prisma.SortOrder
@@ -592,9 +765,15 @@ export type OrderMinOrderByAggregateInput = {
   orderType?: Prisma.SortOrder
   quantity?: Prisma.SortOrder
   limitPrice?: Prisma.SortOrder
+  stopPrice?: Prisma.SortOrder
+  takeProfit?: Prisma.SortOrder
+  stopLoss?: Prisma.SortOrder
   filledQuantity?: Prisma.SortOrder
   averageFilledPrice?: Prisma.SortOrder
+  margin?: Prisma.SortOrder
+  commission?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  rejectionReason?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   filledAt?: Prisma.SortOrder
   cancelledAt?: Prisma.SortOrder
@@ -604,8 +783,13 @@ export type OrderMinOrderByAggregateInput = {
 export type OrderSumOrderByAggregateInput = {
   quantity?: Prisma.SortOrder
   limitPrice?: Prisma.SortOrder
+  stopPrice?: Prisma.SortOrder
+  takeProfit?: Prisma.SortOrder
+  stopLoss?: Prisma.SortOrder
   filledQuantity?: Prisma.SortOrder
   averageFilledPrice?: Prisma.SortOrder
+  margin?: Prisma.SortOrder
+  commission?: Prisma.SortOrder
 }
 
 export type OrderNullableScalarRelationFilter = {
@@ -697,14 +881,6 @@ export type OrderUncheckedUpdateManyWithoutAccountNestedInput = {
   deleteMany?: Prisma.OrderScalarWhereInput | Prisma.OrderScalarWhereInput[]
 }
 
-export type NullableDecimalFieldUpdateOperationsInput = {
-  set?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  increment?: runtime.Decimal | runtime.DecimalJsLike | number | string
-  decrement?: runtime.Decimal | runtime.DecimalJsLike | number | string
-  multiply?: runtime.Decimal | runtime.DecimalJsLike | number | string
-  divide?: runtime.Decimal | runtime.DecimalJsLike | number | string
-}
-
 export type OrderCreateNestedOneWithoutTradesInput = {
   create?: Prisma.XOR<Prisma.OrderCreateWithoutTradesInput, Prisma.OrderUncheckedCreateWithoutTradesInput>
   connectOrCreate?: Prisma.OrderCreateOrConnectWithoutTradesInput
@@ -723,14 +899,21 @@ export type OrderUpdateOneWithoutTradesNestedInput = {
 
 export type OrderCreateWithoutUserInput = {
   id?: string
+  refId?: string | null
   symbol: string
   side: string
   orderType: string
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: string
+  rejectionReason?: string | null
   createdAt?: Date | string
   filledAt?: Date | string | null
   cancelledAt?: Date | string | null
@@ -741,15 +924,22 @@ export type OrderCreateWithoutUserInput = {
 
 export type OrderUncheckedCreateWithoutUserInput = {
   id?: string
+  refId?: string | null
   accountId: string
   symbol: string
   side: string
   orderType: string
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: string
+  rejectionReason?: string | null
   createdAt?: Date | string
   filledAt?: Date | string | null
   cancelledAt?: Date | string | null
@@ -788,6 +978,7 @@ export type OrderScalarWhereInput = {
   OR?: Prisma.OrderScalarWhereInput[]
   NOT?: Prisma.OrderScalarWhereInput | Prisma.OrderScalarWhereInput[]
   id?: Prisma.StringFilter<"Order"> | string
+  refId?: Prisma.StringNullableFilter<"Order"> | string | null
   userId?: Prisma.StringFilter<"Order"> | string
   accountId?: Prisma.StringFilter<"Order"> | string
   symbol?: Prisma.StringFilter<"Order"> | string
@@ -795,9 +986,15 @@ export type OrderScalarWhereInput = {
   orderType?: Prisma.StringFilter<"Order"> | string
   quantity?: Prisma.DecimalFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: Prisma.DecimalNullableFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: Prisma.DecimalNullableFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: Prisma.DecimalNullableFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: Prisma.DecimalNullableFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: Prisma.DecimalFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: Prisma.DecimalNullableFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: Prisma.DecimalFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: Prisma.DecimalFilter<"Order"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: Prisma.StringFilter<"Order"> | string
+  rejectionReason?: Prisma.StringNullableFilter<"Order"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Order"> | Date | string
   filledAt?: Prisma.DateTimeNullableFilter<"Order"> | Date | string | null
   cancelledAt?: Prisma.DateTimeNullableFilter<"Order"> | Date | string | null
@@ -806,14 +1003,21 @@ export type OrderScalarWhereInput = {
 
 export type OrderCreateWithoutAccountInput = {
   id?: string
+  refId?: string | null
   symbol: string
   side: string
   orderType: string
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: string
+  rejectionReason?: string | null
   createdAt?: Date | string
   filledAt?: Date | string | null
   cancelledAt?: Date | string | null
@@ -824,15 +1028,22 @@ export type OrderCreateWithoutAccountInput = {
 
 export type OrderUncheckedCreateWithoutAccountInput = {
   id?: string
+  refId?: string | null
   userId: string
   symbol: string
   side: string
   orderType: string
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: string
+  rejectionReason?: string | null
   createdAt?: Date | string
   filledAt?: Date | string | null
   cancelledAt?: Date | string | null
@@ -868,14 +1079,21 @@ export type OrderUpdateManyWithWhereWithoutAccountInput = {
 
 export type OrderCreateWithoutTradesInput = {
   id?: string
+  refId?: string | null
   symbol: string
   side: string
   orderType: string
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: string
+  rejectionReason?: string | null
   createdAt?: Date | string
   filledAt?: Date | string | null
   cancelledAt?: Date | string | null
@@ -886,6 +1104,7 @@ export type OrderCreateWithoutTradesInput = {
 
 export type OrderUncheckedCreateWithoutTradesInput = {
   id?: string
+  refId?: string | null
   userId: string
   accountId: string
   symbol: string
@@ -893,9 +1112,15 @@ export type OrderUncheckedCreateWithoutTradesInput = {
   orderType: string
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: string
+  rejectionReason?: string | null
   createdAt?: Date | string
   filledAt?: Date | string | null
   cancelledAt?: Date | string | null
@@ -920,14 +1145,21 @@ export type OrderUpdateToOneWithWhereWithoutTradesInput = {
 
 export type OrderUpdateWithoutTradesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  refId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   symbol?: Prisma.StringFieldUpdateOperationsInput | string
   side?: Prisma.StringFieldUpdateOperationsInput | string
   orderType?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   filledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -938,6 +1170,7 @@ export type OrderUpdateWithoutTradesInput = {
 
 export type OrderUncheckedUpdateWithoutTradesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  refId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   accountId?: Prisma.StringFieldUpdateOperationsInput | string
   symbol?: Prisma.StringFieldUpdateOperationsInput | string
@@ -945,9 +1178,15 @@ export type OrderUncheckedUpdateWithoutTradesInput = {
   orderType?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   filledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -956,15 +1195,22 @@ export type OrderUncheckedUpdateWithoutTradesInput = {
 
 export type OrderCreateManyUserInput = {
   id?: string
+  refId?: string | null
   accountId: string
   symbol: string
   side: string
   orderType: string
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: string
+  rejectionReason?: string | null
   createdAt?: Date | string
   filledAt?: Date | string | null
   cancelledAt?: Date | string | null
@@ -973,14 +1219,21 @@ export type OrderCreateManyUserInput = {
 
 export type OrderUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  refId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   symbol?: Prisma.StringFieldUpdateOperationsInput | string
   side?: Prisma.StringFieldUpdateOperationsInput | string
   orderType?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   filledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -991,15 +1244,22 @@ export type OrderUpdateWithoutUserInput = {
 
 export type OrderUncheckedUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  refId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accountId?: Prisma.StringFieldUpdateOperationsInput | string
   symbol?: Prisma.StringFieldUpdateOperationsInput | string
   side?: Prisma.StringFieldUpdateOperationsInput | string
   orderType?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   filledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1009,15 +1269,22 @@ export type OrderUncheckedUpdateWithoutUserInput = {
 
 export type OrderUncheckedUpdateManyWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  refId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accountId?: Prisma.StringFieldUpdateOperationsInput | string
   symbol?: Prisma.StringFieldUpdateOperationsInput | string
   side?: Prisma.StringFieldUpdateOperationsInput | string
   orderType?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   filledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1026,15 +1293,22 @@ export type OrderUncheckedUpdateManyWithoutUserInput = {
 
 export type OrderCreateManyAccountInput = {
   id?: string
+  refId?: string | null
   userId: string
   symbol: string
   side: string
   orderType: string
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: string
+  rejectionReason?: string | null
   createdAt?: Date | string
   filledAt?: Date | string | null
   cancelledAt?: Date | string | null
@@ -1043,14 +1317,21 @@ export type OrderCreateManyAccountInput = {
 
 export type OrderUpdateWithoutAccountInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  refId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   symbol?: Prisma.StringFieldUpdateOperationsInput | string
   side?: Prisma.StringFieldUpdateOperationsInput | string
   orderType?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   filledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1061,15 +1342,22 @@ export type OrderUpdateWithoutAccountInput = {
 
 export type OrderUncheckedUpdateWithoutAccountInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  refId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   symbol?: Prisma.StringFieldUpdateOperationsInput | string
   side?: Prisma.StringFieldUpdateOperationsInput | string
   orderType?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   filledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1079,15 +1367,22 @@ export type OrderUncheckedUpdateWithoutAccountInput = {
 
 export type OrderUncheckedUpdateManyWithoutAccountInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  refId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   symbol?: Prisma.StringFieldUpdateOperationsInput | string
   side?: Prisma.StringFieldUpdateOperationsInput | string
   orderType?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   limitPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   filledQuantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   averageFilledPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  margin?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  commission?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   filledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1127,6 +1422,7 @@ export type OrderCountOutputTypeCountTradesArgs<ExtArgs extends runtime.Types.Ex
 
 export type OrderSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  refId?: boolean
   userId?: boolean
   accountId?: boolean
   symbol?: boolean
@@ -1134,9 +1430,15 @@ export type OrderSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   orderType?: boolean
   quantity?: boolean
   limitPrice?: boolean
+  stopPrice?: boolean
+  takeProfit?: boolean
+  stopLoss?: boolean
   filledQuantity?: boolean
   averageFilledPrice?: boolean
+  margin?: boolean
+  commission?: boolean
   status?: boolean
+  rejectionReason?: boolean
   createdAt?: boolean
   filledAt?: boolean
   cancelledAt?: boolean
@@ -1149,6 +1451,7 @@ export type OrderSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
 
 export type OrderSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  refId?: boolean
   userId?: boolean
   accountId?: boolean
   symbol?: boolean
@@ -1156,9 +1459,15 @@ export type OrderSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   orderType?: boolean
   quantity?: boolean
   limitPrice?: boolean
+  stopPrice?: boolean
+  takeProfit?: boolean
+  stopLoss?: boolean
   filledQuantity?: boolean
   averageFilledPrice?: boolean
+  margin?: boolean
+  commission?: boolean
   status?: boolean
+  rejectionReason?: boolean
   createdAt?: boolean
   filledAt?: boolean
   cancelledAt?: boolean
@@ -1169,6 +1478,7 @@ export type OrderSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
 
 export type OrderSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  refId?: boolean
   userId?: boolean
   accountId?: boolean
   symbol?: boolean
@@ -1176,9 +1486,15 @@ export type OrderSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   orderType?: boolean
   quantity?: boolean
   limitPrice?: boolean
+  stopPrice?: boolean
+  takeProfit?: boolean
+  stopLoss?: boolean
   filledQuantity?: boolean
   averageFilledPrice?: boolean
+  margin?: boolean
+  commission?: boolean
   status?: boolean
+  rejectionReason?: boolean
   createdAt?: boolean
   filledAt?: boolean
   cancelledAt?: boolean
@@ -1189,6 +1505,7 @@ export type OrderSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
 
 export type OrderSelectScalar = {
   id?: boolean
+  refId?: boolean
   userId?: boolean
   accountId?: boolean
   symbol?: boolean
@@ -1196,16 +1513,22 @@ export type OrderSelectScalar = {
   orderType?: boolean
   quantity?: boolean
   limitPrice?: boolean
+  stopPrice?: boolean
+  takeProfit?: boolean
+  stopLoss?: boolean
   filledQuantity?: boolean
   averageFilledPrice?: boolean
+  margin?: boolean
+  commission?: boolean
   status?: boolean
+  rejectionReason?: boolean
   createdAt?: boolean
   filledAt?: boolean
   cancelledAt?: boolean
   updatedAt?: boolean
 }
 
-export type OrderOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "accountId" | "symbol" | "side" | "orderType" | "quantity" | "limitPrice" | "filledQuantity" | "averageFilledPrice" | "status" | "createdAt" | "filledAt" | "cancelledAt" | "updatedAt", ExtArgs["result"]["order"]>
+export type OrderOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "refId" | "userId" | "accountId" | "symbol" | "side" | "orderType" | "quantity" | "limitPrice" | "stopPrice" | "takeProfit" | "stopLoss" | "filledQuantity" | "averageFilledPrice" | "margin" | "commission" | "status" | "rejectionReason" | "createdAt" | "filledAt" | "cancelledAt" | "updatedAt", ExtArgs["result"]["order"]>
 export type OrderInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   account?: boolean | Prisma.AccountDefaultArgs<ExtArgs>
@@ -1230,6 +1553,7 @@ export type $OrderPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    refId: string | null
     userId: string
     accountId: string
     symbol: string
@@ -1237,9 +1561,15 @@ export type $OrderPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     orderType: string
     quantity: runtime.Decimal
     limitPrice: runtime.Decimal | null
+    stopPrice: runtime.Decimal | null
+    takeProfit: runtime.Decimal | null
+    stopLoss: runtime.Decimal | null
     filledQuantity: runtime.Decimal
     averageFilledPrice: runtime.Decimal | null
+    margin: runtime.Decimal
+    commission: runtime.Decimal
     status: string
+    rejectionReason: string | null
     createdAt: Date
     filledAt: Date | null
     cancelledAt: Date | null
@@ -1671,6 +2001,7 @@ export interface Prisma__OrderClient<T, Null = never, ExtArgs extends runtime.Ty
  */
 export interface OrderFieldRefs {
   readonly id: Prisma.FieldRef<"Order", 'String'>
+  readonly refId: Prisma.FieldRef<"Order", 'String'>
   readonly userId: Prisma.FieldRef<"Order", 'String'>
   readonly accountId: Prisma.FieldRef<"Order", 'String'>
   readonly symbol: Prisma.FieldRef<"Order", 'String'>
@@ -1678,9 +2009,15 @@ export interface OrderFieldRefs {
   readonly orderType: Prisma.FieldRef<"Order", 'String'>
   readonly quantity: Prisma.FieldRef<"Order", 'Decimal'>
   readonly limitPrice: Prisma.FieldRef<"Order", 'Decimal'>
+  readonly stopPrice: Prisma.FieldRef<"Order", 'Decimal'>
+  readonly takeProfit: Prisma.FieldRef<"Order", 'Decimal'>
+  readonly stopLoss: Prisma.FieldRef<"Order", 'Decimal'>
   readonly filledQuantity: Prisma.FieldRef<"Order", 'Decimal'>
   readonly averageFilledPrice: Prisma.FieldRef<"Order", 'Decimal'>
+  readonly margin: Prisma.FieldRef<"Order", 'Decimal'>
+  readonly commission: Prisma.FieldRef<"Order", 'Decimal'>
   readonly status: Prisma.FieldRef<"Order", 'String'>
+  readonly rejectionReason: Prisma.FieldRef<"Order", 'String'>
   readonly createdAt: Prisma.FieldRef<"Order", 'DateTime'>
   readonly filledAt: Prisma.FieldRef<"Order", 'DateTime'>
   readonly cancelledAt: Prisma.FieldRef<"Order", 'DateTime'>

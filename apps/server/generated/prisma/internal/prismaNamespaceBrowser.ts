@@ -57,6 +57,7 @@ export const ModelName = {
   VerificationToken: 'VerificationToken',
   EmailChangeToken: 'EmailChangeToken',
   Account: 'Account',
+  Position: 'Position',
   Order: 'Order',
   Trade: 'Trade'
 } as const
@@ -156,8 +157,28 @@ export const AccountScalarFieldEnum = {
 export type AccountScalarFieldEnum = (typeof AccountScalarFieldEnum)[keyof typeof AccountScalarFieldEnum]
 
 
+export const PositionScalarFieldEnum = {
+  id: 'id',
+  refId: 'refId',
+  userId: 'userId',
+  accountId: 'accountId',
+  symbol: 'symbol',
+  side: 'side',
+  quantity: 'quantity',
+  entryPrice: 'entryPrice',
+  margin: 'margin',
+  takeProfit: 'takeProfit',
+  stopLoss: 'stopLoss',
+  openedAt: 'openedAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PositionScalarFieldEnum = (typeof PositionScalarFieldEnum)[keyof typeof PositionScalarFieldEnum]
+
+
 export const OrderScalarFieldEnum = {
   id: 'id',
+  refId: 'refId',
   userId: 'userId',
   accountId: 'accountId',
   symbol: 'symbol',
@@ -165,9 +186,15 @@ export const OrderScalarFieldEnum = {
   orderType: 'orderType',
   quantity: 'quantity',
   limitPrice: 'limitPrice',
+  stopPrice: 'stopPrice',
+  takeProfit: 'takeProfit',
+  stopLoss: 'stopLoss',
   filledQuantity: 'filledQuantity',
   averageFilledPrice: 'averageFilledPrice',
+  margin: 'margin',
+  commission: 'commission',
   status: 'status',
+  rejectionReason: 'rejectionReason',
   createdAt: 'createdAt',
   filledAt: 'filledAt',
   cancelledAt: 'cancelledAt',
@@ -179,6 +206,7 @@ export type OrderScalarFieldEnum = (typeof OrderScalarFieldEnum)[keyof typeof Or
 
 export const TradeScalarFieldEnum = {
   id: 'id',
+  refId: 'refId',
   userId: 'userId',
   accountId: 'accountId',
   orderId: 'orderId',
@@ -186,9 +214,12 @@ export const TradeScalarFieldEnum = {
   side: 'side',
   quantity: 'quantity',
   executedPrice: 'executedPrice',
+  entryPrice: 'entryPrice',
   totalCost: 'totalCost',
+  commission: 'commission',
   pnl: 'pnl',
   pnlPercent: 'pnlPercent',
+  openedAt: 'openedAt',
   executedAt: 'executedAt',
   createdAt: 'createdAt'
 } as const

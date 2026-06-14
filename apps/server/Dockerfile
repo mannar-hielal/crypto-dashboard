@@ -11,6 +11,7 @@ RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 # Using root pnpm-lock.yaml = single source of truth, same as CI
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY apps/server/package.json apps/server/
+COPY generated/CDSDK/package.json generated/CDSDK/
 
 # Install ALL deps (dev included — needed for TypeScript compilation)
 RUN pnpm install --frozen-lockfile
@@ -20,6 +21,7 @@ COPY apps/server/src               apps/server/src
 COPY apps/server/prisma            apps/server/prisma
 COPY apps/server/prisma.config.ts  apps/server/
 COPY apps/server/tsconfig.json     apps/server/
+COPY generated/CDSDK               generated/CDSDK
 
 # Generate Prisma client from schema, then compile TypeScript
 # DATABASE_URL is a dummy — only needed so prisma generate can parse the schema at build time
@@ -47,6 +49,7 @@ RUN chown -R nodejs:nodejs /app
 # Root lockfile = same versions CI tested and builder used
 COPY --chown=nodejs:nodejs package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY --chown=nodejs:nodejs apps/server/package.json apps/server/
+COPY --chown=nodejs:nodejs generated/CDSDK generated/CDSDK
 
 # Switch to non-root BEFORE installing — pnpm store lands in /home/nodejs (not /root)
 # This prevents module resolution errors at runtime caused by /root being unreadable by nodejs
@@ -77,4 +80,3 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD wget -qO- http://localhost:3001/health || exit 1
 
 CMD ["node", "dist/src/index.js"]
-

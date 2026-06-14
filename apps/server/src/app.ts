@@ -14,6 +14,7 @@ import { config } from './config.js';
 import { prismaPlugin } from './plugins/prisma.js';
 import { authPlugin } from './plugins/auth.js';
 import { authRoutes } from './routes/auth/index.js';
+import { paperRoutes } from './routes/paper/index.js';
 
 export async function buildApp() {
   const app = Fastify({
@@ -103,6 +104,7 @@ export async function buildApp() {
   await app.register(authRoutes, { prefix: '/api/auth' });
   await app.register(bybitPlugin);
   await app.register(marketRoutes, { prefix: '/api/market' });
+  await app.register(paperRoutes, { prefix: '/api/paper' });
 
   // ─── CUSTOM ERROR HANDLER ─────────────────────────────────────────────────
   // 🔐 Normalises ALL error responses to { error: string } so:
@@ -119,7 +121,11 @@ export async function buildApp() {
         'Unhandled server error'
       );
       // 🔐 Never leak internal details (DB errors, stack traces) to the client
-      void reply.status(statusCode).send({ error: 'Internal Server Error' });
+      // In development, we return the message to help debugging.
+      void reply.status(statusCode).send({
+        error: 'Internal Server Error',
+        ...(config.nodeEnv === 'development' && { message: error.message }),
+      });
       return;
     }
 

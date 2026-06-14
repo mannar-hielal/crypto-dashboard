@@ -134,7 +134,8 @@ export function usePendingOrderMonitor({ onFilled }: PendingOrderMonitorOptions 
           order.usdtAmount,
           order.takeProfit,
           order.stopLoss,
-          true // skipJournal
+          true, // skipJournal
+          order.id // Pass relatedOrderId to associate with the filled limit/stop order
         );
 
         const typeLabel = order.type === 'limit' ? 'Limit' : 'Stop';

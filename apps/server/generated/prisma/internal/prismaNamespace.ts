@@ -390,6 +390,7 @@ export const ModelName = {
   VerificationToken: 'VerificationToken',
   EmailChangeToken: 'EmailChangeToken',
   Account: 'Account',
+  Position: 'Position',
   Order: 'Order',
   Trade: 'Trade'
 } as const
@@ -407,7 +408,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "refreshToken" | "passwordResetToken" | "verificationToken" | "emailChangeToken" | "account" | "order" | "trade"
+    modelProps: "user" | "refreshToken" | "passwordResetToken" | "verificationToken" | "emailChangeToken" | "account" | "position" | "order" | "trade"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -855,6 +856,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    Position: {
+      payload: Prisma.$PositionPayload<ExtArgs>
+      fields: Prisma.PositionFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PositionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PositionPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PositionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PositionPayload>
+        }
+        findFirst: {
+          args: Prisma.PositionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PositionPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PositionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PositionPayload>
+        }
+        findMany: {
+          args: Prisma.PositionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PositionPayload>[]
+        }
+        create: {
+          args: Prisma.PositionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PositionPayload>
+        }
+        createMany: {
+          args: Prisma.PositionCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PositionCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PositionPayload>[]
+        }
+        delete: {
+          args: Prisma.PositionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PositionPayload>
+        }
+        update: {
+          args: Prisma.PositionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PositionPayload>
+        }
+        deleteMany: {
+          args: Prisma.PositionDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PositionUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PositionUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PositionPayload>[]
+        }
+        upsert: {
+          args: Prisma.PositionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PositionPayload>
+        }
+        aggregate: {
+          args: Prisma.PositionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePosition>
+        }
+        groupBy: {
+          args: Prisma.PositionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PositionGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PositionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PositionCountAggregateOutputType> | number
+        }
+      }
+    }
     Order: {
       payload: Prisma.$OrderPayload<ExtArgs>
       fields: Prisma.OrderFieldRefs
@@ -1121,8 +1196,28 @@ export const AccountScalarFieldEnum = {
 export type AccountScalarFieldEnum = (typeof AccountScalarFieldEnum)[keyof typeof AccountScalarFieldEnum]
 
 
+export const PositionScalarFieldEnum = {
+  id: 'id',
+  refId: 'refId',
+  userId: 'userId',
+  accountId: 'accountId',
+  symbol: 'symbol',
+  side: 'side',
+  quantity: 'quantity',
+  entryPrice: 'entryPrice',
+  margin: 'margin',
+  takeProfit: 'takeProfit',
+  stopLoss: 'stopLoss',
+  openedAt: 'openedAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PositionScalarFieldEnum = (typeof PositionScalarFieldEnum)[keyof typeof PositionScalarFieldEnum]
+
+
 export const OrderScalarFieldEnum = {
   id: 'id',
+  refId: 'refId',
   userId: 'userId',
   accountId: 'accountId',
   symbol: 'symbol',
@@ -1130,9 +1225,15 @@ export const OrderScalarFieldEnum = {
   orderType: 'orderType',
   quantity: 'quantity',
   limitPrice: 'limitPrice',
+  stopPrice: 'stopPrice',
+  takeProfit: 'takeProfit',
+  stopLoss: 'stopLoss',
   filledQuantity: 'filledQuantity',
   averageFilledPrice: 'averageFilledPrice',
+  margin: 'margin',
+  commission: 'commission',
   status: 'status',
+  rejectionReason: 'rejectionReason',
   createdAt: 'createdAt',
   filledAt: 'filledAt',
   cancelledAt: 'cancelledAt',
@@ -1144,6 +1245,7 @@ export type OrderScalarFieldEnum = (typeof OrderScalarFieldEnum)[keyof typeof Or
 
 export const TradeScalarFieldEnum = {
   id: 'id',
+  refId: 'refId',
   userId: 'userId',
   accountId: 'accountId',
   orderId: 'orderId',
@@ -1151,9 +1253,12 @@ export const TradeScalarFieldEnum = {
   side: 'side',
   quantity: 'quantity',
   executedPrice: 'executedPrice',
+  entryPrice: 'entryPrice',
   totalCost: 'totalCost',
+  commission: 'commission',
   pnl: 'pnl',
   pnlPercent: 'pnlPercent',
+  openedAt: 'openedAt',
   executedAt: 'executedAt',
   createdAt: 'createdAt'
 } as const
@@ -1361,6 +1466,7 @@ export type GlobalOmitConfig = {
   verificationToken?: Prisma.VerificationTokenOmit
   emailChangeToken?: Prisma.EmailChangeTokenOmit
   account?: Prisma.AccountOmit
+  position?: Prisma.PositionOmit
   order?: Prisma.OrderOmit
   trade?: Prisma.TradeOmit
 }

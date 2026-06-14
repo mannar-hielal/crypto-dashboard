@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import * as argon2 from 'argon2';
 import { FastifyInstance, FastifyReply } from 'fastify';
+import { Prisma } from '../../../generated/prisma/client.js';
 import { config } from '../../config.js';
 import { EmailService } from '../../services/EmailService.js';
 
@@ -35,7 +36,7 @@ const userResponse = {
     termsAcceptedAt: { type: ['string', 'null'] },
     termsAcceptedIp: { type: ['string', 'null'] },
   },
-};
+} as const;
 
 const tokenResponse = {
   type: 'object',
@@ -44,7 +45,7 @@ const tokenResponse = {
     accessToken: { type: 'string' },
     user: userResponse,
   },
-};
+} as const;
 
 const errorResponse = {
   type: 'object',
@@ -52,7 +53,7 @@ const errorResponse = {
   properties: {
     error: { type: 'string' },
   },
-};
+} as const;
 
 // ─── REQUEST SCHEMAS ──────────────────────────────────────────────────────────
 // Fastify validates ALL incoming data against these BEFORE your handler runs.
@@ -186,8 +187,9 @@ const meSchema = {
       },
     },
     401: errorResponse,
+    500: errorResponse,
   },
-};
+} as const;
 
 const forgotPasswordSchema = {
   tags: ['Auth'],
@@ -480,6 +482,8 @@ export async function authRoutes(app: FastifyInstance) {
         acceptedTerms: boolean;
       };
 
+      app.log.info('📝 Registration attempt');
+
       // 🔐 Normalize inputs before processing
       const normalizedEmail = email.toLowerCase().trim();
       const normalizedUsername = username.toLowerCase().trim();
@@ -493,6 +497,10 @@ export async function authRoutes(app: FastifyInstance) {
         where: { OR: [{ email: normalizedEmail }, { username: normalizedUsername }] },
       });
       if (existing) {
+        app.log.warn(
+          { email: normalizedEmail, username: normalizedUsername },
+          'Registration failed: email or username already taken'
+        );
         // 🔐 Generic error for email/username to match enum-prevention logic,
         // though 409 usually reveals existing account. Still better than naming which one.
         return reply.status(409).send({ error: 'Email or username already taken' });
@@ -500,42 +508,58 @@ export async function authRoutes(app: FastifyInstance) {
 
       const hashedPassword = await argon2.hash(password);
 
-      const user = await app.prisma.user.create({
-        data: {
-          email: normalizedEmail,
-          username: normalizedUsername,
-          password: hashedPassword,
-          termsAcceptedAt: new Date(),
-          termsAcceptedIp: request.ip,
-          account: { create: {} },
-        },
-      });
+      try {
+        const user = await app.prisma.user.create({
+          data: {
+            email: normalizedEmail,
+            username: normalizedUsername,
+            password: hashedPassword,
+            termsAcceptedAt: new Date(),
+            termsAcceptedIp: request.ip,
+            account: { create: {} },
+          },
+        });
 
-      // 📧 Create verification token
-      const rawToken = generateRefreshToken();
-      const tokenHash = hashToken(rawToken);
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+        app.log.info({ userId: user.id }, '✅ User created');
 
-      await app.prisma.verificationToken.create({
-        data: { tokenHash, userId: user.id, expiresAt },
-      });
+        // 📧 Create verification token
+        const rawToken = generateRefreshToken();
+        const tokenHash = hashToken(rawToken);
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-      const verificationUrl = `${config.clientUrl}/verify-email?token=${rawToken}`;
-      await EmailService.sendVerificationEmail(user.email, verificationUrl);
+        await app.prisma.verificationToken.create({
+          data: { tokenHash, userId: user.id, expiresAt },
+        });
 
-      const accessToken = await issueTokens(reply, user.id, user.email);
+        const verificationUrl = `${config.clientUrl}/verify-email?token=${rawToken}`;
+        app.log.info({ to: user.email }, '📧 Sending verification email');
+        await EmailService.sendVerificationEmail(user.email, verificationUrl);
 
-      return reply.status(201).send({
-        accessToken,
-        user: {
-          id: user.id,
-          email: user.email,
-          username: user.username,
-          emailVerifiedAt: null,
-          termsAcceptedAt: user.termsAcceptedAt?.toISOString() ?? null,
-          termsAcceptedIp: user.termsAcceptedIp,
-        },
-      });
+        const accessToken = await issueTokens(reply, user.id, user.email);
+
+        return reply.status(201).send({
+          accessToken,
+          user: {
+            id: user.id,
+            email: user.email,
+            username: user.username,
+            emailVerifiedAt: null,
+            termsAcceptedAt: user.termsAcceptedAt?.toISOString() ?? null,
+            termsAcceptedIp: user.termsAcceptedIp,
+          },
+        });
+      } catch (err) {
+        // Handle race conditions where two requests for the same user pass the findFirst check
+        // but the second one fails at the DB unique constraint level.
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+          app.log.warn(
+            { email: normalizedEmail, username: normalizedUsername },
+            'Registration failed: Race condition unique constraint'
+          );
+          return reply.status(409).send({ error: 'Email or username already taken' });
+        }
+        throw err;
+      }
     }
   );
 
@@ -544,14 +568,24 @@ export async function authRoutes(app: FastifyInstance) {
     const { token } = request.body as { token: string };
     const tokenHash = hashToken(token);
 
+    app.log.info('Verifying email with token hash');
+
     const stored = await app.prisma.verificationToken.findUnique({
       where: { tokenHash },
       include: { user: true },
     });
 
-    if (!stored || stored.expiresAt < new Date()) {
+    if (!stored) {
+      app.log.warn('Verification failed: token not found in database');
       return reply.status(400).send({ error: 'Invalid or expired verification token' });
     }
+
+    if (stored.expiresAt < new Date()) {
+      app.log.warn({ expiresAt: stored.expiresAt }, 'Verification failed: token expired');
+      return reply.status(400).send({ error: 'Invalid or expired verification token' });
+    }
+
+    app.log.info({ userId: stored.userId }, 'Token valid, updating user');
 
     await app.prisma.$transaction([
       app.prisma.user.update({
@@ -619,7 +653,8 @@ export async function authRoutes(app: FastifyInstance) {
         password: string;
       };
 
-      const user = await app.prisma.user.findUnique({ where: { email } });
+      const normalizedEmail = email.toLowerCase().trim();
+      const user = await app.prisma.user.findUnique({ where: { email: normalizedEmail } });
 
       // 🔐 Always run a verify-like check even if user not found — prevents timing attacks.
       //    Argon2 verification against a dummy hash ensures CPU time is consistent.
@@ -726,8 +761,11 @@ export async function authRoutes(app: FastifyInstance) {
       // 🔐 Always return 200 — never reveal whether the email exists
       const SAFE_RESPONSE = { message: 'If that email exists, a reset link has been sent.' };
 
-      const user = await app.prisma.user.findUnique({ where: { email } });
+      const normalizedEmail = email.toLowerCase().trim();
+      app.log.info({ normalizedEmail }, 'Forgot password requested');
+      const user = await app.prisma.user.findUnique({ where: { email: normalizedEmail } });
       if (!user) {
+        app.log.info({ normalizedEmail }, 'Forgot password: user not found');
         return reply.send(SAFE_RESPONSE);
       }
 
@@ -807,32 +845,47 @@ export async function authRoutes(app: FastifyInstance) {
     return reply.send({ message: 'Password updated successfully. Please log in again.' });
   });
 
-  // ─── ME (protected) ──────────────────────────────────────────���───────────────
+  // ─── ME (protected) ────────────────────────────────────────────────────────
   app.get('/me', { schema: meSchema, onRequest: [app.authenticate] }, async (request, reply) => {
-    const userId = (request.user as { userId: string }).userId;
+    try {
+      const userId = (request.user as { userId: string }).userId;
 
-    const user = await app.prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        account: true,
-      },
-    });
+      const user = await app.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          account: true,
+        },
+      });
 
-    if (!user) {
-      return reply.status(401).send({ error: 'User not found' });
+      if (!user) {
+        return reply.status(401).send({ error: 'User not found' });
+      }
+
+      return reply.send({
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
+          termsAcceptedAt: user.termsAcceptedAt?.toISOString() ?? null,
+          termsAcceptedIp: user.termsAcceptedIp,
+          account: user.account
+            ? {
+                ...user.account,
+                totalBalance: user.account.totalBalance.toString(),
+                availableBalance: user.account.availableBalance.toString(),
+                unrealizedPnl: user.account.unrealizedPnl.toString(),
+                realizedPnl: user.account.realizedPnl.toString(),
+                createdAt: user.account.createdAt.toISOString(),
+                updatedAt: user.account.updatedAt.toISOString(),
+              }
+            : null,
+        },
+      });
+    } catch (err) {
+      app.log.error({ err }, 'Failed to fetch me');
+      return reply.status(500).send({ error: 'Internal Server Error' });
     }
-
-    return reply.send({
-      user: {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
-        termsAcceptedAt: user.termsAcceptedAt?.toISOString() ?? null,
-        termsAcceptedIp: user.termsAcceptedIp,
-        account: user.account,
-      },
-    });
   });
 
   // ─── UPDATE PASSWORD (protected) ─────────────────────────────────────────────
