@@ -379,17 +379,13 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
             <RefreshCw className="h-3 w-3" style={{ color: color.purple }} />
           </motion.div>
         ) : lastSyncAt ? (
-          <Cloud
-            className="h-3 w-3"
-            style={{ color: color.green, opacity: 0.7 }}
-            title={`Last synced: ${new Date(lastSyncAt).toLocaleTimeString()}`}
-          />
+          <span title={`Last synced: ${new Date(lastSyncAt).toLocaleTimeString()}`}>
+            <Cloud className="h-3 w-3" style={{ color: color.green, opacity: 0.7 }} />
+          </span>
         ) : (
-          <CloudOff
-            className="h-3 w-3"
-            style={{ color: color.red, opacity: 0.7 }}
-            title="Not synced"
-          />
+          <span title="Not synced">
+            <CloudOff className="h-3 w-3" style={{ color: color.red, opacity: 0.7 }} />
+          </span>
         )}
       </div>
 

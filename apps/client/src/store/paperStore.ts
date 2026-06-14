@@ -787,19 +787,20 @@ export const usePaperStore = create<PaperState>()(
                   },
                   token
                 )
-                .then(() => {
+                .then(async () => {
                   if (isFullClose) {
-                    return paperApi.deletePosition(pos.id, token);
-                  } else {
-                    return paperApi.updatePosition(
-                      pos.id,
-                      {
-                        quantity: (pos.quantity - closeQty).toString(),
-                        margin: (pos.entryUsdtAmount * (1 - fraction)).toString(),
-                      },
-                      token
-                    );
+                    await paperApi.deletePosition(pos.id, token);
+                    return;
                   }
+
+                  await paperApi.updatePosition(
+                    pos.id,
+                    {
+                      quantity: (pos.quantity - closeQty).toString(),
+                      margin: (pos.entryUsdtAmount * (1 - fraction)).toString(),
+                    },
+                    token
+                  );
                 })
                 .catch((e) => console.error('Failed to sync netting to server:', e));
             }
@@ -941,7 +942,7 @@ export const usePaperStore = create<PaperState>()(
                 {
                   refId: id,
                   symbol,
-                  side: side.toUpperCase() as 'BUY' | 'SELL',
+                  side: side === 'buy' ? 'BUY' : 'SELL',
                   orderType: 'MARKET',
                   quantity: quantity.toString(),
                   limitPrice: price.toString(),
@@ -1239,7 +1240,7 @@ export const usePaperStore = create<PaperState>()(
               {
                 refId: id,
                 symbol,
-                side: side.toUpperCase(),
+                side: (side === 'buy' ? 'BUY' : 'SELL') as 'BUY' | 'SELL',
                 orderType: 'LIMIT',
                 quantity: qty.toString(),
                 limitPrice: triggerPrice.toString(),
@@ -1301,7 +1302,7 @@ export const usePaperStore = create<PaperState>()(
               {
                 refId: id,
                 symbol,
-                side: side.toUpperCase(),
+                side: (side === 'buy' ? 'BUY' : 'SELL') as 'BUY' | 'SELL',
                 orderType: 'STOP',
                 quantity: qty.toString(),
                 stopPrice: triggerPrice.toString(),
