@@ -95,17 +95,20 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
   // Sync state when user changes or modal opens
   useEffect(() => {
     if (open && user) {
-      setUsername(user.username);
-      setShowEmailPanel(false);
-      setShowPasswordPanel(false);
-      setShowPasswordConfirm('none');
-      setShowDeleteConfirm(false);
-      setUsernameError(null);
-      setEmailError(null);
-      setDeleteError(null);
-      setPasswordError(null);
-      setEmailSuccess(false);
-      setPasswordSuccess(false);
+      const syncState = () => {
+        setUsername(user.username);
+        setShowEmailPanel(false);
+        setShowPasswordPanel(false);
+        setShowPasswordConfirm('none');
+        setShowDeleteConfirm(false);
+        setUsernameError(null);
+        setEmailError(null);
+        setDeleteError(null);
+        setPasswordError(null);
+        setEmailSuccess(false);
+        setPasswordSuccess(false);
+      };
+      syncState();
     }
   }, [open, user]);
 
