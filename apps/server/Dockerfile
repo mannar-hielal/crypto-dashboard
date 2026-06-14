@@ -9,7 +9,7 @@ RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 
 # Copy workspace manifests first — Docker caches this layer until deps change
 # Using root pnpm-lock.yaml = single source of truth, same as CI
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY apps/server/package.json apps/server/
 
 # Install ALL deps (dev included — needed for TypeScript compilation)
@@ -45,7 +45,7 @@ RUN chown -R nodejs:nodejs /app
 
 # Copy workspace manifests with correct ownership so pnpm install runs as nodejs (not root)
 # Root lockfile = same versions CI tested and builder used
-COPY --chown=nodejs:nodejs package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY --chown=nodejs:nodejs package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY --chown=nodejs:nodejs apps/server/package.json apps/server/
 
 # Switch to non-root BEFORE installing — pnpm store lands in /home/nodejs (not /root)
