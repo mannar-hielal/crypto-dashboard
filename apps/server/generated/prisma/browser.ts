@@ -48,6 +48,11 @@ export type EmailChangeToken = Prisma.EmailChangeTokenModel
  */
 export type Account = Prisma.AccountModel
 /**
+ * Model Position
+ * 
+ */
+export type Position = Prisma.PositionModel
+/**
  * Model Order
  * 
  */

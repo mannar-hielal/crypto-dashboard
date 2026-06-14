@@ -538,6 +538,15 @@ ask: number | null; // best ask from Bybit orderbook.1
 - `src/lib/markets.ts` — shared `SYMBOLS`, `INTERVALS`, `INTERVAL_LABELS` constants (previously duplicated in `SymbolBar`)
 - Commit: `7dfd54a`
 
+### ✅ Completed (added 2026-06-14 — Paper Trading Phase 3 Sync)
+
+- **End-to-end synchronization (Phase 3)** — `paperStore.ts` now fully synchronizes its state (Account, Orders, Trades, Positions) with the PostgreSQL database via `paperApi`.
+- **Netting synchronization** — client-side position netting logic now triggers explicit server updates (`recordTrade`, `updatePosition`, `deletePosition`) to keep the database in lock-step.
+- **Reconciliation & Hydration** — `syncWithServer` hydration uses `refId || id` mapping to ensure local IDs are correctly matched to server records after page refresh, maintaining UI stability.
+- **Legacy ID removal** — removed heuristic checks (`!id.includes('-')`) that previously blocked sync for local IDs. Both CUIDs and local random-string IDs are now handled.
+- **Order-to-Position hardening** — simplified server-side `PATCH /orders/:id` to remove side-effect position creation, preventing duplicate positions. Client remains source-of-truth for the position transition after a fill.
+- **Fixed Position ID consistency** — server now stores raw client IDs in `refId` without prefixing, ensuring 1:1 matching.
+
 ### ✅ Completed (added 2026-04-19 — bid/ask feed + account settings modal)
 
 - **Account Settings modal** — replaces 2-click reset on ⚙️ gear button in `OrderAccountManagementPanel` header. Read-only fields: account name (username from `useAuthStore`), Leverage (`10:1`, Crypto), Commission (`0.07% / 0.0007`, Fixed · Taker). Footer: "Reset account" (2-click confirm, 3 s auto-cancel, closes modal on confirm) + "Save" (disabled — read-only). Backdrop click or ✕ dismisses; confirm state cleared on dismiss.
@@ -562,7 +571,6 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 ### 📋 Planned
 
-- **Phase 3**: Sync paper trading state to DB (Account, Order, Trade models already in schema)
 - **Phase 3**: User profile / account settings (change username, change password)
 - **Phase 4**: Advanced indicators, alerts, multi-symbol watchlist
 - **Phase 5**: Live broker integration — Bybit real-money trading (see full spec below)
@@ -1413,11 +1421,22 @@ The order book is **not needed for paper trading** (fills are instant, no real l
 
 ---
 
-### plan: user settings modal + account deletion lifecycle (06.05.2026) 🔲
+### plan: user settings modal + account deletion lifecycle (06.05.2026) ✅
 
-> **Session context**: Reviewed `PRE_LAUNCH_LEGAL.md` (May 2026 code review findings). Applied several
-> legal compliance fixes to `PrivacyPage.tsx` and `TermsPage.tsx`. Then planned the User Settings
-> feature. Implementation deferred to a future session.
+### plan: sync paper trading state to DB (14.06.2026) 🔄
+- **Goal**: Move paper trading state from `localStorage`-only to server-side persistence in PostgreSQL.
+- **Progress**:
+    - [x] Server: Updated `schema.prisma` with `stopPrice`, `takeProfit`, `stopLoss`, `commission`, `margin`, `rejectionReason` on `Order` and `Trade`.
+    - [x] Server: Created `apps/server/src/routes/paper/index.ts` with Account/Order/Trade CRUD.
+    - [x] SDK: Added `SyncAccountResponse`, `SyncOrderResponse`, `SyncTradeResponse` to types.
+    - [x] SDK: Created `paperApi` for server-side interaction.
+    - [x] Client: Integrate `paperApi` into `paperStore.ts` (netting sync, order sync, position sync).
+    - [x] Client: Implement initial migration from `localStorage` to DB for existing users.
+    - [x] Client: Sync reconciliation via `refId` for UI stability.
+    - [ ] Client: Add "Syncing..." status indicator in the UI.
+
+> **Session context**: Completed Paper Trading Phase 3 synchronization core architecture. Implemented
+> end-to-end sync for netting, removed legacy ID filters, and unified the Order-to-Position lifecycle.
 
 #### Legal compliance work completed this session ✅
 

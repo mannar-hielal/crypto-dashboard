@@ -2,10 +2,11 @@ import { useState, useMemo } from 'react';
 import NumberFlow from '@number-flow/react';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/shallow';
-import { Star, ChevronDown, ChevronUp, Search, TrendingUp, TrendingDown } from 'lucide-react';
+import { Star, ChevronDown, ChevronUp, Search, TrendingUp, TrendingDown, Cloud, CloudOff, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLayoutStore } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
+import { usePaperStore } from '@/store/paperStore';
 import { SYMBOLS, INTERVALS, INTERVAL_LABELS } from '@/lib/markets';
 import { bg, color, fontSize } from '@/lib/tokens';
 import { SymbolPair } from '@/components/ui/CryptoIcon';
@@ -111,6 +112,9 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
 
   const [symbolOpen, setSymbolOpen] = useState(false);
   const [symbolSearch, setSymbolSearch] = useState('');
+
+  const isSyncing = usePaperStore((s) => s.isSyncing);
+  const lastSyncAt = usePaperStore((s) => s.lastSyncAt);
 
   // ── Derived price stats ──────────────────────────────────────────────────
   const prevClose = latestPrice !== null && priceChange !== null ? latestPrice - priceChange : null;
@@ -351,6 +355,25 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
 
       {/* ── Layout picker ────────────────────────────────────────────────── */}
       <ChartLayoutPicker />
+
+      {/* Divider */}
+      <span className="h-4 w-px shrink-0 bg-white/8" />
+
+      {/* ── Sync status ───────────────────────────────────────────────────── */}
+      <div className="flex shrink-0 items-center gap-1.5 pr-2">
+        {isSyncing ? (
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+          >
+            <RefreshCw className="h-3 w-3" style={{ color: color.purple }} />
+          </motion.div>
+        ) : lastSyncAt ? (
+          <Cloud className="h-3 w-3" style={{ color: color.green, opacity: 0.7 }} title={`Last synced: ${new Date(lastSyncAt).toLocaleTimeString()}`} />
+        ) : (
+          <CloudOff className="h-3 w-3" style={{ color: color.red, opacity: 0.7 }} title="Not synced" />
+        )}
+      </div>
 
       {/* Divider */}
       <span className="h-4 w-px shrink-0 bg-white/8" />

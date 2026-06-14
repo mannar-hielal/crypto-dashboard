@@ -9,6 +9,7 @@ import { usePendingOrderMonitor } from '@/hooks/usePendingOrderMonitor';
 import { TradingSoundProvider, useSoundActions } from '@/hooks/TradingSoundContext';
 import { useLayoutStore } from '@/store/layoutStore';
 import { useAuthStore } from '@/store/authStore';
+import { usePaperStore } from '@/store/paperStore';
 import { authApi } from '@crypto-dashboard/sdk';
 import { TopBar } from '@/components/dashboard/TopBar';
 import { LeftToolbar } from '@/components/dashboard/LeftToolbar';
@@ -77,6 +78,18 @@ function DashboardInner() {
   usePaneFeeds();
   useDocumentTitle();
 
+  const user = useAuthStore((s) => s.user);
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const updateUser = useAuthStore((s) => s.updateUser);
+  const syncWithServer = usePaperStore((s) => s.syncWithServer);
+
+  // 🔄 Sync paper trading state with DB on mount (if authenticated)
+  useEffect(() => {
+    if (accessToken) {
+      syncWithServer(accessToken);
+    }
+  }, [accessToken, syncWithServer]);
+
   // Stable callback refs — memoized so they don't change on every render.
   const handleTPSLClosed = useCallback(
     (pnl: number) => {
@@ -92,14 +105,6 @@ function DashboardInner() {
   useTPSLMonitor({ onClosed: handleTPSLClosed });
   usePendingOrderMonitor({ onFilled: handleOrderFilled });
 
-  const user = useAuthStore((s) => s.user);
-  const accessToken = useAuthStore((s) => s.accessToken);
-  const updateUser = useAuthStore((s) => s.updateUser);
-
-  // Active pane symbol drives the TradingPanel key (resets form on symbol change)
-  const activePane = useLayoutStore((s) => s.activePane);
-  const symbol = useLayoutStore((s) => s.panes[s.activePane].symbol);
-  const setBottomPanelHeight = useLayoutStore((s) => s.setBottomPanelHeight);
 
   const [panelSize, setPanelSize] = useState<PanelSize>('open');
   const [tradingPanelOpen, setTradingPanelOpen] = useState(true);
