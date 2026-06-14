@@ -6,6 +6,7 @@
   "type": "module",
   "license": "MIT",
   "author": "MannarHielal",
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev:server": "pnpm --filter @crypto-dashboard/server dev",
     "dev": "pnpm dev:server",
@@ -43,19 +44,5 @@
     "*.{ts,tsx,js,jsx}": [
       "eslint --fix"
     ]
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@prisma/engines",
-      "argon2",
-      "esbuild",
-      "prisma"
-    ],
-    "peerDependencyRules": {
-      "ignoreMissing": [],
-      "allowedVersions": {
-        "eslint-plugin-react-hooks>eslint": "10"
-      }
-    }
   }
 }
