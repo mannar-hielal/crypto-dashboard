@@ -5,8 +5,9 @@ import {
   CreateTradeRequest,
   CreatePositionRequest,
   UpdatePositionRequest,
-  SyncAccountResponse, // ─── Added import ─────────
+  SyncAccountResponse,
 } from '@crypto-dashboard/sdk';
+import { ALLOWED_SYMBOLS } from '../../constants.js';
 
 // ─── SHARED SCHEMAS ───────────────────────────────────────────────────────────
 
@@ -152,7 +153,7 @@ export async function paperRoutes(app: FastifyInstance) {
           additionalProperties: false,
           properties: {
             status: { type: 'string' }, // optional filter
-            limit: { type: 'integer', default: 50 },
+            limit: { type: 'integer', default: 50, maximum: 200 },
           },
         },
         response: {
@@ -193,7 +194,7 @@ export async function paperRoutes(app: FastifyInstance) {
           type: 'object',
           additionalProperties: false,
           properties: {
-            limit: { type: 'integer', default: 50 },
+            limit: { type: 'integer', default: 50, maximum: 200 },
           },
         },
         response: {
@@ -261,8 +262,8 @@ export async function paperRoutes(app: FastifyInstance) {
           required: ['symbol', 'side', 'quantity', 'entryPrice', 'margin'],
           additionalProperties: false,
           properties: {
-            refId: { type: 'string' },
-            symbol: { type: 'string' },
+            refId: { type: 'string', maxLength: 64 },
+            symbol: { type: 'string', enum: ALLOWED_SYMBOLS as unknown as string[] },
             side: { type: 'string', enum: ['LONG', 'SHORT'] },
             quantity: { type: 'string' },
             entryPrice: { type: 'string' },
@@ -317,8 +318,8 @@ export async function paperRoutes(app: FastifyInstance) {
           required: ['symbol', 'side', 'orderType', 'quantity'],
           additionalProperties: false,
           properties: {
-            refId: { type: 'string' },
-            symbol: { type: 'string' },
+            refId: { type: 'string', maxLength: 64 },
+            symbol: { type: 'string', enum: ALLOWED_SYMBOLS as unknown as string[] },
             side: { type: 'string', enum: ['BUY', 'SELL'] },
             orderType: { type: 'string', enum: ['MARKET', 'LIMIT', 'STOP'] },
             quantity: { type: 'string' }, // Decimal
@@ -533,8 +534,8 @@ export async function paperRoutes(app: FastifyInstance) {
           required: ['symbol', 'side', 'quantity', 'executedPrice', 'totalCost'],
           additionalProperties: false,
           properties: {
-            refId: { type: 'string' },
-            symbol: { type: 'string' },
+            refId: { type: 'string', maxLength: 64 },
+            symbol: { type: 'string', enum: ALLOWED_SYMBOLS as unknown as string[] },
             side: { type: 'string', enum: ['BUY', 'SELL'] },
             quantity: { type: 'string' },
             executedPrice: { type: 'string' },
