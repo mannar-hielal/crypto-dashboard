@@ -215,10 +215,7 @@ export async function paperRoutes(app: FastifyInstance) {
         return reply.send(serializeAccount(account));
       } catch (err) {
         app.log.error({ err, userId }, 'Failed to fetch account');
-        return reply.status(500).send({
-          error: 'Internal Server Error',
-          message: err instanceof Error ? err.message : String(err),
-        });
+        return reply.status(500).send({ error: 'Internal Server Error' });
       }
     }
   );
@@ -266,10 +263,7 @@ export async function paperRoutes(app: FastifyInstance) {
         return reply.send(orders.map(serializeOrder));
       } catch (err) {
         app.log.error({ err, userId }, 'Failed to fetch orders');
-        return reply.status(500).send({
-          error: 'Internal Server Error',
-          message: err instanceof Error ? err.message : String(err),
-        });
+        return reply.status(500).send({ error: 'Internal Server Error' });
       }
     }
   );
@@ -313,10 +307,7 @@ export async function paperRoutes(app: FastifyInstance) {
         return reply.send(trades.map(serializeTrade));
       } catch (err) {
         app.log.error({ err, userId }, 'Failed to fetch trades');
-        return reply.status(500).send({
-          error: 'Internal Server Error',
-          message: err instanceof Error ? err.message : String(err),
-        });
+        return reply.status(500).send({ error: 'Internal Server Error' });
       }
     }
   );
@@ -351,10 +342,7 @@ export async function paperRoutes(app: FastifyInstance) {
         return reply.send(positions.map(serializePosition));
       } catch (err) {
         app.log.error({ err, userId }, 'Failed to fetch positions');
-        return reply.status(500).send({
-          error: 'Internal Server Error',
-          message: err instanceof Error ? err.message : String(err),
-        });
+        return reply.status(500).send({ error: 'Internal Server Error' });
       }
     }
   );
@@ -523,10 +511,7 @@ export async function paperRoutes(app: FastifyInstance) {
         return reply.send(serializeAccount(account));
       } catch (err) {
         app.log.error({ err, userId }, 'Failed to reset account');
-        return reply.status(500).send({
-          error: 'Internal Server Error',
-          message: err instanceof Error ? err.message : String(err),
-        });
+        return reply.status(500).send({ error: 'Internal Server Error' });
       }
     }
   );
@@ -574,10 +559,7 @@ export async function paperRoutes(app: FastifyInstance) {
         return reply.send(serializeAccount(account));
       } catch (err) {
         app.log.error({ err, userId }, 'Failed to update account');
-        return reply.status(500).send({
-          error: 'Internal Server Error',
-          message: err instanceof Error ? err.message : String(err),
-        });
+        return reply.status(500).send({ error: 'Internal Server Error' });
       }
     }
   );

@@ -504,7 +504,8 @@ export const usePaperStore = create<PaperState>()(
             get().positions.length > 0;
 
           if (isServerFresh && isLocalActive) {
-            console.log('Migrating local paper trading state to server...');
+            if (import.meta.env.DEV)
+              console.log('Migrating local paper trading state to server...');
             // In a full sync, we'd push EVERYTHING. For Phase 3.0, we prioritize balance.
             await paperApi.updateAccount(
               {
@@ -626,7 +627,7 @@ export const usePaperStore = create<PaperState>()(
             lastSyncAt: Date.now(),
           });
         } catch (err) {
-          console.error('Failed to sync paper trading state:', err);
+          if (import.meta.env.DEV) console.error('Failed to sync paper trading state:', err);
         } finally {
           set({ isSyncing: false });
         }
@@ -802,7 +803,9 @@ export const usePaperStore = create<PaperState>()(
                     token
                   );
                 })
-                .catch((e) => console.error('Failed to sync netting to server:', e));
+                .catch((e) => {
+                  if (import.meta.env.DEV) console.error('Failed to sync netting to server:', e);
+                });
             }
           }
 
@@ -910,7 +913,7 @@ export const usePaperStore = create<PaperState>()(
           action: `Enter ${side === 'buy' ? 'long' : 'short'} position for ${symbol} at price ${price.toFixed(4)} for ${quantity.toFixed(6)} units`,
         };
 
-        // ── Journal entry ─────────────────────────────────────────────────────
+        // ── Journal entry ───────────────────────────────────────────────────────
         const journalEntries: JournalEntry[] = [];
         if (!skipJournal) {
           const positionSide = side === 'buy' ? 'LONG' : 'SHORT';
@@ -955,9 +958,8 @@ export const usePaperStore = create<PaperState>()(
 
           syncPromise
             .then((res) => {
-              // Update local position ID to match server ID for consistency
+              // Keep local position IDs stable; server routes support lookup via refId.
               set((s) => ({
-                positions: s.positions.map((p) => (p.id === id ? { ...p, id: res.id } : p)),
                 orders: s.orders.map((o) => (o.id === `o-${id}` ? { ...o, id: `o-${res.id}` } : o)),
               }));
 
@@ -988,7 +990,9 @@ export const usePaperStore = create<PaperState>()(
                 token
               );
             })
-            .catch((e) => console.error('Failed to sync order/position to server:', e));
+            .catch((e) => {
+              if (import.meta.env.DEV) console.error('Failed to sync order/position to server:', e);
+            });
         }
 
         return id;
@@ -1078,7 +1082,7 @@ export const usePaperStore = create<PaperState>()(
           action: `Close ${pos.side} position for ${pos.symbol} at price ${exitPrice.toFixed(4)} for ${pos.quantity.toFixed(6)} units`,
         };
 
-        // ── Journal entry ──��──────────────────────────────────────────────────
+        // ── Journal entry ─────────────────────────────────────────────────────
         // Net PnL = gross PnL − exit commission — same figure shown in Balance History.
         const netPnl = pnl - commission;
         const closingJournalEntries: JournalEntry[] = [];
@@ -1138,9 +1142,7 @@ export const usePaperStore = create<PaperState>()(
               token
             )
             .then(() => {
-              // Remove position from server. Use positionId which might be the DB ID.
-              // If it's a local ID, the server won't find it by primary key.
-              // We should ideally have an endpoint to delete by refId or just ensure we have the DB ID.
+              // Server supports deleting by either DB id or refId.
               return paperApi.deletePosition(positionId, token);
             })
             .then(() => {
@@ -1154,7 +1156,9 @@ export const usePaperStore = create<PaperState>()(
                 token
               );
             })
-            .catch((e) => console.error('Failed to sync close position to server:', e));
+            .catch((e) => {
+              if (import.meta.env.DEV) console.error('Failed to sync close position to server:', e);
+            });
         }
       },
 
@@ -1250,7 +1254,9 @@ export const usePaperStore = create<PaperState>()(
               },
               token
             )
-            .catch((e) => console.error('Failed to sync limit order:', e));
+            .catch((e) => {
+              if (import.meta.env.DEV) console.error('Failed to sync limit order:', e);
+            });
         }
 
         return id;
@@ -1312,7 +1318,9 @@ export const usePaperStore = create<PaperState>()(
               },
               token
             )
-            .catch((e) => console.error('Failed to sync stop order:', e));
+            .catch((e) => {
+              if (import.meta.env.DEV) console.error('Failed to sync stop order:', e);
+            });
         }
 
         return id;
@@ -1393,9 +1401,9 @@ export const usePaperStore = create<PaperState>()(
         if (token) {
           // !orderId.includes('-') was a heuristic for server-side cuid vs local random ID.
           // Now the server handles both via refId lookup.
-          paperApi
-            .updateOrder(orderId, { status: 'CANCELLED' }, token)
-            .catch((e) => console.error('Failed to cancel order on server:', e));
+          paperApi.updateOrder(orderId, { status: 'CANCELLED' }, token).catch((e) => {
+            if (import.meta.env.DEV) console.error('Failed to cancel order on server:', e);
+          });
         }
       },
 
@@ -1446,9 +1454,9 @@ export const usePaperStore = create<PaperState>()(
         const token = useAuthStore.getState().accessToken;
         if (token) {
           const body = exitType === 'take-profit' ? { takeProfit: null } : { stopLoss: null };
-          paperApi
-            .updatePosition(positionId, body, token)
-            .catch((e) => console.error('Failed to update position exits on server:', e));
+          paperApi.updatePosition(positionId, body, token).catch((e) => {
+            if (import.meta.env.DEV) console.error('Failed to update position exits on server:', e);
+          });
         }
       },
 
@@ -1500,9 +1508,10 @@ export const usePaperStore = create<PaperState>()(
         const token = useAuthStore.getState().accessToken;
         if (token) {
           const body = exitType === 'take-profit' ? { takeProfit: null } : { stopLoss: null };
-          paperApi
-            .updateOrder(pendingOrderId, body, token)
-            .catch((e) => console.error('Failed to update pending order exits on server:', e));
+          paperApi.updateOrder(pendingOrderId, body, token).catch((e) => {
+            if (import.meta.env.DEV)
+              console.error('Failed to update pending order exits on server:', e);
+          });
         }
       },
 
@@ -1520,9 +1529,9 @@ export const usePaperStore = create<PaperState>()(
         // ── Server Sync ────────────────────────────────────────────��─────
         const token = useAuthStore.getState().accessToken;
         if (token) {
-          paperApi
-            .updateOrder(orderId, { status: 'FILLED' }, token)
-            .catch((e) => console.error('Failed to mark order filled on server:', e));
+          paperApi.updateOrder(orderId, { status: 'FILLED' }, token).catch((e) => {
+            if (import.meta.env.DEV) console.error('Failed to mark order filled on server:', e);
+          });
         }
       },
 
@@ -1535,7 +1544,7 @@ export const usePaperStore = create<PaperState>()(
         const cancelRows: HistoricalOrder[] = [];
 
         // Only write cancel records when a leg is explicitly REMOVED (value → null).
-        // Editing to a new price is a silent in-place update �� no cancel record needed.
+        // Editing to a new price is a silent in-place update  no cancel record needed.
         // Use !! to handle both undefined and null (loose != null fails when value is undefined).
         const tpRemoving = takeProfit === null && !!pos.takeProfit;
         const slRemoving = stopLoss === null && !!pos.stopLoss;
@@ -1601,7 +1610,10 @@ export const usePaperStore = create<PaperState>()(
               },
               token
             )
-            .catch((e) => console.error('Failed to update position exits on server:', e));
+            .catch((e) => {
+              if (import.meta.env.DEV)
+                console.error('Failed to update position exits on server:', e);
+            });
         }
       },
 
@@ -1790,7 +1802,10 @@ export const usePaperStore = create<PaperState>()(
               },
               token
             )
-            .catch((e) => console.error('Failed to update pending order on server:', e));
+            .catch((e) => {
+              if (import.meta.env.DEV)
+                console.error('Failed to update pending order on server:', e);
+            });
         }
 
         return 'ok';

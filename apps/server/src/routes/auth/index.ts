@@ -568,7 +568,7 @@ export async function authRoutes(app: FastifyInstance) {
     const { token } = request.body as { token: string };
     const tokenHash = hashToken(token);
 
-    app.log.info({ tokenHash }, 'Verifying email with token hash');
+    app.log.info('Verifying email with token hash');
 
     const stored = await app.prisma.verificationToken.findUnique({
       where: { tokenHash },
@@ -576,15 +576,12 @@ export async function authRoutes(app: FastifyInstance) {
     });
 
     if (!stored) {
-      app.log.warn({ tokenHash }, 'Verification failed: token not found in database');
+      app.log.warn('Verification failed: token not found in database');
       return reply.status(400).send({ error: 'Invalid or expired verification token' });
     }
 
     if (stored.expiresAt < new Date()) {
-      app.log.warn(
-        { tokenHash, expiresAt: stored.expiresAt },
-        'Verification failed: token expired'
-      );
+      app.log.warn({ expiresAt: stored.expiresAt }, 'Verification failed: token expired');
       return reply.status(400).send({ error: 'Invalid or expired verification token' });
     }
 

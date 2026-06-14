@@ -264,15 +264,18 @@ export function RegisterPage() {
               >
                 <button
                   type="submit"
+                  disabled={form.formState.isSubmitting}
                   className="w-full h-8 flex items-center justify-center font-bold tracking-wide text-white transition-all"
                   style={{
-                    background: gradient.brand,
+                    background: form.formState.isSubmitting
+                      ? `${color.purpleDark}80`
+                      : gradient.brand,
                     borderRadius: radius.button,
                     boxShadow: `0 0 20px ${gradient.brandFrom}55`,
                     fontSize: '14px',
                   }}
                 >
-                  Create account
+                  {form.formState.isSubmitting ? 'Creating account...' : 'Create account'}
                 </button>
               </motion.div>
 
