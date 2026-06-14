@@ -1424,16 +1424,17 @@ The order book is **not needed for paper trading** (fills are instant, no real l
 ### plan: user settings modal + account deletion lifecycle (06.05.2026) ✅
 
 ### plan: sync paper trading state to DB (14.06.2026) 🔄
+
 - **Goal**: Move paper trading state from `localStorage`-only to server-side persistence in PostgreSQL.
 - **Progress**:
-    - [x] Server: Updated `schema.prisma` with `stopPrice`, `takeProfit`, `stopLoss`, `commission`, `margin`, `rejectionReason` on `Order` and `Trade`.
-    - [x] Server: Created `apps/server/src/routes/paper/index.ts` with Account/Order/Trade CRUD.
-    - [x] SDK: Added `SyncAccountResponse`, `SyncOrderResponse`, `SyncTradeResponse` to types.
-    - [x] SDK: Created `paperApi` for server-side interaction.
-    - [x] Client: Integrate `paperApi` into `paperStore.ts` (netting sync, order sync, position sync).
-    - [x] Client: Implement initial migration from `localStorage` to DB for existing users.
-    - [x] Client: Sync reconciliation via `refId` for UI stability.
-    - [ ] Client: Add "Syncing..." status indicator in the UI.
+  - [x] Server: Updated `schema.prisma` with `stopPrice`, `takeProfit`, `stopLoss`, `commission`, `margin`, `rejectionReason` on `Order` and `Trade`.
+  - [x] Server: Created `apps/server/src/routes/paper/index.ts` with Account/Order/Trade CRUD.
+  - [x] SDK: Added `SyncAccountResponse`, `SyncOrderResponse`, `SyncTradeResponse` to types.
+  - [x] SDK: Created `paperApi` for server-side interaction.
+  - [x] Client: Integrate `paperApi` into `paperStore.ts` (netting sync, order sync, position sync).
+  - [x] Client: Implement initial migration from `localStorage` to DB for existing users.
+  - [x] Client: Sync reconciliation via `refId` for UI stability.
+  - [ ] Client: Add "Syncing..." status indicator in the UI.
 
 > **Session context**: Completed Paper Trading Phase 3 synchronization core architecture. Implemented
 > end-to-end sync for netting, removed legacy ID filters, and unified the Order-to-Position lifecycle.

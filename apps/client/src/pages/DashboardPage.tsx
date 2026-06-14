@@ -105,7 +105,6 @@ function DashboardInner() {
   useTPSLMonitor({ onClosed: handleTPSLClosed });
   usePendingOrderMonitor({ onFilled: handleOrderFilled });
 
-
   const [panelSize, setPanelSize] = useState<PanelSize>('open');
   const [tradingPanelOpen, setTradingPanelOpen] = useState(true);
   /** Persisted across symbol changes so the user stays on their chosen tab */

@@ -2,7 +2,17 @@ import { useState, useMemo } from 'react';
 import NumberFlow from '@number-flow/react';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/shallow';
-import { Star, ChevronDown, ChevronUp, Search, TrendingUp, TrendingDown, Cloud, CloudOff, RefreshCw } from 'lucide-react';
+import {
+  Star,
+  ChevronDown,
+  ChevronUp,
+  Search,
+  TrendingUp,
+  TrendingDown,
+  Cloud,
+  CloudOff,
+  RefreshCw,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLayoutStore } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
@@ -369,9 +379,17 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
             <RefreshCw className="h-3 w-3" style={{ color: color.purple }} />
           </motion.div>
         ) : lastSyncAt ? (
-          <Cloud className="h-3 w-3" style={{ color: color.green, opacity: 0.7 }} title={`Last synced: ${new Date(lastSyncAt).toLocaleTimeString()}`} />
+          <Cloud
+            className="h-3 w-3"
+            style={{ color: color.green, opacity: 0.7 }}
+            title={`Last synced: ${new Date(lastSyncAt).toLocaleTimeString()}`}
+          />
         ) : (
-          <CloudOff className="h-3 w-3" style={{ color: color.red, opacity: 0.7 }} title="Not synced" />
+          <CloudOff
+            className="h-3 w-3"
+            style={{ color: color.red, opacity: 0.7 }}
+            title="Not synced"
+          />
         )}
       </div>
 
