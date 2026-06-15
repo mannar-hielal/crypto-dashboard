@@ -68,13 +68,13 @@
 
 ### Phase 1 Retroactive — Fix Immediately (auth is already live)
 
-| Item                                                                                                                          | File                   | Type            | Status     |
-| ----------------------------------------------------------------------------------------------------------------------------- | ---------------------- | --------------- | ---------- |
-| `JWT_SECRET` entropy check — `Buffer.byteLength(secret) >= 32` at startup                                                     | `config.ts`            | Code change     | ✅ Done    |
-| Explicit `algorithms: ['HS256']` on `@fastify/jwt` registration                                                               | `app.ts`               | Code change     | ✅ Done    |
-| Token-theft full-revocation: when `/refresh` detects `count=0`, call `deleteMany({ where: { userId } })` to kill all sessions | `routes/auth/index.ts` | Code change     | ✅ Done    |
-| `pnpm audit` added to pre-release CI gate                                                                                     | CI config              | Process change  | ⬜ Pending |
-| No JWT in URL params, CSRF docs, error-handler URL audit, HSTS/CSP/CORS wildcard check                                        | `REVIEW_CHECKLIST.md`  | Checklist items | ✅ Added   |
+| Item                                                                                                                          | File                   | Type            | Status   |
+| ----------------------------------------------------------------------------------------------------------------------------- | ---------------------- | --------------- | -------- |
+| `JWT_SECRET` entropy check — `Buffer.byteLength(secret) >= 32` at startup                                                     | `config.ts`            | Code change     | ✅ Done  |
+| Explicit `algorithms: ['HS256']` on `@fastify/jwt` registration                                                               | `app.ts`               | Code change     | ✅ Done  |
+| Token-theft full-revocation: when `/refresh` detects `count=0`, call `deleteMany({ where: { userId } })` to kill all sessions | `routes/auth/index.ts` | Code change     | ✅ Done  |
+| `pnpm audit` added to pre-release CI gate                                                                                     | CI config              | Process change  | ✅ Done  |
+| No JWT in URL params, CSRF docs, error-handler URL audit, HSTS/CSP/CORS wildcard check                                        | `REVIEW_CHECKLIST.md`  | Checklist items | ✅ Added |
 
 ### Phase 2 — Current Sprint
 
@@ -1597,6 +1597,11 @@ Three visual sections (all use existing token system: `bg.panel`, `bg.surface`, 
 - **feat: Suggested Email Content Update and Compliance alignment (13.06.2026)** ✅
   - **EmailService.ts**: Updated sendDeletionRequestedEmail to include legal disclosures regarding GDPR/nDSG, the 30-day cancellation window, and the 60-day backup persistence period for technical logs. Added portability reminder (data export).
   - **PrivacyPage.tsx**: Updated §7 Data Retention to explicitly disclose the 60-day backup persistence period, ensuring consistency with transactional emails and meeting transparency requirements.
+
+- **chore: add `pnpm audit` to CI pre-release gate (15.06.2026)** ✅
+  - Added `audit` script to root `package.json` (`pnpm audit --audit-level=high` — fails only on high/critical).
+  - Added `Audit dependencies` step to `.github/workflows/ci.yml` (runs after install, blocks the pipeline on high/critical CVEs).
+  - Marked the CI gate checklist item as ✅ in both `REVIEW_CHECKLIST.md` and `APP_LOG.md`.
 
 - **feat: Auth Review Fixes & Email Strengthening (13.06.2026)** ✅
   - **Email Template Refactoring**: Refactored `EmailService.ts` to use professional HTML templates with project branding (ambient navy theme), clear call-to-action buttons, and enhanced security recommendations for verification, password resets, and account changes.
