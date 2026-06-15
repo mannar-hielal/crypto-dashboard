@@ -571,7 +571,6 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 ### 📋 Planned
 
-- **Phase 3**: User profile / account settings (change username, change password)
 - **Phase 4**: Advanced indicators, alerts, multi-symbol watchlist
 - **Phase 5**: Live broker integration — Bybit real-money trading (see full spec below)
 - **Phase 6**: AI trading bot — 3-role system: Scanner + Analyst + Executor, paper mode only (see full spec below)
@@ -1434,10 +1433,18 @@ The order book is **not needed for paper trading** (fills are instant, no real l
   - [x] Client: Integrate `paperApi` into `paperStore.ts` (netting sync, order sync, position sync).
   - [x] Client: Implement initial migration from `localStorage` to DB for existing users.
   - [x] Client: Sync reconciliation via `refId` for UI stability.
-  - [ ] Client: Add "Syncing..." status indicator in the UI.
+  - [x] Client: Add "Syncing..." status indicator in the UI.
 
 > **Session context**: Completed Paper Trading Phase 3 synchronization core architecture. Implemented
 > end-to-end sync for netting, removed legacy ID filters, and unified the Order-to-Position lifecycle.
+
+### ✅ Completed (added 2026-06-15 — Phase 3 User Profile & Account Settings + Sync Indicator)
+
+- **User Profile & Account Settings** — Full settings modal (`SettingsModal.tsx`) accessible via TopBar dropdown → Settings. Three sections: Profile (username change inline), Security & Credentials (email change with verification, password change, forgotten-password reset-link flow), Data & Privacy (GDPR data export as JSON), Danger Zone (account deletion with 30-day soft-delete + cancellation window).
+- **Account deletion lifecycle** — 4 transactional emails (deletion requested, 7-day warning, deletion cancelled, deletion completed); daily purge job in `server/index.ts` gated by `RUN_PURGE_JOB=true`; 7-day warning sent at day 23, hard delete at day 30.
+- **Deletion-pending banner** — Amber dismissible banner on `DashboardPage` when `user.deletionRequestedAt` is set, with "Cancel deletion" button wired to `/api/auth/cancel-deletion`.
+- **Security hardening** — Password change invalidates all sessions server-side; email change requires current password verification + email verification of new address + security alert; per-route rate limiting on deletion endpoints (3/15 min).
+- **"Syncing..." status indicator** — Added sync status to the Account Summary Bar in `OrderAccountManagementPanel` (last item in stats strip): shows spinning `RefreshCw` icon + "Syncing" text during sync, green `Cloud` icon + "Synced" with `lastSyncAt` tooltip when synced, red `CloudOff` icon when unsynced. Uses existing `isSyncing`/`lastSyncAt` state from `paperStore` — no new store changes needed.
 
 #### Legal compliance work completed this session ✅
 
