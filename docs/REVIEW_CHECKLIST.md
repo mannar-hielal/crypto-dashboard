@@ -76,7 +76,7 @@
 
 ### Production-Readiness [Phase 1+]
 
-- [ ] 🔐 **Dependency CVEs**: `pnpm audit` is part of the pre-release gate — `high` or `critical` findings block deployment. Run before every release; do not ship with known critical CVEs.
+- [x] 🔐 **Dependency CVEs**: `pnpm audit` is part of the pre-release gate — `high` or `critical` findings block deployment. Run before every release; do not ship with known critical CVEs.
 - [ ] 🔐 **HTTP Security Headers**: in production, verify Helmet enables HSTS with `includeSubDomains`, CSP whitelists only known origins (no `unsafe-inline` / `unsafe-eval`), and `corsOrigin` is never `*`.
 - [ ] 🔐 **Authenticated WebSocket tokens** [Phase 3+]: future authenticated WebSocket endpoints must pass JWT via the `Authorization` header in the HTTP upgrade request — never as a `?token=` query parameter (query params appear in access logs and browser history).
 
