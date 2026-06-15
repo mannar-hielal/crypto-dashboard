@@ -13,6 +13,7 @@
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "audit": "pnpm audit --audit-level=high",
     "type-check": "pnpm --filter @crypto-dashboard/server type-check",
     "test": "pnpm --filter @crypto-dashboard/server test && pnpm --filter @crypto-dashboard/client test",
     "test:coverage": "pnpm --filter @crypto-dashboard/server test:coverage && pnpm --filter @crypto-dashboard/client test:coverage"
@@ -30,12 +31,12 @@
     "pnpm": ">=10.0.0"
   },
   "devDependencies": {
-    "prettier": "^3.8.1",
-    "eslint": "^10.1.0",
     "@eslint/js": "^10.0.1",
-    "typescript-eslint": "^8.58.0",
+    "eslint": "^10.5.0",
     "husky": "^9.1.7",
-    "lint-staged": "^16.4.0"
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.4",
+    "typescript-eslint": "^8.61.0"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,json,md,yml,yaml,css}": [

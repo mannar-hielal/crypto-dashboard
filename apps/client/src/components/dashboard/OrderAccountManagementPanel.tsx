@@ -321,12 +321,13 @@ export function OrderAccountManagementPanel({
   // We read from the `leverage` reactive selector (already subscribed above) so
   // the effect only runs when showSettings transitions to true.
   const prevShowSettingsRef = useRef(showSettings);
-  if (showSettings && !prevShowSettingsRef.current) {
-    // Read directly from the store (not the reactive selector — leverage is
-    // declared further down the component and can't be used here yet).
-    setDraftLeverage(usePaperStore.getState().leverage);
-  }
-  prevShowSettingsRef.current = showSettings;
+
+  useEffect(() => {
+    if (showSettings && !prevShowSettingsRef.current) {
+      setDraftLeverage(usePaperStore.getState().leverage);
+    }
+    prevShowSettingsRef.current = showSettings;
+  }, [showSettings]);
 
   // ── Column picker state ────────────────────────────────────────────────────
   const [colPickerOpen, setColPickerOpen] = useState(false);
@@ -363,7 +364,7 @@ export function OrderAccountManagementPanel({
   // ── Bench clock — drives reactive TTL expiry of terminal rows in Orders tab ──
   // Ticks every 30 s so the bench auto-clears within ±30 s of the 2-minute mark
   // without hammering the reconciler on every second.
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(id);

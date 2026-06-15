@@ -37,6 +37,11 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres # dummy value — satisfies prisma generate postinstall; no DB is started in this job
         run: pnpm install --frozen-lockfile # installs root + all workspace packages (server, future client)
 
+      - name: Audit dependencies
+        # 🔐 Fails on high/critical CVEs — low/moderate advisories are warnings only.
+        # Run `pnpm audit --fix` locally to auto-resolve where possible.
+        run: pnpm run audit
+
       - name: Type-check (server)
         run: pnpm type-check
         working-directory: apps/server

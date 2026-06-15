@@ -1813,11 +1813,22 @@ export const usePaperStore = create<PaperState>()(
     }),
     {
       name: 'cd-paper-trading', // localStorage key
+      partialize: (state) => ({
+        balance: state.balance,
+        positions: state.positions,
+        pendingOrders: state.pendingOrders,
+        history: state.history,
+        orders: state.orders,
+        realizedPnl: state.realizedPnl,
+        balanceLog: state.balanceLog,
+        journal: state.journal,
+        leverage: state.leverage,
+      }),
       // 🔐 version + migrate: any malformed or tampered localStorage snapshot from an
       //    older schema is safely discarded (migrate returns fresh state) instead of
       //    crashing the app on hydration. Increment `version` whenever a new required
       //    state field is added so old snapshots are migrated rather than used as-is.
-      version: 2,
+      version: 3,
       migrate: (persisted: unknown, fromVersion: number) => {
         // ── Fresh-state fallback ───────────────────────────────────────────
         // Used when the snapshot is completely unrecognisable (null, non-object,
@@ -1890,6 +1901,36 @@ export const usePaperStore = create<PaperState>()(
             balanceLog: Array.isArray(p['balanceLog']) ? p['balanceLog'] : [],
             journal: Array.isArray(p['journal']) ? p['journal'] : [],
             leverage,
+          };
+        }
+
+        // ── v2 → v3 ───────────────────────────────────────────────────────────
+        // v3 strips `isSyncing` and `lastSyncAt` from persisted state — these
+        // are transient runtime fields that should never survive a page refresh.
+        if (fromVersion === 2) {
+          return {
+            balance:
+              typeof p['balance'] === 'number' && p['balance'] >= 0
+                ? p['balance']
+                : STARTING_BALANCE,
+            positions: Array.isArray(p['positions'])
+              ? p['positions'].filter(isPositionSnapshot)
+              : [],
+            pendingOrders: Array.isArray(p['pendingOrders']) ? p['pendingOrders'] : [],
+            history: Array.isArray(p['history']) ? p['history'].filter(isClosedTradeSnapshot) : [],
+            orders: Array.isArray(p['orders']) ? p['orders'] : [],
+            realizedPnl:
+              typeof p['realizedPnl'] === 'number' && Number.isFinite(p['realizedPnl'])
+                ? p['realizedPnl']
+                : 0,
+            balanceLog: Array.isArray(p['balanceLog']) ? p['balanceLog'] : [],
+            journal: Array.isArray(p['journal']) ? p['journal'] : [],
+            leverage:
+              typeof p['leverage'] === 'number' &&
+              Number.isFinite(p['leverage']) &&
+              p['leverage'] >= 1
+                ? Math.min(Math.round(p['leverage']), MAX_LEVERAGE)
+                : 1,
           };
         }
 
