@@ -16,9 +16,6 @@ import {
   Minimize2,
   SlidersHorizontal,
   AlertTriangle,
-  RefreshCw,
-  Cloud,
-  CloudOff,
 } from 'lucide-react';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/shallow';
@@ -408,8 +405,6 @@ export function OrderAccountManagementPanel({
       : orderHistoryRows.filter((o) => o.status === orderHistorySubTab);
   const balanceLog = usePaperStore((s) => s.balanceLog);
   const realizedPnl = usePaperStore((s) => s.realizedPnl);
-  const isSyncing = usePaperStore((s) => s.isSyncing);
-  const lastSyncAt = usePaperStore((s) => s.lastSyncAt);
   const journal = usePaperStore((s) => s.journal);
   const closePosition = usePaperStore((s) => s.closePosition);
   const cancelPendingOrder = usePaperStore((s) => s.cancelPendingOrder);
@@ -825,15 +820,6 @@ export function OrderAccountManagementPanel({
                     value: winRate !== null ? `${winRate.toFixed(0)}%` : '—',
                     col: winRate !== null ? (winRate >= 50 ? color.green : color.red) : undefined,
                   },
-                  {
-                    label: 'Sync',
-                    value: isSyncing
-                      ? 'Syncing...'
-                      : lastSyncAt
-                        ? `Synced ${new Date(lastSyncAt).toLocaleTimeString()}`
-                        : 'Not synced',
-                    col: isSyncing ? color.purple : lastSyncAt ? color.green : color.red,
-                  },
                 ] as { label: string; value: string; col: string | undefined }[]
               ).map(({ label, value, col }) => (
                 <div key={label} className="flex shrink-0 flex-col gap-px">
@@ -847,15 +833,6 @@ export function OrderAccountManagementPanel({
                     className="whitespace-nowrap tabular-nums font-semibold"
                     style={{ fontSize: fontSize.xs11, color: col ?? 'rgba(255,255,255,0.75)' }}
                   >
-                    {label === 'Sync' && isSyncing && (
-                      <RefreshCw className="inline-block h-3 w-3 animate-spin mr-1" />
-                    )}
-                    {label === 'Sync' && !isSyncing && lastSyncAt && (
-                      <Cloud className="inline-block h-3 w-3 mr-1" />
-                    )}
-                    {label === 'Sync' && !isSyncing && !lastSyncAt && (
-                      <CloudOff className="inline-block h-3 w-3 mr-1" />
-                    )}
                     {value}
                   </span>
                 </div>

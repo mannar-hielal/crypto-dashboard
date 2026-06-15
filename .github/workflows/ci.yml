@@ -40,7 +40,7 @@ jobs:
       - name: Audit dependencies
         # 🔐 Fails on high/critical CVEs — low/moderate advisories are warnings only.
         # Run `pnpm audit --fix` locally to auto-resolve where possible.
-        run: pnpm audit --audit-level=high
+        run: pnpm run audit
 
       - name: Type-check (server)
         run: pnpm type-check
