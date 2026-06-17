@@ -16,6 +16,8 @@ import { TermsPage } from '@/pages/TermsPage';
 import { PrivacyPage } from '@/pages/PrivacyPage';
 import { SecurityPage } from '@/pages/SecurityPage';
 import { AcceptableUsePolicyPage } from '@/pages/AcceptableUsePolicyPage';
+import { LandingPage } from '@/pages/LandingPage';
+import { FeaturesPage } from '@/pages/FeaturesPage';
 import { UnderConstructionPage } from '@/pages/UnderConstructionPage';
 import { UnverifiedPage } from '@/pages/UnverifiedPage';
 import { VerifyEmailPage } from '@/pages/VerifyEmailPage';
@@ -66,8 +68,9 @@ export default function App() {
           mode="wait" ensures the old page fully exits before the new one enters. */}
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
-          {/* Landing — show under construction for visitors */}
-          <Route path="/" element={<UnderConstructionPage />} />
+          {/* Landing page */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/features" element={<FeaturesPage />} />
 
           {/* Public routes */}
           <Route path="/login" element={<LoginPage />} />

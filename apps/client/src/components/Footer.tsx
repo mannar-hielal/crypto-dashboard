@@ -3,7 +3,13 @@ import { bg, color, fontSize } from '@/lib/tokens';
 
 export function Footer() {
   return (
-    <footer className="px-4 py-6 text-center" style={{ background: bg.footer }}>
+    <footer className="px-4 py-6 text-center" style={{
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      width: '100%',
+      background: `linear-gradient(180deg, ${bg.page} 0%, ${bg.deep} 100%)`,
+    }}>
       <p style={{ fontSize: fontSize.xs, color: color.muted }}>
         ⚠️ Paper trading only — no real money involved. For educational purposes only.
       </p>

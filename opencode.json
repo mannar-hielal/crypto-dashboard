@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "figma": {
+      "type": "local",
+      "command": ["node", "mcp-servers/figma/dist/index.js"],
+      "cwd": ".",
+      "enabled": true
+    }
+  }
+}
