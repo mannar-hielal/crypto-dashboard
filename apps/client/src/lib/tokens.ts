@@ -12,8 +12,10 @@
 // ─── Backgrounds ─────────────────────────────────────────────────────────────
 
 export const bg = {
-  page: '#0f0e29', // deepest base — page / chart canvas background  (sampled from footer.png)
-  panel: '#211e49', // panel / header background  (sampled from header.png)
+  deep: '#03020a', // deepest tone — cover background base  (Exgen bg solid)
+  page: '#060413', // page / chart canvas background  (Exgen gradient start: #060413)
+  navy: '#081129', // secondary background tone  (Exgen gradient end: #081129)
+  panel: '#25234e', // panel / header / card background  (Exgen card bg: #25234E)
   footer: '#1e1d34', // footer body background  (sampled from footer.png)
   surface: '#3e3c73', // input / card / elevated surface  (sampled from header.png)
 } as const;
@@ -26,8 +28,10 @@ export const color = {
   purple: '#a555e2', // primary accent — vibrant  (sampled from header.png)
   purpleDark: '#695bec', // primary accent — dark/muted, hover states, borders  (sampled from header.png)
   purpleDeep: '#4e3287', // deepest purple — overlays, borders, badge backgrounds  (sampled from header.png)
+  glow: '#6662a9', // ambient glow / blur blobs  (Exgen glow: #6662A9)
   amber: '#e7ab33', // warning / margin alert (golden-amber)
   muted: '#cac5d4', // secondary / muted text  (sampled from header.png)
+  white: '#fcfcfd', // headline / bright text  (Exgen headline: #FCFCFD)
 } as const;
 
 // ─── Chart indicator colors ───────────────────────────────────────────────────
@@ -54,7 +58,7 @@ export const chart = {
   candleDown: '#d5455c', // bearish / red   candle
 
   // Canvas background — must match bg.page exactly
-  bg: '#0f0e29',
+  bg: '#060413',
 } as const;
 
 // ─── Typography ──────────────────────────────────────────────────────────────

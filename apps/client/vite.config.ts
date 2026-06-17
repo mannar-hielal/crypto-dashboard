@@ -54,6 +54,7 @@ export default defineConfig({
 
       // Workbox cache strategy
       workbox: {
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024, // 4 MiB (home-bg.svg is ~2.2 MiB)
         // Cache the app shell (HTML, JS, CSS, fonts, images) — stale-while-revalidate
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         // Never cache API calls — always go to network for live data

@@ -56,7 +56,7 @@ export function LeftToolbar() {
             <div
               key={`sep-${i}`}
               className="my-1.5 h-px w-6 rounded-full"
-              style={{ background: 'rgba(255,255,255,0.06)' }}
+              style={{ background: `color-mix(in srgb, ${color.white} 6%, transparent)` }}
             />
           );
         }

@@ -146,12 +146,12 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
   return (
     <div
       className="flex h-full w-full flex-col overflow-hidden"
-      style={{ background: bg.panel, borderLeft: '1px solid rgba(255,255,255,0.06)' }}
+      style={{ background: bg.panel, borderLeft: `1px solid color-mix(in srgb, ${color.white} 6%, transparent)` }}
     >
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <div
         className="flex shrink-0 flex-col gap-0.5 border-b px-3 py-2.5"
-        style={{ borderColor: 'rgba(255,255,255,0.07)' }}
+        style={{ borderColor: `color-mix(in srgb, ${color.white} 7%, transparent)` }}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -190,7 +190,7 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
       <div className="flex flex-1 flex-col gap-0 overflow-y-auto">
         {/* ── Divider ───────────────────────────────────────────────────── */}
         <div className="shrink-0 px-3 pt-3">
-          <hr style={{ borderColor: 'rgba(255,255,255,0.07)' }} />
+          <hr style={{ borderColor: `color-mix(in srgb, ${color.white} 7%, transparent)` }} />
         </div>
 
         {/* ── Exits section ─────────────────────────────────────────────── */}
@@ -259,7 +259,7 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
 
         {/* ── Divider ───────────────────────────────────────────────────── */}
         <div className="px-3">
-          <hr style={{ borderColor: 'rgba(255,255,255,0.07)' }} />
+          <hr style={{ borderColor: `color-mix(in srgb, ${color.white} 7%, transparent)` }} />
         </div>
 
         {/* ── Position info ─────────────────────────────────────────────── */}
@@ -312,14 +312,14 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
       {/* ── Footer: Confirm / Discard ─────────────────────────────────────── */}
       <div
         className="flex shrink-0 flex-col gap-2 border-t px-3 py-3"
-        style={{ borderColor: 'rgba(255,255,255,0.07)' }}
+        style={{ borderColor: `color-mix(in srgb, ${color.white} 7%, transparent)` }}
       >
         <motion.button
           onClick={handleConfirm}
           disabled={confirmDisabled}
           whileTap={!confirmDisabled ? { scale: 0.97 } : {}}
           className="w-full rounded py-2 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-          style={{ background: 'rgba(105,91,236,0.85)', fontSize: fontSize.xs }}
+          style={{ background: `color-mix(in srgb, ${color.purpleDark} 85%, transparent)`, fontSize: fontSize.xs }}
         >
           Confirm
         </motion.button>
@@ -328,10 +328,10 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
           whileTap={{ scale: 0.97 }}
           className="w-full rounded py-2 text-sm font-semibold transition-colors hover:text-white"
           style={{
-            background: 'rgba(255,255,255,0.05)',
+            background: `color-mix(in srgb, ${color.white} 5%, transparent)`,
             color: color.muted,
             fontSize: fontSize.xs,
-            border: '1px solid rgba(255,255,255,0.08)',
+            border: `1px solid color-mix(in srgb, ${color.white} 8%, transparent)`,
           }}
         >
           Discard

@@ -1,7 +1,7 @@
 {
-  "name": "crypto-dashboard",
+  "name": "crypto-paper-trade",
   "version": "0.1.0",
-  "description": "Free TradingView Plus alternative - Paper trading dashboard for crypto",
+  "description": "Stop paying to learn paper trade",
   "private": true,
   "type": "module",
   "license": "MIT",

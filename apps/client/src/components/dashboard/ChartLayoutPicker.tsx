@@ -128,7 +128,7 @@ export function ChartLayoutPicker() {
                           color: isActive ? color.purple : color.muted,
                           border: isActive
                             ? `1px solid ${color.purpleDark}60`
-                            : '1px solid rgba(255,255,255,0.06)',
+                            : `1px solid color-mix(in srgb, ${color.white} 6%, transparent)`,
                           boxShadow: isActive ? `0 0 8px 2px ${color.purpleDark}30` : 'none',
                         }}
                       >

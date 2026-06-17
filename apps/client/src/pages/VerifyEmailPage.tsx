@@ -48,29 +48,30 @@ export function VerifyEmailPage() {
       >
         {status === 'loading' && (
           <div className="flex flex-col items-center gap-4 py-8">
-            <Loader2 className="w-12 h-12 text-purple-500 animate-spin" />
+            <Loader2 className="w-12 h-12 animate-spin" style={{ color: color.purple }} />
             <h1 className="text-xl font-bold text-white">Verifying your email...</h1>
-            <p className="text-white/60">One moment while we confirm your account.</p>
+            <p className="text-sm" style={{ color: color.muted }}>One moment while we confirm your account.</p>
           </div>
         )}
 
         {status === 'success' && (
           <div className="flex flex-col items-center gap-4 py-8">
-            <CheckCircle2 className="w-16 h-16 text-green-500" />
+            <CheckCircle2 className="w-16 h-16" style={{ color: color.green }} />
             <h1 className="text-2xl font-bold text-white">Email Verified!</h1>
-            <p className="text-white/60">{message}</p>
-            <p className="text-xs text-white/40 pt-4">Redirecting you to login...</p>
+            <p className="text-sm" style={{ color: color.muted }}>{message}</p>
+            <p className="text-xs pt-4" style={{ color: `${color.muted}60` }}>Redirecting you to login...</p>
           </div>
         )}
 
         {status === 'error' && (
           <div className="flex flex-col items-center gap-4 py-8">
-            <AlertCircle className="w-16 h-16 text-red-500" />
+            <AlertCircle className="w-16 h-16" style={{ color: color.red }} />
             <h1 className="text-2xl font-bold text-white">Verification Failed</h1>
-            <p className="text-red-400 font-medium">{message}</p>
+            <p className="text-sm font-medium" style={{ color: color.red }}>{message}</p>
             <Link
               to="/login"
-              className="flex items-center gap-2 text-sm font-bold text-purple-400 hover:text-purple-300 transition-colors pt-4"
+              className="flex items-center gap-2 text-sm font-bold pt-4 transition-colors"
+              style={{ color: color.purple }}
             >
               <ArrowLeft className="w-4 h-4" /> Back to login
             </Link>

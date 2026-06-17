@@ -3,6 +3,8 @@ packages:
   - 'apps/*'
   # Shared SDK (types + API functions) — like Guidewire's CDSDK
   - 'generated/*'
+  # MCP servers (e.g. Figma design reader)
+  - 'mcp-servers/*'
 overrides:
   '@hono/node-server@<1.19.13': '>=1.19.13'
   esbuild@>=0.17.0 <0.28.1: '>=0.28.1'

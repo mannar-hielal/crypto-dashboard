@@ -192,7 +192,7 @@ export function PaneHeader({ paneIndex, isActive, onActivate }: PaneHeaderProps)
                 ? isPositive
                   ? color.green
                   : color.red
-                : 'rgba(255,255,255,0.6)',
+                : `${color.white}99`,
           }}
         >
           {latestPrice.toLocaleString(undefined, {
