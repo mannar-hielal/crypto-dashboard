@@ -38,6 +38,13 @@
     "prettier": "^3.8.4",
     "typescript-eslint": "^8.61.0"
   },
+  "pnpm": {
+    "overrides": {
+      "undici": "^7.28.0",
+      "serialize-javascript": "^7.0.3",
+      "ws": "^8.21.0"
+    }
+  },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,json,md,yml,yaml,css}": [
       "prettier --write"

@@ -675,7 +675,10 @@ export function TradingPanel({
                           setFormError(null);
                         }}
                       />
-                      <span className="text-xs" style={{ color: tpEnabled ? color.white : color.muted }}>
+                      <span
+                        className="text-xs"
+                        style={{ color: tpEnabled ? color.white : color.muted }}
+                      >
                         Take profit, price
                       </span>
                     </div>
@@ -728,7 +731,10 @@ export function TradingPanel({
                           setFormError(null);
                         }}
                       />
-                      <span className="text-xs" style={{ color: slEnabled ? color.white : color.muted }}>
+                      <span
+                        className="text-xs"
+                        style={{ color: slEnabled ? color.white : color.muted }}
+                      >
                         Stop loss, price
                       </span>
                     </div>
@@ -826,7 +832,10 @@ export function TradingPanel({
           ].map(({ label, value }) => (
             <div key={label} className="flex items-center justify-between py-0.5">
               <span style={{ fontSize: fontSize.xs10, color: color.muted }}>{label}</span>
-              <span className="tabular-nums" style={{ fontSize: fontSize.xs10, color: color.white }}>
+              <span
+                className="tabular-nums"
+                style={{ fontSize: fontSize.xs10, color: color.white }}
+              >
                 {value}
               </span>
             </div>
@@ -851,10 +860,18 @@ export function TradingPanel({
                   style={{ color: color.warning }}
                 />
                 <div className="flex flex-col gap-1">
-                  <p style={{ fontSize: fontSize.xs10, color: color.warningLight, lineHeight: 1.4 }}>
+                  <p
+                    style={{ fontSize: fontSize.xs10, color: color.warningLight, lineHeight: 1.4 }}
+                  >
                     {immediateWarning.message}
                   </p>
-                  <p style={{ fontSize: fontSize.xs10, color: `${color.warning}99`, lineHeight: 1.4 }}>
+                  <p
+                    style={{
+                      fontSize: fontSize.xs10,
+                      color: `${color.warning}99`,
+                      lineHeight: 1.4,
+                    }}
+                  >
                     {immediateWarning.suggestion}
                   </p>
                   {bypassWarning && (
@@ -898,22 +915,46 @@ export function TradingPanel({
                   </p>
 
                   {slWarnings.typoWarning && (
-                    <p style={{ fontSize: fontSize.xs10, color: `${color.warningLight}99`, lineHeight: 1.4 }}>
+                    <p
+                      style={{
+                        fontSize: fontSize.xs10,
+                        color: `${color.warningLight}99`,
+                        lineHeight: 1.4,
+                      }}
+                    >
                       {slWarnings.typoWarning}
                     </p>
                   )}
                   {slWarnings.largeDistanceWarning && (
-                    <p style={{ fontSize: fontSize.xs10, color: `${color.warningLight}99`, lineHeight: 1.4 }}>
+                    <p
+                      style={{
+                        fontSize: fontSize.xs10,
+                        color: `${color.warningLight}99`,
+                        lineHeight: 1.4,
+                      }}
+                    >
                       {slWarnings.largeDistanceWarning}
                     </p>
                   )}
                   {tpWarnings.typoWarning && (
-                    <p style={{ fontSize: fontSize.xs10, color: `${color.warningLight}99`, lineHeight: 1.4 }}>
+                    <p
+                      style={{
+                        fontSize: fontSize.xs10,
+                        color: `${color.warningLight}99`,
+                        lineHeight: 1.4,
+                      }}
+                    >
                       {tpWarnings.typoWarning}
                     </p>
                   )}
                   {tpWarnings.largeDistanceWarning && (
-                    <p style={{ fontSize: fontSize.xs10, color: `${color.warningLight}99`, lineHeight: 1.4 }}>
+                    <p
+                      style={{
+                        fontSize: fontSize.xs10,
+                        color: `${color.warningLight}99`,
+                        lineHeight: 1.4,
+                      }}
+                    >
                       {tpWarnings.largeDistanceWarning}
                     </p>
                   )}

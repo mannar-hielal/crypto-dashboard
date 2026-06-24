@@ -396,7 +396,10 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
           ).map(({ label, value }) => (
             <div key={label} className="flex items-center justify-between py-0.5">
               <span style={{ fontSize: fontSize.xs10, color: color.muted }}>{label}</span>
-              <span className="tabular-nums" style={{ fontSize: fontSize.xs10, color: color.white }}>
+              <span
+                className="tabular-nums"
+                style={{ fontSize: fontSize.xs10, color: color.white }}
+              >
                 {value}
               </span>
             </div>
