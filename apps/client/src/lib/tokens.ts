@@ -30,6 +30,8 @@ export const color = {
   purpleDeep: '#4e3287', // deepest purple — overlays, borders, badge backgrounds  (sampled from header.png)
   glow: '#6662a9', // ambient glow / blur blobs  (Exgen glow: #6662A9)
   amber: '#e7ab33', // warning / margin alert (golden-amber)
+  warning: '#f59e0b', // amber-500 — warning callout / alert borders and icons
+  warningLight: '#fcd34d', // amber-200 — warning text / alert message text
   muted: '#cac5d4', // secondary / muted text  (sampled from header.png)
   white: '#fcfcfd', // headline / bright text  (Exgen headline: #FCFCFD)
 } as const;
@@ -56,6 +58,9 @@ export const chart = {
   // Candlestick series
   candleUp: '#2ccd78', // bullish / green candle
   candleDown: '#d5455c', // bearish / red   candle
+
+  // Canvas text colour for axis labels / crosshair values
+  textColor: '#d1d4dc',
 
   // Canvas background — must match bg.page exactly
   bg: '#060413',

@@ -9,7 +9,11 @@ interface AuthLayoutProps {
   centerContent?: boolean;
 }
 
-export function AuthLayout({ children, hideFooter = false, centerContent = false }: AuthLayoutProps) {
+export function AuthLayout({
+  children,
+  hideFooter = false,
+  centerContent = false,
+}: AuthLayoutProps) {
   return (
     <div
       className="relative flex min-h-screen flex-col"
@@ -63,7 +67,11 @@ export function AuthLayout({ children, hideFooter = false, centerContent = false
         }}
       />
 
-      <main className={`relative z-10 flex flex-1 flex-col items-center${centerContent ? ' justify-center' : ''}`}>{children}</main>
+      <main
+        className={`relative z-10 flex flex-1 flex-col items-center${centerContent ? ' justify-center' : ''}`}
+      >
+        {children}
+      </main>
       {!hideFooter && <Footer />}
     </div>
   );

@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button';
 import { AuthLayout } from '@/components/AuthLayout';
 import { CtaSection } from '@/components/CtaSection';
 import { bg, color, gradient, font } from '@/lib/tokens';
+import cryptoCoins from '@/assets/crypto-coins.svg';
+import chartImg from '@/assets/chart.svg';
+import papertradingImg from '@/assets/papertrading.svg';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -58,7 +61,9 @@ function AlternatingSection({
   reversed?: boolean;
 }) {
   return (
-    <div className={`flex w-full flex-col items-center gap-10 lg:flex-row${reversed ? ' lg:flex-row-reverse' : ''}`}>
+    <div
+      className={`flex w-full flex-col items-center gap-10 lg:flex-row${reversed ? ' lg:flex-row-reverse' : ''}`}
+    >
       <motion.div variants={itemVariants} className="flex flex-1 flex-col gap-4">
         <div className="flex items-center gap-4">
           <SectionIcon>{icon}</SectionIcon>
@@ -69,11 +74,36 @@ function AlternatingSection({
         <p className="max-w-lg text-sm leading-relaxed sm:text-base" style={{ color: color.muted }}>
           {desc}
         </p>
+        {(title === 'Advanced Charts' ||
+          title === 'Paper Trading' ||
+          title === 'Real-time Data') && (
+          <div>
+            <Button
+              asChild
+              size="sm"
+              className="mt-1 h-9 rounded-full px-5 text-sm font-semibold text-white shadow-md"
+              style={{ background: gradient.brand }}
+            >
+              <Link
+                to={
+                  title === 'Advanced Charts'
+                    ? '/features#charts'
+                    : title === 'Paper Trading'
+                      ? '/features#trading'
+                      : '/features#realtime'
+                }
+              >
+                {title === 'Advanced Charts'
+                  ? 'Discover Charts'
+                  : title === 'Paper Trading'
+                    ? 'Explore Paper Trading'
+                    : 'Read More'}
+              </Link>
+            </Button>
+          </div>
+        )}
       </motion.div>
-      <motion.div
-        variants={itemVariants}
-        className="flex flex-1 items-center justify-center"
-      >
+      <motion.div variants={itemVariants} className="flex flex-1 items-center justify-center">
         {graphic}
       </motion.div>
     </div>
@@ -102,79 +132,20 @@ const alternatingSections = [
   {
     icon: <TrendingUp className="h-6 w-6" style={{ color: color.purple }} />,
     title: 'Advanced Charts',
-    desc: 'Multi-layout trading view with 6 timeframes. EMA9/20/200, VWAP, MACD indicators and professional drawing tools — all streaming live by WebSocket.',
-    graphic: (
-      <div className="relative flex h-56 w-full max-w-sm items-center justify-center rounded-2xl border p-6 sm:h-72"
-        style={{
-          background: `linear-gradient(135deg, ${bg.page} 0%, ${bg.panel} 100%)`,
-          borderColor: `${color.glow}20`,
-          boxShadow: `0 0 60px ${color.purpleDeep}30`,
-        }}
-      >
-        {/* Mini candlestick simulation */}
-        <div className="flex items-end gap-1.5">
-          {[42, 38, 48, 45, 52, 50, 58, 55, 62, 60, 65, 58, 68, 72, 78, 75, 82, 80, 85, 90].map((h, i) => {
-            const isUp = i % 2 === 0;
-            return (
-              <div key={i} className="flex flex-col items-center" style={{ width: 6 }}>
-                <div
-                  className="w-0.5"
-                  style={{
-                    height: h * 0.3 - 6,
-                    background: isUp ? color.green : color.red,
-                  }}
-                />
-                <div
-                  className="w-full rounded-sm"
-                  style={{
-                    height: 6,
-                    background: isUp ? color.green : color.red,
-                    opacity: 0.5 + h / 200,
-                  }}
-                />
-              </div>
-            );
-          })}
-        </div>
-        {/* Grid overlay */}
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: `
-              linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)
-            `,
-            backgroundSize: '24px 24px',
-          }}
-        />
-      </div>
-    ),
+    desc: 'Up to 4 multi-layout panes with 6 timeframes (1m, 5m, 15m, 1h, 4h, 1d). Sync symbol, interval, crosshair, and time range across panes. EMA9/20/200, VWAP, MACD indicators included — more added constantly. Drawing tools are under active development.',
+    graphic: <img src={chartImg} alt="" className="w-full max-w-lg select-none" />,
   },
   {
     icon: <Activity className="h-6 w-6" style={{ color: color.purple }} />,
     title: 'Paper Trading',
-    desc: 'Market, limit, and stop orders with $10K virtual balance. Set take-profit and stop-loss on every position. Practice leverage 1-10x without risking real money.',
+    desc: 'Market orders fill instantly at the best available price. Limit orders let you name your price, executed when the market reaches your level. Stop orders trigger a market order once the price hits your stop — perfect for entries and exits. All with $10K virtual balance, take-profit and stop-loss on every position, and leverage 1–10x. No real money at risk.',
     graphic: (
-      <div className="relative flex h-56 w-full max-w-sm flex-col justify-center gap-3 rounded-2xl border p-6 sm:h-72"
-        style={{
-          background: `linear-gradient(135deg, ${bg.page} 0%, ${bg.panel} 100%)`,
-          borderColor: `${color.glow}20`,
-          boxShadow: `0 0 60px ${color.purpleDeep}30`,
-        }}
-      >
-        <div className="flex items-center justify-between border-b pb-2" style={{ borderColor: `${color.glow}15` }}>
-          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: color.muted }}>Balance</span>
-          <span className="text-sm font-bold text-white">$10,000.00</span>
-        </div>
-        <div className="flex items-center justify-between border-b pb-2" style={{ borderColor: `${color.glow}15` }}>
-          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: color.muted }}>BTC/USD</span>
-          <span className="text-sm font-bold" style={{ color: color.green }}>+2.14%</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: color.muted }}>Position</span>
-          <span className="text-sm font-bold text-white">0.25 BTC</span>
-        </div>
-      </div>
+      <img
+        src={papertradingImg}
+        alt=""
+        className="w-full max-w-sm select-none object-contain"
+        style={{ transform: 'translate(40px, -40px)' }}
+      />
     ),
     reversed: true,
   },
@@ -183,25 +154,31 @@ const alternatingSections = [
     title: 'Real-time Data',
     desc: 'Live Bybit WebSocket feed across 9 crypto pairs. Bid/ask spread, connection health indicator, and automatic reconnection. Professional charting with real-time candlestick updates.',
     graphic: (
-      <div className="relative flex h-56 w-full max-w-sm items-center justify-center gap-4 rounded-2xl border p-6 sm:h-72"
-        style={{
-          background: `linear-gradient(135deg, ${bg.page} 0%, ${bg.panel} 100%)`,
-          borderColor: `${color.glow}20`,
-          boxShadow: `0 0 60px ${color.purpleDeep}30`,
-        }}
-      >
+      <div className="flex flex-wrap items-center justify-center gap-4">
         {[
           { pair: 'BTC/USD', price: '83,412', chg: '+2.14%', up: true },
           { pair: 'ETH/USD', price: '1,582', chg: '+1.84%', up: true },
           { pair: 'SOL/USD', price: '120.45', chg: '-0.83%', up: false },
           { pair: 'XRP/USD', price: '2.20', chg: '+3.12%', up: true },
         ].map((t) => (
-          <div key={t.pair} className="flex flex-col items-center gap-1 rounded-xl px-3 py-2"
+          <div
+            key={t.pair}
+            className="flex flex-col items-center gap-1 rounded-xl px-3 py-2"
             style={{ background: `${bg.surface}40`, minWidth: 80 }}
           >
-            <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: color.muted }}>{t.pair}</span>
+            <span
+              className="text-[10px] font-semibold uppercase tracking-wider"
+              style={{ color: color.muted }}
+            >
+              {t.pair}
+            </span>
             <span className="text-xs font-bold text-white">{t.price}</span>
-            <span className="text-[10px] font-semibold" style={{ color: t.up ? color.green : color.red }}>{t.chg}</span>
+            <span
+              className="text-[10px] font-semibold"
+              style={{ color: t.up ? color.green : color.red }}
+            >
+              {t.chg}
+            </span>
           </div>
         ))}
       </div>
@@ -250,12 +227,16 @@ export function LandingPage() {
             animate="visible"
             className="flex flex-1 flex-col items-center gap-6 text-center lg:items-start lg:text-left"
           >
-            <motion.div variants={itemVariants}
+            <motion.div
+              variants={itemVariants}
               className="flex items-center gap-3 rounded-full border border-white/10 px-4 py-1.5"
               style={{ background: `${color.glow}15` }}
             >
               <span className="flex h-2 w-2 rounded-full" style={{ background: color.green }} />
-              <span className="text-xs font-medium tracking-wide uppercase" style={{ color: color.muted }}>
+              <span
+                className="text-xs font-medium tracking-wide uppercase"
+                style={{ color: color.muted }}
+              >
                 Free Paper Trading Platform
               </span>
             </motion.div>
@@ -281,17 +262,29 @@ export function LandingPage() {
               Stop paying. Start learning.
             </motion.p>
 
-            <motion.p variants={itemVariants} className="max-w-xl text-base leading-relaxed" style={{ color: color.muted }}>
-              Real-time Bybit data, professional charts, and $10K virtual balance — no sign-up required.
+            <motion.p
+              variants={itemVariants}
+              className="max-w-xl text-base leading-relaxed"
+              style={{ color: color.muted }}
+            >
+              Real-time Bybit data, professional charts, and $10K virtual balance — no sign-up
+              required.
             </motion.p>
 
             <motion.div variants={itemVariants} className="flex gap-4">
-              <Button asChild size="lg" className="h-12 rounded-full px-8 text-base font-semibold text-white shadow-lg"
+              <Button
+                asChild
+                size="lg"
+                className="h-12 rounded-full px-8 text-base font-semibold text-white shadow-lg"
                 style={{ background: gradient.brand }}
               >
                 <Link to="/register">Start Paper Trading</Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="h-12 rounded-full border-white/20 px-8 text-base font-semibold"
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="h-12 rounded-full border-white/20 px-8 text-base font-semibold"
                 style={{ color: color.muted }}
               >
                 <Link to="/features">See Features</Link>
@@ -299,84 +292,19 @@ export function LandingPage() {
             </motion.div>
           </motion.div>
 
-          {/* Laptop mockup — Exgen-inspired */}
+          {/* Crypto coins graphic */}
           <motion.div
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.7, ease: 'easeOut' }}
-            className="flex-1"
+            className="flex flex-1 items-center justify-center"
           >
-            <div className="relative mx-auto w-full max-w-lg">
-              {/* Glow under laptop */}
-              <div
-                className="absolute -bottom-8 left-1/2 h-32 w-3/4 -translate-x-1/2 rounded-full opacity-30 blur-3xl"
-                style={{ background: `radial-gradient(ellipse, ${color.glow} 0%, transparent 70%)` }}
-              />
-              {/* Laptop body */}
-              <div className="relative rounded-2xl border p-2 shadow-2xl"
-                style={{
-                  borderColor: `${color.glow}30`,
-                  background: `linear-gradient(180deg, ${bg.surface} 0%, ${bg.panel} 100%)`,
-                  boxShadow: `0 20px 60px ${color.purpleDeep}40`,
-                }}
-              >
-                {/* Screen */}
-                <div className="overflow-hidden rounded-xl" style={{ background: bg.page }}>
-                  {/* Browser chrome */}
-                  <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: `${bg.footer}cc` }}>
-                    <div className="h-2.5 w-2.5 rounded-full bg-red-500/70" />
-                    <div className="h-2.5 w-2.5 rounded-full bg-amber-500/70" />
-                    <div className="h-2.5 w-2.5 rounded-full bg-green-500/70" />
-                    <div className="ml-3 flex-1 rounded-md px-3 py-1" style={{ background: `${bg.surface}60` }}>
-                      <div className="mx-auto h-2 w-40 rounded" style={{ background: `${color.muted}30` }} />
-                    </div>
-                  </div>
-                  {/* Dashboard preview content */}
-                  <div className="p-4 sm:p-6">
-                    <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: `${color.glow}20` }}>
-                      <div className="flex items-center gap-2">
-                        <div className="h-8 w-8 rounded-lg" style={{ background: `linear-gradient(135deg, ${color.purpleDark}, ${color.purple})` }} />
-                        <div>
-                          <div className="h-3 w-16 rounded" style={{ background: `${color.muted}30` }} />
-                          <div className="mt-1 h-2 w-10 rounded" style={{ background: `${color.muted}20` }} />
-                        </div>
-                      </div>
-                      <div className="h-6 w-20 rounded-full" style={{ background: `${color.green}20` }} />
-                    </div>
-                    {/* Mini chart */}
-                    <div className="mt-3 flex items-end gap-1">
-                      {[35, 28, 42, 38, 45, 52, 48, 55, 62, 58, 65, 70, 68, 72, 78, 82, 75, 85, 80, 88].map((h, i) => (
-                        <div key={i}
-                          className="w-2 rounded-t"
-                          style={{
-                            height: `${h * 0.3}px`,
-                            background: i > 14 ? `linear-gradient(to top, ${color.green}, ${color.green}80)` : `${color.glow}40`,
-                            opacity: 0.5 + (h / 180),
-                          }}
-                        />
-                      ))}
-                    </div>
-                    {/* Bottom stats */}
-                    <div className="mt-4 grid grid-cols-3 gap-2">
-                      {['BTC/USD', 'ETH/USD', 'SOL/USD'].map((pair) => (
-                        <div key={pair} className="rounded-lg px-2 py-2" style={{ background: `${bg.surface}50` }}>
-                          <div className="text-[10px] font-medium" style={{ color: color.muted }}>{pair}</div>
-                          <div className="mt-0.5 text-xs font-bold text-white">
-                            ${(Math.random() * 50000 + 10000).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              {/* Laptop base */}
-              <div className="mx-auto -mt-px h-3 w-[60%] rounded-b-lg shadow-lg"
-                style={{
-                  background: `linear-gradient(180deg, ${bg.surface} 0%, ${bg.panel} 100%)`,
-                  border: `1px solid ${color.glow}20`,
-                  borderTop: 'none',
-                }}
+            <div className="overflow-hidden" style={{ width: 420, height: 420 }}>
+              <img
+                src={cryptoCoins}
+                alt=""
+                className="h-full w-full select-none object-contain"
+                style={{ objectPosition: 'center center' }}
               />
             </div>
           </motion.div>
@@ -393,9 +321,21 @@ export function LandingPage() {
           className="grid w-full grid-cols-1 gap-4 sm:grid-cols-3"
         >
           {[
-              { label: 'Crypto Pairs', value: '9', icon: <BarChart3 className="h-5 w-5" style={{ color: color.purple }} /> },
-            { label: 'Data Feed', value: 'Real-time Bybit', icon: <Zap className="h-5 w-5" style={{ color: color.purple }} /> },
-            { label: 'Virtual Balance', value: '$10,000', icon: <Wallet className="h-5 w-5" style={{ color: color.purple }} /> },
+            {
+              label: 'Crypto Pairs',
+              value: '9',
+              icon: <BarChart3 className="h-5 w-5" style={{ color: color.purple }} />,
+            },
+            {
+              label: 'Data Feed',
+              value: 'Real-time Bybit',
+              icon: <Zap className="h-5 w-5" style={{ color: color.purple }} />,
+            },
+            {
+              label: 'Virtual Balance',
+              value: '$10,000',
+              icon: <Wallet className="h-5 w-5" style={{ color: color.purple }} />,
+            },
           ].map((stat) => (
             <motion.div
               key={stat.label}
@@ -421,14 +361,19 @@ export function LandingPage() {
               >
                 {stat.icon}
               </div>
-              <span className="mt-1 block text-3xl font-black" style={{
-                background: gradient.brand,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}>
+              <span
+                className="mt-1 block text-3xl font-black"
+                style={{
+                  background: gradient.brand,
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
+              >
                 {stat.value}
               </span>
-              <span className="mt-1 block text-sm" style={{ color: color.muted }}>{stat.label}</span>
+              <span className="mt-1 block text-sm" style={{ color: color.muted }}>
+                {stat.label}
+              </span>
             </motion.div>
           ))}
         </motion.div>
@@ -442,7 +387,9 @@ export function LandingPage() {
           className="flex w-full flex-col items-center gap-16"
         >
           <motion.div variants={itemVariants} className="text-center">
-            <h2 className="text-3xl font-bold text-white">Everything you need to practice crypto trading</h2>
+            <h2 className="text-3xl font-bold text-white">
+              Everything you need to practice crypto trading
+            </h2>
             <p className="mt-2 text-sm" style={{ color: color.muted }}>
               Built for beginners and experienced traders alike.
             </p>
@@ -467,12 +414,21 @@ export function LandingPage() {
               className="mb-4 inline-flex items-center gap-2 rounded-full border px-4 py-1.5"
               style={{ borderColor: `${color.glow}30`, background: `${color.glow}10` }}
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke={color.purple} strokeWidth="2" className="h-4 w-4">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke={color.purple}
+                strokeWidth="2"
+                className="h-4 w-4"
+              >
                 <path d="M12 2L2 7l10 5 10-5-10-5z" />
                 <path d="M2 17l10 5 10-5" />
                 <path d="M2 12l10 5 10-5" />
               </svg>
-              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: color.purple }}>
+              <span
+                className="text-xs font-semibold uppercase tracking-wider"
+                style={{ color: color.purple }}
+              >
                 Zero to Trader
               </span>
             </div>
@@ -486,7 +442,10 @@ export function LandingPage() {
               <motion.div key={step.step} variants={itemVariants} className="relative">
                 {/* Connector line */}
                 {i < learningSteps.length - 1 && (
-                  <div className="absolute -right-3 top-12 hidden h-px w-6 md:block" style={{ background: `${color.glow}30` }} />
+                  <div
+                    className="absolute -right-3 top-12 hidden h-px w-6 md:block"
+                    style={{ background: `${color.glow}30` }}
+                  />
                 )}
                 <div
                   className="flex flex-col items-center gap-4 rounded-2xl px-6 py-8 text-center transition-all duration-300 hover:-translate-y-1"
@@ -505,7 +464,9 @@ export function LandingPage() {
                     {step.step}
                   </div>
                   <h3 className="text-lg font-bold text-white">{step.title}</h3>
-                  <p className="text-sm leading-relaxed" style={{ color: color.muted }}>{step.desc}</p>
+                  <p className="text-sm leading-relaxed" style={{ color: color.muted }}>
+                    {step.desc}
+                  </p>
                 </div>
               </motion.div>
             ))}
@@ -526,18 +487,25 @@ export function LandingPage() {
               Unlike traditional platforms, every pixel serves a purpose.
             </p>
           </motion.div>
-          <motion.div variants={itemVariants} className="relative w-full overflow-hidden rounded-2xl border shadow-2xl"
+          <motion.div
+            variants={itemVariants}
+            className="relative w-full overflow-hidden rounded-2xl border shadow-2xl"
             style={{
               borderColor: `${color.glow}20`,
               background: `linear-gradient(135deg, ${bg.page} 0%, ${bg.panel} 100%)`,
               boxShadow: `0 0 80px ${color.purpleDeep}30`,
             }}
           >
-            <div className="flex items-center gap-2 border-b px-5 py-3" style={{ borderColor: `${color.glow}15` }}>
+            <div
+              className="flex items-center gap-2 border-b px-5 py-3"
+              style={{ borderColor: `${color.glow}15` }}
+            >
               <div className="h-3 w-3 rounded-full bg-red-500/60" />
               <div className="h-3 w-3 rounded-full bg-amber-500/60" />
               <div className="h-3 w-3 rounded-full bg-green-500/60" />
-              <span className="ml-3 text-xs" style={{ color: color.muted }}>cryptopapertrade.com</span>
+              <span className="ml-3 text-xs" style={{ color: color.muted }}>
+                cryptopapertrade.com
+              </span>
             </div>
             <div className="flex items-center justify-center p-8 sm:p-12">
               <div className="flex flex-col items-center gap-5 text-center">
@@ -548,7 +516,13 @@ export function LandingPage() {
                     boxShadow: `0 0 30px ${color.purpleDark}40`,
                   }}
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" className="h-10 w-10">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="white"
+                    strokeWidth="1.5"
+                    className="h-10 w-10"
+                  >
                     <rect x="3" y="3" width="18" height="18" rx="2" />
                     <path d="M3 9h18M9 3v18" />
                   </svg>
@@ -556,7 +530,10 @@ export function LandingPage() {
                 <p className="text-sm" style={{ color: color.muted }}>
                   Clean, focused interface — log in to see live charts
                 </p>
-                <Button asChild size="lg" className="rounded-full px-8 text-base font-semibold text-white shadow-lg"
+                <Button
+                  asChild
+                  size="lg"
+                  className="rounded-full px-8 text-base font-semibold text-white shadow-lg"
                   style={{ background: gradient.brand }}
                 >
                   <Link to="/register">Try It Now</Link>

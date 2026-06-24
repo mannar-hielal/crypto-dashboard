@@ -1,6 +1,7 @@
 # Landing Page + Features Page — Build Plan
 
 ## Goal
+
 Create two public-facing marketing pages for cryptopapertrade.com:
 
 - `/` → Landing page (the hub for future offers)
@@ -14,13 +15,13 @@ The marketing hub that will be iterated on with new offers over time.
 
 ### Sections
 
-| Section | Content |
-|---------|---------|
-| **Hero** | Gradient brand headline ("Paper trade crypto, free"), subtitle, two CTAs ("Start Trading" → `/register`, "See Features" → `/features`) |
-| **Stats strip** | 3 metrics (9 crypto pairs, real-time Bybit data, $10K virtual balance) |
-| **Feature highlights** | 3-card grid (Charts, Trading, Data) with icons + brief copy |
-| **Dashboard preview** | Visual mockup/screenshot of the dashboard |
-| **Final CTA** | Full-width gradient banner with heading + "Get Started" button |
+| Section                | Content                                                                                                                                |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **Hero**               | Gradient brand headline ("Paper trade crypto, free"), subtitle, two CTAs ("Start Trading" → `/register`, "See Features" → `/features`) |
+| **Stats strip**        | 3 metrics (9 crypto pairs, real-time Bybit data, $10K virtual balance)                                                                 |
+| **Feature highlights** | 3-card grid (Charts, Trading, Data) with icons + brief copy                                                                            |
+| **Dashboard preview**  | Visual mockup/screenshot of the dashboard                                                                                              |
+| **Final CTA**          | Full-width gradient banner with heading + "Get Started" button                                                                         |
 
 ---
 
@@ -30,15 +31,15 @@ The living catalog of everything the platform does — updated as new features s
 
 ### Sections
 
-| Section | Content |
-|---------|---------|
-| **Hero** | Headline + sticky anchor nav linking to each section |
-| **Charts** | Multi-layout (5 layouts), 6 timeframes, indicators (EMA9/20/200, VWAP, MACD), drawing tools (trend lines, fib, rectangles, text, freehand) |
-| **Trading** | Market/limit/stop orders, TP/SL, position netting, $10K paper balance, leverage 1–10x |
-| **Account** | Positions table, order history, balance audit trail, trading journal |
-| **Real-time Data** | Bybit WebSocket feed, 9 crypto pairs, bid/ask spread, connection status indicator |
-| **Cross-platform** | PWA — installable on mobile/desktop, works offline, synced across devices |
-| **CTA** | "Start trading in 30 seconds" — link to `/register` |
+| Section            | Content                                                                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Hero**           | Headline + sticky anchor nav linking to each section                                                                                       |
+| **Charts**         | Multi-layout (5 layouts), 6 timeframes, indicators (EMA9/20/200, VWAP, MACD), drawing tools (trend lines, fib, rectangles, text, freehand) |
+| **Trading**        | Market/limit/stop orders, TP/SL, position netting, $10K paper balance, leverage 1–10x                                                      |
+| **Account**        | Positions table, order history, balance audit trail, trading journal                                                                       |
+| **Real-time Data** | Bybit WebSocket feed, 9 crypto pairs, bid/ask spread, connection status indicator                                                          |
+| **Cross-platform** | PWA — installable on mobile/desktop, works offline, synced across devices                                                                  |
+| **CTA**            | "Start trading in 30 seconds" — link to `/register`                                                                                        |
 
 ---
 
@@ -63,13 +64,13 @@ The living catalog of everything the platform does — updated as new features s
 
 ## Files to Create
 
-| File | Purpose |
-|------|---------|
-| `src/pages/LandingPage.tsx` | Landing page at `/` |
+| File                         | Purpose                      |
+| ---------------------------- | ---------------------------- |
+| `src/pages/LandingPage.tsx`  | Landing page at `/`          |
 | `src/pages/FeaturesPage.tsx` | Features page at `/features` |
 
 ## Files to Modify
 
-| File | Change |
-|------|--------|
+| File          | Change                  |
+| ------------- | ----------------------- |
 | `src/App.tsx` | Wire up both new routes |

@@ -452,7 +452,10 @@ export function OrderAccountManagementPanel({
       case 'stop-loss':
         return { background: `${colorMap.red}22`, color: colorMap.red };
       default:
-        return { background: `color-mix(in srgb, ${color.white} 8%, transparent)`, color: colorMap.muted };
+        return {
+          background: `color-mix(in srgb, ${color.white} 8%, transparent)`,
+          color: colorMap.muted,
+        };
     }
   }
 
@@ -947,7 +950,7 @@ export function OrderAccountManagementPanel({
                                 className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left transition-colors hover:bg-white/5"
                                 style={{
                                   fontSize: fontSize.xs11,
-                                  color: on ? '#fff' : color.muted,
+                                  color: on ? color.white : color.muted,
                                 }}
                               >
                                 {/* Checkbox */}
@@ -2414,7 +2417,9 @@ export function OrderAccountManagementPanel({
                         style={{
                           fontSize: fontSize.xs10,
                           background:
-                            draftLeverage > 1 ? `${color.amber}22` : `color-mix(in srgb, ${color.white} 6%, transparent)`,
+                            draftLeverage > 1
+                              ? `${color.amber}22`
+                              : `color-mix(in srgb, ${color.white} 6%, transparent)`,
                           color: draftLeverage > 1 ? color.amber : color.muted,
                         }}
                       >
@@ -2435,7 +2440,10 @@ export function OrderAccountManagementPanel({
                               draftLeverage === opt
                                 ? `${color.purple}33`
                                 : `color-mix(in srgb, ${color.white} 5%, transparent)`,
-                            color: draftLeverage === opt ? color.purple : `color-mix(in srgb, ${color.white} 55%, transparent)`,
+                            color:
+                              draftLeverage === opt
+                                ? color.purple
+                                : `color-mix(in srgb, ${color.white} 55%, transparent)`,
                             border:
                               draftLeverage === opt
                                 ? `1px solid ${color.purple}66`
@@ -2463,7 +2471,12 @@ export function OrderAccountManagementPanel({
                         border: `1px solid color-mix(in srgb, ${color.white} 7%, transparent)`,
                       }}
                     >
-                      <span style={{ fontSize: fontSize.xs, color: `color-mix(in srgb, ${color.white} 60%, transparent)` }}>
+                      <span
+                        style={{
+                          fontSize: fontSize.xs,
+                          color: `color-mix(in srgb, ${color.white} 60%, transparent)`,
+                        }}
+                      >
                         {(COMMISSION_RATE * 100).toFixed(2)}% ({COMMISSION_RATE})
                       </span>
                       <span style={{ fontSize: fontSize.xs11, color: color.muted }}>

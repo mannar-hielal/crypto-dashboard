@@ -146,7 +146,10 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
   return (
     <div
       className="flex h-full w-full flex-col overflow-hidden"
-      style={{ background: bg.panel, borderLeft: `1px solid color-mix(in srgb, ${color.white} 6%, transparent)` }}
+      style={{
+        background: bg.panel,
+        borderLeft: `1px solid color-mix(in srgb, ${color.white} 6%, transparent)`,
+      }}
     >
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <div
@@ -214,7 +217,7 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <Toggle checked={tpEnabled} onChange={setTpEnabled} label="Enable take profit" />
-              <span style={{ fontSize: fontSize.xs, color: tpEnabled ? '#fff' : color.muted }}>
+              <span style={{ fontSize: fontSize.xs, color: tpEnabled ? color.white : color.muted }}>
                 Take profit, price
               </span>
             </div>
@@ -237,7 +240,7 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <Toggle checked={slEnabled} onChange={setSlEnabled} label="Enable stop loss" />
-              <span style={{ fontSize: fontSize.xs, color: slEnabled ? '#fff' : color.muted }}>
+              <span style={{ fontSize: fontSize.xs, color: slEnabled ? color.white : color.muted }}>
                 Stop loss, price
               </span>
             </div>
@@ -300,7 +303,7 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
               <span style={{ fontSize: fontSize.xs10, color: color.muted }}>{label}</span>
               <span
                 className="tabular-nums"
-                style={{ fontSize: fontSize.xs10, color: col ?? '#fff' }}
+                style={{ fontSize: fontSize.xs10, color: col ?? color.white }}
               >
                 {value}
               </span>
@@ -319,7 +322,10 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
           disabled={confirmDisabled}
           whileTap={!confirmDisabled ? { scale: 0.97 } : {}}
           className="w-full rounded py-2 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-          style={{ background: `color-mix(in srgb, ${color.purpleDark} 85%, transparent)`, fontSize: fontSize.xs }}
+          style={{
+            background: `color-mix(in srgb, ${color.purpleDark} 85%, transparent)`,
+            fontSize: fontSize.xs,
+          }}
         >
           Confirm
         </motion.button>

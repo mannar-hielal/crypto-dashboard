@@ -5,13 +5,16 @@ function getToken(): string {
   if (!token) {
     throw new Error(
       'FIGMA_ACCESS_TOKEN is not set. Add it to your .env file.\n' +
-      'Generate one at: Figma → Settings → Security → Personal Access Tokens'
+        'Generate one at: Figma → Settings → Security → Personal Access Tokens'
     );
   }
   return token;
 }
 
-async function figmaFetch<T>(path: string, query?: Record<string, string | number | boolean | undefined>): Promise<T> {
+async function figmaFetch<T>(
+  path: string,
+  query?: Record<string, string | number | boolean | undefined>
+): Promise<T> {
   const token = getToken();
   const url = new URL(`${FIGMA_BASE}${path}`);
   if (query) {
@@ -94,11 +97,20 @@ export function getFile(fileKey: string, depth?: number): Promise<FigmaFile> {
   return figmaFetch<FigmaFile>(`/files/${fileKey}`, { depth });
 }
 
-export function getFileNodes(fileKey: string, nodeIds: string, depth?: number): Promise<FigmaNodesResponse> {
+export function getFileNodes(
+  fileKey: string,
+  nodeIds: string,
+  depth?: number
+): Promise<FigmaNodesResponse> {
   return figmaFetch<FigmaNodesResponse>(`/files/${fileKey}/nodes`, { ids: nodeIds, depth });
 }
 
-export function getNodeImages(fileKey: string, nodeIds: string, format?: string, scale?: number): Promise<FigmaImagesResponse> {
+export function getNodeImages(
+  fileKey: string,
+  nodeIds: string,
+  format?: string,
+  scale?: number
+): Promise<FigmaImagesResponse> {
   return figmaFetch<FigmaImagesResponse>(`/images/${fileKey}`, { ids: nodeIds, format, scale });
 }
 

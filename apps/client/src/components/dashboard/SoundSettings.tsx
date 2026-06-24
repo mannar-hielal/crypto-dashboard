@@ -109,7 +109,10 @@ export function SoundSettings() {
           style={{ background: bg.panel, borderColor: `${color.glow}20`, ...popoverStyle }}
         >
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: color.white }}>
+            <span
+              className="text-xs font-bold uppercase tracking-wider"
+              style={{ color: color.white }}
+            >
               Sound Alerts
             </span>
             <button
@@ -126,7 +129,10 @@ export function SoundSettings() {
           </div>
 
           <div className="mb-3 space-y-1.5">
-            <div className="flex justify-between" style={{ fontSize: fontSize.xs, color: color.muted }}>
+            <div
+              className="flex justify-between"
+              style={{ fontSize: fontSize.xs, color: color.muted }}
+            >
               <span>Volume</span>
               <span>{Math.round(vol * 100)}%</span>
             </div>
@@ -154,7 +160,10 @@ export function SoundSettings() {
 
           <div className="mb-3 border-t" style={{ borderColor: `${color.muted}15` }} />
 
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: `${color.muted}60` }}>
+          <p
+            className="mb-2 text-xs font-semibold uppercase tracking-wider"
+            style={{ color: `${color.muted}60` }}
+          >
             Preview
           </p>
           <div className="space-y-1">
@@ -184,7 +193,10 @@ export function SoundSettings() {
             ))}
           </div>
 
-          <p className="mt-3 text-center" style={{ fontSize: fontSize.xs10, color: `${color.muted}40` }}>
+          <p
+            className="mt-3 text-center"
+            style={{ fontSize: fontSize.xs10, color: `${color.muted}40` }}
+          >
             Plays on order &amp; position events
           </p>
         </div>,

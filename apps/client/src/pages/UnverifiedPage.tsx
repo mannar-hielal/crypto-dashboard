@@ -61,8 +61,10 @@ export function UnverifiedPage() {
           <h1 className="text-2xl font-bold text-white">Verify your email</h1>
           <p className="text-sm" style={{ color: color.muted }}>
             We've sent a verification link to{' '}
-            <span className="font-medium" style={{ color: color.purple }}>{user?.email}</span>. Please check your
-            inbox (and spam folder) to activate your account.
+            <span className="font-medium" style={{ color: color.purple }}>
+              {user?.email}
+            </span>
+            . Please check your inbox (and spam folder) to activate your account.
           </p>
         </div>
 
@@ -77,7 +79,9 @@ export function UnverifiedPage() {
             }}
           >
             <CheckCircle2 className="w-5 h-5 shrink-0" style={{ color: color.green }} />
-            <p className="text-sm" style={{ color: color.green }}>{message}</p>
+            <p className="text-sm" style={{ color: color.green }}>
+              {message}
+            </p>
           </motion.div>
         ) : (
           <button

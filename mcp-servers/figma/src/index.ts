@@ -26,7 +26,8 @@ function jsonResponse(data: unknown) {
 const TOOLS: Tool[] = [
   {
     name: 'get_figma_file',
-    description: 'Get the full Figma file document tree (pages, frames, layers, and their properties)',
+    description:
+      'Get the full Figma file document tree (pages, frames, layers, and their properties)',
     inputSchema: {
       type: 'object',
       properties: {
@@ -36,7 +37,8 @@ const TOOLS: Tool[] = [
         },
         depth: {
           type: 'number',
-          description: 'How deep to traverse the node tree (1 = only pages, 2 = pages + top-level frames, omit for full tree)',
+          description:
+            'How deep to traverse the node tree (1 = only pages, 2 = pages + top-level frames, omit for full tree)',
         },
       },
       required: ['fileKey'],
@@ -110,7 +112,8 @@ const TOOLS: Tool[] = [
   },
   {
     name: 'get_figma_styles',
-    description: 'Get all published styles (color swatches, text styles, effect styles) from a Figma file',
+    description:
+      'Get all published styles (color swatches, text styles, effect styles) from a Figma file',
     inputSchema: {
       type: 'object',
       properties: {
@@ -138,10 +141,7 @@ const TOOLS: Tool[] = [
   },
 ];
 
-const server = new Server(
-  { name: 'figma-mcp', version: '1.0.0' },
-  { capabilities: { tools: {} } },
-);
+const server = new Server({ name: 'figma-mcp', version: '1.0.0' }, { capabilities: { tools: {} } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: TOOLS,
@@ -165,7 +165,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const data = await figma.getFileNodes(
           args.fileKey as string,
           args.nodeIds as string,
-          args.depth as number | undefined,
+          args.depth as number | undefined
         );
         return jsonResponse(data);
       }
@@ -175,7 +175,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           args.fileKey as string,
           args.nodeIds as string,
           args.format as string | undefined,
-          args.scale as number | undefined,
+          args.scale as number | undefined
         );
         if (data.err) {
           return textResponse(`Error: ${data.err}`);
@@ -215,6 +215,7 @@ async function main() {
     const transport = new StdioServerTransport();
     await server.connect(transport);
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.error('Failed to start Figma MCP server:', err);
     process.exit(1);
   }

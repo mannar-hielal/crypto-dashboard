@@ -62,7 +62,8 @@ function TickerItem({
       <span className="font-semibold text-white/80">{symbol}</span>
       <span className="tabular-nums text-white/60">{price}</span>
       <span style={{ color: itemColor }} className="tabular-nums font-medium">
-        <ArrowIcon className="h-2.5 w-2.5" />&nbsp;{change}
+        <ArrowIcon className="h-2.5 w-2.5" />
+        &nbsp;{change}
       </span>
       {/* Live indicator dot / static separator dot */}
       {isLive ? (

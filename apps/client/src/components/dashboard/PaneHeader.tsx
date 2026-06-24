@@ -188,11 +188,7 @@ export function PaneHeader({ paneIndex, isActive, onActivate }: PaneHeaderProps)
           style={{
             fontSize: fontSize.xs10,
             color:
-              changePercent !== null
-                ? isPositive
-                  ? color.green
-                  : color.red
-                : `${color.white}99`,
+              changePercent !== null ? (isPositive ? color.green : color.red) : `${color.white}99`,
           }}
         >
           {latestPrice.toLocaleString(undefined, {

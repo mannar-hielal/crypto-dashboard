@@ -188,7 +188,10 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
   return (
     <div
       className="flex h-full w-full flex-col overflow-hidden"
-      style={{ background: bg.panel, borderLeft: `1px solid color-mix(in srgb, ${color.white} 6%, transparent)` }}
+      style={{
+        background: bg.panel,
+        borderLeft: `1px solid color-mix(in srgb, ${color.white} 6%, transparent)`,
+      }}
     >
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <div
@@ -325,7 +328,7 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <Toggle checked={tpEnabled} onChange={setTpEnabled} label="Enable take profit" />
-              <span style={{ fontSize: fontSize.xs, color: tpEnabled ? '#fff' : color.muted }}>
+              <span style={{ fontSize: fontSize.xs, color: tpEnabled ? color.white : color.muted }}>
                 Take profit, price
               </span>
             </div>
@@ -348,7 +351,7 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <Toggle checked={slEnabled} onChange={setSlEnabled} label="Enable stop loss" />
-              <span style={{ fontSize: fontSize.xs, color: slEnabled ? '#fff' : color.muted }}>
+              <span style={{ fontSize: fontSize.xs, color: slEnabled ? color.white : color.muted }}>
                 Stop loss, price
               </span>
             </div>
@@ -393,7 +396,7 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
           ).map(({ label, value }) => (
             <div key={label} className="flex items-center justify-between py-0.5">
               <span style={{ fontSize: fontSize.xs10, color: color.muted }}>{label}</span>
-              <span className="tabular-nums" style={{ fontSize: fontSize.xs10, color: '#fff' }}>
+              <span className="tabular-nums" style={{ fontSize: fontSize.xs10, color: color.white }}>
                 {value}
               </span>
             </div>

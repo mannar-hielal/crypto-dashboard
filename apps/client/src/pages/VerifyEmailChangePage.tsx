@@ -53,7 +53,9 @@ export function VerifyEmailChangePage() {
           <div className="flex flex-col items-center gap-4 py-8">
             <CheckCircle2 className="w-16 h-16" style={{ color: color.green }} />
             <h1 className="text-2xl font-bold text-white">Email Updated!</h1>
-            <p className="text-sm" style={{ color: color.muted }}>{message}</p>
+            <p className="text-sm" style={{ color: color.muted }}>
+              {message}
+            </p>
             <Link
               to="/login"
               className="mt-6 flex items-center justify-center gap-2 h-11 w-full rounded-lg text-sm font-bold text-white transition-all shadow-lg"
@@ -71,7 +73,9 @@ export function VerifyEmailChangePage() {
           <div className="flex flex-col items-center gap-4 py-8">
             <AlertCircle className="w-16 h-16" style={{ color: color.red }} />
             <h1 className="text-2xl font-bold text-white">Verification Failed</h1>
-            <p className="text-sm font-medium" style={{ color: color.red }}>{message}</p>
+            <p className="text-sm font-medium" style={{ color: color.red }}>
+              {message}
+            </p>
             <Link
               to="/login"
               className="flex items-center gap-2 text-sm font-bold pt-4 transition-colors"
