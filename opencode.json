@@ -3,7 +3,11 @@
   "mcp": {
     "figma": {
       "type": "local",
-      "command": ["bash", "-c", "cd mcp-servers/figma && pnpm build && node dist/index.js"],
+      "command": [
+        "bash",
+        "-lc",
+        "pnpm --filter @crypto-dashboard/figma-mcp build && node mcp-servers/figma/dist/index.js"
+      ],
       "cwd": ".",
       "enabled": true
     }
