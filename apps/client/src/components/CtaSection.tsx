@@ -39,7 +39,7 @@ export function CtaSection() {
         className="relative mx-auto flex max-w-2xl flex-col items-center gap-8 px-8 py-20 text-center sm:py-24"
       >
         <div className="relative z-10 flex max-w-lg flex-col items-center gap-5">
-          <h2 className="text-3xl font-bold text-white sm:text-4xl">Start trading in 30 seconds</h2>
+          <h2 className="text-3xl font-bold text-white sm:text-4xl">Start trading in 20 seconds</h2>
           <p className="text-sm leading-relaxed" style={{ color: color.muted }}>
             No credit card. No risk. Just real-time data and a virtual $10K to practice with.
           </p>

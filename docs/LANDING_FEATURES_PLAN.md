@@ -39,7 +39,7 @@ The living catalog of everything the platform does — updated as new features s
 | **Account**        | Positions table, order history, balance audit trail, trading journal                                                                       |
 | **Real-time Data** | Bybit WebSocket feed, 9 crypto pairs, bid/ask spread, connection status indicator                                                          |
 | **Cross-platform** | PWA — installable on mobile/desktop, works offline, synced across devices                                                                  |
-| **CTA**            | "Start trading in 30 seconds" — link to `/register`                                                                                        |
+| **CTA**            | "Start trading in 20 seconds" — link to `/register`                                                                                        |
 
 ---
 

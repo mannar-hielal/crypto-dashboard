@@ -267,8 +267,8 @@ export function LandingPage() {
               className="max-w-xl text-base leading-relaxed"
               style={{ color: color.muted }}
             >
-              Real-time Bybit data, professional charts, and $10K virtual balance — no sign-up
-              required.
+              Real-time Bybit data, professional charts, and $10K virtual balance — register in 20
+              seconds.
             </motion.p>
 
             <motion.div variants={itemVariants} className="flex gap-4">
