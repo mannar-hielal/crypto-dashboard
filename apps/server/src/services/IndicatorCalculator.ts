@@ -40,6 +40,8 @@ export class EMACalculator {
       if (this.candles.length >= this.period) {
         let sum = 0;
         for (let i = this.candles.length - this.period; i < this.candles.length; i++) {
+          // array index — safe, controlled numeric loop variable
+          // eslint-disable-next-line security/detect-object-injection
           sum += this.candles[i].close;
         }
         this.ema = sum / this.period;

@@ -3,7 +3,7 @@ import { useSearchParams, Link } from 'react-router';
 import { motion } from 'framer-motion';
 import { CheckCircle2, AlertCircle, Loader2, ArrowLeft, LogIn } from 'lucide-react';
 import { authApi } from '@crypto-dashboard/sdk';
-import { bg, color } from '@/lib/tokens';
+import { bg, color, gradient } from '@/lib/tokens';
 
 export function VerifyEmailChangePage() {
   const [searchParams] = useSearchParams();
@@ -44,19 +44,25 @@ export function VerifyEmailChangePage() {
       >
         {status === 'loading' && (
           <div className="flex flex-col items-center gap-4 py-8">
-            <Loader2 className="w-12 h-12 text-purple-500 animate-spin" />
+            <Loader2 className="w-12 h-12 animate-spin" style={{ color: color.purple }} />
             <h1 className="text-xl font-bold text-white">Verifying email change...</h1>
           </div>
         )}
 
         {status === 'success' && (
           <div className="flex flex-col items-center gap-4 py-8">
-            <CheckCircle2 className="w-16 h-16 text-green-500" />
+            <CheckCircle2 className="w-16 h-16" style={{ color: color.green }} />
             <h1 className="text-2xl font-bold text-white">Email Updated!</h1>
-            <p className="text-white/60">{message}</p>
+            <p className="text-sm" style={{ color: color.muted }}>
+              {message}
+            </p>
             <Link
               to="/login"
-              className="mt-6 flex items-center justify-center gap-2 h-11 w-full bg-purple-600 hover:bg-purple-500 rounded-lg text-sm font-bold text-white transition-all shadow-lg shadow-purple-600/20"
+              className="mt-6 flex items-center justify-center gap-2 h-11 w-full rounded-lg text-sm font-bold text-white transition-all shadow-lg"
+              style={{
+                background: gradient.brand,
+                boxShadow: `0 4px 16px ${color.purpleDark}40`,
+              }}
             >
               <LogIn className="w-4 h-4" /> Log in with new email
             </Link>
@@ -65,12 +71,15 @@ export function VerifyEmailChangePage() {
 
         {status === 'error' && (
           <div className="flex flex-col items-center gap-4 py-8">
-            <AlertCircle className="w-16 h-16 text-red-500" />
+            <AlertCircle className="w-16 h-16" style={{ color: color.red }} />
             <h1 className="text-2xl font-bold text-white">Verification Failed</h1>
-            <p className="text-red-400 font-medium">{message}</p>
+            <p className="text-sm font-medium" style={{ color: color.red }}>
+              {message}
+            </p>
             <Link
               to="/login"
-              className="flex items-center gap-2 text-sm font-bold text-purple-400 hover:text-purple-300 transition-colors pt-4"
+              className="flex items-center gap-2 text-sm font-bold pt-4 transition-colors"
+              style={{ color: color.purple }}
             >
               <ArrowLeft className="w-4 h-4" /> Back to login
             </Link>

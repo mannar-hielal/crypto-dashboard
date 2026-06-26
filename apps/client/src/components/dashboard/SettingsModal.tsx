@@ -286,7 +286,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                 </h3>
                 <div
                   className="p-6 rounded-2xl border border-white/8 space-y-4 shadow-sm"
-                  style={{ background: 'rgba(255,255,255,0.02)' }}
+                  style={{ background: `color-mix(in srgb, ${color.white} 2%, transparent)` }}
                 >
                   <div className="space-y-2">
                     <label
@@ -352,7 +352,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                 </h3>
                 <div
                   className="p-6 rounded-2xl border border-white/8 space-y-6 shadow-sm"
-                  style={{ background: 'rgba(255,255,255,0.02)' }}
+                  style={{ background: `color-mix(in srgb, ${color.white} 2%, transparent)` }}
                 >
                   {/* Email Row */}
                   <div className="space-y-4">
@@ -584,7 +584,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                 </h3>
                 <div
                   className="p-6 rounded-2xl border border-white/8 space-y-4 shadow-sm"
-                  style={{ background: 'rgba(255,255,255,0.02)' }}
+                  style={{ background: `color-mix(in srgb, ${color.white} 2%, transparent)` }}
                 >
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">

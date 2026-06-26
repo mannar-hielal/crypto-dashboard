@@ -99,7 +99,7 @@ export function ChartPanel({ paneIndex, interval, onChartReady, onChartDestroy }
     const chart = createChart(containerRef.current, {
       layout: {
         background: { color: CHART_BG },
-        textColor: '#d1d4dc',
+        textColor: chartColors.textColor,
         fontFamily: font.sans,
         fontSize: 12,
         attributionLogo: false,

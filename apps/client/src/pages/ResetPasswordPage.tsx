@@ -68,7 +68,7 @@ export function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <AuthLayout>
+      <AuthLayout centerContent>
         <div
           className="rounded-2xl border border-white/8 p-8 shadow-2xl w-full max-w-sm"
           style={{ background: bg.panel }}
@@ -103,7 +103,7 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <AuthLayout>
+    <AuthLayout centerContent>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

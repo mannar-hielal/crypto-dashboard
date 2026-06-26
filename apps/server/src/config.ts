@@ -42,6 +42,8 @@ interface Config {
 
 function loadConfig(): Config {
   const getEnv = (key: string, defaultValue?: string): string => {
+    // process.env is a controlled Namespace object
+    // eslint-disable-next-line security/detect-object-injection
     const value = process.env[key] || defaultValue;
     return value || '';
   };
@@ -70,6 +72,8 @@ function loadConfig(): Config {
     'BYBIT_API_SECRET',
     'JWT_SECRET',
   ];
+  // process.env is a controlled Namespace object
+  // eslint-disable-next-line security/detect-object-injection
   const criticalMissing = criticalVars.filter((v) => !process.env[v]);
 
   if (criticalMissing.length > 0) {

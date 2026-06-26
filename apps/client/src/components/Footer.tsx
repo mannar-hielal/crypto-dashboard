@@ -3,7 +3,12 @@ import { bg, color, fontSize } from '@/lib/tokens';
 
 export function Footer() {
   return (
-    <footer className="px-4 py-6 text-center" style={{ background: bg.footer }}>
+    <footer
+      className="px-4 py-6 text-center"
+      style={{
+        background: `linear-gradient(180deg, ${bg.page} 0%, ${bg.deep} 100%)`,
+      }}
+    >
       <p style={{ fontSize: fontSize.xs, color: color.muted }}>
         ⚠️ Paper trading only — no real money involved. For educational purposes only.
       </p>
@@ -40,7 +45,7 @@ export function Footer() {
           Acceptable Use Policy
         </Link>
       </nav>
-      <p className="mt-2" style={{ fontSize: fontSize.xs, color: `${color.muted}60` }}>
+      <p className="mt-2" style={{ fontSize: fontSize.xs, color: color.muted }}>
         © {new Date().getFullYear()} cryptopapertrade.com
       </p>
     </footer>

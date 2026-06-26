@@ -452,7 +452,10 @@ export function OrderAccountManagementPanel({
       case 'stop-loss':
         return { background: `${colorMap.red}22`, color: colorMap.red };
       default:
-        return { background: 'rgba(255,255,255,0.08)', color: colorMap.muted };
+        return {
+          background: `color-mix(in srgb, ${color.white} 8%, transparent)`,
+          color: colorMap.muted,
+        };
     }
   }
 
@@ -831,7 +834,7 @@ export function OrderAccountManagementPanel({
                   </span>
                   <span
                     className="whitespace-nowrap tabular-nums font-semibold"
-                    style={{ fontSize: fontSize.xs11, color: col ?? 'rgba(255,255,255,0.75)' }}
+                    style={{ fontSize: fontSize.xs11, color: col ?? `${color.white}bf` }}
                   >
                     {value}
                   </span>
@@ -947,7 +950,7 @@ export function OrderAccountManagementPanel({
                                 className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left transition-colors hover:bg-white/5"
                                 style={{
                                   fontSize: fontSize.xs11,
-                                  color: on ? '#fff' : color.muted,
+                                  color: on ? color.white : color.muted,
                                 }}
                               >
                                 {/* Checkbox */}
@@ -1033,7 +1036,7 @@ export function OrderAccountManagementPanel({
                             background:
                               orderSubTab === sub
                                 ? `${color.purpleDark}40`
-                                : 'rgba(255,255,255,0.07)',
+                                : `color-mix(in srgb, ${color.white} 7%, transparent)`,
                             color: orderSubTab === sub ? color.purple : color.muted,
                           }}
                         >
@@ -1086,7 +1089,7 @@ export function OrderAccountManagementPanel({
                             background:
                               orderHistorySubTab === sub
                                 ? `${color.purpleDark}40`
-                                : 'rgba(255,255,255,0.07)',
+                                : `color-mix(in srgb, ${color.white} 7%, transparent)`,
                             color: orderHistorySubTab === sub ? color.purple : color.muted,
                           }}
                         >
@@ -2355,14 +2358,14 @@ export function OrderAccountManagementPanel({
                 className="relative z-50 w-80 rounded-lg shadow-2xl"
                 style={{
                   background: bg.panel,
-                  border: '1px solid rgba(255,255,255,0.08)',
+                  border: `1px solid color-mix(in srgb, ${color.white} 8%, transparent)`,
                 }}
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Modal header */}
                 <div
                   className="flex items-center justify-between border-b px-4 py-3"
-                  style={{ borderColor: 'rgba(255,255,255,0.07)' }}
+                  style={{ borderColor: `color-mix(in srgb, ${color.white} 7%, transparent)` }}
                 >
                   <span className="text-sm font-semibold text-white/90">Account Settings</span>
                   <button
@@ -2391,8 +2394,8 @@ export function OrderAccountManagementPanel({
                     <div
                       className="flex h-8 items-center rounded px-3 text-xs text-white/60"
                       style={{
-                        background: 'rgba(255,255,255,0.04)',
-                        border: '1px solid rgba(255,255,255,0.07)',
+                        background: `color-mix(in srgb, ${color.white} 4%, transparent)`,
+                        border: `1px solid color-mix(in srgb, ${color.white} 7%, transparent)`,
                         fontSize: fontSize.xs,
                       }}
                     >
@@ -2414,7 +2417,9 @@ export function OrderAccountManagementPanel({
                         style={{
                           fontSize: fontSize.xs10,
                           background:
-                            draftLeverage > 1 ? `${color.amber}22` : 'rgba(255,255,255,0.06)',
+                            draftLeverage > 1
+                              ? `${color.amber}22`
+                              : `color-mix(in srgb, ${color.white} 6%, transparent)`,
                           color: draftLeverage > 1 ? color.amber : color.muted,
                         }}
                       >
@@ -2434,12 +2439,15 @@ export function OrderAccountManagementPanel({
                             background:
                               draftLeverage === opt
                                 ? `${color.purple}33`
-                                : 'rgba(255,255,255,0.05)',
-                            color: draftLeverage === opt ? color.purple : 'rgba(255,255,255,0.55)',
+                                : `color-mix(in srgb, ${color.white} 5%, transparent)`,
+                            color:
+                              draftLeverage === opt
+                                ? color.purple
+                                : `color-mix(in srgb, ${color.white} 55%, transparent)`,
                             border:
                               draftLeverage === opt
                                 ? `1px solid ${color.purple}66`
-                                : '1px solid rgba(255,255,255,0.07)',
+                                : `1px solid color-mix(in srgb, ${color.white} 7%, transparent)`,
                           }}
                         >
                           {opt}×
@@ -2459,11 +2467,16 @@ export function OrderAccountManagementPanel({
                     <div
                       className="flex h-8 items-center justify-between rounded px-3"
                       style={{
-                        background: 'rgba(255,255,255,0.04)',
-                        border: '1px solid rgba(255,255,255,0.07)',
+                        background: `color-mix(in srgb, ${color.white} 4%, transparent)`,
+                        border: `1px solid color-mix(in srgb, ${color.white} 7%, transparent)`,
                       }}
                     >
-                      <span style={{ fontSize: fontSize.xs, color: 'rgba(255,255,255,0.6)' }}>
+                      <span
+                        style={{
+                          fontSize: fontSize.xs,
+                          color: `color-mix(in srgb, ${color.white} 60%, transparent)`,
+                        }}
+                      >
                         {(COMMISSION_RATE * 100).toFixed(2)}% ({COMMISSION_RATE})
                       </span>
                       <span style={{ fontSize: fontSize.xs11, color: color.muted }}>
@@ -2476,7 +2489,7 @@ export function OrderAccountManagementPanel({
                 {/* Modal footer */}
                 <div
                   className="flex items-center justify-between border-t px-4 py-3"
-                  style={{ borderColor: 'rgba(255,255,255,0.07)' }}
+                  style={{ borderColor: `color-mix(in srgb, ${color.white} 7%, transparent)` }}
                 >
                   {/* Reset account — 2-click confirm */}
                   <AnimatePresence mode="wait">
@@ -2516,9 +2529,9 @@ export function OrderAccountManagementPanel({
                         }}
                         className="flex h-7 items-center gap-1.5 rounded px-3 text-xs"
                         style={{
-                          background: 'rgba(255,255,255,0.05)',
+                          background: `color-mix(in srgb, ${color.white} 5%, transparent)`,
                           color: color.muted,
-                          border: '1px solid rgba(255,255,255,0.08)',
+                          border: `1px solid color-mix(in srgb, ${color.white} 8%, transparent)`,
                           fontSize: fontSize.xs,
                         }}
                       >
@@ -2536,8 +2549,8 @@ export function OrderAccountManagementPanel({
                     }}
                     className="flex h-7 items-center rounded px-4 text-xs font-semibold transition-opacity hover:opacity-90"
                     style={{
-                      background: 'rgba(165,85,226,0.75)',
-                      color: '#fff',
+                      background: `color-mix(in srgb, ${color.purple} 75%, transparent)`,
+                      color: color.white,
                       fontSize: fontSize.xs,
                     }}
                   >

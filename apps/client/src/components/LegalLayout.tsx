@@ -20,31 +20,40 @@ export function LegalLayout({ title, lastUpdated, version, children }: LegalLayo
   return (
     <div
       className="relative flex min-h-screen flex-col overflow-hidden"
-      style={{ background: bg.page }}
+      style={{
+        background: `linear-gradient(180deg, ${bg.deep} 0%, ${bg.page} 30%, ${bg.navy} 100%)`,
+      }}
     >
-      {/* Ambient glow blobs */}
+      {/* Ambient glow blobs — Exgen cover-style */}
       <div
-        className="pointer-events-none absolute -top-48 left-1/4 h-[480px] w-[480px] rounded-full opacity-[0.07]"
+        className="pointer-events-none absolute -top-48 left-1/4 h-[480px] w-[480px] rounded-full opacity-15"
         style={{
-          background: `radial-gradient(circle, ${color.purpleDark} 0%, transparent 70%)`,
-          animation: 'drift 18s ease-in-out infinite',
+          background: `radial-gradient(circle, ${color.glow} 0%, transparent 70%)`,
+          filter: 'blur(60px)',
         }}
       />
       <div
-        className="pointer-events-none absolute -bottom-32 right-1/4 h-[380px] w-[380px] rounded-full opacity-[0.05]"
+        className="pointer-events-none absolute -bottom-32 right-1/4 h-[380px] w-[380px] rounded-full opacity-10"
+        style={{
+          background: `radial-gradient(circle, ${color.purpleDark} 0%, transparent 70%)`,
+          filter: 'blur(50px)',
+        }}
+      />
+      <div
+        className="pointer-events-none absolute top-1/3 right-1/3 h-[200px] w-[200px] rounded-full opacity-8"
         style={{
           background: `radial-gradient(circle, ${color.purple} 0%, transparent 70%)`,
-          animation: 'drift 24s ease-in-out infinite reverse',
+          filter: 'blur(40px)',
         }}
       />
 
       {/* Subtle grid overlay */}
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.025]"
+        className="pointer-events-none absolute inset-0 opacity-[0.02]"
         style={{
           backgroundImage: `
-            linear-gradient(rgba(255,255,255,0.4) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.4) 1px, transparent 1px)
+            linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)
           `,
           backgroundSize: '40px 40px',
         }}

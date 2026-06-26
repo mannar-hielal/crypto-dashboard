@@ -43,7 +43,7 @@ function StatItem({
   positive?: boolean;
 }) {
   const statColor =
-    positive === true ? color.green : positive === false ? color.red : 'rgba(255,255,255,0.6)';
+    positive === true ? color.green : positive === false ? color.red : `${color.white}99`;
   return (
     <div className="flex flex-col gap-px">
       <span
@@ -187,7 +187,7 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
           className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-bold text-white transition-colors"
           style={{
             background: symbolOpen ? bg.surface : 'transparent',
-            border: '1px solid rgba(255,255,255,0.06)',
+            border: `1px solid color-mix(in srgb, ${color.white} 6%, transparent)`,
           }}
         >
           <SymbolPair
