@@ -16,9 +16,8 @@ import { TermsPage } from '@/pages/TermsPage';
 import { PrivacyPage } from '@/pages/PrivacyPage';
 import { SecurityPage } from '@/pages/SecurityPage';
 import { AcceptableUsePolicyPage } from '@/pages/AcceptableUsePolicyPage';
-import { LandingPage } from '@/pages/LandingPage';
-import { FeaturesPage } from '@/pages/FeaturesPage';
 import { UnderConstructionPage } from '@/pages/UnderConstructionPage';
+import { FeaturesPage } from '@/pages/FeaturesPage';
 import { UnverifiedPage } from '@/pages/UnverifiedPage';
 import { VerifyEmailPage } from '@/pages/VerifyEmailPage';
 import { VerifyEmailChangePage } from '@/pages/VerifyEmailChangePage';
@@ -69,7 +68,7 @@ export default function App() {
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           {/* Landing page */}
-          <Route path="/" element={<LandingPage />} />
+          <Route path="/" element={<UnderConstructionPage />} />
           <Route path="/features" element={<FeaturesPage />} />
 
           {/* Public routes */}
