@@ -215,9 +215,8 @@ async function main() {
     const transport = new StdioServerTransport();
     await server.connect(transport);
   } catch (err) {
-    process.stderr.write(
-      `Failed to start Figma MCP server: ${err instanceof Error ? err.message : String(err)}\n`
-    );
+    const message = err instanceof Error ? (err.stack ?? err.message) : String(err);
+    process.stderr.write(`Failed to start Figma MCP server: ${message}\n`);
     process.exit(1);
   }
 }
