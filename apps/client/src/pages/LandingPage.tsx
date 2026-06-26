@@ -56,12 +56,16 @@ function AlternatingSection({
   icon,
   graphic,
   reversed,
+  ctaLabel,
+  ctaHref,
 }: {
   title: string;
   desc: string;
   icon: React.ReactNode;
   graphic: React.ReactNode;
   reversed?: boolean;
+  ctaLabel?: string;
+  ctaHref?: string;
 }) {
   return (
     <div
@@ -77,9 +81,7 @@ function AlternatingSection({
         <p className="max-w-lg text-sm leading-relaxed sm:text-base" style={{ color: color.muted }}>
           {desc}
         </p>
-        {(title === 'Advanced Charts' ||
-          title === 'Paper Trading' ||
-          title === 'Real-time Data') && (
+        {ctaLabel && ctaHref && (
           <div>
             <Button
               asChild
@@ -87,21 +89,7 @@ function AlternatingSection({
               className="mt-1 h-9 rounded-full px-5 text-sm font-semibold text-white shadow-md"
               style={{ background: gradient.brand }}
             >
-              <Link
-                to={
-                  title === 'Advanced Charts'
-                    ? '/features#charts'
-                    : title === 'Paper Trading'
-                      ? '/features#trading'
-                      : '/features#realtime'
-                }
-              >
-                {title === 'Advanced Charts'
-                  ? 'Discover Charts'
-                  : title === 'Paper Trading'
-                    ? 'Explore Paper Trading'
-                    : 'Read More'}
-              </Link>
+              <Link to={ctaHref}>{ctaLabel}</Link>
             </Button>
           </div>
         )}
@@ -137,6 +125,8 @@ const alternatingSections = [
     title: 'Advanced Charts',
     desc: 'Up to 4 multi-layout panes with 6 timeframes (1m, 5m, 15m, 1h, 4h, 1d). Sync symbol, interval, crosshair, and time range across panes. EMA9/20/200, VWAP, MACD indicators included — more added constantly. Drawing tools are under active development.',
     graphic: <img src={chartImg} alt="" className="w-full max-w-lg select-none" />,
+    ctaLabel: 'Discover Charts',
+    ctaHref: '/features#charts',
   },
   {
     icon: <Activity className="h-6 w-6" style={{ color: color.purple }} />,
@@ -151,6 +141,8 @@ const alternatingSections = [
       />
     ),
     reversed: true,
+    ctaLabel: 'Explore Paper Trading',
+    ctaHref: '/features#trading',
   },
   {
     icon: <Globe className="h-6 w-6" style={{ color: color.purple }} />,
@@ -186,6 +178,8 @@ const alternatingSections = [
         ))}
       </div>
     ),
+    ctaLabel: 'Read More',
+    ctaHref: '/features#realtime',
   },
 ];
 
