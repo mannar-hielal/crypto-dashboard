@@ -39,6 +39,8 @@ vi.mock('../plugins/prisma.js', () => {
     };
     app.decorate('prisma', prismaClient as never);
   };
+  // Fastify Symbol-key pattern — safe, controlled access
+  // eslint-disable-next-line security/detect-object-injection
   (plugin as unknown as Record<symbol, boolean>)[skipOverride] = true;
   return { prismaPlugin: plugin };
 });

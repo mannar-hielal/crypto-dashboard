@@ -35,6 +35,8 @@ function logMissingResendKey(action: string, context: Record<string, unknown>) {
   // 🔐 Never log token-bearing URLs in production logs.
   const safeContext = { ...context };
   for (const key of Object.keys(safeContext)) {
+    // key from Object.keys — safe iteration
+    // eslint-disable-next-line security/detect-object-injection
     if (key.toLowerCase().endsWith('url')) delete safeContext[key];
   }
 

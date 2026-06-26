@@ -57,6 +57,8 @@ async function fetchHistoricalCandles(
   interval: AllowedInterval,
   limit: number
 ): Promise<LiveBar['kline'][]> {
+  // interval is a typed AllowedInterval key — safe, controlled access
+  // eslint-disable-next-line security/detect-object-injection
   const bybitInterval = BYBIT_INTERVAL_MAP[interval];
   const baseUrl = config.bybitTestnet ? 'https://api-testnet.bybit.com' : 'https://api.bybit.com';
 

@@ -8,6 +8,7 @@
   "author": "MannarHielal",
   "packageManager": "pnpm@10.33.0",
   "scripts": {
+    "preinstall": "pnpm audit --audit-level=high",
     "dev:server": "pnpm --filter @crypto-dashboard/server dev",
     "dev": "pnpm dev:server",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
@@ -33,6 +34,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "eslint": "^10.5.0",
+    "eslint-plugin-security": "^4.0.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "prettier": "^3.8.4",
