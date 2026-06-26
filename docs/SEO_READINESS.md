@@ -10,8 +10,8 @@
 
 ## Tier 2 — Trust & conversion
 
-- [ ] **Privacy policy link in cookie banner** — Link to `/privacy`. Add "Reject" option and consent withdrawal mechanism.
-- [ ] **Social proof on landing page** — Active trader count, testimonials, or GitHub stars badge.
+- [x] **Privacy policy link in cookie banner** — Link to `/privacy`.
+- [x] **Social proof on landing page** — Trust badges strip (SSL encryption, no real money, Bybit live data).
 - [ ] **Social / community links in Footer** — X, Discord, GitHub (create accounts if needed).
 - [ ] **Newsletter / "Get Notified" CTA** — Email capture on landing page for pre-launch leads.
 

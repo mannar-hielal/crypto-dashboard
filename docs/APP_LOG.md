@@ -1495,3 +1495,26 @@ The order book is **not needed for paper trading** (fills are instant, no real l
 
 - `apps/client/src/pages/LandingPage.tsx`
 - `apps/client/src/components/Footer.tsx`
+
+---
+
+### feat: Tier 2 — Trust & Conversion (2026-06-26) ✅
+
+**Privacy Policy link in CookieBanner:**
+
+- Added `<Link to="/privacy">Privacy Policy</Link>` to the cookie notice text in `apps/client/src/components/CookieBanner.tsx`
+
+**Trust badges strip on LandingPage:**
+
+- Created `apps/client/src/components/TrustBadges.tsx` — 3 trust badges (256-bit Encryption, No Real Money, Bybit Live Data) in a glass-card strip
+- Each badge: lucide icon in a purple-tinted box, bold label + muted description
+- Added `<TrustBadges />` to `apps/client/src/pages/LandingPage.tsx`, positioned between hero section and stats strip
+
+**Files created:**
+
+- `apps/client/src/components/TrustBadges.tsx`
+
+**Files modified:**
+
+- `apps/client/src/components/CookieBanner.tsx`
+- `apps/client/src/pages/LandingPage.tsx`

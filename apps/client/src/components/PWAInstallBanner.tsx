@@ -158,79 +158,86 @@ export function PWAInstallBanner() {
           />
 
           <div className="flex-1">
-            <p className="text-sm font-semibold">Install cryptopapertrade.com</p>
-
             {platform === 'ios' || platform === 'ipad' ? (
               // ── iOS / iPadOS Safari: visual step-by-step guide ────────────────
               // Apple provides no JS API to trigger "Add to Home Screen" — the user
               // must do it manually via the Share sheet. We make it as clear as possible.
-              <div className="mt-2 space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <span className="bg-primary text-primary-foreground flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
-                    1
-                  </span>
-                  <p className="text-muted-foreground text-xs">
-                    Tap the{' '}
-                    <span className="inline-flex items-center gap-0.5 font-medium">
-                      Share
-                      <svg
-                        viewBox="0 0 24 24"
-                        className="inline-block h-3.5 w-3.5"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-                        <polyline points="16 6 12 2 8 6" />
-                        <line x1="12" y1="2" x2="12" y2="15" />
-                      </svg>
-                    </span>{' '}
-                    button{' '}
-                    {platform === 'ipad'
-                      ? 'in the top-right toolbar of Safari'
-                      : 'at the bottom of Safari'}
-                  </p>
+              <>
+                <p className="text-sm font-semibold">Install cryptopapertrade.com</p>
+                <div className="mt-2 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-primary text-primary-foreground flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
+                      1
+                    </span>
+                    <p className="text-muted-foreground text-xs">
+                      Tap the{' '}
+                      <span className="inline-flex items-center gap-0.5 font-medium">
+                        Share
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="inline-block h-3.5 w-3.5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                          <polyline points="16 6 12 2 8 6" />
+                          <line x1="12" y1="2" x2="12" y2="15" />
+                        </svg>
+                      </span>{' '}
+                      button{' '}
+                      {platform === 'ipad'
+                        ? 'in the top-right toolbar of Safari'
+                        : 'at the bottom of Safari'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="bg-primary text-primary-foreground flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
+                      2
+                    </span>
+                    <p className="text-muted-foreground text-xs">
+                      Scroll down and tap{' '}
+                      <strong className="text-foreground">"Add to Home Screen"</strong>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="bg-primary text-primary-foreground flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
+                      3
+                    </span>
+                    <p className="text-muted-foreground text-xs">
+                      Tap <strong className="text-foreground">"Add"</strong> — done!
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="bg-primary text-primary-foreground flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
-                    2
-                  </span>
-                  <p className="text-muted-foreground text-xs">
-                    Scroll down and tap{' '}
-                    <strong className="text-foreground">"Add to Home Screen"</strong>
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="bg-primary text-primary-foreground flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
-                    3
-                  </span>
-                  <p className="text-muted-foreground text-xs">
-                    Tap <strong className="text-foreground">"Add"</strong> — done!
-                  </p>
-                </div>
-              </div>
+              </>
             ) : platform === 'ios-other' ? (
               // ── Chrome / Edge / Firefox on iOS or iPadOS: must use Safari ─────
-              <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                To install this app, open this page in <strong>Safari</strong> — your current
-                browser doesn&apos;t support PWA installation on this device.
-              </p>
+              <>
+                <p className="text-sm font-semibold">Install cryptopapertrade.com</p>
+                <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                  To install this app, open this page in <strong>Safari</strong> — your current
+                  browser doesn&apos;t support PWA installation on this device.
+                </p>
+              </>
             ) : (
               // ── Android / Chrome: real install button ─────────────────────────
-              <>
-                <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                  Add to your home screen for a faster, full-screen experience.
-                </p>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">Install cryptopapertrade.com</p>
+                  <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                    Add to your home screen for a faster, full-screen experience.
+                  </p>
+                </div>
                 <button
                   onClick={() => void handleAndroidInstall()}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 mt-3 rounded-lg px-4 py-1.5 text-xs font-semibold transition-colors"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 shrink-0 rounded-lg px-4 py-1.5 text-xs font-semibold transition-colors"
                 >
                   Install
                 </button>
-              </>
+              </div>
             )}
           </div>
         </div>
