@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, useLocation } from 'react-router';
 import { AnimatePresence } from 'framer-motion';
 import { authApi } from '@crypto-dashboard/sdk';
@@ -6,22 +6,23 @@ import { useAuthStore } from '@/store/authStore';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { PWAInstallBanner } from '@/components/PWAInstallBanner';
 import { CookieBanner } from '@/components/CookieBanner';
+import { PageFallback } from '@/components/PageFallback';
 
-import { LoginPage } from '@/pages/LoginPage';
-import { RegisterPage } from '@/pages/RegisterPage';
-import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
-import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
-import { DashboardPage } from '@/pages/DashboardPage';
-import { TermsPage } from '@/pages/TermsPage';
-import { PrivacyPage } from '@/pages/PrivacyPage';
-import { SecurityPage } from '@/pages/SecurityPage';
-import { AcceptableUsePolicyPage } from '@/pages/AcceptableUsePolicyPage';
-import { UnderConstructionPage } from '@/pages/UnderConstructionPage';
-import { LandingPage } from '@/pages/LandingPage';
-import { FeaturesPage } from '@/pages/FeaturesPage';
-import { UnverifiedPage } from '@/pages/UnverifiedPage';
-import { VerifyEmailPage } from '@/pages/VerifyEmailPage';
-import { VerifyEmailChangePage } from '@/pages/VerifyEmailChangePage';
+const LoginPage = lazy(() => import('@/pages/LoginPage'));
+const RegisterPage = lazy(() => import('@/pages/RegisterPage'));
+const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'));
+const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
+const TermsPage = lazy(() => import('@/pages/TermsPage'));
+const PrivacyPage = lazy(() => import('@/pages/PrivacyPage'));
+const SecurityPage = lazy(() => import('@/pages/SecurityPage'));
+const AcceptableUsePolicyPage = lazy(() => import('@/pages/AcceptableUsePolicyPage'));
+const UnderConstructionPage = lazy(() => import('@/pages/UnderConstructionPage'));
+const LandingPage = lazy(() => import('@/pages/LandingPage'));
+const FeaturesPage = lazy(() => import('@/pages/FeaturesPage'));
+const UnverifiedPage = lazy(() => import('@/pages/UnverifiedPage'));
+const VerifyEmailPage = lazy(() => import('@/pages/VerifyEmailPage'));
+const VerifyEmailChangePage = lazy(() => import('@/pages/VerifyEmailChangePage'));
 
 // 🔐 Module-level flag — unlike useRef, this survives React StrictMode's
 // simulated mount → unmount → remount cycle, so only ONE /refresh fires
@@ -66,35 +67,37 @@ export default function App() {
       {/* AnimatePresence: detects route changes via location.pathname and plays
           enter/exit animations on the outgoing and incoming page components.
           mode="wait" ensures the old page fully exits before the new one enters. */}
-      <AnimatePresence mode="wait">
-        <Routes location={location} key={location.pathname}>
-          {/* Landing page */}
-          <Route path="/" element={<UnderConstructionPage />} />
-          <Route path="/landing" element={<LandingPage />} />
-          <Route path="/features" element={<FeaturesPage />} />
+      <Suspense fallback={<PageFallback />}>
+        <AnimatePresence mode="wait">
+          <Routes location={location} key={location.pathname}>
+            {/* Landing page */}
+            <Route path="/" element={<UnderConstructionPage />} />
+            <Route path="/landing" element={<LandingPage />} />
+            <Route path="/features" element={<FeaturesPage />} />
 
-          {/* Public routes */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/unverified" element={<UnverifiedPage />} />
-          <Route path="/verify-email" element={<VerifyEmailPage />} />
-          <Route path="/verify-email-change" element={<VerifyEmailChangePage />} />
-          <Route path="/terms" element={<TermsPage />} />
-          <Route path="/privacy" element={<PrivacyPage />} />
-          <Route path="/security" element={<SecurityPage />} />
-          <Route path="/aup" element={<AcceptableUsePolicyPage />} />
+            {/* Public routes */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/unverified" element={<UnverifiedPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/verify-email-change" element={<VerifyEmailChangePage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/security" element={<SecurityPage />} />
+            <Route path="/aup" element={<AcceptableUsePolicyPage />} />
 
-          {/* Protected routes */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
-          </Route>
+            {/* Protected routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
+            </Route>
 
-          {/* Under construction — shown for any unmatched route */}
-          <Route path="*" element={<UnderConstructionPage />} />
-        </Routes>
-      </AnimatePresence>
+            {/* Under construction — shown for any unmatched route */}
+            <Route path="*" element={<UnderConstructionPage />} />
+          </Routes>
+        </AnimatePresence>
+      </Suspense>
     </>
   );
 }

@@ -17,8 +17,8 @@
 
 ## Tier 3 — Performance
 
-- [ ] **Code splitting** — `React.lazy()` for all route pages in `App.tsx`.
-- [ ] **Lazy-load images** — `loading="lazy"` on below-the-fold images in `LandingPage.tsx`.
+- [x] **Code splitting** — `React.lazy()` for all route pages in `App.tsx`.
+- [x] **Lazy-load images** — `loading="lazy"` on below-the-fold images in `LandingPage.tsx`.
 
 ## Tier 4 — Content & growth
 

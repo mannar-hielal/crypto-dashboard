@@ -29,6 +29,7 @@ export function CtaSection() {
         <img
           src={ctaIllustration}
           alt=""
+          loading="lazy"
           className="h-full w-full object-contain opacity-70"
           style={{ maxWidth: '1200px' }}
         />

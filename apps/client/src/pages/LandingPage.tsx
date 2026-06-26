@@ -125,7 +125,7 @@ const alternatingSections = [
     icon: <TrendingUp className="h-6 w-6" style={{ color: color.purple }} />,
     title: 'Advanced Charts',
     desc: 'Up to 4 multi-layout panes with 6 timeframes (1m, 5m, 15m, 1h, 4h, 1d). Sync symbol, interval, crosshair, and time range across panes. EMA9/20/200, VWAP, MACD indicators included — more added constantly. Drawing tools are under active development.',
-    graphic: <img src={chartImg} alt="" className="w-full max-w-lg select-none" />,
+    graphic: <img src={chartImg} alt="" loading="lazy" className="w-full max-w-lg select-none" />,
     ctaLabel: 'Discover Charts',
     ctaHref: '/features#charts',
   },
@@ -137,6 +137,7 @@ const alternatingSections = [
       <img
         src={papertradingImg}
         alt=""
+        loading="lazy"
         className="w-full max-w-sm select-none object-contain"
         style={{ transform: 'translate(40px, -40px)' }}
       />
@@ -335,6 +336,7 @@ export function LandingPage() {
                   <img
                     src={cryptoPairsImg}
                     alt=""
+                    loading="lazy"
                     className="select-none"
                     style={{ marginBottom: '1rem' }}
                   />
@@ -343,12 +345,19 @@ export function LandingPage() {
               {
                 label: 'Data Feed',
                 value: 'Real-time Bybit',
-                icon: <img src={realtimeDataImg} alt="" className="select-none" />,
+                icon: <img src={realtimeDataImg} alt="" loading="lazy" className="select-none" />,
               },
               {
                 label: 'Virtual Balance',
                 value: '$10,000',
-                icon: <img src={visualBalanceImg} alt="" className="w-full select-none" />,
+                icon: (
+                  <img
+                    src={visualBalanceImg}
+                    alt=""
+                    loading="lazy"
+                    className="w-full select-none"
+                  />
+                ),
               },
             ].map((stat) => (
               <motion.div

@@ -1498,6 +1498,32 @@ The order book is **not needed for paper trading** (fills are instant, no real l
 
 ---
 
+### feat: Tier 3 — Performance (2026-06-26) ✅
+
+**Code splitting:**
+
+- Replaced all 14 static page imports in `App.tsx` with `React.lazy()` — each page is now its own chunk, loaded only on navigation
+- DashboardPage chunk reduced from 356 KB → 398 KB separate chunk (no longer in main bundle)
+- Wrapped `<AnimatePresence>` in `<Suspense fallback={<PageFallback />}>`
+- Created `PageFallback.tsx` — branded loading spinner (matches AuthLayout background, purple spinning Loader2 icon)
+
+**Lazy-loaded images:**
+
+- Added `loading="lazy"` to 5 below-the-fold images in `LandingPage.tsx`: `chartImg`, `papertradingImg`, `cryptoPairsImg`, `realtimeDataImg`, `visualBalanceImg`
+- Added `loading="lazy"` to `ctaIllustration` in `CtaSection.tsx`
+
+**Files created:**
+
+- `apps/client/src/components/PageFallback.tsx`
+
+**Files modified:**
+
+- `apps/client/src/App.tsx`
+- `apps/client/src/pages/LandingPage.tsx`
+- `apps/client/src/components/CtaSection.tsx
+
+---
+
 ### feat: Tier 2 — Trust & Conversion (2026-06-26) ✅
 
 **Privacy Policy link in CookieBanner:**
