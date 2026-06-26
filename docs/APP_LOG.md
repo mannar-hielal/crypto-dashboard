@@ -1467,3 +1467,31 @@ The order book is **not needed for paper trading** (fills are instant, no real l
 - Footer `bottom: -8.5rem` → `bottom: 0` (was pushing footer below viewport)
 - LandingPage hero wrapper dropped `overflow-hidden` (was clipping ambient glow blobs)
 - FeaturesPage Account / Real-time Data / Cross-platform sections reformatted from single-line to multi-line style objects
+
+### feat: landing page stats strip + hero refinements (2026-06-26) ✅
+
+**Hero section:**
+
+- Left column (tagline "Paper trade crypto, FREE") — `gap-6` → `gap-4` (1rem), `items-center` → `items-start`
+- Outer flex row — added `overflow: hidden` inline style
+- Hero image switched from `complete-mac-removed-bg.png` → `hero-mac.png` → `hero-mac-app.png`
+- Hero image wrapper: `width: 68rem` → `55rem` → `36rem`, `height: auto`, `overflow-hidden` retained
+
+**Stats strip (3 cards):**
+
+- All three stat icons replaced with `<img>` tags — `9crypto.svg`, `realtime-data.svg`, `visual-balance.svg`
+- Wrapper gradient background removed (transparent) for all three; wrapper sized to `width: 12rem; height: auto`
+- Ambient glow blob (`absolute -right-8 -top-8 ...`) removed from each card
+- Removed unused `group` class from stat cards
+- Removed unused lucide imports (`BarChart3`, `Zap`, `Wallet`)
+- "Crypto Pairs" stat: value changed from `"9"` to `"9 crypto pairs"`, label changed from `"Crypto Pairs"` to `"more are being added"`
+- `9crypto.svg` image gets `margin-bottom: 1rem`
+
+**Footer:**
+
+- Copyright text color: `${color.muted}60` → `color.muted` (full opacity, matching other footer links)
+
+**Files modified:**
+
+- `apps/client/src/pages/LandingPage.tsx`
+- `apps/client/src/components/Footer.tsx`

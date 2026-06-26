@@ -1,14 +1,17 @@
 import { Link } from 'react-router';
 import { motion } from 'framer-motion';
-import { BarChart3, Zap, Wallet, TrendingUp, Activity, Globe } from 'lucide-react';
+import { TrendingUp, Activity, Globe } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { AuthLayout } from '@/components/AuthLayout';
 import { CtaSection } from '@/components/CtaSection';
 import { bg, color, gradient, font } from '@/lib/tokens';
-import cryptoCoins from '@/assets/crypto-coins.svg';
+import macHeaderApp from '@/assets/hero-mac-app.png';
 import chartImg from '@/assets/chart.svg';
 import papertradingImg from '@/assets/papertrading.svg';
+import cryptoPairsImg from '@/assets/9crypto.svg';
+import realtimeDataImg from '@/assets/realtime-data.svg';
+import visualBalanceImg from '@/assets/visual-balance.svg';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -219,13 +222,16 @@ export function LandingPage() {
           }}
         />
 
-        <div className="relative z-10 mx-auto flex max-w-6xl flex-col items-center gap-16 px-4 py-20 lg:flex-row lg:py-28">
+        <div
+          className="relative z-10 mx-auto flex max-w-6xl flex-col items-center gap-16 px-4 py-20 lg:flex-row lg:py-28"
+          style={{ overflow: 'hidden' }}
+        >
           {/* Hero content — left/center */}
           <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"
-            className="flex flex-1 flex-col items-center gap-6 text-center lg:items-start lg:text-left"
+            className="flex flex-1 flex-col items-start gap-4 text-center lg:items-start lg:text-left"
           >
             <motion.div
               variants={itemVariants}
@@ -299,11 +305,11 @@ export function LandingPage() {
             transition={{ duration: 0.7, ease: 'easeOut' }}
             className="flex flex-1 items-center justify-center"
           >
-            <div className="overflow-hidden" style={{ width: 420, height: 420 }}>
+            <div className="overflow-hidden" style={{ width: '36rem', height: 'auto' }}>
               <img
-                src={cryptoCoins}
+                src={macHeaderApp}
                 alt=""
-                className="h-full w-full select-none object-contain"
+                className="w-full select-none object-contain"
                 style={{ objectPosition: 'center center' }}
               />
             </div>
@@ -322,25 +328,32 @@ export function LandingPage() {
         >
           {[
             {
-              label: 'Crypto Pairs',
-              value: '9',
-              icon: <BarChart3 className="h-5 w-5" style={{ color: color.purple }} />,
+              label: 'more are being added',
+              value: '9 crypto pairs',
+              icon: (
+                <img
+                  src={cryptoPairsImg}
+                  alt=""
+                  className="select-none"
+                  style={{ marginBottom: '1rem' }}
+                />
+              ),
             },
             {
               label: 'Data Feed',
               value: 'Real-time Bybit',
-              icon: <Zap className="h-5 w-5" style={{ color: color.purple }} />,
+              icon: <img src={realtimeDataImg} alt="" className="select-none" />,
             },
             {
               label: 'Virtual Balance',
               value: '$10,000',
-              icon: <Wallet className="h-5 w-5" style={{ color: color.purple }} />,
+              icon: <img src={visualBalanceImg} alt="" className="w-full select-none" />,
             },
           ].map((stat) => (
             <motion.div
               key={stat.label}
               variants={itemVariants}
-              className="group relative overflow-hidden rounded-2xl border px-6 py-7 text-center transition-all duration-300 hover:-translate-y-0.5"
+              className="relative overflow-hidden rounded-2xl border px-6 py-7 text-center transition-all duration-300 hover:-translate-y-0.5"
               style={{
                 background: `linear-gradient(135deg, ${bg.panel} 0%, ${bg.page} 100%)`,
                 borderColor: `${color.glow}20`,
@@ -348,15 +361,11 @@ export function LandingPage() {
               }}
             >
               <div
-                className="absolute -right-8 -top-8 h-20 w-20 rounded-full opacity-0 transition-opacity duration-500 group-hover:opacity-10"
-                style={{
-                  background: `radial-gradient(circle, ${color.glow} 0%, transparent 70%)`,
-                }}
-              />
-              <div
                 className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl"
                 style={{
-                  background: `linear-gradient(135deg, ${color.purpleDark}30, ${color.purple}30)`,
+                  width: '12rem',
+                  height: 'auto',
+                  background: 'transparent',
                 }}
               >
                 {stat.icon}
@@ -489,57 +498,147 @@ export function LandingPage() {
           </motion.div>
           <motion.div
             variants={itemVariants}
-            className="relative w-full overflow-hidden rounded-2xl border shadow-2xl"
-            style={{
-              borderColor: `${color.glow}20`,
-              background: `linear-gradient(135deg, ${bg.page} 0%, ${bg.panel} 100%)`,
-              boxShadow: `0 0 80px ${color.purpleDeep}30`,
-            }}
+            className="flex flex-col items-center gap-5 text-center"
           >
             <div
-              className="flex items-center gap-2 border-b px-5 py-3"
-              style={{ borderColor: `${color.glow}15` }}
+              className="relative rounded-2xl border p-2 shadow-2xl"
+              style={{
+                background: `linear-gradient(${bg.surface} 0%, rgb(33, 30, 73) 100%)`,
+                boxShadow: `0 20px 60px ${color.purpleDeep}40`,
+              }}
             >
-              <div className="h-3 w-3 rounded-full bg-red-500/60" />
-              <div className="h-3 w-3 rounded-full bg-amber-500/60" />
-              <div className="h-3 w-3 rounded-full bg-green-500/60" />
-              <span className="ml-3 text-xs" style={{ color: color.muted }}>
-                cryptopapertrade.com
-              </span>
-            </div>
-            <div className="flex items-center justify-center p-8 sm:p-12">
-              <div className="flex flex-col items-center gap-5 text-center">
+              <div className="overflow-hidden rounded-xl" style={{ background: 'rgb(15, 14, 41)' }}>
+                {/* Window title bar */}
                 <div
-                  className="flex h-20 w-20 items-center justify-center rounded-2xl shadow-lg"
-                  style={{
-                    background: `linear-gradient(135deg, ${color.purpleDark} 0%, ${color.purple} 100%)`,
-                    boxShadow: `0 0 30px ${color.purpleDark}40`,
-                  }}
+                  className="flex items-center gap-2 px-4 py-2.5"
+                  style={{ background: `${bg.footer}cc` }}
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="white"
-                    strokeWidth="1.5"
-                    className="h-10 w-10"
+                  <div className="h-2.5 w-2.5 rounded-full bg-red-500/70" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-amber-500/70" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-green-500/70" />
+                  <div
+                    className="ml-3 flex-1 rounded-md px-3 py-1"
+                    style={{ background: `${bg.surface}60` }}
                   >
-                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                    <path d="M3 9h18M9 3v18" />
-                  </svg>
+                    <div
+                      className="mx-auto h-2 w-40 rounded"
+                      style={{ background: `${color.muted}30` }}
+                    />
+                  </div>
                 </div>
-                <p className="text-sm" style={{ color: color.muted }}>
-                  Clean, focused interface — log in to see live charts
-                </p>
-                <Button
-                  asChild
-                  size="lg"
-                  className="rounded-full px-8 text-base font-semibold text-white shadow-lg"
-                  style={{ background: gradient.brand }}
-                >
-                  <Link to="/register">Try It Now</Link>
-                </Button>
+
+                {/* Mock chart body */}
+                <div className="p-4 sm:p-6">
+                  {/* Header row */}
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="h-8 w-8 rounded-lg"
+                        style={{
+                          background: `linear-gradient(135deg, ${color.purpleDark}, ${color.purple})`,
+                        }}
+                      />
+                      <div>
+                        <div
+                          className="h-3 w-16 rounded"
+                          style={{ background: `${color.muted}30` }}
+                        />
+                        <div
+                          className="mt-1 h-2 w-10 rounded"
+                          style={{ background: `${color.muted}20` }}
+                        />
+                      </div>
+                    </div>
+                    <div
+                      className="h-6 w-20 rounded-full"
+                      style={{ background: `${color.green}20` }}
+                    />
+                  </div>
+
+                  {/* Candlestick bars — volatile crypto price action */}
+                  <div className="mt-3 flex items-end gap-1">
+                    {[
+                      { body: 5, top: 2, bottom: 1, up: false },
+                      { body: 7, top: 1, bottom: 2, up: true },
+                      { body: 3, top: 1, bottom: 1, up: false },
+                      { body: 9, top: 2, bottom: 2, up: true },
+                      { body: 11, top: 3, bottom: 1, up: false },
+                      { body: 6, top: 1, bottom: 1, up: true },
+                      { body: 4, top: 2, bottom: 2, up: false },
+                      { body: 2, top: 1, bottom: 1, up: true },
+                      { body: 15, top: 3, bottom: 2, up: false },
+                      { body: 10, top: 2, bottom: 1, up: true },
+                      { body: 8, top: 1, bottom: 3, up: false },
+                      { body: 13, top: 2, bottom: 2, up: true },
+                      { body: 6, top: 1, bottom: 1, up: false },
+                      { body: 17, top: 4, bottom: 2, up: true },
+                      { body: 5, top: 2, bottom: 1, up: false },
+                      { body: 19, top: 3, bottom: 1, up: true },
+                      { body: 14, top: 2, bottom: 2, up: true },
+                      { body: 7, top: 1, bottom: 1, up: false },
+                      { body: 21, top: 3, bottom: 2, up: true },
+                      { body: 24, top: 2, bottom: 2, up: true },
+                    ].map((c, i) => {
+                      const clr = c.up ? color.green : color.red;
+                      const totalH = c.body + c.top + c.bottom;
+                      return (
+                        <div
+                          key={i}
+                          className="relative flex items-center justify-center"
+                          style={{ width: 8, height: totalH }}
+                        >
+                          {/* Wick */}
+                          <div
+                            className="absolute w-0.5 rounded-full"
+                            style={{ height: '100%', background: clr }}
+                          />
+                          {/* Body */}
+                          <div
+                            className="absolute w-2 rounded-sm"
+                            style={{
+                              height: c.body,
+                              bottom: c.bottom,
+                              background: clr,
+                            }}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Price cards */}
+                  <div className="mt-4 grid grid-cols-3 gap-2">
+                    {[
+                      { pair: 'BTC/USD', price: '$51,667' },
+                      { pair: 'ETH/USD', price: '$33,669' },
+                      { pair: 'SOL/USD', price: '$25,515' },
+                    ].map((c) => (
+                      <div
+                        key={c.pair}
+                        className="rounded-lg px-2 py-2"
+                        style={{ background: `${bg.surface}50` }}
+                      >
+                        <div className="text-[10px] font-medium" style={{ color: color.muted }}>
+                          {c.pair}
+                        </div>
+                        <div className="mt-0.5 text-xs font-bold text-white">{c.price}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
+            <p className="text-sm" style={{ color: color.muted }}>
+              Clean, focused interface — log in to see live charts
+            </p>
+            <Button
+              asChild
+              size="lg"
+              className="rounded-full px-8 text-base font-semibold text-white shadow-lg"
+              style={{ background: gradient.brand }}
+            >
+              <Link to="/register">Try It Now</Link>
+            </Button>
           </motion.div>
         </motion.div>
 

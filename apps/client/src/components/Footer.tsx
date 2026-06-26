@@ -45,7 +45,7 @@ export function Footer() {
           Acceptable Use Policy
         </Link>
       </nav>
-      <p className="mt-2" style={{ fontSize: fontSize.xs, color: `${color.muted}60` }}>
+      <p className="mt-2" style={{ fontSize: fontSize.xs, color: color.muted }}>
         © {new Date().getFullYear()} cryptopapertrade.com
       </p>
     </footer>
