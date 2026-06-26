@@ -17,6 +17,7 @@ import { PrivacyPage } from '@/pages/PrivacyPage';
 import { SecurityPage } from '@/pages/SecurityPage';
 import { AcceptableUsePolicyPage } from '@/pages/AcceptableUsePolicyPage';
 import { UnderConstructionPage } from '@/pages/UnderConstructionPage';
+import { LandingPage } from '@/pages/LandingPage';
 import { FeaturesPage } from '@/pages/FeaturesPage';
 import { UnverifiedPage } from '@/pages/UnverifiedPage';
 import { VerifyEmailPage } from '@/pages/VerifyEmailPage';
@@ -69,6 +70,7 @@ export default function App() {
         <Routes location={location} key={location.pathname}>
           {/* Landing page */}
           <Route path="/" element={<UnderConstructionPage />} />
+          <Route path="/landing" element={<LandingPage />} />
           <Route path="/features" element={<FeaturesPage />} />
 
           {/* Public routes */}

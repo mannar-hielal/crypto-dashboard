@@ -1,0 +1,22 @@
+# Allow search engines to crawl public pages
+User-agent: *
+Allow: /
+Allow: /features
+Allow: /login
+Allow: /register
+Allow: /forgot-password
+Allow: /terms
+Allow: /privacy
+Allow: /security
+Allow: /aup
+
+# Block private and token-based paths
+Disallow: /dashboard
+Disallow: /unverified
+Disallow: /verify-email
+Disallow: /verify-email-change
+Disallow: /reset-password
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://cryptopapertrade.com/sitemap.xml

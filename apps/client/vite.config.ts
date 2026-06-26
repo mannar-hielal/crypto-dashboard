@@ -12,7 +12,7 @@ export default defineConfig({
       // generateSW: vite-plugin-pwa generates the service worker automatically using Workbox.
       // registerType 'autoUpdate': new SW activates on next page load without prompting.
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'pwa-192x192.png', 'pwa-512x512.png'],
+      includeAssets: ['favicon.svg', 'logo.svg', 'pwa-192x192.png', 'pwa-512x512.png'],
 
       // Web App Manifest — controls how the app appears when installed on mobile/desktop
       manifest: {

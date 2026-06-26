@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { GraduationCap, Sparkles, Smartphone, Heart } from 'lucide-react';
 
+import { SeoHead } from '@/components/SeoHead';
 import { AuthLayout } from '@/components/AuthLayout';
 import { CtaSection } from '@/components/CtaSection';
 import { bg, color, gradient, font } from '@/lib/tokens';
@@ -115,6 +116,11 @@ function DetailCard({ icon, title, desc }: { icon: React.ReactNode; title: strin
 export function FeaturesPage() {
   return (
     <>
+      <SeoHead
+        title="Features — Live Charts, Paper Trading and More"
+        description="Explore all features of cryptopapertrade.com: multi-chart layouts, technical indicators, long/short paper trading, real-time data, and PWA support."
+        path="/features"
+      />
       {/* Sticky anchor nav */}
       <nav
         className="sticky top-0 z-50 hidden border-b md:block"

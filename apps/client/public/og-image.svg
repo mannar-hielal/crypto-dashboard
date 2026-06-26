@@ -1,0 +1,15 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#080B14"/>
+  <defs>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4F46E5"/>
+      <stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+  </defs>
+  <rect x="540" y="235" width="120" height="120" rx="20" fill="url(#brand)" opacity="0.15"/>
+  <rect x="545" y="240" width="110" height="110" rx="16" fill="url(#brand)" opacity="0.3"/>
+  <rect x="550" y="245" width="100" height="100" rx="14" fill="url(#brand)"/>
+  <text x="600" y="312" font-family="system-ui, -apple-system, sans-serif" font-size="42" font-weight="900" fill="white" text-anchor="middle" dominant-baseline="central">CPT</text>
+  <text x="600" y="400" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="700" fill="white" text-anchor="middle" dominant-baseline="central">cryptopapertrade.com</text>
+  <text x="600" y="440" font-family="system-ui, -apple-system, sans-serif" font-size="16" fill="#8B8FA3" text-anchor="middle" dominant-baseline="central">Paper trade crypto with real-time Bybit price feeds</text>
+</svg>

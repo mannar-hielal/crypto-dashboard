@@ -77,13 +77,12 @@ export function LegalLayout({ title, lastUpdated, version, children }: LegalLayo
           {/* Brand mark row */}
           <div className="mb-4 flex items-center gap-3">
             <div
-              className="flex h-9 w-9 items-center justify-center rounded-lg"
+              className="h-9 w-9 overflow-hidden rounded-lg"
               style={{
-                background: `linear-gradient(135deg, ${color.purpleDark} 0%, ${color.purple} 100%)`,
                 boxShadow: `0 0 18px ${color.purpleDark}60`,
               }}
             >
-              <span className="text-xs font-black text-white">CPT</span>
+              <img src="/logo.svg" alt="CPT" className="h-full w-full" />
             </div>
             <span className="text-sm font-semibold tracking-wide text-white">
               cryptopapertrade.com
