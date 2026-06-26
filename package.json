@@ -43,10 +43,10 @@
   "pnpm": {
     "overrides": {
       "undici": "^7.28.0",
-      "serialize-javascript@>=5.0.0 <7.0.5": ">=7.0.5",
-      "ws@>=8.0.0 <8.21.0": ">=8.21.0",
-      "@hono/node-server@<1.19.13": ">=1.19.13",
-      "esbuild@>=0.17.0 <0.28.1": ">=0.28.1"
+      "serialize-javascript": "^7.0.5",
+      "ws": "^8.21.0",
+      "@hono/node-server": ">=1.19.13",
+      "esbuild": ">=0.28.1"
     }
   },
   "lint-staged": {
