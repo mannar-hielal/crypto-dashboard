@@ -215,8 +215,9 @@ async function main() {
     const transport = new StdioServerTransport();
     await server.connect(transport);
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('Failed to start Figma MCP server:', err);
+    process.stderr.write(
+      `Failed to start Figma MCP server: ${err instanceof Error ? err.message : String(err)}\n`
+    );
     process.exit(1);
   }
 }

@@ -3,7 +3,7 @@
   "mcp": {
     "figma": {
       "type": "local",
-      "command": ["node", "mcp-servers/figma/dist/index.js"],
+      "command": ["bash", "-c", "cd mcp-servers/figma && pnpm build && node dist/index.js"],
       "cwd": ".",
       "enabled": true
     }

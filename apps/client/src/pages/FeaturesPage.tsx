@@ -367,7 +367,7 @@ export function FeaturesPage() {
                   </svg>
                 }
                 title="Order Book"
-                desc="Live bid/ask depth chart. See market liquidity before placing orders."
+                desc="Live bid/ask quotes from the Bybit order book feed. See the spread before placing orders."
               />
             </div>
           </motion.section>

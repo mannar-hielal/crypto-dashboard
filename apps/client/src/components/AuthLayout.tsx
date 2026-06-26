@@ -68,7 +68,7 @@ export function AuthLayout({
       />
 
       <main
-        className={`relative z-10 flex flex-1 flex-col items-center${centerContent ? ' justify-center' : ''}`}
+        className={`relative z-10 flex flex-1 flex-col items-center${centerContent || hideFooter ? ' justify-center p-4' : ''}`}
       >
         {children}
       </main>
