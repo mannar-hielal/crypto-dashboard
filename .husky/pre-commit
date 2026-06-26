@@ -11,6 +11,10 @@ echo "Full list: docs/REVIEW_CHECKLIST.md"
 echo "---------------------------------------"
 
 # 2. Automated Enforcement Gates
+
+# 🔐 Dependency CVE check — fails on high/critical advisories
+pnpm run audit
+
 # Type-check catches errors ESLint misses
 pnpm --filter @crypto-dashboard/server type-check
 pnpm --filter @crypto-dashboard/client type-check

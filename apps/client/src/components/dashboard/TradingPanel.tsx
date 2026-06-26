@@ -473,7 +473,7 @@ export function TradingPanel({
           </span>
           <span
             className="tabular-nums font-bold"
-            style={{ fontSize: fontSize.xs11, color: !isBuy ? '#fff' : color.muted }}
+            style={{ fontSize: fontSize.xs11, color: !isBuy ? color.white : color.muted }}
           >
             {(bid ?? latestPrice)
               ? (bid ?? latestPrice)!.toLocaleString(undefined, { maximumFractionDigits: 2 })
@@ -516,7 +516,7 @@ export function TradingPanel({
           </span>
           <span
             className="tabular-nums font-bold"
-            style={{ fontSize: fontSize.xs11, color: isBuy ? '#fff' : color.muted }}
+            style={{ fontSize: fontSize.xs11, color: isBuy ? color.white : color.muted }}
           >
             {(ask ?? latestPrice)
               ? (ask ?? latestPrice)!.toLocaleString(undefined, { maximumFractionDigits: 2 })
@@ -534,7 +534,7 @@ export function TradingPanel({
             aria-selected={tab === t.id}
             onClick={() => handleTabChange(t.id)}
             className="relative flex-1 py-2 text-xs font-semibold transition-colors"
-            style={{ color: tab === t.id ? '#fff' : color.muted }}
+            style={{ color: tab === t.id ? color.white : color.muted }}
           >
             {t.label}
             {tab === t.id && (
@@ -675,7 +675,10 @@ export function TradingPanel({
                           setFormError(null);
                         }}
                       />
-                      <span className="text-xs" style={{ color: tpEnabled ? '#fff' : color.muted }}>
+                      <span
+                        className="text-xs"
+                        style={{ color: tpEnabled ? color.white : color.muted }}
+                      >
                         Take profit, price
                       </span>
                     </div>
@@ -728,7 +731,10 @@ export function TradingPanel({
                           setFormError(null);
                         }}
                       />
-                      <span className="text-xs" style={{ color: slEnabled ? '#fff' : color.muted }}>
+                      <span
+                        className="text-xs"
+                        style={{ color: slEnabled ? color.white : color.muted }}
+                      >
                         Stop loss, price
                       </span>
                     </div>
@@ -798,7 +804,7 @@ export function TradingPanel({
               >
                 {margin !== null ? `$${margin.toFixed(2)}` : '—'}
                 {' / '}
-                <span style={{ color: '#fff' }}>${balance.toFixed(2)}</span>
+                <span style={{ color: color.white }}>${balance.toFixed(2)}</span>
               </span>
             </div>
             <div
@@ -826,7 +832,10 @@ export function TradingPanel({
           ].map(({ label, value }) => (
             <div key={label} className="flex items-center justify-between py-0.5">
               <span style={{ fontSize: fontSize.xs10, color: color.muted }}>{label}</span>
-              <span className="tabular-nums" style={{ fontSize: fontSize.xs10, color: '#fff' }}>
+              <span
+                className="tabular-nums"
+                style={{ fontSize: fontSize.xs10, color: color.white }}
+              >
                 {value}
               </span>
             </div>
@@ -843,24 +852,32 @@ export function TradingPanel({
               exit={{ opacity: 0, y: -4, height: 0 }}
               transition={{ duration: 0.2 }}
               className="overflow-hidden rounded-md border px-2.5 py-2"
-              style={{ borderColor: '#f59e0b55', background: '#f59e0b0d' }}
+              style={{ borderColor: `${color.warning}55`, background: `${color.warning}0d` }}
             >
               <div className="flex items-start gap-1.5">
                 <AlertTriangle
                   className="mt-0.5 h-3.5 w-3.5 shrink-0"
-                  style={{ color: '#f59e0b' }}
+                  style={{ color: color.warning }}
                 />
                 <div className="flex flex-col gap-1">
-                  <p style={{ fontSize: fontSize.xs10, color: '#fcd34d', lineHeight: 1.4 }}>
+                  <p
+                    style={{ fontSize: fontSize.xs10, color: color.warningLight, lineHeight: 1.4 }}
+                  >
                     {immediateWarning.message}
                   </p>
-                  <p style={{ fontSize: fontSize.xs10, color: '#f59e0b99', lineHeight: 1.4 }}>
+                  <p
+                    style={{
+                      fontSize: fontSize.xs10,
+                      color: `${color.warning}99`,
+                      lineHeight: 1.4,
+                    }}
+                  >
                     {immediateWarning.suggestion}
                   </p>
                   {bypassWarning && (
                     <p
                       className="font-semibold"
-                      style={{ fontSize: fontSize.xs10, color: '#fcd34d' }}
+                      style={{ fontSize: fontSize.xs10, color: color.warningLight }}
                     >
                       Click the button below to confirm and place anyway.
                     </p>
@@ -882,38 +899,62 @@ export function TradingPanel({
               exit={{ opacity: 0, y: -4, height: 0 }}
               transition={{ duration: 0.2 }}
               className="overflow-hidden rounded-md border px-2.5 py-2.5"
-              style={{ borderColor: '#f59e0b88', background: '#f59e0b15' }}
+              style={{ borderColor: `${color.warning}88`, background: `${color.warning}15` }}
             >
               <div className="flex items-start gap-1.5">
                 <AlertTriangle
                   className="mt-0.5 h-3.5 w-3.5 shrink-0"
-                  style={{ color: '#f59e0b' }}
+                  style={{ color: color.warning }}
                 />
                 <div className="flex flex-col gap-1.5 w-full">
                   <p
                     className="font-semibold"
-                    style={{ fontSize: fontSize.xs10, color: '#fcd34d', lineHeight: 1.4 }}
+                    style={{ fontSize: fontSize.xs10, color: color.warningLight, lineHeight: 1.4 }}
                   >
                     ⚠ Suspicious SL/TP value detected
                   </p>
 
                   {slWarnings.typoWarning && (
-                    <p style={{ fontSize: fontSize.xs10, color: '#fcd34d99', lineHeight: 1.4 }}>
+                    <p
+                      style={{
+                        fontSize: fontSize.xs10,
+                        color: `${color.warningLight}99`,
+                        lineHeight: 1.4,
+                      }}
+                    >
                       {slWarnings.typoWarning}
                     </p>
                   )}
                   {slWarnings.largeDistanceWarning && (
-                    <p style={{ fontSize: fontSize.xs10, color: '#fcd34d99', lineHeight: 1.4 }}>
+                    <p
+                      style={{
+                        fontSize: fontSize.xs10,
+                        color: `${color.warningLight}99`,
+                        lineHeight: 1.4,
+                      }}
+                    >
                       {slWarnings.largeDistanceWarning}
                     </p>
                   )}
                   {tpWarnings.typoWarning && (
-                    <p style={{ fontSize: fontSize.xs10, color: '#fcd34d99', lineHeight: 1.4 }}>
+                    <p
+                      style={{
+                        fontSize: fontSize.xs10,
+                        color: `${color.warningLight}99`,
+                        lineHeight: 1.4,
+                      }}
+                    >
                       {tpWarnings.typoWarning}
                     </p>
                   )}
                   {tpWarnings.largeDistanceWarning && (
-                    <p style={{ fontSize: fontSize.xs10, color: '#fcd34d99', lineHeight: 1.4 }}>
+                    <p
+                      style={{
+                        fontSize: fontSize.xs10,
+                        color: `${color.warningLight}99`,
+                        lineHeight: 1.4,
+                      }}
+                    >
                       {tpWarnings.largeDistanceWarning}
                     </p>
                   )}
@@ -970,8 +1011,8 @@ export function TradingPanel({
                       }}
                       className="flex-1 rounded py-1 text-xs font-semibold transition-colors hover:opacity-80"
                       style={{
-                        background: '#f59e0b33',
-                        color: '#fcd34d',
+                        background: `${color.warning}33`,
+                        color: color.warningLight,
                         fontSize: fontSize.xs10,
                       }}
                     >
@@ -1020,12 +1061,12 @@ export function TradingPanel({
             boxShadow: `0 0 16px 0px ${sideColor}30`,
           }}
         >
-          <span className="text-sm font-bold" style={{ color: isBuy ? bg.page : '#fff' }}>
+          <span className="text-sm font-bold" style={{ color: isBuy ? bg.page : color.white }}>
             {bypassWarning && immediateWarning ? 'Place anyway' : isBuy ? 'Buy' : 'Sell'}
           </span>
           <span
             className="font-semibold opacity-80"
-            style={{ fontSize: fontSize.xs10, color: isBuy ? bg.page : '#fff' }}
+            style={{ fontSize: fontSize.xs10, color: isBuy ? bg.page : color.white }}
           >
             {submitSecondary}
           </span>

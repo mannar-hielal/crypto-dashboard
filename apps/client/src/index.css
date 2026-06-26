@@ -17,7 +17,14 @@
     box-sizing: border-box;
   }
 
+  html {
+    min-height: 100%;
+    width: 100%;
+    @apply font-sans;
+  }
+
   body {
+    min-height: 100%;
     margin: 0;
     padding: 0;
     width: 100%;
@@ -26,18 +33,13 @@
     @apply bg-background text-foreground;
   }
 
-  html {
-    width: 100%;
-    @apply font-sans;
-  }
-
   * {
     @apply border-border outline-ring/50;
   }
 
   #root {
     width: 100%;
-    min-height: 100svh;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
   }
@@ -51,9 +53,11 @@
      Tailwind generates utilities from these: text-brand-green, bg-bg-panel,
      hover:text-brand-purple, focus:border-brand-purple-dark/50, etc.       */
 
-  /* Backgrounds */
-  --color-bg-page: #0f0e29;
-  --color-bg-panel: #211e49;
+  /* Backgrounds — Exgen deep purple-navy hierarchy */
+  --color-bg-deep: #03020a;
+  --color-bg-page: #060413;
+  --color-bg-navy: #081129;
+  --color-bg-panel: #25234e;
   --color-bg-footer: #1e1d34;
   --color-bg-surface: #3e3c73;
 
@@ -63,8 +67,10 @@
   --color-brand-purple: #a555e2;
   --color-brand-purple-dark: #695bec;
   --color-brand-purple-deep: #4e3287;
+  --color-brand-glow: #6662a9;
   --color-brand-amber: #e7ab33;
   --color-brand-muted: #cac5d4;
+  --color-brand-white: #fcfcfd;
 
   /* Brand gradient stops — use with bg-gradient-to-r from-brand-grad-from to-brand-grad-to */
   --color-brand-grad-from: #fe4bd1; /* pink-magenta — gradient start */
@@ -121,11 +127,11 @@
 /* Always-dark: :root already sets color-scheme: dark so no .dark wrapper needed */
 
 :root {
-  /* Backgrounds — deep purple-navy hierarchy */
-  --background: oklch(0.07 0.055 285); /* #0f0e29 — deepest base */
-  --card: oklch(0.175 0.08 285); /* #211e49 — panel bg     */
-  --popover: oklch(0.175 0.08 285);
-  --secondary: oklch(0.295 0.092 285); /* #3e3c73 — elevated     */
+  /* Backgrounds — Exgen deep purple-navy hierarchy */
+  --background: oklch(0.04 0.04 285); /* #060413 — deepest base  (Exgen gradient start) */
+  --card: oklch(0.19 0.085 285); /* #25234E — panel bg       (Exgen card bg)       */
+  --popover: oklch(0.19 0.085 285);
+  --secondary: oklch(0.295 0.092 285); /* #3e3c73 — elevated       */
   --muted: oklch(0.295 0.092 285);
   --accent: oklch(0.295 0.092 285);
 
@@ -172,17 +178,27 @@
   --exgen-green: #2ccd78;
   --exgen-red: #d5455c;
   --exgen-purple: #a555e2;
-  --exgen-panel: #211e49;
+  --exgen-purple-dark: #695bec;
+  --exgen-purple-deep: #4e3287;
+  --exgen-glow: #6662a9;
+  --exgen-amber: #e7ab33;
+  --exgen-muted: #cac5d4;
+  --exgen-white: #fcfcfd;
+  --exgen-deep: #03020a;
+  --exgen-page: #060413;
+  --exgen-navy: #081129;
+  --exgen-panel: #25234e;
   --exgen-surface: #3e3c73;
+  --exgen-footer: #1e1d34;
 }
 
 /* Mirror everything for the .dark class so shadcn components stay correct */
 .dark {
-  --background: oklch(0.07 0.055 285);
+  --background: oklch(0.04 0.04 285);
   --foreground: oklch(0.927 0.008 265);
-  --card: oklch(0.175 0.08 285);
+  --card: oklch(0.19 0.085 285);
   --card-foreground: oklch(0.927 0.008 265);
-  --popover: oklch(0.175 0.08 285);
+  --popover: oklch(0.19 0.085 285);
   --popover-foreground: oklch(0.927 0.008 265);
   --primary: oklch(0.535 0.262 298);
   --primary-foreground: oklch(1 0 0);
@@ -339,7 +355,7 @@
 .legal-content h2 {
   font-size: 1.125rem;
   font-weight: 700;
-  color: #e8eaf0;
+  color: var(--exgen-white);
   margin-top: 2rem;
   margin-bottom: 0.75rem;
   padding-bottom: 0.5rem;
@@ -353,7 +369,7 @@
 .legal-content h3 {
   font-size: 1rem;
   font-weight: 600;
-  color: #695bec;
+  color: var(--exgen-purple-dark);
   margin-top: 1.25rem;
   margin-bottom: 0.5rem;
 }
@@ -377,19 +393,19 @@
 }
 
 .legal-content strong {
-  color: #e8eaf0;
+  color: var(--exgen-white);
   font-weight: 600;
 }
 
 .legal-content a {
-  color: #695bec;
+  color: var(--exgen-purple-dark);
   text-decoration: underline;
   text-underline-offset: 4px;
   transition: color 0.15s;
 }
 
 .legal-content a:hover {
-  color: #a555e2;
+  color: var(--exgen-purple);
 }
 
 /* Tables */
@@ -404,7 +420,7 @@
 }
 
 .legal-content thead {
-  background: #3e3c73;
+  background: var(--exgen-surface);
 }
 
 .legal-content th {
@@ -414,18 +430,18 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #cac5d4;
+  color: var(--exgen-muted);
 }
 
 .legal-content td {
   padding: 0.75rem 1rem;
   vertical-align: top;
   border-top: 1px solid oklch(1 0 0 / 6%);
-  background: #211e49;
+  background: var(--exgen-panel);
 }
 
 .legal-content tbody tr:hover td {
-  background: #2a2660;
+  background: var(--exgen-surface);
 }
 
 .legal-content td a {
@@ -439,23 +455,23 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #7c3aed;
+  background: var(--exgen-purple-dark);
   cursor: pointer;
-  border: 2px solid #1a1d2e;
-  box-shadow: 0 0 6px rgba(124, 58, 237, 0.6);
+  border: 2px solid var(--exgen-panel);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--exgen-purple-dark) 60%, transparent);
   transition:
     transform 0.1s,
     box-shadow 0.1s;
 }
 .sound-vol-slider::-webkit-slider-thumb:hover {
   transform: scale(1.25);
-  box-shadow: 0 0 10px rgba(124, 58, 237, 0.8);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--exgen-purple-dark) 80%, transparent);
 }
 .sound-vol-slider::-moz-range-thumb {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #7c3aed;
+  background: var(--exgen-purple-dark);
   cursor: pointer;
-  border: 2px solid #1a1d2e;
+  border: 2px solid var(--exgen-panel);
 }

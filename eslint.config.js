@@ -1,5 +1,6 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
+import securityPlugin from 'eslint-plugin-security';
 
 export default [
   {
@@ -16,6 +17,7 @@ export default [
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  securityPlugin.configs.recommended,
   // Base rules for all files (no type information needed)
   {
     rules: {

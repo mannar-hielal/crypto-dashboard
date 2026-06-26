@@ -1,5 +1,7 @@
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
 
+# 🔐 Dependency CVE check — catches what pre-commit might have missed
+pnpm run audit
+
 # Note: Tests now run in pre-commit
-exit 0

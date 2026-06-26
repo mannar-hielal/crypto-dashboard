@@ -106,6 +106,8 @@ export class CandleAggregator {
     incomingCandle: Kline,
     _candleTime: number
   ): Kline | null {
+    // interval is a typed ChartInterval key — safe, controlled access
+    // eslint-disable-next-line security/detect-object-injection
     const intervalMinutes = INTERVAL_MINUTES[interval];
     const candleClosedTime = incomingCandle.timestamp;
     const openCandleTime = this.getIntervalStart(candleClosedTime, intervalMinutes);

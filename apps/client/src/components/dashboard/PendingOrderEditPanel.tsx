@@ -188,12 +188,15 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
   return (
     <div
       className="flex h-full w-full flex-col overflow-hidden"
-      style={{ background: bg.panel, borderLeft: '1px solid rgba(255,255,255,0.06)' }}
+      style={{
+        background: bg.panel,
+        borderLeft: `1px solid color-mix(in srgb, ${color.white} 6%, transparent)`,
+      }}
     >
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <div
         className="flex shrink-0 flex-col gap-0.5 border-b px-3 py-2.5"
-        style={{ borderColor: 'rgba(255,255,255,0.07)' }}
+        style={{ borderColor: `color-mix(in srgb, ${color.white} 7%, transparent)` }}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -247,7 +250,7 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
 
         {/* ── Divider ───────────────────────────────────────────────────── */}
         <div className="px-3 pt-3">
-          <hr style={{ borderColor: 'rgba(255,255,255,0.07)' }} />
+          <hr style={{ borderColor: `color-mix(in srgb, ${color.white} 7%, transparent)` }} />
         </div>
 
         {/* ── Price ─────────────────────────────────────────────────────── */}
@@ -314,7 +317,7 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
 
         {/* ── Divider ───────────────────────────────────────────────────── */}
         <div className="px-3">
-          <hr style={{ borderColor: 'rgba(255,255,255,0.07)' }} />
+          <hr style={{ borderColor: `color-mix(in srgb, ${color.white} 7%, transparent)` }} />
         </div>
 
         {/* ── Exits section ─────────────────────────────────────────────── */}
@@ -325,7 +328,7 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <Toggle checked={tpEnabled} onChange={setTpEnabled} label="Enable take profit" />
-              <span style={{ fontSize: fontSize.xs, color: tpEnabled ? '#fff' : color.muted }}>
+              <span style={{ fontSize: fontSize.xs, color: tpEnabled ? color.white : color.muted }}>
                 Take profit, price
               </span>
             </div>
@@ -348,7 +351,7 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <Toggle checked={slEnabled} onChange={setSlEnabled} label="Enable stop loss" />
-              <span style={{ fontSize: fontSize.xs, color: slEnabled ? '#fff' : color.muted }}>
+              <span style={{ fontSize: fontSize.xs, color: slEnabled ? color.white : color.muted }}>
                 Stop loss, price
               </span>
             </div>
@@ -370,7 +373,7 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
 
         {/* ── Divider ───────────────────────────────────────────────────── */}
         <div className="px-3">
-          <hr style={{ borderColor: 'rgba(255,255,255,0.07)' }} />
+          <hr style={{ borderColor: `color-mix(in srgb, ${color.white} 7%, transparent)` }} />
         </div>
 
         {/* ── Order info ────────────────────────────────────────────────── */}
@@ -393,7 +396,10 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
           ).map(({ label, value }) => (
             <div key={label} className="flex items-center justify-between py-0.5">
               <span style={{ fontSize: fontSize.xs10, color: color.muted }}>{label}</span>
-              <span className="tabular-nums" style={{ fontSize: fontSize.xs10, color: '#fff' }}>
+              <span
+                className="tabular-nums"
+                style={{ fontSize: fontSize.xs10, color: color.white }}
+              >
                 {value}
               </span>
             </div>
@@ -404,7 +410,7 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
       {/* ── Footer: Confirm / Discard ─────────────────────────────────────── */}
       <div
         className="flex shrink-0 flex-col gap-2 border-t px-3 py-3"
-        style={{ borderColor: 'rgba(255,255,255,0.07)' }}
+        style={{ borderColor: `color-mix(in srgb, ${color.white} 7%, transparent)` }}
       >
         <motion.button
           onClick={handleConfirm}
@@ -420,10 +426,10 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
           whileTap={{ scale: 0.97 }}
           className="w-full rounded py-2 text-sm font-semibold transition-colors hover:text-white"
           style={{
-            background: 'rgba(255,255,255,0.05)',
+            background: `color-mix(in srgb, ${color.white} 5%, transparent)`,
             color: color.muted,
             fontSize: fontSize.xs,
-            border: '1px solid rgba(255,255,255,0.08)',
+            border: `1px solid color-mix(in srgb, ${color.white} 8%, transparent)`,
           }}
         >
           Discard

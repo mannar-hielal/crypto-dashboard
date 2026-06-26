@@ -686,6 +686,8 @@ export async function authRoutes(app: FastifyInstance) {
 
   // ─── REFRESH ─────────────────────────────────────────────────────────────────
   app.post('/refresh', { schema: refreshSchema }, async (request, reply) => {
+    // cookie name is a known constant — safe, controlled access
+    // eslint-disable-next-line security/detect-object-injection
     const rawToken = request.cookies[REFRESH_TOKEN_COOKIE];
 
     if (!rawToken) {
@@ -731,6 +733,8 @@ export async function authRoutes(app: FastifyInstance) {
 
   // ─── LOGOUT ──────────────────────────────────────────────────────────────────
   app.post('/logout', { schema: logoutSchema }, async (request, reply) => {
+    // cookie name is a known constant — safe, controlled access
+    // eslint-disable-next-line security/detect-object-injection
     const rawToken = request.cookies[REFRESH_TOKEN_COOKIE];
 
     if (rawToken) {

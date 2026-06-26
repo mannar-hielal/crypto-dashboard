@@ -1,13 +1,14 @@
 {
-  "name": "crypto-dashboard",
+  "name": "crypto-paper-trade",
   "version": "0.1.0",
-  "description": "Free TradingView Plus alternative - Paper trading dashboard for crypto",
+  "description": "Stop paying to learn paper trade",
   "private": true,
   "type": "module",
   "license": "MIT",
   "author": "MannarHielal",
   "packageManager": "pnpm@10.33.0",
   "scripts": {
+    "preinstall": "pnpm audit --audit-level=high",
     "dev:server": "pnpm --filter @crypto-dashboard/server dev",
     "dev": "pnpm dev:server",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
@@ -33,10 +34,20 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "eslint": "^10.5.0",
+    "eslint-plugin-security": "^4.0.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "prettier": "^3.8.4",
     "typescript-eslint": "^8.61.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "undici": "^7.28.0",
+      "serialize-javascript": "^7.0.5",
+      "ws": "^8.21.0",
+      "@hono/node-server": ">=1.19.13",
+      "esbuild": ">=0.28.1"
+    }
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,json,md,yml,yaml,css}": [

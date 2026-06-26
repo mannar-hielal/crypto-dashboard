@@ -1,0 +1,15 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "figma": {
+      "type": "local",
+      "command": [
+        "bash",
+        "-lc",
+        "pnpm --filter @crypto-dashboard/figma-mcp build && node mcp-servers/figma/dist/index.js"
+      ],
+      "cwd": ".",
+      "enabled": true
+    }
+  }
+}

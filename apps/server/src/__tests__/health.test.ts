@@ -13,6 +13,8 @@ vi.mock('../plugins/prisma.js', () => {
   const prismaPlugin = async (app: FastifyInstance) => {
     app.decorate('prisma', {} as never);
   };
+  // Fastify Symbol-key pattern — safe, controlled access
+  // eslint-disable-next-line security/detect-object-injection
   (prismaPlugin as unknown as Record<symbol, boolean>)[skipOverride] = true;
   return { prismaPlugin };
 });

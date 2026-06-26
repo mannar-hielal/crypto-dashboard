@@ -1438,3 +1438,60 @@ The order book is **not needed for paper trading** (fills are instant, no real l
 
 > **Session context**: Completed Paper Trading Phase 3 synchronization core architecture. Implemented
 > end-to-end sync for netting, removed legacy ID filters, and unified the Order-to-Position lifecycle.
+
+---
+
+### feat: Exgen-themed landing page + features page + CTA section (2026-06-17) ✅
+
+**Files created:**
+
+- `apps/client/src/pages/LandingPage.tsx` — hero with glow blobs, laptop mockup, stats strip, 3 alternating feature highlights, learning path, dashboard preview, CTA
+- `apps/client/src/pages/FeaturesPage.tsx` — sticky anchor nav, 5 detail sections (Charts, Trading, Account, Real-time Data, Cross-platform), Why CPT section, CTA
+- `apps/client/src/components/CtaSection.tsx` — shared floating-illustration component used by both pages
+- `apps/client/src/assets/home-bg.svg` — 2.2 MB background ambient pattern (1920×3985)
+- `apps/client/src/assets/cta-illustration.svg` — 12.7 kB vector illustration (1392×340)
+
+**Files modified:**
+
+- `apps/client/src/components/AuthLayout.tsx` — added `home-bg.svg` overlay, ambient glow blobs, removed `overflow-hidden` from wrapper
+- `apps/client/src/components/Footer.tsx` — changed from normal flow to `position: absolute; bottom: 0` to stick to viewport bottom
+- `apps/client/src/App.tsx` — registered `/` → LandingPage, `/features` → FeaturesPage; removed old under-construction placeholder
+- `apps/client/src/index.css` — Exgen palette: `bg.deep`, `bg.page`, `bg.navy`, `bg.panel`, `color.glow`, `color.white` CSS custom properties; `html`/`body` height fix
+- `apps/client/src/lib/tokens.ts` — matching JS token map
+- `apps/client/vite.config.ts` — Workbox `maximumFileSizeToCacheInBytes` → 4 MiB to precache home-bg.svg
+
+**Refactored to Exgen tokens:** Auth pages (Login, Register, ForgotPassword, ResetPassword, Unverified, VerifyEmail, VerifyEmailChange), LegalLayout, dashboard components (OrderAccountManagementPanel, PendingOrderEditPanel, PositionEditPanel, SettingsModal, SoundSettings, SymbolBar, TickerBar, TopBar, PaneHeader, ChartLayoutPicker, LeftToolbar)
+
+**Session fixes:**
+
+- Footer `bottom: -8.5rem` → `bottom: 0` (was pushing footer below viewport)
+- LandingPage hero wrapper dropped `overflow-hidden` (was clipping ambient glow blobs)
+- FeaturesPage Account / Real-time Data / Cross-platform sections reformatted from single-line to multi-line style objects
+
+### feat: landing page stats strip + hero refinements (2026-06-26) ✅
+
+**Hero section:**
+
+- Left column (tagline "Paper trade crypto, FREE") — `gap-6` → `gap-4` (1rem), `items-center` → `items-start`
+- Outer flex row — added `overflow: hidden` inline style
+- Hero image switched from `complete-mac-removed-bg.png` → `hero-mac.png` → `hero-mac-app.png`
+- Hero image wrapper: `width: 68rem` → `55rem` → `36rem`, `height: auto`, `overflow-hidden` retained
+
+**Stats strip (3 cards):**
+
+- All three stat icons replaced with `<img>` tags — `9crypto.svg`, `realtime-data.svg`, `visual-balance.svg`
+- Wrapper gradient background removed (transparent) for all three; wrapper sized to `width: 12rem; height: auto`
+- Ambient glow blob (`absolute -right-8 -top-8 ...`) removed from each card
+- Removed unused `group` class from stat cards
+- Removed unused lucide imports (`BarChart3`, `Zap`, `Wallet`)
+- "Crypto Pairs" stat: value changed from `"9"` to `"9 crypto pairs"`, label changed from `"Crypto Pairs"` to `"more are being added"`
+- `9crypto.svg` image gets `margin-bottom: 1rem`
+
+**Footer:**
+
+- Copyright text color: `${color.muted}60` → `color.muted` (full opacity, matching other footer links)
+
+**Files modified:**
+
+- `apps/client/src/pages/LandingPage.tsx`
+- `apps/client/src/components/Footer.tsx`

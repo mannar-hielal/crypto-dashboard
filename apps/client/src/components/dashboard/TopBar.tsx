@@ -108,7 +108,10 @@ export function TopBar() {
                   }}
                   whileHover={{ background: bg.surface }}
                   className="flex w-full items-center gap-2 px-3 py-2.5 text-xs transition-colors hover:text-white"
-                  style={{ color: color.muted, borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+                  style={{
+                    color: color.muted,
+                    borderBottom: `1px solid color-mix(in srgb, ${color.white} 5%, transparent)`,
+                  }}
                 >
                   <Settings className="h-3.5 w-3.5" />
                   Settings
