@@ -11,7 +11,7 @@ export function PrivacyPage() {
         description="Privacy policy for cryptopapertrade.com. Learn how we collect, use, and protect your data (nDSG and GDPR compliant)."
         path="/privacy"
       />
-      <LegalLayout title="Privacy Policy" lastUpdated="June 13, 2026" version="1.0">
+      <LegalLayout title="Privacy Policy" lastUpdated="June 27, 2026" version="1.1">
         <section>
           <h2>1. Data Controller</h2>
           <p>
@@ -93,6 +93,14 @@ export function PrivacyPage() {
                   (Cloudflare). See Section 7 for details.
                 </td>
               </tr>
+              <tr>
+                <td>Newsletter subscription data</td>
+                <td>Double opt-in verification, sending newsletters</td>
+                <td>
+                  Email in plain text; verification token as SHA-256 hash; IP address and timestamp
+                  collected at time of subscription (consent proof, GDPR Art. 7)
+                </td>
+              </tr>
             </tbody>
           </table>
         </section>
@@ -124,6 +132,11 @@ export function PrivacyPage() {
               <strong>Legitimate interest (Art. 6(1)(f) GDPR)</strong>: security logging, abuse
               prevention, platform stability.
             </li>
+            <li>
+              <strong>Consent (Art. 6(1)(a) GDPR)</strong>: newsletter subscription — you explicitly
+              opt in, and we record your IP and timestamp at the point of consent. You may withdraw
+              at any time via the unsubscribe link in every email.
+            </li>
           </ul>
         </section>
 
@@ -132,7 +145,10 @@ export function PrivacyPage() {
           <ul>
             <li>To authenticate you and maintain your session securely.</li>
             <li>To display your paper trading history and virtual portfolio.</li>
-            <li>To send transactional emails (password reset only — no marketing emails).</li>
+            <li>
+              To send transactional emails: password reset and newsletter confirmation/verification
+              (no marketing emails).
+            </li>
             <li>To detect and prevent abuse, fraud, or unauthorised access.</li>
           </ul>
           <p>
@@ -171,6 +187,12 @@ export function PrivacyPage() {
               <strong>Edge / CDN logs (Cloudflare)</strong>: retained for <strong>7 days</strong> on
               Cloudflare's infrastructure per their standard log retention policy. We do not export
               or store these logs independently.
+            </li>
+            <li>
+              <strong>Newsletter subscriber data</strong>: pending (unverified) subscribers are
+              automatically purged after <strong>30 days</strong>. Verified subscribers' data is
+              retained until you unsubscribe or request deletion. Verification token hashes are
+              retained as long as the subscription is active to allow secure link verification.
             </li>
           </ul>
         </section>
@@ -215,7 +237,10 @@ export function PrivacyPage() {
           </ul>
           <p>
             We do not use advertising cookies, analytics cookies, or any third-party tracking
-            scripts.
+            scripts. We use <strong>Cloudflare Web Analytics (CFWA)</strong>, a cookieless analytics
+            service that operates at the edge level — it does not set cookies, use browser storage,
+            or collect personal data. It works by adding a <code>cf</code> query parameter to
+            requests for page-view measurement and respects Do Not Track (DNT) headers.
           </p>
         </section>
 
@@ -270,7 +295,7 @@ export function PrivacyPage() {
               </tr>
               <tr>
                 <td>Cloudflare</td>
-                <td>Frontend CDN, DDoS protection</td>
+                <td>Frontend CDN, DDoS protection, Cloudflare Web Analytics (cookieless)</td>
                 <td>Global</td>
                 <td>
                   <div className="flex flex-col gap-1">
@@ -311,7 +336,7 @@ export function PrivacyPage() {
               </tr>
               <tr>
                 <td>Resend</td>
-                <td>Transactional email (password reset)</td>
+                <td>Transactional email (password reset, newsletter confirmation)</td>
                 <td>US</td>
                 <td>
                   <a

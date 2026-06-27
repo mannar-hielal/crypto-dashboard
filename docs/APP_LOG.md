@@ -583,6 +583,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 > Full code-level legal scan performed: **May 5, 2026**
 > Updated for free-only launch: **June 13, 2026**
+> Newsletter + CFWA legal sweep: **June 27, 2026**
 > Snapshot is self-contained in this section for review portability.
 
 ### ✅ Legal Clearances
@@ -1563,5 +1564,37 @@ The order book is **not needed for paper trading** (fills are instant, no real l
 - GA4 deferred until post-launch conversion tracking is needed
 
 **No files changed.**
+
+---
+
+### docs: legal page updates for newsletter + CFWA (2026-06-27) ✅
+
+**PrivacyPage** — full sweep for newsletter waitlist and CFWA disclosures:
+
+- **§3 — What We Collect**: Added newsletter subscription data row (email, SHA-256 token hash, consent IP + timestamp, GDPR Art. 7)
+- **§5 — Legal Basis**: Added `Consent (Art. 6(1)(a) GDPR)` for newsletter with withdrawal via unsubscribe link
+- **§6 — How We Use Data**: "password reset only" → "password reset and newsletter confirmation/verification"
+- **§7 — Data Retention**: Added newsletter subscriber retention (pending → 30-day purge, verified → until unsubscribe)
+- **§8 — Cookies**: Added CFWA disclosure (cookieless, `cf` query param, respects DNT)
+- **§9 — Third-Party Processors**: Resend now includes "newsletter confirmation"; Cloudflare includes "Cloudflare Web Analytics"
+- `lastUpdated` bumped to June 27, 2026, version 1.1
+
+**TermsPage** — minor updates:
+
+- **§10 — Third-Party Services**: Resend includes "newsletter confirmation"; Cloudflare includes "Cloudflare Web Analytics"
+- `lastUpdated` bumped to June 27, 2026, version 1.1
+
+**Other fixes:**
+
+- `index.html` — extended `data-rh="true"` to all OG/Twitter/description/canonical fallback tags so react-helmet-async replaces them in-place
+- `TermsPage.tsx` — fixed period spacing ("purposes . Simulated" → "purposes. Simulated")
+
+**Back link**: LegalLayout uses `navigate(-1)` — verified correct for all navigation flows (Footer → legal page, cross-links between legal pages, direct visits).
+
+**Files modified:**
+
+- `apps/client/index.html`
+- `apps/client/src/pages/PrivacyPage.tsx`
+- `apps/client/src/pages/TermsPage.tsx`
 
 ---

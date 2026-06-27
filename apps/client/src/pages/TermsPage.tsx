@@ -12,7 +12,7 @@ export function TermsPage() {
         description="Terms of service for cryptopapertrade.com — a free crypto paper trading platform."
         path="/terms"
       />
-      <LegalLayout title="Terms of Service" lastUpdated="June 13, 2026" version="1.0">
+      <LegalLayout title="Terms of Service" lastUpdated="June 27, 2026" version="1.1">
         <section>
           <h2>1. Acceptance of Terms</h2>
           <p>
@@ -182,13 +182,15 @@ export function TermsPage() {
               <strong>Bybit</strong> — real-time market data (mainnet)
             </li>
             <li>
-              <strong>Resend</strong> — transactional email delivery (password reset)
+              <strong>Resend</strong> — transactional email delivery (password reset, newsletter
+              confirmation)
             </li>
             <li>
               <strong>Fly.io</strong> — backend hosting (EU/US regions)
             </li>
             <li>
-              <strong>Cloudflare</strong> — frontend CDN and DDoS protection
+              <strong>Cloudflare</strong> — frontend CDN, DDoS protection, and Cloudflare Web
+              Analytics (cookieless)
             </li>
           </ul>
           <p>
