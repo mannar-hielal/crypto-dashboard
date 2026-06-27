@@ -1,5 +1,5 @@
 import { useEffect, lazy, Suspense } from 'react';
-import { Routes, Route, useLocation } from 'react-router';
+import { Routes, Route, useLocation, Navigate } from 'react-router';
 import { AnimatePresence } from 'framer-motion';
 import { authApi } from '@crypto-dashboard/sdk';
 import { useAuthStore } from '@/store/authStore';
@@ -130,7 +130,7 @@ export default function App() {
             </Route>
 
             {/* Catch-all — redirect to landing */}
-            <Route path="*" element={<LandingPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AnimatePresence>
       </Suspense>

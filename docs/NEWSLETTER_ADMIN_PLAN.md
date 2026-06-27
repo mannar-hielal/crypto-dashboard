@@ -1,6 +1,6 @@
 # Newsletter Admin — Pre-Launch Admin Panel (Phase A)
 
-> **Status**: Planned · Not started until explicitly instructed.
+> **Status**: Partial — backend subscriber infrastructure done · broadcast + composer pending.
 
 ## Goal
 
@@ -8,24 +8,39 @@ Provide a way to view subscribers and send pre-launch updates manually via Resen
 
 ---
 
+## ✅ What's done
+
+| Item                                                                                | Status |
+| ----------------------------------------------------------------------------------- | ------ |
+| Prisma `Subscriber` model + migration                                               | ✅     |
+| `GET /subscribers` (auth-protected, filters by status)                              | ✅     |
+| `POST /subscribe` (double-opt-in with rate limiting)                                | ✅     |
+| `POST /verify` (token-based email confirmation)                                     | ✅     |
+| `POST /unsubscribe` (one-click from email link)                                     | ✅     |
+| `sendNewsletterConfirmation` in `EmailService`                                      | ✅     |
+| `SubscriberInfo` + `SubscribersResponse` types in SDK                               | ✅     |
+| `getSubscribers()` in SDK                                                           | ✅     |
+| `AdminNewsletterPage.tsx` — subscribers table with status filter (merged page + UI) | ✅     |
+| Route `/admin/newsletter` in `App.tsx` under `ProtectedRoute`                       | ✅     |
+| Privacy Policy §6 — "pre-launch updates for verified subscribers"                   | ✅     |
+
 ## Files to create
 
-| File                                                   | Purpose                                                             |
-| ------------------------------------------------------ | ------------------------------------------------------------------- |
-| `apps/client/src/components/admin/NewsletterAdmin.tsx` | Admin page — subscribers table + compose + send                     |
-| `apps/client/src/components/admin/ComposerToolbar.tsx` | Tiptap rich-text toolbar (bold, italic, heading, link, bullet list) |
-| `apps/client/src/pages/AdminNewsletterPage.tsx`        | Page wrapper with SeoHead + layout                                  |
+| File                                                   | Purpose                                                             | Status     |
+| ------------------------------------------------------ | ------------------------------------------------------------------- | ---------- |
+| `apps/client/src/components/admin/ComposerToolbar.tsx` | Tiptap rich-text toolbar (bold, italic, heading, link, bullet list) | ⏳ Pending |
+
+> Note: The subscribers table was implemented directly in `AdminNewsletterPage.tsx` (no separate `NewsletterAdmin.tsx` component needed). Compose + send UI still needs to be added to the same page or as a sibling.
 
 ## Files to modify
 
-| File                                         | What changes                                                                                                       |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `apps/server/src/routes/newsletter/index.ts` | Add `GET /subscribers` (auth-protected, returns list) + `POST /broadcast` (sends to all verified via Resend batch) |
-| `apps/server/src/services/EmailService.ts`   | Add `sendBroadcastEmail(to, subject, html, unsubscribeUrl)` method                                                 |
-| `generated/CDSDK/api/newsletter.ts`          | Add `getSubscribers()` and `broadcast(subject, html)`                                                              |
-| `apps/client/src/App.tsx`                    | Add `/admin/newsletter` route under `ProtectedRoute`                                                               |
-| `apps/client/src/pages/PrivacyPage.tsx`      | Update §6 — "no marketing emails" → "pre-launch updates for verified subscribers"                                  |
-| `apps/client/package.json`                   | Add `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-link`                                               |
+| File                                            | What changes                                                         | Status     |
+| ----------------------------------------------- | -------------------------------------------------------------------- | ---------- |
+| `apps/server/src/routes/newsletter/index.ts`    | Add `POST /broadcast` (sends to all verified via Resend batch)       | ⏳ Pending |
+| `apps/server/src/services/EmailService.ts`      | Add `sendBroadcastEmail(to, subject, html, unsubscribeUrl)` method   | ⏳ Pending |
+| `generated/CDSDK/api/newsletter.ts`             | Add `broadcast(subject, html)`                                       | ⏳ Pending |
+| `apps/client/src/pages/AdminNewsletterPage.tsx` | Add compose UI (subject input + Tiptap editor + send buttons)        | ⏳ Pending |
+| `apps/client/package.json`                      | Add `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-link` | ⏳ Pending |
 
 ---
 
@@ -44,7 +59,7 @@ Each subscriber gets a unique unsubscribe link. The broadcast email uses the sha
 
 ---
 
-## Composer UI (Tiptap)
+## Composer UI (Tiptap) ⏳ Pending
 
 ```
 ┌─────────────────────────────────┐
@@ -65,32 +80,26 @@ Each subscriber gets a unique unsubscribe link. The broadcast email uses the sha
 
 ---
 
-## Subscribers table
+## Subscribers table ✅ (implemented)
 
-Exgen dark theme matching the app.
+Exgen dark theme matching the app. Implemented in `AdminNewsletterPage.tsx` with:
 
-```
-┌────────────────────────────────────────────────────────────┐
-│  Subscribers (42)          [Export CSV]  [All ▼]           │
-├────────────────────────────────────────────────────────────┤
-│  email                        status     subscribed         │
-│  user@gmail.com               ● Verified  27 Jun 2026       │
-│  other@yahoo.com              ○ Pending   26 Jun 2026       │
-│  ...                                                       │
-└────────────────────────────────────────────────────────────┘
-```
-
-- Status filter: All / Verified / Pending / Unsubscribed
-- CSV export: downloads filtered list as CSV
+- Status filter: All / Verified / Pending / Unsubscribed (pill buttons)
+- Columns: Email, Status (colored badge with dot), Subscribed date, Verified date
+- Loading spinner, error state, and empty state
+- No CSV export yet (pending)
 
 ---
 
 ## Design decisions (confirmed)
 
-| Decision           | Choice                                            |
-| ------------------ | ------------------------------------------------- |
-| Admin page styling | Match app's Exgen dark theme                      |
-| Privacy Policy     | Update §6 to allow pre-launch updates             |
-| Compose experience | Rich-text editor (Tiptap)                         |
-| Test send target   | Email from `useAuthStore`                         |
-| Admin route        | Accessible via URL (not nav-linked until decided) |
+| Decision           | Choice                                                       | Status     |
+| ------------------ | ------------------------------------------------------------ | ---------- |
+| Admin page styling | Match app's Exgen dark theme                                 | ✅ Done    |
+| Privacy Policy     | Update §6 to allow pre-launch updates                        | ✅ Done    |
+| Subscribers table  | Built into `AdminNewsletterPage.tsx` (no separate component) | ✅ Done    |
+| Compose experience | Rich-text editor (Tiptap)                                    | ⏳ Pending |
+| Broadcast endpoint | `POST /broadcast` — batch-send to all verified               | ⏳ Pending |
+| CSV export         | Download filtered list as CSV                                | ⏳ Pending |
+| Test send target   | Email from `useAuthStore`                                    | ⏳ Pending |
+| Admin route        | Accessible via URL (not nav-linked until decided)            | ✅ Done    |

@@ -1,7 +1,8 @@
 import { Helmet } from 'react-helmet-async';
 import { useLocation } from 'react-router';
 
-const SITE_URL = 'https://cryptopapertrade.com';
+const SITE_URL =
+  typeof window === 'undefined' ? 'https://cryptopapertrade.com' : window.location.origin;
 
 interface SeoHeadProps {
   title: string;

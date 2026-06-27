@@ -27,7 +27,7 @@ export type AggregateSubscriber = {
 export type SubscriberMinAggregateOutputType = {
   id: string | null
   email: string | null
-  status: string | null
+  status: $Enums.SubscriberStatus | null
   tokenHash: string | null
   consentIp: string | null
   createdAt: Date | null
@@ -37,7 +37,7 @@ export type SubscriberMinAggregateOutputType = {
 export type SubscriberMaxAggregateOutputType = {
   id: string | null
   email: string | null
-  status: string | null
+  status: $Enums.SubscriberStatus | null
   tokenHash: string | null
   consentIp: string | null
   createdAt: Date | null
@@ -162,7 +162,7 @@ export type SubscriberGroupByArgs<ExtArgs extends runtime.Types.Extensions.Inter
 export type SubscriberGroupByOutputType = {
   id: string
   email: string
-  status: string
+  status: $Enums.SubscriberStatus
   tokenHash: string
   consentIp: string | null
   createdAt: Date
@@ -193,7 +193,7 @@ export type SubscriberWhereInput = {
   NOT?: Prisma.SubscriberWhereInput | Prisma.SubscriberWhereInput[]
   id?: Prisma.StringFilter<"Subscriber"> | string
   email?: Prisma.StringFilter<"Subscriber"> | string
-  status?: Prisma.StringFilter<"Subscriber"> | string
+  status?: Prisma.EnumSubscriberStatusFilter<"Subscriber"> | $Enums.SubscriberStatus
   tokenHash?: Prisma.StringFilter<"Subscriber"> | string
   consentIp?: Prisma.StringNullableFilter<"Subscriber"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Subscriber"> | Date | string
@@ -217,7 +217,7 @@ export type SubscriberWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.SubscriberWhereInput | Prisma.SubscriberWhereInput[]
   OR?: Prisma.SubscriberWhereInput[]
   NOT?: Prisma.SubscriberWhereInput | Prisma.SubscriberWhereInput[]
-  status?: Prisma.StringFilter<"Subscriber"> | string
+  status?: Prisma.EnumSubscriberStatusFilter<"Subscriber"> | $Enums.SubscriberStatus
   consentIp?: Prisma.StringNullableFilter<"Subscriber"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Subscriber"> | Date | string
   verifiedAt?: Prisma.DateTimeNullableFilter<"Subscriber"> | Date | string | null
@@ -242,7 +242,7 @@ export type SubscriberScalarWhereWithAggregatesInput = {
   NOT?: Prisma.SubscriberScalarWhereWithAggregatesInput | Prisma.SubscriberScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"Subscriber"> | string
   email?: Prisma.StringWithAggregatesFilter<"Subscriber"> | string
-  status?: Prisma.StringWithAggregatesFilter<"Subscriber"> | string
+  status?: Prisma.EnumSubscriberStatusWithAggregatesFilter<"Subscriber"> | $Enums.SubscriberStatus
   tokenHash?: Prisma.StringWithAggregatesFilter<"Subscriber"> | string
   consentIp?: Prisma.StringNullableWithAggregatesFilter<"Subscriber"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Subscriber"> | Date | string
@@ -252,7 +252,7 @@ export type SubscriberScalarWhereWithAggregatesInput = {
 export type SubscriberCreateInput = {
   id?: string
   email: string
-  status?: string
+  status?: $Enums.SubscriberStatus
   tokenHash: string
   consentIp?: string | null
   createdAt?: Date | string
@@ -262,7 +262,7 @@ export type SubscriberCreateInput = {
 export type SubscriberUncheckedCreateInput = {
   id?: string
   email: string
-  status?: string
+  status?: $Enums.SubscriberStatus
   tokenHash: string
   consentIp?: string | null
   createdAt?: Date | string
@@ -272,7 +272,7 @@ export type SubscriberUncheckedCreateInput = {
 export type SubscriberUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
-  status?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumSubscriberStatusFieldUpdateOperationsInput | $Enums.SubscriberStatus
   tokenHash?: Prisma.StringFieldUpdateOperationsInput | string
   consentIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -282,7 +282,7 @@ export type SubscriberUpdateInput = {
 export type SubscriberUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
-  status?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumSubscriberStatusFieldUpdateOperationsInput | $Enums.SubscriberStatus
   tokenHash?: Prisma.StringFieldUpdateOperationsInput | string
   consentIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -292,7 +292,7 @@ export type SubscriberUncheckedUpdateInput = {
 export type SubscriberCreateManyInput = {
   id?: string
   email: string
-  status?: string
+  status?: $Enums.SubscriberStatus
   tokenHash: string
   consentIp?: string | null
   createdAt?: Date | string
@@ -302,7 +302,7 @@ export type SubscriberCreateManyInput = {
 export type SubscriberUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
-  status?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumSubscriberStatusFieldUpdateOperationsInput | $Enums.SubscriberStatus
   tokenHash?: Prisma.StringFieldUpdateOperationsInput | string
   consentIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -312,7 +312,7 @@ export type SubscriberUpdateManyMutationInput = {
 export type SubscriberUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
-  status?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumSubscriberStatusFieldUpdateOperationsInput | $Enums.SubscriberStatus
   tokenHash?: Prisma.StringFieldUpdateOperationsInput | string
   consentIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -347,6 +347,10 @@ export type SubscriberMinOrderByAggregateInput = {
   consentIp?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   verifiedAt?: Prisma.SortOrder
+}
+
+export type EnumSubscriberStatusFieldUpdateOperationsInput = {
+  set?: $Enums.SubscriberStatus
 }
 
 
@@ -399,7 +403,7 @@ export type $SubscriberPayload<ExtArgs extends runtime.Types.Extensions.Internal
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     email: string
-    status: string
+    status: $Enums.SubscriberStatus
     tokenHash: string
     consentIp: string | null
     createdAt: Date
@@ -829,7 +833,7 @@ export interface Prisma__SubscriberClient<T, Null = never, ExtArgs extends runti
 export interface SubscriberFieldRefs {
   readonly id: Prisma.FieldRef<"Subscriber", 'String'>
   readonly email: Prisma.FieldRef<"Subscriber", 'String'>
-  readonly status: Prisma.FieldRef<"Subscriber", 'String'>
+  readonly status: Prisma.FieldRef<"Subscriber", 'SubscriberStatus'>
   readonly tokenHash: Prisma.FieldRef<"Subscriber", 'String'>
   readonly consentIp: Prisma.FieldRef<"Subscriber", 'String'>
   readonly createdAt: Prisma.FieldRef<"Subscriber", 'DateTime'>

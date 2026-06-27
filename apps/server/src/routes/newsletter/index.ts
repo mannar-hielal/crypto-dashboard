@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { FastifyInstance } from 'fastify';
 import { EmailService } from '../../services/EmailService.js';
 import { config } from '../../config.js';
+import type { SubscriberStatus } from '../../../generated/prisma/client.js';
 
 // ─── HELPERS ────────────────────────────────────────────────────────────────
 
@@ -83,7 +84,7 @@ export async function newsletterRoutes(app: FastifyInstance) {
       onRequest: [app.authenticate],
     },
     async (request, reply) => {
-      const { status } = request.query as { status?: string };
+      const { status } = request.query as { status?: SubscriberStatus };
 
       const where = status ? { status } : {};
       const subscribers = await app.prisma.subscriber.findMany({
@@ -149,10 +150,27 @@ export async function newsletterRoutes(app: FastifyInstance) {
         const prismaErr = err as { code?: string };
         // P2002 = unique constraint violation — email already exists
         if (prismaErr.code === 'P2002') {
-          return reply.send({ message: 'Check your inbox — you are already subscribed.' });
+          const existing = await app.prisma.subscriber.findUnique({
+            where: { email: email.toLowerCase() },
+          });
+
+          if (!existing) {
+            request.log.error({ err }, 'Subscriber create failed with P2002 but no record found');
+            return reply.status(500).send({ error: 'Internal Server Error' });
+          }
+
+          if (existing.status === 'unsubscribed') {
+            await app.prisma.subscriber.update({
+              where: { id: existing.id },
+              data: { status: 'pending', tokenHash, consentIp: ip, verifiedAt: null },
+            });
+          } else {
+            return reply.send({ message: 'Check your inbox — you are already subscribed.' });
+          }
+        } else {
+          request.log.error({ err }, 'Failed to create subscriber');
+          return reply.status(500).send({ error: 'Internal Server Error' });
         }
-        request.log.error({ err }, 'Failed to create subscriber');
-        return reply.status(500).send({ error: 'Internal Server Error' });
       }
 
       const verifyUrl = `${config.clientUrl}/newsletter/verify?token=${token}`;
@@ -164,15 +182,15 @@ export async function newsletterRoutes(app: FastifyInstance) {
     }
   );
 
-  // ─── GET /verify ───────────────────────────────────────────────────────────
-  app.get(
+  // ─── POST /verify ──────────────────────────────────────────────────────────
+  app.post(
     '/verify',
     {
       schema: {
         tags: ['Newsletter'],
         summary: 'Verify email subscription',
         description: 'Double-opt-in confirmation — marks subscriber as verified.',
-        querystring: {
+        body: {
           type: 'object',
           required: ['token'],
           properties: {
@@ -186,7 +204,7 @@ export async function newsletterRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const { token } = request.query as { token: string };
+      const { token } = request.body as { token: string };
       const tokenHash = hashToken(token);
 
       const subscriber = await app.prisma.subscriber.findUnique({
@@ -210,15 +228,15 @@ export async function newsletterRoutes(app: FastifyInstance) {
     }
   );
 
-  // ─── GET /unsubscribe ──────────────────────────────────────────────────────
-  app.get(
+  // ─── POST /unsubscribe ─────────────────────────────────────────────────────
+  app.post(
     '/unsubscribe',
     {
       schema: {
         tags: ['Newsletter'],
         summary: 'Unsubscribe from waitlist',
         description: 'One-click unsubscribe from email link.',
-        querystring: {
+        body: {
           type: 'object',
           required: ['token'],
           properties: {
@@ -232,7 +250,7 @@ export async function newsletterRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const { token } = request.query as { token: string };
+      const { token } = request.body as { token: string };
       const tokenHash = hashToken(token);
 
       const subscriber = await app.prisma.subscriber.findUnique({

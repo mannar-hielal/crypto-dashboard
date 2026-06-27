@@ -35,8 +35,24 @@ export const newsletterApi = {
     }),
 
   verify: (token: string) =>
-    request<MessageResponse>(`/api/newsletter/verify?token=${encodeURIComponent(token)}`),
+    fetch(`${BASE_URL}/api/newsletter/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    }).then(async (res) => {
+      const data = (await res.json()) as MessageResponse;
+      if (!res.ok) throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
+      return data;
+    }),
 
   unsubscribe: (token: string) =>
-    request<MessageResponse>(`/api/newsletter/unsubscribe?token=${encodeURIComponent(token)}`),
+    fetch(`${BASE_URL}/api/newsletter/unsubscribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    }).then(async (res) => {
+      const data = (await res.json()) as MessageResponse;
+      if (!res.ok) throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
+      return data;
+    }),
 };

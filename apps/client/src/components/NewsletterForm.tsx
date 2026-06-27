@@ -52,6 +52,10 @@ export function NewsletterForm() {
       <div className="flex gap-3">
         <input
           type="email"
+          name="email"
+          autoComplete="email"
+          inputMode="email"
+          aria-label="Email address"
           value={email}
           onChange={(e) => {
             setEmail(e.target.value);
