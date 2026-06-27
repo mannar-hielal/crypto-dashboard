@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { TrendingUp, Activity, Globe } from 'lucide-react';
 
 import { SeoHead } from '@/components/SeoHead';
@@ -204,29 +204,6 @@ export function LandingPage() {
             background: `linear-gradient(135deg, ${bg.deep} 0%, ${bg.page} 30%, ${bg.navy} 100%)`,
           }}
         >
-          {/* Ambient glow blobs — Exgen-inspired */}
-          <div
-            className="pointer-events-none absolute -top-32 left-1/4 h-[600px] w-[600px] rounded-full opacity-20"
-            style={{
-              background: `radial-gradient(circle, ${color.glow} 0%, transparent 70%)`,
-              filter: 'blur(60px)',
-            }}
-          />
-          <div
-            className="pointer-events-none absolute -bottom-40 right-0 h-[500px] w-[500px] rounded-full opacity-15"
-            style={{
-              background: `radial-gradient(circle, ${color.purpleDark} 0%, transparent 70%)`,
-              filter: 'blur(50px)',
-            }}
-          />
-          <div
-            className="pointer-events-none absolute -top-20 right-1/3 h-[300px] w-[300px] rounded-full opacity-10"
-            style={{
-              background: `radial-gradient(circle, ${color.purple} 0%, transparent 70%)`,
-              filter: 'blur(40px)',
-            }}
-          />
-
           <div
             className="relative z-10 mx-auto flex max-w-6xl flex-col items-center gap-16 px-4 py-20 lg:flex-row lg:py-28"
             style={{ overflow: 'hidden' }}
@@ -243,12 +220,22 @@ export function LandingPage() {
                 className="flex items-center gap-3 rounded-full border border-white/10 px-4 py-1.5"
                 style={{ background: `${color.glow}15` }}
               >
-                <span className="flex h-2 w-2 rounded-full" style={{ background: color.green }} />
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={String(isLive)}
+                    initial={{ scale: 0.6, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.6, opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="flex h-2 w-2 shrink-0 rounded-full"
+                    style={{ background: isLive ? color.green : color.amber }}
+                  />
+                </AnimatePresence>
                 <span
                   className="text-xs font-medium tracking-wide uppercase"
                   style={{ color: color.muted }}
                 >
-                  Free Paper Trading Platform
+                  {isLive ? 'Free Paper Trading Platform' : 'Launching Soon'}
                 </span>
               </motion.div>
 

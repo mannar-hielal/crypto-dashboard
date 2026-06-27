@@ -34,6 +34,68 @@ const errorResponse = {
 // ─── ROUTES ─────────────────────────────────────────────────────────────────
 
 export async function newsletterRoutes(app: FastifyInstance) {
+  // ─── GET /subscribers ─────────────────────────────────────────────────────
+  app.get(
+    '/subscribers',
+    {
+      schema: {
+        tags: ['Newsletter'],
+        summary: 'List all subscribers (admin)',
+        description: 'Returns all newsletter subscribers. Auth-protected.',
+        headers: {
+          type: 'object',
+          properties: {
+            Authorization: { type: 'string' },
+          },
+          required: ['Authorization'],
+        },
+        querystring: {
+          type: 'object',
+          properties: {
+            status: {
+              type: 'string',
+              enum: ['pending', 'verified', 'unsubscribed'],
+            },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              subscribers: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    email: { type: 'string' },
+                    status: { type: 'string' },
+                    createdAt: { type: 'string' },
+                    verifiedAt: { type: 'string', nullable: true },
+                  },
+                },
+              },
+              total: { type: 'integer' },
+            },
+          },
+        },
+      },
+      onRequest: [app.authenticate],
+    },
+    async (request, reply) => {
+      const { status } = request.query as { status?: string };
+
+      const where = status ? { status } : {};
+      const subscribers = await app.prisma.subscriber.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, email: true, status: true, createdAt: true, verifiedAt: true },
+      });
+
+      return reply.send({ subscribers, total: subscribers.length });
+    }
+  );
+
   // ─── POST /subscribe ───────────────────────────────────────────────────────
   app.post(
     '/subscribe',

@@ -54,6 +54,9 @@ const NewsletterUnsubscribedPage = lazy(() =>
     default: m.NewsletterUnsubscribedPage,
   }))
 );
+const AdminNewsletterPage = lazy(() =>
+  import('@/pages/AdminNewsletterPage').then((m) => ({ default: m.AdminNewsletterPage }))
+);
 
 // 🔐 Module-level flag — unlike useRef, this survives React StrictMode's
 // simulated mount → unmount → remount cycle, so only ONE /refresh fires
@@ -123,6 +126,7 @@ export default function App() {
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/admin/newsletter" element={<AdminNewsletterPage />} />
             </Route>
 
             {/* Catch-all — redirect to landing */}

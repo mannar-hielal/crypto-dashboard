@@ -10,10 +10,6 @@ interface LegalLayoutProps {
   children: ReactNode;
 }
 
-/**
- * Shared layout for legal pages (Terms of Use, Privacy Policy).
- * Matches the app's EXGEN dark theme — ambient blobs, brand tokens, panel header.
- */
 export function LegalLayout({ title, lastUpdated, version, children }: LegalLayoutProps) {
   const navigate = useNavigate();
 
@@ -24,29 +20,6 @@ export function LegalLayout({ title, lastUpdated, version, children }: LegalLayo
         background: `linear-gradient(180deg, ${bg.deep} 0%, ${bg.page} 30%, ${bg.navy} 100%)`,
       }}
     >
-      {/* Ambient glow blobs — Exgen cover-style */}
-      <div
-        className="pointer-events-none absolute -top-48 left-1/4 h-[480px] w-[480px] rounded-full opacity-15"
-        style={{
-          background: `radial-gradient(circle, ${color.glow} 0%, transparent 70%)`,
-          filter: 'blur(60px)',
-        }}
-      />
-      <div
-        className="pointer-events-none absolute -bottom-32 right-1/4 h-[380px] w-[380px] rounded-full opacity-10"
-        style={{
-          background: `radial-gradient(circle, ${color.purpleDark} 0%, transparent 70%)`,
-          filter: 'blur(50px)',
-        }}
-      />
-      <div
-        className="pointer-events-none absolute top-1/3 right-1/3 h-[200px] w-[200px] rounded-full opacity-8"
-        style={{
-          background: `radial-gradient(circle, ${color.purple} 0%, transparent 70%)`,
-          filter: 'blur(40px)',
-        }}
-      />
-
       {/* Subtle grid overlay */}
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.02]"

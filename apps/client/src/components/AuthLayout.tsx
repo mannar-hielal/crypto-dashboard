@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 import { Footer } from '@/components/Footer';
-import { bg, color } from '@/lib/tokens';
+import { bg } from '@/lib/tokens';
 import homeBg from '@/assets/home-bg.svg';
 
 interface AuthLayoutProps {
@@ -29,29 +29,6 @@ export function AuthLayout({
           backgroundSize: 'cover',
           backgroundPosition: 'center top',
           backgroundRepeat: 'no-repeat',
-        }}
-      />
-
-      {/* Ambient glow blobs — Exgen cover-style */}
-      <div
-        className="pointer-events-none absolute -top-48 left-1/4 h-[500px] w-[500px] rounded-full opacity-15"
-        style={{
-          background: `radial-gradient(circle, ${color.glow} 0%, transparent 70%)`,
-          filter: 'blur(60px)',
-        }}
-      />
-      <div
-        className="pointer-events-none absolute -bottom-32 right-1/4 h-[400px] w-[400px] rounded-full opacity-10"
-        style={{
-          background: `radial-gradient(circle, ${color.purpleDark} 0%, transparent 70%)`,
-          filter: 'blur(50px)',
-        }}
-      />
-      <div
-        className="pointer-events-none absolute top-1/3 right-1/3 h-[250px] w-[250px] rounded-full opacity-8"
-        style={{
-          background: `radial-gradient(circle, ${color.purple} 0%, transparent 70%)`,
-          filter: 'blur(40px)',
         }}
       />
 
