@@ -28,7 +28,7 @@
 
 ## Infrastructure & pre-launch
 
-- [ ] **Analytics** — Install cookieless analytics (e.g. Plausible, Umami) for traffic/conversion data.
+- [x] **Analytics** — Cloudflare Web Analytics installed (cookieless, no GDPR consent needed). GA4 deferred until post-launch when conversion tracking is needed.
 - [ ] **Lighthouse audit** — Score 90+ Performance, 100 SEO.
 - [ ] **Test all auth flows** — Signup → verify → login → dashboard end-to-end.
 - [ ] **Mobile responsiveness** — Landing + dashboard on multiple device sizes.

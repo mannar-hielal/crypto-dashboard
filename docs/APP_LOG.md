@@ -1520,7 +1520,7 @@ The order book is **not needed for paper trading** (fills are instant, no real l
 
 - `apps/client/src/App.tsx`
 - `apps/client/src/pages/LandingPage.tsx`
-- `apps/client/src/components/CtaSection.tsx
+- `apps/client/src/components/CtaSection.tsx`
 
 ---
 
@@ -1530,11 +1530,17 @@ The order book is **not needed for paper trading** (fills are instant, no real l
 
 - Added `<Link to="/privacy">Privacy Policy</Link>` to the cookie notice text in `apps/client/src/components/CookieBanner.tsx`
 
-**Trust badges strip on LandingPage:**
+**Trust badges in Footer:**
 
-- Created `apps/client/src/components/TrustBadges.tsx` — 3 trust badges (256-bit Encryption, No Real Money, Bybit Live Data) in a glass-card strip
-- Each badge: lucide icon in a purple-tinted box, bold label + muted description
-- Added `<TrustBadges />` to `apps/client/src/pages/LandingPage.tsx`, positioned between hero section and stats strip
+- Created `apps/client/src/components/TrustBadges.tsx` — 3 trust badges (256-bit Encryption, No Real Money, Bybit Live Data) using custom SVG icons
+- Placed in `apps/client/src/components/Footer.tsx` before the nav links
+- Footer background changed from gradient to `bg.panel` (`#25234e`), added `zIndex: 1`
+
+**PWAInstallBanner layout restructure:**
+
+- Moved title "Install cryptopapertrade.com" inside platform branches
+- Android branch: restructured to `flex items-center justify-between` — title + description in one div, Install button as sibling
+- Removed `mt-3` from Install button for tighter spacing
 
 **Files created:**
 
@@ -1543,4 +1549,19 @@ The order book is **not needed for paper trading** (fills are instant, no real l
 **Files modified:**
 
 - `apps/client/src/components/CookieBanner.tsx`
-- `apps/client/src/pages/LandingPage.tsx`
+- `apps/client/src/components/Footer.tsx`
+- `apps/client/src/components/PWAInstallBanner.tsx`
+
+---
+
+### infra: Cloudflare Web Analytics — cookieless analytics (2026-06-26) ✅
+
+- Enabled Real User Measurements (RUM) via Cloudflare Dashboard for `cryptopapertrade.com`
+- Beacon auto-injected at the edge — no code changes needed
+- Confirmed beacon firing on production site (`static.cloudflareinsights.com`, 200 OK in incognito)
+- CFWA is cookieless — no cookie banner or Privacy Policy changes required
+- GA4 deferred until post-launch conversion tracking is needed
+
+**No files changed.**
+
+---

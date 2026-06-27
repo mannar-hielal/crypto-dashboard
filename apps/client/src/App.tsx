@@ -8,21 +8,47 @@ import { PWAInstallBanner } from '@/components/PWAInstallBanner';
 import { CookieBanner } from '@/components/CookieBanner';
 import { PageFallback } from '@/components/PageFallback';
 
-const LoginPage = lazy(() => import('@/pages/LoginPage'));
-const RegisterPage = lazy(() => import('@/pages/RegisterPage'));
-const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage'));
-const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'));
-const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
-const TermsPage = lazy(() => import('@/pages/TermsPage'));
-const PrivacyPage = lazy(() => import('@/pages/PrivacyPage'));
-const SecurityPage = lazy(() => import('@/pages/SecurityPage'));
-const AcceptableUsePolicyPage = lazy(() => import('@/pages/AcceptableUsePolicyPage'));
-const UnderConstructionPage = lazy(() => import('@/pages/UnderConstructionPage'));
-const LandingPage = lazy(() => import('@/pages/LandingPage'));
-const FeaturesPage = lazy(() => import('@/pages/FeaturesPage'));
-const UnverifiedPage = lazy(() => import('@/pages/UnverifiedPage'));
-const VerifyEmailPage = lazy(() => import('@/pages/VerifyEmailPage'));
-const VerifyEmailChangePage = lazy(() => import('@/pages/VerifyEmailChangePage'));
+const LoginPage = lazy(() => import('@/pages/LoginPage').then((m) => ({ default: m.LoginPage })));
+const RegisterPage = lazy(() =>
+  import('@/pages/RegisterPage').then((m) => ({ default: m.RegisterPage }))
+);
+const ForgotPasswordPage = lazy(() =>
+  import('@/pages/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage }))
+);
+const ResetPasswordPage = lazy(() =>
+  import('@/pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage }))
+);
+const DashboardPage = lazy(() =>
+  import('@/pages/DashboardPage').then((m) => ({ default: m.DashboardPage }))
+);
+const TermsPage = lazy(() => import('@/pages/TermsPage').then((m) => ({ default: m.TermsPage })));
+const PrivacyPage = lazy(() =>
+  import('@/pages/PrivacyPage').then((m) => ({ default: m.PrivacyPage }))
+);
+const SecurityPage = lazy(() =>
+  import('@/pages/SecurityPage').then((m) => ({ default: m.SecurityPage }))
+);
+const AcceptableUsePolicyPage = lazy(() =>
+  import('@/pages/AcceptableUsePolicyPage').then((m) => ({ default: m.AcceptableUsePolicyPage }))
+);
+const UnderConstructionPage = lazy(() =>
+  import('@/pages/UnderConstructionPage').then((m) => ({ default: m.UnderConstructionPage }))
+);
+const LandingPage = lazy(() =>
+  import('@/pages/LandingPage').then((m) => ({ default: m.LandingPage }))
+);
+const FeaturesPage = lazy(() =>
+  import('@/pages/FeaturesPage').then((m) => ({ default: m.FeaturesPage }))
+);
+const UnverifiedPage = lazy(() =>
+  import('@/pages/UnverifiedPage').then((m) => ({ default: m.UnverifiedPage }))
+);
+const VerifyEmailPage = lazy(() =>
+  import('@/pages/VerifyEmailPage').then((m) => ({ default: m.VerifyEmailPage }))
+);
+const VerifyEmailChangePage = lazy(() =>
+  import('@/pages/VerifyEmailChangePage').then((m) => ({ default: m.VerifyEmailChangePage }))
+);
 
 // 🔐 Module-level flag — unlike useRef, this survives React StrictMode's
 // simulated mount → unmount → remount cycle, so only ONE /refresh fires
