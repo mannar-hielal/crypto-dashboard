@@ -3,3 +3,4 @@ export * from './types/index.js';
 export * from './api/auth.js';
 export * from './api/market.js';
 export * from './api/paper.js';
+export * from './api/newsletter.js';

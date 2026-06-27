@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { radius } from '@/lib/tokens';
@@ -31,7 +32,10 @@ export function CookieBanner() {
               <div className="flex items-start justify-between gap-2">
                 <p className="text-xs leading-relaxed text-muted-foreground">
                   We use a secure cookie required for login and localStorage to save your paper
-                  trading data and layout. No tracking or advertising cookies are used.
+                  trading data and layout. No tracking or advertising cookies are used.{' '}
+                  <Link to="/privacy" className="underline underline-offset-2 hover:text-white">
+                    Privacy Policy
+                  </Link>
                 </p>
                 <button
                   onClick={handleDismiss}

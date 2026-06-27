@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
+import { SeoHead } from '@/components/SeoHead';
 import { usePaneFeeds } from '@/hooks/usePaneFeeds';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useTPSLMonitor } from '@/hooks/useTPSLMonitor';
@@ -66,9 +67,17 @@ const MIN_PANEL_HEIGHT = 80;
  */
 export function DashboardPage() {
   return (
-    <TradingSoundProvider>
-      <DashboardInner />
-    </TradingSoundProvider>
+    <>
+      <SeoHead
+        title="Dashboard"
+        description="Your crypto paper trading dashboard."
+        path="/dashboard"
+        noIndex
+      />
+      <TradingSoundProvider>
+        <DashboardInner />
+      </TradingSoundProvider>
+    </>
   );
 }
 

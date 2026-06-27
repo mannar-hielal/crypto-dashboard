@@ -12,7 +12,7 @@ export default defineConfig({
       // generateSW: vite-plugin-pwa generates the service worker automatically using Workbox.
       // registerType 'autoUpdate': new SW activates on next page load without prompting.
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'pwa-192x192.png', 'pwa-512x512.png'],
+      includeAssets: ['favicon.svg', 'logo.svg', 'pwa-192x192.png', 'pwa-512x512.png'],
 
       // Web App Manifest — controls how the app appears when installed on mobile/desktop
       manifest: {
@@ -83,6 +83,12 @@ export default defineConfig({
     },
   },
   server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
     headers: {
       // 🔐 Dev-only CSP — applies ONLY to the Vite dev server, never deployed.
       // Production CSP is enforced by @fastify/helmet on the server side.

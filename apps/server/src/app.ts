@@ -15,6 +15,7 @@ import { prismaPlugin } from './plugins/prisma.js';
 import { authPlugin } from './plugins/auth.js';
 import { authRoutes } from './routes/auth/index.js';
 import { paperRoutes } from './routes/paper/index.js';
+import { newsletterRoutes } from './routes/newsletter/index.js';
 
 export async function buildApp() {
   const app = Fastify({
@@ -51,6 +52,7 @@ export async function buildApp() {
         { name: 'Health', description: 'Server health & readiness' },
         { name: 'Auth', description: 'Register, login and profile' },
         { name: 'Market', description: 'Real-time market data and historical candles' },
+        { name: 'Newsletter', description: 'Pre-launch waitlist subscription' },
       ],
     },
   });
@@ -105,6 +107,7 @@ export async function buildApp() {
   await app.register(bybitPlugin);
   await app.register(marketRoutes, { prefix: '/api/market' });
   await app.register(paperRoutes, { prefix: '/api/paper' });
+  await app.register(newsletterRoutes, { prefix: '/api/newsletter' });
 
   // ─── CUSTOM ERROR HANDLER ─────────────────────────────────────────────────
   // 🔐 Normalises ALL error responses to { error: string } so:
