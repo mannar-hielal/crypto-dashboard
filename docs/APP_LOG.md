@@ -583,6 +583,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 > Full code-level legal scan performed: **May 5, 2026**
 > Updated for free-only launch: **June 13, 2026**
+> Newsletter + CFWA legal sweep: **June 27, 2026**
 > Snapshot is self-contained in this section for review portability.
 
 ### ✅ Legal Clearances
@@ -1495,3 +1496,105 @@ The order book is **not needed for paper trading** (fills are instant, no real l
 
 - `apps/client/src/pages/LandingPage.tsx`
 - `apps/client/src/components/Footer.tsx`
+
+---
+
+### feat: Tier 3 — Performance (2026-06-26) ✅
+
+**Code splitting:**
+
+- Replaced all 14 static page imports in `App.tsx` with `React.lazy()` — each page is now its own chunk, loaded only on navigation
+- DashboardPage chunk reduced from 356 KB → 398 KB separate chunk (no longer in main bundle)
+- Wrapped `<AnimatePresence>` in `<Suspense fallback={<PageFallback />}>`
+- Created `PageFallback.tsx` — branded loading spinner (matches AuthLayout background, purple spinning Loader2 icon)
+
+**Lazy-loaded images:**
+
+- Added `loading="lazy"` to 5 below-the-fold images in `LandingPage.tsx`: `chartImg`, `papertradingImg`, `cryptoPairsImg`, `realtimeDataImg`, `visualBalanceImg`
+- Added `loading="lazy"` to `ctaIllustration` in `CtaSection.tsx`
+
+**Files created:**
+
+- `apps/client/src/components/PageFallback.tsx`
+
+**Files modified:**
+
+- `apps/client/src/App.tsx`
+- `apps/client/src/pages/LandingPage.tsx`
+- `apps/client/src/components/CtaSection.tsx`
+
+---
+
+### feat: Tier 2 — Trust & Conversion (2026-06-26) ✅
+
+**Privacy Policy link in CookieBanner:**
+
+- Added `<Link to="/privacy">Privacy Policy</Link>` to the cookie notice text in `apps/client/src/components/CookieBanner.tsx`
+
+**Trust badges in Footer:**
+
+- Created `apps/client/src/components/TrustBadges.tsx` — 3 trust badges (256-bit Encryption, No Real Money, Bybit Live Data) using custom SVG icons
+- Placed in `apps/client/src/components/Footer.tsx` before the nav links
+- Footer background changed from gradient to `bg.panel` (`#25234e`), added `zIndex: 1`
+
+**PWAInstallBanner layout restructure:**
+
+- Moved title "Install cryptopapertrade.com" inside platform branches
+- Android branch: restructured to `flex items-center justify-between` — title + description in one div, Install button as sibling
+- Removed `mt-3` from Install button for tighter spacing
+
+**Files created:**
+
+- `apps/client/src/components/TrustBadges.tsx`
+
+**Files modified:**
+
+- `apps/client/src/components/CookieBanner.tsx`
+- `apps/client/src/components/Footer.tsx`
+- `apps/client/src/components/PWAInstallBanner.tsx`
+
+---
+
+### infra: Cloudflare Web Analytics — cookieless analytics (2026-06-26) ✅
+
+- Enabled Real User Measurements (RUM) via Cloudflare Dashboard for `cryptopapertrade.com`
+- Beacon auto-injected at the edge — no code changes needed
+- Confirmed beacon firing on production site (`static.cloudflareinsights.com`, 200 OK in incognito)
+- CFWA is cookieless — no cookie banner or Privacy Policy changes required
+- GA4 deferred until post-launch conversion tracking is needed
+
+**No files changed.**
+
+---
+
+### docs: legal page updates for newsletter + CFWA (2026-06-27) ✅
+
+**PrivacyPage** — full sweep for newsletter waitlist and CFWA disclosures:
+
+- **§3 — What We Collect**: Added newsletter subscription data row (email, SHA-256 token hash, consent IP + timestamp, GDPR Art. 7)
+- **§5 — Legal Basis**: Added `Consent (Art. 6(1)(a) GDPR)` for newsletter with withdrawal via unsubscribe link
+- **§6 — How We Use Data**: "password reset only" → "password reset and newsletter confirmation/verification"
+- **§7 — Data Retention**: Added newsletter subscriber retention (pending → 30-day purge, verified → until unsubscribe)
+- **§8 — Cookies**: Added CFWA disclosure (cookieless, `cf` query param, respects DNT)
+- **§9 — Third-Party Processors**: Resend now includes "newsletter confirmation"; Cloudflare includes "Cloudflare Web Analytics"
+- `lastUpdated` bumped to June 27, 2026, version 1.1
+
+**TermsPage** — minor updates:
+
+- **§10 — Third-Party Services**: Resend includes "newsletter confirmation"; Cloudflare includes "Cloudflare Web Analytics"
+- `lastUpdated` bumped to June 27, 2026, version 1.1
+
+**Other fixes:**
+
+- `index.html` — extended `data-rh="true"` to all OG/Twitter/description/canonical fallback tags so react-helmet-async replaces them in-place
+- `TermsPage.tsx` — fixed period spacing ("purposes . Simulated" → "purposes. Simulated")
+
+**Back link**: LegalLayout uses `navigate(-1)` — verified correct for all navigation flows (Footer → legal page, cross-links between legal pages, direct visits).
+
+**Files modified:**
+
+- `apps/client/index.html`
+- `apps/client/src/pages/PrivacyPage.tsx`
+- `apps/client/src/pages/TermsPage.tsx`
+
+---

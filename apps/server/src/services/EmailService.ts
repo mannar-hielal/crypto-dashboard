@@ -59,6 +59,18 @@ async function sendEmail(
   }
 }
 
+// ─── NEWSLETTER FOOTER ──────────────────────────────────────────────────────
+
+const NEWSLETTER_FOOTER = (unsubscribeUrl: string) => `
+  <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0"/>
+  <p style="font-size:12px;color:#9ca3af;">
+    You received this email because you subscribed to cryptopapertrade.com updates.
+    <br/>
+    <a href="${unsubscribeUrl}" style="color:#6366f1;text-decoration:underline;">Unsubscribe</a>
+    &nbsp;—&nbsp; No spam, unsubscribe at any time.
+  </p>
+`;
+
 export const EmailService = {
   async sendPasswordResetEmail(to: string, resetUrl: string): Promise<void> {
     const client = getResend();
@@ -314,6 +326,44 @@ export const EmailService = {
       },
       'Failed to send deletion completed email',
       { to, username }
+    );
+  },
+
+  // ─── NEWSLETTER ─────────────────────────────────────────────────────────
+
+  async sendNewsletterConfirmation(
+    to: string,
+    verifyUrl: string,
+    unsubscribeUrl: string
+  ): Promise<void> {
+    const client = getResend();
+
+    if (!client) {
+      logMissingResendKey('Newsletter confirmation', { to, verifyUrl });
+      return;
+    }
+
+    await sendEmail(
+      client,
+      {
+        from: config.resendFromEmail,
+        to,
+        subject: 'Confirm your subscription — cryptopapertrade.com',
+        html: `
+        <h2>You're almost there!</h2>
+        <p>Please confirm your email address to stay updated on our launch.</p>
+        <p>
+          <a href="${verifyUrl}"
+             style="background:#2563eb;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;">
+            Confirm Subscription
+          </a>
+        </p>
+        <p>If you did not subscribe, you can safely ignore this email.</p>
+        ${NEWSLETTER_FOOTER(unsubscribeUrl)}
+      `,
+      },
+      'Failed to send newsletter confirmation',
+      { to }
     );
   },
 };

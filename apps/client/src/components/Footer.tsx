@@ -1,14 +1,19 @@
 import { Link } from 'react-router';
+import { TrustBadges } from '@/components/TrustBadges';
 import { bg, color, fontSize } from '@/lib/tokens';
 
 export function Footer() {
   return (
     <footer
-      className="px-4 py-6 text-center"
+      className="relative px-4 py-6 text-center"
       style={{
-        background: `linear-gradient(180deg, ${bg.page} 0%, ${bg.deep} 100%)`,
+        background: bg.panel,
+        zIndex: 1,
       }}
     >
+      <div className="mb-5 flex justify-center">
+        <TrustBadges />
+      </div>
       <p style={{ fontSize: fontSize.xs, color: color.muted }}>
         ⚠️ Paper trading only — no real money involved. For educational purposes only.
       </p>

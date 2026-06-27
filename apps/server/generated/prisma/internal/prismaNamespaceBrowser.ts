@@ -56,6 +56,7 @@ export const ModelName = {
   PasswordResetToken: 'PasswordResetToken',
   VerificationToken: 'VerificationToken',
   EmailChangeToken: 'EmailChangeToken',
+  Subscriber: 'Subscriber',
   Account: 'Account',
   Position: 'Position',
   Order: 'Order',
@@ -139,6 +140,19 @@ export const EmailChangeTokenScalarFieldEnum = {
 } as const
 
 export type EmailChangeTokenScalarFieldEnum = (typeof EmailChangeTokenScalarFieldEnum)[keyof typeof EmailChangeTokenScalarFieldEnum]
+
+
+export const SubscriberScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  status: 'status',
+  tokenHash: 'tokenHash',
+  consentIp: 'consentIp',
+  createdAt: 'createdAt',
+  verifiedAt: 'verifiedAt'
+} as const
+
+export type SubscriberScalarFieldEnum = (typeof SubscriberScalarFieldEnum)[keyof typeof SubscriberScalarFieldEnum]
 
 
 export const AccountScalarFieldEnum = {

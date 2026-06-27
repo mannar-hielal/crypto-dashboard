@@ -33,17 +33,8 @@ export function TopBar() {
     >
       {/* ── Left: Logo + name + badge ──────────────────────────────────── */}
       <div className="flex items-center gap-2.5">
-        <motion.div
-          whileHover={{ scale: 1.08 }}
-          className="flex h-7 w-7 items-center justify-center rounded-md"
-          style={{ background: gradient.brand }}
-        >
-          <span
-            style={{ fontSize: fontSize.xs11 }}
-            className="font-black tracking-tight text-white"
-          >
-            CPT
-          </span>
+        <motion.div whileHover={{ scale: 1.08 }} className="h-7 w-7 overflow-hidden rounded-md">
+          <img src="/logo.svg" alt="CPT" className="h-full w-full" />
         </motion.div>
 
         <span className="text-sm font-bold tracking-tight text-white">cryptopapertrade.com</span>

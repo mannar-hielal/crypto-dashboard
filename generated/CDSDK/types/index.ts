@@ -46,6 +46,21 @@ export interface ApiError {
   error: string;
 }
 
+// ─── Newsletter ───────────────────────────────────────────────────────────────
+
+export interface SubscriberInfo {
+  id: string;
+  email: string;
+  status: 'pending' | 'verified' | 'unsubscribed';
+  createdAt: string;
+  verifiedAt: string | null;
+}
+
+export interface SubscribersResponse {
+  subscribers: SubscriberInfo[];
+  total: number;
+}
+
 // ─── Market ──────────────────────────────────────────────────────────────────
 
 export interface CandleBar {
