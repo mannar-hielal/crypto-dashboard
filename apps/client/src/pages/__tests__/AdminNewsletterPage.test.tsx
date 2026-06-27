@@ -28,7 +28,6 @@ import type { SubscriberInfo } from '@crypto-dashboard/sdk';
 function makeSubscriber(overrides: Partial<SubscriberInfo> & { email: string }): SubscriberInfo {
   return {
     id: 'sub-1',
-    email: overrides.email,
     status: 'verified',
     createdAt: '2025-01-01T00:00:00.000Z',
     verifiedAt: '2025-01-01T00:00:00.000Z',

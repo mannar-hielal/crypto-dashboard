@@ -66,12 +66,12 @@ describe('CtaSection', () => {
   describe('live state', () => {
     beforeEach(() => {
       vi.resetModules();
-      process.env.VITE_IS_LIVE = 'true';
+      vi.stubEnv('VITE_IS_LIVE', 'true');
     });
 
     afterEach(() => {
       cleanup();
-      delete process.env.VITE_IS_LIVE;
+      vi.unstubAllEnvs();
     });
 
     it('shows the live CTA heading when VITE_IS_LIVE is true', async () => {
