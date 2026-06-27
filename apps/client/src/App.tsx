@@ -31,9 +31,6 @@ const SecurityPage = lazy(() =>
 const AcceptableUsePolicyPage = lazy(() =>
   import('@/pages/AcceptableUsePolicyPage').then((m) => ({ default: m.AcceptableUsePolicyPage }))
 );
-const UnderConstructionPage = lazy(() =>
-  import('@/pages/UnderConstructionPage').then((m) => ({ default: m.UnderConstructionPage }))
-);
 const LandingPage = lazy(() =>
   import('@/pages/LandingPage').then((m) => ({ default: m.LandingPage }))
 );
@@ -97,8 +94,7 @@ export default function App() {
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
             {/* Landing page */}
-            <Route path="/" element={<UnderConstructionPage />} />
-            <Route path="/landing" element={<LandingPage />} />
+            <Route path="/" element={<LandingPage />} />
             <Route path="/features" element={<FeaturesPage />} />
 
             {/* Public routes */}
@@ -119,8 +115,8 @@ export default function App() {
               <Route path="/dashboard" element={<DashboardPage />} />
             </Route>
 
-            {/* Under construction — shown for any unmatched route */}
-            <Route path="*" element={<UnderConstructionPage />} />
+            {/* Catch-all — redirect to landing */}
+            <Route path="*" element={<LandingPage />} />
           </Routes>
         </AnimatePresence>
       </Suspense>

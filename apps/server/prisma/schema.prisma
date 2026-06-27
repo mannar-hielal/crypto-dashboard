@@ -98,6 +98,23 @@ model EmailChangeToken {
 }
 
 // ============================================================================
+// NEWSLETTER (Pre-launch waitlist)
+// ============================================================================
+
+model Subscriber {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  status     String   @default("pending") // pending | verified | unsubscribed
+  tokenHash  String   @unique              // SHA-256 of verification token
+  consentIp  String?
+  createdAt  DateTime @default(now())
+  verifiedAt DateTime?
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ============================================================================
 // ACCOUNT & BALANCE
 // ============================================================================
 

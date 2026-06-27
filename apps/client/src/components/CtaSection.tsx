@@ -2,7 +2,10 @@ import { motion, type Variants } from 'framer-motion';
 import { Link } from 'react-router';
 import ctaIllustration from '@/assets/cta-illustration.svg';
 import { Button } from '@/components/ui/button';
+import { NewsletterForm } from '@/components/NewsletterForm';
 import { color, gradient } from '@/lib/tokens';
+
+const isLive = import.meta.env.VITE_IS_LIVE === 'true';
 
 const itemVariants: Variants = {
   hidden: { opacity: 0, y: 24 },
@@ -39,20 +42,34 @@ export function CtaSection() {
         variants={itemVariants}
         className="relative mx-auto flex max-w-2xl flex-col items-center gap-8 px-8 py-20 text-center sm:py-24"
       >
-        <div className="relative z-10 flex max-w-lg flex-col items-center gap-5">
-          <h2 className="text-3xl font-bold text-white sm:text-4xl">Start trading in 20 seconds</h2>
-          <p className="text-sm leading-relaxed" style={{ color: color.muted }}>
-            No credit card. No risk. Just real-time data and a virtual $10K to practice with.
-          </p>
-          <Button
-            asChild
-            size="lg"
-            className="h-12 rounded-full px-10 text-base font-semibold text-white shadow-lg"
-            style={{ background: gradient.brand }}
-          >
-            <Link to="/register">Get Started Free</Link>
-          </Button>
-        </div>
+        {isLive ? (
+          <div className="relative z-10 flex max-w-lg flex-col items-center gap-5">
+            <h2 className="text-3xl font-bold text-white sm:text-4xl">
+              Start trading in 20 seconds
+            </h2>
+            <p className="text-sm leading-relaxed" style={{ color: color.muted }}>
+              No credit card. No risk. Just real-time data and a virtual $10K to practice with.
+            </p>
+            <Button
+              asChild
+              size="lg"
+              className="h-12 rounded-full px-10 text-base font-semibold text-white shadow-lg"
+              style={{ background: gradient.brand }}
+            >
+              <Link to="/register">Get Started Free</Link>
+            </Button>
+          </div>
+        ) : (
+          <div className="relative z-10 flex max-w-lg flex-col items-center gap-5">
+            <h2 className="text-3xl font-bold text-white sm:text-4xl">
+              Launching soon. Be the first to know.
+            </h2>
+            <p className="text-sm leading-relaxed" style={{ color: color.muted }}>
+              No spam, unsubscribe anytime. We'll notify you when we go live.
+            </p>
+            <NewsletterForm />
+          </div>
+        )}
       </motion.div>
     </div>
   );

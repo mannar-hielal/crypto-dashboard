@@ -83,6 +83,12 @@ export default defineConfig({
     },
   },
   server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
     headers: {
       // 🔐 Dev-only CSP — applies ONLY to the Vite dev server, never deployed.
       // Production CSP is enforced by @fastify/helmet on the server side.

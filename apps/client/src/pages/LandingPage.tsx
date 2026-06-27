@@ -14,6 +14,8 @@ import cryptoPairsImg from '@/assets/9crypto.svg';
 import realtimeDataImg from '@/assets/realtime-data.svg';
 import visualBalanceImg from '@/assets/visual-balance.svg';
 
+const isLive = import.meta.env.VITE_IS_LIVE === 'true';
+
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -192,6 +194,7 @@ export function LandingPage() {
         title="Paper Trade Crypto Free — Real-Time Bybit Data"
         description="Practice crypto trading risk-free with real-time Bybit price feeds. Free paper trading platform with live charts, indicators, and $10,000 virtual balance."
         path="/"
+        {...(!isLive && { noIndex: true })}
       />
       <AuthLayout>
         {/* Exgen Cover-style Hero — full-width gradient background */}
