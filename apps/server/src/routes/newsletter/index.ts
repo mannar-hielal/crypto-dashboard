@@ -93,8 +93,8 @@ export async function newsletterRoutes(app: FastifyInstance) {
         return reply.status(500).send({ error: 'Internal Server Error' });
       }
 
-      const verifyUrl = `${config.clientUrl}/api/newsletter/verify?token=${token}`;
-      const unsubscribeUrl = `${config.clientUrl}/api/newsletter/unsubscribe?token=${token}`;
+      const verifyUrl = `${config.clientUrl}/newsletter/verify?token=${token}`;
+      const unsubscribeUrl = `${config.clientUrl}/newsletter/unsubscribe?token=${token}`;
 
       await EmailService.sendNewsletterConfirmation(email, verifyUrl, unsubscribeUrl);
 
@@ -117,6 +117,10 @@ export async function newsletterRoutes(app: FastifyInstance) {
             token: { type: 'string' },
           },
         },
+        response: {
+          200: messageResponse,
+          404: errorResponse,
+        },
       },
     },
     async (request, reply) => {
@@ -132,7 +136,7 @@ export async function newsletterRoutes(app: FastifyInstance) {
       }
 
       if (subscriber.status === 'verified') {
-        return reply.redirect(`${config.clientUrl}/?verified=true`, 302);
+        return reply.send({ message: 'Email already verified.' });
       }
 
       await app.prisma.subscriber.update({
@@ -140,7 +144,7 @@ export async function newsletterRoutes(app: FastifyInstance) {
         data: { status: 'verified', verifiedAt: new Date() },
       });
 
-      return reply.redirect(`${config.clientUrl}/?verified=true`, 302);
+      return reply.send({ message: 'Email verified. You are on the waitlist!' });
     }
   );
 
@@ -159,6 +163,10 @@ export async function newsletterRoutes(app: FastifyInstance) {
             token: { type: 'string' },
           },
         },
+        response: {
+          200: messageResponse,
+          404: errorResponse,
+        },
       },
     },
     async (request, reply) => {
@@ -174,7 +182,7 @@ export async function newsletterRoutes(app: FastifyInstance) {
       }
 
       if (subscriber.status === 'unsubscribed') {
-        return reply.redirect(`${config.clientUrl}/?unsubscribed=true`, 302);
+        return reply.send({ message: 'You are already unsubscribed.' });
       }
 
       await app.prisma.subscriber.update({
@@ -182,7 +190,7 @@ export async function newsletterRoutes(app: FastifyInstance) {
         data: { status: 'unsubscribed' },
       });
 
-      return reply.redirect(`${config.clientUrl}/?unsubscribed=true`, 302);
+      return reply.send({ message: 'You have been unsubscribed.' });
     }
   );
 }

@@ -46,6 +46,14 @@ const VerifyEmailPage = lazy(() =>
 const VerifyEmailChangePage = lazy(() =>
   import('@/pages/VerifyEmailChangePage').then((m) => ({ default: m.VerifyEmailChangePage }))
 );
+const NewsletterVerifyPage = lazy(() =>
+  import('@/pages/NewsletterVerifyPage').then((m) => ({ default: m.NewsletterVerifyPage }))
+);
+const NewsletterUnsubscribedPage = lazy(() =>
+  import('@/pages/NewsletterUnsubscribedPage').then((m) => ({
+    default: m.NewsletterUnsubscribedPage,
+  }))
+);
 
 // 🔐 Module-level flag — unlike useRef, this survives React StrictMode's
 // simulated mount → unmount → remount cycle, so only ONE /refresh fires
@@ -105,6 +113,8 @@ export default function App() {
             <Route path="/unverified" element={<UnverifiedPage />} />
             <Route path="/verify-email" element={<VerifyEmailPage />} />
             <Route path="/verify-email-change" element={<VerifyEmailChangePage />} />
+            <Route path="/newsletter/verify" element={<NewsletterVerifyPage />} />
+            <Route path="/newsletter/unsubscribe" element={<NewsletterUnsubscribedPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/security" element={<SecurityPage />} />
