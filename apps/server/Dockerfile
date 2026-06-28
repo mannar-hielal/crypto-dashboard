@@ -76,7 +76,7 @@ ENV PORT=3001
 EXPOSE 3001
 
 # Health check — Fly.io and Docker will restart the container if this fails
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
   CMD wget -qO- http://localhost:3001/health || exit 1
 
 CMD ["node", "dist/src/index.js"]
