@@ -3,6 +3,7 @@ import { FastifyInstance } from 'fastify';
 import { EmailService } from '../../services/EmailService.js';
 import { config } from '../../config.js';
 import type { SubscriberStatus } from '../../../generated/prisma/client.js';
+import type { FastifyRequest } from 'fastify';
 
 // ─── HELPERS ────────────────────────────────────────────────────────────────
 
@@ -83,7 +84,12 @@ export async function newsletterRoutes(app: FastifyInstance) {
       },
       onRequest: [app.authenticate],
     },
-    async (request, reply) => {
+    async (request: FastifyRequest, reply) => {
+      const user = request.user as { userId: string; email: string } | undefined;
+      if (!user || user.email !== config.adminEmail) {
+        return reply.status(403).send({ error: 'Forbidden' });
+      }
+
       const { status } = request.query as { status?: SubscriberStatus };
 
       const where = status ? { status } : {};

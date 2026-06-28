@@ -1,4 +1,5 @@
 import { useEffect, useReducer, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { Footer } from '@/components/Footer';
 import { SeoHead } from '@/components/SeoHead';
 import { useAuthStore } from '@/store/authStore';
@@ -63,13 +64,20 @@ function maskEmail(email: string) {
 }
 
 export function AdminNewsletterPage() {
-  const accessToken = useAuthStore((s) => s.accessToken);
+  const navigate = useNavigate();
+  const { accessToken, user } = useAuthStore();
   const [state, dispatch] = useReducer(reducer, initialState);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [showEmails, setShowEmails] = useState(false);
 
   useEffect(() => {
-    if (!accessToken) return;
+    if (user && user.email !== 'adminwithu@gmail.com') {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, navigate]);
+
+  useEffect(() => {
+    if (!accessToken || user?.email !== 'adminwithu@gmail.com') return;
 
     const filterParam = statusFilter === 'all' ? undefined : statusFilter;
 
@@ -86,7 +94,7 @@ export function AdminNewsletterPage() {
           error: err instanceof Error ? err.message : 'Failed to load subscribers',
         })
       );
-  }, [accessToken, statusFilter]);
+  }, [accessToken, user?.email, statusFilter]);
 
   const { loading, error, subscribers, total } = state;
 
