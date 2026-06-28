@@ -20,6 +20,25 @@
     <!-- Responsive viewport — critical for mobile -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
+    <!-- Content Security Policy — browser-enforced for the SPA -->
+    <!-- 'unsafe-inline' on style-src required by Framer Motion animated styles -->
+    <!-- frame-ancestors and report-uri omitted here — they are header-only
+         directives and are already set via server Helmet middleware -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        script-src 'self';
+        style-src 'self' 'unsafe-inline';
+        connect-src 'self';
+        img-src 'self' data: blob:;
+        font-src 'self' data:;
+        worker-src 'self' blob:;
+        base-uri 'none';
+        form-action 'self';
+      "
+    />
+
     <!-- SEO -->
     <meta
       name="description"

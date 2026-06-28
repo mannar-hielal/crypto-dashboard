@@ -1,4 +1,5 @@
 import { useEffect, useReducer, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { Footer } from '@/components/Footer';
 import { SeoHead } from '@/components/SeoHead';
 import { useAuthStore } from '@/store/authStore';
@@ -51,13 +52,33 @@ const STATUS_COLORS: Record<string, string> = {
   unsubscribed: '#d5455c',
 };
 
+function maskEmail(email: string) {
+  const [local, domain] = email.split('@');
+  if (!domain) return email;
+  const maskedLocal = local.length > 2 ? local.substring(0, 2) + '••••' : local + '••••';
+  const domainParts = domain.split('.');
+  const domainName = domainParts[0];
+  const maskedDomain =
+    domainName.length > 2 ? domainName.substring(0, 2) + '•••' : domainName + '•••';
+  const suffix = domainParts.slice(1).join('.');
+  return suffix ? `${maskedLocal}@${maskedDomain}.${suffix}` : `${maskedLocal}@${maskedDomain}`;
+}
+
 export function AdminNewsletterPage() {
-  const accessToken = useAuthStore((s) => s.accessToken);
+  const navigate = useNavigate();
+  const { accessToken, user } = useAuthStore();
   const [state, dispatch] = useReducer(reducer, initialState);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [showEmails, setShowEmails] = useState(false);
 
   useEffect(() => {
-    if (!accessToken) return;
+    if (user && user.email !== import.meta.env.VITE_ADMIN_EMAIL) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, navigate]);
+
+  useEffect(() => {
+    if (!accessToken || user?.email !== import.meta.env.VITE_ADMIN_EMAIL) return;
 
     const filterParam = statusFilter === 'all' ? undefined : statusFilter;
 
@@ -74,7 +95,7 @@ export function AdminNewsletterPage() {
           error: err instanceof Error ? err.message : 'Failed to load subscribers',
         })
       );
-  }, [accessToken, statusFilter]);
+  }, [accessToken, user?.email, statusFilter]);
 
   const { loading, error, subscribers, total } = state;
 
@@ -101,21 +122,33 @@ export function AdminNewsletterPage() {
             </p>
           </div>
 
-          {/* Status filter */}
-          <div className="mb-6 flex flex-wrap gap-2">
-            {(Object.entries(STATUS_LABELS) as [StatusFilter, string][]).map(([key, label]) => (
-              <button
-                key={key}
-                onClick={() => setStatusFilter(key)}
-                className="rounded-full px-4 py-1.5 text-sm font-medium transition-colors"
-                style={{
-                  background: statusFilter === key ? color.purple : bg.surface,
-                  color: statusFilter === key ? '#fff' : color.muted,
-                }}
-              >
-                {label}
-              </button>
-            ))}
+          {/* Controls row */}
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2">
+              {(Object.entries(STATUS_LABELS) as [StatusFilter, string][]).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setStatusFilter(key)}
+                  className="rounded-full px-4 py-1.5 text-sm font-medium transition-colors"
+                  style={{
+                    background: statusFilter === key ? color.purple : bg.surface,
+                    color: statusFilter === key ? '#fff' : color.muted,
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowEmails(!showEmails)}
+              className="rounded-full px-4 py-1.5 text-sm font-medium transition-colors"
+              style={{
+                background: showEmails ? color.red + '20' : bg.surface,
+                color: showEmails ? color.red : color.muted,
+              }}
+            >
+              {showEmails ? 'Hide emails' : 'Show emails'}
+            </button>
           </div>
 
           {/* Table */}
@@ -170,7 +203,7 @@ export function AdminNewsletterPage() {
                       }}
                     >
                       <td className="px-6 py-3.5" style={{ color: color.white }}>
-                        {sub.email}
+                        {showEmails ? sub.email : maskEmail(sub.email)}
                       </td>
                       <td className="px-6 py-3.5">
                         <span

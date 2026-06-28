@@ -36,7 +36,7 @@ export function LegalLayout({ title, lastUpdated, version, children }: LegalLayo
         {/* Back navigation */}
         <button
           onClick={() => navigate(-1)}
-          className="mb-8 inline-flex items-center gap-1.5 text-sm transition-colors hover:text-white"
+          className="mb-8 inline-flex cursor-pointer items-center gap-1.5 text-sm transition-colors hover:text-white"
           style={{ color: color.muted }}
         >
           ← Back

@@ -30,8 +30,8 @@ export function SecurityPage() {
             </li>
             <li>
               <strong>Password Security:</strong> We never store passwords in plain text. We use
-              <strong>argon2id</strong> (a memory-hard password hashing algorithm) to hash passwords
-              before they reach our database.
+              <strong> argon2id</strong> (a memory-hard password hashing algorithm) to hash
+              passwords before they reach our database.
             </li>
             <li>
               <strong>Session Integrity:</strong> We use secure, <code>httpOnly</code>, and

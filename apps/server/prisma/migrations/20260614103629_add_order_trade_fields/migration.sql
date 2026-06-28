@@ -18,9 +18,7 @@ CREATE TABLE "Position" (
 );
 
 -- AlterTable
-ALTER TABLE "Order" ADD COLUMN     "averageFilledPrice" DECIMAL(20,8),
-ADD COLUMN     "commission" DECIMAL(20,8) NOT NULL DEFAULT 0,
-ADD COLUMN     "filledQuantity" DECIMAL(20,8) NOT NULL DEFAULT 0,
+ALTER TABLE "Order" ADD COLUMN     "commission" DECIMAL(20,8) NOT NULL DEFAULT 0,
 ADD COLUMN     "margin" DECIMAL(20,8) NOT NULL DEFAULT 0,
 ADD COLUMN     "refId" TEXT,
 ADD COLUMN     "rejectionReason" TEXT,

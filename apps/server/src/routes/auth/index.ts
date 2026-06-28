@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import * as argon2 from 'argon2';
 import { FastifyInstance, FastifyReply } from 'fastify';
 import { Prisma } from '../../../generated/prisma/client.js';
@@ -83,7 +83,7 @@ const registerSchema = {
       password: {
         type: 'string',
         minLength: 8,
-        maxLength: 72, // 🔐 bcrypt silently ignores chars beyond 72
+        maxLength: 256, // 🔐 argon2 has no effective limit; 256 keeps schema reasonable
         pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).+$',
       },
       acceptedTerms: {
@@ -96,6 +96,7 @@ const registerSchema = {
     201: tokenResponse,
     400: errorResponse,
     409: errorResponse,
+    429: errorResponse,
   },
 };
 
@@ -114,7 +115,7 @@ const loginSchema = {
         format: 'email',
         maxLength: 255,
       },
-      password: { type: 'string', minLength: 1, maxLength: 72 },
+      password: { type: 'string', minLength: 1, maxLength: 256 },
     },
   },
   response: {
@@ -231,7 +232,7 @@ const resetPasswordSchema = {
       password: {
         type: 'string',
         minLength: 8,
-        maxLength: 72,
+        maxLength: 256,
         pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).+$',
       },
     },
@@ -315,7 +316,7 @@ const updatePasswordSchema = {
       newPassword: {
         type: 'string',
         minLength: 8,
-        maxLength: 72,
+        maxLength: 256,
         pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).+$',
       },
     },
@@ -463,6 +464,15 @@ export async function authRoutes(app: FastifyInstance) {
   }
 
   // ─── REGISTER ───────────────────────────────────────────────────────────────
+  // In-memory lock: prevents a second concurrent request for the same email from
+  // proceeding past the duplicate check. The lock is released when the first
+  // request completes (success or failure).
+  const registrationLocks = new Set<string>();
+  // In-memory email-sent guard: prevents sending the verification email twice
+  // for the same email within a 5-minute window. Cleaned up by TTL timeout.
+  const emailSentGuard = new Set<string>();
+  const EMAIL_SENT_TTL_MS = 5 * 60 * 1000;
+
   app.post(
     '/register',
     {
@@ -475,6 +485,7 @@ export async function authRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      const correlationId = randomUUID();
       const { email, username, password, acceptedTerms } = request.body as {
         email: string;
         username: string;
@@ -482,7 +493,7 @@ export async function authRoutes(app: FastifyInstance) {
         acceptedTerms: boolean;
       };
 
-      app.log.info('📝 Registration attempt');
+      app.log.info({ correlationId }, '📝 Registration attempt');
 
       // 🔐 Normalize inputs before processing
       const normalizedEmail = email.toLowerCase().trim();
@@ -492,48 +503,91 @@ export async function authRoutes(app: FastifyInstance) {
         return reply.status(400).send({ error: 'Terms and conditions must be accepted' });
       }
 
-      // 🔐 Check normalized fields to prevent "j.doe@gm.com" vs "J.Doe@gm.com" bypasses
-      const existing = await app.prisma.user.findFirst({
-        where: { OR: [{ email: normalizedEmail }, { username: normalizedUsername }] },
-      });
-      if (existing) {
+      // 🔐 In-memory dedup lock — if a request for this email is already in flight, reject
+      if (registrationLocks.has(normalizedEmail)) {
         app.log.warn(
-          { email: normalizedEmail, username: normalizedUsername },
-          'Registration failed: email or username already taken'
+          { correlationId, email: normalizedEmail },
+          'Registration dedup lock hit — concurrent request'
         );
-        // 🔐 Generic error for email/username to match enum-prevention logic,
-        // though 409 usually reveals existing account. Still better than naming which one.
-        return reply.status(409).send({ error: 'Email or username already taken' });
+        return reply.status(429).send({ error: 'Registration already in progress' });
       }
-
-      const hashedPassword = await argon2.hash(password);
+      registrationLocks.add(normalizedEmail);
 
       try {
-        const user = await app.prisma.user.create({
-          data: {
-            email: normalizedEmail,
-            username: normalizedUsername,
-            password: hashedPassword,
-            termsAcceptedAt: new Date(),
-            termsAcceptedIp: request.ip,
-            account: { create: {} },
-          },
+        // 🔐 Check normalized fields to prevent "j.doe@gm.com" vs "J.Doe@gm.com" bypasses
+        app.log.info({ correlationId }, '🔍 Checking for existing user');
+        const existing = await app.prisma.user.findFirst({
+          where: { OR: [{ email: normalizedEmail }, { username: normalizedUsername }] },
         });
+        if (existing) {
+          app.log.warn(
+            { correlationId, email: normalizedEmail, username: normalizedUsername },
+            'Registration failed: email or username already taken'
+          );
+          return reply.status(409).send({ error: 'Email or username already taken' });
+        }
 
-        app.log.info({ userId: user.id }, '✅ User created');
+        const hashedPassword = await argon2.hash(password);
 
-        // 📧 Create verification token
-        const rawToken = generateRefreshToken();
-        const tokenHash = hashToken(rawToken);
-        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+        // 🔐 Atomic transaction: user + verification token created together.
+        // Also deletes any stale tokens first (idempotency guard).
+        app.log.info({ correlationId }, '🔄 Starting DB transaction');
+        const { user, rawToken } = await app.prisma.$transaction(async (tx) => {
+          const user = await tx.user.create({
+            data: {
+              email: normalizedEmail,
+              username: normalizedUsername,
+              password: hashedPassword,
+              termsAcceptedAt: new Date(),
+              termsAcceptedIp: request.ip,
+              account: { create: {} },
+            },
+          });
 
-        await app.prisma.verificationToken.create({
-          data: { tokenHash, userId: user.id, expiresAt },
+          // Remove stale tokens so every registration yields exactly one valid token
+          await tx.verificationToken.deleteMany({ where: { userId: user.id } });
+
+          const rawToken = generateRefreshToken();
+          const tokenHash = hashToken(rawToken);
+          const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+          await tx.verificationToken.create({
+            data: { tokenHash, userId: user.id, expiresAt },
+          });
+
+          return { user, rawToken };
         });
+        app.log.info(
+          { correlationId, userId: user.id },
+          '✅ Transaction committed — user + token created'
+        );
 
-        const verificationUrl = `${config.clientUrl}/verify-email?token=${rawToken}`;
-        app.log.info({ to: user.email }, '📧 Sending verification email');
-        await EmailService.sendVerificationEmail(user.email, verificationUrl);
+        // 🔐 Email-sent guard: if this email already had a verification email within
+        // the TTL window, skip sending. This catches edge cases where the handler
+        // executes twice (e.g. platform retry, multi-process timing).
+        if (emailSentGuard.has(normalizedEmail)) {
+          app.log.warn(
+            { correlationId, email: normalizedEmail },
+            'Email already sent within TTL — skipping duplicate'
+          );
+        } else {
+          emailSentGuard.add(normalizedEmail);
+          const timeoutId = setTimeout(
+            () => emailSentGuard.delete(normalizedEmail),
+            EMAIL_SENT_TTL_MS
+          );
+
+          try {
+            const verificationUrl = `${config.clientUrl}/verify-email?token=${rawToken}`;
+            app.log.info({ correlationId, to: user.email }, '📧 Sending verification email');
+            await EmailService.sendVerificationEmail(user.email, verificationUrl);
+            app.log.info({ correlationId }, '✅ Verification email sent');
+          } catch (err) {
+            emailSentGuard.delete(normalizedEmail);
+            clearTimeout(timeoutId);
+            throw err;
+          }
+        }
 
         const accessToken = await issueTokens(reply, user.id, user.email);
 
@@ -553,12 +607,15 @@ export async function authRoutes(app: FastifyInstance) {
         // but the second one fails at the DB unique constraint level.
         if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
           app.log.warn(
-            { email: normalizedEmail, username: normalizedUsername },
+            { correlationId, email: normalizedEmail, username: normalizedUsername },
             'Registration failed: Race condition unique constraint'
           );
           return reply.status(409).send({ error: 'Email or username already taken' });
         }
+        app.log.error({ correlationId, err }, '❌ Registration error');
         throw err;
+      } finally {
+        registrationLocks.delete(normalizedEmail);
       }
     }
   );
@@ -617,21 +674,35 @@ export async function authRoutes(app: FastifyInstance) {
         return reply.send(SUCCESS_MSG);
       }
 
-      // Cleanup old tokens
-      await app.prisma.verificationToken.deleteMany({ where: { userId: user.id } });
+      // 🔐 Email-sent guard: skip resend if an email was already sent within the TTL
+      if (emailSentGuard.has(normalizedEmail)) {
+        app.log.warn({ email: normalizedEmail }, 'Resend skipped — email already sent within TTL');
+        return reply.send(SUCCESS_MSG);
+      }
+      emailSentGuard.add(normalizedEmail);
+      const timeoutId = setTimeout(() => emailSentGuard.delete(normalizedEmail), EMAIL_SENT_TTL_MS);
 
-      const rawToken = generateRefreshToken();
-      const tokenHash = hashToken(rawToken);
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      try {
+        // Cleanup old tokens
+        await app.prisma.verificationToken.deleteMany({ where: { userId: user.id } });
 
-      await app.prisma.verificationToken.create({
-        data: { tokenHash, userId: user.id, expiresAt },
-      });
+        const rawToken = generateRefreshToken();
+        const tokenHash = hashToken(rawToken);
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-      const verificationUrl = `${config.clientUrl}/verify-email?token=${rawToken}`;
-      await EmailService.sendVerificationEmail(user.email, verificationUrl);
+        await app.prisma.verificationToken.create({
+          data: { tokenHash, userId: user.id, expiresAt },
+        });
 
-      return reply.send(SUCCESS_MSG);
+        const verificationUrl = `${config.clientUrl}/verify-email?token=${rawToken}`;
+        await EmailService.sendVerificationEmail(user.email, verificationUrl);
+
+        return reply.send(SUCCESS_MSG);
+      } catch (err) {
+        emailSentGuard.delete(normalizedEmail);
+        clearTimeout(timeoutId);
+        throw err;
+      }
     }
   );
 
@@ -685,51 +756,55 @@ export async function authRoutes(app: FastifyInstance) {
   );
 
   // ─── REFRESH ─────────────────────────────────────────────────────────────────
-  app.post('/refresh', { schema: refreshSchema }, async (request, reply) => {
-    // cookie name is a known constant — safe, controlled access
-    // eslint-disable-next-line security/detect-object-injection
-    const rawToken = request.cookies[REFRESH_TOKEN_COOKIE];
+  app.post(
+    '/refresh',
+    { schema: refreshSchema, config: { rateLimit: { max: 20, timeWindow: '15 minutes' } } },
+    async (request, reply) => {
+      // cookie name is a known constant — safe, controlled access
+      // eslint-disable-next-line security/detect-object-injection
+      const rawToken = request.cookies[REFRESH_TOKEN_COOKIE];
 
-    if (!rawToken) {
-      return reply.status(401).send({ error: 'No refresh token' });
+      if (!rawToken) {
+        return reply.status(401).send({ error: 'No refresh token' });
+      }
+
+      const tokenHash = hashToken(rawToken);
+      const stored = await app.prisma.refreshToken.findUnique({ where: { tokenHash } });
+
+      // 🔐 Token not found or expired — clear cookie to avoid stale state
+      if (!stored || stored.expiresAt < new Date()) {
+        void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
+        return reply.status(401).send({ error: 'Invalid or expired refresh token' });
+      }
+
+      // 🔐 Token rotation: use deleteMany (P2025-safe) so concurrent /refresh requests
+      //    each get an atomic delete. Only the first succeeds (count=1); the second
+      //    gets count=0 and is treated as an invalid token — no 500 race condition.
+      const { count: deleted } = await app.prisma.refreshToken.deleteMany({ where: { tokenHash } });
+      if (deleted === 0) {
+        // Token was already consumed by another request (benign race) or replayed.
+        // Do not globally revoke all user sessions here to avoid collateral logout.
+        app.log.warn({ userId: stored.userId }, 'Refresh token already consumed during rotation');
+        void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
+        return reply.status(401).send({ error: 'Invalid or expired refresh token' });
+      }
+
+      // Fetch the user to include email in the new access token payload
+      const user = await app.prisma.user.findUnique({
+        where: { id: stored.userId },
+        select: { id: true, email: true },
+      });
+
+      if (!user) {
+        void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
+        return reply.status(401).send({ error: 'User no longer exists' });
+      }
+
+      const accessToken = await issueTokens(reply, user.id, user.email);
+
+      return reply.send({ accessToken });
     }
-
-    const tokenHash = hashToken(rawToken);
-    const stored = await app.prisma.refreshToken.findUnique({ where: { tokenHash } });
-
-    // 🔐 Token not found or expired — clear cookie to avoid stale state
-    if (!stored || stored.expiresAt < new Date()) {
-      void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
-      return reply.status(401).send({ error: 'Invalid or expired refresh token' });
-    }
-
-    // 🔐 Token rotation: use deleteMany (P2025-safe) so concurrent /refresh requests
-    //    each get an atomic delete. Only the first succeeds (count=1); the second
-    //    gets count=0 and is treated as an invalid token — no 500 race condition.
-    const { count: deleted } = await app.prisma.refreshToken.deleteMany({ where: { tokenHash } });
-    if (deleted === 0) {
-      // Token was already consumed by another request (benign race) or replayed.
-      // Do not globally revoke all user sessions here to avoid collateral logout.
-      app.log.warn({ userId: stored.userId }, 'Refresh token already consumed during rotation');
-      void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
-      return reply.status(401).send({ error: 'Invalid or expired refresh token' });
-    }
-
-    // Fetch the user to include email in the new access token payload
-    const user = await app.prisma.user.findUnique({
-      where: { id: stored.userId },
-      select: { id: true, email: true },
-    });
-
-    if (!user) {
-      void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
-      return reply.status(401).send({ error: 'User no longer exists' });
-    }
-
-    const accessToken = await issueTokens(reply, user.id, user.email);
-
-    return reply.send({ accessToken });
-  });
+  );
 
   // ─── LOGOUT ──────────────────────────────────────────────────────────────────
   app.post('/logout', { schema: logoutSchema }, async (request, reply) => {

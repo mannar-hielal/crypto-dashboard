@@ -38,6 +38,7 @@ interface Config {
   resendApiKey: string;
   resendFromEmail: string;
   clientUrl: string;
+  adminEmail: string;
 }
 
 function loadConfig(): Config {
@@ -62,6 +63,7 @@ function loadConfig(): Config {
     resendApiKey: getEnv('RESEND_API_KEY', ''),
     resendFromEmail: getEnv('RESEND_FROM_EMAIL', 'onboarding@resend.dev'),
     clientUrl: getEnv('CLIENT_URL', 'http://localhost:5173'),
+    adminEmail: getEnv('ADMIN_EMAIL'),
   };
 
   // Check for missing critical variables
@@ -71,6 +73,7 @@ function loadConfig(): Config {
     'BYBIT_API_KEY',
     'BYBIT_API_SECRET',
     'JWT_SECRET',
+    'ADMIN_EMAIL',
   ];
   // process.env is a controlled Namespace object
   // eslint-disable-next-line security/detect-object-injection
