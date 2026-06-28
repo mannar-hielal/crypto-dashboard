@@ -17,6 +17,20 @@ import { authRoutes } from './routes/auth/index.js';
 import { paperRoutes } from './routes/paper/index.js';
 import { newsletterRoutes } from './routes/newsletter/index.js';
 
+const CSP_DIRECTIVES = {
+  defaultSrc: ["'self'"],
+  scriptSrc: ["'self'"],
+  styleSrc: ["'self'", "'unsafe-inline'"],
+  connectSrc: ["'self'", config.corsOrigin],
+  imgSrc: ["'self'", 'data:', 'blob:'],
+  fontSrc: ["'self'", 'data:'],
+  workerSrc: ["'self'", 'blob:'],
+  frameAncestors: ["'none'"],
+  baseUri: ["'none'"],
+  formAction: ["'self'"],
+  reportUri: '/api/csp-violation',
+};
+
 export async function buildApp() {
   const app = Fastify({
     // Disable Fastify's logger in tests to reduce terminal noise
@@ -25,6 +39,25 @@ export async function buildApp() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Fastify's AJV plugin typing is incompatible with ajv-formats in this install.
       plugins: [ajvFormats as any],
     },
+  });
+
+  // ─── CSP VIOLATION REPORTING ──────────────────────────────────────────────
+  // Browsers POST violation reports on first load + on each violation.
+  // Accept both legacy (application/csp-report) and modern (application/reports+json) formats.
+  app.addContentTypeParser(
+    ['application/csp-report', 'application/reports+json'],
+    { parseAs: 'string' },
+    (_req, body: string, done: (err: Error | null, body: unknown) => void) => {
+      try {
+        done(null, JSON.parse(body));
+      } catch {
+        done(null, {});
+      }
+    }
+  );
+  app.post('/api/csp-violation', async (request, reply) => {
+    app.log.warn({ cspReport: request.body }, 'CSP violation reported');
+    return reply.status(204).send();
   });
 
   // ─── API DOCUMENTATION ────────────────────────────────────────────────────
@@ -71,8 +104,19 @@ export async function buildApp() {
   // ─── SECURITY PLUGINS ─────────────────────────────────────────────────────
   await app.register(helmet, {
     // 🔐 Disable CSP in non-production only — swagger-ui loads inline scripts
-    // that helmet's strict default CSP would block. In production CSP is fully on.
-    contentSecurityPolicy: config.nodeEnv === 'production',
+    // that our custom CSP would block. In production CSP is fully on.
+    contentSecurityPolicy:
+      config.nodeEnv === 'production'
+        ? {
+            directives: CSP_DIRECTIVES,
+            reportOnly: false,
+          }
+        : false,
+    strictTransportSecurity: {
+      maxAge: 63072000, // 2 years — industry standard
+      includeSubDomains: true,
+      preload: true, // eligible for browser preload lists
+    },
   });
   // Skip rate limiting in test — prevents flaky tests caused by per-IP counters
   if (config.nodeEnv !== 'test') {

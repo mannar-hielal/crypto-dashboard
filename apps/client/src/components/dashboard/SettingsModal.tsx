@@ -11,6 +11,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
+import { z } from 'zod';
 import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@crypto-dashboard/sdk';
 import { bg, color, fontSize, gradient, radius } from '@/lib/tokens';
@@ -22,6 +23,24 @@ interface SettingsModalProps {
   open: boolean;
   onClose: () => void;
 }
+
+const usernameSchema = z
+  .string()
+  .min(3, 'Username must be at least 3 characters')
+  .max(20, 'Username must be at most 20 characters')
+  .regex(/^[a-zA-Z0-9_]+$/, 'Username must be alphanumeric (letters, numbers, underscores)');
+const emailSchema = z
+  .string()
+  .max(255, 'Email must be at most 255 characters')
+  .email('Invalid email address');
+const passwordSchema = z
+  .string()
+  .min(8, 'Password must be at least 8 characters')
+  .max(256)
+  .regex(
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).+$/,
+    'Password must contain uppercase, lowercase, number, and special character'
+  );
 
 const maskEmail = (email: string) => {
   const [local, domain] = email.split('@');
@@ -115,6 +134,12 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
   if (!user || !accessToken) return null;
 
   const handleUpdateUsername = async () => {
+    const result = usernameSchema.safeParse(username);
+    if (!result.success) {
+      setUsernameError(result.error.issues[0].message);
+      return;
+    }
+
     setIsUpdatingUsername(true);
     setUsernameError(null);
     setUsernameSuccess(false);
@@ -132,6 +157,16 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
   };
 
   const handleUpdateEmail = async () => {
+    const emailResult = emailSchema.safeParse(newEmail);
+    if (!emailResult.success) {
+      setEmailError(emailResult.error.issues[0].message);
+      return;
+    }
+    if (!currentPassword) {
+      setEmailError('Current password is required');
+      return;
+    }
+
     setIsUpdatingEmail(true);
     setEmailError(null);
     setEmailSuccess(false);
@@ -151,6 +186,16 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
   };
 
   const handleUpdatePassword = async () => {
+    const passwordResult = passwordSchema.safeParse(newPassword);
+    if (!passwordResult.success) {
+      setPasswordError(passwordResult.error.issues[0].message);
+      return;
+    }
+    if (!currentPasswordForNewPass) {
+      setPasswordError('Current password is required');
+      return;
+    }
+
     setIsUpdatingPassword(true);
     setPasswordError(null);
     setPasswordSuccess(false);

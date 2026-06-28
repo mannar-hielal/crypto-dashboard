@@ -2,6 +2,9 @@ import { defineConfig } from 'vitest/config';
 import { resolve } from 'path';
 
 export default defineConfig({
+  define: {
+    'import.meta.env.VITE_ADMIN_EMAIL': '"adminwithu@gmail.com"',
+  },
   test: {
     // jsdom provides localStorage, sessionStorage and other browser globals
     // needed by Zustand's persist middleware (paperStore) and future DOM tests.

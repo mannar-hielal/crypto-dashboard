@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
+import { MemoryRouter } from 'react-router';
 
 const mockGetSubscribers = vi.fn();
 vi.mock('@crypto-dashboard/sdk', () => ({
@@ -10,8 +11,10 @@ vi.mock('@crypto-dashboard/sdk', () => ({
 }));
 
 vi.mock('@/store/authStore', () => ({
-  useAuthStore: (selector: (s: { accessToken: string }) => unknown) =>
-    selector({ accessToken: 'test-token' }),
+  useAuthStore: (selector?: (s: { accessToken: string; user: { email: string } }) => unknown) => {
+    const state = { accessToken: 'test-token', user: { email: 'adminwithu@gmail.com' } };
+    return selector ? selector(state) : state;
+  },
 }));
 
 vi.mock('@/components/SeoHead', () => ({
@@ -35,6 +38,10 @@ function makeSubscriber(overrides: Partial<SubscriberInfo> & { email: string }):
   };
 }
 
+function renderPage() {
+  return render(React.createElement(MemoryRouter, null, React.createElement(AdminNewsletterPage)));
+}
+
 describe('AdminNewsletterPage', () => {
   afterEach(() => {
     cleanup();
@@ -44,7 +51,7 @@ describe('AdminNewsletterPage', () => {
   describe('loading state', () => {
     it('shows a loading spinner on mount', () => {
       mockGetSubscribers.mockReturnValue(new Promise(() => {}));
-      render(React.createElement(AdminNewsletterPage));
+      renderPage();
       const spinner = document.querySelector('.animate-spin');
       expect(spinner).not.toBeNull();
     });
@@ -53,7 +60,7 @@ describe('AdminNewsletterPage', () => {
   describe('error state', () => {
     it('shows error message when fetch fails', async () => {
       mockGetSubscribers.mockRejectedValue(new Error('Network error'));
-      render(React.createElement(AdminNewsletterPage));
+      renderPage();
 
       await waitFor(() => {
         expect(screen.getByText('Network error')).not.toBeNull();
@@ -62,7 +69,7 @@ describe('AdminNewsletterPage', () => {
 
     it('shows generic error when fetch rejects with non-Error', async () => {
       mockGetSubscribers.mockRejectedValue('server error');
-      render(React.createElement(AdminNewsletterPage));
+      renderPage();
 
       await waitFor(() => {
         expect(screen.getByText('Failed to load subscribers')).not.toBeNull();
@@ -73,7 +80,7 @@ describe('AdminNewsletterPage', () => {
   describe('empty state', () => {
     it('shows empty state when there are no subscribers', async () => {
       mockGetSubscribers.mockResolvedValue({ subscribers: [], total: 0 });
-      render(React.createElement(AdminNewsletterPage));
+      renderPage();
 
       await waitFor(() => {
         expect(screen.getByText('No subscribers found.')).not.toBeNull();
@@ -91,7 +98,12 @@ describe('AdminNewsletterPage', () => {
     });
 
     it('renders subscriber rows', async () => {
-      render(React.createElement(AdminNewsletterPage));
+      renderPage();
+
+      await waitFor(() => {
+        expect(screen.getByText('Show emails')).not.toBeNull();
+      });
+      fireEvent.click(screen.getByText('Show emails'));
 
       await waitFor(() => {
         expect(screen.getByText('alice@test.com')).not.toBeNull();
@@ -100,7 +112,7 @@ describe('AdminNewsletterPage', () => {
     });
 
     it('shows the total subscriber count', async () => {
-      render(React.createElement(AdminNewsletterPage));
+      renderPage();
 
       await waitFor(() => {
         expect(screen.getByText(/2 subscribers?/i)).not.toBeNull();
@@ -108,7 +120,7 @@ describe('AdminNewsletterPage', () => {
     });
 
     it('renders status badges with correct labels', async () => {
-      render(React.createElement(AdminNewsletterPage));
+      renderPage();
 
       await waitFor(() => {
         expect(screen.getByText('Verified')).not.toBeNull();
@@ -123,7 +135,7 @@ describe('AdminNewsletterPage', () => {
     });
 
     it('renders all four filter buttons', () => {
-      render(React.createElement(AdminNewsletterPage));
+      renderPage();
       const buttons = ['All', 'Pending', 'Verified', 'Unsubscribed'];
       for (const label of buttons) {
         expect(screen.getByText(label)).not.toBeNull();
@@ -131,7 +143,7 @@ describe('AdminNewsletterPage', () => {
     });
 
     it('calls getSubscribers with status filter when clicked', async () => {
-      render(React.createElement(AdminNewsletterPage));
+      renderPage();
 
       await waitFor(() => {
         expect(mockGetSubscribers).toHaveBeenCalledWith('test-token', undefined);
@@ -145,7 +157,7 @@ describe('AdminNewsletterPage', () => {
     });
 
     it('calls getSubscribers without filter for All', async () => {
-      render(React.createElement(AdminNewsletterPage));
+      renderPage();
 
       await waitFor(() => {
         expect(mockGetSubscribers).toHaveBeenCalledWith('test-token', undefined);
@@ -172,7 +184,7 @@ describe('AdminNewsletterPage', () => {
   describe('header', () => {
     it('shows the page title', () => {
       mockGetSubscribers.mockResolvedValue({ subscribers: [], total: 0 });
-      render(React.createElement(AdminNewsletterPage));
+      renderPage();
       expect(screen.getByText('Newsletter Subscribers')).not.toBeNull();
     });
   });
