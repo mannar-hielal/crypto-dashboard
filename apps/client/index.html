@@ -22,7 +22,8 @@
 
     <!-- Content Security Policy — browser-enforced for the SPA -->
     <!-- 'unsafe-inline' on style-src required by Framer Motion animated styles -->
-    <!-- report-uri points to the server-side CSP violation collector -->
+    <!-- frame-ancestors and report-uri omitted here — they are header-only
+         directives and are already set via server Helmet middleware -->
     <meta
       http-equiv="Content-Security-Policy"
       content="
@@ -33,10 +34,8 @@
         img-src 'self' data: blob:;
         font-src 'self' data:;
         worker-src 'self' blob:;
-        frame-ancestors 'none';
         base-uri 'none';
         form-action 'self';
-        report-uri /api/csp-violation;
       "
     />
 

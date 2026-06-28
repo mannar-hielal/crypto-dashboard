@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { LogOut, ChevronDown, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router';
+import { LogOut, ChevronDown, Settings, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@crypto-dashboard/sdk';
@@ -18,6 +19,7 @@ import { SettingsModal } from './SettingsModal';
 export function TopBar() {
   const user = useAuthStore((s) => s.user);
   const clearAuth = useAuthStore((s) => s.clearAuth);
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -107,6 +109,23 @@ export function TopBar() {
                   <Settings className="h-3.5 w-3.5" />
                   Settings
                 </motion.button>
+                {user?.email === 'adminwithu@gmail.com' && (
+                  <motion.button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      navigate('/admin/newsletter');
+                    }}
+                    whileHover={{ background: bg.surface }}
+                    className="flex w-full items-center gap-2 px-3 py-2.5 text-xs transition-colors hover:text-white"
+                    style={{
+                      color: color.muted,
+                      borderBottom: `1px solid color-mix(in srgb, ${color.white} 5%, transparent)`,
+                    }}
+                  >
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    Admin
+                  </motion.button>
+                )}
                 <motion.button
                   onClick={() => {
                     setMenuOpen(false);

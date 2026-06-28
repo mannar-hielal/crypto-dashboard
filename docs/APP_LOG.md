@@ -1329,6 +1329,44 @@ Four issues surfaced in a Copilot PR review and are now resolved.
 
 ---
 
+### security: audit hardening P0/P1/P2 — all 11 findings implemented (2026-06-28) ✅
+
+- **P0 — Shadow DB URL**: hardcoded string → `SHADOW_DATABASE_URL` env var
+- **P0 — Rate limit**: 20/15m added to `/api/auth/refresh`
+- **P0 — HSTS**: `max-age=63072000; includeSubDomains; preload` in Helmet
+- **P0 — Zod schemas**: `SettingsModal` username/email/password validation
+- **P0 — .gitignore**: `.env` added to `apps/client/.gitignore`
+- **P1 — CSP**: custom directives per-app, `POST /api/csp-violation` endpoint, CSP meta tag in `index.html`
+- **P2 — Admin newsletter**: email masking with "Show emails" toggle
+- **P2 — Password maxLength**: 72→256 across all server (4) + client (3) schemas
+- **P2 — .gitignore**: `.env.*` pattern in root
+- **Admin email gating**: `/admin/newsletter` restricted to `ADMIN_EMAIL` on server (403) + client redirect; `ADMIN_EMAIL` env var in config.ts with no default
+
+### feat: admin menu item in TopBar (2026-06-28) ✅
+
+- ShieldCheck icon + "Admin" label in user dropdown, visible only when `user.email === 'adminwithu@gmail.com'`
+- Navigates to `/admin/newsletter` on click
+
+### fix: duplicate verification email — root cause found and fixed (2026-06-28) ✅
+
+**Root cause:** After successful registration, the user was redirected to `/unverified` (via `ProtectedRoute` → `emailVerifiedAt` null check). The "Resend verification email" button on that page triggered a second email via `POST /api/auth/resend-verification` ~2 seconds after registration.
+
+**Changes to `apps/server/src/routes/auth/index.ts`:**
+
+- **In-memory dedup lock** (`registrationLocks` Set) — rejects concurrent requests for the same email with 429
+- **Prisma `$transaction`** — user + verification token created atomically; token creation failure rolls back user creation
+- **Delete-then-create** — `deleteMany` stale tokens before `create`, guaranteeing exactly one valid token per registration
+- **Shared email-sent guard** (`emailSentGuard` Set with 5-minute TTL) — both `/register` and `/resend-verification` check this guard before sending. Resend within the TTL window returns a success message but skips the actual email send
+- **Structured logging** with `correlationId` (`randomUUID()`) at every handler step — lock check, DB transaction, email send — for debugging duplicate-request issues
+
+**Changes to `apps/client/src/pages/RegisterPage.tsx`:**
+
+- Removed `useRef` + `useCallback` double-submit guard — protection is now fully server-side (simpler, more reliable)
+
+**Server logs confirm single request, single email per registration.** 1 email received in final test (`adminwithu+test6`).
+
+---
+
 ## 🔭 Future Release Ideas
 
 ### idea: ATM-style bracket strategies — research (04.05.2026) ⬜
