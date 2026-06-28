@@ -28,9 +28,9 @@
       http-equiv="Content-Security-Policy"
       content="
         default-src 'self';
-        script-src 'self';
+        script-src 'self' https://static.cloudflareinsights.com;
         style-src 'self' 'unsafe-inline';
-        connect-src 'self';
+        connect-src 'self' https://crypto-dashboard-api.fly.dev;
         img-src 'self' data: blob:;
         font-src 'self' data:;
         worker-src 'self' blob:;
