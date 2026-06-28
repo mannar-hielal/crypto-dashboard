@@ -75,6 +75,7 @@ export function ChartPanel({ paneIndex, interval, onChartReady, onChartDestroy }
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const prevLenRef = useRef(0); // tracks first-load to trigger scrollToRealTime()
+  const rafRef = useRef<number | undefined>(undefined);
 
   // ── Series refs (created once, updated on every bars change) ─────────────
   const candleRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
@@ -248,11 +249,19 @@ export function ChartPanel({ paneIndex, interval, onChartReady, onChartDestroy }
     });
 
     // ── ResizeObserver: keeps chart fill its container on any layout change ──
+    // Debounced via rAF to avoid racing during spring animations / splitter
+    // drags where dozens of resize events fire per second.
     const ro = new ResizeObserver(() => {
       if (!containerRef.current || !chartRef.current) return;
-      chartRef.current.applyOptions({
-        width: containerRef.current.clientWidth,
-        height: containerRef.current.clientHeight,
+      const { clientWidth, clientHeight } = containerRef.current;
+      if (clientWidth === 0 || clientHeight === 0) return;
+      if (rafRef.current !== undefined) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = undefined;
+        chartRef.current?.applyOptions({
+          width: clientWidth,
+          height: clientHeight,
+        });
       });
     });
     ro.observe(containerRef.current);
@@ -261,6 +270,7 @@ export function ChartPanel({ paneIndex, interval, onChartReady, onChartDestroy }
     onChartReady?.(chart, candleRef.current!);
 
     return () => {
+      if (rafRef.current !== undefined) cancelAnimationFrame(rafRef.current);
       ro.disconnect();
       chart.remove();
       chartRef.current = null;
