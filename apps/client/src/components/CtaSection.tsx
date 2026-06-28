@@ -18,7 +18,7 @@ const itemVariants: Variants = {
 
 export function CtaSection() {
   return (
-    <div className="relative w-full">
+    <div id="newsletter" className="relative w-full">
       <div
         className="pointer-events-none absolute inset-x-0 top-1/2 flex -translate-y-1/2 items-center justify-center"
         style={{

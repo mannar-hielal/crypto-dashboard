@@ -270,14 +270,27 @@ export function LandingPage() {
               </motion.p>
 
               <motion.div variants={itemVariants} className="flex gap-4">
-                <Button
-                  asChild
-                  size="lg"
-                  className="h-12 rounded-full px-8 text-base font-semibold text-white shadow-lg"
-                  style={{ background: gradient.brand }}
-                >
-                  <Link to="/register">Start Paper Trading</Link>
-                </Button>
+                {isLive ? (
+                  <Button
+                    asChild
+                    size="lg"
+                    className="h-12 rounded-full px-8 text-base font-semibold text-white shadow-lg"
+                    style={{ background: gradient.brand }}
+                  >
+                    <Link to="/register">Start Paper Trading</Link>
+                  </Button>
+                ) : (
+                  <Button
+                    size="lg"
+                    className="h-12 rounded-full px-8 text-base font-semibold text-white shadow-lg"
+                    style={{ background: gradient.brand }}
+                    onClick={() =>
+                      document.getElementById('newsletter')?.scrollIntoView({ behavior: 'smooth' })
+                    }
+                  >
+                    Get notified when live
+                  </Button>
+                )}
                 <Button
                   asChild
                   variant="outline"
