@@ -1,5 +1,9 @@
 -- CreateEnum
-CREATE TYPE "SubscriberStatus" AS ENUM ('pending', 'verified', 'unsubscribed');
+DO $$ BEGIN
+  CREATE TYPE "SubscriberStatus" AS ENUM ('pending', 'verified', 'unsubscribed');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
 -- CreateTable
 CREATE TABLE "Subscriber" (
