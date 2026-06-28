@@ -572,12 +572,21 @@ export async function authRoutes(app: FastifyInstance) {
           );
         } else {
           emailSentGuard.add(normalizedEmail);
-          setTimeout(() => emailSentGuard.delete(normalizedEmail), EMAIL_SENT_TTL_MS);
+          const timeoutId = setTimeout(
+            () => emailSentGuard.delete(normalizedEmail),
+            EMAIL_SENT_TTL_MS
+          );
 
-          const verificationUrl = `${config.clientUrl}/verify-email?token=${rawToken}`;
-          app.log.info({ correlationId, to: user.email }, '📧 Sending verification email');
-          await EmailService.sendVerificationEmail(user.email, verificationUrl);
-          app.log.info({ correlationId }, '✅ Verification email sent');
+          try {
+            const verificationUrl = `${config.clientUrl}/verify-email?token=${rawToken}`;
+            app.log.info({ correlationId, to: user.email }, '📧 Sending verification email');
+            await EmailService.sendVerificationEmail(user.email, verificationUrl);
+            app.log.info({ correlationId }, '✅ Verification email sent');
+          } catch (err) {
+            emailSentGuard.delete(normalizedEmail);
+            clearTimeout(timeoutId);
+            throw err;
+          }
         }
 
         const accessToken = await issueTokens(reply, user.id, user.email);
@@ -671,23 +680,29 @@ export async function authRoutes(app: FastifyInstance) {
         return reply.send(SUCCESS_MSG);
       }
       emailSentGuard.add(normalizedEmail);
-      setTimeout(() => emailSentGuard.delete(normalizedEmail), EMAIL_SENT_TTL_MS);
+      const timeoutId = setTimeout(() => emailSentGuard.delete(normalizedEmail), EMAIL_SENT_TTL_MS);
 
-      // Cleanup old tokens
-      await app.prisma.verificationToken.deleteMany({ where: { userId: user.id } });
+      try {
+        // Cleanup old tokens
+        await app.prisma.verificationToken.deleteMany({ where: { userId: user.id } });
 
-      const rawToken = generateRefreshToken();
-      const tokenHash = hashToken(rawToken);
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        const rawToken = generateRefreshToken();
+        const tokenHash = hashToken(rawToken);
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-      await app.prisma.verificationToken.create({
-        data: { tokenHash, userId: user.id, expiresAt },
-      });
+        await app.prisma.verificationToken.create({
+          data: { tokenHash, userId: user.id, expiresAt },
+        });
 
-      const verificationUrl = `${config.clientUrl}/verify-email?token=${rawToken}`;
-      await EmailService.sendVerificationEmail(user.email, verificationUrl);
+        const verificationUrl = `${config.clientUrl}/verify-email?token=${rawToken}`;
+        await EmailService.sendVerificationEmail(user.email, verificationUrl);
 
-      return reply.send(SUCCESS_MSG);
+        return reply.send(SUCCESS_MSG);
+      } catch (err) {
+        emailSentGuard.delete(normalizedEmail);
+        clearTimeout(timeoutId);
+        throw err;
+      }
     }
   );
 

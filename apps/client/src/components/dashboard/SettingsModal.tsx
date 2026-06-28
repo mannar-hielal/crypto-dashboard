@@ -26,15 +26,21 @@ interface SettingsModalProps {
 
 const usernameSchema = z
   .string()
-  .min(3)
-  .max(20)
-  .regex(/^[a-zA-Z0-9_]+$/);
-const emailSchema = z.string().max(255).email();
+  .min(3, 'Username must be at least 3 characters')
+  .max(20, 'Username must be at most 20 characters')
+  .regex(/^[a-zA-Z0-9_]+$/, 'Username must be alphanumeric (letters, numbers, underscores)');
+const emailSchema = z
+  .string()
+  .max(255, 'Email must be at most 255 characters')
+  .email('Invalid email address');
 const passwordSchema = z
   .string()
-  .min(8)
+  .min(8, 'Password must be at least 8 characters')
   .max(256)
-  .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).+$/);
+  .regex(
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).+$/,
+    'Password must contain uppercase, lowercase, number, and special character'
+  );
 
 const maskEmail = (email: string) => {
   const [local, domain] = email.split('@');

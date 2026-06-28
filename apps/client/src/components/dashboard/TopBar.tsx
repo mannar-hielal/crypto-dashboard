@@ -109,7 +109,7 @@ export function TopBar() {
                   <Settings className="h-3.5 w-3.5" />
                   Settings
                 </motion.button>
-                {user?.email === 'adminwithu@gmail.com' && (
+                {user?.email === import.meta.env.VITE_ADMIN_EMAIL && (
                   <motion.button
                     onClick={() => {
                       setMenuOpen(false);

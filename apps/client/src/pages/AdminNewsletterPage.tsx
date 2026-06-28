@@ -60,7 +60,8 @@ function maskEmail(email: string) {
   const domainName = domainParts[0];
   const maskedDomain =
     domainName.length > 2 ? domainName.substring(0, 2) + '•••' : domainName + '•••';
-  return `${maskedLocal}@${maskedDomain}.${domainParts.slice(1).join('.')}`;
+  const suffix = domainParts.slice(1).join('.');
+  return suffix ? `${maskedLocal}@${maskedDomain}.${suffix}` : `${maskedLocal}@${maskedDomain}`;
 }
 
 export function AdminNewsletterPage() {
@@ -71,13 +72,13 @@ export function AdminNewsletterPage() {
   const [showEmails, setShowEmails] = useState(false);
 
   useEffect(() => {
-    if (user && user.email !== 'adminwithu@gmail.com') {
+    if (user && user.email !== import.meta.env.VITE_ADMIN_EMAIL) {
       navigate('/dashboard', { replace: true });
     }
   }, [user, navigate]);
 
   useEffect(() => {
-    if (!accessToken || user?.email !== 'adminwithu@gmail.com') return;
+    if (!accessToken || user?.email !== import.meta.env.VITE_ADMIN_EMAIL) return;
 
     const filterParam = statusFilter === 'all' ? undefined : statusFilter;
 
