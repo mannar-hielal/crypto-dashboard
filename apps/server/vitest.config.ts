@@ -12,6 +12,7 @@ export default defineConfig({
       JWT_SECRET: 'test-only-secret-min-32-chars-not-for-production',
       BYBIT_API_KEY: 'test-key',
       BYBIT_API_SECRET: 'test-secret',
+      ADMIN_EMAIL: 'admin@test.com',
     },
     coverage: {
       provider: 'v8',
