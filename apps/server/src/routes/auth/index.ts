@@ -685,51 +685,55 @@ export async function authRoutes(app: FastifyInstance) {
   );
 
   // ─── REFRESH ─────────────────────────────────────────────────────────────────
-  app.post('/refresh', { schema: refreshSchema }, async (request, reply) => {
-    // cookie name is a known constant — safe, controlled access
-    // eslint-disable-next-line security/detect-object-injection
-    const rawToken = request.cookies[REFRESH_TOKEN_COOKIE];
+  app.post(
+    '/refresh',
+    { schema: refreshSchema, config: { rateLimit: { max: 20, timeWindow: '15 minutes' } } },
+    async (request, reply) => {
+      // cookie name is a known constant — safe, controlled access
+      // eslint-disable-next-line security/detect-object-injection
+      const rawToken = request.cookies[REFRESH_TOKEN_COOKIE];
 
-    if (!rawToken) {
-      return reply.status(401).send({ error: 'No refresh token' });
+      if (!rawToken) {
+        return reply.status(401).send({ error: 'No refresh token' });
+      }
+
+      const tokenHash = hashToken(rawToken);
+      const stored = await app.prisma.refreshToken.findUnique({ where: { tokenHash } });
+
+      // 🔐 Token not found or expired — clear cookie to avoid stale state
+      if (!stored || stored.expiresAt < new Date()) {
+        void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
+        return reply.status(401).send({ error: 'Invalid or expired refresh token' });
+      }
+
+      // 🔐 Token rotation: use deleteMany (P2025-safe) so concurrent /refresh requests
+      //    each get an atomic delete. Only the first succeeds (count=1); the second
+      //    gets count=0 and is treated as an invalid token — no 500 race condition.
+      const { count: deleted } = await app.prisma.refreshToken.deleteMany({ where: { tokenHash } });
+      if (deleted === 0) {
+        // Token was already consumed by another request (benign race) or replayed.
+        // Do not globally revoke all user sessions here to avoid collateral logout.
+        app.log.warn({ userId: stored.userId }, 'Refresh token already consumed during rotation');
+        void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
+        return reply.status(401).send({ error: 'Invalid or expired refresh token' });
+      }
+
+      // Fetch the user to include email in the new access token payload
+      const user = await app.prisma.user.findUnique({
+        where: { id: stored.userId },
+        select: { id: true, email: true },
+      });
+
+      if (!user) {
+        void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
+        return reply.status(401).send({ error: 'User no longer exists' });
+      }
+
+      const accessToken = await issueTokens(reply, user.id, user.email);
+
+      return reply.send({ accessToken });
     }
-
-    const tokenHash = hashToken(rawToken);
-    const stored = await app.prisma.refreshToken.findUnique({ where: { tokenHash } });
-
-    // 🔐 Token not found or expired — clear cookie to avoid stale state
-    if (!stored || stored.expiresAt < new Date()) {
-      void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
-      return reply.status(401).send({ error: 'Invalid or expired refresh token' });
-    }
-
-    // 🔐 Token rotation: use deleteMany (P2025-safe) so concurrent /refresh requests
-    //    each get an atomic delete. Only the first succeeds (count=1); the second
-    //    gets count=0 and is treated as an invalid token — no 500 race condition.
-    const { count: deleted } = await app.prisma.refreshToken.deleteMany({ where: { tokenHash } });
-    if (deleted === 0) {
-      // Token was already consumed by another request (benign race) or replayed.
-      // Do not globally revoke all user sessions here to avoid collateral logout.
-      app.log.warn({ userId: stored.userId }, 'Refresh token already consumed during rotation');
-      void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
-      return reply.status(401).send({ error: 'Invalid or expired refresh token' });
-    }
-
-    // Fetch the user to include email in the new access token payload
-    const user = await app.prisma.user.findUnique({
-      where: { id: stored.userId },
-      select: { id: true, email: true },
-    });
-
-    if (!user) {
-      void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
-      return reply.status(401).send({ error: 'User no longer exists' });
-    }
-
-    const accessToken = await issueTokens(reply, user.id, user.email);
-
-    return reply.send({ accessToken });
-  });
+  );
 
   // ─── LOGOUT ──────────────────────────────────────────────────────────────────
   app.post('/logout', { schema: logoutSchema }, async (request, reply) => {

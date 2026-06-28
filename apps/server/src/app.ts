@@ -73,6 +73,11 @@ export async function buildApp() {
     // 🔐 Disable CSP in non-production only — swagger-ui loads inline scripts
     // that helmet's strict default CSP would block. In production CSP is fully on.
     contentSecurityPolicy: config.nodeEnv === 'production',
+    strictTransportSecurity: {
+      maxAge: 63072000, // 2 years — industry standard
+      includeSubDomains: true,
+      preload: true, // eligible for browser preload lists
+    },
   });
   // Skip rate limiting in test — prevents flaky tests caused by per-IP counters
   if (config.nodeEnv !== 'test') {
