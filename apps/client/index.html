@@ -20,6 +20,26 @@
     <!-- Responsive viewport — critical for mobile -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
+    <!-- Content Security Policy — browser-enforced for the SPA -->
+    <!-- 'unsafe-inline' on style-src required by Framer Motion animated styles -->
+    <!-- report-uri points to the server-side CSP violation collector -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        script-src 'self';
+        style-src 'self' 'unsafe-inline';
+        connect-src 'self' http://localhost:3001 ws://localhost:3001;
+        img-src 'self' data: blob:;
+        font-src 'self' data:;
+        worker-src 'self' blob:;
+        frame-ancestors 'none';
+        base-uri 'none';
+        form-action 'self';
+        report-uri /api/csp-violation;
+      "
+    />
+
     <!-- SEO -->
     <meta
       name="description"
