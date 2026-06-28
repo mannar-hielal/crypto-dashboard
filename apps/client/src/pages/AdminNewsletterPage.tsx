@@ -51,10 +51,22 @@ const STATUS_COLORS: Record<string, string> = {
   unsubscribed: '#d5455c',
 };
 
+function maskEmail(email: string) {
+  const [local, domain] = email.split('@');
+  if (!domain) return email;
+  const maskedLocal = local.length > 2 ? local.substring(0, 2) + '••••' : local + '••••';
+  const domainParts = domain.split('.');
+  const domainName = domainParts[0];
+  const maskedDomain =
+    domainName.length > 2 ? domainName.substring(0, 2) + '•••' : domainName + '•••';
+  return `${maskedLocal}@${maskedDomain}.${domainParts.slice(1).join('.')}`;
+}
+
 export function AdminNewsletterPage() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const [state, dispatch] = useReducer(reducer, initialState);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [showEmails, setShowEmails] = useState(false);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -101,21 +113,33 @@ export function AdminNewsletterPage() {
             </p>
           </div>
 
-          {/* Status filter */}
-          <div className="mb-6 flex flex-wrap gap-2">
-            {(Object.entries(STATUS_LABELS) as [StatusFilter, string][]).map(([key, label]) => (
-              <button
-                key={key}
-                onClick={() => setStatusFilter(key)}
-                className="rounded-full px-4 py-1.5 text-sm font-medium transition-colors"
-                style={{
-                  background: statusFilter === key ? color.purple : bg.surface,
-                  color: statusFilter === key ? '#fff' : color.muted,
-                }}
-              >
-                {label}
-              </button>
-            ))}
+          {/* Controls row */}
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2">
+              {(Object.entries(STATUS_LABELS) as [StatusFilter, string][]).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setStatusFilter(key)}
+                  className="rounded-full px-4 py-1.5 text-sm font-medium transition-colors"
+                  style={{
+                    background: statusFilter === key ? color.purple : bg.surface,
+                    color: statusFilter === key ? '#fff' : color.muted,
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowEmails(!showEmails)}
+              className="rounded-full px-4 py-1.5 text-sm font-medium transition-colors"
+              style={{
+                background: showEmails ? color.red + '20' : bg.surface,
+                color: showEmails ? color.red : color.muted,
+              }}
+            >
+              {showEmails ? 'Hide emails' : 'Show emails'}
+            </button>
           </div>
 
           {/* Table */}
@@ -170,7 +194,7 @@ export function AdminNewsletterPage() {
                       }}
                     >
                       <td className="px-6 py-3.5" style={{ color: color.white }}>
-                        {sub.email}
+                        {showEmails ? sub.email : maskEmail(sub.email)}
                       </td>
                       <td className="px-6 py-3.5">
                         <span

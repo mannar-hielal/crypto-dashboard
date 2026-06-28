@@ -6,6 +6,7 @@ yarn.lock
 
 # Environment
 .env
+.env.*
 .env.local
 .env.*.local
 

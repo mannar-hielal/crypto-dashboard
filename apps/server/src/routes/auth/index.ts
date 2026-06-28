@@ -83,7 +83,7 @@ const registerSchema = {
       password: {
         type: 'string',
         minLength: 8,
-        maxLength: 72, // 🔐 bcrypt silently ignores chars beyond 72
+        maxLength: 256, // 🔐 argon2 has no effective limit; 256 keeps schema reasonable
         pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).+$',
       },
       acceptedTerms: {
@@ -114,7 +114,7 @@ const loginSchema = {
         format: 'email',
         maxLength: 255,
       },
-      password: { type: 'string', minLength: 1, maxLength: 72 },
+      password: { type: 'string', minLength: 1, maxLength: 256 },
     },
   },
   response: {
@@ -231,7 +231,7 @@ const resetPasswordSchema = {
       password: {
         type: 'string',
         minLength: 8,
-        maxLength: 72,
+        maxLength: 256,
         pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).+$',
       },
     },
@@ -315,7 +315,7 @@ const updatePasswordSchema = {
       newPassword: {
         type: 'string',
         minLength: 8,
-        maxLength: 72,
+        maxLength: 256,
         pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).+$',
       },
     },

@@ -33,7 +33,7 @@ const emailSchema = z.string().max(255).email();
 const passwordSchema = z
   .string()
   .min(8)
-  .max(72)
+  .max(256)
   .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).+$/);
 
 const maskEmail = (email: string) => {
