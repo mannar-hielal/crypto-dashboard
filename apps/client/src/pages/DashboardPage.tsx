@@ -14,6 +14,7 @@ import { usePaperStore } from '@/store/paperStore';
 import { authApi } from '@crypto-dashboard/sdk';
 import { TopBar } from '@/components/dashboard/TopBar';
 import { LeftToolbar } from '@/components/dashboard/LeftToolbar';
+import { CURSOR_CSS_MAP, type CursorVariantId } from '@/lib/cursors';
 import { MultiChartArea } from '@/components/dashboard/MultiChartArea';
 import { OrderAccountManagementPanel } from '@/components/dashboard/OrderAccountManagementPanel';
 import { TickerBar } from '@/components/dashboard/TickerBar';
@@ -82,6 +83,7 @@ export function DashboardPage() {
 }
 
 function DashboardInner() {
+  const [cursorVariant, setCursorVariant] = useState<CursorVariantId>('cross');
   const { playProfit, playLoss, playOrderFilled } = useSoundActions();
 
   usePaneFeeds();
@@ -265,7 +267,7 @@ function DashboardInner() {
 
       {/* ── Main content row ──────────────────────────────────────────────── */}
       <div className="flex min-h-0 flex-1">
-        <LeftToolbar />
+        <LeftToolbar onCursorVariantChange={setCursorVariant} />
 
         {/* Center column: chart on top + paper trading panel on bottom.
             By making this a flex-col sibling of TradingPanel, the TradingPanel
@@ -274,6 +276,7 @@ function DashboardInner() {
           {/* Chart area — animates flex-shrink to 0 when the panel is maximized */}
           <motion.div
             className="relative min-h-0 min-w-0 overflow-hidden"
+            style={{ cursor: CURSOR_CSS_MAP[cursorVariant] }}
             animate={{ flex: isMaximized ? '0 0 0px' : '1 1 0%' }}
             transition={{ type: 'spring', stiffness: 340, damping: 34 }}
           >

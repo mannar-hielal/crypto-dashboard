@@ -90,6 +90,15 @@ export function ChartPanel({ paneIndex, interval, onChartReady, onChartDestroy }
   // Read bars from this pane's store
   const bars = useStore(paneStores[paneIndex], (s) => s.bars);
 
+  // Tracks whether the chart/indicator series have been created so the data
+  // effect can retry its push when state updates arrive before the series
+  // refs are initialised (edge case on very fast first data).
+  const chartReadyRef = useRef(false);
+
+  // Tracks the last-pushed interval so that when the user changes interval we
+  // can keep the old candles visible instead of flushing to a blank canvas.
+  const prevIntervalRef = useRef(interval);
+
   // ── Hover legend state ───────────────────────────────────────────────────
   const [hoverData, setHoverData] = useState<LegendData | null>(null);
 
@@ -269,7 +278,11 @@ export function ChartPanel({ paneIndex, interval, onChartReady, onChartDestroy }
     // Notify parent so MultiChartArea can wire up sync
     onChartReady?.(chart, candleRef.current!);
 
+    // Mark chart as ready so the data effect can skip its guard.
+    chartReadyRef.current = true;
+
     return () => {
+      chartReadyRef.current = false;
       if (rafRef.current !== undefined) cancelAnimationFrame(rafRef.current);
       ro.disconnect();
       chart.remove();
@@ -287,32 +300,31 @@ export function ChartPanel({ paneIndex, interval, onChartReady, onChartDestroy }
     // fresh first-load, causing autoScale + scrollToRealTime to fire.
     if (bars.length === 0) {
       prevLenRef.current = 0;
-      try {
-        candleRef.current?.setData([]);
-        ema9Ref.current?.setData([]);
-        ema20Ref.current?.setData([]);
-        ema200Ref.current?.setData([]);
-        vwapRef.current?.setData([]);
-        macdHistRef.current?.setData([]);
-        macdLineRef.current?.setData([]);
-        signalRef.current?.setData([]);
-      } catch {
-        // series may not be initialised on very first mount
-      }
+      candleRef.current?.setData([]);
+      ema9Ref.current?.setData([]);
+      ema20Ref.current?.setData([]);
+      ema200Ref.current?.setData([]);
+      vwapRef.current?.setData([]);
+      macdHistRef.current?.setData([]);
+      macdLineRef.current?.setData([]);
+      signalRef.current?.setData([]);
       return;
     }
 
-    if (
-      !candleRef.current ||
-      !ema9Ref.current ||
-      !ema20Ref.current ||
-      !ema200Ref.current ||
-      !vwapRef.current ||
-      !macdHistRef.current ||
-      !macdLineRef.current ||
-      !signalRef.current
-    )
+    // If the interval changed but bars haven't been refreshed yet, keep the
+    // old candles on screen rather than flushing to a blank canvas.  The
+    // prevLenRef reset ensures scrollToRealTime fires on the incoming data.
+    if (interval !== prevIntervalRef.current) {
+      prevIntervalRef.current = interval;
+      prevLenRef.current = 0;
       return;
+    }
+
+    // If the chart and series haven't been created yet (edge case where data
+    // arrives before React paints the first frame), defer until the next
+    // re-render. The chartReadyRef is set inside the chart-creation effect,
+    // so once the chart mounts the next bar or tick update will push data.
+    if (!chartReadyRef.current) return;
 
     // lightweight-charts requires data to be strictly ascending by time.
     // De-duplicate by timestamp (keep last) then sort ascending.
@@ -337,7 +349,7 @@ export function ChartPanel({ paneIndex, interval, onChartReady, onChartDestroy }
     }
 
     // Candlestick
-    candleRef.current.setData(
+    candleRef.current?.setData(
       sortedBars.map((b) => ({
         time: toUTC(b.timestamp),
         open: b.open,
@@ -348,10 +360,10 @@ export function ChartPanel({ paneIndex, interval, onChartReady, onChartDestroy }
     );
 
     // Overlay lines
-    ema9Ref.current.setData(linePoints(ema9));
-    ema20Ref.current.setData(linePoints(ema20));
-    ema200Ref.current.setData(linePoints(ema200));
-    vwapRef.current.setData(linePoints(vwap));
+    ema9Ref.current?.setData(linePoints(ema9));
+    ema20Ref.current?.setData(linePoints(ema20));
+    ema200Ref.current?.setData(linePoints(ema200));
+    vwapRef.current?.setData(linePoints(vwap));
 
     // Histogram — 4 colours matching EXGEN/TradingView MACD style:
     //   ≥0 & rising  → #02c076 (strong bull, EXGEN green)
@@ -373,10 +385,10 @@ export function ChartPanel({ paneIndex, interval, onChartReady, onChartDestroy }
         histPts.push({ time: toUTC(sortedBars[i].timestamp), value: val, color });
       }
     }
-    macdHistRef.current.setData(histPts);
+    macdHistRef.current?.setData(histPts);
 
-    macdLineRef.current.setData(linePoints(macd));
-    signalRef.current.setData(linePoints(signal));
+    macdLineRef.current?.setData(linePoints(macd));
+    signalRef.current?.setData(linePoints(signal));
 
     // On first load and after interval/symbol changes (data lands outside the
     // current visible window): scroll to the latest bar and let barSpacing

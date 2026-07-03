@@ -53,7 +53,7 @@ declare module 'fastify' {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const SNAPSHOT_SIZE = 500; // ~8 hours of 1m candles in memory
+const SNAPSHOT_SIZE = 1000; // ~16 hours of 1m candles — matches client's INTERVAL_FETCH_LIMIT
 
 // ─── Plugin ───────────────────────────────────────────────────────────────────
 

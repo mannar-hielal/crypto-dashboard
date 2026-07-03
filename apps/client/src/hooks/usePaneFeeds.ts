@@ -76,20 +76,27 @@ function useSinglePaneFeed(
       };
     }
 
-    // ── Active: reset stale data, then connect ───────────────────────────────
-    store.getState().reset();
+    // ── Active: connect — old candles stay visible until new data arrives ────
+    // Intentionally NOT calling reset() here: clearing bars synchronously
+    // would flash a blank canvas before WS/REST data loads.  setSnapshot
+    // replaces old bars atomically when the first response arrives.
 
     // Step 1: historical REST fetch (fills chart before WS is ready)
+    // Only applies if the WS hasn't already sent its initial snapshot — the
+    // WS snapshot is authoritative (it includes indicators) and we don't want
+    // to overwrite live bars the WS may have already sent.
     marketApi
       .getCandles(symbol, interval, INTERVAL_FETCH_LIMIT[interval])
       .then((res) => {
-        if (!cancelled) {
+        if (!cancelled && !store.getState().wsSnapshotReceived) {
           const last = res.candles[res.candles.length - 1];
           if (last) lastKnownPrices.set(symbol, last.close);
           store.getState().setSnapshot(res.candles, null);
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error('[usePaneFeeds] Failed to fetch historical candles:', err);
+      });
 
     // Step 2: WebSocket live feed
     function connect() {
@@ -123,6 +130,7 @@ function useSinglePaneFeed(
         try {
           const msg = JSON.parse(e.data) as WsMessage;
           if (msg.type === 'snapshot') {
+            store.getState().setWsSnapshotReceived(true);
             const last = msg.bars[msg.bars.length - 1];
             if (last) lastKnownPrices.set(symbol, last.kline.close);
             store.getState().setSnapshot(

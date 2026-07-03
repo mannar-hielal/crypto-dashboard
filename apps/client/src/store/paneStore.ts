@@ -33,11 +33,15 @@ export interface PaneMarketState {
   bid: number | null;
   /** Best ask price from orderbook.1 stream */
   ask: number | null;
+  /** Becomes true when the first WS snapshot message lands on this pane.
+   *  Reset to false on every reset() / interval change. */
+  wsSnapshotReceived: boolean;
 
   setSnapshot: (bars: CandleBar[], indicators: IndicatorSnapshot | null) => void;
   addBar: (liveBar: LiveBar) => void;
   setConnected: (connected: boolean) => void;
   setBidAsk: (bid: number, ask: number, lastPrice?: number) => void;
+  setWsSnapshotReceived: (v: boolean) => void;
   /** Wipe all data — called before a new symbol/interval connects */
   reset: () => void;
 }
@@ -53,6 +57,7 @@ function createPaneStore() {
     isConnected: false,
     bid: null,
     ask: null,
+    wsSnapshotReceived: false,
 
     setSnapshot: (bars, indicators) => {
       // Deduplicate by timestamp (keep last occurrence) then sort ascending.
@@ -122,6 +127,8 @@ function createPaneStore() {
         };
       }),
 
+    setWsSnapshotReceived: (v) => set({ wsSnapshotReceived: v }),
+
     reset: () =>
       set({
         bars: [],
@@ -131,6 +138,7 @@ function createPaneStore() {
         isConnected: false,
         bid: null,
         ask: null,
+        wsSnapshotReceived: false,
       }),
   }));
 }
