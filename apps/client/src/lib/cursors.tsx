@@ -1,6 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 // ─── Cursor variant SVG icons (TradingView style) ───────────────────────────
 
+import type { JSX } from 'react';
+
 function CrossIcon({ size = 28 }: { size?: number }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width={size} height={size}>
@@ -53,7 +55,7 @@ function svgCursor(svgContent: string): string {
   const uri = encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 28 28">${svgContent}</svg>`
   );
-  return `url("data:image/svg+xml,${uri}") 14 14`;
+  return `url("data:image/svg+xml,${uri}") 14 14, auto`;
 }
 
 export const CURSOR_CSS_MAP: Record<CursorVariantId, string> = {

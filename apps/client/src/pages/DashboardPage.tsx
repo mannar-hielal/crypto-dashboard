@@ -134,6 +134,51 @@ function DashboardInner() {
   const [editTarget, setEditTarget] = useState<EditTarget>(null);
   const isTradingPanelVisible = !editTarget && tradingPanelOpen;
 
+  // ── Chart cursor variant + drag-to-grab ─────────────────────────────────
+
+  /** Ref on the chart-area motion.div so we can toggle data-dragging without
+   *  re-renders during pointer drag. The CSS rule `[data-dragging] canvas`
+   *  overrides the lightweight-charts cursor to `grabbing`. */
+  const chartAreaRef = useRef<HTMLDivElement>(null);
+
+  /** Inject a <style> tag that overrides canvas cursors for the selected
+   *  cursor variant and shows a grabbing hand during drag. Using !important
+   *  beats lightweight-charts' own inline canvas cursor management. */
+  useEffect(() => {
+    const rules =
+      Object.entries(CURSOR_CSS_MAP)
+        .map(
+          ([variant, cursorVal]) =>
+            `[data-cursor="${variant}"] canvas { cursor: ${cursorVal} !important; }`
+        )
+        .join('\n') + '\n[data-dragging="true"] canvas { cursor: grabbing !important; }';
+
+    const style = document.createElement('style');
+    style.id = 'chart-cursor-override';
+    style.textContent = rules;
+    document.head.appendChild(style);
+    return () => style.remove();
+  }, []);
+
+  /** Toggle data-dragging attribute via direct DOM — zero re-renders during
+   *  drag. Listens on the container for pointerdown and on document for
+   *  pointerup so drags that end outside the container still reset. */
+  useEffect(() => {
+    const el = chartAreaRef.current;
+    if (!el) return;
+
+    const onDown = () => el.setAttribute('data-dragging', 'true');
+    const onUp = () => el.removeAttribute('data-dragging');
+
+    el.addEventListener('pointerdown', onDown);
+    document.addEventListener('pointerup', onUp);
+
+    return () => {
+      el.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('pointerup', onUp);
+    };
+  }, []);
+
   // ── Bottom-panel drag-to-resize ─────────────────────────────────────────
 
   /**
@@ -275,8 +320,9 @@ function DashboardInner() {
         <div ref={centerColRef} className="relative flex min-h-0 min-w-0 flex-1 flex-col">
           {/* Chart area — animates flex-shrink to 0 when the panel is maximized */}
           <motion.div
+            ref={chartAreaRef}
+            data-cursor={cursorVariant}
             className="relative min-h-0 min-w-0 overflow-hidden"
-            style={{ cursor: CURSOR_CSS_MAP[cursorVariant] }}
             animate={{ flex: isMaximized ? '0 0 0px' : '1 1 0%' }}
             transition={{ type: 'spring', stiffness: 340, damping: 34 }}
           >

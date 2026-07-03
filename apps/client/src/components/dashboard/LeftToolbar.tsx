@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { ElementType } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MousePointer2,
@@ -49,12 +50,62 @@ interface LeftToolbarProps {
 
 export function LeftToolbar({ onCursorVariantChange }: LeftToolbarProps) {
   const [activeTool, setActiveTool] = useState('cursor');
-  const [hoveredTool, setHoveredTool] = useState<string | null>(null);
   const [cursorVariant, setCursorVariant] = useState<CursorVariantId>('cross');
   const [showCursorMenu, setShowCursorMenu] = useState(false);
+  const asideRef = useRef<HTMLElement>(null);
   const cursorBtnRef = useRef<HTMLButtonElement>(null);
   const cursorMenuRef = useRef<HTMLDivElement>(null);
   const [menuPos, setMenuPos] = useState({ left: 0, top: 0 });
+
+  // ── Portal-based tooltip (TradingView data-tooltip pattern) ─────────
+  const [tooltip, setTooltip] = useState<{
+    text: string;
+    top: number;
+    left: number;
+  } | null>(null);
+  const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => {
+    const aside = asideRef.current;
+    if (!aside) return;
+
+    let lastEl: HTMLElement | null = null;
+
+    const onMouseOver = (e: MouseEvent) => {
+      const el = (e.target as HTMLElement).closest<HTMLElement>('[data-tooltip]');
+      if (!el) {
+        if (lastEl) {
+          lastEl = null;
+          clearTimeout(tooltipTimeoutRef.current);
+          setTooltip(null);
+        }
+        return;
+      }
+      if (el === lastEl) return;
+      lastEl = el;
+      const text = el.getAttribute('data-tooltip') || '';
+      const delay = Number(el.getAttribute('data-tooltip-delay')) || 1500;
+      clearTimeout(tooltipTimeoutRef.current);
+      tooltipTimeoutRef.current = setTimeout(() => {
+        const rect = el.getBoundingClientRect();
+        setTooltip({ text, top: rect.top + rect.height / 2, left: rect.right + 10 });
+      }, delay);
+    };
+
+    const onMouseLeave = () => {
+      lastEl = null;
+      clearTimeout(tooltipTimeoutRef.current);
+      setTooltip(null);
+    };
+
+    aside.addEventListener('mouseover', onMouseOver);
+    aside.addEventListener('mouseleave', onMouseLeave);
+    return () => {
+      aside.removeEventListener('mouseover', onMouseOver);
+      aside.removeEventListener('mouseleave', onMouseLeave);
+      clearTimeout(tooltipTimeoutRef.current);
+    };
+  }, []);
 
   // Close menu on click-outside
   const handleMousedown = useCallback((e: MouseEvent) => {
@@ -93,6 +144,7 @@ export function LeftToolbar({ onCursorVariantChange }: LeftToolbarProps) {
 
   return (
     <aside
+      ref={asideRef}
       className="flex w-11 shrink-0 flex-col items-center gap-0.5 border-r border-white/6 py-2 overflow-y-auto"
       style={{ background: bg.page }}
     >
@@ -114,14 +166,19 @@ export function LeftToolbar({ onCursorVariantChange }: LeftToolbarProps) {
 
         // ── Cursor tool gets right-click popup + variant chevron ───────────
         if (isCursor) {
+          const cursorVariantDef = CURSOR_VARIANTS.find(
+            (v): v is NonNullable<typeof v> => v !== null && v.id === cursorVariant
+          );
+          const CursorIcon = cursorVariantDef?.icon ?? Icon;
+
           return (
             <motion.button
               key={tool.id}
               ref={cursorBtnRef}
+              data-tooltip={cursorVariantDef?.label ?? 'Cursor'}
+              aria-label={cursorVariantDef?.label ?? 'Cursor'}
               onClick={() => setActiveTool('cursor')}
               onContextMenu={handleCursorContextMenu}
-              onHoverStart={() => setHoveredTool(tool.id)}
-              onHoverEnd={() => setHoveredTool(null)}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               className="group relative flex h-10 w-10 items-center justify-center rounded"
@@ -143,7 +200,7 @@ export function LeftToolbar({ onCursorVariantChange }: LeftToolbarProps) {
                 />
               )}
 
-              <Icon className="relative z-10 h-6 w-6" />
+              <CursorIcon size={24} />
 
               {/* Variant indicator chevron — 6px triangle at bottom-right */}
               <span
@@ -157,22 +214,6 @@ export function LeftToolbar({ onCursorVariantChange }: LeftToolbarProps) {
                   opacity: 0.6,
                 }}
               />
-
-              {/* Tooltip */}
-              <AnimatePresence>
-                {hoveredTool === tool.id && (
-                  <motion.span
-                    initial={{ opacity: 0, x: -4 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -4 }}
-                    transition={{ duration: 0.12 }}
-                    className="pointer-events-none absolute left-full ml-2.5 z-50 whitespace-nowrap rounded-md border border-white/8 px-2 py-1 font-semibold text-white/80 shadow-xl"
-                    style={{ fontSize: fontSize.xs10, background: bg.surface }}
-                  >
-                    Cursor &middot; Right-click for variants
-                  </motion.span>
-                )}
-              </AnimatePresence>
             </motion.button>
           );
         }
@@ -181,10 +222,9 @@ export function LeftToolbar({ onCursorVariantChange }: LeftToolbarProps) {
         return (
           <motion.button
             key={tool.id}
+            data-tooltip={tool.label}
+            aria-label={tool.label}
             onClick={() => setActiveTool(tool.id)}
-            onHoverStart={() => setHoveredTool(tool.id)}
-            onHoverEnd={() => setHoveredTool(null)}
-            title={tool.label}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             className="group relative flex h-10 w-10 items-center justify-center rounded"
@@ -207,22 +247,6 @@ export function LeftToolbar({ onCursorVariantChange }: LeftToolbarProps) {
             )}
 
             <Icon className="relative z-10 h-6 w-6" />
-
-            {/* Tooltip */}
-            <AnimatePresence>
-              {hoveredTool === tool.id && (
-                <motion.span
-                  initial={{ opacity: 0, x: -4 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -4 }}
-                  transition={{ duration: 0.12 }}
-                  className="pointer-events-none absolute left-full ml-2.5 z-50 whitespace-nowrap rounded-md border border-white/8 px-2 py-1 font-semibold text-white/80 shadow-xl"
-                  style={{ fontSize: fontSize.xs10, background: bg.surface }}
-                >
-                  {tool.label}
-                </motion.span>
-              )}
-            </AnimatePresence>
           </motion.button>
         );
       })}
@@ -300,6 +324,25 @@ export function LeftToolbar({ onCursorVariantChange }: LeftToolbarProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ── Portal tooltip ───────────────────────────────────────────── */}
+      {tooltip &&
+        createPortal(
+          <div
+            role="tooltip"
+            className="pointer-events-none fixed z-[1000] whitespace-nowrap rounded-md border border-white/8 px-2 py-1 font-semibold text-white/80 shadow-xl"
+            style={{
+              top: tooltip.top,
+              left: tooltip.left,
+              transform: 'translateY(-50%)',
+              fontSize: fontSize.xs10,
+              background: bg.surface,
+            }}
+          >
+            {tooltip.text}
+          </div>,
+          document.body
+        )}
     </aside>
   );
 }
