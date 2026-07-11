@@ -524,6 +524,8 @@ class TrendlineRenderer implements IPrimitivePaneRenderer {
         // ── Committed drawings (trendline, ray, horizontal, vertical) ────
         const drawings = this._primitive._drawingsRef.current;
         const selectedId = this._primitive._selectedIdRef.current;
+        const isEraser = this._primitive._cursorVariantRef.current === 'eraser';
+        const hoveredId = isEraser ? this._primitive._hoveredIdRef.current : null;
 
         for (const drawing of drawings) {
           switch (drawing.shape.type) {
@@ -539,7 +541,7 @@ class TrendlineRenderer implements IPrimitivePaneRenderer {
                 drawing.shape.points[0],
                 drawing.shape.points[1],
                 drawing,
-                drawing.id === selectedId,
+                drawing.id === selectedId || drawing.id === hoveredId,
                 drawing.shape.type === 'ray' // extend past B
               );
               break;
@@ -554,7 +556,7 @@ class TrendlineRenderer implements IPrimitivePaneRenderer {
                 series,
                 drawing.shape.points[0],
                 drawing,
-                drawing.id === selectedId
+                drawing.id === selectedId || drawing.id === hoveredId
               );
               break;
             }
@@ -565,10 +567,10 @@ class TrendlineRenderer implements IPrimitivePaneRenderer {
                 hpr,
                 vpr,
                 chart,
-                series,
+                _series,
                 drawing.shape.points[0],
                 drawing,
-                drawing.id === selectedId
+                drawing.id === selectedId || drawing.id === hoveredId
               );
               break;
             }
@@ -584,7 +586,7 @@ class TrendlineRenderer implements IPrimitivePaneRenderer {
                 drawing.shape.points[1],
                 drawing.shape.points[2],
                 drawing,
-                drawing.id === selectedId
+                drawing.id === selectedId || drawing.id === hoveredId
               );
               break;
             }
@@ -598,7 +600,7 @@ class TrendlineRenderer implements IPrimitivePaneRenderer {
                 series,
                 drawing.shape.points,
                 drawing,
-                drawing.id === selectedId
+                drawing.id === selectedId || drawing.id === hoveredId
               );
               break;
             }
@@ -635,16 +637,22 @@ export class DrawingPrimitive implements ISeriesPrimitive<Time> {
   _requestUpdate: (() => void) | null = null;
   _drawingsRef: RefObject<Drawing[]>;
   _selectedIdRef: RefObject<string | null>;
+  _hoveredIdRef: RefObject<string | null>;
+  _cursorVariantRef: RefObject<string>;
   _inProgressRef: RefObject<InProgressDrawing | null>;
   private _paneView: TrendlinePaneView;
 
   constructor(
     drawingsRef: RefObject<Drawing[]>,
     selectedIdRef: RefObject<string | null>,
+    hoveredIdRef: RefObject<string | null>,
+    cursorVariantRef: RefObject<string>,
     inProgressRef: RefObject<InProgressDrawing | null>
   ) {
     this._drawingsRef = drawingsRef;
     this._selectedIdRef = selectedIdRef;
+    this._hoveredIdRef = hoveredIdRef;
+    this._cursorVariantRef = cursorVariantRef;
     this._inProgressRef = inProgressRef;
     this._paneView = new TrendlinePaneView(this);
   }

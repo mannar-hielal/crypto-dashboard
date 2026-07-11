@@ -38,8 +38,12 @@ interface ChartPanelProps {
   activeTool?: string;
   /** Selected line tool variant */
   lineTool?: string;
+  /** Current cursor variant (e.g. 'cross', 'eraser') */
+  cursorVariant?: string;
   /** Called when drawing mode should exit (right-click) */
   onExitDrawingMode?: () => void;
+  /** Called when eraser should exit (right-click while eraser active) */
+  onEraserExit?: () => void;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -83,7 +87,9 @@ export function ChartPanel({
   onChartDestroy,
   activeTool,
   lineTool,
+  cursorVariant,
   onExitDrawingMode,
+  onEraserExit,
 }: ChartPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -115,6 +121,8 @@ export function ChartPanel({
   // Stable refs for primitive (avoids re-creating)
   const drawingsRef = useRef<Drawing[]>(drawings);
   const selectedIdRef = useRef<string | null>(selectedDrawingId);
+  const hoveredIdRef = useRef<string | null>(null);
+  const cursorVariantRef = useRef(cursorVariant);
   const inProgressRef = useRef<InProgressDrawing | null>(null);
   const primitiveRef = useRef<DrawingPrimitive | null>(null);
 
@@ -125,6 +133,9 @@ export function ChartPanel({
   useEffect(() => {
     selectedIdRef.current = selectedDrawingId;
   }, [selectedDrawingId]);
+  useEffect(() => {
+    cursorVariantRef.current = cursorVariant;
+  }, [cursorVariant]);
 
   // ── 1. Create chart once on mount ────────────────────────────────────────
   useEffect(() => {
@@ -171,7 +182,7 @@ export function ChartPanel({
     });
 
     // ── Drawing primitive ──────────────────────────────────────────────────
-    const primitive = new DrawingPrimitive(drawingsRef, selectedIdRef, inProgressRef);
+    const primitive = new DrawingPrimitive(drawingsRef, selectedIdRef, hoveredIdRef, cursorVariantRef, inProgressRef);
     primitiveRef.current = primitive;
     candleRef.current.attachPrimitive(primitive);
 
@@ -258,6 +269,12 @@ export function ChartPanel({
       } else {
         containerRef.current?.removeAttribute('data-drawing-hover');
       }
+      // Track hovered drawing for eraser visual feedback
+      const newHoveredId = (param.hoveredObjectId as string | undefined) ?? null;
+      if (hoveredIdRef.current !== newHoveredId) {
+        hoveredIdRef.current = newHoveredId;
+        primitiveRef.current?.requestUpdate();
+      }
     });
 
     // ── Crosshair subscription: feeds the hover legend ───────────────────────
@@ -341,7 +358,9 @@ export function ChartPanel({
     containerRef,
     activeTool: activeTool ?? '',
     lineTool: lineTool ?? '',
+    cursorVariant: cursorVariant ?? 'crosshair',
     onExitDrawingMode: onExitDrawingMode ?? (() => {}),
+    onEraserExit: onEraserExit ?? (() => {}),
   });
 
   useEffect(() => {

@@ -6,6 +6,7 @@ import { MousePointer2, Type, Pencil, Trash2 } from 'lucide-react';
 import { bg, color, fontSize } from '@/lib/tokens';
 import { CURSOR_VARIANTS, type CursorVariantId } from '@/lib/cursors';
 import { LINE_TOOLS, type LineToolId } from '@/lib/lineTools';
+import { BinToolMenu } from '@/components/drawing/BinToolMenu';
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
 
@@ -22,7 +23,7 @@ const TOOLS: Tool[] = [
   { id: 'text', icon: Type, label: 'Text' },
   { id: 'pencil', icon: Pencil, label: 'Freehand Draw' },
   null,
-  { id: 'clear', icon: Trash2, label: 'Clear All' },
+  { id: 'bin', icon: Trash2, label: 'Remove All' },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -30,17 +31,23 @@ const TOOLS: Tool[] = [
 interface LeftToolbarProps {
   onCursorVariantChange?: (variant: CursorVariantId) => void;
   activeTool?: string;
+  cursorVariant?: CursorVariantId;
   onToolChange?: (toolId: string, lineToolId: string) => void;
+  onBinAction?: () => void;
   lineTool?: LineToolId;
 }
 
 export function LeftToolbar({
   onCursorVariantChange,
   activeTool: activeToolProp,
+  cursorVariant: cursorVariantProp,
   onToolChange,
+  onBinAction,
   lineTool: lineToolProp,
 }: LeftToolbarProps) {
-  const [cursorVariant, setCursorVariant] = useState<CursorVariantId>('cross');
+  // Cursor variant mirrors prop when controlled, falls back to local state
+  const [localCursorVariant, setLocalCursorVariant] = useState<CursorVariantId>('cross');
+  const cursorVariant = cursorVariantProp ?? localCursorVariant;
 
   // Local active tool mirrors prop, falls back to 'cursor' when uncontrolled
   const [localActiveTool, setLocalActiveTool] = useState('cursor');
@@ -71,6 +78,11 @@ export function LeftToolbar({
   const lineMenuRef = useRef<HTMLDivElement>(null);
   const [lineMenuPos, setLineMenuPos] = useState({ left: 0, top: 0 });
 
+  // ── Bin tool right-click menu ──────────────────────────────────────────────
+  const [showBinMenu, setShowBinMenu] = useState(false);
+  const binBtnRef = useRef<HTMLButtonElement>(null);
+  const [binMenuPos, setBinMenuPos] = useState({ left: 0, top: 0 });
+
   function handleLineContextMenu(e: React.MouseEvent) {
     e.preventDefault();
     const rect = lineBtnRef.current?.getBoundingClientRect();
@@ -78,6 +90,15 @@ export function LeftToolbar({
       setLineMenuPos({ left: rect.right + 6, top: rect.top });
     }
     setShowLineMenu((v) => !v);
+  }
+
+  function handleBinContextMenu(e: React.MouseEvent) {
+    e.preventDefault();
+    const rect = binBtnRef.current?.getBoundingClientRect();
+    if (rect) {
+      setBinMenuPos({ left: rect.right + 6, top: rect.top });
+    }
+    setShowBinMenu(true);
   }
 
   function handleLineToolSelect(id: LineToolId) {
@@ -184,7 +205,7 @@ export function LeftToolbar({
   }
 
   function handleCursorVariantSelect(id: CursorVariantId) {
-    setCursorVariant(id);
+    setLocalCursorVariant(id);
     setActiveTool('cursor');
     setShowCursorMenu(false);
     onCursorVariantChange?.(id);
@@ -213,6 +234,7 @@ export function LeftToolbar({
         const isActive = activeTool === tool.id;
         const isCursor = tool.id === 'cursor';
         const isLine = tool.id === 'line';
+        const isBin = tool.id === 'bin';
 
         // ── Cursor tool gets right-click popup + variant chevron ───────────
         if (isCursor) {
@@ -327,6 +349,40 @@ export function LeftToolbar({
                   opacity: 0.6,
                 }}
               />
+            </motion.button>
+          );
+        }
+
+        // ── All other tools ─────────────────────────────────────────────
+        if (isBin) {
+          return (
+            <motion.button
+              key={tool.id}
+              ref={binBtnRef}
+              data-tooltip={tool.label}
+              aria-label={tool.label}
+              onClick={() => onBinAction?.()}
+              onContextMenu={handleBinContextMenu}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="group relative flex h-10 w-10 items-center justify-center rounded"
+              style={{
+                background: isActive ? `${color.purpleDark}20` : 'transparent',
+                color: isActive ? color.purple : color.muted,
+              }}
+            >
+              {isActive && (
+                <motion.span
+                  layoutId="toolbar-active"
+                  className="absolute inset-0 rounded"
+                  style={{
+                    background: `${color.purpleDark}20`,
+                    boxShadow: `0 0 0 1px ${color.purpleDark}40`,
+                  }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                />
+              )}
+              <Icon className="relative z-10 h-6 w-6" />
             </motion.button>
           );
         }
@@ -514,6 +570,9 @@ export function LeftToolbar({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ── Bin tool submenu ──────────────────────────────────────────── */}
+      {showBinMenu && <BinToolMenu position={binMenuPos} onClose={() => setShowBinMenu(false)} />}
 
       {/* ── Portal tooltip ───────────────────────────────────────────── */}
       {tooltip &&

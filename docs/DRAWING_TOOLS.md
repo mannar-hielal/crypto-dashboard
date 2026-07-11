@@ -178,7 +178,7 @@ Draw helpers in `DrawingPrimitive.ts`:
 | Lines         | `line`   | MousePointer2 | Right-click → line tool submenu (6 variants)               |
 | Text          | `text`   | Type          | UI only — not yet wired                                    |
 | Freehand Draw | `pencil` | Pencil        | UI only — not yet wired                                    |
-| Clear All     | `clear`  | Trash2        | Calls `clearAll()`                                         |
+| Bin           | `bin`    | Trash2        | Left-click → remove all; Right-click → submenu options     |
 
 ### Removed Tools
 
@@ -269,13 +269,15 @@ The OHLC overlay in `ChartPanel.tsx:544` is hidden when `inProgressDrawing !== n
 - [x] Per-shape hit-testing: `pointToSegmentDist` (trendline/parallel), `pointToRayDist` (ray, no clamp past B), Y/X proximity (horizontal/vertical)
 - [x] Toolbar position adapts per shape (midpoint for 2-point/3-point, anchor for 1-point)
 - [x] Drawing system test coverage: 65 tests (34 store + 31 coordinates)
+- [x] Undo/redo stack (session-only, depth 50, `Ctrl+Z`/`Ctrl+Shift+Z`)
+- [x] Eraser cursor variant — removes drawings on click (locked drawings included)
+- [x] Bin tool — left-click removes all; right-click submenu with locked-drawings toggle
 
 ## What's UI Only (Not Wired)
 
 - [ ] **Polyline** (`polyline`) — no `ISeriesPrimitive` / multi-point logic
 - [ ] **Text** tool — UI button only
 - [ ] **Freehand Draw** — UI button only
-- [ ] **Eraser** cursor variant — no eraser logic
 
 ## Known Limitations
 
@@ -289,6 +291,71 @@ The OHLC overlay in `ChartPanel.tsx:544` is hidden when `inProgressDrawing !== n
 8. ~~`pointToSegmentDist` duplicated~~ — ✅ Extracted to `drawing/coordinates.ts` along with `pointToRayDist`
 9. ~~Line-body hit-testing logic duplicated 3×~~ — ✅ `hitTestBodies` in `drawing/coordinates.ts` centralises per-shape dispatch
 10. ~~`lineTool` prop is dead input~~ — ✅ Click handler uses `activeToolRef.current` via `PLACEMENT_CONFIGS`
+
+---
+
+## Eraser & Bin Tool Plan
+
+### Feature 1: Eraser Mode (Cursor Variant)
+
+The eraser already exists as a cursor variant in `cursors.tsx` (`CursorVariantId = 'eraser'`, `EraserIcon`, `CURSOR_CSS_MAP.eraser`). It's selectable from the cursor tool's right-click submenu.
+
+**Behavior (TradingView reference):**
+
+| Action                    | Behavior                                  |
+| ------------------------- | ----------------------------------------- |
+| Hover over drawing body   | Eraser cursor, body highlights            |
+| Left-click on drawing     | Remove it (with undo snapshot)            |
+| Left-click on empty space | No-op                                     |
+| Right-click               | Exit eraser mode, restore previous cursor |
+| Escape                    | Exit eraser mode                          |
+
+Locked drawings: Eraser CAN remove them. `isLocked` only prevents drag/handle editing, not eraser deletion.
+
+**No `DrawingPrimitive` changes needed**: `hitTest` already returns body hits for locked drawings (lines 694, 716, 745-751, 782-788, 806-816). Only handle hits are skipped for locked drawings. Since eraser only needs body hits, existing hit test works as-is.
+
+**Changes:**
+
+1. `useDrawingInteraction.ts` — Add `cursorVariant` prop + eraser remove-on-click logic
+2. `ChartPanel.tsx` — Pass `cursorVariant` to hook
+3. `MultiChartArea.tsx` — Pass `cursorVariant` through
+4. `DashboardPage.tsx` — Pass `cursorVariant` to `MultiChartArea`, track variant in `previousToolRef`
+
+### Feature 2: Bin Tool (Toolbar + Right-Click Submenu)
+
+Replaces the existing "Clear All" button. Left-click removes all drawings. Right-click opens submenu.
+
+**Submenu (TradingView reference):**
+
+```
+┌─────────────────────────────────┐
+│  Remove N drawings              │
+├─────────────────────────────────┤
+│  Always remove locked    [toggle]│
+└─────────────────────────────────┘
+```
+
+- "Remove N drawings" — N = total count. Respects the locked toggle.
+- "Always remove locked drawings" — toggle, OFF by default. When OFF, `removeAll` keeps locked drawings. When ON, removes everything.
+
+**Changes:**
+
+1. `drawingStore.ts` — Add `removeAll`, `alwaysRemoveLocked`, `setAlwaysRemoveLocked`
+2. `LeftToolbar.tsx` — Rename `clear` → `bin`, add right-click submenu
+3. `BinToolMenu.tsx` — New file: submenu component
+4. `DashboardPage.tsx` — Handle bin tool click (call `removeAll`, don't switch `activeTool`)
+
+**File Change Summary:**
+
+| File                       | Change                                                                      |
+| -------------------------- | --------------------------------------------------------------------------- |
+| `drawingStore.ts`          | Add `removeAll`, `alwaysRemoveLocked`, `setAlwaysRemoveLocked`              |
+| `useDrawingInteraction.ts` | Add `cursorVariant` prop, eraser remove logic                               |
+| `ChartPanel.tsx`           | Pass `cursorVariant` to hook                                                |
+| `MultiChartArea.tsx`       | Pass `cursorVariant` through                                                |
+| `DashboardPage.tsx`        | Pass `cursorVariant`, handle `bin` tool, track variant in `previousToolRef` |
+| `LeftToolbar.tsx`          | Rename `clear`→`bin`, add right-click submenu                               |
+| `BinToolMenu.tsx`          | **New** — submenu component                                                 |
 
 ---
 

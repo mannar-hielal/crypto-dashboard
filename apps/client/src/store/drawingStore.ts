@@ -47,6 +47,7 @@ export interface DrawingStoreState {
   nextZIndex: number;
   undoStack: UndoSnapshot[];
   redoStack: UndoSnapshot[];
+  alwaysRemoveLocked: boolean;
 }
 
 export interface DrawingStoreActions {
@@ -57,6 +58,8 @@ export interface DrawingStoreActions {
   removeDrawing: (id: string) => void;
   selectDrawing: (id: string | null) => void;
   clearAll: () => void;
+  removeAll: () => void;
+  setAlwaysRemoveLocked: (v: boolean) => void;
   moveDrawing: (id: string, dir: 'front' | 'forward' | 'back' | 'backward') => void;
   cloneDrawing: (id: string, priceOffset?: number) => void;
   undo: () => void;
@@ -115,6 +118,7 @@ export const useDrawingStore = create<DrawingStoreState & DrawingStoreActions>()
       nextZIndex: 1,
       undoStack: [] as UndoSnapshot[],
       redoStack: [] as UndoSnapshot[],
+      alwaysRemoveLocked: false,
 
       addDrawing(d) {
         const id = crypto.randomUUID();
@@ -158,6 +162,24 @@ export const useDrawingStore = create<DrawingStoreState & DrawingStoreActions>()
 
       clearAll() {
         set(() => withUndo(get, { drawings: [], selectedDrawingId: null, nextZIndex: 1 }));
+      },
+
+      removeAll() {
+        const { alwaysRemoveLocked } = get();
+        set((s) => {
+          const remaining = alwaysRemoveLocked
+            ? []
+            : s.drawings.filter((d) => d.isLocked);
+          return withUndo(get, {
+            drawings: remaining,
+            selectedDrawingId: null,
+            ...(remaining.length === 0 ? { nextZIndex: 1 } : {}),
+          });
+        });
+      },
+
+      setAlwaysRemoveLocked(v) {
+        set({ alwaysRemoveLocked: v });
       },
 
       moveDrawing(id, dir) {
@@ -236,7 +258,11 @@ export const useDrawingStore = create<DrawingStoreState & DrawingStoreActions>()
         if (version < 2) return migrateV1toV2(persisted);
         return persisted as { drawings: Drawing[]; nextZIndex: number };
       },
-      partialize: ({ drawings, nextZIndex }) => ({ drawings, nextZIndex }),
+      partialize: ({ drawings, nextZIndex, alwaysRemoveLocked }) => ({
+        drawings,
+        nextZIndex,
+        alwaysRemoveLocked,
+      }),
     }
   )
 );

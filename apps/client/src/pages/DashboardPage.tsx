@@ -11,6 +11,7 @@ import { TradingSoundProvider, useSoundActions } from '@/hooks/TradingSoundConte
 import { useLayoutStore } from '@/store/layoutStore';
 import { useAuthStore } from '@/store/authStore';
 import { usePaperStore } from '@/store/paperStore';
+import { useDrawingStore } from '@/store/drawingStore';
 import { authApi } from '@crypto-dashboard/sdk';
 import { TopBar } from '@/components/dashboard/TopBar';
 import { LeftToolbar } from '@/components/dashboard/LeftToolbar';
@@ -88,6 +89,7 @@ function DashboardInner() {
   const [activeTool, setActiveTool] = useState('cursor');
   const [selectedLineTool, setSelectedLineTool] = useState<LineToolId>('trendline');
   const previousToolRef = useRef({ toolId: 'cursor', lineToolId: 'trendline' as LineToolId });
+  const previousCursorRef = useRef<CursorVariantId>('cross');
 
   function handleToolChange(toolId: string, lineToolId: string) {
     // Store previous tool before switching to a drawing tool
@@ -98,6 +100,10 @@ function DashboardInner() {
     if (LINE_TOOLS.some((t) => t !== null && t.id === toolId)) {
       previousToolRef.current = { toolId: activeTool, lineToolId: selectedLineTool };
     }
+    // Reset cursor variant when switching to a drawing tool so eraser cursor doesn't persist
+    if (toolId !== 'cursor') {
+      setCursorVariant('cross');
+    }
     setActiveTool(toolId);
     setSelectedLineTool(lineToolId as LineToolId);
   }
@@ -107,6 +113,22 @@ function DashboardInner() {
     setActiveTool(toolId);
     setSelectedLineTool(lineToolId);
   }
+
+  function handleBinAction() {
+    useDrawingStore.getState().removeAll();
+  }
+
+  function handleCursorVariantChange(variant: CursorVariantId) {
+    if (variant !== 'eraser') {
+      previousCursorRef.current = variant;
+    }
+    setCursorVariant(variant);
+  }
+
+  function handleEraserExit() {
+    setCursorVariant(previousCursorRef.current);
+  }
+
   const { playProfit, playLoss, playOrderFilled } = useSoundActions();
 
   usePaneFeeds();
@@ -176,7 +198,7 @@ function DashboardInner() {
         )
         .join('\n') +
       '\n[data-dragging="true"] canvas { cursor: grabbing !important; }' +
-      '\n[data-drawing-hover] canvas { cursor: unset !important; }';
+      '\n[data-drawing-hover]:not([data-cursor="eraser"]) canvas { cursor: unset !important; }';
 
     const style = document.createElement('style');
     style.id = 'chart-cursor-override';
@@ -338,10 +360,12 @@ function DashboardInner() {
       {/* ── Main content row ──────────────────────────────────────────────── */}
       <div className="flex min-h-0 flex-1">
         <LeftToolbar
-          onCursorVariantChange={setCursorVariant}
+          onCursorVariantChange={handleCursorVariantChange}
           activeTool={activeTool}
+          cursorVariant={cursorVariant}
           lineTool={selectedLineTool}
           onToolChange={handleToolChange}
+          onBinAction={handleBinAction}
         />
 
         {/* Center column: chart on top + paper trading panel on bottom.
@@ -360,7 +384,9 @@ function DashboardInner() {
             <MultiChartArea
               activeTool={activeTool}
               lineTool={selectedLineTool}
+              cursorVariant={cursorVariant}
               onExitDrawingMode={handleExitDrawingMode}
+              onEraserExit={handleEraserExit}
             />
           </motion.div>
 

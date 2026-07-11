@@ -94,10 +94,18 @@ function ResizeSplitter({ axis, position, splitterRef, onPointerDown }: Splitter
 interface MultiChartAreaProps {
   activeTool?: string;
   lineTool?: string;
+  cursorVariant?: string;
   onExitDrawingMode?: () => void;
+  onEraserExit?: () => void;
 }
 
-export function MultiChartArea({ activeTool, lineTool, onExitDrawingMode }: MultiChartAreaProps) {
+export function MultiChartArea({
+  activeTool,
+  lineTool,
+  cursorVariant,
+  onExitDrawingMode,
+  onEraserExit,
+}: MultiChartAreaProps) {
   const layout = useLayoutStore((s) => s.layout);
   const activePane = useLayoutStore((s) => s.activePane);
   const syncOptions = useLayoutStore((s) => s.syncOptions);
@@ -370,7 +378,9 @@ export function MultiChartArea({ activeTool, lineTool, onExitDrawingMode }: Mult
                 onChartDestroy={() => handleChartDestroy(paneIndex)}
                 activeTool={activeTool}
                 lineTool={lineTool}
+                cursorVariant={cursorVariant}
                 onExitDrawingMode={onExitDrawingMode}
+                onEraserExit={onEraserExit}
               />
 
               {isActive && paneCount > 1 && (

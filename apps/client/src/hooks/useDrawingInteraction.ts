@@ -24,7 +24,9 @@ interface UseDrawingInteractionOptions {
   containerRef: React.RefObject<HTMLDivElement | null>;
   activeTool: string;
   lineTool: string;
+  cursorVariant: string;
   onExitDrawingMode: () => void;
+  onEraserExit: () => void;
 }
 
 interface UseDrawingInteractionResult {
@@ -105,7 +107,9 @@ export function useDrawingInteraction({
   containerRef,
   activeTool,
   lineTool,
+  cursorVariant,
   onExitDrawingMode,
+  onEraserExit,
 }: UseDrawingInteractionOptions): UseDrawingInteractionResult {
   const stateRef = useRef<DrawState>('IDLE');
 
@@ -117,11 +121,13 @@ export function useDrawingInteraction({
   // Refs for latest activeTool/lineTool for use in event handlers
   const activeToolRef = useRef(activeTool);
   const lineToolRef = useRef(lineTool);
+  const cursorVariantRef = useRef(cursorVariant);
 
   useEffect(() => {
     activeToolRef.current = activeTool;
     lineToolRef.current = lineTool;
-  }, [activeTool, lineTool]);
+    cursorVariantRef.current = cursorVariant;
+  }, [activeTool, lineTool, cursorVariant]);
 
   // ── Enter/exit drawing mode ────────────────────────────────────
   useEffect(() => {
@@ -150,7 +156,11 @@ export function useDrawingInteraction({
 
       // Cursor mode: only select existing drawings
       if (activeToolRef.current === 'cursor') {
-        if (hitId) {
+        if (cursorVariantRef.current === 'eraser') {
+          if (hitId) {
+            store.removeDrawing(hitId);
+          }
+        } else if (hitId) {
           store.selectDrawing(hitId);
         }
         return;
@@ -348,6 +358,7 @@ export function useDrawingInteraction({
 
     const onPointerDown = (e: PointerEvent) => {
       if (!isInteractive()) return;
+      if (cursorVariantRef.current === 'eraser') return;
       const drawings = useDrawingStore.getState().drawings;
 
       // Handle drag (resize) — both modes
@@ -488,6 +499,13 @@ export function useDrawingInteraction({
     if (!container) return;
 
     const handleContextMenu = (e: MouseEvent) => {
+      // Eraser: right-click exits eraser mode
+      if (cursorVariantRef.current === 'eraser') {
+        e.preventDefault();
+        onEraserExit();
+        return;
+      }
+
       if (!isLineTool(activeToolRef.current)) return;
       e.preventDefault();
 
