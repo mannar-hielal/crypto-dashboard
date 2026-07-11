@@ -15,6 +15,7 @@ import { authApi } from '@crypto-dashboard/sdk';
 import { TopBar } from '@/components/dashboard/TopBar';
 import { LeftToolbar } from '@/components/dashboard/LeftToolbar';
 import { CURSOR_CSS_MAP, type CursorVariantId } from '@/lib/cursors';
+import { LINE_TOOLS, type LineToolId } from '@/lib/lineTools';
 import { MultiChartArea } from '@/components/dashboard/MultiChartArea';
 import { OrderAccountManagementPanel } from '@/components/dashboard/OrderAccountManagementPanel';
 import { TickerBar } from '@/components/dashboard/TickerBar';
@@ -84,6 +85,28 @@ export function DashboardPage() {
 
 function DashboardInner() {
   const [cursorVariant, setCursorVariant] = useState<CursorVariantId>('cross');
+  const [activeTool, setActiveTool] = useState('cursor');
+  const [selectedLineTool, setSelectedLineTool] = useState<LineToolId>('trendline');
+  const previousToolRef = useRef({ toolId: 'cursor', lineToolId: 'trendline' as LineToolId });
+
+  function handleToolChange(toolId: string, lineToolId: string) {
+    // Store previous tool before switching to a drawing tool
+    if (toolId !== 'cursor' && !LINE_TOOLS.some((t) => t !== null && t.id === toolId)) {
+      previousToolRef.current = { toolId: activeTool, lineToolId: selectedLineTool };
+    }
+    // If switching to a line tool, store previous tool
+    if (LINE_TOOLS.some((t) => t !== null && t.id === toolId)) {
+      previousToolRef.current = { toolId: activeTool, lineToolId: selectedLineTool };
+    }
+    setActiveTool(toolId);
+    setSelectedLineTool(lineToolId as LineToolId);
+  }
+
+  function handleExitDrawingMode() {
+    const { toolId, lineToolId } = previousToolRef.current;
+    setActiveTool(toolId);
+    setSelectedLineTool(lineToolId);
+  }
   const { playProfit, playLoss, playOrderFilled } = useSoundActions();
 
   usePaneFeeds();
@@ -151,7 +174,9 @@ function DashboardInner() {
           ([variant, cursorVal]) =>
             `[data-cursor="${variant}"] canvas { cursor: ${cursorVal} !important; }`
         )
-        .join('\n') + '\n[data-dragging="true"] canvas { cursor: grabbing !important; }';
+        .join('\n') +
+      '\n[data-dragging="true"] canvas { cursor: grabbing !important; }' +
+      '\n[data-drawing-hover] canvas { cursor: unset !important; }';
 
     const style = document.createElement('style');
     style.id = 'chart-cursor-override';
@@ -312,7 +337,12 @@ function DashboardInner() {
 
       {/* ── Main content row ──────────────────────────────────────────────── */}
       <div className="flex min-h-0 flex-1">
-        <LeftToolbar onCursorVariantChange={setCursorVariant} />
+        <LeftToolbar
+          onCursorVariantChange={setCursorVariant}
+          activeTool={activeTool}
+          lineTool={selectedLineTool}
+          onToolChange={handleToolChange}
+        />
 
         {/* Center column: chart on top + paper trading panel on bottom.
             By making this a flex-col sibling of TradingPanel, the TradingPanel
@@ -322,11 +352,16 @@ function DashboardInner() {
           <motion.div
             ref={chartAreaRef}
             data-cursor={cursorVariant}
+            data-drawing-active={activeTool === 'line' ? 'true' : undefined}
             className="relative min-h-0 min-w-0 overflow-hidden"
             animate={{ flex: isMaximized ? '0 0 0px' : '1 1 0%' }}
             transition={{ type: 'spring', stiffness: 340, damping: 34 }}
           >
-            <MultiChartArea />
+            <MultiChartArea
+              activeTool={activeTool}
+              lineTool={selectedLineTool}
+              onExitDrawingMode={handleExitDrawingMode}
+            />
           </motion.div>
 
           {/* Paper trading panel.

@@ -2,20 +2,10 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import type { ElementType } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  MousePointer2,
-  Crosshair,
-  TrendingUp,
-  Minus,
-  ArrowUpRight,
-  Square,
-  Triangle,
-  Type,
-  Pencil,
-  Trash2,
-} from 'lucide-react';
+import { MousePointer2, Crosshair, Square, Triangle, Type, Pencil, Trash2 } from 'lucide-react';
 import { bg, color, fontSize } from '@/lib/tokens';
 import { CURSOR_VARIANTS, type CursorVariantId } from '@/lib/cursors';
+import { LINE_TOOLS, type LineToolId } from '@/lib/lineTools';
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
 // null = visual separator between groups
@@ -30,9 +20,7 @@ const TOOLS: Tool[] = [
   { id: 'cursor', icon: MousePointer2, label: 'Cursor' },
   { id: 'crosshair', icon: Crosshair, label: 'Crosshair' },
   null,
-  { id: 'trendline', icon: TrendingUp, label: 'Trend Line' },
-  { id: 'hline', icon: Minus, label: 'Horizontal Line' },
-  { id: 'ray', icon: ArrowUpRight, label: 'Ray' },
+  { id: 'line', icon: MousePointer2, label: 'Lines' },
   { id: 'rectangle', icon: Square, label: 'Rectangle' },
   { id: 'fib', icon: Triangle, label: 'Fibonacci' },
   null,
@@ -46,16 +34,63 @@ const TOOLS: Tool[] = [
 
 interface LeftToolbarProps {
   onCursorVariantChange?: (variant: CursorVariantId) => void;
+  activeTool?: string;
+  onToolChange?: (toolId: string, lineToolId: string) => void;
+  lineTool?: LineToolId;
 }
 
-export function LeftToolbar({ onCursorVariantChange }: LeftToolbarProps) {
-  const [activeTool, setActiveTool] = useState('cursor');
+export function LeftToolbar({
+  onCursorVariantChange,
+  activeTool: activeToolProp,
+  onToolChange,
+  lineTool: lineToolProp,
+}: LeftToolbarProps) {
   const [cursorVariant, setCursorVariant] = useState<CursorVariantId>('cross');
+
+  // Local active tool mirrors prop, falls back to 'cursor' when uncontrolled
+  const [localActiveTool, setLocalActiveTool] = useState('cursor');
+  const activeTool = activeToolProp ?? localActiveTool;
+  const setActiveTool = useCallback(
+    (id: string) => {
+      if (activeToolProp === undefined) setLocalActiveTool(id);
+    },
+    [activeToolProp]
+  );
   const [showCursorMenu, setShowCursorMenu] = useState(false);
   const asideRef = useRef<HTMLElement>(null);
   const cursorBtnRef = useRef<HTMLButtonElement>(null);
   const cursorMenuRef = useRef<HTMLDivElement>(null);
   const [menuPos, setMenuPos] = useState({ left: 0, top: 0 });
+
+  // ── Line drawing tool ──────────────────────────────────────────────────────
+  const [localLineTool, setLocalLineTool] = useState<LineToolId>('trendline');
+  const lineTool = lineToolProp ?? localLineTool;
+  const setLineTool = useCallback(
+    (id: LineToolId) => {
+      if (lineToolProp === undefined) setLocalLineTool(id);
+    },
+    [lineToolProp]
+  );
+  const [showLineMenu, setShowLineMenu] = useState(false);
+  const lineBtnRef = useRef<HTMLButtonElement>(null);
+  const lineMenuRef = useRef<HTMLDivElement>(null);
+  const [lineMenuPos, setLineMenuPos] = useState({ left: 0, top: 0 });
+
+  function handleLineContextMenu(e: React.MouseEvent) {
+    e.preventDefault();
+    const rect = lineBtnRef.current?.getBoundingClientRect();
+    if (rect) {
+      setLineMenuPos({ left: rect.right + 6, top: rect.top });
+    }
+    setShowLineMenu((v) => !v);
+  }
+
+  function handleLineToolSelect(id: LineToolId) {
+    setLineTool(id);
+    setActiveTool(id);
+    setShowLineMenu(false);
+    onToolChange?.(id, id);
+  }
 
   // ── Portal-based tooltip (TradingView data-tooltip pattern) ─────────
   const [tooltip, setTooltip] = useState<{
@@ -126,6 +161,24 @@ export function LeftToolbar({ onCursorVariantChange }: LeftToolbarProps) {
     return () => document.removeEventListener('mousedown', handleMousedown);
   }, [showCursorMenu, handleMousedown]);
 
+  const handleLineMousedown = useCallback((e: MouseEvent) => {
+    if (
+      lineMenuRef.current &&
+      !lineMenuRef.current.contains(e.target as Node) &&
+      lineBtnRef.current &&
+      !lineBtnRef.current.contains(e.target as Node)
+    ) {
+      setShowLineMenu(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showLineMenu) {
+      document.addEventListener('mousedown', handleLineMousedown);
+    }
+    return () => document.removeEventListener('mousedown', handleLineMousedown);
+  }, [showLineMenu, handleLineMousedown]);
+
   function handleCursorContextMenu(e: React.MouseEvent) {
     e.preventDefault();
     const rect = cursorBtnRef.current?.getBoundingClientRect();
@@ -140,6 +193,7 @@ export function LeftToolbar({ onCursorVariantChange }: LeftToolbarProps) {
     setActiveTool('cursor');
     setShowCursorMenu(false);
     onCursorVariantChange?.(id);
+    onToolChange?.('cursor', lineTool);
   }
 
   return (
@@ -163,6 +217,7 @@ export function LeftToolbar({ onCursorVariantChange }: LeftToolbarProps) {
         const Icon = tool.icon;
         const isActive = activeTool === tool.id;
         const isCursor = tool.id === 'cursor';
+        const isLine = tool.id === 'line';
 
         // ── Cursor tool gets right-click popup + variant chevron ───────────
         if (isCursor) {
@@ -177,7 +232,10 @@ export function LeftToolbar({ onCursorVariantChange }: LeftToolbarProps) {
               ref={cursorBtnRef}
               data-tooltip={cursorVariantDef?.label ?? 'Cursor'}
               aria-label={cursorVariantDef?.label ?? 'Cursor'}
-              onClick={() => setActiveTool('cursor')}
+              onClick={() => {
+                setActiveTool('cursor');
+                onToolChange?.('cursor', lineTool);
+              }}
               onContextMenu={handleCursorContextMenu}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
@@ -218,13 +276,76 @@ export function LeftToolbar({ onCursorVariantChange }: LeftToolbarProps) {
           );
         }
 
+        // ── Line tool gets right-click popup + variant chevron ────────────
+        if (isLine) {
+          const lineToolDef = LINE_TOOLS.find(
+            (v): v is NonNullable<typeof v> => v !== null && v.id === lineTool
+          );
+          const LineIcon = lineToolDef?.icon ?? Icon;
+          const lineToolActive = LINE_TOOLS.some(
+            (v): v is NonNullable<typeof v> => v !== null && v.id === activeTool
+          );
+
+          return (
+            <motion.button
+              key={tool.id}
+              ref={lineBtnRef}
+              data-tooltip="Lines"
+              aria-label={lineToolDef?.label ?? 'Lines'}
+              onClick={() => {
+                setActiveTool(lineTool);
+                onToolChange?.(lineTool, lineTool);
+              }}
+              onContextMenu={handleLineContextMenu}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="group relative flex h-10 w-10 items-center justify-center rounded"
+              style={{
+                background: lineToolActive ? `${color.purpleDark}20` : 'transparent',
+                color: lineToolActive ? color.purple : color.muted,
+              }}
+            >
+              {/* Active glow ring */}
+              {lineToolActive && (
+                <motion.span
+                  layoutId="toolbar-active"
+                  className="absolute inset-0 rounded"
+                  style={{
+                    background: `${color.purpleDark}20`,
+                    boxShadow: `0 0 0 1px ${color.purpleDark}40`,
+                  }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                />
+              )}
+
+              <LineIcon size={24} />
+
+              {/* Variant indicator chevron — 6px triangle at bottom-right */}
+              <span
+                className="absolute bottom-0.5 right-0.5 z-10"
+                style={{
+                  width: 0,
+                  height: 0,
+                  borderLeft: '6px solid transparent',
+                  borderRight: '6px solid transparent',
+                  borderTop: '6px solid currentColor',
+                  opacity: 0.6,
+                }}
+              />
+            </motion.button>
+          );
+        }
+
         // ── All other tools ─────────────────────────────────────────────
         return (
           <motion.button
             key={tool.id}
             data-tooltip={tool.label}
             aria-label={tool.label}
-            onClick={() => setActiveTool(tool.id)}
+            onClick={() => {
+              setActiveTool(tool.id);
+              onToolChange?.(tool.id, lineTool);
+            }}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             className="group relative flex h-10 w-10 items-center justify-center rounded"
@@ -285,6 +406,80 @@ export function LeftToolbar({ onCursorVariantChange }: LeftToolbarProps) {
                 <button
                   key={variant.id}
                   onClick={() => handleCursorVariantSelect(variant.id)}
+                  className="flex w-full items-center gap-2.5 px-2 py-1.5 text-left transition-colors"
+                  style={{
+                    background: isSelected ? `${color.purpleDark}20` : 'transparent',
+                    color: isSelected ? color.purple : color.muted,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.background = `${color.white}08`;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.background = 'transparent';
+                    }
+                  }}
+                >
+                  <VariantIcon size={22} />
+                  <span className="flex-1 text-xs font-medium">{variant.label}</span>
+                  {isSelected && (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </button>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Line variant popup menu ────────────────────────────────────── */}
+      <AnimatePresence>
+        {showLineMenu && (
+          <motion.div
+            ref={lineMenuRef}
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.12 }}
+            className="fixed z-50 w-44 overflow-hidden rounded-md border border-white/8 py-1 shadow-xl"
+            style={{
+              left: lineMenuPos.left,
+              top: lineMenuPos.top,
+              background: bg.panel,
+            }}
+          >
+            {LINE_TOOLS.map((variant, idx) => {
+              if (variant === null) {
+                return (
+                  <div
+                    key={`div-${idx}`}
+                    className="mx-2 my-1 h-px rounded-full"
+                    style={{ background: `color-mix(in srgb, ${color.white} 8%, transparent)` }}
+                  />
+                );
+              }
+
+              const VariantIcon = variant.icon;
+              const isSelected = lineTool === variant.id;
+
+              return (
+                <button
+                  key={variant.id}
+                  onClick={() => handleLineToolSelect(variant.id)}
                   className="flex w-full items-center gap-2.5 px-2 py-1.5 text-left transition-colors"
                   style={{
                     background: isSelected ? `${color.purpleDark}20` : 'transparent',

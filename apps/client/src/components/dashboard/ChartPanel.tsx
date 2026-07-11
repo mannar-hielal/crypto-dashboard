@@ -10,10 +10,16 @@ import {
 } from 'lightweight-charts';
 import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts';
 import { useStore } from 'zustand';
+import { createPortal } from 'react-dom';
 import { paneStores } from '@/store/paneStore';
 import { calcEMA, calcVWAP, calcMACD } from '@/lib/indicators';
 import { bg, color, chart as chartColors, font, fontSize } from '@/lib/tokens';
 import { INTERVAL_BAR_SPACING, type Interval } from '@/lib/markets';
+import { DrawingPrimitive } from '@/lib/drawing/DrawingPrimitive';
+import { useDrawingInteraction } from '@/hooks/useDrawingInteraction';
+import { useDrawingStore } from '@/store/drawingStore';
+import { DrawingPropertiesMenu } from '@/components/drawing/DrawingPropertiesMenu';
+import type { Drawing, InProgressDrawing } from '@/lib/drawing/types';
 
 const CHART_BG = chartColors.bg;
 
@@ -22,19 +28,18 @@ const CHART_BG = chartColors.bg;
 interface ChartPanelProps {
   /** Which pane store to read data from (0–3) */
   paneIndex: 0 | 1 | 2 | 3;
-  /**
-   * Current interval — used to set the TradingView-matched initial bar
-   * spacing on first load and after every symbol/interval change.
-   */
+  /** Current interval — used to set the TradingView-matched initial bar spacing on first load */
   interval: Interval;
-  /**
-   * Called once when the lightweight-charts instance is ready.
-   * Receives both the chart API and the primary candlestick series so that
-   * MultiChartArea can use setCrosshairPosition (v5 API).
-   */
+  /** Called once when the lightweight-charts instance is ready */
   onChartReady?: (chart: IChartApi, series: ISeriesApi<'Candlestick'>) => void;
-  /** Called when the chart is destroyed (pane unmounts) */
+  /** Called when the chart is destroyed */
   onChartDestroy?: () => void;
+  /** Active drawing tool */
+  activeTool?: string;
+  /** Selected line tool variant */
+  lineTool?: string;
+  /** Called when drawing mode should exit (right-click) */
+  onExitDrawingMode?: () => void;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -71,13 +76,21 @@ function toUTC(ms: number): UTCTimestamp {
   return Math.floor(ms / 1000) as UTCTimestamp;
 }
 
-export function ChartPanel({ paneIndex, interval, onChartReady, onChartDestroy }: ChartPanelProps) {
+export function ChartPanel({
+  paneIndex,
+  interval,
+  onChartReady,
+  onChartDestroy,
+  activeTool,
+  lineTool,
+  onExitDrawingMode,
+}: ChartPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const prevLenRef = useRef(0); // tracks first-load to trigger scrollToRealTime()
+  const prevLenRef = useRef(0);
   const rafRef = useRef<number | undefined>(undefined);
 
-  // ── Series refs (created once, updated on every bars change) ─────────────
+  // ── Series refs ──────────────────────────────────────────────────────────
   const candleRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const ema9Ref = useRef<ISeriesApi<'Line'> | null>(null);
   const ema20Ref = useRef<ISeriesApi<'Line'> | null>(null);
@@ -87,20 +100,31 @@ export function ChartPanel({ paneIndex, interval, onChartReady, onChartDestroy }
   const macdLineRef = useRef<ISeriesApi<'Line'> | null>(null);
   const signalRef = useRef<ISeriesApi<'Line'> | null>(null);
 
-  // Read bars from this pane's store
   const bars = useStore(paneStores[paneIndex], (s) => s.bars);
 
-  // Tracks whether the chart/indicator series have been created so the data
-  // effect can retry its push when state updates arrive before the series
-  // refs are initialised (edge case on very fast first data).
   const chartReadyRef = useRef(false);
-
-  // Tracks the last-pushed interval so that when the user changes interval we
-  // can keep the old candles visible instead of flushing to a blank canvas.
   const prevIntervalRef = useRef(interval);
 
   // ── Hover legend state ───────────────────────────────────────────────────
   const [hoverData, setHoverData] = useState<LegendData | null>(null);
+
+  // ── Drawing engine ──────────────────────────────────────────────────────
+  const drawings = useDrawingStore((s) => s.drawings);
+  const selectedDrawingId = useDrawingStore((s) => s.selectedDrawingId);
+
+  // Stable refs for primitive (avoids re-creating)
+  const drawingsRef = useRef<Drawing[]>(drawings);
+  const selectedIdRef = useRef<string | null>(selectedDrawingId);
+  const inProgressRef = useRef<InProgressDrawing | null>(null);
+  const primitiveRef = useRef<DrawingPrimitive | null>(null);
+
+  // Sync refs with latest values (not during render)
+  useEffect(() => {
+    drawingsRef.current = drawings;
+  }, [drawings]);
+  useEffect(() => {
+    selectedIdRef.current = selectedDrawingId;
+  }, [selectedDrawingId]);
 
   // ── 1. Create chart once on mount ────────────────────────────────────────
   useEffect(() => {
@@ -145,6 +169,11 @@ export function ChartPanel({ paneIndex, interval, onChartReady, onChartDestroy }
       wickUpColor: chartColors.candleUp,
       wickDownColor: chartColors.candleDown,
     });
+
+    // ── Drawing primitive ──────────────────────────────────────────────────
+    const primitive = new DrawingPrimitive(drawingsRef, selectedIdRef, inProgressRef);
+    primitiveRef.current = primitive;
+    candleRef.current.attachPrimitive(primitive);
 
     // ── Pane 0: EMA 9 — silver/gray ─────────────────────────────────────────
     ema9Ref.current = chart.addSeries(LineSeries, {
@@ -222,6 +251,15 @@ export function ChartPanel({ paneIndex, interval, onChartReady, onChartDestroy }
       1
     );
 
+    // ── Drawing hover detection ──────────────────────────────────────────────
+    chart.subscribeCrosshairMove((param) => {
+      if (param.hoveredObjectId) {
+        containerRef.current?.setAttribute('data-drawing-hover', 'true');
+      } else {
+        containerRef.current?.removeAttribute('data-drawing-hover');
+      }
+    });
+
     // ── Crosshair subscription: feeds the hover legend ───────────────────────
     chart.subscribeCrosshairMove((param) => {
       if (!param.time || !param.point || !candleRef.current) {
@@ -285,12 +323,86 @@ export function ChartPanel({ paneIndex, interval, onChartReady, onChartDestroy }
       chartReadyRef.current = false;
       if (rafRef.current !== undefined) cancelAnimationFrame(rafRef.current);
       ro.disconnect();
+      if (candleRef.current && primitiveRef.current) {
+        candleRef.current.detachPrimitive(primitiveRef.current);
+      }
+      primitiveRef.current = null;
       chart.remove();
       chartRef.current = null;
       onChartDestroy?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // create once
+
+  // ── 3. Wire drawing interaction hook ──────────────────────────────────────
+  const { inProgressDrawing } = useDrawingInteraction({
+    chartRef,
+    seriesRef: candleRef,
+    containerRef,
+    activeTool: activeTool ?? '',
+    lineTool: lineTool ?? '',
+    onExitDrawingMode: onExitDrawingMode ?? (() => {}),
+  });
+
+  useEffect(() => {
+    inProgressRef.current = inProgressDrawing;
+  }, [inProgressDrawing]);
+
+  // ── 4. Request primitive redraw when drawing data changes ──────────────────
+  useEffect(() => {
+    primitiveRef.current?.requestUpdate();
+  }, [drawings, selectedDrawingId, inProgressDrawing]);
+
+  // ── 5. Compute toolbar position for selected drawing ──────────────────────
+  const [toolbarPos, setToolbarPos] = useState<{ x: number; y: number } | null>(null);
+  const [viewportVersion, setViewportVersion] = useState(0);
+
+  // Subscribe to viewport changes to reposition toolbar
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+
+    const handler = () => setViewportVersion((v) => v + 1);
+    chart.timeScale().subscribeVisibleTimeRangeChange(handler);
+    return () => chart.timeScale().unsubscribeVisibleTimeRangeChange(handler);
+  }, []);
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!selectedDrawingId || !chartRef.current || !candleRef.current) {
+      setToolbarPos(null);
+      return;
+    }
+    const drawing = drawings.find((d) => d.id === selectedDrawingId);
+    if (!drawing || drawing.points.length < 2) {
+      setToolbarPos(null);
+      return;
+    }
+
+    const x1 = chartRef.current.timeScale().timeToCoordinate(drawing.points[0].time);
+    const y1 = candleRef.current.priceToCoordinate(drawing.points[0].price);
+    const x2 = chartRef.current.timeScale().timeToCoordinate(drawing.points[1].time);
+    const y2 = candleRef.current.priceToCoordinate(drawing.points[1].price);
+    if (x1 === null || y1 === null || x2 === null || y2 === null) {
+      setToolbarPos(null);
+      return;
+    }
+
+    const midX = (x1 + x2) / 2;
+    const minY = Math.min(y1, y2);
+
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    if (!containerRect) {
+      setToolbarPos(null);
+      return;
+    }
+
+    setToolbarPos({
+      x: containerRect.left + midX,
+      y: containerRect.top + minY - 10,
+    });
+  }, [selectedDrawingId, drawings, viewportVersion]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // ── 2. Push data whenever bars changes ───────────────────────────────────
   useEffect(() => {
@@ -429,7 +541,7 @@ export function ChartPanel({ paneIndex, interval, onChartReady, onChartDestroy }
       <div ref={containerRef} className="h-full w-full" />
 
       {/* ── Hover legend ─────────────────────────────────────────────────── */}
-      {hoverData && (
+      {hoverData && !inProgressDrawing && (
         <div
           className="pointer-events-none absolute left-3 top-3 z-10 rounded-lg border border-white/6 px-3 py-2 backdrop-blur-md"
           style={{ background: `${bg.page}e6` }}
@@ -523,6 +635,38 @@ export function ChartPanel({ paneIndex, interval, onChartReady, onChartDestroy }
           </div>
         </div>
       )}
+
+      {/* ── Floating properties toolbar for selected drawing ──────────────── */}
+      {selectedDrawingId &&
+        toolbarPos &&
+        (() => {
+          const selectedDrawing = drawings.find((d) => d.id === selectedDrawingId);
+          if (!selectedDrawing) return null;
+          return createPortal(
+            <DrawingPropertiesMenu
+              drawing={selectedDrawing}
+              position={toolbarPos}
+              onUpdate={(id, updates) => useDrawingStore.getState().updateDrawing(id, updates)}
+              onRemove={(id) => useDrawingStore.getState().removeDrawing(id)}
+              onClose={() => useDrawingStore.getState().selectDrawing(null)}
+              onClone={(drawing) => {
+                let priceOffset: number | undefined;
+                if (candleRef.current && drawing.points.length > 0) {
+                  const y = candleRef.current.priceToCoordinate(drawing.points[0].price);
+                  if (y !== null) {
+                    const newPrice = candleRef.current.coordinateToPrice(y + 32);
+                    if (newPrice !== null) {
+                      priceOffset = newPrice - drawing.points[0].price;
+                    }
+                  }
+                }
+                useDrawingStore.getState().cloneDrawing(drawing.id, priceOffset);
+              }}
+              onReorder={(id, dir) => useDrawingStore.getState().moveDrawing(id, dir)}
+            />,
+            document.body
+          );
+        })()}
     </div>
   );
 }
