@@ -3,13 +3,13 @@
 import { useEffect, useRef, useState } from 'react';
 import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts';
 import { useDrawingStore } from '@/store/drawingStore';
-import { LINE_TOOLS } from '@/lib/lineTools';
-import type { Drawing, DrawingPoint, InProgressDrawing } from '@/lib/drawing/types';
+import { LINE_TOOLS, type LineToolId } from '@/lib/lineTools';
+import type { Drawing, DrawingPoint, InProgressDrawing, DrawingType } from '@/lib/drawing/types';
 import { hitTestBodies } from '@/lib/drawing/coordinates';
 
 // ─── Types ─────────────────────────────────────────────────────────
 
-type DrawState = 'IDLE' | 'DRAWING' | 'PLACING_A' | 'DRAGGING_HANDLE' | 'DRAGGING_DRAWING';
+type DrawState = 'IDLE' | 'DRAWING' | 'PLACING' | 'DRAGGING_HANDLE' | 'DRAGGING_DRAWING';
 
 interface DragState {
   drawingId: string;
@@ -31,8 +31,31 @@ interface UseDrawingInteractionResult {
   inProgressDrawing: InProgressDrawing | null;
 }
 
+// ─── Placement config per tool ──────────────────────────────────────
+//
+// `totalPoints` is how many clicks to commit. 0 = open-ended (not used in P2).
+// `finishOn` can be 'click' (commit on the Nth click) or 'dblclick' (P3).
+
+interface PlacementConfig {
+  totalPoints: number;
+  finishOn: 'click' | 'dblclick';
+}
+
+const PLACEMENT_CONFIGS: Partial<Record<LineToolId, PlacementConfig>> = {
+  trendline: { totalPoints: 2, finishOn: 'click' },
+  horizontal: { totalPoints: 1, finishOn: 'click' },
+  vertical: { totalPoints: 1, finishOn: 'click' },
+  ray: { totalPoints: 2, finishOn: 'click' },
+  parallel: { totalPoints: 3, finishOn: 'click' },
+  polyline: { totalPoints: 0, finishOn: 'dblclick' },
+};
+
 function isLineTool(toolId: string): boolean {
   return LINE_TOOLS.some((t): t is NonNullable<typeof t> => t !== null && t.id === toolId);
+}
+
+function getPlacementConfig(toolId: string): PlacementConfig | undefined {
+  return PLACEMENT_CONFIGS[toolId as LineToolId];
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────
@@ -136,6 +159,19 @@ export function useDrawingInteraction({
       // Non-line-tool modes: no drawing interaction
       if (!isLineTool(activeToolRef.current)) return;
 
+      // Get placement config — if the tool isn't configured yet, bail.
+      const config = getPlacementConfig(activeToolRef.current);
+      if (!config) return;
+
+      // Capture the click point (used in all branches below)
+      if (!param.time || !param.point) return;
+      const price = series.coordinateToPrice(param.point.y);
+      if (price === null) return;
+      const point: DrawingPoint = {
+        time: param.time as UTCTimestamp,
+        price,
+      };
+
       if (stateRef.current === 'DRAWING') {
         if (hitId) {
           store.selectDrawing(hitId);
@@ -155,44 +191,59 @@ export function useDrawingInteraction({
           }
         }
 
-        // Only trendline placement is implemented (2-click flow).
-        // Horizontal/vertical (1-click), parallel (3-click), polyline (N-click)
-        // will be wired in subsequent phases.
-        if (activeToolRef.current !== 'trendline') return;
+        // 1-click tools (horizontal, vertical): place immediately on the click
+        if (config.totalPoints === 1) {
+          const toolId = activeToolRef.current as DrawingType;
+          const newId = store.addDrawing({
+            shape: { type: toolId, points: [point] },
+          });
+          store.selectDrawing(newId);
+          // Stay in DRAWING — user can place more or click elsewhere
+          return;
+        }
 
-        if (!param.time || !param.point) return;
-        const price = series.coordinateToPrice(param.point.y);
-        if (price === null) return;
-
-        const point: DrawingPoint = {
-          time: param.time as UTCTimestamp,
-          price,
+        // Multi-click tools (trendline 2, ray 2, parallel 3 future): start PLACING
+        inProgressRef.current = {
+          type: activeToolRef.current as DrawingType,
+          points: [point],
+          hoverPoint: null,
         };
-        inProgressRef.current = { type: 'trendline', points: [point], hoverPoint: null };
         setInProgressDrawing(inProgressRef.current);
-        stateRef.current = 'PLACING_A';
+        stateRef.current = 'PLACING';
         store.selectDrawing(null);
         return;
       }
 
-      if (stateRef.current === 'PLACING_A') {
-        if (!param.time || !param.point) return;
-        const price = series.coordinateToPrice(param.point.y);
-        if (price === null) return;
-
+      if (stateRef.current === 'PLACING') {
         const ip = inProgressRef.current;
         if (!ip) return;
 
-        const pointB: DrawingPoint = { time: param.time as UTCTimestamp, price };
-        const newId = store.addDrawing({
-          shape: { type: ip.type, points: [...ip.points, pointB] },
-        });
+        const pointB: DrawingPoint = point;
 
-        inProgressRef.current = null;
-        setInProgressDrawing(null);
-        stateRef.current = 'DRAWING';
+        // Open-ended tools (polyline, totalPoints === 0): always accumulate;
+        // commit is handled by the dblclick handler.
+        if (config.totalPoints === 0) {
+          inProgressRef.current = { ...ip, points: [...ip.points, pointB] };
+          setInProgressDrawing(inProgressRef.current);
+          return;
+        }
 
-        store.selectDrawing(newId);
+        const totalAfter = ip.points.length + 1;
+
+        if (totalAfter >= config.totalPoints) {
+          // Commit
+          const newId = store.addDrawing({
+            shape: { type: ip.type, points: [...ip.points, pointB] },
+          });
+          inProgressRef.current = null;
+          setInProgressDrawing(null);
+          stateRef.current = 'DRAWING';
+          store.selectDrawing(newId);
+        } else {
+          // Accumulate — stay in PLACING
+          inProgressRef.current = { ...ip, points: [...ip.points, pointB] };
+          setInProgressDrawing(inProgressRef.current);
+        }
         return;
       }
     };
@@ -200,6 +251,57 @@ export function useDrawingInteraction({
     chart.subscribeClick(handler);
     return () => {
       chart.unsubscribeClick(handler);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── subscribeDblClick — commit polyline ──────────────────────
+  useEffect(() => {
+    const chart = chartRef.current;
+    const series = seriesRef.current;
+    if (!chart || !series) return;
+
+    const handler = () => {
+      if (stateRef.current !== 'PLACING') return;
+      const ip = inProgressRef.current;
+      if (!ip || ip.type !== 'polyline') return;
+
+      const config = getPlacementConfig(activeToolRef.current);
+      if (!config || config.finishOn !== 'dblclick') return;
+
+      // The double-click point is already added by the second subscribeClick
+      // event that precedes dblclick. Deduplicate the last two points if they
+      // are at the same position (same time + price).
+      let points = [...ip.points];
+      if (points.length >= 2) {
+        const last = points[points.length - 1]!;
+        const prev = points[points.length - 2]!;
+        if (last.time === prev.time && last.price === prev.price) {
+          points = points.slice(0, -1);
+        }
+      }
+
+      // Need at least 2 points for a polyline
+      if (points.length < 2) {
+        inProgressRef.current = null;
+        setInProgressDrawing(null);
+        stateRef.current = 'DRAWING';
+        return;
+      }
+
+      const store = useDrawingStore.getState();
+      const newId = store.addDrawing({
+        shape: { type: 'polyline', points },
+      });
+      inProgressRef.current = null;
+      setInProgressDrawing(null);
+      stateRef.current = 'DRAWING';
+      store.selectDrawing(newId);
+    };
+
+    chart.subscribeDblClick(handler);
+    return () => {
+      chart.unsubscribeDblClick(handler);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -212,7 +314,7 @@ export function useDrawingInteraction({
 
     const handler = (param: Parameters<Parameters<IChartApi['subscribeCrosshairMove']>[0]>[0]) => {
       if (!isLineTool(activeToolRef.current)) return;
-      if (stateRef.current !== 'PLACING_A') return;
+      if (stateRef.current !== 'PLACING') return;
       if (!param.sourceEvent) return;
       if (!param.time || !param.point) return;
 
@@ -262,7 +364,7 @@ export function useDrawingInteraction({
       }
 
       // Body drag (translate) — both modes, skip during new-drawing placement
-      if (stateRef.current === 'PLACING_A') return;
+      if (stateRef.current === 'PLACING') return;
       const rect = container.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
@@ -308,9 +410,13 @@ export function useDrawingInteraction({
         const newPoints: DrawingPoint[] = drawing.shape.points.map((p, i) =>
           i === dragRef.current!.pointIndex ? { time: time as UTCTimestamp, price } : p
         );
-        useDrawingStore.getState().updateDrawing(dragRef.current!.drawingId, {
-          shape: { ...drawing.shape, points: newPoints },
-        });
+        useDrawingStore.getState().updateDrawing(
+          dragRef.current!.drawingId,
+          {
+            shape: { ...drawing.shape, points: newPoints },
+          },
+          true
+        );
         return;
       }
 
@@ -334,9 +440,13 @@ export function useDrawingInteraction({
 
         const currentDrawing = useDrawingStore.getState().drawings.find((d) => d.id === drawingId);
         if (!currentDrawing) return;
-        useDrawingStore.getState().updateDrawing(drawingId, {
-          shape: { ...currentDrawing.shape, points: newPoints },
-        });
+        useDrawingStore.getState().updateDrawing(
+          drawingId,
+          {
+            shape: { ...currentDrawing.shape, points: newPoints },
+          },
+          true
+        );
         return;
       }
     };
@@ -381,7 +491,23 @@ export function useDrawingInteraction({
       if (!isLineTool(activeToolRef.current)) return;
       e.preventDefault();
 
-      if (stateRef.current === 'PLACING_A') {
+      if (stateRef.current === 'PLACING') {
+        const ip = inProgressRef.current;
+        if (ip && ip.type === 'polyline' && ip.points.length >= 2) {
+          let points = [...ip.points];
+          const last = points[points.length - 1]!;
+          const prev = points[points.length - 2]!;
+          if (last.time === prev.time && last.price === prev.price) {
+            points = points.slice(0, -1);
+          }
+          if (points.length >= 2) {
+            const store = useDrawingStore.getState();
+            const newId = store.addDrawing({
+              shape: { type: 'polyline', points },
+            });
+            store.selectDrawing(newId);
+          }
+        }
         inProgressRef.current = null;
         setInProgressDrawing(null);
       }
@@ -399,10 +525,22 @@ export function useDrawingInteraction({
   // ── Keyboard shortcuts ─────────────────────────────────────────
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Undo/Redo — global (work regardless of active tool)
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          useDrawingStore.getState().redo();
+        } else {
+          useDrawingStore.getState().undo();
+        }
+        return;
+      }
+
+      // Drawing-specific shortcuts require an active line tool
       if (!isLineTool(activeToolRef.current)) return;
 
       if (e.key === 'Escape') {
-        if (stateRef.current === 'PLACING_A') {
+        if (stateRef.current === 'PLACING') {
           inProgressRef.current = null;
           setInProgressDrawing(null);
           stateRef.current = 'DRAWING';

@@ -21,7 +21,38 @@ export interface TrendlineData {
   points: DrawingPoint[]; // exactly 2
 }
 
-export type ShapeData = TrendlineData;
+export interface HorizontalData {
+  type: 'horizontal';
+  points: DrawingPoint[]; // exactly 1 (price anchor; time is irrelevant — line extends infinitely)
+}
+
+export interface VerticalData {
+  type: 'vertical';
+  points: DrawingPoint[]; // exactly 1 (time anchor; price is irrelevant — line extends infinitely)
+}
+
+export interface RayData {
+  type: 'ray';
+  points: DrawingPoint[]; // exactly 2 (anchor A + direction point B; extends infinitely past B)
+}
+
+export interface ParallelData {
+  type: 'parallel';
+  points: DrawingPoint[]; // exactly 3: A, B, C
+}
+
+export interface PolylineData {
+  type: 'polyline';
+  points: DrawingPoint[]; // N ≥ 2
+}
+
+export type ShapeData =
+  | TrendlineData
+  | HorizontalData
+  | VerticalData
+  | RayData
+  | ParallelData
+  | PolylineData;
 
 export type DrawingType = ShapeData['type'];
 

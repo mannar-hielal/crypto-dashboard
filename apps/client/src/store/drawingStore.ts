@@ -34,22 +34,33 @@ function createDrawingStyle(): Omit<Drawing, 'id' | 'zIndex' | 'shape'> {
 
 // ─── Types ─────────────────────────────────────────────────────────
 
+const UNDO_LIMIT = 50;
+
+interface UndoSnapshot {
+  drawings: Drawing[];
+  nextZIndex: number;
+}
+
 export interface DrawingStoreState {
   drawings: Drawing[];
   selectedDrawingId: string | null;
   nextZIndex: number;
+  undoStack: UndoSnapshot[];
+  redoStack: UndoSnapshot[];
 }
 
 export interface DrawingStoreActions {
   addDrawing: (
     d: { shape: ShapeData } & Partial<Omit<Drawing, 'id' | 'zIndex' | 'shape'>>
   ) => string;
-  updateDrawing: (id: string, updates: Partial<Drawing>) => void;
+  updateDrawing: (id: string, updates: Partial<Drawing>, skipUndo?: boolean) => void;
   removeDrawing: (id: string) => void;
   selectDrawing: (id: string | null) => void;
   clearAll: () => void;
   moveDrawing: (id: string, dir: 'front' | 'forward' | 'back' | 'backward') => void;
   cloneDrawing: (id: string, priceOffset?: number) => void;
+  undo: () => void;
+  redo: () => void;
 }
 
 // ─── Persist migration (v1 → v2) ────────────────────────────────────
@@ -78,12 +89,32 @@ function migrateV1toV2(persisted: unknown): { drawings: Drawing[]; nextZIndex: n
 
 // ─── Store ─────────────────────────────────────────────────────────
 
+function takeSnapshot(state: DrawingStoreState): UndoSnapshot {
+  return {
+    drawings: state.drawings.map((d) => ({
+      ...d,
+      shape: { ...d.shape, points: [...d.shape.points] },
+    })),
+    nextZIndex: state.nextZIndex,
+  };
+}
+
+function withUndo(get: () => DrawingStoreState, patch: Partial<DrawingStoreState>) {
+  const { undoStack } = get();
+  const snapshot = takeSnapshot(get());
+  const newStack = [...undoStack, snapshot];
+  if (newStack.length > UNDO_LIMIT) newStack.shift();
+  return { undoStack: newStack, redoStack: [] as UndoSnapshot[], ...patch };
+}
+
 export const useDrawingStore = create<DrawingStoreState & DrawingStoreActions>()(
   persist(
     (set, get) => ({
       drawings: [] as Drawing[],
       selectedDrawingId: null as string | null,
       nextZIndex: 1,
+      undoStack: [] as UndoSnapshot[],
+      redoStack: [] as UndoSnapshot[],
 
       addDrawing(d) {
         const id = crypto.randomUUID();
@@ -94,21 +125,31 @@ export const useDrawingStore = create<DrawingStoreState & DrawingStoreActions>()
           id,
           zIndex,
         };
-        set((s) => ({ drawings: [...s.drawings, drawing], nextZIndex: zIndex + 1 }));
+        set((s) => withUndo(get, { drawings: [...s.drawings, drawing], nextZIndex: zIndex + 1 }));
         return id;
       },
 
-      updateDrawing(id, updates) {
-        set((s) => ({
-          drawings: s.drawings.map((d) => (d.id === id ? { ...d, ...updates } : d)),
-        }));
+      updateDrawing(id, updates, skipUndo = false) {
+        if (skipUndo) {
+          set((s) => ({
+            drawings: s.drawings.map((d) => (d.id === id ? { ...d, ...updates } : d)),
+          }));
+        } else {
+          set((s) =>
+            withUndo(get, {
+              drawings: s.drawings.map((d) => (d.id === id ? { ...d, ...updates } : d)),
+            })
+          );
+        }
       },
 
       removeDrawing(id) {
-        set((s) => ({
-          drawings: s.drawings.filter((d) => d.id !== id),
-          selectedDrawingId: s.selectedDrawingId === id ? null : s.selectedDrawingId,
-        }));
+        set((s) =>
+          withUndo(get, {
+            drawings: s.drawings.filter((d) => d.id !== id),
+            selectedDrawingId: s.selectedDrawingId === id ? null : s.selectedDrawingId,
+          })
+        );
       },
 
       selectDrawing(id) {
@@ -116,7 +157,7 @@ export const useDrawingStore = create<DrawingStoreState & DrawingStoreActions>()
       },
 
       clearAll() {
-        set({ drawings: [], selectedDrawingId: null, nextZIndex: 1 });
+        set(() => withUndo(get, { drawings: [], selectedDrawingId: null, nextZIndex: 1 }));
       },
 
       moveDrawing(id, dir) {
@@ -135,10 +176,10 @@ export const useDrawingStore = create<DrawingStoreState & DrawingStoreActions>()
           const [item] = sorted.splice(idx, 1);
           sorted.splice(newIdx, 0, item);
 
-          return {
+          return withUndo(get, {
             drawings: sorted.map((d, i) => ({ ...d, zIndex: i + 1 })),
             nextZIndex: Math.max(s.nextZIndex, sorted.length + 1),
-          };
+          });
         });
       },
 
@@ -157,9 +198,34 @@ export const useDrawingStore = create<DrawingStoreState & DrawingStoreActions>()
           shape: { ...drawing.shape, points: offsetPoints },
           isLocked: false,
         };
-        set((s) => ({
-          drawings: [...s.drawings, clone],
-          nextZIndex: zIndex + 1,
+        set((s) => withUndo(get, { drawings: [...s.drawings, clone], nextZIndex: zIndex + 1 }));
+      },
+
+      undo() {
+        const { undoStack, redoStack } = get();
+        if (undoStack.length === 0) return;
+        const snapshot = undoStack[undoStack.length - 1]!;
+        const redoSnapshot = takeSnapshot(get());
+        set(() => ({
+          drawings: snapshot.drawings,
+          nextZIndex: snapshot.nextZIndex,
+          undoStack: undoStack.slice(0, -1),
+          redoStack: [...redoStack, redoSnapshot],
+          selectedDrawingId: null,
+        }));
+      },
+
+      redo() {
+        const { redoStack, undoStack } = get();
+        if (redoStack.length === 0) return;
+        const snapshot = redoStack[redoStack.length - 1]!;
+        const undoSnapshot = takeSnapshot(get());
+        set(() => ({
+          drawings: snapshot.drawings,
+          nextZIndex: snapshot.nextZIndex,
+          redoStack: redoStack.slice(0, -1),
+          undoStack: [...undoStack, undoSnapshot],
+          selectedDrawingId: null,
         }));
       },
     }),

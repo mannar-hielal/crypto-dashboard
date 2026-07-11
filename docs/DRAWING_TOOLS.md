@@ -2,7 +2,7 @@
 
 ## Overview
 
-Trendline drawing system built on `lightweight-charts` `ISeriesPrimitive` API. Supports placement, selection, drag-to-move/resize, properties editing, persistence, clone, and visual ordering.
+Drawing system built on `lightweight-charts` `ISeriesPrimitive` API. Supports trendline, horizontal line, vertical line, ray, and parallel channel placement; selection, drag-to-move/resize, properties editing, persistence, clone, and visual ordering. Polyline, text, and freehand tools are UI-only (not wired).
 
 ---
 
@@ -25,21 +25,21 @@ DashboardPage (activeTool, lineTool state)
 
 ### File Inventory
 
-| File                                                           | Role                                                                                                                                                            |
-| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/client/src/lib/drawing/types.ts`                         | `Drawing`, `DrawingPoint`, `InProgressDrawing`, `ShapeData`, `DrawingType`, `LineStyle` types — discriminated union on `shape` field                            |
-| `apps/client/src/lib/drawing/coordinates.ts`                   | Shared pure-math hit-testing utilities (`pointToSegmentDist`, `hitTestBodies`) — eliminates 3-way duplication                                                   |
-| `apps/client/src/lib/drawing/DrawingPrimitive.ts`              | `ISeriesPrimitive` — canvas rendering via `TrendlineRenderer` + `hitTest` (imports from `coordinates.ts`)                                                       |
-| `apps/client/src/lib/lineTools.tsx`                            | SVG icon components + `LINE_TOOLS` array (6 tool definitions)                                                                                                   |
-| `apps/client/src/store/drawingStore.ts`                        | Zustand store w/ `persist` middleware (`cd-drawings` localStorage key)                                                                                          |
-| `apps/client/src/hooks/useDrawingInteraction.ts`               | State machine (`IDLE` → `DRAWING` → `PLACING_A`) + pointer capture — uses `activeToolRef.current` to drive drawing type (guard: only `'trendline'` implemented) |
-| `apps/client/src/components/drawing/DrawingPropertiesMenu.tsx` | Floating toolbar: color, width, style, label, lock, delete, kebab                                                                                               |
-| `apps/client/src/components/drawing/ColorPicker.tsx`           | TradingView-style 10 gray + 6×10 color swatch grid                                                                                                              |
-| `apps/client/src/components/drawing/KebabMenu.tsx`             | Clone, Visual Order submenu, Delete                                                                                                                             |
-| `apps/client/src/components/dashboard/ChartPanel.tsx`          | Creates `DrawingPrimitive`, computes toolbar position, gates hover legend                                                                                       |
-| `apps/client/src/components/dashboard/LeftToolbar.tsx`         | Sidebar: cursor variant menu + line tool submenu (right-click)                                                                                                  |
-| `apps/client/src/components/dashboard/MultiChartArea.tsx`      | Passes drawing props to each `ChartPanel`                                                                                                                       |
-| `apps/client/src/pages/DashboardPage.tsx`                      | Top-level `activeTool`/`selectedLineTool` state, cursor CSS, exit handler                                                                                       |
+| File                                                           | Role                                                                                                                                                                              |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/client/src/lib/drawing/types.ts`                         | `Drawing`, `DrawingPoint`, `InProgressDrawing`, `ShapeData` (trendline/horizontal/vertical/ray/parallel), `DrawingType`, `LineStyle` types — discriminated union on `shape` field |
+| `apps/client/src/lib/drawing/coordinates.ts`                   | Shared pure-math hit-testing utilities (`pointToSegmentDist`, `hitTestBodies`) — eliminates 3-way duplication                                                                     |
+| `apps/client/src/lib/drawing/DrawingPrimitive.ts`              | `ISeriesPrimitive` — canvas rendering via `TrendlineRenderer` + `hitTest` (imports from `coordinates.ts`)                                                                         |
+| `apps/client/src/lib/lineTools.tsx`                            | SVG icon components + `LINE_TOOLS` array (6 tool definitions)                                                                                                                     |
+| `apps/client/src/store/drawingStore.ts`                        | Zustand store w/ `persist` middleware (`cd-drawings` localStorage key)                                                                                                            |
+| `apps/client/src/hooks/useDrawingInteraction.ts`               | State machine (`IDLE` → `DRAWING` → `PLACING_A`) + pointer capture — uses `activeToolRef.current` to drive drawing type (guard: only `'trendline'` implemented)                   |
+| `apps/client/src/components/drawing/DrawingPropertiesMenu.tsx` | Floating toolbar: color, width, style, label, lock, delete, kebab                                                                                                                 |
+| `apps/client/src/components/drawing/ColorPicker.tsx`           | TradingView-style 10 gray + 6×10 color swatch grid                                                                                                                                |
+| `apps/client/src/components/drawing/KebabMenu.tsx`             | Clone, Visual Order submenu, Delete                                                                                                                                               |
+| `apps/client/src/components/dashboard/ChartPanel.tsx`          | Creates `DrawingPrimitive`, computes toolbar position, gates hover legend                                                                                                         |
+| `apps/client/src/components/dashboard/LeftToolbar.tsx`         | Sidebar: cursor variant menu + line tool submenu (right-click)                                                                                                                    |
+| `apps/client/src/components/dashboard/MultiChartArea.tsx`      | Passes drawing props to each `ChartPanel`                                                                                                                                         |
+| `apps/client/src/pages/DashboardPage.tsx`                      | Top-level `activeTool`/`selectedLineTool` state, cursor CSS, exit handler                                                                                                         |
 
 ---
 
@@ -56,7 +56,7 @@ DashboardPage (activeTool, lineTool state)
   - `selectDrawing(id)` — sets `selectedDrawingId` (used by hook + toolbar)
   - `clearAll()` — resets everything
   - `moveDrawing(id, dir)` — re-sorts z-indices (`front`/`forward`/`back`/`backward`)
-  - `cloneDrawing(id, priceOffset?)` — copies `shape.points` with optional vertical offset, forces `isLocked: false`
+  - `cloneDrawing(id, priceOffset?)` — copies `shape.points` with optional vertical offset, forces `isLocked: false`; for 1-point shapes (horizontal/vertical) offsets the single anchor; for 2-point (trendline/ray) offsets both
 
 ---
 
@@ -74,20 +74,43 @@ DashboardPage (activeTool, lineTool state)
          │   → subscribeClick listens for first point   │
          │   → pointerdown captures for drag (handle/   │
          │     body)                                    │
+         │   → 1-click tools (horizontal/vertical)      │
+         │     commit immediately on click              │
          └─────────────┬───────────────────────────────┘
                        │ click on chart (not hitting drawing)
+                       │ for multi-click tools (trendline, ray)
                        ▼
          ┌─────────────────────────────────────────────┐
-         │  PLACING_A                                  │
+         │  PLACING                                    │
          │   → subscribeCrosshairMove shows preview     │
          │   → hoverPoint draws dashed preview line     │
-         │   → click B → addDrawing → back to DRAWING  │
+         │   → click → accumulate point or commit       │
+         │     (config.totalPoints reached)             │
          │   → Escape → cancel → back to DRAWING       │
          └─────────────────────────────────────────────┘
 
   DRAGGING_HANDLE ← pointerdown on handle circle (resize endpoint)
   DRAGGING_DRAWING ← pointerdown on line body (translate entire line)
 ```
+
+### Placement Configs (P2)
+
+`PLACEMENT_CONFIGS` drives per-tool point count and finish method:
+
+```ts
+const PLACEMENT_CONFIGS: Partial<Record<LineToolId, PlacementConfig>> = {
+  trendline: { totalPoints: 2, finishOn: 'click' },
+  horizontal: { totalPoints: 1, finishOn: 'click' },
+  vertical: { totalPoints: 1, finishOn: 'click' },
+  ray: { totalPoints: 2, finishOn: 'click' },
+  parallel: { totalPoints: 3, finishOn: 'click' },
+  // polyline  (P3): { totalPoints: 0, finishOn: 'dblclick' }
+};
+```
+
+1-click tools (horizontal, vertical): click in DRAWING state → commit immediately (no PLACING state).
+2-click tools (trendline, ray): click in DRAWING → enter PLACING → click → commit.
+3-click tools (parallel): click in DRAWING → enter PLACING → click (2nd point accumulated) → click (3rd point commit). After 2nd click, preview shows base line solid + offset line dashed following cursor.
 
 ### Keyboard Shortcuts
 
@@ -113,16 +136,35 @@ DashboardPage (activeTool, lineTool state)
 
 ## Canvas Rendering (`DrawingPrimitive.ts`)
 
-- **Renderer**: `TrendlineRenderer` — draws via `useBitmapCoordinateSpace`
+- **Renderer**: `TrendlineRenderer` — draws via `useBitmapCoordinateSpace`, dispatches to per-shape draw helpers (`drawLineShape`, `drawHorizontalShape`, `drawVerticalShape`)
 - **Rendered layers** (top to bottom):
-  1. **In-progress preview**: dashed white line (`[6, 3]` dash) when placing point B
-  2. **Committed lines**: colored line, dash/dot spacing scales with `lineWidth`
+  1. **In-progress preview**: dashed white line (`[6, 3]` dash) when placing point B (trendline / ray only — 1-click tools skip preview)
+  2. **Committed lines / shapes**: per-shape rendering (see below), dash/dot spacing scales with `lineWidth`
      - `dashed`: `[8 * lineWidth, 4 * lineWidth]` (in bitmap pixels × `hpr`)
      - `dotted`: `[1 * lineWidth, 3 * lineWidth]` (in bitmap pixels × `hpr`)
-  3. **Label**: rotated text at midpoint, drawn only when `drawing.label` is set (no auto-generated price-change pill)
+  3. **Label**: shape-specific anchor (see below), drawn only when `drawing.label` is set
   4. **Handles**: white filled circles with color stroke (only for selected drawing)
-- **hitTest**: returns `PrimitiveHoveredItem` with z-priority (handle > body) — drives `hoveredObjectId` in crosshair move
+- **hitTest**: per-shape body + handle hit-test (handle > body priority), returns `PrimitiveHoveredItem`
 - **requestUpdate**: called on every `drawings`/`selectedDrawingId`/`inProgressDrawing` change
+
+### Per-shape rendering & hit-testing
+
+| Shape        | Render                                         | Hit-test body                                       | Handle count           | Toolbar anchor                     |
+| ------------ | ---------------------------------------------- | --------------------------------------------------- | ---------------------- | ---------------------------------- |
+| `trendline`  | 2-point segment                                | `pointToSegmentDist` (clamped to A→B)               | 2 (A, B)               | midpoint of A–B, y = min(Y_A, Y_B) |
+| `ray`        | 2-point line extended past B to chart edge     | `pointToRayDist` (no clamp past B; clamps behind A) | 2 (A, B)               | midpoint of A–B, y = min(Y_A, Y_B) |
+| `horizontal` | full-width line at `points[0].price`           | `\|y - Y_line\| < threshold` (any X)                | 1 (at placement point) | placement point (x, y)             |
+| `vertical`   | full-height line at `points[0].time`           | `\|x - X_line\| < threshold` (any Y)                | 1 (at placement point) | placement point (x, y)             |
+| `parallel`   | base A→B + offset C→C+(B−A) + translucent fill | `pointToSegmentDist` for both base + offset lines   | 3 (A, B, C)            | midpoint of A–B, y = min(Y_A, Y_B) |
+
+Draw helpers in `DrawingPrimitive.ts`:
+
+- `drawLineShape(...)` — renders trendline OR ray (`extendPastB` flag)
+- `drawHorizontalShape(...)` — renders full-width line + optional label/handle at anchor
+- `drawVerticalShape(...)` — renders full-height line + optional label/handle at anchor
+- `drawParallelShape(...)` — renders base line + parallel offset line + translucent fill + 3 handles
+- `drawVerticalShape(...)` — renders full-height line + optional label/handle at anchor
+- `applyStrokeStyle`, `drawHandlesAt`, `drawLabelAt` — shared helpers
 
 ---
 
@@ -218,36 +260,35 @@ The OHLC overlay in `ChartPanel.tsx:544` is hidden when `inProgressDrawing !== n
 - [x] All popups positioned inside toolbar div (`absolute left-0 top-12`)
 - [x] `data-drawing-hover` attribute on chart div when hovering a drawing
 - [x] `data-drawing-active` attribute when line tool is active
-- [x] Discriminated union: `Drawing.shape: ShapeData` replaces flat `type` + `points` (Phase A)
-- [x] Shared coordinate utilities in `drawing/coordinates.ts` (`pointToSegmentDist`, `hitTestBodies`)
-- [x] Store factory: `createDrawingStyle()` centralises default color/width/style
-- [x] Persist v1→v2 migration: wraps old flat `{type, points}` into `{shape: {type, points}}`
-- [x] Click handler uses `activeToolRef.current` (not hardcoded `'trendline'`) + guards unimplemented tools
-- [x] Drawing system test coverage: 41 tests (25 store + 16 coordinates)
+- [x] **Horizontal line** (`horizontal`) — 1-click placement, full-width line at price, draggable handle, properties toolbar
+- [x] **Vertical line** (`vertical`) — 1-click placement, full-height line at time, draggable handle, properties toolbar
+- [x] **Ray** (`ray`) — 2-click placement, extends infinitely past B, drag handle A or B, properties toolbar
+- [x] **Parallel channel** (`parallel`) — 3-click placement, live offset preview after A+B, base line + offset line + translucent fill, 3 draggable handles
+- [x] State machine refactor: `PLACING` + `PLACEMENT_CONFIGS` replaces `PLACING_A` — supports 1-click, 2-click, and 3-click tools uniformly
+- [x] Per-shape rendering branches in `DrawingPrimitive` (trendline/ray/horizontal/vertical/parallel) with shared draw helpers
+- [x] Per-shape hit-testing: `pointToSegmentDist` (trendline/parallel), `pointToRayDist` (ray, no clamp past B), Y/X proximity (horizontal/vertical)
+- [x] Toolbar position adapts per shape (midpoint for 2-point/3-point, anchor for 1-point)
+- [x] Drawing system test coverage: 65 tests (34 store + 31 coordinates)
 
 ## What's UI Only (Not Wired)
 
-- [ ] **Horizontal Line** (`horizontal`) — no `ISeriesPrimitive` implementation
-- [ ] **Vertical Line** (`vertical`) — no `ISeriesPrimitive` implementation
 - [ ] **Polyline** (`polyline`) — no `ISeriesPrimitive` / multi-point logic
-- [ ] **Ray** (`ray`) — no `ISeriesPrimitive` implementation
-- [ ] **Parallel** (`parallel`) — no `ISeriesPrimitive` implementation
 - [ ] **Text** tool — UI button only
 - [ ] **Freehand Draw** — UI button only
 - [ ] **Eraser** cursor variant — no eraser logic
 
 ## Known Limitations
 
-1. `DrawingType` is `'trendline'` only — discriminated union has one variant (extensible: add `HorizontalData`, `VerticalData`, etc. to `ShapeData`)
-2. `DrawingPrimitive` only renders 2-point trendlines (no multi-segment)
+1. ~~`DrawingType` is `'trendline'` only~~ — ✅ Now a discriminated union with trendline, horizontal, vertical, ray
+2. ~~`DrawingPrimitive` only renders 2-point trendlines~~ — ✅ Now renders trendline, ray, horizontal, vertical (single-segment; multi-segment for polyline is future work)
 3. Toolbar position computed from container `getBoundingClientRect` — may break if container offset changes (e.g., scroll)
 4. Clip/paste not implemented (KebabMenu shows "Copy" label concept but not wired)
 5. No undo/redo
 6. No snap-to-grid or snap-to-ohlc
-7. ~~Zero test coverage for the drawing system~~ — ✅ Now has 41 tests (25 store + 16 coordinates)
-8. ~~`pointToSegmentDist` duplicated across `DrawingPrimitive.ts:16` and `useDrawingInteraction.ts:78`~~ — ✅ Extracted to `drawing/coordinates.ts`
-9. ~~Line-body hit-testing logic duplicated 3×~~ — ✅ `hitTestBodies` in `drawing/coordinates.ts` replaces all 3 copies
-10. ~~`lineTool` prop passed to `useDrawingInteraction` but never used inside the click handler~~ — ✅ Click handler now uses `activeToolRef.current` with guard for unimplemented tools
+7. ~~Zero test coverage~~ — ✅ 59 tests (32 store + 27 coordinates)
+8. ~~`pointToSegmentDist` duplicated~~ — ✅ Extracted to `drawing/coordinates.ts` along with `pointToRayDist`
+9. ~~Line-body hit-testing logic duplicated 3×~~ — ✅ `hitTestBodies` in `drawing/coordinates.ts` centralises per-shape dispatch
+10. ~~`lineTool` prop is dead input~~ — ✅ Click handler uses `activeToolRef.current` via `PLACEMENT_CONFIGS`
 
 ---
 

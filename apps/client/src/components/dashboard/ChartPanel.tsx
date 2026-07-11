@@ -364,7 +364,21 @@ export function ChartPanel({
 
     const handler = () => setViewportVersion((v) => v + 1);
     chart.timeScale().subscribeVisibleTimeRangeChange(handler);
-    return () => chart.timeScale().unsubscribeVisibleTimeRangeChange(handler);
+
+    // Also recompute on scroll / resize for scroll-safety
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handler, { capture: true, passive: true });
+      window.addEventListener('resize', handler);
+    }
+
+    return () => {
+      chart.timeScale().unsubscribeVisibleTimeRangeChange(handler);
+      if (container) {
+        container.removeEventListener('scroll', handler, { capture: true });
+        window.removeEventListener('resize', handler);
+      }
+    };
   }, []);
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -374,22 +388,66 @@ export function ChartPanel({
       return;
     }
     const drawing = drawings.find((d) => d.id === selectedDrawingId);
-    if (!drawing || drawing.shape.points.length < 2) {
+    if (!drawing || drawing.shape.points.length < 1) {
       setToolbarPos(null);
       return;
     }
 
-    const x1 = chartRef.current.timeScale().timeToCoordinate(drawing.shape.points[0].time);
-    const y1 = candleRef.current.priceToCoordinate(drawing.shape.points[0].price);
-    const x2 = chartRef.current.timeScale().timeToCoordinate(drawing.shape.points[1].time);
-    const y2 = candleRef.current.priceToCoordinate(drawing.shape.points[1].price);
-    if (x1 === null || y1 === null || x2 === null || y2 === null) {
+    const p0 = drawing.shape.points[0];
+    const x0 = chartRef.current.timeScale().timeToCoordinate(p0.time) as number | null;
+    const y0 = candleRef.current.priceToCoordinate(p0.price) as number | null;
+    if (x0 === null || y0 === null) {
       setToolbarPos(null);
       return;
     }
 
-    const midX = (x1 + x2) / 2;
-    const minY = Math.min(y1, y2);
+    let anchorX = x0;
+    let anchorY = y0;
+    if (drawing.shape.type === 'trendline' || drawing.shape.type === 'ray') {
+      if (drawing.shape.points.length < 2) {
+        setToolbarPos(null);
+        return;
+      }
+      const p1 = drawing.shape.points[1];
+      const x1 = chartRef.current.timeScale().timeToCoordinate(p1.time);
+      const y1 = candleRef.current.priceToCoordinate(p1.price);
+      if (x1 === null || y1 === null) {
+        setToolbarPos(null);
+        return;
+      }
+      anchorX = ((x0 as number) + (x1 as number)) / 2;
+      anchorY = Math.min(y0 as number, y1 as number);
+    } else if (drawing.shape.type === 'parallel') {
+      if (drawing.shape.points.length < 3) {
+        setToolbarPos(null);
+        return;
+      }
+      const p1 = drawing.shape.points[1];
+      const x1 = chartRef.current.timeScale().timeToCoordinate(p1.time);
+      const y1 = candleRef.current.priceToCoordinate(p1.price);
+      if (x1 === null || y1 === null) {
+        setToolbarPos(null);
+        return;
+      }
+      // Anchor at midpoint of base line A→B
+      anchorX = ((x0 as number) + (x1 as number)) / 2;
+      anchorY = Math.min(y0 as number, y1 as number);
+    } else if (drawing.shape.type === 'polyline') {
+      if (drawing.shape.points.length < 2) {
+        setToolbarPos(null);
+        return;
+      }
+      const p1 = drawing.shape.points[1];
+      const x1 = chartRef.current.timeScale().timeToCoordinate(p1.time);
+      const y1 = candleRef.current.priceToCoordinate(p1.price);
+      if (x1 === null || y1 === null) {
+        setToolbarPos(null);
+        return;
+      }
+      // Anchor at midpoint of first two vertices
+      anchorX = ((x0 as number) + (x1 as number)) / 2;
+      anchorY = Math.min(y0 as number, y1 as number);
+    }
 
     const containerRect = containerRef.current?.getBoundingClientRect();
     if (!containerRect) {
@@ -398,8 +456,8 @@ export function ChartPanel({
     }
 
     setToolbarPos({
-      x: containerRect.left + midX,
-      y: containerRect.top + minY - 10,
+      x: containerRect.left + anchorX,
+      y: containerRect.top + anchorY - 10,
     });
   }, [selectedDrawingId, drawings, viewportVersion]);
   /* eslint-enable react-hooks/set-state-in-effect */

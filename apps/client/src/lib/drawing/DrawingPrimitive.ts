@@ -11,8 +11,390 @@ import type {
   Time,
 } from 'lightweight-charts';
 import type { RefObject } from 'react';
-import type { Drawing, InProgressDrawing } from '@/lib/drawing/types';
-import { pointToSegmentDist } from '@/lib/drawing/coordinates';
+import type { Drawing, DrawingPoint, InProgressDrawing } from '@/lib/drawing/types';
+import { pointToSegmentDist, pointToRayDist } from '@/lib/drawing/coordinates';
+
+// ─── Per-shape draw helpers ────────────────────────────────────────
+
+function applyStrokeStyle(ctx: CanvasRenderingContext2D, drawing: Drawing, hpr: number) {
+  ctx.lineWidth = drawing.lineWidth * hpr;
+  ctx.strokeStyle = drawing.color;
+  ctx.lineCap = 'round';
+  if (drawing.lineStyle === 'dashed') {
+    ctx.setLineDash([8 * drawing.lineWidth * hpr, 4 * drawing.lineWidth * hpr]);
+  } else if (drawing.lineStyle === 'dotted') {
+    ctx.setLineDash([drawing.lineWidth * hpr, 3 * drawing.lineWidth * hpr]);
+  } else {
+    ctx.setLineDash([]);
+  }
+}
+
+function drawHandlesAt(
+  ctx: CanvasRenderingContext2D,
+  hpr: number,
+  points: { x: number; y: number }[],
+  color: string
+) {
+  const handleR = Math.round(6 * hpr);
+  const strokeW = Math.round(2 * hpr);
+  ctx.save();
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = color;
+  ctx.lineWidth = strokeW;
+  for (const p of points) {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, handleR, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawLabelAt(
+  ctx: CanvasRenderingContext2D,
+  vpr: number,
+  bx: number,
+  by: number,
+  angle: number,
+  label: string,
+  textColor: string
+) {
+  ctx.save();
+  ctx.translate(bx, by);
+  ctx.rotate(angle);
+  ctx.font = `24px "Geist Variable", -apple-system, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillStyle = textColor;
+  ctx.fillText(label, 0, -8 * vpr);
+  ctx.restore();
+}
+
+/**
+ * Draws a trendline or ray. If `extendPastB`, the line extends from A
+ * through B to the appropriate chart edge (ray).
+ */
+function drawLineShape(
+  ctx: CanvasRenderingContext2D,
+  hpr: number,
+  vpr: number,
+  chart: IChartApi,
+  series: ISeriesApi<'Candlestick'>,
+  p1: DrawingPoint,
+  p2: DrawingPoint,
+  drawing: Drawing,
+  isSelected: boolean,
+  extendPastB: boolean
+) {
+  const x1 = chart.timeScale().timeToCoordinate(p1.time);
+  const y1 = series.priceToCoordinate(p1.price);
+  const x2 = chart.timeScale().timeToCoordinate(p2.time);
+  const y2 = series.priceToCoordinate(p2.price);
+  if (x1 === null || y1 === null || x2 === null || y2 === null) return;
+
+  let endX = Math.round(x2 * hpr);
+  let endY = Math.round(y2 * vpr);
+
+  if (extendPastB) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const bitmapW = ctx.canvas.width;
+    const bitmapH = ctx.canvas.height;
+    let t: number;
+    if (dx > 0) {
+      // Extend rightward to right edge
+      t = (bitmapW / hpr - x1) / dx;
+    } else if (dx < 0) {
+      // Extend leftward to left edge (x = 0)
+      t = -x1 / dx;
+    } else if (dy > 0) {
+      // Vertical downward — extend to bottom edge
+      t = (bitmapH / vpr - y1) / dy;
+    } else if (dy < 0) {
+      // Vertical upward — extend to top edge (y = 0)
+      t = -y1 / dy;
+    } else {
+      // A === B, nothing to extend
+      t = 1;
+    }
+    const clamp = Math.max(1, t);
+    endX = Math.round((x1 + clamp * dx) * hpr);
+    endY = Math.round((y1 + clamp * dy) * vpr);
+  }
+
+  const bx1 = Math.round(x1 * hpr);
+  const by1 = Math.round(y1 * vpr);
+
+  ctx.save();
+  applyStrokeStyle(ctx, drawing, hpr);
+  ctx.beginPath();
+  ctx.moveTo(bx1, by1);
+  ctx.lineTo(endX, endY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  if (drawing.label) {
+    drawLabelAt(
+      ctx,
+      vpr,
+      (bx1 + endX) / 2,
+      (by1 + endY) / 2,
+      Math.atan2(endY - by1, endX - bx1),
+      drawing.label,
+      drawing.textColor
+    );
+  }
+
+  if (isSelected) {
+    drawHandlesAt(
+      ctx,
+      hpr,
+      [
+        { x: bx1, y: by1 },
+        { x: Math.round(x2 * hpr), y: Math.round(y2 * vpr) },
+      ],
+      drawing.color
+    );
+  }
+}
+
+/**
+ * Draws a horizontal line spanning the full chart width at the price
+ * of the single anchor point.
+ */
+function drawHorizontalShape(
+  ctx: CanvasRenderingContext2D,
+  hpr: number,
+  vpr: number,
+  chart: IChartApi,
+  series: ISeriesApi<'Candlestick'>,
+  point: DrawingPoint,
+  drawing: Drawing,
+  isSelected: boolean
+) {
+  const y = series.priceToCoordinate(point.price);
+  if (y === null) return;
+  const by = Math.round(y * vpr);
+  const bitmapW = ctx.canvas.width;
+
+  ctx.save();
+  applyStrokeStyle(ctx, drawing, hpr);
+  ctx.beginPath();
+  ctx.moveTo(0, by);
+  ctx.lineTo(bitmapW, by);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  if (drawing.label) {
+    const x = chart.timeScale().timeToCoordinate(point.time);
+    if (x !== null) {
+      drawLabelAt(ctx, vpr, Math.round(x * hpr), by, 0, drawing.label, drawing.textColor);
+    }
+  }
+
+  if (isSelected) {
+    const x = chart.timeScale().timeToCoordinate(point.time);
+    if (x !== null) {
+      drawHandlesAt(ctx, hpr, [{ x: Math.round(x * hpr), y: by }], drawing.color);
+    }
+  }
+}
+
+/**
+ * Draws a vertical line spanning the full chart height at the time of
+ * the single anchor point.
+ */
+function drawVerticalShape(
+  ctx: CanvasRenderingContext2D,
+  hpr: number,
+  vpr: number,
+  chart: IChartApi,
+  _series: ISeriesApi<'Candlestick'>,
+  point: DrawingPoint,
+  drawing: Drawing,
+  isSelected: boolean
+) {
+  const x = chart.timeScale().timeToCoordinate(point.time);
+  if (x === null) return;
+  const bx = Math.round(x * hpr);
+  const bitmapH = ctx.canvas.height;
+
+  ctx.save();
+  applyStrokeStyle(ctx, drawing, hpr);
+  ctx.beginPath();
+  ctx.moveTo(bx, 0);
+  ctx.lineTo(bx, bitmapH);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  if (drawing.label) {
+    const y = _series.priceToCoordinate(point.price);
+    if (y !== null) {
+      drawLabelAt(ctx, vpr, bx, Math.round(y * vpr), Math.PI / 2, drawing.label, drawing.textColor);
+    }
+  }
+
+  if (isSelected) {
+    const y = _series.priceToCoordinate(point.price);
+    if (y !== null) {
+      drawHandlesAt(ctx, hpr, [{ x: bx, y: Math.round(y * vpr) }], drawing.color);
+    }
+  }
+}
+
+/**
+ * Draws a parallel channel: base line A→B + offset line C→C+(B−A).
+ * Optionally fills the area between the two lines with a translucent colour.
+ */
+function drawParallelShape(
+  ctx: CanvasRenderingContext2D,
+  hpr: number,
+  vpr: number,
+  chart: IChartApi,
+  series: ISeriesApi<'Candlestick'>,
+  pA: DrawingPoint,
+  pB: DrawingPoint,
+  pC: DrawingPoint,
+  drawing: Drawing,
+  isSelected: boolean
+) {
+  const ax = chart.timeScale().timeToCoordinate(pA.time);
+  const ay = series.priceToCoordinate(pA.price);
+  const bx = chart.timeScale().timeToCoordinate(pB.time);
+  const by = series.priceToCoordinate(pB.price);
+  const cx = chart.timeScale().timeToCoordinate(pC.time);
+  const cy = series.priceToCoordinate(pC.price);
+  if (ax === null || ay === null || bx === null || by === null || cx === null || cy === null)
+    return;
+
+  const dx = bx - ax;
+  const dy = by - ay;
+
+  const bax = Math.round(ax * hpr);
+  const bay = Math.round(ay * vpr);
+  const bbx = Math.round(bx * hpr);
+  const bby = Math.round(by * vpr);
+  const bcx = Math.round(cx * hpr);
+  const bcy = Math.round(cy * vpr);
+  const bdx = Math.round((cx + dx) * hpr);
+  const bdy = Math.round((cy + dy) * vpr);
+
+  // ── Fill between the two lines (translucent) ──────────────────────
+  ctx.save();
+  ctx.fillStyle = drawing.color + '20'; // ~12% opacity hex suffix
+  ctx.beginPath();
+  ctx.moveTo(bax, bay);
+  ctx.lineTo(bbx, bby);
+  ctx.lineTo(bdx, bdy);
+  ctx.lineTo(bcx, bcy);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  // ── Base line A→B ─────────────────────────────────────────────────
+  ctx.save();
+  applyStrokeStyle(ctx, drawing, hpr);
+  ctx.beginPath();
+  ctx.moveTo(bax, bay);
+  ctx.lineTo(bbx, bby);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  // ── Offset line C→C+(B−A) ─────────────────────────────────────────
+  ctx.save();
+  applyStrokeStyle(ctx, drawing, hpr);
+  ctx.beginPath();
+  ctx.moveTo(bcx, bcy);
+  ctx.lineTo(bdx, bdy);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  // ── Label at midpoint of base line ───────────────────────────────
+  if (drawing.label) {
+    drawLabelAt(
+      ctx,
+      vpr,
+      (bax + bbx) / 2,
+      (bay + bby) / 2,
+      Math.atan2(bby - bay, bbx - bax),
+      drawing.label,
+      drawing.textColor
+    );
+  }
+
+  // ── Handles (3 when selected) ────────────────────────────────────
+  if (isSelected) {
+    drawHandlesAt(
+      ctx,
+      hpr,
+      [
+        { x: bax, y: bay },
+        { x: bbx, y: bby },
+        { x: bcx, y: bcy },
+      ],
+      drawing.color
+    );
+  }
+}
+
+/**
+ * Draws a polyline: a series of connected line segments through N points.
+ */
+function drawPolylineShape(
+  ctx: CanvasRenderingContext2D,
+  hpr: number,
+  vpr: number,
+  chart: IChartApi,
+  series: ISeriesApi<'Candlestick'>,
+  points: DrawingPoint[],
+  drawing: Drawing,
+  isSelected: boolean
+) {
+  if (points.length < 2) return;
+
+  // Convert all points to bitmap coords
+  const bitmapPts: { x: number; y: number }[] = [];
+  for (const p of points) {
+    const x = chart.timeScale().timeToCoordinate(p.time);
+    const y = series.priceToCoordinate(p.price);
+    if (x === null || y === null) return;
+    bitmapPts.push({ x: Math.round(x * hpr), y: Math.round(y * vpr) });
+  }
+
+  // Draw connected segments
+  ctx.save();
+  applyStrokeStyle(ctx, drawing, hpr);
+  ctx.beginPath();
+  ctx.moveTo(bitmapPts[0]!.x, bitmapPts[0]!.y);
+  for (let i = 1; i < bitmapPts.length; i++) {
+    ctx.lineTo(bitmapPts[i]!.x, bitmapPts[i]!.y);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  // Label at midpoint of first segment
+  if (drawing.label && bitmapPts.length >= 2) {
+    drawLabelAt(
+      ctx,
+      vpr,
+      (bitmapPts[0]!.x + bitmapPts[1]!.x) / 2,
+      (bitmapPts[0]!.y + bitmapPts[1]!.y) / 2,
+      Math.atan2(bitmapPts[1]!.y - bitmapPts[0]!.y, bitmapPts[1]!.x - bitmapPts[0]!.x),
+      drawing.label,
+      drawing.textColor
+    );
+  }
+
+  if (isSelected) {
+    drawHandlesAt(ctx, hpr, bitmapPts, drawing.color);
+  }
+}
 
 // ─── Renderer ──────────────────────────────────────────────────────
 
@@ -42,6 +424,7 @@ class TrendlineRenderer implements IPrimitivePaneRenderer {
         // ── In-progress preview (dashed) ─────────────────────────
         const ip = this._primitive._inProgressRef.current;
         if (ip && ip.points.length === 1 && ip.hoverPoint) {
+          // 2-click tools (trendline, ray): A placed, preview A→cursor
           const x1 = chart.timeScale().timeToCoordinate(ip.points[0].time);
           const y1 = series.priceToCoordinate(ip.points[0].price);
           const x2 = chart.timeScale().timeToCoordinate(ip.hoverPoint.time);
@@ -57,88 +440,168 @@ class TrendlineRenderer implements IPrimitivePaneRenderer {
             ctx.stroke();
             ctx.restore();
           }
+        } else if (ip && ip.type === 'parallel' && ip.points.length === 2 && ip.hoverPoint) {
+          // 3-click parallel: A & B placed, preview A→B solid white + dashed C(hover)→C+(B−A)
+          const ax = chart.timeScale().timeToCoordinate(ip.points[0].time);
+          const ay = series.priceToCoordinate(ip.points[0].price);
+          const bx = chart.timeScale().timeToCoordinate(ip.points[1].time);
+          const by = series.priceToCoordinate(ip.points[1].price);
+          const cx = chart.timeScale().timeToCoordinate(ip.hoverPoint.time);
+          const cy = series.priceToCoordinate(ip.hoverPoint.price);
+          if (
+            ax !== null &&
+            ay !== null &&
+            bx !== null &&
+            by !== null &&
+            cx !== null &&
+            cy !== null
+          ) {
+            const ddx = bx - ax;
+            const ddy = by - ay;
+            // Base line A→B (solid white)
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+            ctx.lineWidth = 1 * hpr;
+            ctx.beginPath();
+            ctx.moveTo(Math.round(ax * hpr), Math.round(ay * vpr));
+            ctx.lineTo(Math.round(bx * hpr), Math.round(by * vpr));
+            ctx.stroke();
+            ctx.restore();
+            // Offset line C(hover)→C+(B−A) (dashed)
+            ctx.save();
+            ctx.setLineDash([6 * hpr, 3 * hpr]);
+            ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+            ctx.lineWidth = 1 * hpr;
+            ctx.beginPath();
+            ctx.moveTo(Math.round(cx * hpr), Math.round(cy * vpr));
+            ctx.lineTo(Math.round((cx + ddx) * hpr), Math.round((cy + ddy) * vpr));
+            ctx.stroke();
+            ctx.restore();
+          }
+        } else if (ip && ip.type === 'polyline' && ip.points.length >= 1 && ip.hoverPoint) {
+          // Polyline: show placed segments solid + dashed segment to cursor
+          const placed: { x: number; y: number }[] = [];
+          let allValid = true;
+          for (const p of ip.points) {
+            const px = chart.timeScale().timeToCoordinate(p.time);
+            const py = series.priceToCoordinate(p.price);
+            if (px === null || py === null) {
+              allValid = false;
+              break;
+            }
+            placed.push({ x: Math.round(px * hpr), y: Math.round(py * vpr) });
+          }
+          const hx = chart.timeScale().timeToCoordinate(ip.hoverPoint.time);
+          const hy = series.priceToCoordinate(ip.hoverPoint.price);
+          if (allValid && hx !== null && hy !== null) {
+            // Solid placed segments
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+            ctx.lineWidth = 1 * hpr;
+            ctx.beginPath();
+            ctx.moveTo(placed[0]!.x, placed[0]!.y);
+            for (let i = 1; i < placed.length; i++) {
+              ctx.lineTo(placed[i]!.x, placed[i]!.y);
+            }
+            ctx.stroke();
+            ctx.restore();
+            // Dashed segment to cursor
+            const last = placed[placed.length - 1]!;
+            const bx = Math.round(hx * hpr);
+            const by = Math.round(hy * vpr);
+            ctx.save();
+            ctx.setLineDash([6 * hpr, 3 * hpr]);
+            ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+            ctx.lineWidth = 1 * hpr;
+            ctx.beginPath();
+            ctx.moveTo(last.x, last.y);
+            ctx.lineTo(bx, by);
+            ctx.stroke();
+            ctx.restore();
+          }
         }
 
-        // ── Committed trendlines ────────────────────────────────
+        // ── Committed drawings (trendline, ray, horizontal, vertical) ────
         const drawings = this._primitive._drawingsRef.current;
         const selectedId = this._primitive._selectedIdRef.current;
 
         for (const drawing of drawings) {
-          if (drawing.shape.type !== 'trendline' || drawing.shape.points.length < 2) continue;
-
-          const p1 = drawing.shape.points[0];
-          const p2 = drawing.shape.points[1];
-          const x1 = chart.timeScale().timeToCoordinate(p1.time);
-          const y1 = series.priceToCoordinate(p1.price);
-          const x2 = chart.timeScale().timeToCoordinate(p2.time);
-          const y2 = series.priceToCoordinate(p2.price);
-          if (x1 === null || y1 === null || x2 === null || y2 === null) continue;
-
-          const bx1 = Math.round(x1 * hpr);
-          const by1 = Math.round(y1 * vpr);
-          const bx2 = Math.round(x2 * hpr);
-          const by2 = Math.round(y2 * vpr);
-
-          // Line
-          ctx.lineWidth = drawing.lineWidth * hpr;
-          ctx.strokeStyle = drawing.color;
-          ctx.lineCap = 'round';
-
-          if (drawing.lineStyle === 'dashed') {
-            ctx.setLineDash([8 * drawing.lineWidth * hpr, 4 * drawing.lineWidth * hpr]);
-          } else if (drawing.lineStyle === 'dotted') {
-            ctx.setLineDash([drawing.lineWidth * hpr, 3 * drawing.lineWidth * hpr]);
-          } else {
-            ctx.setLineDash([]);
-          }
-
-          ctx.beginPath();
-          ctx.moveTo(bx1, by1);
-          ctx.lineTo(bx2, by2);
-          ctx.stroke();
-          ctx.setLineDash([]);
-
-          // ── Label ─────────────────────────────────────────────
-          const midBx = (bx1 + bx2) / 2;
-          const midBy = (by1 + by2) / 2;
-
-          ctx.save();
-
-          if (drawing.label) {
-            const angle = Math.atan2(by2 - by1, bx2 - bx1);
-            ctx.translate(midBx, midBy);
-            ctx.rotate(angle);
-            ctx.font = `24px "Geist Variable", -apple-system, sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom';
-            ctx.fillStyle = drawing.textColor;
-            ctx.fillText(drawing.label, 0, -8 * vpr);
-          }
-
-          ctx.restore();
-
-          // ── Handles (if selected) ──────────────────────────────
-          const isSelected = drawing.id === selectedId;
-          if (isSelected) {
-            const handleR = Math.round(6 * hpr);
-            const strokeW = Math.round(2 * hpr);
-
-            ctx.save();
-            ctx.fillStyle = '#ffffff';
-            ctx.strokeStyle = drawing.color;
-            ctx.lineWidth = strokeW;
-
-            for (const [hx, hy] of [
-              [bx1, by1],
-              [bx2, by2],
-            ]) {
-              ctx.beginPath();
-              ctx.arc(hx, hy, handleR, 0, 2 * Math.PI);
-              ctx.fill();
-              ctx.stroke();
+          switch (drawing.shape.type) {
+            case 'trendline':
+            case 'ray': {
+              if (drawing.shape.points.length < 2) continue;
+              drawLineShape(
+                ctx,
+                hpr,
+                vpr,
+                chart,
+                series,
+                drawing.shape.points[0],
+                drawing.shape.points[1],
+                drawing,
+                drawing.id === selectedId,
+                drawing.shape.type === 'ray' // extend past B
+              );
+              break;
             }
-
-            ctx.restore();
+            case 'horizontal': {
+              if (drawing.shape.points.length < 1) continue;
+              drawHorizontalShape(
+                ctx,
+                hpr,
+                vpr,
+                chart,
+                series,
+                drawing.shape.points[0],
+                drawing,
+                drawing.id === selectedId
+              );
+              break;
+            }
+            case 'vertical': {
+              if (drawing.shape.points.length < 1) continue;
+              drawVerticalShape(
+                ctx,
+                hpr,
+                vpr,
+                chart,
+                series,
+                drawing.shape.points[0],
+                drawing,
+                drawing.id === selectedId
+              );
+              break;
+            }
+            case 'parallel': {
+              if (drawing.shape.points.length < 3) continue;
+              drawParallelShape(
+                ctx,
+                hpr,
+                vpr,
+                chart,
+                series,
+                drawing.shape.points[0],
+                drawing.shape.points[1],
+                drawing.shape.points[2],
+                drawing,
+                drawing.id === selectedId
+              );
+              break;
+            }
+            case 'polyline': {
+              if (drawing.shape.points.length < 2) continue;
+              drawPolylineShape(
+                ctx,
+                hpr,
+                vpr,
+                chart,
+                series,
+                drawing.shape.points,
+                drawing,
+                drawing.id === selectedId
+              );
+              break;
+            }
           }
         }
       }
@@ -211,34 +674,146 @@ export class DrawingPrimitive implements ISeriesPrimitive<Time> {
     let closest: { id: string; dist: number; priority: number; isHandle: boolean } | null = null;
 
     for (const drawing of drawings) {
-      if (drawing.shape.type !== 'trendline' || drawing.shape.points.length < 2) continue;
+      const { type, points } = drawing.shape;
 
-      const p1 = drawing.shape.points[0];
-      const p2 = drawing.shape.points[1];
-      const x1 = chart.timeScale().timeToCoordinate(p1.time);
-      const y1 = series.priceToCoordinate(p1.price);
-      const x2 = chart.timeScale().timeToCoordinate(p2.time);
-      const y2 = series.priceToCoordinate(p2.price);
-      if (x1 === null || y1 === null || x2 === null || y2 === null) continue;
+      if (type === 'horizontal' && points.length >= 1) {
+        const p = points[0];
+        const yLine = series.priceToCoordinate(p.price);
+        if (yLine === null) continue;
 
-      // Locked drawings: only line-body hits (selection), no handle hits
-      if (!drawing.isLocked) {
-        // Endpoint handles (priority 2, 12px threshold)
-        for (const [hx, hy] of [
-          [x1, y1],
-          [x2, y2],
-        ]) {
-          const dist = Math.sqrt((x - hx) ** 2 + (y - hy) ** 2);
-          if (dist < 12 && (!closest || dist < closest.dist)) {
-            closest = { id: drawing.id, dist, priority: 2, isHandle: true };
+        if (!drawing.isLocked) {
+          const xHandle = chart.timeScale().timeToCoordinate(p.time);
+          if (xHandle !== null) {
+            const dist = Math.sqrt((x - xHandle) ** 2 + (y - yLine) ** 2);
+            if (dist < 12 && (!closest || dist < closest.dist)) {
+              closest = { id: drawing.id, dist, priority: 2, isHandle: true };
+            }
           }
+        }
+
+        const bodyDist = Math.abs(y - yLine);
+        if (bodyDist < 8 && (!closest || bodyDist < closest.dist)) {
+          closest = { id: drawing.id, dist: bodyDist, priority: 1, isHandle: false };
+        }
+        continue;
+      }
+
+      if (type === 'vertical' && points.length >= 1) {
+        const p = points[0];
+        const xLine = chart.timeScale().timeToCoordinate(p.time);
+        if (xLine === null) continue;
+
+        if (!drawing.isLocked) {
+          const yHandle = series.priceToCoordinate(p.price);
+          if (yHandle !== null) {
+            const dist = Math.sqrt((x - xLine) ** 2 + (y - yHandle) ** 2);
+            if (dist < 12 && (!closest || dist < closest.dist)) {
+              closest = { id: drawing.id, dist, priority: 2, isHandle: true };
+            }
+          }
+        }
+
+        const bodyDist = Math.abs(x - xLine);
+        if (bodyDist < 8 && (!closest || bodyDist < closest.dist)) {
+          closest = { id: drawing.id, dist: bodyDist, priority: 1, isHandle: false };
+        }
+        continue;
+      }
+
+      if (type === 'trendline' || type === 'ray') {
+        if (points.length < 2) continue;
+        const p1 = points[0];
+        const p2 = points[1];
+        const x1 = chart.timeScale().timeToCoordinate(p1.time);
+        const y1 = series.priceToCoordinate(p1.price);
+        const x2 = chart.timeScale().timeToCoordinate(p2.time);
+        const y2 = series.priceToCoordinate(p2.price);
+        if (x1 === null || y1 === null || x2 === null || y2 === null) continue;
+
+        if (!drawing.isLocked) {
+          for (const [hx, hy] of [
+            [x1, y1],
+            [x2, y2],
+          ]) {
+            const dist = Math.sqrt((x - hx) ** 2 + (y - hy) ** 2);
+            if (dist < 12 && (!closest || dist < closest.dist)) {
+              closest = { id: drawing.id, dist, priority: 2, isHandle: true };
+            }
+          }
+        }
+
+        const bodyDist =
+          type === 'ray'
+            ? pointToRayDist(x, y, x1, y1, x2, y2)
+            : pointToSegmentDist(x, y, x1, y1, x2, y2);
+        if (bodyDist < 8 && (!closest || bodyDist < closest.dist)) {
+          closest = { id: drawing.id, dist: bodyDist, priority: 1, isHandle: false };
+        }
+        continue;
+      }
+
+      if (type === 'parallel') {
+        if (points.length < 3) continue;
+        const ax = chart.timeScale().timeToCoordinate(points[0].time);
+        const ay = series.priceToCoordinate(points[0].price);
+        const bx = chart.timeScale().timeToCoordinate(points[1].time);
+        const by = series.priceToCoordinate(points[1].price);
+        const cx = chart.timeScale().timeToCoordinate(points[2].time);
+        const cy = series.priceToCoordinate(points[2].price);
+        if (ax === null || ay === null || bx === null || by === null || cx === null || cy === null)
+          continue;
+
+        if (!drawing.isLocked) {
+          for (const [hx, hy] of [
+            [ax, ay],
+            [bx, by],
+            [cx, cy],
+          ]) {
+            const dist = Math.sqrt((x - hx) ** 2 + (y - hy) ** 2);
+            if (dist < 12 && (!closest || dist < closest.dist)) {
+              closest = { id: drawing.id, dist, priority: 2, isHandle: true };
+            }
+          }
+        }
+
+        const ddx = bx - ax;
+        const ddy = by - ay;
+        const baseDist = pointToSegmentDist(x, y, ax, ay, bx, by);
+        if (baseDist < 8 && (!closest || baseDist < closest.dist)) {
+          closest = { id: drawing.id, dist: baseDist, priority: 1, isHandle: false };
+        }
+        const offsetDist = pointToSegmentDist(x, y, cx, cy, cx + ddx, cy + ddy);
+        if (offsetDist < 8 && (!closest || offsetDist < closest.dist)) {
+          closest = { id: drawing.id, dist: offsetDist, priority: 1, isHandle: false };
         }
       }
 
-      // Line body (priority 1, 8px threshold) — always hit-testable
-      const lineDist = pointToSegmentDist(x, y, x1, y1, x2, y2);
-      if (lineDist < 8 && (!closest || lineDist < closest.dist)) {
-        closest = { id: drawing.id, dist: lineDist, priority: 1, isHandle: false };
+      if (type === 'polyline') {
+        if (points.length < 2) continue;
+
+        if (!drawing.isLocked) {
+          for (const p of points) {
+            const hx = chart.timeScale().timeToCoordinate(p.time);
+            const hy = series.priceToCoordinate(p.price);
+            if (hx === null || hy === null) continue;
+            const dist = Math.sqrt((x - hx) ** 2 + (y - hy) ** 2);
+            if (dist < 12 && (!closest || dist < closest.dist)) {
+              closest = { id: drawing.id, dist, priority: 2, isHandle: true };
+            }
+          }
+        }
+
+        for (let i = 0; i < points.length - 1; i++) {
+          const x1 = chart.timeScale().timeToCoordinate(points[i]!.time);
+          const y1 = series.priceToCoordinate(points[i]!.price);
+          const x2 = chart.timeScale().timeToCoordinate(points[i + 1]!.time);
+          const y2 = series.priceToCoordinate(points[i + 1]!.price);
+          if (x1 === null || y1 === null || x2 === null || y2 === null) continue;
+          const bodyDist = pointToSegmentDist(x, y, x1, y1, x2, y2);
+          if (bodyDist < 8 && (!closest || bodyDist < closest.dist)) {
+            closest = { id: drawing.id, dist: bodyDist, priority: 1, isHandle: false };
+          }
+        }
       }
     }
 
