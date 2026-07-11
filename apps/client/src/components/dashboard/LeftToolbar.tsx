@@ -2,13 +2,12 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import type { ElementType } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MousePointer2, Crosshair, Square, Triangle, Type, Pencil, Trash2 } from 'lucide-react';
+import { MousePointer2, Type, Pencil, Trash2 } from 'lucide-react';
 import { bg, color, fontSize } from '@/lib/tokens';
 import { CURSOR_VARIANTS, type CursorVariantId } from '@/lib/cursors';
 import { LINE_TOOLS, type LineToolId } from '@/lib/lineTools';
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
-// null = visual separator between groups
 
 type Tool = {
   id: string;
@@ -18,12 +17,8 @@ type Tool = {
 
 const TOOLS: Tool[] = [
   { id: 'cursor', icon: MousePointer2, label: 'Cursor' },
-  { id: 'crosshair', icon: Crosshair, label: 'Crosshair' },
   null,
   { id: 'line', icon: MousePointer2, label: 'Lines' },
-  { id: 'rectangle', icon: Square, label: 'Rectangle' },
-  { id: 'fib', icon: Triangle, label: 'Fibonacci' },
-  null,
   { id: 'text', icon: Type, label: 'Text' },
   { id: 'pencil', icon: Pencil, label: 'Freehand Draw' },
   null,
