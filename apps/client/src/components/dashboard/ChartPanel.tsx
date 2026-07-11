@@ -374,15 +374,15 @@ export function ChartPanel({
       return;
     }
     const drawing = drawings.find((d) => d.id === selectedDrawingId);
-    if (!drawing || drawing.points.length < 2) {
+    if (!drawing || drawing.shape.points.length < 2) {
       setToolbarPos(null);
       return;
     }
 
-    const x1 = chartRef.current.timeScale().timeToCoordinate(drawing.points[0].time);
-    const y1 = candleRef.current.priceToCoordinate(drawing.points[0].price);
-    const x2 = chartRef.current.timeScale().timeToCoordinate(drawing.points[1].time);
-    const y2 = candleRef.current.priceToCoordinate(drawing.points[1].price);
+    const x1 = chartRef.current.timeScale().timeToCoordinate(drawing.shape.points[0].time);
+    const y1 = candleRef.current.priceToCoordinate(drawing.shape.points[0].price);
+    const x2 = chartRef.current.timeScale().timeToCoordinate(drawing.shape.points[1].time);
+    const y2 = candleRef.current.priceToCoordinate(drawing.shape.points[1].price);
     if (x1 === null || y1 === null || x2 === null || y2 === null) {
       setToolbarPos(null);
       return;
@@ -651,12 +651,12 @@ export function ChartPanel({
               onClose={() => useDrawingStore.getState().selectDrawing(null)}
               onClone={(drawing) => {
                 let priceOffset: number | undefined;
-                if (candleRef.current && drawing.points.length > 0) {
-                  const y = candleRef.current.priceToCoordinate(drawing.points[0].price);
+                if (candleRef.current && drawing.shape.points.length > 0) {
+                  const y = candleRef.current.priceToCoordinate(drawing.shape.points[0].price);
                   if (y !== null) {
                     const newPrice = candleRef.current.coordinateToPrice(y + 32);
                     if (newPrice !== null) {
-                      priceOffset = newPrice - drawing.points[0].price;
+                      priceOffset = newPrice - drawing.shape.points[0].price;
                     }
                   }
                 }

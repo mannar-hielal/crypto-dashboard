@@ -12,25 +12,7 @@ import type {
 } from 'lightweight-charts';
 import type { RefObject } from 'react';
 import type { Drawing, InProgressDrawing } from '@/lib/drawing/types';
-
-function pointToSegmentDist(
-  px: number,
-  py: number,
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number
-): number {
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  const lenSq = dx * dx + dy * dy;
-  if (lenSq === 0) return Math.sqrt((px - x1) ** 2 + (py - y1) ** 2);
-  let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
-  t = Math.max(0, Math.min(1, t));
-  const nearX = x1 + t * dx;
-  const nearY = y1 + t * dy;
-  return Math.sqrt((px - nearX) ** 2 + (py - nearY) ** 2);
-}
+import { pointToSegmentDist } from '@/lib/drawing/coordinates';
 
 // ─── Renderer ──────────────────────────────────────────────────────
 
@@ -82,10 +64,10 @@ class TrendlineRenderer implements IPrimitivePaneRenderer {
         const selectedId = this._primitive._selectedIdRef.current;
 
         for (const drawing of drawings) {
-          if (drawing.type !== 'trendline' || drawing.points.length < 2) continue;
+          if (drawing.shape.type !== 'trendline' || drawing.shape.points.length < 2) continue;
 
-          const p1 = drawing.points[0];
-          const p2 = drawing.points[1];
+          const p1 = drawing.shape.points[0];
+          const p2 = drawing.shape.points[1];
           const x1 = chart.timeScale().timeToCoordinate(p1.time);
           const y1 = series.priceToCoordinate(p1.price);
           const x2 = chart.timeScale().timeToCoordinate(p2.time);
@@ -229,10 +211,10 @@ export class DrawingPrimitive implements ISeriesPrimitive<Time> {
     let closest: { id: string; dist: number; priority: number; isHandle: boolean } | null = null;
 
     for (const drawing of drawings) {
-      if (drawing.type !== 'trendline' || drawing.points.length < 2) continue;
+      if (drawing.shape.type !== 'trendline' || drawing.shape.points.length < 2) continue;
 
-      const p1 = drawing.points[0];
-      const p2 = drawing.points[1];
+      const p1 = drawing.shape.points[0];
+      const p2 = drawing.shape.points[1];
       const x1 = chart.timeScale().timeToCoordinate(p1.time);
       const y1 = series.priceToCoordinate(p1.price);
       const x2 = chart.timeScale().timeToCoordinate(p2.time);

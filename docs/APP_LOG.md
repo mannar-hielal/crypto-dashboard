@@ -510,6 +510,16 @@ ask: number | null; // best ask from Bybit orderbook.1
 | `apps/client/src/components/dashboard/MultiChartArea.tsx`              | CSS grid renderer for all layouts; wires crosshair + time-range sync                                                                           |
 | `docs/markup-reference/`                                               | HTML UI reference files — component structure & interaction patterns (not 1:1 copies)                                                          |
 | `docs/screenshots/theme/`                                              | Visual source of truth — spacing, colors, sizes, layout                                                                                        |
+| `docs/DRAWING_TOOLS.md`                                                | Drawing tools architecture, status, roadmap                                                                                                    |
+| `apps/client/src/lib/drawing/types.ts`                                 | Drawing type definitions (`Drawing`, `DrawingPoint`, `LineStyle`, etc.)                                                                        |
+| `apps/client/src/lib/drawing/DrawingPrimitive.ts`                      | `ISeriesPrimitive` — canvas rendering + hit-testing for trendlines                                                                             |
+| `apps/client/src/lib/lineTools.tsx`                                    | SVG icons + `LINE_TOOLS` array (6 line drawing tool definitions)                                                                               |
+| `apps/client/src/store/drawingStore.ts`                                | Zustand store w/ `persist` for drawings (localStorage `cd-drawings`)                                                                           |
+| `apps/client/src/hooks/useDrawingInteraction.ts`                       | State machine for drawing placement and drag interactions                                                                                      |
+| `apps/client/src/components/drawing/DrawingPropertiesMenu.tsx`         | Floating toolbar for selected drawing (color, width, style, label, lock, delete)                                                               |
+| `apps/client/src/components/drawing/KebabMenu.tsx`                     | Submenu: Clone, Visual Order, Delete                                                                                                           |
+| `apps/client/src/components/drawing/ColorPicker.tsx`                   | TV-style color swatch grid (10 grays + 6×10 color matrix)                                                                                      |
+| `apps/client/src/lib/cursors.tsx`                                      | Cursor variant icons + data-URI CSS map for chart cursor overrides                                                                             |
 | `docs/REVIEW_CHECKLIST.md`                                             | Pre-commit review checklist — run before every push                                                                                            |
 | `docs/APP_LOG.md`                                                      | This file — full project context, attach at start of every session                                                                             |
 
@@ -571,7 +581,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 ### 📋 Planned (Next)
 
-- **Left Toolbar (aside bar) — wire up functions**: Currently UI-only (icons with no actions). Build out the tool buttons: drawing tools, measurement tools, line-study annotations on charts, etc. Requires connecting toolbar click events to `paneStore` / chart actions.
+- **Additional drawing tools**: Wire remaining line tools (horizontal line, vertical line, ray, parallel, polyline, text, freehand, eraser) — currently UI-only in toolbar, only trendline has full drawing logic.
 - **Phase 4**: Advanced indicators, alerts, multi-symbol watchlist
 - **Phase 5**: Live broker integration — Bybit real-money trading (see full spec below)
 - **Phase 6**: AI trading bot — 3-role system: Scanner + Analyst + Executor, paper mode only (see full spec below)
@@ -1364,6 +1374,56 @@ Four issues surfaced in a Copilot PR review and are now resolved.
 - Removed `useRef` + `useCallback` double-submit guard — protection is now fully server-side (simpler, more reliable)
 
 **Server logs confirm single request, single email per registration.** 1 email received in final test (`adminwithu+test6`).
+
+---
+
+### feat: drawing tools — trendline system (2026-07-11) ✅
+
+Completed the MVP trendline drawing system with full interaction lifecycle and TV-style toolbar.
+
+**Architecture:**
+
+- `DrawingPrimitive` — `ISeriesPrimitive` implementation for canvas rendering via `TrendlineRenderer` + `hitTest`
+- `useDrawingInteraction` — state machine (`IDLE` → `DRAWING` → `PLACING_A` + pointer capture for drag/resize)
+- `drawingStore` — Zustand w/ `persist` (`cd-drawings` localStorage key) — drawings survive page refresh
+
+**Implemented:**
+
+- Trendline placement: click A → preview via crosshair move → click B to commit
+- Selection via `hoveredObjectId`, click-on-handle, click-on-body
+- Handle drag to resize endpoint, body drag to translate entire line
+- Properties toolbar (`DrawingPropertiesMenu`) at trendline midpoint with drag-to-reposition
+- Line color, text color, label, line width (1/2/3/4 px), line style (solid/dashed/dotted)
+- Dash/dot gap spacing scales with `lineWidth`
+- Lock drawing (prevents move/resize)
+- Delete via keyboard (`Delete`/`Backspace`) and toolbar button
+- Clone with 32px downward offset (computes price delta via `priceToCoordinate`/`coordinateToPrice`)
+- Visual order (z-index reorder: front/back/forward/backward)
+- Right-click exits drawing mode and restores previous tool
+- Escape cancels in-progress placement or deselects
+- Only user-set label renders on canvas (auto price-change pill removed)
+- Hover legend hidden during active drawing placement
+- All popups (color picker, width, style, label, kebab) positioned inside toolbar (`absolute left-0 top-12`)
+- `data-drawing-hover`/`data-drawing-active` attributes on chart div
+- TV-style line style dropdown (solid/dashed/dotted SVG previews in `<table>`)
+- KebabMenu with Clone + Visual Order submenu (TradingView `<table>`)
+- Cursor variant submenu + line tool submenu in LeftToolbar (right-click)
+- Crosshair, Rectangle, Fibonacci toolbar buttons removed (UI-only with no implementation)
+
+**New files:**
+
+- `apps/client/src/lib/drawing/types.ts`
+- `apps/client/src/lib/drawing/DrawingPrimitive.ts`
+- `apps/client/src/lib/lineTools.tsx`
+- `apps/client/src/store/drawingStore.ts`
+- `apps/client/src/hooks/useDrawingInteraction.ts`
+- `apps/client/src/components/drawing/DrawingPropertiesMenu.tsx`
+- `apps/client/src/components/drawing/KebabMenu.tsx`
+- `apps/client/src/components/drawing/ColorPicker.tsx`
+- `apps/client/src/lib/cursors.tsx`
+- `docs/DRAWING_TOOLS.md`
+
+**All checks pass:** server + client type-check, lint, 490 tests.
 
 ---
 

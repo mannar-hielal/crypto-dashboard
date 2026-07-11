@@ -5,6 +5,7 @@ import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts';
 import { useDrawingStore } from '@/store/drawingStore';
 import { LINE_TOOLS } from '@/lib/lineTools';
 import type { Drawing, DrawingPoint, InProgressDrawing } from '@/lib/drawing/types';
+import { hitTestBodies } from '@/lib/drawing/coordinates';
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -29,8 +30,6 @@ interface UseDrawingInteractionOptions {
 interface UseDrawingInteractionResult {
   inProgressDrawing: InProgressDrawing | null;
 }
-
-const DEFAULT_COLOR = '#2196f3';
 
 function isLineTool(toolId: string): boolean {
   return LINE_TOOLS.some((t): t is NonNullable<typeof t> => t !== null && t.id === toolId);
@@ -65,57 +64,10 @@ function hitTestHandles(
 
   for (const drawing of drawings) {
     if (drawing.isLocked) continue;
-    for (let i = 0; i < drawing.points.length; i++) {
-      const dist = pointToHandleDist(x, y, chart, series, drawing.points[i]);
+    for (let i = 0; i < drawing.shape.points.length; i++) {
+      const dist = pointToHandleDist(x, y, chart, series, drawing.shape.points[i]);
       if (dist !== null && dist < 12) {
         return { drawingId: drawing.id, pointIndex: i };
-      }
-    }
-  }
-  return null;
-}
-
-function pointToSegmentDist(
-  px: number,
-  py: number,
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number
-): number {
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  const lenSq = dx * dx + dy * dy;
-  if (lenSq === 0) return Math.sqrt((px - x1) ** 2 + (py - y1) ** 2);
-  let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
-  t = Math.max(0, Math.min(1, t));
-  const nearX = x1 + t * dx;
-  const nearY = y1 + t * dy;
-  return Math.sqrt((px - nearX) ** 2 + (py - nearY) ** 2);
-}
-
-function hitTestLineBody(
-  clientX: number,
-  clientY: number,
-  chart: IChartApi,
-  series: ISeriesApi<'Candlestick'>,
-  container: HTMLElement,
-  drawings: Drawing[]
-): { drawingId: string } | null {
-  const rect = container.getBoundingClientRect();
-  const x = clientX - rect.left;
-  const y = clientY - rect.top;
-
-  for (const drawing of drawings) {
-    if (drawing.points.length < 2) continue;
-    for (let i = 0; i < drawing.points.length - 1; i++) {
-      const x1 = chart.timeScale().timeToCoordinate(drawing.points[i].time);
-      const y1 = series.priceToCoordinate(drawing.points[i].price);
-      const x2 = chart.timeScale().timeToCoordinate(drawing.points[i + 1].time);
-      const y2 = series.priceToCoordinate(drawing.points[i + 1].price);
-      if (x1 === null || y1 === null || x2 === null || y2 === null) continue;
-      if (pointToSegmentDist(x, y, x1, y1, x2, y2) < 8) {
-        return { drawingId: drawing.id };
       }
     }
   }
@@ -193,21 +145,20 @@ export function useDrawingInteraction({
         // Before starting a new drawing, check if click is on an existing line body
         if (param.point) {
           const allDrawings = useDrawingStore.getState().drawings;
-          for (const drawing of allDrawings) {
-            if (drawing.points.length < 2) continue;
-            for (let i = 0; i < drawing.points.length - 1; i++) {
-              const x1 = chart.timeScale().timeToCoordinate(drawing.points[i].time);
-              const y1 = series.priceToCoordinate(drawing.points[i].price);
-              const x2 = chart.timeScale().timeToCoordinate(drawing.points[i + 1].time);
-              const y2 = series.priceToCoordinate(drawing.points[i + 1].price);
-              if (x1 === null || y1 === null || x2 === null || y2 === null) continue;
-              if (pointToSegmentDist(param.point.x, param.point.y, x1, y1, x2, y2) < 8) {
-                store.selectDrawing(drawing.id);
-                return;
-              }
-            }
+          const bodyHitId = hitTestBodies(param.point.x, param.point.y, allDrawings, {
+            timeToX: (t) => chart.timeScale().timeToCoordinate(t),
+            priceToY: (p) => series.priceToCoordinate(p),
+          });
+          if (bodyHitId) {
+            store.selectDrawing(bodyHitId);
+            return;
           }
         }
+
+        // Only trendline placement is implemented (2-click flow).
+        // Horizontal/vertical (1-click), parallel (3-click), polyline (N-click)
+        // will be wired in subsequent phases.
+        if (activeToolRef.current !== 'trendline') return;
 
         if (!param.time || !param.point) return;
         const price = series.coordinateToPrice(param.point.y);
@@ -234,13 +185,7 @@ export function useDrawingInteraction({
 
         const pointB: DrawingPoint = { time: param.time as UTCTimestamp, price };
         const newId = store.addDrawing({
-          type: 'trendline',
-          points: [...ip.points, pointB],
-          color: DEFAULT_COLOR,
-          textColor: '#ffffff',
-          lineWidth: 2,
-          lineStyle: 'solid',
-          isLocked: false,
+          shape: { type: ip.type, points: [...ip.points, pointB] },
         });
 
         inProgressRef.current = null;
@@ -318,18 +263,23 @@ export function useDrawingInteraction({
 
       // Body drag (translate) — both modes, skip during new-drawing placement
       if (stateRef.current === 'PLACING_A') return;
-      const bodyHit = hitTestLineBody(e.clientX, e.clientY, chart, series, container, drawings);
-      if (bodyHit) {
-        const drawing = drawings.find((d) => d.id === bodyHit.drawingId);
+      const rect = container.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const bodyHitId = hitTestBodies(x, y, drawings, {
+        timeToX: (t) => chart.timeScale().timeToCoordinate(t),
+        priceToY: (p) => series.priceToCoordinate(p),
+      });
+      if (bodyHitId) {
+        const drawing = drawings.find((d) => d.id === bodyHitId);
         if (!drawing || drawing.isLocked) return;
         e.stopPropagation();
         e.preventDefault();
-        const rect = container.getBoundingClientRect();
         stateRef.current = 'DRAGGING_DRAWING';
         dragRef.current = {
-          drawingId: bodyHit.drawingId,
+          drawingId: bodyHitId,
           pointIndex: -1,
-          startPoints: drawing.points.map((p) => ({ ...p })),
+          startPoints: drawing.shape.points.map((p) => ({ ...p })),
           startMouse: { x: e.clientX - rect.left, y: e.clientY - rect.top },
         };
         container.setPointerCapture(e.pointerId);
@@ -355,10 +305,12 @@ export function useDrawingInteraction({
           .drawings.find((d) => d.id === dragRef.current!.drawingId);
         if (!drawing) return;
 
-        const newPoints: DrawingPoint[] = drawing.points.map((p, i) =>
+        const newPoints: DrawingPoint[] = drawing.shape.points.map((p, i) =>
           i === dragRef.current!.pointIndex ? { time: time as UTCTimestamp, price } : p
         );
-        useDrawingStore.getState().updateDrawing(dragRef.current.drawingId, { points: newPoints });
+        useDrawingStore.getState().updateDrawing(dragRef.current!.drawingId, {
+          shape: { ...drawing.shape, points: newPoints },
+        });
         return;
       }
 
@@ -380,7 +332,11 @@ export function useDrawingInteraction({
           return { time: newTime as UTCTimestamp, price: newPrice };
         });
 
-        useDrawingStore.getState().updateDrawing(drawingId, { points: newPoints });
+        const currentDrawing = useDrawingStore.getState().drawings.find((d) => d.id === drawingId);
+        if (!currentDrawing) return;
+        useDrawingStore.getState().updateDrawing(drawingId, {
+          shape: { ...currentDrawing.shape, points: newPoints },
+        });
         return;
       }
     };
