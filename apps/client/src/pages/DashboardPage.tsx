@@ -109,9 +109,8 @@ function DashboardInner() {
   }
 
   function handleExitDrawingMode() {
-    const { toolId, lineToolId } = previousToolRef.current;
+    const { toolId } = previousToolRef.current;
     setActiveTool(toolId);
-    setSelectedLineTool(lineToolId);
   }
 
   function handleBinAction() {
