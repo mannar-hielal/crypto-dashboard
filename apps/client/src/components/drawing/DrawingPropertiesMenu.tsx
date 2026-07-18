@@ -2,10 +2,11 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { bg, color } from '@/lib/tokens';
+import { bg, color, fontSize as fontSizeTokens } from '@/lib/tokens';
 import { ColorPicker } from '@/components/drawing/ColorPicker';
 import { KebabMenu } from '@/components/drawing/KebabMenu';
 import type { Drawing, LineStyle } from '@/lib/drawing/types';
+import { SHAPE_CAPABILITIES } from '@/lib/drawing/types';
 
 // ─── Props ─────────────────────────────────────────────────────────
 
@@ -17,11 +18,16 @@ interface DrawingPropertiesMenuProps {
   onClose: () => void;
   onClone: (drawing: Drawing) => void;
   onReorder: (id: string, dir: 'front' | 'forward' | 'back' | 'backward') => void;
+  /** P6 — invoked when the user clicks the label/edit button on an editable
+   *  text/note/callout/priceNote drawing. ChartPanel mounts the on-chart
+   *  textarea overlay for that drawing and closes this toolbar. */
+  onEditLabel?: (drawing: Drawing) => void;
 }
 
-// ─── Line width options ────────────────────────────────────────────
+// ─── Line width + font size options ─────────────────────────────────
 
 const LINE_WIDTHS = [1, 2, 3, 4] as const;
+const FONT_SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32] as const;
 
 // ─── Toolbar button style ──────────────────────────────────────────
 
@@ -38,14 +44,20 @@ export function DrawingPropertiesMenu({
   onClose,
   onClone,
   onReorder,
+  onEditLabel,
 }: DrawingPropertiesMenuProps) {
   const [anchorPos, setAnchorPos] = useState({ x: position.x, y: position.y });
   const [showLineColor, setShowLineColor] = useState(false);
   const [showTextColor, setShowTextColor] = useState(false);
+  const [showFillColor, setShowFillColor] = useState(false);
   const [showWidth, setShowWidth] = useState(false);
   const [showLabel, setShowLabel] = useState(false);
   const [showLineStyle, setShowLineStyle] = useState(false);
+  const [showFontSize, setShowFontSize] = useState(false);
   const [showKebab, setShowKebab] = useState(false);
+
+  // P6 — per-shape capability flags (drives button visibility)
+  const caps = SHAPE_CAPABILITIES[drawing.shape.type];
 
   const toolbarRef = useRef<HTMLDivElement>(null);
 
@@ -76,9 +88,11 @@ export function DrawingPropertiesMenu({
   function openPopup(name: string) {
     setShowLineColor(name === 'lineColor');
     setShowTextColor(name === 'textColor');
+    setShowFillColor(name === 'fillColor');
     setShowWidth(name === 'width');
     setShowLabel(name === 'label');
     setShowLineStyle(name === 'lineStyle');
+    setShowFontSize(name === 'fontSize');
     setShowKebab(name === 'kebab');
   }
 
@@ -134,117 +148,174 @@ export function DrawingPropertiesMenu({
         ))}
       </div>
 
-      {/* ── Line color ──────────────────────────────────────────── */}
-      <button
-        className={BTN}
-        onClick={() => openPopup('lineColor')}
-        title="Line color"
-        aria-label="Line color"
-      >
-        <div
-          className="h-6 w-6 rounded-full border border-white/20"
-          style={{ background: drawing.color }}
-        />
-      </button>
+      {/* ── Line color ╱ border accent ──────────────────────────── */}
+      {caps.hasLineColor && (
+        <button
+          className={BTN}
+          onClick={() => openPopup('lineColor')}
+          title="Line color"
+          aria-label="Line color"
+        >
+          <div
+            className="h-6 w-6 rounded-full border border-white/20"
+            style={{ background: drawing.color }}
+          />
+        </button>
+      )}
+
+      {/* ── Fill color (P6 — box / pill background) ──────────────── */}
+      {caps.hasFillColor && (
+        <button
+          className={BTN}
+          onClick={() => openPopup('fillColor')}
+          title="Fill color"
+          aria-label="Fill color"
+        >
+          <div
+            className="h-6 w-6 rounded border border-white/20"
+            style={{ background: drawing.backgroundColor }}
+          />
+        </button>
+      )}
 
       {/* ── Text color ──────────────────────────────────────────── */}
-      <button
-        className={BTN}
-        onClick={() => openPopup('textColor')}
-        title="Text color"
-        aria-label="Text color"
-      >
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 28 28"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
+      {caps.hasTextColor && (
+        <button
+          className={BTN}
+          onClick={() => openPopup('textColor')}
+          title="Text color"
+          aria-label="Text color"
         >
-          <text
-            x="14"
-            y="20"
-            textAnchor="middle"
-            fill={drawing.textColor}
-            stroke="none"
-            fontSize="18"
-            fontFamily="sans-serif"
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 28 28"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
           >
-            A
-          </text>
-        </svg>
-      </button>
+            <text
+              x="14"
+              y="20"
+              textAnchor="middle"
+              fill={drawing.textColor}
+              stroke="none"
+              fontSize="18"
+              fontFamily="sans-serif"
+            >
+              A
+            </text>
+          </svg>
+        </button>
+      )}
 
-      {/* ── Label ───────────────────────────────────────────────── */}
-      <button
-        className={BTN}
-        onClick={() => openPopup('label')}
-        title="Edit label"
-        aria-label="Edit label"
-      >
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 13 15"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1"
+      {/* ── P6 — Label (textarea editor for annotations) ────────── */}
+      {caps.hasEditableLabel && (
+        <button
+          className={BTN}
+          onClick={() => {
+            if (
+              drawing.shape.type === 'text' ||
+              drawing.shape.type === 'note' ||
+              drawing.shape.type === 'callout' ||
+              drawing.shape.type === 'priceNote'
+            ) {
+              // P6 — open the on-chart textarea editor (multiline)
+              onEditLabel?.(drawing);
+              onClose();
+            } else {
+              openPopup('label');
+            }
+          }}
+          title="Edit label"
+          aria-label="Edit label"
         >
-          <path d="M4 14.5h2.5m2.5 0H6.5m0 0V.5m0 0h-5a1 1 0 0 0-1 1V4m6-3.5h5a1 1 0 0 1 1 1V4" />
-        </svg>
-      </button>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 13 15"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1"
+          >
+            <path d="M4 14.5h2.5m2.5 0H6.5m0 0V.5m0 0h-5a1 1 0 0 0-1 1V4m6-3.5h5a1 1 0 0 1 1 1V4" />
+          </svg>
+        </button>
+      )}
 
       {/* ── Line width ──────────────────────────────────────────── */}
-      <button
-        className={BTN}
-        onClick={() => openPopup('width')}
-        title="Line width"
-        aria-label="Line width"
-      >
-        <svg width="24" height="24" viewBox="0 0 28 28">
-          <line
-            x1="2"
-            y1="14"
-            x2="26"
-            y2="14"
-            stroke="currentColor"
-            strokeWidth={drawing.lineWidth}
-            strokeLinecap="round"
-          />
-        </svg>
-      </button>
+      {caps.hasLineWidth && (
+        <button
+          className={BTN}
+          onClick={() => openPopup('width')}
+          title="Line width"
+          aria-label="Line width"
+        >
+          <svg width="24" height="24" viewBox="0 0 28 28">
+            <line
+              x1="2"
+              y1="14"
+              x2="26"
+              y2="14"
+              stroke="currentColor"
+              strokeWidth={drawing.lineWidth}
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
+      )}
 
       {/* ── Line style dropdown ──────────────────────────────────── */}
-      <button
-        className={BTN}
-        onClick={() => openPopup('lineStyle')}
-        title="Line style"
-        aria-label={`Line style: ${drawing.lineStyle}`}
-      >
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 28 28"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
+      {caps.hasLineStyle && (
+        <button
+          className={BTN}
+          onClick={() => openPopup('lineStyle')}
+          title="Line style"
+          aria-label={`Line style: ${drawing.lineStyle}`}
         >
-          <line
-            x1="2"
-            y1="14"
-            x2="26"
-            y2="14"
-            strokeDasharray={
-              drawing.lineStyle === 'solid'
-                ? 'none'
-                : drawing.lineStyle === 'dashed'
-                  ? '6 4'
-                  : '2 4'
-            }
-          />
-        </svg>
-      </button>
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 28 28"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <line
+              x1="2"
+              y1="14"
+              x2="26"
+              y2="14"
+              strokeDasharray={
+                drawing.lineStyle === 'solid'
+                  ? 'none'
+                  : drawing.lineStyle === 'dashed'
+                    ? '6 4'
+                    : '2 4'
+              }
+            />
+          </svg>
+        </button>
+      )}
+
+      {/* ── P6 — Font-size chip ───────────────────────────────────── */}
+      {caps.hasFontSize && (
+        <button
+          className={BTN}
+          onClick={() => openPopup('fontSize')}
+          title="Font size"
+          aria-label="Font size"
+          style={{
+            fontFamily: 'inherit',
+            fontSize: fontSizeTokens.xs11,
+            fontWeight: 600,
+            letterSpacing: 0.4,
+            color: color.white,
+          }}
+        >
+          {drawing.fontSize}
+        </button>
+      )}
 
       {/* ── Lock toggle ─────────────────────────────────────────── */}
       <button
@@ -334,6 +405,17 @@ export function DrawingPropertiesMenu({
         </div>
       )}
 
+      {/* ── P6 — Fill color (box / pill background) ─────────────── */}
+      {showFillColor && (
+        <div className="absolute left-0 top-12 z-[100]">
+          <ColorPicker
+            selectedColor={drawing.backgroundColor}
+            onSelect={(hex) => onUpdate(drawing.id, { backgroundColor: hex })}
+            onClose={() => setShowFillColor(false)}
+          />
+        </div>
+      )}
+
       <AnimatePresence>
         {showLabel && (
           <motion.div
@@ -411,6 +493,47 @@ export function DrawingPropertiesMenu({
                     </td>
                     <td className="pr-3 py-1">
                       <span className="whitespace-nowrap text-xs font-medium">{w}px</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── P6 — Font-size dropdown ───────────────────────────────── */}
+      <AnimatePresence>
+        {showFontSize && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.1 }}
+            className="absolute left-0 top-12 z-[100] overflow-hidden rounded-md border border-white/8 shadow-xl"
+            style={{ background: bg.panel }}
+          >
+            <table>
+              <tbody>
+                {FONT_SIZES.map((size) => (
+                  <tr
+                    key={size}
+                    data-role="menuitem"
+                    tabIndex={-1}
+                    className="cursor-pointer transition-colors hover:bg-white/8"
+                    style={{
+                      background: drawing.fontSize === size ? `${color.purpleDark}20` : undefined,
+                      color: drawing.fontSize === size ? color.white : color.muted,
+                    }}
+                    onClick={() => {
+                      onUpdate(drawing.id, { fontSize: size });
+                      setShowFontSize(false);
+                    }}
+                  >
+                    <td className="px-2.5 py-1.5 text-right">
+                      <span className="whitespace-nowrap text-xs font-medium tabular-nums">
+                        {size}
+                      </span>
                     </td>
                   </tr>
                 ))}

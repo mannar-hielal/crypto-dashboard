@@ -86,10 +86,13 @@ describe('drawingStore', () => {
       const drawing = useDrawingStore.getState().drawings[0]!;
       expect(drawing.id).toBe(id);
       expect(drawing.color).toBe('#2196f3');
-      expect(drawing.textColor).toBe('#ffffff');
+      expect(drawing.textColor).toBe('#fcfcfd'); // P6 — DEFAULT_TEXT_COLOR switched to tokens.color.white
       expect(drawing.lineWidth).toBe(2);
       expect(drawing.lineStyle).toBe('solid');
       expect(drawing.isLocked).toBe(false);
+      // P6 annotation style defaults
+      expect(drawing.fontSize).toBe(14);
+      expect(drawing.backgroundColor).toBe('#25234e');
     });
 
     it('allows overriding default style', () => {
@@ -593,6 +596,54 @@ describe('drawingStore', () => {
       expect(clone.shape.points[0]!.time).toBe(1000 as DrawingPoint['time']);
       expect(clone.shape.points[1]!.time).toBe(2000 as DrawingPoint['time']);
       expect(clone.shape.points[2]!.time).toBe(3000 as DrawingPoint['time']);
+    });
+  });
+
+  // ── P6 — text & notes shapes ─────────────────────────────────────────
+
+  describe('P6 text & notes shapes', () => {
+    function makeTextNoteShape(type: 'text' | 'note' | 'callout' | 'priceNote' | 'priceLabel') {
+      return {
+        type,
+        points: [makePoint(100, 1000)],
+      };
+    }
+
+    it.each(['text', 'note', 'callout', 'priceNote', 'priceLabel'] as const)(
+      'stores %s shape with one anchor point and default annotation style',
+      (type) => {
+        const id = useDrawingStore.getState().addDrawing({ shape: makeTextNoteShape(type) });
+        const drawing = useDrawingStore.getState().drawings.find((d) => d.id === id)!;
+        expect(drawing.shape.type).toBe(type);
+        expect(drawing.shape.points).toHaveLength(1);
+        // P6 default annotation style backfilled by factory
+        expect(drawing.fontSize).toBe(14);
+        expect(drawing.backgroundColor).toBe('#25234e');
+      }
+    );
+
+    it('preserves user-provided fontSize + backgroundColor overrides', () => {
+      const id = useDrawingStore.getState().addDrawing({
+        shape: makeTextNoteShape('note'),
+        fontSize: 20,
+        backgroundColor: '#0a0a0a',
+      });
+      const drawing = useDrawingStore.getState().drawings.find((d) => d.id === id)!;
+      expect(drawing.fontSize).toBe(20);
+      expect(drawing.backgroundColor).toBe('#0a0a0a');
+    });
+
+    it('cloneDrawing offsets the single anchor for note/callout/text shapes', () => {
+      const id = useDrawingStore.getState().addDrawing({
+        shape: makeTextNoteShape('callout'),
+      });
+      useDrawingStore.getState().cloneDrawing(id, 50);
+      const clone = useDrawingStore.getState().drawings[1]!;
+      expect(clone.shape.type).toBe('callout');
+      expect(clone.shape.points[0]!.price).toBe(150);
+      expect(clone.shape.points[0]!.time).toBe(1000 as DrawingPoint['time']);
+      // Lock state always fresh on a clone
+      expect(clone.isLocked).toBe(false);
     });
   });
 });

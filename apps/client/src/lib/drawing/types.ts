@@ -46,13 +46,57 @@ export interface PolylineData {
   points: DrawingPoint[]; // N ≥ 2
 }
 
+// ─── Text & Notes shapes (P6 — all single-anchor) ───────────────────
+//
+// Five annotation tools sharing the same geometry (1 anchor at (time, price))
+// but different rendering, editability, and styling:
+//   - text       : bare multiline text, no box, editable via textarea overlay
+//   - note       : sticky-note box pinned at anchor, no extra geometry
+//   - callout    : rounded box offset from anchor + leader tail
+//   - priceNote  : note box + dashed lead line + right-edge price pill
+//   - priceLabel : auto-rendered price pill (not editable)
+//
+// Text content for all editable ones is stored in the shared `Drawing.label`
+// field (multiline via `\n`). Price label does not use `label` — it renders
+// the formatted `anchor.price` directly.
+
+export interface TextData {
+  type: 'text';
+  points: DrawingPoint[]; // exactly 1
+}
+
+export interface NoteData {
+  type: 'note';
+  points: DrawingPoint[]; // exactly 1
+}
+
+export interface CalloutData {
+  type: 'callout';
+  points: DrawingPoint[]; // exactly 1
+}
+
+export interface PriceNoteData {
+  type: 'priceNote';
+  points: DrawingPoint[]; // exactly 1
+}
+
+export interface PriceLabelData {
+  type: 'priceLabel';
+  points: DrawingPoint[]; // exactly 1
+}
+
 export type ShapeData =
   | TrendlineData
   | HorizontalData
   | VerticalData
   | RayData
   | ParallelData
-  | PolylineData;
+  | PolylineData
+  | TextData
+  | NoteData
+  | CalloutData
+  | PriceNoteData
+  | PriceLabelData;
 
 export type DrawingType = ShapeData['type'];
 
@@ -68,9 +112,90 @@ export interface Drawing {
   textColor: string;
   lineWidth: number;
   lineStyle: LineStyle;
+  // Annotation style (P6 — text & notes)
+  fontSize: number;
+  backgroundColor: string;
   // Shape-specific data (replaces flat `type` + `points`)
   shape: ShapeData;
 }
+
+// ─── Shape capability flags (P6.9 — conditional properties menu) ─────
+
+export interface ShapeCapabilities {
+  hasLineColor: boolean;
+  hasFillColor: boolean;
+  hasTextColor: boolean;
+  hasEditableLabel: boolean;
+  hasFontSize: boolean;
+  hasLineWidth: boolean;
+  hasLineStyle: boolean;
+}
+
+const LINE_CAPS: ShapeCapabilities = {
+  hasLineColor: true,
+  hasFillColor: false,
+  hasTextColor: true, // label color
+  hasEditableLabel: true, // single-line label
+  hasFontSize: false,
+  hasLineWidth: true,
+  hasLineStyle: true,
+};
+
+const PARALLEL_CAPS: ShapeCapabilities = { ...LINE_CAPS, hasFillColor: true };
+
+export const SHAPE_CAPABILITIES: Record<DrawingType, ShapeCapabilities> = {
+  trendline: LINE_CAPS,
+  horizontal: LINE_CAPS,
+  vertical: LINE_CAPS,
+  ray: LINE_CAPS,
+  parallel: PARALLEL_CAPS,
+  polyline: LINE_CAPS,
+  text: {
+    hasLineColor: false,
+    hasFillColor: false,
+    hasTextColor: true,
+    hasEditableLabel: true, // opens textarea editor
+    hasFontSize: true,
+    hasLineWidth: false,
+    hasLineStyle: false,
+  },
+  note: {
+    hasLineColor: true, // border
+    hasFillColor: true,
+    hasTextColor: true,
+    hasEditableLabel: true, // opens textarea editor
+    hasFontSize: true,
+    hasLineWidth: true,
+    hasLineStyle: true,
+  },
+  callout: {
+    hasLineColor: true, // border + leader tail
+    hasFillColor: true,
+    hasTextColor: true,
+    hasEditableLabel: true, // opens textarea editor
+    hasFontSize: true,
+    hasLineWidth: true,
+    hasLineStyle: true,
+  },
+  priceNote: {
+    hasLineColor: true, // border + lead line + pill border
+    hasFillColor: true,
+    hasTextColor: true,
+    hasEditableLabel: true, // opens textarea editor
+    hasFontSize: true,
+    hasLineWidth: true,
+    hasLineStyle: true,
+  },
+  priceLabel: {
+    hasLineColor: true, // pill fill
+    hasFillColor: true, // pill fill (alias of color for pill)
+    hasTextColor: true, // pill text
+    hasEditableLabel: false, // not editable
+    hasFontSize: true,
+    hasLineWidth: true, // pill border
+    hasLineStyle: true, // effectively unused but harmless
+  },
+};
 
 // ─── In-progress placement state ────────────────────────────────────
 

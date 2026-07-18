@@ -7,7 +7,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { pointToSegmentDist, pointToRayDist, hitTestBodies } from '../drawing/coordinates';
+import {
+  pointToSegmentDist,
+  pointToRayDist,
+  hitTestBodies,
+  pointInRect,
+} from '../drawing/coordinates';
 import type { Drawing } from '@/lib/drawing/types';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -25,6 +30,8 @@ function makeDrawing(
     textColor: '#ffffff',
     lineWidth: 2,
     lineStyle: 'solid',
+    fontSize: 14,
+    backgroundColor: '#25234e',
     shape: {
       type,
       points: points.map((p) => ({
@@ -416,5 +423,27 @@ describe('hitTestBodies', () => {
   it('polyline: not hit-testable with fewer than 2 points', () => {
     const drawing = makeDrawing([{ time: 0, price: 0 }], 'pl1', 'polyline');
     expect(hitTestBodies(0, 0, [drawing], dummyConverters, 8)).toBeNull();
+  });
+});
+
+// ─── P6 — pointInRect helper ────────────────────────────────────────────────
+
+describe('pointInRect', () => {
+  it('true when point is inside the rectangle', () => {
+    expect(pointInRect(50, 50, 0, 0, 100, 100)).toBe(true);
+  });
+  it('true on the boundary', () => {
+    expect(pointInRect(0, 0, 0, 0, 100, 100)).toBe(true);
+    expect(pointInRect(100, 100, 0, 0, 100, 100)).toBe(true);
+  });
+  it('false when point is outside the rectangle', () => {
+    expect(pointInRect(101, 50, 0, 0, 100, 100)).toBe(false);
+    expect(pointInRect(-1, 50, 0, 0, 100, 100)).toBe(false);
+    expect(pointInRect(50, 200, 0, 0, 100, 100)).toBe(false);
+  });
+  it('respects the padding argument (expands the box)', () => {
+    // Point at 105 — outside on bare box, inside with 10px padding
+    expect(pointInRect(105, 50, 0, 0, 100, 100, 0)).toBe(false);
+    expect(pointInRect(105, 50, 0, 0, 100, 100, 10)).toBe(true);
   });
 });

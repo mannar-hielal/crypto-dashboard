@@ -28,7 +28,8 @@ cryptopapertrade.com/
 ├── generated/
 │   └── CDSDK/            @crypto-dashboard/sdk      Shared types + API functions
 ├── mcp-servers/            Figma MCP server
-├── docs/                   REVIEW_CHECKLIST.md (251 items — read before any PR)
+├── docs/                   APP_LOG.md · DRAWING_TOOLS.md · plans (review checklist consolidated into .agents/skills/bug-sweep/SKILL.md)
+├── .agents/skills/         16 project skills (ZCode/Claude Code/Codex cross-tool standard) — bug-sweep, drawing-tools, lightweight-charts-patterns, session-bootstrap, paper-trading-logic, figma-theme-source, +10 more
 ├── docker-compose.yml      Postgres 16 + Redis 7
 ├── fly.toml                Fly.io config (Singapore, 512MB shared-cpu-1x)
 ├── opencode.json           Figma MCP config

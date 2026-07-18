@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts';
 import { useDrawingStore } from '@/store/drawingStore';
-import { LINE_TOOLS, type LineToolId } from '@/lib/lineTools';
+import { LINE_TOOLS } from '@/lib/lineTools';
+import { isTextNoteTool } from '@/lib/textNotes';
 import type { Drawing, DrawingPoint, InProgressDrawing, DrawingType } from '@/lib/drawing/types';
 import { hitTestBodies } from '@/lib/drawing/coordinates';
 
@@ -27,6 +28,10 @@ interface UseDrawingInteractionOptions {
   cursorVariant: string;
   onExitDrawingMode: () => void;
   onEraserExit: () => void;
+  /** P6 — invoked when the user clicks to place a text/note/callout/priceNote
+   *  drawing or double-clicks an existing one, so ChartPanel mounts the
+   *  on-chart textarea overlay. NOT invoked for priceLabel (not editable). */
+  onRequestEdit?: (drawingId: string) => void;
 }
 
 interface UseDrawingInteractionResult {
@@ -43,21 +48,37 @@ interface PlacementConfig {
   finishOn: 'click' | 'dblclick';
 }
 
-const PLACEMENT_CONFIGS: Partial<Record<LineToolId, PlacementConfig>> = {
+const PLACEMENT_CONFIGS: Record<string, PlacementConfig> = {
   trendline: { totalPoints: 2, finishOn: 'click' },
   horizontal: { totalPoints: 1, finishOn: 'click' },
   vertical: { totalPoints: 1, finishOn: 'click' },
   ray: { totalPoints: 2, finishOn: 'click' },
   parallel: { totalPoints: 3, finishOn: 'click' },
   polyline: { totalPoints: 0, finishOn: 'dblclick' },
+  // P6 — text & notes shapes (all single-anchor, single-click placement)
+  text: { totalPoints: 1, finishOn: 'click' },
+  note: { totalPoints: 1, finishOn: 'click' },
+  callout: { totalPoints: 1, finishOn: 'click' },
+  priceNote: { totalPoints: 1, finishOn: 'click' },
+  priceLabel: { totalPoints: 1, finishOn: 'click' },
 };
 
 function isLineTool(toolId: string): boolean {
   return LINE_TOOLS.some((t): t is NonNullable<typeof t> => t !== null && t.id === toolId);
 }
 
+function isDrawingTool(toolId: string): boolean {
+  return isLineTool(toolId) || isTextNoteTool(toolId);
+}
+
 function getPlacementConfig(toolId: string): PlacementConfig | undefined {
-  return PLACEMENT_CONFIGS[toolId as LineToolId];
+  return PLACEMENT_CONFIGS[toolId];
+}
+
+/** True for text/note/callout/priceNote — opens the textarea editor after placement.
+ *  PriceLabel is NOT editable (renders formatted price only). */
+function isEditableTextNoteTool(toolId: string): boolean {
+  return toolId === 'text' || toolId === 'note' || toolId === 'callout' || toolId === 'priceNote';
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────
@@ -110,6 +131,7 @@ export function useDrawingInteraction({
   cursorVariant,
   onExitDrawingMode,
   onEraserExit,
+  onRequestEdit,
 }: UseDrawingInteractionOptions): UseDrawingInteractionResult {
   const stateRef = useRef<DrawState>('IDLE');
 
@@ -122,18 +144,20 @@ export function useDrawingInteraction({
   const activeToolRef = useRef(activeTool);
   const lineToolRef = useRef(lineTool);
   const cursorVariantRef = useRef(cursorVariant);
+  const onRequestEditRef = useRef(onRequestEdit);
 
   useEffect(() => {
     activeToolRef.current = activeTool;
     lineToolRef.current = lineTool;
     cursorVariantRef.current = cursorVariant;
-  }, [activeTool, lineTool, cursorVariant]);
+    onRequestEditRef.current = onRequestEdit;
+  }, [activeTool, lineTool, cursorVariant, onRequestEdit]);
 
   // ── Enter/exit drawing mode ────────────────────────────────────
   useEffect(() => {
-    if (isLineTool(activeTool) && stateRef.current === 'IDLE') {
+    if (isDrawingTool(activeTool) && stateRef.current === 'IDLE') {
       stateRef.current = 'DRAWING';
-    } else if (!isLineTool(activeTool)) {
+    } else if (!isDrawingTool(activeTool)) {
       stateRef.current = 'IDLE';
       inProgressRef.current = null;
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -166,8 +190,8 @@ export function useDrawingInteraction({
         return;
       }
 
-      // Non-line-tool modes: no drawing interaction
-      if (!isLineTool(activeToolRef.current)) return;
+      // Non-drawing-tool modes: no drawing interaction
+      if (!isDrawingTool(activeToolRef.current)) return;
 
       // Get placement config — if the tool isn't configured yet, bail.
       const config = getPlacementConfig(activeToolRef.current);
@@ -201,13 +225,23 @@ export function useDrawingInteraction({
           }
         }
 
-        // 1-click tools (horizontal, vertical): place immediately on the click
+        // 1-click tools (horizontal, vertical, text, note, callout, priceNote,
+        // priceLabel): commit immediately on the click.
         if (config.totalPoints === 1) {
           const toolId = activeToolRef.current as DrawingType;
           const newId = store.addDrawing({
             shape: { type: toolId, points: [point] },
+            // P6 — editable annotation shapes default to an empty label so the
+            // textarea overlay's placeholder shows. Price label renders the
+            // formatted price regardless of label, so undefined is correct.
+            label: isEditableTextNoteTool(toolId) ? '' : undefined,
           });
           store.selectDrawing(newId);
+          // P6 — auto-enter edit mode for text/note/callout/priceNote so the
+          // textarea overlay mounts immediately after placement.
+          if (isEditableTextNoteTool(toolId)) {
+            onRequestEditRef.current?.(newId);
+          }
           // Stay in DRAWING — user can place more or click elsewhere
           return;
         }
@@ -271,8 +305,24 @@ export function useDrawingInteraction({
     const series = seriesRef.current;
     if (!chart || !series) return;
 
-    const handler = () => {
-      if (stateRef.current !== 'PLACING') return;
+    const handler = (param: Parameters<Parameters<IChartApi['subscribeDblClick']>[0]>[0]) => {
+      // P6 — dblclick on an existing editable text/note/callout/priceNote
+      // drawing opens the on-chart textarea editor. This branch fires from
+      // any non-PLACING state (IDLE, DRAWING) including while a line/note
+      // tool is active. The hit detection uses `param.hoveredObjectId`, the
+      // same field used by subscribeClick for selection.
+      if (stateRef.current !== 'PLACING') {
+        const hoveredId = param.hoveredObjectId as string | undefined;
+        if (hoveredId) {
+          const hovered = useDrawingStore.getState().drawings.find((d) => d.id === hoveredId);
+          if (hovered && isEditableTextNoteTool(hovered.shape.type)) {
+            useDrawingStore.getState().selectDrawing(hoveredId);
+            onRequestEditRef.current?.(hoveredId);
+          }
+        }
+        return;
+      }
+
       const ip = inProgressRef.current;
       if (!ip || ip.type !== 'polyline') return;
 
@@ -323,7 +373,9 @@ export function useDrawingInteraction({
     if (!chart || !series) return;
 
     const handler = (param: Parameters<Parameters<IChartApi['subscribeCrosshairMove']>[0]>[0]) => {
-      if (!isLineTool(activeToolRef.current)) return;
+      // Preview only fires during PLACING state. 1-click tools (incl. all P6
+      // text/note shapes) never enter PLACING, so they never need preview.
+      if (!isDrawingTool(activeToolRef.current)) return;
       if (stateRef.current !== 'PLACING') return;
       if (!param.sourceEvent) return;
       if (!param.time || !param.point) return;
@@ -354,7 +406,7 @@ export function useDrawingInteraction({
     if (!container || !chart || !series) return;
 
     const isInteractive = () =>
-      isLineTool(activeToolRef.current) || activeToolRef.current === 'cursor';
+      isDrawingTool(activeToolRef.current) || activeToolRef.current === 'cursor';
 
     const onPointerDown = (e: PointerEvent) => {
       if (!isInteractive()) return;
@@ -464,7 +516,7 @@ export function useDrawingInteraction({
 
     const onPointerUp = (e: PointerEvent) => {
       if (stateRef.current === 'DRAGGING_HANDLE') {
-        stateRef.current = isLineTool(activeToolRef.current) ? 'DRAWING' : 'IDLE';
+        stateRef.current = isDrawingTool(activeToolRef.current) ? 'DRAWING' : 'IDLE';
         dragRef.current = null;
         container.releasePointerCapture(e.pointerId);
         return;
@@ -474,7 +526,7 @@ export function useDrawingInteraction({
         if (dragRef.current) {
           useDrawingStore.getState().selectDrawing(dragRef.current.drawingId);
         }
-        stateRef.current = isLineTool(activeToolRef.current) ? 'DRAWING' : 'IDLE';
+        stateRef.current = isDrawingTool(activeToolRef.current) ? 'DRAWING' : 'IDLE';
         dragRef.current = null;
         container.releasePointerCapture(e.pointerId);
         return;
@@ -506,7 +558,7 @@ export function useDrawingInteraction({
         return;
       }
 
-      if (!isLineTool(activeToolRef.current)) return;
+      if (!isDrawingTool(activeToolRef.current)) return;
       e.preventDefault();
 
       if (stateRef.current === 'PLACING') {

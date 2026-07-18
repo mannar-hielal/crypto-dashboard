@@ -64,7 +64,7 @@
 
 ## 🔐 Security Hardening Plan
 
-> Identified post-Phase-2 review. All checklist items added to `REVIEW_CHECKLIST.md` Section 2.
+> Identified post-Phase-2 review. All checklist items added to the **`bug-sweep`** skill priorities P1–P12 (formerly `docs/REVIEW_CHECKLIST.md` Section 2; consolidated into the skill as the single source of truth).
 
 ### Phase 1 Retroactive — Fix Immediately (auth is already live)
 
@@ -74,14 +74,14 @@
 | Explicit `algorithms: ['HS256']` on `@fastify/jwt` registration                                                               | `app.ts`               | Code change     | ✅ Done  |
 | Token-theft full-revocation: when `/refresh` detects `count=0`, call `deleteMany({ where: { userId } })` to kill all sessions | `routes/auth/index.ts` | Code change     | ✅ Done  |
 | `pnpm audit` added to pre-release CI gate                                                                                     | CI config              | Process change  | ✅ Done  |
-| No JWT in URL params, CSRF docs, error-handler URL audit, HSTS/CSP/CORS wildcard check                                        | `REVIEW_CHECKLIST.md`  | Checklist items | ✅ Added |
+| No JWT in URL params, CSRF docs, error-handler URL audit, HSTS/CSP/CORS wildcard check                                        | `bug-sweep` skill P2   | Checklist items | ✅ Added |
 
 ### Phase 2 — Current Sprint
 
-| Item                                                                                 | File                  | Type           | Status   |
-| ------------------------------------------------------------------------------------ | --------------------- | -------------- | -------- |
-| `dangerouslySetInnerHTML` prohibition + user content as plain text                   | `REVIEW_CHECKLIST.md` | Checklist item | ✅ Added |
-| `paperStore` `persist()` — add `version` + `migrate` for safe localStorage hydration | `paperStore.ts`       | Code change    | ✅ Done  |
+| Item                                                                                 | File                 | Type           | Status   |
+| ------------------------------------------------------------------------------------ | -------------------- | -------------- | -------- |
+| `dangerouslySetInnerHTML` prohibition + user content as plain text                   | `bug-sweep` skill P2 | Checklist item | ✅ Added |
+| `paperStore` `persist()` — add `version` + `migrate` for safe localStorage hydration | `paperStore.ts`      | Code change    | ✅ Done  |
 
 ### Phase 3+ — Future
 
@@ -520,7 +520,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 | `apps/client/src/components/drawing/KebabMenu.tsx`                     | Submenu: Clone, Visual Order, Delete                                                                                                           |
 | `apps/client/src/components/drawing/ColorPicker.tsx`                   | TV-style color swatch grid (10 grays + 6×10 color matrix)                                                                                      |
 | `apps/client/src/lib/cursors.tsx`                                      | Cursor variant icons + data-URI CSS map for chart cursor overrides                                                                             |
-| `docs/REVIEW_CHECKLIST.md`                                             | Pre-commit review checklist — run before every push                                                                                            |
+| `.agents/skills/bug-sweep/SKILL.md`                                    | Pre-commit / proactive-audit checklist (138 items, priorities P1–P12) — single source of truth. Was `docs/REVIEW_CHECKLIST.md` — consolidated. |
 | `docs/APP_LOG.md`                                                      | This file — full project context, attach at start of every session                                                                             |
 
 ---
@@ -534,7 +534,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 - **Phase 1**: Client scaffold — React 19, Vite, Tailwind, PWA, React Router, Zustand
 - **Phase 2**: Live price feed (WebSocket → `usePriceFeed` → `marketStore`)
 - **Phase 2**: Paper trading v1 — `paperStore` (market orders), `TradingPanel` (market-only), `OrderAccountManagementPanel` (Positions + Order History + Balance History + Journal tabs), TP/SL monitor, commission accounting
-- **Phase 2**: Review infrastructure — `REVIEW_CHECKLIST.md`, `APP_LOG.md`, CI-passing tests (421 total: 321 client + 100 server)
+- **Phase 2**: Review infrastructure — `APP_LOG.md`, CI-passing tests (421 total: 321 client + 100 server). (Formerly included `REVIEW_CHECKLIST.md`; consolidated into `.agents/skills/bug-sweep/SKILL.md` as the single source of truth.)
 
 ### ✅ Completed (added 2026-04-12)
 

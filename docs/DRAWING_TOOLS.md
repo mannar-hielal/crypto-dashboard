@@ -616,3 +616,227 @@ This is wrong. Wiring those tools before the type-system + renderer-registry fou
 3. When the renderer registry lands (P1.3), you rip out the code you just added.
 
 **Correct order: foundation first (P1), THEN shapes (P2–P3).** P1 is ~3–4 days that saves re-doing work on every subsequent shape. Test scaffolding (P1.6) is inserted before any new shapes because the P1.1 refactor touches 7 files with zero existing test coverage.
+
+---
+
+## Priority 6 — Text & Notes drawing tools
+
+> 5 sub-tools under a new Text-and-Notes toolbar submenu mirroring TradingView's "Text and notes" group.
+> Locked plan (visual Q&A complete; skill-loaded review complete: `drawing-tools`, `lightweight-charts-patterns`, `figma-theme-source`).
+
+### Scope (final)
+
+Five tools under the LeftToolbar Text submenu, in display order:
+
+| Order | ID           | Tool        | Editable body | Geometry                                                              |
+| ----- | ------------ | ----------- | ------------- | --------------------------------------------------------------------- |
+| 0     | `text`       | Text        | Yes           | Bare multiline text at anchor                                         |
+| —     | `null`       | separator   | —             | —                                                                     |
+| 2     | `note`       | Note        | Yes           | Sticky-note box pinned at (time, price), no extra geometry            |
+| 3     | `callout`    | Callout     | Yes           | Rounded box offset from anchor + leader tail                          |
+| —     | `null`       | separator   | —             | —                                                                     |
+| 5     | `priceNote`  | Price Note  | Yes           | Note box at anchor + dashed lead line + right-edge price pill         |
+| 6     | `priceLabel` | Price Label | No            | Pill badge at anchor showing formatted `anchor.price` (auto-rendered) |
+
+**Explicitly out of scope**: Flag mark, Pin, Table, Comment, Signpost, Idea, Post, Image (other entries in TradingView's "Text and notes" and "Content" groups).
+
+### Locked defaults
+
+| Token                                              | Value                                                     | Source                                                                                   |
+| -------------------------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Default box fill (`backgroundColor` field default) | `bg.panel` (`#25234e`)                                    | existing `tokens.ts` (Exgen-sourced) — no Figma mint pass required                       |
+| Default text color (`textColor`)                   | `color.white` (`#fcfcfd`)                                 | existing — already set in `drawingStore.ts:13`                                           |
+| Default border/pin accent (`color`)                | `color.purple`                                            | existing                                                                                 |
+| Default font family                                | `font.sans` (`Geist Variable, ui-sans-serif, sans-serif`) | existing — already used by chart + line-label                                            |
+| Default font size                                  | **14**                                                    | new `fontSize` field on `Drawing`; TradingView default; chart axis = 12, line label = 24 |
+| Font-size preset chip ladder                       | `10/12/14/16/18/20/24/28/32`                              | TradingView-eyeballed                                                                    |
+| Pill radius                                        | `4px`                                                     | TradingView-eyeballed                                                                    |
+| Box radius                                         | `6px`                                                     | TradingView-eyeballed                                                                    |
+
+**Decision rules confirmed with the user:**
+
+- Text content storage → **reuse existing `Drawing.label`** (allow `\n` for multiline). No new field, no `text` field.
+- Edit UX → **on-chart HTML `<textarea>` overlay** via `createPortal`. Repositions with viewport during pan/zoom (existing `viewportVersion` state). Commit on blur + Enter; multiline via Shift+Enter; Escape cancels and discards. Autofocus + select-all on mount.
+- Default label after placement → **empty + textarea autofocus + placeholder "Enter text"**. No "Text"/"Note" marker string.
+- Price label content → **auto-formatted `anchor.price`** (`toLocaleString`, 2 decimals). Not editable.
+- Price label scheme → `drawing.color` fill + `drawing.textColor` text (confirmed by TradingView screenshot showing blue pill / white "63,485").
+- Transaction under pan/zoom → textarea **repositions with viewport** (does not cancel).
+- Lock / Trash / Kebab → **stay shape-agnostic** (no per-shape conditional).
+- Hexagon/settings panel → **defer to post-v1**.
+- Per-tool menu capability matrix → **required for v1** (P6.9 — no longer deferred). Drives conditional button rendering per `shape.type`.
+
+### TradingView per-tool menu reference
+
+Captured from screenshots (vision-read via `vision-opencode-go-grok-4.5`):
+
+| Tool                     | Top-row buttons (L→R)                                                                                                                    |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Text                     | grip · clone-template · **pencil (edit text)** blue · **paint-drop (fill)** blue · **T (text color)** white · hexagon · lock · trash · ⋯ |
+| Note                     | grip · clone-template · **T (text style)** · **"20" (font size)** · hex · lock · **anchor** · trash · ⋯                                  |
+| Price Note               | grip · clone-template · **pencil (edit)** · **eyedropper (fill)** · **T (text)** · gear · lock · trash · ⋯                               |
+| Price Label              | grip · clone-template · **T (text)** · **paint-drop (fill)** · **"14" (font size)** · hex · lock · trash · ⋯                             |
+| Flag Mark (out of scope) | grip · clone-template · paint-drop · hex · lock · trash · ⋯                                                                              |
+
+**Consistent trading axis**: drag-grip · clone-template · per-tool content · hex/settings · lock · trash · ⋯
+
+---
+
+### Phase P6.1 — Schema & store foundation
+
+| #      | Task                                                                                                                                             | File                                            |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| P6.1.1 | Add 5 `ShapeData` variants (`text`, `note`, `priceNote`, `callout`, `priceLabel`), each single-anchor `points: DrawingPoint[]` (exactly 1)       | `apps/client/src/lib/drawing/types.ts:49–55`    |
+| P6.1.2 | Add `fontSize: number` (default 14) and `backgroundColor: string` (default `bg.panel` `#25234e`) to `Drawing` interface + `createDrawingStyle()` | `apps/client/src/store/drawingStore.ts:12–33`   |
+| P6.1.3 | Bump persistence v2 → v3 with `migrateV2toV3` backfilling `fontSize: 14`, `backgroundColor: bg.panel` defaults on every persisted drawing        | `apps/client/src/store/drawingStore.ts:254–266` |
+| P6.1.4 | `cloneDrawing` continues to work for single-anchor shapes — existing priceOffset code at `drawingStore.ts:208–224` already handles 1-point       | no change                                       |
+
+### Phase P6.2 — Tool registry & icons
+
+| #      | Task                                                                                                                                                                     | File                            |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------- |
+| P6.2.1 | New `apps/client/src/lib/textNotes.tsx` exporting `TextNoteToolId = 'text' \| 'note' \| 'priceNote' \| 'callout' \| 'priceLabel'` + `TEXT_NOTES` array (5 entries)       | new file                        |
+| P6.2.2 | Embed the 5 SVG icons verbatim from the TradingView markup (`LineToolText`, `LineToolTextNote`, `LineToolPriceNote`, `LineToolCallout`, `LineToolPriceLabel`)            | new file                        |
+| P6.2.3 | Verify defaults against existing `tokens.ts` (no Figma mint pass required — all defaults reuse existing Exgen-sourced values; only `fontSize=14` is annotation-specific) | `apps/client/src/lib/tokens.ts` |
+
+### Phase P6.3 — LeftToolbar Text-and-Notes submenu
+
+Mirror the cursor-variant submenu (`LeftToolbar.tsx:426–498`) byte-for-byte.
+
+| #      | Task                                                                                                                                                                            | Location                      |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| P6.3.1 | Promote `text` `TOOLS` entry from generic branch (`LeftToolbar.tsx:390–423`) to a new `isText` branch with chevron + `onContextMenu`                                            | `LeftToolbar.tsx:23, 240–423` |
+| P6.3.2 | Add local state: `showTextMenu`, `textBtnRef`, `textMenuRef`, `textMenuPos` + controlled prop mirror                                                                            | `LeftToolbar.tsx:48–75`       |
+| P6.3.3 | `handleTextContextMenu` (toggle open, position 6px right) — mirror `handleCursorContextMenu` `198–205`                                                                          | `LeftToolbar.tsx`             |
+| P6.3.4 | `handleTextNoteSelect(id)` callback — mirror `handleCursorVariantSelect` `207–213`: `setActiveTool(id)`, fire `onToolChange?.(id, lineTool)` + new `onTextNoteToolChange?.(id)` | `LeftToolbar.tsx`             |
+| P6.3.5 | Add click-outside `useEffect` for `showTextMenu` — mirror `162–178`                                                                                                             | `LeftToolbar.tsx`             |
+| P6.3.6 | Add AnimatePresence submenu mapping `TEXT_NOTES` — mirror `426–498` (replace `cursorVariant === variant.id` with `textTool === variant.id`)                                     | `LeftToolbar.tsx`             |
+| P6.3.7 | Extend props interface: add `textTool?: TextNoteToolId; onTextNoteToolChange?: (id: TextNoteToolId) => void`                                                                    | `LeftToolbar.tsx:31–38`       |
+| P6.3.8 | Update `data-drawing-active` to include text/note ids — extend the `'line'` check at `DashboardPage.tsx:378` to `LINE_TOOLS.some(...) \|\| TEXT_NOTES.some(...)`                | `DashboardPage.tsx`           |
+
+### Phase P6.4 — DashboardPage state & threading
+
+| #      | Task                                                                                                                                                                   | Location                             |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| P6.4.1 | Add `selectedTextNoteTool` state (default `'text'`)                                                                                                                    | `DashboardPage.tsx:88–92`            |
+| P6.4.2 | Extend `handleToolChange` — treat the 5 text/note ids like line-tool ids for `previousToolRef` save + cursor reset; add `textToolId` param + `setSelectedTextNoteTool` | `DashboardPage.tsx:94–109`           |
+| P6.4.3 | Pass new props to LeftToolbar (`textTool`, `onTextNoteToolChange`) and MultiChartArea                                                                                  | `DashboardPage.tsx:361–368, 383–389` |
+| P6.4.4 | Thread prop chain through `MultiChartArea.tsx:95–107` and `ChartPanel.tsx:38–46, 355–364`                                                                              | two files                            |
+
+### Phase P6.5 — Placement / state machine
+
+| #      | Task                                                                                                                                                                                                                                                                                                                                                                                                                                           | Location                         |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| P6.5.1 | Recognize `TEXT_NOTES` ids as drawing tools in `isLineTool` (rename to `isDrawingTool` or add sibling `isTextNoteTool`)                                                                                                                                                                                                                                                                                                                        | `useDrawingInteraction.ts:55–57` |
+| P6.5.2 | Add `PLACEMENT_CONFIGS` entries for `text`, `note`, `priceNote`, `callout`, `priceLabel`: `{ totalPoints: 1, finishOn: 'click' }`                                                                                                                                                                                                                                                                                                              | `useDrawingInteraction.ts:46–53` |
+| P6.5.3 | Extend the 1-click branch (`useDrawingInteraction.ts:205–213`) so after commit `store.selectDrawing(newId)` it sets a new `editingDrawingIdRef.current` + emits `onRequestEdit?.(id)` for text/note/priceNote/callout (NOT priceLabel). **Hot-path discipline**: continue using `stateRef` / `activeToolRef` only — never capture `activeTool` closure (handler must stay zero-recreation per render per `lightweight-charts-patterns` skill). | `useDrawingInteraction.ts`       |
+| P6.5.4 | Pass `onRequestEdit` callback through `ChartPanel` → `useDrawingInteraction`                                                                                                                                                                                                                                                                                                                                                                   | `ChartPanel.tsx:355–364`         |
+| P6.5.5 | Existing `subscribeDblClick` (`useDrawingInteraction.ts:268–317`) extended: when NOT in PLACING and `param.hoveredObjectId` matches a text/note/priceNote/callout drawing, fire `onRequestEdit?.(id)` to open the textarea editor                                                                                                                                                                                                              | `useDrawingInteraction.ts`       |
+
+Default label setting: `addDrawing` is called with **no `label`** — the textarea overlay pops up with placeholder "Enter text".
+
+### Phase P6.6 — Renderer (`DrawingPrimitive.ts`, `coordinates.ts`)
+
+| #      | Task                                                                                                                                                                                                                                                                                                                                  |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P6.6.1 | `drawTextShape` — bare multiline text at anchor (split `label` on `\n`); uses `fontSize`, `textColor`, `font.sans`. 1 handle.                                                                                                                                                                                                         |
+| P6.6.2 | `drawNoteShape` — rounded-rect box with `backgroundColor` fill + `color` 1px border + multiline `label` inside + small pin circle at anchor. 1 handle.                                                                                                                                                                                |
+| P6.6.3 | `drawPriceNoteShape` — Note's box + dashed horizontal line from box to right edge + price pill (right-axis docked) showing formatted `anchor.price`. Reuse new `drawPricePill(price, ...)` helper so P6.6.5 shares code. 1 handle.                                                                                                    |
+| P6.6.4 | `drawCalloutShape` — rounded box + leader line to anchor. 1 handle (anchor only).                                                                                                                                                                                                                                                     |
+| P6.6.5 | `drawPriceLabelShape` — pill badge docked at anchor's time, vertically centered at anchor's price; pill fill=`color`, pill text = formatted price in `textColor`. 1 handle.                                                                                                                                                           |
+| P6.6.6 | Extend `draw()` switch (`DrawingPrimitive.ts:530–608`) + `hitTest` (`676–838`) with the 5 new shape branches. Body hit-test: `pointInRect` (new) for box shapes + existing `pointToSegmentDist` for callout leader + priceNote dashed line + priceNote right-axis pill hit + horizontal-line Y proximity for priceNote's dashed line. |
+| P6.6.7 | New pure helpers in `apps/client/src/lib/drawing/coordinates.ts`: `pointInRect(x, y, rx, ry, rw, rh)`, `computeTextBox(ctx, text, fontSize, font)` — shared by renderer + editor for box bounds.                                                                                                                                      |
+| P6.6.8 | No in-progress preview — 1-click tools (consistent with horizontal/vertical which already skip preview).                                                                                                                                                                                                                              |
+| P6.6.9 | New `apps/client/src/lib/drawing/textLayout.ts` — pure functions for splitting `label` on `\n` + measuring with `ctx.measureText` + computing box bounds. **Both** the renderer and the on-chart textarea editor must produce identical box bounds (else the textarea drifts from the canvas text).                                   |
+
+### Phase P6.7 — ChartPanel
+
+| #      | Task                                                                                                                                                                                                                                                                           | Location                          |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------- |
+| P6.7.1 | Toolbar anchor unchanged — already defaults to single anchor for 1-point shapes at `ChartPanel.tsx:415–424`                                                                                                                                                                    | no change                         |
+| P6.7.2 | Pass `onRequestEdit` callback from primitive → hook → panel; add `editingDrawingId` state + ref. **Confirm editor is a React portal (not `ISeriesPrimitive`)** so existing `chart.remove()` cleanup path stays correct per `lightweight-charts-patterns` skill lifecycle rule. | `ChartPanel.tsx:118–127, 355–364` |
+| P6.7.3 | Hide hover legend while editing — extend `ChartPanel.tsx:621` condition to `&& !inProgressDrawing && !editingDrawingId`                                                                                                                                                        | `ChartPanel.tsx:621`              |
+| P6.7.4 | Mount the new `TextDrawingEditor` portal block — adjacent to existing DrawingPropertiesMenu portal at `ChartPanel.tsx:716–746`                                                                                                                                                 | `ChartPanel.tsx:716`              |
+
+### Phase P6.8 — On-chart textarea editor (new file)
+
+| #      | Task                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P6.8.1 | New `apps/client/src/components/drawing/TextDrawingEditor.tsx` — `createPortal` to `document.body`. Style: `background: drawing.backgroundColor`, `color: drawing.textColor`, `font: ${drawing.fontSize}px ${font.sans}`, border `1px solid ${color.purple}`. Position computed from container rect + anchor screen coords + measured box bounds (shared with renderer via `textLayout.ts`). |
+| P6.8.2 | Mount in ChartPanel when `editingDrawingId` set. Props: `drawing`, `position`, `onCommit(text)`, `onCancel()`.                                                                                                                                                                                                                                                                               |
+| P6.8.3 | Commit on blur + Enter (without Shift) — `onCommit` writes `updateDrawing(id, { label: text })` then closes. Shift+Enter for newline (multiline). Escape cancels and clears (discards).                                                                                                                                                                                                      |
+| P6.8.4 | Reposition on pan/zoom via existing `viewportVersion` (`ChartPanel.tsx:377`) — pass into editor as a dependency.                                                                                                                                                                                                                                                                             |
+| P6.8.5 | Autofocus + select-all on mount (`HTMLTextAreaElement.select()`). Placeholder = "Enter text".                                                                                                                                                                                                                                                                                                |
+| P6.8.6 | Per-shape editor mount offsets — text overlays text bounds directly; note/priceNote/callout overlay the box area.                                                                                                                                                                                                                                                                            |
+
+### Phase P6.9 — Per-tool conditional properties menu (REQUIRED for v1)
+
+> Was deferred as roadmap P4.3. Promoted to required after per-tool screenshots confirmed TradingView itself conditionally renders per shape.
+
+Implement the **capability matrix** in `DrawingPropertiesMenu.tsx`. Button visibility is driven by the active shape's `shape.type`.
+
+| Button                   | Line tools (existing) | Text                | Note                | Price Note          | Callout             | Price Label      |
+| ------------------------ | --------------------- | ------------------- | ------------------- | ------------------- | ------------------- | ---------------- |
+| Line/border color        | ✓                     | ✗                   | ✓                   | ✓                   | ✓                   | ✓                |
+| **Fill color (NEW)**     | parallel only         | ✗                   | ✓                   | ✓                   | ✓                   | ✓                |
+| Text color               | label only            | body                | body                | body                | body                | pill text        |
+| Label/T editor           | single-line input     | **textarea editor** | **textarea editor** | **textarea editor** | **textarea editor** | ✗ (not editable) |
+| **Font-size chip (NEW)** | ✗                     | ✓                   | ✓                   | ✓                   | ✓                   | ✓                |
+| Line width               | ✓                     | ✗                   | ✓                   | ✓                   | ✓                   | ✓                |
+| Line style               | ✓                     | ✗                   | ✓                   | ✓                   | ✓                   | ✓                |
+| Lock / Trash / Kebab     | ✓                     | ✓                   | ✓                   | ✓                   | ✓                   | ✓                |
+
+| #      | Task                                                                                                                                                                                                                                                                                 | Location                                  |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------- |
+| P6.9.1 | Add a `ShapeCapabilities` map keyed by `DrawingType` → set of buttons shown. Apply at the top of the render to filter button list.                                                                                                                                                   | `DrawingPropertiesMenu.tsx`               |
+| P6.9.2 | Add **Fill color** button (paint-drop SVG from TradingView markup) — opens existing `ColorPicker`, writes `drawing.backgroundColor`. Hidden for `text` (no box) and existing line tools (except parallel which already uses translucent fill — wire fill for parallel too for free). | `DrawingPropertiesMenu.tsx:137–178`       |
+| P6.9.3 | Add **Font-size chip** button (shows current numeric size) — opens a small dropdown (`10/12/14/16/18/20/24/28/32`). Writes `drawing.fontSize`. Hidden for existing line tools.                                                                                                       | `DrawingPropertiesMenu.tsx` (new section) |
+| P6.9.4 | **Label/T button behavior pivot**: for text/note/priceNote/callout, clicking "T" opens the new `TextDrawingEditor` (P6.8) instead of the existing single-line input. Single-line input remains for line tools only. Hide the T button entirely for `priceLabel` (not editable).      | `DrawingPropertiesMenu.tsx:179–196`       |
+| P6.9.5 | Hide Line/Width/Style buttons for the bare `text` shape; keep visible for note/priceNote/callout/priceLabel (their boxes use border color + width + style respectively).                                                                                                             | `DrawingPropertiesMenu.tsx:138–247`       |
+| P6.9.6 | Keep Lock/Trash/Kebab shape-agnostic and always visible.                                                                                                                                                                                                                             | unchanged                                 |
+| P6.9.7 | (Future) Add clone-template button next to grip — defer; Kebab "Clone" path remains the canonical way for v1.                                                                                                                                                                        | post-v1                                   |
+
+### Phase P6.10 — Tests
+
+| #       | Task                                                                                                                                                  | File                                                            |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| P6.10.1 | v3 migration: assert old v2 payload migrates with `fontSize`/`backgroundColor` defaults backfilled; assert round-trip preserves all 5 new shape types | `apps/client/src/__tests__/drawingStore.test.ts`                |
+| P6.10.2 | `coordinates.test.ts` — `pointInRect`, `computeTextBox`, hit-test parity for all 5 new shapes (incl. priceNote dashed line + right-edge pill hits)    | `apps/client/src/__tests__/coordinates.test.ts`                 |
+| P6.10.3 | Placement test — `onRequestEdit` fires for `text`/`note`/`priceNote`/`callout`; not for `priceLabel`; default `label` is `undefined` (not 'Text')     | `apps/client/src/__tests__/useDrawingInteraction.test.ts`       |
+| P6.10.4 | DrawingPropertiesMenu shape-capability test — assert the expected button set renders for each shape type (lightweight, skip if too brittle)           | `apps/client/src/__tests__/DrawingPropertiesMenu.test.ts` (new) |
+
+### Documentation
+
+| File                    | Update                                                                                                                                                                                                                                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docs/DRAWING_TOOLS.md` | Add this P6 section (done); after implementation, update "What's Implemented" to list the 5 tools; add a "Text & Notes tools" subsection documenting the Note-vs-Price-Note distinction + the on-chart textarea editor UX + the per-tool menu capability matrix; bump P5.2 ("Text tool") to done. |
+| `AGENTS.md`             | Add a one-liner noting `drawingStore` is now `cd-drawings` v3 after P6.1.3 lands.                                                                                                                                                                                                                 |
+
+### Execution order & rough effort
+
+| Phase                                                    | Effort       | Independent?                     |
+| -------------------------------------------------------- | ------------ | -------------------------------- |
+| P6.1 Schema                                              | Small        | Unblocks all                     |
+| P6.2 Registry + 5 icons                                  | Small–Medium | After P6.1                       |
+| P6.3 Submenu UI                                          | Medium       | After P6.2                       |
+| P6.4 State threading                                     | Small        | After P6.2                       |
+| P6.5 Placement (existing 1-click branch)                 | Small        | After P6.1 + P6.4                |
+| P6.6 Renderers (5 helpers + hit-tests + `textLayout.ts`) | **Large**    | After P6.1                       |
+| P6.7 ChartPanel                                          | Small        | After P6.5 + P6.8                |
+| P6.8 TextDrawingEditor                                   | Medium       | After P6.6 (shares `textLayout`) |
+| P6.9 Conditional per-tool menu (required)                | Medium       | After P6.1 + P6.8                |
+| P6.10 Tests                                              | Medium       | After P6.6 + P6.9 + P6.5         |
+
+### Verification
+
+```bash
+pnpm --filter @crypto-dashboard/client type-check
+pnpm --filter @crypto-dashboard/client test -- drawingStore
+pnpm --filter @crypto-dashboard/client test -- coordinates
+pnpm lint
+pnpm format:check
+pnpm --filter @crypto-dashboard/client dev
+```
+
+Manual smoke (per tool + cross-tool): place each of the 5; verify editor opens; type multiline; commit-on-blur; reload + persistence; drag anchor; lock + try drag (blocked) + eraser still deletes; clone via Kebab; undo/redo across edits; hover legend hidden during placement and edit; right-click exits drawing mode; price label pill updates as anchor moves; price note dashed line stretching on chart pan; box fill / font size / line color all wired through `DrawingPropertiesMenu` and persist.
+
+Pre-commit audit: run `bug-sweep` skill mode B (PR-check / pre-commit) against the diff before the pre-commit hook fires. Catches TS-strict narrowing bugs in the new `ShapeData` discriminator branch + Zustand persistence migration issues before reaching CI.

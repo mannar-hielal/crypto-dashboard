@@ -12,7 +12,17 @@ import type {
 } from 'lightweight-charts';
 import type { RefObject } from 'react';
 import type { Drawing, DrawingPoint, InProgressDrawing } from '@/lib/drawing/types';
-import { pointToSegmentDist, pointToRayDist } from '@/lib/drawing/coordinates';
+import { pointToSegmentDist, pointToRayDist, pointInRect } from '@/lib/drawing/coordinates';
+import {
+  BOX_PADDING_PX,
+  BOX_RADIUS_PX,
+  PILL_RADIUS_PX,
+  TEXT_LINE_HEIGHT,
+  FONT_FAMILY,
+  splitLines,
+  formatPriceLabel,
+  computeAnnotationBox,
+} from '@/lib/drawing/textLayout';
 
 // ─── Per-shape draw helpers ────────────────────────────────────────
 
@@ -396,6 +406,316 @@ function drawPolylineShape(
   }
 }
 
+// ─── P6 text & notes draw helpers ────────────────────────────────────
+//
+// All five annotation shapes are single-anchor. They render a box-or-pill
+// around the anchor (note/callout/priceNote box, priceLabel pill) or just
+// the text itself (text). All return null when the anchor's screen coords
+// are not resolvable — the renderer's `draw()` switch then `continue`s.
+
+/** Re-exported here so call sites inside DrawingPrimitive can call the shared
+ *  computeAnnotationBox without changing the local style. */
+function computeBox(
+  ctx: CanvasRenderingContext2D,
+  drawing: Drawing,
+  x: number,
+  y: number
+): { x: number; y: number; w: number; h: number } | null {
+  return computeAnnotationBox(ctx, drawing, x, y);
+}
+
+/** Single-line drawing helper that paints a rounded price pill centered at
+ *  (cx, cy) in CSS pixels. Used by both PriceNote (right-edge pill) and
+ *  PriceLabel (anchor-centered pill). Returns the pill's CSS bounds so the
+ *  caller's hit-test (pointInRect) + textarea editor can mirror geometry. */
+function renderPricePill(
+  ctx: CanvasRenderingContext2D,
+  hpr: number,
+  vpr: number,
+  cx: number,
+  cy: number,
+  text: string,
+  fill: string,
+  textColor: string,
+  fontSize: number,
+  paddingCss: number,
+  border: string | null = null,
+  borderW: number = 1,
+  radiusCss: number = PILL_RADIUS_PX
+): { x: number; y: number; w: number; h: number } {
+  ctx.save();
+  ctx.font = `${fontSize}px ${FONT_FAMILY}`;
+  const textW = ctx.measureText(text).width;
+  const pillW = Math.ceil(textW + paddingCss * 2);
+  const pillH = Math.round(fontSize + paddingCss);
+  const px = Math.round(cx * hpr);
+  const py = Math.round(cy * vpr);
+  const pw = Math.round(pillW * hpr);
+  const ph = Math.round(pillH * vpr);
+  const r = radiusCss * hpr;
+  ctx.beginPath();
+  if (typeof (ctx as CanvasRenderingContext2D).roundRect === 'function') {
+    ctx.roundRect(px - pw / 2, py - ph / 2, pw, ph, r);
+  } else {
+    // Fallback rounded rect path
+    ctx.moveTo(px - pw / 2 + r, py - ph / 2);
+    ctx.arcTo(px + pw / 2, py - ph / 2, px + pw / 2, py + ph / 2, r);
+    ctx.arcTo(px + pw / 2, py + ph / 2, px - pw / 2, py + ph / 2, r);
+    ctx.arcTo(px - pw / 2, py + ph / 2, px - pw / 2, py - ph / 2, r);
+    ctx.arcTo(px - pw / 2, py - ph / 2, px + pw / 2, py - ph / 2, r);
+  }
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  if (border && borderW > 0) {
+    ctx.lineWidth = borderW * hpr;
+    ctx.strokeStyle = border;
+    ctx.stroke();
+  }
+  ctx.fillStyle = textColor;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, px, py + 0 * hpr);
+  ctx.restore();
+  return {
+    x: cx - pillW / 2,
+    y: cy - pillH / 2,
+    w: pillW,
+    h: pillH,
+  };
+}
+
+/** Filled rounded rectangle path. Caller closes/fills/strokes. */
+function roundRectPath(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  radius: number
+) {
+  ctx.beginPath();
+  if (typeof (ctx as CanvasRenderingContext2D).roundRect === 'function') {
+    ctx.roundRect(x, y, w, h, radius);
+  } else {
+    ctx.moveTo(x + radius, y);
+    ctx.arcTo(x + w, y, x + w, y + h, radius);
+    ctx.arcTo(x + w, y + h, x, y + h, radius);
+    ctx.arcTo(x, y + h, x, y, radius);
+    ctx.arcTo(x, y, x + w, y, radius);
+  }
+  ctx.closePath();
+}
+
+/** Multiline text fill centered vertically in a box of height `h`. Used by
+ *  text/note/callout/priceNote bodies. */
+function fillMultilineText(
+  ctx: CanvasRenderingContext2D,
+  text: string | undefined,
+  fontSize: number,
+  fill: string,
+  boxX: number,
+  boxY: number,
+  boxW: number,
+  boxH: number,
+  paddingPx: number
+) {
+  void boxW;
+  const lines = splitLines(text);
+  const lineH = Math.round(fontSize * TEXT_LINE_HEIGHT);
+  const visibleLines = Math.max(1, lines.length);
+  ctx.save();
+  ctx.font = `${fontSize}px ${FONT_FAMILY}`;
+  ctx.fillStyle = fill;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  // Vertically center the text block within the box
+  const blockH = lineH * visibleLines;
+  if (lines.length === 0) {
+    // Empty — no fill, just reset state
+    void blockH;
+    ctx.restore();
+    return;
+  }
+  let startY = boxY + (boxH - blockH) / 2;
+  for (const ln of lines) {
+    ctx.fillText(ln, boxX + paddingPx, startY);
+    startY += lineH;
+  }
+  ctx.restore();
+}
+
+/** Drawing-specific renderer dispatch for the P6 single-anchor shapes.
+ *  Returns the box the shape occupied (in CSS pixels) so the caller's hit
+ *  test + textarea editor can mirror its geometry. */
+function drawTextNoteShape(
+  ctx: CanvasRenderingContext2D,
+  hpr: number,
+  vpr: number,
+  chart: IChartApi,
+  series: ISeriesApi<'Candlestick'>,
+  drawing: Drawing,
+  isSelected: boolean,
+  isHoveredForEraser: boolean
+): { x: number; y: number; w: number; h: number } | null {
+  const p = drawing.shape.points[0];
+  if (!p) return null;
+  const ax = chart.timeScale().timeToCoordinate(p.time);
+  const ay = series.priceToCoordinate(p.price);
+  if (ax === null || ay === null) return null;
+
+  const box = computeBox(ctx, drawing, ax, ay);
+  if (!box) return null;
+  const bX = Math.round(box.x * hpr);
+  const bY = Math.round(box.y * vpr);
+  const bW = Math.round(box.w * hpr);
+  const bH = Math.round(box.h * vpr);
+  const fontSize = drawing.fontSize;
+  const padding = drawing.shape.type === 'text' ? 1 : BOX_PADDING_PX;
+
+  switch (drawing.shape.type) {
+    case 'text': {
+      fillMultilineText(
+        ctx,
+        drawing.label,
+        fontSize,
+        drawing.textColor,
+        box.x,
+        box.y,
+        box.w,
+        box.h,
+        padding
+      );
+      break;
+    }
+    case 'note':
+    case 'priceNote': {
+      // Box
+      ctx.save();
+      roundRectPath(ctx, bX, bY, bW, bH, BOX_RADIUS_PX * hpr);
+      ctx.fillStyle = drawing.backgroundColor;
+      ctx.fill();
+      ctx.lineWidth = drawing.lineWidth * hpr;
+      ctx.strokeStyle = drawing.color;
+      // Box borders stay solid — applyStrokeStyle would dash them
+      ctx.stroke();
+      ctx.restore();
+
+      // Body text
+      fillMultilineText(
+        ctx,
+        drawing.label,
+        fontSize,
+        drawing.textColor,
+        box.x,
+        box.y,
+        box.w,
+        box.h,
+        BOX_PADDING_PX
+      );
+
+      // Small pin circle at anchor
+      ctx.save();
+      ctx.fillStyle = drawing.color;
+      ctx.beginPath();
+      ctx.arc(Math.round(ax * hpr), Math.round(ay * vpr), Math.round(3 * hpr), 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.restore();
+
+      // Price note extras — dashed lead line to right-edge pill
+      if (drawing.shape.type === 'priceNote') {
+        const rightEdge = ctx.canvas.width;
+        const pillXCss = rightEdge / hpr - 60; // 60px gutter inset for the pill column
+        // Dashed lead line from box-right to pill-left
+        ctx.save();
+        ctx.setLineDash([6 * hpr, 3 * hpr]);
+        ctx.strokeStyle = drawing.color + '90';
+        ctx.lineWidth = drawing.lineWidth * hpr;
+        ctx.beginPath();
+        ctx.moveTo(bX + bW, Math.round(ay * vpr));
+        ctx.lineTo(Math.round(pillXCss * hpr), Math.round(ay * vpr));
+        ctx.stroke();
+        ctx.restore();
+
+        // Right-edge price pill
+        renderPricePill(
+          ctx,
+          hpr,
+          vpr,
+          pillXCss,
+          ay,
+          formatPriceLabel(p.price),
+          drawing.color,
+          drawing.textColor,
+          fontSize,
+          8,
+          drawing.color,
+          drawing.lineWidth
+        );
+      }
+      break;
+    }
+    case 'callout': {
+      // Leader tail from anchor to bottom-center of box
+      ctx.save();
+      ctx.strokeStyle = drawing.color;
+      ctx.lineWidth = drawing.lineWidth * hpr;
+      ctx.beginPath();
+      ctx.moveTo(Math.round(ax * hpr), Math.round(ay * vpr));
+      ctx.lineTo(Math.round((box.x + box.w / 2) * hpr), Math.round((box.y + box.h) * vpr));
+      ctx.stroke();
+      ctx.restore();
+
+      // Box
+      ctx.save();
+      roundRectPath(ctx, bX, bY, bW, bH, BOX_RADIUS_PX * hpr);
+      ctx.fillStyle = drawing.backgroundColor;
+      ctx.fill();
+      ctx.lineWidth = drawing.lineWidth * hpr;
+      ctx.strokeStyle = drawing.color;
+      ctx.stroke();
+      ctx.restore();
+
+      // Body text
+      fillMultilineText(
+        ctx,
+        drawing.label,
+        fontSize,
+        drawing.textColor,
+        box.x,
+        box.y,
+        box.w,
+        box.h,
+        BOX_PADDING_PX
+      );
+      break;
+    }
+    case 'priceLabel': {
+      renderPricePill(
+        ctx,
+        hpr,
+        vpr,
+        ax,
+        ay,
+        formatPriceLabel(p.price),
+        drawing.color,
+        drawing.textColor,
+        fontSize,
+        8,
+        drawing.color,
+        drawing.lineWidth
+      );
+      break;
+    }
+  }
+
+  if (isSelected || isHoveredForEraser) {
+    drawHandlesAt(ctx, hpr, [{ x: Math.round(ax * hpr), y: Math.round(ay * vpr) }], drawing.color);
+  }
+
+  return { x: box.x, y: box.y, w: box.w, h: box.h };
+}
+
 // ─── Renderer ──────────────────────────────────────────────────────
 
 class TrendlineRenderer implements IPrimitivePaneRenderer {
@@ -567,7 +887,7 @@ class TrendlineRenderer implements IPrimitivePaneRenderer {
                 hpr,
                 vpr,
                 chart,
-                _series,
+                series,
                 drawing.shape.points[0],
                 drawing,
                 drawing.id === selectedId || drawing.id === hoveredId
@@ -601,6 +921,25 @@ class TrendlineRenderer implements IPrimitivePaneRenderer {
                 drawing.shape.points,
                 drawing,
                 drawing.id === selectedId || drawing.id === hoveredId
+              );
+              break;
+            }
+            // P6 — text & notes shapes (all single-anchor)
+            case 'text':
+            case 'note':
+            case 'callout':
+            case 'priceNote':
+            case 'priceLabel': {
+              if (drawing.shape.points.length < 1) continue;
+              drawTextNoteShape(
+                ctx,
+                hpr,
+                vpr,
+                chart,
+                series,
+                drawing,
+                drawing.id === selectedId,
+                drawing.id === hoveredId
               );
               break;
             }
@@ -638,15 +977,36 @@ export class DrawingPrimitive implements ISeriesPrimitive<Time> {
   _drawingsRef: RefObject<Drawing[]>;
   _selectedIdRef: RefObject<string | null>;
   _hoveredIdRef: RefObject<string | null>;
-  _cursorVariantRef: RefObject<string>;
+  _cursorVariantRef: RefObject<string | undefined>;
   _inProgressRef: RefObject<InProgressDrawing | null>;
   private _paneView: TrendlinePaneView;
+  /** Lazy offscreen canvas 2D context used by `hitTest` to measure annotation
+   *  text bounds. Created on first hitTest (browser-only — never SSR). */
+  private _measuringCtx: CanvasRenderingContext2D | null = null;
+
+  /** Lazily create or return the cached measuring context. Returns null if
+   *  the browser blocks offscreen canvas creation (rare) — caller must
+   *  tolerate by skipping box-body hit-test for annotation shapes. */
+  private _getMeasuringCtx(): CanvasRenderingContext2D | null {
+    if (this._measuringCtx) return this._measuringCtx;
+    try {
+      const c = document.createElement('canvas');
+      const ctx = c.getContext('2d');
+      if (ctx) {
+        this._measuringCtx = ctx;
+        return ctx;
+      }
+    } catch {
+      // fall through
+    }
+    return null;
+  }
 
   constructor(
     drawingsRef: RefObject<Drawing[]>,
     selectedIdRef: RefObject<string | null>,
     hoveredIdRef: RefObject<string | null>,
-    cursorVariantRef: RefObject<string>,
+    cursorVariantRef: RefObject<string | undefined>,
     inProgressRef: RefObject<InProgressDrawing | null>
   ) {
     this._drawingsRef = drawingsRef;
@@ -683,6 +1043,50 @@ export class DrawingPrimitive implements ISeriesPrimitive<Time> {
 
     for (const drawing of drawings) {
       const { type, points } = drawing.shape;
+
+      // ── P6 — text / note / callout / priceNote / priceLabel ──────────
+      if (
+        type === 'text' ||
+        type === 'note' ||
+        type === 'callout' ||
+        type === 'priceNote' ||
+        type === 'priceLabel'
+      ) {
+        if (points.length < 1) continue;
+        const p = points[0];
+        const ax = chart.timeScale().timeToCoordinate(p.time);
+        const ay = series.priceToCoordinate(p.price);
+        if (ax === null || ay === null) continue;
+
+        // Anchor handle hit — priority 2 (above body)
+        if (!drawing.isLocked) {
+          const handleDist = Math.sqrt((x - ax) ** 2 + (y - ay) ** 2);
+          if (handleDist < 12 && (!closest || handleDist < closest.dist)) {
+            closest = { id: drawing.id, dist: handleDist, priority: 2, isHandle: true };
+          }
+        }
+
+        // Body hit — pointInRect on the rendered box
+        const mctx = this._getMeasuringCtx();
+        if (mctx) {
+          const box = computeBox(mctx, drawing, ax, ay);
+          if (box && pointInRect(x, y, box.x, box.y, box.w, box.h, 4)) {
+            const bodyDist = 0; // inside the box — closest possible
+            if (!closest || bodyDist < closest.dist) {
+              closest = { id: drawing.id, dist: bodyDist, priority: 1, isHandle: false };
+            }
+          }
+        }
+
+        // Price note — also hit-test the dashed lead line (horizontal Y proximity)
+        if (type === 'priceNote') {
+          const leadDist = Math.abs(y - ay);
+          if (leadDist < 8 && (!closest || leadDist < closest.dist)) {
+            closest = { id: drawing.id, dist: leadDist, priority: 1, isHandle: false };
+          }
+        }
+        continue;
+      }
 
       if (type === 'horizontal' && points.length >= 1) {
         const p = points[0];

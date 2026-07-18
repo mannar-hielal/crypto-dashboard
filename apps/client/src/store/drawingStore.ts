@@ -6,13 +6,17 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Drawing, LineStyle, ShapeData } from '@/lib/drawing/types';
+import { bg, color } from '@/lib/tokens';
 
 // ─── Default style constants ────────────────────────────────────────
 
-const DEFAULT_COLOR = '#2196f3';
-const DEFAULT_TEXT_COLOR = '#ffffff';
+const DEFAULT_COLOR = '#2196f3'; // TradingView blue — shared default for line + annotation drawings
+const DEFAULT_TEXT_COLOR = color.white;
 const DEFAULT_LINE_WIDTH = 2;
 const DEFAULT_LINE_STYLE: LineStyle = 'solid';
+// P6 annotation style defaults
+const DEFAULT_FONT_SIZE = 14;
+const DEFAULT_BACKGROUND_COLOR = bg.panel; // #25234e — Exgen panel
 
 // ─── Factory ────────────────────────────────────────────────────────
 
@@ -28,6 +32,8 @@ function createDrawingStyle(): Omit<Drawing, 'id' | 'zIndex' | 'shape'> {
     textColor: DEFAULT_TEXT_COLOR,
     lineWidth: DEFAULT_LINE_WIDTH,
     lineStyle: DEFAULT_LINE_STYLE,
+    fontSize: DEFAULT_FONT_SIZE,
+    backgroundColor: DEFAULT_BACKGROUND_COLOR,
     isLocked: false,
   };
 }
@@ -86,6 +92,34 @@ function migrateV1toV2(persisted: unknown): { drawings: Drawing[]; nextZIndex: n
       const { type, points, ...rest } = d;
       return { ...rest, shape: { type, points } } as Drawing;
     }),
+    nextZIndex: old.nextZIndex,
+  };
+}
+
+/**
+ * v2 schema: `{ shape: { type, points }, color, lineWidth, ... }` — no
+ * annotation style fields.
+ * v3 schema: same shape union extended with text/note/callout/priceNote/
+ * priceLabel variants + two new shared style fields on `Drawing`:
+ *   - `fontSize: number`         (default 14, TradingView-matched)
+ *   - `backgroundColor: string`  (default `bg.panel` for note/callout boxes)
+ *
+ * The schema additions are forward-compatible (existing shapes simply
+ * carry the two new fields as null-default no-ops). The migration
+ * backfills the two new style defaults on every persisted drawing so the
+ * type contract (`Drawing.fontSize: number`) holds after rehydration.
+ */
+function migrateV2toV3(persisted: unknown): { drawings: Drawing[]; nextZIndex: number } {
+  const old = persisted as {
+    drawings: Array<Partial<Drawing> & { shape: { type: string; points: unknown[] } }>;
+    nextZIndex: number;
+  };
+  return {
+    drawings: old.drawings.map((d) => ({
+      ...d,
+      fontSize: d.fontSize ?? DEFAULT_FONT_SIZE,
+      backgroundColor: d.backgroundColor ?? DEFAULT_BACKGROUND_COLOR,
+    })) as Drawing[],
     nextZIndex: old.nextZIndex,
   };
 }
@@ -167,9 +201,7 @@ export const useDrawingStore = create<DrawingStoreState & DrawingStoreActions>()
       removeAll() {
         const { alwaysRemoveLocked } = get();
         set((s) => {
-          const remaining = alwaysRemoveLocked
-            ? []
-            : s.drawings.filter((d) => d.isLocked);
+          const remaining = alwaysRemoveLocked ? [] : s.drawings.filter((d) => d.isLocked);
           return withUndo(get, {
             drawings: remaining,
             selectedDrawingId: null,
@@ -253,9 +285,10 @@ export const useDrawingStore = create<DrawingStoreState & DrawingStoreActions>()
     }),
     {
       name: 'cd-drawings',
-      version: 2,
+      version: 3,
       migrate: (persisted, version) => {
         if (version < 2) return migrateV1toV2(persisted);
+        if (version < 3) return migrateV2toV3(persisted);
         return persisted as { drawings: Drawing[]; nextZIndex: number };
       },
       partialize: ({ drawings, nextZIndex, alwaysRemoveLocked }) => ({

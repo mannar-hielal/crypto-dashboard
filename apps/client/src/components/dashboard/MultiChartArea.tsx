@@ -94,6 +94,7 @@ function ResizeSplitter({ axis, position, splitterRef, onPointerDown }: Splitter
 interface MultiChartAreaProps {
   activeTool?: string;
   lineTool?: string;
+  textTool?: string;
   cursorVariant?: string;
   onExitDrawingMode?: () => void;
   onEraserExit?: () => void;
@@ -102,6 +103,7 @@ interface MultiChartAreaProps {
 export function MultiChartArea({
   activeTool,
   lineTool,
+  textTool,
   cursorVariant,
   onExitDrawingMode,
   onEraserExit,
@@ -378,6 +380,7 @@ export function MultiChartArea({
                 onChartDestroy={() => handleChartDestroy(paneIndex)}
                 activeTool={activeTool}
                 lineTool={lineTool}
+                textTool={textTool}
                 cursorVariant={cursorVariant}
                 onExitDrawingMode={onExitDrawingMode}
                 onEraserExit={onEraserExit}

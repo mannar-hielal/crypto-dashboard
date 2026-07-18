@@ -19,6 +19,7 @@ import { DrawingPrimitive } from '@/lib/drawing/DrawingPrimitive';
 import { useDrawingInteraction } from '@/hooks/useDrawingInteraction';
 import { useDrawingStore } from '@/store/drawingStore';
 import { DrawingPropertiesMenu } from '@/components/drawing/DrawingPropertiesMenu';
+import { TextDrawingEditor } from '@/components/drawing/TextDrawingEditor';
 import type { Drawing, InProgressDrawing } from '@/lib/drawing/types';
 
 const CHART_BG = chartColors.bg;
@@ -38,6 +39,8 @@ interface ChartPanelProps {
   activeTool?: string;
   /** Selected line tool variant */
   lineTool?: string;
+  /** P6 — Selected text/note sub-tool id */
+  textTool?: string;
   /** Current cursor variant (e.g. 'cross', 'eraser') */
   cursorVariant?: string;
   /** Called when drawing mode should exit (right-click) */
@@ -87,10 +90,17 @@ export function ChartPanel({
   onChartDestroy,
   activeTool,
   lineTool,
+  textTool,
   cursorVariant,
   onExitDrawingMode,
   onEraserExit,
 }: ChartPanelProps) {
+  // P6 — `textTool` mirrors `lineTool` as the user's most-recent text/note
+  // sub-tool. The chart itself reads `activeTool` directly when a text/note
+  // sub-tool is active, so `textTool` is preserved here only for symmetrical
+  // prop threading.
+  void textTool;
+
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const prevLenRef = useRef(0);
@@ -117,6 +127,21 @@ export function ChartPanel({
   // ── Drawing engine ──────────────────────────────────────────────────────
   const drawings = useDrawingStore((s) => s.drawings);
   const selectedDrawingId = useDrawingStore((s) => s.selectedDrawingId);
+
+  // ── P6 — on-chart text editor state ─────────────────────────────────────
+  const [editingDrawingId, setEditingDrawingId] = useState<string | null>(null);
+  const editingDrawingIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    editingDrawingIdRef.current = editingDrawingId;
+  }, [editingDrawingId]);
+  // Auto-clear selection as editing state if the drawing is removed.
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
+    if (editingDrawingId === null) return;
+    const stillExists = useDrawingStore.getState().drawings.some((d) => d.id === editingDrawingId);
+    if (!stillExists) setEditingDrawingId(null);
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [drawings, editingDrawingId]);
 
   // Stable refs for primitive (avoids re-creating)
   const drawingsRef = useRef<Drawing[]>(drawings);
@@ -182,7 +207,13 @@ export function ChartPanel({
     });
 
     // ── Drawing primitive ──────────────────────────────────────────────────
-    const primitive = new DrawingPrimitive(drawingsRef, selectedIdRef, hoveredIdRef, cursorVariantRef, inProgressRef);
+    const primitive = new DrawingPrimitive(
+      drawingsRef,
+      selectedIdRef,
+      hoveredIdRef,
+      cursorVariantRef,
+      inProgressRef
+    );
     primitiveRef.current = primitive;
     candleRef.current.attachPrimitive(primitive);
 
@@ -361,6 +392,7 @@ export function ChartPanel({
     cursorVariant: cursorVariant ?? 'crosshair',
     onExitDrawingMode: onExitDrawingMode ?? (() => {}),
     onEraserExit: onEraserExit ?? (() => {}),
+    onRequestEdit: (id) => setEditingDrawingId(id),
   });
 
   useEffect(() => {
@@ -618,7 +650,7 @@ export function ChartPanel({
       <div ref={containerRef} className="h-full w-full" />
 
       {/* ── Hover legend ─────────────────────────────────────────────────── */}
-      {hoverData && !inProgressDrawing && (
+      {hoverData && !inProgressDrawing && !editingDrawingId && (
         <div
           className="pointer-events-none absolute left-3 top-3 z-10 rounded-lg border border-white/6 px-3 py-2 backdrop-blur-md"
           style={{ background: `${bg.page}e6` }}
@@ -740,6 +772,29 @@ export function ChartPanel({
                 useDrawingStore.getState().cloneDrawing(drawing.id, priceOffset);
               }}
               onReorder={(id, dir) => useDrawingStore.getState().moveDrawing(id, dir)}
+              onEditLabel={(drawing) => setEditingDrawingId(drawing.id)}
+            />,
+            document.body
+          );
+        })()}
+
+      {/* ── P6 — On-chart textarea editor for text/note/callout/priceNote ── */}
+      {editingDrawingId &&
+        (() => {
+          const edited = drawings.find((d) => d.id === editingDrawingId);
+          if (!edited) return null;
+          return createPortal(
+            <TextDrawingEditor
+              drawing={edited}
+              chartRef={chartRef}
+              seriesRef={candleRef}
+              containerRef={containerRef}
+              repositionKey={viewportVersion}
+              onCommit={(id, text) => {
+                useDrawingStore.getState().updateDrawing(id, { label: text });
+                setEditingDrawingId(null);
+              }}
+              onCancel={() => setEditingDrawingId(null)}
             />,
             document.body
           );

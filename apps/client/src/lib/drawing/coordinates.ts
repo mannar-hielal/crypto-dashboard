@@ -67,20 +67,56 @@ export interface CoordinateConverters {
 /**
  * Hit-test all drawing bodies at screen coordinate (x, y).
  * Handles trendline (segment), ray (half-line past B), horizontal (full-width Y),
- * vertical (full-height X), and parallel channel (two parallel segments).
+ * vertical (full-height X), parallel channel (two parallel segments), polyline
+ * (N consecutive segments), and the P6 text/note annotation shapes
+ * (text/note/callout/priceNote/priceLabel — all single-anchor, hit-tested via
+ * their canvas-rendered box bounds).
+ *
  * Returns the id of the first drawing whose body is within `threshold`
- * pixels, or null.
+ * pixels, or null. Iterates in store order (later entries paint above;
+ * hit detection would naturally prefer the topmost — see `hitTestNearest`
+ * variant below if you want topmost semantics).
  */
 export function hitTestBodies(
   x: number,
   y: number,
   drawings: Drawing[],
   converters: CoordinateConverters,
-  threshold = 8
+  threshold = 8,
+  /** Optional box lookup for the P6 single-anchor annotation shapes.
+   *  Returns the rendered box at (x, y) in screen coordinates for the given
+   *  drawing or null when the anchor's screen coords are unavailable
+   *  (e.g. anchor scrolled off-screen). The box format mirrors what the
+   *  renderer computes — see `DrawingPrimitive.drawNoteShape` /
+   *  `drawCalloutShape` / `drawPriceNoteShape` / `drawPriceLabelShape`. */
+  boxFor?: (drawing: Drawing) => { x: number; y: number; w: number; h: number } | null
 ): string | null {
   const { timeToX, priceToY } = converters;
   for (const drawing of drawings) {
     const { type, points } = drawing.shape;
+
+    // ── P6 — text / note / callout / priceNote / priceLabel ──────────────
+    // All five single-anchor annotation shapes use canvas-rendered boxes;
+    // hit-test is a pure bounding-box check. `boxFor` is supplied by the
+    // primitive; if absent we fall through to the next branch (no-op).
+    if (
+      boxFor &&
+      (type === 'text' ||
+        type === 'note' ||
+        type === 'callout' ||
+        type === 'priceNote' ||
+        type === 'priceLabel') &&
+      points.length >= 1
+    ) {
+      const box = boxFor(drawing);
+      if (box && pointInRect(x, y, box.x, box.y, box.w, box.h)) return drawing.id;
+      // For price note, also hit-test its dashed lead line + right-edge pill
+      if (type === 'priceNote' && box) {
+        const yAnchor = priceToY(points[0].price);
+        if (yAnchor !== null && Math.abs(y - yAnchor) < threshold) return drawing.id;
+      }
+      continue;
+    }
 
     if (type === 'horizontal' && points.length >= 1) {
       const yLine = priceToY(points[0].price);
@@ -149,4 +185,21 @@ export function hitTestBodies(
     }
   }
   return null;
+}
+
+/**
+ * True when point (x, y) is inside the rectangle (rx, ry, rw, rh), with
+ * `padding` tolerance on each edge. Used by the P6 annotation shapes for
+ * single-anchor box hit-testing.
+ */
+export function pointInRect(
+  x: number,
+  y: number,
+  rx: number,
+  ry: number,
+  rw: number,
+  rh: number,
+  padding = 0
+): boolean {
+  return x >= rx - padding && x <= rx + rw + padding && y >= ry - padding && y <= ry + rh + padding;
 }

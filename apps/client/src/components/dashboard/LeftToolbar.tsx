@@ -6,6 +6,7 @@ import { MousePointer2, Type, Pencil, Trash2 } from 'lucide-react';
 import { bg, color, fontSize } from '@/lib/tokens';
 import { CURSOR_VARIANTS, type CursorVariantId } from '@/lib/cursors';
 import { LINE_TOOLS, type LineToolId } from '@/lib/lineTools';
+import { TEXT_NOTES, type TextNoteToolId } from '@/lib/textNotes';
 import { BinToolMenu } from '@/components/drawing/BinToolMenu';
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
@@ -35,6 +36,9 @@ interface LeftToolbarProps {
   onToolChange?: (toolId: string, lineToolId: string) => void;
   onBinAction?: () => void;
   lineTool?: LineToolId;
+  /** P6 — current selected text-and-notes sub-tool id */
+  textTool?: TextNoteToolId;
+  onTextNoteToolChange?: (id: TextNoteToolId) => void;
 }
 
 export function LeftToolbar({
@@ -44,6 +48,8 @@ export function LeftToolbar({
   onToolChange,
   onBinAction,
   lineTool: lineToolProp,
+  textTool: textToolProp,
+  onTextNoteToolChange,
 }: LeftToolbarProps) {
   // Cursor variant mirrors prop when controlled, falls back to local state
   const [localCursorVariant, setLocalCursorVariant] = useState<CursorVariantId>('cross');
@@ -78,6 +84,20 @@ export function LeftToolbar({
   const lineMenuRef = useRef<HTMLDivElement>(null);
   const [lineMenuPos, setLineMenuPos] = useState({ left: 0, top: 0 });
 
+  // ── Text & Notes sub-tool ─────────────────────────────────────────────────
+  const [localTextTool, setLocalTextTool] = useState<TextNoteToolId>('text');
+  const textTool = textToolProp ?? localTextTool;
+  const setTextTool = useCallback(
+    (id: TextNoteToolId) => {
+      if (textToolProp === undefined) setLocalTextTool(id);
+    },
+    [textToolProp]
+  );
+  const [showTextMenu, setShowTextMenu] = useState(false);
+  const textBtnRef = useRef<HTMLButtonElement>(null);
+  const textMenuRef = useRef<HTMLDivElement>(null);
+  const [textMenuPos, setTextMenuPos] = useState({ left: 0, top: 0 });
+
   // ── Bin tool right-click menu ──────────────────────────────────────────────
   const [showBinMenu, setShowBinMenu] = useState(false);
   const binBtnRef = useRef<HTMLButtonElement>(null);
@@ -90,6 +110,15 @@ export function LeftToolbar({
       setLineMenuPos({ left: rect.right + 6, top: rect.top });
     }
     setShowLineMenu((v) => !v);
+  }
+
+  function handleTextContextMenu(e: React.MouseEvent) {
+    e.preventDefault();
+    const rect = textBtnRef.current?.getBoundingClientRect();
+    if (rect) {
+      setTextMenuPos({ left: rect.right + 6, top: rect.top });
+    }
+    setShowTextMenu((v) => !v);
   }
 
   function handleBinContextMenu(e: React.MouseEvent) {
@@ -105,6 +134,14 @@ export function LeftToolbar({
     setLineTool(id);
     setActiveTool(id);
     setShowLineMenu(false);
+    onToolChange?.(id, id);
+  }
+
+  function handleTextNoteToolSelect(id: TextNoteToolId) {
+    setTextTool(id);
+    setActiveTool(id);
+    setShowTextMenu(false);
+    onTextNoteToolChange?.(id);
     onToolChange?.(id, id);
   }
 
@@ -195,6 +232,24 @@ export function LeftToolbar({
     return () => document.removeEventListener('mousedown', handleLineMousedown);
   }, [showLineMenu, handleLineMousedown]);
 
+  const handleTextMousedown = useCallback((e: MouseEvent) => {
+    if (
+      textMenuRef.current &&
+      !textMenuRef.current.contains(e.target as Node) &&
+      textBtnRef.current &&
+      !textBtnRef.current.contains(e.target as Node)
+    ) {
+      setShowTextMenu(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showTextMenu) {
+      document.addEventListener('mousedown', handleTextMousedown);
+    }
+    return () => document.removeEventListener('mousedown', handleTextMousedown);
+  }, [showTextMenu, handleTextMousedown]);
+
   function handleCursorContextMenu(e: React.MouseEvent) {
     e.preventDefault();
     const rect = cursorBtnRef.current?.getBoundingClientRect();
@@ -235,6 +290,7 @@ export function LeftToolbar({
         const isCursor = tool.id === 'cursor';
         const isLine = tool.id === 'line';
         const isBin = tool.id === 'bin';
+        const isText = tool.id === 'text';
 
         // ── Cursor tool gets right-click popup + variant chevron ───────────
         if (isCursor) {
@@ -387,6 +443,66 @@ export function LeftToolbar({
           );
         }
 
+        // ── Text & notes tool gets right-click popup + variant chevron ───
+        if (isText) {
+          const textToolDef = TEXT_NOTES.find(
+            (v): v is NonNullable<typeof v> => v !== null && v.id === textTool
+          );
+          const TextIcon = textToolDef?.icon ?? Icon;
+          const textToolActive = TEXT_NOTES.some(
+            (v): v is NonNullable<typeof v> => v !== null && v.id === activeTool
+          );
+
+          return (
+            <motion.button
+              key={tool.id}
+              ref={textBtnRef}
+              data-tooltip="Text and notes"
+              aria-label={textToolDef?.label ?? 'Text and notes'}
+              onClick={() => {
+                setActiveTool(textTool);
+                onTextNoteToolChange?.(textTool);
+                onToolChange?.(textTool, textTool);
+              }}
+              onContextMenu={handleTextContextMenu}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="group relative flex h-10 w-10 items-center justify-center rounded"
+              style={{
+                background: textToolActive ? `${color.purpleDark}20` : 'transparent',
+                color: textToolActive ? color.purple : color.muted,
+              }}
+            >
+              {textToolActive && (
+                <motion.span
+                  layoutId="toolbar-active"
+                  className="absolute inset-0 rounded"
+                  style={{
+                    background: `${color.purpleDark}20`,
+                    boxShadow: `0 0 0 1px ${color.purpleDark}40`,
+                  }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                />
+              )}
+
+              <TextIcon size={24} />
+
+              {/* Variant indicator chevron — 6px triangle at bottom-right */}
+              <span
+                className="absolute bottom-0.5 right-0.5 z-10"
+                style={{
+                  width: 0,
+                  height: 0,
+                  borderLeft: '6px solid transparent',
+                  borderRight: '6px solid transparent',
+                  borderTop: '6px solid currentColor',
+                  opacity: 0.6,
+                }}
+              />
+            </motion.button>
+          );
+        }
+
         // ── All other tools ─────────────────────────────────────────────
         return (
           <motion.button
@@ -531,6 +647,80 @@ export function LeftToolbar({
                 <button
                   key={variant.id}
                   onClick={() => handleLineToolSelect(variant.id)}
+                  className="flex w-full items-center gap-2.5 px-2 py-1.5 text-left transition-colors"
+                  style={{
+                    background: isSelected ? `${color.purpleDark}20` : 'transparent',
+                    color: isSelected ? color.purple : color.muted,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.background = `${color.white}08`;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.background = 'transparent';
+                    }
+                  }}
+                >
+                  <VariantIcon size={22} />
+                  <span className="flex-1 text-xs font-medium">{variant.label}</span>
+                  {isSelected && (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </button>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Text & notes variant popup menu ────────────────────────────── */}
+      <AnimatePresence>
+        {showTextMenu && (
+          <motion.div
+            ref={textMenuRef}
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.12 }}
+            className="fixed z-50 w-44 overflow-hidden rounded-md border border-white/8 py-1 shadow-xl"
+            style={{
+              left: textMenuPos.left,
+              top: textMenuPos.top,
+              background: bg.panel,
+            }}
+          >
+            {TEXT_NOTES.map((variant, idx) => {
+              if (variant === null) {
+                return (
+                  <div
+                    key={`div-${idx}`}
+                    className="mx-2 my-1 h-px rounded-full"
+                    style={{ background: `color-mix(in srgb, ${color.white} 8%, transparent)` }}
+                  />
+                );
+              }
+
+              const VariantIcon = variant.icon;
+              const isSelected = textTool === variant.id;
+
+              return (
+                <button
+                  key={variant.id}
+                  onClick={() => handleTextNoteToolSelect(variant.id)}
                   className="flex w-full items-center gap-2.5 px-2 py-1.5 text-left transition-colors"
                   style={{
                     background: isSelected ? `${color.purpleDark}20` : 'transparent',
