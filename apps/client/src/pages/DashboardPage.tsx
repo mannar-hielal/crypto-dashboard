@@ -105,8 +105,11 @@ function DashboardInner() {
       setCursorVariant('cross');
     }
     setActiveTool(toolId);
-    setSelectedLineTool(lineToolId as LineToolId);
-    if (isTextNote) setSelectedTextNoteTool(lineToolId as TextNoteToolId);
+    // 🔐 Only mutate the corresponding sub-tool state — never both. Crossing
+    // the streams (e.g. writing a text/note id into selectedLineTool) breaks
+    // the Line button's icon lookup and silently breaks Line-button clicks.
+    if (isLineTool) setSelectedLineTool(lineToolId as LineToolId);
+    if (isTextNote) setSelectedTextNoteTool(toolId as TextNoteToolId);
   }
 
   function handleTextNoteToolChange(id: TextNoteToolId) {

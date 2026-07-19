@@ -203,3 +203,73 @@ export function pointInRect(
 ): boolean {
   return x >= rx - padding && x <= rx + rw + padding && y >= ry - padding && y <= ry + rh + padding;
 }
+
+/**
+ * Distance from (x, y) to the nearest edge of a rectangle. 0 when inside.
+ * Used by the spawn-suppression guard so imprecise placement-clicks near
+ * an existing text/notes drawing's expanded hit-box fall inside the
+ * guard threshold instead of polluting the chart with sibling drawings.
+ */
+export function distToRect(
+  px: number,
+  py: number,
+  rx: number,
+  ry: number,
+  rw: number,
+  rh: number
+): number {
+  const dx = Math.max(rx - px, 0, px - (rx + rw));
+  const dy = Math.max(ry - py, 0, py - (ry + rh));
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+/** Annotation-shape hit-box expansion constants (TradingView-conservative).
+ *  Matches the values used by `DrawingPrimitive.hitTest` for the P6 text/
+ *  note/callout/priceNote/priceLabel shapes — kept here so the
+ *  spawn-suppression guard in `useDrawingInteraction` references the same
+ *  pixel budget without having to reach into DrawingPrimitive. */
+export const TEXT_HIT_PADDING_PX = 8;
+export const TEXT_HIT_MIN_W = 60;
+export const TEXT_HIT_MIN_H = 18;
+
+/**
+ * Returns the id + distance of the closest editable text/notes drawing whose
+ * ANNOTATION-EXPANDED hit-box is within `threshold` px of (x, y). Used by
+ * `useDrawingInteraction` to suppress new-drawing placement when the click
+ * landed near an existing text/note/callout/priceNote/priceLabel — imprecise
+ * clicks near a drawing select instead of spawning a sibling.
+ *
+ * Caller passes `boxFor` (its own measuring-context-bearing resolver) so
+ * this stays pure of canvas/DOM. PriceLabel is intentionally INCLUDED —
+ * users can hit-test it for the spawn guard, but the editable selector in
+ * `useDrawingInteraction` filters PriceLabel out afterwards.
+ */
+export function nearestTextShapeDistance(
+  x: number,
+  y: number,
+  drawings: Drawing[],
+  boxFor: (drawing: Drawing) => { x: number; y: number; w: number; h: number } | null
+): { id: string; dist: number } | null {
+  let best: { id: string; dist: number } | null = null;
+  for (const drawing of drawings) {
+    const { type } = drawing.shape;
+    if (
+      type !== 'text' &&
+      type !== 'note' &&
+      type !== 'callout' &&
+      type !== 'priceNote' &&
+      type !== 'priceLabel'
+    ) {
+      continue;
+    }
+    const box = boxFor(drawing);
+    if (!box) continue;
+    const hitW = Math.max(box.w, TEXT_HIT_MIN_W) + TEXT_HIT_PADDING_PX * 2;
+    const hitH = Math.max(box.h, TEXT_HIT_MIN_H) + TEXT_HIT_PADDING_PX * 2;
+    const hitX = box.x - TEXT_HIT_PADDING_PX;
+    const hitY = box.y - TEXT_HIT_PADDING_PX;
+    const dist = distToRect(x, y, hitX, hitY, hitW, hitH);
+    if (!best || dist < best.dist) best = { id: drawing.id, dist };
+  }
+  return best;
+}

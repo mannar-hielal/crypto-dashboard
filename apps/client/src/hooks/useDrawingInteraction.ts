@@ -5,8 +5,19 @@ import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts';
 import { useDrawingStore } from '@/store/drawingStore';
 import { LINE_TOOLS } from '@/lib/lineTools';
 import { isTextNoteTool } from '@/lib/textNotes';
-import type { Drawing, DrawingPoint, InProgressDrawing, DrawingType } from '@/lib/drawing/types';
-import { hitTestBodies } from '@/lib/drawing/coordinates';
+import type {
+  Drawing,
+  DrawingPoint,
+  InProgressDrawing,
+  DrawingType,
+  PaneIndex,
+} from '@/lib/drawing/types';
+import {
+  hitTestBodies,
+  nearestTextShapeDistance,
+  type CoordinateConverters,
+} from '@/lib/drawing/coordinates';
+import { computeAnnotationBox } from '@/lib/drawing/textLayout';
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -32,6 +43,11 @@ interface UseDrawingInteractionOptions {
    *  drawing or double-clicks an existing one, so ChartPanel mounts the
    *  on-chart textarea overlay. NOT invoked for priceLabel (not editable). */
   onRequestEdit?: (drawingId: string) => void;
+  /** v4 — pane index this hook's chart owns. Stamped on every newly-spawned
+   *  drawing so it lands on the correct pane and is filtered correctly by
+   *  DrawingPrimitive's per-pane hitTest/draw. Defaults to 0 when omitted
+   *  (test contexts). */
+  paneIndex?: PaneIndex;
 }
 
 interface UseDrawingInteractionResult {
@@ -83,6 +99,29 @@ function isEditableTextNoteTool(toolId: string): boolean {
 
 // ─── Helpers ───────────────────────────────────────────────────────
 
+// ─── Helpers ───────────────────────────────────────────────────────
+
+/** Lazy offscreen canvas 2D context for measuring text-shape hit-boxes
+ *  during the spawn-suppression guard (Fix 3). Created once per session
+ *  on first use; safe in browser only (chart code never runs on SSR).
+ *  Returns null when offscreen canvas creation is blocked — caller must
+ *  tolerate by skipping the guard. Mirrors DrawingPrimitive._getMeasuringCtx. */
+let _measuringCtx: CanvasRenderingContext2D | null = null;
+function getMeasuringCtx(): CanvasRenderingContext2D | null {
+  if (_measuringCtx) return _measuringCtx;
+  try {
+    const c = document.createElement('canvas');
+    const ctx = c.getContext('2d');
+    if (ctx) {
+      _measuringCtx = ctx;
+      return ctx;
+    }
+  } catch {
+    // fall through
+  }
+  return null;
+}
+
 function pointToHandleDist(
   px: number,
   py: number,
@@ -132,6 +171,7 @@ export function useDrawingInteraction({
   onExitDrawingMode,
   onEraserExit,
   onRequestEdit,
+  paneIndex = 0,
 }: UseDrawingInteractionOptions): UseDrawingInteractionResult {
   const stateRef = useRef<DrawState>('IDLE');
 
@@ -145,13 +185,15 @@ export function useDrawingInteraction({
   const lineToolRef = useRef(lineTool);
   const cursorVariantRef = useRef(cursorVariant);
   const onRequestEditRef = useRef(onRequestEdit);
+  const paneIndexRef = useRef<PaneIndex>(paneIndex);
 
   useEffect(() => {
     activeToolRef.current = activeTool;
     lineToolRef.current = lineTool;
     cursorVariantRef.current = cursorVariant;
     onRequestEditRef.current = onRequestEdit;
-  }, [activeTool, lineTool, cursorVariant, onRequestEdit]);
+    paneIndexRef.current = paneIndex;
+  }, [activeTool, lineTool, cursorVariant, onRequestEdit, paneIndex]);
 
   // ── Enter/exit drawing mode ────────────────────────────────────
   useEffect(() => {
@@ -175,10 +217,44 @@ export function useDrawingInteraction({
     const handler = (param: Parameters<Parameters<IChartApi['subscribeClick']>[0]>[0]) => {
       if (stateRef.current === 'DRAGGING_HANDLE' || stateRef.current === 'DRAGGING_DRAWING') return;
 
+      // 🔐 Mac right-click is Ctrl+Click — registers as `button=0 +
+      // ctrlKey=true` because the Mac platform fires a `contextmenu` event
+      // after a synthetic left-click. lightweight-charts' `_mouseDownHandler`
+      // only filters by `button !== 0`, so it treats Mac Ctrl+Click as a real
+      // left-click and fires `subscribeClick`. Without this guard the click
+      // handler would spawn a new empty text drawing at the click location
+      // even though the user intended a right-click. The chart's existing
+      // `contextmenu` handler then runs and exits drawing mode — but the
+      // empty drawing was already placed, polluting the chart.
+      //
+      // lightweight-charts' compatEvent (the value of `param.sourceEvent`)
+      // carries `ctrlKey`, `altKey`, `shiftKey`, `metaKey`, and
+      // `_internal_target` (NOT a DOM `target` — the original-event target
+      // object lives at `._internal_target`).
+      const srcEvent = (
+        param as {
+          sourceEvent?: (MouseEvent & { _internal_target?: EventTarget | null }) | undefined;
+        }
+      ).sourceEvent;
+      if (srcEvent?.ctrlKey) return;
+
+      // 🔐 Defensive guard: if the chart click originated inside the
+      // TextDrawingEditor portal (target is the textarea or its motion.div
+      // wrapper), bail before placing a new drawing. The compatEvent's
+      // target is on `._internal_target` (not `.target`).
+      const srcTarget = srcEvent?._internal_target as HTMLElement | null | undefined;
+      if (srcTarget && srcTarget.closest('[data-text-drawing-editor]')) return;
+
       const store = useDrawingStore.getState();
       const hitId = param.hoveredObjectId as string | undefined;
 
-      // Cursor mode: only select existing drawings
+      // Cursor mode: select existing drawings. 🔐 Fix 4 — when the hit
+      // resolves to an editable text/note/callout/priceNote drawing,
+      // ALSO open the editor so single left-click is the primary re-entry
+      // path for editing committed text. PriceLabel is excluded — it
+      // renders formatted price and isn't editable. Mirrors TradingView's
+      // "click text to edit" UX (which previously required a precise
+      // double-click inside a stingy ~50×17 hit-box).
       if (activeToolRef.current === 'cursor') {
         if (cursorVariantRef.current === 'eraser') {
           if (hitId) {
@@ -186,6 +262,10 @@ export function useDrawingInteraction({
           }
         } else if (hitId) {
           store.selectDrawing(hitId);
+          const hit = useDrawingStore.getState().drawings.find((d) => d.id === hitId);
+          if (hit && isEditableTextNoteTool(hit.shape.type)) {
+            onRequestEditRef.current?.(hitId);
+          }
         }
         return;
       }
@@ -225,6 +305,47 @@ export function useDrawingInteraction({
           }
         }
 
+        // 🔐 Fix 3 — Spawn-suppression for text/notes drawings. Without
+        // this guard, an imprecise left-click near (but outside) an
+        // existing text drawing's small ~50×17 px hit-box would spawn a
+        // NEW empty text drawing at the click location — polluting the
+        // chart with sibling drawings the user never intended. With the
+        // guard, clicks within 16 px of an expanded hit-box (matching
+        // DrawingPrimitive.hitTest's TEXT_HIT_* expansion) instead select
+        // the existing drawing. When the hit is on an editable text/
+        // note/callout/priceNote drawing we also open the editor.
+        if (param.point) {
+          const allDrawings = useDrawingStore.getState().drawings;
+          const mctx = getMeasuringCtx();
+          if (mctx) {
+            const converters: CoordinateConverters = {
+              timeToX: (t) => chart.timeScale().timeToCoordinate(t),
+              priceToY: (p) => series.priceToCoordinate(p),
+            };
+            const nearest = nearestTextShapeDistance(
+              param.point.x,
+              param.point.y,
+              allDrawings,
+              (drawing) => {
+                const p0 = drawing.shape.points[0];
+                if (!p0) return null;
+                const ax = converters.timeToX(p0.time);
+                const ay = converters.priceToY(p0.price);
+                if (ax === null || ay === null) return null;
+                return computeAnnotationBox(mctx, drawing, ax, ay);
+              }
+            );
+            if (nearest && nearest.dist < 16) {
+              store.selectDrawing(nearest.id);
+              const hit = useDrawingStore.getState().drawings.find((d) => d.id === nearest.id);
+              if (hit && isEditableTextNoteTool(hit.shape.type)) {
+                onRequestEditRef.current?.(nearest.id);
+              }
+              return;
+            }
+          }
+        }
+
         // 1-click tools (horizontal, vertical, text, note, callout, priceNote,
         // priceLabel): commit immediately on the click.
         if (config.totalPoints === 1) {
@@ -235,6 +356,11 @@ export function useDrawingInteraction({
             // textarea overlay's placeholder shows. Price label renders the
             // formatted price regardless of label, so undefined is correct.
             label: isEditableTextNoteTool(toolId) ? '' : undefined,
+            // 🔐 v4 — stamp the owning pane so DrawingPrimitive's per-pane
+            // filter (draw() + hitTest()) places this drawing on the correct
+            // chart only. Without this, multi-pane dashboards would render
+            // each new drawing on every pane.
+            paneIndex: paneIndexRef.current,
           });
           store.selectDrawing(newId);
           // P6 — auto-enter edit mode for text/note/callout/priceNote so the
@@ -278,6 +404,8 @@ export function useDrawingInteraction({
           // Commit
           const newId = store.addDrawing({
             shape: { type: ip.type, points: [...ip.points, pointB] },
+            // 🔐 v4 — stamp the owning pane on multi-click commits too.
+            paneIndex: paneIndexRef.current,
           });
           inProgressRef.current = null;
           setInProgressDrawing(null);
@@ -352,6 +480,8 @@ export function useDrawingInteraction({
       const store = useDrawingStore.getState();
       const newId = store.addDrawing({
         shape: { type: 'polyline', points },
+        // 🔐 v4 — stamp the owning pane on polyline dblclick commits.
+        paneIndex: paneIndexRef.current,
       });
       inProgressRef.current = null;
       setInProgressDrawing(null);
@@ -411,6 +541,17 @@ export function useDrawingInteraction({
     const onPointerDown = (e: PointerEvent) => {
       if (!isInteractive()) return;
       if (cursorVariantRef.current === 'eraser') return;
+
+      // 🔐 If the pointer landed on the TextDrawingEditor's textarea (or any
+      // descendant of its portal wrapper), bail before hit-testing. The
+      // container's pointerdown listener is registered with { capture: true },
+      // so it fires BEFORE the textarea's React onMouseDown/onPointerDown
+      // handlers can stopPropagation. Without this guard, right-click inside
+      // the editor would trigger a chart click that spawns a new empty text
+      // drawing at the click coordinates — losing the user's in-progress text.
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest('[data-text-drawing-editor]')) return;
+
       const drawings = useDrawingStore.getState().drawings;
 
       // Handle drag (resize) — both modes
@@ -551,6 +692,17 @@ export function useDrawingInteraction({
     if (!container) return;
 
     const handleContextMenu = (e: MouseEvent) => {
+      // 🔐 If the right-click landed inside the TextDrawingEditor portal,
+      // suppress the browser context menu but do NOT exit drawing mode,
+      // deselect, or spawn a new drawing. The editor's textarea handles
+      // its own context interactions; exiting here would discard the
+      // user's in-progress text.
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest('[data-text-drawing-editor]')) {
+        e.preventDefault();
+        return;
+      }
+
       // Eraser: right-click exits eraser mode
       if (cursorVariantRef.current === 'eraser') {
         e.preventDefault();
@@ -574,6 +726,8 @@ export function useDrawingInteraction({
             const store = useDrawingStore.getState();
             const newId = store.addDrawing({
               shape: { type: 'polyline', points },
+              // 🔐 v4 — stamp the owning pane on contextmenu polyline commits.
+              paneIndex: paneIndexRef.current,
             });
             store.selectDrawing(newId);
           }
@@ -595,6 +749,21 @@ export function useDrawingInteraction({
   // ── Keyboard shortcuts ─────────────────────────────────────────
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // 🔐 If the user is typing inside an editable element (the TextDrawingEditor
+      // textarea, an input, or any contentEditable), let that element handle
+      // every keystroke natively — Backspace edits text, Escape cancels via the
+      // editor's own onKeyDown, Undo/Redo uses the browser's native text undo.
+      // Without this guard, Backspace would call removeDrawing(selectedId) and
+      // Escape would deselect the very drawing being edited, both racing the
+      // editor's own handlers.
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT' || target.isContentEditable)
+      ) {
+        return;
+      }
+
       // Undo/Redo — global (work regardless of active tool)
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
         e.preventDefault();

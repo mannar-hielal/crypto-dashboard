@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Drawing, LineStyle, ShapeData } from '@/lib/drawing/types';
+import type { Drawing, LineStyle, PaneIndex, ShapeData } from '@/lib/drawing/types';
 import { bg, color } from '@/lib/tokens';
 
 // ─── Default style constants ────────────────────────────────────────
@@ -26,7 +26,7 @@ const DEFAULT_BACKGROUND_COLOR = bg.panel; // #25234e — Exgen panel
  * field. This centralises defaults so they're never scattered across
  * call sites.
  */
-function createDrawingStyle(): Omit<Drawing, 'id' | 'zIndex' | 'shape'> {
+function createDrawingStyle(): Omit<Drawing, 'id' | 'zIndex' | 'shape' | 'paneIndex'> {
   return {
     color: DEFAULT_COLOR,
     textColor: DEFAULT_TEXT_COLOR,
@@ -124,6 +124,29 @@ function migrateV2toV3(persisted: unknown): { drawings: Drawing[]; nextZIndex: n
   };
 }
 
+/**
+ * v3 schema: drawings carry `fontSize` + `backgroundColor` but NO
+ * `paneIndex`. All v3 drawings visually appeared on every pane in a
+ * multi-pane dashboard (every pane's `DrawingPrimitive` reads the global
+ * store). v4 adds `paneIndex: 0..3` so each drawing belongs to exactly
+ * one pane. The migration backfills `paneIndex: 0` for legacy drawings
+ * — preserving their existing placement (most users only had pane 0 in
+ * the v3 era, multi-pane was a niche config).
+ */
+function migrateV3toV4(persisted: unknown): { drawings: Drawing[]; nextZIndex: number } {
+  const old = persisted as {
+    drawings: Array<Partial<Drawing> & { shape: { type: string; points: unknown[] } }>;
+    nextZIndex: number;
+  };
+  return {
+    drawings: old.drawings.map((d) => ({
+      ...d,
+      paneIndex: (d.paneIndex ?? 0) as PaneIndex,
+    })) as Drawing[],
+    nextZIndex: old.nextZIndex,
+  };
+}
+
 // ─── Store ─────────────────────────────────────────────────────────
 
 function takeSnapshot(state: DrawingStoreState): UndoSnapshot {
@@ -162,6 +185,11 @@ export const useDrawingStore = create<DrawingStoreState & DrawingStoreActions>()
           ...d,
           id,
           zIndex,
+          // 🔐 Default to pane 0 when the caller omits paneIndex. Every
+          // ChartPanel passes its own paneIndex via useDrawingInteraction
+          // — this default only fires for store-direct callers in tests
+          // and migration paths.
+          paneIndex: (d.paneIndex ?? 0) as PaneIndex,
         };
         set((s) => withUndo(get, { drawings: [...s.drawings, drawing], nextZIndex: zIndex + 1 }));
         return id;
@@ -251,6 +279,10 @@ export const useDrawingStore = create<DrawingStoreState & DrawingStoreActions>()
           zIndex,
           shape: { ...drawing.shape, points: offsetPoints },
           isLocked: false,
+          // 🔐 Clone stays on the same pane — clones of pane-2 drawings
+          // remain on pane 2 ( TradingView behaviour for "Duplicate" on
+          // a multi-pane chart ).
+          paneIndex: drawing.paneIndex,
         };
         set((s) => withUndo(get, { drawings: [...s.drawings, clone], nextZIndex: zIndex + 1 }));
       },
@@ -285,11 +317,25 @@ export const useDrawingStore = create<DrawingStoreState & DrawingStoreActions>()
     }),
     {
       name: 'cd-drawings',
-      version: 3,
+      version: 4,
       migrate: (persisted, version) => {
-        if (version < 2) return migrateV1toV2(persisted);
-        if (version < 3) return migrateV2toV3(persisted);
-        return persisted as { drawings: Drawing[]; nextZIndex: number };
+        // 🔐 Chain migrations sequentially — each `return` early-exit was
+        // skipping later schema bumps, so a v0 persisted state would only
+        // get the v1→v2 lift and miss the v3 (fontSize/backgroundColor)
+        // and v4 (paneIndex) backfills. Now we accumulate the patch
+        // through every required stage so a cold-load from any legacy
+        // version lands at the current schema.
+        let result = persisted as { drawings: Partial<Drawing>[]; nextZIndex: number };
+        if (version < 2) {
+          result = migrateV1toV2(result) as unknown as typeof result;
+        }
+        if (version < 3) {
+          result = migrateV2toV3(result) as unknown as typeof result;
+        }
+        if (version < 4) {
+          result = migrateV3toV4(result) as unknown as typeof result;
+        }
+        return result as { drawings: Drawing[]; nextZIndex: number };
       },
       partialize: ({ drawings, nextZIndex, alwaysRemoveLocked }) => ({
         drawings,

@@ -12,6 +12,8 @@ import {
   pointToRayDist,
   hitTestBodies,
   pointInRect,
+  distToRect,
+  nearestTextShapeDistance,
 } from '../drawing/coordinates';
 import type { Drawing } from '@/lib/drawing/types';
 
@@ -39,6 +41,7 @@ function makeDrawing(
         price: p.price,
       })),
     },
+    paneIndex: 0,
   };
 }
 
@@ -445,5 +448,171 @@ describe('pointInRect', () => {
     // Point at 105 — outside on bare box, inside with 10px padding
     expect(pointInRect(105, 50, 0, 0, 100, 100, 0)).toBe(false);
     expect(pointInRect(105, 50, 0, 0, 100, 100, 10)).toBe(true);
+  });
+});
+
+// ─── v4 — distToRect helper ───────────────────────────────────────────────
+
+describe('distToRect', () => {
+  it('returns 0 when the point is inside the rectangle', () => {
+    expect(distToRect(50, 50, 0, 0, 100, 100)).toBe(0);
+    expect(distToRect(0, 0, 0, 0, 100, 100)).toBe(0);
+    expect(distToRect(100, 100, 0, 0, 100, 100)).toBe(0);
+  });
+  it('returns the horizontal distance when the point is to the right', () => {
+    expect(distToRect(150, 50, 0, 0, 100, 100)).toBe(50);
+  });
+  it('returns the vertical distance when the point is below', () => {
+    expect(distToRect(50, 150, 0, 0, 100, 100)).toBe(50);
+  });
+  it('returns the diagonal distance when the point is below-right', () => {
+    // Corner at (100, 100); point at (110, 110) → dx=10, dy=10 → dist ≈ 14.14
+    expect(distToRect(110, 110, 0, 0, 100, 100)).toBeCloseTo(Math.sqrt(200), 5);
+  });
+  it('returns 0 for points on the rectangle edge', () => {
+    expect(distToRect(100, 50, 0, 0, 100, 100)).toBe(0);
+    expect(distToRect(50, 0, 0, 0, 100, 100)).toBe(0);
+  });
+});
+
+// ─── v4 — nearestTextShapeDistance (spawn-suppression guard helper) ───────
+
+describe('nearestTextShapeDistance', () => {
+  function makeTextDrawing(
+    id: string,
+    anchor: { time: number; price: number },
+    over: Partial<Drawing> = {}
+  ): Drawing {
+    return {
+      id,
+      zIndex: 1,
+      isLocked: false,
+      color: '#a555e2',
+      textColor: '#fcfcfd',
+      lineWidth: 1,
+      lineStyle: 'solid',
+      fontSize: 14,
+      backgroundColor: '#0a0a0a',
+      shape: {
+        type: 'text',
+        points: [
+          {
+            time: anchor.time as Drawing['shape']['points'][number]['time'],
+            price: anchor.price,
+          },
+        ],
+      },
+      paneIndex: 0,
+      ...over,
+    };
+  }
+
+  it('returns null when no drawings are passed', () => {
+    expect(nearestTextShapeDistance(50, 50, [], () => null)).toBeNull();
+  });
+
+  it('returns the drawing id with dist=0 when the point is inside the expanded box', () => {
+    const d = makeTextDrawing('d1', { time: 100, price: 100 });
+    // boxFor returns a 50×16 box centered at (100, 100)
+    const result = nearestTextShapeDistance(105, 105, [d], () => ({
+      x: 75,
+      y: 92,
+      w: 50,
+      h: 16,
+    }));
+    expect(result).not.toBeNull();
+    expect(result!.id).toBe('d1');
+    expect(result!.dist).toBe(0);
+  });
+
+  it('returns the distance to the nearest edge when the point is outside', () => {
+    const d = makeTextDrawing('d1', { time: 100, price: 100 });
+    // expanded box: x=75, y=92, w=60+16=76, h=18+16=34 → covers x=[75-8, 151+8]=[67, 159], y=[92-8, 110+8]=[84, 118]
+    // Wait — boxFor returns the RAW box; expansion (padding + min) is applied inside the helper.
+    // box.x=75, box.y=92, box.w=60, box.h=18 → expanded: x=75-8=67, y=92-8=84, w=60+16=76, h=18+16=34
+    // → covers x=[67, 143], y=[84, 118]
+    // Point at (150, 100) → dx = 150-143 = 7, dy = 0 → dist = 7
+    const result = nearestTextShapeDistance(150, 100, [d], () => ({
+      x: 75,
+      y: 92,
+      w: 60,
+      h: 18,
+    }));
+    expect(result).not.toBeNull();
+    expect(result!.id).toBe('d1');
+    expect(result!.dist).toBe(7);
+  });
+
+  it('expands a tiny box (50×17) to the 60×18 minimum + 8px padding', () => {
+    const d = makeTextDrawing('d1', { time: 100, price: 100 });
+    // boxFor returns a 50×17 box at (75, 91.5)
+    // expanded: hitW = max(50, 60) + 16 = 76, hitH = max(17, 18) + 16 = 34
+    // x = 75 - 8 = 67, y = 91.5 - 8 = 83.5
+    // → covers x=[67, 143], y=[83.5, 117.5]
+    // Point at (144, 100) → 1 px outside the expanded box → dist = 1
+    const result = nearestTextShapeDistance(144, 100, [d], () => ({
+      x: 75,
+      y: 91.5,
+      w: 50,
+      h: 17,
+    }));
+    expect(result).not.toBeNull();
+    expect(result!.id).toBe('d1');
+    expect(result!.dist).toBeCloseTo(1, 5);
+  });
+
+  it('skips non-text shapes (trendline, horizontal, etc.)', () => {
+    const trendline: Drawing = {
+      id: 't1',
+      zIndex: 1,
+      isLocked: false,
+      color: '#2196f3',
+      textColor: '#ffffff',
+      lineWidth: 2,
+      lineStyle: 'solid',
+      fontSize: 14,
+      backgroundColor: '#25234e',
+      shape: {
+        type: 'trendline',
+        points: [
+          { time: 0 as Drawing['shape']['points'][number]['time'], price: 0 },
+          { time: 100 as Drawing['shape']['points'][number]['time'], price: 100 },
+        ],
+      },
+      paneIndex: 0,
+    };
+    // boxFor returns the trendline's bbox — but the helper should skip
+    // trendline shapes entirely (only text/note/callout/priceNote/priceLabel).
+    const result = nearestTextShapeDistance(50, 50, [trendline], () => ({
+      x: 0,
+      y: 0,
+      w: 100,
+      h: 100,
+    }));
+    expect(result).toBeNull();
+  });
+
+  it('returns null when boxFor returns null for all drawings (anchor off-screen)', () => {
+    const d = makeTextDrawing('d1', { time: 100, price: 100 });
+    const result = nearestTextShapeDistance(50, 50, [d], () => null);
+    expect(result).toBeNull();
+  });
+
+  it('returns the closest of multiple text drawings', () => {
+    const d1 = makeTextDrawing('d1', { time: 100, price: 100 });
+    const d2 = makeTextDrawing('d2', { time: 200, price: 200 });
+    // d1 box at (75, 91.5, 50, 17) → expanded covers x=[67, 143]
+    // d2 box at (175, 191.5, 50, 17) → expanded covers x=[167, 243]
+    // Point at (160, 100) → d1 dist = 17 (160-143), d2 dist = 7 (167-160)
+    let callCount = 0;
+    const result = nearestTextShapeDistance(160, 100, [d1, d2], (drawing) => {
+      callCount += 1;
+      const x = drawing.id === 'd1' ? 75 : 175;
+      return { x, y: 91.5, w: 50, h: 17 };
+    });
+    expect(result).not.toBeNull();
+    expect(result!.id).toBe('d2');
+    expect(result!.dist).toBeCloseTo(7, 5);
+    expect(callCount).toBe(2);
   });
 });

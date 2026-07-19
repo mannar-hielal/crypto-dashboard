@@ -9,8 +9,21 @@
 //   - Mount: focus + select all (so typing replaces empty placeholder)
 //   - Shift+Enter            → newline
 //   - Enter (no shift)       → commit + close
-//   - Blur                   → commit + close
 //   - Escape                 → cancel + discard + close
+//   - Pointerdown inside the editor → interact (focus, click-to-position cursor, right-click context menu)
+//   - Pointerdown outside the editor BUT inside the chart container → commit + close
+//   - Pointerdown elsewhere (DrawingPropertiesMenu, ColorPicker, rest of the app) → leave editor open
+//
+// Right-click semantics: traditionally onBlur={commit} closed the editor any
+// time the textarea lost focus — including spuriously when the user right-
+// clicked anywhere on the chart (browser default removes focus from the
+// previously-focused textarea on mousedown outside it). Mac's "right-click"
+// (Ctrl+Click) registers as `button=0 + ctrlKey=true`, so lightweight-charts
+// treats it as a left-click and fires subscribeClick → suspected absence of
+// focus loss. We replace onBlur with a document-level pointerdown capture
+// listener that ONLY commits + closes when the click lands on the chart
+// container (not the editor portal, not other UI). This matches the user's
+// mental model of "right-click in the editor keeps the editor open".
 //
 // Repositioning on pan/zoom is driven by the parent chart re-rendering this
 // portal each time `viewportVersion` changes (passed as a `repositionKey`
@@ -55,6 +68,63 @@ export function TextDrawingEditor({
 }: TextDrawingEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [value, setValue] = useState(drawing.label ?? '');
+
+  // 🔐 latest-commit ref — kept fresh via an effect so the document-level
+  // pointerdown listener (registered once on mount) closes over a stable
+  // commitRef instead of recreating the listener on every keystroke.
+  const commitRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    commitRef.current = () => onCommit(drawing.id, value);
+  }, [drawing.id, value, onCommit]);
+
+  // 🔐 Commit-on-outside-chart-click listener. Replaces the brittle
+  // onBlur={commit} approach (which fired spuriously on any focus loss —
+  // including right-click outside the textarea — and incorrectly committed
+  // when the chart contextmenu handler deselected + exited drawing mode).
+  //
+  // The listener fires in the **capture** phase on `document`, before any
+  // chart container event listener. That ordering matters because:
+  //   1. Lightweight-charts' `_mouseDownHandler` registers `mouseup` on the
+  //      documentElement when the chart canvas receives a left-click. Without
+  //      our listener firing first, the subsequent `subscribeClick` would
+  //      spawn a new empty text drawing at the click coordinates, switching
+  //      the editor to it — losing any in-progress text in the previous
+  //      drawing (the OLD editor's mount path doesn't commit; React just
+  //      diff-remounts with the new drawing's empty label).
+  //   2. Mac right-click is Ctrl+Click (button=0 + ctrlKey=true). The
+  //      browser fires a `contextmenu` event after the synthetic click, so
+  //      the chart's existing contextmenu handler exits drawing mode. Our
+  //      listener commits the editor BEFORE that handler runs, so the
+  //      user's text is persisted and the editor closes cleanly.
+  //
+  // We deliberately do NOT commit when the pointer lands elsewhere (the
+  // floating DrawingPropertiesMenu portal, the ColorPicker portal, or other
+  // UI). The user can change color / line weight while the text editor stays
+  // open — that matches TradingView.
+  useEffect(() => {
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+
+      // Click inside the editor itself (textarea, motion.div, any descendant)
+      // → don't commit. User is interacting with the editor (cursor position,
+      // browser context menu for Cut/Copy/Paste, etc.).
+      if (target.closest('[data-text-drawing-editor]')) return;
+
+      // Click inside the chart container (chart canvas, axes) → commit + close.
+      // The editor is in a portal to document.body, so the chart container is
+      // not an ancestor of the editor; this is why we explicitly check
+      // `containerRef.current.contains(target)` rather than relying on the
+      // `data-text-drawing-editor` marker.
+      const container = containerRef.current;
+      if (!container || !container.contains(target)) return;
+
+      commitRef.current();
+    };
+    document.addEventListener('pointerdown', onPointerDown, /* capture */ true);
+    return () => document.removeEventListener('pointerdown', onPointerDown, /* capture */ true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Lazy offscreen canvas context used only for measuring text width — same
   // approach the DrawingPrimitive uses for its hit-test (mirroring the box
@@ -148,16 +218,16 @@ export function TextDrawingEditor({
 
   return (
     <motion.div
+      data-text-drawing-editor
       initial={{ opacity: 0, scale: 0.96 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.08 }}
-      style={{ position: 'fixed', left: 0, top: 0, pointerEvents: 'none', zIndex: 200 }}
+      style={{ position: 'fixed', left: 0, top: 0, zIndex: 200 }}
     >
       <textarea
         ref={textareaRef}
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        onBlur={commit}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -175,6 +245,7 @@ export function TextDrawingEditor({
         // chart click that deselects or starts a new drawing.
         onMouseDown={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       />
     </motion.div>
   );

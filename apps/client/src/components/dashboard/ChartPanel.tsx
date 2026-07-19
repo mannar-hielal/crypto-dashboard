@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import {
   createChart,
@@ -20,7 +20,7 @@ import { useDrawingInteraction } from '@/hooks/useDrawingInteraction';
 import { useDrawingStore } from '@/store/drawingStore';
 import { DrawingPropertiesMenu } from '@/components/drawing/DrawingPropertiesMenu';
 import { TextDrawingEditor } from '@/components/drawing/TextDrawingEditor';
-import type { Drawing, InProgressDrawing } from '@/lib/drawing/types';
+import type { Drawing, InProgressDrawing, PaneIndex } from '@/lib/drawing/types';
 
 const CHART_BG = chartColors.bg;
 
@@ -125,7 +125,25 @@ export function ChartPanel({
   const [hoverData, setHoverData] = useState<LegendData | null>(null);
 
   // ── Drawing engine ──────────────────────────────────────────────────────
-  const drawings = useDrawingStore((s) => s.drawings);
+  // 🔐 Per-pane drawings — only this pane's drawings flow into the local
+  // rendering + interaction surface. The global store still holds every
+  // drawing (so the bin/eraser tools see them all), but the visual canvas
+  // + hit-test + editor mount only consider this pane's subset. Without
+  // this filter, every pane's DrawingPrimitive renders the entire global
+  // list — visually duplicating each drawing across panes in 2-/4-pane
+  // dashboard layouts.
+  //
+  // P4-57: select the raw array with a stable selector (same reference
+  // when unchanged → no cascade re-render), then filter with `useMemo` so
+  // the derived array only changes when the source actually changes. A
+  // bare `.filter()` inside the selector would return a new array on
+  // every store update, triggering ChartPanel re-renders on unrelated
+  // state changes (e.g. selection toggles).
+  const allDrawings = useDrawingStore((s) => s.drawings);
+  const drawings = useMemo(
+    () => allDrawings.filter((d) => d.paneIndex === paneIndex),
+    [allDrawings, paneIndex]
+  );
   const selectedDrawingId = useDrawingStore((s) => s.selectedDrawingId);
 
   // ── P6 — on-chart text editor state ─────────────────────────────────────
@@ -150,6 +168,10 @@ export function ChartPanel({
   const cursorVariantRef = useRef(cursorVariant);
   const inProgressRef = useRef<InProgressDrawing | null>(null);
   const primitiveRef = useRef<DrawingPrimitive | null>(null);
+  // 🔐 Stable pane-index ref so DrawingPrimitive can filter drawings
+  // without re-constructing on every render. The primitive's hitTest +
+  // draw() loops both skip drawings whose paneIndex doesn't match.
+  const paneIndexRef = useRef<PaneIndex>(paneIndex);
 
   // Sync refs with latest values (not during render)
   useEffect(() => {
@@ -212,7 +234,8 @@ export function ChartPanel({
       selectedIdRef,
       hoveredIdRef,
       cursorVariantRef,
-      inProgressRef
+      inProgressRef,
+      paneIndexRef
     );
     primitiveRef.current = primitive;
     candleRef.current.attachPrimitive(primitive);
@@ -393,6 +416,8 @@ export function ChartPanel({
     onExitDrawingMode: onExitDrawingMode ?? (() => {}),
     onEraserExit: onEraserExit ?? (() => {}),
     onRequestEdit: (id) => setEditingDrawingId(id),
+    // 🔐 v4 — pass our pane index so new drawings are stamped correctly.
+    paneIndex,
   });
 
   useEffect(() => {
@@ -785,6 +810,7 @@ export function ChartPanel({
           if (!edited) return null;
           return createPortal(
             <TextDrawingEditor
+              key={edited.id}
               drawing={edited}
               chartRef={chartRef}
               seriesRef={candleRef}

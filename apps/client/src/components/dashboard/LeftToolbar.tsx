@@ -142,7 +142,11 @@ export function LeftToolbar({
     setActiveTool(id);
     setShowTextMenu(false);
     onTextNoteToolChange?.(id);
-    onToolChange?.(id, id);
+    // 🔐 Pass `lineTool` (the line sub-tool) — not the text/note id — as the
+    // second arg. Otherwise DashboardPage.handleToolChange writes the text/note
+    // id into `selectedLineTool` state, breaking the Line button's icon lookup
+    // (falls back to MousePointer2 = the "arrow" the user saw).
+    onToolChange?.(id, lineTool);
   }
 
   // ── Portal-based tooltip (TradingView data-tooltip pattern) ─────────
@@ -462,7 +466,9 @@ export function LeftToolbar({
               onClick={() => {
                 setActiveTool(textTool);
                 onTextNoteToolChange?.(textTool);
-                onToolChange?.(textTool, textTool);
+                // 🔐 Same fix as handleTextNoteToolSelect above — pass the line
+                // sub-tool, not the text/note id, as the second arg.
+                onToolChange?.(textTool, lineTool);
               }}
               onContextMenu={handleTextContextMenu}
               whileHover={{ scale: 1.1 }}

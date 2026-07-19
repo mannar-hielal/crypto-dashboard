@@ -100,6 +100,12 @@ export type ShapeData =
 
 export type DrawingType = ShapeData['type'];
 
+/** Pane index (0..3) — drawings are scoped to their owning chart pane so a
+ *  single global `useDrawingStore` doesn't visually pollute sibling panes in
+ *  a multi-pane dashboard layout. Persisted via v4 schema; v3→v4 migration
+ *  backfills `paneIndex: 0` for legacy drawings. */
+export type PaneIndex = 0 | 1 | 2 | 3;
+
 // ─── Full drawing (base style + shape-specific data) ────────────────
 
 export interface Drawing {
@@ -117,6 +123,9 @@ export interface Drawing {
   backgroundColor: string;
   // Shape-specific data (replaces flat `type` + `points`)
   shape: ShapeData;
+  /** Pane this drawing belongs to (v4). Migration backfills 0; addDrawing
+   *  defaults to 0 when the caller doesn't supply one. */
+  paneIndex: PaneIndex;
 }
 
 // ─── Shape capability flags (P6.9 — conditional properties menu) ─────

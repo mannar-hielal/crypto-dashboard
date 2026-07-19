@@ -646,4 +646,140 @@ describe('drawingStore', () => {
       expect(clone.isLocked).toBe(false);
     });
   });
+
+  // ── v4 — paneIndex on drawings ────────────────────────────────────────
+
+  describe('v4 paneIndex', () => {
+    it('addDrawing defaults paneIndex to 0 when caller omits it', () => {
+      const id = useDrawingStore.getState().addDrawing({ shape: makeTrendlineShape() });
+      const drawing = useDrawingStore.getState().drawings.find((d) => d.id === id)!;
+      expect(drawing.paneIndex).toBe(0);
+    });
+
+    it('addDrawing stamps the caller-provided paneIndex', () => {
+      const id = useDrawingStore.getState().addDrawing({
+        shape: makeTrendlineShape(),
+        paneIndex: 2,
+      });
+      const drawing = useDrawingStore.getState().drawings.find((d) => d.id === id)!;
+      expect(drawing.paneIndex).toBe(2);
+    });
+
+    it('cloneDrawing preserves the source drawing paneIndex', () => {
+      const id = useDrawingStore.getState().addDrawing({
+        shape: makeTrendlineShape(),
+        paneIndex: 3,
+      });
+      useDrawingStore.getState().cloneDrawing(id, 50);
+      const clone = useDrawingStore.getState().drawings[1]!;
+      expect(clone.paneIndex).toBe(3);
+    });
+  });
+
+  // ── persist migrate() — v3 → v4 ──────────────────────────────────────
+
+  describe('persist migrate()', () => {
+    it('v3 → v4: backfills paneIndex=0 on every persisted drawing', () => {
+      const migrate = useDrawingStore.persist.getOptions().migrate!;
+
+      const migrated = migrate(
+        {
+          drawings: [
+            {
+              id: 'p3-1',
+              zIndex: 1,
+              isLocked: false,
+              color: '#2196f3',
+              textColor: '#ffffff',
+              lineWidth: 2,
+              lineStyle: 'solid',
+              fontSize: 14,
+              backgroundColor: '#25234e',
+              shape: { type: 'trendline', points: [makePoint(100, 1000), makePoint(200, 2000)] },
+            },
+            {
+              id: 'p3-2',
+              zIndex: 2,
+              isLocked: false,
+              color: '#a555e2',
+              textColor: '#fcfcfd',
+              lineWidth: 1,
+              lineStyle: 'solid',
+              fontSize: 14,
+              backgroundColor: '#0a0a0a',
+              shape: { type: 'text', points: [makePoint(50000, 1700000000)] },
+              label: 'Hello',
+            },
+          ],
+          nextZIndex: 3,
+        },
+        3
+      ) as { drawings: Array<{ paneIndex: number; id: string }>; nextZIndex: number };
+
+      expect(migrated.drawings).toHaveLength(2);
+      expect(migrated.drawings[0]!.paneIndex).toBe(0);
+      expect(migrated.drawings[1]!.paneIndex).toBe(0);
+      expect(migrated.nextZIndex).toBe(3);
+    });
+
+    it('v4 → v4: passes through unchanged', () => {
+      const migrate = useDrawingStore.persist.getOptions().migrate!;
+
+      const migrated = migrate(
+        {
+          drawings: [
+            {
+              id: 'p4-1',
+              zIndex: 1,
+              isLocked: false,
+              color: '#2196f3',
+              textColor: '#ffffff',
+              lineWidth: 2,
+              lineStyle: 'solid',
+              fontSize: 14,
+              backgroundColor: '#25234e',
+              paneIndex: 2,
+              shape: { type: 'trendline', points: [makePoint(100, 1000), makePoint(200, 2000)] },
+            },
+          ],
+          nextZIndex: 2,
+        },
+        4
+      ) as { drawings: Array<{ paneIndex: number; id: string }>; nextZIndex: number };
+
+      expect(migrated.drawings).toHaveLength(1);
+      expect(migrated.drawings[0]!.paneIndex).toBe(2);
+    });
+
+    it('v0 → v4: chains v1→v2→v3→v4 and backfills all schema defaults', () => {
+      const migrate = useDrawingStore.persist.getOptions().migrate!;
+
+      // v0/v1 schema: flat { type, points, color, ... } — no shape wrapper,
+      // no fontSize/backgroundColor/paneIndex
+      const migrated = migrate(
+        {
+          drawings: [
+            {
+              id: 'v1-1',
+              zIndex: 1,
+              isLocked: false,
+              color: '#2196f3',
+              textColor: '#ffffff',
+              lineWidth: 2,
+              lineStyle: 'solid',
+              type: 'trendline',
+              points: [makePoint(100, 1000), makePoint(200, 2000)],
+            },
+          ],
+          nextZIndex: 2,
+        },
+        0
+      ) as { drawings: Array<{ paneIndex: number; fontSize: number; backgroundColor: string }> };
+
+      expect(migrated.drawings).toHaveLength(1);
+      expect(migrated.drawings[0]!.paneIndex).toBe(0);
+      expect(migrated.drawings[0]!.fontSize).toBe(14);
+      expect(migrated.drawings[0]!.backgroundColor).toBe('#25234e');
+    });
+  });
 });

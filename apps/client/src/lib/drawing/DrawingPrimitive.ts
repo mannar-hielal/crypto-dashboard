@@ -11,8 +11,9 @@ import type {
   Time,
 } from 'lightweight-charts';
 import type { RefObject } from 'react';
-import type { Drawing, DrawingPoint, InProgressDrawing } from '@/lib/drawing/types';
+import type { Drawing, DrawingPoint, InProgressDrawing, PaneIndex } from '@/lib/drawing/types';
 import { pointToSegmentDist, pointToRayDist, pointInRect } from '@/lib/drawing/coordinates';
+import { TEXT_HIT_PADDING_PX, TEXT_HIT_MIN_W, TEXT_HIT_MIN_H } from '@/lib/drawing/coordinates';
 import {
   BOX_PADDING_PX,
   BOX_RADIUS_PX,
@@ -846,8 +847,16 @@ class TrendlineRenderer implements IPrimitivePaneRenderer {
         const selectedId = this._primitive._selectedIdRef.current;
         const isEraser = this._primitive._cursorVariantRef.current === 'eraser';
         const hoveredId = isEraser ? this._primitive._hoveredIdRef.current : null;
+        const paneIndex = this._primitive._paneIndexRef.current;
 
         for (const drawing of drawings) {
+          // 🔐 Pane isolation — only render drawings owned by this pane.
+          // Without this filter, a v3-era drawing persisted without a
+          // paneIndex would render on every pane simultaneously (every
+          // pane's DrawingPrimitive reads the same global store). v4
+          // migration backfills paneIndex=0 so legacy drawings land on
+          // pane 0 only.
+          if (drawing.paneIndex !== paneIndex) continue;
           switch (drawing.shape.type) {
             case 'trendline':
             case 'ray': {
@@ -979,6 +988,11 @@ export class DrawingPrimitive implements ISeriesPrimitive<Time> {
   _hoveredIdRef: RefObject<string | null>;
   _cursorVariantRef: RefObject<string | undefined>;
   _inProgressRef: RefObject<InProgressDrawing | null>;
+  /** Pane index this primitive filters against. Drawings whose `paneIndex`
+   *  doesn't match are skipped in both draw() and hitTest() — they're not
+   *  owned by this pane's chart. A ref so we don't re-construct the
+   *  primitive on every pane-state change in ChartPanel. */
+  _paneIndexRef: RefObject<PaneIndex>;
   private _paneView: TrendlinePaneView;
   /** Lazy offscreen canvas 2D context used by `hitTest` to measure annotation
    *  text bounds. Created on first hitTest (browser-only — never SSR). */
@@ -1007,13 +1021,15 @@ export class DrawingPrimitive implements ISeriesPrimitive<Time> {
     selectedIdRef: RefObject<string | null>,
     hoveredIdRef: RefObject<string | null>,
     cursorVariantRef: RefObject<string | undefined>,
-    inProgressRef: RefObject<InProgressDrawing | null>
+    inProgressRef: RefObject<InProgressDrawing | null>,
+    paneIndexRef: RefObject<PaneIndex>
   ) {
     this._drawingsRef = drawingsRef;
     this._selectedIdRef = selectedIdRef;
     this._hoveredIdRef = hoveredIdRef;
     this._cursorVariantRef = cursorVariantRef;
     this._inProgressRef = inProgressRef;
+    this._paneIndexRef = paneIndexRef;
     this._paneView = new TrendlinePaneView(this);
   }
 
@@ -1039,9 +1055,15 @@ export class DrawingPrimitive implements ISeriesPrimitive<Time> {
     if (!chart || !series) return null;
 
     const drawings = this._drawingsRef.current;
+    const paneIndex = this._paneIndexRef.current;
     let closest: { id: string; dist: number; priority: number; isHandle: boolean } | null = null;
 
     for (const drawing of drawings) {
+      // 🔐 Pane isolation — only hit-test drawings owned by this pane so a
+      // click on pane 0's canvas doesn't accidentally select a drawing
+      // that belongs to pane 1.
+      if (drawing.paneIndex !== paneIndex) continue;
+
       const { type, points } = drawing.shape;
 
       // ── P6 — text / note / callout / priceNote / priceLabel ──────────
@@ -1066,14 +1088,23 @@ export class DrawingPrimitive implements ISeriesPrimitive<Time> {
           }
         }
 
-        // Body hit — pointInRect on the rendered box
+        // Body hit — pointInRect on the EXPANDED box. Small labels (e.g.
+        // "Hello" measuring ~50×17 px) would create a stingy hit area
+        // after commit shrinkage; the conservative 8-px padding + 60×18
+        // floor (TEXT_HIT_* constants) brings short labels up to a
+        // TradingView-like comfortably-clickable target so reselecting
+        // after the editor closes doesn't require pixel-aimed clicks.
         const mctx = this._getMeasuringCtx();
         if (mctx) {
           const box = computeBox(mctx, drawing, ax, ay);
-          if (box && pointInRect(x, y, box.x, box.y, box.w, box.h, 4)) {
-            const bodyDist = 0; // inside the box — closest possible
-            if (!closest || bodyDist < closest.dist) {
-              closest = { id: drawing.id, dist: bodyDist, priority: 1, isHandle: false };
+          if (box) {
+            const hitW = Math.max(box.w, TEXT_HIT_MIN_W);
+            const hitH = Math.max(box.h, TEXT_HIT_MIN_H);
+            if (pointInRect(x, y, box.x, box.y, hitW, hitH, TEXT_HIT_PADDING_PX)) {
+              const bodyDist = 0; // inside the box — closest possible
+              if (!closest || bodyDist < closest.dist) {
+                closest = { id: drawing.id, dist: bodyDist, priority: 1, isHandle: false };
+              }
             }
           }
         }
