@@ -48,6 +48,10 @@ interface UseDrawingInteractionOptions {
    *  DrawingPrimitive's per-pane hitTest/draw. Defaults to 0 when omitted
    *  (test contexts). */
   paneIndex?: PaneIndex;
+  /** Called when the context-menu handler exits drawing mode while a text
+   *  editor is open (right-click outside the editor). Closes the editor so
+   *  the committed text stays at its anchor position. */
+  onCommitEdit?: () => void;
 }
 
 interface UseDrawingInteractionResult {
@@ -97,15 +101,14 @@ function isEditableTextNoteTool(toolId: string): boolean {
   return toolId === 'text' || toolId === 'note' || toolId === 'callout' || toolId === 'priceNote';
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────
 
-// ─── Helpers ───────────────────────────────────────────────────────
-
-/** Lazy offscreen canvas 2D context for measuring text-shape hit-boxes
- *  during the spawn-suppression guard (Fix 3). Created once per session
- *  on first use; safe in browser only (chart code never runs on SSR).
- *  Returns null when offscreen canvas creation is blocked — caller must
- *  tolerate by skipping the guard. Mirrors DrawingPrimitive._getMeasuringCtx. */
+/** Lazily-created offscreen 2D context used by the spawn-suppression guard
+ *  (Fix 3) and the cursor-mode reselect fallback (Fix 8) to measure an
+ *  annotation drawing's hit-box. Created once per session on first use; safe
+ *  in browser only (chart code never runs on SSR). Returns null when offscreen
+ *  canvas creation is blocked — callers must tolerate by skipping the guard.
+ *  Mirrors DrawingPrimitive._getMeasuringCtx. */
 let _measuringCtx: CanvasRenderingContext2D | null = null;
 function getMeasuringCtx(): CanvasRenderingContext2D | null {
   if (_measuringCtx) return _measuringCtx;
@@ -118,6 +121,67 @@ function getMeasuringCtx(): CanvasRenderingContext2D | null {
     }
   } catch {
     // fall through
+  }
+  return null;
+}
+
+/** Per-pane-aware manual hit-test at screen point (x, y). Used as the
+ *  fallback in cursor mode when lightweight-charts did NOT supply
+ *  `param.hoveredObjectId` (which happens whenever no crosshair-move fired
+ *  over the hit-box immediately before the click — e.g. right after the
+ *  editor closed or after panning onto the label). Resolves the id of the
+ *  nearest hit drawing owned by THIS pane only, so a click on pane 0 can't
+ *  select a drawing that belongs to pane 1.
+ *
+ *  Mirrors DrawingPrimitive.hitTest: handle + segment/ray body math via
+ *  `hitTestBodies` for trendline/horizontal/vertical/ray/parallel/polyline,
+ *  and `nearestTextShapeDistance` (expanded annotation hit-box) for the
+ *  P6 text/note/callout/priceNote/priceLabel shapes — `hitTestBodies`
+ *  alone skips annotation shapes when `boxFor` isn't threaded per-shape,
+ *  so we run both passes. Returns null when nothing is within tolerance. */
+function resolveHitAt(
+  x: number,
+  y: number,
+  chart: IChartApi,
+  series: ISeriesApi<'Candlestick'>,
+  drawings: Drawing[],
+  paneIndex: PaneIndex
+): { id: string; dist: number } | null {
+  const local = drawings.filter((d) => d.paneIndex === paneIndex);
+  const converters: CoordinateConverters = {
+    timeToX: (t) => chart.timeScale().timeToCoordinate(t),
+    priceToY: (p) => series.priceToCoordinate(p),
+  };
+
+  // 1 — line/segment bodies (incl. handle-equivalent proximity via threshold)
+  const bodyId = hitTestBodies(x, y, local, converters, 8, (drawing) => {
+    const p0 = drawing.shape.points[0];
+    if (!p0) return null;
+    const ax = converters.timeToX(p0.time);
+    const ay = converters.priceToY(p0.price);
+    if (ax === null || ay === null) return null;
+    const mctx = getMeasuringCtx();
+    if (!mctx) return null;
+    return computeAnnotationBox(mctx, drawing, ax, ay);
+  });
+  // hitTestBodies returns the first matching id (store order). Dist 0 = hit.
+  if (bodyId) return { id: bodyId, dist: 0 };
+
+  // 2 — expanded annotation hit-box (text/note/callout/priceNote/priceLabel)
+  const mctx = getMeasuringCtx();
+  if (mctx) {
+    const nearest = nearestTextShapeDistance(x, y, local, (drawing) => {
+      const p0 = drawing.shape.points[0];
+      if (!p0) return null;
+      const ax = converters.timeToX(p0.time);
+      const ay = converters.priceToY(p0.price);
+      if (ax === null || ay === null) return null;
+      return computeAnnotationBox(mctx, drawing, ax, ay);
+    });
+    // distToRect returns 0 when inside the expanded box; permit a few px of
+    // tolerance beyond the box edge so a click that lands just outside the
+    // visible glyph still reselects (matches the spawn guard's 16 px budget).
+    if (nearest && nearest.dist < 16) return nearest;
   }
   return null;
 }
@@ -172,6 +236,7 @@ export function useDrawingInteraction({
   onEraserExit,
   onRequestEdit,
   paneIndex = 0,
+  onCommitEdit,
 }: UseDrawingInteractionOptions): UseDrawingInteractionResult {
   const stateRef = useRef<DrawState>('IDLE');
 
@@ -185,6 +250,7 @@ export function useDrawingInteraction({
   const lineToolRef = useRef(lineTool);
   const cursorVariantRef = useRef(cursorVariant);
   const onRequestEditRef = useRef(onRequestEdit);
+  const onCommitEditRef = useRef(onCommitEdit);
   const paneIndexRef = useRef<PaneIndex>(paneIndex);
 
   useEffect(() => {
@@ -192,8 +258,9 @@ export function useDrawingInteraction({
     lineToolRef.current = lineTool;
     cursorVariantRef.current = cursorVariant;
     onRequestEditRef.current = onRequestEdit;
+    onCommitEditRef.current = onCommitEdit;
     paneIndexRef.current = paneIndex;
-  }, [activeTool, lineTool, cursorVariant, onRequestEdit, paneIndex]);
+  }, [activeTool, lineTool, cursorVariant, onRequestEdit, onCommitEdit, paneIndex]);
 
   // ── Enter/exit drawing mode ────────────────────────────────────
   useEffect(() => {
@@ -259,12 +326,59 @@ export function useDrawingInteraction({
         if (cursorVariantRef.current === 'eraser') {
           if (hitId) {
             store.removeDrawing(hitId);
+          } else if (param.point) {
+            // 🔐 Fix 8 — same fallback as select: lightweight-charts only
+            // populates `param.hoveredObjectId` when a crosshair-move fired
+            // over (and stayed over) the hit-box immediately before the
+            // click. After a right-click commit or a pan onto the label,
+            // `hoveredObjectId` is often absent — without this fallback the
+            // eraser click would silently miss the drawing the user is
+            // pointing at.
+            const resolved = resolveHitAt(
+              param.point.x,
+              param.point.y,
+              chart,
+              series,
+              useDrawingStore.getState().drawings,
+              paneIndexRef.current
+            );
+            if (resolved) store.removeDrawing(resolved.id);
           }
         } else if (hitId) {
           store.selectDrawing(hitId);
           const hit = useDrawingStore.getState().drawings.find((d) => d.id === hitId);
           if (hit && isEditableTextNoteTool(hit.shape.type)) {
             onRequestEditRef.current?.(hitId);
+          }
+        } else if (param.point) {
+          // 🔐 Fix 8 — cursor-mode reselect fallback. lightweight-charts'
+          // `param.hoveredObjectId` is only populated when a crosshair-move
+          // event fires over the primitive's hit-box immediately before the
+          // click. After the right-click editor-commit path (which deselects
+          // and exits drawing mode to cursor) or after panning the chart
+          // onto the label, the crosshair may not have crossed the box, so
+          // `hoveredObjectId` is undefined and the old `else if (hitId)`
+          // branch was a silent no-op — the user clicked on the committed
+          // text and nothing selected. Fall back to a per-pane manual
+          // hit-test (segment bodies + expanded annotation box) so a click
+          // that lands on (or just beside) the drawing reselects it; and
+          // for editable text/note shapes we open the editor too.
+          const resolved = resolveHitAt(
+            param.point.x,
+            param.point.y,
+            chart,
+            series,
+            useDrawingStore.getState().drawings,
+            paneIndexRef.current
+          );
+          if (resolved) {
+            store.selectDrawing(resolved.id);
+            const hit = useDrawingStore.getState().drawings.find((d) => d.id === resolved.id);
+            if (hit && isEditableTextNoteTool(hit.shape.type)) {
+              onRequestEditRef.current?.(resolved.id);
+            }
+            // Non-editable hit (trendline/horizontal/ray/...) — selecting is
+            // enough; the properties toolbar mounts via the store selection.
           }
         }
         return;
@@ -552,7 +666,9 @@ export function useDrawingInteraction({
       const target = e.target as HTMLElement | null;
       if (target && target.closest('[data-text-drawing-editor]')) return;
 
-      const drawings = useDrawingStore.getState().drawings;
+      const drawings = useDrawingStore
+        .getState()
+        .drawings.filter((d) => d.paneIndex === paneIndexRef.current);
 
       // Handle drag (resize) — both modes
       const handleHit = hitTestHandles(e.clientX, e.clientY, chart, series, container, drawings);
@@ -572,9 +688,19 @@ export function useDrawingInteraction({
       const rect = container.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      const bodyHitId = hitTestBodies(x, y, drawings, {
+      const converters: CoordinateConverters = {
         timeToX: (t) => chart.timeScale().timeToCoordinate(t),
         priceToY: (p) => series.priceToCoordinate(p),
+      };
+      const bodyHitId = hitTestBodies(x, y, drawings, converters, 8, (drawing) => {
+        const p0 = drawing.shape.points[0];
+        if (!p0) return null;
+        const ax = converters.timeToX(p0.time);
+        const ay = converters.priceToY(p0.price);
+        if (ax === null || ay === null) return null;
+        const mctx = getMeasuringCtx();
+        if (!mctx) return null;
+        return computeAnnotationBox(mctx, drawing, ax, ay);
       });
       if (bodyHitId) {
         const drawing = drawings.find((d) => d.id === bodyHitId);
@@ -738,6 +864,11 @@ export function useDrawingInteraction({
       stateRef.current = 'DRAWING';
 
       useDrawingStore.getState().selectDrawing(null);
+      // 🔐 Close the text editor if it was open (right-click outside the
+      // editor while a text tool was active). Without this, exiting drawing
+      // mode restores the cursor tool but leaves the editor mounted — the
+      // user sees a stale textarea with no way to dismiss it.
+      onCommitEditRef.current?.();
       onExitDrawingMode();
     };
 

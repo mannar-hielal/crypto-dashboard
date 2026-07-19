@@ -840,3 +840,595 @@ pnpm --filter @crypto-dashboard/client dev
 Manual smoke (per tool + cross-tool): place each of the 5; verify editor opens; type multiline; commit-on-blur; reload + persistence; drag anchor; lock + try drag (blocked) + eraser still deletes; clone via Kebab; undo/redo across edits; hover legend hidden during placement and edit; right-click exits drawing mode; price label pill updates as anchor moves; price note dashed line stretching on chart pan; box fill / font size / line color all wired through `DrawingPropertiesMenu` and persist.
 
 Pre-commit audit: run `bug-sweep` skill mode B (PR-check / pre-commit) against the diff before the pre-commit hook fires. Catches TS-strict narrowing bugs in the new `ShapeData` discriminator branch + Zustand persistence migration issues before reaching CI.
+
+---
+
+## TradingView Architecture Analysis (from HAR-extracted bundles)
+
+Date: 2026-07-19
+Source: 26 JS bundles extracted from TradingView chart HAR files (`cursor-group.har`, `lines.har`, `ray.har`, `text-and-notes.har`, `trendline.har`)
+
+### Three-Layer Architecture
+
+TradingView separates drawing tools into three independent layers, each with its own file per tool:
+
+```
+LineDataSource (model layer)
+  └─ InplaceTextLineDataSource
+       └─ LineToolTrendLine        (trendline, arrow, ray, extended)
+       └─ LineToolTextNote         (note)
+       └─ LineToolCallout          (callout)
+       └─ LineToolPriceNote        (price note)
+
+LineSourcePaneView (view-model layer)
+  └─ TrendToolWithStatsPaneView    (line tools with optional stats)
+  └─ InplaceTextLineSourcePaneView (annotation tools)
+
+BitmapCoordinatesPaneRenderer (renderer layer — pure canvas)
+  └─ TrendLineRenderer             (line with extends + arrow ends)
+  └─ SelectionRenderer             (anchor point circles)
+  └─ TextRenderer                  (text labels with background/border)
+  └─ VerticalLineRenderer          (full-height vertical lines)
+  └─ ParallelChannelRenderer       (parallel channel with fill)
+  └─ BezierQuadroRenderer          (bezier curves)
+  └─ RectangleRenderer             (rectangle with fill)
+  └─ GannArcRenderer               (gann arcs)
+```
+
+### Pattern 1: Per-shape Renderer with `setData()` + `hitTest()`
+
+Every renderer extends `BitmapCoordinatesPaneRenderer` (module 934305) and implements three methods:
+
+```js
+class TrendLineRenderer extends BitmapCoordinatesPaneRenderer {
+  // Typed data object — all config in one place
+  setData(e) {
+    this._data = e;
+    // e = { points, color, linewidth, linestyle,
+    //       extendleft, extendright, leftend, rightend,
+    //       excludeBoundaries }
+  }
+
+  // Per-renderer hit detection — returns HitTestResult
+  hitTest(e) {
+    if (!this._data) return null;
+    // Distance-based hit detection
+    return new HitTestResult(HitTarget.MovePoint);
+  }
+
+  // Pure canvas drawing — receives draw scope
+  _drawImpl(e) {
+    const { context, horizontalPixelRatio, verticalPixelRatio } = e;
+    // ... canvas drawing code
+  }
+}
+```
+
+Key insight: `setData()` is the ONLY coupling point between the pane view and the renderer. The renderer has no knowledge of the chart model, time scales, or price scales — it receives pre-converted pixel coordinates.
+
+### Pattern 2: CompositeRenderer Overlays Multiple Renderers
+
+The pane view's `_updateImpl()` builds a list of renderers:
+
+```js
+// From TrendLinePaneView._updateImpl (trendline chunk):
+_updateImpl(e) {
+  // 1. Create main line renderer
+  this._trendRenderer.setData({
+    points: [p1, p2],
+    color: lineColor,
+    linewidth: lineWidth,
+    extendleft: extendLeft,
+    extendright: extendRight,
+    leftend: leftEnd,
+    rightend: rightEnd,
+    excludeBoundaries: textLabelBounds, // avoids overlapping text
+  })
+  this._renderer.insert(this._trendRenderer, 0)
+
+  // 2. Add stats label if enabled
+  if (showStats) {
+    this._renderer.append(this._updateAndReturnStatsRenderer(e))
+  }
+
+  // 3. Add middle-point marker
+  if (showMiddlePoint) {
+    this._renderer.append(new SelectionRenderer({ points: [middlePoint] }))
+  }
+
+  // 4. Add endpoint anchors
+  this.addAnchors(this._renderer)
+
+  // 5. Add alert trigger overlay
+  this._addAlertRenderer(this._renderer, points)
+}
+
+// Public API returns the composite
+renderer(e) {
+  return this._invalidated && this._updateImpl(e), this._renderer
+}
+```
+
+The `CompositeRenderer` (module 789190) is simple — it holds an ordered list of renderers and calls `draw()` on each in sequence:
+
+```js
+class CompositeRenderer {
+  append(renderer) {
+    this._list.push(renderer);
+  }
+  insert(renderer, index) {
+    this._list.splice(index, 0, renderer);
+  }
+  clear() {
+    this._list = [];
+  }
+  draw(target) {
+    for (const r of this._list) r.draw(target);
+  }
+}
+```
+
+### Pattern 3: HitTarget Enum
+
+Module 763 (shared constants module) defines:
+
+```js
+enum HitTarget {
+  None,         // no hit
+  MovePoint,    // draggable endpoint
+  Regular,      // line body (click to select)
+  ChangePoint,  // intermediate anchor point
+}
+```
+
+Every `hitTest()` returns `HitTestResult` wrapping a `HitTarget`:
+
+```js
+class HitTestResult {
+  constructor(target, extraData) {
+    this.hitType = target;
+    this.areaName = extraData?.areaName; // 'AnchorPoint' | 'Text' | 'Style'
+    this.pointIndex = extraData?.pointIndex;
+    this.cursorType = extraData?.cursorType; // PaneCursorType
+    this.snappingPrice = extraData?.snappingPrice;
+    this.ownerSourceId = extraData?.ownerSourceId;
+    this.activeItem = extraData?.activeItem; // custom item identifier
+    this.clickHandler = extraData?.clickHandler;
+    this.tapHandler = extraData?.clickHandler;
+  }
+  mergeData(data) {
+    /* shallow merge */
+  }
+}
+```
+
+Related: `PaneCursorType` enum (module 976813) for cursor shapes during interaction:
+
+```js
+enum PaneCursorType {
+  Default, Pointer, Eraser, Dot, Grabbing,
+  ZoomIn, VerticalResize, HorizontalResize,
+  DiagonalNeSwResize, DiagonalNwSeResize,
+  Text, None
+}
+```
+
+### Pattern 4: Centralized Interaction Tolerance
+
+Module 604214 exports a single function used uniformly across ALL renderer hit-tests:
+
+```js
+function interactionTolerance() {
+  return {
+    curve: 7, // bezier curve tolerance
+    series: 3, // series line tolerance
+    anchor: 12, // anchor point radius
+  };
+}
+```
+
+No magic numbers scattered across renderers — each renderer calls `interactionTolerance().anchor` or `interactionTolerance().curve` etc.
+
+### Pattern 5: Tool Variants via Property Overrides (Inheritance)
+
+TradingView avoids duplicated switch branches by using class inheritance. Tools that share geometry extend the same base class and only override default properties:
+
+```js
+// Base class — 2-point line with extend/arrow options
+class LineToolTrendLine extends InplaceTextLineDataSource {
+  pointsCount() {
+    return 2;
+  }
+  name() {
+    return 'Trendline';
+  }
+  canHasAlert() {
+    return true;
+  }
+}
+
+// Arrow = TrendLine with rightEnd: Arrow
+class LineToolArrow extends LineToolTrendLine {
+  name() {
+    return 'Arrow';
+  }
+  static createProperties(e, t) {
+    const r = LineToolTrendLinePropertiesImpl._createWithDefaults(
+      'linetoolarrow',
+      e,
+      { ...nonThemedFactoryDefaults, rightEnd: LineEnd.Arrow },
+      themedFactoryDefaults,
+      t
+    );
+    return (this._configureProperties(r), r);
+  }
+}
+
+// Ray = TrendLine with extendRight: true
+class LineToolRay extends LineToolTrendLine {
+  name() {
+    return 'Ray';
+  }
+  static createProperties(e, t) {
+    const r = LineToolTrendLinePropertiesImpl._createWithDefaults(
+      'linetoolray',
+      e,
+      { ...nonThemedFactoryDefaults, extendRight: true },
+      themedFactoryDefaults,
+      t
+    );
+    return (this._configureProperties(r), r);
+  }
+}
+
+// Extended = TrendLine with both sides extended
+class LineToolExtended extends LineToolTrendLine {
+  name() {
+    return 'Extended';
+  }
+  static createProperties(e, t) {
+    const r = LineToolTrendLinePropertiesImpl._createWithDefaults(
+      'linetoolextended',
+      e,
+      { ...nonThemedFactoryDefaults, extendLeft: true, extendRight: true },
+      themedFactoryDefaults,
+      t
+    );
+    return (this._configureProperties(r), r);
+  }
+}
+```
+
+### Pattern 6: Annotation Renderers (line + text combined)
+
+Annotation tools (text note, callout, price note) have renderers that combine line drawing + text label rendering in a single class:
+
+```js
+// From line-tool-text-note.js:
+class TextNoteRenderer extends BitmapCoordinatesPaneRenderer {
+  constructor(hitTestResult) {
+    super();
+    this._data = null;
+    this._textLabelRenderer = new TextRenderer();
+    this._lineHitTest = new HitTestResult(HitTarget.MovePoint);
+    this._textHitTest =
+      hitTestResult || new HitTestResult(HitTarget.MovePoint, { areaName: AreaName.Text });
+  }
+
+  setData(e) {
+    this._data = e;
+    // Configure the text label renderer
+    this._textLabelRenderer.setData({
+      horzAlign: HorizontalAlign.Left,
+      vertAlign: VerticalAlign.Middle,
+      points: [e.points[1]],
+      text: e.textData.text,
+      color: e.textData.color,
+      fontSize: e.textData.fontSize,
+      // ...
+    });
+  }
+
+  hitTest(e) {
+    // 1. Hit-test the connecting line
+    const dist = distanceToSegment(e, linePointA, linePointB);
+    if (dist <= tolerance) return this._lineHitTest;
+
+    // 2. Hit-test the text label rect
+    const rect = this._textLabelRenderer.rect();
+    if (pointInBox(e, rect)) return this._textHitTest;
+
+    return null;
+  }
+
+  _drawImpl(e) {
+    // 1. Draw pin circle at anchor
+    // 2. Draw connecting line from anchor to box
+    // 3. Draw background box
+    // 4. Draw text inside box
+    // 5. Draw border
+  }
+}
+```
+
+### Pattern 7: Inplace Text Editing via React Portal
+
+Module `chart-text-editor-renderer.js` implements text editing as a React `<textarea>` mounted at absolute pixel coordinates via `createPortal`:
+
+```js
+// Core pattern:
+function ChartTextEditor({ position, font, ... }) {
+  return createPortal(
+    <textarea
+      style={{
+        position: 'absolute',
+        left: position.x,
+        top: position.y,
+        width: measuredWidth,
+        height: measuredHeight,
+        font: fontFamily,
+        fontSize: fontSize,
+        lineHeight: `${lineHeight}px`,
+      }}
+      autoFocus
+      value={text}
+      onChange={handleChange}
+      onBlur={() => commit(1)}     // 1 = Blur commit reason
+      onKeyDown={(e) => {
+        if (escape) cancel()
+        if (enter && !shift) commit()  // Enter commits, Shift+Enter = newline
+      }}
+    />,
+    document.body
+  )
+}
+```
+
+Properties are reactive via `WatchedValue` (module 232364):
+
+```js
+const textProperty = new WatchedValue('');
+textProperty.subscribe((newVal) => {
+  /* update view */
+});
+textProperty.setValue('new text');
+
+// In hooks:
+function useWatchedValue(wv) {
+  const [value, setValue] = useState(wv.value());
+  useEffect(() => wv.subscribe(setValue), [wv]);
+  return [value, (v) => wv.setValue(v)];
+}
+```
+
+### Pattern 8: Per-Tool Template Serialization
+
+Each tool defines its own `template()` method for JSON persistence:
+
+```js
+// From LineToolTrendLine:
+template() {
+  const e = super.template()
+  e.text = this.properties().childs().text.value()
+  return e
+}
+
+// Property keys collected from the tool definition:
+const nonThemedKeys = extractAllPropertiesKeys(nonThemedDefaults)
+const themedKeys = extractAllPropertiesKeys(themedDefaults)
+const allStateKeys = [...nonThemedKeys, ...themedKeys, "text"]
+```
+
+### Pattern 9: Built-in Alert Integration
+
+The pane view base class (`LineSourcePaneView`, module 640990) has a built-in `_addAlertRenderer()` method:
+
+```js
+// From lt-pane-views.js:
+_addAlertRenderer(compositeRenderer, points, lineColor) {
+  if (this._model.readOnly()) return
+  if (this._model.isInReplay().value()) return
+  if (!this._source.hasAlert()) return
+
+  // Creates a clickable overlay that opens the alert dialog
+  // when the user clicks on the drawing while an alert is set
+  compositeRenderer.append(createAlertRenderer(points, lineColor))
+}
+```
+
+The alert integration is shape-aware — different shape types have different condition types:
+
+- Trendline: "Price crosses line", "Price touches line"
+- Horizontal: "Price crosses level"
+- Vertical: "Time crosses vertical line"
+- Text/Note: no alert conditions
+
+### Pattern 10: Data Source Properties (WatchedValue Pattern)
+
+Every tool property is a `WatchedValue<T>`:
+
+```js
+class LineToolTrendLinePropertiesImpl {
+  constructor() {
+    this.childs = () => ({
+      linecolor: new WatchedValue(color),
+      linewidth: new WatchedValue(2),
+      linestyle: new WatchedValue(LineStyle.Solid),
+      extendLeft: new WatchedValue(false),
+      extendRight: new WatchedValue(false),
+      text: new WatchedValue(''),
+      // ... 30+ properties
+    });
+  }
+}
+
+// Usage in pane view:
+const props = this._source.properties().childs();
+const lineColor = props.linecolor.value();
+```
+
+### Key Architectural Differences vs Our System
+
+| Aspect                    | TradingView                                                                                           | Us (current)                                                                                                  |
+| ------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | --------- |
+| **Renderer architecture** | 12+ per-shape classes, each with `setData()` + `hitTest()` + `_drawImpl()`                            | Single `TrendlineRenderer` class with `switch(type)` on 11 shapes                                             |
+| **Rendering composition** | `CompositeRenderer.append()` overlays independent renderers                                           | Single `useBitmapCoordinateSpace()` with one draw loop                                                        |
+| **Hit test**              | Each renderer returns `HitTestResult(HitTarget)`                                                      | `hitTest()` returns `{externalId, distance, priority, cursorStyle}` with boolean `isHandle`                   |
+| **HitTarget enum**        | `None/MovePoint/Regular/ChangePoint` + `AreaName` + `PaneCursorType`                                  | No enum — boolean `isHandle` flag + `priority: 1                                                              | 2` number |
+| **Tool variants**         | Extend base class, override default properties (Arrow=TrendLine+Arrow end, Ray=TrendLine+extendRight) | Same switch branch with `extendPastB` boolean param                                                           |
+| **Properties**            | `WatchedValue<T>` with subscribe/setValue, per-tool property classes                                  | Plain TypeScript interface `Drawing` with flat fields                                                         |
+| **Interaction tolerance** | `interactionTolerance()` centralized function — `{curve, series, anchor}`                             | Magic numbers scattered: `8`, `12`, `6`, `3` in DrawingPrimitive.ts, coordinates.ts, useDrawingInteraction.ts |
+| **Text editing**          | React `<textarea>` portal + WatchedValue reactive binding                                             | Similar textarea portal but without reactive property system                                                  |
+| **Template/persist**      | Per-tool `template()` method + property key collection                                                | Flat JSON via Zustand persist middleware                                                                      |
+| **Alert integration**     | `_addAlertRenderer()` built into pane view base class                                                 | Not implemented                                                                                               |
+| **Undo system**           | Transaction-based (observed in HAR network traffic — `undo`/`redo` API paths)                         | Session undo stack (depth 50, works via `Ctrl+Z`)                                                             |
+
+---
+
+## TV-Inspired Refactoring Plan
+
+### Phase 1 — Per-Shape Renderer Classes (highest impact, lowest risk, ~3-4 days)
+
+Extract the monolithic draw/hit-test logic into independent renderer classes matching TV's `BitmapCoordinatesPaneRenderer` pattern.
+
+**Goal**: Each renderer is a self-contained unit with `setData(data)`, `hitTest(x, y)`, and `draw(scope)`.
+
+| #   | File (new)                                             | Contents                                                                                                                                                                                                                             |
+| --- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1.1 | `src/lib/drawing/renderers/TrendLineRenderer.ts`       | Renders a 2-point line with extends + arrow ends. `setData({points, color, linewidth, linestyle, extendLeft, extendRight, leftEnd, rightEnd, excludeBoundaries})`. `hitTest()` returns `HitTarget.MovePoint` or `HitTarget.Regular`. |
+| 1.2 | `src/lib/drawing/renderers/HorizontalLineRenderer.ts`  | Full-width line at Y. `setData({x, y, color, linewidth, linestyle, label})`. `hitTest()` returns Y-distance check.                                                                                                                   |
+| 1.3 | `src/lib/drawing/renderers/VerticalLineRenderer.ts`    | Full-height line at X. `setData({x, y, color, linewidth, linestyle, label})`. `hitTest()` returns X-distance check.                                                                                                                  |
+| 1.4 | `src/lib/drawing/renderers/ParallelChannelRenderer.ts` | Two TrendLineRenderers + translucent fill polygon.                                                                                                                                                                                   |
+| 1.5 | `src/lib/drawing/renderers/PolylineRenderer.ts`        | N-point connected segments. `setData({points, color, linewidth, linestyle})`. Iterates N-1 segments in hit-test.                                                                                                                     |
+| 1.6 | `src/lib/drawing/renderers/SelectionRenderer.ts`       | Anchor point rendering + handle-dist hit-test. Matches TV's `SelectionRenderer` (module 473461).                                                                                                                                     |
+| 1.7 | `src/lib/drawing/renderers/TextLabelRenderer.ts`       | Text with background rect + border. For text/note/callout/priceNote/priceLabel shapes.                                                                                                                                               |
+| 1.8 | `src/lib/drawing/renderers/CompositeRenderer.ts`       | Ordered renderer list — `append()`, `insert()`, `clear()`, `draw()`. Matches TV's `CompositeRenderer` (module 789190).                                                                                                               |
+| 1.9 | `src/lib/drawing/renderers/index.ts`                   | Re-export barrel.                                                                                                                                                                                                                    |
+
+| #    | File (changed)                            | Change                                                                                                                                                                                                                                                                                                                                                       |
+| ---- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1.10 | `src/lib/drawing/HitTarget.ts`            | **New enum**: `HitTarget.None/MovePoint/Regular/ChangePoint`. **New class**: `HitTestResult { target, areaName, pointIndex, cursorType }`. Match TV's module 763.                                                                                                                                                                                            |
+| 1.11 | `src/lib/drawing/interactionTolerance.ts` | **New**: `interactionTolerance() => { curve, series, anchor, body }`. Centralize all magic numbers. Match TV's module 604214.                                                                                                                                                                                                                                |
+| 1.12 | `src/lib/drawing/DrawingPrimitive.ts`     | **Rewrite**: Replace monolithic `draw()` switch + `hitTest()` switch with `CompositeRenderer` composition. On each render frame, create/update per-shape renderers and append to composite. Hit-test: iterate renderers, call each `hitTest()`, return closest. This is equivalent to TV's `LineSourcePaneView.renderer()` + `renderer().hitTest()` pattern. |
+| 1.13 | `src/lib/drawing/coordinates.ts`          | Remove `hitTestBodies()` (replaced by per-renderer `hitTest()`). Keep pure math helpers (`pointToSegmentDist`, `pointToRayDist`, `pointInRect`, `distToRect`).                                                                                                                                                                                               |
+| 1.14 | `src/lib/drawing/textLayout.ts`           | Keep — still needed for `computeAnnotationBox`, `splitLines`, `formatPriceLabel`.                                                                                                                                                                                                                                                                            |
+
+### Phase 2 — Pane View Layer (medium impact, ~2-3 days)
+
+Extract "view model" logic (point → pixel conversion, visibility checks, stats computation) into pane view classes, matching TV's `LineSourcePaneView`.
+
+| #   | File (new)                                        | Contents                                                                                                                                                                                                                                |
+| --- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2.1 | `src/lib/drawing/paneViews/TrendLinePaneView.ts`  | Public method `renderer(scope) → CompositeRenderer`. Converts model points to pixel coords, creates `TrendLineRenderer`, `SelectionRenderer` (for anchors), optional stats renderer. Caches until `_invalidated` flag is set.           |
+| 2.2 | `src/lib/drawing/paneViews/AnnotationPaneView.ts` | For text/note/callout/priceNote/priceLabel. Creates `TextLabelRenderer` + pin circle + optional elements (leader line, price pill, dashed line).                                                                                        |
+| 2.3 | `src/lib/drawing/paneViews/LineSourcePaneView.ts` | **Base class** shared by all pane views. Handles: anchor color, hover/selected state, `_updateImpl()` lifecycle, `_addAlertRenderer()` (stub — returns null, TV has full impl). Matches TV's `LineSourcePaneView` base (module 640990). |
+| 2.4 | `src/lib/drawing/paneViews/index.ts`              | Re-export barrel.                                                                                                                                                                                                                       |
+
+| #   | File (changed)                        | Change                                                                                                                                          |
+| --- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| 2.5 | `src/lib/drawing/DrawingPrimitive.ts` | Delegate to pane views instead of direct-draw. `paneViews()` returns per-shape pane view instances. `hitTest()` iterates pane views' renderers. |
+| 2.6 | `src/lib/drawing/types.ts`            | Add `PaneViewInterface { renderer(scope): CompositeRenderer                                                                                     | null }` if not already available via lightweight-charts types. |
+
+### Phase 3 — Tool Descriptor System (lower impact, ~1-2 days)
+
+Replace scattered configuration objects with a centralized tool descriptor list, matching TV's per-tool class pattern.
+
+| #   | File (new)                           | Contents                                                                                                                                                                                                                                                    |
+| --- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3.1 | `src/lib/drawing/toolDescriptors.ts` | Array of `ToolDescriptor` objects: `{ id, totalPoints, finishOn, defaultProperties, shapeDataFactory, editableTextProperties, hasAlert, capabilities }`. Single source of truth for: point counts, style defaults, property menu buttons, alert capability. |
+
+| #   | File (changed)                                       | Change                                                                                                                                                |
+| --- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3.2 | `src/lib/drawing/types.ts`                           | Add `ToolDescriptor` interface, `ToolId = DrawingType \| 'cursor' \| 'eraser'` union.                                                                 |
+| 3.3 | `src/hooks/useDrawingInteraction.ts`                 | Replace `PLACEMENT_CONFIGS` object + `isLineTool()` + `isTextNoteTool()` + `isEditableTextNoteTool()` with single `getToolDescriptor(toolId)` lookup. |
+| 3.4 | `src/lib/lineTools.tsx`                              | Add `getToolById(id)` export from `toolDescriptors.ts` to replace `LINE_TOOLS.some()` pattern.                                                        |
+| 3.5 | `src/lib/textNotes.ts`                               | Remove `isTextNoteTool()` — replace with `getToolDescriptor(id)` check.                                                                               |
+| 3.6 | `src/store/drawingStore.ts`                          | `createDrawingStyle()` → delegate to `toolDescriptors.ts` for default values per tool type.                                                           |
+| 3.7 | `src/components/dashboard/DrawingPropertiesMenu.tsx` | Replace hardcoded `SHAPE_CAPABILITIES` map with `getToolDescriptor(id).capabilities`.                                                                 |
+
+### Phase 4 — Tool Variants via Property Overrides (lowest impact, ~1 day)
+
+Match TV's pattern of extending a base tool descriptor instead of duplicating switch branches.
+
+| #   | File (changed)                        | Change                                                                                                                                                                                                                                                                                                                                    |
+| --- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 4.1 | `src/lib/drawing/toolDescriptors.ts`  | Add variant pattern: `const TrendLineBase = { ... }`, then `const RayTool = { ...TrendLineBase, defaultProperties: { extendRight: true } }`. Variants share the same renderer class but produce different default properties. This means `Ray` and `Trendline` share `TrendLineRenderer` but with different defaults — no duplicate code. |
+| 4.2 | `src/lib/drawing/DrawingPrimitive.ts` | Simplify: the renderer selection is driven by `ToolDescriptor.rendererClass`, not `switch(type)`. Adding a new variant adds a 3-line descriptor, not a new switch branch.                                                                                                                                                                 |
+
+### Files Unchanged by Refactor
+
+These files need little to no modification — the refactor is internal to the drawing system:
+
+- `src/lib/drawing/types.ts` — Only add `HitTarget` enum, `PaneViewInterface`; existing `ShapeData` union stays.
+- `src/store/drawingStore.ts` — Only `createDrawingStyle()` delegates to toolDescriptors; undo/redo stays.
+- `src/hooks/useDrawingInteraction.ts` — Only replaces `PLACEMENT_CONFIGS`/`isLineTool()` with `getToolDescriptor()`. State machine logic unchanged.
+- `src/components/drawing/DrawingPropertiesMenu.tsx` — Only replaces capability map source.
+- `src/components/dashboard/ChartPanel.tsx` — No changes (DrawingPrimitive constructor signature unchanged).
+- `src/components/dashboard/LeftToolbar.tsx` — No changes.
+- `src/components/dashboard/MultiChartArea.tsx` — No changes.
+- `src/pages/DashboardPage.tsx` — No changes.
+
+### Effort Summary
+
+| Phase     | Description                | New Files | Changed Files | Effort         |
+| --------- | -------------------------- | --------- | ------------- | -------------- |
+| 1         | Per-shape renderer classes | 9         | 3             | 3-4 days       |
+| 2         | Pane view layer            | 4         | 2             | 2-3 days       |
+| 3         | Tool descriptor system     | 1         | 5             | 1-2 days       |
+| 4         | Tool variants              | 0         | 2             | ~1 day         |
+| **Total** |                            | **14**    | **12**        | **~7-10 days** |
+
+### Verification Checklist
+
+After each phase, run:
+
+```bash
+pnpm --filter @crypto-dashboard/client type-check
+pnpm --filter @crypto-dashboard/client test
+pnpm lint
+pnpm format:check
+pnpm --filter @crypto-dashboard/client dev  # manual smoke test
+```
+
+Manual smoke test per phase:
+
+| Phase | Smoke Test                                                                                                                                                         |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1     | Place/select/drag each of the 11 shapes. Verify hit-test feels identical (no regression in tolerance). Verify composite rendering order (anchors on top of lines). |
+| 2     | Same as 1 — pane view layer is internal, no user-facing change.                                                                                                    |
+| 3     | Same as 1 — descriptor system is internal, no user-facing change.                                                                                                  |
+| 4     | Variants (arrow, extended) work without code duplication. Verify `Ray` and `Trendline` share renderer.                                                             |
+
+### Known Limitations (post-refactor)
+
+1. No alert integration — `_addAlertRenderer` is stubbed. This is a separate feature requiring server-side alert storage + WS push.
+2. No `WatchedValue<T>` reactive property system — our plain `Drawing` interface with Zustand persist is simpler and sufficient for localStorage-only storage. TV's `WatchedValue` system exists because properties are synced to server via JWT.
+3. No WebSocket real-time collaboration — TV syncs drawings across devices via their `charts-storage` API. Out of scope.
+4. 72 TV line tools → our 11 shapes. The architecture supports adding more tools via the descriptor system, but implementing the actual drawing primitives (fibonacci, gann, etc.) requires significant geometry work.
+
+### Appendix: Module IDs from TV Bundles
+
+Key module references found in the extracted chunks:
+
+```
+Module 604214 → interactionTolerance()
+Module 640990 → LineSourcePaneView (base class for pane views)
+Module 789190 → CompositeRenderer
+Module 763    → HitTarget, HitTestResult, AreaName
+Module 976813 → PaneCursorType
+Module 934305 → BitmapCoordinatesPaneRenderer (base class for all renderers)
+Module 473461 → SelectionRenderer
+Module 664815 → TrendLineRenderer
+Module 453677 → PaneRendererLine (generic line renderer)
+Module 26069  → LINESTYLE_SOLID constant
+Module 873573 → generateColor (alpha blending)
+Module 898938 → RegressionTrendPaneView
+Module 240222 → GannFixedPaneView
+Module 702918 → BezierQuadroPaneView
+Module 470986 → TextRenderer (text labels with background/border)
+Module 660161 → LineEnd (Normal, Arrow, Diamond), LineToolColorsProperty
+Module 362864 → color/definition property utility functions
+Module 160909 → commonLineToolPropertiesStateKeys
+Module 974663 → extractThemedColors, extractAllPropertiesKeys
+Module 798561 → factoryDefaultsForCurrentTheme
+```

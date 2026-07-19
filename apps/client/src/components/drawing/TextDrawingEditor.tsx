@@ -28,13 +28,25 @@
 // Repositioning on pan/zoom is driven by the parent chart re-rendering this
 // portal each time `viewportVersion` changes (passed as a `repositionKey`
 // dependency so this effect re-runs).
+//
+// 🔐 Fix 8 — live label preview. While the editor is open the user's draft
+// text lives only in the local `value` state; the canvas-rendered glyph is
+// sized from `drawing.label` (the store), which is still the pre-edit/empty
+// string until commit. Until they diverge, the textarea (sized from `value`)
+// and the canvas text (sized from `drawing.label`) use DIFFERENT box widths
+// — so panning the chart displaced the canvas text and the textarea overlay
+// at different rates ("swimming"). We now push every keystroke back into
+// the store via `onPreview` so the canvas and the textarea always derive
+// their boxes from the same string, and `onCancel` reverts the label to the
+// mount-time snapshot so Escape discards the draft cleanly.
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import { motion } from 'framer-motion';
 import type { IChartApi, ISeriesApi } from 'lightweight-charts';
 import type { Drawing } from '@/lib/drawing/types';
 import { color, font } from '@/lib/tokens';
+import { useDrawingStore } from '@/store/drawingStore';
 import {
   BOX_PADDING_PX,
   FONT_FAMILY,
@@ -51,9 +63,16 @@ interface TextDrawingEditorProps {
   /** Bumped by the parent chart on pan/zoom so we recompute screen position.
    *  Optional — when omitted, the editor stays put until the next render. */
   repositionKey?: number;
-  /** Called with the new label text. Empty string clears the label. */
+  /** Live preview write — called on every keystroke so the canvas-rendered
+   *  label (sized from the store) stays in sync with the textarea (sized from
+   *  local `value`). Without this the two diverge during pan ("swimming").
+   *  Optional with a no-op default so standalone test renders don't need it. */
+  onPreview?: (id: string, text: string) => void;
+  /** Called with the new label text. Empty string clears the label. Finalizes
+   *  the live preview already written by `onPreview` and closes the editor. */
   onCommit: (id: string, text: string) => void;
-  /** Called when the user escapes — discards any in-progress edits. */
+  /** Called when the user escapes — reverts the label to the mount-time
+   *  snapshot (discarding the draft written by `onPreview`) and closes. */
   onCancel: () => void;
 }
 
@@ -63,11 +82,19 @@ export function TextDrawingEditor({
   seriesRef,
   containerRef,
   repositionKey = 0,
+  onPreview,
   onCommit,
   onCancel,
 }: TextDrawingEditorProps) {
+  const preview = onPreview ?? (() => {});
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [value, setValue] = useState(drawing.label ?? '');
+
+  // 🔐 Fix 8 — snapshot the label as it was on mount so Escape can revert the
+  // live preview written on each keystroke back to the pre-edit value. A ref
+  // (not state) — captured once and never re-sampled, otherwise reopening the
+  // editor on an already-edited drawing would treat the draft as the baseline.
+  const initialLabelRef = useRef<string>(drawing.label ?? '');
 
   // 🔐 latest-commit ref — kept fresh via an effect so the document-level
   // pointerdown listener (registered once on mount) closes over a stable
@@ -142,7 +169,7 @@ export function TextDrawingEditor({
   // portal each time `repositionKey` changes.
   const [pos, setPos] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
     const chart = chartRef.current;
     const series = seriesRef.current;
@@ -227,13 +254,25 @@ export function TextDrawingEditor({
       <textarea
         ref={textareaRef}
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => {
+          const next = e.target.value;
+          setValue(next);
+          // 🔐 Fix 8 — push the draft into the store immediately so the canvas
+          // renderer sizes its box from the same string the textarea shows.
+          // Keeps them pixel-aligned during pan (kills the "swimming").
+          preview(drawing.id, next);
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             commit();
           } else if (e.key === 'Escape') {
             e.preventDefault();
+            // 🔐 Fix 8 — revert the live preview written during typing
+            // back to the mount-time snapshot, then close.
+            useDrawingStore.getState().updateDrawing(drawing.id, {
+              label: initialLabelRef.current,
+            });
             onCancel();
           }
         }}

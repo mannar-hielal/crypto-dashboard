@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import {
   createChart,
@@ -152,6 +152,17 @@ export function ChartPanel({
   useEffect(() => {
     editingDrawingIdRef.current = editingDrawingId;
   }, [editingDrawingId]);
+
+  // 🔐 Fix 8 — snapshot the label as it was when editing began so Escape can
+  // revert the live keystroke-preview back to the pre-edit value. Snapped
+  // in `beginEdit` (the single entry point for opening the editor) from the
+  // store — NOT from the filtered `drawings` subset, which is fine since
+  // `useDrawingStore.getState().drawings` is the same source the editor
+  // reads from.
+  const beginEdit = useCallback((id: string) => {
+    setEditingDrawingId(id);
+  }, []);
+
   // Auto-clear selection as editing state if the drawing is removed.
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
@@ -415,7 +426,15 @@ export function ChartPanel({
     cursorVariant: cursorVariant ?? 'crosshair',
     onExitDrawingMode: onExitDrawingMode ?? (() => {}),
     onEraserExit: onEraserExit ?? (() => {}),
-    onRequestEdit: (id) => setEditingDrawingId(id),
+    onRequestEdit: (id) => beginEdit(id),
+    // 🔐 Close the text editor when right-click exits drawing mode (contextmenu
+    // handler calls onCommitEdit before restoring the previous tool). Without
+    // this, the editor would remain mounted in a broken state after a right-click.
+    onCommitEdit: () => {
+      if (editingDrawingIdRef.current !== null) {
+        setEditingDrawingId(null);
+      }
+    },
     // 🔐 v4 — pass our pane index so new drawings are stamped correctly.
     paneIndex,
   });
@@ -458,7 +477,7 @@ export function ChartPanel({
   }, []);
 
   /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!selectedDrawingId || !chartRef.current || !candleRef.current) {
       setToolbarPos(null);
       return;
@@ -797,7 +816,7 @@ export function ChartPanel({
                 useDrawingStore.getState().cloneDrawing(drawing.id, priceOffset);
               }}
               onReorder={(id, dir) => useDrawingStore.getState().moveDrawing(id, dir)}
-              onEditLabel={(drawing) => setEditingDrawingId(drawing.id)}
+              onEditLabel={(drawing) => beginEdit(drawing.id)}
             />,
             document.body
           );
@@ -816,11 +835,19 @@ export function ChartPanel({
               seriesRef={candleRef}
               containerRef={containerRef}
               repositionKey={viewportVersion}
+              onPreview={(id, text) => {
+                // 🔐 Fix 8 — live keystroke preview: keep the store label in
+                // sync while typing so the canvas-sized box matches the
+                // textarea-sized box (no "swimming" during pan).
+                useDrawingStore.getState().updateDrawing(id, { label: text });
+              }}
               onCommit={(id, text) => {
                 useDrawingStore.getState().updateDrawing(id, { label: text });
                 setEditingDrawingId(null);
               }}
-              onCancel={() => setEditingDrawingId(null)}
+              onCancel={() => {
+                setEditingDrawingId(null);
+              }}
             />,
             document.body
           );
