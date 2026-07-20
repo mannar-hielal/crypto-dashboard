@@ -18,15 +18,9 @@ import { SettingsModal } from './SettingsModal';
  */
 export function TopBar() {
   const user = useAuthStore((s) => s.user);
-  const clearAuth = useAuthStore((s) => s.clearAuth);
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-
-  async function handleLogout() {
-    await authApi.logout();
-    clearAuth();
-  }
 
   return (
     <header
@@ -79,7 +73,10 @@ export function TopBar() {
               </span>
               <ChevronDown
                 className="h-3 w-3 transition-transform"
-                style={{ color: color.muted, transform: menuOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                style={{
+                  color: color.muted,
+                  transform: menuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                }}
               />
             </motion.button>
 
@@ -130,7 +127,10 @@ export function TopBar() {
                     <motion.button
                       onClick={() => {
                         setMenuOpen(false);
-                        void handleLogout();
+                        void (async () => {
+                          await authApi.logout();
+                          useAuthStore.getState().clearAuth();
+                        })();
                       }}
                       whileHover={{ background: bg.surface }}
                       className="flex w-full items-center gap-2 px-3 py-2.5 text-xs transition-colors hover:text-white"
@@ -145,8 +145,8 @@ export function TopBar() {
             </AnimatePresence>
           </>
         ) : (
-          <motion.a
-            href="/login"
+          <motion.button
+            onClick={() => navigate('/login')}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors"
@@ -157,10 +157,9 @@ export function TopBar() {
             }}
           >
             Sign in
-          </motion.a>
+          </motion.button>
         )}
-
-        </div>
+      </div>
 
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </header>
