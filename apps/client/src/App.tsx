@@ -18,6 +18,7 @@ const ForgotPasswordPage = lazy(() =>
 const ResetPasswordPage = lazy(() =>
   import('@/pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage }))
 );
+const ChartPage = lazy(() => import('@/pages/ChartPage').then((m) => ({ default: m.ChartPage })));
 const DashboardPage = lazy(() =>
   import('@/pages/DashboardPage').then((m) => ({ default: m.DashboardPage }))
 );
@@ -122,6 +123,9 @@ export default function App() {
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/security" element={<SecurityPage />} />
             <Route path="/aup" element={<AcceptableUsePolicyPage />} />
+
+            {/* Public chart page — no auth required (TradingView free license requirement) */}
+            <Route path="/chart" element={<ChartPage />} />
 
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>

@@ -64,7 +64,7 @@
 
 ## 🔐 Security Hardening Plan
 
-> Identified post-Phase-2 review. All checklist items added to `REVIEW_CHECKLIST.md` Section 2.
+> Identified post-Phase-2 review. All checklist items added to the **`bug-sweep`** skill priorities P1–P12 (formerly `docs/REVIEW_CHECKLIST.md` Section 2; consolidated into the skill as the single source of truth).
 
 ### Phase 1 Retroactive — Fix Immediately (auth is already live)
 
@@ -74,14 +74,14 @@
 | Explicit `algorithms: ['HS256']` on `@fastify/jwt` registration                                                               | `app.ts`               | Code change     | ✅ Done  |
 | Token-theft full-revocation: when `/refresh` detects `count=0`, call `deleteMany({ where: { userId } })` to kill all sessions | `routes/auth/index.ts` | Code change     | ✅ Done  |
 | `pnpm audit` added to pre-release CI gate                                                                                     | CI config              | Process change  | ✅ Done  |
-| No JWT in URL params, CSRF docs, error-handler URL audit, HSTS/CSP/CORS wildcard check                                        | `REVIEW_CHECKLIST.md`  | Checklist items | ✅ Added |
+| No JWT in URL params, CSRF docs, error-handler URL audit, HSTS/CSP/CORS wildcard check                                        | `bug-sweep` skill P2   | Checklist items | ✅ Added |
 
 ### Phase 2 — Current Sprint
 
-| Item                                                                                 | File                  | Type           | Status   |
-| ------------------------------------------------------------------------------------ | --------------------- | -------------- | -------- |
-| `dangerouslySetInnerHTML` prohibition + user content as plain text                   | `REVIEW_CHECKLIST.md` | Checklist item | ✅ Added |
-| `paperStore` `persist()` — add `version` + `migrate` for safe localStorage hydration | `paperStore.ts`       | Code change    | ✅ Done  |
+| Item                                                                                 | File                 | Type           | Status   |
+| ------------------------------------------------------------------------------------ | -------------------- | -------------- | -------- |
+| `dangerouslySetInnerHTML` prohibition + user content as plain text                   | `bug-sweep` skill P2 | Checklist item | ✅ Added |
+| `paperStore` `persist()` — add `version` + `migrate` for safe localStorage hydration | `paperStore.ts`      | Code change    | ✅ Done  |
 
 ### Phase 3+ — Future
 
@@ -510,7 +510,20 @@ ask: number | null; // best ask from Bybit orderbook.1
 | `apps/client/src/components/dashboard/MultiChartArea.tsx`              | CSS grid renderer for all layouts; wires crosshair + time-range sync                                                                           |
 | `docs/markup-reference/`                                               | HTML UI reference files — component structure & interaction patterns (not 1:1 copies)                                                          |
 | `docs/screenshots/theme/`                                              | Visual source of truth — spacing, colors, sizes, layout                                                                                        |
-| `docs/REVIEW_CHECKLIST.md`                                             | Pre-commit review checklist — run before every push                                                                                            |
+| `docs/DRAWING_TOOLS.md`                                                | Drawing tools architecture, status, roadmap                                                                                                    |
+| `apps/client/src/lib/drawing/types.ts`                                 | Drawing type definitions (`Drawing`, `DrawingPoint`, `LineStyle`, etc.)                                                                        |
+| `apps/client/src/lib/drawing/DrawingPrimitive.ts`                      | `ISeriesPrimitive` — canvas rendering via `CompositeRenderer` + per-shape renderers (Phase 1 refactored, ~550 lines)                           |
+| `apps/client/src/lib/drawing/HitTarget.ts`                             | `HitTarget` enum (None/Body/Handle) + `HitTestResult` interface — matches TV's module 763                                                      |
+| `apps/client/src/lib/drawing/interactionTolerance.ts`                  | Centralized `BODY_HIT_TOLERANCE_PX=8` / `HANDLE_HIT_TOLERANCE_PX=12` — matches TV's module 604214                                              |
+| `apps/client/src/lib/drawing/renderers/`                               | 6 per-shape renderers + CompositeRenderer + shared utilities (Phase 1)                                                                         |
+| `apps/client/src/lib/lineTools.tsx`                                    | SVG icons + `LINE_TOOLS` array (6 line drawing tool definitions)                                                                               |
+| `apps/client/src/store/drawingStore.ts`                                | Zustand store w/ `persist` for drawings (localStorage `cd-drawings`)                                                                           |
+| `apps/client/src/hooks/useDrawingInteraction.ts`                       | State machine for drawing placement and drag interactions                                                                                      |
+| `apps/client/src/components/drawing/DrawingPropertiesMenu.tsx`         | Floating toolbar for selected drawing (color, width, style, label, lock, delete)                                                               |
+| `apps/client/src/components/drawing/KebabMenu.tsx`                     | Submenu: Clone, Visual Order, Delete                                                                                                           |
+| `apps/client/src/components/drawing/ColorPicker.tsx`                   | TV-style color swatch grid (10 grays + 6×10 color matrix)                                                                                      |
+| `apps/client/src/lib/cursors.tsx`                                      | Cursor variant icons + data-URI CSS map for chart cursor overrides                                                                             |
+| `.agents/skills/bug-sweep/SKILL.md`                                    | Pre-commit / proactive-audit checklist (138 items, priorities P1–P12) — single source of truth. Was `docs/REVIEW_CHECKLIST.md` — consolidated. |
 | `docs/APP_LOG.md`                                                      | This file — full project context, attach at start of every session                                                                             |
 
 ---
@@ -524,7 +537,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 - **Phase 1**: Client scaffold — React 19, Vite, Tailwind, PWA, React Router, Zustand
 - **Phase 2**: Live price feed (WebSocket → `usePriceFeed` → `marketStore`)
 - **Phase 2**: Paper trading v1 — `paperStore` (market orders), `TradingPanel` (market-only), `OrderAccountManagementPanel` (Positions + Order History + Balance History + Journal tabs), TP/SL monitor, commission accounting
-- **Phase 2**: Review infrastructure — `REVIEW_CHECKLIST.md`, `APP_LOG.md`, CI-passing tests (421 total: 321 client + 100 server)
+- **Phase 2**: Review infrastructure — `APP_LOG.md`, CI-passing tests (421 total: 321 client + 100 server). (Formerly included `REVIEW_CHECKLIST.md`; consolidated into `.agents/skills/bug-sweep/SKILL.md` as the single source of truth.)
 
 ### ✅ Completed (added 2026-04-12)
 
@@ -537,6 +550,19 @@ ask: number | null; // best ask from Bybit orderbook.1
 - `TradingPanel` + `useTPSLMonitor` migrated to `layoutStore` + `paneStores` (TP/SL monitors pane 0 — primary trading pane)
 - `src/lib/markets.ts` — shared `SYMBOLS`, `INTERVALS`, `INTERVAL_LABELS` constants (previously duplicated in `SymbolBar`)
 - Commit: `7dfd54a`
+
+### ✅ Completed (added 2026-07-19 — Phase 1 Drawing Refactoring)
+
+- **Phase 1 — Per-shape renderer classes** — extracted the monolithic `DrawingPrimitive.ts` (1278 lines) into 11 new files following TradingView's `BitmapCoordinatesPaneRenderer` + `CompositeRenderer` + `HitTarget` patterns:
+  - `BitmapCoordinatesPaneRenderer.ts` — abstract base with `draw(scope)` + `hitTest(x,y)`
+  - `CompositeRenderer.ts` — ordered renderer list matching TV's module 789190
+  - 6 per-shape renderers: TrendLineRenderer, HorizontalLineRenderer, VerticalLineRenderer, ParallelChannelRenderer, PolylineRenderer, TextLabelRenderer
+  - `HitTarget.ts` — enum + `HitTestResult` interface matching TV's module 763
+  - `interactionTolerance.ts` — centralized thresholds matching TV's module 604214
+  - `sharedDrawing.ts` — `drawHandles()` + `applyLineStyle()` utilities
+  - `DrawingPrimitive.ts` rewritten to ~550 lines using `CompositeRenderer` composition
+  - `coordinates.ts` deprecated annotations on old hit-test functions (kept for backward compat)
+  - Verification: `tsc -b` clean, ESLint 0 errors, Prettier clean, all 506 tests pass
 
 ### ✅ Completed (added 2026-06-14 — Paper Trading Phase 3 Sync)
 
@@ -571,7 +597,9 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 ### 📋 Planned (Next)
 
-- **Left Toolbar (aside bar) — wire up functions**: Currently UI-only (icons with no actions). Build out the tool buttons: drawing tools, measurement tools, line-study annotations on charts, etc. Requires connecting toolbar click events to `paneStore` / chart actions.
+- **Phase 2 — Pane view layer**: Extract point→pixel conversion from `DrawingPrimitive` into per-shape `PaneView` classes, decoupling chart-coordinate conversion from canvas rendering. Phase 1 (renderer classes) is complete; Phase 2 would also wire in-progress preview through per-shape renderers and add `SelectionRenderer`.
+- **Phase 3–4**: Tool descriptor system + tool variants via property overrides.
+- **Additional drawing tools**: Wire remaining placement (polyline, freehand) — Phase 1 refactoring laid per-shape renderer foundation, but polyline and freehand still need placement state machine support.
 - **Phase 4**: Advanced indicators, alerts, multi-symbol watchlist
 - **Phase 5**: Live broker integration — Bybit real-money trading (see full spec below)
 - **Phase 6**: AI trading bot — 3-role system: Scanner + Analyst + Executor, paper mode only (see full spec below)
@@ -1364,6 +1392,56 @@ Four issues surfaced in a Copilot PR review and are now resolved.
 - Removed `useRef` + `useCallback` double-submit guard — protection is now fully server-side (simpler, more reliable)
 
 **Server logs confirm single request, single email per registration.** 1 email received in final test (`adminwithu+test6`).
+
+---
+
+### feat: drawing tools — trendline system (2026-07-11) ✅
+
+Completed the MVP trendline drawing system with full interaction lifecycle and TV-style toolbar.
+
+**Architecture:**
+
+- `DrawingPrimitive` — `ISeriesPrimitive` implementation for canvas rendering via `TrendlineRenderer` + `hitTest`
+- `useDrawingInteraction` — state machine (`IDLE` → `DRAWING` → `PLACING_A` + pointer capture for drag/resize)
+- `drawingStore` — Zustand w/ `persist` (`cd-drawings` localStorage key) — drawings survive page refresh
+
+**Implemented:**
+
+- Trendline placement: click A → preview via crosshair move → click B to commit
+- Selection via `hoveredObjectId`, click-on-handle, click-on-body
+- Handle drag to resize endpoint, body drag to translate entire line
+- Properties toolbar (`DrawingPropertiesMenu`) at trendline midpoint with drag-to-reposition
+- Line color, text color, label, line width (1/2/3/4 px), line style (solid/dashed/dotted)
+- Dash/dot gap spacing scales with `lineWidth`
+- Lock drawing (prevents move/resize)
+- Delete via keyboard (`Delete`/`Backspace`) and toolbar button
+- Clone with 32px downward offset (computes price delta via `priceToCoordinate`/`coordinateToPrice`)
+- Visual order (z-index reorder: front/back/forward/backward)
+- Right-click exits drawing mode and restores previous tool
+- Escape cancels in-progress placement or deselects
+- Only user-set label renders on canvas (auto price-change pill removed)
+- Hover legend hidden during active drawing placement
+- All popups (color picker, width, style, label, kebab) positioned inside toolbar (`absolute left-0 top-12`)
+- `data-drawing-hover`/`data-drawing-active` attributes on chart div
+- TV-style line style dropdown (solid/dashed/dotted SVG previews in `<table>`)
+- KebabMenu with Clone + Visual Order submenu (TradingView `<table>`)
+- Cursor variant submenu + line tool submenu in LeftToolbar (right-click)
+- Crosshair, Rectangle, Fibonacci toolbar buttons removed (UI-only with no implementation)
+
+**New files:**
+
+- `apps/client/src/lib/drawing/types.ts`
+- `apps/client/src/lib/drawing/DrawingPrimitive.ts`
+- `apps/client/src/lib/lineTools.tsx`
+- `apps/client/src/store/drawingStore.ts`
+- `apps/client/src/hooks/useDrawingInteraction.ts`
+- `apps/client/src/components/drawing/DrawingPropertiesMenu.tsx`
+- `apps/client/src/components/drawing/KebabMenu.tsx`
+- `apps/client/src/components/drawing/ColorPicker.tsx`
+- `apps/client/src/lib/cursors.tsx`
+- `docs/DRAWING_TOOLS.md`
+
+**All checks pass:** server + client type-check, lint, 490 tests.
 
 ---
 

@@ -13,6 +13,8 @@ export default [
       'pnpm-lock.yaml',
       'apps/server/generated/**', // 🔐 never lint auto-generated Prisma client
       'generated/**', // 🔐 never lint workspace-root generated/ (CDSDK)
+      'tv-website-full/**', // TradingView captured bundles — reference only
+      '**/*.har', // HTTP archive files — reference only, not source code
     ],
   },
   js.configs.recommended,

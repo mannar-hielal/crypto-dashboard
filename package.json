@@ -15,7 +15,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "audit": "pnpm audit --audit-level=high",
-    "type-check": "pnpm --filter @crypto-dashboard/server type-check",
+    "type-check": "pnpm --filter @crypto-dashboard/server type-check && pnpm --filter @crypto-dashboard/client type-check",
     "test": "pnpm --filter @crypto-dashboard/server test && pnpm --filter @crypto-dashboard/client test",
     "test:coverage": "pnpm --filter @crypto-dashboard/server test:coverage && pnpm --filter @crypto-dashboard/client test:coverage"
   },
