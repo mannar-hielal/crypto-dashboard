@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { WebSocket } from '@fastify/websocket';
-import type { LiveBar, TickerUpdate } from '../../plugins/bybit.js';
+import type { LiveBar, IndicatorSnapshot, TickerUpdate } from '../../plugins/bybit.js';
 import { config } from '../../config.js';
 import { logger } from '../../logger.js';
 import { ALLOWED_SYMBOLS } from '../../constants.js';
@@ -209,10 +209,57 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
 
       log.info({ symbol, interval }, 'Client connected to live feed');
 
-      // ① Send the cached snapshot immediately so the chart isn't blank
+      // ① Send the cached snapshot immediately so the chart isn't blank.
+      //    If the aggregator is too cold (< 50 bars) use the REST fallback
+      //    instead so the client gets a full history on first connect.
+      const MIN_SNAPSHOT = 50;
       const snapshot = fastify.bybit.getSnapshot(symbol, interval);
-      if (snapshot.length > 0) {
+      if (snapshot.length >= MIN_SNAPSHOT) {
         socket.send(JSON.stringify({ type: 'snapshot', bars: snapshot }));
+      } else if (snapshot.length > 0) {
+        // Aggregator has a few bars — send them as a preview, then replace
+        // with a full REST-backed snapshot.
+        socket.send(JSON.stringify({ type: 'snapshot', bars: snapshot }));
+        fetchHistoricalCandles(symbol, interval, 1000)
+          .then((candles) => {
+            if (candles.length > 0 && socket.readyState === 1) {
+              socket.send(
+                JSON.stringify({
+                  type: 'snapshot',
+                  bars: candles.map((kline) => ({
+                    symbol,
+                    interval,
+                    kline,
+                    indicators: null as unknown as IndicatorSnapshot,
+                  })),
+                })
+              );
+            }
+          })
+          .catch((err) => {
+            log.error({ err, symbol, interval }, 'REST fallback for WS snapshot failed');
+          });
+      } else {
+        // Completely cold aggregator — fetch from Bybit REST to fill the gap.
+        fetchHistoricalCandles(symbol, interval, 1000)
+          .then((candles) => {
+            if (candles.length > 0 && socket.readyState === 1) {
+              socket.send(
+                JSON.stringify({
+                  type: 'snapshot',
+                  bars: candles.map((kline) => ({
+                    symbol,
+                    interval,
+                    kline,
+                    indicators: null as unknown as IndicatorSnapshot,
+                  })),
+                })
+              );
+            }
+          })
+          .catch((err) => {
+            log.error({ err, symbol, interval }, 'REST fallback for WS snapshot failed');
+          });
       }
 
       // ② Subscribe to live bar updates and forward to this client

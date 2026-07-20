@@ -11,9 +11,13 @@ import { TradingSoundProvider, useSoundActions } from '@/hooks/TradingSoundConte
 import { useLayoutStore } from '@/store/layoutStore';
 import { useAuthStore } from '@/store/authStore';
 import { usePaperStore } from '@/store/paperStore';
+import { useDrawingStore } from '@/store/drawingStore';
 import { authApi } from '@crypto-dashboard/sdk';
 import { TopBar } from '@/components/dashboard/TopBar';
 import { LeftToolbar } from '@/components/dashboard/LeftToolbar';
+import { CURSOR_CSS_MAP, type CursorVariantId } from '@/lib/cursors';
+import { LINE_TOOLS, type LineToolId } from '@/lib/lineTools';
+import { TEXT_NOTES, type TextNoteToolId } from '@/lib/textNotes';
 import { MultiChartArea } from '@/components/dashboard/MultiChartArea';
 import { OrderAccountManagementPanel } from '@/components/dashboard/OrderAccountManagementPanel';
 import { TickerBar } from '@/components/dashboard/TickerBar';
@@ -81,7 +85,57 @@ export function DashboardPage() {
   );
 }
 
-function DashboardInner() {
+export function DashboardInner() {
+  const [cursorVariant, setCursorVariant] = useState<CursorVariantId>('cross');
+  const [activeTool, setActiveTool] = useState('cursor');
+  const [selectedLineTool, setSelectedLineTool] = useState<LineToolId>('trendline');
+  const [selectedTextNoteTool, setSelectedTextNoteTool] = useState<TextNoteToolId>('text');
+  const previousToolRef = useRef({ toolId: 'cursor', lineToolId: 'trendline' as LineToolId });
+  const previousCursorRef = useRef<CursorVariantId>('cross');
+
+  function handleToolChange(toolId: string, lineToolId: string) {
+    // Store previous tool before switching to a drawing tool
+    const isLineTool = LINE_TOOLS.some((t) => t !== null && t.id === toolId);
+    const isTextNote = TEXT_NOTES.some((t) => t !== null && t.id === toolId);
+    if (toolId !== 'cursor' && (isLineTool || isTextNote)) {
+      previousToolRef.current = { toolId: activeTool, lineToolId: selectedLineTool };
+    }
+    // Reset cursor variant when switching to a drawing tool so eraser cursor doesn't persist
+    if (toolId !== 'cursor') {
+      setCursorVariant('cross');
+    }
+    setActiveTool(toolId);
+    // 🔐 Only mutate the corresponding sub-tool state — never both. Crossing
+    // the streams (e.g. writing a text/note id into selectedLineTool) breaks
+    // the Line button's icon lookup and silently breaks Line-button clicks.
+    if (isLineTool) setSelectedLineTool(lineToolId as LineToolId);
+    if (isTextNote) setSelectedTextNoteTool(toolId as TextNoteToolId);
+  }
+
+  function handleTextNoteToolChange(id: TextNoteToolId) {
+    setSelectedTextNoteTool(id);
+  }
+
+  function handleExitDrawingMode() {
+    const { toolId } = previousToolRef.current;
+    setActiveTool(toolId);
+  }
+
+  function handleBinAction() {
+    useDrawingStore.getState().removeAll();
+  }
+
+  function handleCursorVariantChange(variant: CursorVariantId) {
+    if (variant !== 'eraser') {
+      previousCursorRef.current = variant;
+    }
+    setCursorVariant(variant);
+  }
+
+  function handleEraserExit() {
+    setCursorVariant(previousCursorRef.current);
+  }
+
   const { playProfit, playLoss, playOrderFilled } = useSoundActions();
 
   usePaneFeeds();
@@ -131,6 +185,53 @@ function DashboardInner() {
   /** When set, an edit panel replaces the TradingPanel in the right column */
   const [editTarget, setEditTarget] = useState<EditTarget>(null);
   const isTradingPanelVisible = !editTarget && tradingPanelOpen;
+
+  // ── Chart cursor variant + drag-to-grab ─────────────────────────────────
+
+  /** Ref on the chart-area motion.div so we can toggle data-dragging without
+   *  re-renders during pointer drag. The CSS rule `[data-dragging] canvas`
+   *  overrides the lightweight-charts cursor to `grabbing`. */
+  const chartAreaRef = useRef<HTMLDivElement>(null);
+
+  /** Inject a <style> tag that overrides canvas cursors for the selected
+   *  cursor variant and shows a grabbing hand during drag. Using !important
+   *  beats lightweight-charts' own inline canvas cursor management. */
+  useEffect(() => {
+    const rules =
+      Object.entries(CURSOR_CSS_MAP)
+        .map(
+          ([variant, cursorVal]) =>
+            `[data-cursor="${variant}"] canvas { cursor: ${cursorVal} !important; }`
+        )
+        .join('\n') +
+      '\n[data-dragging="true"] canvas { cursor: grabbing !important; }' +
+      '\n[data-drawing-hover]:not([data-cursor="eraser"]) canvas { cursor: unset !important; }';
+
+    const style = document.createElement('style');
+    style.id = 'chart-cursor-override';
+    style.textContent = rules;
+    document.head.appendChild(style);
+    return () => style.remove();
+  }, []);
+
+  /** Toggle data-dragging attribute via direct DOM — zero re-renders during
+   *  drag. Listens on the container for pointerdown and on document for
+   *  pointerup so drags that end outside the container still reset. */
+  useEffect(() => {
+    const el = chartAreaRef.current;
+    if (!el) return;
+
+    const onDown = () => el.setAttribute('data-dragging', 'true');
+    const onUp = () => el.removeAttribute('data-dragging');
+
+    el.addEventListener('pointerdown', onDown);
+    document.addEventListener('pointerup', onUp);
+
+    return () => {
+      el.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('pointerup', onUp);
+    };
+  }, []);
 
   // ── Bottom-panel drag-to-resize ─────────────────────────────────────────
 
@@ -265,7 +366,16 @@ function DashboardInner() {
 
       {/* ── Main content row ──────────────────────────────────────────────── */}
       <div className="flex min-h-0 flex-1">
-        <LeftToolbar />
+        <LeftToolbar
+          onCursorVariantChange={handleCursorVariantChange}
+          activeTool={activeTool}
+          cursorVariant={cursorVariant}
+          lineTool={selectedLineTool}
+          onToolChange={handleToolChange}
+          onBinAction={handleBinAction}
+          textTool={selectedTextNoteTool}
+          onTextNoteToolChange={handleTextNoteToolChange}
+        />
 
         {/* Center column: chart on top + paper trading panel on bottom.
             By making this a flex-col sibling of TradingPanel, the TradingPanel
@@ -273,11 +383,27 @@ function DashboardInner() {
         <div ref={centerColRef} className="relative flex min-h-0 min-w-0 flex-1 flex-col">
           {/* Chart area — animates flex-shrink to 0 when the panel is maximized */}
           <motion.div
+            ref={chartAreaRef}
+            data-cursor={cursorVariant}
+            data-drawing-active={
+              activeTool === 'line' ||
+              LINE_TOOLS.some((t) => t !== null && t.id === activeTool) ||
+              TEXT_NOTES.some((t) => t !== null && t.id === activeTool)
+                ? 'true'
+                : undefined
+            }
             className="relative min-h-0 min-w-0 overflow-hidden"
             animate={{ flex: isMaximized ? '0 0 0px' : '1 1 0%' }}
             transition={{ type: 'spring', stiffness: 340, damping: 34 }}
           >
-            <MultiChartArea />
+            <MultiChartArea
+              activeTool={activeTool}
+              lineTool={selectedLineTool}
+              textTool={selectedTextNoteTool}
+              cursorVariant={cursorVariant}
+              onExitDrawingMode={handleExitDrawingMode}
+              onEraserExit={handleEraserExit}
+            />
           </motion.div>
 
           {/* Paper trading panel.

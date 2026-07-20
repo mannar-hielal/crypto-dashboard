@@ -15,3 +15,9 @@ apps/*/node_modules/
 .env
 .env.*
 
+# TradingView captured bundles — reference only
+tv-website-full/
+
+# HTTP Archive files — not source code
+*.har
+
