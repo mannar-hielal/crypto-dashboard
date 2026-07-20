@@ -85,7 +85,7 @@ export function DashboardPage() {
   );
 }
 
-function DashboardInner() {
+export function DashboardInner() {
   const [cursorVariant, setCursorVariant] = useState<CursorVariantId>('cross');
   const [activeTool, setActiveTool] = useState('cursor');
   const [selectedLineTool, setSelectedLineTool] = useState<LineToolId>('trendline');
