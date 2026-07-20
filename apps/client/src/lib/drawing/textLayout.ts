@@ -15,9 +15,41 @@
 // measuring alignment, then sizing the textarea using the resulting width
 // and a 0.6 line-height multiplier matching `font.sans` natural metrics.
 
-import { font } from '@/lib/tokens';
+// Singleton offscreen measuring context shared by both the canvas renderer
+// (TextLabelRenderer) and the HTML textarea overlay (TextDrawingEditor).
+// Both must use the SAME context so `measureText` always returns identical
+// metrics — eliminating the font-loading discrepancy that caused canvas-
+// rendered text to appear smaller than the textarea during editing.
+//
+// Created on first access; `warmUpSharedMeasuringCtx()` must be called
+// before any text-drawing measurements are needed.
+let _sharedMctx: CanvasRenderingContext2D | null = null;
 
-export const FONT_FAMILY = font.sans;
+/** Ensure the singleton measuring context is created and warmed up with
+ *  the target font at the given size. Safe to call multiple times — a
+ *  no-op after the first warm-up. */
+export function warmUpSharedMeasuringCtx(fontSize: number): CanvasRenderingContext2D | null {
+  if (_sharedMctx) return _sharedMctx;
+  try {
+    const ctx = document.createElement('canvas').getContext('2d');
+    if (!ctx) return null;
+    ctx.font = `${fontSize}px ${FONT_FAMILY}`;
+    ctx.measureText('x');
+    document.fonts?.load(`${fontSize}px ${FONT_FAMILY}`).catch(() => {});
+    _sharedMctx = ctx;
+    return ctx;
+  } catch {
+    return null;
+  }
+}
+
+/** Lazily get or create the shared measuring context. If it doesn't exist
+ *  yet, creates it with the given `fallbackFontSize`. */
+export function getSharedMeasuringCtx(fallbackFontSize = 22): CanvasRenderingContext2D | null {
+  return warmUpSharedMeasuringCtx(fallbackFontSize);
+}
+
+export const FONT_FAMILY = 'sans-serif';
 export const BOX_PADDING_PX = 8; // padding inside note/callout/priceNote boxes
 export const BOX_RADIUS_PX = 6; // border radius for note/callout/priceNote
 export const PILL_RADIUS_PX = 4; // border radius for price pills

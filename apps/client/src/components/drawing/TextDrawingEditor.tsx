@@ -45,14 +45,14 @@ import type { RefObject } from 'react';
 import { motion } from 'framer-motion';
 import type { IChartApi, ISeriesApi } from 'lightweight-charts';
 import type { Drawing } from '@/lib/drawing/types';
-import { color, font } from '@/lib/tokens';
+import { color } from '@/lib/tokens';
 import { useDrawingStore } from '@/store/drawingStore';
 import {
   BOX_PADDING_PX,
-  FONT_FAMILY,
   TEXT_LINE_HEIGHT,
-  fontCssShorthand,
+  FONT_FAMILY,
   computeAnnotationBox,
+  getSharedMeasuringCtx,
 } from '@/lib/drawing/textLayout';
 
 interface TextDrawingEditorProps {
@@ -153,17 +153,14 @@ export function TextDrawingEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Lazy offscreen canvas context used only for measuring text width — same
-  // approach the DrawingPrimitive uses for its hit-test (mirroring the box
-  // bounds computed by `computeAnnotationBox` so the textarea and the
-  // canvas text overlap exactly under pan/zoom).
-  const measuringCtx = useMemo<CanvasRenderingContext2D | null>(() => {
-    try {
-      return document.createElement('canvas').getContext('2d');
-    } catch {
-      return null;
-    }
-  }, []);
+  // Singleton measuring context — shared with the canvas TextLabelRenderer
+  // so text-box computation always uses the same font metrics. Warms up
+  // Geist Variable on creation so `measureText` returns consistent results
+  // in both the textarea (position) and canvas (rendering).
+  const measuringCtx = useMemo<CanvasRenderingContext2D | null>(
+    () => getSharedMeasuringCtx(drawing.fontSize),
+    [drawing.fontSize]
+  );
 
   // Position — recomputed each render; the parent chart re-mounts the
   // portal each time `repositionKey` changes.
@@ -228,7 +225,6 @@ export function TextDrawingEditor({
     height: pos.h,
     background: isBareText ? 'transparent' : drawing.backgroundColor,
     color: drawing.textColor,
-    font: fontCssShorthand(fontSize, FONT_FAMILY),
     border: `1px solid ${color.purple}`,
     borderRadius: 6,
     padding: isBareText ? 0 : BOX_PADDING_PX,
@@ -236,9 +232,9 @@ export function TextDrawingEditor({
     resize: 'none',
     overflow: 'hidden',
     textAlign: 'left',
-    fontFamily: font.sans,
-    lineHeight: TEXT_LINE_HEIGHT,
+    fontFamily: FONT_FAMILY,
     fontSize,
+    lineHeight: TEXT_LINE_HEIGHT,
     zIndex: 200,
     boxShadow: `0 0 0 2px ${color.purpleDark}30`,
   };

@@ -18,9 +18,6 @@ interface DrawingPropertiesMenuProps {
   onClose: () => void;
   onClone: (drawing: Drawing) => void;
   onReorder: (id: string, dir: 'front' | 'forward' | 'back' | 'backward') => void;
-  /** P6 — invoked when the user clicks the label/edit button on an editable
-   *  text/note/callout/priceNote drawing. ChartPanel mounts the on-chart
-   *  textarea overlay for that drawing and closes this toolbar. */
   onEditLabel?: (drawing: Drawing) => void;
 }
 
@@ -29,10 +26,12 @@ interface DrawingPropertiesMenuProps {
 const LINE_WIDTHS = [1, 2, 3, 4] as const;
 const FONT_SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32] as const;
 
-// ─── Toolbar button style ──────────────────────────────────────────
+// ─── Toolbar button style ─────────────────────────────────────────
 
 const BTN =
   'flex h-10 w-10 items-center justify-center rounded text-sm transition-colors hover:bg-white/10';
+
+const ICON = 'size-5';
 
 // ─── Component ─────────────────────────────────────────────────────
 
@@ -56,19 +55,24 @@ export function DrawingPropertiesMenu({
   const [showFontSize, setShowFontSize] = useState(false);
   const [showKebab, setShowKebab] = useState(false);
 
-  // P6 — per-shape capability flags (drives button visibility)
   const caps = SHAPE_CAPABILITIES[drawing.shape.type];
+  const isTextTool =
+    drawing.shape.type === 'text' ||
+    drawing.shape.type === 'note' ||
+    drawing.shape.type === 'callout' ||
+    drawing.shape.type === 'priceNote' ||
+    drawing.shape.type === 'priceLabel';
+
+  const isEditableText = isTextTool && drawing.shape.type !== 'priceLabel';
 
   const toolbarRef = useRef<HTMLDivElement>(null);
 
-  // Sync anchor position from parent
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setAnchorPos({ x: position.x, y: position.y });
   }, [position.x, position.y]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Click-outside-to-close the entire toolbar
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (toolbarRef.current && !toolbarRef.current.contains(e.target as Node)) {
@@ -148,43 +152,13 @@ export function DrawingPropertiesMenu({
         ))}
       </div>
 
-      {/* ── Line color ╱ border accent ──────────────────────────── */}
-      {caps.hasLineColor && (
+      {/* ── Duplicate (hidden for text/note tools) ──────────────── */}
+      {!isTextTool && (
         <button
           className={BTN}
-          onClick={() => openPopup('lineColor')}
-          title="Line color"
-          aria-label="Line color"
-        >
-          <div
-            className="h-6 w-6 rounded-full border border-white/20"
-            style={{ background: drawing.color }}
-          />
-        </button>
-      )}
-
-      {/* ── Fill color (P6 — box / pill background) ──────────────── */}
-      {caps.hasFillColor && (
-        <button
-          className={BTN}
-          onClick={() => openPopup('fillColor')}
-          title="Fill color"
-          aria-label="Fill color"
-        >
-          <div
-            className="h-6 w-6 rounded border border-white/20"
-            style={{ background: drawing.backgroundColor }}
-          />
-        </button>
-      )}
-
-      {/* ── Text color ──────────────────────────────────────────── */}
-      {caps.hasTextColor && (
-        <button
-          className={BTN}
-          onClick={() => openPopup('textColor')}
-          title="Text color"
-          aria-label="Text color"
+          onClick={() => onClone(drawing)}
+          title="Duplicate"
+          aria-label="Duplicate"
         >
           <svg
             width="24"
@@ -192,86 +166,31 @@ export function DrawingPropertiesMenu({
             viewBox="0 0 28 28"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2"
+            strokeWidth="1.5"
+            className={ICON}
           >
-            <text
-              x="14"
-              y="20"
-              textAnchor="middle"
-              fill={drawing.textColor}
-              stroke="none"
-              fontSize="18"
-              fontFamily="sans-serif"
-            >
-              A
-            </text>
+            <rect x="7" y="7" width="14" height="14" rx="1" />
+            <rect x="11" y="11" width="14" height="14" rx="1" fill="none" opacity="0.5" />
+            <line x1="22" y1="8" x2="22" y2="5" strokeWidth="1.5" />
+            <line x1="18.5" y1="6.5" x2="25.5" y2="6.5" strokeWidth="1.5" />
           </svg>
         </button>
       )}
 
-      {/* ── P6 — Label (textarea editor for annotations) ────────── */}
+      {/* ── Text format T (label edit — opens textarea for text tools, single-line input for line tools) ── */}
       {caps.hasEditableLabel && (
         <button
           className={BTN}
           onClick={() => {
-            if (
-              drawing.shape.type === 'text' ||
-              drawing.shape.type === 'note' ||
-              drawing.shape.type === 'callout' ||
-              drawing.shape.type === 'priceNote'
-            ) {
-              // P6 — open the on-chart textarea editor (multiline)
+            if (isEditableText) {
               onEditLabel?.(drawing);
               onClose();
             } else {
               openPopup('label');
             }
           }}
-          title="Edit label"
-          aria-label="Edit label"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 13 15"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1"
-          >
-            <path d="M4 14.5h2.5m2.5 0H6.5m0 0V.5m0 0h-5a1 1 0 0 0-1 1V4m6-3.5h5a1 1 0 0 1 1 1V4" />
-          </svg>
-        </button>
-      )}
-
-      {/* ── Line width ──────────────────────────────────────────── */}
-      {caps.hasLineWidth && (
-        <button
-          className={BTN}
-          onClick={() => openPopup('width')}
-          title="Line width"
-          aria-label="Line width"
-        >
-          <svg width="24" height="24" viewBox="0 0 28 28">
-            <line
-              x1="2"
-              y1="14"
-              x2="26"
-              y2="14"
-              stroke="currentColor"
-              strokeWidth={drawing.lineWidth}
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
-      )}
-
-      {/* ── Line style dropdown ──────────────────────────────────── */}
-      {caps.hasLineStyle && (
-        <button
-          className={BTN}
-          onClick={() => openPopup('lineStyle')}
-          title="Line style"
-          aria-label={`Line style: ${drawing.lineStyle}`}
+          title="Edit text"
+          aria-label="Edit text"
         >
           <svg
             width="24"
@@ -280,25 +199,17 @@ export function DrawingPropertiesMenu({
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
+            className={ICON}
           >
-            <line
-              x1="2"
-              y1="14"
-              x2="26"
-              y2="14"
-              strokeDasharray={
-                drawing.lineStyle === 'solid'
-                  ? 'none'
-                  : drawing.lineStyle === 'dashed'
-                    ? '6 4'
-                    : '2 4'
-              }
-            />
+            <text x="10" y="18" fontSize="14" fontWeight="700" fill="currentColor" stroke="none">
+              T
+            </text>
+            <line x1="6" y1="21" x2="22" y2="21" strokeWidth="2.5" />
           </svg>
         </button>
       )}
 
-      {/* ── P6 — Font-size chip ───────────────────────────────────── */}
+      {/* ── Font-size chip ─────────────────────────────────────── */}
       {caps.hasFontSize && (
         <button
           className={BTN}
@@ -317,11 +228,156 @@ export function DrawingPropertiesMenu({
         </button>
       )}
 
+      {/* ── Line / border accent color ─────────────────────────── */}
+      {caps.hasLineColor && (
+        <button
+          className={BTN}
+          onClick={() => openPopup('lineColor')}
+          title="Line color"
+          aria-label="Line color"
+        >
+          <div
+            className="h-6 w-6 rounded-full border border-white/20"
+            style={{ background: drawing.color }}
+          />
+        </button>
+      )}
+
+      {/* ── Fill color (box / pill background) ──────────────────── */}
+      {caps.hasFillColor && (
+        <button
+          className={BTN}
+          onClick={() => openPopup('fillColor')}
+          title="Fill color"
+          aria-label="Fill color"
+        >
+          <div
+            className="h-6 w-6 rounded border border-white/20"
+            style={{ background: drawing.backgroundColor }}
+          />
+        </button>
+      )}
+
+      {/* ── Text color ─────────────────────────────────────────── */}
+      {caps.hasTextColor && (
+        <button
+          className={BTN}
+          onClick={() => openPopup('textColor')}
+          title="Text color"
+          aria-label="Text color"
+        >
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 28 28"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className={ICON}
+          >
+            <text
+              x="14"
+              y="20"
+              textAnchor="middle"
+              fill={drawing.textColor}
+              stroke="none"
+              fontSize="18"
+              fontFamily="sans-serif"
+            >
+              A
+            </text>
+          </svg>
+        </button>
+      )}
+
+      {/* ── Line width ──────────────────────────────────────────── */}
+      {caps.hasLineWidth && (
+        <button
+          className={BTN}
+          onClick={() => openPopup('width')}
+          title="Line width"
+          aria-label="Line width"
+        >
+          <svg width="24" height="24" viewBox="0 0 28 28" className={ICON}>
+            <line
+              x1="2"
+              y1="14"
+              x2="26"
+              y2="14"
+              stroke="currentColor"
+              strokeWidth={drawing.lineWidth}
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
+      )}
+
+      {/* ── Line style ──────────────────────────────────────────── */}
+      {caps.hasLineStyle && (
+        <button
+          className={BTN}
+          onClick={() => openPopup('lineStyle')}
+          title="Line style"
+          aria-label={`Line style: ${drawing.lineStyle}`}
+        >
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 28 28"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className={ICON}
+          >
+            <line
+              x1="2"
+              y1="14"
+              x2="26"
+              y2="14"
+              strokeDasharray={
+                drawing.lineStyle === 'solid'
+                  ? 'none'
+                  : drawing.lineStyle === 'dashed'
+                    ? '6 4'
+                    : '2 4'
+              }
+            />
+          </svg>
+        </button>
+      )}
+
+      {/* ── Hexagon / shape settings (hidden for text/note tools) ── */}
+      {!isTextTool && (
+        <button
+          className={BTN}
+          onClick={() => {
+            if (caps.hasLineStyle) openPopup('lineStyle');
+            else if (caps.hasTextColor) openPopup('textColor');
+            else if (caps.hasFontSize) openPopup('fontSize');
+          }}
+          title="Style settings"
+          aria-label="Style settings"
+        >
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 28 28"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            className={ICON}
+          >
+            <path d="M14 3L25 9.5v9L14 25 3 18.5v-9L14 3z" />
+            <circle cx="14" cy="14" r="3" />
+          </svg>
+        </button>
+      )}
+
       {/* ── Lock toggle ─────────────────────────────────────────── */}
       <button
         className={BTN}
         onClick={() => onUpdate(drawing.id, { isLocked: !drawing.isLocked })}
-        title="Lock drawing"
+        title={drawing.isLocked ? 'Unlock drawing' : 'Lock drawing'}
         aria-pressed={drawing.isLocked}
         aria-label={drawing.isLocked ? 'Unlock drawing' : 'Lock drawing'}
         style={{ color: drawing.isLocked ? '#fbbf24' : undefined }}
@@ -333,6 +389,7 @@ export function DrawingPropertiesMenu({
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
+          className={ICON}
         >
           {drawing.isLocked ? (
             <>
@@ -350,6 +407,33 @@ export function DrawingPropertiesMenu({
         </svg>
       </button>
 
+      {/* ── Anchor toggle (hidden for text/note tools) ──────────── */}
+      {!isTextTool && (
+        <button
+          className={BTN}
+          onClick={() => onUpdate(drawing.id, { isFloating: !drawing.isFloating })}
+          title={drawing.isFloating ? 'Anchor to chart' : 'Detach from chart'}
+          aria-pressed={drawing.isFloating}
+          aria-label={drawing.isFloating ? 'Anchor to chart' : 'Detach from chart'}
+          style={{ color: drawing.isFloating ? '#fbbf24' : undefined }}
+        >
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 28 28"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            className={ICON}
+          >
+            <circle cx="14" cy="7" r="2.5" fill="currentColor" />
+            <line x1="14" y1="9.5" x2="14" y2="22" strokeWidth="2" />
+            <path d="M9 22h10" strokeWidth="2" />
+            <path d="M8 16c0 0 2-4 6-4s6 4 6 4" strokeWidth="1.5" />
+          </svg>
+        </button>
+      )}
+
       {/* ── Remove ──────────────────────────────────────────────── */}
       <button
         className={BTN}
@@ -364,6 +448,7 @@ export function DrawingPropertiesMenu({
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
+          className={ICON}
         >
           <line x1="7" y1="7" x2="21" y2="21" />
           <line x1="21" y1="7" x2="7" y2="21" />
@@ -377,7 +462,7 @@ export function DrawingPropertiesMenu({
         title="More actions"
         aria-label="More actions"
       >
-        <svg width="24" height="24" viewBox="0 0 28 28" fill="currentColor">
+        <svg width="24" height="24" viewBox="0 0 28 28" fill="currentColor" className={ICON}>
           <circle cx="14" cy="8" r="2" />
           <circle cx="14" cy="14" r="2" />
           <circle cx="14" cy="20" r="2" />
@@ -405,7 +490,6 @@ export function DrawingPropertiesMenu({
         </div>
       )}
 
-      {/* ── P6 — Fill color (box / pill background) ─────────────── */}
       {showFillColor && (
         <div className="absolute left-0 top-12 z-[100]">
           <ColorPicker
@@ -502,7 +586,6 @@ export function DrawingPropertiesMenu({
         )}
       </AnimatePresence>
 
-      {/* ── P6 — Font-size dropdown ───────────────────────────────── */}
       <AnimatePresence>
         {showFontSize && (
           <motion.div

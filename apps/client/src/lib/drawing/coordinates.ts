@@ -65,6 +65,11 @@ export interface CoordinateConverters {
 }
 
 /**
+ * @deprecated Phase 1 — replaced by per-shape renderer hitTest() methods.
+ *   Kept for backward compatibility with useDrawingInteraction.ts which
+ *   still calls this for spawn-suppression + eraser mode. Will be removed
+ *   when useDrawingInteraction migrates to DrawingPrimitive.hitTest().
+ *
  * Hit-test all drawing bodies at screen coordinate (x, y).
  * Handles trendline (segment), ray (half-line past B), horizontal (full-width Y),
  * vertical (full-height X), parallel channel (two parallel segments), polyline
@@ -233,6 +238,9 @@ export const TEXT_HIT_MIN_W = 60;
 export const TEXT_HIT_MIN_H = 18;
 
 /**
+ * @deprecated Phase 1 — replaced by TextLabelRenderer.hitTest() which
+ *   handles the same expanded-box logic internally.
+ *
  * Returns the id + distance of the closest editable text/notes drawing whose
  * ANNOTATION-EXPANDED hit-box is within `threshold` px of (x, y). Used by
  * `useDrawingInteraction` to suppress new-drawing placement when the click

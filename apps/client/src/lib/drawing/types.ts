@@ -121,6 +121,9 @@ export interface Drawing {
   // Annotation style (P6 — text & notes)
   fontSize: number;
   backgroundColor: string;
+  /** If true, the annotation floats freely on the chart canvas rather than
+   *  being pinned to its original anchor point. */
+  isFloating?: boolean;
   // Shape-specific data (replaces flat `type` + `points`)
   shape: ShapeData;
   /** Pane this drawing belongs to (v4). Migration backfills 0; addDrawing

@@ -15,7 +15,7 @@ const DEFAULT_TEXT_COLOR = color.white;
 const DEFAULT_LINE_WIDTH = 2;
 const DEFAULT_LINE_STYLE: LineStyle = 'solid';
 // P6 annotation style defaults
-const DEFAULT_FONT_SIZE = 14;
+const DEFAULT_FONT_SIZE = 22;
 const DEFAULT_BACKGROUND_COLOR = bg.panel; // #25234e — Exgen panel
 
 // ─── Factory ────────────────────────────────────────────────────────

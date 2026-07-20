@@ -91,7 +91,7 @@ describe('drawingStore', () => {
       expect(drawing.lineStyle).toBe('solid');
       expect(drawing.isLocked).toBe(false);
       // P6 annotation style defaults
-      expect(drawing.fontSize).toBe(14);
+      expect(drawing.fontSize).toBe(22);
       expect(drawing.backgroundColor).toBe('#25234e');
     });
 
@@ -617,7 +617,7 @@ describe('drawingStore', () => {
         expect(drawing.shape.type).toBe(type);
         expect(drawing.shape.points).toHaveLength(1);
         // P6 default annotation style backfilled by factory
-        expect(drawing.fontSize).toBe(14);
+        expect(drawing.fontSize).toBe(22);
         expect(drawing.backgroundColor).toBe('#25234e');
       }
     );
@@ -778,7 +778,7 @@ describe('drawingStore', () => {
 
       expect(migrated.drawings).toHaveLength(1);
       expect(migrated.drawings[0]!.paneIndex).toBe(0);
-      expect(migrated.drawings[0]!.fontSize).toBe(14);
+      expect(migrated.drawings[0]!.fontSize).toBe(22);
       expect(migrated.drawings[0]!.backgroundColor).toBe('#25234e');
     });
   });

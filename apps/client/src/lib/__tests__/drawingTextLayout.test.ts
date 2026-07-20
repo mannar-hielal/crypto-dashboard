@@ -157,7 +157,7 @@ describe('computeAnnotationBox', () => {
     // Indirect check: ctx.font is set inside textBlockBounds
     ctx.save();
     ctx.font = `14px ${FONT_FAMILY}`;
-    expect(ctx.font).toContain('Geist');
+    expect(ctx.font).toContain('sans-serif');
     ctx.restore();
     void BOX_PADDING_PX;
   });

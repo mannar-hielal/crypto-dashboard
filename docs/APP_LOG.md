@@ -512,7 +512,10 @@ ask: number | null; // best ask from Bybit orderbook.1
 | `docs/screenshots/theme/`                                              | Visual source of truth — spacing, colors, sizes, layout                                                                                        |
 | `docs/DRAWING_TOOLS.md`                                                | Drawing tools architecture, status, roadmap                                                                                                    |
 | `apps/client/src/lib/drawing/types.ts`                                 | Drawing type definitions (`Drawing`, `DrawingPoint`, `LineStyle`, etc.)                                                                        |
-| `apps/client/src/lib/drawing/DrawingPrimitive.ts`                      | `ISeriesPrimitive` — canvas rendering + hit-testing for trendlines                                                                             |
+| `apps/client/src/lib/drawing/DrawingPrimitive.ts`                      | `ISeriesPrimitive` — canvas rendering via `CompositeRenderer` + per-shape renderers (Phase 1 refactored, ~550 lines)                           |
+| `apps/client/src/lib/drawing/HitTarget.ts`                             | `HitTarget` enum (None/Body/Handle) + `HitTestResult` interface — matches TV's module 763                                                      |
+| `apps/client/src/lib/drawing/interactionTolerance.ts`                  | Centralized `BODY_HIT_TOLERANCE_PX=8` / `HANDLE_HIT_TOLERANCE_PX=12` — matches TV's module 604214                                              |
+| `apps/client/src/lib/drawing/renderers/`                               | 6 per-shape renderers + CompositeRenderer + shared utilities (Phase 1)                                                                         |
 | `apps/client/src/lib/lineTools.tsx`                                    | SVG icons + `LINE_TOOLS` array (6 line drawing tool definitions)                                                                               |
 | `apps/client/src/store/drawingStore.ts`                                | Zustand store w/ `persist` for drawings (localStorage `cd-drawings`)                                                                           |
 | `apps/client/src/hooks/useDrawingInteraction.ts`                       | State machine for drawing placement and drag interactions                                                                                      |
@@ -548,6 +551,19 @@ ask: number | null; // best ask from Bybit orderbook.1
 - `src/lib/markets.ts` — shared `SYMBOLS`, `INTERVALS`, `INTERVAL_LABELS` constants (previously duplicated in `SymbolBar`)
 - Commit: `7dfd54a`
 
+### ✅ Completed (added 2026-07-19 — Phase 1 Drawing Refactoring)
+
+- **Phase 1 — Per-shape renderer classes** — extracted the monolithic `DrawingPrimitive.ts` (1278 lines) into 11 new files following TradingView's `BitmapCoordinatesPaneRenderer` + `CompositeRenderer` + `HitTarget` patterns:
+  - `BitmapCoordinatesPaneRenderer.ts` — abstract base with `draw(scope)` + `hitTest(x,y)`
+  - `CompositeRenderer.ts` — ordered renderer list matching TV's module 789190
+  - 6 per-shape renderers: TrendLineRenderer, HorizontalLineRenderer, VerticalLineRenderer, ParallelChannelRenderer, PolylineRenderer, TextLabelRenderer
+  - `HitTarget.ts` — enum + `HitTestResult` interface matching TV's module 763
+  - `interactionTolerance.ts` — centralized thresholds matching TV's module 604214
+  - `sharedDrawing.ts` — `drawHandles()` + `applyLineStyle()` utilities
+  - `DrawingPrimitive.ts` rewritten to ~550 lines using `CompositeRenderer` composition
+  - `coordinates.ts` deprecated annotations on old hit-test functions (kept for backward compat)
+  - Verification: `tsc -b` clean, ESLint 0 errors, Prettier clean, all 506 tests pass
+
 ### ✅ Completed (added 2026-06-14 — Paper Trading Phase 3 Sync)
 
 - **End-to-end synchronization (Phase 3)** — `paperStore.ts` now fully synchronizes its state (Account, Orders, Trades, Positions) with the PostgreSQL database via `paperApi`.
@@ -581,7 +597,9 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 ### 📋 Planned (Next)
 
-- **Additional drawing tools**: Wire remaining line tools (horizontal line, vertical line, ray, parallel, polyline, text, freehand, eraser) — currently UI-only in toolbar, only trendline has full drawing logic.
+- **Phase 2 — Pane view layer**: Extract point→pixel conversion from `DrawingPrimitive` into per-shape `PaneView` classes, decoupling chart-coordinate conversion from canvas rendering. Phase 1 (renderer classes) is complete; Phase 2 would also wire in-progress preview through per-shape renderers and add `SelectionRenderer`.
+- **Phase 3–4**: Tool descriptor system + tool variants via property overrides.
+- **Additional drawing tools**: Wire remaining placement (polyline, freehand) — Phase 1 refactoring laid per-shape renderer foundation, but polyline and freehand still need placement state machine support.
 - **Phase 4**: Advanced indicators, alerts, multi-symbol watchlist
 - **Phase 5**: Live broker integration — Bybit real-money trading (see full spec below)
 - **Phase 6**: AI trading bot — 3-role system: Scanner + Analyst + Executor, paper mode only (see full spec below)
