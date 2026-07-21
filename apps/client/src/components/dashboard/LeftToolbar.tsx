@@ -7,8 +7,6 @@ import { bg, color, fontSize } from '@/lib/tokens';
 import { CURSOR_VARIANTS, type CursorVariantId } from '@/lib/cursors';
 import { LINE_TOOLS, type LineToolId } from '@/lib/lineTools';
 import { TEXT_NOTES, type TextNoteToolId } from '@/lib/textNotes';
-import { BinToolMenu } from '@/components/drawing/BinToolMenu';
-
 // ─── Tool definitions ─────────────────────────────────────────────────────────
 
 type Tool = {
@@ -98,11 +96,6 @@ export function LeftToolbar({
   const textMenuRef = useRef<HTMLDivElement>(null);
   const [textMenuPos, setTextMenuPos] = useState({ left: 0, top: 0 });
 
-  // ── Bin tool right-click menu ──────────────────────────────────────────────
-  const [showBinMenu, setShowBinMenu] = useState(false);
-  const binBtnRef = useRef<HTMLButtonElement>(null);
-  const [binMenuPos, setBinMenuPos] = useState({ left: 0, top: 0 });
-
   function handleLineContextMenu(e: React.MouseEvent) {
     e.preventDefault();
     const rect = lineBtnRef.current?.getBoundingClientRect();
@@ -119,15 +112,6 @@ export function LeftToolbar({
       setTextMenuPos({ left: rect.right + 6, top: rect.top });
     }
     setShowTextMenu((v) => !v);
-  }
-
-  function handleBinContextMenu(e: React.MouseEvent) {
-    e.preventDefault();
-    const rect = binBtnRef.current?.getBoundingClientRect();
-    if (rect) {
-      setBinMenuPos({ left: rect.right + 6, top: rect.top });
-    }
-    setShowBinMenu(true);
   }
 
   function handleLineToolSelect(id: LineToolId) {
@@ -418,11 +402,9 @@ export function LeftToolbar({
           return (
             <motion.button
               key={tool.id}
-              ref={binBtnRef}
               data-tooltip={tool.label}
               aria-label={tool.label}
               onClick={() => onBinAction?.()}
-              onContextMenu={handleBinContextMenu}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               className="group relative flex h-10 w-10 items-center justify-center rounded"
@@ -766,9 +748,6 @@ export function LeftToolbar({
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* ── Bin tool submenu ──────────────────────────────────────────── */}
-      {showBinMenu && <BinToolMenu position={binMenuPos} onClose={() => setShowBinMenu(false)} />}
 
       {/* ── Portal tooltip ───────────────────────────────────────────── */}
       {tooltip &&

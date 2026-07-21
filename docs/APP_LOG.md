@@ -1714,3 +1714,35 @@ The order book is **not needed for paper trading** (fills are instant, no real l
 - `apps/client/src/pages/TermsPage.tsx`
 
 ---
+
+### feat: replace custom drawing system with lightweight-charts-drawing library (2026-07-21) ✅
+
+Replaced the fragile custom `ISeriesPrimitive` drawing system (~3,500+ lines) with `lightweight-charts-drawing` v0.1.1 (MIT, 68 tools). The library plugs directly into lightweight-charts v5 via the same `ISeriesPrimitive` API.
+
+**Key changes:**
+
+- `ChartPanel.tsx` — removed `DrawingPrimitive` + `useDrawingInteraction` hook + `drawingStore` usage. Added `DrawingManager` creation per pane with `attach()`, persistence via `exportDrawings()`/`importDrawings()`, symbol-based localStorage keys (`cd-drawings-{symbol}`).
+- `drawingManager.ts` — thin wrapper with `TOOL_MAP` (tool ID translation), `restoreDrawings()`, `persistDrawings()`, `getPersistenceKey()`.
+- `MultiChartArea.tsx` — removed drawing-related props; added `onDrawingManagerReady` callback per pane.
+- `DashboardPage.tsx` — `handleToolChange` now calls `manager.setActiveTool(TOOL_MAP[toolId])` on the active pane's manager. `handleBinAction` calls `manager.clearAll()`. Removed `handleExitDrawingMode`, `handleEraserExit`, `useDrawingStore`.
+- `LeftToolbar.tsx` — removed `BinToolMenu` import and bin context menu (bin click still calls `clearAll`).
+
+**Deleted files (~3,500+ lines):**
+
+- `apps/client/src/lib/drawing/` (entire directory: types, DrawingPrimitive, HitTarget, coordinates, renderers, textLayout, interactionTolerance)
+- `apps/client/src/components/drawing/` (entire directory: DrawingPropertiesMenu, KebabMenu, ColorPicker, TextDrawingEditor, BinToolMenu)
+- `apps/client/src/hooks/useDrawingInteraction.ts`
+- `apps/client/src/store/drawingStore.ts`
+- `apps/client/src/store/__tests__/drawingStore.test.ts`
+- `apps/client/src/lib/__tests__/drawingCoordinates.test.ts`
+- `apps/client/src/lib/__tests__/drawingTextLayout.test.ts`
+
+**Known gap:** Existing persisted drawings in `localStorage['cd-drawings']` are lost (schema change). Acceptable at early stage.
+
+**Files created:**
+
+- `apps/client/src/lib/drawingManager.ts`
+
+**Gates:** lint ✅, type-check ✅, test (490) ✅, format ✅
+
+---

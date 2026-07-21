@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
+import { DrawingManager } from 'lightweight-charts-drawing';
 import { SeoHead } from '@/components/SeoHead';
 import { usePaneFeeds } from '@/hooks/usePaneFeeds';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -11,13 +12,13 @@ import { TradingSoundProvider, useSoundActions } from '@/hooks/TradingSoundConte
 import { useLayoutStore } from '@/store/layoutStore';
 import { useAuthStore } from '@/store/authStore';
 import { usePaperStore } from '@/store/paperStore';
-import { useDrawingStore } from '@/store/drawingStore';
 import { authApi } from '@crypto-dashboard/sdk';
 import { TopBar } from '@/components/dashboard/TopBar';
 import { LeftToolbar } from '@/components/dashboard/LeftToolbar';
 import { CURSOR_CSS_MAP, type CursorVariantId } from '@/lib/cursors';
 import { LINE_TOOLS, type LineToolId } from '@/lib/lineTools';
 import { TEXT_NOTES, type TextNoteToolId } from '@/lib/textNotes';
+import { TOOL_MAP } from '@/lib/drawingManager';
 import { MultiChartArea } from '@/components/dashboard/MultiChartArea';
 import { OrderAccountManagementPanel } from '@/components/dashboard/OrderAccountManagementPanel';
 import { TickerBar } from '@/components/dashboard/TickerBar';
@@ -90,50 +91,37 @@ export function DashboardInner() {
   const [activeTool, setActiveTool] = useState('cursor');
   const [selectedLineTool, setSelectedLineTool] = useState<LineToolId>('trendline');
   const [selectedTextNoteTool, setSelectedTextNoteTool] = useState<TextNoteToolId>('text');
-  const previousToolRef = useRef({ toolId: 'cursor', lineToolId: 'trendline' as LineToolId });
-  const previousCursorRef = useRef<CursorVariantId>('cross');
+  const drawingManagerRefs = useRef<(DrawingManager | null)[]>([null, null, null, null]);
+
+  function handleDrawingManagerReady(paneIndex: number, manager: DrawingManager) {
+    drawingManagerRefs.current[paneIndex] = manager;
+  }
 
   function handleToolChange(toolId: string, lineToolId: string) {
-    // Store previous tool before switching to a drawing tool
     const isLineTool = LINE_TOOLS.some((t) => t !== null && t.id === toolId);
     const isTextNote = TEXT_NOTES.some((t) => t !== null && t.id === toolId);
-    if (toolId !== 'cursor' && (isLineTool || isTextNote)) {
-      previousToolRef.current = { toolId: activeTool, lineToolId: selectedLineTool };
-    }
-    // Reset cursor variant when switching to a drawing tool so eraser cursor doesn't persist
-    if (toolId !== 'cursor') {
-      setCursorVariant('cross');
-    }
     setActiveTool(toolId);
-    // 🔐 Only mutate the corresponding sub-tool state — never both. Crossing
-    // the streams (e.g. writing a text/note id into selectedLineTool) breaks
-    // the Line button's icon lookup and silently breaks Line-button clicks.
     if (isLineTool) setSelectedLineTool(lineToolId as LineToolId);
     if (isTextNote) setSelectedTextNoteTool(toolId as TextNoteToolId);
+
+    const paneIndex = useLayoutStore.getState().activePane;
+    const manager = drawingManagerRefs.current[paneIndex];
+    if (manager) {
+      manager.setActiveTool(toolId === 'cursor' ? null : (TOOL_MAP[toolId] ?? null));
+    }
   }
 
   function handleTextNoteToolChange(id: TextNoteToolId) {
     setSelectedTextNoteTool(id);
   }
 
-  function handleExitDrawingMode() {
-    const { toolId } = previousToolRef.current;
-    setActiveTool(toolId);
-  }
-
   function handleBinAction() {
-    useDrawingStore.getState().removeAll();
+    const paneIndex = useLayoutStore.getState().activePane;
+    drawingManagerRefs.current[paneIndex]?.clearAll();
   }
 
   function handleCursorVariantChange(variant: CursorVariantId) {
-    if (variant !== 'eraser') {
-      previousCursorRef.current = variant;
-    }
     setCursorVariant(variant);
-  }
-
-  function handleEraserExit() {
-    setCursorVariant(previousCursorRef.current);
   }
 
   const { playProfit, playLoss, playOrderFilled } = useSoundActions();
@@ -205,7 +193,7 @@ export function DashboardInner() {
         )
         .join('\n') +
       '\n[data-dragging="true"] canvas { cursor: grabbing !important; }' +
-      '\n[data-drawing-hover]:not([data-cursor="eraser"]) canvas { cursor: unset !important; }';
+      '';
 
     const style = document.createElement('style');
     style.id = 'chart-cursor-override';
@@ -384,26 +372,13 @@ export function DashboardInner() {
           {/* Chart area — animates flex-shrink to 0 when the panel is maximized */}
           <motion.div
             ref={chartAreaRef}
-            data-cursor={cursorVariant}
-            data-drawing-active={
-              activeTool === 'line' ||
-              LINE_TOOLS.some((t) => t !== null && t.id === activeTool) ||
-              TEXT_NOTES.some((t) => t !== null && t.id === activeTool)
-                ? 'true'
-                : undefined
-            }
+            data-cursor={activeTool === 'cursor' ? cursorVariant : undefined}
+            data-drawing-active={activeTool !== 'cursor' ? 'true' : undefined}
             className="relative min-h-0 min-w-0 overflow-hidden"
             animate={{ flex: isMaximized ? '0 0 0px' : '1 1 0%' }}
             transition={{ type: 'spring', stiffness: 340, damping: 34 }}
           >
-            <MultiChartArea
-              activeTool={activeTool}
-              lineTool={selectedLineTool}
-              textTool={selectedTextNoteTool}
-              cursorVariant={cursorVariant}
-              onExitDrawingMode={handleExitDrawingMode}
-              onEraserExit={handleEraserExit}
-            />
+            <MultiChartArea onDrawingManagerReady={handleDrawingManagerReady} />
           </motion.div>
 
           {/* Paper trading panel.
