@@ -55,6 +55,10 @@ No other store changes needed — Zustand `persist` middleware already keeps sta
 
 ---
 
+---
+
+## **Note (2026-07):** Drawing tools are no longer part of this plan. We're replacing the custom drawing system with `lightweight-charts-drawing` (MIT, 68 tools) instead — see `DRAWING_MIGRATION_PLAN.md`. The TV Advanced Charts license still covers the chart widget itself if we choose to integrate it later, but the drawing layer is now independent.
+
 ## Phase 2 — TradingView Library Integration
 
 ### 2.1 Download & self-host

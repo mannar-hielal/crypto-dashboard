@@ -16,8 +16,6 @@ import { authApi } from '@crypto-dashboard/sdk';
 import { TopBar } from '@/components/dashboard/TopBar';
 import { LeftToolbar } from '@/components/dashboard/LeftToolbar';
 import { CURSOR_CSS_MAP, type CursorVariantId } from '@/lib/cursors';
-import { LINE_TOOLS, type LineToolId } from '@/lib/lineTools';
-import { TEXT_NOTES, type TextNoteToolId } from '@/lib/textNotes';
 import { TOOL_MAP } from '@/lib/drawingManager';
 import { MultiChartArea } from '@/components/dashboard/MultiChartArea';
 import { OrderAccountManagementPanel } from '@/components/dashboard/OrderAccountManagementPanel';
@@ -88,31 +86,20 @@ export function DashboardPage() {
 
 export function DashboardInner() {
   const [cursorVariant, setCursorVariant] = useState<CursorVariantId>('cross');
-  const [activeTool, setActiveTool] = useState('cursor');
-  const [selectedLineTool, setSelectedLineTool] = useState<LineToolId>('trendline');
-  const [selectedTextNoteTool, setSelectedTextNoteTool] = useState<TextNoteToolId>('text');
+  const [activeToolType, setActiveToolType] = useState<string | null>(null);
   const drawingManagerRefs = useRef<(DrawingManager | null)[]>([null, null, null, null]);
 
   function handleDrawingManagerReady(paneIndex: number, manager: DrawingManager) {
     drawingManagerRefs.current[paneIndex] = manager;
   }
 
-  function handleToolChange(toolId: string, lineToolId: string) {
-    const isLineTool = LINE_TOOLS.some((t) => t !== null && t.id === toolId);
-    const isTextNote = TEXT_NOTES.some((t) => t !== null && t.id === toolId);
-    setActiveTool(toolId);
-    if (isLineTool) setSelectedLineTool(lineToolId as LineToolId);
-    if (isTextNote) setSelectedTextNoteTool(toolId as TextNoteToolId);
-
+  function handleToolChange(toolType: string | null) {
+    setActiveToolType(toolType);
     const paneIndex = useLayoutStore.getState().activePane;
     const manager = drawingManagerRefs.current[paneIndex];
     if (manager) {
-      manager.setActiveTool(toolId === 'cursor' ? null : (TOOL_MAP[toolId] ?? null));
+      manager.setActiveTool(toolType === null ? null : (TOOL_MAP[toolType] ?? toolType));
     }
-  }
-
-  function handleTextNoteToolChange(id: TextNoteToolId) {
-    setSelectedTextNoteTool(id);
   }
 
   function handleBinAction() {
@@ -355,14 +342,10 @@ export function DashboardInner() {
       {/* ── Main content row ──────────────────────────────────────────────── */}
       <div className="flex min-h-0 flex-1">
         <LeftToolbar
-          onCursorVariantChange={handleCursorVariantChange}
-          activeTool={activeTool}
-          cursorVariant={cursorVariant}
-          lineTool={selectedLineTool}
           onToolChange={handleToolChange}
           onBinAction={handleBinAction}
-          textTool={selectedTextNoteTool}
-          onTextNoteToolChange={handleTextNoteToolChange}
+          cursorVariant={cursorVariant}
+          onCursorVariantChange={handleCursorVariantChange}
         />
 
         {/* Center column: chart on top + paper trading panel on bottom.
@@ -372,8 +355,8 @@ export function DashboardInner() {
           {/* Chart area — animates flex-shrink to 0 when the panel is maximized */}
           <motion.div
             ref={chartAreaRef}
-            data-cursor={activeTool === 'cursor' ? cursorVariant : undefined}
-            data-drawing-active={activeTool !== 'cursor' ? 'true' : undefined}
+            data-cursor={activeToolType === null ? cursorVariant : undefined}
+            data-drawing-active={activeToolType !== null ? 'true' : undefined}
             className="relative min-h-0 min-w-0 overflow-hidden"
             animate={{ flex: isMaximized ? '0 0 0px' : '1 1 0%' }}
             transition={{ type: 'spring', stiffness: 340, damping: 34 }}
