@@ -91,6 +91,9 @@ export function DashboardInner() {
 
   function handleDrawingManagerReady(paneIndex: number, manager: DrawingManager) {
     drawingManagerRefs.current[paneIndex] = manager;
+    manager.on('tool:changed', () => {
+      setActiveToolType(manager.getActiveTool());
+    });
   }
 
   function handleToolChange(toolType: string | null) {

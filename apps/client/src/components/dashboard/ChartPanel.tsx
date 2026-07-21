@@ -10,7 +10,8 @@ import {
 } from 'lightweight-charts';
 import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts';
 import { useStore } from 'zustand';
-import { DrawingManager } from 'lightweight-charts-drawing';
+import { DrawingManager, ToolRegistry } from 'lightweight-charts-drawing';
+import type { Anchor, IDrawing, Point } from 'lightweight-charts-drawing';
 import { paneStores } from '@/store/paneStore';
 import { calcEMA, calcVWAP, calcMACD } from '@/lib/indicators';
 import { bg, color, chart as chartColors, font, fontSize } from '@/lib/tokens';
@@ -62,6 +63,14 @@ function toUTC(ms: number): UTCTimestamp {
   return Math.floor(ms / 1000) as UTCTimestamp;
 }
 
+function getDrawingText(d: IDrawing): string {
+  return (d as unknown as { getText?: () => string }).getText?.() ?? '';
+}
+
+function setDrawingText(d: IDrawing, text: string): void {
+  (d as unknown as { setText?: (t: string) => void }).setText?.(text);
+}
+
 export function ChartPanel({
   paneIndex,
   symbol,
@@ -76,6 +85,7 @@ export function ChartPanel({
   const rafRef = useRef<number | undefined>(undefined);
   const managerRef = useRef<DrawingManager | null>(null);
   const prevSymbolRef = useRef<string>('');
+  const pendingAnchorsRef = useRef<Anchor[] | null>(null);
 
   const candleRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const ema9Ref = useRef<ISeriesApi<'Line'> | null>(null);
@@ -92,6 +102,10 @@ export function ChartPanel({
   const prevIntervalRef = useRef(interval);
 
   const [hoverData, setHoverData] = useState<LegendData | null>(null);
+  const [editingTextInfo, setEditingTextInfo] = useState<{
+    drawingId: string;
+    text: string;
+  } | null>(null);
 
   // ── 1. Create chart + drawing manager once on mount ──────────────────────
   useEffect(() => {
@@ -221,6 +235,137 @@ export function ChartPanel({
 
     onDrawingManagerReady?.(manager);
 
+    // ── Drawing placement (click-to-place) ─────────────────────────────────
+    const removePreview = () => {
+      try {
+        manager.removeDrawing('__preview__');
+      } catch {
+        // preview may not exist
+      }
+    };
+
+    const updatePreview = (mouseX: number, mouseY: number) => {
+      const pending = pendingAnchorsRef.current;
+      if (!pending) return;
+
+      const activeTool = manager.getActiveTool();
+      if (!activeTool) return;
+
+      const registry = ToolRegistry.getInstance();
+      const toolDef = registry.get(activeTool);
+      if (!toolDef) return;
+
+      if (pending.length >= toolDef.requiredAnchors) {
+        removePreview();
+        return;
+      }
+
+      const time = chart.timeScale().coordinateToTime(mouseX);
+      const price = candleRef.current?.coordinateToPrice(mouseY);
+      if (time === null || price === null || price === undefined) return;
+
+      const mouseAnchor: Anchor = { time, price };
+      const previewAnchors: Anchor[] = [...pending];
+      const remaining = toolDef.requiredAnchors - pending.length;
+      for (let i = 0; i < remaining; i++) previewAnchors.push(mouseAnchor);
+
+      removePreview();
+
+      const previewDrawing = registry.createDrawing(
+        activeTool,
+        '__preview__',
+        previewAnchors,
+        { lineDash: [5, 5] as never },
+        {}
+      );
+      if (previewDrawing) {
+        manager.addDrawing(previewDrawing);
+      }
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = container.getBoundingClientRect();
+      updatePreview(e.clientX - rect.left, e.clientY - rect.top);
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && pendingAnchorsRef.current) {
+        pendingAnchorsRef.current = null;
+        removePreview();
+        manager.setActiveTool(null);
+      }
+    };
+
+    const unsubToolChanged = manager.on('tool:changed', () => {
+      pendingAnchorsRef.current = null;
+      removePreview();
+    });
+
+    const handleChartClick: Parameters<typeof chart.subscribeClick>[0] = (param) => {
+      const activeTool = manager.getActiveTool();
+      if (!activeTool || !param.point) return;
+
+      const time = chart.timeScale().coordinateToTime(param.point.x);
+      const price = candleRef.current?.coordinateToPrice(param.point.y);
+      if (time === null || price === null || price === undefined) return;
+
+      const anchor: Anchor = { time, price };
+
+      if (!pendingAnchorsRef.current) {
+        pendingAnchorsRef.current = [];
+      }
+
+      pendingAnchorsRef.current.push(anchor);
+
+      const registry = ToolRegistry.getInstance();
+      const toolDef = registry.get(activeTool);
+      if (!toolDef) return;
+
+      if (pendingAnchorsRef.current.length >= toolDef.requiredAnchors) {
+        removePreview();
+        const drawing = registry.createDrawing(
+          activeTool,
+          crypto.randomUUID(),
+          pendingAnchorsRef.current,
+          {},
+          {}
+        );
+        if (drawing) {
+          manager.addDrawing(drawing);
+        }
+        pendingAnchorsRef.current = null;
+        manager.setActiveTool(null);
+      }
+    };
+    chart.subscribeClick(handleChartClick);
+
+    const container = containerRef.current;
+    container.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('keydown', handleKeyDown);
+
+    // ── Double-click text editing ─────────────────────────────────────────
+    const TEXT_DRAWING_TYPES = new Set([
+      'text-annotation',
+      'anchored-text',
+      'note',
+      'callout',
+      'comment',
+    ]);
+
+    const handleDblClick = (e: MouseEvent) => {
+      const rect = container.getBoundingClientRect();
+      const point: Point = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      };
+      const hit = manager.hitTest(point);
+      if (hit && TEXT_DRAWING_TYPES.has(hit.type)) {
+        const text = getDrawingText(hit);
+        setEditingTextInfo({ drawingId: hit.id, text });
+      }
+    };
+    container.addEventListener('dblclick', handleDblClick);
+
     // ── Crosshair (hover legend) ───────────────────────────────────────────
     chart.subscribeCrosshairMove((param) => {
       if (!param.time || !param.point || !candleRef.current) {
@@ -281,6 +426,11 @@ export function ChartPanel({
       unsubRemove();
       unsubUpdate();
       unsubClear();
+      chart.unsubscribeClick(handleChartClick);
+      unsubToolChanged();
+      container.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('keydown', handleKeyDown);
+      container.removeEventListener('dblclick', handleDblClick);
       manager.detach();
       managerRef.current = null;
       chart.remove();
@@ -492,6 +642,62 @@ export function ChartPanel({
                 </span>
               </span>
             )}
+          </div>
+        </div>
+      )}
+
+      {editingTextInfo && (
+        <div
+          className="absolute inset-0 z-20 flex items-center justify-center bg-black/40"
+          onMouseDown={() => setEditingTextInfo(null)}
+        >
+          <div
+            className="rounded-lg border border-white/10 bg-gray-900 p-3 shadow-xl"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <textarea
+              autoFocus
+              className="w-64 rounded border border-white/10 bg-gray-800 p-2 text-sm text-white outline-none"
+              defaultValue={editingTextInfo.text}
+              onChange={(e) =>
+                setEditingTextInfo((prev) => (prev ? { ...prev, text: e.target.value } : null))
+              }
+              onBlur={(e) => {
+                const drawing = managerRef.current?.getDrawing(editingTextInfo.drawingId);
+                if (drawing) setDrawingText(drawing, e.currentTarget.value);
+                setEditingTextInfo(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  e.stopPropagation();
+                  setEditingTextInfo(null);
+                } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                  e.stopPropagation();
+                  const drawing = managerRef.current?.getDrawing(editingTextInfo.drawingId);
+                  if (drawing) setDrawingText(drawing, e.currentTarget.value);
+                  setEditingTextInfo(null);
+                }
+              }}
+              rows={3}
+            />
+            <div className="mt-2 flex justify-end gap-2">
+              <button
+                className="rounded px-2 py-1 text-xs text-white/60 hover:text-white"
+                onClick={() => setEditingTextInfo(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="rounded bg-purple-600 px-2 py-1 text-xs font-medium text-white hover:bg-purple-500"
+                onClick={() => {
+                  const drawing = managerRef.current?.getDrawing(editingTextInfo.drawingId);
+                  if (drawing) setDrawingText(drawing, editingTextInfo.text);
+                  setEditingTextInfo(null);
+                }}
+              >
+                Save
+              </button>
+            </div>
           </div>
         </div>
       )}
