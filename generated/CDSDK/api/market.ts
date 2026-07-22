@@ -13,9 +13,9 @@ export const marketApi = {
    * @param limit - number of candles to return (max 1000)
    */
   getCandles: (symbol = 'BTCUSDT', interval = '1m', limit = 200) =>
-    fetch(
-      `${BASE_URL}/api/market/candles?symbol=${symbol}&interval=${interval}&limit=${limit}`
-    ).then(async (res) => {
+    fetch(`${BASE_URL}/api/market/candles?symbol=${symbol}&interval=${interval}&limit=${limit}`, {
+      signal: AbortSignal.timeout(10_000),
+    }).then(async (res) => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json() as Promise<CandleHistoryResponse>;
     }),

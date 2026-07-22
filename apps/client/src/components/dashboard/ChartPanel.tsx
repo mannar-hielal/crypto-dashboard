@@ -414,7 +414,9 @@ export function ChartPanel({
     });
     ro.observe(containerRef.current);
 
-    onChartReady?.(chart, candleRef.current!);
+    if (candleRef.current) {
+      onChartReady?.(chart, candleRef.current);
+    }
 
     chartReadyRef.current = true;
 
