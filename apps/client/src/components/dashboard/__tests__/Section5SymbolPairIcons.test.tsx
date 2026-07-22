@@ -98,7 +98,14 @@ import { SYMBOLS } from '@/lib/markets';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function renderSymbolBar() {
-  return render(<SymbolBar tradingPanelOpen={false} onToggleTrading={vi.fn()} />);
+  return render(
+    <SymbolBar
+      tradingPanelOpen={false}
+      onToggleTrading={vi.fn()}
+      leftToolbarOpen={true}
+      onToggleLeftToolbar={vi.fn()}
+    />
+  );
 }
 
 function renderPanel() {

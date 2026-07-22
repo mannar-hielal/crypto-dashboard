@@ -16,6 +16,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   const res = await fetch(`${BASE_URL}${path}`, {
     ...rest,
+    signal: AbortSignal.timeout(10_000),
     headers: {
       // Only set Content-Type when there's a body — Fastify rejects Content-Type: application/json with an empty body
       ...(init?.body !== undefined && init.body !== null && { 'Content-Type': 'application/json' }),

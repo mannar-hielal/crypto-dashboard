@@ -3,6 +3,7 @@ import NumberFlow from '@number-flow/react';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/shallow';
 import {
+  Menu,
   Star,
   ChevronDown,
   ChevronUp,
@@ -67,9 +68,16 @@ function StatItem({
 interface SymbolBarProps {
   tradingPanelOpen: boolean;
   onToggleTrading: () => void;
+  leftToolbarOpen: boolean;
+  onToggleLeftToolbar: () => void;
 }
 
-export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps) {
+export function SymbolBar({
+  tradingPanelOpen,
+  onToggleTrading,
+  leftToolbarOpen,
+  onToggleLeftToolbar,
+}: SymbolBarProps) {
   // ── Active pane config from layoutStore ──────────────────────────────────
   const activePane = useLayoutStore((s) => s.activePane);
   const paneConfig = useLayoutStore((s) => s.panes[s.activePane]);
@@ -163,9 +171,19 @@ export function SymbolBar({ tradingPanelOpen, onToggleTrading }: SymbolBarProps)
 
   return (
     <div
-      className="flex h-11 w-full shrink-0 items-center gap-3 border-b border-white/6 px-3"
+      className="flex h-11 w-full shrink-0 items-center gap-3 overflow-x-auto border-b border-white/6 px-3 scrollbar-none"
       style={{ background: bg.panel }}
     >
+      {/* ── Toolbar toggle (mobile) ──────────────────────────────────────── */}
+      <button
+        onClick={onToggleLeftToolbar}
+        title={leftToolbarOpen ? 'Hide toolbar' : 'Show toolbar'}
+        className="shrink-0 transition-colors hover:text-white lg:hidden"
+        style={{ color: leftToolbarOpen ? color.purple : color.muted }}
+      >
+        <Menu className="h-4 w-4" />
+      </button>
+
       {/* ── Star ──────────────────────────────────────────────────────────── */}
       <button
         title="Add to favourites"
