@@ -2,27 +2,27 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import type { ElementType } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MousePointer2, Type, Pencil, Trash2 } from 'lucide-react';
+import { MousePointer2, TrendingUp, GitBranch, Shapes, Type, Ruler, Trash2 } from 'lucide-react';
 import { bg, color, fontSize } from '@/lib/tokens';
 import { CURSOR_VARIANTS, type CursorVariantId } from '@/lib/cursors';
-import { LINE_TOOLS, type LineToolId } from '@/lib/lineTools';
-import { TEXT_NOTES, type TextNoteToolId } from '@/lib/textNotes';
-import { BinToolMenu } from '@/components/drawing/BinToolMenu';
+import { TOOL_GROUPS } from '@/lib/libraryTools';
 
-// ─── Tool definitions ─────────────────────────────────────────────────────────
+// ─── Tool toolbar button definitions ────────────────────────────────────────
 
-type Tool = {
+type ToolButton = {
   id: string;
   icon: ElementType;
   label: string;
 } | null;
 
-const TOOLS: Tool[] = [
+const MAIN_BUTTONS: ToolButton[] = [
   { id: 'cursor', icon: MousePointer2, label: 'Cursor' },
   null,
-  { id: 'line', icon: MousePointer2, label: 'Lines' },
-  { id: 'text', icon: Type, label: 'Text' },
-  { id: 'pencil', icon: Pencil, label: 'Freehand Draw' },
+  { id: 'trend-lines', icon: TrendingUp, label: 'Trend Lines' },
+  { id: 'fib-gann', icon: GitBranch, label: 'Fib & Gann' },
+  { id: 'shapes', icon: Shapes, label: 'Shapes' },
+  { id: 'annotations', icon: Type, label: 'Text & Notes' },
+  { id: 'measure', icon: Ruler, label: 'Forecast & Measure' },
   null,
   { id: 'bin', icon: Trash2, label: 'Remove All' },
 ];
@@ -30,126 +30,143 @@ const TOOLS: Tool[] = [
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface LeftToolbarProps {
-  onCursorVariantChange?: (variant: CursorVariantId) => void;
-  activeTool?: string;
-  cursorVariant?: CursorVariantId;
-  onToolChange?: (toolId: string, lineToolId: string) => void;
+  onToolChange?: (toolType: string | null) => void;
   onBinAction?: () => void;
-  lineTool?: LineToolId;
-  /** P6 — current selected text-and-notes sub-tool id */
-  textTool?: TextNoteToolId;
-  onTextNoteToolChange?: (id: TextNoteToolId) => void;
+  cursorVariant?: CursorVariantId;
+  onCursorVariantChange?: (variant: CursorVariantId) => void;
 }
 
 export function LeftToolbar({
-  onCursorVariantChange,
-  activeTool: activeToolProp,
-  cursorVariant: cursorVariantProp,
   onToolChange,
   onBinAction,
-  lineTool: lineToolProp,
-  textTool: textToolProp,
-  onTextNoteToolChange,
+  cursorVariant: cursorVariantProp,
+  onCursorVariantChange,
 }: LeftToolbarProps) {
-  // Cursor variant mirrors prop when controlled, falls back to local state
+  // ── Cursor (local state falls back when uncontrolled) ──────────────────
   const [localCursorVariant, setLocalCursorVariant] = useState<CursorVariantId>('cross');
   const cursorVariant = cursorVariantProp ?? localCursorVariant;
 
-  // Local active tool mirrors prop, falls back to 'cursor' when uncontrolled
-  const [localActiveTool, setLocalActiveTool] = useState('cursor');
-  const activeTool = activeToolProp ?? localActiveTool;
-  const setActiveTool = useCallback(
-    (id: string) => {
-      if (activeToolProp === undefined) setLocalActiveTool(id);
-    },
-    [activeToolProp]
-  );
+  // ── Tool state ──────────────────────────────────────────────────────────
+  const [activeToolType, setActiveToolType] = useState<string | null>(null);
+
+  // Last-selected sub-tool per group (persists across group switches)
+  const [subToolMap, setSubToolMap] = useState<Record<string, string>>({
+    'trend-lines': 'trend-line',
+    'fib-gann': 'fib-retracement',
+    shapes: 'rectangle',
+    annotations: 'text-annotation',
+    measure: 'long-position',
+  });
+
+  // ── Generic popup menu state (replaces individual menu states) ──────────
+  const [popupMenu, setPopupMenu] = useState<{
+    groupId: string;
+    left: number;
+    top: number;
+  } | null>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+
+  // ── Cursor variant menu (kept separate — these are CSS cursors, not drawing tools) ──
   const [showCursorMenu, setShowCursorMenu] = useState(false);
-  const asideRef = useRef<HTMLElement>(null);
   const cursorBtnRef = useRef<HTMLButtonElement>(null);
   const cursorMenuRef = useRef<HTMLDivElement>(null);
-  const [menuPos, setMenuPos] = useState({ left: 0, top: 0 });
+  const [cursorMenuPos, setCursorMenuPos] = useState({ left: 0, top: 0 });
 
-  // ── Line drawing tool ──────────────────────────────────────────────────────
-  const [localLineTool, setLocalLineTool] = useState<LineToolId>('trendline');
-  const lineTool = lineToolProp ?? localLineTool;
-  const setLineTool = useCallback(
-    (id: LineToolId) => {
-      if (lineToolProp === undefined) setLocalLineTool(id);
-    },
-    [lineToolProp]
-  );
-  const [showLineMenu, setShowLineMenu] = useState(false);
-  const lineBtnRef = useRef<HTMLButtonElement>(null);
-  const lineMenuRef = useRef<HTMLDivElement>(null);
-  const [lineMenuPos, setLineMenuPos] = useState({ left: 0, top: 0 });
+  const asideRef = useRef<HTMLElement>(null);
 
-  // ── Text & Notes sub-tool ─────────────────────────────────────────────────
-  const [localTextTool, setLocalTextTool] = useState<TextNoteToolId>('text');
-  const textTool = textToolProp ?? localTextTool;
-  const setTextTool = useCallback(
-    (id: TextNoteToolId) => {
-      if (textToolProp === undefined) setLocalTextTool(id);
-    },
-    [textToolProp]
-  );
-  const [showTextMenu, setShowTextMenu] = useState(false);
-  const textBtnRef = useRef<HTMLButtonElement>(null);
-  const textMenuRef = useRef<HTMLDivElement>(null);
-  const [textMenuPos, setTextMenuPos] = useState({ left: 0, top: 0 });
+  // ── Handlers ────────────────────────────────────────────────────────────
 
-  // ── Bin tool right-click menu ──────────────────────────────────────────────
-  const [showBinMenu, setShowBinMenu] = useState(false);
-  const binBtnRef = useRef<HTMLButtonElement>(null);
-  const [binMenuPos, setBinMenuPos] = useState({ left: 0, top: 0 });
-
-  function handleLineContextMenu(e: React.MouseEvent) {
-    e.preventDefault();
-    const rect = lineBtnRef.current?.getBoundingClientRect();
-    if (rect) {
-      setLineMenuPos({ left: rect.right + 6, top: rect.top });
+  function handleMainClick(groupId: string) {
+    if (groupId === 'cursor') {
+      setActiveToolType(null);
+      onToolChange?.(null);
+      return;
     }
-    setShowLineMenu((v) => !v);
-  }
-
-  function handleTextContextMenu(e: React.MouseEvent) {
-    e.preventDefault();
-    const rect = textBtnRef.current?.getBoundingClientRect();
-    if (rect) {
-      setTextMenuPos({ left: rect.right + 6, top: rect.top });
+    if (groupId === 'bin') {
+      onBinAction?.();
+      return;
     }
-    setShowTextMenu((v) => !v);
-  }
-
-  function handleBinContextMenu(e: React.MouseEvent) {
-    e.preventDefault();
-    const rect = binBtnRef.current?.getBoundingClientRect();
-    if (rect) {
-      setBinMenuPos({ left: rect.right + 6, top: rect.top });
+    const toolType = subToolMap[groupId];
+    if (toolType) {
+      setActiveToolType(toolType);
+      onToolChange?.(toolType);
     }
-    setShowBinMenu(true);
   }
 
-  function handleLineToolSelect(id: LineToolId) {
-    setLineTool(id);
-    setActiveTool(id);
-    setShowLineMenu(false);
-    onToolChange?.(id, id);
+  function handleContextMenu(e: React.MouseEvent, groupId: string) {
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    setPopupMenu({ groupId, left: rect.right + 6, top: rect.top });
   }
 
-  function handleTextNoteToolSelect(id: TextNoteToolId) {
-    setTextTool(id);
-    setActiveTool(id);
-    setShowTextMenu(false);
-    onTextNoteToolChange?.(id);
-    // 🔐 Pass `lineTool` (the line sub-tool) — not the text/note id — as the
-    // second arg. Otherwise DashboardPage.handleToolChange writes the text/note
-    // id into `selectedLineTool` state, breaking the Line button's icon lookup
-    // (falls back to MousePointer2 = the "arrow" the user saw).
-    onToolChange?.(id, lineTool);
+  function handleSubToolSelect(groupId: string, toolType: string) {
+    setSubToolMap((prev) => ({ ...prev, [groupId]: toolType }));
+    setActiveToolType(toolType);
+    setPopupMenu(null);
+    onToolChange?.(toolType);
   }
 
-  // ── Portal-based tooltip (TradingView data-tooltip pattern) ─────────
+  function isGroupActive(groupId: string): boolean {
+    if (groupId === 'cursor') return activeToolType === null;
+    if (groupId === 'bin') return false;
+    if (activeToolType === null) return false;
+    const group = TOOL_GROUPS.find((g) => g.id === groupId);
+    if (!group) return false;
+    return group.categories.some((cat) => cat.tools.some((t) => t.id === activeToolType));
+  }
+
+  // ── Click-outside: generic popup ────────────────────────────────────────
+  const handleMousedown = useCallback((e: MouseEvent) => {
+    if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
+      setPopupMenu(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (popupMenu) {
+      document.addEventListener('mousedown', handleMousedown);
+    }
+    return () => document.removeEventListener('mousedown', handleMousedown);
+  }, [popupMenu, handleMousedown]);
+
+  // ── Click-outside: cursor menu ──────────────────────────────────────────
+  const handleCursorMousedown = useCallback((e: MouseEvent) => {
+    if (
+      cursorMenuRef.current &&
+      !cursorMenuRef.current.contains(e.target as Node) &&
+      cursorBtnRef.current &&
+      !cursorBtnRef.current.contains(e.target as Node)
+    ) {
+      setShowCursorMenu(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showCursorMenu) {
+      document.addEventListener('mousedown', handleCursorMousedown);
+    }
+    return () => document.removeEventListener('mousedown', handleCursorMousedown);
+  }, [showCursorMenu, handleCursorMousedown]);
+
+  // ── Cursor handlers ─────────────────────────────────────────────────────
+  function handleCursorContextMenu(e: React.MouseEvent) {
+    e.preventDefault();
+    const rect = cursorBtnRef.current?.getBoundingClientRect();
+    if (rect) {
+      setCursorMenuPos({ left: rect.right + 6, top: rect.top });
+    }
+    setShowCursorMenu((v) => !v);
+  }
+
+  function handleCursorVariantSelect(id: CursorVariantId) {
+    setLocalCursorVariant(id);
+    setActiveToolType(null);
+    setShowCursorMenu(false);
+    onCursorVariantChange?.(id);
+    onToolChange?.(null);
+  }
+
+  // ── Tooltip ─────────────────────────────────────────────────────────────
   const [tooltip, setTooltip] = useState<{
     text: string;
     top: number;
@@ -199,77 +216,8 @@ export function LeftToolbar({
     };
   }, []);
 
-  // Close menu on click-outside
-  const handleMousedown = useCallback((e: MouseEvent) => {
-    if (
-      cursorMenuRef.current &&
-      !cursorMenuRef.current.contains(e.target as Node) &&
-      cursorBtnRef.current &&
-      !cursorBtnRef.current.contains(e.target as Node)
-    ) {
-      setShowCursorMenu(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (showCursorMenu) {
-      document.addEventListener('mousedown', handleMousedown);
-    }
-    return () => document.removeEventListener('mousedown', handleMousedown);
-  }, [showCursorMenu, handleMousedown]);
-
-  const handleLineMousedown = useCallback((e: MouseEvent) => {
-    if (
-      lineMenuRef.current &&
-      !lineMenuRef.current.contains(e.target as Node) &&
-      lineBtnRef.current &&
-      !lineBtnRef.current.contains(e.target as Node)
-    ) {
-      setShowLineMenu(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (showLineMenu) {
-      document.addEventListener('mousedown', handleLineMousedown);
-    }
-    return () => document.removeEventListener('mousedown', handleLineMousedown);
-  }, [showLineMenu, handleLineMousedown]);
-
-  const handleTextMousedown = useCallback((e: MouseEvent) => {
-    if (
-      textMenuRef.current &&
-      !textMenuRef.current.contains(e.target as Node) &&
-      textBtnRef.current &&
-      !textBtnRef.current.contains(e.target as Node)
-    ) {
-      setShowTextMenu(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (showTextMenu) {
-      document.addEventListener('mousedown', handleTextMousedown);
-    }
-    return () => document.removeEventListener('mousedown', handleTextMousedown);
-  }, [showTextMenu, handleTextMousedown]);
-
-  function handleCursorContextMenu(e: React.MouseEvent) {
-    e.preventDefault();
-    const rect = cursorBtnRef.current?.getBoundingClientRect();
-    if (rect) {
-      setMenuPos({ left: rect.right + 6, top: rect.top });
-    }
-    setShowCursorMenu((v) => !v);
-  }
-
-  function handleCursorVariantSelect(id: CursorVariantId) {
-    setLocalCursorVariant(id);
-    setActiveTool('cursor');
-    setShowCursorMenu(false);
-    onCursorVariantChange?.(id);
-    onToolChange?.('cursor', lineTool);
-  }
+  // ── Get the active group for popup menu ─────────────────────────────────
+  const activePopupGroup = popupMenu ? TOOL_GROUPS.find((g) => g.id === popupMenu.groupId) : null;
 
   return (
     <aside
@@ -277,8 +225,7 @@ export function LeftToolbar({
       className="flex w-11 shrink-0 flex-col items-center gap-0.5 border-r border-white/6 py-2 overflow-y-auto"
       style={{ background: bg.page }}
     >
-      {TOOLS.map((tool, i) => {
-        // Separator
+      {MAIN_BUTTONS.map((tool, i) => {
         if (tool === null) {
           return (
             <div
@@ -290,13 +237,11 @@ export function LeftToolbar({
         }
 
         const Icon = tool.icon;
-        const isActive = activeTool === tool.id;
+        const toolActive = isGroupActive(tool.id);
         const isCursor = tool.id === 'cursor';
-        const isLine = tool.id === 'line';
         const isBin = tool.id === 'bin';
-        const isText = tool.id === 'text';
 
-        // ── Cursor tool gets right-click popup + variant chevron ───────────
+        // ── Cursor tool ──────────────────────────────────────────────────
         if (isCursor) {
           const cursorVariantDef = CURSOR_VARIANTS.find(
             (v): v is NonNullable<typeof v> => v !== null && v.id === cursorVariant
@@ -310,20 +255,19 @@ export function LeftToolbar({
               data-tooltip={cursorVariantDef?.label ?? 'Cursor'}
               aria-label={cursorVariantDef?.label ?? 'Cursor'}
               onClick={() => {
-                setActiveTool('cursor');
-                onToolChange?.('cursor', lineTool);
+                setActiveToolType(null);
+                onToolChange?.(null);
               }}
               onContextMenu={handleCursorContextMenu}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               className="group relative flex h-10 w-10 items-center justify-center rounded"
               style={{
-                background: isActive ? `${color.purpleDark}20` : 'transparent',
-                color: isActive ? color.purple : color.muted,
+                background: toolActive ? `${color.purpleDark}20` : 'transparent',
+                color: toolActive ? color.purple : color.muted,
               }}
             >
-              {/* Active glow ring */}
-              {isActive && (
+              {toolActive && (
                 <motion.span
                   layoutId="toolbar-active"
                   className="absolute inset-0 rounded"
@@ -334,10 +278,7 @@ export function LeftToolbar({
                   transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                 />
               )}
-
               <CursorIcon size={24} />
-
-              {/* Variant indicator chevron — 6px triangle at bottom-right */}
               <span
                 className="absolute bottom-0.5 right-0.5 z-10"
                 style={{
@@ -353,182 +294,25 @@ export function LeftToolbar({
           );
         }
 
-        // ── Line tool gets right-click popup + variant chevron ────────────
-        if (isLine) {
-          const lineToolDef = LINE_TOOLS.find(
-            (v): v is NonNullable<typeof v> => v !== null && v.id === lineTool
-          );
-          const LineIcon = lineToolDef?.icon ?? Icon;
-          const lineToolActive = LINE_TOOLS.some(
-            (v): v is NonNullable<typeof v> => v !== null && v.id === activeTool
-          );
+        // ── Drawing tool groups ──────────────────────────────────────────
+        const hasSubmenu = !isBin && TOOL_GROUPS.some((g) => g.id === tool.id);
 
-          return (
-            <motion.button
-              key={tool.id}
-              ref={lineBtnRef}
-              data-tooltip="Lines"
-              aria-label={lineToolDef?.label ?? 'Lines'}
-              onClick={() => {
-                setActiveTool(lineTool);
-                onToolChange?.(lineTool, lineTool);
-              }}
-              onContextMenu={handleLineContextMenu}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              className="group relative flex h-10 w-10 items-center justify-center rounded"
-              style={{
-                background: lineToolActive ? `${color.purpleDark}20` : 'transparent',
-                color: lineToolActive ? color.purple : color.muted,
-              }}
-            >
-              {/* Active glow ring */}
-              {lineToolActive && (
-                <motion.span
-                  layoutId="toolbar-active"
-                  className="absolute inset-0 rounded"
-                  style={{
-                    background: `${color.purpleDark}20`,
-                    boxShadow: `0 0 0 1px ${color.purpleDark}40`,
-                  }}
-                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                />
-              )}
-
-              <LineIcon size={24} />
-
-              {/* Variant indicator chevron — 6px triangle at bottom-right */}
-              <span
-                className="absolute bottom-0.5 right-0.5 z-10"
-                style={{
-                  width: 0,
-                  height: 0,
-                  borderLeft: '6px solid transparent',
-                  borderRight: '6px solid transparent',
-                  borderTop: '6px solid currentColor',
-                  opacity: 0.6,
-                }}
-              />
-            </motion.button>
-          );
-        }
-
-        // ── All other tools ─────────────────────────────────────────────
-        if (isBin) {
-          return (
-            <motion.button
-              key={tool.id}
-              ref={binBtnRef}
-              data-tooltip={tool.label}
-              aria-label={tool.label}
-              onClick={() => onBinAction?.()}
-              onContextMenu={handleBinContextMenu}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              className="group relative flex h-10 w-10 items-center justify-center rounded"
-              style={{
-                background: isActive ? `${color.purpleDark}20` : 'transparent',
-                color: isActive ? color.purple : color.muted,
-              }}
-            >
-              {isActive && (
-                <motion.span
-                  layoutId="toolbar-active"
-                  className="absolute inset-0 rounded"
-                  style={{
-                    background: `${color.purpleDark}20`,
-                    boxShadow: `0 0 0 1px ${color.purpleDark}40`,
-                  }}
-                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                />
-              )}
-              <Icon className="relative z-10 h-6 w-6" />
-            </motion.button>
-          );
-        }
-
-        // ── Text & notes tool gets right-click popup + variant chevron ───
-        if (isText) {
-          const textToolDef = TEXT_NOTES.find(
-            (v): v is NonNullable<typeof v> => v !== null && v.id === textTool
-          );
-          const TextIcon = textToolDef?.icon ?? Icon;
-          const textToolActive = TEXT_NOTES.some(
-            (v): v is NonNullable<typeof v> => v !== null && v.id === activeTool
-          );
-
-          return (
-            <motion.button
-              key={tool.id}
-              ref={textBtnRef}
-              data-tooltip="Text and notes"
-              aria-label={textToolDef?.label ?? 'Text and notes'}
-              onClick={() => {
-                setActiveTool(textTool);
-                onTextNoteToolChange?.(textTool);
-                // 🔐 Same fix as handleTextNoteToolSelect above — pass the line
-                // sub-tool, not the text/note id, as the second arg.
-                onToolChange?.(textTool, lineTool);
-              }}
-              onContextMenu={handleTextContextMenu}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              className="group relative flex h-10 w-10 items-center justify-center rounded"
-              style={{
-                background: textToolActive ? `${color.purpleDark}20` : 'transparent',
-                color: textToolActive ? color.purple : color.muted,
-              }}
-            >
-              {textToolActive && (
-                <motion.span
-                  layoutId="toolbar-active"
-                  className="absolute inset-0 rounded"
-                  style={{
-                    background: `${color.purpleDark}20`,
-                    boxShadow: `0 0 0 1px ${color.purpleDark}40`,
-                  }}
-                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                />
-              )}
-
-              <TextIcon size={24} />
-
-              {/* Variant indicator chevron — 6px triangle at bottom-right */}
-              <span
-                className="absolute bottom-0.5 right-0.5 z-10"
-                style={{
-                  width: 0,
-                  height: 0,
-                  borderLeft: '6px solid transparent',
-                  borderRight: '6px solid transparent',
-                  borderTop: '6px solid currentColor',
-                  opacity: 0.6,
-                }}
-              />
-            </motion.button>
-          );
-        }
-
-        // ── All other tools ─────────────────────────────────────────────
         return (
           <motion.button
             key={tool.id}
             data-tooltip={tool.label}
             aria-label={tool.label}
-            onClick={() => {
-              setActiveTool(tool.id);
-              onToolChange?.(tool.id, lineTool);
-            }}
+            onClick={() => handleMainClick(tool.id)}
+            onContextMenu={(e) => hasSubmenu && handleContextMenu(e, tool.id)}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             className="group relative flex h-10 w-10 items-center justify-center rounded"
             style={{
-              background: isActive ? `${color.purpleDark}20` : 'transparent',
-              color: isActive ? color.purple : color.muted,
+              background: toolActive ? `${color.purpleDark}20` : 'transparent',
+              color: toolActive ? color.purple : color.muted,
             }}
           >
-            {/* Active glow ring */}
-            {isActive && (
+            {toolActive && (
               <motion.span
                 layoutId="toolbar-active"
                 className="absolute inset-0 rounded"
@@ -539,8 +323,20 @@ export function LeftToolbar({
                 transition={{ type: 'spring', stiffness: 500, damping: 35 }}
               />
             )}
-
             <Icon className="relative z-10 h-6 w-6" />
+            {hasSubmenu && (
+              <span
+                className="absolute bottom-0.5 right-0.5 z-10"
+                style={{
+                  width: 0,
+                  height: 0,
+                  borderLeft: '6px solid transparent',
+                  borderRight: '6px solid transparent',
+                  borderTop: '6px solid currentColor',
+                  opacity: 0.6,
+                }}
+              />
+            )}
           </motion.button>
         );
       })}
@@ -556,8 +352,8 @@ export function LeftToolbar({
             transition={{ duration: 0.12 }}
             className="fixed z-50 w-44 overflow-hidden rounded-md border border-white/8 py-1 shadow-xl"
             style={{
-              left: menuPos.left,
-              top: menuPos.top,
+              left: cursorMenuPos.left,
+              top: cursorMenuPos.top,
               background: bg.panel,
             }}
           >
@@ -619,156 +415,84 @@ export function LeftToolbar({
         )}
       </AnimatePresence>
 
-      {/* ── Line variant popup menu ────────────────────────────────────── */}
+      {/* ── Generic tool group popup menu ──────────────────────────────── */}
       <AnimatePresence>
-        {showLineMenu && (
+        {popupMenu && activePopupGroup && (
           <motion.div
-            ref={lineMenuRef}
+            ref={popupRef}
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.12 }}
-            className="fixed z-50 w-44 overflow-hidden rounded-md border border-white/8 py-1 shadow-xl"
+            className="fixed z-50 overflow-hidden rounded-md border border-white/8 py-1 shadow-xl"
             style={{
-              left: lineMenuPos.left,
-              top: lineMenuPos.top,
+              left: popupMenu.left,
+              top: popupMenu.top,
               background: bg.panel,
+              maxHeight: '80vh',
+              overflowY: 'auto',
             }}
           >
-            {LINE_TOOLS.map((variant, idx) => {
-              if (variant === null) {
-                return (
+            {activePopupGroup.categories.map((cat, ci) => (
+              <div key={`cat-${ci}`}>
+                {ci > 0 && (
                   <div
-                    key={`div-${idx}`}
                     className="mx-2 my-1 h-px rounded-full"
                     style={{ background: `color-mix(in srgb, ${color.white} 8%, transparent)` }}
                   />
-                );
-              }
-
-              const VariantIcon = variant.icon;
-              const isSelected = lineTool === variant.id;
-
-              return (
-                <button
-                  key={variant.id}
-                  onClick={() => handleLineToolSelect(variant.id)}
-                  className="flex w-full items-center gap-2.5 px-2 py-1.5 text-left transition-colors"
-                  style={{
-                    background: isSelected ? `${color.purpleDark}20` : 'transparent',
-                    color: isSelected ? color.purple : color.muted,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isSelected) {
-                      e.currentTarget.style.background = `${color.white}08`;
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isSelected) {
-                      e.currentTarget.style.background = 'transparent';
-                    }
-                  }}
+                )}
+                <div
+                  className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider"
+                  style={{ color: `${color.muted}80` }}
                 >
-                  <VariantIcon size={22} />
-                  <span className="flex-1 text-xs font-medium">{variant.label}</span>
-                  {isSelected && (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+                  {cat.label}
+                </div>
+                {cat.tools.map((toolDef) => {
+                  const isSelected = activeToolType === toolDef.id;
+                  return (
+                    <button
+                      key={toolDef.id}
+                      onClick={() => handleSubToolSelect(activePopupGroup.id, toolDef.id)}
+                      className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left transition-colors"
+                      style={{
+                        background: isSelected ? `${color.purpleDark}20` : 'transparent',
+                        color: isSelected ? color.purple : color.muted,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSelected) {
+                          e.currentTarget.style.background = `${color.white}08`;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelected) {
+                          e.currentTarget.style.background = 'transparent';
+                        }
+                      }}
                     >
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  )}
-                </button>
-              );
-            })}
+                      <span className="flex-1 text-xs font-medium">{toolDef.label}</span>
+                      {isSelected && (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* ── Text & notes variant popup menu ────────────────────────────── */}
-      <AnimatePresence>
-        {showTextMenu && (
-          <motion.div
-            ref={textMenuRef}
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.12 }}
-            className="fixed z-50 w-44 overflow-hidden rounded-md border border-white/8 py-1 shadow-xl"
-            style={{
-              left: textMenuPos.left,
-              top: textMenuPos.top,
-              background: bg.panel,
-            }}
-          >
-            {TEXT_NOTES.map((variant, idx) => {
-              if (variant === null) {
-                return (
-                  <div
-                    key={`div-${idx}`}
-                    className="mx-2 my-1 h-px rounded-full"
-                    style={{ background: `color-mix(in srgb, ${color.white} 8%, transparent)` }}
-                  />
-                );
-              }
-
-              const VariantIcon = variant.icon;
-              const isSelected = textTool === variant.id;
-
-              return (
-                <button
-                  key={variant.id}
-                  onClick={() => handleTextNoteToolSelect(variant.id)}
-                  className="flex w-full items-center gap-2.5 px-2 py-1.5 text-left transition-colors"
-                  style={{
-                    background: isSelected ? `${color.purpleDark}20` : 'transparent',
-                    color: isSelected ? color.purple : color.muted,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isSelected) {
-                      e.currentTarget.style.background = `${color.white}08`;
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isSelected) {
-                      e.currentTarget.style.background = 'transparent';
-                    }
-                  }}
-                >
-                  <VariantIcon size={22} />
-                  <span className="flex-1 text-xs font-medium">{variant.label}</span>
-                  {isSelected && (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  )}
-                </button>
-              );
-            })}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── Bin tool submenu ──────────────────────────────────────────── */}
-      {showBinMenu && <BinToolMenu position={binMenuPos} onClose={() => setShowBinMenu(false)} />}
 
       {/* ── Portal tooltip ───────────────────────────────────────────── */}
       {tooltip &&

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import {
   createChart,
@@ -10,43 +10,25 @@ import {
 } from 'lightweight-charts';
 import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts';
 import { useStore } from 'zustand';
-import { createPortal } from 'react-dom';
+import { DrawingManager, ToolRegistry } from 'lightweight-charts-drawing';
+import type { Anchor, IDrawing, Point } from 'lightweight-charts-drawing';
 import { paneStores } from '@/store/paneStore';
 import { calcEMA, calcVWAP, calcMACD } from '@/lib/indicators';
 import { bg, color, chart as chartColors, font, fontSize } from '@/lib/tokens';
 import { INTERVAL_BAR_SPACING, type Interval } from '@/lib/markets';
-import { DrawingPrimitive } from '@/lib/drawing/DrawingPrimitive';
-import { useDrawingInteraction } from '@/hooks/useDrawingInteraction';
-import { useDrawingStore } from '@/store/drawingStore';
-import { DrawingPropertiesMenu } from '@/components/drawing/DrawingPropertiesMenu';
-import { TextDrawingEditor } from '@/components/drawing/TextDrawingEditor';
-import type { Drawing, InProgressDrawing, PaneIndex } from '@/lib/drawing/types';
+import { restoreDrawings, persistDrawings, getPersistenceKey } from '@/lib/drawingManager';
 
 const CHART_BG = chartColors.bg;
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface ChartPanelProps {
-  /** Which pane store to read data from (0–3) */
   paneIndex: 0 | 1 | 2 | 3;
-  /** Current interval — used to set the TradingView-matched initial bar spacing on first load */
+  symbol: string;
   interval: Interval;
-  /** Called once when the lightweight-charts instance is ready */
   onChartReady?: (chart: IChartApi, series: ISeriesApi<'Candlestick'>) => void;
-  /** Called when the chart is destroyed */
   onChartDestroy?: () => void;
-  /** Active drawing tool */
-  activeTool?: string;
-  /** Selected line tool variant */
-  lineTool?: string;
-  /** P6 — Selected text/note sub-tool id */
-  textTool?: string;
-  /** Current cursor variant (e.g. 'cross', 'eraser') */
-  cursorVariant?: string;
-  /** Called when drawing mode should exit (right-click) */
-  onExitDrawingMode?: () => void;
-  /** Called when eraser should exit (right-click while eraser active) */
-  onEraserExit?: () => void;
+  onDrawingManagerReady?: (manager: DrawingManager) => void;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -54,7 +36,6 @@ interface ChartPanelProps {
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-/** Formats a UTCTimestamp (seconds) as "Sun 05 Apr '26 17:32" */
 function formatUTCTime(secs: number): string {
   const d = new Date(secs * 1000);
   const dd = String(d.getUTCDate()).padStart(2, '0');
@@ -78,35 +59,34 @@ interface LegendData {
   vwap: number | null;
 }
 
-/** lightweight-charts works in seconds, our store timestamps are milliseconds */
 function toUTC(ms: number): UTCTimestamp {
   return Math.floor(ms / 1000) as UTCTimestamp;
 }
 
+function getDrawingText(d: IDrawing): string {
+  return (d as unknown as { getText?: () => string }).getText?.() ?? '';
+}
+
+function setDrawingText(d: IDrawing, text: string): void {
+  (d as unknown as { setText?: (t: string) => void }).setText?.(text);
+}
+
 export function ChartPanel({
   paneIndex,
+  symbol,
   interval,
   onChartReady,
   onChartDestroy,
-  activeTool,
-  lineTool,
-  textTool,
-  cursorVariant,
-  onExitDrawingMode,
-  onEraserExit,
+  onDrawingManagerReady,
 }: ChartPanelProps) {
-  // P6 — `textTool` mirrors `lineTool` as the user's most-recent text/note
-  // sub-tool. The chart itself reads `activeTool` directly when a text/note
-  // sub-tool is active, so `textTool` is preserved here only for symmetrical
-  // prop threading.
-  void textTool;
-
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const prevLenRef = useRef(0);
   const rafRef = useRef<number | undefined>(undefined);
+  const managerRef = useRef<DrawingManager | null>(null);
+  const prevSymbolRef = useRef<string>('');
+  const pendingAnchorsRef = useRef<Anchor[] | null>(null);
 
-  // ── Series refs ──────────────────────────────────────────────────────────
   const candleRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const ema9Ref = useRef<ISeriesApi<'Line'> | null>(null);
   const ema20Ref = useRef<ISeriesApi<'Line'> | null>(null);
@@ -121,81 +101,13 @@ export function ChartPanel({
   const chartReadyRef = useRef(false);
   const prevIntervalRef = useRef(interval);
 
-  // ── Hover legend state ───────────────────────────────────────────────────
   const [hoverData, setHoverData] = useState<LegendData | null>(null);
+  const [editingTextInfo, setEditingTextInfo] = useState<{
+    drawingId: string;
+    text: string;
+  } | null>(null);
 
-  // ── Drawing engine ──────────────────────────────────────────────────────
-  // 🔐 Per-pane drawings — only this pane's drawings flow into the local
-  // rendering + interaction surface. The global store still holds every
-  // drawing (so the bin/eraser tools see them all), but the visual canvas
-  // + hit-test + editor mount only consider this pane's subset. Without
-  // this filter, every pane's DrawingPrimitive renders the entire global
-  // list — visually duplicating each drawing across panes in 2-/4-pane
-  // dashboard layouts.
-  //
-  // P4-57: select the raw array with a stable selector (same reference
-  // when unchanged → no cascade re-render), then filter with `useMemo` so
-  // the derived array only changes when the source actually changes. A
-  // bare `.filter()` inside the selector would return a new array on
-  // every store update, triggering ChartPanel re-renders on unrelated
-  // state changes (e.g. selection toggles).
-  const allDrawings = useDrawingStore((s) => s.drawings);
-  const drawings = useMemo(
-    () => allDrawings.filter((d) => d.paneIndex === paneIndex),
-    [allDrawings, paneIndex]
-  );
-  const selectedDrawingId = useDrawingStore((s) => s.selectedDrawingId);
-
-  // ── P6 — on-chart text editor state ─────────────────────────────────────
-  const [editingDrawingId, setEditingDrawingId] = useState<string | null>(null);
-  const editingDrawingIdRef = useRef<string | null>(null);
-  useEffect(() => {
-    editingDrawingIdRef.current = editingDrawingId;
-  }, [editingDrawingId]);
-
-  // 🔐 Fix 8 — snapshot the label as it was when editing began so Escape can
-  // revert the live keystroke-preview back to the pre-edit value. Snapped
-  // in `beginEdit` (the single entry point for opening the editor) from the
-  // store — NOT from the filtered `drawings` subset, which is fine since
-  // `useDrawingStore.getState().drawings` is the same source the editor
-  // reads from.
-  const beginEdit = useCallback((id: string) => {
-    setEditingDrawingId(id);
-  }, []);
-
-  // Auto-clear selection as editing state if the drawing is removed.
-  useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect */
-    if (editingDrawingId === null) return;
-    const stillExists = useDrawingStore.getState().drawings.some((d) => d.id === editingDrawingId);
-    if (!stillExists) setEditingDrawingId(null);
-    /* eslint-enable react-hooks/set-state-in-effect */
-  }, [drawings, editingDrawingId]);
-
-  // Stable refs for primitive (avoids re-creating)
-  const drawingsRef = useRef<Drawing[]>(drawings);
-  const selectedIdRef = useRef<string | null>(selectedDrawingId);
-  const hoveredIdRef = useRef<string | null>(null);
-  const cursorVariantRef = useRef(cursorVariant);
-  const inProgressRef = useRef<InProgressDrawing | null>(null);
-  const primitiveRef = useRef<DrawingPrimitive | null>(null);
-  // 🔐 Stable pane-index ref so DrawingPrimitive can filter drawings
-  // without re-constructing on every render. The primitive's hitTest +
-  // draw() loops both skip drawings whose paneIndex doesn't match.
-  const paneIndexRef = useRef<PaneIndex>(paneIndex);
-
-  // Sync refs with latest values (not during render)
-  useEffect(() => {
-    drawingsRef.current = drawings;
-  }, [drawings]);
-  useEffect(() => {
-    selectedIdRef.current = selectedDrawingId;
-  }, [selectedDrawingId]);
-  useEffect(() => {
-    cursorVariantRef.current = cursorVariant;
-  }, [cursorVariant]);
-
-  // ── 1. Create chart once on mount ────────────────────────────────────────
+  // ── 1. Create chart + drawing manager once on mount ──────────────────────
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -217,10 +129,9 @@ export function ChartPanel({
         borderColor: 'rgba(255,255,255,0.07)',
         timeVisible: true,
         secondsVisible: false,
-        barSpacing: 6, // overridden on first load via INTERVAL_BAR_SPACING
+        barSpacing: 6,
       },
       localization: {
-        // Shows "Sun 05 Apr '26 17:32" on the time axis and crosshair tooltip
         timeFormatter: (time: UTCTimestamp) => formatUTCTime(time),
       },
       width: containerRef.current.clientWidth,
@@ -229,7 +140,7 @@ export function ChartPanel({
 
     chartRef.current = chart;
 
-    // ── Pane 0: main candles ────────────────────────────────────────────────
+    // ── Series ──────────────────────────────────────────────────────────────
     candleRef.current = chart.addSeries(CandlestickSeries, {
       upColor: chartColors.candleUp,
       downColor: chartColors.candleDown,
@@ -239,19 +150,6 @@ export function ChartPanel({
       wickDownColor: chartColors.candleDown,
     });
 
-    // ── Drawing primitive ──────────────────────────────────────────────────
-    const primitive = new DrawingPrimitive(
-      drawingsRef,
-      selectedIdRef,
-      hoveredIdRef,
-      cursorVariantRef,
-      inProgressRef,
-      paneIndexRef
-    );
-    primitiveRef.current = primitive;
-    candleRef.current.attachPrimitive(primitive);
-
-    // ── Pane 0: EMA 9 — silver/gray ─────────────────────────────────────────
     ema9Ref.current = chart.addSeries(LineSeries, {
       color: chartColors.ema9,
       lineWidth: 2,
@@ -261,7 +159,6 @@ export function ChartPanel({
       crosshairMarkerVisible: false,
     });
 
-    // ── Pane 0: EMA 20 — blue ───────────────────────────────────────────────
     ema20Ref.current = chart.addSeries(LineSeries, {
       color: chartColors.ema20,
       lineWidth: 2,
@@ -271,7 +168,6 @@ export function ChartPanel({
       crosshairMarkerVisible: false,
     });
 
-    // ── Pane 0: EMA 200 — purple (trend filter, thin — background reference) ─
     ema200Ref.current = chart.addSeries(LineSeries, {
       color: chartColors.ema200,
       lineWidth: 1,
@@ -281,7 +177,6 @@ export function ChartPanel({
       crosshairMarkerVisible: false,
     });
 
-    // ── Pane 0: VWAP — orange sparse-dotted ─────────────────────────────────
     vwapRef.current = chart.addSeries(LineSeries, {
       color: chartColors.vwap,
       lineWidth: 2,
@@ -292,14 +187,12 @@ export function ChartPanel({
       crosshairMarkerVisible: false,
     });
 
-    // ── Pane 1: MACD histogram (pane auto-created by passing index 1) ────────
     macdHistRef.current = chart.addSeries(
       HistogramSeries,
       { color: chartColors.macdHistBull, priceLineVisible: false, lastValueVisible: false },
       1
     );
 
-    // ── Pane 1: MACD line — blue ────────────────────────────────────────────
     macdLineRef.current = chart.addSeries(
       LineSeries,
       {
@@ -313,7 +206,6 @@ export function ChartPanel({
       1
     );
 
-    // ── Pane 1: Signal line — orange ─────────────────────────────────────────
     signalRef.current = chart.addSeries(
       LineSeries,
       {
@@ -327,22 +219,154 @@ export function ChartPanel({
       1
     );
 
-    // ── Drawing hover detection ──────────────────────────────────────────────
-    chart.subscribeCrosshairMove((param) => {
-      if (param.hoveredObjectId) {
-        containerRef.current?.setAttribute('data-drawing-hover', 'true');
-      } else {
-        containerRef.current?.removeAttribute('data-drawing-hover');
+    // ── Drawing manager ────────────────────────────────────────────────────
+    const manager = new DrawingManager();
+    managerRef.current = manager;
+
+    manager.attach(chart, candleRef.current as never, containerRef.current);
+    restoreDrawings(manager, symbol);
+    prevSymbolRef.current = symbol;
+
+    const save = () => persistDrawings(manager, symbol);
+    const unsubAdd = manager.on('drawing:added', save);
+    const unsubRemove = manager.on('drawing:removed', save);
+    const unsubUpdate = manager.on('drawing:updated', save);
+    const unsubClear = manager.on('drawing:cleared', save);
+
+    onDrawingManagerReady?.(manager);
+
+    // ── Drawing placement (click-to-place) ─────────────────────────────────
+    const removePreview = () => {
+      try {
+        manager.removeDrawing('__preview__');
+      } catch {
+        // preview may not exist
       }
-      // Track hovered drawing for eraser visual feedback
-      const newHoveredId = (param.hoveredObjectId as string | undefined) ?? null;
-      if (hoveredIdRef.current !== newHoveredId) {
-        hoveredIdRef.current = newHoveredId;
-        primitiveRef.current?.requestUpdate();
+    };
+
+    const updatePreview = (mouseX: number, mouseY: number) => {
+      const pending = pendingAnchorsRef.current;
+      if (!pending) return;
+
+      const activeTool = manager.getActiveTool();
+      if (!activeTool) return;
+
+      const registry = ToolRegistry.getInstance();
+      const toolDef = registry.get(activeTool);
+      if (!toolDef) return;
+
+      if (pending.length >= toolDef.requiredAnchors) {
+        removePreview();
+        return;
       }
+
+      const time = chart.timeScale().coordinateToTime(mouseX);
+      const price = candleRef.current?.coordinateToPrice(mouseY);
+      if (time === null || price === null || price === undefined) return;
+
+      const mouseAnchor: Anchor = { time, price };
+      const previewAnchors: Anchor[] = [...pending];
+      const remaining = toolDef.requiredAnchors - pending.length;
+      for (let i = 0; i < remaining; i++) previewAnchors.push(mouseAnchor);
+
+      removePreview();
+
+      const previewDrawing = registry.createDrawing(
+        activeTool,
+        '__preview__',
+        previewAnchors,
+        { lineDash: [5, 5] as never },
+        {}
+      );
+      if (previewDrawing) {
+        manager.addDrawing(previewDrawing);
+      }
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = container.getBoundingClientRect();
+      updatePreview(e.clientX - rect.left, e.clientY - rect.top);
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && pendingAnchorsRef.current) {
+        pendingAnchorsRef.current = null;
+        removePreview();
+        manager.setActiveTool(null);
+      }
+    };
+
+    const unsubToolChanged = manager.on('tool:changed', () => {
+      pendingAnchorsRef.current = null;
+      removePreview();
     });
 
-    // ── Crosshair subscription: feeds the hover legend ───────────────────────
+    const handleChartClick: Parameters<typeof chart.subscribeClick>[0] = (param) => {
+      const activeTool = manager.getActiveTool();
+      if (!activeTool || !param.point) return;
+
+      const time = chart.timeScale().coordinateToTime(param.point.x);
+      const price = candleRef.current?.coordinateToPrice(param.point.y);
+      if (time === null || price === null || price === undefined) return;
+
+      const anchor: Anchor = { time, price };
+
+      if (!pendingAnchorsRef.current) {
+        pendingAnchorsRef.current = [];
+      }
+
+      pendingAnchorsRef.current.push(anchor);
+
+      const registry = ToolRegistry.getInstance();
+      const toolDef = registry.get(activeTool);
+      if (!toolDef) return;
+
+      if (pendingAnchorsRef.current.length >= toolDef.requiredAnchors) {
+        removePreview();
+        const drawing = registry.createDrawing(
+          activeTool,
+          crypto.randomUUID(),
+          pendingAnchorsRef.current,
+          {},
+          {}
+        );
+        if (drawing) {
+          manager.addDrawing(drawing);
+        }
+        pendingAnchorsRef.current = null;
+        manager.setActiveTool(null);
+      }
+    };
+    chart.subscribeClick(handleChartClick);
+
+    const container = containerRef.current;
+    container.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('keydown', handleKeyDown);
+
+    // ── Double-click text editing ─────────────────────────────────────────
+    const TEXT_DRAWING_TYPES = new Set([
+      'text-annotation',
+      'anchored-text',
+      'note',
+      'callout',
+      'comment',
+    ]);
+
+    const handleDblClick = (e: MouseEvent) => {
+      const rect = container.getBoundingClientRect();
+      const point: Point = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      };
+      const hit = manager.hitTest(point);
+      if (hit && TEXT_DRAWING_TYPES.has(hit.type)) {
+        const text = getDrawingText(hit);
+        setEditingTextInfo({ drawingId: hit.id, text });
+      }
+    };
+    container.addEventListener('dblclick', handleDblClick);
+
+    // ── Crosshair (hover legend) ───────────────────────────────────────────
     chart.subscribeCrosshairMove((param) => {
       if (!param.time || !param.point || !candleRef.current) {
         setHoverData(null);
@@ -377,9 +401,7 @@ export function ChartPanel({
       });
     });
 
-    // ── ResizeObserver: keeps chart fill its container on any layout change ──
-    // Debounced via rAF to avoid racing during spring animations / splitter
-    // drags where dozens of resize events fire per second.
+    // ── ResizeObserver ─────────────────────────────────────────────────────
     const ro = new ResizeObserver(() => {
       if (!containerRef.current || !chartRef.current) return;
       const { clientWidth, clientHeight } = containerRef.current;
@@ -387,28 +409,30 @@ export function ChartPanel({
       if (rafRef.current !== undefined) cancelAnimationFrame(rafRef.current);
       rafRef.current = requestAnimationFrame(() => {
         rafRef.current = undefined;
-        chartRef.current?.applyOptions({
-          width: clientWidth,
-          height: clientHeight,
-        });
+        chartRef.current?.applyOptions({ width: clientWidth, height: clientHeight });
       });
     });
     ro.observe(containerRef.current);
 
-    // Notify parent so MultiChartArea can wire up sync
     onChartReady?.(chart, candleRef.current!);
 
-    // Mark chart as ready so the data effect can skip its guard.
     chartReadyRef.current = true;
 
     return () => {
       chartReadyRef.current = false;
       if (rafRef.current !== undefined) cancelAnimationFrame(rafRef.current);
       ro.disconnect();
-      if (candleRef.current && primitiveRef.current) {
-        candleRef.current.detachPrimitive(primitiveRef.current);
-      }
-      primitiveRef.current = null;
+      unsubAdd();
+      unsubRemove();
+      unsubUpdate();
+      unsubClear();
+      chart.unsubscribeClick(handleChartClick);
+      unsubToolChanged();
+      container.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('keydown', handleKeyDown);
+      container.removeEventListener('dblclick', handleDblClick);
+      manager.detach();
+      managerRef.current = null;
       chart.remove();
       chartRef.current = null;
       onChartDestroy?.();
@@ -416,153 +440,24 @@ export function ChartPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // create once
 
-  // ── 3. Wire drawing interaction hook ──────────────────────────────────────
-  const { inProgressDrawing } = useDrawingInteraction({
-    chartRef,
-    seriesRef: candleRef,
-    containerRef,
-    activeTool: activeTool ?? '',
-    lineTool: lineTool ?? '',
-    cursorVariant: cursorVariant ?? 'crosshair',
-    onExitDrawingMode: onExitDrawingMode ?? (() => {}),
-    onEraserExit: onEraserExit ?? (() => {}),
-    onRequestEdit: (id) => beginEdit(id),
-    // 🔐 Close the text editor when right-click exits drawing mode (contextmenu
-    // handler calls onCommitEdit before restoring the previous tool). Without
-    // this, the editor would remain mounted in a broken state after a right-click.
-    onCommitEdit: () => {
-      if (editingDrawingIdRef.current !== null) {
-        setEditingDrawingId(null);
-      }
-    },
-    // 🔐 v4 — pass our pane index so new drawings are stamped correctly.
-    paneIndex,
-  });
-
+  // ── Re-persist on symbol change ──────────────────────────────────────────
   useEffect(() => {
-    inProgressRef.current = inProgressDrawing;
-  }, [inProgressDrawing]);
-
-  // ── 4. Request primitive redraw when drawing data changes ──────────────────
-  useEffect(() => {
-    primitiveRef.current?.requestUpdate();
-  }, [drawings, selectedDrawingId, inProgressDrawing]);
-
-  // ── 5. Compute toolbar position for selected drawing ──────────────────────
-  const [toolbarPos, setToolbarPos] = useState<{ x: number; y: number } | null>(null);
-  const [viewportVersion, setViewportVersion] = useState(0);
-
-  // Subscribe to viewport changes to reposition toolbar
-  useEffect(() => {
-    const chart = chartRef.current;
-    if (!chart) return;
-
-    const handler = () => setViewportVersion((v) => v + 1);
-    chart.timeScale().subscribeVisibleTimeRangeChange(handler);
-
-    // Also recompute on scroll / resize for scroll-safety
-    const container = containerRef.current;
-    if (container) {
-      container.addEventListener('scroll', handler, { capture: true, passive: true });
-      window.addEventListener('resize', handler);
-    }
-
-    return () => {
-      chart.timeScale().unsubscribeVisibleTimeRangeChange(handler);
-      if (container) {
-        container.removeEventListener('scroll', handler, { capture: true });
-        window.removeEventListener('resize', handler);
-      }
-    };
-  }, []);
-
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useLayoutEffect(() => {
-    if (!selectedDrawingId || !chartRef.current || !candleRef.current) {
-      setToolbarPos(null);
+    const manager = managerRef.current;
+    if (!manager) {
+      prevSymbolRef.current = symbol;
       return;
     }
-    const drawing = drawings.find((d) => d.id === selectedDrawingId);
-    if (!drawing || drawing.shape.points.length < 1) {
-      setToolbarPos(null);
-      return;
+    if (prevSymbolRef.current && prevSymbolRef.current !== symbol) {
+      const prevKey = getPersistenceKey(prevSymbolRef.current);
+      localStorage.setItem(prevKey, JSON.stringify(manager.exportDrawings()));
+      manager.clearAll();
+      restoreDrawings(manager, symbol);
     }
-
-    const p0 = drawing.shape.points[0];
-    const x0 = chartRef.current.timeScale().timeToCoordinate(p0.time) as number | null;
-    const y0 = candleRef.current.priceToCoordinate(p0.price) as number | null;
-    if (x0 === null || y0 === null) {
-      setToolbarPos(null);
-      return;
-    }
-
-    let anchorX = x0;
-    let anchorY = y0;
-    if (drawing.shape.type === 'trendline' || drawing.shape.type === 'ray') {
-      if (drawing.shape.points.length < 2) {
-        setToolbarPos(null);
-        return;
-      }
-      const p1 = drawing.shape.points[1];
-      const x1 = chartRef.current.timeScale().timeToCoordinate(p1.time);
-      const y1 = candleRef.current.priceToCoordinate(p1.price);
-      if (x1 === null || y1 === null) {
-        setToolbarPos(null);
-        return;
-      }
-      anchorX = ((x0 as number) + (x1 as number)) / 2;
-      anchorY = Math.min(y0 as number, y1 as number);
-    } else if (drawing.shape.type === 'parallel') {
-      if (drawing.shape.points.length < 3) {
-        setToolbarPos(null);
-        return;
-      }
-      const p1 = drawing.shape.points[1];
-      const x1 = chartRef.current.timeScale().timeToCoordinate(p1.time);
-      const y1 = candleRef.current.priceToCoordinate(p1.price);
-      if (x1 === null || y1 === null) {
-        setToolbarPos(null);
-        return;
-      }
-      // Anchor at midpoint of base line A→B
-      anchorX = ((x0 as number) + (x1 as number)) / 2;
-      anchorY = Math.min(y0 as number, y1 as number);
-    } else if (drawing.shape.type === 'polyline') {
-      if (drawing.shape.points.length < 2) {
-        setToolbarPos(null);
-        return;
-      }
-      const p1 = drawing.shape.points[1];
-      const x1 = chartRef.current.timeScale().timeToCoordinate(p1.time);
-      const y1 = candleRef.current.priceToCoordinate(p1.price);
-      if (x1 === null || y1 === null) {
-        setToolbarPos(null);
-        return;
-      }
-      // Anchor at midpoint of first two vertices
-      anchorX = ((x0 as number) + (x1 as number)) / 2;
-      anchorY = Math.min(y0 as number, y1 as number);
-    }
-
-    const containerRect = containerRef.current?.getBoundingClientRect();
-    if (!containerRect) {
-      setToolbarPos(null);
-      return;
-    }
-
-    setToolbarPos({
-      x: containerRect.left + anchorX,
-      y: containerRect.top + anchorY - 10,
-    });
-  }, [selectedDrawingId, drawings, viewportVersion]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+    prevSymbolRef.current = symbol;
+  }, [symbol]);
 
   // ── 2. Push data whenever bars changes ───────────────────────────────────
   useEffect(() => {
-    // When bars are wiped (symbol / interval change), reset the first-load
-    // tracker and clear stale series data so old candles don't linger.
-    // prevLenRef must be 0 so the next real data load is treated as a
-    // fresh first-load, causing autoScale + scrollToRealTime to fire.
     if (bars.length === 0) {
       prevLenRef.current = 0;
       candleRef.current?.setData([]);
@@ -576,23 +471,14 @@ export function ChartPanel({
       return;
     }
 
-    // If the interval changed but bars haven't been refreshed yet, keep the
-    // old candles on screen rather than flushing to a blank canvas.  The
-    // prevLenRef reset ensures scrollToRealTime fires on the incoming data.
     if (interval !== prevIntervalRef.current) {
       prevIntervalRef.current = interval;
       prevLenRef.current = 0;
       return;
     }
 
-    // If the chart and series haven't been created yet (edge case where data
-    // arrives before React paints the first frame), defer until the next
-    // re-render. The chartReadyRef is set inside the chart-creation effect,
-    // so once the chart mounts the next bar or tick update will push data.
     if (!chartReadyRef.current) return;
 
-    // lightweight-charts requires data to be strictly ascending by time.
-    // De-duplicate by timestamp (keep last) then sort ascending.
     const dedupMap = new Map<number, (typeof bars)[0]>();
     for (const b of bars) dedupMap.set(b.timestamp, b);
     const sortedBars = Array.from(dedupMap.values()).sort((a, b) => a.timestamp - b.timestamp);
@@ -604,7 +490,6 @@ export function ChartPanel({
     const vwap = calcVWAP(sortedBars);
     const { macd, signal, histogram } = calcMACD(closes);
 
-    // Build [{time, value}] skipping null entries (not enough history yet)
     function linePoints(vals: (number | null)[]) {
       const pts: { time: UTCTimestamp; value: number }[] = [];
       for (let i = 0; i < sortedBars.length; i++) {
@@ -613,7 +498,6 @@ export function ChartPanel({
       return pts;
     }
 
-    // Candlestick
     candleRef.current?.setData(
       sortedBars.map((b) => ({
         time: toUTC(b.timestamp),
@@ -624,46 +508,33 @@ export function ChartPanel({
       }))
     );
 
-    // Overlay lines
     ema9Ref.current?.setData(linePoints(ema9));
     ema20Ref.current?.setData(linePoints(ema20));
     ema200Ref.current?.setData(linePoints(ema200));
     vwapRef.current?.setData(linePoints(vwap));
 
-    // Histogram — 4 colours matching EXGEN/TradingView MACD style:
-    //   ≥0 & rising  → #02c076 (strong bull, EXGEN green)
-    //   ≥0 & falling → #02c07666 (weak bull, muted green)
-    //   <0 & rising  → #f6465d66 (weak bear, muted red)
-    //   <0 & falling → #f6465d (strong bear, EXGEN red)
     const histPts: { time: UTCTimestamp; value: number; color: string }[] = [];
     for (let i = 0; i < sortedBars.length; i++) {
       if (histogram[i] !== null) {
         const val = histogram[i]!;
         const prev = i > 0 ? (histogram[i - 1] ?? val) : val;
         const rising = val >= prev;
-        let color: string;
+        let c: string;
         if (val >= 0) {
-          color = rising ? chartColors.macdHistBull : `${chartColors.macdHistBull}66`;
+          c = rising ? chartColors.macdHistBull : `${chartColors.macdHistBull}66`;
         } else {
-          color = rising ? `${chartColors.macdHistBear}66` : chartColors.macdHistBear;
+          c = rising ? `${chartColors.macdHistBear}66` : chartColors.macdHistBear;
         }
-        histPts.push({ time: toUTC(sortedBars[i].timestamp), value: val, color });
+        histPts.push({ time: toUTC(sortedBars[i].timestamp), value: val, color: c });
       }
     }
     macdHistRef.current?.setData(histPts);
-
     macdLineRef.current?.setData(linePoints(macd));
     signalRef.current?.setData(linePoints(signal));
 
-    // On first load and after interval/symbol changes (data lands outside the
-    // current visible window): scroll to the latest bar and let barSpacing
-    // control how many candles are visible — same behaviour as TradingView.
-    // For ordinary incremental tick updates we leave the user's zoom/pan alone.
     const timeScale = chartRef.current?.timeScale();
     const firstTime = toUTC(sortedBars[0].timestamp);
     const lastTime = toUTC(sortedBars[sortedBars.length - 1].timestamp);
-    // getVisibleRange() returns Time (a union), but we only ever feed UTCTimestamp
-    // values so it's safe to cast here for the comparison below.
     const visibleRange = timeScale?.getVisibleRange() as
       | { from: UTCTimestamp; to: UTCTimestamp }
       | null
@@ -674,15 +545,8 @@ export function ChartPanel({
       !visibleRange || lastTime < visibleRange.from || firstTime > visibleRange.to;
 
     if (isFirstLoad || isOutOfRange) {
-      // Re-enable Y-axis autoscale before scrolling so that a stale price
-      // scale from a previous symbol/interval doesn't hide the new data.
       chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
-      // Apply the TradingView-matched bar spacing for this interval so the
-      // initial view shows ~160–200 readable candles regardless of timeframe,
-      // then anchor the right edge to the most recent bar.
-      timeScale?.applyOptions({
-        barSpacing: INTERVAL_BAR_SPACING[interval],
-      });
+      timeScale?.applyOptions({ barSpacing: INTERVAL_BAR_SPACING[interval] });
       timeScale?.scrollToRealTime();
     }
     prevLenRef.current = sortedBars.length;
@@ -690,21 +554,16 @@ export function ChartPanel({
 
   return (
     <div className="relative h-full w-full" style={{ background: CHART_BG }}>
-      {/* The actual lightweight-charts canvas fills this div */}
       <div ref={containerRef} className="h-full w-full" />
 
-      {/* ── Hover legend ─────────────────────────────────────────────────── */}
-      {hoverData && !inProgressDrawing && !editingDrawingId && (
+      {hoverData && (
         <div
           className="pointer-events-none absolute left-3 top-3 z-10 rounded-lg border border-white/6 px-3 py-2 backdrop-blur-md"
           style={{ background: `${bg.page}e6` }}
         >
-          {/* Time */}
           <p className="mb-1.5" style={{ fontSize: fontSize.xs10, color: color.muted }}>
             {hoverData.time}
           </p>
-
-          {/* OHLC */}
           <div className="flex items-center gap-2 font-mono" style={{ fontSize: fontSize.xs11 }}>
             <span style={{ color: color.muted }}>O</span>
             <span className="text-slate-200">
@@ -735,8 +594,6 @@ export function ChartPanel({
               })}
             </span>
           </div>
-
-          {/* Indicators */}
           <div
             className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 font-mono"
             style={{ fontSize: fontSize.xs10 }}
@@ -789,69 +646,61 @@ export function ChartPanel({
         </div>
       )}
 
-      {/* ── Floating properties toolbar for selected drawing ──────────────── */}
-      {selectedDrawingId &&
-        toolbarPos &&
-        (() => {
-          const selectedDrawing = drawings.find((d) => d.id === selectedDrawingId);
-          if (!selectedDrawing) return null;
-          return createPortal(
-            <DrawingPropertiesMenu
-              drawing={selectedDrawing}
-              position={toolbarPos}
-              onUpdate={(id, updates) => useDrawingStore.getState().updateDrawing(id, updates)}
-              onRemove={(id) => useDrawingStore.getState().removeDrawing(id)}
-              onClose={() => useDrawingStore.getState().selectDrawing(null)}
-              onClone={(drawing) => {
-                let priceOffset: number | undefined;
-                if (candleRef.current && drawing.shape.points.length > 0) {
-                  const y = candleRef.current.priceToCoordinate(drawing.shape.points[0].price);
-                  if (y !== null) {
-                    const newPrice = candleRef.current.coordinateToPrice(y + 32);
-                    if (newPrice !== null) {
-                      priceOffset = newPrice - drawing.shape.points[0].price;
-                    }
-                  }
+      {editingTextInfo && (
+        <div
+          className="absolute inset-0 z-20 flex items-center justify-center bg-black/40"
+          onMouseDown={() => setEditingTextInfo(null)}
+        >
+          <div
+            className="rounded-lg border border-white/10 bg-gray-900 p-3 shadow-xl"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <textarea
+              autoFocus
+              className="w-64 rounded border border-white/10 bg-gray-800 p-2 text-sm text-white outline-none"
+              defaultValue={editingTextInfo.text}
+              onChange={(e) =>
+                setEditingTextInfo((prev) => (prev ? { ...prev, text: e.target.value } : null))
+              }
+              onBlur={(e) => {
+                const drawing = managerRef.current?.getDrawing(editingTextInfo.drawingId);
+                if (drawing) setDrawingText(drawing, e.currentTarget.value);
+                setEditingTextInfo(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  e.stopPropagation();
+                  setEditingTextInfo(null);
+                } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                  e.stopPropagation();
+                  const drawing = managerRef.current?.getDrawing(editingTextInfo.drawingId);
+                  if (drawing) setDrawingText(drawing, e.currentTarget.value);
+                  setEditingTextInfo(null);
                 }
-                useDrawingStore.getState().cloneDrawing(drawing.id, priceOffset);
               }}
-              onReorder={(id, dir) => useDrawingStore.getState().moveDrawing(id, dir)}
-              onEditLabel={(drawing) => beginEdit(drawing.id)}
-            />,
-            document.body
-          );
-        })()}
-
-      {/* ── P6 — On-chart textarea editor for text/note/callout/priceNote ── */}
-      {editingDrawingId &&
-        (() => {
-          const edited = drawings.find((d) => d.id === editingDrawingId);
-          if (!edited) return null;
-          return createPortal(
-            <TextDrawingEditor
-              key={edited.id}
-              drawing={edited}
-              chartRef={chartRef}
-              seriesRef={candleRef}
-              containerRef={containerRef}
-              repositionKey={viewportVersion}
-              onPreview={(id, text) => {
-                // 🔐 Fix 8 — live keystroke preview: keep the store label in
-                // sync while typing so the canvas-sized box matches the
-                // textarea-sized box (no "swimming" during pan).
-                useDrawingStore.getState().updateDrawing(id, { label: text });
-              }}
-              onCommit={(id, text) => {
-                useDrawingStore.getState().updateDrawing(id, { label: text });
-                setEditingDrawingId(null);
-              }}
-              onCancel={() => {
-                setEditingDrawingId(null);
-              }}
-            />,
-            document.body
-          );
-        })()}
+              rows={3}
+            />
+            <div className="mt-2 flex justify-end gap-2">
+              <button
+                className="rounded px-2 py-1 text-xs text-white/60 hover:text-white"
+                onClick={() => setEditingTextInfo(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="rounded bg-purple-600 px-2 py-1 text-xs font-medium text-white hover:bg-purple-500"
+                onClick={() => {
+                  const drawing = managerRef.current?.getDrawing(editingTextInfo.drawingId);
+                  if (drawing) setDrawingText(drawing, editingTextInfo.text);
+                  setEditingTextInfo(null);
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

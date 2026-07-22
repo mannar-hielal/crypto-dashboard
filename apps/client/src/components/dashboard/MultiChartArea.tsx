@@ -32,6 +32,7 @@
 import { useRef, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import type { IChartApi, ISeriesApi } from 'lightweight-charts';
+import { DrawingManager } from 'lightweight-charts-drawing';
 import { useLayoutStore, LAYOUT_PANE_COUNT, DEFAULT_PANE_SIZES } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
 import { ChartPanel } from '@/components/dashboard/ChartPanel';
@@ -92,22 +93,10 @@ function ResizeSplitter({ axis, position, splitterRef, onPointerDown }: Splitter
 // ─── MultiChartArea ───────────────────────────────────────────────────────────
 
 interface MultiChartAreaProps {
-  activeTool?: string;
-  lineTool?: string;
-  textTool?: string;
-  cursorVariant?: string;
-  onExitDrawingMode?: () => void;
-  onEraserExit?: () => void;
+  onDrawingManagerReady?: (paneIndex: number, manager: DrawingManager) => void;
 }
 
-export function MultiChartArea({
-  activeTool,
-  lineTool,
-  textTool,
-  cursorVariant,
-  onExitDrawingMode,
-  onEraserExit,
-}: MultiChartAreaProps) {
+export function MultiChartArea({ onDrawingManagerReady }: MultiChartAreaProps) {
   const layout = useLayoutStore((s) => s.layout);
   const activePane = useLayoutStore((s) => s.activePane);
   const syncOptions = useLayoutStore((s) => s.syncOptions);
@@ -375,15 +364,11 @@ export function MultiChartArea({
             >
               <ChartPanel
                 paneIndex={paneIndex}
+                symbol={panes[paneIndex].symbol}
                 interval={panes[paneIndex].interval}
                 onChartReady={(chart, series) => handleChartReady(paneIndex, chart, series)}
                 onChartDestroy={() => handleChartDestroy(paneIndex)}
-                activeTool={activeTool}
-                lineTool={lineTool}
-                textTool={textTool}
-                cursorVariant={cursorVariant}
-                onExitDrawingMode={onExitDrawingMode}
-                onEraserExit={onEraserExit}
+                onDrawingManagerReady={(manager) => onDrawingManagerReady?.(paneIndex, manager)}
               />
 
               {isActive && paneCount > 1 && (
