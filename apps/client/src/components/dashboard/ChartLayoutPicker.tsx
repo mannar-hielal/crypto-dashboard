@@ -6,8 +6,9 @@
  * Also surfaces sync-option toggles (symbol / interval / crosshair / time range).
  */
 
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { motion } from 'framer-motion';
 import { useLayoutStore } from '@/store/layoutStore';
 import type { LayoutId, SyncOptions } from '@/store/layoutStore';
 import { bg, color, fontSize } from '@/lib/tokens';
@@ -57,13 +58,21 @@ export function ChartLayoutPicker() {
   const toggleSync = useLayoutStore((s) => s.toggleSync);
 
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const currentIcon = LAYOUT_ICONS[layout];
+
+  function getMenuPosition() {
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (!rect) return { top: 0, left: 0 };
+    return { top: rect.bottom + 6, left: rect.left };
+  }
 
   return (
     <div className="relative shrink-0">
       {/* Trigger button — shows the active layout icon */}
       <motion.button
+        ref={triggerRef}
         onClick={() => setOpen((p) => !p)}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
@@ -86,8 +95,9 @@ export function ChartLayoutPicker() {
         </svg>
       </motion.button>
 
-      <AnimatePresence>
-        {open && (
+      {/* Rendered via portal to avoid overflow clip from SymbolBar container */}
+      {open &&
+        createPortal(
           <>
             {/* Backdrop */}
             <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
@@ -97,8 +107,8 @@ export function ChartLayoutPicker() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -6, scale: 0.97 }}
               transition={{ duration: 0.14 }}
-              className="absolute left-0 top-full z-50 mt-1.5 w-56 overflow-hidden rounded-xl border border-white/8 shadow-2xl"
-              style={{ background: bg.panel }}
+              className="fixed z-50 w-56 overflow-hidden rounded-xl border border-white/8 shadow-2xl"
+              style={{ background: bg.panel, ...getMenuPosition() }}
             >
               {/* ── Layout grid ───────────────────────────────────────────── */}
               <div className="border-b border-white/6 px-3 pb-3 pt-2.5">
@@ -184,9 +194,9 @@ export function ChartLayoutPicker() {
                 })}
               </div>
             </motion.div>
-          </>
+          </>,
+          document.body
         )}
-      </AnimatePresence>
     </div>
   );
 }
