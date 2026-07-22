@@ -32,10 +32,10 @@ export const INTERVAL_LABELS: Record<Interval, string> = {
  *   1d  8 px → ~150 candles ≈   5 months
  */
 export const INTERVAL_BAR_SPACING: Record<Interval, number> = {
-  '1m': 6,
-  '5m': 6,
-  '15m': 6,
-  '1h': 6,
+  '1m': 3,
+  '5m': 3,
+  '15m': 4,
+  '1h': 5,
   '4h': 6,
   '1d': 8,
 };
