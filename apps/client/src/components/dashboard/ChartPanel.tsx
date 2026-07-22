@@ -15,7 +15,12 @@ import type { Anchor, IDrawing, Point } from 'lightweight-charts-drawing';
 import { paneStores } from '@/store/paneStore';
 import { calcEMA, calcVWAP, calcMACD } from '@/lib/indicators';
 import { bg, color, chart as chartColors, font, fontSize } from '@/lib/tokens';
-import { INTERVAL_BAR_SPACING, type Interval } from '@/lib/markets';
+import {
+  INTERVAL_BAR_SPACING,
+  getPresetSeconds,
+  type Interval,
+  type TimeRangePreset,
+} from '@/lib/markets';
 import { restoreDrawings, persistDrawings, getPersistenceKey } from '@/lib/drawingManager';
 
 const CHART_BG = chartColors.bg;
@@ -26,6 +31,7 @@ interface ChartPanelProps {
   paneIndex: 0 | 1 | 2 | 3;
   symbol: string;
   interval: Interval;
+  timeRangePreset?: TimeRangePreset | null;
   onChartReady?: (chart: IChartApi, series: ISeriesApi<'Candlestick'>) => void;
   onChartDestroy?: () => void;
   onDrawingManagerReady?: (manager: DrawingManager) => void;
@@ -77,6 +83,7 @@ export function ChartPanel({
   paneIndex,
   symbol,
   interval,
+  timeRangePreset,
   onChartReady,
   onChartDestroy,
   onDrawingManagerReady,
@@ -567,10 +574,31 @@ export function ChartPanel({
     if (isFirstLoad || isOutOfRange) {
       chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
       timeScale?.applyOptions({ barSpacing: INTERVAL_BAR_SPACING[interval] });
-      timeScale?.scrollToRealTime();
+      if (!timeRangePreset) {
+        timeScale?.scrollToRealTime();
+      }
     }
     prevLenRef.current = sortedBars.length;
-  }, [bars, interval]);
+  }, [bars, interval, timeRangePreset]);
+
+  // ── 3. Apply time-range preset when it changes ────────────────────────────
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart || !timeRangePreset) return;
+    if (bars.length === 0) return;
+
+    const seconds = getPresetSeconds(timeRangePreset);
+
+    if (seconds === Infinity) {
+      chart.timeScale().fitContent();
+    } else {
+      const now = Math.floor(Date.now() / 1000) as UTCTimestamp;
+      chart.timeScale().setVisibleRange({
+        from: (now - seconds) as UTCTimestamp,
+        to: now,
+      });
+    }
+  }, [timeRangePreset, interval, bars]);
 
   // ── Zoom-in selection handlers ──────────────────────────────────────────
   const handleZoomPointerDown = useCallback((e: React.PointerEvent) => {

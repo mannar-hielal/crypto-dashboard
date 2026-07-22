@@ -120,6 +120,9 @@ DashboardPage
 ```
 
 - `tokens.ts` is the single source of truth for colors — no hex in components.
+- **New UI components MUST use CSS Modules** (`*.module.css`) with camelCase class names. Existing Tailwind-utility components remain as-is.
+- No inline `style` props except for dynamic values from `tokens.ts`.
+- Drawing tool primitives live in `src/lib/drawing/` (types, renderers, composites).
 - `cursors.tsx` exports SVG icon functions + `CURSOR_CSS_MAP` (data-URI cursors).
 - `lineTools.tsx` exports SVG icon functions + `LINE_TOOLS` array — UI only, no drawing logic.
 

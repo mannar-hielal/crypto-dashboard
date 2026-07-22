@@ -88,7 +88,12 @@ function useSinglePaneFeed(
     marketApi
       .getCandles(symbol, interval, INTERVAL_FETCH_LIMIT[interval])
       .then((res) => {
-        if (!cancelled && !store.getState().wsSnapshotReceived) {
+        if (cancelled) return;
+        // Use REST if the WS snapshot hasn't arrived yet, or if it has fewer
+        // bars — common for higher intervals (1h/4h/1d) where the server-side
+        // aggregator needs hours/days to build up history.
+        const currentBars = store.getState().bars.length;
+        if (!store.getState().wsSnapshotReceived || res.candles.length > currentBars) {
           const last = res.candles[res.candles.length - 1];
           if (last) lastKnownPrices.set(symbol, last.close);
           store.getState().setSnapshot(res.candles, null);

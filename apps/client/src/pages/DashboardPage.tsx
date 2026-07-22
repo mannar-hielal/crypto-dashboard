@@ -29,6 +29,9 @@ import type { OrderTab } from '@/components/dashboard/TradingPanel';
 import { PositionEditPanel } from '@/components/dashboard/PositionEditPanel';
 import { PendingOrderEditPanel } from '@/components/dashboard/PendingOrderEditPanel';
 import { bg, color, fontSize } from '@/lib/tokens';
+import { TIME_RANGE_PRESETS, getPresetSeconds } from '@/lib/markets';
+import type { UTCTimestamp } from 'lightweight-charts';
+import { TimeRangeSwitcher } from '@/components/dashboard/TimeRangeSwitcher';
 
 // ─── Edit target type ────────────────────────────────────────────────────────
 type EditTarget =
@@ -149,6 +152,8 @@ export function DashboardInner() {
   const panes = useLayoutStore((s) => s.panes);
   const activePaneConfig = panes[activePaneIndex] ?? panes[0];
   const symbol = activePaneConfig.symbol;
+  const setPaneTimeRangePreset = useLayoutStore((s) => s.setPaneTimeRangePreset);
+  const setPaneInterval = useLayoutStore((s) => s.setPaneInterval);
   const setBottomPanelHeight = useLayoutStore((s) => s.setBottomPanelHeight);
 
   // 🔄 Sync paper trading state with DB on mount (if authenticated)
@@ -423,6 +428,35 @@ export function DashboardInner() {
               />
             </ErrorBoundary>
           </motion.div>
+
+          {/* ── Time-range preset bar ──────────────────────────────────────────── */}
+          <div
+            className="flex shrink-0 items-center justify-between border-t border-white/6 px-3"
+            style={{ height: 28, background: 'rgba(0,0,0,0.15)' }}
+          >
+            <span style={{ fontSize: fontSize.xs10, color: color.muted }}>Range</span>
+            <TimeRangeSwitcher
+              activePreset={panes[activePaneIndex]?.timeRangePreset ?? null}
+              onPresetChange={(preset) => {
+                setPaneTimeRangePreset(activePaneIndex, preset);
+                if (!preset) return;
+                const p = TIME_RANGE_PRESETS.find((pr) => pr.key === preset);
+                if (p) setPaneInterval(activePaneIndex, p.interval);
+                const chart = chartRefs.current[activePaneIndex];
+                if (!chart) return;
+                const seconds = getPresetSeconds(preset);
+                if (seconds === Infinity) {
+                  chart.timeScale().fitContent();
+                } else {
+                  const now = Math.floor(Date.now() / 1000) as UTCTimestamp;
+                  chart.timeScale().setVisibleRange({
+                    from: (now - seconds) as UTCTimestamp,
+                    to: now,
+                  });
+                }
+              }}
+            />
+          </div>
 
           {/* Paper trading panel.
               Normal: fixed pixel height animated via spring.

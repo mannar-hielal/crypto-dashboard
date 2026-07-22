@@ -351,85 +351,88 @@ export function MultiChartArea({
   }
 
   return (
-    <div
-      ref={gridRef}
-      className="relative grid h-full w-full"
-      style={{ gridTemplateColumns, gridTemplateRows }}
-    >
-      {(Array.from({ length: paneCount }) as undefined[]).map((_, i) => {
-        const paneIndex = i as 0 | 1 | 2 | 3;
-        const isActive = activePane === paneIndex;
+    <div className="absolute inset-0 flex flex-col">
+      <div
+        ref={gridRef}
+        className="relative grid min-h-0 flex-1"
+        style={{ gridTemplateColumns, gridTemplateRows }}
+      >
+        {(Array.from({ length: paneCount }) as undefined[]).map((_, i) => {
+          const paneIndex = i as 0 | 1 | 2 | 3;
+          const isActive = activePane === paneIndex;
 
-        return (
-          <div key={paneIndex} className="relative flex min-h-0 min-w-0 flex-col overflow-hidden">
-            {paneCount > 1 && (
-              <PaneHeader
-                paneIndex={paneIndex}
-                isActive={isActive}
-                onActivate={() => setActivePane(paneIndex)}
-              />
-            )}
-
-            <div
-              className="relative flex-1 overflow-hidden"
-              onClick={() => setActivePane(paneIndex)}
-            >
-              <ChartPanel
-                paneIndex={paneIndex}
-                symbol={panes[paneIndex].symbol}
-                interval={panes[paneIndex].interval}
-                onChartReady={(chart, series) => handleChartReady(paneIndex, chart, series)}
-                onChartDestroy={() => handleChartDestroy(paneIndex)}
-                onDrawingManagerReady={(manager) => onDrawingManagerReady?.(paneIndex, manager)}
-                activeToolType={activeToolType}
-                onToolChange={onToolChange}
-              />
-
-              {isActive && paneCount > 1 && (
-                <motion.div
-                  key={`border-${paneIndex}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="pointer-events-none absolute inset-0"
-                  style={{
-                    border: `1.5px solid ${color.purpleDark}60`,
-                    boxShadow: `inset 0 0 0 1px ${color.purpleDark}20`,
-                  }}
+          return (
+            <div key={paneIndex} className="relative flex min-h-0 min-w-0 flex-col overflow-hidden">
+              {paneCount > 1 && (
+                <PaneHeader
+                  paneIndex={paneIndex}
+                  isActive={isActive}
+                  onActivate={() => setActivePane(paneIndex)}
                 />
               )}
+
+              <div
+                className="relative flex-1 overflow-hidden"
+                onClick={() => setActivePane(paneIndex)}
+              >
+                <ChartPanel
+                  paneIndex={paneIndex}
+                  symbol={panes[paneIndex].symbol}
+                  interval={panes[paneIndex].interval}
+                  timeRangePreset={panes[paneIndex].timeRangePreset}
+                  onChartReady={(chart, series) => handleChartReady(paneIndex, chart, series)}
+                  onChartDestroy={() => handleChartDestroy(paneIndex)}
+                  onDrawingManagerReady={(manager) => onDrawingManagerReady?.(paneIndex, manager)}
+                  activeToolType={activeToolType}
+                  onToolChange={onToolChange}
+                />
+
+                {isActive && paneCount > 1 && (
+                  <motion.div
+                    key={`border-${paneIndex}`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="pointer-events-none absolute inset-0"
+                    style={{
+                      border: `1.5px solid ${color.purpleDark}60`,
+                      boxShadow: `inset 0 0 0 1px ${color.purpleDark}20`,
+                    }}
+                  />
+                )}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
 
-      {/* ── Column splitters (2h, 3h, 4) ─────────────────────────────────── */}
-      {paneCount > 1 &&
-        colSplitterPositions.map((pos, k) => (
-          <ResizeSplitter
-            key={`col-split-${k}`}
-            axis="col"
-            position={pos}
-            splitterRef={(el) => {
-              colSplitterRefs.current[k] = el;
-            }}
-            onPointerDown={(e) => handleColSplitterPointerDown(e, k)}
-          />
-        ))}
+        {/* ── Column splitters (2h, 3h, 4) ─────────────────────────────────── */}
+        {paneCount > 1 &&
+          colSplitterPositions.map((pos, k) => (
+            <ResizeSplitter
+              key={`col-split-${k}`}
+              axis="col"
+              position={pos}
+              splitterRef={(el) => {
+                colSplitterRefs.current[k] = el;
+              }}
+              onPointerDown={(e) => handleColSplitterPointerDown(e, k)}
+            />
+          ))}
 
-      {/* ── Row splitters (2v, 4) ─────────────────────────────────────────── */}
-      {paneCount > 1 &&
-        rowSplitterPositions.map((pos, k) => (
-          <ResizeSplitter
-            key={`row-split-${k}`}
-            axis="row"
-            position={pos}
-            splitterRef={(el) => {
-              rowSplitterRefs.current[k] = el;
-            }}
-            onPointerDown={(e) => handleRowSplitterPointerDown(e, k)}
-          />
-        ))}
+        {/* ── Row splitters (2v, 4) ─────────────────────────────────────────── */}
+        {paneCount > 1 &&
+          rowSplitterPositions.map((pos, k) => (
+            <ResizeSplitter
+              key={`row-split-${k}`}
+              axis="row"
+              position={pos}
+              splitterRef={(el) => {
+                rowSplitterRefs.current[k] = el;
+              }}
+              onPointerDown={(e) => handleRowSplitterPointerDown(e, k)}
+            />
+          ))}
+      </div>
     </div>
   );
 }

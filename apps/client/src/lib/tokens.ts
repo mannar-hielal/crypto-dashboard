@@ -18,6 +18,9 @@ export const bg = {
   panel: '#25234e', // panel / header / card background  (Exgen card bg: #25234E)
   footer: '#1e1d34', // footer body background  (sampled from footer.png)
   surface: '#3e3c73', // input / card / elevated surface  (sampled from header.png)
+  tooltip: '#25234e', // tooltip background — same as panel by default
+  modal: '#1e1d34', // modal overlay background
+  input: '#3e3c73', // input field background — same as surface
 } as const;
 
 // ─── Brand / UI colors ───────────────────────────────────────────────────────
@@ -95,6 +98,77 @@ export const gradient = {
   brand: 'linear-gradient(90deg, #FE4BD1 0%, #3F5FF5 100%)',
   brandFrom: '#FE4BD1', // pink-magenta — gradient start (0%)
   brandTo: '#3F5FF5', // blue-purple  — gradient end   (100%)
+} as const;
+
+// ─── Border colors ───────────────────────────────────────────────────────────
+
+export const border = {
+  default: 'rgba(255,255,255,0.07)',
+  hover: 'rgba(255,255,255,0.12)',
+  active: color.purpleDark,
+  input: 'rgba(255,255,255,0.10)',
+  divider: 'rgba(255,255,255,0.06)',
+  card: 'rgba(255,255,255,0.08)',
+} as const;
+
+// ─── Shadows ─────────────────────────────────────────────────────────────────
+
+export const shadow = {
+  card: '0 2px 8px rgba(0,0,0,0.3)',
+  dropdown: '0 4px 16px rgba(0,0,0,0.4)',
+  modal: '0 8px 32px rgba(0,0,0,0.5)',
+  tooltip: '0 2px 8px rgba(0,0,0,0.4)',
+} as const;
+
+// ─── Toolbar (LeftToolbar / ChartToolbar) ────────────────────────────────────
+
+export const toolbar = {
+  buttonBg: 'transparent',
+  buttonBgHover: 'rgba(255,255,255,0.08)',
+  buttonBgActive: `${color.purpleDark}20`,
+  buttonIcon: color.muted,
+  buttonIconActive: color.purple,
+  buttonIconHover: color.white,
+  divider: 'rgba(255,255,255,0.06)',
+  height: '40px',
+} as const;
+
+// ─── Focus ring (keyboard-only) ──────────────────────────────────────────────
+
+export const focusRing = {
+  width: '2px',
+  offset: '3px',
+  color: color.purpleDark,
+  radius: 'inherit',
+} as const;
+
+// ─── Size scale ──────────────────────────────────────────────────────────────
+
+export const size = {
+  xs: 2, // 28px — toolbar icon buttons, badge counts
+  sm: 3, // 34px — small panel controls
+  md: 4, // 40px — default button height
+  lg: 5, // 48px — primary CTAs
+  xl: 6, // 56px — large inputs
+  xxl: 7, // 80px — hero elements
+} as const;
+
+// ─── Z-index layers ──────────────────────────────────────────────────────────
+
+export const zIndex = {
+  dropdown: 50,
+  tooltip: 100,
+  modal: 200,
+  toast: 300,
+  drawingOverlay: 400,
+} as const;
+
+// ─── Interaction tolerances (drawing tools / hit testing) ────────────────────
+
+export const interaction = {
+  tolerance: { series: 4, anchor: 6, curve: 4 },
+  anchorRadius: { regular: 6, touch: 13 },
+  anchorStroke: { regular: 1, touch: 3, selected: 3, touchSelected: 0 },
 } as const;
 
 // ─── Border radii ────────────────────────────────────────────────────────────

@@ -346,6 +346,83 @@
   background: oklch(1 0 0 / 20%);
 }
 
+/* ── Focus ring — keyboard-only (hidden on mouse click) ──────────────── */
+
+.focus-ring {
+  position: relative;
+}
+
+.focus-ring::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border: 2px solid var(--exgen-purple-dark);
+  border-radius: inherit;
+  pointer-events: none;
+  display: none;
+}
+
+.focus-ring:focus:not(:focus-visible)::after {
+  display: none;
+}
+
+.focus-ring:focus-visible::after {
+  display: block;
+}
+
+/* ── Toolbar button ────────────────────────────────────────────────────── */
+
+.toolbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.25rem;
+  color: var(--exgen-muted);
+  background: transparent;
+  border: none;
+  cursor: default;
+  position: relative;
+}
+
+.toolbar-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--exgen-white);
+}
+
+.toolbar-btn.active {
+  color: var(--exgen-purple);
+}
+
+.toolbar-btn.active::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--exgen-purple-dark) 20%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--exgen-purple-dark) 40%, transparent);
+}
+
+.toolbar-btn:focus-visible {
+  outline: none;
+}
+
+.toolbar-btn:focus-visible::after {
+  display: block;
+}
+
+/* ── Toolbar divider ───────────────────────────────────────────────────── */
+
+.toolbar-divider {
+  width: 1.5rem;
+  height: 1px;
+  border-radius: 9999px;
+  margin-top: 0.375rem;
+  margin-bottom: 0.375rem;
+  background: rgba(255, 255, 255, 0.06);
+}
+
 /* ── Legal pages (.legal-content) ────────────────────────────────────────── */
 
 .legal-content section {

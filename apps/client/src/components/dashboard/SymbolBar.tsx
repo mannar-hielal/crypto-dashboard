@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import NumberFlow from '@number-flow/react';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/shallow';
@@ -18,10 +19,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useLayoutStore } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
 import { usePaperStore } from '@/store/paperStore';
-import { SYMBOLS, INTERVALS, INTERVAL_LABELS } from '@/lib/markets';
+import { SYMBOLS } from '@/lib/markets';
 import { bg, color, fontSize } from '@/lib/tokens';
+
 import { SymbolPair } from '@/components/ui/CryptoIcon';
 import { ChartLayoutPicker } from '@/components/dashboard/ChartLayoutPicker';
+import { IntervalDropdown } from '@/components/dashboard/IntervalDropdown';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -83,6 +86,7 @@ export function SymbolBar({
   const paneConfig = useLayoutStore((s) => s.panes[s.activePane]);
   const setPaneSymbol = useLayoutStore((s) => s.setPaneSymbol);
   const setPaneInterval = useLayoutStore((s) => s.setPaneInterval);
+  const setPaneTimeRangePreset = useLayoutStore((s) => s.setPaneTimeRangePreset);
 
   const { symbol, interval } = paneConfig;
 
@@ -130,6 +134,8 @@ export function SymbolBar({
 
   const [symbolOpen, setSymbolOpen] = useState(false);
   const [symbolSearch, setSymbolSearch] = useState('');
+  const [symbolMenuPos, setSymbolMenuPos] = useState({ top: 0, left: 0 });
+  const symbolTriggerRef = useRef<HTMLButtonElement>(null);
 
   const isSyncing = usePaperStore((s) => s.isSyncing);
   const lastSyncAt = usePaperStore((s) => s.lastSyncAt);
@@ -196,9 +202,12 @@ export function SymbolBar({
       {/* ── Symbol picker ─────────────────────────────────────────────────── */}
       <div className="relative shrink-0">
         <motion.button
+          ref={symbolTriggerRef}
           onClick={() => {
             setSymbolOpen((p) => !p);
             setSymbolSearch('');
+            const rect = symbolTriggerRef.current?.getBoundingClientRect();
+            if (rect) setSymbolMenuPos({ top: rect.bottom + 6, left: rect.left });
           }}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
@@ -222,8 +231,8 @@ export function SymbolBar({
           )}
         </motion.button>
 
-        <AnimatePresence>
-          {symbolOpen && (
+        {symbolOpen &&
+          createPortal(
             <>
               <div className="fixed inset-0 z-40" onClick={() => setSymbolOpen(false)} />
               <motion.div
@@ -231,8 +240,12 @@ export function SymbolBar({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -6, scale: 0.97 }}
                 transition={{ duration: 0.15 }}
-                className="absolute left-0 top-full z-50 mt-1.5 w-52 overflow-hidden rounded-xl border border-white/8 shadow-2xl"
-                style={{ background: bg.panel }}
+                className="fixed z-50 w-52 overflow-hidden rounded-xl border border-white/8 shadow-2xl"
+                style={{
+                  background: bg.panel,
+                  top: symbolMenuPos.top,
+                  left: symbolMenuPos.left,
+                }}
               >
                 <div className="flex items-center gap-2 border-b border-white/6 px-3 py-2">
                   <Search className="h-3 w-3 shrink-0" style={{ color: color.muted }} />
@@ -292,9 +305,9 @@ export function SymbolBar({
                   )}
                 </div>
               </motion.div>
-            </>
+            </>,
+            document.body
           )}
-        </AnimatePresence>
       </div>
 
       {/* Divider */}
@@ -410,35 +423,14 @@ export function SymbolBar({
       {/* Divider */}
       <span className="h-4 w-px shrink-0 bg-white/8" />
 
-      {/* ── Timeframe buttons ─────────────────────────────────────────────── */}
-      <div className="flex shrink-0 items-center gap-0.5">
-        {INTERVALS.map((tf) => (
-          <motion.button
-            key={tf}
-            onClick={() => setPaneInterval(activePane, tf)}
-            title={INTERVAL_LABELS[tf]}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className={`relative rounded px-2.5 py-1 font-semibold transition-colors ${interval === tf ? 'text-white' : 'hover:text-white'}`}
-            style={{ fontSize: fontSize.xs11, color: interval === tf ? 'white' : color.muted }}
-          >
-            {interval === tf && (
-              <motion.span
-                layoutId="active-tf"
-                className="absolute inset-0 rounded"
-                style={{ background: `${color.purpleDark}20` }}
-                transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-              />
-            )}
-            <span
-              className="relative z-10"
-              style={{ color: interval === tf ? color.purple : undefined }}
-            >
-              {tf}
-            </span>
-          </motion.button>
-        ))}
-      </div>
+      {/* ── Timeframe dropdown ────────────────────────────────────────────── */}
+      <IntervalDropdown
+        value={interval}
+        onChange={(tf) => {
+          setPaneTimeRangePreset(activePane, null);
+          setPaneInterval(activePane, tf);
+        }}
+      />
 
       {/* Divider */}
       <span className="h-4 w-px shrink-0 bg-white/8" />
