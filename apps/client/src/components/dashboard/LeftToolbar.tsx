@@ -231,6 +231,8 @@ export function LeftToolbar({
   // ── Get the active group for popup menu ─────────────────────────────────
   const activePopupGroup = popupMenu ? TOOL_GROUPS.find((g) => g.id === popupMenu.groupId) : null;
 
+  const zoomActive = activeToolType === 'zoom-in';
+
   return (
     <aside
       ref={asideRef}
@@ -239,13 +241,7 @@ export function LeftToolbar({
     >
       {MAIN_BUTTONS.map((tool, i) => {
         if (tool === null) {
-          return (
-            <div
-              key={`sep-${i}`}
-              className="my-1.5 h-px w-6 rounded-full"
-              style={{ background: `color-mix(in srgb, ${color.white} 6%, transparent)` }}
-            />
-          );
+          return <div key={`sep-${i}`} className="toolbar-divider" />;
         }
 
         const Icon = tool.icon;
@@ -273,20 +269,12 @@ export function LeftToolbar({
               onContextMenu={handleCursorContextMenu}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              className="group relative flex h-10 w-10 items-center justify-center rounded"
-              style={{
-                background: toolActive ? `${color.purpleDark}20` : 'transparent',
-                color: toolActive ? color.purple : color.muted,
-              }}
+              className={`toolbar-btn focus-ring${toolActive ? ' active' : ''}`}
             >
               {toolActive && (
                 <motion.span
                   layoutId="toolbar-active"
                   className="absolute inset-0 rounded"
-                  style={{
-                    background: `${color.purpleDark}20`,
-                    boxShadow: `0 0 0 1px ${color.purpleDark}40`,
-                  }}
                   transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                 />
               )}
@@ -325,20 +313,12 @@ export function LeftToolbar({
             onContextMenu={(e) => hasSubmenu && handleContextMenu(e, tool.id)}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            className="group relative flex h-10 w-10 items-center justify-center rounded"
-            style={{
-              background: toolActive ? `${color.purpleDark}20` : 'transparent',
-              color: toolActive ? color.purple : color.muted,
-            }}
+            className={`toolbar-btn focus-ring${toolActive ? ' active' : ''}`}
           >
             {toolActive && (
               <motion.span
                 layoutId="toolbar-active"
                 className="absolute inset-0 rounded"
-                style={{
-                  background: `${color.purpleDark}20`,
-                  boxShadow: `0 0 0 1px ${color.purpleDark}40`,
-                }}
                 transition={{ type: 'spring', stiffness: 500, damping: 35 }}
               />
             )}
@@ -371,16 +351,12 @@ export function LeftToolbar({
         );
       })}
 
-      {/* ── Zoom controls ───────────────────────────────────────────────── */}
-      <div
-        className="my-1.5 h-px w-6 rounded-full"
-        style={{ background: `color-mix(in srgb, ${color.white} 6%, transparent)` }}
-      />
+      <div className="toolbar-divider" />
       <motion.button
         data-tooltip="Zoom in"
         aria-label="Zoom in"
         onClick={() => {
-          if (activeToolType === 'zoom-in') {
+          if (zoomActive) {
             setActiveToolType(null);
             onToolChange?.(null);
           } else {
@@ -390,20 +366,12 @@ export function LeftToolbar({
         }}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
-        className="group relative flex h-10 w-10 items-center justify-center rounded"
-        style={{
-          background: activeToolType === 'zoom-in' ? `${color.purpleDark}20` : 'transparent',
-          color: activeToolType === 'zoom-in' ? color.purple : color.muted,
-        }}
+        className={`toolbar-btn focus-ring${zoomActive ? ' active' : ''}`}
       >
-        {activeToolType === 'zoom-in' && (
+        {zoomActive && (
           <motion.span
             layoutId="toolbar-active"
             className="absolute inset-0 rounded"
-            style={{
-              background: `${color.purpleDark}20`,
-              boxShadow: `0 0 0 1px ${color.purpleDark}40`,
-            }}
             transition={{ type: 'spring', stiffness: 500, damping: 35 }}
           />
         )}
@@ -415,8 +383,7 @@ export function LeftToolbar({
         onClick={onZoomOut}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
-        className="flex h-10 w-10 items-center justify-center rounded"
-        style={{ color: color.muted }}
+        className="toolbar-btn"
       >
         <ZoomOut size={24} />
       </motion.button>
