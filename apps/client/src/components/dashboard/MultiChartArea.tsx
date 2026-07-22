@@ -94,9 +94,17 @@ function ResizeSplitter({ axis, position, splitterRef, onPointerDown }: Splitter
 
 interface MultiChartAreaProps {
   onDrawingManagerReady?: (paneIndex: number, manager: DrawingManager) => void;
+  onChartRefReady?: (paneIndex: number, chart: IChartApi) => void;
+  activeToolType?: string | null;
+  onToolChange?: (toolType: string | null) => void;
 }
 
-export function MultiChartArea({ onDrawingManagerReady }: MultiChartAreaProps) {
+export function MultiChartArea({
+  onDrawingManagerReady,
+  onChartRefReady,
+  activeToolType,
+  onToolChange,
+}: MultiChartAreaProps) {
   const layout = useLayoutStore((s) => s.layout);
   const activePane = useLayoutStore((s) => s.activePane);
   const syncOptions = useLayoutStore((s) => s.syncOptions);
@@ -159,6 +167,7 @@ export function MultiChartArea({ onDrawingManagerReady }: MultiChartAreaProps) {
     (paneIndex: number, chart: IChartApi, series: ISeriesApi<'Candlestick'>) => {
       chartRefs.current[paneIndex] = chart;
       seriesRefs.current[paneIndex] = series;
+      onChartRefReady?.(paneIndex, chart);
 
       chart.subscribeCrosshairMove((param) => {
         if (!syncRef.current.crosshair) return;
@@ -211,6 +220,9 @@ export function MultiChartArea({ onDrawingManagerReady }: MultiChartAreaProps) {
         isSyncingTimeRange.current = false;
       });
     },
+    // onChartRefReady is intentionally excluded — it's a stable callback setter that should
+    // never trigger re-subscription of crosshair/timeRange handlers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
 
@@ -369,6 +381,8 @@ export function MultiChartArea({ onDrawingManagerReady }: MultiChartAreaProps) {
                 onChartReady={(chart, series) => handleChartReady(paneIndex, chart, series)}
                 onChartDestroy={() => handleChartDestroy(paneIndex)}
                 onDrawingManagerReady={(manager) => onDrawingManagerReady?.(paneIndex, manager)}
+                activeToolType={activeToolType}
+                onToolChange={onToolChange}
               />
 
               {isActive && paneCount > 1 && (

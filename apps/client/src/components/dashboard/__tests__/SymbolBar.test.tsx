@@ -75,7 +75,14 @@ describe('SymbolBar trade button', () => {
 
   it('is disabled when the trading panel is already open', () => {
     const onToggleTrading = vi.fn();
-    render(<SymbolBar tradingPanelOpen onToggleTrading={onToggleTrading} />);
+    render(
+      <SymbolBar
+        tradingPanelOpen
+        onToggleTrading={onToggleTrading}
+        leftToolbarOpen
+        onToggleLeftToolbar={vi.fn()}
+      />
+    );
 
     const tradeButton = screen.getByRole('button', { name: /trade/i }) as HTMLButtonElement;
     expect(tradeButton.disabled).toBe(true);
@@ -87,7 +94,14 @@ describe('SymbolBar trade button', () => {
 
   it('calls onToggleTrading when the trading panel is closed', () => {
     const onToggleTrading = vi.fn();
-    render(<SymbolBar tradingPanelOpen={false} onToggleTrading={onToggleTrading} />);
+    render(
+      <SymbolBar
+        tradingPanelOpen={false}
+        onToggleTrading={onToggleTrading}
+        leftToolbarOpen={false}
+        onToggleLeftToolbar={vi.fn()}
+      />
+    );
 
     const tradeButton = screen.getByRole('button', { name: /trade/i }) as HTMLButtonElement;
     expect(tradeButton.disabled).toBe(false);

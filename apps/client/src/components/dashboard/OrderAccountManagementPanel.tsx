@@ -844,7 +844,7 @@ export function OrderAccountManagementPanel({
 
             {/* ── Tab bar ─────────────────────────────────────────────────── */}
             <div
-              className="relative flex items-center border-b border-white/6"
+              className="relative flex items-center overflow-x-auto border-b border-white/6 scrollbar-none"
               style={{ background: bg.panel }}
             >
               {(['positions', 'orders', 'orderhistory', 'balancehistory', 'journal'] as const).map(
@@ -1102,7 +1102,7 @@ export function OrderAccountManagementPanel({
               </div>
             )}
 
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="flex min-h-0 flex-1 flex-col overflow-x-auto overflow-y-hidden">
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
                   key={infoTab}
@@ -1110,7 +1110,7 @@ export function OrderAccountManagementPanel({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
                   transition={{ duration: 0.14, ease: 'easeOut' }}
-                  className="flex min-h-0 flex-1 flex-col overflow-hidden"
+                  className="flex min-h-0 flex-1 flex-col overflow-x-auto overflow-y-hidden"
                 >
                   {/* ════ Positions ════════════════════════════════════════════════ */}
                   {infoTab === 'positions' &&
@@ -1124,7 +1124,7 @@ export function OrderAccountManagementPanel({
                         No open positions
                       </motion.div>
                     ) : (
-                      <div className="flex-1 overflow-y-auto">
+                      <div className="flex-1 overflow-auto">
                         <table className="w-full text-xs">
                           <thead>
                             <tr
@@ -1417,7 +1417,7 @@ export function OrderAccountManagementPanel({
                         No orders
                       </motion.div>
                     ) : (
-                      <div className="flex-1 overflow-y-auto">
+                      <div className="flex-1 overflow-auto">
                         <table className="w-full text-xs">
                           <thead>
                             <tr
@@ -1888,7 +1888,7 @@ export function OrderAccountManagementPanel({
                         No order history
                       </motion.div>
                     ) : (
-                      <div className="flex-1 overflow-y-auto">
+                      <div className="flex-1 overflow-auto">
                         <table className="w-full text-xs">
                           <thead>
                             <tr
@@ -2095,7 +2095,7 @@ export function OrderAccountManagementPanel({
                         No balance history yet
                       </motion.div>
                     ) : (
-                      <div className="flex-1 overflow-y-auto">
+                      <div className="flex-1 overflow-auto">
                         <table className="w-full text-xs">
                           <thead>
                             <tr
@@ -2271,7 +2271,7 @@ export function OrderAccountManagementPanel({
                           </button>
                         </motion.div>
                       ) : (
-                        <div className="flex-1 overflow-y-auto">
+                        <div className="flex-1 overflow-auto">
                           <table className="w-full">
                             <thead>
                               <tr

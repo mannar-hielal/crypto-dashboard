@@ -215,11 +215,15 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
       const MIN_SNAPSHOT = 50;
       const snapshot = fastify.bybit.getSnapshot(symbol, interval);
       if (snapshot.length >= MIN_SNAPSHOT) {
-        socket.send(JSON.stringify({ type: 'snapshot', bars: snapshot }));
+        if (socket.readyState === 1) {
+          socket.send(JSON.stringify({ type: 'snapshot', bars: snapshot }));
+        }
       } else if (snapshot.length > 0) {
         // Aggregator has a few bars — send them as a preview, then replace
         // with a full REST-backed snapshot.
-        socket.send(JSON.stringify({ type: 'snapshot', bars: snapshot }));
+        if (socket.readyState === 1) {
+          socket.send(JSON.stringify({ type: 'snapshot', bars: snapshot }));
+        }
         fetchHistoricalCandles(symbol, interval, 1000)
           .then((candles) => {
             if (candles.length > 0 && socket.readyState === 1) {
