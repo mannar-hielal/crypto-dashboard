@@ -1,4 +1,8 @@
-import type { IPrimitivePaneRenderer, IPrimitivePaneView, PrimitivePaneViewZOrder } from 'lightweight-charts';
+import type {
+  IPrimitivePaneRenderer,
+  IPrimitivePaneView,
+  PrimitivePaneViewZOrder,
+} from 'lightweight-charts';
 import { interaction } from '@/lib/tokens';
 import { PaneCursorType } from './types';
 import type { PaneCursorType as PaneCursorTypeT } from './types';
@@ -51,10 +55,16 @@ export function cursorResizeFromAngle(
   if (angle >= ANGLE_337_5 || angle < ANGLE_22_5 || (angle >= ANGLE_157_5 && angle < ANGLE_202_5)) {
     return PaneCursorType.HorizontalResize;
   }
-  if ((angle >= ANGLE_22_5 && angle < ANGLE_67_5) || (angle >= ANGLE_202_5 && angle < ANGLE_247_5)) {
+  if (
+    (angle >= ANGLE_22_5 && angle < ANGLE_67_5) ||
+    (angle >= ANGLE_202_5 && angle < ANGLE_247_5)
+  ) {
     return PaneCursorType.DiagonalNwSeResize;
   }
-  if ((angle >= ANGLE_67_5 && angle < ANGLE_112_5) || (angle >= ANGLE_247_5 && angle < ANGLE_292_5)) {
+  if (
+    (angle >= ANGLE_67_5 && angle < ANGLE_112_5) ||
+    (angle >= ANGLE_247_5 && angle < ANGLE_292_5)
+  ) {
     return PaneCursorType.VerticalResize;
   }
   return PaneCursorType.DiagonalNeSwResize;
@@ -77,8 +87,12 @@ class AnchorPaneRenderer implements IPrimitivePaneRenderer {
 
     const radius = isTouch ? interaction.anchorRadius.touch : interaction.anchorRadius.regular;
     const strokeWidth = isTouch
-      ? (selected ? interaction.anchorStroke.touchSelected : interaction.anchorStroke.touch)
-      : (selected ? interaction.anchorStroke.selected : interaction.anchorStroke.regular);
+      ? selected
+        ? interaction.anchorStroke.touchSelected
+        : interaction.anchorStroke.touch
+      : selected
+        ? interaction.anchorStroke.selected
+        : interaction.anchorStroke.regular;
 
     target.useMediaCoordinateSpace(({ context }) => {
       for (const pt of points) {
