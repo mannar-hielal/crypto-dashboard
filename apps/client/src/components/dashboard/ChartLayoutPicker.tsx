@@ -58,22 +58,21 @@ export function ChartLayoutPicker() {
   const toggleSync = useLayoutStore((s) => s.toggleSync);
 
   const [open, setOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   const currentIcon = LAYOUT_ICONS[layout];
-
-  function getMenuPosition() {
-    const rect = triggerRef.current?.getBoundingClientRect();
-    if (!rect) return { top: 0, left: 0 };
-    return { top: rect.bottom + 6, left: rect.left };
-  }
 
   return (
     <div className="relative shrink-0">
       {/* Trigger button — shows the active layout icon */}
       <motion.button
         ref={triggerRef}
-        onClick={() => setOpen((p) => !p)}
+        onClick={() => {
+          setOpen((p) => !p);
+          const rect = triggerRef.current?.getBoundingClientRect();
+          if (rect) setMenuPos({ top: rect.bottom + 6, left: rect.left });
+        }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         title="Chart layout"
@@ -108,7 +107,7 @@ export function ChartLayoutPicker() {
               exit={{ opacity: 0, y: -6, scale: 0.97 }}
               transition={{ duration: 0.14 }}
               className="fixed z-50 w-56 overflow-hidden rounded-xl border border-white/8 shadow-2xl"
-              style={{ background: bg.panel, ...getMenuPosition() }}
+              style={{ background: bg.panel, top: menuPos.top, left: menuPos.left }}
             >
               {/* ── Layout grid ───────────────────────────────────────────── */}
               <div className="border-b border-white/6 px-3 pb-3 pt-2.5">

@@ -13,7 +13,13 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { SYMBOLS, INTERVALS, type Interval } from '@/lib/markets';
+import {
+  SYMBOLS,
+  INTERVALS,
+  TIME_RANGE_PRESETS,
+  type Interval,
+  type TimeRangePreset,
+} from '@/lib/markets';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -22,6 +28,7 @@ export type LayoutId = '1' | '2h' | '2v' | '3h' | '4';
 export interface PaneConfig {
   symbol: string;
   interval: Interval;
+  timeRangePreset: TimeRangePreset | null;
 }
 
 export interface SyncOptions {
@@ -72,10 +79,10 @@ export const DEFAULT_PANE_SIZES: Record<LayoutId, PaneSizes> = {
 
 /** Default symbol/interval for each pane slot */
 const DEFAULT_PANES: PaneConfig[] = [
-  { symbol: SYMBOLS[0].symbol, interval: INTERVALS[0] }, // BTCUSDT, 1m
-  { symbol: SYMBOLS[1].symbol, interval: INTERVALS[0] }, // ETHUSDT, 1m
-  { symbol: SYMBOLS[2].symbol, interval: INTERVALS[0] }, // SOLUSDT, 1m
-  { symbol: SYMBOLS[3].symbol, interval: INTERVALS[0] }, // BNBUSDT, 1m
+  { symbol: SYMBOLS[0].symbol, interval: INTERVALS[0], timeRangePreset: null }, // BTCUSDT, 1m
+  { symbol: SYMBOLS[1].symbol, interval: INTERVALS[0], timeRangePreset: null }, // ETHUSDT, 1m
+  { symbol: SYMBOLS[2].symbol, interval: INTERVALS[0], timeRangePreset: null }, // SOLUSDT, 1m
+  { symbol: SYMBOLS[3].symbol, interval: INTERVALS[0], timeRangePreset: null }, // BNBUSDT, 1m
 ];
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -94,6 +101,7 @@ interface LayoutState {
   setActivePane: (index: number) => void;
   setPaneSymbol: (paneIndex: number, symbol: string) => void;
   setPaneInterval: (paneIndex: number, interval: Interval) => void;
+  setPaneTimeRangePreset: (paneIndex: number, preset: TimeRangePreset | null) => void;
   toggleSync: (key: keyof SyncOptions) => void;
   setPaneSizes: (layout: LayoutId, sizes: PaneSizes) => void;
   setBottomPanelHeight: (height: number) => void;
@@ -142,6 +150,13 @@ export const useLayoutStore = create<LayoutState>()(
           updated[paneIndex] = { ...updated[paneIndex], interval };
           set({ panes: updated });
         }
+      },
+
+      setPaneTimeRangePreset: (paneIndex, preset) => {
+        const { panes } = get();
+        const updated = [...panes];
+        updated[paneIndex] = { ...updated[paneIndex], timeRangePreset: preset };
+        set({ panes: updated });
       },
 
       toggleSync: (key) => {
@@ -204,7 +219,12 @@ export const useLayoutStore = create<LayoutState>()(
             const interval = INTERVALS.includes(saved.interval as Interval)
               ? (saved.interval as Interval)
               : def.interval;
-            return { symbol: saved.symbol ?? def.symbol, interval };
+            const timeRangePreset =
+              saved.timeRangePreset !== undefined &&
+              TIME_RANGE_PRESETS.some((p) => p.key === saved.timeRangePreset)
+                ? (saved.timeRangePreset as TimeRangePreset)
+                : null;
+            return { symbol: saved.symbol ?? def.symbol, interval, timeRangePreset };
           }) as [PaneConfig, PaneConfig, PaneConfig, PaneConfig];
         }
         // Ensure paneSizes is present and has all layout IDs (added after v1)

@@ -12,7 +12,8 @@ import { useStore } from 'zustand';
 import { ChevronDown, Search } from 'lucide-react';
 import { useLayoutStore } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
-import { SYMBOLS, INTERVALS } from '@/lib/markets';
+import { SYMBOLS } from '@/lib/markets';
+import { IntervalDropdown } from '@/components/dashboard/IntervalDropdown';
 import { CryptoIcon } from '@/components/ui/CryptoIcon';
 import { bg, color, fontSize } from '@/lib/tokens';
 
@@ -26,6 +27,7 @@ export function PaneHeader({ paneIndex, isActive, onActivate }: PaneHeaderProps)
   const paneConfig = useLayoutStore((s) => s.panes[paneIndex]);
   const setPaneSymbol = useLayoutStore((s) => s.setPaneSymbol);
   const setPaneInterval = useLayoutStore((s) => s.setPaneInterval);
+  const setPaneTimeRangePreset = useLayoutStore((s) => s.setPaneTimeRangePreset);
 
   const latestPrice = useStore(paneStores[paneIndex], (s) => s.latestPrice);
   const priceChange = useStore(paneStores[paneIndex], (s) => s.priceChange);
@@ -157,25 +159,16 @@ export function PaneHeader({ paneIndex, isActive, onActivate }: PaneHeaderProps)
       <span className="h-3 w-px shrink-0 bg-white/7" />
 
       {/* Interval quick-switch */}
-      <div className="flex shrink-0 items-center gap-px" onClick={(e) => e.stopPropagation()}>
-        {INTERVALS.map((tf) => (
-          <button
-            key={tf}
-            onClick={(e) => {
-              e.stopPropagation();
-              onActivate();
-              setPaneInterval(paneIndex, tf);
-            }}
-            className="rounded px-1 py-0.5 font-semibold transition-colors"
-            style={{
-              fontSize: '9px',
-              color: interval === tf ? color.purple : color.muted,
-              background: interval === tf ? `${color.purpleDark}20` : 'transparent',
-            }}
-          >
-            {tf}
-          </button>
-        ))}
+      <div onClick={(e) => e.stopPropagation()}>
+        <IntervalDropdown
+          value={interval}
+          onChange={(tf) => {
+            onActivate();
+            setPaneTimeRangePreset(paneIndex, null);
+            setPaneInterval(paneIndex, tf);
+          }}
+          compact
+        />
       </div>
 
       {/* Spacer */}

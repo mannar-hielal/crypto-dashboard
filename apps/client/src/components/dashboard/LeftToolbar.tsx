@@ -279,13 +279,18 @@ export function LeftToolbar({
                 />
               )}
               <CursorIcon size={24} />
-              <button
+              <span
                 onClick={(e) => {
                   e.stopPropagation();
                   handleCursorContextMenu(e);
                 }}
                 className="absolute bottom-0.5 right-0.5 z-10 cursor-pointer"
                 aria-label="Change cursor style"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') handleCursorContextMenu(e as never);
+                }}
                 style={{
                   width: 0,
                   height: 0,
@@ -324,7 +329,7 @@ export function LeftToolbar({
             )}
             <Icon className="relative z-10 h-6 w-6" />
             {hasSubmenu && (
-              <button
+              <span
                 onClick={(e) => {
                   e.stopPropagation();
                   const parent = (e.currentTarget as HTMLElement).parentElement;
@@ -335,6 +340,17 @@ export function LeftToolbar({
                 }}
                 className="absolute bottom-0.5 right-0.5 z-10 cursor-pointer"
                 aria-label={`${tool.label} tools`}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    const parent = (e.currentTarget as HTMLElement).parentElement;
+                    if (parent) {
+                      const rect = parent.getBoundingClientRect();
+                      setPopupMenu({ groupId: tool.id, left: rect.right + 6, top: rect.top });
+                    }
+                  }
+                }}
                 style={{
                   width: 0,
                   height: 0,

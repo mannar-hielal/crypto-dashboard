@@ -20,10 +20,10 @@ function resetStore() {
     layout: '1',
     activePane: 0,
     panes: [
-      { symbol: SYMBOLS[0].symbol, interval: INTERVALS[0] },
-      { symbol: SYMBOLS[1].symbol, interval: INTERVALS[0] },
-      { symbol: SYMBOLS[2].symbol, interval: INTERVALS[0] },
-      { symbol: SYMBOLS[3].symbol, interval: INTERVALS[0] },
+      { symbol: SYMBOLS[0].symbol, interval: INTERVALS[0], timeRangePreset: null },
+      { symbol: SYMBOLS[1].symbol, interval: INTERVALS[0], timeRangePreset: null },
+      { symbol: SYMBOLS[2].symbol, interval: INTERVALS[0], timeRangePreset: null },
+      { symbol: SYMBOLS[3].symbol, interval: INTERVALS[0], timeRangePreset: null },
     ],
     syncOptions: {
       symbol: false,
@@ -177,10 +177,10 @@ describe('layoutStore', () => {
       useLayoutStore.setState({
         activePane: 2,
         panes: [
-          { symbol: SYMBOLS[0].symbol, interval: '1m' },
-          { symbol: SYMBOLS[1].symbol, interval: '5m' },
-          { symbol: SYMBOLS[2].symbol, interval: '1h' },
-          { symbol: SYMBOLS[3].symbol, interval: '4h' },
+          { symbol: SYMBOLS[0].symbol, interval: '1m', timeRangePreset: null },
+          { symbol: SYMBOLS[1].symbol, interval: '5m', timeRangePreset: null },
+          { symbol: SYMBOLS[2].symbol, interval: '1h', timeRangePreset: null },
+          { symbol: SYMBOLS[3].symbol, interval: '4h', timeRangePreset: null },
         ],
       });
       useLayoutStore.getState().toggleSync('interval');
