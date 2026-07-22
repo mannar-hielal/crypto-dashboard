@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import {
   createChart,
@@ -29,6 +29,8 @@ interface ChartPanelProps {
   onChartReady?: (chart: IChartApi, series: ISeriesApi<'Candlestick'>) => void;
   onChartDestroy?: () => void;
   onDrawingManagerReady?: (manager: DrawingManager) => void;
+  activeToolType?: string | null;
+  onToolChange?: (toolType: string | null) => void;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -78,6 +80,8 @@ export function ChartPanel({
   onChartReady,
   onChartDestroy,
   onDrawingManagerReady,
+  activeToolType,
+  onToolChange,
 }: ChartPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -106,6 +110,20 @@ export function ChartPanel({
     drawingId: string;
     text: string;
   } | null>(null);
+
+  // ── Zoom-in selection ──────────────────────────────────────────────────
+  const [zoomRect, setZoomRect] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const zoomDragRef = useRef(false);
+  const zoomStartRef = useRef({ x: 0, y: 0 });
+  const onToolChangeRef = useRef(onToolChange);
+  useEffect(() => {
+    onToolChangeRef.current = onToolChange;
+  });
 
   // ── 1. Create chart + drawing manager once on mount ──────────────────────
   useEffect(() => {
@@ -554,9 +572,102 @@ export function ChartPanel({
     prevLenRef.current = sortedBars.length;
   }, [bars, interval]);
 
+  // ── Zoom-in selection handlers ──────────────────────────────────────────
+  const handleZoomPointerDown = useCallback((e: React.PointerEvent) => {
+    const el = containerRef.current;
+    if (!el) return;
+    zoomDragRef.current = true;
+    const rect = el.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    zoomStartRef.current = { x, y };
+    setZoomRect({ left: x, top: y, width: 0, height: 0 });
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, []);
+
+  const handleZoomPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!zoomDragRef.current) return;
+    const el = containerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const sx = zoomStartRef.current.x;
+    const sy = zoomStartRef.current.y;
+    setZoomRect({
+      left: Math.min(sx, x),
+      top: Math.min(sy, y),
+      width: Math.abs(x - sx),
+      height: Math.abs(y - sy),
+    });
+  }, []);
+
+  const handleZoomPointerUp = useCallback((e: React.PointerEvent) => {
+    if (!zoomDragRef.current) return;
+    zoomDragRef.current = false;
+    const el = containerRef.current;
+    const chart = chartRef.current;
+    if (!el || !chart) {
+      setZoomRect(null);
+      return;
+    }
+    const rect = el.getBoundingClientRect();
+    const endX = e.clientX - rect.left;
+    const startX = zoomStartRef.current.x;
+    const startLogical = chart.timeScale().coordinateToLogical(startX);
+    const endLogical = chart.timeScale().coordinateToLogical(endX);
+    if (startLogical !== null && endLogical !== null) {
+      const minLogical = Math.min(startLogical, endLogical);
+      const maxLogical = Math.max(startLogical, endLogical);
+      if (maxLogical - minLogical > 2) {
+        chart.timeScale().setVisibleLogicalRange({ from: minLogical, to: maxLogical });
+      }
+    }
+    setZoomRect(null);
+  }, []);
+
+  // ── Escape key exits zoom-in mode ───────────────────────────────────────
+  useEffect(() => {
+    if (activeToolType !== 'zoom-in') return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setZoomRect(null);
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      setZoomRect(null);
+    };
+  }, [activeToolType]);
+
   return (
     <div className="relative h-full w-full" style={{ background: CHART_BG }}>
       <div ref={containerRef} className="h-full w-full" />
+
+      {/* ── Zoom-in selection overlay ─────────────────────────────────── */}
+      {activeToolType === 'zoom-in' && (
+        <div
+          className="absolute inset-0 z-20"
+          style={{ cursor: 'zoom-in', touchAction: 'none' }}
+          onPointerDown={handleZoomPointerDown}
+          onPointerMove={handleZoomPointerMove}
+          onPointerUp={handleZoomPointerUp}
+        />
+      )}
+      {zoomRect && (
+        <div
+          className="pointer-events-none absolute z-30"
+          style={{
+            left: zoomRect.left,
+            top: zoomRect.top,
+            width: zoomRect.width,
+            height: zoomRect.height,
+            background: 'rgba(139, 92, 246, 0.12)',
+            border: '1px solid rgba(139, 92, 246, 0.5)',
+          }}
+        />
+      )}
 
       {hoverData && (
         <div

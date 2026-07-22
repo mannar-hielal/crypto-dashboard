@@ -2,7 +2,17 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import type { ElementType } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MousePointer2, TrendingUp, GitBranch, Shapes, Type, Ruler, Trash2 } from 'lucide-react';
+import {
+  MousePointer2,
+  TrendingUp,
+  GitBranch,
+  Shapes,
+  Type,
+  Ruler,
+  Trash2,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react';
 import { bg, color, fontSize } from '@/lib/tokens';
 import { CURSOR_VARIANTS, type CursorVariantId } from '@/lib/cursors';
 import { TOOL_GROUPS } from '@/lib/libraryTools';
@@ -32,6 +42,7 @@ const MAIN_BUTTONS: ToolButton[] = [
 interface LeftToolbarProps {
   onToolChange?: (toolType: string | null) => void;
   onBinAction?: () => void;
+  onZoomOut?: () => void;
   cursorVariant?: CursorVariantId;
   onCursorVariantChange?: (variant: CursorVariantId) => void;
 }
@@ -39,6 +50,7 @@ interface LeftToolbarProps {
 export function LeftToolbar({
   onToolChange,
   onBinAction,
+  onZoomOut,
   cursorVariant: cursorVariantProp,
   onCursorVariantChange,
 }: LeftToolbarProps) {
@@ -358,6 +370,56 @@ export function LeftToolbar({
           </motion.button>
         );
       })}
+
+      {/* ── Zoom controls ───────────────────────────────────────────────── */}
+      <div
+        className="my-1.5 h-px w-6 rounded-full"
+        style={{ background: `color-mix(in srgb, ${color.white} 6%, transparent)` }}
+      />
+      <motion.button
+        data-tooltip="Zoom in"
+        aria-label="Zoom in"
+        onClick={() => {
+          if (activeToolType === 'zoom-in') {
+            setActiveToolType(null);
+            onToolChange?.(null);
+          } else {
+            setActiveToolType('zoom-in');
+            onToolChange?.('zoom-in');
+          }
+        }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        className="group relative flex h-10 w-10 items-center justify-center rounded"
+        style={{
+          background: activeToolType === 'zoom-in' ? `${color.purpleDark}20` : 'transparent',
+          color: activeToolType === 'zoom-in' ? color.purple : color.muted,
+        }}
+      >
+        {activeToolType === 'zoom-in' && (
+          <motion.span
+            layoutId="toolbar-active"
+            className="absolute inset-0 rounded"
+            style={{
+              background: `${color.purpleDark}20`,
+              boxShadow: `0 0 0 1px ${color.purpleDark}40`,
+            }}
+            transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+          />
+        )}
+        <ZoomIn className="relative z-10" size={24} />
+      </motion.button>
+      <motion.button
+        data-tooltip="Zoom out"
+        aria-label="Zoom out"
+        onClick={onZoomOut}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        className="flex h-10 w-10 items-center justify-center rounded"
+        style={{ color: color.muted }}
+      >
+        <ZoomOut size={24} />
+      </motion.button>
 
       {/* ── Cursor variant popup menu ─────────────────────────────────── */}
       <AnimatePresence>

@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import type { IChartApi } from 'lightweight-charts';
 import { DrawingManager } from 'lightweight-charts-drawing';
 import { SeoHead } from '@/components/SeoHead';
 import { usePaneFeeds } from '@/hooks/usePaneFeeds';
@@ -90,6 +91,7 @@ export function DashboardInner() {
   const [cursorVariant, setCursorVariant] = useState<CursorVariantId>('cross');
   const [activeToolType, setActiveToolType] = useState<string | null>(null);
   const drawingManagerRefs = useRef<(DrawingManager | null)[]>([null, null, null, null]);
+  const chartRefs = useRef<(IChartApi | null)[]>([null, null, null, null]);
 
   function handleDrawingManagerReady(paneIndex: number, manager: DrawingManager) {
     drawingManagerRefs.current[paneIndex] = manager;
@@ -100,6 +102,7 @@ export function DashboardInner() {
 
   function handleToolChange(toolType: string | null) {
     setActiveToolType(toolType);
+    if (toolType === 'zoom-in') return;
     const paneIndex = useLayoutStore.getState().activePane;
     const manager = drawingManagerRefs.current[paneIndex];
     if (manager) {
@@ -110,6 +113,22 @@ export function DashboardInner() {
   function handleBinAction() {
     const paneIndex = useLayoutStore.getState().activePane;
     drawingManagerRefs.current[paneIndex]?.clearAll();
+  }
+
+  function handleChartRefReady(paneIndex: number, chart: IChartApi) {
+    chartRefs.current[paneIndex] = chart;
+  }
+
+  function handleZoomOut() {
+    const chart = chartRefs.current[activePaneIndex];
+    if (!chart) return;
+    const range = chart.timeScale().getVisibleLogicalRange();
+    if (!range) return;
+    const center = (range.from + range.to) / 2;
+    const span = range.to - range.from;
+    chart
+      .timeScale()
+      .setVisibleLogicalRange({ from: center - span * 0.65, to: center + span * 0.65 });
   }
 
   function handleCursorVariantChange(variant: CursorVariantId) {
@@ -376,6 +395,7 @@ export function DashboardInner() {
           <LeftToolbar
             onToolChange={handleToolChange}
             onBinAction={handleBinAction}
+            onZoomOut={handleZoomOut}
             cursorVariant={cursorVariant}
             onCursorVariantChange={handleCursorVariantChange}
           />
@@ -395,7 +415,12 @@ export function DashboardInner() {
             transition={{ type: 'spring', stiffness: 340, damping: 34 }}
           >
             <ErrorBoundary>
-              <MultiChartArea onDrawingManagerReady={handleDrawingManagerReady} />
+              <MultiChartArea
+                onDrawingManagerReady={handleDrawingManagerReady}
+                onChartRefReady={handleChartRefReady}
+                activeToolType={activeToolType}
+                onToolChange={handleToolChange}
+              />
             </ErrorBoundary>
           </motion.div>
 
