@@ -279,8 +279,13 @@ export function LeftToolbar({
                 />
               )}
               <CursorIcon size={24} />
-              <span
-                className="absolute bottom-0.5 right-0.5 z-10"
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCursorContextMenu(e);
+                }}
+                className="absolute bottom-0.5 right-0.5 z-10 cursor-pointer"
+                aria-label="Change cursor style"
                 style={{
                   width: 0,
                   height: 0,
@@ -288,6 +293,8 @@ export function LeftToolbar({
                   borderRight: '6px solid transparent',
                   borderTop: '6px solid currentColor',
                   opacity: 0.6,
+                  background: 'none',
+                  padding: 0,
                 }}
               />
             </motion.button>
@@ -325,8 +332,17 @@ export function LeftToolbar({
             )}
             <Icon className="relative z-10 h-6 w-6" />
             {hasSubmenu && (
-              <span
-                className="absolute bottom-0.5 right-0.5 z-10"
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const parent = (e.currentTarget as HTMLElement).parentElement;
+                  if (parent) {
+                    const rect = parent.getBoundingClientRect();
+                    setPopupMenu({ groupId: tool.id, left: rect.right + 6, top: rect.top });
+                  }
+                }}
+                className="absolute bottom-0.5 right-0.5 z-10 cursor-pointer"
+                aria-label={`${tool.label} tools`}
                 style={{
                   width: 0,
                   height: 0,
@@ -334,6 +350,8 @@ export function LeftToolbar({
                   borderRight: '6px solid transparent',
                   borderTop: '6px solid currentColor',
                   opacity: 0.6,
+                  background: 'none',
+                  padding: 0,
                 }}
               />
             )}

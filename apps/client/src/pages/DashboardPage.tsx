@@ -8,6 +8,7 @@ import { SeoHead } from '@/components/SeoHead';
 import { usePaneFeeds } from '@/hooks/usePaneFeeds';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useTPSLMonitor } from '@/hooks/useTPSLMonitor';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { usePendingOrderMonitor } from '@/hooks/usePendingOrderMonitor';
 import { TradingSoundProvider, useSoundActions } from '@/hooks/TradingSoundContext';
 import { useLayoutStore } from '@/store/layoutStore';
@@ -153,8 +154,28 @@ export function DashboardInner() {
   useTPSLMonitor({ onClosed: handleTPSLClosed });
   usePendingOrderMonitor({ onFilled: handleOrderFilled });
 
-  const [panelSize, setPanelSize] = useState<PanelSize>('open');
-  const [tradingPanelOpen, setTradingPanelOpen] = useState(true);
+  const isMobile = useMediaQuery('(max-width: 1023px)');
+
+  const [panelSize, setPanelSize] = useState<PanelSize>(() => {
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) {
+      return 'collapsed';
+    }
+    return 'open';
+  });
+
+  const [tradingPanelOpen, setTradingPanelOpen] = useState(() => {
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) {
+      return false;
+    }
+    return true;
+  });
+
+  const [leftToolbarOpen, setLeftToolbarOpen] = useState(() => {
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) {
+      return false;
+    }
+    return true;
+  });
   /** Persisted across symbol changes so the user stays on their chosen tab */
   const [tradingTab, setTradingTab] = useState<OrderTab>('market');
   /** Persisted across remounts so the user stays on their chosen side — mirrors TV */
@@ -341,16 +362,24 @@ export function DashboardInner() {
       <SymbolBar
         tradingPanelOpen={tradingPanelOpen}
         onToggleTrading={() => setTradingPanelOpen((v) => !v)}
+        leftToolbarOpen={leftToolbarOpen}
+        onToggleLeftToolbar={() => setLeftToolbarOpen((v) => !v)}
       />
 
       {/* ── Main content row ──────────────────────────────────────────────── */}
-      <div className="flex min-h-0 flex-1">
-        <LeftToolbar
-          onToolChange={handleToolChange}
-          onBinAction={handleBinAction}
-          cursorVariant={cursorVariant}
-          onCursorVariantChange={handleCursorVariantChange}
-        />
+      <div className={`flex min-h-0 flex-1${isMobile ? ' relative' : ''}`}>
+        <motion.div
+          animate={{ width: leftToolbarOpen ? 44 : 0 }}
+          transition={{ duration: 0.2, ease: 'easeInOut' }}
+          className="shrink-0 overflow-hidden"
+        >
+          <LeftToolbar
+            onToolChange={handleToolChange}
+            onBinAction={handleBinAction}
+            cursorVariant={cursorVariant}
+            onCursorVariantChange={handleCursorVariantChange}
+          />
+        </motion.div>
 
         {/* Center column: chart on top + paper trading panel on bottom.
             By making this a flex-col sibling of TradingPanel, the TradingPanel
@@ -459,12 +488,13 @@ export function DashboardInner() {
             close/reopen. Width is animated to 0 when hidden.
             key={`${activePane}-${symbol}`} still resets the form on symbol change. */}
         <motion.div
-          animate={{
-            width: isTradingPanelVisible ? 256 : 0,
-            opacity: isTradingPanelVisible ? 1 : 0,
-          }}
+          animate={
+            isMobile
+              ? { x: isTradingPanelVisible ? 0 : '100%', opacity: isTradingPanelVisible ? 1 : 0 }
+              : { width: isTradingPanelVisible ? 256 : 0, opacity: isTradingPanelVisible ? 1 : 0 }
+          }
           transition={{ duration: 0.2, ease: 'easeInOut' }}
-          className="shrink-0 overflow-hidden"
+          className={`shrink-0 overflow-hidden${isMobile ? ' absolute inset-0 z-30 w-full' : ''}`}
           aria-hidden={!isTradingPanelVisible}
           inert={!isTradingPanelVisible ? true : undefined}
           style={{ pointerEvents: isTradingPanelVisible ? 'auto' : 'none' }}
@@ -484,14 +514,14 @@ export function DashboardInner() {
 
       {/* ── Dashboard footer ─────────────────────────────────────────────── */}
       <div
-        className="flex h-7 w-full shrink-0 items-center justify-between border-t border-white/5 px-4"
+        className="flex h-auto w-full shrink-0 flex-col items-center border-t border-white/5 px-4 py-2 sm:h-7 sm:flex-row sm:items-center sm:justify-between sm:py-0"
         style={{ background: bg.footer }}
       >
         <span style={{ fontSize: fontSize.xs10, color: `${color.muted}80` }}>
           ⚠️ Paper trading only — no real funds. For educational purposes.
         </span>
         <nav
-          className="flex items-center gap-4"
+          className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 sm:flex-nowrap sm:gap-4"
           style={{ fontSize: fontSize.xs10, color: `${color.muted}60` }}
         >
           <Link to="/terms" className="transition-colors hover:text-white/50">
@@ -506,7 +536,7 @@ export function DashboardInner() {
           <Link to="/aup" className="transition-colors hover:text-white/50">
             Acceptable Use Policy
           </Link>
-          <span className="ml-2 font-medium">
+          <span className="font-medium sm:ml-2">
             © {new Date().getFullYear()} cryptopapertrade.com
           </span>
         </nav>

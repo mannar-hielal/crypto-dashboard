@@ -1746,3 +1746,36 @@ Replaced the fragile custom `ISeriesPrimitive` drawing system (~3,500+ lines) wi
 **Gates:** lint ✅, type-check ✅, test (490) ✅, format ✅
 
 ---
+
+### feat: mobile/tablet responsive layout — panel defaults, overlays, toolbar toggle, scroll fixes (2026-07-22) ✅
+
+**Problem:** The dashboard was desktop-only — fixed at 152px chrome, 256px sidebar, no breakpoint handling. On mobile/tablet (< 1024px) the chart had ~223px of usable space and panels overflowed or clipped.
+
+**Changes — `useMediaQuery` hook (new):**
+
+- `apps/client/src/hooks/useMediaQuery.ts` — generic `matchMedia` hook used by `DashboardPage` for mobile breakpoint detection.
+
+**Changes — `DashboardPage.tsx` (layout orchestration):**
+
+- **TradingPanel starts closed on mobile**: `useState` seeded with `matchMedia('(max-width: 1023px)')` — defaults `tradingPanelOpen = false`.
+- **OrderAccountMgmt starts collapsed on mobile**: `panelSize` seeded as `'collapsed'` (36px header) instead of `'open'` (208px).
+- **LeftToolbar starts collapsed on mobile**: `leftToolbarOpen` defaults to `false`.
+- **TradingPanel full-width overlay on mobile**: uses `x` translation (`0 → '100%'`) with `absolute inset-0 w-full` so the panel slides in from the right at full viewport width. Desktop unchanged (`width: 0 → 256`).
+- **LeftToolbar collapsible**: wrapped in `motion.div` with `width: 44 ↔ 0` animation. Toggle controlled by hamburger button in SymbolBar.
+- **Footer**: on mobile (`< 640px`) — `flex-col` with `flex-wrap` links (2-column layout). Desktop unchanged — single-row `h-7`.
+
+**Changes — `SymbolBar.tsx`:**
+
+- Added `leftToolbarOpen` / `onToggleLeftToolbar` props + hamburger `Menu` button (visible on `< lg`, `lg:hidden`).
+- Added `overflow-x-auto scrollbar-none` to SymbolBar outer div — all items (Trade button, timeframe picker, etc.) scrollable on mobile.
+
+**Changes — `LeftToolbar.tsx`:**
+
+- Arrow dropdown indicators: converted from inert `<span>` to `<button>` with `onClick` + `e.stopPropagation()` — left-click opens tool submenu (no right-click required). Cursor variant arrow similarly wired. Right-click still works as fallback.
+
+**Changes — `OrderAccountManagementPanel.tsx`:**
+
+- **Tab bar**: added `overflow-x-auto scrollbar-none` — tabs scroll horizontally when they overflow.
+- **Content area**: both outer wrapper (line 1105) and motion wrapper (line 1113) changed from `overflow-hidden` to `overflow-x-auto overflow-y-hidden` — enables horizontal scroll for table content on narrow viewports.
+
+**Gates:** type-check ✅, lint ✅, test (371) ✅, format ✅
