@@ -25,6 +25,7 @@
     "cryptocurrency-icons": "^0.18.1",
     "framer-motion": "^12.40.0",
     "lightweight-charts": "^5.2.0",
+    "lightweight-charts-drawing": "^0.1.1",
     "lucide-react": "^1.18.0",
     "radix-ui": "^1.5.0",
     "react": "^19.2.7",
