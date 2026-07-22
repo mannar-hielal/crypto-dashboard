@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { DrawingManager } from 'lightweight-charts-drawing';
 import { SeoHead } from '@/components/SeoHead';
 import { usePaneFeeds } from '@/hooks/usePaneFeeds';
@@ -364,7 +365,9 @@ export function DashboardInner() {
             animate={{ flex: isMaximized ? '0 0 0px' : '1 1 0%' }}
             transition={{ type: 'spring', stiffness: 340, damping: 34 }}
           >
-            <MultiChartArea onDrawingManagerReady={handleDrawingManagerReady} />
+            <ErrorBoundary>
+              <MultiChartArea onDrawingManagerReady={handleDrawingManagerReady} />
+            </ErrorBoundary>
           </motion.div>
 
           {/* Paper trading panel.
