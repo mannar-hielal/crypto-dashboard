@@ -501,7 +501,6 @@ export function ChartPanel({
     if (interval !== prevIntervalRef.current) {
       prevIntervalRef.current = interval;
       prevLenRef.current = 0;
-      return;
     }
 
     if (!chartReadyRef.current) return;

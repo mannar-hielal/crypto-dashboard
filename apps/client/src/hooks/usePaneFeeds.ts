@@ -81,6 +81,12 @@ function useSinglePaneFeed(
     // would flash a blank canvas before WS/REST data loads.  setSnapshot
     // replaces old bars atomically when the first response arrives.
 
+    // Reset the WS snapshot flag so the fresh REST fetch is accepted.
+    // On interval/symbol change the old flag from the previous connection
+    // would block the REST response (wsSnapshotReceived && currentBars >=
+    // REST count), leaving only the cold-aggregator WS snapshot (~2 bars).
+    store.getState().setWsSnapshotReceived(false);
+
     // Step 1: historical REST fetch (fills chart before WS is ready)
     // Only applies if the WS hasn't already sent its initial snapshot — the
     // WS snapshot is authoritative (it includes indicators) and we don't want
