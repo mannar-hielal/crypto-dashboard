@@ -218,14 +218,15 @@ export function DashboardInner() {
   const chartAreaRef = useRef<HTMLDivElement>(null);
 
   /** Inject a <style> tag that overrides canvas cursors for the selected
-   *  cursor variant and shows a grabbing hand during drag. Using !important
-   *  beats lightweight-charts' own inline canvas cursor management. */
+   *  cursor variant and shows a grabbing hand during drag. The !important on
+   *  [data-dragging] is needed to beat lw-charts during drag; variant rules
+   *  intentionally omit !important so lw-charts can show pointer cursor
+   *  when hovering over drawings (via Drawing.hitTest -> PrimitiveHoveredItem). */
   useEffect(() => {
     const rules =
       Object.entries(CURSOR_CSS_MAP)
         .map(
-          ([variant, cursorVal]) =>
-            `[data-cursor="${variant}"] canvas { cursor: ${cursorVal} !important; }`
+          ([variant, cursorVal]) => `[data-cursor="${variant}"] canvas { cursor: ${cursorVal}; }`
         )
         .join('\n') +
       '\n[data-dragging="true"] canvas { cursor: grabbing !important; }' +
@@ -403,6 +404,7 @@ export function DashboardInner() {
             onZoomOut={handleZoomOut}
             cursorVariant={cursorVariant}
             onCursorVariantChange={handleCursorVariantChange}
+            activeToolType={activeToolType}
           />
         </motion.div>
 

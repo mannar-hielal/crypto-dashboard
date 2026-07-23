@@ -37,12 +37,18 @@ export interface PaneMarketState {
    *  Reset to false on every reset() / interval change. */
   wsSnapshotReceived: boolean;
 
+  /** True when the user has manually zoomed this pane via the zoom-in tool.
+   *  MultiChartArea time-range sync skips zoomed panes to prevent
+   *  other panes' setData+restore cycles from overriding the user's view. */
+  userZoomed: boolean;
+
   setSnapshot: (bars: CandleBar[], indicators: IndicatorSnapshot | null) => void;
   setIndicators: (indicators: IndicatorSnapshot | null) => void;
   addBar: (liveBar: LiveBar) => void;
   setConnected: (connected: boolean) => void;
   setBidAsk: (bid: number, ask: number, lastPrice?: number) => void;
   setWsSnapshotReceived: (v: boolean) => void;
+  setUserZoomed: (v: boolean) => void;
   /** Wipe all data — called before a new symbol/interval connects */
   reset: () => void;
 }
@@ -59,6 +65,7 @@ function createPaneStore() {
     bid: null,
     ask: null,
     wsSnapshotReceived: false,
+    userZoomed: false,
 
     setSnapshot: (bars, indicators) => {
       // Deduplicate by timestamp (keep last occurrence) then sort ascending.
@@ -132,6 +139,8 @@ function createPaneStore() {
 
     setWsSnapshotReceived: (v) => set({ wsSnapshotReceived: v }),
 
+    setUserZoomed: (v) => set({ userZoomed: v }),
+
     reset: () =>
       set({
         bars: [],
@@ -142,6 +151,7 @@ function createPaneStore() {
         bid: null,
         ask: null,
         wsSnapshotReceived: false,
+        userZoomed: false,
       }),
   }));
 }

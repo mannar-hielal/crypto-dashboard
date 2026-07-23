@@ -111,6 +111,7 @@ export function ChartPanel({
 
   const chartReadyRef = useRef(false);
   const prevIntervalRef = useRef(interval);
+  const userZoomedRef = useRef(false);
 
   const [hoverData, setHoverData] = useState<LegendData | null>(null);
   const [editingTextInfo, setEditingTextInfo] = useState<{
@@ -128,6 +129,12 @@ export function ChartPanel({
   const zoomDragRef = useRef(false);
   const zoomStartRef = useRef({ x: 0, y: 0 });
   const onToolChangeRef = useRef(onToolChange);
+  const bodyDragRef = useRef<{
+    startX: number;
+    startY: number;
+    startAnchors: { time: number; price: number }[];
+    drawingId: string;
+  } | null>(null);
   useEffect(() => {
     onToolChangeRef.current = onToolChange;
   });
@@ -308,9 +315,93 @@ export function ChartPanel({
       }
     };
 
+    // ── Body drag-to-reposition ──────────────────────────────────────────
+    /** Intercept mousedown in capturing phase so we can prevent the
+     *  lightweight-charts canvas from receiving the event and starting a
+     *  chart pan when the user drags a drawing body. */
+    const handleBodyMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0) return;
+      const m = managerRef.current;
+      if (!m || m.getActiveTool()) return;
+
+      const rect = container.getBoundingClientRect();
+      const point: Point = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+
+      // Anchor drag — let DrawingManager handle via bubbling phase (no stop)
+      if (m.hitTestAnchor(point) !== null) return;
+
+      const hit = m.hitTest(point);
+      if (!hit || hit.options.locked) return;
+
+      // Body drag — stop propagation so the canvas never receives the event
+      e.stopPropagation();
+
+      // Select the drawing if not already
+      const selected = m.getSelectedDrawing();
+      if (selected?.id !== hit.id) {
+        m.selectDrawing(hit.id);
+      }
+
+      bodyDragRef.current = {
+        startX: e.clientX,
+        startY: e.clientY,
+        startAnchors: hit.anchors.map((a) => ({ time: a.time as number, price: a.price })),
+        drawingId: hit.id,
+      };
+      hit.setState('editing');
+    };
+
+    const handleBodyMouseUp = () => {
+      const drag = bodyDragRef.current;
+      if (!drag) return;
+
+      const m = managerRef.current;
+      if (!m) {
+        bodyDragRef.current = null;
+        return;
+      }
+
+      const drawing = m.getSelectedDrawing();
+      if (drawing) {
+        drawing.setState('selected');
+        persistDrawings(m, prevSymbolRef.current);
+      }
+      bodyDragRef.current = null;
+    };
+
     const handleMouseMove = (e: MouseEvent) => {
       const rect = container.getBoundingClientRect();
       updatePreview(e.clientX - rect.left, e.clientY - rect.top);
+
+      // Body drag
+      const drag = bodyDragRef.current;
+      if (!drag) return;
+
+      const m = managerRef.current;
+      const ch = chartRef.current;
+      const cs = candleRef.current;
+      if (!m || !ch || !cs) return;
+
+      const drawing = m.getSelectedDrawing();
+      if (!drawing || drawing.id !== drag.drawingId) return;
+
+      const timeScale = ch.timeScale();
+      const startTime = timeScale.coordinateToTime(drag.startX - rect.left);
+      const currTime = timeScale.coordinateToTime(e.clientX - rect.left);
+      const startPrice = cs.coordinateToPrice(drag.startY - rect.top);
+      const currPrice = cs.coordinateToPrice(e.clientY - rect.top);
+      if (startTime === null || currTime === null || startPrice === null || currPrice === null)
+        return;
+
+      const timeOffset = (currTime as number) - (startTime as number);
+      const priceOffset = currPrice - startPrice;
+
+      drawing.setAnchors(
+        drag.startAnchors.map((a) => ({
+          time: (a.time + timeOffset) as UTCTimestamp,
+          price: a.price + priceOffset,
+        }))
+      );
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -319,6 +410,13 @@ export function ChartPanel({
         removePreview();
         manager.setActiveTool(null);
       }
+    };
+
+    // ── Right-click → cursor (selection) mode ─────────────────────────────
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      bodyDragRef.current = null;
+      onToolChangeRef.current?.(null);
     };
 
     const unsubToolChanged = manager.on('tool:changed', () => {
@@ -359,14 +457,16 @@ export function ChartPanel({
           manager.addDrawing(drawing);
         }
         pendingAnchorsRef.current = null;
-        manager.setActiveTool(null);
       }
     };
     chart.subscribeClick(handleChartClick);
 
     const container = containerRef.current;
     container.addEventListener('mousemove', handleMouseMove);
+    container.addEventListener('mousedown', handleBodyMouseDown, { capture: true });
+    document.addEventListener('mouseup', handleBodyMouseUp);
     document.addEventListener('keydown', handleKeyDown);
+    container.addEventListener('contextmenu', handleContextMenu);
 
     // ── Double-click text editing ─────────────────────────────────────────
     const TEXT_DRAWING_TYPES = new Set([
@@ -456,8 +556,12 @@ export function ChartPanel({
       chart.unsubscribeClick(handleChartClick);
       unsubToolChanged();
       container.removeEventListener('mousemove', handleMouseMove);
+      container.removeEventListener('mousedown', handleBodyMouseDown, { capture: true });
+      document.removeEventListener('mouseup', handleBodyMouseUp);
       document.removeEventListener('keydown', handleKeyDown);
+      container.removeEventListener('contextmenu', handleContextMenu);
       container.removeEventListener('dblclick', handleDblClick);
+      bodyDragRef.current = null;
       manager.detach();
       managerRef.current = null;
       chart.remove();
@@ -486,6 +590,8 @@ export function ChartPanel({
   // ── 2. Push data whenever bars changes ───────────────────────────────────
   useEffect(() => {
     if (bars.length === 0) {
+      userZoomedRef.current = false;
+      paneStores[paneIndex].getState().setUserZoomed(false);
       prevLenRef.current = 0;
       candleRef.current?.setData([]);
       ema9Ref.current?.setData([]);
@@ -501,6 +607,7 @@ export function ChartPanel({
     if (interval !== prevIntervalRef.current) {
       prevIntervalRef.current = interval;
       prevLenRef.current = 0;
+      paneStores[paneIndex].getState().setUserZoomed(false);
       return;
     }
 
@@ -526,15 +633,26 @@ export function ChartPanel({
       return pts;
     }
 
-    candleRef.current?.setData(
-      sortedBars.map((b) => ({
-        time: toUTC(b.timestamp),
-        open: b.open,
-        high: b.high,
-        low: b.low,
-        close: b.close,
-      }))
-    );
+    // ── Data push ──────────────────────────────────────────────────────────
+    // Save visible logical range before setData calls — lightweight-charts
+    // has a known bug where setData resets the visible range (SO #63557823).
+    const notFirstLoad = prevLenRef.current > 0;
+    const savedRange = notFirstLoad
+      ? (chartRef.current?.timeScale().getVisibleLogicalRange() ?? undefined)
+      : undefined;
+
+    const candleData = sortedBars.map((b) => ({
+      time: toUTC(b.timestamp),
+      open: b.open,
+      high: b.high,
+      low: b.low,
+      close: b.close,
+    }));
+    if (sortedBars.length === prevLenRef.current) {
+      candleRef.current?.update(candleData[candleData.length - 1]);
+    } else {
+      candleRef.current?.setData(candleData);
+    }
 
     ema9Ref.current?.setData(linePoints(ema9));
     ema20Ref.current?.setData(linePoints(ema20));
@@ -560,6 +678,11 @@ export function ChartPanel({
     macdLineRef.current?.setData(linePoints(macd));
     signalRef.current?.setData(linePoints(signal));
 
+    // Restore saved logical range (setData resets it — known lw-charts bug)
+    if (savedRange && notFirstLoad) {
+      chartRef.current?.timeScale().setVisibleLogicalRange(savedRange);
+    }
+
     const timeScale = chartRef.current?.timeScale();
     const firstTime = toUTC(sortedBars[0].timestamp);
     const lastTime = toUTC(sortedBars[sortedBars.length - 1].timestamp);
@@ -568,11 +691,11 @@ export function ChartPanel({
       | null
       | undefined;
 
-    const isFirstLoad = prevLenRef.current === 0;
+    const isFirstLoad = !notFirstLoad;
     const isOutOfRange =
       !visibleRange || lastTime < visibleRange.from || firstTime > visibleRange.to;
 
-    if (isFirstLoad || isOutOfRange) {
+    if (isFirstLoad || (isOutOfRange && !userZoomedRef.current)) {
       chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
       timeScale?.applyOptions({ barSpacing: INTERVAL_BAR_SPACING[interval] });
       if (!timeRangePreset) {
@@ -631,29 +754,34 @@ export function ChartPanel({
     });
   }, []);
 
-  const handleZoomPointerUp = useCallback((e: React.PointerEvent) => {
-    if (!zoomDragRef.current) return;
-    zoomDragRef.current = false;
-    const el = containerRef.current;
-    const chart = chartRef.current;
-    if (!el || !chart) {
-      setZoomRect(null);
-      return;
-    }
-    const rect = el.getBoundingClientRect();
-    const endX = e.clientX - rect.left;
-    const startX = zoomStartRef.current.x;
-    const startLogical = chart.timeScale().coordinateToLogical(startX);
-    const endLogical = chart.timeScale().coordinateToLogical(endX);
-    if (startLogical !== null && endLogical !== null) {
-      const minLogical = Math.min(startLogical, endLogical);
-      const maxLogical = Math.max(startLogical, endLogical);
-      if (maxLogical - minLogical > 2) {
-        chart.timeScale().setVisibleLogicalRange({ from: minLogical, to: maxLogical });
+  const handleZoomPointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      if (!zoomDragRef.current) return;
+      zoomDragRef.current = false;
+      const el = containerRef.current;
+      const chart = chartRef.current;
+      if (!el || !chart) {
+        setZoomRect(null);
+        return;
       }
-    }
-    setZoomRect(null);
-  }, []);
+      const rect = el.getBoundingClientRect();
+      const endX = e.clientX - rect.left;
+      const startX = zoomStartRef.current.x;
+      const startLogical = chart.timeScale().coordinateToLogical(startX);
+      const endLogical = chart.timeScale().coordinateToLogical(endX);
+      if (startLogical !== null && endLogical !== null) {
+        const minLogical = Math.min(startLogical, endLogical);
+        const maxLogical = Math.max(startLogical, endLogical);
+        if (maxLogical - minLogical > 2) {
+          chart.timeScale().setVisibleLogicalRange({ from: minLogical, to: maxLogical });
+          userZoomedRef.current = true;
+          paneStores[paneIndex].getState().setUserZoomed(true);
+        }
+      }
+      setZoomRect(null);
+    },
+    [paneIndex]
+  );
 
   // ── Escape key exits zoom-in mode ───────────────────────────────────────
   useEffect(() => {
@@ -669,6 +797,25 @@ export function ChartPanel({
       setZoomRect(null);
     };
   }, [activeToolType]);
+
+  // ── Delete/Backspace removes selected drawing ───────────────────────────
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+        return;
+      const manager = managerRef.current;
+      if (!manager) return;
+      const selected = manager.getSelectedDrawing();
+      if (selected) {
+        e.preventDefault();
+        manager.removeDrawing(selected.id);
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
 
   return (
     <div className="relative h-full w-full" style={{ background: CHART_BG }}>

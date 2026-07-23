@@ -153,6 +153,8 @@ export function MultiChartArea({
       if (i === activePane) continue;
       const other = chartRefs.current[i];
       if (!other) continue;
+      // Don't override a pane the user has manually zoomed
+      if (paneStores[i as 0 | 1 | 2 | 3].getState().userZoomed) continue;
       try {
         other.timeScale().setVisibleRange(range);
       } catch {
@@ -211,6 +213,8 @@ export function MultiChartArea({
           if (i === paneIndex) continue;
           const other = chartRefs.current[i];
           if (!other) continue;
+          // Don't override a pane the user has manually zoomed
+          if (paneStores[i as 0 | 1 | 2 | 3].getState().userZoomed) continue;
           try {
             other.timeScale().setVisibleRange(range);
           } catch {

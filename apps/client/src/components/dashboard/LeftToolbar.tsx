@@ -45,6 +45,7 @@ interface LeftToolbarProps {
   onZoomOut?: () => void;
   cursorVariant?: CursorVariantId;
   onCursorVariantChange?: (variant: CursorVariantId) => void;
+  activeToolType?: string | null;
 }
 
 export function LeftToolbar({
@@ -53,13 +54,15 @@ export function LeftToolbar({
   onZoomOut,
   cursorVariant: cursorVariantProp,
   onCursorVariantChange,
+  activeToolType: activeToolTypeProp,
 }: LeftToolbarProps) {
   // ── Cursor (local state falls back when uncontrolled) ──────────────────
   const [localCursorVariant, setLocalCursorVariant] = useState<CursorVariantId>('cross');
   const cursorVariant = cursorVariantProp ?? localCursorVariant;
 
-  // ── Tool state ──────────────────────────────────────────────────────────
-  const [activeToolType, setActiveToolType] = useState<string | null>(null);
+  // ── Tool state (external prop takes precedence, fall back to local) ──────
+  const [localToolType, setLocalToolType] = useState<string | null>(null);
+  const activeToolType = activeToolTypeProp !== undefined ? activeToolTypeProp : localToolType;
 
   // Last-selected sub-tool per group (persists across group switches)
   const [subToolMap, setSubToolMap] = useState<Record<string, string>>({
@@ -90,7 +93,7 @@ export function LeftToolbar({
 
   function handleMainClick(groupId: string) {
     if (groupId === 'cursor') {
-      setActiveToolType(null);
+      setLocalToolType(null);
       onToolChange?.(null);
       return;
     }
@@ -100,7 +103,7 @@ export function LeftToolbar({
     }
     const toolType = subToolMap[groupId];
     if (toolType) {
-      setActiveToolType(toolType);
+      setLocalToolType(toolType);
       onToolChange?.(toolType);
     }
   }
@@ -113,7 +116,7 @@ export function LeftToolbar({
 
   function handleSubToolSelect(groupId: string, toolType: string) {
     setSubToolMap((prev) => ({ ...prev, [groupId]: toolType }));
-    setActiveToolType(toolType);
+    setLocalToolType(toolType);
     setPopupMenu(null);
     onToolChange?.(toolType);
   }
@@ -172,7 +175,7 @@ export function LeftToolbar({
 
   function handleCursorVariantSelect(id: CursorVariantId) {
     setLocalCursorVariant(id);
-    setActiveToolType(null);
+    setLocalToolType(null);
     setShowCursorMenu(false);
     onCursorVariantChange?.(id);
     onToolChange?.(null);
@@ -263,7 +266,7 @@ export function LeftToolbar({
               data-tooltip={cursorVariantDef?.label ?? 'Cursor'}
               aria-label={cursorVariantDef?.label ?? 'Cursor'}
               onClick={() => {
-                setActiveToolType(null);
+                setLocalToolType(null);
                 onToolChange?.(null);
               }}
               onContextMenu={handleCursorContextMenu}
@@ -309,11 +312,21 @@ export function LeftToolbar({
         // ── Drawing tool groups ──────────────────────────────────────────
         const hasSubmenu = !isBin && TOOL_GROUPS.some((g) => g.id === tool.id);
 
+        // Show the selected subtool's label in the toolbar when active
+        const selectedToolId = subToolMap[tool.id];
+        const selectedToolDef =
+          toolActive && selectedToolId
+            ? (TOOL_GROUPS.find((g) => g.id === tool.id)
+                ?.categories.flatMap((c) => c.tools)
+                .find((t) => t.id === selectedToolId) ?? null)
+            : null;
+        const toolLabel = selectedToolDef?.label ?? tool.label;
+
         return (
           <motion.button
             key={tool.id}
-            data-tooltip={tool.label}
-            aria-label={tool.label}
+            data-tooltip={toolLabel}
+            aria-label={toolLabel}
             onClick={() => handleMainClick(tool.id)}
             onContextMenu={(e) => hasSubmenu && handleContextMenu(e, tool.id)}
             whileHover={{ scale: 1.1 }}
@@ -327,7 +340,13 @@ export function LeftToolbar({
                 transition={{ type: 'spring', stiffness: 500, damping: 35 }}
               />
             )}
-            <Icon className="relative z-10 h-6 w-6" />
+            {toolActive && selectedToolDef ? (
+              <span className="relative z-10 text-[9px] font-semibold leading-tight text-center truncate w-full px-0.5">
+                {selectedToolDef.label}
+              </span>
+            ) : (
+              <Icon className="relative z-10 h-6 w-6" />
+            )}
             {hasSubmenu && (
               <span
                 onClick={(e) => {
@@ -339,7 +358,7 @@ export function LeftToolbar({
                   }
                 }}
                 className="absolute bottom-0.5 right-0.5 z-10 cursor-pointer"
-                aria-label={`${tool.label} tools`}
+                aria-label={`${toolLabel} tools`}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => {
@@ -373,10 +392,10 @@ export function LeftToolbar({
         aria-label="Zoom in"
         onClick={() => {
           if (zoomActive) {
-            setActiveToolType(null);
+            setLocalToolType(null);
             onToolChange?.(null);
           } else {
-            setActiveToolType('zoom-in');
+            setLocalToolType('zoom-in');
             onToolChange?.('zoom-in');
           }
         }}
