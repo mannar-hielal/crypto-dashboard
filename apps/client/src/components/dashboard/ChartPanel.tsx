@@ -580,7 +580,7 @@ export function ChartPanel({
       }
     }
     prevLenRef.current = sortedBars.length;
-  }, [bars, interval, timeRangePreset]);
+  }, [bars, interval, timeRangePreset, paneIndex]);
 
   // ── 3. Apply time-range preset when it changes ────────────────────────────
   useEffect(() => {
