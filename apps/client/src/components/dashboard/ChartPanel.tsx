@@ -501,6 +501,7 @@ export function ChartPanel({
     if (interval !== prevIntervalRef.current) {
       prevIntervalRef.current = interval;
       prevLenRef.current = 0;
+      return;
     }
 
     if (!chartReadyRef.current) return;
@@ -575,7 +576,7 @@ export function ChartPanel({
       chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
       timeScale?.applyOptions({ barSpacing: INTERVAL_BAR_SPACING[interval] });
       if (!timeRangePreset) {
-        timeScale?.fitContent();
+        timeScale?.scrollToRealTime();
       }
     }
     prevLenRef.current = sortedBars.length;
