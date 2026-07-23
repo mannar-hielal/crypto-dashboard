@@ -49,6 +49,7 @@ function useSinglePaneFeed(
     // old async work captures its own `cancelled` and the new effect run
     // creates a fresh variable without disturbing the old closure.
     let cancelled = false;
+    let restDataApplied = false;
     const store = paneStores[paneIndex];
 
     // ── Pane is not visible in current layout → disconnect + clear ──────────
@@ -81,6 +82,12 @@ function useSinglePaneFeed(
     // would flash a blank canvas before WS/REST data loads.  setSnapshot
     // replaces old bars atomically when the first response arrives.
 
+    // Reset the WS snapshot flag so the fresh REST fetch is accepted.
+    // On interval/symbol change the old flag from the previous connection
+    // would block the REST response (wsSnapshotReceived && currentBars >=
+    // REST count), leaving only the cold-aggregator WS snapshot (~2 bars).
+    store.getState().setWsSnapshotReceived(false);
+
     // Step 1: historical REST fetch (fills chart before WS is ready)
     // Only applies if the WS hasn't already sent its initial snapshot — the
     // WS snapshot is authoritative (it includes indicators) and we don't want
@@ -97,6 +104,7 @@ function useSinglePaneFeed(
           const last = res.candles[res.candles.length - 1];
           if (last) lastKnownPrices.set(symbol, last.close);
           store.getState().setSnapshot(res.candles, null);
+          restDataApplied = true;
         }
       })
       .catch((err) => {
@@ -138,10 +146,18 @@ function useSinglePaneFeed(
             store.getState().setWsSnapshotReceived(true);
             const last = msg.bars[msg.bars.length - 1];
             if (last) lastKnownPrices.set(symbol, last.kline.close);
-            store.getState().setSnapshot(
-              msg.bars.map((b) => b.kline),
-              last?.indicators ?? null
-            );
+            // If REST already loaded data (1000 bars), only update indicators
+            // — don't overwrite with the WS cold-aggregator snapshot (~2-9 bars).
+            // restDataApplied is a closure variable: reset per effect run (i.e. on
+            // interval/symbol change), so a fresh feed always accepts the WS data.
+            if (restDataApplied) {
+              store.getState().setIndicators(last?.indicators ?? null);
+            } else {
+              store.getState().setSnapshot(
+                msg.bars.map((b) => b.kline),
+                last?.indicators ?? null
+              );
+            }
           } else if (msg.type === 'bar') {
             lastKnownPrices.set(symbol, msg.bar.kline.close);
             store.getState().addBar(msg.bar);
