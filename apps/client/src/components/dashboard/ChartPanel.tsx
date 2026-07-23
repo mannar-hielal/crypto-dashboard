@@ -508,6 +508,7 @@ export function ChartPanel({
     const dedupMap = new Map<number, (typeof bars)[0]>();
     for (const b of bars) dedupMap.set(b.timestamp, b);
     const sortedBars = Array.from(dedupMap.values()).sort((a, b) => a.timestamp - b.timestamp);
+    console.log(`[CD] ChartPanel pane ${paneIndex} ${interval}: ${sortedBars.length} bars`);
 
     const closes = sortedBars.map((b) => b.close);
     const ema9 = calcEMA(closes, 9);
@@ -574,7 +575,7 @@ export function ChartPanel({
       chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
       timeScale?.applyOptions({ barSpacing: INTERVAL_BAR_SPACING[interval] });
       if (!timeRangePreset) {
-        timeScale?.scrollToRealTime();
+        timeScale?.fitContent();
       }
     }
     prevLenRef.current = sortedBars.length;
