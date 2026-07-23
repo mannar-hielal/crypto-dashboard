@@ -38,6 +38,7 @@ export interface PaneMarketState {
   wsSnapshotReceived: boolean;
 
   setSnapshot: (bars: CandleBar[], indicators: IndicatorSnapshot | null) => void;
+  setIndicators: (indicators: IndicatorSnapshot | null) => void;
   addBar: (liveBar: LiveBar) => void;
   setConnected: (connected: boolean) => void;
   setBidAsk: (bid: number, ask: number, lastPrice?: number) => void;
@@ -76,6 +77,8 @@ function createPaneStore() {
         priceChange: last && prev ? last.close - prev.close : null,
       });
     },
+
+    setIndicators: (indicators) => set({ indicators }),
 
     addBar: (liveBar) => {
       const { bars } = get();

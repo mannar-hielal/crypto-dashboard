@@ -509,6 +509,7 @@ export function ChartPanel({
     const dedupMap = new Map<number, (typeof bars)[0]>();
     for (const b of bars) dedupMap.set(b.timestamp, b);
     const sortedBars = Array.from(dedupMap.values()).sort((a, b) => a.timestamp - b.timestamp);
+    console.log(`[CD] ChartPanel pane ${paneIndex} ${interval}: ${sortedBars.length} bars`);
 
     const closes = sortedBars.map((b) => b.close);
     const ema9 = calcEMA(closes, 9);
@@ -579,7 +580,7 @@ export function ChartPanel({
       }
     }
     prevLenRef.current = sortedBars.length;
-  }, [bars, interval, timeRangePreset]);
+  }, [bars, interval, timeRangePreset, paneIndex]);
 
   // ── 3. Apply time-range preset when it changes ────────────────────────────
   useEffect(() => {
