@@ -16,6 +16,7 @@ import {
 import { bg, color, fontSize } from '@/lib/tokens';
 import { CURSOR_VARIANTS, type CursorVariantId } from '@/lib/cursors';
 import { TOOL_GROUPS } from '@/lib/libraryTools';
+import { TOOL_ICONS } from '@/lib/toolIcons';
 
 // ─── Tool toolbar button definitions ────────────────────────────────────────
 
@@ -312,15 +313,16 @@ export function LeftToolbar({
         // ── Drawing tool groups ──────────────────────────────────────────
         const hasSubmenu = !isBin && TOOL_GROUPS.some((g) => g.id === tool.id);
 
-        // Show the selected subtool's label in the toolbar when active
+        // Show the selected subtool's icon in the toolbar
         const selectedToolId = subToolMap[tool.id];
-        const selectedToolDef =
-          toolActive && selectedToolId
-            ? (TOOL_GROUPS.find((g) => g.id === tool.id)
-                ?.categories.flatMap((c) => c.tools)
-                .find((t) => t.id === selectedToolId) ?? null)
-            : null;
+        const selectedToolDef = selectedToolId
+          ? (TOOL_GROUPS.find((g) => g.id === tool.id)
+              ?.categories.flatMap((c) => c.tools)
+              .find((t) => t.id === selectedToolId) ?? null)
+          : null;
+        const SelectedIcon = selectedToolDef ? TOOL_ICONS[selectedToolDef.id] : null;
         const toolLabel = selectedToolDef?.label ?? tool.label;
+        const showToolIcon = SelectedIcon != null;
 
         return (
           <motion.button
@@ -340,12 +342,12 @@ export function LeftToolbar({
                 transition={{ type: 'spring', stiffness: 500, damping: 35 }}
               />
             )}
-            {toolActive && selectedToolDef ? (
-              <span className="relative z-10 text-[9px] font-semibold leading-tight text-center truncate w-full px-0.5">
-                {selectedToolDef.label}
+            {showToolIcon ? (
+              <span className="relative z-10 flex items-center justify-center w-full">
+                <SelectedIcon size={22} />
               </span>
             ) : (
-              <Icon className="relative z-10 h-6 w-6" />
+              <Icon className="relative z-10 h-6 w-6" strokeWidth={1} />
             )}
             {hasSubmenu && (
               <span
@@ -410,7 +412,7 @@ export function LeftToolbar({
             transition={{ type: 'spring', stiffness: 500, damping: 35 }}
           />
         )}
-        <ZoomIn className="relative z-10" size={24} />
+        <ZoomIn className="relative z-10" size={24} strokeWidth={1} />
       </motion.button>
       <motion.button
         data-tooltip="Zoom out"
@@ -420,7 +422,7 @@ export function LeftToolbar({
         whileTap={{ scale: 0.9 }}
         className="toolbar-btn"
       >
-        <ZoomOut size={24} />
+        <ZoomOut size={24} strokeWidth={1} />
       </motion.button>
 
       {/* ── Cursor variant popup menu ─────────────────────────────────── */}
@@ -483,7 +485,7 @@ export function LeftToolbar({
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
-                      strokeWidth="3"
+                      strokeWidth={1}
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     >
@@ -531,11 +533,12 @@ export function LeftToolbar({
                 </div>
                 {cat.tools.map((toolDef) => {
                   const isSelected = activeToolType === toolDef.id;
+                  const ToolIcon = TOOL_ICONS[toolDef.id];
                   return (
                     <button
                       key={toolDef.id}
                       onClick={() => handleSubToolSelect(activePopupGroup.id, toolDef.id)}
-                      className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left transition-colors"
+                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left transition-colors"
                       style={{
                         background: isSelected ? `${color.purpleDark}20` : 'transparent',
                         color: isSelected ? color.purple : color.muted,
@@ -551,6 +554,7 @@ export function LeftToolbar({
                         }
                       }}
                     >
+                      {ToolIcon ? <ToolIcon size={16} /> : <span className="w-4" />}
                       <span className="flex-1 text-xs font-medium">{toolDef.label}</span>
                       {isSelected && (
                         <svg
@@ -560,7 +564,7 @@ export function LeftToolbar({
                           viewBox="0 0 24 24"
                           fill="none"
                           stroke="currentColor"
-                          strokeWidth="3"
+                          strokeWidth={1}
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         >
