@@ -16,6 +16,13 @@ import {
 import { bg, color, fontSize } from '@/lib/tokens';
 import { CURSOR_VARIANTS, type CursorVariantId } from '@/lib/cursors';
 import { TOOL_GROUPS } from '@/lib/libraryTools';
+import type { ToolDef } from '@/lib/libraryTools';
+import { TOOL_ICONS } from '@/lib/toolIcons';
+
+const BIN_TOOLS: ToolDef[] = [
+  { id: 'remove-all', label: 'Remove All' },
+  { id: 'eraser', label: 'Eraser' },
+];
 
 // ─── Tool toolbar button definitions ────────────────────────────────────────
 
@@ -45,6 +52,7 @@ interface LeftToolbarProps {
   onZoomOut?: () => void;
   cursorVariant?: CursorVariantId;
   onCursorVariantChange?: (variant: CursorVariantId) => void;
+  activeToolType?: string | null;
 }
 
 export function LeftToolbar({
@@ -53,13 +61,15 @@ export function LeftToolbar({
   onZoomOut,
   cursorVariant: cursorVariantProp,
   onCursorVariantChange,
+  activeToolType: activeToolTypeProp,
 }: LeftToolbarProps) {
   // ── Cursor (local state falls back when uncontrolled) ──────────────────
   const [localCursorVariant, setLocalCursorVariant] = useState<CursorVariantId>('cross');
   const cursorVariant = cursorVariantProp ?? localCursorVariant;
 
-  // ── Tool state ──────────────────────────────────────────────────────────
-  const [activeToolType, setActiveToolType] = useState<string | null>(null);
+  // ── Tool state (external prop takes precedence, fall back to local) ──────
+  const [localToolType, setLocalToolType] = useState<string | null>(null);
+  const activeToolType = activeToolTypeProp !== undefined ? activeToolTypeProp : localToolType;
 
   // Last-selected sub-tool per group (persists across group switches)
   const [subToolMap, setSubToolMap] = useState<Record<string, string>>({
@@ -68,6 +78,7 @@ export function LeftToolbar({
     shapes: 'rectangle',
     annotations: 'text-annotation',
     measure: 'long-position',
+    bin: 'remove-all',
   });
 
   // ── Generic popup menu state (replaces individual menu states) ──────────
@@ -90,17 +101,25 @@ export function LeftToolbar({
 
   function handleMainClick(groupId: string) {
     if (groupId === 'cursor') {
-      setActiveToolType(null);
+      setLocalToolType(null);
       onToolChange?.(null);
       return;
     }
     if (groupId === 'bin') {
-      onBinAction?.();
+      const toolType = subToolMap[groupId];
+      if (toolType === 'remove-all') {
+        onBinAction?.();
+        setLocalToolType(null);
+        onToolChange?.(null);
+      } else {
+        setLocalToolType(toolType);
+        onToolChange?.(toolType);
+      }
       return;
     }
     const toolType = subToolMap[groupId];
     if (toolType) {
-      setActiveToolType(toolType);
+      setLocalToolType(toolType);
       onToolChange?.(toolType);
     }
   }
@@ -113,14 +132,20 @@ export function LeftToolbar({
 
   function handleSubToolSelect(groupId: string, toolType: string) {
     setSubToolMap((prev) => ({ ...prev, [groupId]: toolType }));
-    setActiveToolType(toolType);
     setPopupMenu(null);
-    onToolChange?.(toolType);
+    if (groupId === 'bin' && toolType === 'remove-all') {
+      setLocalToolType(null);
+      onToolChange?.(null);
+      onBinAction?.();
+    } else {
+      setLocalToolType(toolType);
+      onToolChange?.(toolType);
+    }
   }
 
   function isGroupActive(groupId: string): boolean {
     if (groupId === 'cursor') return activeToolType === null;
-    if (groupId === 'bin') return false;
+    if (groupId === 'bin') return activeToolType === 'eraser';
     if (activeToolType === null) return false;
     const group = TOOL_GROUPS.find((g) => g.id === groupId);
     if (!group) return false;
@@ -172,7 +197,7 @@ export function LeftToolbar({
 
   function handleCursorVariantSelect(id: CursorVariantId) {
     setLocalCursorVariant(id);
-    setActiveToolType(null);
+    setLocalToolType(null);
     setShowCursorMenu(false);
     onCursorVariantChange?.(id);
     onToolChange?.(null);
@@ -229,7 +254,16 @@ export function LeftToolbar({
   }, []);
 
   // ── Get the active group for popup menu ─────────────────────────────────
-  const activePopupGroup = popupMenu ? TOOL_GROUPS.find((g) => g.id === popupMenu.groupId) : null;
+  const activePopupGroup = popupMenu
+    ? popupMenu.groupId === 'bin'
+      ? {
+          id: 'bin',
+          icon: Trash2,
+          label: 'Remove All',
+          categories: [{ label: 'Tools', tools: BIN_TOOLS }],
+        }
+      : TOOL_GROUPS.find((g) => g.id === popupMenu.groupId)
+    : null;
 
   const zoomActive = activeToolType === 'zoom-in';
 
@@ -247,7 +281,6 @@ export function LeftToolbar({
         const Icon = tool.icon;
         const toolActive = isGroupActive(tool.id);
         const isCursor = tool.id === 'cursor';
-        const isBin = tool.id === 'bin';
 
         // ── Cursor tool ──────────────────────────────────────────────────
         if (isCursor) {
@@ -263,7 +296,7 @@ export function LeftToolbar({
               data-tooltip={cursorVariantDef?.label ?? 'Cursor'}
               aria-label={cursorVariantDef?.label ?? 'Cursor'}
               onClick={() => {
-                setActiveToolType(null);
+                setLocalToolType(null);
                 onToolChange?.(null);
               }}
               onContextMenu={handleCursorContextMenu}
@@ -307,13 +340,26 @@ export function LeftToolbar({
         }
 
         // ── Drawing tool groups ──────────────────────────────────────────
-        const hasSubmenu = !isBin && TOOL_GROUPS.some((g) => g.id === tool.id);
+        const hasSubmenu = TOOL_GROUPS.some((g) => g.id === tool.id) || tool.id === 'bin';
+
+        // Show the selected subtool's icon in the toolbar
+        const selectedToolId = subToolMap[tool.id];
+        const selectedToolDef = selectedToolId
+          ? tool.id === 'bin'
+            ? (BIN_TOOLS.find((t) => t.id === selectedToolId) ?? null)
+            : (TOOL_GROUPS.find((g) => g.id === tool.id)
+                ?.categories.flatMap((c) => c.tools)
+                .find((t) => t.id === selectedToolId) ?? null)
+          : null;
+        const SelectedIcon = selectedToolDef ? TOOL_ICONS[selectedToolDef.id] : null;
+        const toolLabel = selectedToolDef?.label ?? tool.label;
+        const showToolIcon = SelectedIcon != null;
 
         return (
           <motion.button
             key={tool.id}
-            data-tooltip={tool.label}
-            aria-label={tool.label}
+            data-tooltip={toolLabel}
+            aria-label={toolLabel}
             onClick={() => handleMainClick(tool.id)}
             onContextMenu={(e) => hasSubmenu && handleContextMenu(e, tool.id)}
             whileHover={{ scale: 1.1 }}
@@ -327,7 +373,13 @@ export function LeftToolbar({
                 transition={{ type: 'spring', stiffness: 500, damping: 35 }}
               />
             )}
-            <Icon className="relative z-10 h-6 w-6" />
+            {showToolIcon ? (
+              <span className="relative z-10 flex items-center justify-center w-full">
+                <SelectedIcon size={22} />
+              </span>
+            ) : (
+              <Icon className="relative z-10 h-6 w-6" strokeWidth={1} />
+            )}
             {hasSubmenu && (
               <span
                 onClick={(e) => {
@@ -339,7 +391,7 @@ export function LeftToolbar({
                   }
                 }}
                 className="absolute bottom-0.5 right-0.5 z-10 cursor-pointer"
-                aria-label={`${tool.label} tools`}
+                aria-label={`${toolLabel} tools`}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => {
@@ -373,10 +425,10 @@ export function LeftToolbar({
         aria-label="Zoom in"
         onClick={() => {
           if (zoomActive) {
-            setActiveToolType(null);
+            setLocalToolType(null);
             onToolChange?.(null);
           } else {
-            setActiveToolType('zoom-in');
+            setLocalToolType('zoom-in');
             onToolChange?.('zoom-in');
           }
         }}
@@ -391,7 +443,7 @@ export function LeftToolbar({
             transition={{ type: 'spring', stiffness: 500, damping: 35 }}
           />
         )}
-        <ZoomIn className="relative z-10" size={24} />
+        <ZoomIn className="relative z-10" size={24} strokeWidth={1} />
       </motion.button>
       <motion.button
         data-tooltip="Zoom out"
@@ -401,7 +453,7 @@ export function LeftToolbar({
         whileTap={{ scale: 0.9 }}
         className="toolbar-btn"
       >
-        <ZoomOut size={24} />
+        <ZoomOut size={24} strokeWidth={1} />
       </motion.button>
 
       {/* ── Cursor variant popup menu ─────────────────────────────────── */}
@@ -464,7 +516,7 @@ export function LeftToolbar({
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
-                      strokeWidth="3"
+                      strokeWidth={1}
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     >
@@ -512,11 +564,12 @@ export function LeftToolbar({
                 </div>
                 {cat.tools.map((toolDef) => {
                   const isSelected = activeToolType === toolDef.id;
+                  const ToolIcon = toolDef.id === 'remove-all' ? Trash2 : TOOL_ICONS[toolDef.id];
                   return (
                     <button
                       key={toolDef.id}
                       onClick={() => handleSubToolSelect(activePopupGroup.id, toolDef.id)}
-                      className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left transition-colors"
+                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left transition-colors"
                       style={{
                         background: isSelected ? `${color.purpleDark}20` : 'transparent',
                         color: isSelected ? color.purple : color.muted,
@@ -532,6 +585,13 @@ export function LeftToolbar({
                         }
                       }}
                     >
+                      {toolDef.id === 'remove-all' ? (
+                        <Trash2 size={16} strokeWidth={1} />
+                      ) : ToolIcon ? (
+                        <ToolIcon size={16} />
+                      ) : (
+                        <span className="w-4" />
+                      )}
                       <span className="flex-1 text-xs font-medium">{toolDef.label}</span>
                       {isSelected && (
                         <svg
@@ -541,7 +601,7 @@ export function LeftToolbar({
                           viewBox="0 0 24 24"
                           fill="none"
                           stroke="currentColor"
-                          strokeWidth="3"
+                          strokeWidth={1}
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         >
