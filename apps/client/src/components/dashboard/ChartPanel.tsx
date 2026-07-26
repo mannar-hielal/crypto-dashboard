@@ -71,6 +71,21 @@ function toUTC(ms: number): UTCTimestamp {
   return Math.floor(ms / 1000) as UTCTimestamp;
 }
 
+const PADDING_BARS = 200;
+
+const INTERVAL_SECONDS: Record<Interval, number> = {
+  '1m': 60,
+  '5m': 300,
+  '15m': 900,
+  '30m': 1800,
+  '1h': 3600,
+  '2h': 7200,
+  '4h': 14400,
+  '1d': 86400,
+  '1w': 604800,
+  '1M': 2592000,
+};
+
 function getDrawingText(d: IDrawing): string {
   return (d as unknown as { getText?: () => string }).getText?.() ?? '';
 }
@@ -97,6 +112,7 @@ export function ChartPanel({
   const managerRef = useRef<DrawingManager | null>(null);
   const prevSymbolRef = useRef<string>('');
   const pendingAnchorsRef = useRef<Anchor[] | null>(null);
+  const clickStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
 
   const candleRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const ema9Ref = useRef<ISeriesApi<'Line'> | null>(null);
@@ -106,11 +122,13 @@ export function ChartPanel({
   const macdHistRef = useRef<ISeriesApi<'Histogram'> | null>(null);
   const macdLineRef = useRef<ISeriesApi<'Line'> | null>(null);
   const signalRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const paddingSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
 
   const bars = useStore(paneStores[paneIndex], (s) => s.bars);
 
   const chartReadyRef = useRef(false);
   const prevIntervalRef = useRef(interval);
+  const userZoomedRef = useRef(false);
 
   const [hoverData, setHoverData] = useState<LegendData | null>(null);
   const [editingTextInfo, setEditingTextInfo] = useState<{
@@ -128,6 +146,12 @@ export function ChartPanel({
   const zoomDragRef = useRef(false);
   const zoomStartRef = useRef({ x: 0, y: 0 });
   const onToolChangeRef = useRef(onToolChange);
+  const bodyDragRef = useRef<{
+    startX: number;
+    startY: number;
+    startAnchors: { time: number; price: number }[];
+    drawingId: string;
+  } | null>(null);
   useEffect(() => {
     onToolChangeRef.current = onToolChange;
   });
@@ -149,7 +173,7 @@ export function ChartPanel({
         horzLines: { color: 'rgba(255,255,255,0.04)' },
       },
       crosshair: { mode: CrosshairMode.Normal },
-      rightPriceScale: { borderColor: 'rgba(255,255,255,0.07)' },
+      rightPriceScale: { borderColor: 'rgba(255,255,255,0.07)', autoScale: false },
       timeScale: {
         borderColor: 'rgba(255,255,255,0.07)',
         timeVisible: true,
@@ -244,6 +268,14 @@ export function ChartPanel({
       1
     );
 
+    // ── Invisible padding: extends time scale into empty space ─────────
+    paddingSeriesRef.current = chart.addSeries(LineSeries, {
+      color: 'transparent',
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+    });
+
     // ── Drawing manager ────────────────────────────────────────────────────
     const manager = new DrawingManager();
     managerRef.current = manager;
@@ -261,6 +293,43 @@ export function ChartPanel({
     onDrawingManagerReady?.(manager);
 
     // ── Drawing placement (click-to-place) ─────────────────────────────────
+    const resolveTime = (x: number): UTCTimestamp | null => {
+      const t = chart.timeScale().coordinateToTime(x);
+      if (t !== null) return t as UTCTimestamp;
+
+      const logical = chart.timeScale().coordinateToLogical(x);
+      if (logical === null) return null;
+
+      const cd = candleRef.current;
+      if (!cd) return null;
+      const data = cd.data();
+      if (data.length < 2) return null;
+
+      const last = data[data.length - 1];
+      const lastTime = last.time as UTCTimestamp;
+      const prev = data[data.length - 2];
+      const barInterval = lastTime - (prev.time as UTCTimestamp);
+      if (barInterval <= 0) return null;
+
+      for (const ref of [last, data[0]]) {
+        const refX = chart.timeScale().timeToCoordinate(ref.time);
+        if (refX === null) continue;
+        const refLogical = chart.timeScale().coordinateToLogical(refX);
+        if (refLogical === null) continue;
+        const offset = ref === last ? 0 : data.length - 1;
+        const refTime = ref.time as UTCTimestamp;
+        return (refTime + (logical - (refLogical + offset)) * barInterval) as UTCTimestamp;
+      }
+
+      const vr = chart.timeScale().getVisibleLogicalRange();
+      if (vr && logical > Math.floor(vr.to)) {
+        const barsPast = logical - Math.floor(vr.to);
+        return (lastTime + barsPast * barInterval) as UTCTimestamp;
+      }
+
+      return null;
+    };
+
     const removePreview = () => {
       try {
         manager.removeDrawing('__preview__');
@@ -269,7 +338,7 @@ export function ChartPanel({
       }
     };
 
-    const updatePreview = (mouseX: number, mouseY: number) => {
+    const updatePreview = (mouseX: number, mouseY: number, paneHeight: number) => {
       const pending = pendingAnchorsRef.current;
       if (!pending) return;
 
@@ -285,8 +354,9 @@ export function ChartPanel({
         return;
       }
 
-      const time = chart.timeScale().coordinateToTime(mouseX);
-      const price = candleRef.current?.coordinateToPrice(mouseY);
+      const time = resolveTime(mouseX);
+      const clampedY = Math.max(0, Math.min(mouseY, paneHeight));
+      const price = candleRef.current?.coordinateToPrice(clampedY);
       if (time === null || price === null || price === undefined) return;
 
       const mouseAnchor: Anchor = { time, price };
@@ -308,9 +378,93 @@ export function ChartPanel({
       }
     };
 
+    // ── Body drag-to-reposition ──────────────────────────────────────────
+    /** Intercept mousedown in capturing phase so we can prevent the
+     *  lightweight-charts canvas from receiving the event and starting a
+     *  chart pan when the user drags a drawing body. */
+    const handleBodyMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0) return;
+      const m = managerRef.current;
+      if (!m || m.getActiveTool()) return;
+
+      const rect = container.getBoundingClientRect();
+      const point: Point = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+
+      // Anchor drag — let DrawingManager handle via bubbling phase (no stop)
+      if (m.hitTestAnchor(point) !== null) return;
+
+      const hit = m.hitTest(point);
+      if (!hit || hit.options.locked) return;
+
+      // Body drag — stop propagation so the canvas never receives the event
+      e.stopPropagation();
+
+      // Select the drawing if not already
+      const selected = m.getSelectedDrawing();
+      if (selected?.id !== hit.id) {
+        m.selectDrawing(hit.id);
+      }
+
+      bodyDragRef.current = {
+        startX: e.clientX,
+        startY: e.clientY,
+        startAnchors: hit.anchors.map((a) => ({ time: a.time as number, price: a.price })),
+        drawingId: hit.id,
+      };
+      hit.setState('editing');
+    };
+
+    const handleBodyMouseUp = () => {
+      const drag = bodyDragRef.current;
+      if (!drag) return;
+
+      const m = managerRef.current;
+      if (!m) {
+        bodyDragRef.current = null;
+        return;
+      }
+
+      const drawing = m.getSelectedDrawing();
+      if (drawing) {
+        drawing.setState('selected');
+        persistDrawings(m, prevSymbolRef.current);
+      }
+      bodyDragRef.current = null;
+    };
+
     const handleMouseMove = (e: MouseEvent) => {
       const rect = container.getBoundingClientRect();
-      updatePreview(e.clientX - rect.left, e.clientY - rect.top);
+      updatePreview(e.clientX - rect.left, e.clientY - rect.top, rect.height);
+
+      // Body drag
+      const drag = bodyDragRef.current;
+      if (!drag) return;
+
+      const m = managerRef.current;
+      const cs = candleRef.current;
+      if (!m || !cs) return;
+
+      const drawing = m.getSelectedDrawing();
+      if (!drawing || drawing.id !== drag.drawingId) return;
+
+      const startTime = resolveTime(drag.startX - rect.left);
+      const currTime = resolveTime(e.clientX - rect.left);
+      const startRY = Math.max(0, Math.min(drag.startY - rect.top, rect.height));
+      const currRY = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
+      const startPrice = cs.coordinateToPrice(startRY);
+      const currPrice = cs.coordinateToPrice(currRY);
+      if (startTime === null || currTime === null || startPrice === null || currPrice === null)
+        return;
+
+      const timeOffset = (currTime as number) - (startTime as number);
+      const priceOffset = currPrice - startPrice;
+
+      drawing.setAnchors(
+        drag.startAnchors.map((a) => ({
+          time: (a.time + timeOffset) as UTCTimestamp,
+          price: a.price + priceOffset,
+        }))
+      );
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -321,17 +475,43 @@ export function ChartPanel({
       }
     };
 
+    // ── Right-click → cursor (selection) mode ─────────────────────────────
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      bodyDragRef.current = null;
+      onToolChangeRef.current?.(null);
+    };
+
     const unsubToolChanged = manager.on('tool:changed', () => {
       pendingAnchorsRef.current = null;
       removePreview();
     });
 
-    const handleChartClick: Parameters<typeof chart.subscribeClick>[0] = (param) => {
-      const activeTool = manager.getActiveTool();
-      if (!activeTool || !param.point) return;
+    // ── Tool-active click handling (pointer-based, works in empty space) ───
+    const handlePointerDown = (e: PointerEvent) => {
+      if (e.button !== 0) return;
+      if (!manager.getActiveTool()) return;
+      clickStartRef.current = { x: e.clientX, y: e.clientY, time: Date.now() };
+    };
 
-      const time = chart.timeScale().coordinateToTime(param.point.x);
-      const price = candleRef.current?.coordinateToPrice(param.point.y);
+    const handlePointerUp = (e: PointerEvent) => {
+      if (e.button !== 0) return;
+      const start = clickStartRef.current;
+      clickStartRef.current = null;
+      if (!start) return;
+
+      const activeTool = manager.getActiveTool();
+      if (!activeTool) return;
+
+      const dist = Math.abs(e.clientX - start.x) + Math.abs(e.clientY - start.y);
+      const elapsed = Date.now() - start.time;
+      if (dist > 8 || elapsed > 500) return;
+
+      const rect = container.getBoundingClientRect();
+      const time = resolveTime(e.clientX - rect.left);
+      const mouseY = e.clientY - rect.top;
+      const clampedY = Math.max(0, Math.min(mouseY, rect.height));
+      const price = candleRef.current?.coordinateToPrice(clampedY);
       if (time === null || price === null || price === undefined) return;
 
       const anchor: Anchor = { time, price };
@@ -359,14 +539,17 @@ export function ChartPanel({
           manager.addDrawing(drawing);
         }
         pendingAnchorsRef.current = null;
-        manager.setActiveTool(null);
       }
     };
-    chart.subscribeClick(handleChartClick);
 
     const container = containerRef.current;
+    container.addEventListener('pointerdown', handlePointerDown, { capture: true });
+    container.addEventListener('pointerup', handlePointerUp);
     container.addEventListener('mousemove', handleMouseMove);
+    container.addEventListener('mousedown', handleBodyMouseDown, { capture: true });
+    document.addEventListener('mouseup', handleBodyMouseUp);
     document.addEventListener('keydown', handleKeyDown);
+    container.addEventListener('contextmenu', handleContextMenu);
 
     // ── Double-click text editing ─────────────────────────────────────────
     const TEXT_DRAWING_TYPES = new Set([
@@ -453,11 +636,16 @@ export function ChartPanel({
       unsubRemove();
       unsubUpdate();
       unsubClear();
-      chart.unsubscribeClick(handleChartClick);
+      container.removeEventListener('pointerdown', handlePointerDown, { capture: true });
+      container.removeEventListener('pointerup', handlePointerUp);
       unsubToolChanged();
       container.removeEventListener('mousemove', handleMouseMove);
+      container.removeEventListener('mousedown', handleBodyMouseDown, { capture: true });
+      document.removeEventListener('mouseup', handleBodyMouseUp);
       document.removeEventListener('keydown', handleKeyDown);
+      container.removeEventListener('contextmenu', handleContextMenu);
       container.removeEventListener('dblclick', handleDblClick);
+      bodyDragRef.current = null;
       manager.detach();
       managerRef.current = null;
       chart.remove();
@@ -486,6 +674,8 @@ export function ChartPanel({
   // ── 2. Push data whenever bars changes ───────────────────────────────────
   useEffect(() => {
     if (bars.length === 0) {
+      userZoomedRef.current = false;
+      paneStores[paneIndex].getState().setUserZoomed(false);
       prevLenRef.current = 0;
       candleRef.current?.setData([]);
       ema9Ref.current?.setData([]);
@@ -495,12 +685,14 @@ export function ChartPanel({
       macdHistRef.current?.setData([]);
       macdLineRef.current?.setData([]);
       signalRef.current?.setData([]);
+      paddingSeriesRef.current?.setData([]);
       return;
     }
 
     if (interval !== prevIntervalRef.current) {
       prevIntervalRef.current = interval;
       prevLenRef.current = 0;
+      paneStores[paneIndex].getState().setUserZoomed(false);
       return;
     }
 
@@ -526,15 +718,29 @@ export function ChartPanel({
       return pts;
     }
 
-    candleRef.current?.setData(
-      sortedBars.map((b) => ({
-        time: toUTC(b.timestamp),
-        open: b.open,
-        high: b.high,
-        low: b.low,
-        close: b.close,
-      }))
-    );
+    // ── Data push ──────────────────────────────────────────────────────────
+    // Save visible logical range before setData calls — lightweight-charts
+    // has a known bug where setData resets the visible range (SO #63557823).
+    const notFirstLoad = prevLenRef.current > 0;
+    const barDiff = Math.abs(sortedBars.length - prevLenRef.current);
+    const isReload = barDiff > 1;
+    const savedRange =
+      notFirstLoad && !isReload
+        ? (chartRef.current?.timeScale().getVisibleLogicalRange() ?? undefined)
+        : undefined;
+
+    const candleData = sortedBars.map((b) => ({
+      time: toUTC(b.timestamp),
+      open: b.open,
+      high: b.high,
+      low: b.low,
+      close: b.close,
+    }));
+    if (sortedBars.length === prevLenRef.current) {
+      candleRef.current?.update(candleData[candleData.length - 1]);
+    } else {
+      candleRef.current?.setData(candleData);
+    }
 
     ema9Ref.current?.setData(linePoints(ema9));
     ema20Ref.current?.setData(linePoints(ema20));
@@ -560,6 +766,24 @@ export function ChartPanel({
     macdLineRef.current?.setData(linePoints(macd));
     signalRef.current?.setData(linePoints(signal));
 
+    // ── Extend time scale into empty space so coordinateToTime works ──
+    if (sortedBars.length > 1) {
+      const barSec = INTERVAL_SECONDS[interval];
+      const lastBar = sortedBars[sortedBars.length - 1];
+      const lastClose = lastBar.close;
+      const lastT = toUTC(lastBar.timestamp);
+      const paddingData: { time: UTCTimestamp; value: number }[] = [];
+      for (let i = 1; i <= PADDING_BARS; i++) {
+        paddingData.push({ time: (lastT + i * barSec) as UTCTimestamp, value: lastClose });
+      }
+      paddingSeriesRef.current?.setData(paddingData);
+    }
+
+    // Restore saved logical range (setData resets it — known lw-charts bug)
+    if (savedRange && notFirstLoad) {
+      chartRef.current?.timeScale().setVisibleLogicalRange(savedRange);
+    }
+
     const timeScale = chartRef.current?.timeScale();
     const firstTime = toUTC(sortedBars[0].timestamp);
     const lastTime = toUTC(sortedBars[sortedBars.length - 1].timestamp);
@@ -568,12 +792,15 @@ export function ChartPanel({
       | null
       | undefined;
 
-    const isFirstLoad = prevLenRef.current === 0;
+    const isFirstLoad = !notFirstLoad;
     const isOutOfRange =
       !visibleRange || lastTime < visibleRange.from || firstTime > visibleRange.to;
 
-    if (isFirstLoad || isOutOfRange) {
+    if (isFirstLoad || isReload || (isOutOfRange && !userZoomedRef.current)) {
       chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
+      requestAnimationFrame(() => {
+        chartRef.current?.priceScale('right').applyOptions({ autoScale: false });
+      });
       timeScale?.applyOptions({ barSpacing: INTERVAL_BAR_SPACING[interval] });
       if (!timeRangePreset) {
         timeScale?.scrollToRealTime();
@@ -631,29 +858,34 @@ export function ChartPanel({
     });
   }, []);
 
-  const handleZoomPointerUp = useCallback((e: React.PointerEvent) => {
-    if (!zoomDragRef.current) return;
-    zoomDragRef.current = false;
-    const el = containerRef.current;
-    const chart = chartRef.current;
-    if (!el || !chart) {
-      setZoomRect(null);
-      return;
-    }
-    const rect = el.getBoundingClientRect();
-    const endX = e.clientX - rect.left;
-    const startX = zoomStartRef.current.x;
-    const startLogical = chart.timeScale().coordinateToLogical(startX);
-    const endLogical = chart.timeScale().coordinateToLogical(endX);
-    if (startLogical !== null && endLogical !== null) {
-      const minLogical = Math.min(startLogical, endLogical);
-      const maxLogical = Math.max(startLogical, endLogical);
-      if (maxLogical - minLogical > 2) {
-        chart.timeScale().setVisibleLogicalRange({ from: minLogical, to: maxLogical });
+  const handleZoomPointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      if (!zoomDragRef.current) return;
+      zoomDragRef.current = false;
+      const el = containerRef.current;
+      const chart = chartRef.current;
+      if (!el || !chart) {
+        setZoomRect(null);
+        return;
       }
-    }
-    setZoomRect(null);
-  }, []);
+      const rect = el.getBoundingClientRect();
+      const endX = e.clientX - rect.left;
+      const startX = zoomStartRef.current.x;
+      const startLogical = chart.timeScale().coordinateToLogical(startX);
+      const endLogical = chart.timeScale().coordinateToLogical(endX);
+      if (startLogical !== null && endLogical !== null) {
+        const minLogical = Math.min(startLogical, endLogical);
+        const maxLogical = Math.max(startLogical, endLogical);
+        if (maxLogical - minLogical > 2) {
+          chart.timeScale().setVisibleLogicalRange({ from: minLogical, to: maxLogical });
+          userZoomedRef.current = true;
+          paneStores[paneIndex].getState().setUserZoomed(true);
+        }
+      }
+      setZoomRect(null);
+    },
+    [paneIndex]
+  );
 
   // ── Escape key exits zoom-in mode ───────────────────────────────────────
   useEffect(() => {
@@ -669,6 +901,25 @@ export function ChartPanel({
       setZoomRect(null);
     };
   }, [activeToolType]);
+
+  // ── Delete/Backspace removes selected drawing ───────────────────────────
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+        return;
+      const manager = managerRef.current;
+      if (!manager) return;
+      const selected = manager.getSelectedDrawing();
+      if (selected) {
+        e.preventDefault();
+        manager.removeDrawing(selected.id);
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
 
   return (
     <div className="relative h-full w-full" style={{ background: CHART_BG }}>
