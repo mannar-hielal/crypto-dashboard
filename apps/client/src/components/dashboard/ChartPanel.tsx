@@ -71,6 +71,21 @@ function toUTC(ms: number): UTCTimestamp {
   return Math.floor(ms / 1000) as UTCTimestamp;
 }
 
+const PADDING_BARS = 200;
+
+const INTERVAL_SECONDS: Record<Interval, number> = {
+  '1m': 60,
+  '5m': 300,
+  '15m': 900,
+  '30m': 1800,
+  '1h': 3600,
+  '2h': 7200,
+  '4h': 14400,
+  '1d': 86400,
+  '1w': 604800,
+  '1M': 2592000,
+};
+
 function getDrawingText(d: IDrawing): string {
   return (d as unknown as { getText?: () => string }).getText?.() ?? '';
 }
@@ -97,6 +112,7 @@ export function ChartPanel({
   const managerRef = useRef<DrawingManager | null>(null);
   const prevSymbolRef = useRef<string>('');
   const pendingAnchorsRef = useRef<Anchor[] | null>(null);
+  const clickStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
 
   const candleRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const ema9Ref = useRef<ISeriesApi<'Line'> | null>(null);
@@ -106,6 +122,7 @@ export function ChartPanel({
   const macdHistRef = useRef<ISeriesApi<'Histogram'> | null>(null);
   const macdLineRef = useRef<ISeriesApi<'Line'> | null>(null);
   const signalRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const paddingSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
 
   const bars = useStore(paneStores[paneIndex], (s) => s.bars);
 
@@ -156,7 +173,7 @@ export function ChartPanel({
         horzLines: { color: 'rgba(255,255,255,0.04)' },
       },
       crosshair: { mode: CrosshairMode.Normal },
-      rightPriceScale: { borderColor: 'rgba(255,255,255,0.07)' },
+      rightPriceScale: { borderColor: 'rgba(255,255,255,0.07)', autoScale: false },
       timeScale: {
         borderColor: 'rgba(255,255,255,0.07)',
         timeVisible: true,
@@ -251,6 +268,14 @@ export function ChartPanel({
       1
     );
 
+    // ── Invisible padding: extends time scale into empty space ─────────
+    paddingSeriesRef.current = chart.addSeries(LineSeries, {
+      color: 'transparent',
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+    });
+
     // ── Drawing manager ────────────────────────────────────────────────────
     const manager = new DrawingManager();
     managerRef.current = manager;
@@ -268,6 +293,43 @@ export function ChartPanel({
     onDrawingManagerReady?.(manager);
 
     // ── Drawing placement (click-to-place) ─────────────────────────────────
+    const resolveTime = (x: number): UTCTimestamp | null => {
+      const t = chart.timeScale().coordinateToTime(x);
+      if (t !== null) return t as UTCTimestamp;
+
+      const logical = chart.timeScale().coordinateToLogical(x);
+      if (logical === null) return null;
+
+      const cd = candleRef.current;
+      if (!cd) return null;
+      const data = cd.data();
+      if (data.length < 2) return null;
+
+      const last = data[data.length - 1];
+      const lastTime = last.time as UTCTimestamp;
+      const prev = data[data.length - 2];
+      const barInterval = lastTime - (prev.time as UTCTimestamp);
+      if (barInterval <= 0) return null;
+
+      for (const ref of [last, data[0]]) {
+        const refX = chart.timeScale().timeToCoordinate(ref.time);
+        if (refX === null) continue;
+        const refLogical = chart.timeScale().coordinateToLogical(refX);
+        if (refLogical === null) continue;
+        const offset = ref === last ? 0 : data.length - 1;
+        const refTime = ref.time as UTCTimestamp;
+        return (refTime + (logical - (refLogical + offset)) * barInterval) as UTCTimestamp;
+      }
+
+      const vr = chart.timeScale().getVisibleLogicalRange();
+      if (vr && logical > Math.floor(vr.to)) {
+        const barsPast = logical - Math.floor(vr.to);
+        return (lastTime + barsPast * barInterval) as UTCTimestamp;
+      }
+
+      return null;
+    };
+
     const removePreview = () => {
       try {
         manager.removeDrawing('__preview__');
@@ -276,7 +338,7 @@ export function ChartPanel({
       }
     };
 
-    const updatePreview = (mouseX: number, mouseY: number) => {
+    const updatePreview = (mouseX: number, mouseY: number, paneHeight: number) => {
       const pending = pendingAnchorsRef.current;
       if (!pending) return;
 
@@ -292,8 +354,9 @@ export function ChartPanel({
         return;
       }
 
-      const time = chart.timeScale().coordinateToTime(mouseX);
-      const price = candleRef.current?.coordinateToPrice(mouseY);
+      const time = resolveTime(mouseX);
+      const clampedY = Math.max(0, Math.min(mouseY, paneHeight));
+      const price = candleRef.current?.coordinateToPrice(clampedY);
       if (time === null || price === null || price === undefined) return;
 
       const mouseAnchor: Anchor = { time, price };
@@ -371,25 +434,25 @@ export function ChartPanel({
 
     const handleMouseMove = (e: MouseEvent) => {
       const rect = container.getBoundingClientRect();
-      updatePreview(e.clientX - rect.left, e.clientY - rect.top);
+      updatePreview(e.clientX - rect.left, e.clientY - rect.top, rect.height);
 
       // Body drag
       const drag = bodyDragRef.current;
       if (!drag) return;
 
       const m = managerRef.current;
-      const ch = chartRef.current;
       const cs = candleRef.current;
-      if (!m || !ch || !cs) return;
+      if (!m || !cs) return;
 
       const drawing = m.getSelectedDrawing();
       if (!drawing || drawing.id !== drag.drawingId) return;
 
-      const timeScale = ch.timeScale();
-      const startTime = timeScale.coordinateToTime(drag.startX - rect.left);
-      const currTime = timeScale.coordinateToTime(e.clientX - rect.left);
-      const startPrice = cs.coordinateToPrice(drag.startY - rect.top);
-      const currPrice = cs.coordinateToPrice(e.clientY - rect.top);
+      const startTime = resolveTime(drag.startX - rect.left);
+      const currTime = resolveTime(e.clientX - rect.left);
+      const startRY = Math.max(0, Math.min(drag.startY - rect.top, rect.height));
+      const currRY = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
+      const startPrice = cs.coordinateToPrice(startRY);
+      const currPrice = cs.coordinateToPrice(currRY);
       if (startTime === null || currTime === null || startPrice === null || currPrice === null)
         return;
 
@@ -424,12 +487,31 @@ export function ChartPanel({
       removePreview();
     });
 
-    const handleChartClick: Parameters<typeof chart.subscribeClick>[0] = (param) => {
-      const activeTool = manager.getActiveTool();
-      if (!activeTool || !param.point) return;
+    // ── Tool-active click handling (pointer-based, works in empty space) ───
+    const handlePointerDown = (e: PointerEvent) => {
+      if (e.button !== 0) return;
+      if (!manager.getActiveTool()) return;
+      clickStartRef.current = { x: e.clientX, y: e.clientY, time: Date.now() };
+    };
 
-      const time = chart.timeScale().coordinateToTime(param.point.x);
-      const price = candleRef.current?.coordinateToPrice(param.point.y);
+    const handlePointerUp = (e: PointerEvent) => {
+      if (e.button !== 0) return;
+      const start = clickStartRef.current;
+      clickStartRef.current = null;
+      if (!start) return;
+
+      const activeTool = manager.getActiveTool();
+      if (!activeTool) return;
+
+      const dist = Math.abs(e.clientX - start.x) + Math.abs(e.clientY - start.y);
+      const elapsed = Date.now() - start.time;
+      if (dist > 8 || elapsed > 500) return;
+
+      const rect = container.getBoundingClientRect();
+      const time = resolveTime(e.clientX - rect.left);
+      const mouseY = e.clientY - rect.top;
+      const clampedY = Math.max(0, Math.min(mouseY, rect.height));
+      const price = candleRef.current?.coordinateToPrice(clampedY);
       if (time === null || price === null || price === undefined) return;
 
       const anchor: Anchor = { time, price };
@@ -459,9 +541,10 @@ export function ChartPanel({
         pendingAnchorsRef.current = null;
       }
     };
-    chart.subscribeClick(handleChartClick);
 
     const container = containerRef.current;
+    container.addEventListener('pointerdown', handlePointerDown, { capture: true });
+    container.addEventListener('pointerup', handlePointerUp);
     container.addEventListener('mousemove', handleMouseMove);
     container.addEventListener('mousedown', handleBodyMouseDown, { capture: true });
     document.addEventListener('mouseup', handleBodyMouseUp);
@@ -553,7 +636,8 @@ export function ChartPanel({
       unsubRemove();
       unsubUpdate();
       unsubClear();
-      chart.unsubscribeClick(handleChartClick);
+      container.removeEventListener('pointerdown', handlePointerDown, { capture: true });
+      container.removeEventListener('pointerup', handlePointerUp);
       unsubToolChanged();
       container.removeEventListener('mousemove', handleMouseMove);
       container.removeEventListener('mousedown', handleBodyMouseDown, { capture: true });
@@ -601,6 +685,7 @@ export function ChartPanel({
       macdHistRef.current?.setData([]);
       macdLineRef.current?.setData([]);
       signalRef.current?.setData([]);
+      paddingSeriesRef.current?.setData([]);
       return;
     }
 
@@ -637,9 +722,12 @@ export function ChartPanel({
     // Save visible logical range before setData calls — lightweight-charts
     // has a known bug where setData resets the visible range (SO #63557823).
     const notFirstLoad = prevLenRef.current > 0;
-    const savedRange = notFirstLoad
-      ? (chartRef.current?.timeScale().getVisibleLogicalRange() ?? undefined)
-      : undefined;
+    const barDiff = Math.abs(sortedBars.length - prevLenRef.current);
+    const isReload = barDiff > 1;
+    const savedRange =
+      notFirstLoad && !isReload
+        ? (chartRef.current?.timeScale().getVisibleLogicalRange() ?? undefined)
+        : undefined;
 
     const candleData = sortedBars.map((b) => ({
       time: toUTC(b.timestamp),
@@ -678,6 +766,19 @@ export function ChartPanel({
     macdLineRef.current?.setData(linePoints(macd));
     signalRef.current?.setData(linePoints(signal));
 
+    // ── Extend time scale into empty space so coordinateToTime works ──
+    if (sortedBars.length > 1) {
+      const barSec = INTERVAL_SECONDS[interval];
+      const lastBar = sortedBars[sortedBars.length - 1];
+      const lastClose = lastBar.close;
+      const lastT = toUTC(lastBar.timestamp);
+      const paddingData: { time: UTCTimestamp; value: number }[] = [];
+      for (let i = 1; i <= PADDING_BARS; i++) {
+        paddingData.push({ time: (lastT + i * barSec) as UTCTimestamp, value: lastClose });
+      }
+      paddingSeriesRef.current?.setData(paddingData);
+    }
+
     // Restore saved logical range (setData resets it — known lw-charts bug)
     if (savedRange && notFirstLoad) {
       chartRef.current?.timeScale().setVisibleLogicalRange(savedRange);
@@ -695,8 +796,11 @@ export function ChartPanel({
     const isOutOfRange =
       !visibleRange || lastTime < visibleRange.from || firstTime > visibleRange.to;
 
-    if (isFirstLoad || (isOutOfRange && !userZoomedRef.current)) {
+    if (isFirstLoad || isReload || (isOutOfRange && !userZoomedRef.current)) {
       chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
+      requestAnimationFrame(() => {
+        chartRef.current?.priceScale('right').applyOptions({ autoScale: false });
+      });
       timeScale?.applyOptions({ barSpacing: INTERVAL_BAR_SPACING[interval] });
       if (!timeRangePreset) {
         timeScale?.scrollToRealTime();

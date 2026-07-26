@@ -105,7 +105,7 @@ export function DashboardInner() {
 
   function handleToolChange(toolType: string | null) {
     setActiveToolType(toolType);
-    if (toolType === 'zoom-in') return;
+    if (toolType === 'zoom-in' || toolType === 'eraser') return;
     const paneIndex = useLayoutStore.getState().activePane;
     const manager = drawingManagerRefs.current[paneIndex];
     if (manager) {

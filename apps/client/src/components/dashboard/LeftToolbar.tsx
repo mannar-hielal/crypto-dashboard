@@ -16,7 +16,13 @@ import {
 import { bg, color, fontSize } from '@/lib/tokens';
 import { CURSOR_VARIANTS, type CursorVariantId } from '@/lib/cursors';
 import { TOOL_GROUPS } from '@/lib/libraryTools';
+import type { ToolDef } from '@/lib/libraryTools';
 import { TOOL_ICONS } from '@/lib/toolIcons';
+
+const BIN_TOOLS: ToolDef[] = [
+  { id: 'remove-all', label: 'Remove All' },
+  { id: 'eraser', label: 'Eraser' },
+];
 
 // ─── Tool toolbar button definitions ────────────────────────────────────────
 
@@ -72,6 +78,7 @@ export function LeftToolbar({
     shapes: 'rectangle',
     annotations: 'text-annotation',
     measure: 'long-position',
+    bin: 'remove-all',
   });
 
   // ── Generic popup menu state (replaces individual menu states) ──────────
@@ -99,7 +106,15 @@ export function LeftToolbar({
       return;
     }
     if (groupId === 'bin') {
-      onBinAction?.();
+      const toolType = subToolMap[groupId];
+      if (toolType === 'remove-all') {
+        onBinAction?.();
+        setLocalToolType(null);
+        onToolChange?.(null);
+      } else {
+        setLocalToolType(toolType);
+        onToolChange?.(toolType);
+      }
       return;
     }
     const toolType = subToolMap[groupId];
@@ -117,14 +132,20 @@ export function LeftToolbar({
 
   function handleSubToolSelect(groupId: string, toolType: string) {
     setSubToolMap((prev) => ({ ...prev, [groupId]: toolType }));
-    setLocalToolType(toolType);
     setPopupMenu(null);
-    onToolChange?.(toolType);
+    if (groupId === 'bin' && toolType === 'remove-all') {
+      setLocalToolType(null);
+      onToolChange?.(null);
+      onBinAction?.();
+    } else {
+      setLocalToolType(toolType);
+      onToolChange?.(toolType);
+    }
   }
 
   function isGroupActive(groupId: string): boolean {
     if (groupId === 'cursor') return activeToolType === null;
-    if (groupId === 'bin') return false;
+    if (groupId === 'bin') return activeToolType === 'eraser';
     if (activeToolType === null) return false;
     const group = TOOL_GROUPS.find((g) => g.id === groupId);
     if (!group) return false;
@@ -233,7 +254,16 @@ export function LeftToolbar({
   }, []);
 
   // ── Get the active group for popup menu ─────────────────────────────────
-  const activePopupGroup = popupMenu ? TOOL_GROUPS.find((g) => g.id === popupMenu.groupId) : null;
+  const activePopupGroup = popupMenu
+    ? popupMenu.groupId === 'bin'
+      ? {
+          id: 'bin',
+          icon: Trash2,
+          label: 'Remove All',
+          categories: [{ label: 'Tools', tools: BIN_TOOLS }],
+        }
+      : TOOL_GROUPS.find((g) => g.id === popupMenu.groupId)
+    : null;
 
   const zoomActive = activeToolType === 'zoom-in';
 
@@ -251,7 +281,6 @@ export function LeftToolbar({
         const Icon = tool.icon;
         const toolActive = isGroupActive(tool.id);
         const isCursor = tool.id === 'cursor';
-        const isBin = tool.id === 'bin';
 
         // ── Cursor tool ──────────────────────────────────────────────────
         if (isCursor) {
@@ -311,14 +340,16 @@ export function LeftToolbar({
         }
 
         // ── Drawing tool groups ──────────────────────────────────────────
-        const hasSubmenu = !isBin && TOOL_GROUPS.some((g) => g.id === tool.id);
+        const hasSubmenu = TOOL_GROUPS.some((g) => g.id === tool.id) || tool.id === 'bin';
 
         // Show the selected subtool's icon in the toolbar
         const selectedToolId = subToolMap[tool.id];
         const selectedToolDef = selectedToolId
-          ? (TOOL_GROUPS.find((g) => g.id === tool.id)
-              ?.categories.flatMap((c) => c.tools)
-              .find((t) => t.id === selectedToolId) ?? null)
+          ? tool.id === 'bin'
+            ? (BIN_TOOLS.find((t) => t.id === selectedToolId) ?? null)
+            : (TOOL_GROUPS.find((g) => g.id === tool.id)
+                ?.categories.flatMap((c) => c.tools)
+                .find((t) => t.id === selectedToolId) ?? null)
           : null;
         const SelectedIcon = selectedToolDef ? TOOL_ICONS[selectedToolDef.id] : null;
         const toolLabel = selectedToolDef?.label ?? tool.label;
@@ -533,7 +564,7 @@ export function LeftToolbar({
                 </div>
                 {cat.tools.map((toolDef) => {
                   const isSelected = activeToolType === toolDef.id;
-                  const ToolIcon = TOOL_ICONS[toolDef.id];
+                  const ToolIcon = toolDef.id === 'remove-all' ? Trash2 : TOOL_ICONS[toolDef.id];
                   return (
                     <button
                       key={toolDef.id}
@@ -554,7 +585,13 @@ export function LeftToolbar({
                         }
                       }}
                     >
-                      {ToolIcon ? <ToolIcon size={16} /> : <span className="w-4" />}
+                      {toolDef.id === 'remove-all' ? (
+                        <Trash2 size={16} strokeWidth={1} />
+                      ) : ToolIcon ? (
+                        <ToolIcon size={16} />
+                      ) : (
+                        <span className="w-4" />
+                      )}
                       <span className="flex-1 text-xs font-medium">{toolDef.label}</span>
                       {isSelected && (
                         <svg
