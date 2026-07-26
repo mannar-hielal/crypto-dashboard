@@ -5,6 +5,7 @@ import { authApi } from '@crypto-dashboard/sdk';
 import { useAuthStore } from '@/store/authStore';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { PWAInstallBanner } from '@/components/PWAInstallBanner';
+import { OfflineBanner } from '@/components/OfflineBanner';
 import { CookieBanner } from '@/components/CookieBanner';
 import { PageFallback } from '@/components/PageFallback';
 
@@ -93,6 +94,9 @@ export default function App() {
 
   return (
     <>
+      {/* Offline indicator — shows when the browser reports no network */}
+      <OfflineBanner />
+
       {/* PWA install hint — iOS Safari (manual) and Android Chrome (native prompt) */}
       <PWAInstallBanner />
 
