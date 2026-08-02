@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { radius } from '@/lib/tokens';
+import { bg, radius } from '@/lib/tokens';
 
 const STORAGE_KEY = 'cd-cookie-notice-dismissed';
 
@@ -27,7 +27,10 @@ export function CookieBanner() {
           exit={{ y: 100, opacity: 0 }}
           className="fixed bottom-4 left-4 right-4 z-[100] md:left-auto md:right-4 md:w-96"
         >
-          <div className="relative overflow-hidden rounded-xl border border-white/10 bg-[#16143a] p-4 shadow-2xl backdrop-blur-md">
+          <div
+            className="relative overflow-hidden rounded-xl border border-white/10 p-4 shadow-2xl backdrop-blur-md"
+            style={{ background: bg.banner }}
+          >
             <div className="flex flex-col gap-3">
               <div className="flex items-start justify-between gap-2">
                 <p className="text-xs leading-relaxed text-muted-foreground">

@@ -78,10 +78,10 @@ export function calculateMovingAverageIndicatorValues<TData extends SupportedDat
 
   ensureTimestampData(data);
 
-  const values: (number | undefined)[] = data.map(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (d) => (d as any)[source] as number | undefined
-  );
+  const values: (number | undefined)[] = data.map((d) => {
+    const v = (d as unknown as Record<string, unknown>)[source as string];
+    return typeof v === 'number' ? v : undefined;
+  });
   const times: UTCTimestamp[] = data.map((d) => d.time as UTCTimestamp);
 
   // Compute main moving average

@@ -8,7 +8,8 @@ import { SeoHead } from '@/components/SeoHead';
 import { useNavigate } from 'react-router';
 
 export function UnverifiedPage() {
-  const { user, clearAuth } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  const clearAuth = useAuthStore((s) => s.clearAuth);
   const navigate = useNavigate();
   const [status, setStatus] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle');
   const [message, setMessage] = useState('');

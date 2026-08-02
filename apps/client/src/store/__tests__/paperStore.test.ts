@@ -337,6 +337,12 @@ describe('paperStore', () => {
       usePaperStore.getState().reset();
       expect(usePaperStore.getState().history).toHaveLength(0);
     });
+
+    it('resets leverage back to 1', () => {
+      usePaperStore.getState().setLeverage(10);
+      usePaperStore.getState().reset();
+      expect(usePaperStore.getState().leverage).toBe(1);
+    });
   });
 
   describe('persist migrate()', () => {
@@ -394,6 +400,75 @@ describe('paperStore', () => {
 
       expect(migrated.positions).toHaveLength(1);
       expect(migrated.history).toHaveLength(1);
+    });
+
+    it('v2 migrate filters malformed orders/pendingOrders/balanceLog/journal and rejects Infinity balance', () => {
+      const migrate = usePaperStore.persist.getOptions().migrate!;
+
+      const migrated = migrate(
+        {
+          balance: Infinity,
+          positions: [],
+          pendingOrders: [
+            {
+              id: 'po-1',
+              symbol: 'BTCUSDT',
+              side: 'buy',
+              type: 'limit',
+              usdtAmount: 500,
+              triggerPrice: 50_000,
+              qty: 0.01,
+              placedAt: Date.now(),
+            },
+            { id: 'bad-pending', triggerPrice: 'oops' },
+          ],
+          history: [],
+          orders: [
+            {
+              id: 'o-1',
+              symbol: 'BTCUSDT',
+              side: 'buy',
+              type: 'market',
+              qty: 0.01,
+              status: 'filled',
+              commission: 0.7,
+              placingTime: Date.now() - 1000,
+              closingTime: Date.now(),
+            },
+            { id: 'bad-order', status: 'bogus' },
+          ],
+          realizedPnl: 0,
+          balanceLog: [
+            {
+              id: 'b-1',
+              time: Date.now(),
+              balanceBefore: 10_000,
+              balanceAfter: 9_500,
+              pnl: -500,
+              action: 'open',
+            },
+            { id: 'bad-event', pnl: 'oops' },
+          ],
+          journal: [
+            { id: 'j-1', time: Date.now(), text: 'Opened LONG BTCUSDT' },
+            { id: 'bad-journal', text: 42 },
+          ],
+          leverage: 5,
+        },
+        2
+      ) as {
+        balance: number;
+        pendingOrders: unknown[];
+        orders: unknown[];
+        balanceLog: unknown[];
+        journal: unknown[];
+      };
+
+      expect(migrated.balance).toBe(STARTING_BALANCE); // Infinity rejected
+      expect(migrated.pendingOrders).toHaveLength(1);
+      expect(migrated.orders).toHaveLength(1);
+      expect(migrated.balanceLog).toHaveLength(1);
+      expect(migrated.journal).toHaveLength(1);
     });
   });
 

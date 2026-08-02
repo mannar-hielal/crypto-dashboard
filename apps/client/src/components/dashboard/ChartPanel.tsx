@@ -15,7 +15,12 @@ import {
   type Interval,
   type TimeRangePreset,
 } from '@/lib/markets';
-import { restoreDrawings, persistDrawings, getPersistenceKey } from '@/lib/drawingManager';
+import {
+  restoreDrawings,
+  persistDrawings,
+  schedulePersistDrawings,
+  getPersistenceKey,
+} from '@/lib/drawingManager';
 import { IndicatorWidgets } from '@/components/indicators/IndicatorWidgets';
 
 const CHART_BG = chartColors.bg;
@@ -205,8 +210,9 @@ export function ChartPanel({
     // 🔐 Persist under the CURRENT symbol, not the mount-time one — prevSymbolRef
     //    is kept current by the symbol-change effect below, so a drawing made
     //    after switching BTC→ETH writes to the ETH key instead of overwriting
-    //    BTC's saved drawings (silent data loss).
-    const save = () => persistDrawings(manager, prevSymbolRef.current ?? symbol);
+    //    BTC's saved drawings (silent data loss). Debounced to avoid re-writing
+    //    the full set on every anchor-drag pointermove.
+    const save = () => schedulePersistDrawings(manager, prevSymbolRef.current ?? symbol);
     const unsubAdd = manager.on('drawing:added', save);
     const unsubRemove = manager.on('drawing:removed', save);
     const unsubUpdate = manager.on('drawing:updated', save);

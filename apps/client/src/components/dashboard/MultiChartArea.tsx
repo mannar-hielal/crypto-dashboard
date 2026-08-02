@@ -109,7 +109,13 @@ export function MultiChartArea({
   const activePane = useLayoutStore((s) => s.activePane);
   const syncOptions = useLayoutStore((s) => s.syncOptions);
   const setActivePane = useLayoutStore((s) => s.setActivePane);
-  const panes = useLayoutStore((s) => s.panes);
+  // Per-pane selectors — subscribing to the whole `panes` array re-renders all
+  // 4 charts when any one pane changes (symbol/interval/indicator edits).
+  const pane0 = useLayoutStore((s) => s.panes[0]);
+  const pane1 = useLayoutStore((s) => s.panes[1]);
+  const pane2 = useLayoutStore((s) => s.panes[2]);
+  const pane3 = useLayoutStore((s) => s.panes[3]);
+  const panes = [pane0, pane1, pane2, pane3];
   const paneSizes = useLayoutStore((s) => s.paneSizes);
   const setPaneSizes = useLayoutStore((s) => s.setPaneSizes);
 

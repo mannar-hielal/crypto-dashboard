@@ -11,7 +11,9 @@ import { Navigate, Outlet } from 'react-router';
 import { useAuthStore } from '@/store/authStore';
 
 export function ProtectedRoute() {
-  const { accessToken, user, isLoading } = useAuthStore();
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const user = useAuthStore((s) => s.user);
+  const isLoading = useAuthStore((s) => s.isLoading);
 
   if (isLoading) {
     return (

@@ -3,6 +3,7 @@
 interface ImportMetaEnv {
   readonly VITE_PWA_DEV_SW?: string;
   readonly VITE_IS_LIVE?: string;
+  readonly VITE_ADMIN_EMAIL?: string;
 }
 
 interface ImportMeta {

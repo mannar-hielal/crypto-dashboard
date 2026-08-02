@@ -327,6 +327,69 @@ function isClosedTradeSnapshot(value: unknown): value is ClosedTrade {
   return true;
 }
 
+function isPendingOrderSnapshot(value: unknown): value is PendingOrder {
+  if (!isRecord(value)) return false;
+  if (!isString(value['id']) || !isString(value['symbol'])) return false;
+  if (value['side'] !== 'buy' && value['side'] !== 'sell') return false;
+  if (value['type'] !== 'limit' && value['type'] !== 'stop') return false;
+  if (!isPositiveNumber(value['usdtAmount'])) return false;
+  if (!isPositiveNumber(value['triggerPrice'])) return false;
+  if (!isPositiveNumber(value['qty'])) return false;
+  if (!isFiniteNumber(value['placedAt'])) return false;
+  if (value['takeProfit'] !== undefined && !isPositiveNumber(value['takeProfit'])) return false;
+  if (value['stopLoss'] !== undefined && !isPositiveNumber(value['stopLoss'])) return false;
+  return true;
+}
+
+function isHistoricalOrderSnapshot(value: unknown): value is HistoricalOrder {
+  if (!isRecord(value)) return false;
+  if (!isString(value['id']) || !isString(value['symbol'])) return false;
+  if (value['side'] !== 'buy' && value['side'] !== 'sell') return false;
+  if (
+    value['type'] !== 'market' &&
+    value['type'] !== 'limit' &&
+    value['type'] !== 'stop' &&
+    value['type'] !== 'take-profit' &&
+    value['type'] !== 'stop-loss'
+  ) {
+    return false;
+  }
+  if (
+    value['status'] !== 'filled' &&
+    value['status'] !== 'cancelled' &&
+    value['status'] !== 'rejected'
+  ) {
+    return false;
+  }
+  if (!isPositiveNumber(value['qty'])) return false;
+  if (!isFiniteNumber(value['commission'])) return false;
+  if (!isFiniteNumber(value['placingTime']) || !isFiniteNumber(value['closingTime'])) return false;
+  if (value['limitPrice'] !== undefined && !isFiniteNumber(value['limitPrice'])) return false;
+  if (value['stopPrice'] !== undefined && !isFiniteNumber(value['stopPrice'])) return false;
+  if (value['fillPrice'] !== undefined && !isFiniteNumber(value['fillPrice'])) return false;
+  if (value['margin'] !== undefined && !isFiniteNumber(value['margin'])) return false;
+  return true;
+}
+
+function isBalanceEventSnapshot(value: unknown): value is BalanceEvent {
+  if (!isRecord(value)) return false;
+  if (!isString(value['id']) || !isString(value['action'])) return false;
+  if (!isFiniteNumber(value['time'])) return false;
+  if (!isFiniteNumber(value['balanceBefore'])) return false;
+  if (!isFiniteNumber(value['balanceAfter'])) return false;
+  if (!isFiniteNumber(value['pnl'])) return false;
+  return true;
+}
+
+function isJournalEntrySnapshot(value: unknown): value is JournalEntry {
+  if (!isRecord(value)) return false;
+  if (!isString(value['id']) || !isString(value['text'])) return false;
+  if (!isFiniteNumber(value['time'])) return false;
+  if (value['isUserNote'] !== undefined && typeof value['isUserNote'] !== 'boolean') return false;
+  if (value['pnl'] !== undefined && !isFiniteNumber(value['pnl'])) return false;
+  return true;
+}
+
 interface PaperState {
   balance: number;
   positions: Position[];
@@ -1196,6 +1259,7 @@ export const usePaperStore = create<PaperState>()(
           realizedPnl: 0,
           balanceLog: [],
           journal: [],
+          leverage: 1,
         }),
 
       placeLimitOrder: (symbol, side, triggerPrice, usdtAmount, takeProfit, stopLoss) => {
@@ -1855,7 +1919,7 @@ export const usePaperStore = create<PaperState>()(
         if (fromVersion === 0) {
           return {
             balance:
-              typeof p['balance'] === 'number' && p['balance'] >= 0
+              typeof p['balance'] === 'number' && Number.isFinite(p['balance']) && p['balance'] >= 0
                 ? p['balance']
                 : STARTING_BALANCE,
             positions: Array.isArray(p['positions'])
@@ -1885,7 +1949,7 @@ export const usePaperStore = create<PaperState>()(
               : 1;
           return {
             balance:
-              typeof p['balance'] === 'number' && p['balance'] >= 0
+              typeof p['balance'] === 'number' && Number.isFinite(p['balance']) && p['balance'] >= 0
                 ? p['balance']
                 : STARTING_BALANCE,
             positions: Array.isArray(p['positions'])
@@ -1896,10 +1960,14 @@ export const usePaperStore = create<PaperState>()(
               typeof p['realizedPnl'] === 'number' && Number.isFinite(p['realizedPnl'])
                 ? p['realizedPnl']
                 : 0,
-            pendingOrders: Array.isArray(p['pendingOrders']) ? p['pendingOrders'] : [],
-            orders: Array.isArray(p['orders']) ? p['orders'] : [],
-            balanceLog: Array.isArray(p['balanceLog']) ? p['balanceLog'] : [],
-            journal: Array.isArray(p['journal']) ? p['journal'] : [],
+            pendingOrders: Array.isArray(p['pendingOrders'])
+              ? p['pendingOrders'].filter(isPendingOrderSnapshot)
+              : [],
+            orders: Array.isArray(p['orders']) ? p['orders'].filter(isHistoricalOrderSnapshot) : [],
+            balanceLog: Array.isArray(p['balanceLog'])
+              ? p['balanceLog'].filter(isBalanceEventSnapshot)
+              : [],
+            journal: Array.isArray(p['journal']) ? p['journal'].filter(isJournalEntrySnapshot) : [],
             leverage,
           };
         }
@@ -1910,21 +1978,25 @@ export const usePaperStore = create<PaperState>()(
         if (fromVersion === 2) {
           return {
             balance:
-              typeof p['balance'] === 'number' && p['balance'] >= 0
+              typeof p['balance'] === 'number' && Number.isFinite(p['balance']) && p['balance'] >= 0
                 ? p['balance']
                 : STARTING_BALANCE,
             positions: Array.isArray(p['positions'])
               ? p['positions'].filter(isPositionSnapshot)
               : [],
-            pendingOrders: Array.isArray(p['pendingOrders']) ? p['pendingOrders'] : [],
+            pendingOrders: Array.isArray(p['pendingOrders'])
+              ? p['pendingOrders'].filter(isPendingOrderSnapshot)
+              : [],
             history: Array.isArray(p['history']) ? p['history'].filter(isClosedTradeSnapshot) : [],
-            orders: Array.isArray(p['orders']) ? p['orders'] : [],
+            orders: Array.isArray(p['orders']) ? p['orders'].filter(isHistoricalOrderSnapshot) : [],
             realizedPnl:
               typeof p['realizedPnl'] === 'number' && Number.isFinite(p['realizedPnl'])
                 ? p['realizedPnl']
                 : 0,
-            balanceLog: Array.isArray(p['balanceLog']) ? p['balanceLog'] : [],
-            journal: Array.isArray(p['journal']) ? p['journal'] : [],
+            balanceLog: Array.isArray(p['balanceLog'])
+              ? p['balanceLog'].filter(isBalanceEventSnapshot)
+              : [],
+            journal: Array.isArray(p['journal']) ? p['journal'].filter(isJournalEntrySnapshot) : [],
             leverage:
               typeof p['leverage'] === 'number' &&
               Number.isFinite(p['leverage']) &&
