@@ -20,11 +20,15 @@ import { newsletterRoutes } from './routes/newsletter/index.js';
 const CSP_DIRECTIVES = {
   defaultSrc: ["'self'"],
   scriptSrc: ["'self'"],
+  // 'unsafe-inline' on style-src is required by Framer Motion animated styles —
+  // style injection is not a script-execution vector, so this is an accepted
+  // tradeoff (documented in the client's index.html CSP).
   styleSrc: ["'self'", "'unsafe-inline'"],
   connectSrc: ["'self'", config.corsOrigin],
   imgSrc: ["'self'", 'data:', 'blob:'],
   fontSrc: ["'self'", 'data:'],
   workerSrc: ["'self'", 'blob:'],
+  objectSrc: ["'none'"],
   frameAncestors: ["'none'"],
   baseUri: ["'none'"],
   formAction: ["'self'"],
@@ -44,6 +48,8 @@ export async function buildApp() {
   // ─── CSP VIOLATION REPORTING ──────────────────────────────────────────────
   // Browsers POST violation reports on first load + on each violation.
   // Accept both legacy (application/csp-report) and modern (application/reports+json) formats.
+  // The route itself is registered AFTER rate-limit below so it inherits the
+  // global limiter (it is a public, unauthenticated log sink).
   app.addContentTypeParser(
     ['application/csp-report', 'application/reports+json'],
     { parseAs: 'string' },
@@ -55,10 +61,6 @@ export async function buildApp() {
       }
     }
   );
-  app.post('/api/csp-violation', async (request, reply) => {
-    app.log.warn({ cspReport: request.body }, 'CSP violation reported');
-    return reply.status(204).send();
-  });
 
   // ─── API DOCUMENTATION ────────────────────────────────────────────────────
   // Swagger reads your route schemas and auto-generates an OpenAPI 3.0 spec.
@@ -125,8 +127,17 @@ export async function buildApp() {
       timeWindow: '1 minute',
     });
   }
+
+  // 🔐 Registered AFTER rate-limit so this public log sink is protected from abuse
+  app.post('/api/csp-violation', async (request, reply) => {
+    app.log.warn({ cspReport: request.body }, 'CSP violation reported');
+    return reply.status(204).send();
+  });
   await app.register(cors, {
-    origin: config.nodeEnv === 'production' ? config.corsOrigin : true,
+    // 🔐 Explicit origin allowlist in ALL environments — `origin: true` (reflect
+    //    any) with `credentials: true` is a credential-exfiltration hazard if
+    //    NODE_ENV is ever mis-set in a deployed environment.
+    origin: [config.corsOrigin],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });

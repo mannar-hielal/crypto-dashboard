@@ -434,10 +434,10 @@ describe('POST /api/auth/refresh', () => {
     expect(res.statusCode).toBe(401);
   });
 
-  it('returns 401 on already-consumed refresh token without global user revocation', async () => {
+  it('returns 401 on already-consumed refresh token and revokes ALL user sessions (🔐 replay protection)', async () => {
     const deleteManyMock = app.prisma.refreshToken.deleteMany as ReturnType<typeof vi.fn>;
     deleteManyMock.mockClear();
-    deleteManyMock.mockResolvedValueOnce({ count: 0 });
+    deleteManyMock.mockResolvedValue({ count: 0 });
 
     (app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       id: 'rt-race',
@@ -453,8 +453,10 @@ describe('POST /api/auth/refresh', () => {
     });
 
     expect(res.statusCode).toBe(401);
-    // Only the token-hash delete attempt should run; no second deleteMany({ userId }) call.
-    expect(deleteManyMock).toHaveBeenCalledTimes(1);
+    // 🔐 Stolen-token replay = account takeover in progress — the user-wide
+    //    deleteMany({ userId }) must run (2 calls total: token-hash + user-wide).
+    expect(deleteManyMock).toHaveBeenCalledTimes(2);
+    expect(deleteManyMock).toHaveBeenCalledWith({ where: { userId: 'user-1' } });
   });
 });
 

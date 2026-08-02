@@ -7,6 +7,15 @@ import { ALLOWED_SYMBOLS } from '../../constants.js';
 
 const log = logger.child({ route: 'market' });
 
+// ─── WebSocket connection caps ────────────────────────────────────────────────
+// 🔐 The WS feed is unauthenticated and each cold connection can trigger a Bybit
+//    REST fetch — cap concurrent connections globally and per-IP so a single
+//    attacker cannot exhaust sockets or hammer the upstream API.
+const MAX_WS_CONNECTIONS = 500;
+const MAX_WS_PER_IP = 20;
+const activeWs = new Set<WebSocket>();
+const ipCounts = new Map<string, number>();
+
 // ─── Validation ───────────────────────────────────────────────────────────────
 
 // Derive the narrow union type from the allowlist array
@@ -203,8 +212,30 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
       const symbolRaw = (request.query.symbol ?? 'BTCUSDT').toUpperCase();
       const intervalRaw = request.query.interval ?? '1m';
 
+      // 🔐 Enforce connection caps before any work — reject excess connections.
+      const clientIp = request.ip;
+      const currentIpCount = ipCounts.get(clientIp) ?? 0;
+      if (activeWs.size >= MAX_WS_CONNECTIONS || currentIpCount >= MAX_WS_PER_IP) {
+        fastify.log.warn({ clientIp }, 'WS connection limit reached — rejecting');
+        socket.close(1013, 'Connection limit reached');
+        return;
+      }
+      activeWs.add(socket);
+      ipCounts.set(clientIp, currentIpCount + 1);
+
+      const releaseConnection = () => {
+        activeWs.delete(socket);
+        const remaining = (ipCounts.get(clientIp) ?? 1) - 1;
+        if (remaining <= 0) {
+          ipCounts.delete(clientIp);
+        } else {
+          ipCounts.set(clientIp, remaining);
+        }
+      };
+
       // 🔐 Validate against allowlist — guard also narrows type to AllowedSymbol
       if (!isAllowedSymbol(symbolRaw) || !isAllowedInterval(intervalRaw)) {
+        releaseConnection();
         socket.close(1008, 'Invalid symbol or interval');
         return;
       }
@@ -290,6 +321,7 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
       socket.on('close', () => {
         unsubscribe();
         unsubscribeTicker();
+        releaseConnection();
         log.info({ symbol, interval }, 'Client disconnected from live feed');
       });
 
@@ -297,6 +329,7 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
         log.error({ err }, 'Client WebSocket error');
         unsubscribe();
         unsubscribeTicker();
+        releaseConnection();
       });
     }
   );
