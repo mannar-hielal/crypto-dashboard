@@ -21,10 +21,12 @@ import { paneStores } from '@/store/paneStore';
 import { usePaperStore } from '@/store/paperStore';
 import { SYMBOLS } from '@/lib/markets';
 import { bg, color, fontSize } from '@/lib/tokens';
+import { getIndicatorMeta } from '@/lib/indicators/catalog';
 
 import { SymbolPair } from '@/components/ui/CryptoIcon';
 import { ChartLayoutPicker } from '@/components/dashboard/ChartLayoutPicker';
 import { IntervalDropdown } from '@/components/dashboard/IntervalDropdown';
+import { IndicatorDropdown } from '@/components/indicators/IndicatorDropdown';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -87,8 +89,9 @@ export function SymbolBar({
   const setPaneSymbol = useLayoutStore((s) => s.setPaneSymbol);
   const setPaneInterval = useLayoutStore((s) => s.setPaneInterval);
   const setPaneTimeRangePreset = useLayoutStore((s) => s.setPaneTimeRangePreset);
+  const addIndicator = useLayoutStore((s) => s.addIndicator);
 
-  const { symbol, interval } = paneConfig;
+  const { symbol, interval, indicators } = paneConfig;
 
   // ── Market data — subscribe to all 4 pane stores, pick the active one ────
   // (4 unconditional hook calls — hooks rule compliant)
@@ -173,6 +176,21 @@ export function SymbolBar({
     if (sym !== symbol) setPaneSymbol(activePane, sym);
     setSymbolOpen(false);
     setSymbolSearch('');
+  }
+
+  function handleAddIndicator(indicatorId: string) {
+    const meta = getIndicatorMeta(indicatorId);
+    if (!meta) return;
+    addIndicator(activePane, {
+      instanceId: `${indicatorId}_${Date.now()}_${indicators.length}`,
+      indicatorId,
+      params: { ...meta.defaultParams },
+      color: meta.defaultColor,
+      lineWidth: meta.defaultLineWidth,
+      lineStyle: meta.defaultLineStyle,
+      enabled: true,
+      position: { x: 8, y: 40 + indicators.length * 60 },
+    });
   }
 
   return (
@@ -393,6 +411,12 @@ export function SymbolBar({
       </div>
 
       <div className="flex-1" />
+
+      {/* ── Indicators dropdown ──────────────────────────────────────────── */}
+      <IndicatorDropdown
+        existingIds={indicators.map((inst) => inst.indicatorId)}
+        onAdd={handleAddIndicator}
+      />
 
       {/* ── Layout picker ────────────────────────────────────────────────── */}
       <ChartLayoutPicker />

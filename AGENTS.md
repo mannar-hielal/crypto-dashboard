@@ -123,8 +123,13 @@ DashboardPage
 - **New UI components MUST use CSS Modules** (`*.module.css`) with camelCase class names. Existing Tailwind-utility components remain as-is.
 - No inline `style` props except for dynamic values from `tokens.ts`.
 - Drawing tool primitives live in `src/lib/drawing/` (types, renderers, composites).
+- ChartPanel primitive lifecycle effect at line ~672 MUST have a cleanup function (detachPrimitive + removeSeries + clear ref map) — React StrictMode double-mounts in dev and stale primitive refs cause indicator lines to silently not render.
 - `cursors.tsx` exports SVG icon functions + `CURSOR_CSS_MAP` (data-URI cursors).
 - `lineTools.tsx` exports SVG icon functions + `LINE_TOOLS` array — UI only, no drawing logic.
+
+## Chart quirks
+
+- **React StrictMode double-mount**: App wraps `<StrictMode>` in `main.tsx`. In dev, every effect runs → cleanup → runs again. Any `useEffect` without a cleanup function that creates/modifies chart primitives will accumulate stale primitives pointing to a removed chart. Current safe effects: init (has cleanup), primitive lifecycle (has cleanup as of #fix-strictmode-primitives).
 
 ## Environment quirks
 

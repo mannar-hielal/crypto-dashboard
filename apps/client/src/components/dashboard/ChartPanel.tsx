@@ -1,19 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { RefObject } from 'react';
-import {
-  createChart,
-  CandlestickSeries,
-  LineSeries,
-  HistogramSeries,
-  CrosshairMode,
-  LineStyle,
-} from 'lightweight-charts';
+import { createChart, CandlestickSeries, LineSeries, CrosshairMode } from 'lightweight-charts';
 import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts';
 import { useStore } from 'zustand';
 import { DrawingManager, ToolRegistry } from 'lightweight-charts-drawing';
 import type { Anchor, IDrawing, Point } from 'lightweight-charts-drawing';
 import { paneStores } from '@/store/paneStore';
-import { calcEMA, calcVWAP, calcMACD } from '@/lib/indicators';
+import { useLayoutStore } from '@/store/layoutStore';
+import { getIndicatorMeta } from '@/lib/indicators/catalog';
+import type { IndicatorInstance, IndicatorPrimitive, IndicatorStyle } from '@/lib/indicators/types';
 import { bg, color, chart as chartColors, font, fontSize } from '@/lib/tokens';
 import {
   INTERVAL_BAR_SPACING,
@@ -22,6 +16,7 @@ import {
   type TimeRangePreset,
 } from '@/lib/markets';
 import { restoreDrawings, persistDrawings, getPersistenceKey } from '@/lib/drawingManager';
+import { IndicatorWidgets } from '@/components/indicators/IndicatorWidgets';
 
 const CHART_BG = chartColors.bg;
 
@@ -32,6 +27,7 @@ interface ChartPanelProps {
   symbol: string;
   interval: Interval;
   timeRangePreset?: TimeRangePreset | null;
+  indicators: IndicatorInstance[];
   onChartReady?: (chart: IChartApi, series: ISeriesApi<'Candlestick'>) => void;
   onChartDestroy?: () => void;
   onDrawingManagerReady?: (manager: DrawingManager) => void;
@@ -61,10 +57,6 @@ interface LegendData {
   high: number;
   low: number;
   close: number;
-  ema9: number | null;
-  ema20: number | null;
-  ema200: number | null;
-  vwap: number | null;
 }
 
 function toUTC(ms: number): UTCTimestamp {
@@ -99,6 +91,7 @@ export function ChartPanel({
   symbol,
   interval,
   timeRangePreset,
+  indicators,
   onChartReady,
   onChartDestroy,
   onDrawingManagerReady,
@@ -115,14 +108,8 @@ export function ChartPanel({
   const clickStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
 
   const candleRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
-  const ema9Ref = useRef<ISeriesApi<'Line'> | null>(null);
-  const ema20Ref = useRef<ISeriesApi<'Line'> | null>(null);
-  const ema200Ref = useRef<ISeriesApi<'Line'> | null>(null);
-  const vwapRef = useRef<ISeriesApi<'Line'> | null>(null);
-  const macdHistRef = useRef<ISeriesApi<'Histogram'> | null>(null);
-  const macdLineRef = useRef<ISeriesApi<'Line'> | null>(null);
-  const signalRef = useRef<ISeriesApi<'Line'> | null>(null);
   const paddingSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const primitiveRefs = useRef<Map<string, IndicatorPrimitive>>(new Map());
 
   const bars = useStore(paneStores[paneIndex], (s) => s.bars);
 
@@ -198,75 +185,6 @@ export function ChartPanel({
       wickUpColor: chartColors.candleUp,
       wickDownColor: chartColors.candleDown,
     });
-
-    ema9Ref.current = chart.addSeries(LineSeries, {
-      color: chartColors.ema9,
-      lineWidth: 2,
-      title: 'EMA 9',
-      priceLineVisible: false,
-      lastValueVisible: true,
-      crosshairMarkerVisible: false,
-    });
-
-    ema20Ref.current = chart.addSeries(LineSeries, {
-      color: chartColors.ema20,
-      lineWidth: 2,
-      title: 'EMA 20',
-      priceLineVisible: false,
-      lastValueVisible: true,
-      crosshairMarkerVisible: false,
-    });
-
-    ema200Ref.current = chart.addSeries(LineSeries, {
-      color: chartColors.ema200,
-      lineWidth: 1,
-      title: 'EMA 200',
-      priceLineVisible: false,
-      lastValueVisible: true,
-      crosshairMarkerVisible: false,
-    });
-
-    vwapRef.current = chart.addSeries(LineSeries, {
-      color: chartColors.vwap,
-      lineWidth: 2,
-      lineStyle: LineStyle.SparseDotted,
-      title: 'VWAP',
-      priceLineVisible: false,
-      lastValueVisible: true,
-      crosshairMarkerVisible: false,
-    });
-
-    macdHistRef.current = chart.addSeries(
-      HistogramSeries,
-      { color: chartColors.macdHistBull, priceLineVisible: false, lastValueVisible: false },
-      1
-    );
-
-    macdLineRef.current = chart.addSeries(
-      LineSeries,
-      {
-        color: chartColors.macdLine,
-        lineWidth: 2,
-        title: 'MACD',
-        priceLineVisible: false,
-        lastValueVisible: true,
-        crosshairMarkerVisible: false,
-      },
-      1
-    );
-
-    signalRef.current = chart.addSeries(
-      LineSeries,
-      {
-        color: chartColors.macdSignal,
-        lineWidth: 2,
-        title: 'Signal',
-        priceLineVisible: false,
-        lastValueVisible: true,
-        crosshairMarkerVisible: false,
-      },
-      1
-    );
 
     // ── Invisible padding: extends time scale into empty space ─────────
     paddingSeriesRef.current = chart.addSeries(LineSeries, {
@@ -581,20 +499,13 @@ export function ChartPanel({
         return;
       }
 
-      type OhlcRow = { open: number; high: number; low: number; close: number };
-      type LineRow = { value: number };
-
-      const candle = param.seriesData.get(candleRef.current) as OhlcRow | undefined;
+      const candle = param.seriesData.get(candleRef.current) as
+        | { open: number; high: number; low: number; close: number }
+        | undefined;
       if (!candle) {
         setHoverData(null);
         return;
       }
-
-      const lineVal = (ref: RefObject<ISeriesApi<'Line'> | null>): number | null => {
-        if (!ref.current) return null;
-        const d = param.seriesData.get(ref.current) as LineRow | undefined;
-        return d && 'value' in d ? d.value : null;
-      };
 
       setHoverData({
         time: formatUTCTime(param.time as number),
@@ -602,10 +513,6 @@ export function ChartPanel({
         high: candle.high,
         low: candle.low,
         close: candle.close,
-        ema9: lineVal(ema9Ref),
-        ema20: lineVal(ema20Ref),
-        ema200: lineVal(ema200Ref),
-        vwap: lineVal(vwapRef),
       });
     });
 
@@ -678,13 +585,6 @@ export function ChartPanel({
       paneStores[paneIndex].getState().setUserZoomed(false);
       prevLenRef.current = 0;
       candleRef.current?.setData([]);
-      ema9Ref.current?.setData([]);
-      ema20Ref.current?.setData([]);
-      ema200Ref.current?.setData([]);
-      vwapRef.current?.setData([]);
-      macdHistRef.current?.setData([]);
-      macdLineRef.current?.setData([]);
-      signalRef.current?.setData([]);
       paddingSeriesRef.current?.setData([]);
       return;
     }
@@ -701,23 +601,6 @@ export function ChartPanel({
     const dedupMap = new Map<number, (typeof bars)[0]>();
     for (const b of bars) dedupMap.set(b.timestamp, b);
     const sortedBars = Array.from(dedupMap.values()).sort((a, b) => a.timestamp - b.timestamp);
-    console.log(`[CD] ChartPanel pane ${paneIndex} ${interval}: ${sortedBars.length} bars`);
-
-    const closes = sortedBars.map((b) => b.close);
-    const ema9 = calcEMA(closes, 9);
-    const ema20 = calcEMA(closes, 20);
-    const ema200 = calcEMA(closes, 200);
-    const vwap = calcVWAP(sortedBars);
-    const { macd, signal, histogram } = calcMACD(closes);
-
-    function linePoints(vals: (number | null)[]) {
-      const pts: { time: UTCTimestamp; value: number }[] = [];
-      for (let i = 0; i < sortedBars.length; i++) {
-        if (vals[i] !== null) pts.push({ time: toUTC(sortedBars[i].timestamp), value: vals[i]! });
-      }
-      return pts;
-    }
-
     // ── Data push ──────────────────────────────────────────────────────────
     // Save visible logical range before setData calls — lightweight-charts
     // has a known bug where setData resets the visible range (SO #63557823).
@@ -735,36 +618,13 @@ export function ChartPanel({
       high: b.high,
       low: b.low,
       close: b.close,
+      volume: b.volume,
     }));
     if (sortedBars.length === prevLenRef.current) {
       candleRef.current?.update(candleData[candleData.length - 1]);
     } else {
       candleRef.current?.setData(candleData);
     }
-
-    ema9Ref.current?.setData(linePoints(ema9));
-    ema20Ref.current?.setData(linePoints(ema20));
-    ema200Ref.current?.setData(linePoints(ema200));
-    vwapRef.current?.setData(linePoints(vwap));
-
-    const histPts: { time: UTCTimestamp; value: number; color: string }[] = [];
-    for (let i = 0; i < sortedBars.length; i++) {
-      if (histogram[i] !== null) {
-        const val = histogram[i]!;
-        const prev = i > 0 ? (histogram[i - 1] ?? val) : val;
-        const rising = val >= prev;
-        let c: string;
-        if (val >= 0) {
-          c = rising ? chartColors.macdHistBull : `${chartColors.macdHistBull}66`;
-        } else {
-          c = rising ? `${chartColors.macdHistBear}66` : chartColors.macdHistBear;
-        }
-        histPts.push({ time: toUTC(sortedBars[i].timestamp), value: val, color: c });
-      }
-    }
-    macdHistRef.current?.setData(histPts);
-    macdLineRef.current?.setData(linePoints(macd));
-    signalRef.current?.setData(linePoints(signal));
 
     // ── Extend time scale into empty space so coordinateToTime works ──
     if (sortedBars.length > 1) {
@@ -809,7 +669,110 @@ export function ChartPanel({
     prevLenRef.current = sortedBars.length;
   }, [bars, interval, timeRangePreset, paneIndex]);
 
-  // ── 3. Apply time-range preset when it changes ────────────────────────────
+  // ── 3. Indicator primitive lifecycle ───────────────────────────────────────
+  useEffect(() => {
+    const chart = chartRef.current;
+    const source = candleRef.current;
+    if (!chart || !source) return;
+
+    const primitives = primitiveRefs.current;
+    const prevIds = new Set(primitives.keys());
+    const nextIds = new Set(indicators.map((i) => i.instanceId));
+
+    for (const instanceId of prevIds) {
+      if (!nextIds.has(instanceId)) {
+        const prim = primitives.get(instanceId);
+        if (prim) {
+          try {
+            source.detachPrimitive(prim);
+          } catch {
+            /* already detached */
+          }
+          for (const s of prim.getSeries()) {
+            try {
+              chart.removeSeries(s);
+            } catch {
+              /* already removed */
+            }
+          }
+        }
+        primitives.delete(instanceId);
+      }
+    }
+
+    for (const inst of indicators) {
+      if (!inst.enabled) {
+        const prim = primitives.get(inst.instanceId);
+        if (prim) {
+          try {
+            source.detachPrimitive(prim);
+          } catch {
+            /* already detached */
+          }
+          for (const s of prim.getSeries()) {
+            try {
+              chart.removeSeries(s);
+            } catch {
+              /* already removed */
+            }
+          }
+          primitives.delete(inst.instanceId);
+        }
+        continue;
+      }
+
+      const meta = getIndicatorMeta(inst.indicatorId);
+      if (!meta) continue;
+
+      const existing = primitives.get(inst.instanceId);
+      if (existing) {
+        existing.applyOptions(inst.params);
+        existing.applyStyle({
+          color: inst.color,
+          lineWidth: inst.lineWidth,
+          lineStyle: inst.lineStyle,
+        });
+      } else {
+        const style: IndicatorStyle = {
+          color: inst.color,
+          lineWidth: inst.lineWidth,
+          lineStyle: inst.lineStyle,
+        };
+        // Panes are relative to THIS chart instance (0 = candles, 1 = first
+        // sub-pane), not to the layout grid — the layout's paneIndex is
+        // unrelated to lightweight-charts pane indices.
+        const actualPaneIndex = meta.category === 'sub-pane' ? 1 : 0;
+        const prim = meta.factory({
+          chart,
+          source,
+          params: inst.params,
+          style,
+          paneIndex: actualPaneIndex,
+        });
+        primitives.set(inst.instanceId, prim);
+      }
+    }
+
+    return () => {
+      for (const [, prim] of primitives) {
+        try {
+          source.detachPrimitive(prim);
+        } catch {
+          /* already detached */
+        }
+        for (const s of prim.getSeries()) {
+          try {
+            chart.removeSeries(s);
+          } catch {
+            /* already removed */
+          }
+        }
+      }
+      primitives.clear();
+    };
+  }, [indicators, paneIndex]);
+
+  // ── 4. Apply time-range preset when it changes ────────────────────────────
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart || !timeRangePreset) return;
@@ -990,52 +953,7 @@ export function ChartPanel({
           <div
             className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 font-mono"
             style={{ fontSize: fontSize.xs10 }}
-          >
-            {hoverData.ema9 !== null && (
-              <span>
-                <span style={{ color: chartColors.ema9 }}>EMA9 </span>
-                <span className="text-slate-300">
-                  {hoverData.ema9.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-              </span>
-            )}
-            {hoverData.ema20 !== null && (
-              <span>
-                <span style={{ color: chartColors.ema20 }}>EMA20 </span>
-                <span className="text-slate-300">
-                  {hoverData.ema20.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-              </span>
-            )}
-            {hoverData.ema200 !== null && (
-              <span>
-                <span style={{ color: chartColors.ema200 }}>EMA200 </span>
-                <span className="text-slate-300">
-                  {hoverData.ema200.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-              </span>
-            )}
-            {hoverData.vwap !== null && (
-              <span>
-                <span style={{ color: chartColors.vwap }}>VWAP </span>
-                <span className="text-slate-300">
-                  {hoverData.vwap.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-              </span>
-            )}
-          </div>
+          ></div>
         </div>
       )}
 
@@ -1094,6 +1012,19 @@ export function ChartPanel({
           </div>
         </div>
       )}
+
+      <IndicatorWidgets
+        containerRef={containerRef}
+        primitiveRefs={primitiveRefs}
+        indicators={indicators}
+        onRemove={(instanceId) => useLayoutStore.getState().removeIndicator(paneIndex, instanceId)}
+        onUpdate={(instanceId, updates) =>
+          useLayoutStore.getState().updateIndicator(paneIndex, instanceId, updates)
+        }
+        onPositionChange={(instanceId, position) =>
+          useLayoutStore.getState().setIndicatorPosition(paneIndex, instanceId, position)
+        }
+      />
     </div>
   );
 }

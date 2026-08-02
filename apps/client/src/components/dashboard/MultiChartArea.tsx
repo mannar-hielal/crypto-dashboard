@@ -384,6 +384,7 @@ export function MultiChartArea({
                   symbol={panes[paneIndex].symbol}
                   interval={panes[paneIndex].interval}
                   timeRangePreset={panes[paneIndex].timeRangePreset}
+                  indicators={panes[paneIndex].indicators}
                   onChartReady={(chart, series) => handleChartReady(paneIndex, chart, series)}
                   onChartDestroy={() => handleChartDestroy(paneIndex)}
                   onDrawingManagerReady={(manager) => onDrawingManagerReady?.(paneIndex, manager)}
