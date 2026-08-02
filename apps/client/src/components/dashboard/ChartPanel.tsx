@@ -202,7 +202,11 @@ export function ChartPanel({
     restoreDrawings(manager, symbol);
     prevSymbolRef.current = symbol;
 
-    const save = () => persistDrawings(manager, symbol);
+    // 🔐 Persist under the CURRENT symbol, not the mount-time one — prevSymbolRef
+    //    is kept current by the symbol-change effect below, so a drawing made
+    //    after switching BTC→ETH writes to the ETH key instead of overwriting
+    //    BTC's saved drawings (silent data loss).
+    const save = () => persistDrawings(manager, prevSymbolRef.current ?? symbol);
     const unsubAdd = manager.on('drawing:added', save);
     const unsubRemove = manager.on('drawing:removed', save);
     const unsubUpdate = manager.on('drawing:updated', save);
@@ -754,6 +758,17 @@ export function ChartPanel({
     }
 
     return () => {
+      // 🔐 Diff-aware teardown: this cleanup runs BOTH before every dependency
+      //    change re-run AND on unmount. On a re-run the effect body above has
+      //    already removed primitives absent from `nextIds`, so tearing down
+      //    EVERYTHING here (then rebuilding) would turn the diff logic into
+      //    dead code and churn all indicator series on every add/remove/edit
+      //    (flicker + rescale). Only do the full teardown on real unmount —
+      //    signalled by chartReadyRef.current === false, which the mount-effect
+      //    cleanup (declared earlier, so it runs first) sets when the chart is
+      //    being destroyed.
+      if (chartReadyRef.current) return;
+
       for (const [, prim] of primitives) {
         try {
           source.detachPrimitive(prim);

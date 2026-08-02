@@ -1,10 +1,16 @@
 /**
  * usePendingOrderMonitor
  *
- * Subscribes directly to paneStores[0] (vanilla Zustand, outside React's
+ * Subscribes directly to ALL four paneStores (vanilla Zustand, outside React's
  * render cycle) so EVERY price tick is evaluated — React 18 automatic batching
  * can coalesce rapid ticks into a single render and cause the useEffect-based
  * approach to skip over a trigger level entirely.
+ *
+ * Each pane store subscription is matched to the symbol of THAT pane
+ * (layoutStore.panes[i].symbol), not the active pane — same pattern as
+ * useTPSLMonitor. The original hook subscribed only to paneStores[0], so a
+ * limit/stop order placed on any other pane was filtered out on every tick
+ * and pended forever (its reserved USDT stayed locked).
  *
  * Two-price check per tick:
  *   1. latestPrice  — the most recent last-trade / ticker price
@@ -82,6 +88,105 @@ export function effectiveCheckPrice(
   return Math.max(latestPrice, candleHigh);
 }
 
+// ─── Per-pane evaluation helper ───────────────────────────────────────────────
+
+/**
+ * Evaluates all pending orders whose symbol matches the given pane's current
+ * symbol. Called on every price tick from that pane's store.
+ *
+ * Exported for unit testing — allows tests to directly invoke the evaluation
+ * logic without mounting the React hook or setting up store subscriptions.
+ *
+ * @param paneIndex  Index into paneStores[] and layoutStore.panes[]
+ * @param latestPrice  Latest trade price from this pane's store
+ * @param bars         Candle bars array from this pane's store
+ * @param onFilled     Optional callback invoked when an order fills
+ */
+export function evaluatePanePendingOrders(
+  paneIndex: number,
+  latestPrice: number,
+  bars: { low: number; high: number }[],
+  onFilled?: () => void
+) {
+  // 🔐 Only evaluate orders whose symbol matches THIS pane — prevents a
+  //    cross-symbol fill when panes show different symbols.
+  const symbol = useLayoutStore.getState().panes[paneIndex].symbol;
+  const pending = usePaperStore.getState().pendingOrders.filter((o) => o.symbol === symbol);
+  if (pending.length === 0) return;
+
+  const currentBar = bars[bars.length - 1];
+  const candleLow = currentBar?.low ?? latestPrice;
+  const candleHigh = currentBar?.high ?? latestPrice;
+
+  for (const order of pending) {
+    // Fast path: real-time tick already crosses the trigger — fill at latestPrice.
+    // Slow path: candle extreme crosses the trigger (sweep) — fill at triggerPrice.
+    const triggeredByLatest = checkPendingTrigger(order, latestPrice);
+    if (!triggeredByLatest) {
+      const checkPrice = effectiveCheckPrice(order, latestPrice, candleLow, candleHigh);
+      if (!checkPendingTrigger(order, checkPrice)) continue;
+    }
+
+    const fillPrice = triggeredByLatest ? latestPrice : order.triggerPrice;
+
+    // Remove from pending without creating a cancellation record — refunds
+    // the reserved balance so placeOrder can deduct it again immediately.
+    usePaperStore.getState().fillPendingOrder(order.id);
+
+    // Re-open as a live position at the fill price.
+    // skipJournal=true — we write our own human-readable entry below.
+    const posId = usePaperStore.getState().placeOrder(
+      order.symbol,
+      order.side,
+      fillPrice,
+      order.usdtAmount,
+      order.takeProfit,
+      order.stopLoss,
+      true, // skipJournal
+      order.id // Pass relatedOrderId to associate with the filled limit/stop order
+    );
+
+    const typeLabel = order.type === 'limit' ? 'Limit' : 'Stop';
+    const sideLabel = order.side === 'buy' ? 'Long' : 'Short';
+
+    if (posId) {
+      onFilled?.();
+      usePaperStore
+        .getState()
+        .addJournalNote(
+          `${typeLabel} order filled — ${sideLabel} ${order.symbol} @ $${fmtPrice(fillPrice)} ` +
+            `(trigger: $${fmtPrice(order.triggerPrice)}, qty: ${order.qty.toFixed(6)})`,
+          false
+        );
+      // TV-style activation entries for bracket TP/SL legs
+      if (order.takeProfit) {
+        usePaperStore
+          .getState()
+          .addJournalNote(
+            `Take-Profit order activated — ${sideLabel} ${order.symbol} @ $${fmtPrice(order.takeProfit)}`,
+            false
+          );
+      }
+      if (order.stopLoss) {
+        usePaperStore
+          .getState()
+          .addJournalNote(
+            `Stop-Loss order activated — ${sideLabel} ${order.symbol} @ $${fmtPrice(order.stopLoss)}`,
+            false
+          );
+      }
+    } else {
+      // Fill failed (e.g. balance check failed after cancel refund — edge case).
+      usePaperStore
+        .getState()
+        .addJournalNote(
+          `${typeLabel} order for ${order.symbol} triggered @ $${fmtPrice(fillPrice)} but could not be filled`,
+          false
+        );
+    }
+  }
+}
+
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
 interface PendingOrderMonitorOptions {
@@ -96,89 +201,19 @@ export function usePendingOrderMonitor({ onFilled }: PendingOrderMonitorOptions 
   }, [onFilled]);
 
   useEffect(() => {
-    // Subscribe directly to the vanilla Zustand store — bypasses React 18
-    // automatic batching so every individual price tick is evaluated.
-    const unsubscribe = paneStores[0].subscribe((state) => {
-      const { latestPrice, bars } = state;
-      if (latestPrice === null) return;
+    // Subscribe to ALL four pane stores independently — each subscription reads
+    // the symbol of ITS OWN pane (not the active pane) so a pending order on
+    // ETH (pane 1) is never missed because pane 0 shows BTC.
+    const unsubscribers = paneStores.map((store, paneIndex) =>
+      store.subscribe((state) => {
+        const { latestPrice, bars } = state;
+        if (latestPrice === null) return;
+        evaluatePanePendingOrders(paneIndex, latestPrice, bars, onFilledRef.current);
+      })
+    );
 
-      const symbol = useLayoutStore.getState().panes[0].symbol;
-      const pending = usePaperStore.getState().pendingOrders.filter((o) => o.symbol === symbol);
-      if (pending.length === 0) return;
-
-      const currentBar = bars[bars.length - 1];
-      const candleLow = currentBar?.low ?? latestPrice;
-      const candleHigh = currentBar?.high ?? latestPrice;
-
-      for (const order of pending) {
-        // Fast path: real-time tick already crosses the trigger — fill at latestPrice.
-        // Slow path: candle extreme crosses the trigger (sweep) — fill at triggerPrice.
-        const triggeredByLatest = checkPendingTrigger(order, latestPrice);
-        if (!triggeredByLatest) {
-          const checkPrice = effectiveCheckPrice(order, latestPrice, candleLow, candleHigh);
-          if (!checkPendingTrigger(order, checkPrice)) continue;
-        }
-
-        const fillPrice = triggeredByLatest ? latestPrice : order.triggerPrice;
-
-        // Remove from pending without creating a cancellation record — refunds
-        // the reserved balance so placeOrder can deduct it again immediately.
-        usePaperStore.getState().fillPendingOrder(order.id);
-
-        // Re-open as a live position at the fill price.
-        // skipJournal=true — we write our own human-readable entry below.
-        const posId = usePaperStore.getState().placeOrder(
-          order.symbol,
-          order.side,
-          fillPrice,
-          order.usdtAmount,
-          order.takeProfit,
-          order.stopLoss,
-          true, // skipJournal
-          order.id // Pass relatedOrderId to associate with the filled limit/stop order
-        );
-
-        const typeLabel = order.type === 'limit' ? 'Limit' : 'Stop';
-        const sideLabel = order.side === 'buy' ? 'Long' : 'Short';
-
-        if (posId) {
-          onFilledRef.current?.();
-          usePaperStore
-            .getState()
-            .addJournalNote(
-              `${typeLabel} order filled — ${sideLabel} ${order.symbol} @ $${fmtPrice(fillPrice)} ` +
-                `(trigger: $${fmtPrice(order.triggerPrice)}, qty: ${order.qty.toFixed(6)})`,
-              false
-            );
-          // TV-style activation entries for bracket TP/SL legs
-          if (order.takeProfit) {
-            usePaperStore
-              .getState()
-              .addJournalNote(
-                `Take-Profit order activated — ${sideLabel} ${order.symbol} @ $${fmtPrice(order.takeProfit)}`,
-                false
-              );
-          }
-          if (order.stopLoss) {
-            usePaperStore
-              .getState()
-              .addJournalNote(
-                `Stop-Loss order activated — ${sideLabel} ${order.symbol} @ $${fmtPrice(order.stopLoss)}`,
-                false
-              );
-          }
-        } else {
-          // Fill failed (e.g. balance check failed after cancel refund — edge case).
-          usePaperStore
-            .getState()
-            .addJournalNote(
-              `${typeLabel} order for ${order.symbol} triggered @ $${fmtPrice(fillPrice)} but could not be filled`,
-              false
-            );
-        }
-      }
-    });
-
-    return unsubscribe;
+    return () => {
+      unsubscribers.forEach((unsub) => unsub());
+    };
   }, []); // Mount once — reads fresh state from getState() on every tick
 }

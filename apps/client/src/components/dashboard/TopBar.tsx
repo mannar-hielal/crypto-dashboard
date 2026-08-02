@@ -128,8 +128,14 @@ export function TopBar() {
                       onClick={() => {
                         setMenuOpen(false);
                         void (async () => {
-                          await authApi.logout();
-                          useAuthStore.getState().clearAuth();
+                          try {
+                            await authApi.logout();
+                          } catch {
+                            // 🔐 Local session must clear even if the server call
+                            // fails — otherwise the user appears signed-in forever.
+                          } finally {
+                            useAuthStore.getState().clearAuth();
+                          }
                         })();
                       }}
                       whileHover={{ background: bg.surface }}
