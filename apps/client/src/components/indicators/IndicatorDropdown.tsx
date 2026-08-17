@@ -78,12 +78,20 @@ export function IndicatorDropdown({ existingIds, onAdd }: IndicatorDropdownProps
                       {cat === 'overlay' ? 'Overlays' : 'Sub-panes'}
                     </div>
                     {grouped[cat].map((meta) => {
-                      const alreadyExists = existingIds.includes(meta.id);
+                      // Indicators are independent instances (each with its own
+                      // instanceId + params), not per-pane singletons — the
+                      // default pane setup itself adds three separate EMA
+                      // instances (length 9/20/200). So re-clicking an
+                      // indicator that's already added must add ANOTHER
+                      // instance, not no-op. `instanceCount` is shown as a
+                      // badge purely so it's still visible how many of this
+                      // indicator type are already on the chart.
+                      const instanceCount = existingIds.filter((id) => id === meta.id).length;
                       return (
                         <button
                           key={meta.id}
                           onClick={() => {
-                            if (!alreadyExists) onAdd(meta.id);
+                            onAdd(meta.id);
                             setOpen(false);
                           }}
                           className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-white/5"
@@ -110,16 +118,21 @@ export function IndicatorDropdown({ existingIds, onAdd }: IndicatorDropdownProps
                               {meta.description}
                             </div>
                           </div>
-                          {alreadyExists ? (
-                            <span style={{ fontSize: fontSize.xs10, color: color.muted }}>
-                              Added
-                            </span>
-                          ) : (
-                            <Plus
-                              className="h-3.5 w-3.5 shrink-0"
-                              style={{ color: color.purple }}
-                            />
-                          )}
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            {instanceCount > 0 && (
+                              <span
+                                className="rounded-full px-1.5 py-0.5 font-semibold"
+                                style={{
+                                  fontSize: fontSize.xs10,
+                                  background: `${meta.defaultColor}20`,
+                                  color: meta.defaultColor,
+                                }}
+                              >
+                                ×{instanceCount}
+                              </span>
+                            )}
+                            <Plus className="h-3.5 w-3.5" style={{ color: color.purple }} />
+                          </div>
                         </button>
                       );
                     })}
