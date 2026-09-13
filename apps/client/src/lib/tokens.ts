@@ -21,6 +21,7 @@ export const bg = {
   tooltip: '#25234e', // tooltip background — same as panel by default
   modal: '#1e1d34', // modal overlay background
   input: '#3e3c73', // input field background — same as surface
+  banner: '#16143a', // cookie banner / toast background — dark violet tint
 } as const;
 
 // ─── Brand / UI colors ───────────────────────────────────────────────────────
@@ -55,8 +56,10 @@ export const chart = {
   // MACD pane
   macdLine: '#2962ff', // deep blue
   macdSignal: '#ff6d00', // deep orange
-  macdHistBull: '#20c8b3', // teal  — rising  positive histogram bar
-  macdHistBear: '#d5455c', // red   — falling negative histogram bar
+  macdHistBull: '#26a69a', // teal — rising positive histogram bar (TradingView Color 0)
+  macdHistBullDim: '#b2dfdb', // light teal — falling positive (TradingView Color 1)
+  macdHistBearDim: '#ffcdd2', // light red — rising negative (TradingView Color 2)
+  macdHistBear: '#ff5252', // red — falling negative histogram bar (TradingView Color 3)
 
   // Candlestick series
   candleUp: '#2ccd78', // bullish / green candle
@@ -169,6 +172,7 @@ export const interaction = {
   tolerance: { series: 4, anchor: 6, curve: 4 },
   anchorRadius: { regular: 6, touch: 13 },
   anchorStroke: { regular: 1, touch: 3, selected: 3, touchSelected: 0 },
+  anchorFill: '#1a1a2e', // non-hovered anchor centre fill
 } as const;
 
 // ─── Border radii ────────────────────────────────────────────────────────────

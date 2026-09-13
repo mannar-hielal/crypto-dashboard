@@ -149,8 +149,9 @@ export function DashboardInner() {
   const syncWithServer = usePaperStore((s) => s.syncWithServer);
 
   const activePaneIndex = useLayoutStore((s) => s.activePane);
-  const panes = useLayoutStore((s) => s.panes);
-  const activePaneConfig = panes[activePaneIndex] ?? panes[0];
+  // 🔐 Selector reads live state, not a closure — re-renders only when the
+  //    active pane's own data changes, not on every pane edit.
+  const activePaneConfig = useLayoutStore((s) => s.panes[s.activePane] ?? s.panes[0]);
   const symbol = activePaneConfig.symbol;
   const setPaneTimeRangePreset = useLayoutStore((s) => s.setPaneTimeRangePreset);
   const setPaneInterval = useLayoutStore((s) => s.setPaneInterval);
@@ -438,7 +439,7 @@ export function DashboardInner() {
           >
             <span style={{ fontSize: fontSize.xs10, color: color.muted }}>Range</span>
             <TimeRangeSwitcher
-              activePreset={panes[activePaneIndex]?.timeRangePreset ?? null}
+              activePreset={activePaneConfig?.timeRangePreset ?? null}
               onPresetChange={(preset) => {
                 setPaneTimeRangePreset(activePaneIndex, preset);
                 if (!preset) return;

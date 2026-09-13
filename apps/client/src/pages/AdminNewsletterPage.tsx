@@ -47,9 +47,9 @@ const STATUS_LABELS: Record<StatusFilter, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: '#f59e0b',
-  verified: '#2ccd78',
-  unsubscribed: '#d5455c',
+  pending: color.warning,
+  verified: color.green,
+  unsubscribed: color.red,
 };
 
 function maskEmail(email: string) {
@@ -66,7 +66,8 @@ function maskEmail(email: string) {
 
 export function AdminNewsletterPage() {
   const navigate = useNavigate();
-  const { accessToken, user } = useAuthStore();
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const user = useAuthStore((s) => s.user);
   const [state, dispatch] = useReducer(reducer, initialState);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [showEmails, setShowEmails] = useState(false);
@@ -132,7 +133,7 @@ export function AdminNewsletterPage() {
                   className="rounded-full px-4 py-1.5 text-sm font-medium transition-colors"
                   style={{
                     background: statusFilter === key ? color.purple : bg.surface,
-                    color: statusFilter === key ? '#fff' : color.muted,
+                    color: statusFilter === key ? color.white : color.muted,
                   }}
                 >
                   {label}

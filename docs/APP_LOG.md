@@ -237,11 +237,11 @@ Tab badge counts: purple pill for Positions count, amber pill for Orders count (
 | `3h` | 3 columns | 3     |
 | `4`  | 2×2 grid  | 4     |
 
-**`layoutStore`** (persisted `cd-layout` v1):
+**`layoutStore`** (persisted `cd-layout` v2 — version 1→2 migration adds `indicators` to each `PaneConfig`):
 
 - `layout: LayoutId` — active layout ID
 - `activePane: number` — pane that receives SymbolBar controls + TradingPanel focus
-- `panes: PaneConfig[]` — 4 entries; defaults: `BTC/1m · ETH/1m · SOL/1m · BNB/1m`
+- `panes: PaneConfig[]` — 4 entries; each now has `indicators: IndicatorInstance[]` (defaults: EMA9/EMA20/EMA200/VWAP)
 - `syncOptions: SyncOptions` — defaults: `crosshair: true, timeRange: true, symbol: false, interval: false`
 - `paneSizes: Record<LayoutId, PaneSizes>` — per-layout `{ colFracs: number[]; rowFracs: number[] }` (fractions sum to 1.0 per axis). Persisted. Defaults: equal splits. Hydration guard in `merge()` ensures all layout IDs present even when loading old localStorage snapshots.
 - `setLayout()` clamps `activePane` to `paneCount − 1` when switching to a smaller layout
@@ -485,6 +485,13 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 | File                                                                   | Purpose                                                                                                                                        |
 | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/client/src/lib/indicators/types.ts`                              | User-selectable indicator types (`IndicatorMeta`, `IndicatorInstance`, `IndicatorPrimitive`)                                                   |
+| `apps/client/src/lib/indicators/catalog.ts`                            | Catalog of 9 indicators with param defs + inline factory functions                                                                             |
+| `apps/client/src/lib/indicators/primitives/`                           | Custom `ISeriesPrimitive` implementations (ema, vwap, macd) + 6 LH calculation files                                                           |
+| `apps/client/src/components/indicators/IndicatorDropdown.tsx`          | Portal dropdown in SymbolBar — add indicators grouped by category                                                                              |
+| `apps/client/src/components/indicators/IndicatorWidget.tsx`            | Floating draggable indicator widget (Framer Motion)                                                                                            |
+| `apps/client/src/components/indicators/IndicatorWidgets.tsx`           | Container + settings state for indicator widgets                                                                                               |
+| `apps/client/src/components/indicators/IndicatorSettings.tsx`          | Portal popover for params/style editing                                                                                                        |
 | `apps/client/src/lib/tokens.ts`                                        | **Design tokens** — single source of truth for all colors, fonts, sizes (JS/TS side)                                                           |
 | `apps/client/src/index.css`                                            | Tailwind v4 theme — `@theme inline` generates brand color utilities from tokens                                                                |
 | `apps/client/src/store/paperStore.ts`                                  | All paper trading state + actions                                                                                                              |
@@ -594,6 +601,17 @@ ask: number | null; // best ask from Bybit orderbook.1
 - **`useShallow` selectors** — `paneSymbols` object selector wrapped in `useShallow` to prevent `getSnapshot` infinite loop
 - **Journal PnL badge** — `JournalEntry.pnl?: number` (net = gross − exit commission); `closePosition` attaches it to the exec entry; `useTPSLMonitor` passes it via `addJournalNote(text, false, netPnl)`; `JournalRow` renders a colored `+$X.XX` / `−$X.XX` pill inline after the text (green/red tint). Only close entries carry the badge; open and user-note entries do not.
 - **Tab persistence across symbol changes** — `OrderTab` exported from `TradingPanel.tsx`; `tradingTab` lifted to `DashboardPage`; passed as `initialTab` + `onTabChange` props so Market/Limit/Stop selection survives the `key`-reset remount. Price input lazily initialised to new symbol's `latestPrice` when mounting on Limit/Stop.
+
+### ✅ Completed (added 2026-07-27 — User-Selectable Indicators)
+
+- **User-selectable indicators** — replaced 5 hardcoded always-on indicators (EMA9/20/200, VWAP, MACD) with a fully user-configurable `ISeriesPrimitive` system.
+- **Indicator catalog** (`lib/indicators/catalog.ts`): 9 indicators — EMA, SMA, AvgPrice, MedianPrice, WeightedClose, VWAP, MACD, Momentum, PercentChange — each with typed param defs, default params/style, and an inline factory returning an `IndicatorPrimitive`.
+- **Custom primitives**: `primitives/ema.ts` (recursive EMA via LH `exponentialMovingAverage`), `primitives/vwap.ts` (daily-reset sparse dotted line reading volume from source data), `primitives/macd.ts` (compound 3-series: MACD line + signal line + color-coded histogram bars on a sub-pane).
+- **LH calculation files ported**: 6 LH calculation functions extracted and standalone (SMA, AvgPrice, MedianPrice, WeightedClose, Momentum, PercentChange).
+- **layoutStore**: `PaneConfig.indicators: IndicatorInstance[]` with `addIndicator`/`removeIndicator`/`updateIndicator`/`setIndicatorPosition` actions; version 1→2 with migration.
+- **UI components**: `IndicatorDropdown.tsx` (portal dropdown in SymbolBar, grouped by category), `IndicatorSettings.tsx` (portal popover for params/style/color/lineWidth), `IndicatorWidget.tsx` (Framer Motion draggable widget with eye/settings/remove + latest value), `IndicatorWidgets.tsx` (container with ResizeObserver, 1 s refresh poll).
+- **SymbolBar**: "Indicators" button before ChartLayoutPicker.
+- **ChartPanel**: removed ema9Ref/ema20Ref/ema200Ref/vwapRef/macdHistRef/macdLineRef/signalRef refs + series creation + data push; added primitive lifecycle effect (attach/detach/update via Map); renders `IndicatorWidgets`.
 
 ### 📋 Planned (Next)
 

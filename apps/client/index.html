@@ -14,14 +14,20 @@
     <!-- PWA: Android/Chrome — standard equivalent of apple-mobile-web-app-capable -->
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="cryptopapertrade.com" />
-    <link rel="apple-touch-icon" href="/pwa-192x192.png" />
+    <meta name="apple-mobile-web-app-title" content="CP Trade" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/pwa-180x180.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/pwa-152x152.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/pwa-167x167.png" />
+    <link rel="apple-touch-icon" sizes="120x120" href="/pwa-120x120.png" />
+    <link rel="apple-touch-startup-image" href="/splash-2732x2732.png" />
 
     <!-- Responsive viewport — critical for mobile -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
     <!-- Content Security Policy — browser-enforced for the SPA -->
     <!-- 'unsafe-inline' on style-src required by Framer Motion animated styles -->
+    <!-- __CONNECT_SRC__ is replaced at build time with 'self' + the configured -->
+    <!-- VITE_API_URL (http + ws variants) — see cspConnectSrcPlugin in vite.config.ts -->
     <!-- frame-ancestors and report-uri omitted here — they are header-only
          directives and are already set via server Helmet middleware -->
     <meta
@@ -30,10 +36,11 @@
         default-src 'self';
         script-src 'self' https://static.cloudflareinsights.com;
         style-src 'self' 'unsafe-inline';
-        connect-src 'self' http://localhost:3001 ws://localhost:3001 https://crypto-dashboard-api.fly.dev https://api.cryptopapertrade.com wss://api.cryptopapertrade.com;
+        connect-src __CONNECT_SRC__;
         img-src 'self' data: blob:;
         font-src 'self' data:;
         worker-src 'self' blob:;
+        object-src 'none';
         base-uri 'none';
         form-action 'self';
       "
