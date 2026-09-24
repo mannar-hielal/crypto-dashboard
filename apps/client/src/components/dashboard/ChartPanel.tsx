@@ -120,6 +120,10 @@ export function ChartPanel({
 
   const chartReadyRef = useRef(false);
   const prevIntervalRef = useRef(interval);
+  // 🔐 Separate from prevSymbolRef above — that one drives the drawings-
+  // persistence effect and has its own sequencing. This one only tracks
+  // which symbol the bars-push effect below last rendered for.
+  const prevBarsSymbolRef = useRef(symbol);
   const userZoomedRef = useRef(false);
 
   const [hoverData, setHoverData] = useState<LegendData | null>(null);
@@ -608,8 +612,17 @@ export function ChartPanel({
       return;
     }
 
-    if (interval !== prevIntervalRef.current) {
+    if (interval !== prevIntervalRef.current || symbol !== prevBarsSymbolRef.current) {
+      // 🔐 A symbol switch must force a full setData() below, same as an
+      // interval switch already does — otherwise, once a pane has loaded
+      // full history (bars.length pinned at MAX_BARS), the new symbol's bars
+      // array commonly lands at the same length as the old one, and the
+      // length-equality check below wrongly takes the .update() branch —
+      // splicing one new-symbol candle onto a series still otherwise showing
+      // the previous symbol's candles, corrupting the chart until the
+      // interval changes or the page reloads.
       prevIntervalRef.current = interval;
+      prevBarsSymbolRef.current = symbol;
       prevLenRef.current = 0;
       paneStores[paneIndex].getState().setUserZoomed(false);
       return;
@@ -686,7 +699,7 @@ export function ChartPanel({
       }
     }
     prevLenRef.current = sortedBars.length;
-  }, [bars, interval, timeRangePreset, paneIndex]);
+  }, [bars, interval, timeRangePreset, paneIndex, symbol]);
 
   // ── 3. Indicator primitive lifecycle ───────────────────────────────────────
   useEffect(() => {

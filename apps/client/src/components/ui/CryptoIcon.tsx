@@ -87,7 +87,7 @@ interface SymbolPairProps {
 /**
  * SymbolPair
  *
- * Renders two stacked coin icons (base + quote) in the TradingView style:
+ * Renders two stacked coin icons (base + quote) in the TVP style:
  * the base coin sits at full size in front; the quote coin overlaps at the
  * bottom-right at ~65% size with a 1 px panel-coloured ring separating them.
  * Falls back gracefully to the CryptoIcon text badge for unknown symbols.

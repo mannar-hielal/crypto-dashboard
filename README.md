@@ -10,7 +10,7 @@ A professional paper trading dashboard for cryptocurrency. Real-time charting, s
 
 ## ✨ Features
 
-- **Live Candlestick Charts** — 9 built-in indicators (EMA, SMA, Average Price, Median Price, Weighted Close, VWAP, Momentum, Percent Change, MACD), each a draggable, customizable widget, via TradingView Lightweight Charts
+- **Live Candlestick Charts** — 9 built-in indicators (EMA, SMA, Average Price, Median Price, Weighted Close, VWAP, Momentum, Percent Change, MACD), each a draggable, customizable widget, via TVP Lightweight Charts
 - **Drawing Toolkit** — Trend lines, Fibonacci retracements, shapes, text, and freehand drawing
 - **Multi-Chart Layout** — 1, 2 (horizontal/vertical), 3, or 4 synchronized chart panes; crosshair and time-range sync across all active panes
 - **Paper Trading** — Simulated long/short market, limit, and stop orders with $10,000 virtual balance and full P&L accounting
@@ -24,7 +24,7 @@ A professional paper trading dashboard for cryptocurrency. Real-time charting, s
 - **Order & Balance History** — Full audit trail of every order, balance change, and commission
 - **Rejected Order Icon** — ⚠️ inline error icon in the History tab when an order is rejected (e.g. insufficient funds), with a tooltip explaining the rejection reason
 - **Crypto Leverage Settings** — Bybit-style leverage selector (1×–125×) in the Account Settings dialog; affects position size across all order types; persisted across sessions
-- **Symbol Pair Icons** — stacked base/quote coin icons (TradingView style) in every Symbol cell of the Positions, Orders, and History tables, and in the SymbolBar symbol picker trigger and dropdown rows
+- **Symbol Pair Icons** — stacked base/quote coin icons (TVP style) in every Symbol cell of the Positions, Orders, and History tables, and in the SymbolBar symbol picker trigger and dropdown rows
 - **Trading Journal** — Auto-generated trade events + personal editable notes
 - **Multi-Timeframe** — 1m / 5m / 15m / 1h / 4h / 1d intervals with live aggregation
 - **Real-Time Data** — Bybit V5 WebSocket feed with automatic reconnection
@@ -53,7 +53,7 @@ A professional paper trading dashboard for cryptocurrency. Real-time charting, s
 | ------------------ | ------------------------------------------------ |
 | **Backend**        | Node.js v24 + Fastify + Prisma 7 + PostgreSQL 16 |
 | **Frontend**       | React 19 + TypeScript + Vite 8 + Tailwind CSS v4 |
-| **Charting**       | TradingView Lightweight Charts v5                |
+| **Charting**       | TVP Lightweight Charts v5                        |
 | **State**          | Zustand                                          |
 | **Data**           | Bybit V5 WebSocket API (mainnet)                 |
 | **Infrastructure** | Docker Compose (PostgreSQL + Redis)              |

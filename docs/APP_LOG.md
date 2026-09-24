@@ -40,7 +40,7 @@
 | react              | ^19.2.4  |                             |
 | zustand            | ^5.0.12  |                             |
 | framer-motion      | ^12.38.0 | Animations throughout       |
-| lightweight-charts | ^5.1.0   | TradingView chart library   |
+| lightweight-charts | ^5.1.0   | TVP chart library           |
 | @number-flow/react | ^0.6.0   | Animated number transitions |
 | lucide-react       | ^1.7.0   | Icons                       |
 | tailwindcss        | ^4.2.2   |                             |
@@ -165,7 +165,7 @@
    - **Bracket lifecycle (TV-style)**: placing limit/stop with TP+SL creates 3 linked rows: parent order + TP child + SL child.
    - **Pre-fill/trigger**: parent row = Working, TP/SL child rows = Inactive; cancelling parent cancels all 3.
    - **Post-fill/trigger**: parent row moves to historical Filled (visible in Orders → Filled + Order History → Filled; non-cancellable); child exits become Working and can be cancelled individually.
-   - **Position close — sibling cancel** ✅: `closePosition` builds a `siblingCancelOrders: HistoricalOrder[]` array at close time. Rules: if `closeType === 'take-profit'` → cancel SL; if `closeType === 'stop-loss'` → cancel TP; manual close (no closeType) → cancel both. Each cancelled record: `type = 'take-profit' | 'stop-loss'`, `status = 'cancelled'`, `commission = 0`, `placingTime = pos.openedAt`, `closingTime = now`, `limitPrice` or `stopPrice` filled with the exit level. They land in `orders[]` alongside the fill record, making them appear in **Order History → Cancelled** and **Orders → Cancelled** — mirrors TradingView exactly. No journal note is added for auto-cancelled siblings (kept silent to avoid noise next to the main TP/SL close entry).
+   - **Position close — sibling cancel** ✅: `closePosition` builds a `siblingCancelOrders: HistoricalOrder[]` array at close time. Rules: if `closeType === 'take-profit'` → cancel SL; if `closeType === 'stop-loss'` → cancel TP; manual close (no closeType) → cancel both. Each cancelled record: `type = 'take-profit' | 'stop-loss'`, `status = 'cancelled'`, `commission = 0`, `placingTime = pos.openedAt`, `closingTime = now`, `limitPrice` or `stopPrice` filled with the exit level. They land in `orders[]` alongside the fill record, making them appear in **Order History → Cancelled** and **Orders → Cancelled** — mirrors TVP exactly. No journal note is added for auto-cancelled siblings (kept silent to avoid noise next to the main TP/SL close entry).
    - `OrderDisplayRow` union: `{ kind: 'pending'; data: PendingOrder } | { kind: 'historical'; data: HistoricalOrder } | { kind: 'exit-order'; data: SyntheticExitOrder }`.
 
 3. **Order History** ✅ — TV-style order history table showing all `HistoricalOrder[]` records (market + limit + stop, all statuses). Columns: Symbol, Side, Type, Qty, Limit Price, Stop Price, Fill Price, Status, Commission, Placing Time, Closing Time (on by default) · optional: Order ID, Leverage, Margin
@@ -217,7 +217,7 @@ Tab badge counts: purple pill for Positions count, amber pill for Orders count (
 
 - **Last Price column** ✅: `lastKnownPrices` map in `paneStore` — updated on every WS snapshot/bar, never cleared on reset. `getPriceForSymbol()` helper in `OrderAccountManagementPanel` tries live pane price first, falls back to `lastKnownPrices` so positions in non-active symbols retain correct mark price and PnL.
 
-- **Symbol pair icons** (`SymbolPair`) in Positions / Orders / History symbol column ✅: stacked base + quote coin icons (base 16 px front, quote 10 px overlapping bottom-right with panel-colour ring separator) in the TradingView style. Also applied to the `SymbolBar` symbol picker — both the trigger button (18 px base) and every dropdown row (20 px base). `SymbolPair` is exported from `CryptoIcon.tsx`; `USDT` added to `CRYPTO_ICON_URLS` (falls back to text badge gracefully). `cryptoIcons.test.ts` updated: count 9 → 10, USDT mock + expected entry added.
+- **Symbol pair icons** (`SymbolPair`) in Positions / Orders / History symbol column ✅: stacked base + quote coin icons (base 16 px front, quote 10 px overlapping bottom-right with panel-colour ring separator) in the TVP style. Also applied to the `SymbolBar` symbol picker — both the trigger button (18 px base) and every dropdown row (20 px base). `SymbolPair` is exported from `CryptoIcon.tsx`; `USDT` added to `CRYPTO_ICON_URLS` (falls back to text badge gracefully). `cryptoIcons.test.ts` updated: count 9 → 10, USDT mock + expected entry added.
 
 ### Bottom Panel — `OrderAccountManagementPanel` ⏳ (still planned)
 
@@ -264,7 +264,7 @@ Tab badge counts: purple pill for Positions count, amber pill for Orders count (
 **`ChartLayoutPicker`** (rendered inside `SymbolBar`, right side):
 
 - Trigger: 7×7 icon reflecting active layout; highlights purple + border when popover is open
-- Popover (w-56): "Layout" row with 5 SVG icons (paths match TradingView `chart-layout.html`) + "Sync across panes" section
+- Popover (w-56): "Layout" row with 5 SVG icons (paths match TVP `chart-layout.html`) + "Sync across panes" section
 - Sync section: 4 animated pill toggles (spring 600/35) — Sync Symbol / Sync Interval / Sync Crosshair / Sync Time Range
 - Selecting a layout closes the popover; sync toggles keep popover open until backdrop click
 
@@ -282,9 +282,9 @@ Tab badge counts: purple pill for Positions count, amber pill for Orders count (
 - **Time range sync**: `subscribeVisibleTimeRangeChange` → `setVisibleRange(range)` on each follower
 - Guard ref `isSyncingTimeRange` breaks circular time-range loop; crosshair uses `sourceEvent` instead
 - Sync options + pane count read via refs so event handlers stay up-to-date without re-registration
-- **Snap-on-enable (symbol / interval)**: `toggleSync('symbol' | 'interval')` — when the flag transitions from OFF → ON, all panes are immediately snapped to the **active pane's** current symbol/interval. Active pane is the source of truth (mirrors TradingView/Bookmap convention: the chart the user is focused on wins). Toggling OFF only flips the flag; panes retain their (now-uniform) values. Crosshair has no snap (event-driven pointer only).
+- **Snap-on-enable (symbol / interval)**: `toggleSync('symbol' | 'interval')` — when the flag transitions from OFF → ON, all panes are immediately snapped to the **active pane's** current symbol/interval. Active pane is the source of truth (mirrors TVP/Bookmap convention: the chart the user is focused on wins). Toggling OFF only flips the flag; panes retain their (now-uniform) values. Crosshair has no snap (event-driven pointer only).
 - **Snap-on-enable (timeRange)**: a `useEffect` in `MultiChartArea` watches `syncOptions.timeRange`; on OFF → ON it reads `chartRefs[activePane].timeScale().getVisibleRange()` and calls `setVisibleRange(range)` on all other active chart refs. Active pane wins. Uses the same `isSyncingTimeRange` guard to prevent cascade. Crosshair has no snap — it is purely pointer-driven.
-- **Interval-aware initial view** (TradingView-matched): `INTERVAL_BAR_SPACING` in `markets.ts` maps each interval to an initial px/bar spacing targeting ~160–200 visible candles at a ~1 200 px viewport (same visual density as TradingView). Applied in `ChartPanel` on `isFirstLoad || isOutOfRange` via `timeScale().applyOptions({ barSpacing })` before `scrollToRealTime()`. Fetch limit bumped to `INTERVAL_FETCH_LIMIT` (1 000 bars = server max) for deep scrollback buffer. `MAX_BARS` in `paneStore` raised to 1 000 to match.
+- **Interval-aware initial view** (TVP-matched): `INTERVAL_BAR_SPACING` in `markets.ts` maps each interval to an initial px/bar spacing targeting ~160–200 visible candles at a ~1 200 px viewport (same visual density as TVP). Applied in `ChartPanel` on `isFirstLoad || isOutOfRange` via `timeScale().applyOptions({ barSpacing })` before `scrollToRealTime()`. Fetch limit bumped to `INTERVAL_FETCH_LIMIT` (1 000 bars = server max) for deep scrollback buffer. `MAX_BARS` in `paneStore` raised to 1 000 to match.
 
 **`PaneHeader`** (h-7, rendered only in multi-pane mode):
 
@@ -316,7 +316,7 @@ Tab badge counts: purple pill for Positions count, amber pill for Orders count (
 
 ### Right Panel — `TradingPanel` ✅ (current implementation)
 
-Based on TradingView markup reference. Not a 1:1 copy.
+Based on TVP markup reference. Not a 1:1 copy.
 
 **Header:** Symbol name (e.g. `BTCUSDT`) + ✕ close (hides panel only, component stays mounted, **all form state preserved** — qty, price, TP/SL, tab, side). Resets **form inputs** (qty, price, TP, SL) on symbol or active pane change via ``key={`${activePane}-${symbol}`}`` in `DashboardPage`. **Tab selection (Market/Limit/Stop) and side (Buy/Sell) survive symbol changes** — `tradingTab` and `tradingSide` are lifted state in `DashboardPage`, passed as `initialTab`/`initialSide` props; `OrderTab` is exported from `TradingPanel.tsx`.
 
@@ -361,7 +361,7 @@ Based on TradingView markup reference. Not a 1:1 copy.
 - Primary line: `Buy` / `Sell` (large)
 - Secondary line: `{qty} {baseAsset} · MARKET` | `{qty} {baseAsset} @ {price} LIMIT` | `{qty} {baseAsset} @ {price} STOP`
 
-**Intentionally skipped vs TradingView:** DOM tab, Risk USD / Risk % balance, Tick value, Time in force
+**Intentionally skipped vs TVP:** DOM tab, Risk USD / Risk % balance, Tick value, Time in force
 
 ---
 
@@ -560,7 +560,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 ### ✅ Completed (added 2026-07-19 — Phase 1 Drawing Refactoring)
 
-- **Phase 1 — Per-shape renderer classes** — extracted the monolithic `DrawingPrimitive.ts` (1278 lines) into 11 new files following TradingView's `BitmapCoordinatesPaneRenderer` + `CompositeRenderer` + `HitTarget` patterns:
+- **Phase 1 — Per-shape renderer classes** — extracted the monolithic `DrawingPrimitive.ts` (1278 lines) into 11 new files following TVP's `BitmapCoordinatesPaneRenderer` + `CompositeRenderer` + `HitTarget` patterns:
   - `BitmapCoordinatesPaneRenderer.ts` — abstract base with `draw(scope)` + `hitTest(x,y)`
   - `CompositeRenderer.ts` — ordered renderer list matching TV's module 789190
   - 6 per-shape renderers: TrendLineRenderer, HorizontalLineRenderer, VerticalLineRenderer, ParallelChannelRenderer, PolylineRenderer, TextLabelRenderer
@@ -667,7 +667,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 ### Summary
 
-Enable users to connect their personal Bybit account via API keys and execute real trades directly from cryptopapertrade.com. The app acts purely as a UI client — it never holds funds. All money stays in the user's own Bybit account. The architecture mirrors how TradingView's broker bridge works: Client → cryptopapertrade.com server (signs + validates) → Bybit REST API → user's account.
+Enable users to connect their personal Bybit account via API keys and execute real trades directly from cryptopapertrade.com. The app acts purely as a UI client — it never holds funds. All money stays in the user's own Bybit account. The architecture mirrors how TVP's broker bridge works: Client → cryptopapertrade.com server (signs + validates) → Bybit REST API → user's account.
 
 ### Cost Model
 
@@ -899,7 +899,7 @@ _Last updated: 2026-05-05 (fixed production API URL baked into client bundle)_
     journal notes are appended (one per activated exit leg):
     `Take-Profit order activated — {sideLabel} {symbol} @ ${price}`
     `Stop-Loss order activated — {sideLabel} {symbol} @ ${price}`
-    These are read-only system entries (isUserNote: false), mirroring TradingView's activation log.
+    These are read-only system entries (isUserNote: false), mirroring TVP's activation log.
     Journal order: fill entry first, then TP activation, then SL activation (newest-first in view).
 
 - **feat: drag-to-resize bottom panel + chart pane splitters**
@@ -1004,7 +1004,7 @@ _Last updated: 2026-05-05 (fixed production API URL baked into client bundle)_
   - **Behaviour clarification captured**: 1.7.1 — the app disables the submit button when qty is empty (no inline error text); test plan Notes updated to reflect this.
   - **Files changed**: `apps/client/src/store/__tests__/paperStore.test.ts`, `apps/client/src/components/dashboard/__tests__/TradingPanel.test.tsx`, `docs/TRADING_TEST_PLAN.md`, `docs/APP_LOG.md`
 
-- **feat: TradingView-style journal detail for edited parent/child orders (01.05.2026)** ✅
+- **feat: TVP-style journal detail for edited parent/child orders (01.05.2026)** ✅
   - **`paperStore.ts`** — replaced the single generic edit journal line with **delta-aware multi-entry logs** for both `updatePositionExits()` and `editPendingOrder()`.
   - **Open position exit edits** now produce:
     - a summary entry describing exactly what changed, e.g. `Modified LONG BTCUSDT exits — TP $55,000.00 → $56,000.00, SL $48,000.00 → $47,000.00`
@@ -1281,7 +1281,7 @@ The helper and test file introduced in the 4.18 safety-hardening fix were rename
 
 ### feat: TV-style Orders bench lifecycle — session-scoped TTL cleanup (02.05.2026) ✅
 
-**Context:** The Orders tab was showing all historical `filled`/`cancelled`/`rejected` records indefinitely — identical to Order History. TradingView treats Orders as a temporary working bench: terminal rows appear briefly after the event, then auto-evict. On page refresh the bench resets entirely.
+**Context:** The Orders tab was showing all historical `filled`/`cancelled`/`rejected` records indefinitely — identical to Order History. TVP treats Orders as a temporary working bench: terminal rows appear briefly after the event, then auto-evict. On page refresh the bench resets entirely.
 
 **Behaviour implemented (mirrors TV):**
 
@@ -1332,7 +1332,7 @@ The helper and test file introduced in the 4.18 safety-hardening fix were rename
 - Kept technical `bid`/`ask` terms only where they are explicitly helpful (quote mapping notes and spread tooltip context), so testers can match on-screen labels without losing precision.
 - Key sections aligned:
   - **Dual-platform setup** + **Setup checklist** tolerance/parity language
-  - **Section 6** price-parity wording (`Sell/Buy` vs TradingView `SELL/BUY` at same timestamp)
+  - **Section 6** price-parity wording (`Sell/Buy` vs TVP `SELL/BUY` at same timestamp)
   - **Section 9** renamed to `Sell/Buy Prices & Spread in TradingPanel` with row wording updated to on-screen labels
   - Minor consistency updates in regression notes where wording previously led with `bid/ask`
 - Scope: **documentation only** (no runtime logic change, no API/store changes, no behavior change).
@@ -1442,7 +1442,7 @@ Completed the MVP trendline drawing system with full interaction lifecycle and T
 - All popups (color picker, width, style, label, kebab) positioned inside toolbar (`absolute left-0 top-12`)
 - `data-drawing-hover`/`data-drawing-active` attributes on chart div
 - TV-style line style dropdown (solid/dashed/dotted SVG previews in `<table>`)
-- KebabMenu with Clone + Visual Order submenu (TradingView `<table>`)
+- KebabMenu with Clone + Visual Order submenu (TVP `<table>`)
 - Cursor variant submenu + line tool submenu in LeftToolbar (right-click)
 - Crosshair, Rectangle, Fibonacci toolbar buttons removed (UI-only with no implementation)
 

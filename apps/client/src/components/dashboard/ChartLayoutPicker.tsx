@@ -2,7 +2,7 @@
  * ChartLayoutPicker
  *
  * Popover button that lets the user choose between 5 chart layouts.
- * SVG icons match the TradingView reference (chart-layout.html).
+ * SVG icons match the TVP reference (chart-layout.html).
  * Also surfaces sync-option toggles (symbol / interval / crosshair / time range).
  */
 
@@ -13,7 +13,7 @@ import { useLayoutStore } from '@/store/layoutStore';
 import type { LayoutId, SyncOptions } from '@/store/layoutStore';
 import { bg, color, fontSize } from '@/lib/tokens';
 
-// ─── Layout icon SVG paths (from TradingView markup reference) ────────────────
+// ─── Layout icon SVG paths (from TVP markup reference) ────────────────
 
 const LAYOUT_ICONS: Record<LayoutId, { label: string; path: string }> = {
   '1': {
