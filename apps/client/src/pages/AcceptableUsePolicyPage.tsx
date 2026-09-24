@@ -11,7 +11,7 @@ export function AcceptableUsePolicyPage() {
         description="Acceptable use policy for cryptopapertrade.com paper trading platform."
         path="/aup"
       />
-      <LegalLayout title="Acceptable Use Policy" lastUpdated="June 13, 2026" version="1.0">
+      <LegalLayout title="Acceptable Use Policy" lastUpdated="September 24, 2026" version="1.1">
         <section>
           <h2>1. Introduction</h2>
           <p>
