@@ -89,6 +89,5 @@ Per the project rule (⛔ no implementation without explicit instruction), the w
 ## Rules
 
 - Never invent a color/font/size. If the MCP call fails or returns the value as `visible: false`, descend to a deeper child until you find the actual rendered fill / type style. State the Node ID you sampled so the user can verify.
-- `docs/markup-reference/` (HTML) stays the secondary structural reference (component anatomy, interaction patterns), not the color/font source.
 - Loose repo-root screenshots (`Screenshot 2026-07-14 at *.png`) are **not** the source of truth — they are dev previews. Don't sample from them.
 - Whenever `session-bootstrap` flags the missing `docs/screenshots/theme/`, redirect here. Consider proposing an APP_LOG edit that replaces the `docs/screenshots/theme/` reference with the Figma URL when the user is ready.

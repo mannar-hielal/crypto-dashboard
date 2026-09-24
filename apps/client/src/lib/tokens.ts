@@ -48,7 +48,7 @@ export const chart = {
   // EMA overlay lines
   ema9: '#94a3b8', // slate-400 — fast MA
   ema20: '#3b82f6', // blue — medium MA
-  ema200: '#9c27b0', // purple — trend filter (source: chart.html markup-reference rgb(156,39,176))
+  ema200: '#9c27b0', // purple — trend filter (rgb(156,39,176), originally sampled from a since-removed markup reference)
 
   // VWAP overlay line
   vwap: '#f97316', // orange
@@ -139,7 +139,7 @@ export const toolbar = {
 // ─── Range bar (chart time-range preset strip) ───────────────────────────────
 
 export const rangeBar = {
-  height: 28, // matches TVP-style time-axis row height (source: chart.html markup-reference)
+  height: 28, // matches TVP-style time-axis row height (originally sampled from a since-removed markup reference)
   background: 'rgba(0,0,0,0.15)',
 } as const;
 

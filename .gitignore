@@ -42,7 +42,6 @@ yarn-error.log*
 prisma/migrations/
 
 # Internal docs — not for version control
-docs/markup-reference/
 docs/PRE_LAUNCH_LEGAL.md
 
 # TVP captured bundles — reference only, not part of the project

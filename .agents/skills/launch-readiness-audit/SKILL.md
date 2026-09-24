@@ -22,7 +22,7 @@ For each item below, grep/read the codebase and the cited doc, then output: ✅ 
 
 ### 🔴 Tier 1 — Blockers (public launch cannot ship with these open)
 
-1. **Visual source-of-truth missing**: `docs/APP_LOG.md` mandates `docs/screenshots/theme/` be consulted before any UI decision. **At last scan this directory does not exist** (only root-level `Screenshot 2026-07-14 at *.png`). Either restore the theme screenshots, repoint APP_LOG to a new canonical reference, or accept `docs/markup-reference/` + `apps/client/src/lib/tokens.ts` as the new source. Pick one and update APP_LOG.
+1. **Visual source-of-truth** — ✅ resolved (2026-09-24): `docs/screenshots/theme/` never existed and `docs/markup-reference/` has since been removed; `.claude/conventions/design.md`'s hierarchy (`apps/client/src/lib/tokens.ts` first, the Figma file via `.agents/skills/figma-theme-source` second) is now the actual, working canonical reference, and `session-bootstrap`/`design.md` have been updated to point there directly instead of to the removed paths.
 2. **SEO Tier 1** (from `SEO_READINESS.md`): verify each unchecked item — robots/sitemap, OG/Twitter cards, canonical URLs, JSON-LD, page titles. Mark each verified with a citation.
 3. **Launch plan** (SEO_READINESS Tier 4): channels, messaging, target audience defined? Not code — but flag as a missing artifact.
 4. **Production security headers**: Helmet HSTS `includeSubDomains`, CSP whitelist (no `unsafe-inline`/`unsafe-eval`), `corsOrigin` ≠ `*`. (`bug-sweep` P2-40 Production-Readiness — currently unverified.) Audit `apps/server/src/app.ts`.
