@@ -6,6 +6,7 @@ import { SeoHead } from '@/components/SeoHead';
 import { Button } from '@/components/ui/button';
 import { AuthLayout } from '@/components/AuthLayout';
 import { CtaSection } from '@/components/CtaSection';
+import { TopBar } from '@/components/dashboard/TopBar';
 import { bg, color, gradient, font } from '@/lib/tokens';
 import macHeaderApp from '@/assets/hero-mac-app.png';
 import chartImg from '@/assets/chart.svg';
@@ -126,7 +127,7 @@ const alternatingSections = [
   {
     icon: <TrendingUp className="h-6 w-6" style={{ color: color.purple }} />,
     title: 'Advanced Charts',
-    desc: 'Up to 4 multi-layout panes with 6 timeframes (1m, 5m, 15m, 1h, 4h, 1d). Sync symbol, interval, crosshair, and time range across panes. EMA9/20/200, VWAP, MACD indicators included — more added constantly. Drawing tools are under active development.',
+    desc: 'Up to 4 multi-layout panes with 6 timeframes (1m, 5m, 15m, 1h, 4h, 1d). Sync symbol, interval, crosshair, and time range across panes. 9 built-in indicators — EMA, SMA, VWAP, MACD, and more — each a draggable, customizable widget. Full drawing toolkit included: trend lines, Fibonacci, shapes, text, and freehand.',
     graphic: <img src={chartImg} alt="" loading="lazy" className="w-full max-w-lg select-none" />,
     ctaLabel: 'Discover Charts',
     ctaHref: '/features#charts',
@@ -196,6 +197,7 @@ export function LandingPage() {
         path="/"
         {...(!isLive && { noIndex: true })}
       />
+      <TopBar marketing />
       <AuthLayout>
         {/* Exgen Cover-style Hero — full-width gradient background */}
         <div
@@ -320,6 +322,35 @@ export function LandingPage() {
               </div>
             </motion.div>
           </div>
+        </div>
+
+        {/* ─── Live chart banner ───────────────────────────────────────── */}
+        <div className="mx-auto flex w-full max-w-6xl justify-center px-4 pt-8">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="flex flex-col items-center gap-3 rounded-full border border-white/10 px-6 py-3 text-center sm:flex-row sm:gap-4 sm:text-left"
+            style={{ background: `${color.glow}15` }}
+          >
+            <span
+              className="flex h-2 w-2 shrink-0 rounded-full"
+              style={{ background: color.green }}
+            />
+            <span className="text-sm" style={{ color: color.muted }}>
+              <span className="font-semibold text-white">See it before you sign up.</span> Live BTC,
+              ETH, SOL and more — 9 indicators, full charting toolkit. No account required.
+            </span>
+            <Button
+              asChild
+              size="sm"
+              className="h-9 shrink-0 rounded-full px-5 text-sm font-semibold text-white shadow-md"
+              style={{ background: gradient.brand }}
+            >
+              <Link to="/chart">Try It Free — No Signup</Link>
+            </Button>
+          </motion.div>
         </div>
 
         {/* ─── Stats strip ──────────────────────────────────────────────── */}

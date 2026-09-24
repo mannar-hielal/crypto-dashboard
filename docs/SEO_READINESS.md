@@ -13,7 +13,7 @@
 - [x] **Privacy policy link in cookie banner** — Link to `/privacy`.
 - [x] **Social proof on landing page** — Trust badges strip (SSL encryption, no real money, Bybit live data).
 - [ ] **Social / community links in Footer** — X, Discord, GitHub (create accounts if needed).
-- [ ] **Newsletter / "Get Notified" CTA** — Email capture on landing page for pre-launch leads.
+- [x] **Newsletter / "Get Notified" CTA** — `NewsletterForm.tsx` wired into `CtaSection.tsx`'s non-live branch.
 
 ## Tier 3 — Performance
 
@@ -40,7 +40,7 @@
 
 ## ✅ Completed
 
-- [x] **Put site behind "Under Construction" splash** — Root `/` renders `UnderConstructionPage`; all other routes still accessible for dev.
+- [x] **Retire "Under Construction" splash** — Root `/` rendered `UnderConstructionPage` pre-launch; replaced by the real `LandingPage` on 2026-06-17. The app is now live in production.
 - [x] **Brand logo (`public/logo.svg`)** — Created from `og-image.svg` design (purple-indigo gradient, bottom-aligned CPT). Replaced all inline CPT brand marks in TopBar, LegalLayout, auth pages, and UnderConstructionPage.
 - [x] **Favicon (`public/favicon.svg`)** — Updated to match the brand logo (same gradient, same bottom-aligned CPT).
 - [x] **PWA icons (`pwa-192x192.png`, `pwa-512x512.png`)** — Regenerated from the new logo, replacing the old candlestick chart design.

@@ -67,7 +67,7 @@ export function IndicatorWidget({
     instance.indicatorId === 'ema' || instance.indicatorId === 'sma'
       ? `${instance.params.length ?? ''}`
       : instance.indicatorId === 'macd'
-        ? `${instance.params.fast ?? 12},${instance.params.slow ?? 26},${instance.params.signal ?? 9}`
+        ? `${instance.params.fast ?? 12},${instance.params.slow ?? 26},${instance.params.signalLength ?? 9}`
         : '';
 
   return (

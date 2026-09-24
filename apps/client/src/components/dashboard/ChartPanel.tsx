@@ -582,10 +582,19 @@ export function ChartPanel({
     if (prevSymbolRef.current && prevSymbolRef.current !== symbol) {
       const prevKey = getPersistenceKey(prevSymbolRef.current);
       localStorage.setItem(prevKey, JSON.stringify(manager.exportDrawings()));
+      // 🔐 Update prevSymbolRef to the NEW symbol before clearAll/restoreDrawings,
+      //    not after. Those calls synchronously emit drawing:cleared/added
+      //    events, each invoking the `save` closure above (which persists under
+      //    prevSymbolRef.current) — if that ref still pointed at the old symbol
+      //    here, the debounced save fires later with the new symbol's restored
+      //    drawings but keyed to the old symbol's localStorage key, silently
+      //    overwriting the backup line 578 just wrote.
+      prevSymbolRef.current = symbol;
       manager.clearAll();
       restoreDrawings(manager, symbol);
+    } else {
+      prevSymbolRef.current = symbol;
     }
-    prevSymbolRef.current = symbol;
   }, [symbol]);
 
   // ── 2. Push data whenever bars changes ───────────────────────────────────
@@ -794,10 +803,23 @@ export function ChartPanel({
   }, [indicators, paneIndex]);
 
   // ── 4. Apply time-range preset when it changes ────────────────────────────
+  const prevPresetKeyRef = useRef<string | null>(null);
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart || !timeRangePreset) return;
     if (bars.length === 0) return;
+
+    // This effect also depends on `bars`, which gets a new array reference on
+    // every incoming WebSocket tick — so it re-runs on every tick, not just
+    // when the preset/interval actually change. Re-snapping to "now" on every
+    // tick would make it impossible to pan to older candles while a preset is
+    // active. Only force the snap when the preset or interval itself just
+    // changed; otherwise respect a manual zoom the same way the autoscale
+    // effect above does (`!userZoomedRef.current`).
+    const presetKey = `${timeRangePreset}:${interval}`;
+    const presetOrIntervalChanged = prevPresetKeyRef.current !== presetKey;
+    prevPresetKeyRef.current = presetKey;
+    if (!presetOrIntervalChanged && userZoomedRef.current) return;
 
     const seconds = getPresetSeconds(timeRangePreset);
 
