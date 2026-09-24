@@ -128,7 +128,7 @@ export default function App() {
             <Route path="/security" element={<SecurityPage />} />
             <Route path="/aup" element={<AcceptableUsePolicyPage />} />
 
-            {/* Public chart page — no auth required (TradingView free license requirement) */}
+            {/* Public chart page — no auth required (TVP free license requirement) */}
             <Route path="/chart" element={<ChartPage />} />
 
             {/* Protected routes */}

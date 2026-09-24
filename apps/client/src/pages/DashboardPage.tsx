@@ -456,7 +456,7 @@ export function DashboardInner() {
               Maximized: flex-1 fills the center column (chart has collapsed to 0). */}
           {/* ── bottom-widgetbar-handle ────────────────────────────────────────
               12 px absolutely-positioned strip centred on the chart/panel boundary.
-              Mirrors the TradingView `bottom-widgetbar-handle` pattern:
+              Mirrors the TVP `bottom-widgetbar-handle` pattern:
                 • touch-action: none  — prevents scroll interference on touch
                 • cursor: ns-resize   — signals the vertical drag affordance
                 • aria-hidden         — decorative; excluded from the a11y tree

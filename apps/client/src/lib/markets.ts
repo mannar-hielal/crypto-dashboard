@@ -23,7 +23,7 @@ export const INTERVAL_LABELS: Record<Interval, string> = {
  * Initial bar spacing (px) applied on first chart load per interval.
  *
  * Targets ~160–200 visible candles in a typical 1 200 px viewport —
- * matching TradingView's default zoom density. Lower timeframes use a
+ * matching TVP's default zoom density. Lower timeframes use a
  * tighter spacing so they show a meaningful slice of recent history;
  * the daily bar is slightly wider to keep individual candles readable.
  *
@@ -102,7 +102,7 @@ export const SYMBOLS: SymbolEntry[] = [
 ];
 
 /**
- * Time-range presets for the range switcher — mirrors TradingView's preset list.
+ * Time-range presets for the range switcher — mirrors TVP's preset list.
  *
  * Each preset adjusts the visible time window AND switches to a sensible
  * candle interval for that range. `seconds` is a thunk so YTD (year-to-date)
@@ -187,7 +187,7 @@ export function getPresetSeconds(preset: TimeRangePreset): number | typeof Infin
 
 /**
  * Quantity precision (decimal places) per symbol — mirrors Bybit Spot lot sizes.
- * Used to floor raw qty to the exchange minimum step, matching TradingView's
+ * Used to floor raw qty to the exchange minimum step, matching TVP's
  * "trade value" calculation (input USD → floor qty → actual filled value).
  *
  * Example: 100 USD at 74,825 → raw 0.001337 BTC → floor to 4dp → 0.0013 BTC

@@ -34,11 +34,25 @@ jobs:
       - name: Run Claude Code Review
         id: claude-review
         uses: anthropics/claude-code-action@v1
+        env:
+          # Lets the reviewer run `gh pr diff` via Bash — works regardless of
+          # checkout fetch-depth, unlike a local `git diff` against a base ref
+          # that may not be fetched.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
-          plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
-          claude_args: '--allowedTools "mcp__github_inline_comment__create_inline_comment"'
+          # Mirrors .claude/agents/code-reviewer.md's persona — an independent
+          # reviewer with no context on how the code was written, scoped to
+          # bugs/security/regressions only (not the broader reuse/simplify/
+          # efficiency/convention checklist the code-review plugin runs).
+          # Keep this in sync with that file if it changes.
+          prompt: |
+            You are an independent reviewer with no knowledge of how this
+            code was written. Run `gh pr diff ${{ github.event.pull_request.number }}`
+            to see this pull request's diff, check it against the rest of
+            the codebase, and report any bug, security issue, or regression
+            you find as inline comments on
+            ${{ github.repository }}/pull/${{ github.event.pull_request.number }}.
+          claude_args: '--allowedTools "Read,Grep,Glob,Bash,mcp__github_inline_comment__create_inline_comment"'
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options

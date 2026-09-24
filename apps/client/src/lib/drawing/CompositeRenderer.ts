@@ -2,7 +2,7 @@ import type { ISeriesPrimitive, SeriesAttachedParameter } from 'lightweight-char
 
 /**
  * CompositeRenderer — batch multiple ISeriesPrimitive renderers
- * into a single one. Mirrors TradingView's pattern of appending
+ * into a single one. Mirrors TVP's pattern of appending
  * renderers to a CompositeRenderer and delegating lifecycle calls.
  */
 export class CompositeRenderer implements ISeriesPrimitive {

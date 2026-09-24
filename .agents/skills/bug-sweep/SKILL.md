@@ -281,7 +281,7 @@ These were in the original bug-sweep and are now subsumed under P4 Trading Logic
 132. `cd-drawings` version matches schema; new `ShapeData` variant ⇒ version bump + `migrate` covers new variant.
 133. Locked drawings still deletable via eraser — `isLocked` blocks drag/handle drag only, not eraser click. Don't add guard that breaks this.
 134. UI-only tools (Text, Freehand, Polyline) must NOT be claimed implemented in docs. If `DRAWING_TOOLS.md` contradicts code, fix the doc (user-permitting).
-135. Cosmetic exit-order Type label mismatch: Order History shows `MARKET` vs TradingView's `Take Profit`. Non-blocking — track, don't silently change.
+135. Cosmetic exit-order Type label mismatch: Order History shows `MARKET` vs TVP's `Take Profit`. Non-blocking — track, don't silently change.
 
 ---
 

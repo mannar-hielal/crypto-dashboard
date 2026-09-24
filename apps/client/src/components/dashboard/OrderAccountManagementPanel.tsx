@@ -29,7 +29,7 @@ import { useLayoutStore } from '@/store/layoutStore';
 import { useTradingSoundCtx } from '@/hooks/TradingSoundContext';
 import { SoundSettings } from './SoundSettings';
 
-/** Format a crypto quantity the same way TradingView does — trim trailing zeros, max 6 dp */
+/** Format a crypto quantity the same way TVP does — trim trailing zeros, max 6 dp */
 const fmtQty = (n: number) => parseFloat(n.toFixed(6)).toString();
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -54,7 +54,7 @@ function shortId(id: string): string {
 }
 
 /**
- * Format a market price the TradingView way using the imported helper from
+ * Format a market price the TVP way using the imported helper from
  * @/lib/utils.
  */
 

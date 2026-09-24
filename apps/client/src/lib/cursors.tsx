@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-// ─── Cursor variant SVG icons (TradingView style) ───────────────────────────
+// ─── Cursor variant SVG icons (TVP style) ───────────────────────────
 
 import type { JSX } from 'react';
 

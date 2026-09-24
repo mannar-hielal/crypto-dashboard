@@ -5,7 +5,7 @@ description: Use when working on a chart in cryptopapertrade.com — ChartPanel.
 
 # Lightweight Charts Patterns — cryptopapertrade.com
 
-Adapted from `emeraldls/mmt-api-skills` → `skills/mmt-tradingview-charts/SKILL.md` + its 14 per-rule files. Same patterns; data source swapped from MMT (multi-exchange, CBOR, `OHLCVTPublic`) to cryptopapertrade's Bybit proxy (`/api/market/*` REST, `/api/market/ws` WebSocket, `CandleBar` from `generated/CDSDK/types/index.ts`).
+Adapted from `emeraldls/mmt-api-skills` → `skills/mmt-tvp-charts/SKILL.md` + its 14 per-rule files. Same patterns; data source swapped from MMT (multi-exchange, CBOR, `OHLCVTPublic`) to cryptopapertrade's Bybit proxy (`/api/market/*` REST, `/api/market/ws` WebSocket, `CandleBar` from `generated/CDSDK/types/index.ts`).
 
 ## App context — what's already wired
 

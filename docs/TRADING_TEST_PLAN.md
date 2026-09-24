@@ -2,7 +2,7 @@
 
 > Status legend: ⬜ Not tested · ✅ Pass · ❌ Fail · ⚠️ Partial
 >
-> **TV ✓** column = cross-check against TradingView Paper Trading (Bybit BTCUSDT Spot · 1m).
+> **TV ✓** column = cross-check against TVP Paper Trading (Bybit BTCUSDT Spot · 1m).
 > Present only for numerically comparable tests. Leave blank if not dual-platform; mark ✅/❌ when testing both.
 >
 > **Tier legend:**
@@ -19,8 +19,8 @@
 ## Dual-platform setup (run when doing cross-platform checks)
 
 1. Open cryptopapertrade.com at `localhost:5173/dashboard` — reset account
-2. Open TradingView → Paper Trading → Bybit BTCUSDT Spot · 1m
-3. Reset TradingView account
+2. Open TVP → Paper Trading → Bybit BTCUSDT Spot · 1m
+3. Reset TVP account
 4. Place identical orders in both apps within the same second
 5. Tolerance: entry prices within $1 (one SELL/BUY spread for BTC)
 6. PnL formula: `(exit − entry) × qty − (entry × qty × 0.0007) − (exit × qty × 0.0007)`
@@ -30,7 +30,7 @@
 ## Setup checklist (run before every section)
 
 - [ ] Dev server running; price updating in TradingPanel header and browser tab
-- [ ] TradingPanel Sell/Buy parity vs TradingView at same moment: `abs(CD Sell - TV SELL) <= 1.00` and `abs(CD Buy - TV BUY) <= 1.00`
+- [ ] TradingPanel Sell/Buy parity vs TVP at same moment: `abs(CD Sell - TV SELL) <= 1.00` and `abs(CD Buy - TV BUY) <= 1.00`
 - [ ] Order & Account Management panel open; balance = $10,000.00
 - [ ] Account reset
 - [ ] Journal empty
@@ -54,7 +54,7 @@
 | 1.1.7 | Check **Orders** tab → **All** sub-tab                            | Same row visible (within TTL); count badge = 1                                                                                                          | ✅     |      | T2 · RTL    | Badge drops to 0 after 2 min (only active rows).                                    |
 | 1.1.8 | Check **Orders** tab → **Working** sub-tab                        | Empty — market orders instantly filled, never Working                                                                                                   | ✅     |      | T1 · Vitest | Working only counts pending; market orders are historical.                          |
 
-> **TV cross-check 1.1.3:** Entry price in cryptopapertrade.com vs TradingView should differ by ≤ $1 (one SELL/BUY spread).
+> **TV cross-check 1.1.3:** Entry price in cryptopapertrade.com vs TVP should differ by ≤ $1 (one SELL/BUY spread).
 > **TV cross-check 1.1.4:** Available balance after commission deduction should match within $0.10.
 
 ### 1.2 Basic Sell (USD mode)
@@ -65,7 +65,7 @@
 | 1.2.2 | Click **Sell** button                                                   | Position opens                                                      | ✅     |      | T1 · Vitest |       |
 | 1.2.3 | Positions tab                                                           | 1 SHORT row. PnL updates live (green if price dropped, red if rose) | ✅     | ⬜   | T1 · Vitest |       |
 
-> **TV cross-check 1.2.3:** Unrealised PnL sign and approximate magnitude should match TradingView's SHORT position PnL.
+> **TV cross-check 1.2.3:** Unrealised PnL sign and approximate magnitude should match TVP's SHORT position PnL.
 
 ### 1.3 Units mode
 
@@ -86,8 +86,8 @@
 | 1.4.4 | Journal tab                                                                          | Entry + Auto-close entries with green PnL badge `+$X.XX`                            | ✅     | ✅   | T1 · Vitest | Clean 2-line audit trail. PnL sign matches. TV shows verbose system log (intentional divergence). |
 
 > **TV cross-check 1.4.3:** TP should trigger at the same price level in both apps (same candle).
-> **TV cross-check 1.4.4:** Net PnL in Journal badge should match TradingView's realised PnL within $0.10.
-> **Known cosmetic gap (non-blocking):** Exit order Type in Order History shows `MARKET` in cryptopapertrade.com vs `Take Profit` in TradingView. Fix labelling in a future pass.
+> **TV cross-check 1.4.4:** Net PnL in Journal badge should match TVP's realised PnL within $0.10.
+> **Known cosmetic gap (non-blocking):** Exit order Type in Order History shows `MARKET` in cryptopapertrade.com vs `Take Profit` in TVP. Fix labelling in a future pass.
 
 ### 1.5 Sell with Stop-Loss only
 
@@ -97,7 +97,7 @@
 | 1.5.2 | Submit                                                                                          | SHORT position with SL = price; **Orders → Working shows 1 synthetic SL BUY order** | ✅     |      | T1 · Vitest | Synthetic exit order renders correctly. Matches TV parity.               |
 | 1.5.3 | When price rises to SL                                                                          | Auto-closed; Journal red PnL badge `−$X.XX`; Working order disappears               | ✅     | ✅   | T1 · Vitest | Position closed. SL order evicts from Working. Journal shows loss badge. |
 
-> **TV cross-check 1.5.3:** Loss magnitude should match TradingView's realised PnL within $0.10.
+> **TV cross-check 1.5.3:** Loss magnitude should match TVP's realised PnL within $0.10.
 > **TV parity note (1.5.2):** TV shows TP/SL as separate child "Working" orders in the Orders tab (Type = "Take Profit" or "Stop Loss"). cryptopapertrade.com now does the same — synthetic exit orders are derived from open positions and shown in Working sub-tab with correct Type label, Side (opposite of position), and price in Limit/Stop Price column. They disappear automatically when the position closes.
 
 ### 1.6 Buy with both TP and SL
@@ -108,7 +108,7 @@
 | 1.6.2 | Submit                                      | Position shows both TP and SL                                                          | ✅     |      | T1 · Vitest | LONG opened @ $75,429.10. Order History shows 1 BUY Filled.                             |
 | 1.6.3 | Manual close via **✕** in Positions tab     | Position removed; History row appears; PnL correct; Journal shows close with PnL badge | ✅     | ✅   | T1 · Vitest | Manual ✕ close executed. TP auto-cancelled. Journal: `Closed LONG ... @ $X` with badge. |
 
-> **TV cross-check 1.6.3:** Manually close the mirrored TradingView position at the same moment; PnL values should match within $0.10.
+> **TV cross-check 1.6.3:** Manually close the mirrored TVP position at the same moment; PnL values should match within $0.10.
 
 ### 1.7 Edge cases
 
@@ -200,7 +200,7 @@
 
 ## Section 3 — Stop Orders _(run after Section 2 passes)_
 
-> **Manual verification status (01.05.2026):** 3.1.1–3.5.3 manually verified against TradingView Paper Trading (Bybit BTCUSDT Spot · 1m) — all ✅.
+> **Manual verification status (01.05.2026):** 3.1.1–3.5.3 manually verified against TVP Paper Trading (Bybit BTCUSDT Spot · 1m) — all ✅.
 >
 > **Automation status (01.05.2026):** T1 + T2 tests written and passing (211/211 total suite). New tests live in:
 >
@@ -297,20 +297,20 @@
 > Run this section to validate the price feed fix end-to-end. Both apps open side by side.
 > Tolerance for all price comparisons: **<= $1.00** (one SELL/BUY spread for BTC).
 > Lot-size note: cryptopapertrade.com now floors qty to the same step TV uses (BTC: 0.0001, ETH: 0.001, etc.) so Trade value and qty shown on the button should match TV within the spread tolerance.
-> **TradingView quote mapping:** `TV SELL` = best **bid**; `TV BUY` = best **ask**.
+> **TVP quote mapping:** `TV SELL` = best **bid**; `TV BUY` = best **ask**.
 > **Parity rule (same timestamp snapshot):** `abs(CD Sell - TV SELL) <= 1.00` and `abs(CD Buy - TV BUY) <= 1.00`.
 
-| #   | Scenario                                                            | Expected                                                                                                     | Status | Tier            | Notes                                                                                                                                           |
-| --- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------ | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| 6.1 | Compare TradingPanel Sell/Buy vs TradingView SELL/BUY at rest       | **Both** checks pass at the same moment: `abs(CD Sell - TV SELL) <= 1.00` and `abs(CD Buy - TV BUY) <= 1.00` | ⬜     | T3 · Playwright | In TradingView UI, `SELL` = bid and `BUY` = ask. All Section 6 tests require a live WebSocket feed and real-time clock — cannot be unit-tested. |
-| 6.2 | Watch both prices for 30 s during normal market activity            | cryptopapertrade.com tracks TradingView tick-for-tick; no sustained lag > $1                                 | ⬜     | T3 · Playwright |                                                                                                                                                 |
-| 6.3 | Watch both prices during a fast move (news spike or breakout)       | cryptopapertrade.com catches up within 1–2 s; no freeze or stuck price                                       | ⬜     | T3 · Playwright |                                                                                                                                                 |
-| 6.4 | Place identical $200 market Buy in both apps within the same second | Entry prices differ by ≤ $1; qty in cryptopapertrade.com ≈ qty in TradingView                                | ⬜     | T3 · Playwright |                                                                                                                                                 |
-| 6.5 | Let position run for 2 min, compare Unrealised PnL                  | PnL sign matches (both green or both red); magnitude within $0.50                                            | ⬜     | T3 · Playwright |                                                                                                                                                 |
-| 6.6 | Close both positions manually at the same moment                    | Realised PnL matches within $0.50; commission deducted in both                                               | ⬜     | T3 · Playwright |                                                                                                                                                 |
-| 6.7 | Place identical Limit Buy at live − 1% in both apps                 | Both fill on the same candle; entry prices within $1                                                         | ⬜     | T3 · Playwright |                                                                                                                                                 |
-| 6.8 | Place identical Stop Buy at live + 0.5% in both apps                | Both trigger on the same candle; entry prices within $1                                                      | ⬜     | T3 · Playwright |                                                                                                                                                 |
-| 6.9 | Browser tab title during test                                       | Tab shows `▲ BTC/USDT {price} +x.xx%` or `▼ …` updating live; arrow flips on reversal                        | ⬜     | T3 · Playwright |                                                                                                                                                 |
+| #   | Scenario                                                            | Expected                                                                                                     | Status | Tier            | Notes                                                                                                                                   |
+| --- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 6.1 | Compare TradingPanel Sell/Buy vs TVP SELL/BUY at rest               | **Both** checks pass at the same moment: `abs(CD Sell - TV SELL) <= 1.00` and `abs(CD Buy - TV BUY) <= 1.00` | ⬜     | T3 · Playwright | In TVP UI, `SELL` = bid and `BUY` = ask. All Section 6 tests require a live WebSocket feed and real-time clock — cannot be unit-tested. |
+| 6.2 | Watch both prices for 30 s during normal market activity            | cryptopapertrade.com tracks TVP tick-for-tick; no sustained lag > $1                                         | ⬜     | T3 · Playwright |                                                                                                                                         |
+| 6.3 | Watch both prices during a fast move (news spike or breakout)       | cryptopapertrade.com catches up within 1–2 s; no freeze or stuck price                                       | ⬜     | T3 · Playwright |                                                                                                                                         |
+| 6.4 | Place identical $200 market Buy in both apps within the same second | Entry prices differ by ≤ $1; qty in cryptopapertrade.com ≈ qty in TVP                                        | ⬜     | T3 · Playwright |                                                                                                                                         |
+| 6.5 | Let position run for 2 min, compare Unrealised PnL                  | PnL sign matches (both green or both red); magnitude within $0.50                                            | ⬜     | T3 · Playwright |                                                                                                                                         |
+| 6.6 | Close both positions manually at the same moment                    | Realised PnL matches within $0.50; commission deducted in both                                               | ⬜     | T3 · Playwright |                                                                                                                                         |
+| 6.7 | Place identical Limit Buy at live − 1% in both apps                 | Both fill on the same candle; entry prices within $1                                                         | ⬜     | T3 · Playwright |                                                                                                                                         |
+| 6.8 | Place identical Stop Buy at live + 0.5% in both apps                | Both trigger on the same candle; entry prices within $1                                                      | ⬜     | T3 · Playwright |                                                                                                                                         |
+| 6.9 | Browser tab title during test                                       | Tab shows `▲ BTC/USDT {price} +x.xx%` or `▼ …` updating live; arrow flips on reversal                        | ⬜     | T3 · Playwright |                                                                                                                                         |
 
 ---
 
@@ -396,7 +396,7 @@
 | 9.5 | Spread value decimal places                                                     | If spread < 1: 4 decimal places (e.g. `0.1000`); if ≥ 1: 2 decimal places (e.g. `1.25`)                      | ⬜     | T2 · RTL        | Spread formatting logic is pure JS — render `TradingPanel` with mocked SELL/BUY quote props and assert the badge text. |
 | 9.6 | Disconnect WebSocket (network tab block) — wait for SELL/BUY quotes to go stale | Sell/Buy prices fall back to `latestPrice`; spread badge shows `—`                                           | ⬜     | T3 · Playwright | `page.context().setOffline(true)` + await WS stale timeout.                                                            |
 | 9.7 | Switch active pane symbol (e.g. BTC → ETH in multi-pane mode)                   | Sell/Buy prices update to ETH SELL/BUY quotes immediately; spread re-renders for ETH                         | ⬜     | T3 · Playwright |                                                                                                                        |
-| 9.8 | Compare Sell/Buy vs TradingView SELL/BUY at rest                                | **Both** checks pass at the same moment: `abs(CD Sell - TV SELL) <= 1.00` and `abs(CD Buy - TV BUY) <= 1.00` | ⬜     | T3 · Playwright | In TradingView UI, `SELL` = bid and `BUY` = ask.                                                                       |
+| 9.8 | Compare Sell/Buy vs TVP SELL/BUY at rest                                        | **Both** checks pass at the same moment: `abs(CD Sell - TV SELL) <= 1.00` and `abs(CD Buy - TV BUY) <= 1.00` | ⬜     | T3 · Playwright | In TVP UI, `SELL` = bid and `BUY` = ask.                                                                               |
 
 ---
 

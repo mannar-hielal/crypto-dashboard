@@ -122,7 +122,7 @@ export function TradingPanel({
   /**
    * The price shown and used for Limit/Stop orders.
    * While the user hasn't typed anything (priceInput === ''), we compute a
-   * default that mirrors TradingView's behaviour: always start slightly on the
+   * default that mirrors TVP's behaviour: always start slightly on the
    * "pending" side of the market so the order queues rather than fills immediately.
    *
    *   Limit Buy  / Stop Sell → use bid  (below market) — fallback latestPrice × 0.9999
@@ -200,7 +200,7 @@ export function TradingPanel({
   })();
 
   /**
-   * Lot-size rounded qty — mirrors TradingView's behaviour.
+   * Lot-size rounded qty — mirrors TVP's behaviour.
    * In USD mode:  floor(inputUSD / price, lotDecimals) → actual filled qty
    * In units mode: floor(inputQty, lotDecimals)
    */

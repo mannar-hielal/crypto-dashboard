@@ -23,7 +23,7 @@ commit does not carry forward to the next change — confirm each time.
   because they landed in the same session.
 - Real examples from history: `fix: pin undici override to 7.x to unbreak jsdom in client tests`,
   `security: close audit findings — session revocation, timing equalization, CSP, rate limits`,
-  `feat: add TradingView-style range switcher with auto interval switch, interval dropdown, and
+  `feat: add TVP-style range switcher with auto interval switch, interval dropdown, and
 new timeframes` — specific and scoped to what actually changed, not a generic "update files."
 - `security:` exists as its own category (distinct from `fix:`) specifically so security-motivated
   changes are easy to find in `git log` later — use it whenever the change's primary purpose is

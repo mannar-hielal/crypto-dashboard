@@ -189,7 +189,7 @@ export const useLayoutStore = create<LayoutState>()(
         // When enabling symbol or interval sync, immediately snap all panes to
         // the active pane's value. Active pane wins — it is the chart the user
         // is currently focused on, making it the most intuitive source of truth
-        // (mirrors the behaviour of TradingView / Bookmap multi-chart sync).
+        // (mirrors the behaviour of TVP / Bookmap multi-chart sync).
         if (turningOn && key === 'symbol') {
           const sourceSymbol = (panes[activePane] ?? DEFAULT_PANES[0]).symbol;
           set({
