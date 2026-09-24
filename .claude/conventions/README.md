@@ -17,6 +17,12 @@ code-shape reference (what a compliant route/cookie/JWT looks like); `security.m
 above it (why, and the controls no single route handler owns — supply chain, container hardening,
 threat model). Read both when touching auth, secrets, or anything internet-facing.
 
+**Some of these rules are also mechanically enforced**, not just documented — see
+[`.claude/hooks/`](../hooks/README.md) for the PreToolUse/PostToolUse/Stop/SessionStart hooks that
+catch commit-prefix violations, unsafe git flags, bad branch names, incomplete PR bodies, staged
+secrets, hand-edits to generated files, hardcoded hex/`console.*`/`any`, and CVE regressions —
+each hook's docstring cites the convention section it encodes.
+
 ## Relationship to other project docs (don't duplicate — link)
 
 - **`AGENTS.md`** (repo root) is the fast quick-reference: commands, monorepo layout, one-line
