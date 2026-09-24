@@ -4,6 +4,7 @@ import { GraduationCap, Sparkles, Smartphone, Heart } from 'lucide-react';
 import { SeoHead } from '@/components/SeoHead';
 import { AuthLayout } from '@/components/AuthLayout';
 import { CtaSection } from '@/components/CtaSection';
+import { TopBar } from '@/components/dashboard/TopBar';
 import { bg, color, gradient, font } from '@/lib/tokens';
 
 const sections = [
@@ -121,9 +122,11 @@ export function FeaturesPage() {
         description="Explore all features of cryptopapertrade.com: multi-chart layouts, technical indicators, long/short paper trading, real-time data, and PWA support."
         path="/features"
       />
-      {/* Sticky anchor nav */}
+      <TopBar marketing />
+
+      {/* Sticky anchor nav — docks below TopBar (h-12 = 48px) */}
       <nav
-        className="sticky top-0 z-50 hidden border-b md:block"
+        className="sticky top-12 z-50 hidden border-b md:block"
         style={{
           background: `linear-gradient(90deg, ${bg.page}E6 0%, ${bg.navy}E6 100%)`,
           backdropFilter: 'blur(12px)',

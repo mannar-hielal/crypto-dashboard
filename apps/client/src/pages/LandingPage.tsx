@@ -6,6 +6,7 @@ import { SeoHead } from '@/components/SeoHead';
 import { Button } from '@/components/ui/button';
 import { AuthLayout } from '@/components/AuthLayout';
 import { CtaSection } from '@/components/CtaSection';
+import { TopBar } from '@/components/dashboard/TopBar';
 import { bg, color, gradient, font } from '@/lib/tokens';
 import macHeaderApp from '@/assets/hero-mac-app.png';
 import chartImg from '@/assets/chart.svg';
@@ -196,6 +197,7 @@ export function LandingPage() {
         path="/"
         {...(!isLive && { noIndex: true })}
       />
+      <TopBar marketing />
       <AuthLayout>
         {/* Exgen Cover-style Hero — full-width gradient background */}
         <div
