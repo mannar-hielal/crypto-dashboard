@@ -361,7 +361,12 @@ function isHistoricalOrderSnapshot(value: unknown): value is HistoricalOrder {
   ) {
     return false;
   }
-  if (!isPositiveNumber(value['qty'])) return false;
+  // Rejected orders may carry qty: 0 when no live price was available to size them.
+  if (value['status'] === 'rejected') {
+    if (!isFiniteNumber(value['qty']) || (value['qty'] as number) < 0) return false;
+  } else if (!isPositiveNumber(value['qty'])) {
+    return false;
+  }
   if (!isFiniteNumber(value['commission'])) return false;
   if (!isFiniteNumber(value['placingTime']) || !isFiniteNumber(value['closingTime'])) return false;
   if (value['limitPrice'] !== undefined && !isFiniteNumber(value['limitPrice'])) return false;
