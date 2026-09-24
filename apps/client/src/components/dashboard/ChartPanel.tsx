@@ -803,10 +803,23 @@ export function ChartPanel({
   }, [indicators, paneIndex]);
 
   // ── 4. Apply time-range preset when it changes ────────────────────────────
+  const prevPresetKeyRef = useRef<string | null>(null);
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart || !timeRangePreset) return;
     if (bars.length === 0) return;
+
+    // This effect also depends on `bars`, which gets a new array reference on
+    // every incoming WebSocket tick — so it re-runs on every tick, not just
+    // when the preset/interval actually change. Re-snapping to "now" on every
+    // tick would make it impossible to pan to older candles while a preset is
+    // active. Only force the snap when the preset or interval itself just
+    // changed; otherwise respect a manual zoom the same way the autoscale
+    // effect above does (`!userZoomedRef.current`).
+    const presetKey = `${timeRangePreset}:${interval}`;
+    const presetOrIntervalChanged = prevPresetKeyRef.current !== presetKey;
+    prevPresetKeyRef.current = presetKey;
+    if (!presetOrIntervalChanged && userZoomedRef.current) return;
 
     const seconds = getPresetSeconds(timeRangePreset);
 
