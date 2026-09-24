@@ -3,14 +3,14 @@
 This directory is the canonical, role-organized home for cryptopapertrade.com's engineering
 conventions. Each file reads as if written and enforced by a senior owner of that discipline.
 
-| File                           | Owner voice                   | Covers                                                                                                                               |
-| ------------------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| [`react.md`](./react.md)       | Senior React developer        | Component design, hooks/effects, Zustand, styling discipline, client TS-strict rules                                                 |
-| [`web.md`](./web.md)           | Senior web/platform developer | Architecture, backend patterns (Fastify/Prisma), WebSocket lifecycle, logging, config, performance, infra, code-level security rules |
-| [`design.md`](./design.md)     | Senior UX designer            | Design-token source of truth, color/typography/spacing system, motion, accessibility, visual-change process gate                     |
+| File                           | Owner voice                   | Covers                                                                                                                                                  |
+| ------------------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`react.md`](./react.md)       | Senior React developer        | Component design, hooks/effects, Zustand, styling discipline, client TS-strict rules                                                                    |
+| [`web.md`](./web.md)           | Senior web/platform developer | Architecture, backend patterns (Fastify/Prisma), WebSocket lifecycle, logging, config, performance, infra, code-level security rules                    |
+| [`design.md`](./design.md)     | Senior UX designer            | Design-token source of truth, color/typography/spacing system, motion, accessibility, visual-change process gate                                        |
 | [`security.md`](./security.md) | Cyber security expert         | Threat model, defense-in-depth layers, supply-chain policy, secrets management, container hardening, refactor-safety check, security definition-of-done |
-| [`testing.md`](./testing.md)   | Senior test manager           | Test philosophy, server/client test patterns, mocking rules, CI/pre-commit gates                                                     |
-| [`git.md`](./git.md)           | —                             | Commit message/prefix rules, branch naming, CI/CD triggers, PR template + checklist                                                  |
+| [`testing.md`](./testing.md)   | Senior test manager           | Test philosophy, server/client test patterns, mocking rules, CI/pre-commit gates                                                                        |
+| [`git.md`](./git.md)           | —                             | Commit message/prefix rules, branch naming, CI/CD triggers, PR template + checklist                                                                     |
 
 `web.md` and `security.md` intentionally overlap at the boundary: `web.md#security` is the
 code-shape reference (what a compliant route/cookie/JWT looks like); `security.md` is the program

@@ -130,7 +130,7 @@ the diff against this checklist**, not just the checklist for the feature area b
 - [ ] **Auth/authz checks preserved and in the same order relative to the mutating operation.**
       If `onRequest: [app.authenticate]`, an ownership check, or a permission check lived on the
       pre-refactor path, confirm it's still on every path that can now reach the same effect —
-      especially if the refactor extracted a helper that a *new* caller might invoke without going
+      especially if the refactor extracted a helper that a _new_ caller might invoke without going
       through the original guard.
 - [ ] **Every call site checked, not just the one that motivated the refactor.** If a function was
       extracted or consolidated because two places had similar logic, confirm a security property
@@ -139,7 +139,7 @@ the diff against this checklist**, not just the checklist for the feature area b
 - [ ] **Input validation/sanitization still runs before the data is used.** Schema validation,
       allowlist checks (`ALLOWED_SYMBOLS`/`ALLOWED_INTERVALS`), and sanitization steps are easy to
       leave behind when logic moves to a new function or file — confirm the validation step moved
-      *with* the code it was guarding, not just the code itself.
+      _with_ the code it was guarding, not just the code itself.
 - [ ] **Error handling still fails closed.** Flattening or restructuring `try`/`catch` blocks can
       let a raw error (stack trace, DB message, internal path) bubble past the point that used to
       catch and sanitize it before it reached the client. Re-check the 5xx path still returns only

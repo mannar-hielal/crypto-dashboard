@@ -72,7 +72,7 @@ A feature/fix PR targets `develop`; a release PR targets `main` from `develop` (
 whether it's a feature/fix branch → `develop` PR or a `develop` → `main` release PR.** There is no
 auto-populated GitHub template anymore, so write this out (or paste it) each time:
 
-````markdown
+```markdown
 ## 📋 What does this PR do?
 
 <!-- One sentence summary -->
@@ -111,13 +111,13 @@ auto-populated GitHub template anymore, so write this out (or paste it) each tim
 - [ ] ESLint + Prettier pass locally
 - [ ] Type-check passes (`pnpm type-check`)
 - [ ] Tests pass (`pnpm test`)
-````
+```
 
 Fill in every section — an unfilled placeholder or an unchecked checklist box needs an explicit
 reason written next to it, not silence. "How to test" is concrete, numbered reviewer steps, never
 "tested locally." Screenshots are attached for any UI change — the PR-time complement to the visual
 Q&A gate in [`design.md`](./design.md#process-gate--do-this-before-any-visual-change), which
-happens *before* the change is made; the screenshot is the after-the-fact proof for the reviewer.
+happens _before_ the change is made; the screenshot is the after-the-fact proof for the reviewer.
 On a `develop → main` release PR, the checklist still applies in full — re-verify it at the
 release boundary, don't assume it already covered by the individual PRs that landed on `develop`.
 
