@@ -12,11 +12,15 @@ const BASE_URL =
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const { headers, ...rest } = init || {};
+  const { headers, signal, ...rest } = init || {};
 
   const res = await fetch(`${BASE_URL}${path}`, {
     ...rest,
-    signal: AbortSignal.timeout(10_000),
+    // Always enforce a 10s ceiling, but don't discard a caller-supplied signal
+    // (e.g. an unmount AbortController) — abort on whichever fires first.
+    signal: signal
+      ? AbortSignal.any([signal, AbortSignal.timeout(10_000)])
+      : AbortSignal.timeout(10_000),
     headers: {
       // Only set Content-Type when there's a body — Fastify rejects Content-Type: application/json with an empty body
       ...(init?.body !== undefined && init.body !== null && { 'Content-Type': 'application/json' }),
