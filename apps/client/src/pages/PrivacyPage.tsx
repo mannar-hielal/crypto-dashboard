@@ -220,8 +220,8 @@ export function PrivacyPage() {
               <ul>
                 <li>
                   <code>cd-paper-trading</code> — a local cache of your virtual positions, order
-                  history, and simulated account balance, mirroring the authoritative copy synced
-                  to our servers (see Section 3).
+                  history, and simulated account balance, mirroring the authoritative copy synced to
+                  our servers (see Section 3).
                 </li>
                 <li>
                   <code>cd-layout</code> — your saved dashboard panel layout.

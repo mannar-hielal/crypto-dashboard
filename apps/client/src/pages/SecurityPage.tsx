@@ -40,9 +40,9 @@ export function SecurityPage() {
             </li>
             <li>
               <strong>Database Security:</strong> Paper trading and account data are stored in a
-              PostgreSQL database. All database access goes through Prisma ORM using
-              parameterized, prepared-statement queries — the same mechanism that protects the
-              rest of the platform against SQL injection.
+              PostgreSQL database. All database access goes through Prisma ORM using parameterized,
+              prepared-statement queries — the same mechanism that protects the rest of the platform
+              against SQL injection.
             </li>
           </ul>
         </section>
