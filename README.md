@@ -4,11 +4,14 @@ A professional paper trading dashboard for cryptocurrency. Real-time charting, s
 
 > ⚠️ **Paper Trading Only** — No real money. For educational and practice purposes only.
 
+**Try it live:** [cryptopapertrade.com/chart](https://cryptopapertrade.com/chart) — no signup required.
+
 ---
 
 ## ✨ Features
 
-- **Live Candlestick Charts** — EMA (9/20/200), MACD, and VWAP indicators via TradingView Lightweight Charts
+- **Live Candlestick Charts** — 9 built-in indicators (EMA, SMA, Average Price, Median Price, Weighted Close, VWAP, Momentum, Percent Change, MACD), each a draggable, customizable widget, via TradingView Lightweight Charts
+- **Drawing Toolkit** — Trend lines, Fibonacci retracements, shapes, text, and freehand drawing
 - **Multi-Chart Layout** — 1, 2 (horizontal/vertical), 3, or 4 synchronized chart panes; crosshair and time-range sync across all active panes
 - **Paper Trading** — Simulated long/short market, limit, and stop orders with $10,000 virtual balance and full P&L accounting
 - **Account Summary Bar** — Live stats strip showing Balance, Equity, Unrealized P&L, Realized P&L, Available, Reserved, and Win Rate
@@ -32,12 +35,15 @@ A professional paper trading dashboard for cryptocurrency. Real-time charting, s
 
 ## 🗺️ Roadmap
 
-| Phase       | Status         | Scope                                                                                                                                                                                                                                                                                         |
-| ----------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Phase 1** | ✅ Complete    | Auth, live chart, paper trading v1 (market orders), TP/SL monitor, journal, PWA                                                                                                                                                                                                               |
-| **Phase 2** | 🔄 In Progress | Limit/Stop orders, TradingPanel redesign, pending order monitor ✅, sound alerts ✅, maximize panel ✅, bid/ask feed ✅, account summary bar ✅, order status badges ✅, placing/closing time cols ✅, orders sub-tabs ✅, rejected order icon ✅, leverage settings ✅, symbol pair icons ✅ |
-| **Phase 3** | 🔄 In Progress | Sync trades to DB, user profile & account settings ✅                                                                                                                                                                                                                                         |
-| **Phase 4** | 📋 Planned     | Advanced indicators, multi-symbol watchlist, price alerts                                                                                                                                                                                                                                     |
+| Phase        | Status         | Scope                                                                                                                                                                                                                                                                                         |
+| ------------ | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Phase 1**  | ✅ Complete    | Auth, live chart, paper trading v1 (market orders), TP/SL monitor, journal, PWA                                                                                                                                                                                                               |
+| **Phase 2**  | 🔄 In Progress | Limit/Stop orders, TradingPanel redesign, pending order monitor ✅, sound alerts ✅, maximize panel ✅, bid/ask feed ✅, account summary bar ✅, order status badges ✅, placing/closing time cols ✅, orders sub-tabs ✅, rejected order icon ✅, leverage settings ✅, symbol pair icons ✅ |
+| **Phase 3**  | 🔄 In Progress | Sync trades to DB ✅, user profile & account settings ✅                                                                                                                                                                                                                                      |
+| **Phase 4**  | 📋 Planned     | Advanced indicators, multi-symbol watchlist, price alerts                                                                                                                                                                                                                                     |
+| **Phase 5**  | 📋 Planned     | Live broker integration — Bybit real-money trading                                                                                                                                                                                                                                            |
+| **Phase 6**  | 📋 Planned     | AI trading bot — Scanner + Analyst + Executor roles, paper mode only                                                                                                                                                                                                                          |
+| **Phase 6b** | 📋 Planned     | AI bot connected to Bybit live trading — requires Phase 5 + Phase 6 proven                                                                                                                                                                                                                    |
 
 ---
 
@@ -190,4 +196,4 @@ Deployments trigger automatically on push to `main` when CI passes.
 ---
 
 **Live:** [API Health](https://crypto-dashboard-api.fly.dev/health) · [App](https://crypto-dashboard-7yy.pages.dev)  
-**Last updated:** April 19, 2026
+**Last updated:** September 24, 2026

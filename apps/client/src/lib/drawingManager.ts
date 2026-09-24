@@ -8,7 +8,13 @@ const MAX_DRAWINGS = 200;
 // Short debounce so drag updates (drawing:updated fires per anchor move) don't
 // re-serialize the full drawing set on every pointermove.
 const PERSIST_DEBOUNCE_MS = 150;
-const persistTimers = new Map<string, ReturnType<typeof setTimeout>>();
+// 🔐 Keyed by DrawingManager instance, not by symbol string. Two panes can
+// show the same symbol at once, each with its own DrawingManager — keying by
+// symbol alone made them share one timer, so editing pane B would
+// clearTimeout() and silently drop pane A's still-pending save. Keying by
+// instance makes every pane's debounce independent regardless of what symbol
+// any of them are currently showing.
+const persistTimers = new WeakMap<DrawingManager, ReturnType<typeof setTimeout>>();
 
 export const TOOL_MAP: Record<string, string> = {
   trendline: 'trend-line',
@@ -33,17 +39,30 @@ export function restoreDrawings(manager: DrawingManager, symbol: string) {
   const saved = localStorage.getItem(key);
   if (!saved) return;
 
+  let data: SerializedDrawing[];
   try {
-    const data = JSON.parse(saved) as SerializedDrawing[];
-    if (!Array.isArray(data) || data.length === 0) return;
-
-    const registry = ToolRegistry.getInstance();
-    const factory = (type: string, raw: SerializedDrawing) => {
-      return registry.createDrawing(type, raw.id, raw.anchors, raw.style, raw.options);
-    };
-    manager.importDrawings(data, factory);
+    const parsed = JSON.parse(saved) as unknown;
+    if (!Array.isArray(parsed) || parsed.length === 0) return;
+    data = parsed as SerializedDrawing[];
   } catch {
+    // Not valid JSON at all — nothing recoverable here.
     localStorage.removeItem(key);
+    return;
+  }
+
+  // 🔐 Import one drawing at a time instead of manager.importDrawings(data, ...)
+  //    — that runs the whole array through a single factory call and aborts
+  //    on the first exception, which the outer try/catch used to turn into
+  //    "delete every saved drawing for this symbol" for a single corrupted
+  //    or no-longer-supported entry. Skip just the bad one instead.
+  const registry = ToolRegistry.getInstance();
+  for (const raw of data) {
+    try {
+      const drawing = registry.createDrawing(raw.type, raw.id, raw.anchors, raw.style, raw.options);
+      if (drawing) manager.addDrawing(drawing);
+    } catch {
+      // Skip this one entry; the rest of the saved set is still restored.
+    }
   }
 }
 
@@ -56,14 +75,14 @@ export function persistDrawings(manager: DrawingManager, symbol: string) {
   localStorage.setItem(key, JSON.stringify(capped));
 }
 
-/** Debounced variant used by live editing — coalesces drag updates per symbol. */
+/** Debounced variant used by live editing — coalesces drag updates per pane. */
 export function schedulePersistDrawings(manager: DrawingManager, symbol: string) {
-  const existing = persistTimers.get(symbol);
+  const existing = persistTimers.get(manager);
   if (existing) clearTimeout(existing);
   persistTimers.set(
-    symbol,
+    manager,
     setTimeout(() => {
-      persistTimers.delete(symbol);
+      persistTimers.delete(manager);
       persistDrawings(manager, symbol);
     }, PERSIST_DEBOUNCE_MS)
   );

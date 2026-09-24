@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, Link } from 'react-router';
 import { LogOut, ChevronDown, Settings, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
@@ -7,16 +7,29 @@ import { authApi } from '@crypto-dashboard/sdk';
 import { bg, color, fontSize, gradient, radius } from '@/lib/tokens';
 import { SettingsModal } from './SettingsModal';
 
+interface TopBarProps {
+  /**
+   * Also rendered on the public marketing pages (Landing/Features), not just
+   * inside the dashboard shell — sticks to the viewport top there, and the
+   * right side becomes a single "enter the app" CTA (Live Chart / Dashboard)
+   * instead of the account menu, since there's no account to manage from a
+   * marketing page.
+   */
+  marketing?: boolean;
+}
+
 /**
  * TopBar — App-level header (row 1)
  *
  * Contains only application-wide chrome:
  *   • Logo + app name + Beta badge  (left)
- *   • User avatar + logout dropdown (right)
+ *   • User avatar + logout dropdown (right) — or, in `marketing` mode, a
+ *     single Live Chart / Dashboard CTA
  *
  * All trading-specific content (symbol, price, timeframes) lives in SymbolBar.
  */
-export function TopBar() {
+export function TopBar({ marketing = false }: TopBarProps) {
+  const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -24,8 +37,8 @@ export function TopBar() {
 
   return (
     <header
-      className="flex h-12 w-full shrink-0 items-center justify-between border-b border-white/6 px-4"
-      style={{ background: bg.panel, zIndex: 20 }}
+      className={`flex h-12 w-full shrink-0 items-center justify-between border-b border-white/6 px-4${marketing ? ' sticky top-0' : ''}`}
+      style={{ background: bg.panel, zIndex: marketing ? 50 : 20 }}
     >
       {/* ── Left: Logo + name + badge ──────────────────────────────────── */}
       <div className="flex items-center gap-2.5">
@@ -48,9 +61,21 @@ export function TopBar() {
         </span>
       </div>
 
-      {/* ── Right: User menu ───────────────────────────────────────────── */}
+      {/* ── Right: User menu, or a single CTA on marketing pages ─────────── */}
       <div className="relative">
-        {user ? (
+        {marketing ? (
+          <Link
+            to={accessToken ? '/dashboard' : '/chart'}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors"
+            style={{
+              color: color.white,
+              background: gradient.brand,
+              borderRadius: radius.button,
+            }}
+          >
+            {accessToken ? 'Dashboard' : 'Live Chart'}
+          </Link>
+        ) : user ? (
           <>
             <motion.button
               onClick={() => setMenuOpen((p) => !p)}

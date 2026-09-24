@@ -11,7 +11,7 @@ export function SecurityPage() {
         description="Security practices and vulnerability disclosure for cryptopapertrade.com."
         path="/security"
       />
-      <LegalLayout title="Security" lastUpdated="June 13, 2026" version="1.0">
+      <LegalLayout title="Security" lastUpdated="September 24, 2026" version="1.1">
         <section>
           <h2>Our Commitment to Security</h2>
           <p>
@@ -37,6 +37,12 @@ export function SecurityPage() {
               <strong>Session Integrity:</strong> We use secure, <code>httpOnly</code>, and
               <code>SameSite=Strict</code> cookies for session management to protect against
               Cross-Site Scripting (XSS) and Cross-Site Request Forgery (CSRF) attacks.
+            </li>
+            <li>
+              <strong>Database Security:</strong> Paper trading and account data are stored in a
+              PostgreSQL database. All database access goes through Prisma ORM using parameterized,
+              prepared-statement queries — the same mechanism that protects the rest of the platform
+              against SQL injection.
             </li>
           </ul>
         </section>

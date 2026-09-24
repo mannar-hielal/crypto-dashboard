@@ -15,6 +15,10 @@ const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
 // hash briefly so a near-simultaneous /refresh for the same (already-rotated)
 // token — e.g. two browser tabs refreshing at once — is treated as a benign
 // race rather than a replayed/stolen token, and doesn't log out every device.
+// This is per-process state — correct for a single server instance (current
+// deployment), but a loser request handled by a different instance in a
+// horizontally-scaled deployment wouldn't see the winner's entry here. Move
+// this to Redis (already used elsewhere) before scaling the API past 1 machine.
 const ROTATION_GRACE_MS = 5_000;
 const recentlyRotatedTokens = new Map<string, number>();
 
@@ -24,6 +28,33 @@ function wasRecentlyRotated(tokenHash: string): boolean {
     if (now - rotatedAt > ROTATION_GRACE_MS) recentlyRotatedTokens.delete(hash);
   }
   return recentlyRotatedTokens.has(tokenHash);
+}
+
+// 🔐 Serializes concurrent /refresh requests for the same token within this
+// process. deleteMany is atomic at the DB layer (only one request can ever
+// see count=1), but the two requests' promises resolve independently — Node
+// gives no guarantee that the winner's continuation (which records the grace
+// window above) runs before the loser's continuation checks it. Queuing
+// same-token requests removes that ordering dependency entirely: the second
+// request's body simply doesn't start until the first has fully finished.
+const refreshLocks = new Map<string, Promise<void>>();
+
+async function withRefreshLock<T>(tokenHash: string, fn: () => Promise<T>): Promise<T> {
+  const previous = refreshLocks.get(tokenHash) ?? Promise.resolve();
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  refreshLocks.set(tokenHash, held);
+  await previous;
+  try {
+    return await fn();
+  } finally {
+    release();
+    if (refreshLocks.get(tokenHash) === held) {
+      refreshLocks.delete(tokenHash);
+    }
+  }
 }
 const ACCESS_TOKEN_EXPIRY = '15m'; // Short-lived — lives only in Zustand memory
 
@@ -797,52 +828,57 @@ export async function authRoutes(app: FastifyInstance) {
       }
 
       const tokenHash = hashToken(rawToken);
-      const stored = await app.prisma.refreshToken.findUnique({ where: { tokenHash } });
 
-      // 🔐 Token not found or expired — clear cookie to avoid stale state
-      if (!stored || stored.expiresAt < new Date()) {
-        void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
-        return reply.status(401).send({ error: 'Invalid or expired refresh token' });
-      }
+      return withRefreshLock(tokenHash, async () => {
+        const stored = await app.prisma.refreshToken.findUnique({ where: { tokenHash } });
 
-      // 🔐 Token rotation: use deleteMany (P2025-safe) so concurrent /refresh requests
-      //    each get an atomic delete. Only the first succeeds (count=1); the second
-      //    gets count=0 and is treated as an invalid token — no 500 race condition.
-      const { count: deleted } = await app.prisma.refreshToken.deleteMany({ where: { tokenHash } });
-      if (deleted === 0) {
-        // 🔐 Token already consumed = either a benign double-tab race OR a replayed
-        //    stolen token. Only escalate to a full session revoke when this token
-        //    wasn't just rotated by a concurrent request of our own — that's the
-        //    classic session-theft signal. A same-token race within the grace
-        //    window is expected (e.g. two tabs refreshing at once) and shouldn't
-        //    log out every device.
-        if (wasRecentlyRotated(tokenHash)) {
+        // 🔐 Token not found or expired — clear cookie to avoid stale state
+        if (!stored || stored.expiresAt < new Date()) {
+          void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
           return reply.status(401).send({ error: 'Invalid or expired refresh token' });
         }
-        app.log.warn(
-          { userId: stored.userId },
-          'Refresh token replay detected — revoking all sessions'
-        );
-        await app.prisma.refreshToken.deleteMany({ where: { userId: stored.userId } });
-        void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
-        return reply.status(401).send({ error: 'Invalid or expired refresh token' });
-      }
-      recentlyRotatedTokens.set(tokenHash, Date.now());
 
-      // Fetch the user to include email in the new access token payload
-      const user = await app.prisma.user.findUnique({
-        where: { id: stored.userId },
-        select: { id: true, email: true },
+        // 🔐 Token rotation: use deleteMany (P2025-safe) so concurrent /refresh requests
+        //    each get an atomic delete. Only the first succeeds (count=1); the second
+        //    gets count=0 and is treated as an invalid token — no 500 race condition.
+        const { count: deleted } = await app.prisma.refreshToken.deleteMany({
+          where: { tokenHash },
+        });
+        if (deleted === 0) {
+          // 🔐 Token already consumed = either a benign double-tab race OR a replayed
+          //    stolen token. Only escalate to a full session revoke when this token
+          //    wasn't just rotated by a concurrent request of our own — that's the
+          //    classic session-theft signal. A same-token race within the grace
+          //    window is expected (e.g. two tabs refreshing at once) and shouldn't
+          //    log out every device.
+          if (wasRecentlyRotated(tokenHash)) {
+            return reply.status(401).send({ error: 'Invalid or expired refresh token' });
+          }
+          app.log.warn(
+            { userId: stored.userId },
+            'Refresh token replay detected — revoking all sessions'
+          );
+          await app.prisma.refreshToken.deleteMany({ where: { userId: stored.userId } });
+          void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
+          return reply.status(401).send({ error: 'Invalid or expired refresh token' });
+        }
+        recentlyRotatedTokens.set(tokenHash, Date.now());
+
+        // Fetch the user to include email in the new access token payload
+        const user = await app.prisma.user.findUnique({
+          where: { id: stored.userId },
+          select: { id: true, email: true },
+        });
+
+        if (!user) {
+          void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
+          return reply.status(401).send({ error: 'User no longer exists' });
+        }
+
+        const accessToken = await issueTokens(reply, user.id, user.email);
+
+        return reply.send({ accessToken });
       });
-
-      if (!user) {
-        void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
-        return reply.status(401).send({ error: 'User no longer exists' });
-      }
-
-      const accessToken = await issueTokens(reply, user.id, user.email);
-
-      return reply.send({ accessToken });
     }
   );
 

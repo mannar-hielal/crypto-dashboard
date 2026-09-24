@@ -513,6 +513,63 @@ describe('POST /api/auth/refresh', () => {
     expect(deleteManyMock).toHaveBeenCalledTimes(2);
     expect(deleteManyMock).not.toHaveBeenCalledWith({ where: { userId: 'user-1' } });
   });
+
+  it('serializes two truly concurrent requests for the same token instead of letting them race (🔐 no mass revoke regardless of DB response ordering)', async () => {
+    const deleteManyMock = app.prisma.refreshToken.deleteMany as ReturnType<typeof vi.fn>;
+    const findUniqueMock = app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>;
+    deleteManyMock.mockClear();
+    findUniqueMock.mockClear();
+
+    const CONCURRENT_RAW_TOKEN = 'f'.repeat(64);
+    const stored = {
+      id: 'rt-concurrent',
+      tokenHash: 'hashed-concurrent',
+      userId: 'user-1',
+      expiresAt: FUTURE,
+    };
+    findUniqueMock.mockResolvedValue(stored);
+    (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: 'user-1',
+      email: validUser.email,
+    });
+
+    // First request's deleteMany is deliberately held open (simulates a slow
+    // DB round trip) so we can assert the second request doesn't even start
+    // its own DB work until the first fully finishes and releases the lock —
+    // that's the mechanism that removes the race, independent of whichever
+    // request's DB response happens to arrive back first in a real deployment.
+    let resolveFirstDelete!: (v: { count: number }) => void;
+    const firstDeleteGate = new Promise<{ count: number }>((resolve) => {
+      resolveFirstDelete = resolve;
+    });
+    deleteManyMock.mockImplementationOnce(() => firstDeleteGate);
+    deleteManyMock.mockResolvedValueOnce({ count: 0 });
+
+    const requestA = app.inject({
+      method: 'POST',
+      url: '/api/auth/refresh',
+      headers: { cookie: `refresh_token=${CONCURRENT_RAW_TOKEN}` },
+    });
+    const requestB = app.inject({
+      method: 'POST',
+      url: '/api/auth/refresh',
+      headers: { cookie: `refresh_token=${CONCURRENT_RAW_TOKEN}` },
+    });
+
+    // Give both requests a chance to start. B must still be blocked on the
+    // lock — it should not have reached findUnique yet.
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(findUniqueMock).toHaveBeenCalledTimes(1);
+
+    // Now let the first (winning) request finish.
+    resolveFirstDelete({ count: 1 });
+
+    const [resA, resB] = await Promise.all([requestA, requestB]);
+
+    expect(resA.statusCode).toBe(200);
+    expect(resB.statusCode).toBe(401);
+    expect(deleteManyMock).not.toHaveBeenCalledWith({ where: { userId: 'user-1' } });
+  });
 });
 
 // ─── LOGOUT ──────────────────────────────────────────────────────────────────
