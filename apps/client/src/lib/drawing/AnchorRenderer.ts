@@ -110,7 +110,7 @@ class AnchorPaneRenderer implements IPrimitivePaneRenderer {
         // Fill
         context.beginPath();
         context.arc(x, y, drawRadius - strokeWidth, 0, 2 * Math.PI);
-        context.fillStyle = isHovered ? color : '#1a1a2e';
+        context.fillStyle = isHovered ? color : interaction.anchorFill;
         context.fill();
       }
     });

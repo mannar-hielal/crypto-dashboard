@@ -27,6 +27,30 @@ const RECONNECT_DELAY_MS = 3_000;
  */
 const DATA_TIMEOUT_MS = 30_000; // 30 s — well below any proxy idle-timeout
 
+/**
+ * 🔐 Historical REST fetch retry schedule. Previously a failed fetch (network
+ * blip, transient 5xx, timeout) had no retry at all: `restDataApplied` would
+ * stay false for the lifetime of the connection, permanently stranding the
+ * pane on the WebSocket's tiny cold-aggregator snapshot (~2-9 bars) — which
+ * then renders as a compressed sliver of candles once cross-pane time-range
+ * sync stretches the visible window to match a sibling pane that *did* load
+ * full history. These are the fast, short-backoff retries that ride out
+ * transient failures within a few seconds.
+ */
+const REST_RETRY_DELAYS_MS = [1_000, 2_000, 4_000];
+
+/**
+ * If every fast retry above is exhausted, keep retrying at this fixed,
+ * gentler cadence in the background for as long as the pane stays mounted —
+ * so a longer backend/network outage still self-heals once it clears,
+ * instead of requiring the user to switch symbols or reload the page.
+ */
+const REST_HEALING_RETRY_DELAY_MS = 15_000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 // ─── Single pane feed ─────────────────────────────────────────────────────────
 
 function useSinglePaneFeed(
@@ -71,6 +95,12 @@ function useSinglePaneFeed(
         clearTimeout(reconnectTimerRef.current);
         reconnectTimerRef.current = null;
       }
+      // 🔐 Clear the data-watchdog too — a stale watchdog firing later could
+      //    close a re-created socket for a different symbol/interval.
+      if (dataWatchdogRef.current) {
+        clearTimeout(dataWatchdogRef.current);
+        dataWatchdogRef.current = null;
+      }
       store.getState().reset();
       return () => {
         cancelled = true;
@@ -88,28 +118,45 @@ function useSinglePaneFeed(
     // REST count), leaving only the cold-aggregator WS snapshot (~2 bars).
     store.getState().setWsSnapshotReceived(false);
 
-    // Step 1: historical REST fetch (fills chart before WS is ready)
+    // Step 1: historical REST fetch (fills chart before WS is ready), with
+    // retry — a REST failure must never permanently strand this pane on the
+    // WebSocket's tiny cold-aggregator snapshot. See REST_RETRY_DELAYS_MS /
+    // REST_HEALING_RETRY_DELAY_MS above for the backoff schedule.
     // Only applies if the WS hasn't already sent its initial snapshot — the
     // WS snapshot is authoritative (it includes indicators) and we don't want
     // to overwrite live bars the WS may have already sent.
-    marketApi
-      .getCandles(symbol, interval, INTERVAL_FETCH_LIMIT[interval])
-      .then((res) => {
-        if (cancelled) return;
-        // Use REST if the WS snapshot hasn't arrived yet, or if it has fewer
-        // bars — common for higher intervals (1h/4h/1d) where the server-side
-        // aggregator needs hours/days to build up history.
-        const currentBars = store.getState().bars.length;
-        if (!store.getState().wsSnapshotReceived || res.candles.length > currentBars) {
-          const last = res.candles[res.candles.length - 1];
-          if (last) lastKnownPrices.set(symbol, last.close);
-          store.getState().setSnapshot(res.candles, null);
-          restDataApplied = true;
+    async function fetchHistoricalCandles() {
+      let attempt = 0;
+      while (!cancelled && !restDataApplied) {
+        try {
+          const res = await marketApi.getCandles(symbol, interval, INTERVAL_FETCH_LIMIT[interval]);
+          if (cancelled) return;
+          // Use REST if the WS snapshot hasn't arrived yet, or if it has fewer
+          // bars — common for higher intervals (1h/4h/1d) where the server-side
+          // aggregator needs hours/days to build up history.
+          const currentBars = store.getState().bars.length;
+          if (!store.getState().wsSnapshotReceived || res.candles.length > currentBars) {
+            const last = res.candles[res.candles.length - 1];
+            if (last) lastKnownPrices.set(symbol, last.close);
+            store.getState().setSnapshot(res.candles, null);
+            restDataApplied = true;
+          }
+          // Success (whether or not the data was applied) — nothing more to do.
+          return;
+        } catch (err) {
+          const delay = REST_RETRY_DELAYS_MS[attempt] ?? REST_HEALING_RETRY_DELAY_MS;
+          console.error(
+            `[usePaneFeeds] Failed to fetch historical candles for ${symbol} ` +
+              `(attempt ${attempt}, retrying in ${delay}ms):`,
+            err
+          );
+          attempt++;
+          if (cancelled) return;
+          await sleep(delay);
         }
-      })
-      .catch((err) => {
-        console.error('[usePaneFeeds] Failed to fetch historical candles:', err);
-      });
+      }
+    }
+    fetchHistoricalCandles();
 
     // Step 2: WebSocket live feed
     function connect() {
@@ -223,11 +270,20 @@ function useSinglePaneFeed(
 
 export function usePaneFeeds() {
   const layout = useLayoutStore((s) => s.layout);
-  const panes = useLayoutStore((s) => s.panes);
+  // Per-pane selectors — a symbol/interval change on one pane must not
+  // re-render the feed hook (and restart effects) for the other three.
+  const symbol0 = useLayoutStore((s) => s.panes[0].symbol);
+  const interval0 = useLayoutStore((s) => s.panes[0].interval);
+  const symbol1 = useLayoutStore((s) => s.panes[1].symbol);
+  const interval1 = useLayoutStore((s) => s.panes[1].interval);
+  const symbol2 = useLayoutStore((s) => s.panes[2].symbol);
+  const interval2 = useLayoutStore((s) => s.panes[2].interval);
+  const symbol3 = useLayoutStore((s) => s.panes[3].symbol);
+  const interval3 = useLayoutStore((s) => s.panes[3].interval);
   const count = LAYOUT_PANE_COUNT[layout];
 
-  useSinglePaneFeed(0, panes[0].symbol, panes[0].interval, count > 0);
-  useSinglePaneFeed(1, panes[1].symbol, panes[1].interval, count > 1);
-  useSinglePaneFeed(2, panes[2].symbol, panes[2].interval, count > 2);
-  useSinglePaneFeed(3, panes[3].symbol, panes[3].interval, count > 3);
+  useSinglePaneFeed(0, symbol0, interval0, count > 0);
+  useSinglePaneFeed(1, symbol1, interval1, count > 1);
+  useSinglePaneFeed(2, symbol2, interval2, count > 2);
+  useSinglePaneFeed(3, symbol3, interval3, count > 3);
 }

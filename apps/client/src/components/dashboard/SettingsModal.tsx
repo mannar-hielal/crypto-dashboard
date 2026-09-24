@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   X,
   Check,
@@ -54,8 +54,10 @@ const maskEmail = (email: string) => {
 };
 
 export function SettingsModal({ open, onClose }: SettingsModalProps) {
-  const { user, accessToken, updateUser, clearAuth } = useAuthStore();
-  const paperState = usePaperStore.getState();
+  const user = useAuthStore((s) => s.user);
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const updateUser = useAuthStore((s) => s.updateUser);
+  const clearAuth = useAuthStore((s) => s.clearAuth);
 
   const [username, setUsername] = useState(user?.username ?? '');
   const [isUpdatingUsername, setIsUpdatingUsername] = useState(false);
@@ -84,6 +86,13 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
   const [deletePassword, setDeletePassword] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  // 🔐 Timeout ids — cleared on unmount so a pending success-timer (or the
+  //    password-change redirect) never fires setState after the modal is gone.
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => {
+    const timers = timersRef.current;
+    return () => timers.forEach(clearTimeout);
+  }, []);
 
   // Animation variants (reused from LoginPage feel)
   const containerVariants: Variants = {
@@ -148,7 +157,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
       const res = await authApi.updateUsername({ username }, accessToken);
       updateUser({ username: res.user.username });
       setUsernameSuccess(true);
-      setTimeout(() => setUsernameSuccess(false), 3000);
+      timersRef.current.push(setTimeout(() => setUsernameSuccess(false), 3000));
     } catch (err) {
       setUsernameError(err instanceof Error ? err.message : 'An unknown error occurred');
     } finally {
@@ -174,7 +183,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
     try {
       await authApi.updateEmail({ email: newEmail, currentPassword }, accessToken);
       setEmailSuccess(true);
-      setTimeout(() => setEmailSuccess(false), 5000);
+      timersRef.current.push(setTimeout(() => setEmailSuccess(false), 5000));
       setShowEmailPanel(false);
       setNewEmail('');
       setCurrentPassword('');
@@ -206,11 +215,13 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
         accessToken
       );
       setPasswordSuccess(true);
-      setTimeout(() => {
-        // Password change forces logout server-side
-        clearAuth();
-        window.location.href = '/login';
-      }, 2000);
+      timersRef.current.push(
+        setTimeout(() => {
+          // Password change forces logout server-side
+          clearAuth();
+          window.location.href = '/login';
+        }, 2000)
+      );
     } catch (err) {
       setPasswordError(err instanceof Error ? err.message : 'An unknown error occurred');
     } finally {
@@ -249,6 +260,10 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
   };
 
   const handleExportData = () => {
+    // 🔐 Read fresh state inside the handler — the component does not subscribe
+    //    to paperStore, so a TP/SL auto-close or pending-order fill while the
+    //    modal is open would otherwise export a stale snapshot.
+    const paperState = usePaperStore.getState();
     const exportData = {
       profile: {
         id: user.id,

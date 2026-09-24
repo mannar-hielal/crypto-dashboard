@@ -10,6 +10,21 @@ import { EmailService } from '../../services/EmailService.js';
 //    It is memory-hard and computationally expensive (resistant to GPU cracking).
 const REFRESH_TOKEN_COOKIE = 'refresh_token';
 const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
+
+// 🔐 Short in-memory grace window: when a token rotation succeeds, remember its
+// hash briefly so a near-simultaneous /refresh for the same (already-rotated)
+// token — e.g. two browser tabs refreshing at once — is treated as a benign
+// race rather than a replayed/stolen token, and doesn't log out every device.
+const ROTATION_GRACE_MS = 5_000;
+const recentlyRotatedTokens = new Map<string, number>();
+
+function wasRecentlyRotated(tokenHash: string): boolean {
+  const now = Date.now();
+  for (const [hash, rotatedAt] of recentlyRotatedTokens) {
+    if (now - rotatedAt > ROTATION_GRACE_MS) recentlyRotatedTokens.delete(hash);
+  }
+  return recentlyRotatedTokens.has(tokenHash);
+}
 const ACCESS_TOKEN_EXPIRY = '15m'; // Short-lived — lives only in Zustand memory
 
 // ─── TOKEN HELPERS ────────────────────────────────────────────────────────────
@@ -253,6 +268,7 @@ const verifyEmailSchema = {
   body: {
     type: 'object',
     required: ['token'],
+    additionalProperties: false,
     properties: {
       token: { type: 'string', minLength: 64, maxLength: 64 },
     },
@@ -272,6 +288,7 @@ const resendVerificationSchema = {
   body: {
     type: 'object',
     required: ['email'],
+    additionalProperties: false,
     properties: {
       email: { type: 'string', format: 'email' },
     },
@@ -291,6 +308,7 @@ const verifyEmailChangeSchema = {
   body: {
     type: 'object',
     required: ['token'],
+    additionalProperties: false,
     properties: {
       token: { type: 'string', minLength: 64, maxLength: 64 },
     },
@@ -311,6 +329,7 @@ const updatePasswordSchema = {
   body: {
     type: 'object',
     required: ['currentPassword', 'newPassword'],
+    additionalProperties: false,
     properties: {
       currentPassword: { type: 'string' },
       newPassword: {
@@ -338,6 +357,7 @@ const updateUsernameSchema = {
   body: {
     type: 'object',
     required: ['username'],
+    additionalProperties: false,
     properties: {
       username: {
         type: 'string',
@@ -365,6 +385,7 @@ const updateEmailSchema = {
   body: {
     type: 'object',
     required: ['email', 'currentPassword'],
+    additionalProperties: false,
     properties: {
       email: { type: 'string', format: 'email', maxLength: 255 },
       currentPassword: { type: 'string' },
@@ -388,6 +409,7 @@ const requestDeletionSchema = {
   body: {
     type: 'object',
     required: ['password'],
+    additionalProperties: false,
     properties: {
       password: { type: 'string' },
     },
@@ -472,6 +494,12 @@ export async function authRoutes(app: FastifyInstance) {
   // for the same email within a 5-minute window. Cleaned up by TTL timeout.
   const emailSentGuard = new Set<string>();
   const EMAIL_SENT_TTL_MS = 5 * 60 * 1000;
+  // 🔐 Per-email cooldown for forgot-password — separate from the IP rate limit
+  //    so a rotating-IP attacker cannot spam one victim's inbox or kill their
+  //    reset link by re-issuing tokens. Also equalizes response timing.
+  const resetEmailGuard = new Set<string>();
+  const RESET_EMAIL_GUARD_TTL_MS = 60 * 1000;
+  const RESET_TIMING_EQUALIZE_MS = 250;
 
   app.post(
     '/register',
@@ -782,12 +810,24 @@ export async function authRoutes(app: FastifyInstance) {
       //    gets count=0 and is treated as an invalid token — no 500 race condition.
       const { count: deleted } = await app.prisma.refreshToken.deleteMany({ where: { tokenHash } });
       if (deleted === 0) {
-        // Token was already consumed by another request (benign race) or replayed.
-        // Do not globally revoke all user sessions here to avoid collateral logout.
-        app.log.warn({ userId: stored.userId }, 'Refresh token already consumed during rotation');
+        // 🔐 Token already consumed = either a benign double-tab race OR a replayed
+        //    stolen token. Only escalate to a full session revoke when this token
+        //    wasn't just rotated by a concurrent request of our own — that's the
+        //    classic session-theft signal. A same-token race within the grace
+        //    window is expected (e.g. two tabs refreshing at once) and shouldn't
+        //    log out every device.
+        if (wasRecentlyRotated(tokenHash)) {
+          return reply.status(401).send({ error: 'Invalid or expired refresh token' });
+        }
+        app.log.warn(
+          { userId: stored.userId },
+          'Refresh token replay detected — revoking all sessions'
+        );
+        await app.prisma.refreshToken.deleteMany({ where: { userId: stored.userId } });
         void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
         return reply.status(401).send({ error: 'Invalid or expired refresh token' });
       }
+      recentlyRotatedTokens.set(tokenHash, Date.now());
 
       // Fetch the user to include email in the new access token payload
       const user = await app.prisma.user.findUnique({
@@ -842,9 +882,26 @@ export async function authRoutes(app: FastifyInstance) {
 
       const normalizedEmail = email.toLowerCase().trim();
       app.log.info({ normalizedEmail }, 'Forgot password requested');
+
+      // 🔐 Per-email cooldown — stops an attacker rotating IPs from flooding a
+      //    victim's inbox and continuously invalidating their reset link.
+      if (resetEmailGuard.has(normalizedEmail)) {
+        return reply.send(SAFE_RESPONSE);
+      }
+      resetEmailGuard.add(normalizedEmail);
+      setTimeout(() => {
+        resetEmailGuard.delete(normalizedEmail);
+      }, RESET_EMAIL_GUARD_TTL_MS);
+
       const user = await app.prisma.user.findUnique({ where: { email: normalizedEmail } });
       if (!user) {
-        app.log.info({ normalizedEmail }, 'Forgot password: user not found');
+        // 🔐 Equalize response time with the existing-user path so the endpoint
+        //    cannot enumerate registered emails via timing. Perform the same
+        //    token-hash cost plus a bounded delay in place of the email send.
+        const throwaway = generateRefreshToken();
+        hashToken(throwaway);
+        await new Promise((r) => setTimeout(r, RESET_TIMING_EQUALIZE_MS));
+        app.log.info({ normalizedEmail }, 'Forgot password: user not found (uniform response)');
         return reply.send(SAFE_RESPONSE);
       }
 
@@ -931,6 +988,8 @@ export async function authRoutes(app: FastifyInstance) {
 
       const user = await app.prisma.user.findUnique({
         where: { id: userId },
+        // 🔐 Never load the password hash into memory — omit it from the query
+        omit: { password: true },
         include: {
           account: true,
         },

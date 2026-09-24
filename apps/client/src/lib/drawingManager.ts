@@ -1,6 +1,15 @@
 import { DrawingManager, ToolRegistry } from 'lightweight-charts-drawing';
 import type { SerializedDrawing } from 'lightweight-charts-drawing';
 
+// 🔐 Hard cap on persisted drawings per symbol — prevents unbounded localStorage
+//    growth from an untracked drawing spree (and keeps the restore cost bounded).
+const MAX_DRAWINGS = 200;
+
+// Short debounce so drag updates (drawing:updated fires per anchor move) don't
+// re-serialize the full drawing set on every pointermove.
+const PERSIST_DEBOUNCE_MS = 150;
+const persistTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
 export const TOOL_MAP: Record<string, string> = {
   trendline: 'trend-line',
   horizontal: 'horizontal-line',
@@ -41,5 +50,21 @@ export function restoreDrawings(manager: DrawingManager, symbol: string) {
 export function persistDrawings(manager: DrawingManager, symbol: string) {
   const key = getPersistenceKey(symbol);
   const drawings = manager.exportDrawings();
-  localStorage.setItem(key, JSON.stringify(drawings));
+  // Cap then write the full set — the debounce coalesces rapid anchor-drag
+  // events so we don't re-serialize on every pointermove.
+  const capped = drawings.slice(-MAX_DRAWINGS);
+  localStorage.setItem(key, JSON.stringify(capped));
+}
+
+/** Debounced variant used by live editing — coalesces drag updates per symbol. */
+export function schedulePersistDrawings(manager: DrawingManager, symbol: string) {
+  const existing = persistTimers.get(symbol);
+  if (existing) clearTimeout(existing);
+  persistTimers.set(
+    symbol,
+    setTimeout(() => {
+      persistTimers.delete(symbol);
+      persistDrawings(manager, symbol);
+    }, PERSIST_DEBOUNCE_MS)
+  );
 }

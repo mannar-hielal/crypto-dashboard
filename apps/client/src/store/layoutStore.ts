@@ -20,15 +20,20 @@ import {
   type Interval,
   type TimeRangePreset,
 } from '@/lib/markets';
+import type { IndicatorInstance } from '@/lib/indicators/types';
+import { createDefaultIndicatorInstances } from '@/lib/indicators/catalog';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type LayoutId = '1' | '2h' | '2v' | '3h' | '4';
 
+const MAX_INDICATORS_PER_PANE = 50;
+
 export interface PaneConfig {
   symbol: string;
   interval: Interval;
   timeRangePreset: TimeRangePreset | null;
+  indicators: IndicatorInstance[];
 }
 
 export interface SyncOptions {
@@ -77,12 +82,17 @@ export const DEFAULT_PANE_SIZES: Record<LayoutId, PaneSizes> = {
   '4': { colFracs: [0.5, 0.5], rowFracs: [0.5, 0.5] },
 };
 
-/** Default symbol/interval for each pane slot */
+/** Default symbol/interval/indicators for each pane slot */
 const DEFAULT_PANES: PaneConfig[] = [
-  { symbol: SYMBOLS[0].symbol, interval: INTERVALS[0], timeRangePreset: null }, // BTCUSDT, 1m
-  { symbol: SYMBOLS[1].symbol, interval: INTERVALS[0], timeRangePreset: null }, // ETHUSDT, 1m
-  { symbol: SYMBOLS[2].symbol, interval: INTERVALS[0], timeRangePreset: null }, // SOLUSDT, 1m
-  { symbol: SYMBOLS[3].symbol, interval: INTERVALS[0], timeRangePreset: null }, // BNBUSDT, 1m
+  {
+    symbol: SYMBOLS[0].symbol,
+    interval: INTERVALS[0],
+    timeRangePreset: null,
+    indicators: createDefaultIndicatorInstances(),
+  }, // BTCUSDT, 1m
+  { symbol: SYMBOLS[1].symbol, interval: INTERVALS[0], timeRangePreset: null, indicators: [] }, // ETHUSDT, 1m
+  { symbol: SYMBOLS[2].symbol, interval: INTERVALS[0], timeRangePreset: null, indicators: [] }, // SOLUSDT, 1m
+  { symbol: SYMBOLS[3].symbol, interval: INTERVALS[0], timeRangePreset: null, indicators: [] }, // BNBUSDT, 1m
 ];
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -102,6 +112,18 @@ interface LayoutState {
   setPaneSymbol: (paneIndex: number, symbol: string) => void;
   setPaneInterval: (paneIndex: number, interval: Interval) => void;
   setPaneTimeRangePreset: (paneIndex: number, preset: TimeRangePreset | null) => void;
+  addIndicator: (paneIndex: number, instance: IndicatorInstance) => void;
+  removeIndicator: (paneIndex: number, instanceId: string) => void;
+  updateIndicator: (
+    paneIndex: number,
+    instanceId: string,
+    patch: Partial<IndicatorInstance>
+  ) => void;
+  setIndicatorPosition: (
+    paneIndex: number,
+    instanceId: string,
+    position: { x: number; y: number }
+  ) => void;
   toggleSync: (key: keyof SyncOptions) => void;
   setPaneSizes: (layout: LayoutId, sizes: PaneSizes) => void;
   setBottomPanelHeight: (height: number) => void;
@@ -188,6 +210,55 @@ export const useLayoutStore = create<LayoutState>()(
         set({ syncOptions: newSyncOptions });
       },
 
+      addIndicator: (paneIndex, instance) =>
+        set((s) => {
+          const panes = [...s.panes];
+          panes[paneIndex] = {
+            ...panes[paneIndex],
+            indicators: [...panes[paneIndex].indicators, instance].slice(
+              0,
+              MAX_INDICATORS_PER_PANE
+            ),
+          };
+          return { panes };
+        }),
+
+      removeIndicator: (paneIndex, instanceId) =>
+        set((s) => {
+          const panes = [...s.panes];
+          panes[paneIndex] = {
+            ...panes[paneIndex],
+            indicators: panes[paneIndex].indicators.filter(
+              (inst) => inst.instanceId !== instanceId
+            ),
+          };
+          return { panes };
+        }),
+
+      updateIndicator: (paneIndex, instanceId, patch) =>
+        set((s) => {
+          const panes = [...s.panes];
+          panes[paneIndex] = {
+            ...panes[paneIndex],
+            indicators: panes[paneIndex].indicators.map((inst) =>
+              inst.instanceId === instanceId ? { ...inst, ...patch } : inst
+            ),
+          };
+          return { panes };
+        }),
+
+      setIndicatorPosition: (paneIndex, instanceId, position) =>
+        set((s) => {
+          const panes = [...s.panes];
+          panes[paneIndex] = {
+            ...panes[paneIndex],
+            indicators: panes[paneIndex].indicators.map((inst) =>
+              inst.instanceId === instanceId ? { ...inst, position } : inst
+            ),
+          };
+          return { panes };
+        }),
+
       setPaneSizes: (layout, sizes) =>
         set((s) => ({ paneSizes: { ...s.paneSizes, [layout]: sizes } })),
 
@@ -195,7 +266,21 @@ export const useLayoutStore = create<LayoutState>()(
     }),
     {
       name: 'cd-layout',
-      version: 1,
+      version: 2,
+      migrate: (persistedState: unknown, version: number) => {
+        const state = persistedState as Record<string, unknown>;
+        // v1 → v2: add indicators to panes
+        if (version < 2) {
+          const panes = state.panes as Array<Record<string, unknown>> | undefined;
+          if (panes) {
+            state.panes = panes.map((pane, i) => ({
+              ...pane,
+              indicators: pane.indicators ?? (i === 0 ? createDefaultIndicatorInstances() : []),
+            }));
+          }
+        }
+        return state as unknown as LayoutState;
+      },
       // Clamp activePane on hydration: persisted state could have an activePane
       // that is out of range for the persisted layout if the layout was changed
       // between sessions without going through setLayout (e.g. manual storage
@@ -224,7 +309,12 @@ export const useLayoutStore = create<LayoutState>()(
               TIME_RANGE_PRESETS.some((p) => p.key === saved.timeRangePreset)
                 ? (saved.timeRangePreset as TimeRangePreset)
                 : null;
-            return { symbol: saved.symbol ?? def.symbol, interval, timeRangePreset };
+            return {
+              symbol: saved.symbol ?? def.symbol,
+              interval,
+              timeRangePreset,
+              indicators: saved.indicators ?? (i === 0 ? createDefaultIndicatorInstances() : []),
+            };
           }) as [PaneConfig, PaneConfig, PaneConfig, PaneConfig];
         }
         // Ensure paneSizes is present and has all layout IDs (added after v1)
@@ -238,6 +328,12 @@ export const useLayoutStore = create<LayoutState>()(
         // Ensure bottomPanelHeight is a valid number (field added after initial release)
         if (typeof merged.bottomPanelHeight !== 'number' || merged.bottomPanelHeight < 80) {
           merged.bottomPanelHeight = 208;
+        }
+        // Ensure all panes have indicators array (v2+ field)
+        for (let i = 0; i < merged.panes.length; i++) {
+          if (!merged.panes[i].indicators) {
+            merged.panes[i].indicators = i === 0 ? createDefaultIndicatorInstances() : [];
+          }
         }
         return merged;
       },

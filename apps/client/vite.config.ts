@@ -1,30 +1,62 @@
 import path from 'path';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
-export default defineConfig({
+/**
+ * Injects the correct connect-src into the index.html meta CSP based on
+ * VITE_API_URL. The SDK talks to the API directly (not via the Vite proxy),
+ * so the CSP must allow exactly the configured API origin + its ws:// variant.
+ * Hardcoding dev localhost entries here leaks them into production builds.
+ */
+function cspConnectSrcPlugin(mode: string): Plugin {
+  const env = loadEnv(mode, process.cwd(), '');
+  const apiUrl = env.VITE_API_URL ?? 'http://localhost:3001';
+  const wsUrl = apiUrl.replace(/^http/, 'ws');
+  const connectSrc = `'self' ${apiUrl} ${wsUrl}`;
+  return {
+    name: 'csp-connect-src',
+    transformIndexHtml(html) {
+      return html.replaceAll('__CONNECT_SRC__', connectSrc);
+    },
+  };
+}
+
+export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     tailwindcss(),
+    cspConnectSrcPlugin(mode),
     VitePWA({
       // generateSW: vite-plugin-pwa generates the service worker automatically using Workbox.
       // registerType 'autoUpdate': new SW activates on next page load without prompting.
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'logo.svg', 'pwa-192x192.png', 'pwa-512x512.png'],
+      includeAssets: [
+        'favicon.svg',
+        'logo.svg',
+        'pwa-192x192.png',
+        'pwa-512x512.png',
+        'pwa-120x120.png',
+        'pwa-152x152.png',
+        'pwa-167x167.png',
+        'pwa-180x180.png',
+        'splash-2732x2732.png',
+      ],
 
       // Web App Manifest — controls how the app appears when installed on mobile/desktop
       manifest: {
         name: 'cryptopapertrade.com',
-        short_name: 'cryptopapertrade.com',
+        short_name: 'CP Trade',
         description: 'Paper trade crypto with real-time Bybit price feeds',
         theme_color: '#080B14', // Browser chrome color on mobile
         background_color: '#080B14', // Splash screen background
         display: 'standalone', // Hides browser UI — feels like a native app
+        display_override: ['window-controls-overlay', 'standalone', 'minimal-ui'],
         orientation: 'portrait',
         scope: '/',
         start_url: '/',
+        categories: ['finance', 'productivity'],
         icons: [
           {
             src: 'pwa-192x192.png',
@@ -35,7 +67,27 @@ export default defineConfig({
             src: 'pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable', // 'maskable' = safe zone for Android adaptive icons
+            purpose: 'any maskable',
+          },
+          {
+            src: 'pwa-180x180.png',
+            sizes: '180x180',
+            type: 'image/png',
+          },
+          {
+            src: 'pwa-152x152.png',
+            sizes: '152x152',
+            type: 'image/png',
+          },
+          {
+            src: 'pwa-167x167.png',
+            sizes: '167x167',
+            type: 'image/png',
+          },
+          {
+            src: 'pwa-120x120.png',
+            sizes: '120x120',
+            type: 'image/png',
           },
         ],
       },
@@ -118,4 +170,4 @@ export default defineConfig({
       ].join('; '),
     },
   },
-});
+}));

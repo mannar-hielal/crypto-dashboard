@@ -93,6 +93,11 @@ function createPaneStore() {
       const last = bars[bars.length - 1];
       let updatedBars: CandleBar[];
 
+      // 🔐 Reject out-of-order ticks — a delayed WS message with an older
+      //    timestamp appended at the end breaks lightweight-charts' strictly
+      //    ascending time requirement (same invariant setSnapshot sorts by).
+      if (last && incomingKline.timestamp < last.timestamp) return;
+
       if (last && last.timestamp === incomingKline.timestamp) {
         updatedBars = [...bars.slice(0, -1), incomingKline];
       } else {

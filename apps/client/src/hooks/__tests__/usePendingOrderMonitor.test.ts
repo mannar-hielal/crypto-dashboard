@@ -19,7 +19,7 @@
  *   - Stop  Sell → uses min(latestPrice, candleLow)  — price fell into trigger
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { checkPendingTrigger, effectiveCheckPrice } from '../usePendingOrderMonitor';
 
 // ─── Limit Buy ────────────────────────────────────────────────────────────────
@@ -167,5 +167,71 @@ describe('effectiveCheckPrice()', () => {
     const eff = effectiveCheckPrice(order, 50_100 /* above */, 49_900 /* below */, 50_200);
     expect(eff).toBe(49_900);
     expect(checkPendingTrigger(order, eff)).toBe(true);
+  });
+});
+
+// ─── evaluatePanePendingOrders — multi-pane symbol isolation ──────────────────
+// Regression tests for the fix that expanded the monitor from paneStores[0]-only
+// to ALL four pane stores. Before the fix, a pending order on a non-pane-0
+// symbol was never evaluated → it pended forever with its USDT locked.
+
+import { evaluatePanePendingOrders } from '../usePendingOrderMonitor';
+import { useLayoutStore } from '@/store/layoutStore';
+import { usePaperStore } from '@/store/paperStore';
+
+describe('evaluatePanePendingOrders() multi-pane symbol isolation', () => {
+  beforeEach(() => {
+    usePaperStore.getState().reset();
+
+    // Pane 0 = ETHUSDT, Pane 1 = BTCUSDT
+    useLayoutStore.setState({
+      panes: [
+        { symbol: 'ETHUSDT', interval: '1m' },
+        { symbol: 'BTCUSDT', interval: '1m' },
+        { symbol: 'SOLUSDT', interval: '1m' },
+        { symbol: 'BNBUSDT', interval: '1m' },
+      ],
+    } as Parameters<typeof useLayoutStore.setState>[0]);
+  });
+
+  it('fills a pending order whose symbol matches pane 1 (BTCUSDT) — not pane 0', () => {
+    // Place a limit buy on BTCUSDT @ 78_000 (current price 78_500 → not filled yet)
+    usePaperStore.getState().placeLimitOrder('BTCUSDT', 'buy', 78_000, 100);
+    expect(usePaperStore.getState().pendingOrders).toHaveLength(1);
+
+    // BTC price on pane 1 drops to 77_900 → below the 78_000 limit → fill
+    evaluatePanePendingOrders(1, 77_900, []);
+
+    expect(usePaperStore.getState().pendingOrders).toHaveLength(0);
+    expect(usePaperStore.getState().positions).toHaveLength(1);
+  });
+
+  it('does NOT fill a BTCUSDT pending order from an ETHUSDT tick on pane 0', () => {
+    usePaperStore.getState().placeLimitOrder('BTCUSDT', 'buy', 78_000, 100);
+
+    // ETH price tick on pane 0 — pane 0 symbol is ETHUSDT, not BTCUSDT
+    evaluatePanePendingOrders(0, 2_500, []);
+
+    expect(usePaperStore.getState().pendingOrders).toHaveLength(1);
+  });
+
+  it('does NOT fill an ETHUSDT pending order from a BTCUSDT tick on pane 1', () => {
+    usePaperStore.getState().placeLimitOrder('ETHUSDT', 'buy', 3_000, 100);
+
+    // BTC price tick on pane 1 — pane 1 symbol is BTCUSDT, not ETHUSDT
+    evaluatePanePendingOrders(1, 76_500, []);
+
+    expect(usePaperStore.getState().pendingOrders).toHaveLength(1);
+  });
+
+  it('evaluates pending orders on every pane independently', () => {
+    usePaperStore.getState().placeLimitOrder('ETHUSDT', 'buy', 3_000, 100);
+    usePaperStore.getState().placeLimitOrder('BTCUSDT', 'buy', 78_000, 100);
+
+    // ETH tick on pane 0 fills the ETH order; BTC on pane 1 is untouched
+    evaluatePanePendingOrders(0, 2_900, []);
+
+    expect(usePaperStore.getState().pendingOrders).toHaveLength(1);
+    expect(usePaperStore.getState().positions).toHaveLength(1);
   });
 });

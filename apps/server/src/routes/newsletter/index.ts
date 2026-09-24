@@ -115,6 +115,7 @@ export async function newsletterRoutes(app: FastifyInstance) {
         body: {
           type: 'object',
           required: ['email'],
+          additionalProperties: false,
           properties: {
             email: { type: 'string', format: 'email' },
           },
@@ -199,6 +200,7 @@ export async function newsletterRoutes(app: FastifyInstance) {
         body: {
           type: 'object',
           required: ['token'],
+          additionalProperties: false,
           properties: {
             token: { type: 'string' },
           },
@@ -245,6 +247,7 @@ export async function newsletterRoutes(app: FastifyInstance) {
         body: {
           type: 'object',
           required: ['token'],
+          additionalProperties: false,
           properties: {
             token: { type: 'string' },
           },

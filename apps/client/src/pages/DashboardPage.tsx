@@ -28,9 +28,8 @@ import { TradingPanel } from '@/components/dashboard/TradingPanel';
 import type { OrderTab } from '@/components/dashboard/TradingPanel';
 import { PositionEditPanel } from '@/components/dashboard/PositionEditPanel';
 import { PendingOrderEditPanel } from '@/components/dashboard/PendingOrderEditPanel';
-import { bg, color, fontSize } from '@/lib/tokens';
-import { TIME_RANGE_PRESETS, getPresetSeconds } from '@/lib/markets';
-import type { UTCTimestamp } from 'lightweight-charts';
+import { bg, color, fontSize, rangeBar } from '@/lib/tokens';
+import { TIME_RANGE_PRESETS } from '@/lib/markets';
 import { TimeRangeSwitcher } from '@/components/dashboard/TimeRangeSwitcher';
 
 // ─── Edit target type ────────────────────────────────────────────────────────
@@ -149,8 +148,9 @@ export function DashboardInner() {
   const syncWithServer = usePaperStore((s) => s.syncWithServer);
 
   const activePaneIndex = useLayoutStore((s) => s.activePane);
-  const panes = useLayoutStore((s) => s.panes);
-  const activePaneConfig = panes[activePaneIndex] ?? panes[0];
+  // 🔐 Selector reads live state, not a closure — re-renders only when the
+  //    active pane's own data changes, not on every pane edit.
+  const activePaneConfig = useLayoutStore((s) => s.panes[s.activePane] ?? s.panes[0]);
   const symbol = activePaneConfig.symbol;
   const setPaneTimeRangePreset = useLayoutStore((s) => s.setPaneTimeRangePreset);
   const setPaneInterval = useLayoutStore((s) => s.setPaneInterval);
@@ -434,28 +434,19 @@ export function DashboardInner() {
           {/* ── Time-range preset bar ──────────────────────────────────────────── */}
           <div
             className="flex shrink-0 items-center justify-between border-t border-white/6 px-3"
-            style={{ height: 28, background: 'rgba(0,0,0,0.15)' }}
+            style={{ height: rangeBar.height, background: rangeBar.background }}
           >
             <span style={{ fontSize: fontSize.xs10, color: color.muted }}>Range</span>
             <TimeRangeSwitcher
-              activePreset={panes[activePaneIndex]?.timeRangePreset ?? null}
+              activePreset={activePaneConfig?.timeRangePreset ?? null}
               onPresetChange={(preset) => {
+                // ChartPanel's own effect (reacts to timeRangePreset/interval/bars)
+                // applies the visible range once the store updates — don't also
+                // set it here, or the two can race against an interval switch.
                 setPaneTimeRangePreset(activePaneIndex, preset);
                 if (!preset) return;
                 const p = TIME_RANGE_PRESETS.find((pr) => pr.key === preset);
                 if (p) setPaneInterval(activePaneIndex, p.interval);
-                const chart = chartRefs.current[activePaneIndex];
-                if (!chart) return;
-                const seconds = getPresetSeconds(preset);
-                if (seconds === Infinity) {
-                  chart.timeScale().fitContent();
-                } else {
-                  const now = Math.floor(Date.now() / 1000) as UTCTimestamp;
-                  chart.timeScale().setVisibleRange({
-                    from: (now - seconds) as UTCTimestamp,
-                    to: now,
-                  });
-                }
               }}
             />
           </div>
