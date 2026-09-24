@@ -1,6 +1,6 @@
 ---
 name: launch-readiness-audit
-description: Use when the user asks "is cryptopapertrade ready to launch", "what's left before public release", "ship it", "beta readiness", or wants a gap analysis to launch. Cross-checks docs/SEO_READINESS.md, docs/APP_LOG.md Legal & Compliance + roadmap sections, docs/LANDING_FEATURES_PLAN.md, docs/NEWSLETTER_ADMIN_PLAN.md, and the docs/DRAWING_TOOLS.md UI-only list against the codebase. Produces a tiers-blocker / important / polish audit.
+description: Use when the user asks "is cryptopapertrade ready to launch", "what's left before public release", "ship it", "beta readiness", or wants a gap analysis to launch. Cross-checks docs/SEO_READINESS.md, docs/APP_LOG.md Legal & Compliance + roadmap sections, docs/NEWSLETTER_ADMIN_PLAN.md, and the docs/DRAWING_TOOLS.md UI-only list against the codebase. Produces a tiers-blocker / important / polish audit.
 ---
 
 # Launch Readiness Audit — cryptopapertrade.com (free-only launch)
@@ -11,7 +11,6 @@ Source docs to read before producing the audit:
 
 - `docs/SEO_READINESS.md` (Tier 1–4 + Infrastructure & pre-launch + Completed)
 - `docs/APP_LOG.md` — sections "⚖️ Legal & Compliance Status", "🗺️ Phase Roadmap", "📋 Planned (Next)"
-- `docs/LANDING_FEATURES_PLAN.md` — `/` and `/features` pages
 - `docs/NEWSLETTER_ADMIN_PLAN.md` — compose + send UI marked ⏳ Pending
 - `docs/DRAWING_TOOLS.md` — "What's UI Only (Not Wired)"
 - **`bug-sweep`** skill — flagged items in P1–P12 still latent (was `docs/REVIEW_CHECKLIST.md`; consolidated into the skill as the single source of truth)
@@ -36,7 +35,7 @@ For each item below, grep/read the codebase and the cited doc, then output: ✅ 
 
 ### 🟡 Tier 2 — Trust & conversion
 
-11. Landing page (`/`) + Features page (`/features`) per `LANDING_FEATURES_PLAN.md` — confirmed present and styled per `tokens.ts`?
+11. Landing page (`/`) + Features page (`/features`) — confirmed present and styled per `tokens.ts`?
 12. Newsletter: subscribers table ✅; **compose + send UI pending** per `NEWSLETTER_ADMIN_PLAN.md`. Decide: ship the landing without broadcast, or finish composer first.
 13. SEO Tier 2: trust badges, social proof, FAQ, contact/legal links.
 14. `README.md` matches reality — no removed tools (Crosshair, Rectangle, Fibonacci) advertised; drawing tools status (text, freehand UI-only) not overstated.
