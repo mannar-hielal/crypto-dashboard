@@ -136,6 +136,13 @@ export const toolbar = {
   height: '40px',
 } as const;
 
+// ─── Range bar (chart time-range preset strip) ───────────────────────────────
+
+export const rangeBar = {
+  height: 28, // matches TradingView-style time-axis row height (source: chart.html markup-reference)
+  background: 'rgba(0,0,0,0.15)',
+} as const;
+
 // ─── Focus ring (keyboard-only) ──────────────────────────────────────────────
 
 export const focusRing = {

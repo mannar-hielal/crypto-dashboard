@@ -65,7 +65,29 @@ interface BybitKlineResponse {
   };
 }
 
-async function fetchHistoricalCandles(
+// 🔐 Coalesce concurrent requests for the same symbol/interval/limit into a
+//    single upstream fetch — a burst of reconnecting clients (e.g. after a
+//    server restart, before the aggregator warms up) would otherwise each
+//    fire their own REST call and risk tripping Bybit's rate limit.
+const inFlightCandleFetches = new Map<string, Promise<LiveBar['kline'][]>>();
+
+function fetchHistoricalCandles(
+  symbol: string,
+  interval: AllowedInterval,
+  limit: number
+): Promise<LiveBar['kline'][]> {
+  const cacheKey = `${symbol}:${interval}:${limit}`;
+  const existing = inFlightCandleFetches.get(cacheKey);
+  if (existing) return existing;
+
+  const promise = fetchHistoricalCandlesFromBybit(symbol, interval, limit).finally(() => {
+    inFlightCandleFetches.delete(cacheKey);
+  });
+  inFlightCandleFetches.set(cacheKey, promise);
+  return promise;
+}
+
+async function fetchHistoricalCandlesFromBybit(
   symbol: string,
   interval: AllowedInterval,
   limit: number
@@ -223,7 +245,10 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
       activeWs.add(socket);
       ipCounts.set(clientIp, currentIpCount + 1);
 
+      let released = false;
       const releaseConnection = () => {
+        if (released) return;
+        released = true;
         activeWs.delete(socket);
         const remaining = (ipCounts.get(clientIp) ?? 1) - 1;
         if (remaining <= 0) {
@@ -244,78 +269,84 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
 
       log.info({ symbol, interval }, 'Client connected to live feed');
 
-      // ① Send the cached snapshot immediately so the chart isn't blank.
-      //    If the aggregator is too cold (< 50 bars) use the REST fallback
-      //    instead so the client gets a full history on first connect.
-      const MIN_SNAPSHOT = 50;
-      const snapshot = fastify.bybit.getSnapshot(symbol, interval);
-      if (snapshot.length >= MIN_SNAPSHOT) {
-        if (socket.readyState === 1) {
-          socket.send(JSON.stringify({ type: 'snapshot', bars: snapshot }));
-        }
-      } else if (snapshot.length > 0) {
-        // Aggregator has a few bars — send them as a preview, then replace
-        // with a full REST-backed snapshot.
-        if (socket.readyState === 1) {
-          socket.send(JSON.stringify({ type: 'snapshot', bars: snapshot }));
-        }
-        fetchHistoricalCandles(symbol, interval, 1000)
-          .then((candles) => {
-            if (candles.length > 0 && socket.readyState === 1) {
-              socket.send(
-                JSON.stringify({
-                  type: 'snapshot',
-                  bars: candles.map((kline) => ({
-                    symbol,
-                    interval,
-                    kline,
-                    indicators: null as unknown as IndicatorSnapshot,
-                  })),
-                })
-              );
-            }
-          })
-          .catch((err) => {
-            log.error({ err, symbol, interval }, 'REST fallback for WS snapshot failed');
-          });
-      } else {
-        // Completely cold aggregator — fetch from Bybit REST to fill the gap.
-        fetchHistoricalCandles(symbol, interval, 1000)
-          .then((candles) => {
-            if (candles.length > 0 && socket.readyState === 1) {
-              socket.send(
-                JSON.stringify({
-                  type: 'snapshot',
-                  bars: candles.map((kline) => ({
-                    symbol,
-                    interval,
-                    kline,
-                    indicators: null as unknown as IndicatorSnapshot,
-                  })),
-                })
-              );
-            }
-          })
-          .catch((err) => {
-            log.error({ err, symbol, interval }, 'REST fallback for WS snapshot failed');
-          });
-      }
-
-      // ② Subscribe to live bar updates and forward to this client
+      // ① Subscribe to live bar updates and forward to this client. Buffer bars
+      //    matching this connection while a REST-backed snapshot is in flight
+      //    (below) so that snapshot can't roll back bars already forwarded.
+      let restFetchInFlight = false;
+      const barsDuringRestFetch = new Map<number, LiveBar['kline']>();
       const unsubscribe = fastify.bybit.subscribe((bar: LiveBar) => {
         if (bar.symbol !== symbol || bar.interval !== interval) return;
+        if (restFetchInFlight) {
+          barsDuringRestFetch.set(bar.kline.timestamp, bar.kline);
+        }
         if (socket.readyState === 1 /* WebSocket.OPEN */) {
           socket.send(JSON.stringify({ type: 'bar', bar }));
         }
       });
 
-      // ③ Subscribe to ticker (lastPrice/bid/ask) updates and forward to this client
+      // ② Subscribe to ticker (lastPrice/bid/ask) updates and forward to this client
       const unsubscribeTicker = fastify.bybit.subscribeTicker((update: TickerUpdate) => {
         if (update.symbol !== symbol) return;
         if (socket.readyState === 1 /* WebSocket.OPEN */) {
           socket.send(JSON.stringify({ type: 'ticker', ...update }));
         }
       });
+
+      // ③ Send the cached snapshot immediately so the chart isn't blank.
+      //    If the aggregator is too cold (< 50 bars) use the REST fallback
+      //    instead so the client gets a full history on first connect.
+      const MIN_SNAPSHOT = 50;
+      const snapshot = fastify.bybit.getSnapshot(symbol, interval);
+
+      const sendRestBackedSnapshot = () => {
+        restFetchInFlight = true;
+        void fetchHistoricalCandles(symbol, interval, 1000)
+          .then((candles) => {
+            if (candles.length === 0 || socket.readyState !== 1) return;
+            // Merge in any bars forwarded live while this fetch was in flight so
+            // the snapshot doesn't roll the chart back past what the client
+            // already has.
+            const byTimestamp = new Map(candles.map((kline) => [kline.timestamp, kline]));
+            for (const [timestamp, kline] of barsDuringRestFetch) {
+              byTimestamp.set(timestamp, kline);
+            }
+            const mergedCandles = [...byTimestamp.values()].sort(
+              (a, b) => a.timestamp - b.timestamp
+            );
+            socket.send(
+              JSON.stringify({
+                type: 'snapshot',
+                bars: mergedCandles.map((kline) => ({
+                  symbol,
+                  interval,
+                  kline,
+                  indicators: null as unknown as IndicatorSnapshot,
+                })),
+              })
+            );
+          })
+          .catch((err) => {
+            log.error({ err, symbol, interval }, 'REST fallback for WS snapshot failed');
+          })
+          .finally(() => {
+            restFetchInFlight = false;
+            barsDuringRestFetch.clear();
+          });
+      };
+
+      if (snapshot.length >= MIN_SNAPSHOT) {
+        if (socket.readyState === 1) {
+          socket.send(JSON.stringify({ type: 'snapshot', bars: snapshot }));
+        }
+      } else {
+        if (snapshot.length > 0 && socket.readyState === 1) {
+          // Aggregator has a few bars — send them as a preview, then replace
+          // with a full REST-backed snapshot.
+          socket.send(JSON.stringify({ type: 'snapshot', bars: snapshot }));
+        }
+        // Thin or completely cold aggregator — fetch from Bybit REST to fill the gap.
+        sendRestBackedSnapshot();
+      }
 
       // ④ Clean up listeners when client disconnects
       socket.on('close', () => {

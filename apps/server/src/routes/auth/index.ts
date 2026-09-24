@@ -10,6 +10,21 @@ import { EmailService } from '../../services/EmailService.js';
 //    It is memory-hard and computationally expensive (resistant to GPU cracking).
 const REFRESH_TOKEN_COOKIE = 'refresh_token';
 const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
+
+// 🔐 Short in-memory grace window: when a token rotation succeeds, remember its
+// hash briefly so a near-simultaneous /refresh for the same (already-rotated)
+// token — e.g. two browser tabs refreshing at once — is treated as a benign
+// race rather than a replayed/stolen token, and doesn't log out every device.
+const ROTATION_GRACE_MS = 5_000;
+const recentlyRotatedTokens = new Map<string, number>();
+
+function wasRecentlyRotated(tokenHash: string): boolean {
+  const now = Date.now();
+  for (const [hash, rotatedAt] of recentlyRotatedTokens) {
+    if (now - rotatedAt > ROTATION_GRACE_MS) recentlyRotatedTokens.delete(hash);
+  }
+  return recentlyRotatedTokens.has(tokenHash);
+}
 const ACCESS_TOKEN_EXPIRY = '15m'; // Short-lived — lives only in Zustand memory
 
 // ─── TOKEN HELPERS ────────────────────────────────────────────────────────────
@@ -796,9 +811,14 @@ export async function authRoutes(app: FastifyInstance) {
       const { count: deleted } = await app.prisma.refreshToken.deleteMany({ where: { tokenHash } });
       if (deleted === 0) {
         // 🔐 Token already consumed = either a benign double-tab race OR a replayed
-        //    stolen token. The latter is the classic session-theft signal, so treat
-        //    replay as a compromise and revoke ALL of the user's sessions rather
-        //    than just clearing the cookie (attacker may hold other tokens too).
+        //    stolen token. Only escalate to a full session revoke when this token
+        //    wasn't just rotated by a concurrent request of our own — that's the
+        //    classic session-theft signal. A same-token race within the grace
+        //    window is expected (e.g. two tabs refreshing at once) and shouldn't
+        //    log out every device.
+        if (wasRecentlyRotated(tokenHash)) {
+          return reply.status(401).send({ error: 'Invalid or expired refresh token' });
+        }
         app.log.warn(
           { userId: stored.userId },
           'Refresh token replay detected — revoking all sessions'
@@ -807,6 +827,7 @@ export async function authRoutes(app: FastifyInstance) {
         void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
         return reply.status(401).send({ error: 'Invalid or expired refresh token' });
       }
+      recentlyRotatedTokens.set(tokenHash, Date.now());
 
       // Fetch the user to include email in the new access token payload
       const user = await app.prisma.user.findUnique({

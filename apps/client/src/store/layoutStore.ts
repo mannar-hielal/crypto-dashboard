@@ -27,6 +27,8 @@ import { createDefaultIndicatorInstances } from '@/lib/indicators/catalog';
 
 export type LayoutId = '1' | '2h' | '2v' | '3h' | '4';
 
+const MAX_INDICATORS_PER_PANE = 50;
+
 export interface PaneConfig {
   symbol: string;
   interval: Interval;
@@ -213,7 +215,10 @@ export const useLayoutStore = create<LayoutState>()(
           const panes = [...s.panes];
           panes[paneIndex] = {
             ...panes[paneIndex],
-            indicators: [...panes[paneIndex].indicators, instance],
+            indicators: [...panes[paneIndex].indicators, instance].slice(
+              0,
+              MAX_INDICATORS_PER_PANE
+            ),
           };
           return { panes };
         }),
