@@ -15,11 +15,11 @@ fintech dashboard (Exgen visual system) — Tailwind v4 + CSS Modules + `lightwe
    Access it via the Figma MCP (`figma_*` tools, declared in `opencode.json`), never by guessing
    values from memory. See `.agents/skills/figma-theme-source` for the full frame/node-ID map
    (landing, sign-in, spot/futures trade panels, markets, etc.) and the sampling workflow.
-3. **`docs/markup-reference/`** — secondary reference for component _anatomy_ and interaction
-   structure (grid layout, toolbar composition), not for colors or fonts.
-4. **Never** sample from the loose root-level `Screenshot 2026-07-14 *.png` files or from
+3. **Never** sample from the loose root-level `Screenshot 2026-07-14 *.png` files or from
    `docs/screenshots/theme/` — the latter is referenced by `docs/APP_LOG.md`/`AGENTS.md` but does
    not exist in the repo. Treat any such reference as stale and redirect to Figma.
+   (`docs/markup-reference/` — the former secondary reference for component anatomy/interaction
+   structure — was removed 2026-09-24; Figma now covers that ground too.)
 
 No hex value, font string, font size, or px measurement is ever hardcoded directly in a component.
 If Figma and `tokens.ts` disagree, `tokens.ts` (Figma-derived) wins — flag the doc as stale rather
@@ -135,10 +135,10 @@ interaction tables are intentionally left out of this snapshot; read `tokens.ts`
 ## Process gate — do this before any visual change
 
 Per `.agents/skills/session-bootstrap`'s non-negotiable #2: **before** touching spacing, color,
-size, layout, or interaction on any component, run a visual Q&A with the user first — quote the
-Figma frame (via `.agents/skills/figma-theme-source`) or `docs/markup-reference/` as the reference,
-and do not invent a value to fill a gap. This applies even to "small" tweaks — a 2px padding change
-is a visual decision.
+size, layout, or interaction on any component, run a visual Q&A with the user first — quote
+`tokens.ts` or the Figma frame (via `.agents/skills/figma-theme-source`) as the reference, and do
+not invent a value to fill a gap. This applies even to "small" tweaks — a 2px padding change is a
+visual decision.
 
 ## Cross-references
 

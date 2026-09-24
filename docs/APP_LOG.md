@@ -11,11 +11,11 @@
 >
 > 🎨 **Visual/UI rule**: Before implementing any UI change, always ask the user a Q&A to confirm
 > visual decisions (spacing, colors, sizes, layout, etc.). Always refer to
-> [`docs/screenshots/theme`](screenshots/theme) as the **primary** visual source of truth for all
-> styling decisions (colors, spacing, sizes, layout). When an element is not visible or not
-> distinguishable in screenshots, **fall back** to [`docs/markup-reference`](markup-reference) for
-> that element's visual properties (e.g. exact color values, sizes). For component structure and
-> interaction patterns, refer to `docs/markup-reference` — HTML reference files for UI components.
+> `apps/client/src/lib/tokens.ts` as the **primary** visual source of truth for all styling
+> decisions (colors, spacing, sizes, layout). For anything not yet in `tokens.ts`, or for component
+> structure/interaction patterns, fall back to the Figma file (see `.agents/skills/figma-theme-source`).
+> (`docs/screenshots/theme/` and `docs/markup-reference/`, formerly cited here, never existed /
+> have since been removed — see `.claude/conventions/design.md`'s source-of-truth hierarchy.)
 > Goal is **not** a 1:1 copy; take what makes sense and do it better where possible.
 > Always ask clarifying questions when there is confusion or uncertainty before implementing.
 
@@ -56,7 +56,7 @@
 - ESLint + Prettier enforced in CI. `pnpm lint && pnpm type-check && pnpm test` must pass before every push.
 - Background palette: `#0f0e29` (page bg), `#211e49` (panel/header bg), `#1e1d34` (footer bg), `#3e3c73` (input/card bg) — sampled from `docs/screenshots/theme/header.png` + `footer.png`
 - Accent palette: `#a555e2`/`#695bec` (purple primary), `#4e3287` (purpleDeep), `#2ccd78` (green/profit), `#d5455c` (red/loss), `#e7ab33` (amber/warning), `#cac5d4` (muted text) — sampled from `docs/screenshots/theme/header.png`
-- Visual source of truth: `docs/screenshots/theme/` — always consult before making spacing, color, size, or layout decisions. Fall back to `docs/markup-reference/` when element not visible in screenshots.
+- Visual source of truth: `apps/client/src/lib/tokens.ts` — always consult before making spacing, color, size, or layout decisions. Fall back to the Figma file (`.agents/skills/figma-theme-source`) for anything not yet in `tokens.ts`.
 - **No hardcoded hex values, font strings, or font sizes in components** — always import from `@/lib/tokens`. Canvas/chart libs (lightweight-charts) must use `tokens.ts` directly (cannot read CSS vars). Tailwind pseudo-classes (`hover:`, `focus:`) use named brand utilities from `@theme inline` in `index.css`.
 - Q&A required before any UI implementation — no visual assumptions
 
@@ -515,8 +515,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 | `apps/client/src/components/dashboard/ChartLayoutPicker.tsx`           | Layout picker popover (5 SVG icons) + sync option toggles                                                                                      |
 | `apps/client/src/components/dashboard/PaneHeader.tsx`                  | Per-pane mini header (symbol picker, interval buttons, live price, connection dot)                                                             |
 | `apps/client/src/components/dashboard/MultiChartArea.tsx`              | CSS grid renderer for all layouts; wires crosshair + time-range sync                                                                           |
-| `docs/markup-reference/`                                               | HTML UI reference files — component structure & interaction patterns (not 1:1 copies)                                                          |
-| `docs/screenshots/theme/`                                              | Visual source of truth — spacing, colors, sizes, layout                                                                                        |
+| `apps/client/src/lib/tokens.ts`                                        | Visual source of truth — spacing, colors, sizes, layout (fallback: Figma via `.agents/skills/figma-theme-source`)                              |
 | `docs/DRAWING_TOOLS.md`                                                | Drawing tools architecture, status, roadmap                                                                                                    |
 | `apps/client/src/lib/drawing/types.ts`                                 | Drawing type definitions (`Drawing`, `DrawingPoint`, `LineStyle`, etc.)                                                                        |
 | `apps/client/src/lib/drawing/DrawingPrimitive.ts`                      | `ISeriesPrimitive` — canvas rendering via `CompositeRenderer` + per-shape renderers (Phase 1 refactored, ~550 lines)                           |
@@ -1797,3 +1796,59 @@ Replaced the fragile custom `ISeriesPrimitive` drawing system (~3,500+ lines) wi
 - **Content area**: both outer wrapper (line 1105) and motion wrapper (line 1113) changed from `overflow-hidden` to `overflow-x-auto overflow-y-hidden` — enables horizontal scroll for table content on narrow viewports.
 
 **Gates:** type-check ✅, lint ✅, test (371) ✅, format ✅
+
+---
+
+### feat: launch content sweep — live mode, copy reconciliation, live-chart CTA, legal rewrites (2026-09-24) ✅
+
+**Problem:** The app was live in production but the site didn't reflect it — `VITE_IS_LIVE` was never set in `.env.production`, Landing/Features copy undersold the indicator system (only named EMA9/20/200, VWAP, MACD when the catalog had grown to 9) and still called drawing tools "under active development" despite them shipping, the public `/chart` demo wasn't linked from anywhere on the marketing site, and the Privacy Policy still described paper-trading data as browser-only when server-side sync had shipped weeks earlier.
+
+**Changes:**
+
+- `apps/client/.env.production` — added `VITE_IS_LIVE=true`.
+- `LandingPage.tsx` / `FeaturesPage.tsx` — reconciled indicator/drawing-tools copy with what's actually shipped; added a "Try it live, no signup" sticky banner on Landing linking to `/chart`.
+- `robots.txt`, `sitemap.xml`, `ChartPage.tsx` `SeoHead` — surfaced `/chart` for crawlers with accurate title/description.
+- `PrivacyPage.tsx` — rewrote the "Paper trade history" data-storage section (now correctly describes server-side Postgres sync, not browser-only) and the Section 8 localStorage description that contradicted it. Version 1.1 → 1.2.
+- `SecurityPage.tsx` — added a Database Security paragraph (Postgres + Prisma parameterized queries; no network-isolation claim, since that couldn't be verified). Version 1.0 → 1.1.
+- `AcceptableUsePolicyPage.tsx` — version/date synced to 1.1 (no content changes needed).
+- `LegalLayout.tsx` — removed the "Phase 1 active development" banner from all 4 legal pages.
+- `README.md`, `docs/SEO_READINESS.md` — refreshed stale claims (root `/` still described as `UnderConstructionPage`; newsletter CTA marked not-done despite being wired).
+
+**Gates:** type-check ✅, lint ✅, format ✅, test (510) ✅, both builds ✅
+
+---
+
+### fix: 8 correctness bugs found via independent code review (2026-09-24) ✅
+
+An independent-reviewer pass (`/code-review`, later formalized as the `code-reviewer` subagent) over the accumulated diff surfaced 8 real bugs, none previously caught:
+
+- **Auth refresh-token race** (`apps/server/src/routes/auth/index.ts`) — `wasRecentlyRotated()`'s grace-window entry was only set after the winning `deleteMany` resolved, but two concurrent `/refresh` requests' promises resolve independently — no guarantee the winner's continuation ran before the loser's check. Could misclassify a benign double-tab race as a replay and revoke every session. Fixed by serializing same-token requests through an in-process lock. Added a genuine-concurrency regression test (existing tests only simulated the race sequentially).
+- **Drawing-persistence data loss on symbol switch** (`ChartPanel.tsx`) — `prevSymbolRef` wasn't updated until after `clearAll()`/`restoreDrawings()` fired their save events, so a debounced save could overwrite the just-saved backup with the wrong symbol's data.
+- **Multi-pane debounce collision** (`drawingManager.ts`) — `persistTimers` was keyed by symbol string, shared across all panes; two panes on the same symbol would cancel each other's pending save. Rekeyed to the `DrawingManager` instance.
+- **Time-range preset fights live ticks** (`ChartPanel.tsx`) — the preset effect depended on `bars` (new reference every tick) and re-applied `setVisibleRange` unconditionally, yanking the view back to "now" and undoing any manual pan. Now respects `userZoomedRef` like the sibling autoscale effect, only forcing the snap when the preset/interval itself changes.
+- **One corrupted drawing wiped the whole saved set** (`drawingManager.ts`) — `restoreDrawings` imported the whole batch in one try/catch; now imports entries individually and skips only the bad one.
+- **4 indicator primitives always left the newest bar blank** (`median-price-calculation.ts`, `average-price-calculation.ts`, `percent-change-calculation.ts`, `weighted-close-calculation.ts`) — off-by-one in `endIndex` (`data.length - 1` instead of `data.length` for non-negative offset). Also removed a leftover `console.log` firing on every tick in `average-price-calculation.ts`. Added regression tests for all 4.
+- **MACD widget badge always showed "9"** (`IndicatorWidget.tsx`) — read `params.signal`, catalog's actual key is `signalLength`.
+- **Candlesticks corrupt after a symbol switch once a pane has full history** (`ChartPanel.tsx`) — the bars-push effect's `.update()` vs `.setData()` decision compared bar-array length to the previous render's length, reset on interval change but not symbol change. Since history is capped at 1000 bars for every symbol, a post-switch array commonly lands at the same length as the old one — a coincidence, not an edge case — wrongly taking the `.update()` splice path and corrupting the chart until the interval changed or the page reloaded. Fixed by tracking the symbol separately and forcing a full `setData()` on a symbol change too.
+
+**Gates:** type-check ✅, lint ✅, format ✅, test (510, +11 new regression tests) ✅, both builds ✅
+
+---
+
+### feat: persistent chart/dashboard nav on Landing/Features (2026-09-24) ✅
+
+**Problem:** No way to jump straight to `/chart` (or `/dashboard` if logged in) from the marketing pages short of scrolling to a CTA button.
+
+**Changes:** Extended `TopBar.tsx` (the dashboard header) with a `marketing` prop instead of building a parallel component — same visual shell (logo, wordmark, Beta badge), but sticky, and the right side swaps the account menu for a single "Live Chart" / "Dashboard" CTA driven by `accessToken` presence. Rendered as a sibling above `AuthLayout` in `LandingPage.tsx` and `FeaturesPage.tsx` (not inside `AuthLayout`, which is also shared by the 4 auth pages that shouldn't get this nav). `FeaturesPage.tsx`'s own sticky anchor sub-nav moved from `top-0` to `top-12` to dock below the new bar instead of overlapping it.
+
+**Gates:** type-check ✅, lint ✅, format ✅, test (510) ✅
+
+---
+
+### chore: TVP rename, code-reviewer subagent, obsolete plan-doc cleanup (2026-09-24) ✅
+
+- **TradingView → TVP**: replaced all literal "TradingView" mentions in comments/docs/skill files with "TVP" (internal shorthand) across 27 files. The 3 real external references in `docs/TV_LICENSE_MIGRATION_PLAN.md` (actual tradingview.com URLs and the `tradingview/charting_library` GitHub repo path) were left untouched, since rewriting them would point to nonexistent resources.
+- **`code-reviewer` subagent**: added `.claude/agents/code-reviewer.md` — an independent reviewer scoped to bugs/security/regressions, no context on how the code was written. Updated `claude-code-review.yml` to run the same persona in CI instead of the broader `/code-review` plugin checklist; switched to `gh pr diff` for the diff itself (works regardless of checkout fetch-depth).
+- **Removed 3 fully-implemented/obsolete plan docs**: `docs/LANDING_FEATURES_PLAN.md` (Landing + Features pages fully shipped, including past what the plan specified), `docs/INDICATORS_PLAN.md` (doc's own Status line already said "Done"), `docs/TV_SWEEP_PLAN.md` (no longer needed). Cleaned up the now-dangling `LANDING_FEATURES_PLAN.md` reference in the `launch-readiness-audit` skill.
+
+**Gates:** type-check ✅, lint ✅, format ✅, test (510) ✅
