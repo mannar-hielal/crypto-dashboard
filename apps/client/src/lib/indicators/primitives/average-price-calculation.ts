@@ -39,7 +39,11 @@ export function calculateAveragePriceIndicatorValues<T = Time>(
   const offset = options.offset ?? 0;
   const result = new Array(data.length);
   const startIndex = offset > 0 ? offset : 0;
-  const endIndex = offset < 0 ? data.length - 1 + offset : data.length - 1;
+  // 🔐 data.length (not data.length - 1) for offset >= 0 — the trailing loop
+  //    below only exists to leave blank whitespace for a NEGATIVE offset; at
+  //    offset 0 there should be zero trailing whitespace entries, so the value
+  //    loop must run all the way through the last bar, not stop one short of it.
+  const endIndex = offset < 0 ? data.length + offset : data.length;
   let resultIndex = 0;
 
   for (let i = 0; i < startIndex; i++) {
@@ -67,6 +71,5 @@ export function calculateAveragePriceIndicatorValues<T = Time>(
     resultIndex += 1;
   }
 
-  console.log(result);
   return result;
 }
