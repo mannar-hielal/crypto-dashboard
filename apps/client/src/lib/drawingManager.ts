@@ -39,17 +39,30 @@ export function restoreDrawings(manager: DrawingManager, symbol: string) {
   const saved = localStorage.getItem(key);
   if (!saved) return;
 
+  let data: SerializedDrawing[];
   try {
-    const data = JSON.parse(saved) as SerializedDrawing[];
-    if (!Array.isArray(data) || data.length === 0) return;
-
-    const registry = ToolRegistry.getInstance();
-    const factory = (type: string, raw: SerializedDrawing) => {
-      return registry.createDrawing(type, raw.id, raw.anchors, raw.style, raw.options);
-    };
-    manager.importDrawings(data, factory);
+    const parsed = JSON.parse(saved) as unknown;
+    if (!Array.isArray(parsed) || parsed.length === 0) return;
+    data = parsed as SerializedDrawing[];
   } catch {
+    // Not valid JSON at all — nothing recoverable here.
     localStorage.removeItem(key);
+    return;
+  }
+
+  // 🔐 Import one drawing at a time instead of manager.importDrawings(data, ...)
+  //    — that runs the whole array through a single factory call and aborts
+  //    on the first exception, which the outer try/catch used to turn into
+  //    "delete every saved drawing for this symbol" for a single corrupted
+  //    or no-longer-supported entry. Skip just the bad one instead.
+  const registry = ToolRegistry.getInstance();
+  for (const raw of data) {
+    try {
+      const drawing = registry.createDrawing(raw.type, raw.id, raw.anchors, raw.style, raw.options);
+      if (drawing) manager.addDrawing(drawing);
+    } catch {
+      // Skip this one entry; the rest of the saved set is still restored.
+    }
   }
 }
 
