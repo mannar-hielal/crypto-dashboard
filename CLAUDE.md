@@ -4,8 +4,11 @@ Project: cryptopapertrade.com — pnpm monorepo, `apps/client` (React 19 + Vite 
 `apps/server` (Fastify 5 + Prisma 7), shared SDK at `generated/CDSDK`.
 
 Start every session by reading, in order: `AGENTS.md` (quick commands, monorepo layout), then
-`.agents/skills/session-bootstrap/SKILL.md` (the two non-negotiable process rules: no
-implementation without explicit instruction, and a visual Q&A gate before any UI change).
+`docs/APP_LOG.md` (single source of truth for the whole project — architecture decisions, design
+agreements, business logic, roadmap, legal/compliance, known issues; skim the section relevant to
+the task rather than reading it end to end), then `.agents/skills/session-bootstrap/SKILL.md` (the
+two non-negotiable process rules: no implementation without explicit instruction, and a visual Q&A
+gate before any UI change).
 
 ## Conventions — read the one matching the area you're touching
 
