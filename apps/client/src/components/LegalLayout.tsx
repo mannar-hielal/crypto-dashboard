@@ -66,19 +66,6 @@ export function LegalLayout({ title, lastUpdated, version, children }: LegalLayo
           <p className="mt-1.5 text-sm" style={{ color: color.muted }}>
             {version ? `Version ${version} — ` : ''}Last updated: {lastUpdated}
           </p>
-
-          {/* Development notice */}
-          <div
-            className="mt-4 rounded-lg border px-4 py-2.5 text-sm font-medium"
-            style={{
-              borderColor: `${color.amber}40`,
-              background: `${color.amber}14`,
-              color: color.amber,
-            }}
-          >
-            ⚠️ This platform is in active development (Phase 1). These terms will be updated as new
-            features are added.
-          </div>
         </div>
 
         {/* Legal content */}
