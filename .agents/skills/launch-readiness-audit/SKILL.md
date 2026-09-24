@@ -49,7 +49,7 @@ For each item below, grep/read the codebase and the cited doc, then output: ✅ 
 ### 🟢 Tier 4 — Polish
 
 17. Drawing tools: ship trendline/horizontal/vertical/ray/parallel as advertised. **Don't ship the UI-only buttons** (Text, Freehand, Polyline) without wiring — either wire them, hide them, or mark them "coming soon" explicitly in UI. (See `drawing-tools` skill for the wiring path.)
-18. Cosmetic exit-order Type label mismatch (Order History shows `MARKET` vs TradingView's `Take Profit`) — ship or visibly track in-app.
+18. Cosmetic exit-order Type label mismatch (Order History shows `MARKET` vs TVP's `Take Profit`) — ship or visibly track in-app.
 19. Tests: every ⬜ in `docs/TRADING_TEST_PLAN.md` turned to ✅ or consciously deferred.
 
 ## Output format

@@ -227,7 +227,7 @@ apps/client/src/components/indicators/IndicatorWidgets.tsx
 1. **Phase 1 scope**: All single-series LH indicators + existing 5 — resolved ✓
 2. **Dropdown position**: Before layout picker in SymbolBar — resolved ✓
 3. **Persistence**: Always persist to layoutStore (no auth gating) — resolved ✓
-4. **Configurable params from the start**: Yes, with gear icon → TradingView-style settings popover — resolved ✓
+4. **Configurable params from the start**: Yes, with gear icon → TVP-style settings popover — resolved ✓
 5. **Widget positioning**: Floating, draggable over chart — resolved ✓
 6. **Migrate existing indicators**: Yes, all to LH ISeriesPrimitive pattern — resolved ✓
 7. **Defaults**: EMA 9/20/200 + VWAP — resolved ✓

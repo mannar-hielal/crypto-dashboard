@@ -45,7 +45,7 @@ prisma/migrations/
 docs/markup-reference/
 docs/PRE_LAUNCH_LEGAL.md
 
-# TradingView captured bundles — reference only, not part of the project
+# TVP captured bundles — reference only, not part of the project
 tv-website-full/
 *.har
 

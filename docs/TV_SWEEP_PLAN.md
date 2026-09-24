@@ -1,6 +1,6 @@
 # TV Sweep — Implementation Plan
 
-> Recommendations extracted from `tv-website-full/` (TradingView codebase) analysis, grounded in **Exgen Figma tokens** (file `XnbW6uGFwCVYzz3MGGCjFM`), skipping light/dark theme support.
+> Recommendations extracted from `tv-website-full/` (TVP codebase) analysis, grounded in **Exgen Figma tokens** (file `XnbW6uGFwCVYzz3MGGCjFM`), skipping light/dark theme support.
 
 ---
 
