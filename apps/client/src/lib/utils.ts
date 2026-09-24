@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Format a crypto price to a readable precision — matches TradingView style.
+ * Format a crypto price to a readable precision — matches TVP style.
  *   >= 1000 → 2 dp  (e.g. 75495.10)
  *   >= 1    → 4 dp  (e.g. 1.2345)
  *   < 1     → 6 dp  (e.g. 0.000123)

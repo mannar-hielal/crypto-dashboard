@@ -59,7 +59,7 @@ DashboardPage  (activeTool, selectedLineTool, cursorVariant state)
 3. `cloneDrawing(id, priceOffset?)` works for trendline/horizontal/vertical but **mangles parallel channel's 3-point geometry** unless per-shape clone is delegated to the renderer. P4.2.
 4. No snap-to-grid or snap-to-OHLC for horizontal/vertical/ray. P5.1.
 5. Multi-segment polyline rendering is not in current shape renderers — each renderer is single-segment only.
-6. Cosmetic, non-blocking: exit-order Type in Order History shows `MARKET` instead of TradingView's `Take Profit` / `Stop Loss` (see `docs/TRADING_TEST_PLAN.md` notes). Tracked as a future labelling pass.
+6. Cosmetic, non-blocking: exit-order Type in Order History shows `MARKET` instead of TVP's `Take Profit` / `Stop Loss` (see `docs/TRADING_TEST_PLAN.md` notes). Tracked as a future labelling pass.
 
 ## How to add a new shape (follow the roadmap order)
 

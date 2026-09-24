@@ -56,10 +56,10 @@ export const chart = {
   // MACD pane
   macdLine: '#2962ff', // deep blue
   macdSignal: '#ff6d00', // deep orange
-  macdHistBull: '#26a69a', // teal — rising positive histogram bar (TradingView Color 0)
-  macdHistBullDim: '#b2dfdb', // light teal — falling positive (TradingView Color 1)
-  macdHistBearDim: '#ffcdd2', // light red — rising negative (TradingView Color 2)
-  macdHistBear: '#ff5252', // red — falling negative histogram bar (TradingView Color 3)
+  macdHistBull: '#26a69a', // teal — rising positive histogram bar (TVP Color 0)
+  macdHistBullDim: '#b2dfdb', // light teal — falling positive (TVP Color 1)
+  macdHistBearDim: '#ffcdd2', // light red — rising negative (TVP Color 2)
+  macdHistBear: '#ff5252', // red — falling negative histogram bar (TVP Color 3)
 
   // Candlestick series
   candleUp: '#2ccd78', // bullish / green candle
@@ -139,7 +139,7 @@ export const toolbar = {
 // ─── Range bar (chart time-range preset strip) ───────────────────────────────
 
 export const rangeBar = {
-  height: 28, // matches TradingView-style time-axis row height (source: chart.html markup-reference)
+  height: 28, // matches TVP-style time-axis row height (source: chart.html markup-reference)
   background: 'rgba(0,0,0,0.15)',
 } as const;
 

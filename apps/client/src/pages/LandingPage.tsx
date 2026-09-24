@@ -487,7 +487,7 @@ export function LandingPage() {
               </div>
               <h2 className="text-3xl font-bold text-white">Your learning journey</h2>
               <p className="mt-2 text-sm" style={{ color: color.muted }}>
-                Unlike TradingView, we're built for learning — not just charting.
+                Unlike other platforms, we're built for learning — not just charting.
               </p>
             </motion.div>
             <div className="grid w-full grid-cols-1 gap-6 md:grid-cols-3">
