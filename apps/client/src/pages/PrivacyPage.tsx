@@ -1,3 +1,5 @@
+import { Link } from 'react-router';
+
 import { LegalLayout } from '@/components/LegalLayout';
 import { SeoHead } from '@/components/SeoHead';
 
@@ -11,7 +13,7 @@ export function PrivacyPage() {
         description="Privacy policy for cryptopapertrade.com. Learn how we collect, use, and protect your data (nDSG and GDPR compliant)."
         path="/privacy"
       />
-      <LegalLayout title="Privacy Policy" lastUpdated="June 27, 2026" version="1.1">
+      <LegalLayout title="Privacy Policy" lastUpdated="September 24, 2026" version="1.2">
         <section>
           <h2>1. Data Controller</h2>
           <p>
@@ -73,16 +75,17 @@ export function PrivacyPage() {
               </tr>
               <tr>
                 <td>Paper trade history</td>
-                <td>Displaying your simulated portfolio and order history</td>
                 <td>
-                  Your browser's localStorage on your device only — not transmitted to or stored on
-                  our servers. Clearing your browser data will erase it.
-                  <br />
-                  <em>
-                    ⚠️ In a future update (Phase 3), paper trading state will be optionally synced
-                    to the server. Users will be notified by email before this change takes effect
-                    and will be given the choice to opt in.
-                  </em>
+                  Displaying your simulated portfolio, positions, and order/trade history — and
+                  keeping it in sync across your devices
+                </td>
+                <td>
+                  Synced to and stored in our PostgreSQL database, hosted on Fly.io. It is retained
+                  for as long as your account is active, per the retention terms in Section 7, and
+                  protected by the same security controls described in our{' '}
+                  <Link to="/security">Security Policy</Link>. A local copy is also cached in your
+                  browser's localStorage (see Section 8) to speed up UI rendering, but the
+                  server-side database record is authoritative.
                 </td>
               </tr>
               <tr>
@@ -216,8 +219,9 @@ export function PrivacyPage() {
               and paper trading simulation state across sessions:
               <ul>
                 <li>
-                  <code>cd-paper-trading</code> — your virtual positions, order history, and
-                  simulated account balance.
+                  <code>cd-paper-trading</code> — a local cache of your virtual positions, order
+                  history, and simulated account balance, mirroring the authoritative copy synced
+                  to our servers (see Section 3).
                 </li>
                 <li>
                   <code>cd-layout</code> — your saved dashboard panel layout.
@@ -231,8 +235,11 @@ export function PrivacyPage() {
                   dismissed the cookie information banner.
                 </li>
               </ul>
-              This data exists entirely on your device. Clearing your browser data or using a
-              different device will erase it. It is never sent to our servers.
+              The <code>cd-layout</code>, <code>cd-paper-col-prefs</code>, and{' '}
+              <code>cd-cookie-notice-dismissed</code> keys exist entirely on your device and are
+              never sent to our servers — clearing your browser data or using a different device
+              will erase them. <code>cd-paper-trading</code> is a local cache only; its
+              authoritative copy lives in our database as described in Section 3.
             </li>
           </ul>
           <p>
