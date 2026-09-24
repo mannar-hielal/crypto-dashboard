@@ -322,6 +322,35 @@ export function LandingPage() {
           </div>
         </div>
 
+        {/* ─── Live chart banner ───────────────────────────────────────── */}
+        <div className="mx-auto flex w-full max-w-6xl justify-center px-4 pt-8">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="flex flex-col items-center gap-3 rounded-full border border-white/10 px-6 py-3 text-center sm:flex-row sm:gap-4 sm:text-left"
+            style={{ background: `${color.glow}15` }}
+          >
+            <span
+              className="flex h-2 w-2 shrink-0 rounded-full"
+              style={{ background: color.green }}
+            />
+            <span className="text-sm" style={{ color: color.muted }}>
+              <span className="font-semibold text-white">See it before you sign up.</span> Live BTC,
+              ETH, SOL and more — 9 indicators, full charting toolkit. No account required.
+            </span>
+            <Button
+              asChild
+              size="sm"
+              className="h-9 shrink-0 rounded-full px-5 text-sm font-semibold text-white shadow-md"
+              style={{ background: gradient.brand }}
+            >
+              <Link to="/chart">Try It Free — No Signup</Link>
+            </Button>
+          </motion.div>
+        </div>
+
         {/* ─── Stats strip ──────────────────────────────────────────────── */}
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-24 px-4 py-16">
           <motion.div
