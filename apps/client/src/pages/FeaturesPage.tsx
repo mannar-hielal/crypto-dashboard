@@ -233,7 +233,7 @@ export function FeaturesPage() {
                     </svg>
                   }
                   title="Indicators"
-                  desc="EMA9/20/200, VWAP, and MACD with customizable histogram and signal lines."
+                  desc="9 built-in indicators — EMA, SMA, Average Price, Median Price, Weighted Close, VWAP, Momentum, Percent Change, and MACD. Each renders as a draggable widget with live values, an eye toggle, and a settings panel for color, line style, and parameters — independently per chart pane."
                 />
                 <DetailCard
                   icon={
