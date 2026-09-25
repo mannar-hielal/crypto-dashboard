@@ -1869,3 +1869,17 @@ An independent-reviewer pass (`/code-review`, later formalized as the `code-revi
 **Fallback if Pages injection doesn't appear after redeploy:** add CFWA's manual JS snippet (site token from Web Analytics → Manage site) to `index.html`; CSP already covers it.
 
 **Gates:** audit ✅, type-check ✅, lint ✅, format ✅, test (510) ✅, client build ✅ (`dist/index.html` connect-src verified)
+
+---
+
+### infra: CFWA enabled on Pages, www → apex redirect, Search Console + Bing (2026-09-25) ✅
+
+Dashboard-only changes following the CFWA CSP fix (#121/#122):
+
+- **CFWA enabled on the Pages project** (Workers & Pages → project → Metrics → Web Analytics). Pages only injects the beacon into deployments made _after_ enabling. Verified live after the #122 deploy: `beacon.min.js` + `data-cf-beacon` token present, browser shows `rum` OPTIONS 200 + POST 204, no CSP violations.
+- **Redirect Rule: www → apex (301)** — Rules → Redirect Rules, template "Redirect from WWW to root": `https://www.*` → `https://${1}`, 301, **Preserve query string ON** (keeps UTM params). The "DNS may not be proxying www" deploy warning was a false positive (www is a Pages custom domain, resolves to Cloudflare IPs) — deployed anyway; do **not** create a second www record. Verified: `https://www.…/features?utm_source=test` → 301 → `https://cryptopapertrade.com/features?utm_source=test`; apex 200; `api.` unaffected. `http://www` takes 2 hops (Always Use HTTPS → then this rule) — acceptable.
+- **Google Search Console** — Domain property `cryptopapertrade.com`, verified via DNS TXT in Cloudflare. **Keep the `google-site-verification` TXT record** — removing it revokes access. Sitemap must be submitted as the **full URL** `https://cryptopapertrade.com/sitemap.xml` (Domain properties have no path prefix; `sitemap.xml` alone is rejected).
+- **Bing Webmaster Tools** — _pending_: import from Search Console (covers DuckDuckGo/Yahoo/Ecosia/ChatGPT search). Optional: Caching → Configuration → Crawler Hints ON for IndexNow.
+- **Reminder:** Analytics → Dashboards "Traffic overview" is edge request data (bots, assets, own traffic), not visitors — use Web Analytics for human numbers.
+
+**No files changed.**
