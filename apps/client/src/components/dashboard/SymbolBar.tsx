@@ -26,6 +26,7 @@ import { getIndicatorMeta } from '@/lib/indicators/catalog';
 import { SymbolPair } from '@/components/ui/CryptoIcon';
 import { ChartLayoutPicker } from '@/components/dashboard/ChartLayoutPicker';
 import { IntervalDropdown } from '@/components/dashboard/IntervalDropdown';
+import { ChartTypeDropdown } from '@/components/dashboard/ChartTypeDropdown';
 import { IndicatorDropdown } from '@/components/indicators/IndicatorDropdown';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -89,9 +90,10 @@ export function SymbolBar({
   const setPaneSymbol = useLayoutStore((s) => s.setPaneSymbol);
   const setPaneInterval = useLayoutStore((s) => s.setPaneInterval);
   const setPaneTimeRangePreset = useLayoutStore((s) => s.setPaneTimeRangePreset);
+  const setPaneChartType = useLayoutStore((s) => s.setPaneChartType);
   const addIndicator = useLayoutStore((s) => s.addIndicator);
 
-  const { symbol, interval, indicators } = paneConfig;
+  const { symbol, interval, indicators, chartType } = paneConfig;
 
   // ── Market data — subscribe to all 4 pane stores, pick the active one ────
   // (4 unconditional hook calls — hooks rule compliant)
@@ -446,6 +448,9 @@ export function SymbolBar({
 
       {/* Divider */}
       <span className="h-4 w-px shrink-0 bg-white/8" />
+
+      {/* ── Chart type (Candles / Heikin Ashi) ─────────────────────────────── */}
+      <ChartTypeDropdown value={chartType} onChange={(t) => setPaneChartType(activePane, t)} />
 
       {/* ── Timeframe dropdown ────────────────────────────────────────────── */}
       <IntervalDropdown

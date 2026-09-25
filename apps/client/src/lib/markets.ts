@@ -22,34 +22,33 @@ export const INTERVAL_LABELS: Record<Interval, string> = {
 /**
  * Initial bar spacing (px) applied on first chart load per interval.
  *
- * Targets ~160–200 visible candles in a typical 1 200 px viewport —
- * matching TVP's default zoom density. Lower timeframes use a
- * tighter spacing so they show a meaningful slice of recent history;
- * the daily bar is slightly wider to keep individual candles readable.
+ * Candle bodies ~7–9 px wide, matching Bybit's/TradingView's default density:
+ * at 3 px (the old 1m/5m value) bodies were ~2 px with visible spacing, so
+ * the chart read as thin and gappy next to Bybit's.
  *
  * Reference viewport ~1 200 px → visible candles ≈ 1 200 / barSpacing
- *   1m  6 px → ~200 candles ≈  3.3 h
- *   5m  6 px → ~200 candles ≈ 16.7 h
- *   15m 6 px → ~200 candles ≈  2.1 days
- *   30m 5 px → ~240 candles ≈  5   days
- *   1h  5 px → ~240 candles ≈ 10   days
- *   2h  5 px → ~240 candles ≈ 20   days
- *   4h  6 px → ~200 candles ≈ 33   days (~1 month)
- *   1d  8 px → ~150 candles ≈  5   months
- *   1w  6 px → ~200 candles ≈  3.8 years
- *   1M  6 px → ~200 candles ≈ 16.7 years
+ *   1m  7 px → ~170 candles ≈  2.9 h
+ *   5m  7 px → ~170 candles ≈ 14   h
+ *   15m 7 px → ~170 candles ≈  1.8 days
+ *   30m 7 px → ~170 candles ≈  3.5 days
+ *   1h  7 px → ~170 candles ≈  7   days
+ *   2h  7 px → ~170 candles ≈ 14   days
+ *   4h  8 px → ~150 candles ≈ 25   days
+ *   1d  9 px → ~130 candles ≈  4.4 months
+ *   1w  8 px → ~150 candles ≈  2.9 years
+ *   1M  8 px → ~150 candles (more than most symbols' full history)
  */
 export const INTERVAL_BAR_SPACING: Record<Interval, number> = {
-  '1m': 3,
-  '5m': 3,
-  '15m': 4,
-  '30m': 5,
-  '1h': 5,
-  '2h': 5,
-  '4h': 6,
-  '1d': 8,
-  '1w': 6,
-  '1M': 6,
+  '1m': 7,
+  '5m': 7,
+  '15m': 7,
+  '30m': 7,
+  '1h': 7,
+  '2h': 7,
+  '4h': 8,
+  '1d': 9,
+  '1w': 8,
+  '1M': 8,
 };
 
 /**

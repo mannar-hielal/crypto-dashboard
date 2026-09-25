@@ -22,6 +22,8 @@ const h = vi.hoisted(() => ({
   priceScaleOptions: [] as Record<string, unknown>[],
   timeScaleCalls: [] as { method: string; args: unknown[] }[],
   drawingHandlers: new Map<string, ((e: { drawing?: object }) => void)[]>(),
+  // Calls on each series, in addSeries order (0 = candles, 1 = padding).
+  seriesCalls: [] as { method: string; args: unknown[] }[][],
 }));
 
 vi.mock('lightweight-charts', async (importOriginal) => {
@@ -33,7 +35,20 @@ vi.mock('lightweight-charts', async (importOriginal) => {
         if (prop === 'addSeries')
           return (_type: unknown, opts: Record<string, unknown>) => {
             h.seriesOptions.push(opts);
-            return stub();
+            const calls: { method: string; args: unknown[] }[] = [];
+            h.seriesCalls.push(calls);
+            return new Proxy(
+              {},
+              {
+                get: (_s, method) =>
+                  method === 'then'
+                    ? undefined
+                    : (...args: unknown[]) => {
+                        calls.push({ method: String(method), args });
+                        return stub();
+                      },
+              }
+            );
           };
         if (prop === 'priceScale')
           return () => ({
@@ -113,6 +128,7 @@ describe('ChartPanel price scale autoscale', () => {
     h.priceScaleOptions.length = 0;
     h.timeScaleCalls.length = 0;
     h.drawingHandlers.clear();
+    h.seriesCalls.length = 0;
     rafCallbacks.length = 0;
     vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
       rafCallbacks.push(cb);
@@ -190,5 +206,52 @@ describe('ChartPanel price scale autoscale', () => {
     };
     for (const cb of handlers) cb({ drawing });
     expect(drawing.autoscaleInfo()).toBeNull();
+  });
+
+  it('draws Heikin Ashi values and keeps the real last price visible', () => {
+    // Display-only: the candle series gets HA bars, but its own last-value
+    // label (which would show the HA close) is replaced by a price line at the
+    // REAL last close.
+    render(
+      <ChartPanel
+        paneIndex={0}
+        symbol="BTCUSDT"
+        interval="1m"
+        indicators={[]}
+        chartType="heikinAshi"
+      />
+    );
+    const bars = Array.from({ length: 30 }, (_, i) => bar(i, 84_000 + i * 10));
+    act(() => {
+      paneStores[0].getState().setSnapshot(bars, null);
+    });
+    const candleCalls = h.seriesCalls[0];
+    const setData = candleCalls.filter((c) => c.method === 'setData').pop();
+    const pushed = setData?.args[0] as { open: number; close: number }[];
+    const last = bars[bars.length - 1];
+    // HA close = (o + h + l + c) / 4
+    expect(pushed[pushed.length - 1].close).toBe(
+      (last.open + last.high + last.low + last.close) / 4
+    );
+    expect(candleCalls).toContainEqual({
+      method: 'applyOptions',
+      args: [{ lastValueVisible: false, priceLineVisible: false }],
+    });
+    const priceLine = candleCalls.find((c) => c.method === 'createPriceLine');
+    expect((priceLine?.args[0] as { price: number }).price).toBe(last.close);
+  });
+
+  it('draws real candles by default', () => {
+    render(<ChartPanel paneIndex={0} symbol="BTCUSDT" interval="1m" indicators={[]} />);
+    const bars = Array.from({ length: 30 }, (_, i) => bar(i, 84_000 + i * 10));
+    act(() => {
+      paneStores[0].getState().setSnapshot(bars, null);
+    });
+    const candleCalls = h.seriesCalls[0];
+    const pushed = candleCalls.filter((c) => c.method === 'setData').pop()?.args[0] as {
+      close: number;
+    }[];
+    expect(pushed[pushed.length - 1].close).toBe(bars[bars.length - 1].close);
+    expect(candleCalls.some((c) => c.method === 'createPriceLine')).toBe(false);
   });
 });

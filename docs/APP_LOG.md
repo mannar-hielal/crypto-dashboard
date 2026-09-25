@@ -2008,3 +2008,61 @@ All 38 rate-limit failures passed on a slow re-run.
 the previous symbol's candles under the new symbol's header until a retry succeeds.
 
 **Gates:** type-check ✅, lint ✅, format ✅, test ✅
+
+---
+
+### feat: chart candles match Bybit — Spot history, wider candles, Heikin Ashi chart type (2026-09-25) ✅
+
+**Trigger:** the owner compared CPT with Bybit (BTC/USDT, 1m, same layout). Bybit's candles
+looked cleaner and more solid, with longer wicks and no gaps. Analysis found three causes:
+
+1. **Bybit's chart was set to Heikin Ashi** (its legend reads "Heikin Ashi"). That's a smoothed
+   candle type: 43 colour flips per 200 bars against 89 raw, with a larger wick share (50% vs
+   40%). CPT only drew raw candles.
+2. **History came from the perpetual market.** `BYBIT_KLINE_CATEGORY_ORDER` was
+   `['linear', 'spot']`, while the live WebSocket is spot. CPT history equalled Bybit linear
+   exactly and was about $39 per candle off Bybit **Spot** (BYBIT_PARITY_PLAN F1).
+3. **Thin candles.** 1m and 5m used 3px bar spacing (about 2px bodies) against about 8px on
+   Bybit. Raw 1m data has no real gaps (open = previous close for 199/199 bars); the "gaps" were
+   horizontal spacing.
+
+**Changes:**
+
+- **Server** `routes/market/index.ts`: history category order is now `['spot', 'linear']`. The
+  tests were flipped to "spot first, linear fallback". The full Spot/Perp switch stays in BP-0.
+- **`lib/markets.ts` `INTERVAL_BAR_SPACING`:** 1m through 2h go to 7px, 4h 8, 1d 9, 1w/1M 8
+  (Bybit-like density, the owner's choice). They are still applied only on
+  load/reload/out-of-range, so user zoom is kept.
+- **Heikin Ashi chart type:**
+  - `lib/heikinAshi.ts` is a pure `toHeikinAshi()`, converting the whole series, since each HA
+    bar depends on the previous one.
+  - Per-pane `chartType: 'candles' | 'heikinAshi'` in `layoutStore`. Persist v2 → v3 migration;
+    `merge` rejects unknown values.
+  - New `ChartTypeDropdown` in the top bar, beside the interval dropdown, bound to the active
+    pane.
+  - `ChartPanel` feeds HA bars to the candle series. Switching type forces a full `setData` and
+    keeps the zoom.
+  - Indicators compute on HA prices, as on Bybit/TradingView (the owner's choice). They read
+    `source.data()`.
+  - **The real price stays visible:** in HA mode the series' own last-value label (which would
+    show the HA close) is hidden, and a price line shows the real last close. Orders, fills and
+    PnL are unchanged; they use store prices.
+  - The legend shows "· Heikin Ashi".
+- **Tests:**
+  - `heikinAshi.test.ts` (5)
+  - `layoutStore.test.ts` (+4: action, v3 migration, merge validation)
+  - `ChartPanel.priceScale.test.tsx` (+2: HA series values, real price line / default candles)
+  - server `market.test.ts` (2 flipped)
+
+**Verification (running app vs Bybit's public API):**
+
+- **Spot match:** CPT history equals Bybit Spot (max |Δclose| 0.000000) for BTC, ETH, SOL, LINK
+  and DOGE at 1m/5m/1h/1d.
+- **HA match:** the chart's HA series equals HA computed independently from Bybit Spot klines
+  (max |Δ| 0.000000 over 50 bars).
+- **Real price:** in HA mode the price line shows the real live price, and switching back
+  restores the real candles and the series label.
+- **Spacing:** first load gives 7/7/7/8/9px for 1m/5m/1h/4h/1d.- **Regression check with the new spacing and chart type:**
+  - layout-transition matrix: 0/200 transitions with giant candles or an empty pane
+  - symbol × interval matrix with every pane in Heikin Ashi: 450 combos, 0 axis or zoom
+    failures. The 21 rate-limit failures all passed on a slow re-run.

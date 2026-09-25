@@ -1,11 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createChart, CandlestickSeries, LineSeries, CrosshairMode } from 'lightweight-charts';
-import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts';
+import {
+  createChart,
+  CandlestickSeries,
+  LineSeries,
+  CrosshairMode,
+  LineStyle,
+} from 'lightweight-charts';
+import type { IChartApi, IPriceLine, ISeriesApi, UTCTimestamp } from 'lightweight-charts';
 import { useStore } from 'zustand';
 import { DrawingManager, ToolRegistry } from 'lightweight-charts-drawing';
 import type { Anchor, IDrawing, Point } from 'lightweight-charts-drawing';
 import { paneStores } from '@/store/paneStore';
 import { useLayoutStore } from '@/store/layoutStore';
+import type { ChartType } from '@/store/layoutStore';
 import { getIndicatorMeta } from '@/lib/indicators/catalog';
 import type { IndicatorInstance, IndicatorPrimitive, IndicatorStyle } from '@/lib/indicators/types';
 import { bg, color, chart as chartColors, font, fontSize } from '@/lib/tokens';
@@ -22,6 +29,7 @@ import {
   getPersistenceKey,
 } from '@/lib/drawingManager';
 import { runPaneDataPush } from '@/lib/chartSync';
+import { toHeikinAshi } from '@/lib/heikinAshi';
 import { IndicatorWidgets } from '@/components/indicators/IndicatorWidgets';
 
 const CHART_BG = chartColors.bg;
@@ -34,6 +42,8 @@ interface ChartPanelProps {
   interval: Interval;
   timeRangePreset?: TimeRangePreset | null;
   indicators: IndicatorInstance[];
+  /** 'heikinAshi' draws HA candles (display-only; see lib/heikinAshi.ts). */
+  chartType?: ChartType;
   onChartReady?: (chart: IChartApi, series: ISeriesApi<'Candlestick'>) => void;
   onChartDestroy?: () => void;
   onDrawingManagerReady?: (manager: DrawingManager) => void;
@@ -100,6 +110,7 @@ export function ChartPanel({
   interval,
   timeRangePreset,
   indicators,
+  chartType = 'candles',
   onChartReady,
   onChartDestroy,
   onDrawingManagerReady,
@@ -127,6 +138,12 @@ export function ChartPanel({
   // persistence effect and has its own sequencing. This one only tracks
   // which symbol the bars-push effect below last rendered for.
   const prevBarsSymbolRef = useRef(symbol);
+  // Chart type the candle series was last filled with — a change forces a
+  // full setData (not .update()) but keeps the user's zoom.
+  const prevChartTypeRef = useRef(chartType);
+  // HA mode hides the series' own last-value label (it would show the HA
+  // close) and shows the REAL last price on this line instead.
+  const realPriceLineRef = useRef<IPriceLine | null>(null);
   const userZoomedRef = useRef(false);
 
   const [hoverData, setHoverData] = useState<LegendData | null>(null);
@@ -593,6 +610,9 @@ export function ChartPanel({
       managerRef.current = null;
       chart.remove();
       chartRef.current = null;
+      // The price line died with the chart — StrictMode re-mounts must not
+      // call applyOptions on it.
+      realPriceLineRef.current = null;
       onChartDestroy?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -631,6 +651,10 @@ export function ChartPanel({
       prevLenRef.current = 0;
       candleRef.current?.setData([]);
       paddingSeriesRef.current?.setData([]);
+      if (realPriceLineRef.current) {
+        candleRef.current?.removePriceLine(realPriceLineRef.current);
+        realPriceLineRef.current = null;
+      }
       return;
     }
 
@@ -668,8 +692,11 @@ export function ChartPanel({
 
     // 🔐 Sync broadcasts from this pane are suppressed until the push has
     //    finished — see runPaneDataPush in lib/chartSync.ts.
+    const chartTypeChanged = chartType !== prevChartTypeRef.current;
+    prevChartTypeRef.current = chartType;
+
     runPaneDataPush(paneIndex, () => {
-      const candleData = sortedBars.map((b) => ({
+      const realData = sortedBars.map((b) => ({
         time: toUTC(b.timestamp),
         open: b.open,
         high: b.high,
@@ -677,10 +704,40 @@ export function ChartPanel({
         close: b.close,
         volume: b.volume,
       }));
-      if (sortedBars.length === prevLenRef.current) {
+      // HA bars depend on the previous HA bar, so the whole series is
+      // converted even when only the last bar is pushed via .update().
+      const candleData = chartType === 'heikinAshi' ? toHeikinAshi(realData) : realData;
+      if (sortedBars.length === prevLenRef.current && !chartTypeChanged) {
         candleRef.current?.update(candleData[candleData.length - 1]);
       } else {
         candleRef.current?.setData(candleData);
+      }
+
+      // Real last-price label: the series' own label in candles mode; in HA
+      // mode a separate price line, since the series' last value is HA.
+      const heikinAshi = chartType === 'heikinAshi';
+      candleRef.current?.applyOptions({
+        lastValueVisible: !heikinAshi,
+        priceLineVisible: !heikinAshi,
+      });
+      const lastReal = realData[realData.length - 1];
+      const lastColor =
+        lastReal.close >= lastReal.open ? chartColors.candleUp : chartColors.candleDown;
+      if (heikinAshi) {
+        if (realPriceLineRef.current) {
+          realPriceLineRef.current.applyOptions({ price: lastReal.close, color: lastColor });
+        } else if (candleRef.current) {
+          realPriceLineRef.current = candleRef.current.createPriceLine({
+            price: lastReal.close,
+            color: lastColor,
+            lineWidth: 1,
+            lineStyle: LineStyle.Dotted,
+            axisLabelVisible: true,
+          });
+        }
+      } else if (realPriceLineRef.current) {
+        candleRef.current?.removePriceLine(realPriceLineRef.current);
+        realPriceLineRef.current = null;
       }
 
       // ── Extend time scale into empty space so coordinateToTime works ──
@@ -731,7 +788,7 @@ export function ChartPanel({
       }
     });
     prevLenRef.current = sortedBars.length;
-  }, [bars, interval, timeRangePreset, paneIndex, symbol]);
+  }, [bars, interval, timeRangePreset, paneIndex, symbol, chartType]);
 
   // ── 3. Indicator primitive lifecycle ───────────────────────────────────────
   useEffect(() => {
@@ -1007,6 +1064,7 @@ export function ChartPanel({
         >
           <p className="mb-1.5" style={{ fontSize: fontSize.xs10, color: color.muted }}>
             {hoverData.time}
+            {chartType === 'heikinAshi' && ' · Heikin Ashi'}
           </p>
           <div className="flex items-center gap-2 font-mono" style={{ fontSize: fontSize.xs11 }}>
             <span style={{ color: color.muted }}>O</span>

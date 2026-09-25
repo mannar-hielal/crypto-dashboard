@@ -6,10 +6,11 @@
  *   - setPaneSymbol(): single-pane update vs. sync.symbol broadcast
  *   - setPaneInterval(): single-pane update vs. sync.interval broadcast
  *   - toggleSync(): toggles individual sync flags + snap-on-enable for symbol/interval
+ *   - setPaneChartType() + persisted chartType migration/validation (v3)
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useLayoutStore } from '../layoutStore';
+import { useLayoutStore, type PaneConfig } from '../layoutStore';
 import { SYMBOLS, INTERVALS } from '@/lib/markets';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -20,10 +21,34 @@ function resetStore() {
     layout: '1',
     activePane: 0,
     panes: [
-      { symbol: SYMBOLS[0].symbol, interval: INTERVALS[0], timeRangePreset: null, indicators: [] },
-      { symbol: SYMBOLS[1].symbol, interval: INTERVALS[0], timeRangePreset: null, indicators: [] },
-      { symbol: SYMBOLS[2].symbol, interval: INTERVALS[0], timeRangePreset: null, indicators: [] },
-      { symbol: SYMBOLS[3].symbol, interval: INTERVALS[0], timeRangePreset: null, indicators: [] },
+      {
+        symbol: SYMBOLS[0].symbol,
+        interval: INTERVALS[0],
+        timeRangePreset: null,
+        indicators: [],
+        chartType: 'candles',
+      },
+      {
+        symbol: SYMBOLS[1].symbol,
+        interval: INTERVALS[0],
+        timeRangePreset: null,
+        indicators: [],
+        chartType: 'candles',
+      },
+      {
+        symbol: SYMBOLS[2].symbol,
+        interval: INTERVALS[0],
+        timeRangePreset: null,
+        indicators: [],
+        chartType: 'candles',
+      },
+      {
+        symbol: SYMBOLS[3].symbol,
+        interval: INTERVALS[0],
+        timeRangePreset: null,
+        indicators: [],
+        chartType: 'candles',
+      },
     ],
     syncOptions: {
       symbol: false,
@@ -177,16 +202,82 @@ describe('layoutStore', () => {
       useLayoutStore.setState({
         activePane: 2,
         panes: [
-          { symbol: SYMBOLS[0].symbol, interval: '1m', timeRangePreset: null, indicators: [] },
-          { symbol: SYMBOLS[1].symbol, interval: '5m', timeRangePreset: null, indicators: [] },
-          { symbol: SYMBOLS[2].symbol, interval: '1h', timeRangePreset: null, indicators: [] },
-          { symbol: SYMBOLS[3].symbol, interval: '4h', timeRangePreset: null, indicators: [] },
+          {
+            symbol: SYMBOLS[0].symbol,
+            interval: '1m',
+            timeRangePreset: null,
+            indicators: [],
+            chartType: 'candles',
+          },
+          {
+            symbol: SYMBOLS[1].symbol,
+            interval: '5m',
+            timeRangePreset: null,
+            indicators: [],
+            chartType: 'candles',
+          },
+          {
+            symbol: SYMBOLS[2].symbol,
+            interval: '1h',
+            timeRangePreset: null,
+            indicators: [],
+            chartType: 'candles',
+          },
+          {
+            symbol: SYMBOLS[3].symbol,
+            interval: '4h',
+            timeRangePreset: null,
+            indicators: [],
+            chartType: 'candles',
+          },
         ],
       });
       useLayoutStore.getState().toggleSync('interval');
       const { panes, syncOptions } = useLayoutStore.getState();
       expect(syncOptions.interval).toBe(true);
       expect(panes.every((p) => p.interval === '1h')).toBe(true);
+    });
+  });
+
+  // ── setPaneChartType() + persistence ──────────────────────────────────────
+
+  describe('setPaneChartType()', () => {
+    it('updates only the target pane', () => {
+      useLayoutStore.getState().setPaneChartType(1, 'heikinAshi');
+      const { panes } = useLayoutStore.getState();
+      expect(panes[1].chartType).toBe('heikinAshi');
+      expect(panes[0].chartType).toBe('candles');
+    });
+  });
+
+  describe('persisted chartType', () => {
+    const { migrate, merge } = useLayoutStore.persist.getOptions();
+
+    it('v2 → v3 migration defaults every pane to candles', () => {
+      const v2 = { panes: [{ symbol: 'BTCUSDT', interval: '1m', indicators: [] }] };
+      const migrated = migrate!(v2, 2) as { panes: PaneConfig[] };
+      expect(migrated.panes[0].chartType).toBe('candles');
+    });
+
+    it('merge replaces an unknown chartType with candles', () => {
+      const current = useLayoutStore.getState();
+      const persisted = {
+        panes: current.panes.map((p, i) =>
+          i === 0 ? { ...p, chartType: 'renko' as unknown as PaneConfig['chartType'] } : p
+        ),
+      };
+      const merged = merge!(persisted, current);
+      expect(merged.panes[0].chartType).toBe('candles');
+    });
+
+    it('merge keeps a valid persisted chartType', () => {
+      const current = useLayoutStore.getState();
+      const persisted = {
+        panes: current.panes.map((p, i) =>
+          i === 2 ? { ...p, chartType: 'heikinAshi' as const } : p
+        ),
+      };
+      expect(merge!(persisted, current).panes[2].chartType).toBe('heikinAshi');
     });
   });
 });
