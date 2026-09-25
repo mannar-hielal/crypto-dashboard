@@ -29,7 +29,7 @@ From `.claude/skills/session-bootstrap` — non-negotiable:
 
 1. **No implementation without explicit instruction.** Propose the page (type, URL, layout, title,
    description, where it's linked from) and wait for a go-ahead.
-2. **Visual Q&A gate** per `.claude/conventions/design.md` before any UI work. Source of truth:
+2. **Visual Q&A gate** per `.claude/rules/design.md` before any UI work. Source of truth:
    `apps/client/src/lib/tokens.ts` first, then the Figma file via `.claude/skills/figma-theme-source`.
 
 Also decide the **URL** now: lowercase, hyphenated, short, keyword-bearing (`/paper-trading-guide`,
@@ -37,7 +37,7 @@ not `/Guide1`). URLs are hard to change later without a redirect (see Step 9).
 
 ## Step 3 — Code
 
-Follow `.claude/conventions/react.md`.
+Follow `.claude/rules/react.md`.
 
 1. **Page component**: `apps/client/src/pages/<Name>Page.tsx`, **named export** (`export function
 <Name>Page()`).
@@ -91,7 +91,7 @@ Answer each; if "yes", do the linked work in the same PR.
 
 - **Collects any user data** (form, email, upload)? → update `apps/client/src/pages/PrivacyPage.tsx`
   (what's collected, legal basis, retention); any new server endpoint needs validation and rate
-  limiting per `.claude/conventions/web.md` and `.claude/conventions/security.md`.
+  limiting per `.claude/rules/web.md` and `.claude/rules/security.md`.
 - **Loads a new third-party origin** (script, iframe, font, API, image CDN)? → CSP:
   `script-src`/`img-src`/etc. in `apps/client/index.html`, `connect-src` via `cspConnectSrcPlugin` in
   `apps/client/vite.config.ts`; add the processor to Privacy §9 and Terms §10. Exact origins only,
@@ -101,7 +101,7 @@ Answer each; if "yes", do the linked work in the same PR.
 
 ## Step 6 — Tests
 
-Per `.claude/conventions/testing.md`: any page with logic, a form, or interaction gets tests
+Per `.claude/rules/testing.md`: any page with logic, a form, or interaction gets tests
 (extract logic into pure functions and test those first). A purely static content page may not need
 one — if you skip tests, state that explicitly in the PR's test section.
 
@@ -110,7 +110,7 @@ one — if you skip tests, state that explicitly in the PR's test section.
 1. `docs/APP_LOG.md` — add an entry (`### feat: … (YYYY-MM-DD) ✅` with problem, changes, gates).
 2. `docs/SEO_READINESS.md` — update the counts in the Tier 1 lines ("Sitemap lists all N
    indexable public routes", "Unique titles set on all N public pages").
-3. Branch `feat/<short-kebab>` cut per `.claude/conventions/git.md`; run the `bug-sweep` skill in
+3. Branch `feat/<short-kebab>` cut per `.claude/rules/git.md`; run the `bug-sweep` skill in
    Mode B on the diff; PR to `develop` with the full template (screenshots required — it's UI).
    Commit/push/PR only when the user explicitly asks.
 

@@ -1,16 +1,18 @@
 # Project Conventions
 
-This directory is the canonical, role-organized home for cryptopapertrade.com's engineering
-conventions. Each file reads as if written and enforced by a senior owner of that discipline.
+The role-organized engineering conventions for cryptopapertrade.com live in
+[`.claude/rules/`](../rules/), where Claude Code loads them automatically (unscoped files at launch,
+`paths:`-scoped files when matching files are read). This README is the index. Each file reads as
+if written and enforced by a senior owner of that discipline.
 
-| File                           | Owner voice                   | Covers                                                                                                                                                  |
-| ------------------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`react.md`](./react.md)       | Senior React developer        | Component design, hooks/effects, Zustand, styling discipline, client TS-strict rules                                                                    |
-| [`web.md`](./web.md)           | Senior web/platform developer | Architecture, backend patterns (Fastify/Prisma), WebSocket lifecycle, logging, config, performance, infra, code-level security rules                    |
-| [`design.md`](./design.md)     | Senior UX designer            | Design-token source of truth, color/typography/spacing system, motion, accessibility, visual-change process gate                                        |
-| [`security.md`](./security.md) | Cyber security expert         | Threat model, defense-in-depth layers, supply-chain policy, secrets management, container hardening, refactor-safety check, security definition-of-done |
-| [`testing.md`](./testing.md)   | Senior test manager           | Test philosophy, server/client test patterns, mocking rules, CI/pre-commit gates                                                                        |
-| [`git.md`](./git.md)           | —                             | Commit message/prefix rules, branch naming, CI/CD triggers, PR template + checklist                                                                     |
+| File                                  | Owner voice                   | Covers                                                                                                                                                  |
+| ------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`react.md`](../rules/react.md)       | Senior React developer        | Component design, hooks/effects, Zustand, styling discipline, client TS-strict rules                                                                    |
+| [`web.md`](../rules/web.md)           | Senior web/platform developer | Architecture, backend patterns (Fastify/Prisma), WebSocket lifecycle, logging, config, performance, infra, code-level security rules                    |
+| [`design.md`](../rules/design.md)     | Senior UX designer            | Design-token source of truth, color/typography/spacing system, motion, accessibility, visual-change process gate                                        |
+| [`security.md`](../rules/security.md) | Cyber security expert         | Threat model, defense-in-depth layers, supply-chain policy, secrets management, container hardening, refactor-safety check, security definition-of-done |
+| [`testing.md`](../rules/testing.md)   | Senior test manager           | Test philosophy, server/client test patterns, mocking rules, CI/pre-commit gates                                                                        |
+| [`git.md`](../rules/git.md)           | —                             | Commit message/prefix rules, branch naming, CI/CD triggers, PR template + checklist                                                                     |
 
 `web.md` and `security.md` intentionally overlap at the boundary: `web.md#security` is the
 code-shape reference (what a compliant route/cookie/JWT looks like); `security.md` is the program
@@ -43,4 +45,4 @@ each hook's docstring cites the convention section it encodes.
 
 If a convention here goes stale (a rule changes, a pattern is replaced), update the convention
 file **and** its source-of-truth counterpart (`AGENTS.md` and/or the relevant skill) in the same
-commit — this directory should never disagree with the skills it was extracted from.
+commit — `.claude/rules/` should never disagree with the skills it was extracted from.

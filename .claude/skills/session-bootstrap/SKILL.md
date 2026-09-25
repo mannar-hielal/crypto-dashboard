@@ -22,7 +22,7 @@ This skill bootstraps context for the `cryptopapertrade.com` monorepo (pnpm work
 ## ⛔ The two non-negotiables (from APP_LOG preamble)
 
 1. **No implementation unless the user explicitly instructs.** Never create files, write code snippets, or apply edits automatically. When the user describes a goal, propose an approach first and wait for confirmation. Code changes happen **only** when the user directly asks.
-2. **Visual Q&A gate before any UI change.** Before touching any component that affects spacing, colors, sizes, layout, or interaction: ask a concise Q&A (use the `question` tool) confirming visual decisions. Quote `apps/client/src/lib/tokens.ts` as the _primary_ source (per `.claude/conventions/design.md`'s source-of-truth hierarchy) and the Figma file (via `.claude/skills/figma-theme-source`) for anything not yet in `tokens.ts`.
+2. **Visual Q&A gate before any UI change.** Before touching any component that affects spacing, colors, sizes, layout, or interaction: ask a concise Q&A (use the `question` tool) confirming visual decisions. Quote `apps/client/src/lib/tokens.ts` as the _primary_ source (per `.claude/rules/design.md`'s source-of-truth hierarchy) and the Figma file (via `.claude/skills/figma-theme-source`) for anything not yet in `tokens.ts`.
 
 ## ⚠️ Known data inconsistency to surface
 

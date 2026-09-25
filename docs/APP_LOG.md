@@ -15,7 +15,7 @@
 > decisions (colors, spacing, sizes, layout). For anything not yet in `tokens.ts`, or for component
 > structure/interaction patterns, fall back to the Figma file (see `.claude/skills/figma-theme-source`).
 > (`docs/screenshots/theme/` and `docs/markup-reference/`, formerly cited here, never existed /
-> have since been removed — see `.claude/conventions/design.md`'s source-of-truth hierarchy.)
+> have since been removed — see `.claude/rules/design.md`'s source-of-truth hierarchy.)
 > Goal is **not** a 1:1 copy; take what makes sense and do it better where possible.
 > Always ask clarifying questions when there is confusion or uncertainty before implementing.
 

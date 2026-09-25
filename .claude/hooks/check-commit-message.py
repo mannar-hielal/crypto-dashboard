@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PreToolUse (Bash) — enforces .claude/conventions/git.md § Commit messages.
+"""PreToolUse (Bash) — enforces .claude/rules/git.md § Commit messages.
 
 Blocks a `git commit` invocation unless the subject line starts with one of
 the canonical prefixes. Fails OPEN (allows the command) when the message
@@ -48,7 +48,7 @@ def main():
     if not subject:
         print(
             "check-commit-message: could not parse the commit subject from this "
-            "command — skipping the prefix check (see .claude/conventions/git.md "
+            "command — skipping the prefix check (see .claude/rules/git.md "
             "§ Commit messages). Double-check it manually.",
             file=sys.stderr,
         )
@@ -58,7 +58,7 @@ def main():
         allowed_list = ", ".join(f"{p}:" for p in ALLOWED)
         print(
             f'Blocked: commit subject "{subject}" doesn\'t start with an allowed '
-            f"prefix ({allowed_list}). See .claude/conventions/git.md § Commit messages.",
+            f"prefix ({allowed_list}). See .claude/rules/git.md § Commit messages.",
             file=sys.stderr,
         )
         return 2

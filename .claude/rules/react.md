@@ -1,3 +1,9 @@
+---
+paths:
+  - 'apps/client/src/**/*.tsx'
+  - 'apps/client/src/**/*.ts'
+---
+
 # React Conventions (Senior React Developer)
 
 Scope: `apps/client/src/**`. Stack: React 19 + Vite 8 + Tailwind v4 + Zustand + `lightweight-charts`.
