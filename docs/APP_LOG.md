@@ -617,6 +617,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 - **Phase 2 — Pane view layer**: Extract point→pixel conversion from `DrawingPrimitive` into per-shape `PaneView` classes, decoupling chart-coordinate conversion from canvas rendering. Phase 1 (renderer classes) is complete; Phase 2 would also wire in-progress preview through per-shape renderers and add `SelectionRenderer`.
 - **Phase 3–4**: Tool descriptor system + tool variants via property overrides.
 - **Additional drawing tools**: Wire remaining placement (polyline, freehand) — Phase 1 refactoring laid per-shape renderer foundation, but polyline and freehand still need placement state machine support.
+- **Bybit parity — Spot + USDT Perpetual** (agreed 2026-09-25): split trading into Spot (1×, buy/sell what you hold) and USDT Perpetual (leverage), one shared USDT wallet, new users start on Spot. **Trade execution moves to a 24/7 server engine** (the client becomes a view; supersedes "client is source of truth" from Paper Trading Phase 3 Sync). Then Bybit VIP 0 fees instead of the flat 0.07%, Bybit fill prices, mark price + isolated liquidation, funding, cross margin. Full plan, findings (incl. the spot/linear feed mismatch and missing spot bid/ask) and open questions → [`docs/BYBIT_PARITY_PLAN.md`](./BYBIT_PARITY_PLAN.md)
 - **Phase 4**: Advanced indicators, alerts, multi-symbol watchlist
 - **Phase 5**: Live broker integration — Bybit real-money trading (see full spec below)
 - **Phase 6**: AI trading bot — 3-role system: Scanner + Analyst + Executor, paper mode only (see full spec below)
