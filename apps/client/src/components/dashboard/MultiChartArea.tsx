@@ -27,6 +27,8 @@
  *               follower panes are immediately snapped to the active pane's
  *               current visible range (active pane wins — same precedence
  *               rule as symbol/interval sync).
+ *               Only panes on the SAME interval are synced — see
+ *               isTimeSyncPeer().
  */
 
 import { useRef, useCallback, useEffect } from 'react';
@@ -35,9 +37,16 @@ import type { IChartApi, ISeriesApi } from 'lightweight-charts';
 import { DrawingManager } from 'lightweight-charts-drawing';
 import { useLayoutStore, LAYOUT_PANE_COUNT, DEFAULT_PANE_SIZES } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
+import { canDriveTimeSync, isPanePushingData, isTimeSyncPeer } from '@/lib/chartSync';
 import { ChartPanel } from '@/components/dashboard/ChartPanel';
 import { PaneHeader } from '@/components/dashboard/PaneHeader';
 import { color } from '@/lib/tokens';
+
+/** Inputs for canDriveTimeSync — read at event time, never a stale closure. */
+function paneHistory(paneIndex: number) {
+  const { historyLoaded, bars } = paneStores[paneIndex as 0 | 1 | 2 | 3].getState();
+  return { loaded: historyLoaded, bars: bars.length };
+}
 
 // ─── ResizeSplitter ───────────────────────────────────────────────────────────
 
@@ -152,11 +161,16 @@ export function MultiChartArea({
     const sourceChart = chartRefs.current[activePane];
     if (!sourceChart) return;
     const range = sourceChart.timeScale().getVisibleRange();
-    if (!range) return;
+    if (
+      !range ||
+      !canDriveTimeSync(seriesRefs.current[activePane]?.data(), range, paneHistory(activePane))
+    )
+      return;
 
     isSyncingTimeRange.current = true;
     for (let i = 0; i < paneCount; i++) {
       if (i === activePane) continue;
+      if (!isTimeSyncPeer(useLayoutStore.getState().panes, activePane, i)) continue;
       const other = chartRefs.current[i];
       if (!other) continue;
       // Don't override a pane the user has manually zoomed
@@ -213,10 +227,16 @@ export function MultiChartArea({
       chart.timeScale().subscribeVisibleTimeRangeChange((range) => {
         if (!syncRef.current.timeRange) return;
         if (isSyncingTimeRange.current) return;
-        if (!range) return;
+        if (isPanePushingData(paneIndex)) return;
+        if (
+          !range ||
+          !canDriveTimeSync(seriesRefs.current[paneIndex]?.data(), range, paneHistory(paneIndex))
+        )
+          return;
         isSyncingTimeRange.current = true;
         for (let i = 0; i < paneCountRef.current; i++) {
           if (i === paneIndex) continue;
+          if (!isTimeSyncPeer(useLayoutStore.getState().panes, paneIndex, i)) continue;
           const other = chartRefs.current[i];
           if (!other) continue;
           // Don't override a pane the user has manually zoomed

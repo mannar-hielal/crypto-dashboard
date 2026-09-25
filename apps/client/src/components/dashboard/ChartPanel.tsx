@@ -21,6 +21,7 @@ import {
   schedulePersistDrawings,
   getPersistenceKey,
 } from '@/lib/drawingManager';
+import { runPaneDataPush } from '@/lib/chartSync';
 import { IndicatorWidgets } from '@/components/indicators/IndicatorWidgets';
 
 const CHART_BG = chartColors.bg;
@@ -69,6 +70,8 @@ function toUTC(ms: number): UTCTimestamp {
 }
 
 const PADDING_BARS = 200;
+/** Empty bars kept between the newest candle and the right edge on (re)load. */
+const RIGHT_GAP_BARS = 5;
 
 const INTERVAL_SECONDS: Record<Interval, number> = {
   '1m': 60,
@@ -169,7 +172,15 @@ export function ChartPanel({
         horzLines: { color: 'rgba(255,255,255,0.04)' },
       },
       crosshair: { mode: CrosshairMode.Normal },
-      rightPriceScale: { borderColor: 'rgba(255,255,255,0.07)', autoScale: false },
+      // 🔐 Autoscale stays ON. It used to be forced off and only pulsed on for
+      //    one rAF after a data load, which froze whatever range that single
+      //    frame computed — if it was a flat WS cold-aggregator snapshot or the
+      //    flat padding series, the axis collapsed to ~0.1 USDT and every candle
+      //    rendered as a full-height bar until reload. Drawing/indicator
+      //    primitives must NOT implement autoscaleInfo, and the padding series
+      //    opts out via autoscaleInfoProvider below. A manual price-axis drag
+      //    turns autoscale off (lw-charts built-in); double-click restores it.
+      rightPriceScale: { borderColor: 'rgba(255,255,255,0.07)' },
       timeScale: {
         borderColor: 'rgba(255,255,255,0.07)',
         timeVisible: true,
@@ -198,6 +209,8 @@ export function ChartPanel({
     // ── Invisible padding: extends time scale into empty space ─────────
     paddingSeriesRef.current = chart.addSeries(LineSeries, {
       color: 'transparent',
+      // Flat line at lastClose — must never shape the price axis.
+      autoscaleInfoProvider: () => null,
       priceLineVisible: false,
       lastValueVisible: false,
       crosshairMarkerVisible: false,
@@ -208,6 +221,14 @@ export function ChartPanel({
     managerRef.current = manager;
 
     manager.attach(chart, candleRef.current as never, containerRef.current);
+    // 🔐 lightweight-charts-drawing's base drawing implements autoscaleInfo()
+    //    from its anchor prices, regardless of the visible time range — with
+    //    autoscale ON, one far-off trendline would stretch the price axis and
+    //    squash the candles. Opt every drawing out as it's added. Subscribed
+    //    before restoreDrawings so persisted drawings are covered too.
+    const unsubAutoscale = manager.on('drawing:added', ({ drawing }) => {
+      if (drawing) Object.assign(drawing, { autoscaleInfo: () => null });
+    });
     restoreDrawings(manager, symbol);
     prevSymbolRef.current = symbol;
 
@@ -557,6 +578,7 @@ export function ChartPanel({
       unsubRemove();
       unsubUpdate();
       unsubClear();
+      unsubAutoscale();
       container.removeEventListener('pointerdown', handlePointerDown, { capture: true });
       container.removeEventListener('pointerup', handlePointerUp);
       unsubToolChanged();
@@ -644,60 +666,70 @@ export function ChartPanel({
         ? (chartRef.current?.timeScale().getVisibleLogicalRange() ?? undefined)
         : undefined;
 
-    const candleData = sortedBars.map((b) => ({
-      time: toUTC(b.timestamp),
-      open: b.open,
-      high: b.high,
-      low: b.low,
-      close: b.close,
-      volume: b.volume,
-    }));
-    if (sortedBars.length === prevLenRef.current) {
-      candleRef.current?.update(candleData[candleData.length - 1]);
-    } else {
-      candleRef.current?.setData(candleData);
-    }
-
-    // ── Extend time scale into empty space so coordinateToTime works ──
-    if (sortedBars.length > 1) {
-      const barSec = INTERVAL_SECONDS[interval];
-      const lastBar = sortedBars[sortedBars.length - 1];
-      const lastClose = lastBar.close;
-      const lastT = toUTC(lastBar.timestamp);
-      const paddingData: { time: UTCTimestamp; value: number }[] = [];
-      for (let i = 1; i <= PADDING_BARS; i++) {
-        paddingData.push({ time: (lastT + i * barSec) as UTCTimestamp, value: lastClose });
+    // 🔐 Sync broadcasts from this pane are suppressed until the push has
+    //    finished — see runPaneDataPush in lib/chartSync.ts.
+    runPaneDataPush(paneIndex, () => {
+      const candleData = sortedBars.map((b) => ({
+        time: toUTC(b.timestamp),
+        open: b.open,
+        high: b.high,
+        low: b.low,
+        close: b.close,
+        volume: b.volume,
+      }));
+      if (sortedBars.length === prevLenRef.current) {
+        candleRef.current?.update(candleData[candleData.length - 1]);
+      } else {
+        candleRef.current?.setData(candleData);
       }
-      paddingSeriesRef.current?.setData(paddingData);
-    }
 
-    // Restore saved logical range (setData resets it — known lw-charts bug)
-    if (savedRange && notFirstLoad) {
-      chartRef.current?.timeScale().setVisibleLogicalRange(savedRange);
-    }
-
-    const timeScale = chartRef.current?.timeScale();
-    const firstTime = toUTC(sortedBars[0].timestamp);
-    const lastTime = toUTC(sortedBars[sortedBars.length - 1].timestamp);
-    const visibleRange = timeScale?.getVisibleRange() as
-      | { from: UTCTimestamp; to: UTCTimestamp }
-      | null
-      | undefined;
-
-    const isFirstLoad = !notFirstLoad;
-    const isOutOfRange =
-      !visibleRange || lastTime < visibleRange.from || firstTime > visibleRange.to;
-
-    if (isFirstLoad || isReload || (isOutOfRange && !userZoomedRef.current)) {
-      chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
-      requestAnimationFrame(() => {
-        chartRef.current?.priceScale('right').applyOptions({ autoScale: false });
-      });
-      timeScale?.applyOptions({ barSpacing: INTERVAL_BAR_SPACING[interval] });
-      if (!timeRangePreset) {
-        timeScale?.scrollToRealTime();
+      // ── Extend time scale into empty space so coordinateToTime works ──
+      if (sortedBars.length > 1) {
+        const barSec = INTERVAL_SECONDS[interval];
+        const lastBar = sortedBars[sortedBars.length - 1];
+        const lastClose = lastBar.close;
+        const lastT = toUTC(lastBar.timestamp);
+        const paddingData: { time: UTCTimestamp; value: number }[] = [];
+        for (let i = 1; i <= PADDING_BARS; i++) {
+          paddingData.push({ time: (lastT + i * barSec) as UTCTimestamp, value: lastClose });
+        }
+        paddingSeriesRef.current?.setData(paddingData);
       }
-    }
+
+      // Restore saved logical range (setData resets it — known lw-charts bug)
+      if (savedRange && notFirstLoad) {
+        chartRef.current?.timeScale().setVisibleLogicalRange(savedRange);
+      }
+
+      const timeScale = chartRef.current?.timeScale();
+      const firstTime = toUTC(sortedBars[0].timestamp);
+      const lastTime = toUTC(sortedBars[sortedBars.length - 1].timestamp);
+      const visibleRange = timeScale?.getVisibleRange() as
+        | { from: UTCTimestamp; to: UTCTimestamp }
+        | null
+        | undefined;
+
+      const isFirstLoad = !notFirstLoad;
+      const isOutOfRange =
+        !visibleRange || lastTime < visibleRange.from || firstTime > visibleRange.to;
+
+      if (isFirstLoad || isReload || (isOutOfRange && !userZoomedRef.current)) {
+        // Re-enable in case the user dragged the price axis (which disables it).
+        chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
+        timeScale?.applyOptions({ barSpacing: INTERVAL_BAR_SPACING[interval] });
+        if (!timeRangePreset) {
+          // 🔐 Not scrollToRealTime(): the time scale's "real time" end is the
+          //    last PADDING bar, 200 bars past the newest candle. In a narrow
+          //    pane (split layouts, higher intervals) that parked the view on
+          //    empty future space with zero candles visible — and with nothing
+          //    to fit, the price axis showed a stale/collapsed range, so
+          //    scrolling back revealed full-height "tall" candles. Anchor the
+          //    newest real candle RIGHT_GAP_BARS from the right edge instead.
+          const paddingBars = sortedBars.length > 1 ? PADDING_BARS : 0;
+          timeScale?.scrollToPosition(RIGHT_GAP_BARS - paddingBars, false);
+        }
+      }
+    });
     prevLenRef.current = sortedBars.length;
   }, [bars, interval, timeRangePreset, paneIndex, symbol]);
 

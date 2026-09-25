@@ -36,6 +36,12 @@ export interface PaneMarketState {
   /** Becomes true when the first WS snapshot message lands on this pane.
    *  Reset to false on every reset() / interval change. */
   wsSnapshotReceived: boolean;
+  /** True once the REST history fetch for the CURRENT symbol/interval has
+   *  succeeded. Until then `bars` may be the previous symbol's candles or the
+   *  WS cold-aggregator snapshot (a partial history whose length grows with
+   *  server uptime). MultiChartArea only lets a pane drive time-range sync
+   *  once this is true. Reset on reset() and on every symbol/interval change. */
+  historyLoaded: boolean;
 
   /** True when the user has manually zoomed this pane via the zoom-in tool.
    *  MultiChartArea time-range sync skips zoomed panes to prevent
@@ -48,6 +54,7 @@ export interface PaneMarketState {
   setConnected: (connected: boolean) => void;
   setBidAsk: (bid: number, ask: number, lastPrice?: number) => void;
   setWsSnapshotReceived: (v: boolean) => void;
+  setHistoryLoaded: (v: boolean) => void;
   setUserZoomed: (v: boolean) => void;
   /** Wipe all data — called before a new symbol/interval connects */
   reset: () => void;
@@ -65,6 +72,7 @@ function createPaneStore() {
     bid: null,
     ask: null,
     wsSnapshotReceived: false,
+    historyLoaded: false,
     userZoomed: false,
 
     setSnapshot: (bars, indicators) => {
@@ -144,6 +152,8 @@ function createPaneStore() {
 
     setWsSnapshotReceived: (v) => set({ wsSnapshotReceived: v }),
 
+    setHistoryLoaded: (v) => set({ historyLoaded: v }),
+
     setUserZoomed: (v) => set({ userZoomed: v }),
 
     reset: () =>
@@ -156,6 +166,7 @@ function createPaneStore() {
         bid: null,
         ask: null,
         wsSnapshotReceived: false,
+        historyLoaded: false,
         userZoomed: false,
       }),
   }));
