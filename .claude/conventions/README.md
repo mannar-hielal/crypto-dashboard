@@ -27,15 +27,17 @@ each hook's docstring cites the convention section it encodes.
 
 - **`AGENTS.md`** (repo root) is the fast quick-reference: commands, monorepo layout, one-line
   style rules. These convention files expand on the _why_ behind those rules, organized by role.
-- **`.agents/skills/bug-sweep/SKILL.md`** is the enforcement checklist (priorities P1–P12,
+- **`.claude/skills/bug-sweep/SKILL.md`** is the enforcement checklist (priorities P1–P12,
   138 items) run before every commit/PR — the verification companion to these conventions.
-- **`.agents/skills/api-best-practices/SKILL.md`** is the deep-dive reference for server code
+- **`.claude/skills/api-best-practices/SKILL.md`** is the deep-dive reference for server code
   shape (retry/circuit-breaker, WS ping/pong, ring buffers) — `web.md` summarizes and links to it.
-- **`.agents/skills/session-bootstrap/SKILL.md`** holds the two non-negotiable process rules
+- **`.claude/skills/session-bootstrap/SKILL.md`** holds the two non-negotiable process rules
   (no implementation without explicit instruction; visual Q&A gate before UI changes) — process
   rules, not code conventions, so they stay there rather than being duplicated here.
+- **`.claude/skills/add-page/SKILL.md`** is the checklist for adding, renaming or removing a page/route
+  (route, `SeoHead`, sitemap, internal links, legal/CSP impact, post-deploy indexing).
 - Domain-specific deep dives (`lightweight-charts-patterns`, `drawing-tools`, `paper-trading-logic`)
-  stay in `.agents/skills/` — these convention files link to them rather than re-explaining them.
+  stay in `.claude/skills/` — these convention files link to them rather than re-explaining them.
 
 ## When these conventions change
 

@@ -13,7 +13,7 @@
 > visual decisions (spacing, colors, sizes, layout, etc.). Always refer to
 > `apps/client/src/lib/tokens.ts` as the **primary** visual source of truth for all styling
 > decisions (colors, spacing, sizes, layout). For anything not yet in `tokens.ts`, or for component
-> structure/interaction patterns, fall back to the Figma file (see `.agents/skills/figma-theme-source`).
+> structure/interaction patterns, fall back to the Figma file (see `.claude/skills/figma-theme-source`).
 > (`docs/screenshots/theme/` and `docs/markup-reference/`, formerly cited here, never existed /
 > have since been removed — see `.claude/conventions/design.md`'s source-of-truth hierarchy.)
 > Goal is **not** a 1:1 copy; take what makes sense and do it better where possible.
@@ -56,7 +56,7 @@
 - ESLint + Prettier enforced in CI. `pnpm lint && pnpm type-check && pnpm test` must pass before every push.
 - Background palette: `#0f0e29` (page bg), `#211e49` (panel/header bg), `#1e1d34` (footer bg), `#3e3c73` (input/card bg) — sampled from `docs/screenshots/theme/header.png` + `footer.png`
 - Accent palette: `#a555e2`/`#695bec` (purple primary), `#4e3287` (purpleDeep), `#2ccd78` (green/profit), `#d5455c` (red/loss), `#e7ab33` (amber/warning), `#cac5d4` (muted text) — sampled from `docs/screenshots/theme/header.png`
-- Visual source of truth: `apps/client/src/lib/tokens.ts` — always consult before making spacing, color, size, or layout decisions. Fall back to the Figma file (`.agents/skills/figma-theme-source`) for anything not yet in `tokens.ts`.
+- Visual source of truth: `apps/client/src/lib/tokens.ts` — always consult before making spacing, color, size, or layout decisions. Fall back to the Figma file (`.claude/skills/figma-theme-source`) for anything not yet in `tokens.ts`.
 - **No hardcoded hex values, font strings, or font sizes in components** — always import from `@/lib/tokens`. Canvas/chart libs (lightweight-charts) must use `tokens.ts` directly (cannot read CSS vars). Tailwind pseudo-classes (`hover:`, `focus:`) use named brand utilities from `@theme inline` in `index.css`.
 - Q&A required before any UI implementation — no visual assumptions
 
@@ -515,7 +515,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 | `apps/client/src/components/dashboard/ChartLayoutPicker.tsx`           | Layout picker popover (5 SVG icons) + sync option toggles                                                                                      |
 | `apps/client/src/components/dashboard/PaneHeader.tsx`                  | Per-pane mini header (symbol picker, interval buttons, live price, connection dot)                                                             |
 | `apps/client/src/components/dashboard/MultiChartArea.tsx`              | CSS grid renderer for all layouts; wires crosshair + time-range sync                                                                           |
-| `apps/client/src/lib/tokens.ts`                                        | Visual source of truth — spacing, colors, sizes, layout (fallback: Figma via `.agents/skills/figma-theme-source`)                              |
+| `apps/client/src/lib/tokens.ts`                                        | Visual source of truth — spacing, colors, sizes, layout (fallback: Figma via `.claude/skills/figma-theme-source`)                              |
 | `docs/DRAWING_TOOLS.md`                                                | Drawing tools architecture, status, roadmap                                                                                                    |
 | `apps/client/src/lib/drawing/types.ts`                                 | Drawing type definitions (`Drawing`, `DrawingPoint`, `LineStyle`, etc.)                                                                        |
 | `apps/client/src/lib/drawing/DrawingPrimitive.ts`                      | `ISeriesPrimitive` — canvas rendering via `CompositeRenderer` + per-shape renderers (Phase 1 refactored, ~550 lines)                           |
@@ -529,7 +529,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 | `apps/client/src/components/drawing/KebabMenu.tsx`                     | Submenu: Clone, Visual Order, Delete                                                                                                           |
 | `apps/client/src/components/drawing/ColorPicker.tsx`                   | TV-style color swatch grid (10 grays + 6×10 color matrix)                                                                                      |
 | `apps/client/src/lib/cursors.tsx`                                      | Cursor variant icons + data-URI CSS map for chart cursor overrides                                                                             |
-| `.agents/skills/bug-sweep/SKILL.md`                                    | Pre-commit / proactive-audit checklist (138 items, priorities P1–P12) — single source of truth. Was `docs/REVIEW_CHECKLIST.md` — consolidated. |
+| `.claude/skills/bug-sweep/SKILL.md`                                    | Pre-commit / proactive-audit checklist (138 items, priorities P1–P12) — single source of truth. Was `docs/REVIEW_CHECKLIST.md` — consolidated. |
 | `docs/APP_LOG.md`                                                      | This file — full project context, attach at start of every session                                                                             |
 
 ---
@@ -543,7 +543,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 - **Phase 1**: Client scaffold — React 19, Vite, Tailwind, PWA, React Router, Zustand
 - **Phase 2**: Live price feed (WebSocket → `usePriceFeed` → `marketStore`)
 - **Phase 2**: Paper trading v1 — `paperStore` (market orders), `TradingPanel` (market-only), `OrderAccountManagementPanel` (Positions + Order History + Balance History + Journal tabs), TP/SL monitor, commission accounting
-- **Phase 2**: Review infrastructure — `APP_LOG.md`, CI-passing tests (421 total: 321 client + 100 server). (Formerly included `REVIEW_CHECKLIST.md`; consolidated into `.agents/skills/bug-sweep/SKILL.md` as the single source of truth.)
+- **Phase 2**: Review infrastructure — `APP_LOG.md`, CI-passing tests (421 total: 321 client + 100 server). (Formerly included `REVIEW_CHECKLIST.md`; consolidated into `.claude/skills/bug-sweep/SKILL.md` as the single source of truth.)
 
 ### ✅ Completed (added 2026-04-12)
 
@@ -1883,3 +1883,16 @@ Dashboard-only changes following the CFWA CSP fix (#121/#122):
 - **Reminder:** Analytics → Dashboards "Traffic overview" is edge request data (bots, assets, own traffic), not visitors — use Web Analytics for human numbers.
 
 **No files changed.**
+
+---
+
+### chore: `add-page` skill + move project skills to `.claude/skills/` (2026-09-25) ✅
+
+**Problem:** Adding a page has several easy-to-forget manual steps (static `sitemap.xml`, `SeoHead` canonical/`noIndex`, internal links, CSP/legal impact, Search Console indexing request). Separately, project skills lived in `.agents/skills/` (a cross-tool location for ZCode/Codex), which Claude Code doesn't scan — it only auto-loads `.claude/skills/`. Claude Code is the only tool in use.
+
+**Changes:**
+
+- **New skill `.claude/skills/add-page/SKILL.md`** — 9-step checklist: classify the page (public-indexable / transactional / authenticated / admin), process gates, route + lazy import + layout + `SeoHead`, sitemap/robots/internal links, legal & CSP impact, tests, APP_LOG/SEO_READINESS + PR, post-deploy indexing (Search Console URL Inspection, Bing/IndexNow), and rename/remove via `_redirects` 301. Includes a "known site-wide gaps" list (no prerendering, SVG `og:image`, soft-404 catch-all) to delete items from as they're fixed.
+- **Moved all 16 existing skills `.agents/skills/` → `.claude/skills/`** (`git mv`, history preserved) and removed `.agents/`. Claude Code now auto-loads all 17 project skills, each invocable as `/<name>`.
+- **All path references updated** (`.agents/skills` → `.claude/skills`): `CLAUDE.md`, `AGENTS.md`, all `.claude/conventions/*.md`, `.claude/hooks/session-start-context.py` (SessionStart context), `.husky/pre-commit` (bug-sweep hint), skills cross-references, and current-state lines in this log. Historical log entries that mention the old path describe past state and were updated too, so the log has no dead paths.
+- `session-bootstrap` task-specific list and `.claude/conventions/README.md` now point to `add-page`.

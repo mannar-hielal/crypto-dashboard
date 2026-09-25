@@ -7,7 +7,7 @@ echo "---------------------------------------"
 echo "- No secrets in code? Check .env.example"
 echo "- Security comments (🔐) added?"
 echo "- SDK types updated for API changes?"
-echo "Full list: .agents/skills/bug-sweep/SKILL.md (138 items, P1-P12)"
+echo "Full list: .claude/skills/bug-sweep/SKILL.md (138 items, P1-P12)"
 echo "---------------------------------------"
 
 # 2. Automated Enforcement Gates

@@ -17,18 +17,19 @@ This skill bootstraps context for the `cryptopapertrade.com` monorepo (pnpm work
    - Paper trading / orders / TP/SL / journal → `docs/TRADING_TEST_PLAN.md` + `paper-trading-logic` skill.
    - Server / auth / WebSocket → AGENTS.md "Testing" + server `__tests__/`.
    - Pre-launch polish → `docs/SEO_READINESS.md` + `launch-readiness-audit` skill.
+   - New page / route, or renaming/removing one → `add-page` skill (routing, SEO, sitemap, legal, post-deploy indexing).
 
 ## ⛔ The two non-negotiables (from APP_LOG preamble)
 
 1. **No implementation unless the user explicitly instructs.** Never create files, write code snippets, or apply edits automatically. When the user describes a goal, propose an approach first and wait for confirmation. Code changes happen **only** when the user directly asks.
-2. **Visual Q&A gate before any UI change.** Before touching any component that affects spacing, colors, sizes, layout, or interaction: ask a concise Q&A (use the `question` tool) confirming visual decisions. Quote `apps/client/src/lib/tokens.ts` as the _primary_ source (per `.claude/conventions/design.md`'s source-of-truth hierarchy) and the Figma file (via `.agents/skills/figma-theme-source`) for anything not yet in `tokens.ts`.
+2. **Visual Q&A gate before any UI change.** Before touching any component that affects spacing, colors, sizes, layout, or interaction: ask a concise Q&A (use the `question` tool) confirming visual decisions. Quote `apps/client/src/lib/tokens.ts` as the _primary_ source (per `.claude/conventions/design.md`'s source-of-truth hierarchy) and the Figma file (via `.claude/skills/figma-theme-source`) for anything not yet in `tokens.ts`.
 
 ## ⚠️ Known data inconsistency to surface
 
 `docs/APP_LOG.md` used to reference `docs/screenshots/theme/` and `docs/markup-reference/` as visual sources of truth. Neither exists any more:
 
 - `docs/screenshots/theme/` never existed in the repo (only loose root-level `Screenshot 2026-07-14 at *.png` files).
-- `docs/markup-reference/` existed with partial files (`grid.html`, `chart-layout.html`, `toolbar.html`, `layout-area-*`) but was removed (2026-09-24) once `apps/client/src/lib/tokens.ts` + the Figma file (`.agents/skills/figma-theme-source`) covered the same ground as the real, live sources.
+- `docs/markup-reference/` existed with partial files (`grid.html`, `chart-layout.html`, `toolbar.html`, `layout-area-*`) but was removed (2026-09-24) once `apps/client/src/lib/tokens.ts` + the Figma file (`.claude/skills/figma-theme-source`) covered the same ground as the real, live sources.
 
 If a task is UI-visual, use `tokens.ts` first and the Figma MCP second — do not invent values. The AGENTS.md rule stands: no hardcoded hex, fonts, sizes in components; everything comes from `apps/client/src/lib/tokens.ts` (JS) and `index.css` `@theme inline` (Tailwind).
 

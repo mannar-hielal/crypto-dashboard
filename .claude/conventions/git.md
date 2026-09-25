@@ -6,7 +6,7 @@ no `.github`/`docs` PR template file anymore — the template is reproduced verb
 
 ## Non-negotiable first
 
-Per `.agents/skills/session-bootstrap`: **never** run `git commit`, `git push`, or open a PR
+Per `.claude/skills/session-bootstrap`: **never** run `git commit`, `git push`, or open a PR
 without the user explicitly asking for that specific action in that moment. A prior approval to
 commit does not carry forward to the next change — confirm each time.
 
@@ -132,6 +132,6 @@ The checklist items map onto the other convention files:
 
 ## Cross-references
 
-- Process non-negotiables (no unrequested implementation, visual Q&A gate) → `.agents/skills/session-bootstrap`
-- Pre-commit/PR audit checklist (Mode B) → `.agents/skills/bug-sweep`
+- Process non-negotiables (no unrequested implementation, visual Q&A gate) → `.claude/skills/session-bootstrap`
+- Pre-commit/PR audit checklist (Mode B) → `.claude/skills/bug-sweep`
 - Local gate commands and CI parity → [`testing.md`](./testing.md)

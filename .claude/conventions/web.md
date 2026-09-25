@@ -123,7 +123,7 @@ supply-chain policy, secrets management, container hardening — see [`security.
   else is `await`ed. `@typescript-eslint/no-floating-promises` is an ESLint error on server source.
 - Every outbound `fetch` to an external service sets `AbortSignal.timeout(n)` (default 8s) and,
   ideally, goes through the shared retry/circuit-breaker wrapper — see
-  `.agents/skills/api-best-practices` for the full `fetchWithRetry`/`CircuitBreaker` implementation.
+  `.claude/skills/api-best-practices` for the full `fetchWithRetry`/`CircuitBreaker` implementation.
 
 ## WebSocket lifecycle (server and client)
 
@@ -191,6 +191,6 @@ supply-chain policy, secrets management, container hardening — see [`security.
 ## Cross-references
 
 - Server code-shape deep dive (retry/circuit-breaker, WS ping/pong, ring buffers, typed error
-  classes) → `.agents/skills/api-best-practices`
-- Full pre-commit/audit checklist → `.agents/skills/bug-sweep` (P2, P3, P5, P7–P10, P12)
-- Pre-launch tiered audit → `.agents/skills/launch-readiness-audit`
+  classes) → `.claude/skills/api-best-practices`
+- Full pre-commit/audit checklist → `.claude/skills/bug-sweep` (P2, P3, P5, P7–P10, P12)
+- Pre-launch tiered audit → `.claude/skills/launch-readiness-audit`

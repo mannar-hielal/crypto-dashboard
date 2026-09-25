@@ -88,8 +88,8 @@ gate that `pnpm test`/`pnpm lint`/`pnpm type-check` would have caught first.
 ## Cross-references
 
 - Full pre-commit/proactive-audit checklist (P6 = Tests, plus every priority's test implications)
-  → `.agents/skills/bug-sweep`
+  → `.claude/skills/bug-sweep`
 - Trading-domain test scenarios (TP/SL, commission math, journal behavior) →
-  `docs/TRADING_TEST_PLAN.md` and `.agents/skills/paper-trading-logic`
+  `docs/TRADING_TEST_PLAN.md` and `.claude/skills/paper-trading-logic`
 - Process rule that gates all of the above: no test (or any code) gets written speculatively —
-  work happens only against an explicit instruction → `.agents/skills/session-bootstrap`
+  work happens only against an explicit instruction → `.claude/skills/session-bootstrap`

@@ -83,7 +83,7 @@ Scope: `apps/client/src/**`. Stack: React 19 + Vite 8 + Tailwind v4 + Zustand + 
 Editable price/quantity inputs are `type="text" inputMode="decimal"` with a `.replace(/,/g, '')`
 parse step — never `type="number"`, which breaks on locale thousands separators (commas).
 
-## Chart-specific gotchas (see `.agents/skills/lightweight-charts-patterns`, `drawing-tools`)
+## Chart-specific gotchas (see `.claude/skills/lightweight-charts-patterns`, `drawing-tools`)
 
 - Any effect that attaches a chart primitive or series must detach/remove it and clear the ref map
   in its cleanup — StrictMode's double-mount otherwise leaves stale primitives pointing at a
@@ -95,7 +95,7 @@ parse step — never `type="number"`, which breaks on locale thousands separator
 
 ## Cross-references
 
-- Chart lifecycle deep dive → `.agents/skills/lightweight-charts-patterns`
-- Drawing-tool architecture → `.agents/skills/drawing-tools`
-- Trading-logic correctness rules (TP/SL direction, commission math) → `.agents/skills/paper-trading-logic`
-- Full pre-commit checklist for anything under `apps/client/src/**` → `.agents/skills/bug-sweep` (P4, P-Drawing, P-ClientTS)
+- Chart lifecycle deep dive → `.claude/skills/lightweight-charts-patterns`
+- Drawing-tool architecture → `.claude/skills/drawing-tools`
+- Trading-logic correctness rules (TP/SL direction, commission math) → `.claude/skills/paper-trading-logic`
+- Full pre-commit checklist for anything under `apps/client/src/**` → `.claude/skills/bug-sweep` (P4, P-Drawing, P-ClientTS)
