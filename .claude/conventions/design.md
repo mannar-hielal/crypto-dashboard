@@ -13,7 +13,7 @@ fintech dashboard (Exgen visual system) — Tailwind v4 + CSS Modules + `lightwe
    yet in `tokens.ts`:
    `https://www.figma.com/design/XnbW6uGFwCVYzz3MGGCjFM/Exgen-–-Crypto-Exchange-Dashboard-Template-–-Fintech---AI`
    Access it via the Figma MCP (`figma_*` tools, declared in `opencode.json`), never by guessing
-   values from memory. See `.agents/skills/figma-theme-source` for the full frame/node-ID map
+   values from memory. See `.claude/skills/figma-theme-source` for the full frame/node-ID map
    (landing, sign-in, spot/futures trade panels, markets, etc.) and the sampling workflow.
 3. **Never** sample from the loose root-level `Screenshot 2026-07-14 *.png` files or from
    `docs/screenshots/theme/` — the latter is referenced by `docs/APP_LOG.md`/`AGENTS.md` but does
@@ -29,7 +29,7 @@ than silently reconciling it.
 
 The full, authoritative list is the file itself — this table is a quick-reference snapshot so a
 value doesn't need to be re-derived from Figma if it's already minted. Sampled from Figma node IDs
-noted in `.agents/skills/figma-theme-source` (e.g. `93:5177` = Sign in / auth flow frame).
+noted in `.claude/skills/figma-theme-source` (e.g. `93:5177` = Sign in / auth flow frame).
 
 | Token                             | Value                                              | Role                                 |
 | --------------------------------- | -------------------------------------------------- | ------------------------------------ |
@@ -134,15 +134,15 @@ interaction tables are intentionally left out of this snapshot; read `tokens.ts`
 
 ## Process gate — do this before any visual change
 
-Per `.agents/skills/session-bootstrap`'s non-negotiable #2: **before** touching spacing, color,
+Per `.claude/skills/session-bootstrap`'s non-negotiable #2: **before** touching spacing, color,
 size, layout, or interaction on any component, run a visual Q&A with the user first — quote
-`tokens.ts` or the Figma frame (via `.agents/skills/figma-theme-source`) as the reference, and do
+`tokens.ts` or the Figma frame (via `.claude/skills/figma-theme-source`) as the reference, and do
 not invent a value to fill a gap. This applies even to "small" tweaks — a 2px padding change is a
 visual decision.
 
 ## Cross-references
 
-- Token sampling workflow, Figma frame/node map → `.agents/skills/figma-theme-source`
+- Token sampling workflow, Figma frame/node map → `.claude/skills/figma-theme-source`
 - Component/hook implementation conventions that consume these tokens → [`react.md`](./react.md)
 - The visual Q&A non-negotiable + missing `docs/screenshots/theme/` caveat →
-  `.agents/skills/session-bootstrap`
+  `.claude/skills/session-bootstrap`
