@@ -9,12 +9,14 @@ import { VitePWA } from 'vite-plugin-pwa';
  * VITE_API_URL. The SDK talks to the API directly (not via the Vite proxy),
  * so the CSP must allow exactly the configured API origin + its ws:// variant.
  * Hardcoding dev localhost entries here leaks them into production builds.
+ * Also allows the Cloudflare Web Analytics beacon's report endpoint
+ * (cloudflareinsights.com/cdn-cgi/rum); script-src already allows the beacon script.
  */
 function cspConnectSrcPlugin(mode: string): Plugin {
   const env = loadEnv(mode, process.cwd(), '');
   const apiUrl = env.VITE_API_URL ?? 'http://localhost:3001';
   const wsUrl = apiUrl.replace(/^http/, 'ws');
-  const connectSrc = `'self' ${apiUrl} ${wsUrl}`;
+  const connectSrc = `'self' ${apiUrl} ${wsUrl} https://cloudflareinsights.com`;
   return {
     name: 'csp-connect-src',
     transformIndexHtml(html) {
