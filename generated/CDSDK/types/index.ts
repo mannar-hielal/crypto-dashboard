@@ -63,6 +63,12 @@ export interface SubscribersResponse {
 
 // ─── Market ──────────────────────────────────────────────────────────────────
 
+/**
+ * Bybit market a pane reads its data from: `spot` = Spot, `linear` = USDT Perpetual
+ * (BYBIT_PARITY_PLAN BP-0). Mirrors ALLOWED_CATEGORIES in apps/server/src/constants.ts.
+ */
+export type MarketCategory = 'spot' | 'linear';
+
 export interface CandleBar {
   timestamp: number; // Unix ms — start of the candle
   open: number;
@@ -84,6 +90,8 @@ export interface IndicatorSnapshot {
 }
 
 export interface LiveBar {
+  /** Optional: REST-built snapshots from older servers didn't carry it */
+  category?: MarketCategory;
   symbol: string;
   interval: string; // '1m' | '5m' | '15m' | '1h' | '4h' | '1d'
   kline: CandleBar;
@@ -94,12 +102,72 @@ export interface LiveBar {
 export type WsMessage =
   | { type: 'snapshot'; bars: LiveBar[] }
   | { type: 'bar'; bar: LiveBar }
-  | { type: 'ticker'; symbol: string; lastPrice: number; bid: number; ask: number };
+  | ({ type: 'ticker' } & TickerMessage);
+
+/**
+ * Quote update for one symbol. Spot: lastPrice + best bid/ask (orderbook.1). Linear adds mark and
+ * index price and funding. bid/ask are null until the first quote arrives.
+ */
+export interface TickerMessage {
+  category: MarketCategory;
+  symbol: string;
+  lastPrice: number;
+  bid: number | null;
+  ask: number | null;
+  markPrice?: number;
+  indexPrice?: number;
+  fundingRate?: number;
+  /** Unix ms of the next funding settlement */
+  nextFundingTime?: number;
+  fundingIntervalHour?: number;
+}
 
 export interface CandleHistoryResponse {
+  category: MarketCategory;
   symbol: string;
   interval: string;
   candles: CandleBar[];
+}
+
+/** Trading rules for one symbol in one market — from Bybit instruments-info, cached server-side. */
+export interface Instrument {
+  symbol: string;
+  category: MarketCategory;
+  /** Price increment */
+  tickSize: number;
+  /** Quantity increment (spot: basePrecision) */
+  qtyStep: number;
+  /** Minimum order quantity in the base coin */
+  minOrderQty: number;
+  /** Minimum order value in USDT (spot: minOrderAmt, linear: minNotionalValue) */
+  minNotional: number;
+  /** Bybit's max leverage (linear only) */
+  maxLeverage: number | null;
+  /** Funding interval in minutes (linear only) */
+  fundingIntervalMin: number | null;
+}
+
+export interface InstrumentsResponse {
+  category: MarketCategory;
+  instruments: Instrument[];
+}
+
+/** One risk-limit tier of a USDT Perpetual symbol. */
+export interface RiskLimitTier {
+  id: number;
+  /** Upper bound of position value (USDT) for this tier */
+  riskLimitValue: number;
+  /** Maintenance margin rate, e.g. 0.005 = 0.5% */
+  maintenanceMarginRate: number;
+  initialMarginRate: number;
+  maxLeverage: number;
+  /** USDT deducted from maintenance margin at this tier (0 for tier 1) */
+  mmDeduction: number;
+}
+
+export interface RiskLimitResponse {
+  symbol: string;
+  tiers: RiskLimitTier[];
 }
 
 export interface UpdateUserResponse {

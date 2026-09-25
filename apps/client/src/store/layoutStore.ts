@@ -20,6 +20,7 @@ import {
   type Interval,
   type TimeRangePreset,
 } from '@/lib/markets';
+import type { MarketCategory } from '@crypto-dashboard/sdk';
 import type { IndicatorInstance } from '@/lib/indicators/types';
 import { createDefaultIndicatorInstances } from '@/lib/indicators/catalog';
 
@@ -38,12 +39,24 @@ function isChartType(v: unknown): v is ChartType {
   return CHART_TYPES.includes(v as ChartType);
 }
 
+/** Bybit market a pane reads its data from (BYBIT_PARITY_PLAN BP-0). */
+export const MARKET_CATEGORIES = ['spot', 'linear'] as const satisfies readonly MarketCategory[];
+
+function isMarketCategory(v: unknown): v is MarketCategory {
+  return MARKET_CATEGORIES.includes(v as MarketCategory);
+}
+
 export interface PaneConfig {
   symbol: string;
   interval: Interval;
   timeRangePreset: TimeRangePreset | null;
   indicators: IndicatorInstance[];
   chartType: ChartType;
+  /**
+   * Bybit market for this pane's history, candles and quotes. Everyone stays on 'spot' until the
+   * BP-2 market switch ships — that release also moves existing layouts to 'linear' (D7).
+   */
+  category: MarketCategory;
 }
 
 export interface SyncOptions {
@@ -100,6 +113,7 @@ const DEFAULT_PANES: PaneConfig[] = [
     timeRangePreset: null,
     indicators: createDefaultIndicatorInstances(),
     chartType: 'candles',
+    category: 'spot',
   }, // BTCUSDT, 1m
   {
     symbol: SYMBOLS[1].symbol,
@@ -107,6 +121,7 @@ const DEFAULT_PANES: PaneConfig[] = [
     timeRangePreset: null,
     indicators: [],
     chartType: 'candles',
+    category: 'spot',
   }, // ETHUSDT, 1m
   {
     symbol: SYMBOLS[2].symbol,
@@ -114,6 +129,7 @@ const DEFAULT_PANES: PaneConfig[] = [
     timeRangePreset: null,
     indicators: [],
     chartType: 'candles',
+    category: 'spot',
   }, // SOLUSDT, 1m
   {
     symbol: SYMBOLS[3].symbol,
@@ -121,6 +137,7 @@ const DEFAULT_PANES: PaneConfig[] = [
     timeRangePreset: null,
     indicators: [],
     chartType: 'candles',
+    category: 'spot',
   }, // BNBUSDT, 1m
 ];
 
@@ -142,6 +159,8 @@ interface LayoutState {
   setPaneInterval: (paneIndex: number, interval: Interval) => void;
   setPaneTimeRangePreset: (paneIndex: number, preset: TimeRangePreset | null) => void;
   setPaneChartType: (paneIndex: number, chartType: ChartType) => void;
+  /** Follows symbol sync: with sync on, every pane switches market together. */
+  setPaneCategory: (paneIndex: number, category: MarketCategory) => void;
   addIndicator: (paneIndex: number, instance: IndicatorInstance) => void;
   removeIndicator: (paneIndex: number, instanceId: string) => void;
   updateIndicator: (
@@ -185,10 +204,23 @@ export const useLayoutStore = create<LayoutState>()(
       setPaneSymbol: (paneIndex, symbol) => {
         const { panes, syncOptions } = get();
         if (syncOptions.symbol) {
-          set({ panes: panes.map((p) => ({ ...p, symbol })) });
+          // A synced symbol means the same instrument everywhere — market included
+          const category = panes[paneIndex]?.category ?? 'spot';
+          set({ panes: panes.map((p) => ({ ...p, symbol, category })) });
         } else {
           const updated = [...panes];
           updated[paneIndex] = { ...updated[paneIndex], symbol };
+          set({ panes: updated });
+        }
+      },
+
+      setPaneCategory: (paneIndex, category) => {
+        const { panes, syncOptions } = get();
+        if (syncOptions.symbol) {
+          set({ panes: panes.map((p) => ({ ...p, category })) });
+        } else {
+          const updated = [...panes];
+          updated[paneIndex] = { ...updated[paneIndex], category };
           set({ panes: updated });
         }
       },
@@ -228,10 +260,10 @@ export const useLayoutStore = create<LayoutState>()(
         // is currently focused on, making it the most intuitive source of truth
         // (mirrors the behaviour of TVP / Bookmap multi-chart sync).
         if (turningOn && key === 'symbol') {
-          const sourceSymbol = (panes[activePane] ?? DEFAULT_PANES[0]).symbol;
+          const source = panes[activePane] ?? DEFAULT_PANES[0];
           set({
             syncOptions: newSyncOptions,
-            panes: panes.map((p) => ({ ...p, symbol: sourceSymbol })),
+            panes: panes.map((p) => ({ ...p, symbol: source.symbol, category: source.category })),
           });
           return;
         }
@@ -303,7 +335,7 @@ export const useLayoutStore = create<LayoutState>()(
     }),
     {
       name: 'cd-layout',
-      version: 3,
+      version: 4,
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as Record<string, unknown>;
         // v1 → v2: add indicators to panes
@@ -320,6 +352,12 @@ export const useLayoutStore = create<LayoutState>()(
         if (version < 3) {
           const panes = state.panes as Array<Record<string, unknown>> | undefined;
           if (panes) state.panes = panes.map((pane) => ({ ...pane, chartType: 'candles' }));
+        }
+        // v3 → v4: add category to panes. Existing layouts stay on spot for now — the D7
+        // "existing → linear" move ships with the BP-2 market switch.
+        if (version < 4) {
+          const panes = state.panes as Array<Record<string, unknown>> | undefined;
+          if (panes) state.panes = panes.map((pane) => ({ ...pane, category: 'spot' }));
         }
         return state as unknown as LayoutState;
       },
@@ -357,13 +395,17 @@ export const useLayoutStore = create<LayoutState>()(
               timeRangePreset,
               indicators: saved.indicators ?? (i === 0 ? createDefaultIndicatorInstances() : []),
               chartType: isChartType(saved.chartType) ? saved.chartType : 'candles',
+              category: isMarketCategory(saved.category) ? saved.category : 'spot',
             };
           }) as [PaneConfig, PaneConfig, PaneConfig, PaneConfig];
         }
-        // An unknown/corrupted chartType must never reach ChartPanel.
-        merged.panes = merged.panes.map((p) =>
-          isChartType(p.chartType) ? p : { ...p, chartType: 'candles' }
-        );
+        // An unknown/corrupted chartType or category must never reach ChartPanel / usePaneFeeds
+        // (category ends up in a server request).
+        merged.panes = merged.panes.map((p) => ({
+          ...p,
+          chartType: isChartType(p.chartType) ? p.chartType : 'candles',
+          category: isMarketCategory(p.category) ? p.category : 'spot',
+        }));
         // Ensure paneSizes is present and has all layout IDs (added after v1)
         if (!merged.paneSizes || typeof merged.paneSizes !== 'object') {
           merged.paneSizes = { ...DEFAULT_PANE_SIZES };

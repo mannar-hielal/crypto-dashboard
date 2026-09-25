@@ -2066,3 +2066,75 @@ looked cleaner and more solid, with longer wicks and no gaps. Analysis found thr
   - layout-transition matrix: 0/200 transitions with giant candles or an empty pane
   - symbol × interval matrix with every pane in Heikin Ashi: 450 combos, 0 axis or zoom
     failures. The 21 rate-limit failures all passed on a slow re-run.
+
+---
+
+### feat: Bybit Parity BP-0 — per-market data feed (Spot + USDT Perpetual) (2026-09-26) ✅
+
+**Context:** phase 1 of `docs/BYBIT_PARITY_PLAN.md`. Each market now reads history, live candles and
+quotes from its own Bybit category (`spot` / `linear`). The BP-1 server engine needs this feed. No
+market switch yet (BP-2), so every pane is `spot` and trading is unchanged.
+
+**Findings closed:**
+
+- **F1:** history no longer falls back from one category to the other. `/candles` takes
+  `category` (schema enum, default `spot` for old cached clients) and makes one upstream call.
+- **F2 (confirmed live):** spot `tickers` has no `bid1Price`/`ask1Price`, so `parseTicker` dropped every
+  spot update and no `ticker` message ever reached the client. The Sell/Buy buttons were running on
+  `latestPrice` and the spread badge showed `—`.
+  - The `orderbook.1` feed described in the 2026-04-19 entry had since been replaced by `tickers`.
+  - Spot now subscribes `orderbook.1` again and merges its best level into the ticker state.
+
+**Changes:**
+
+- **Server**
+  - `BybitWebSocketManager(useTestnet, category)`: builds the `/v5/public/{category}` URL.
+  - `subscribeMany()` sends ≤10 args per request. Bybit spot rejects more ("args size >10",
+    checked live).
+  - Ticker state is merged per field, so linear deltas that carry only bid/ask keep mark/funding.
+  - A ticker is emitted as soon as `lastPrice` is known, with `bid`/`ask` null until the first quote.
+    Updates that change no price (most book-size pushes) are dropped.
+  - `plugins/bybit.ts`: one manager + `CandleAggregator` per category. Snapshot and indicator keys
+    are `category:symbol:interval`, and `LiveBar`/`TickerUpdate` carry `category`.
+  - `getTicker()` returns the latest quote, which `/ws` sends on connect. It is cleared when the
+    category's stream disconnects.
+  - `/ws` takes an allow-listed `category` (1008 otherwise).
+  - New `services/BybitMarketInfo.ts` backs `GET /api/market/instruments?category=` (tick size, qty
+    step, min qty/notional, max leverage, funding interval) and `GET /api/market/risk-limit?symbol=`
+    (linear tiers).
+    - Both cache 6 h and coalesce concurrent requests.
+    - A failed refresh serves the stale value when one exists; with no value, the route returns 502
+      with no upstream text.
+- **SDK**
+  - New `MarketCategory`, `TickerMessage` (nullable bid/ask plus optional mark/index/funding),
+    `Instrument`, `RiskLimitTier` and their response types.
+  - `getCandles` and `wsUrl` take `category` (default `spot`); new `getInstruments` and `getRiskLimit`.
+- **Client**
+  - `PaneConfig.category`, with `cd-layout` v3 → v4 migration; `merge` rejects unknown values.
+  - Symbol sync (`setPaneSymbol`, `toggleSync`) also syncs category. New `setPaneCategory`, not
+    wired to any UI yet.
+  - `paneStore.setTicker` replaces `setBidAsk`: a null side keeps the last value, and it stores
+    `markPrice`/`indexPrice`/`fundingRate`/`nextFundingTime`.
+  - `lastKnownPrices` is keyed `category:symbol` through `setLastKnownPrice`/`getLastKnownPrice`
+    (default spot).
+
+**Deliberate deviation from the plan:** D7 says existing layouts move to `linear`. That move is
+deferred to BP-2 (see the plan's BP-0 notes). Without a switch, returning users would silently get
+perp charts with no way back.
+
+**Tests:**
+
+- server: `BybitWebSocketManager.test.ts` +13, `market.test.ts` +16 (the fallback test replaced)
+- client: `layoutStore.test.ts` +9, `paneStore.test.ts` +8
+- `TRADING_TEST_PLAN.md` gains Section 12
+
+**Verification (running app vs live Bybit, 2026-09-26):**
+
+- **Spot WS:** tickers now carry bid/ask (83969.9 / 83970).
+- **Linear WS:** carries mark/index/funding (`fundingIntervalHour` 8).
+- **Invalid category:** closed with 1008.
+- **History:** linear and spot 1m history differ by the expected basis (~$40).
+- **Instruments and risk-limit:** match Bybit. BTCUSDT tier-1 MMR is **0.33%**, not the plan's 0.5%.
+
+**Gates:** type-check ✅ (server + client), lint ✅, format ✅, test ✅ (154 server + 435 client),
+audit ✅ (11 moderate, none high)
