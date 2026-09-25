@@ -1852,3 +1852,20 @@ An independent-reviewer pass (`/code-review`, later formalized as the `code-revi
 - **Removed 3 fully-implemented/obsolete plan docs**: `docs/LANDING_FEATURES_PLAN.md` (Landing + Features pages fully shipped, including past what the plan specified), `docs/INDICATORS_PLAN.md` (doc's own Status line already said "Done"), `docs/TV_SWEEP_PLAN.md` (no longer needed). Cleaned up the now-dangling `LANDING_FEATURES_PLAN.md` reference in the `launch-readiness-audit` skill.
 
 **Gates:** type-check ✅, lint ✅, format ✅, test (510) ✅
+
+---
+
+### fix: Cloudflare Web Analytics reporting 0 visits — CSP connect-src (2026-09-25) ✅
+
+**Problem:** CFWA dashboard showed 0 visits / 0 page views. Two causes:
+
+1. **CSP blocked the beacon's reports.** `script-src` allowed `static.cloudflareinsights.com` (so the beacon _loaded_ — which is what the 2026-06-26 "200 OK" check confirmed), but `connect-src` only allowed `'self'` + the API, so the beacon's POST to `https://cloudflareinsights.com/cdn-cgi/rum` was silently blocked. No data ever reached CFWA.
+2. **Beacon not injected on the live site.** `curl https://cryptopapertrade.com/` shows no `beacon.min.js` tag. The frontend is Cloudflare Pages (deployed via `wrangler pages deploy`); Pages only injects the beacon into deployments made _after_ Web Analytics is enabled on the Pages project itself (Workers & Pages → project → Metrics → Web Analytics). Dashboard action, no code.
+
+**Changes:** `cspConnectSrcPlugin` (`apps/client/vite.config.ts`) now appends `https://cloudflareinsights.com` to `connect-src` — exact origin, no wildcard. Comments updated in `vite.config.ts` and `index.html`. No legal-page change: CFWA was already disclosed (Privacy §8–9, Terms §10).
+
+**Note:** the Analytics → Dashboards "Traffic overview" view is edge HTTP request data (bots, crawlers, asset requests, own traffic), not visitors — use Web Analytics for human-visitor numbers.
+
+**Fallback if Pages injection doesn't appear after redeploy:** add CFWA's manual JS snippet (site token from Web Analytics → Manage site) to `index.html`; CSP already covers it.
+
+**Gates:** audit ✅, type-check ✅, lint ✅, format ✅, test (510) ✅, client build ✅ (`dist/index.html` connect-src verified)
