@@ -152,7 +152,7 @@ the diff against this checklist**, not just the checklist for the feature area b
       as any other new dependency (see [Supply-chain security](#supply-chain-security)) — a
       refactor is not a lower-scrutiny path for adding a dependency.
 - [ ] **The relevant `bug-sweep` priorities still get run.** "It's just a refactor" is not an
-      exemption from `.agents/skills/bug-sweep` Mode B — run P1 (types) and P2 (security) at
+      exemption from `.claude/skills/bug-sweep` Mode B — run P1 (types) and P2 (security) at
       minimum against the diff, plus whichever other priorities the touched files map to.
 
 If any box can't be checked with confidence from the diff alone, say so explicitly rather than
@@ -182,6 +182,6 @@ Before calling a feature "done," confirm:
 
 - Code-level security rules (JWT payload, cookie flags, Prisma patterns, rate-limit config) →
   [`web.md`](./web.md#security)
-- Full pre-commit/audit checklist (P2 = Security) → `.agents/skills/bug-sweep`
-- Server request-handling code shape → `.agents/skills/api-best-practices`
-- Pre-launch tiered risk audit → `.agents/skills/launch-readiness-audit`
+- Full pre-commit/audit checklist (P2 = Security) → `.claude/skills/bug-sweep`
+- Server request-handling code shape → `.claude/skills/api-best-practices`
+- Pre-launch tiered risk audit → `.claude/skills/launch-readiness-audit`
