@@ -53,7 +53,11 @@ function isAllowedInterval(interval: string): interval is AllowedInterval {
 }
 
 type BybitCategory = 'spot' | 'linear';
-const BYBIT_KLINE_CATEGORY_ORDER: readonly BybitCategory[] = ['linear', 'spot'];
+// Spot first: the live kline/ticker WS (BybitWebSocketManager) is spot, so
+// history must be too — linear-first history sat ~$40 off Bybit's Spot chart
+// and could step where history met live bars. Linear stays as a fallback for
+// params errors. The real Spot/Perp market switch is BYBIT_PARITY_PLAN F1 / BP-0.
+const BYBIT_KLINE_CATEGORY_ORDER: readonly BybitCategory[] = ['spot', 'linear'];
 
 // ─── Bybit REST helper ────────────────────────────────────────────────────────
 

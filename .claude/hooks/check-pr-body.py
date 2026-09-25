@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PreToolUse (Bash) — enforces .claude/conventions/git.md § Pull requests.
+"""PreToolUse (Bash) — enforces .claude/rules/git.md § Pull requests.
 
 Blocks `gh pr create` unless the body contains all 6 required template
 sections — applies equally to a feature/fix -> develop PR and a
@@ -58,7 +58,7 @@ def main():
         print(
             "check-pr-body: could not locate the PR body (no --body/--body-file found) "
             "— skipping the template check. Make sure it follows "
-            ".claude/conventions/git.md § Pull requests.",
+            ".claude/rules/git.md § Pull requests.",
             file=sys.stderr,
         )
         return 0
@@ -68,7 +68,7 @@ def main():
         print(
             "Blocked: PR body is missing required section(s): "
             + ", ".join(missing)
-            + ". See .claude/conventions/git.md § Pull requests for the full template.",
+            + ". See .claude/rules/git.md § Pull requests for the full template.",
             file=sys.stderr,
         )
         return 2

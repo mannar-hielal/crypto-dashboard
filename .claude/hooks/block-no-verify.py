@@ -2,7 +2,7 @@
 """PreToolUse (Bash) — hard-blocks bypassing git safety hooks or commit signing.
 
 Encodes the repo-wide rule (restated as the non-negotiable in
-.claude/conventions/git.md) that hooks are never skipped and commits are
+.claude/rules/git.md) that hooks are never skipped and commits are
 never left unsigned without the user explicitly asking for that *exact*
 exception — something this hook can't verify from the command string alone,
 so it blocks the bypass flags unconditionally instead. Note: `-n` only means
@@ -56,7 +56,7 @@ def main():
             "Blocked: this command bypasses a git safety hook or commit signing "
             f"({'; '.join(reasons)}). Never skip hooks or signing unless the user "
             "explicitly asked for that exact exception in this turn "
-            "(see .claude/conventions/git.md).",
+            "(see .claude/rules/git.md).",
             file=sys.stderr,
         )
         return 2

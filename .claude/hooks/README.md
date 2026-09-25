@@ -1,6 +1,6 @@
 # `.claude/hooks/`
 
-Claude Code hooks that mechanically enforce a subset of `.claude/conventions/`. Registered in
+Claude Code hooks that mechanically enforce a subset of `.claude/rules/`. Registered in
 `.claude/settings.json`. See the plan this was built from for the full rule → hook mapping and the
 cleanup rationale: each script's docstring cites the convention file/section it encodes.
 

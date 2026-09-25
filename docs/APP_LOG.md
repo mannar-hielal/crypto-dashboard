@@ -15,7 +15,7 @@
 > decisions (colors, spacing, sizes, layout). For anything not yet in `tokens.ts`, or for component
 > structure/interaction patterns, fall back to the Figma file (see `.claude/skills/figma-theme-source`).
 > (`docs/screenshots/theme/` and `docs/markup-reference/`, formerly cited here, never existed /
-> have since been removed — see `.claude/conventions/design.md`'s source-of-truth hierarchy.)
+> have since been removed — see `.claude/rules/design.md`'s source-of-truth hierarchy.)
 > Goal is **not** a 1:1 copy; take what makes sense and do it better where possible.
 > Always ask clarifying questions when there is confusion or uncertainty before implementing.
 
@@ -617,6 +617,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 - **Phase 2 — Pane view layer**: Extract point→pixel conversion from `DrawingPrimitive` into per-shape `PaneView` classes, decoupling chart-coordinate conversion from canvas rendering. Phase 1 (renderer classes) is complete; Phase 2 would also wire in-progress preview through per-shape renderers and add `SelectionRenderer`.
 - **Phase 3–4**: Tool descriptor system + tool variants via property overrides.
 - **Additional drawing tools**: Wire remaining placement (polyline, freehand) — Phase 1 refactoring laid per-shape renderer foundation, but polyline and freehand still need placement state machine support.
+- **Bybit parity — Spot + USDT Perpetual** (agreed 2026-09-25): split trading into Spot (1×, buy/sell what you hold) and USDT Perpetual (leverage), one shared USDT wallet, new users start on Spot. **Trade execution moves to a 24/7 server engine** (the client becomes a view; supersedes "client is source of truth" from Paper Trading Phase 3 Sync). Then Bybit VIP 0 fees instead of the flat 0.07%, Bybit fill prices, mark price + isolated liquidation, funding, cross margin. Full plan, findings (incl. the spot/linear feed mismatch and missing spot bid/ask) and open questions → [`docs/BYBIT_PARITY_PLAN.md`](./BYBIT_PARITY_PLAN.md)
 - **Phase 4**: Advanced indicators, alerts, multi-symbol watchlist
 - **Phase 5**: Live broker integration — Bybit real-money trading (see full spec below)
 - **Phase 6**: AI trading bot — 3-role system: Scanner + Analyst + Executor, paper mode only (see full spec below)
@@ -1896,3 +1897,172 @@ Dashboard-only changes following the CFWA CSP fix (#121/#122):
 - **Moved all 16 existing skills `.agents/skills/` → `.claude/skills/`** (`git mv`, history preserved) and removed `.agents/`. Claude Code now auto-loads all 17 project skills, each invocable as `/<name>`.
 - **All path references updated** (`.agents/skills` → `.claude/skills`): `CLAUDE.md`, `AGENTS.md`, all `.claude/conventions/*.md`, `.claude/hooks/session-start-context.py` (SessionStart context), `.husky/pre-commit` (bug-sweep hint), skills cross-references, and current-state lines in this log. Historical log entries that mention the old path describe past state and were updated too, so the log has no dead paths.
 - `session-bootstrap` task-specific list and `.claude/conventions/README.md` now point to `add-page`.
+
+---
+
+### fix: candlesticks rendered as full-height vertical bars — frozen price scale (2026-09-25) ✅
+
+**Symptom:** Sometimes, and on every pane at once, each candle and indicator line (EMA/VWAP)
+filled the full pane height. The price axis had collapsed to a window of about 0.1 USDT around
+the last price. It was most common in split layouts and after switching symbol or interval. A
+page refresh fixed it.
+
+**Root cause** (`ChartPanel.tsx`). Two defects combined:
+
+1. **The view opened on empty future space.** After a data load the chart called
+   `timeScale().scrollToRealTime()`. The time scale's "real time" end is the last bar of the
+   invisible 200-bar padding `LineSeries`, not the newest candle. When the pane is narrower than
+   about 200 bars (split layouts, higher intervals), the view held only padding and zero
+   candles.
+2. **The price axis froze on whatever one frame saw.** The right price scale was created with
+   `autoScale: false`. After a load, autoscale was turned on for a single
+   `requestAnimationFrame` and then off again. With (1), that frame saw only the flat padding
+   line (all at `lastClose`), so the axis collapsed to `lastClose ± ~0.06` and stayed there.
+   Scrolling back to the candles showed them as full-height bars. The WebSocket's 2–9-bar
+   startup snapshot (1m bars are often O=H=L=C) arriving before REST history could produce the
+   same flat frame.
+
+Autoscale had been turned off in `2e91530` because drawings were stretching the axis. The base
+drawing class in `lightweight-charts-drawing` implements `autoscaleInfo()` from its anchor prices,
+whatever time range is visible.
+
+**Fix:**
+
+- **Scroll to the newest candle.** `scrollToRealTime()` is replaced with
+  `scrollToPosition(RIGHT_GAP_BARS - PADDING_BARS)`, which puts the newest candle 5 bars from
+  the right edge.
+- **Autoscale stays on.** The one-frame pulse is removed. Dragging the price axis turns autoscale
+  off (built into lightweight-charts), and double-clicking the axis turns it back on. First load,
+  reload and out-of-range still re-apply `autoScale: true`.
+- **Padding line excluded.** The padding series has `autoscaleInfoProvider: () => null`.
+- **Drawings excluded.** Every drawing is opted out of autoscale by overriding `autoscaleInfo`
+  on `drawing:added`. The listener is subscribed before `restoreDrawings`, so persisted drawings
+  are covered too.
+- **Time-range sync is limited to panes on the same interval** (`lib/chartSync.ts`
+  `isTimeSyncPeer`, used by `MultiChartArea.tsx`). A cross-interval matrix test found a second giant-candle path: sync copied a
+  1m/30m pane's few-hour window onto a 4h/1D/1W/1M pane, which then showed 0–1 candles stretched
+  across the whole pane. Panes on different intervals now keep their own zoom. This was the
+  owner's decision (the alternative was capping bar spacing).
+- **Only a pane whose history has loaded may drive time-range sync** (`lib/chartSync.ts`
+  `canDriveTimeSync`, new `paneStore.historyLoaded` set by `usePaneFeeds` on REST success).
+  Right after a pane mounts (layout change) or switches symbol or interval, it briefly shows the
+  WebSocket startup snapshot or the previous symbol's bars. Its visible time range is then a few
+  minutes wide, a single instant, or entirely in the future padding. Sync broadcast that range,
+  and the async echo (which lands after the `isSyncingTimeRange` guard has reset) zoomed every
+  peer, including fully loaded ones, into a handful of giant candles (50–100px per bar),
+  permanently. Two reproductions:
+  - switching 3 same-interval panes 2h → 4h
+  - the owner's report: changing layout 1 → 2h with two 1m panes
+
+  The first version of this guard used a bar-count threshold (at least 10 bars). It passed on a
+  fresh server but failed in the owner's session: the startup snapshot keeps growing with server
+  uptime (12 bars after 12 minutes, about 60 after an hour), so no count can tell it apart from
+  real history. The rule is now:
+  - the pane's REST history has loaded (`historyLoaded`)
+  - the chart series has caught up with the store (store updates first)
+  - the range is non-degenerate and overlaps the pane's candles
+
+- **No sync broadcasts from a pane mid data-push** (`lib/chartSync.ts` `runPaneDataPush`,
+  wrapping `ChartPanel`'s setData → padding → restore/anchor block). Found by a transition
+  matrix over all 20 ordered layout pairs × 10 intervals: 9 of 200 transitions (1m and 5m)
+  still ended at 40–50px per bar. A trace of every time-scale call showed the cause.
+  lightweight-charts fires visible-range events synchronously inside `setData()`. When REST
+  history replaced a few-bar snapshot, that event carried the transitional ~16-bar view, and by
+  then the pane already passed every source check. It was broadcast, and peer echoes overwrote
+  the pane's own anchor before it was painted.
+- **MACD sub-pane.** `macd.ts` used the same pulse-and-freeze pattern on its own price scale.
+  The rAF that turned autoscale off is removed.
+- **Regression tests:** `components/dashboard/__tests__/ChartPanel.priceScale.test.tsx`
+  (5 tests), `lib/__tests__/chartSync.test.ts` (13 tests) and
+  `store/__tests__/paneStore.test.ts` (4 tests).
+
+**Verification:** a Playwright harness (Chromium, scratch script, not committed) drove the
+running dev app through every layout (1, 2h, 2v, 3h, 4) × interval (10) × symbol (9). Each pane
+got a different symbol, and runs covered both all panes on the same interval and mixed intervals
+with time-range sync on: 900 combos. For every pane it checked that the price axis contains its
+visible candles without collapsing (at least 90% of the candle range), that at least 2 candles
+are in view, and that the pane shows the requested symbol's data.
+
+- **Final code:** 0 axis failures and 0 zoom failures across all 900 combos. 39 combos first
+  failed on 429s from the 100 req/min rate limit (stale data); all 39 passed on a slow-paced
+  re-run.
+- **Old code (negative control):** 36/36 of a 2h/3h × 1m/4h slice failed. Panes were parked on
+  the padding with 0 candles, and the axis covered only 17–35% of the candle range: the reported
+  full-height bars. The same slice on the fixed code: 0/36.
+- **Drawings:** saved trendlines at 3× and 0.2× the price stretched the old axis to 155× the
+  candle range. After the fix it's 1.00×.
+
+**Layout-change verification** (added after the owner reported giant candles when changing
+layout; the first matrix changed layout together with symbol/interval, which reloaded every pane
+and hid this path). Every ordered layout-to-layout transition (20 pairs, as a single sequence)
+× 10 intervals, with layout the only change:
+
+- **Final code:** 0/200 transitions with giant candles (>25px per bar) or an empty pane.
+- **Old code:** 22/40 (1m and 5m).
+
+The symbol × interval matrix was re-run on the final code: 900 combos, 0 axis or zoom failures.
+All 38 rate-limit failures passed on a slow re-run.
+
+**Follow-up (separate issue, not fixed here):** when a symbol switch's REST history call gets a
+429 (100 req/min per IP, reachable by switching quickly across 4 panes), the pane keeps showing
+the previous symbol's candles under the new symbol's header until a retry succeeds.
+
+**Gates:** type-check ✅, lint ✅, format ✅, test ✅
+
+---
+
+### feat: chart candles match Bybit — Spot history, wider candles, Heikin Ashi chart type (2026-09-25) ✅
+
+**Trigger:** the owner compared CPT with Bybit (BTC/USDT, 1m, same layout). Bybit's candles
+looked cleaner and more solid, with longer wicks and no gaps. Analysis found three causes:
+
+1. **Bybit's chart was set to Heikin Ashi** (its legend reads "Heikin Ashi"). That's a smoothed
+   candle type: 43 colour flips per 200 bars against 89 raw, with a larger wick share (50% vs
+   40%). CPT only drew raw candles.
+2. **History came from the perpetual market.** `BYBIT_KLINE_CATEGORY_ORDER` was
+   `['linear', 'spot']`, while the live WebSocket is spot. CPT history equalled Bybit linear
+   exactly and was about $39 per candle off Bybit **Spot** (BYBIT_PARITY_PLAN F1).
+3. **Thin candles.** 1m and 5m used 3px bar spacing (about 2px bodies) against about 8px on
+   Bybit. Raw 1m data has no real gaps (open = previous close for 199/199 bars); the "gaps" were
+   horizontal spacing.
+
+**Changes:**
+
+- **Server** `routes/market/index.ts`: history category order is now `['spot', 'linear']`. The
+  tests were flipped to "spot first, linear fallback". The full Spot/Perp switch stays in BP-0.
+- **`lib/markets.ts` `INTERVAL_BAR_SPACING`:** 1m through 2h go to 7px, 4h 8, 1d 9, 1w/1M 8
+  (Bybit-like density, the owner's choice). They are still applied only on
+  load/reload/out-of-range, so user zoom is kept.
+- **Heikin Ashi chart type:**
+  - `lib/heikinAshi.ts` is a pure `toHeikinAshi()`, converting the whole series, since each HA
+    bar depends on the previous one.
+  - Per-pane `chartType: 'candles' | 'heikinAshi'` in `layoutStore`. Persist v2 → v3 migration;
+    `merge` rejects unknown values.
+  - New `ChartTypeDropdown` in the top bar, beside the interval dropdown, bound to the active
+    pane.
+  - `ChartPanel` feeds HA bars to the candle series. Switching type forces a full `setData` and
+    keeps the zoom.
+  - Indicators compute on HA prices, as on Bybit/TradingView (the owner's choice). They read
+    `source.data()`.
+  - **The real price stays visible:** in HA mode the series' own last-value label (which would
+    show the HA close) is hidden, and a price line shows the real last close. Orders, fills and
+    PnL are unchanged; they use store prices.
+  - The legend shows "· Heikin Ashi".
+- **Tests:**
+  - `heikinAshi.test.ts` (5)
+  - `layoutStore.test.ts` (+4: action, v3 migration, merge validation)
+  - `ChartPanel.priceScale.test.tsx` (+2: HA series values, real price line / default candles)
+  - server `market.test.ts` (2 flipped)
+
+**Verification (running app vs Bybit's public API):**
+
+- **Spot match:** CPT history equals Bybit Spot (max |Δclose| 0.000000) for BTC, ETH, SOL, LINK
+  and DOGE at 1m/5m/1h/1d.
+- **HA match:** the chart's HA series equals HA computed independently from Bybit Spot klines
+  (max |Δ| 0.000000 over 50 bars).
+- **Real price:** in HA mode the price line shows the real live price, and switching back
+  restores the real candles and the series label.
+- **Spacing:** first load gives 7/7/7/8/9px for 1m/5m/1h/4h/1d.- **Regression check with the new spacing and chart type:**
+  - layout-transition matrix: 0/200 transitions with giant candles or an empty pane
+  - symbol × interval matrix with every pane in Heikin Ashi: 450 combos, 0 axis or zoom
+    failures. The 21 rate-limit failures all passed on a slow re-run.

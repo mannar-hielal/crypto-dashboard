@@ -2,7 +2,7 @@
 """PreToolUse (Edit|Write) — blocks hand-edits to the auto-generated Prisma
 client (apps/server/generated/**). Regenerate via `pnpm prisma generate`
 instead of editing it directly — the changes are silently lost on the next
-generate. See .claude/conventions/web.md § Architecture boundaries.
+generate. See .claude/rules/web.md § Architecture boundaries.
 """
 import json
 import sys
@@ -18,7 +18,7 @@ def main():
         print(
             f"Blocked: {file_path} is auto-generated (Prisma client) — hand edits are "
             "silently lost on the next `pnpm prisma generate`. Change the Prisma schema "
-            "or config instead (see .claude/conventions/web.md § Architecture boundaries).",
+            "or config instead (see .claude/rules/web.md § Architecture boundaries).",
             file=sys.stderr,
         )
         return 2

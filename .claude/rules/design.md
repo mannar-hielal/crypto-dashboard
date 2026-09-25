@@ -1,3 +1,10 @@
+---
+paths:
+  - 'apps/client/src/**/*.tsx'
+  - 'apps/client/src/**/*.css'
+  - 'apps/client/src/lib/tokens.ts'
+---
+
 # Design & Styling Conventions (Senior UX Designer)
 
 Scope: visual language, layout, motion, and accessibility for `apps/client`. Dark-mode-only

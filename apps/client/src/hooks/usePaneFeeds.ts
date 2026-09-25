@@ -117,6 +117,7 @@ function useSinglePaneFeed(
     // would block the REST response (wsSnapshotReceived && currentBars >=
     // REST count), leaving only the cold-aggregator WS snapshot (~2 bars).
     store.getState().setWsSnapshotReceived(false);
+    store.getState().setHistoryLoaded(false);
 
     // Step 1: historical REST fetch (fills chart before WS is ready), with
     // retry — a REST failure must never permanently strand this pane on the
@@ -141,6 +142,9 @@ function useSinglePaneFeed(
             store.getState().setSnapshot(res.candles, null);
             restDataApplied = true;
           }
+          // Applied or not (the WS may already hold at least as many bars),
+          // this pane now has its full history for this symbol/interval.
+          store.getState().setHistoryLoaded(true);
           // Success (whether or not the data was applied) — nothing more to do.
           return;
         } catch (err) {

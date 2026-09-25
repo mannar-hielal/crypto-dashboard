@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PreToolUse (Bash) — enforces .claude/conventions/git.md § Branching & PR flow.
+"""PreToolUse (Bash) — enforces .claude/rules/git.md § Branching & PR flow.
 
 Blocks creating a new branch whose name doesn't follow the
 `<feat|fix>/kebab-description` convention.
@@ -37,7 +37,7 @@ def main():
 
     print(
         f'Blocked: branch name "{name}" doesn\'t follow the "<feat|fix>/kebab-description" '
-        "convention (see .claude/conventions/git.md § Branching & PR flow).",
+        "convention (see .claude/rules/git.md § Branching & PR flow).",
         file=sys.stderr,
     )
     return 2

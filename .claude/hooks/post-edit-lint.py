@@ -6,7 +6,7 @@ this repo's conventions flag. Never blocks — the edit already happened — thi
 just relays a reminder into the transcript so Claude can self-correct in a
 follow-up edit if the flag is a real hit (some are heuristic and may be
 false positives; ESLint/tsc remain the authoritative gate at commit time).
-Sources: .claude/conventions/{react,design,web}.md
+Sources: .claude/rules/{react,design,web}.md
 """
 import json
 import re
@@ -49,30 +49,30 @@ def main():
         if HEX_RE.search(content):
             warnings.append(
                 "hardcoded hex color — colors should come from @/lib/tokens "
-                "(.claude/conventions/design.md)"
+                "(.claude/rules/design.md)"
             )
         if BARE_USE_STORE_RE.search(content):
             warnings.append(
                 "useStore() called with no selector — subscribe with a fine-grained "
-                "selector instead (.claude/conventions/react.md § Zustand)"
+                "selector instead (.claude/rules/react.md § Zustand)"
             )
 
     if (CLIENT_STYLE_RE.search(normalized) or SERVER_TS_RE.search(normalized)) and ANY_RE.search(content):
         warnings.append(
             "`any` / `as any` found — no-explicit-any is an ESLint error "
-            "(.claude/conventions/react.md / web.md)"
+            "(.claude/rules/react.md / web.md)"
         )
 
     if SERVER_TS_RE.search(normalized) and "/config.ts" not in normalized:
         if CONSOLE_RE.search(content):
             warnings.append(
                 "console.* found — Pino's `log` is the only logger outside config.ts "
-                "(.claude/conventions/web.md § Logging discipline)"
+                "(.claude/rules/web.md § Logging discipline)"
             )
         if FETCH_RE.search(content) and not ABORT_RE.search(content):
             warnings.append(
                 "fetch(...) found with no AbortSignal.timeout(...) anywhere in the file "
-                "(.claude/conventions/web.md § Egress)"
+                "(.claude/rules/web.md § Egress)"
             )
 
     if warnings:
