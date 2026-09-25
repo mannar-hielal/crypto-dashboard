@@ -1,3 +1,11 @@
+---
+paths:
+  - '**/__tests__/**'
+  - '**/*.test.ts'
+  - '**/*.test.tsx'
+  - '**/vitest.config.ts'
+---
+
 # Testing Conventions (Senior Test Manager)
 
 Scope: both packages' Vitest suites (`apps/server`, `apps/client`). Goal: every change is provably

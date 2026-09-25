@@ -226,14 +226,13 @@ export function createMacdPrimitive(
   function pulsePaneAutoscale(dataLength: number) {
     // lightweight-charts won't re-fit a sub-pane price scale that was created
     // before the source had data (e.g. persisted reload loads 0 → N bars).
-    // Re-run autoscale each time the dataset size changes so the scale tracks
-    // the newly arrived bars instead of staying stuck on a degenerate range.
+    // Re-enable autoscale each time the dataset size changes so the scale
+    // tracks the newly arrived bars instead of staying stuck on a degenerate
+    // range. 🔐 Never switch it back off in a rAF: that froze whatever single
+    // frame it computed (same bug as the main candle pane — see ChartPanel).
     if (dataLength === lastPulsedLength) return;
     lastPulsedLength = dataLength;
     macdSeries.priceScale().applyOptions({ autoScale: true });
-    requestAnimationFrame(() => {
-      macdSeries.priceScale().applyOptions({ autoScale: false });
-    });
   }
 
   source.attachPrimitive(api);

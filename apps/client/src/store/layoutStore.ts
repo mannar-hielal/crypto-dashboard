@@ -29,11 +29,21 @@ export type LayoutId = '1' | '2h' | '2v' | '3h' | '4';
 
 const MAX_INDICATORS_PER_PANE = 50;
 
+/** How a pane draws its candles. Heikin Ashi is display-only — orders, fills
+ *  and PnL always use real prices. */
+export const CHART_TYPES = ['candles', 'heikinAshi'] as const;
+export type ChartType = (typeof CHART_TYPES)[number];
+
+function isChartType(v: unknown): v is ChartType {
+  return CHART_TYPES.includes(v as ChartType);
+}
+
 export interface PaneConfig {
   symbol: string;
   interval: Interval;
   timeRangePreset: TimeRangePreset | null;
   indicators: IndicatorInstance[];
+  chartType: ChartType;
 }
 
 export interface SyncOptions {
@@ -89,10 +99,29 @@ const DEFAULT_PANES: PaneConfig[] = [
     interval: INTERVALS[0],
     timeRangePreset: null,
     indicators: createDefaultIndicatorInstances(),
+    chartType: 'candles',
   }, // BTCUSDT, 1m
-  { symbol: SYMBOLS[1].symbol, interval: INTERVALS[0], timeRangePreset: null, indicators: [] }, // ETHUSDT, 1m
-  { symbol: SYMBOLS[2].symbol, interval: INTERVALS[0], timeRangePreset: null, indicators: [] }, // SOLUSDT, 1m
-  { symbol: SYMBOLS[3].symbol, interval: INTERVALS[0], timeRangePreset: null, indicators: [] }, // BNBUSDT, 1m
+  {
+    symbol: SYMBOLS[1].symbol,
+    interval: INTERVALS[0],
+    timeRangePreset: null,
+    indicators: [],
+    chartType: 'candles',
+  }, // ETHUSDT, 1m
+  {
+    symbol: SYMBOLS[2].symbol,
+    interval: INTERVALS[0],
+    timeRangePreset: null,
+    indicators: [],
+    chartType: 'candles',
+  }, // SOLUSDT, 1m
+  {
+    symbol: SYMBOLS[3].symbol,
+    interval: INTERVALS[0],
+    timeRangePreset: null,
+    indicators: [],
+    chartType: 'candles',
+  }, // BNBUSDT, 1m
 ];
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -112,6 +141,7 @@ interface LayoutState {
   setPaneSymbol: (paneIndex: number, symbol: string) => void;
   setPaneInterval: (paneIndex: number, interval: Interval) => void;
   setPaneTimeRangePreset: (paneIndex: number, preset: TimeRangePreset | null) => void;
+  setPaneChartType: (paneIndex: number, chartType: ChartType) => void;
   addIndicator: (paneIndex: number, instance: IndicatorInstance) => void;
   removeIndicator: (paneIndex: number, instanceId: string) => void;
   updateIndicator: (
@@ -178,6 +208,13 @@ export const useLayoutStore = create<LayoutState>()(
         const { panes } = get();
         const updated = [...panes];
         updated[paneIndex] = { ...updated[paneIndex], timeRangePreset: preset };
+        set({ panes: updated });
+      },
+
+      setPaneChartType: (paneIndex, chartType) => {
+        const { panes } = get();
+        const updated = [...panes];
+        updated[paneIndex] = { ...updated[paneIndex], chartType };
         set({ panes: updated });
       },
 
@@ -266,7 +303,7 @@ export const useLayoutStore = create<LayoutState>()(
     }),
     {
       name: 'cd-layout',
-      version: 2,
+      version: 3,
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as Record<string, unknown>;
         // v1 → v2: add indicators to panes
@@ -278,6 +315,11 @@ export const useLayoutStore = create<LayoutState>()(
               indicators: pane.indicators ?? (i === 0 ? createDefaultIndicatorInstances() : []),
             }));
           }
+        }
+        // v2 → v3: add chartType to panes
+        if (version < 3) {
+          const panes = state.panes as Array<Record<string, unknown>> | undefined;
+          if (panes) state.panes = panes.map((pane) => ({ ...pane, chartType: 'candles' }));
         }
         return state as unknown as LayoutState;
       },
@@ -314,9 +356,14 @@ export const useLayoutStore = create<LayoutState>()(
               interval,
               timeRangePreset,
               indicators: saved.indicators ?? (i === 0 ? createDefaultIndicatorInstances() : []),
+              chartType: isChartType(saved.chartType) ? saved.chartType : 'candles',
             };
           }) as [PaneConfig, PaneConfig, PaneConfig, PaneConfig];
         }
+        // An unknown/corrupted chartType must never reach ChartPanel.
+        merged.panes = merged.panes.map((p) =>
+          isChartType(p.chartType) ? p : { ...p, chartType: 'candles' }
+        );
         // Ensure paneSizes is present and has all layout IDs (added after v1)
         if (!merged.paneSizes || typeof merged.paneSizes !== 'object') {
           merged.paneSizes = { ...DEFAULT_PANE_SIZES };

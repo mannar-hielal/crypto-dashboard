@@ -4,7 +4,7 @@
 1. HARD GATE (re-checked even on a forced continuation): if package.json or
    pnpm-lock.yaml changed, re-run `pnpm audit --audit-level=high` and block
    stopping on failure — catches a CVE regression before the human even asks
-   to commit. Source: .claude/conventions/security.md § Supply-chain security.
+   to commit. Source: .claude/rules/security.md § Supply-chain security.
 2. SOFT NUDGES (checked once per turn only, via stop_hook_active, so this
    never loops): warn if server routes/plugins changed with no matching test
    change (refactor-safety reminder), or if client component/style files
@@ -55,7 +55,7 @@ def main():
                 "Blocked: package.json/pnpm-lock.yaml changed and "
                 "`pnpm audit --audit-level=high` is failing. Fix it or add/adjust a "
                 "pnpm.overrides entry before finishing "
-                "(.claude/conventions/security.md § Supply-chain security):",
+                "(.claude/rules/security.md § Supply-chain security):",
                 file=sys.stderr,
             )
             print((proc.stdout or "")[-2000:], file=sys.stderr)

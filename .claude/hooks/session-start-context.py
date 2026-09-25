@@ -2,7 +2,7 @@
 """SessionStart — injects the process non-negotiables + current branch state
 as context, so every session starts with them loaded rather than depending
 on the model choosing to read AGENTS.md / session-bootstrap on its own.
-Source: .claude/skills/session-bootstrap/SKILL.md, .claude/conventions/git.md.
+Source: .claude/skills/session-bootstrap/SKILL.md, .claude/rules/git.md.
 """
 import json
 import subprocess
@@ -26,14 +26,14 @@ def main():
         "cryptopapertrade.com session context:",
         "- Non-negotiables (.claude/skills/session-bootstrap): (1) no implementation "
         "without explicit instruction this turn; (2) visual Q&A gate before any UI change.",
-        "- Conventions live in .claude/conventions/ (react, web, design, security, "
+        "- Conventions live in .claude/rules/ (react, web, design, security, "
         "testing, git) — read the one matching what you're about to touch.",
     ]
     if branch:
         lines.append(f"- Current branch: {branch}.")
         if branch == "main":
             lines.append(
-                "  ⚠️ On `main` directly — per .claude/conventions/git.md, "
+                "  ⚠️ On `main` directly — per .claude/rules/git.md, "
                 "feature/fix work belongs on a feat/... or fix/... branch, cut from "
                 "main only once develop is already merged into it."
             )

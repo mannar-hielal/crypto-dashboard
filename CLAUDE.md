@@ -10,22 +10,13 @@ the task rather than reading it end to end), then `.claude/skills/session-bootst
 two non-negotiable process rules: no implementation without explicit instruction, and a visual Q&A
 gate before any UI change).
 
-## Conventions — read the one matching the area you're touching
+## Conventions
 
-`.claude/conventions/` holds the project's engineering conventions, each written from the
-perspective of a senior owner of that discipline. Consult the relevant file(s) _before_ writing or
-reviewing code in that area — treat them as binding, not optional background reading.
+The binding engineering conventions live in `.claude/rules/` and load automatically: `web.md`,
+`security.md` and `git.md` at launch; `react.md`, `design.md` and `testing.md` when matching files
+are read (see each file's `paths:` frontmatter).
 
-| File                                                                   | Read before touching                                                    | Voice                         |
-| ---------------------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------- |
-| [`.claude/conventions/react.md`](./.claude/conventions/react.md)       | `apps/client/src/**` — components, hooks, Zustand stores                | Senior React developer        |
-| [`.claude/conventions/web.md`](./.claude/conventions/web.md)           | `apps/server/src/**`, `generated/CDSDK/**`, any API/WebSocket/DB change | Senior web/platform developer |
-| [`.claude/conventions/design.md`](./.claude/conventions/design.md)     | Any spacing, color, typography, layout, or motion change                | Senior UX designer            |
-| [`.claude/conventions/security.md`](./.claude/conventions/security.md) | Auth, secrets, dependencies, Docker/infra, anything internet-facing     | Cyber security expert         |
-| [`.claude/conventions/testing.md`](./.claude/conventions/testing.md)   | Any new test, or any change to test setup/mocking                       | Senior test manager           |
-| [`.claude/conventions/git.md`](./.claude/conventions/git.md)           | Any commit, branch, or PR                                               | — (process convention)        |
-
-See [`.claude/conventions/README.md`](./.claude/conventions/README.md) for how these relate to
+See [`.claude/CONVENTIONS.md`](./.claude/CONVENTIONS.md) for how these relate to
 `AGENTS.md` and to the deeper task-specific playbooks in `.claude/skills/` (e.g. `bug-sweep` — the
 pre-commit/audit checklist that enforces these conventions; `api-best-practices`;
 `figma-theme-source` — the canonical visual source, the
@@ -37,7 +28,7 @@ checklist for adding, renaming or removing a page/route). Claude Code loads ever
 ## After any refactor
 
 Before reporting a refactor complete or committing it, run the checklist in
-[`.claude/conventions/security.md#verify-a-refactor-is-safe`](./.claude/conventions/security.md#verify-a-refactor-is-safe)
+[`.claude/rules/security.md#verify-a-refactor-is-safe`](./.claude/rules/security.md#verify-a-refactor-is-safe)
 against the diff — a "no behavior change" commit is exactly where a security regression (a dropped
 auth check, a validation step left behind, a flattened error handler that now leaks) goes
 unnoticed. This applies even when the refactor looks purely structural or is scoped to a single

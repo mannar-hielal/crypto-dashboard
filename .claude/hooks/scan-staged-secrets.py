@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PreToolUse (Bash) — enforces .claude/conventions/security.md § Secrets management.
+"""PreToolUse (Bash) — enforces .claude/rules/security.md § Secrets management.
 
 Before a `git commit` runs, scans the staged diff for common secret shapes
 and blocks the commit if one is found. `.env.example` is exempt since it's
@@ -50,7 +50,7 @@ def main():
     if hits:
         print(
             "Blocked: staged diff looks like it contains a secret/credential "
-            "(see .claude/conventions/security.md § Secrets management):",
+            "(see .claude/rules/security.md § Secrets management):",
             file=sys.stderr,
         )
         for h in hits[:5]:
