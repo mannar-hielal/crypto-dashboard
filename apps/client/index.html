@@ -27,7 +27,8 @@
     <!-- Content Security Policy — browser-enforced for the SPA -->
     <!-- 'unsafe-inline' on style-src required by Framer Motion animated styles -->
     <!-- __CONNECT_SRC__ is replaced at build time with 'self' + the configured -->
-    <!-- VITE_API_URL (http + ws variants) — see cspConnectSrcPlugin in vite.config.ts -->
+    <!-- VITE_API_URL (http + ws variants) + the Cloudflare Web Analytics report -->
+    <!-- endpoint (https://cloudflareinsights.com) — see cspConnectSrcPlugin in vite.config.ts -->
     <!-- frame-ancestors and report-uri omitted here — they are header-only
          directives and are already set via server Helmet middleware -->
     <meta
