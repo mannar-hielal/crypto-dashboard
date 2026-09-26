@@ -17,7 +17,9 @@ Only commands that actually *invoke* `gh` count. The command is split into shell
 heredoc bodies are dropped, so a commit message or `--grep` pattern that merely mentions
 `gh pr merge` is ignored. The target PR comes from the command's own positional argument (number,
 URL or branch; `--head` for `create`; the run's branch for `gh run`), and falls back to the current
-branch's PR only when the command names no target.
+branch's PR only when the command names no target. A `$VAR` target set earlier in the same
+command (`PR=130; gh pr merge $PR`) is substituted; a `gh pr merge` whose target is still a shell
+expansion (`$X`, `$(…)`, backticks) is **blocked**, because the gate can't tell which PR would merge.
 
 Fails open. If `gh` is missing, unauthenticated, offline or slow, the event is unknown, or the PR
 can't be determined, it exits 0 silently. It is an early catch, not the only line of defence.
@@ -62,6 +64,7 @@ SEPARATOR_CHARS = ";&|()\n`"
 SEGMENT_SPLIT_RE = re.compile(r"&&|\|\||[;|\n]|\$\(|`")
 ENV_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 PR_URL_RE = re.compile(r"/pull/(\d+)")
+VAR_REF_RE = re.compile(r"^\$(?:\{(\w+)\}|(\w+))$")
 
 QUERY = """
 query($o: String!, $n: String!, $p: Int!, $after: String) {
@@ -84,7 +87,10 @@ query($o: String!, $n: String!, $p: Int!, $after: String) {
 
 
 def _segments(command):
-    """Token lists of each simple command, split only on *unquoted* shell separators.
+    """(tokens, terminator) for each simple command, split only on *unquoted* shell separators.
+
+    `terminator` is the separator token that ended the command ("" at the end), so a command
+    followed directly by a backtick or `$(` is known to take an expanded argument.
 
     shlex with punctuation_chars keeps quoted text intact, so a `|` or `;` inside `--subject "…"`
     or `--jq '…'` never splits a command. Newline is a separator only outside quotes.
@@ -97,16 +103,16 @@ def _segments(command):
     try:
         tokens = list(lex)
     except ValueError:
-        return [seg.split() for seg in SEGMENT_SPLIT_RE.split(command)]
+        return [(seg.split(), "") for seg in SEGMENT_SPLIT_RE.split(command)]
 
     segments, current = [], []
     for tok in tokens:
         if tok and all(ch in SEPARATOR_CHARS for ch in tok):
-            segments.append(current)
+            segments.append((current, tok))
             current = []
         else:
             current.append(tok)
-    segments.append(current)
+    segments.append((current, ""))
     return segments
 
 
@@ -120,16 +126,46 @@ def gh_invocations(command):
     """
     stripped = HEREDOC_RE.sub("", command)
     found = []
-    for tokens in _segments(stripped):
+    variables = {}
+    for tokens, terminator in _segments(stripped):
+        # Leading NAME=value words: remembered (a bare assignment sets a shell variable for the
+        # rest of the command; a prefix one only for this command, but treating both as set is
+        # the safer reading for a gate).
         while tokens and (ENV_ASSIGN_RE.match(tokens[0]) or tokens[0] in ("{", "then", "do", "!", "$")):
+            if ENV_ASSIGN_RE.match(tokens[0]):
+                name, _, value = tokens[0].partition("=")
+                variables[name] = value
             tokens = tokens[1:]
         if len(tokens) < 3 or tokens[0] != "gh":
             continue
         sub = (tokens[1], tokens[2])
         if sub != MERGE and sub not in LOOK:
             continue
-        found.append(_parse_args(sub, tokens[3:]))
+        inv = _parse_args(sub, tokens[3:])
+        for key in ("target", "repo"):
+            inv[key] = _expand(inv[key], variables)
+        inv["unresolved_expansion"] = any(_is_expansion(inv[k]) for k in ("target", "repo")) or (
+            # `gh pr merge `cmd`` / `gh pr merge $(cmd)`: the argument is the expansion itself
+            "`" in terminator
+            or (terminator.startswith("(") and tokens[-1:] == ["$"])
+        )
+        found.append(inv)
     return found
+
+
+def _expand(value, variables):
+    """Substitute a whole-token `$VAR` / `${VAR}` assigned earlier in the same command."""
+    if value is None:
+        return None
+    m = VAR_REF_RE.match(value)
+    if m:
+        return variables.get(m.group(1) or m.group(2), value)
+    return value
+
+
+def _is_expansion(value):
+    """True when a value is (still) a shell expansion the hook can't evaluate."""
+    return value is not None and ("$" in value or "`" in value)
 
 
 def _parse_args(sub, args):
@@ -263,9 +299,23 @@ def main():
     wanted = {MERGE} if event == "PreToolUse" else LOOK
     invocations = [inv for inv in gh_invocations(command) if inv["sub"] in wanted]
 
+    if event == "PreToolUse":
+        dynamic = [inv for inv in invocations if inv["unresolved_expansion"]]
+        if dynamic:
+            print(
+                f"Blocked: can't tell which PR `gh pr merge {dynamic[0]['target']}` would merge. "
+                "The target is a shell expansion, so the unresolved-Claude-review-thread gate "
+                "can't check it. Re-run with a literal PR number, URL or branch. "
+                "See .claude/rules/git.md § Review comments.",
+                file=sys.stderr,
+            )
+            return 2
+
     reports = []
     seen = set()
     for inv in invocations:
+        if inv["unresolved_expansion"]:
+            continue  # PostToolUse nudge: nothing reliable to check
         resolved = resolve_pr(inv, cwd)
         # One report per PR, however many gh calls in the command point at it
         if resolved is None or resolved in seen:

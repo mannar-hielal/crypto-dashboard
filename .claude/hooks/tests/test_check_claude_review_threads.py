@@ -237,6 +237,51 @@ class Dedupe(unittest.TestCase):
         self.assertEqual(err.getvalue().count("PR #5 has"), 1)
 
 
+class ShellExpansions(unittest.TestCase):
+    """Review thread :202 — a merge target given via a variable or $(…) can't slip through."""
+
+    def inv(self, command):
+        return hook.gh_invocations(command)[0]
+
+    def test_variable_assigned_in_same_command_is_substituted(self):
+        inv = self.inv("PR=130\ngh pr merge $PR --squash")
+        self.assertEqual((inv["target"], inv["unresolved_expansion"]), ("130", False))
+
+    def test_braced_variable(self):
+        inv = self.inv("PR=7; gh pr merge ${PR}")
+        self.assertEqual((inv["target"], inv["unresolved_expansion"]), ("7", False))
+
+    def test_unknown_variable_is_unresolved(self):
+        self.assertTrue(self.inv("gh pr merge $PR --squash")["unresolved_expansion"])
+
+    def test_command_substitution_is_unresolved(self):
+        self.assertTrue(
+            self.inv("gh pr merge $(gh pr view --json number -q .number)")["unresolved_expansion"]
+        )
+
+    def test_backticks_are_unresolved(self):
+        self.assertTrue(self.inv("gh pr merge `cat pr.txt`")["unresolved_expansion"])
+
+    def test_literal_target_is_resolved(self):
+        self.assertFalse(self.inv("gh pr merge 130")["unresolved_expansion"])
+
+    def run_main(self, event, command):
+        payload = {"hook_event_name": event, "tool_input": {"command": command}, "cwd": "."}
+        err = io.StringIO()
+        with mock.patch.object(sys, "stdin", io.StringIO(json.dumps(payload))), \
+             mock.patch.object(hook, "gh", side_effect=AssertionError("gh must not be called")), \
+             redirect_stderr(err):
+            return hook.main(), err.getvalue()
+
+    def test_merge_with_unresolvable_target_is_blocked(self):
+        code, err = self.run_main("PreToolUse", "gh pr merge $PR --squash")
+        self.assertEqual(code, 2)
+        self.assertIn("literal PR number", err)
+
+    def test_look_with_unresolvable_target_is_skipped(self):
+        self.assertEqual(self.run_main("PostToolUse", "gh pr checks $PR")[0], 0)
+
+
 class FailOpen(unittest.TestCase):
     """Review thread :106 — an unknown/missing event never runs the check."""
 
