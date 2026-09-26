@@ -3,6 +3,8 @@
  * Phase 1: Market data, indicators, and streaming
  */
 
+import type { BybitCategory } from '../constants.js';
+
 // ─── MARKET DATA ──────────────────────────────────────────────────────────────
 
 export interface Kline {
@@ -33,16 +35,27 @@ export interface Trade {
 
 // ─── STREAMING ────────────────────────────────────────────────────────────────
 
+/**
+ * Merged quote state for one symbol in one category. Spot builds it from `tickers` (lastPrice) +
+ * `orderbook.1` (bid/ask); linear gets everything from `tickers`. bid/ask are null until the first
+ * quote arrives, and the perp-only fields are undefined on spot.
+ */
 export interface TickerData {
   symbol: string;
   lastPrice: number;
-  bid: number;
-  ask: number;
+  bid: number | null;
+  ask: number | null;
+  markPrice?: number;
+  indexPrice?: number;
+  fundingRate?: number;
+  nextFundingTime?: number;
+  fundingIntervalHour?: number;
 }
 
 export type StreamDataType = 'kline' | 'orderBook' | 'trade' | 'ticker';
 
 export interface StreamData {
+  category: BybitCategory;
   symbol: string;
   dataType: StreamDataType;
   data: Kline | OrderBook | Trade | TickerData;

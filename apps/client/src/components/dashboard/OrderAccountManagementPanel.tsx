@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/shallow';
-import { paneStores, lastKnownPrices } from '@/store/paneStore';
+import { paneStores, getLastKnownPrice } from '@/store/paneStore';
 import { usePaperStore, COMMISSION_RATE, CRYPTO_LEVERAGE_OPTIONS } from '@/store/paperStore';
 import type { JournalEntry, HistoricalOrder, PendingOrder } from '@/store/paperStore';
 import type { PanelSize } from '@/pages/DashboardPage';
@@ -391,7 +391,7 @@ export function OrderAccountManagementPanel({
   // Helper: get the best available price for a symbol — live pane price first,
   // then the last known price (persisted across symbol switches), then null.
   function getPriceForSymbol(sym: string): number | null {
-    return priceBySymbol[sym] ?? lastKnownPrices.get(sym) ?? null;
+    return priceBySymbol[sym] ?? getLastKnownPrice(sym) ?? null;
   }
 
   const balance = usePaperStore((s) => s.balance);

@@ -10,7 +10,7 @@ import { useState } from 'react';
 import { X, TrendingUp, TrendingDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { usePaperStore, COMMISSION_RATE } from '@/store/paperStore';
-import { paneStores, lastKnownPrices } from '@/store/paneStore';
+import { paneStores, getLastKnownPrice } from '@/store/paneStore';
 import { useLayoutStore } from '@/store/layoutStore';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/shallow';
@@ -46,9 +46,7 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
     if (lp !== null) priceBySymbol[paneSymbols[i]] = lp;
   });
   const markPrice = position
-    ? (priceBySymbol[position.symbol] ??
-      lastKnownPrices.get(position.symbol) ??
-      position.entryPrice)
+    ? (priceBySymbol[position.symbol] ?? getLastKnownPrice(position.symbol) ?? position.entryPrice)
     : 0;
 
   // ── Local state ─────────────────────────────────────────────────────────────

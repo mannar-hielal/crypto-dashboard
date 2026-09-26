@@ -6,9 +6,22 @@
 
 import { EventEmitter } from 'events';
 import { Kline, OrderBook, Trade, TickerData, StreamData } from '../types/index.js';
+import type { BybitCategory } from '../constants.js';
 import { logger } from '../logger.js';
 
 const log = logger.child({ service: 'BybitWebSocketManager' });
+
+// Bybit rejects a subscribe/unsubscribe request with more than 10 args on spot
+// ("args size >10", checked live 2026-09-26); linear allows more, but one limit
+// for both keeps the batching logic simple.
+const MAX_ARGS_PER_REQUEST = 10;
+
+/** Parse a Bybit numeric string field; undefined when absent or non-finite. */
+function toFinite(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  const n = parseFloat(String(value));
+  return Number.isFinite(n) ? n : undefined;
+}
 
 interface WebSocketSubscription {
   channel: string;
@@ -19,19 +32,27 @@ interface WebSocketSubscription {
 export class BybitWebSocketManager extends EventEmitter {
   private ws: WebSocket | null = null;
   private url: string;
+  /** Which Bybit public stream this manager reads (`/v5/public/{category}`). */
+  readonly category: BybitCategory;
   private subscriptions: Map<string, WebSocketSubscription> = new Map();
   private reconnectAttempts = 0;
   private reconnectDelay = 1000; // Start with 1s
   private isManuallyClosed = false;
   private heartbeatTimeout: NodeJS.Timeout | null = null;
-  /** Last known ticker state per symbol — used to merge Bybit delta updates */
-  private tickerState: Map<string, { lastPrice: number; bid: number; ask: number }> = new Map();
+  /**
+   * Last known quote state per symbol — Bybit sends a snapshot, then deltas that carry only the
+   * changed fields, and spot splits lastPrice (`tickers`) from bid/ask (`orderbook.1`). Every
+   * update is merged field by field into this state. Bounded by the subscription cap and
+   * cleaned up in unsubscribe().
+   */
+  private tickerState: Map<string, Partial<TickerData>> = new Map();
 
-  constructor(useTestnet: boolean = true) {
+  constructor(useTestnet: boolean = true, category: BybitCategory = 'spot') {
     super();
+    this.category = category;
     this.url = useTestnet
-      ? 'wss://stream-testnet.bybit.com/v5/public/spot'
-      : 'wss://stream.bybit.com/v5/public/spot';
+      ? `wss://stream-testnet.bybit.com/v5/public/${category}`
+      : `wss://stream.bybit.com/v5/public/${category}`;
   }
 
   /**
@@ -69,8 +90,11 @@ export class BybitWebSocketManager extends EventEmitter {
         };
 
         this.ws.onclose = () => {
-          log.info('Disconnected');
+          log.info({ category: this.category }, 'Disconnected');
           this.stopHeartbeat();
+          // Quotes from before the drop are stale — start clean so the post-reconnect snapshot is
+          // always emitted and spot never pairs a fresh lastPrice with a pre-drop bid/ask.
+          this.tickerState.clear();
 
           if (!this.isManuallyClosed) {
             this.reconnect();
@@ -117,37 +141,55 @@ export class BybitWebSocketManager extends EventEmitter {
   private static readonly MAX_SUBSCRIPTIONS = 50;
 
   subscribe(channel: string, symbol: string, interval?: string): void {
+    const key = this.register(channel, symbol, interval);
+    if (key) this.sendOp('subscribe', [key]);
+  }
+
+  /**
+   * Subscribe to several topics at once, sent in batches of at most MAX_ARGS_PER_REQUEST args
+   * (Bybit spot rejects larger requests).
+   */
+  subscribeMany(topics: WebSocketSubscription[]): void {
+    const keys: string[] = [];
+    for (const { channel, symbol, interval } of topics) {
+      const key = this.register(channel, symbol, interval);
+      if (key) keys.push(key);
+    }
+    this.sendOp('subscribe', keys);
+  }
+
+  /**
+   * Private: validate and store a subscription. Returns its key, or null when it was rejected or
+   * is already stored.
+   */
+  private register(channel: string, symbol: string, interval?: string): string | null {
     // 🔐 Validate channel
     if (!BybitWebSocketManager.VALID_CHANNELS.has(channel)) {
       log.error({ channel }, 'Invalid channel');
-      return;
+      return null;
     }
 
     // 🔐 Validate symbol format
     if (!BybitWebSocketManager.VALID_SYMBOL.test(symbol)) {
       log.error({ symbol }, 'Invalid symbol format');
-      return;
+      return null;
     }
 
     // 🔐 Enforce subscription limit
     if (this.subscriptions.size >= BybitWebSocketManager.MAX_SUBSCRIPTIONS) {
       log.error({ limit: BybitWebSocketManager.MAX_SUBSCRIPTIONS }, 'Subscription limit reached');
-      return;
+      return null;
     }
 
     const key = `${channel}|${symbol}${interval ? `|${interval}` : ''}`;
 
     if (this.subscriptions.has(key)) {
       log.info({ key }, 'Already subscribed');
-      return;
+      return null;
     }
 
-    const subscription: WebSocketSubscription = { channel, symbol, interval };
-    this.subscriptions.set(key, subscription);
-
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.sendSubscription(key);
-    }
+    this.subscriptions.set(key, { channel, symbol, interval });
+    return key;
   }
 
   /**
@@ -161,9 +203,7 @@ export class BybitWebSocketManager extends EventEmitter {
       return;
     }
 
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.sendUnsubscription(key);
-    }
+    this.sendOp('unsubscribe', [key]);
 
     this.subscriptions.delete(key);
 
@@ -176,44 +216,28 @@ export class BybitWebSocketManager extends EventEmitter {
   }
 
   /**
-   * Private: Send subscription message to Bybit
+   * Private: Send a subscribe/unsubscribe request for the given subscription keys, in batches of
+   * at most MAX_ARGS_PER_REQUEST topics. No-op while the socket isn't open — resubscribeAll()
+   * sends everything stored once it connects.
    */
-  private sendSubscription(key: string): void {
-    const subscription = this.subscriptions.get(key);
-    if (!subscription) return;
+  private sendOp(op: 'subscribe' | 'unsubscribe', keys: string[]): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
 
-    const { channel, symbol, interval } = subscription;
-    const topic = interval ? `${channel}.${interval}.${symbol}` : `${channel}.${symbol}`;
-
-    const message = {
-      op: 'subscribe',
-      args: [topic],
-    };
-
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(message));
-      log.info({ topic }, 'Subscribed');
+    const topics: string[] = [];
+    for (const key of keys) {
+      const subscription = this.subscriptions.get(key);
+      if (!subscription) continue;
+      const { channel, symbol, interval } = subscription;
+      topics.push(interval ? `${channel}.${interval}.${symbol}` : `${channel}.${symbol}`);
     }
-  }
 
-  /**
-   * Private: Send unsubscription message to Bybit
-   */
-  private sendUnsubscription(key: string): void {
-    const subscription = this.subscriptions.get(key);
-    if (!subscription) return;
-
-    const { channel, symbol, interval } = subscription;
-    const topic = interval ? `${channel}.${interval}.${symbol}` : `${channel}.${symbol}`;
-
-    const message = {
-      op: 'unsubscribe',
-      args: [topic],
-    };
-
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(message));
-      log.info({ topic }, 'Unsubscribed');
+    for (let i = 0; i < topics.length; i += MAX_ARGS_PER_REQUEST) {
+      const args = topics.slice(i, i + MAX_ARGS_PER_REQUEST);
+      this.ws.send(JSON.stringify({ op, args }));
+      log.info(
+        { category: this.category, topics: args },
+        op === 'subscribe' ? 'Subscribed' : 'Unsubscribed'
+      );
     }
   }
 
@@ -268,42 +292,55 @@ export class BybitWebSocketManager extends EventEmitter {
 
       if (!topic || !streamData) return;
 
-      // Parse topic: e.g. "kline.1.BTCUSDT", "orderbook.1.BTCUSDT", "publicTrade.BTCUSDT"
+      // Parse topic: e.g. "kline.1.BTCUSDT", "orderbook.1.BTCUSDT", "publicTrade.BTCUSDT".
+      // The middle part is a kline interval only for kline topics — for orderbook it is the
+      // book depth, so it is never passed on as an interval.
       const parts = topic.split('.');
       const channelType = parts[0];
       const symbol = parts[parts.length - 1];
-      const interval = parts.length === 3 ? parts[1] : undefined;
-
-      let eventData: StreamData | null = null;
 
       if (channelType === 'kline') {
-        eventData = this.parseKline(streamData, symbol, interval);
+        this.emitStream(channelType, this.parseKline(streamData, symbol));
       } else if (channelType === 'orderbook') {
-        eventData = this.parseOrderBook(
+        const orderBook = this.parseOrderBook(
           streamData as { b: string[][]; a: string[][] },
           symbol,
           streamTs ?? Date.now()
         );
+        this.emitStream(channelType, orderBook);
+        // Spot tickers carry no bid/ask (F2) — the best level of orderbook.1 supplies them.
+        if (orderBook) {
+          const book = orderBook.data as OrderBook;
+          this.emitStream(
+            'tickers',
+            this.mergeTicker(symbol, {
+              bid: toFinite(book.bids[0]?.[0]),
+              ask: toFinite(book.asks[0]?.[0]),
+            })
+          );
+        }
       } else if (channelType === 'publicTrade') {
-        eventData = this.parseTrade(streamData, symbol);
+        this.emitStream(channelType, this.parseTrade(streamData, symbol));
       } else if (channelType === 'tickers') {
-        eventData = this.parseTicker(streamData, symbol);
-      }
-
-      if (eventData) {
-        this.emit('data', eventData);
-        this.emit(`${channelType}:${symbol}`, eventData);
+        this.emitStream(channelType, this.parseTicker(streamData, symbol));
       }
     } catch (error) {
       log.error({ err: error }, 'Error processing stream data');
     }
   }
 
+  /** Private: emit a parsed stream event (skips null). */
+  private emitStream(channelType: string, eventData: StreamData | null): void {
+    if (!eventData) return;
+    this.emit('data', eventData);
+    this.emit(`${channelType}:${eventData.symbol}`, eventData);
+  }
+
   /**
    * Private: Parse kline (candle) data from Bybit v5
    * Bybit v5 sends an array of kline objects — we use the first (most recent) item
    */
-  private parseKline(data: unknown, symbol: string, _interval?: string): StreamData | null {
+  private parseKline(data: unknown, symbol: string): StreamData | null {
     try {
       const items = Array.isArray(data) ? data : [data];
       if (items.length === 0) return null;
@@ -349,6 +386,7 @@ export class BybitWebSocketManager extends EventEmitter {
       };
 
       return {
+        category: this.category,
         symbol,
         dataType: 'kline',
         data: kline,
@@ -380,6 +418,7 @@ export class BybitWebSocketManager extends EventEmitter {
       };
 
       return {
+        category: this.category,
         symbol,
         dataType: 'orderBook',
         data: orderBook,
@@ -392,43 +431,76 @@ export class BybitWebSocketManager extends EventEmitter {
   }
 
   /**
-   * Private: Parse ticker data from Bybit v5 tickers stream
-   * Provides real-time lastPrice, best bid, and best ask — no aggregation lag.
+   * Private: Parse ticker data from Bybit v5 tickers stream.
+   * Spot: lastPrice only (bid/ask come from orderbook.1). Linear: lastPrice, bid/ask, mark/index
+   * price and funding fields. Deltas carry only changed fields, so each one is merged into the
+   * last known state.
    */
   private parseTicker(data: unknown, symbol: string): StreamData | null {
     try {
       if (!data || typeof data !== 'object') return null;
       const raw = data as Record<string, unknown>;
 
-      // Bybit sends a full snapshot first, then partial DELTA updates where
-      // only changed fields are present.  Merge into last known state so we
-      // never drop a delta that omits bid1Price or ask1Price.
-      const prev = this.tickerState.get(symbol);
-
-      const lastPrice =
-        raw.lastPrice !== undefined ? parseFloat(String(raw.lastPrice)) : prev?.lastPrice;
-      const bid = raw.bid1Price !== undefined ? parseFloat(String(raw.bid1Price)) : prev?.bid;
-      const ask = raw.ask1Price !== undefined ? parseFloat(String(raw.ask1Price)) : prev?.ask;
-
-      if (
-        lastPrice === undefined ||
-        bid === undefined ||
-        ask === undefined ||
-        !Number.isFinite(lastPrice) ||
-        !Number.isFinite(bid) ||
-        !Number.isFinite(ask)
-      ) {
-        return null;
-      }
-
-      this.tickerState.set(symbol, { lastPrice, bid, ask });
-
-      const ticker: TickerData = { symbol, lastPrice, bid, ask };
-      return { symbol, dataType: 'ticker', data: ticker, timestamp: Date.now() };
+      return this.mergeTicker(symbol, {
+        lastPrice: toFinite(raw.lastPrice),
+        bid: toFinite(raw.bid1Price),
+        ask: toFinite(raw.ask1Price),
+        markPrice: toFinite(raw.markPrice),
+        indexPrice: toFinite(raw.indexPrice),
+        fundingRate: toFinite(raw.fundingRate),
+        nextFundingTime: toFinite(raw.nextFundingTime),
+        fundingIntervalHour: toFinite(raw.fundingIntervalHour),
+      });
     } catch (error) {
       log.error({ err: error }, 'Failed to parse ticker');
       return null;
     }
+  }
+
+  /**
+   * Private: merge a partial quote update into the symbol's ticker state and return the merged
+   * ticker event. Undefined fields keep their last known value. Returns null until a lastPrice is
+   * known, and when the update changed nothing; bid/ask are null until the first quote arrives,
+   * so a missing bid/ask never drops a lastPrice update (F2).
+   */
+  private mergeTicker(symbol: string, update: Partial<TickerData>): StreamData | null {
+    const merged: Record<string, unknown> = { ...this.tickerState.get(symbol) };
+    let changed = false;
+    for (const [field, value] of Object.entries(update)) {
+      // field comes from the fixed Partial<TickerData> keys above — safe, controlled access
+      // eslint-disable-next-line security/detect-object-injection
+      if (value !== undefined && merged[field] !== value) {
+        // eslint-disable-next-line security/detect-object-injection
+        merged[field] = value;
+        changed = true;
+      }
+    }
+    const state = merged as Partial<TickerData>;
+    this.tickerState.set(symbol, state);
+
+    // Most orderbook.1 pushes only change the size at the best level — nothing to broadcast.
+    if (!changed || state.lastPrice === undefined) return null;
+
+    const ticker: TickerData = {
+      symbol,
+      lastPrice: state.lastPrice,
+      bid: state.bid ?? null,
+      ask: state.ask ?? null,
+    };
+    if (this.category === 'linear') {
+      ticker.markPrice = state.markPrice;
+      ticker.indexPrice = state.indexPrice;
+      ticker.fundingRate = state.fundingRate;
+      ticker.nextFundingTime = state.nextFundingTime;
+      ticker.fundingIntervalHour = state.fundingIntervalHour;
+    }
+    return {
+      category: this.category,
+      symbol,
+      dataType: 'ticker',
+      data: ticker,
+      timestamp: Date.now(),
+    };
   }
 
   /**
@@ -461,6 +533,7 @@ export class BybitWebSocketManager extends EventEmitter {
       };
 
       return {
+        category: this.category,
         symbol,
         dataType: 'trade',
         data: trade,
@@ -500,9 +573,7 @@ export class BybitWebSocketManager extends EventEmitter {
    * Private: Resubscribe to all channels after reconnection
    */
   private resubscribeAll(): void {
-    for (const key of this.subscriptions.keys()) {
-      this.sendSubscription(key);
-    }
+    this.sendOp('subscribe', [...this.subscriptions.keys()]);
   }
 
   /**

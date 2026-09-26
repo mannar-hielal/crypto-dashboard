@@ -9,17 +9,40 @@
  */
 
 import { createStore } from 'zustand';
-import type { CandleBar, IndicatorSnapshot, LiveBar } from '@crypto-dashboard/sdk';
+import type {
+  CandleBar,
+  IndicatorSnapshot,
+  LiveBar,
+  MarketCategory,
+  TickerMessage,
+} from '@crypto-dashboard/sdk';
 
 const MAX_BARS = 1000;
 
 /**
- * Global map of the last known price for each symbol.
+ * Global map of the last known price per market + symbol, keyed `category:symbol` — spot and
+ * perp prices differ, so they're kept apart (BYBIT_PARITY_PLAN BP-0).
  * Updated by every pane feed, never cleared on pane reset.
  * Used as a fallback so positions retain their mark price
- * after switching away from a symbol.
+ * after switching away from a symbol. Bounded: 2 categories × 9 symbols.
+ * Read/write through getLastKnownPrice / setLastKnownPrice.
  */
 export const lastKnownPrices = new Map<string, number>();
+
+export function setLastKnownPrice(category: MarketCategory, symbol: string, price: number): void {
+  lastKnownPrices.set(`${category}:${symbol}`, price);
+}
+
+/**
+ * Positions carry no category until BP-2; they trade at spot prices today, so spot is the
+ * default.
+ */
+export function getLastKnownPrice(
+  symbol: string,
+  category: MarketCategory = 'spot'
+): number | undefined {
+  return lastKnownPrices.get(`${category}:${symbol}`);
+}
 
 // ─── State shape ─────────────────────────────────────────────────────────────
 
@@ -29,10 +52,16 @@ export interface PaneMarketState {
   latestPrice: number | null;
   priceChange: number | null;
   isConnected: boolean;
-  /** Best bid price from orderbook.1 stream */
+  /** Best bid (spot: orderbook.1, linear: tickers) */
   bid: number | null;
-  /** Best ask price from orderbook.1 stream */
+  /** Best ask (spot: orderbook.1, linear: tickers) */
   ask: number | null;
+  /** USDT Perpetual only — null on spot panes */
+  markPrice: number | null;
+  indexPrice: number | null;
+  fundingRate: number | null;
+  /** Unix ms of the next funding settlement */
+  nextFundingTime: number | null;
   /** Becomes true when the first WS snapshot message lands on this pane.
    *  Reset to false on every reset() / interval change. */
   wsSnapshotReceived: boolean;
@@ -52,7 +81,8 @@ export interface PaneMarketState {
   setIndicators: (indicators: IndicatorSnapshot | null) => void;
   addBar: (liveBar: LiveBar) => void;
   setConnected: (connected: boolean) => void;
-  setBidAsk: (bid: number, ask: number, lastPrice?: number) => void;
+  /** Apply a `ticker` WS message. A null bid/ask keeps the last known side. */
+  setTicker: (ticker: TickerMessage) => void;
   setWsSnapshotReceived: (v: boolean) => void;
   setHistoryLoaded: (v: boolean) => void;
   setUserZoomed: (v: boolean) => void;
@@ -71,6 +101,10 @@ function createPaneStore() {
     isConnected: false,
     bid: null,
     ask: null,
+    markPrice: null,
+    indexPrice: null,
+    fundingRate: null,
+    nextFundingTime: null,
     wsSnapshotReceived: false,
     historyLoaded: false,
     userZoomed: false,
@@ -129,24 +163,23 @@ function createPaneStore() {
 
     setConnected: (isConnected) => set({ isConnected }),
 
-    setBidAsk: (bid, ask, lastPrice) =>
+    setTicker: (ticker) =>
       set((s) => {
-        // If no lastPrice was provided, only update bid/ask; leave latestPrice and
-        // priceChange untouched so the direction indicator stays consistent.
-        if (lastPrice == null) {
-          return { bid, ask };
-        }
-
         // Recompute priceChange relative to the previous confirmed candle close
         // so that latestPrice = previousClose + priceChange invariant holds.
         const previousClose =
           s.bars.length >= 2 ? (s.bars[s.bars.length - 2]?.close ?? null) : null;
 
         return {
-          bid,
-          ask,
-          latestPrice: lastPrice,
-          priceChange: previousClose == null ? s.priceChange : lastPrice - previousClose,
+          // Spot bid/ask stay null until the first orderbook.1 update — keep the last known side
+          bid: ticker.bid ?? s.bid,
+          ask: ticker.ask ?? s.ask,
+          latestPrice: ticker.lastPrice,
+          priceChange: previousClose == null ? s.priceChange : ticker.lastPrice - previousClose,
+          markPrice: ticker.markPrice ?? null,
+          indexPrice: ticker.indexPrice ?? null,
+          fundingRate: ticker.fundingRate ?? null,
+          nextFundingTime: ticker.nextFundingTime ?? null,
         };
       }),
 
@@ -165,6 +198,10 @@ function createPaneStore() {
         isConnected: false,
         bid: null,
         ask: null,
+        markPrice: null,
+        indexPrice: null,
+        fundingRate: null,
+        nextFundingTime: null,
         wsSnapshotReceived: false,
         historyLoaded: false,
         userZoomed: false,

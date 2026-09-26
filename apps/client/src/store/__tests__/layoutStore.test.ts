@@ -7,6 +7,7 @@
  *   - setPaneInterval(): single-pane update vs. sync.interval broadcast
  *   - toggleSync(): toggles individual sync flags + snap-on-enable for symbol/interval
  *   - setPaneChartType() + persisted chartType migration/validation (v3)
+ *   - setPaneCategory() + category sync + persisted category migration/validation (v4)
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -27,6 +28,7 @@ function resetStore() {
         timeRangePreset: null,
         indicators: [],
         chartType: 'candles',
+        category: 'spot',
       },
       {
         symbol: SYMBOLS[1].symbol,
@@ -34,6 +36,7 @@ function resetStore() {
         timeRangePreset: null,
         indicators: [],
         chartType: 'candles',
+        category: 'spot',
       },
       {
         symbol: SYMBOLS[2].symbol,
@@ -41,6 +44,7 @@ function resetStore() {
         timeRangePreset: null,
         indicators: [],
         chartType: 'candles',
+        category: 'spot',
       },
       {
         symbol: SYMBOLS[3].symbol,
@@ -48,6 +52,7 @@ function resetStore() {
         timeRangePreset: null,
         indicators: [],
         chartType: 'candles',
+        category: 'spot',
       },
     ],
     syncOptions: {
@@ -208,6 +213,7 @@ describe('layoutStore', () => {
             timeRangePreset: null,
             indicators: [],
             chartType: 'candles',
+            category: 'spot',
           },
           {
             symbol: SYMBOLS[1].symbol,
@@ -215,6 +221,7 @@ describe('layoutStore', () => {
             timeRangePreset: null,
             indicators: [],
             chartType: 'candles',
+            category: 'spot',
           },
           {
             symbol: SYMBOLS[2].symbol,
@@ -222,6 +229,7 @@ describe('layoutStore', () => {
             timeRangePreset: null,
             indicators: [],
             chartType: 'candles',
+            category: 'spot',
           },
           {
             symbol: SYMBOLS[3].symbol,
@@ -229,6 +237,7 @@ describe('layoutStore', () => {
             timeRangePreset: null,
             indicators: [],
             chartType: 'candles',
+            category: 'spot',
           },
         ],
       });
@@ -278,6 +287,90 @@ describe('layoutStore', () => {
         ),
       };
       expect(merge!(persisted, current).panes[2].chartType).toBe('heikinAshi');
+    });
+  });
+
+  // ── category (BYBIT_PARITY_PLAN BP-0) ─────────────────────────────────────
+
+  describe('setPaneCategory()', () => {
+    it('updates only the target pane when sync.symbol is off', () => {
+      useLayoutStore.getState().setPaneCategory(1, 'linear');
+      const { panes } = useLayoutStore.getState();
+      expect(panes[1].category).toBe('linear');
+      expect(panes[0].category).toBe('spot');
+    });
+
+    it('updates all panes when sync.symbol is on', () => {
+      useLayoutStore.setState({
+        syncOptions: { ...useLayoutStore.getState().syncOptions, symbol: true },
+      });
+      useLayoutStore.getState().setPaneCategory(2, 'linear');
+      expect(useLayoutStore.getState().panes.every((p) => p.category === 'linear')).toBe(true);
+    });
+
+    it('synced setPaneSymbol copies the source pane category to every pane', () => {
+      useLayoutStore.getState().setPaneCategory(1, 'linear');
+      useLayoutStore.setState({
+        syncOptions: { ...useLayoutStore.getState().syncOptions, symbol: true },
+      });
+      useLayoutStore.getState().setPaneSymbol(1, 'ETHUSDT');
+      const { panes } = useLayoutStore.getState();
+      expect(panes.every((p) => p.symbol === 'ETHUSDT' && p.category === 'linear')).toBe(true);
+    });
+
+    it('enabling symbol sync snaps every pane to the active pane category', () => {
+      useLayoutStore.getState().setPaneCategory(0, 'linear');
+      useLayoutStore.getState().toggleSync('symbol');
+      expect(useLayoutStore.getState().panes.every((p) => p.category === 'linear')).toBe(true);
+    });
+  });
+
+  describe('persisted category', () => {
+    const { migrate, merge } = useLayoutStore.persist.getOptions();
+
+    it('new layouts default every pane to spot', () => {
+      const initial = useLayoutStore.getInitialState();
+      expect(initial.panes.every((p) => p.category === 'spot')).toBe(true);
+    });
+
+    it('v3 → v4 migration keeps existing layouts on spot (D7 move deferred to BP-2)', () => {
+      const v3 = {
+        panes: [{ symbol: 'BTCUSDT', interval: '1m', indicators: [], chartType: 'heikinAshi' }],
+      };
+      const migrated = migrate!(v3, 3) as { panes: PaneConfig[] };
+      expect(migrated.panes[0].category).toBe('spot');
+      expect(migrated.panes[0].chartType).toBe('heikinAshi');
+    });
+
+    it('merge replaces an unknown category with spot (🔐 it reaches a server request)', () => {
+      const current = useLayoutStore.getState();
+      const persisted = {
+        panes: current.panes.map((p, i) =>
+          i === 0 ? { ...p, category: 'inverse' as unknown as PaneConfig['category'] } : p
+        ),
+      };
+      expect(merge!(persisted, current).panes[0].category).toBe('spot');
+    });
+
+    it('merge keeps a valid persisted category', () => {
+      const current = useLayoutStore.getState();
+      const persisted = {
+        panes: current.panes.map((p, i) => (i === 3 ? { ...p, category: 'linear' as const } : p)),
+      };
+      expect(merge!(persisted, current).panes[3].category).toBe('linear');
+    });
+
+    it('merge rebuilds a short panes array with a valid category per pane', () => {
+      const current = useLayoutStore.getState();
+      const persisted = {
+        panes: [
+          { symbol: 'ETHUSDT', interval: '1m', category: 'linear' },
+        ] as unknown as PaneConfig[],
+      };
+      const merged = merge!(persisted, current);
+      expect(merged.panes).toHaveLength(4);
+      expect(merged.panes[0].category).toBe('linear');
+      expect(merged.panes[1].category).toBe('spot');
     });
   });
 });
