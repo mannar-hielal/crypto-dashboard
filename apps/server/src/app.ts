@@ -1,5 +1,6 @@
 import websocket from '@fastify/websocket';
 import bybitPlugin from './plugins/bybit.js';
+import tradingPlugin from './plugins/trading.js';
 import { marketRoutes } from './routes/market/index.js';
 import cookie from '@fastify/cookie';
 import Fastify, { type FastifyError } from 'fastify';
@@ -190,6 +191,7 @@ export async function buildApp() {
   // ─── ROUTES ───────────────────────────────────────────────────────────────
   await app.register(authRoutes, { prefix: '/api/auth' });
   await app.register(bybitPlugin);
+  await app.register(tradingPlugin); // BP-1 server engine — needs prisma + bybit
   await app.register(marketRoutes, { prefix: '/api/market' });
   await app.register(paperRoutes, { prefix: '/api/paper' });
   await app.register(newsletterRoutes, { prefix: '/api/newsletter' });

@@ -78,7 +78,7 @@ function seedState({
 
 beforeEach(() => {
   localStorage.clear();
-  usePaperStore.getState().reset();
+  usePaperStore.getState().clear();
   paneStores[0].setState({ latestPrice: 77_350, isConnected: true, bid: 77_340, ask: 77_360 });
   useLayoutStore.setState({ activePane: 0 });
 });
@@ -139,6 +139,7 @@ describe('OrderAccountManagementPanel Orders filled sub-tab', () => {
           usdtAmount: 193.38,
           triggerPrice: 77_375,
           qty: 0.0025,
+          leverage: 1,
           placedAt: 1_715_000_000_000,
         },
       ],
@@ -298,6 +299,7 @@ describe('Section 4 — Account Summary Bar', () => {
           usdtAmount: 200,
           triggerPrice: 50_000,
           qty: 0.004,
+          leverage: 1,
           placedAt: Date.now(),
         } satisfies PendingOrder,
       ],

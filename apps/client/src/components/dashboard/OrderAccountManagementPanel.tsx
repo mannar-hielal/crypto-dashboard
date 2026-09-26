@@ -26,7 +26,6 @@ import type { PanelSize } from '@/pages/DashboardPage';
 import { bg, color, fontSize } from '@/lib/tokens';
 import { fmtMktPrice } from '@/lib/utils';
 import { useLayoutStore } from '@/store/layoutStore';
-import { useTradingSoundCtx } from '@/hooks/TradingSoundContext';
 import { SoundSettings } from './SoundSettings';
 
 /** Format a crypto quantity the same way TVP does — trim trailing zeros, max 6 dp */
@@ -415,7 +414,6 @@ export function OrderAccountManagementPanel({
   const reset = usePaperStore((s) => s.reset);
   const leverage = usePaperStore((s) => s.leverage);
   const setLeverage = usePaperStore((s) => s.setLeverage);
-  const sound = useTradingSoundCtx();
   const username = useAuthStore((s) => s.user?.username ?? 'Account');
 
   // ── Balance history rows (sorted newest first) ────────────────────────────
@@ -660,21 +658,14 @@ export function OrderAccountManagementPanel({
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   function handleClose(positionId: string) {
-    const pos = positions.find((p) => p.id === positionId);
-    if (!pos) return;
-    const markPrice = getPriceForSymbol(pos.symbol);
-    if (!markPrice) return;
-    const pnl =
-      pos.side === 'long'
-        ? (markPrice - pos.entryPrice) * pos.quantity
-        : (pos.entryPrice - markPrice) * pos.quantity;
-    closePosition(positionId, markPrice);
-    if (pnl >= 0) sound.playProfit();
-    else sound.playLoss();
+    // Closes at the server's live price; the server's profit / loss sound plays via the feed
+    void closePosition(positionId);
   }
 
-  function handleSaveNote() {
-    if (noteText.trim()) addJournalNote(noteText.trim());
+  async function handleSaveNote() {
+    const text = noteText.trim();
+    // Keep the draft if the server didn't take it (network error, over-long note)
+    if (text && (await addJournalNote(text))) return;
     setNoteText('');
     setIsAddingNote(false);
   }
@@ -684,8 +675,10 @@ export function OrderAccountManagementPanel({
     setEditText(entry.text);
   }
 
-  function handleSaveEdit() {
-    if (editingId && editText.trim()) editJournalEntry(editingId, editText.trim());
+  async function handleSaveEdit() {
+    const text = editText.trim();
+    // Stay in edit mode if the server didn't take the change
+    if (editingId && text && (await editJournalEntry(editingId, text))) return;
     setEditingId(null);
     setEditText('');
   }

@@ -1,43 +1,23 @@
-import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
+/**
+ * Paper-trading API + private WebSocket tests (BYBIT_PARITY_PLAN BP-1).
+ *
+ * The HTTP layer is tested with the trading service stubbed (vi.spyOn on app.trading /
+ * app.paperRepository). Engine maths is covered by trading/engine/__tests__, and the service
+ * layer by trading/__tests__. Here: auth, validation (intent only, no client prices),
+ * error mapping, ownership (404), the removed F11 endpoints, and the WebSocket protocol.
+ */
+
+import { describe, it, expect, vi, beforeAll, afterAll, afterEach } from 'vitest';
 import type { FastifyInstance } from 'fastify';
+import { Decimal } from '@prisma/client/runtime/client';
+import type { PaperStateDTO } from '@crypto-dashboard/sdk';
 
 // ─── Mock Prisma ─────────────────────────────────────────────────────────────
+// The routes never reach Prisma here (the trading service is stubbed per test).
 vi.mock('../plugins/prisma.js', () => {
   const skipOverride = Symbol.for('skip-override');
   const plugin = async (app: FastifyInstance) => {
-    const prismaClient = {
-      account: {
-        findUnique: vi.fn(),
-        create: vi.fn(),
-        update: vi.fn(),
-      },
-      order: {
-        findMany: vi.fn(),
-        findFirst: vi.fn(),
-        create: vi.fn(),
-        update: vi.fn(),
-        deleteMany: vi.fn(),
-      },
-      trade: {
-        findMany: vi.fn(),
-        create: vi.fn(),
-        deleteMany: vi.fn(),
-      },
-      position: {
-        findMany: vi.fn(),
-        findFirst: vi.fn(),
-        create: vi.fn(),
-        update: vi.fn(),
-        deleteMany: vi.fn(),
-      },
-      $transaction: vi
-        .fn()
-        .mockImplementation(
-          async (arg: Promise<unknown>[] | ((tx: unknown) => Promise<unknown>)) =>
-            typeof arg === 'function' ? arg(prismaClient) : Promise.all(arg)
-        ),
-    };
-    app.decorate('prisma', prismaClient as never);
+    app.decorate('prisma', {} as never);
   };
   // Fastify Symbol-key pattern — safe, controlled access
   // eslint-disable-next-line security/detect-object-injection
@@ -46,144 +26,443 @@ vi.mock('../plugins/prisma.js', () => {
 });
 
 import { buildApp } from '../app.js';
+import { TradingError, WAITING_FOR_PRICE } from '../trading/TradingService.js';
 
-describe('Paper Trading Routes', () => {
+const EMPTY_DELTA = {
+  account: { balance: '10000', realizedPnl: '0', leverage: 1, version: 1 },
+  positionsUpsert: [],
+  positionsRemove: [],
+  pendingUpsert: [],
+  pendingRemove: [],
+  orders: [],
+  trades: [],
+  balanceEvents: [],
+  journal: [],
+  journalEdits: [],
+};
+
+const STATE: PaperStateDTO = {
+  account: { balance: '10000', realizedPnl: '0', leverage: 1, version: 0 },
+  positions: [],
+  pendingOrders: [],
+  orders: [],
+  trades: [],
+  journal: [],
+  balanceEvents: [],
+};
+
+const executed = <R>(result: R) => ({ result, delta: EMPTY_DELTA, sound: 'placed' as const });
+
+describe('Paper Trading API (BP-1)', () => {
   let app: FastifyInstance;
   const userId = 'user-1';
   let token: string;
+  let auth: { authorization: string };
 
   beforeAll(async () => {
     app = await buildApp();
+    await app.ready();
     token = app.jwt.sign({ userId, email: 'test@example.com' });
+    auth = { authorization: `Bearer ${token}` };
   });
 
   afterAll(async () => {
     await app.close();
   });
 
-  describe('GET /api/paper/account', () => {
-    it('returns the account details', async () => {
-      const mockAccount = {
-        id: 'acc-1',
-        userId,
-        totalBalance: { toString: () => '10000' },
-        availableBalance: { toString: () => '10000' },
-        unrealizedPnl: { toString: () => '0' },
-        realizedPnl: { toString: () => '0' },
-        lastReset: new Date(),
-      };
-      vi.mocked(app.prisma.account.findUnique).mockResolvedValueOnce(mockAccount as never);
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
-      const res = await app.inject({
-        method: 'GET',
-        url: '/api/paper/account',
-        headers: { authorization: `Bearer ${token}` },
+  // ── Auth ─────────────────────────────────────────────────────────────────────
+
+  it.each([
+    ['GET', '/api/paper/state'],
+    ['POST', '/api/paper/orders'],
+    ['DELETE', '/api/paper/orders/o1'],
+    ['PATCH', '/api/paper/orders/o1'],
+    ['DELETE', '/api/paper/orders/o1/exits/take-profit'],
+    ['PATCH', '/api/paper/positions/p1/tpsl'],
+    ['DELETE', '/api/paper/positions/p1/exits/stop-loss'],
+    ['POST', '/api/paper/positions/p1/close'],
+    ['PATCH', '/api/paper/account/leverage'],
+    ['POST', '/api/paper/account/reset'],
+    ['POST', '/api/paper/journal'],
+    ['PATCH', '/api/paper/journal/j1'],
+  ] as const)('%s %s requires a valid token (401)', async (method, url) => {
+    const res = await app.inject({ method, url });
+    expect(res.statusCode).toBe(401);
+  });
+
+  // ── F11: client-computed endpoints are gone ──────────────────────────────────
+
+  it.each([
+    ['PATCH', '/api/paper/account'],
+    ['POST', '/api/paper/trades'],
+    ['POST', '/api/paper/positions'],
+    ['DELETE', '/api/paper/positions/p1'],
+    ['PATCH', '/api/paper/positions/p1'],
+  ] as const)('removed endpoint %s %s → 404 (F11)', async (method, url) => {
+    const res = await app.inject({ method, url, headers: auth, payload: {} });
+    expect(res.statusCode).toBe(404);
+  });
+
+  // ── GET /state ───────────────────────────────────────────────────────────────
+
+  it('GET /state returns the account snapshot of the token user', async () => {
+    const snapshot = vi.spyOn(app.paperRepository, 'snapshot').mockResolvedValue(STATE);
+    const res = await app.inject({ method: 'GET', url: '/api/paper/state', headers: auth });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual(STATE);
+    expect(snapshot).toHaveBeenCalledWith(userId);
+  });
+
+  // ── POST /orders ─────────────────────────────────────────────────────────────
+
+  describe('POST /orders', () => {
+    const post = (payload: object) =>
+      app.inject({ method: 'POST', url: '/api/paper/orders', headers: auth, payload });
+
+    it('passes a market intent as Decimals and returns result + delta + sound', async () => {
+      const place = vi.spyOn(app.trading, 'placeOrder').mockResolvedValue(executed('pos-1'));
+      const res = await post({
+        symbol: 'BTCUSDT',
+        side: 'buy',
+        type: 'market',
+        usdtAmount: '100.5',
+        takeProfit: '55000',
       });
-
       expect(res.statusCode).toBe(200);
-      expect(res.json()).toEqual(expect.objectContaining({ id: 'acc-1' }));
+      expect(res.json()).toMatchObject({ result: 'pos-1', sound: 'placed' });
+      const [calledUser, intent] = place.mock.calls[0];
+      expect(calledUser).toBe(userId);
+      expect(intent.usdtAmount).toEqual(new Decimal('100.5'));
+      expect(intent.takeProfit).toEqual(new Decimal('55000'));
+      expect(intent).not.toHaveProperty('triggerPrice');
     });
-  });
 
-  describe('POST /api/paper/orders', () => {
-    it('creates a new order without side-effects', async () => {
-      const mockAccount = { id: 'acc-1', userId };
-      vi.mocked(app.prisma.account.findUnique).mockResolvedValueOnce(mockAccount as never);
-      vi.mocked(app.prisma.order.create).mockResolvedValueOnce({
-        id: 'order-1',
+    it('🔐 a client-supplied price never reaches the engine (unknown fields are stripped)', async () => {
+      // Fastify's validator removes properties not in the schema (additionalProperties: false +
+      // the default removeAdditional) — the fill price is always the server's own.
+      const place = vi.spyOn(app.trading, 'placeOrder').mockResolvedValue(executed('pos-1'));
+      const res = await post({
         symbol: 'BTCUSDT',
-        side: 'BUY',
-        orderType: 'MARKET',
-        quantity: { toString: () => '1.0' },
-        status: 'FILLED',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        filledQuantity: { toString: () => '1.0' },
-        margin: { toString: () => '0' },
-        commission: { toString: () => '0' },
-      } as never);
-
-      const res = await app.inject({
-        method: 'POST',
-        url: '/api/paper/orders',
-        headers: { authorization: `Bearer ${token}` },
-        payload: {
-          symbol: 'BTCUSDT',
-          side: 'BUY',
-          orderType: 'MARKET',
-          quantity: '1.0',
-          limitPrice: '50000',
-        },
+        side: 'buy',
+        type: 'market',
+        usdtAmount: '100',
+        price: '1',
+        balance: '1000000',
       });
-
-      expect(res.statusCode).toBe(201);
-      expect(app.prisma.order.create).toHaveBeenCalled();
-      // Verify NO position creation happened in this route
-      expect(app.prisma.position.create).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('POST /api/paper/positions', () => {
-    it('creates a new position', async () => {
-      const mockAccount = { id: 'acc-1', userId };
-      vi.mocked(app.prisma.account.findUnique).mockResolvedValueOnce(mockAccount as never);
-      vi.mocked(app.prisma.position.create).mockResolvedValueOnce({
-        id: 'pos-1',
-        symbol: 'BTCUSDT',
-        side: 'LONG',
-        quantity: { toString: () => '1.0' },
-        entryPrice: { toString: () => '50000' },
-        margin: { toString: () => '1000' },
-        openedAt: new Date(),
-        updatedAt: new Date(),
-      } as never);
-
-      const res = await app.inject({
-        method: 'POST',
-        url: '/api/paper/positions',
-        headers: { authorization: `Bearer ${token}` },
-        payload: {
-          symbol: 'BTCUSDT',
-          side: 'LONG',
-          quantity: '1.0',
-          entryPrice: '50000',
-          margin: '1000',
-        },
-      });
-
-      expect(res.statusCode).toBe(201);
-      expect(app.prisma.position.create).toHaveBeenCalled();
-    });
-  });
-
-  describe('PATCH /api/paper/orders/:id', () => {
-    it('updates an existing order by refId or id', async () => {
-      vi.mocked(app.prisma.order.findFirst).mockResolvedValueOnce({ id: 'db-id-1' } as never);
-      vi.mocked(app.prisma.order.update).mockResolvedValueOnce({
-        id: 'db-id-1',
-        symbol: 'BTCUSDT',
-        side: 'BUY',
-        orderType: 'MARKET',
-        quantity: { toString: () => '1.0' },
-        status: 'FILLED',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        filledQuantity: { toString: () => '1.0' },
-        margin: { toString: () => '0' },
-        commission: { toString: () => '0' },
-      } as never);
-
-      const res = await app.inject({
-        method: 'PATCH',
-        url: '/api/paper/orders/local-ref-id',
-        headers: { authorization: `Bearer ${token}` },
-        payload: { status: 'FILLED' },
-      });
-
       expect(res.statusCode).toBe(200);
-      expect(app.prisma.order.update).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: 'db-id-1' } })
+      const intent = place.mock.calls[0][1];
+      expect(intent).not.toHaveProperty('price');
+      expect(intent).not.toHaveProperty('balance');
+    });
+
+    it.each([
+      [{ symbol: 'PEPEUSDT' }, 'symbol outside the allowlist'],
+      [{ side: 'long' }, 'bad side'],
+      [{ type: 'trailing' }, 'bad type'],
+      [{ usdtAmount: '1e5' }, 'exponent notation'],
+      [{ usdtAmount: '-5' }, 'negative amount'],
+      [{ usdtAmount: '1.123456789' }, 'more than 8 decimals'],
+      [{ usdtAmount: 'abc' }, 'not a number'],
+    ])('400 for %o (%s)', async (override) => {
+      const res = await post({
+        symbol: 'BTCUSDT',
+        side: 'buy',
+        type: 'market',
+        usdtAmount: '100',
+        ...override,
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('409 for a zero amount', async () => {
+      const res = await post({ symbol: 'BTCUSDT', side: 'buy', type: 'market', usdtAmount: '0' });
+      expect(res.statusCode).toBe(409);
+    });
+
+    it('400 for a limit order without triggerPrice', async () => {
+      const res = await post({ symbol: 'BTCUSDT', side: 'buy', type: 'limit', usdtAmount: '100' });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('passes a limit trigger price', async () => {
+      const place = vi.spyOn(app.trading, 'placeOrder').mockResolvedValue(executed('o-1'));
+      const res = await post({
+        symbol: 'ETHUSDT',
+        side: 'sell',
+        type: 'limit',
+        usdtAmount: '100',
+        triggerPrice: '3100.25',
+      });
+      expect(res.statusCode).toBe(200);
+      expect(place.mock.calls[0][1].triggerPrice).toEqual(new Decimal('3100.25'));
+    });
+
+    it('maps a TradingError to its status with only the message', async () => {
+      vi.spyOn(app.trading, 'placeOrder').mockRejectedValue(
+        new TradingError(409, WAITING_FOR_PRICE)
       );
+      const res = await post({ symbol: 'BTCUSDT', side: 'buy', type: 'market', usdtAmount: '100' });
+      expect(res.statusCode).toBe(409);
+      expect(res.json()).toEqual({ error: WAITING_FOR_PRICE });
     });
+
+    it('🔐 an unexpected error becomes a generic 500 (no internals leak)', async () => {
+      vi.spyOn(app.trading, 'placeOrder').mockRejectedValue(new Error('db password is hunter2'));
+      const res = await post({ symbol: 'BTCUSDT', side: 'buy', type: 'market', usdtAmount: '100' });
+      expect(res.statusCode).toBe(500);
+      expect(res.json().error).toBe('Internal Server Error');
+      expect(res.body).not.toContain('hunter2');
+    });
+
+    it('without a live price the real service answers "Waiting for live price…"', async () => {
+      // No stub: the test-mode Bybit feed has no tickers
+      const res = await post({ symbol: 'BTCUSDT', side: 'buy', type: 'market', usdtAmount: '100' });
+      expect(res.statusCode).toBe(409);
+      expect(res.json()).toEqual({ error: WAITING_FOR_PRICE });
+    });
+  });
+
+  // ── Order / position management ──────────────────────────────────────────────
+
+  it('DELETE /orders/:id → 404 when the order is not the user’s (or does not exist)', async () => {
+    const cancel = vi.spyOn(app.trading, 'cancelOrder').mockResolvedValue(executed(false));
+    const res = await app.inject({ method: 'DELETE', url: '/api/paper/orders/o-9', headers: auth });
+    expect(res.statusCode).toBe(404);
+    expect(cancel).toHaveBeenCalledWith(userId, 'o-9');
+  });
+
+  it('DELETE /orders/:id → 200 with the delta when cancelled', async () => {
+    vi.spyOn(app.trading, 'cancelOrder').mockResolvedValue(executed(true));
+    const res = await app.inject({ method: 'DELETE', url: '/api/paper/orders/o-1', headers: auth });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ result: true, delta: EMPTY_DELTA });
+  });
+
+  it('🔐 rejects ids with unexpected characters (400)', async () => {
+    const res = await app.inject({
+      method: 'DELETE',
+      url: '/api/paper/orders/o%3B1',
+      headers: auth,
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('PATCH /orders/:id passes null exits and returns rejected', async () => {
+    const edit = vi
+      .spyOn(app.trading, 'editOrder')
+      .mockResolvedValue(executed('rejected' as const));
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/api/paper/orders/o-1',
+      headers: auth,
+      payload: { triggerPrice: '50000', usdtAmount: '200', takeProfit: null, stopLoss: '48000' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().result).toBe('rejected');
+    const [, , , , tp, sl] = edit.mock.calls[0];
+    expect(tp).toBeNull();
+    expect(sl).toEqual(new Decimal('48000'));
+  });
+
+  it('DELETE /orders/:id/exits/:leg only accepts take-profit / stop-loss', async () => {
+    const res = await app.inject({
+      method: 'DELETE',
+      url: '/api/paper/orders/o-1/exits/trailing',
+      headers: auth,
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('POST /positions/:id/close returns the gross PnL as a string', async () => {
+    vi.spyOn(app.trading, 'closePosition').mockResolvedValue(executed(new Decimal('12.5')));
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/paper/positions/p-1/close',
+      headers: auth,
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().result).toBe('12.5');
+  });
+
+  it('POST /positions/:id/close → 404 for an unknown position', async () => {
+    vi.spyOn(app.trading, 'closePosition').mockResolvedValue(executed(null));
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/paper/positions/nope/close',
+      headers: auth,
+    });
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('PATCH /account/leverage validates 1..10', async () => {
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/api/paper/account/leverage',
+      headers: auth,
+      payload: { leverage: 11 },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('POST /journal bounds note length (500)', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/paper/journal',
+      headers: auth,
+      payload: { text: 'x'.repeat(501) },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+});
+
+// ─── Private WebSocket ─────────────────────────────────────────────────────────
+
+describe('WS /api/paper/ws (BP-1)', () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    app = await buildApp();
+    await app.ready();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  type Ws = Awaited<ReturnType<FastifyInstance['injectWS']>>;
+
+  /** Open a socket and collect its messages and close code. */
+  async function open(headers: Record<string, string> = {}) {
+    const messages: unknown[] = [];
+    let closeCode: number | null = null;
+    let onClose: () => void = () => undefined;
+    const closed = new Promise<void>((resolve) => {
+      onClose = resolve;
+    });
+    const ws: Ws = await app.injectWS(
+      '/api/paper/ws',
+      { headers },
+      {
+        onInit: (socket) => {
+          socket.on('message', (data: Buffer) => messages.push(JSON.parse(data.toString())));
+          socket.on('close', (code: number) => {
+            closeCode = code;
+            onClose();
+          });
+        },
+      }
+    );
+    const next = async (count: number) => {
+      for (let i = 0; i < 100 && messages.length < count; i++) {
+        await new Promise((r) => setTimeout(r, 10));
+      }
+      return messages;
+    };
+    return { ws, messages, next, closed, code: () => closeCode };
+  }
+
+  const tokenFor = (userId: string) => app.jwt.sign({ userId, email: `${userId}@x.test` });
+
+  it('closes with 4401 on an invalid token', async () => {
+    const { ws, closed, code } = await open();
+    ws.send(JSON.stringify({ type: 'auth', token: 'not-a-jwt' }));
+    await closed;
+    expect(code()).toBe(4401);
+  });
+
+  it('closes with 1008 on an unexpected first message', async () => {
+    const { ws, closed, code } = await open();
+    ws.send(JSON.stringify({ type: 'subscribe' }));
+    await closed;
+    expect(code()).toBe(1008);
+  });
+
+  it('🔐 closes with 1009 on an oversized message (size guard before JSON.parse)', async () => {
+    const { ws, closed, code } = await open();
+    ws.send('x'.repeat(5 * 1024));
+    await closed;
+    expect(code()).toBe(1009);
+  });
+
+  it('🔐 closes with 1008 when the Origin is not the app', async () => {
+    const { closed, code } = await open({ origin: 'https://evil.example' });
+    await closed;
+    expect(code()).toBe(1008);
+  });
+
+  it('sends the snapshot on auth, then the user’s deltas to every open tab', async () => {
+    vi.spyOn(app.paperRepository, 'snapshot').mockResolvedValue(STATE);
+    const a = await open();
+    const b = await open();
+    a.ws.send(JSON.stringify({ type: 'auth', token: tokenFor('ws-user') }));
+    b.ws.send(JSON.stringify({ type: 'auth', token: tokenFor('ws-user') }));
+    expect((await a.next(1))[0]).toEqual({ type: 'snapshot', state: STATE });
+    await b.next(1);
+
+    app.paperEvents.publish({
+      userId: 'ws-user',
+      delta: EMPTY_DELTA,
+      sound: 'filled',
+      state: {
+        balance: new Decimal(1),
+        realizedPnl: new Decimal(0),
+        leverage: 1,
+        positions: [],
+        pendingOrders: [],
+      },
+    });
+    // Another user's change never reaches these sockets
+    app.paperEvents.publish({
+      userId: 'someone-else',
+      delta: EMPTY_DELTA,
+      state: {
+        balance: new Decimal(1),
+        realizedPnl: new Decimal(0),
+        leverage: 1,
+        positions: [],
+        pendingOrders: [],
+      },
+    });
+
+    expect((await a.next(2))[1]).toEqual({ type: 'delta', delta: EMPTY_DELTA, sound: 'filled' });
+    expect((await b.next(2))[1]).toEqual({ type: 'delta', delta: EMPTY_DELTA, sound: 'filled' });
+    await new Promise((r) => setTimeout(r, 30));
+    expect(a.messages).toHaveLength(2);
+    a.ws.terminate();
+    b.ws.terminate();
+  });
+
+  it('🔐 a re-auth with another user’s token closes the socket (4401)', async () => {
+    vi.spyOn(app.paperRepository, 'snapshot').mockResolvedValue(STATE);
+    const s = await open();
+    s.ws.send(JSON.stringify({ type: 'auth', token: tokenFor('switch-a') }));
+    await s.next(1);
+    s.ws.send(JSON.stringify({ type: 'auth', token: tokenFor('switch-b') }));
+    await s.closed;
+    expect(s.code()).toBe(4401);
+  });
+
+  it('caps open sockets per user (5) with 1013', async () => {
+    vi.spyOn(app.paperRepository, 'snapshot').mockResolvedValue(STATE);
+    const sockets = [];
+    for (let i = 0; i < 5; i++) {
+      const s = await open();
+      s.ws.send(JSON.stringify({ type: 'auth', token: tokenFor('cap-user') }));
+      await s.next(1);
+      sockets.push(s);
+    }
+    const sixth = await open();
+    sixth.ws.send(JSON.stringify({ type: 'auth', token: tokenFor('cap-user') }));
+    await sixth.closed;
+    expect(sixth.code()).toBe(1013);
+    for (const s of sockets) s.ws.terminate();
   });
 });

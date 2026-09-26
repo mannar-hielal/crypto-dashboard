@@ -1,11 +1,10 @@
-import { useState, useId, useEffect } from 'react';
+import { useState, useId, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { X, ChevronUp, ChevronDown, ArrowLeftRight, Info, AlertTriangle } from 'lucide-react';
 import { useStore } from 'zustand';
 import { useLayoutStore } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
-import { usePaperStore, COMMISSION_RATE } from '@/store/paperStore';
-import { useTradingSoundCtx } from '@/hooks/TradingSoundContext';
+import { usePaperStore, COMMISSION_RATE, type PlaceResult } from '@/store/paperStore';
 import { floorToLot } from '@/lib/markets';
 import { bg, color, fontSize } from '@/lib/tokens';
 import { Toggle } from '@/components/ui/Toggle';
@@ -94,7 +93,8 @@ export function TradingPanel({
   const placeOrder = usePaperStore((s) => s.placeOrder);
   const placeLimitOrder = usePaperStore((s) => s.placeLimitOrder);
   const placeStopOrder = usePaperStore((s) => s.placeStopOrder);
-  const sound = useTradingSoundCtx();
+  // Guards against a second submit while an order request is in flight
+  const submittingRef = useRef(false);
 
   // ── Local state ───────────────────────────────────────────────────────────
   const [side, setSide] = useState<OrderSide>(initialSide);
@@ -389,24 +389,36 @@ export function TradingPanel({
       return;
     }
 
+    void submitOrder();
+  }
+
+  /**
+   * Send the order to the server (BYBIT_PARITY_PLAN BP-1). A market order fills at the server's
+   * live price — execPrice is only this panel's preview. The server plays the placed / queued
+   * sound through the paper feed, so there is none here.
+   */
+  async function submitOrder() {
+    if (submittingRef.current) return; // one request at a time (double-click guard)
     const v = validate();
     if (!v || !execPrice) return;
 
-    const id =
-      tab === 'market'
-        ? placeOrder(symbol, side, execPrice, v.amount, v.tp, v.sl)
-        : tab === 'limit'
-          ? placeLimitOrder(symbol, side, execPrice, v.amount, v.tp, v.sl)
-          : placeStopOrder(symbol, side, execPrice, v.amount, v.tp, v.sl);
-
-    if (!id) {
-      setFormError('Order could not be placed');
-      return;
+    submittingRef.current = true;
+    let result: PlaceResult;
+    try {
+      result =
+        tab === 'market'
+          ? await placeOrder(symbol, side, v.amount, v.tp, v.sl)
+          : tab === 'limit'
+            ? await placeLimitOrder(symbol, side, execPrice, v.amount, v.tp, v.sl)
+            : await placeStopOrder(symbol, side, execPrice, v.amount, v.tp, v.sl);
+    } finally {
+      submittingRef.current = false;
     }
 
-    // Play sound feedback
-    if (tab === 'market') sound.playOrderPlaced();
-    else sound.playOrderQueued();
+    if (!result.id) {
+      setFormError(result.error ?? 'Order could not be placed');
+      return;
+    }
 
     setQtyInput('');
     setPriceInput('');
@@ -979,35 +991,9 @@ export function TradingPanel({
                       onClick={() => {
                         setSltpConfirmPending(false);
                         setSltpConfirmBypassed(true);
-                        // Re-run execute immediately — sltpConfirmBypassed is set above so
-                        // the gate will be skipped. We call validate + submit inline rather
-                        // than relying on state to flush, to avoid an extra render cycle.
-                        const v = validate();
-                        if (!v || !execPrice) return;
-                        const id =
-                          tab === 'market'
-                            ? placeOrder(symbol, side, execPrice, v.amount, v.tp, v.sl)
-                            : tab === 'limit'
-                              ? placeLimitOrder(symbol, side, execPrice, v.amount, v.tp, v.sl)
-                              : placeStopOrder(symbol, side, execPrice, v.amount, v.tp, v.sl);
-                        if (!id) {
-                          setFormError('Order could not be placed');
-                          return;
-                        }
-                        if (tab === 'market') sound.playOrderPlaced();
-                        else sound.playOrderQueued();
-                        setQtyInput('');
-                        setPriceInput('');
-                        setTpInput('');
-                        setSlInput('');
-                        setTpEnabled(false);
-                        setSlEnabled(false);
-                        setBypassWarning(false);
-                        setSltpConfirmBypassed(false);
-                        void executeAnim.start({
-                          scale: [1, 1.04, 1],
-                          transition: { duration: 0.3, ease: 'easeOut' },
-                        });
+                        // Submit immediately — sltpConfirmBypassed is set above, but we call
+                        // the shared submit directly rather than waiting for state to flush.
+                        void submitOrder();
                       }}
                       className="flex-1 rounded py-1 text-xs font-semibold transition-colors hover:opacity-80"
                       style={{

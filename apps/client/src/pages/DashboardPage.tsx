@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
@@ -8,13 +8,12 @@ import { DrawingManager } from 'lightweight-charts-drawing';
 import { SeoHead } from '@/components/SeoHead';
 import { usePaneFeeds } from '@/hooks/usePaneFeeds';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { useTPSLMonitor } from '@/hooks/useTPSLMonitor';
+import { usePaperFeed } from '@/hooks/usePaperFeed';
+import { useSessionRefresh } from '@/hooks/useSessionRefresh';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { usePendingOrderMonitor } from '@/hooks/usePendingOrderMonitor';
-import { TradingSoundProvider, useSoundActions } from '@/hooks/TradingSoundContext';
+import { TradingSoundProvider } from '@/hooks/TradingSoundContext';
 import { useLayoutStore } from '@/store/layoutStore';
 import { useAuthStore } from '@/store/authStore';
-import { usePaperStore } from '@/store/paperStore';
 import { authApi } from '@crypto-dashboard/sdk';
 import { TopBar } from '@/components/dashboard/TopBar';
 import { LeftToolbar } from '@/components/dashboard/LeftToolbar';
@@ -137,15 +136,12 @@ export function DashboardInner() {
     setCursorVariant(variant);
   }
 
-  const { playProfit, playLoss, playOrderFilled } = useSoundActions();
-
   usePaneFeeds();
   useDocumentTitle();
 
   const user = useAuthStore((s) => s.user);
   const accessToken = useAuthStore((s) => s.accessToken);
   const updateUser = useAuthStore((s) => s.updateUser);
-  const syncWithServer = usePaperStore((s) => s.syncWithServer);
 
   const activePaneIndex = useLayoutStore((s) => s.activePane);
   // 🔐 Selector reads live state, not a closure — re-renders only when the
@@ -156,27 +152,10 @@ export function DashboardInner() {
   const setPaneInterval = useLayoutStore((s) => s.setPaneInterval);
   const setBottomPanelHeight = useLayoutStore((s) => s.setBottomPanelHeight);
 
-  // 🔄 Sync paper trading state with DB on mount (if authenticated)
-  useEffect(() => {
-    if (accessToken) {
-      syncWithServer(accessToken);
-    }
-  }, [accessToken, syncWithServer]);
-
-  // Stable callback refs — memoized so they don't change on every render.
-  const handleTPSLClosed = useCallback(
-    (pnl: number) => {
-      if (pnl >= 0) playProfit();
-      else playLoss();
-    },
-    [playProfit, playLoss]
-  );
-  const handleOrderFilled = useCallback(() => {
-    playOrderFilled();
-  }, [playOrderFilled]);
-
-  useTPSLMonitor({ onClosed: handleTPSLClosed });
-  usePendingOrderMonitor({ onFilled: handleOrderFilled });
+  // Paper trading runs on the server (BYBIT_PARITY_PLAN BP-1): the private WebSocket keeps
+  // paperStore in sync and plays fill / TP-SL sounds; the session refresh keeps the token valid.
+  useSessionRefresh();
+  usePaperFeed();
 
   const isMobile = useMediaQuery('(max-width: 1023px)');
 

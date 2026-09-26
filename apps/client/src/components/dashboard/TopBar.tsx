@@ -4,6 +4,7 @@ import { LogOut, ChevronDown, Settings, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@crypto-dashboard/sdk';
+import { usePaperStore } from '@/store/paperStore';
 import { bg, color, fontSize, gradient, radius } from '@/lib/tokens';
 import { SettingsModal } from './SettingsModal';
 
@@ -160,6 +161,8 @@ export function TopBar({ marketing = false }: TopBarProps) {
                             // fails — otherwise the user appears signed-in forever.
                           } finally {
                             useAuthStore.getState().clearAuth();
+                            // 🔐 Never leave the account on screen for the next user
+                            usePaperStore.getState().clear();
                           }
                         })();
                       }}

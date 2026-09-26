@@ -166,15 +166,16 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
     }
   }
 
-  function handleConfirm() {
+  async function handleConfirm() {
     if (confirmDisabled) return;
-    const result = editPendingOrder(
+    const result = await editPendingOrder(
       orderId,
       newPrice,
       newUsdtAmount,
       tpEnabled && tpVal ? tpVal : null,
       slEnabled && slVal ? slVal : null
     );
+    if (result === 'error') return; // request failed — nothing changed; keep the panel open
     if (result === 'rejected') {
       setSubmitResult('rejected');
       // Close after a short delay so the user can see the rejection

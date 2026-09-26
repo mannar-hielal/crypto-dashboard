@@ -1,13 +1,11 @@
 import type {
-  SyncAccountResponse,
-  SyncOrderResponse,
-  SyncTradeResponse,
-  SyncPositionResponse,
-  CreateOrderRequest,
-  UpdateOrderRequest,
-  CreateTradeRequest,
-  CreatePositionRequest,
-  UpdatePositionRequest,
+  EditPendingOrderRequest,
+  JournalNoteRequest,
+  PaperActionResponse,
+  PaperExitLeg,
+  PaperStateDTO,
+  PlaceOrderRequest,
+  UpdatePositionExitsRequest,
 } from '../types/index.js';
 
 const BASE_URL =
@@ -15,7 +13,7 @@ const BASE_URL =
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function request<T>(path: string, accessToken: string, init?: RequestInit): Promise<T> {
   const { headers, signal, ...rest } = init || {};
 
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -27,6 +25,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       : AbortSignal.timeout(10_000),
     headers: {
       ...(init?.body !== undefined && init.body !== null && { 'Content-Type': 'application/json' }),
+      Authorization: `Bearer ${accessToken}`,
       ...headers,
     },
     credentials: 'include',
@@ -40,95 +39,111 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const message = (data as { error?: string }).error ?? `HTTP ${res.status}`;
-    throw new Error(message);
+    // `status` lets callers tell an auth failure (401) from a transient one (network, 5xx)
+    throw Object.assign(new Error(message), { status: res.status });
   }
 
   return data;
 }
 
-// ─── Paper API ────────────────────────────────────────────────────────────────
+const json = (method: string, body: unknown): RequestInit => ({
+  method,
+  body: JSON.stringify(body),
+});
+
+// ─── Paper API (BYBIT_PARITY_PLAN BP-1) ──────────────────────────────────────
+//
+// The server executes every trade. These calls send intent only (what to do); the server picks
+// prices, computes fees and PnL, and answers with the resulting delta. The same delta is also
+// pushed to every open tab over the private WebSocket (paperApi.wsUrl()).
 
 export const paperApi = {
-  getAccount: (accessToken: string) =>
-    request<SyncAccountResponse>('/api/paper/account', {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    }),
+  /** Full account view: balance, positions, pending orders and recent history. */
+  getState: (accessToken: string) => request<PaperStateDTO>('/api/paper/state', accessToken),
 
-  updateAccount: (body: Partial<SyncAccountResponse>, accessToken: string) =>
-    request<SyncAccountResponse>('/api/paper/account', {
-      method: 'PATCH',
-      headers: { Authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify(body),
-    }),
+  /** Market / limit / stop order. `result` is the new position / order id, or null if rejected. */
+  placeOrder: (body: PlaceOrderRequest, accessToken: string) =>
+    request<PaperActionResponse<string | null>>(
+      '/api/paper/orders',
+      accessToken,
+      json('POST', body)
+    ),
+
+  cancelOrder: (orderId: string, accessToken: string) =>
+    request<PaperActionResponse<boolean>>(
+      `/api/paper/orders/${encodeURIComponent(orderId)}`,
+      accessToken,
+      { method: 'DELETE' }
+    ),
+
+  editOrder: (orderId: string, body: EditPendingOrderRequest, accessToken: string) =>
+    request<PaperActionResponse<'ok' | 'rejected' | 'not-found'>>(
+      `/api/paper/orders/${encodeURIComponent(orderId)}`,
+      accessToken,
+      json('PATCH', body)
+    ),
+
+  cancelOrderExit: (orderId: string, leg: PaperExitLeg, accessToken: string) =>
+    request<PaperActionResponse<boolean>>(
+      `/api/paper/orders/${encodeURIComponent(orderId)}/exits/${leg}`,
+      accessToken,
+      { method: 'DELETE' }
+    ),
+
+  updatePositionExits: (
+    positionId: string,
+    body: UpdatePositionExitsRequest,
+    accessToken: string
+  ) =>
+    request<PaperActionResponse<boolean>>(
+      `/api/paper/positions/${encodeURIComponent(positionId)}/tpsl`,
+      accessToken,
+      json('PATCH', body)
+    ),
+
+  cancelPositionExit: (positionId: string, leg: PaperExitLeg, accessToken: string) =>
+    request<PaperActionResponse<boolean>>(
+      `/api/paper/positions/${encodeURIComponent(positionId)}/exits/${leg}`,
+      accessToken,
+      { method: 'DELETE' }
+    ),
+
+  /** Close at the server's live price. `result` is the gross PnL (decimal string), or null. */
+  closePosition: (positionId: string, accessToken: string) =>
+    request<PaperActionResponse<string | null>>(
+      `/api/paper/positions/${encodeURIComponent(positionId)}/close`,
+      accessToken,
+      { method: 'POST' }
+    ),
+
+  setLeverage: (leverage: number, accessToken: string) =>
+    request<PaperActionResponse<number>>(
+      '/api/paper/account/leverage',
+      accessToken,
+      json('PATCH', { leverage })
+    ),
 
   resetAccount: (accessToken: string) =>
-    request<SyncAccountResponse>('/api/paper/account/reset', {
+    request<PaperActionResponse<boolean>>('/api/paper/account/reset', accessToken, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${accessToken}` },
     }),
 
-  getOrders: (query: { status?: string; limit?: number } = {}, accessToken: string) => {
-    const params = new URLSearchParams();
-    if (query.status) params.append('status', query.status);
-    if (query.limit) params.append('limit', String(query.limit));
-    const qs = params.toString();
-    return request<SyncOrderResponse[]>(`/api/paper/orders${qs ? `?${qs}` : ''}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+  addNote: (body: JournalNoteRequest, accessToken: string) =>
+    request<PaperActionResponse<string>>('/api/paper/journal', accessToken, json('POST', body)),
+
+  editNote: (entryId: string, body: JournalNoteRequest, accessToken: string) =>
+    request<PaperActionResponse<boolean>>(
+      `/api/paper/journal/${encodeURIComponent(entryId)}`,
+      accessToken,
+      json('PATCH', body)
+    ),
+
+  /**
+   * Private live-update WebSocket. 🔐 No token in the URL: after `open`, send
+   * `{ type: 'auth', token }` (WsPaperAuthMessage) as the first message.
+   */
+  wsUrl: (): string => {
+    const base = BASE_URL.replace(/^http/, 'ws'); // http → ws, https → wss
+    return `${base}/api/paper/ws`;
   },
-
-  getTrades: (query: { limit?: number } = {}, accessToken: string) => {
-    const params = new URLSearchParams();
-    if (query.limit) params.append('limit', String(query.limit));
-    const qs = params.toString();
-    return request<SyncTradeResponse[]>(`/api/paper/trades${qs ? `?${qs}` : ''}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-  },
-
-  getPositions: (accessToken: string) =>
-    request<SyncPositionResponse[]>('/api/paper/positions', {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    }),
-
-  createPosition: (body: CreatePositionRequest, accessToken: string) =>
-    request<SyncPositionResponse>('/api/paper/positions', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify(body),
-    }),
-
-  createOrder: (body: CreateOrderRequest, accessToken: string) =>
-    request<SyncOrderResponse>('/api/paper/orders', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify(body),
-    }),
-
-  updateOrder: (id: string, body: UpdateOrderRequest, accessToken: string) =>
-    request<SyncOrderResponse>(`/api/paper/orders/${id}`, {
-      method: 'PATCH',
-      headers: { Authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify(body),
-    }),
-
-  recordTrade: (body: CreateTradeRequest, accessToken: string) =>
-    request<SyncTradeResponse>('/api/paper/trades', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify(body),
-    }),
-
-  deletePosition: (id: string, accessToken: string) =>
-    request<void>(`/api/paper/positions/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${accessToken}` },
-    }),
-
-  updatePosition: (id: string, body: UpdatePositionRequest, accessToken: string) =>
-    request<SyncPositionResponse>(`/api/paper/positions/${id}`, {
-      method: 'PATCH',
-      headers: { Authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify(body),
-    }),
 };

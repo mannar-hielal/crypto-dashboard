@@ -154,6 +154,7 @@ const btcPendingOrder: PendingOrder = {
   usdtAmount: 200,
   triggerPrice: 75_000,
   qty: 0.002667,
+  leverage: 1,
   placedAt: 1_715_000_000_000,
 };
 
@@ -175,7 +176,7 @@ const btcHistoricalOrder: HistoricalOrder = {
 
 beforeEach(() => {
   localStorage.clear();
-  usePaperStore.getState().reset();
+  usePaperStore.getState().clear();
   paneStores[0].setState({
     latestPrice: 77_000,
     isConnected: true,

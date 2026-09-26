@@ -11,6 +11,15 @@
 - `T2 · RTL` — component integration test (@testing-library/react)
 - `T3 · Playwright` — e2e test (real browser, live WebSocket)
 
+> **Since BP-1 (2026-09-26) trading runs on the server.**
+>
+> - **T1 · Vitest rows** for Sections 1–4 and 7: the engine maths, fills, netting, journal and TP/SL / pending triggers
+>   are now tested against the real engine in `apps/server/src/trading/engine/__tests__/` (`actions.test.ts`,
+>   `triggers.test.ts`). They used to live in `apps/client/src/store/__tests__/paperStore.test.ts` and the two monitor
+>   test files, which are gone.
+> - **T2 · RTL rows:** component tests still render the real panels. They mock `paperApi` (`src/test/fakePaperApi.ts`)
+>   and assert the intent sent to the server.
+
 **Test environment:** Local dev (`pnpm dev`). Symbol: BTCUSDT (live feed).
 **Reset account between sections** using the ⚙️ gear → Reset? button.
 
@@ -521,3 +530,40 @@
 | 12.3.3 | `GET /api/market/risk-limit?symbol=BTCUSDT`              | Tiers lowest first; tier 1 `maintenanceMarginRate 0.0033`, `mmDeduction 0`                                                 | ✅     | T1 · Vitest | Live tier-1 MMR is 0.33%, not the 0.5% the parity plan §2 quoted — re-check before BP-3. |
 | 12.3.4 | `GET /api/market/risk-limit?symbol=PEPEUSDT` / no symbol | 400, no upstream call                                                                                                      | ✅     | T1 · Vitest |                                                                                          |
 | 12.3.5 | Bybit returns an error / rate limit                      | 502 `{ error: 'Failed to fetch market data' }` — no upstream text; a stale cached value is served if one exists            | ✅     | T1 · Vitest | Stale-on-error path is covered by code review, not a dedicated test.                     |
+
+---
+
+## Section 13 — Server trading engine (Bybit Parity BP-1)
+
+> Trades are executed and watched on the server (`apps/server/src/trading`). The browser sends intent only and mirrors
+> the account over the private WebSocket `/api/paper/ws`. Reference: `docs/BYBIT_PARITY_PLAN.md` BP-1.
+
+### 13.1 Intent only (F11)
+
+| #      | Action                                                                                           | Expected                                                                                | Status | Tier        | Notes                                                                  |
+| ------ | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- | ------ | ----------- | ---------------------------------------------------------------------- |
+| 13.1.1 | Market Buy $100                                                                                  | Request body has symbol / side / type / usdtAmount only; fill price = server live price | ✅     | T2 · RTL    | `TradingPanel.test` "sends intent only"; `services.test` server price. |
+| 13.1.2 | `curl -X POST /api/paper/orders` with an extra `price` / `balance` field                         | The fields are stripped and never reach the engine; the order fills at the server price | ✅     | T1 · Vitest | `paper.test` "a client-supplied price never reaches the engine".       |
+| 13.1.3 | Old endpoints: `PATCH /api/paper/account`, `POST /api/paper/trades`, `POST /api/paper/positions` | 404                                                                                     | ✅     | T1 · Vitest | Removed in BP-1.                                                       |
+| 13.1.4 | Market order while the server has no live price (feed down)                                      | 409 "Waiting for live price…", shown in the order form; form keeps its values           | ✅     | T1 + T2     | `paper.test` + `TradingPanel.test` "server rejection".                 |
+
+### 13.2 24/7 execution (F10)
+
+| #      | Action                                                                             | Expected                                                                                            | Status | Tier            | Notes                                                              |
+| ------ | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ------ | --------------- | ------------------------------------------------------------------ |
+| 13.2.1 | Place a limit a few $ past the price, **close the tab**, wait for the fill, reopen | Position open; journal has "Limit order filled — …"; Order History has the filled limit row         | ⬜     | T3 · Playwright | Needs live feed + a running server.                                |
+| 13.2.2 | Open a position with a TP near the price, close the tab, wait, reopen              | Position closed; "Auto-closed … Take-Profit hit at $X" in the journal; balance updated              | ⬜     | T3 · Playwright |                                                                    |
+| 13.2.3 | TP/SL on a symbol **no pane is showing**                                           | Still triggers (the browser only watched symbols open in a pane)                                    | ✅     | T1 · Vitest     | `triggers.test` symbol isolation / `services.test` MatchingEngine. |
+| 13.2.4 | Restart the server with open orders; price crosses during the downtime             | On restart a "Backfilling price gap" log line; the crossed order fills at its trigger, exactly once | ⬜     | T3              | Engine unit: `services.test` "backfills downtime".                 |
+
+### 13.3 Sync, sessions, safety fixes
+
+| #      | Action                                                                  | Expected                                                                              | Status | Tier            | Notes                                                                        |
+| ------ | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------ | --------------- | ---------------------------------------------------------------------------- |
+| 13.3.1 | Two tabs open; place / cancel / close in one                            | The other tab updates within ~1 s; each sound plays once per tab                      | ⬜     | T3 · Playwright | WS fan-out unit-tested in `paper.test`.                                      |
+| 13.3.2 | Log out, log in as another user on the same browser                     | Nothing of the first account is shown; `cd-paper-trading` is gone from localStorage   | ✅     | T1 · Vitest     | `usePaperFeed.test` sign-out + `paperStore.test` clear(). Logout leak fixed. |
+| 13.3.3 | Keep the dashboard open for 20+ minutes, then trade                     | Orders still work (access token refreshed ~60 s before expiry; WS re-authenticates)   | ⬜     | T3              | `usePaperFeed.test` re-auth / 4401 refresh.                                  |
+| 13.3.4 | S1 — a triggered order that can't fill                                  | Recorded as rejected ("Order could not be filled."), never silently dropped           | ✅     | T1 · Vitest     | `actions.test` "S1".                                                         |
+| 13.3.5 | S2 — place a limit at 1×, change leverage to 10×, let it fill           | Position size uses 1× (the order's own leverage)                                      | ✅     | T1 · Vitest     | `actions.test` "S2".                                                         |
+| 13.3.6 | S3 — a limit placed mid-candle after the candle already dipped below it | Does not fill until a tick after placement crosses it                                 | ✅     | T1 · Vitest     | `triggers.test` "S3".                                                        |
+| 13.3.7 | Filled limit / stop in Order History                                    | Row keeps its own type (LIMIT / STOP) — changed from the browser's temporary "MARKET" | ✅     | T1 · Vitest     | `actions.test` 3.1.3.                                                        |

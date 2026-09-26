@@ -31,6 +31,8 @@ export type AccountAvgAggregateOutputType = {
   availableBalance: runtime.Decimal | null
   unrealizedPnl: runtime.Decimal | null
   realizedPnl: runtime.Decimal | null
+  leverage: number | null
+  version: number | null
   resetCount: number | null
 }
 
@@ -39,6 +41,8 @@ export type AccountSumAggregateOutputType = {
   availableBalance: runtime.Decimal | null
   unrealizedPnl: runtime.Decimal | null
   realizedPnl: runtime.Decimal | null
+  leverage: number | null
+  version: number | null
   resetCount: number | null
 }
 
@@ -49,6 +53,8 @@ export type AccountMinAggregateOutputType = {
   availableBalance: runtime.Decimal | null
   unrealizedPnl: runtime.Decimal | null
   realizedPnl: runtime.Decimal | null
+  leverage: number | null
+  version: number | null
   lastReset: Date | null
   resetCount: number | null
   createdAt: Date | null
@@ -62,6 +68,8 @@ export type AccountMaxAggregateOutputType = {
   availableBalance: runtime.Decimal | null
   unrealizedPnl: runtime.Decimal | null
   realizedPnl: runtime.Decimal | null
+  leverage: number | null
+  version: number | null
   lastReset: Date | null
   resetCount: number | null
   createdAt: Date | null
@@ -75,6 +83,8 @@ export type AccountCountAggregateOutputType = {
   availableBalance: number
   unrealizedPnl: number
   realizedPnl: number
+  leverage: number
+  version: number
   lastReset: number
   resetCount: number
   createdAt: number
@@ -88,6 +98,8 @@ export type AccountAvgAggregateInputType = {
   availableBalance?: true
   unrealizedPnl?: true
   realizedPnl?: true
+  leverage?: true
+  version?: true
   resetCount?: true
 }
 
@@ -96,6 +108,8 @@ export type AccountSumAggregateInputType = {
   availableBalance?: true
   unrealizedPnl?: true
   realizedPnl?: true
+  leverage?: true
+  version?: true
   resetCount?: true
 }
 
@@ -106,6 +120,8 @@ export type AccountMinAggregateInputType = {
   availableBalance?: true
   unrealizedPnl?: true
   realizedPnl?: true
+  leverage?: true
+  version?: true
   lastReset?: true
   resetCount?: true
   createdAt?: true
@@ -119,6 +135,8 @@ export type AccountMaxAggregateInputType = {
   availableBalance?: true
   unrealizedPnl?: true
   realizedPnl?: true
+  leverage?: true
+  version?: true
   lastReset?: true
   resetCount?: true
   createdAt?: true
@@ -132,6 +150,8 @@ export type AccountCountAggregateInputType = {
   availableBalance?: true
   unrealizedPnl?: true
   realizedPnl?: true
+  leverage?: true
+  version?: true
   lastReset?: true
   resetCount?: true
   createdAt?: true
@@ -232,6 +252,8 @@ export type AccountGroupByOutputType = {
   availableBalance: runtime.Decimal
   unrealizedPnl: runtime.Decimal
   realizedPnl: runtime.Decimal
+  leverage: number
+  version: number
   lastReset: Date
   resetCount: number
   createdAt: Date
@@ -268,6 +290,8 @@ export type AccountWhereInput = {
   availableBalance?: Prisma.DecimalFilter<"Account"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: Prisma.DecimalFilter<"Account"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: Prisma.DecimalFilter<"Account"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: Prisma.IntFilter<"Account"> | number
+  version?: Prisma.IntFilter<"Account"> | number
   lastReset?: Prisma.DateTimeFilter<"Account"> | Date | string
   resetCount?: Prisma.IntFilter<"Account"> | number
   createdAt?: Prisma.DateTimeFilter<"Account"> | Date | string
@@ -276,6 +300,8 @@ export type AccountWhereInput = {
   trades?: Prisma.TradeListRelationFilter
   orders?: Prisma.OrderListRelationFilter
   positions?: Prisma.PositionListRelationFilter
+  journalEntries?: Prisma.JournalEntryListRelationFilter
+  balanceEvents?: Prisma.BalanceEventListRelationFilter
 }
 
 export type AccountOrderByWithRelationInput = {
@@ -285,6 +311,8 @@ export type AccountOrderByWithRelationInput = {
   availableBalance?: Prisma.SortOrder
   unrealizedPnl?: Prisma.SortOrder
   realizedPnl?: Prisma.SortOrder
+  leverage?: Prisma.SortOrder
+  version?: Prisma.SortOrder
   lastReset?: Prisma.SortOrder
   resetCount?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -293,6 +321,8 @@ export type AccountOrderByWithRelationInput = {
   trades?: Prisma.TradeOrderByRelationAggregateInput
   orders?: Prisma.OrderOrderByRelationAggregateInput
   positions?: Prisma.PositionOrderByRelationAggregateInput
+  journalEntries?: Prisma.JournalEntryOrderByRelationAggregateInput
+  balanceEvents?: Prisma.BalanceEventOrderByRelationAggregateInput
 }
 
 export type AccountWhereUniqueInput = Prisma.AtLeast<{
@@ -305,6 +335,8 @@ export type AccountWhereUniqueInput = Prisma.AtLeast<{
   availableBalance?: Prisma.DecimalFilter<"Account"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: Prisma.DecimalFilter<"Account"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: Prisma.DecimalFilter<"Account"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: Prisma.IntFilter<"Account"> | number
+  version?: Prisma.IntFilter<"Account"> | number
   lastReset?: Prisma.DateTimeFilter<"Account"> | Date | string
   resetCount?: Prisma.IntFilter<"Account"> | number
   createdAt?: Prisma.DateTimeFilter<"Account"> | Date | string
@@ -313,6 +345,8 @@ export type AccountWhereUniqueInput = Prisma.AtLeast<{
   trades?: Prisma.TradeListRelationFilter
   orders?: Prisma.OrderListRelationFilter
   positions?: Prisma.PositionListRelationFilter
+  journalEntries?: Prisma.JournalEntryListRelationFilter
+  balanceEvents?: Prisma.BalanceEventListRelationFilter
 }, "id" | "userId">
 
 export type AccountOrderByWithAggregationInput = {
@@ -322,6 +356,8 @@ export type AccountOrderByWithAggregationInput = {
   availableBalance?: Prisma.SortOrder
   unrealizedPnl?: Prisma.SortOrder
   realizedPnl?: Prisma.SortOrder
+  leverage?: Prisma.SortOrder
+  version?: Prisma.SortOrder
   lastReset?: Prisma.SortOrder
   resetCount?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -343,6 +379,8 @@ export type AccountScalarWhereWithAggregatesInput = {
   availableBalance?: Prisma.DecimalWithAggregatesFilter<"Account"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: Prisma.DecimalWithAggregatesFilter<"Account"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: Prisma.DecimalWithAggregatesFilter<"Account"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: Prisma.IntWithAggregatesFilter<"Account"> | number
+  version?: Prisma.IntWithAggregatesFilter<"Account"> | number
   lastReset?: Prisma.DateTimeWithAggregatesFilter<"Account"> | Date | string
   resetCount?: Prisma.IntWithAggregatesFilter<"Account"> | number
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Account"> | Date | string
@@ -355,6 +393,8 @@ export type AccountCreateInput = {
   availableBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: number
+  version?: number
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -363,6 +403,8 @@ export type AccountCreateInput = {
   trades?: Prisma.TradeCreateNestedManyWithoutAccountInput
   orders?: Prisma.OrderCreateNestedManyWithoutAccountInput
   positions?: Prisma.PositionCreateNestedManyWithoutAccountInput
+  journalEntries?: Prisma.JournalEntryCreateNestedManyWithoutAccountInput
+  balanceEvents?: Prisma.BalanceEventCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateInput = {
@@ -372,6 +414,8 @@ export type AccountUncheckedCreateInput = {
   availableBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: number
+  version?: number
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -379,6 +423,8 @@ export type AccountUncheckedCreateInput = {
   trades?: Prisma.TradeUncheckedCreateNestedManyWithoutAccountInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutAccountInput
   positions?: Prisma.PositionUncheckedCreateNestedManyWithoutAccountInput
+  journalEntries?: Prisma.JournalEntryUncheckedCreateNestedManyWithoutAccountInput
+  balanceEvents?: Prisma.BalanceEventUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUpdateInput = {
@@ -387,6 +433,8 @@ export type AccountUpdateInput = {
   availableBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  version?: Prisma.IntFieldUpdateOperationsInput | number
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -395,6 +443,8 @@ export type AccountUpdateInput = {
   trades?: Prisma.TradeUpdateManyWithoutAccountNestedInput
   orders?: Prisma.OrderUpdateManyWithoutAccountNestedInput
   positions?: Prisma.PositionUpdateManyWithoutAccountNestedInput
+  journalEntries?: Prisma.JournalEntryUpdateManyWithoutAccountNestedInput
+  balanceEvents?: Prisma.BalanceEventUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateInput = {
@@ -404,6 +454,8 @@ export type AccountUncheckedUpdateInput = {
   availableBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  version?: Prisma.IntFieldUpdateOperationsInput | number
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -411,6 +463,8 @@ export type AccountUncheckedUpdateInput = {
   trades?: Prisma.TradeUncheckedUpdateManyWithoutAccountNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutAccountNestedInput
   positions?: Prisma.PositionUncheckedUpdateManyWithoutAccountNestedInput
+  journalEntries?: Prisma.JournalEntryUncheckedUpdateManyWithoutAccountNestedInput
+  balanceEvents?: Prisma.BalanceEventUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountCreateManyInput = {
@@ -420,6 +474,8 @@ export type AccountCreateManyInput = {
   availableBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: number
+  version?: number
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -432,6 +488,8 @@ export type AccountUpdateManyMutationInput = {
   availableBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  version?: Prisma.IntFieldUpdateOperationsInput | number
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -445,6 +503,8 @@ export type AccountUncheckedUpdateManyInput = {
   availableBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  version?: Prisma.IntFieldUpdateOperationsInput | number
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -463,6 +523,8 @@ export type AccountCountOrderByAggregateInput = {
   availableBalance?: Prisma.SortOrder
   unrealizedPnl?: Prisma.SortOrder
   realizedPnl?: Prisma.SortOrder
+  leverage?: Prisma.SortOrder
+  version?: Prisma.SortOrder
   lastReset?: Prisma.SortOrder
   resetCount?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -474,6 +536,8 @@ export type AccountAvgOrderByAggregateInput = {
   availableBalance?: Prisma.SortOrder
   unrealizedPnl?: Prisma.SortOrder
   realizedPnl?: Prisma.SortOrder
+  leverage?: Prisma.SortOrder
+  version?: Prisma.SortOrder
   resetCount?: Prisma.SortOrder
 }
 
@@ -484,6 +548,8 @@ export type AccountMaxOrderByAggregateInput = {
   availableBalance?: Prisma.SortOrder
   unrealizedPnl?: Prisma.SortOrder
   realizedPnl?: Prisma.SortOrder
+  leverage?: Prisma.SortOrder
+  version?: Prisma.SortOrder
   lastReset?: Prisma.SortOrder
   resetCount?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -497,6 +563,8 @@ export type AccountMinOrderByAggregateInput = {
   availableBalance?: Prisma.SortOrder
   unrealizedPnl?: Prisma.SortOrder
   realizedPnl?: Prisma.SortOrder
+  leverage?: Prisma.SortOrder
+  version?: Prisma.SortOrder
   lastReset?: Prisma.SortOrder
   resetCount?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -508,6 +576,8 @@ export type AccountSumOrderByAggregateInput = {
   availableBalance?: Prisma.SortOrder
   unrealizedPnl?: Prisma.SortOrder
   realizedPnl?: Prisma.SortOrder
+  leverage?: Prisma.SortOrder
+  version?: Prisma.SortOrder
   resetCount?: Prisma.SortOrder
 }
 
@@ -606,12 +676,42 @@ export type AccountUpdateOneRequiredWithoutTradesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.AccountUpdateToOneWithWhereWithoutTradesInput, Prisma.AccountUpdateWithoutTradesInput>, Prisma.AccountUncheckedUpdateWithoutTradesInput>
 }
 
+export type AccountCreateNestedOneWithoutJournalEntriesInput = {
+  create?: Prisma.XOR<Prisma.AccountCreateWithoutJournalEntriesInput, Prisma.AccountUncheckedCreateWithoutJournalEntriesInput>
+  connectOrCreate?: Prisma.AccountCreateOrConnectWithoutJournalEntriesInput
+  connect?: Prisma.AccountWhereUniqueInput
+}
+
+export type AccountUpdateOneRequiredWithoutJournalEntriesNestedInput = {
+  create?: Prisma.XOR<Prisma.AccountCreateWithoutJournalEntriesInput, Prisma.AccountUncheckedCreateWithoutJournalEntriesInput>
+  connectOrCreate?: Prisma.AccountCreateOrConnectWithoutJournalEntriesInput
+  upsert?: Prisma.AccountUpsertWithoutJournalEntriesInput
+  connect?: Prisma.AccountWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.AccountUpdateToOneWithWhereWithoutJournalEntriesInput, Prisma.AccountUpdateWithoutJournalEntriesInput>, Prisma.AccountUncheckedUpdateWithoutJournalEntriesInput>
+}
+
+export type AccountCreateNestedOneWithoutBalanceEventsInput = {
+  create?: Prisma.XOR<Prisma.AccountCreateWithoutBalanceEventsInput, Prisma.AccountUncheckedCreateWithoutBalanceEventsInput>
+  connectOrCreate?: Prisma.AccountCreateOrConnectWithoutBalanceEventsInput
+  connect?: Prisma.AccountWhereUniqueInput
+}
+
+export type AccountUpdateOneRequiredWithoutBalanceEventsNestedInput = {
+  create?: Prisma.XOR<Prisma.AccountCreateWithoutBalanceEventsInput, Prisma.AccountUncheckedCreateWithoutBalanceEventsInput>
+  connectOrCreate?: Prisma.AccountCreateOrConnectWithoutBalanceEventsInput
+  upsert?: Prisma.AccountUpsertWithoutBalanceEventsInput
+  connect?: Prisma.AccountWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.AccountUpdateToOneWithWhereWithoutBalanceEventsInput, Prisma.AccountUpdateWithoutBalanceEventsInput>, Prisma.AccountUncheckedUpdateWithoutBalanceEventsInput>
+}
+
 export type AccountCreateWithoutUserInput = {
   id?: string
   totalBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
   availableBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: number
+  version?: number
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -619,6 +719,8 @@ export type AccountCreateWithoutUserInput = {
   trades?: Prisma.TradeCreateNestedManyWithoutAccountInput
   orders?: Prisma.OrderCreateNestedManyWithoutAccountInput
   positions?: Prisma.PositionCreateNestedManyWithoutAccountInput
+  journalEntries?: Prisma.JournalEntryCreateNestedManyWithoutAccountInput
+  balanceEvents?: Prisma.BalanceEventCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutUserInput = {
@@ -627,6 +729,8 @@ export type AccountUncheckedCreateWithoutUserInput = {
   availableBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: number
+  version?: number
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -634,6 +738,8 @@ export type AccountUncheckedCreateWithoutUserInput = {
   trades?: Prisma.TradeUncheckedCreateNestedManyWithoutAccountInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutAccountInput
   positions?: Prisma.PositionUncheckedCreateNestedManyWithoutAccountInput
+  journalEntries?: Prisma.JournalEntryUncheckedCreateNestedManyWithoutAccountInput
+  balanceEvents?: Prisma.BalanceEventUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutUserInput = {
@@ -658,6 +764,8 @@ export type AccountUpdateWithoutUserInput = {
   availableBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  version?: Prisma.IntFieldUpdateOperationsInput | number
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -665,6 +773,8 @@ export type AccountUpdateWithoutUserInput = {
   trades?: Prisma.TradeUpdateManyWithoutAccountNestedInput
   orders?: Prisma.OrderUpdateManyWithoutAccountNestedInput
   positions?: Prisma.PositionUpdateManyWithoutAccountNestedInput
+  journalEntries?: Prisma.JournalEntryUpdateManyWithoutAccountNestedInput
+  balanceEvents?: Prisma.BalanceEventUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutUserInput = {
@@ -673,6 +783,8 @@ export type AccountUncheckedUpdateWithoutUserInput = {
   availableBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  version?: Prisma.IntFieldUpdateOperationsInput | number
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -680,6 +792,8 @@ export type AccountUncheckedUpdateWithoutUserInput = {
   trades?: Prisma.TradeUncheckedUpdateManyWithoutAccountNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutAccountNestedInput
   positions?: Prisma.PositionUncheckedUpdateManyWithoutAccountNestedInput
+  journalEntries?: Prisma.JournalEntryUncheckedUpdateManyWithoutAccountNestedInput
+  balanceEvents?: Prisma.BalanceEventUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountCreateWithoutPositionsInput = {
@@ -688,6 +802,8 @@ export type AccountCreateWithoutPositionsInput = {
   availableBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: number
+  version?: number
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -695,6 +811,8 @@ export type AccountCreateWithoutPositionsInput = {
   user: Prisma.UserCreateNestedOneWithoutAccountInput
   trades?: Prisma.TradeCreateNestedManyWithoutAccountInput
   orders?: Prisma.OrderCreateNestedManyWithoutAccountInput
+  journalEntries?: Prisma.JournalEntryCreateNestedManyWithoutAccountInput
+  balanceEvents?: Prisma.BalanceEventCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutPositionsInput = {
@@ -704,12 +822,16 @@ export type AccountUncheckedCreateWithoutPositionsInput = {
   availableBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: number
+  version?: number
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   trades?: Prisma.TradeUncheckedCreateNestedManyWithoutAccountInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutAccountInput
+  journalEntries?: Prisma.JournalEntryUncheckedCreateNestedManyWithoutAccountInput
+  balanceEvents?: Prisma.BalanceEventUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutPositionsInput = {
@@ -734,6 +856,8 @@ export type AccountUpdateWithoutPositionsInput = {
   availableBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  version?: Prisma.IntFieldUpdateOperationsInput | number
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -741,6 +865,8 @@ export type AccountUpdateWithoutPositionsInput = {
   user?: Prisma.UserUpdateOneRequiredWithoutAccountNestedInput
   trades?: Prisma.TradeUpdateManyWithoutAccountNestedInput
   orders?: Prisma.OrderUpdateManyWithoutAccountNestedInput
+  journalEntries?: Prisma.JournalEntryUpdateManyWithoutAccountNestedInput
+  balanceEvents?: Prisma.BalanceEventUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutPositionsInput = {
@@ -750,12 +876,16 @@ export type AccountUncheckedUpdateWithoutPositionsInput = {
   availableBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  version?: Prisma.IntFieldUpdateOperationsInput | number
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   trades?: Prisma.TradeUncheckedUpdateManyWithoutAccountNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutAccountNestedInput
+  journalEntries?: Prisma.JournalEntryUncheckedUpdateManyWithoutAccountNestedInput
+  balanceEvents?: Prisma.BalanceEventUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountCreateWithoutOrdersInput = {
@@ -764,6 +894,8 @@ export type AccountCreateWithoutOrdersInput = {
   availableBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: number
+  version?: number
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -771,6 +903,8 @@ export type AccountCreateWithoutOrdersInput = {
   user: Prisma.UserCreateNestedOneWithoutAccountInput
   trades?: Prisma.TradeCreateNestedManyWithoutAccountInput
   positions?: Prisma.PositionCreateNestedManyWithoutAccountInput
+  journalEntries?: Prisma.JournalEntryCreateNestedManyWithoutAccountInput
+  balanceEvents?: Prisma.BalanceEventCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutOrdersInput = {
@@ -780,12 +914,16 @@ export type AccountUncheckedCreateWithoutOrdersInput = {
   availableBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: number
+  version?: number
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   trades?: Prisma.TradeUncheckedCreateNestedManyWithoutAccountInput
   positions?: Prisma.PositionUncheckedCreateNestedManyWithoutAccountInput
+  journalEntries?: Prisma.JournalEntryUncheckedCreateNestedManyWithoutAccountInput
+  balanceEvents?: Prisma.BalanceEventUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutOrdersInput = {
@@ -810,6 +948,8 @@ export type AccountUpdateWithoutOrdersInput = {
   availableBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  version?: Prisma.IntFieldUpdateOperationsInput | number
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -817,6 +957,8 @@ export type AccountUpdateWithoutOrdersInput = {
   user?: Prisma.UserUpdateOneRequiredWithoutAccountNestedInput
   trades?: Prisma.TradeUpdateManyWithoutAccountNestedInput
   positions?: Prisma.PositionUpdateManyWithoutAccountNestedInput
+  journalEntries?: Prisma.JournalEntryUpdateManyWithoutAccountNestedInput
+  balanceEvents?: Prisma.BalanceEventUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutOrdersInput = {
@@ -826,12 +968,16 @@ export type AccountUncheckedUpdateWithoutOrdersInput = {
   availableBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  version?: Prisma.IntFieldUpdateOperationsInput | number
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   trades?: Prisma.TradeUncheckedUpdateManyWithoutAccountNestedInput
   positions?: Prisma.PositionUncheckedUpdateManyWithoutAccountNestedInput
+  journalEntries?: Prisma.JournalEntryUncheckedUpdateManyWithoutAccountNestedInput
+  balanceEvents?: Prisma.BalanceEventUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountCreateWithoutTradesInput = {
@@ -840,6 +986,8 @@ export type AccountCreateWithoutTradesInput = {
   availableBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: number
+  version?: number
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -847,6 +995,8 @@ export type AccountCreateWithoutTradesInput = {
   user: Prisma.UserCreateNestedOneWithoutAccountInput
   orders?: Prisma.OrderCreateNestedManyWithoutAccountInput
   positions?: Prisma.PositionCreateNestedManyWithoutAccountInput
+  journalEntries?: Prisma.JournalEntryCreateNestedManyWithoutAccountInput
+  balanceEvents?: Prisma.BalanceEventCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutTradesInput = {
@@ -856,12 +1006,16 @@ export type AccountUncheckedCreateWithoutTradesInput = {
   availableBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: number
+  version?: number
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutAccountInput
   positions?: Prisma.PositionUncheckedCreateNestedManyWithoutAccountInput
+  journalEntries?: Prisma.JournalEntryUncheckedCreateNestedManyWithoutAccountInput
+  balanceEvents?: Prisma.BalanceEventUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutTradesInput = {
@@ -886,6 +1040,8 @@ export type AccountUpdateWithoutTradesInput = {
   availableBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  version?: Prisma.IntFieldUpdateOperationsInput | number
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -893,6 +1049,8 @@ export type AccountUpdateWithoutTradesInput = {
   user?: Prisma.UserUpdateOneRequiredWithoutAccountNestedInput
   orders?: Prisma.OrderUpdateManyWithoutAccountNestedInput
   positions?: Prisma.PositionUpdateManyWithoutAccountNestedInput
+  journalEntries?: Prisma.JournalEntryUpdateManyWithoutAccountNestedInput
+  balanceEvents?: Prisma.BalanceEventUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutTradesInput = {
@@ -902,12 +1060,200 @@ export type AccountUncheckedUpdateWithoutTradesInput = {
   availableBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   unrealizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  version?: Prisma.IntFieldUpdateOperationsInput | number
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   orders?: Prisma.OrderUncheckedUpdateManyWithoutAccountNestedInput
   positions?: Prisma.PositionUncheckedUpdateManyWithoutAccountNestedInput
+  journalEntries?: Prisma.JournalEntryUncheckedUpdateManyWithoutAccountNestedInput
+  balanceEvents?: Prisma.BalanceEventUncheckedUpdateManyWithoutAccountNestedInput
+}
+
+export type AccountCreateWithoutJournalEntriesInput = {
+  id?: string
+  totalBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  availableBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  unrealizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: number
+  version?: number
+  lastReset?: Date | string
+  resetCount?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  user: Prisma.UserCreateNestedOneWithoutAccountInput
+  trades?: Prisma.TradeCreateNestedManyWithoutAccountInput
+  orders?: Prisma.OrderCreateNestedManyWithoutAccountInput
+  positions?: Prisma.PositionCreateNestedManyWithoutAccountInput
+  balanceEvents?: Prisma.BalanceEventCreateNestedManyWithoutAccountInput
+}
+
+export type AccountUncheckedCreateWithoutJournalEntriesInput = {
+  id?: string
+  userId: string
+  totalBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  availableBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  unrealizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: number
+  version?: number
+  lastReset?: Date | string
+  resetCount?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  trades?: Prisma.TradeUncheckedCreateNestedManyWithoutAccountInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutAccountInput
+  positions?: Prisma.PositionUncheckedCreateNestedManyWithoutAccountInput
+  balanceEvents?: Prisma.BalanceEventUncheckedCreateNestedManyWithoutAccountInput
+}
+
+export type AccountCreateOrConnectWithoutJournalEntriesInput = {
+  where: Prisma.AccountWhereUniqueInput
+  create: Prisma.XOR<Prisma.AccountCreateWithoutJournalEntriesInput, Prisma.AccountUncheckedCreateWithoutJournalEntriesInput>
+}
+
+export type AccountUpsertWithoutJournalEntriesInput = {
+  update: Prisma.XOR<Prisma.AccountUpdateWithoutJournalEntriesInput, Prisma.AccountUncheckedUpdateWithoutJournalEntriesInput>
+  create: Prisma.XOR<Prisma.AccountCreateWithoutJournalEntriesInput, Prisma.AccountUncheckedCreateWithoutJournalEntriesInput>
+  where?: Prisma.AccountWhereInput
+}
+
+export type AccountUpdateToOneWithWhereWithoutJournalEntriesInput = {
+  where?: Prisma.AccountWhereInput
+  data: Prisma.XOR<Prisma.AccountUpdateWithoutJournalEntriesInput, Prisma.AccountUncheckedUpdateWithoutJournalEntriesInput>
+}
+
+export type AccountUpdateWithoutJournalEntriesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  totalBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  availableBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  unrealizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  resetCount?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  user?: Prisma.UserUpdateOneRequiredWithoutAccountNestedInput
+  trades?: Prisma.TradeUpdateManyWithoutAccountNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutAccountNestedInput
+  positions?: Prisma.PositionUpdateManyWithoutAccountNestedInput
+  balanceEvents?: Prisma.BalanceEventUpdateManyWithoutAccountNestedInput
+}
+
+export type AccountUncheckedUpdateWithoutJournalEntriesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  totalBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  availableBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  unrealizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  resetCount?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  trades?: Prisma.TradeUncheckedUpdateManyWithoutAccountNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutAccountNestedInput
+  positions?: Prisma.PositionUncheckedUpdateManyWithoutAccountNestedInput
+  balanceEvents?: Prisma.BalanceEventUncheckedUpdateManyWithoutAccountNestedInput
+}
+
+export type AccountCreateWithoutBalanceEventsInput = {
+  id?: string
+  totalBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  availableBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  unrealizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: number
+  version?: number
+  lastReset?: Date | string
+  resetCount?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  user: Prisma.UserCreateNestedOneWithoutAccountInput
+  trades?: Prisma.TradeCreateNestedManyWithoutAccountInput
+  orders?: Prisma.OrderCreateNestedManyWithoutAccountInput
+  positions?: Prisma.PositionCreateNestedManyWithoutAccountInput
+  journalEntries?: Prisma.JournalEntryCreateNestedManyWithoutAccountInput
+}
+
+export type AccountUncheckedCreateWithoutBalanceEventsInput = {
+  id?: string
+  userId: string
+  totalBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  availableBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  unrealizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: number
+  version?: number
+  lastReset?: Date | string
+  resetCount?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  trades?: Prisma.TradeUncheckedCreateNestedManyWithoutAccountInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutAccountInput
+  positions?: Prisma.PositionUncheckedCreateNestedManyWithoutAccountInput
+  journalEntries?: Prisma.JournalEntryUncheckedCreateNestedManyWithoutAccountInput
+}
+
+export type AccountCreateOrConnectWithoutBalanceEventsInput = {
+  where: Prisma.AccountWhereUniqueInput
+  create: Prisma.XOR<Prisma.AccountCreateWithoutBalanceEventsInput, Prisma.AccountUncheckedCreateWithoutBalanceEventsInput>
+}
+
+export type AccountUpsertWithoutBalanceEventsInput = {
+  update: Prisma.XOR<Prisma.AccountUpdateWithoutBalanceEventsInput, Prisma.AccountUncheckedUpdateWithoutBalanceEventsInput>
+  create: Prisma.XOR<Prisma.AccountCreateWithoutBalanceEventsInput, Prisma.AccountUncheckedCreateWithoutBalanceEventsInput>
+  where?: Prisma.AccountWhereInput
+}
+
+export type AccountUpdateToOneWithWhereWithoutBalanceEventsInput = {
+  where?: Prisma.AccountWhereInput
+  data: Prisma.XOR<Prisma.AccountUpdateWithoutBalanceEventsInput, Prisma.AccountUncheckedUpdateWithoutBalanceEventsInput>
+}
+
+export type AccountUpdateWithoutBalanceEventsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  totalBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  availableBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  unrealizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  resetCount?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  user?: Prisma.UserUpdateOneRequiredWithoutAccountNestedInput
+  trades?: Prisma.TradeUpdateManyWithoutAccountNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutAccountNestedInput
+  positions?: Prisma.PositionUpdateManyWithoutAccountNestedInput
+  journalEntries?: Prisma.JournalEntryUpdateManyWithoutAccountNestedInput
+}
+
+export type AccountUncheckedUpdateWithoutBalanceEventsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  totalBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  availableBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  unrealizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  resetCount?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  trades?: Prisma.TradeUncheckedUpdateManyWithoutAccountNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutAccountNestedInput
+  positions?: Prisma.PositionUncheckedUpdateManyWithoutAccountNestedInput
+  journalEntries?: Prisma.JournalEntryUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 
@@ -919,12 +1265,16 @@ export type AccountCountOutputType = {
   trades: number
   orders: number
   positions: number
+  journalEntries: number
+  balanceEvents: number
 }
 
 export type AccountCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   trades?: boolean | AccountCountOutputTypeCountTradesArgs
   orders?: boolean | AccountCountOutputTypeCountOrdersArgs
   positions?: boolean | AccountCountOutputTypeCountPositionsArgs
+  journalEntries?: boolean | AccountCountOutputTypeCountJournalEntriesArgs
+  balanceEvents?: boolean | AccountCountOutputTypeCountBalanceEventsArgs
 }
 
 /**
@@ -958,6 +1308,20 @@ export type AccountCountOutputTypeCountPositionsArgs<ExtArgs extends runtime.Typ
   where?: Prisma.PositionWhereInput
 }
 
+/**
+ * AccountCountOutputType without action
+ */
+export type AccountCountOutputTypeCountJournalEntriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.JournalEntryWhereInput
+}
+
+/**
+ * AccountCountOutputType without action
+ */
+export type AccountCountOutputTypeCountBalanceEventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.BalanceEventWhereInput
+}
+
 
 export type AccountSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -966,6 +1330,8 @@ export type AccountSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   availableBalance?: boolean
   unrealizedPnl?: boolean
   realizedPnl?: boolean
+  leverage?: boolean
+  version?: boolean
   lastReset?: boolean
   resetCount?: boolean
   createdAt?: boolean
@@ -974,6 +1340,8 @@ export type AccountSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   trades?: boolean | Prisma.Account$tradesArgs<ExtArgs>
   orders?: boolean | Prisma.Account$ordersArgs<ExtArgs>
   positions?: boolean | Prisma.Account$positionsArgs<ExtArgs>
+  journalEntries?: boolean | Prisma.Account$journalEntriesArgs<ExtArgs>
+  balanceEvents?: boolean | Prisma.Account$balanceEventsArgs<ExtArgs>
   _count?: boolean | Prisma.AccountCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["account"]>
 
@@ -984,6 +1352,8 @@ export type AccountSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   availableBalance?: boolean
   unrealizedPnl?: boolean
   realizedPnl?: boolean
+  leverage?: boolean
+  version?: boolean
   lastReset?: boolean
   resetCount?: boolean
   createdAt?: boolean
@@ -998,6 +1368,8 @@ export type AccountSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   availableBalance?: boolean
   unrealizedPnl?: boolean
   realizedPnl?: boolean
+  leverage?: boolean
+  version?: boolean
   lastReset?: boolean
   resetCount?: boolean
   createdAt?: boolean
@@ -1012,18 +1384,22 @@ export type AccountSelectScalar = {
   availableBalance?: boolean
   unrealizedPnl?: boolean
   realizedPnl?: boolean
+  leverage?: boolean
+  version?: boolean
   lastReset?: boolean
   resetCount?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type AccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "totalBalance" | "availableBalance" | "unrealizedPnl" | "realizedPnl" | "lastReset" | "resetCount" | "createdAt" | "updatedAt", ExtArgs["result"]["account"]>
+export type AccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "totalBalance" | "availableBalance" | "unrealizedPnl" | "realizedPnl" | "leverage" | "version" | "lastReset" | "resetCount" | "createdAt" | "updatedAt", ExtArgs["result"]["account"]>
 export type AccountInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   trades?: boolean | Prisma.Account$tradesArgs<ExtArgs>
   orders?: boolean | Prisma.Account$ordersArgs<ExtArgs>
   positions?: boolean | Prisma.Account$positionsArgs<ExtArgs>
+  journalEntries?: boolean | Prisma.Account$journalEntriesArgs<ExtArgs>
+  balanceEvents?: boolean | Prisma.Account$balanceEventsArgs<ExtArgs>
   _count?: boolean | Prisma.AccountCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type AccountIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1040,6 +1416,8 @@ export type $AccountPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     trades: Prisma.$TradePayload<ExtArgs>[]
     orders: Prisma.$OrderPayload<ExtArgs>[]
     positions: Prisma.$PositionPayload<ExtArgs>[]
+    journalEntries: Prisma.$JournalEntryPayload<ExtArgs>[]
+    balanceEvents: Prisma.$BalanceEventPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1048,6 +1426,8 @@ export type $AccountPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     availableBalance: runtime.Decimal
     unrealizedPnl: runtime.Decimal
     realizedPnl: runtime.Decimal
+    leverage: number
+    version: number
     lastReset: Date
     resetCount: number
     createdAt: Date
@@ -1450,6 +1830,8 @@ export interface Prisma__AccountClient<T, Null = never, ExtArgs extends runtime.
   trades<T extends Prisma.Account$tradesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Account$tradesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TradePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   orders<T extends Prisma.Account$ordersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Account$ordersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   positions<T extends Prisma.Account$positionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Account$positionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PositionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  journalEntries<T extends Prisma.Account$journalEntriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Account$journalEntriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$JournalEntryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  balanceEvents<T extends Prisma.Account$balanceEventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Account$balanceEventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BalanceEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1485,6 +1867,8 @@ export interface AccountFieldRefs {
   readonly availableBalance: Prisma.FieldRef<"Account", 'Decimal'>
   readonly unrealizedPnl: Prisma.FieldRef<"Account", 'Decimal'>
   readonly realizedPnl: Prisma.FieldRef<"Account", 'Decimal'>
+  readonly leverage: Prisma.FieldRef<"Account", 'Int'>
+  readonly version: Prisma.FieldRef<"Account", 'Int'>
   readonly lastReset: Prisma.FieldRef<"Account", 'DateTime'>
   readonly resetCount: Prisma.FieldRef<"Account", 'Int'>
   readonly createdAt: Prisma.FieldRef<"Account", 'DateTime'>
@@ -1959,6 +2343,54 @@ export type Account$positionsArgs<ExtArgs extends runtime.Types.Extensions.Inter
   take?: number
   skip?: number
   distinct?: Prisma.PositionScalarFieldEnum | Prisma.PositionScalarFieldEnum[]
+}
+
+/**
+ * Account.journalEntries
+ */
+export type Account$journalEntriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the JournalEntry
+   */
+  select?: Prisma.JournalEntrySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the JournalEntry
+   */
+  omit?: Prisma.JournalEntryOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.JournalEntryInclude<ExtArgs> | null
+  where?: Prisma.JournalEntryWhereInput
+  orderBy?: Prisma.JournalEntryOrderByWithRelationInput | Prisma.JournalEntryOrderByWithRelationInput[]
+  cursor?: Prisma.JournalEntryWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.JournalEntryScalarFieldEnum | Prisma.JournalEntryScalarFieldEnum[]
+}
+
+/**
+ * Account.balanceEvents
+ */
+export type Account$balanceEventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the BalanceEvent
+   */
+  select?: Prisma.BalanceEventSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the BalanceEvent
+   */
+  omit?: Prisma.BalanceEventOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BalanceEventInclude<ExtArgs> | null
+  where?: Prisma.BalanceEventWhereInput
+  orderBy?: Prisma.BalanceEventOrderByWithRelationInput | Prisma.BalanceEventOrderByWithRelationInput[]
+  cursor?: Prisma.BalanceEventWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.BalanceEventScalarFieldEnum | Prisma.BalanceEventScalarFieldEnum[]
 }
 
 /**

@@ -1,99 +1,29 @@
-import { FastifyInstance } from 'fastify';
-import { Account, Order, Trade, Position } from '../../../generated/prisma/client.js';
-import {
-  CreateOrderRequest,
-  UpdateOrderRequest,
-  CreateTradeRequest,
-  CreatePositionRequest,
-  UpdatePositionRequest,
-  SyncAccountResponse,
+/**
+ * Paper-trading API (BYBIT_PARITY_PLAN BP-1): intent-only endpoints.
+ *
+ * The client says *what* to do (symbol, side, amount, trigger price, TP/SL). The server picks
+ * prices from its own live feed, runs the engine (apps/server/src/trading) and returns the
+ * resulting delta, which is also pushed to the user's other tabs over the private WebSocket.
+ *
+ * 🔐 F11: the old endpoints that stored client-computed balances, fill prices and PnL
+ * (PATCH /account, POST /orders|trades|positions, PATCH/DELETE /orders|positions) are gone —
+ * nothing the client sends can set a price, a balance or a PnL.
+ */
+
+import type { FastifyInstance, FastifyReply } from 'fastify';
+import { Decimal } from '@prisma/client/runtime/client';
+import type {
+  EditPendingOrderRequest,
+  JournalNoteRequest,
+  PlaceOrderRequest,
+  UpdatePositionExitsRequest,
 } from '@crypto-dashboard/sdk';
 import { ALLOWED_SYMBOLS } from '../../constants.js';
+import { TradingError, type Executed } from '../../trading/TradingService.js';
+import type { ExitLeg } from '../../trading/engine/index.js';
+import { privatePaperWs } from './ws.js';
 
-// ─── SHARED SCHEMAS ───────────────────────────────────────────────────────────
-
-const accountResponse = {
-  type: 'object',
-  required: ['id', 'totalBalance', 'availableBalance', 'unrealizedPnl', 'realizedPnl'],
-  additionalProperties: false,
-  properties: {
-    id: { type: 'string' },
-    totalBalance: { type: 'string' },
-    availableBalance: { type: 'string' },
-    unrealizedPnl: { type: 'string' },
-    realizedPnl: { type: 'string' },
-    lastReset: { type: 'string', format: 'date-time' },
-    resetCount: { type: 'integer' },
-  },
-} as const;
-
-const orderResponse = {
-  type: 'object',
-  required: ['id', 'symbol', 'side', 'orderType', 'quantity', 'status', 'createdAt'],
-  additionalProperties: false,
-  properties: {
-    id: { type: 'string' },
-    refId: { type: ['string', 'null'] },
-    symbol: { type: 'string' },
-    side: { type: 'string' },
-    orderType: { type: 'string' },
-    quantity: { type: 'string' },
-    limitPrice: { type: ['string', 'null'] },
-    stopPrice: { type: ['string', 'null'] },
-    takeProfit: { type: ['string', 'null'] },
-    stopLoss: { type: ['string', 'null'] },
-    status: { type: 'string' },
-    filledQuantity: { type: 'string' },
-    averageFilledPrice: { type: ['string', 'null'] },
-    margin: { type: 'string' },
-    commission: { type: 'string' },
-    rejectionReason: { type: ['string', 'null'] },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-    filledAt: { type: ['string', 'null'], format: 'date-time' },
-    cancelledAt: { type: ['string', 'null'], format: 'date-time' },
-  },
-} as const;
-
-const tradeResponse = {
-  type: 'object',
-  required: ['id', 'symbol', 'side', 'quantity', 'executedPrice', 'totalCost', 'pnl', 'executedAt'],
-  additionalProperties: false,
-  properties: {
-    id: { type: 'string' },
-    refId: { type: ['string', 'null'] },
-    symbol: { type: 'string' },
-    side: { type: 'string' },
-    quantity: { type: 'string' },
-    executedPrice: { type: 'string' },
-    entryPrice: { type: ['string', 'null'] },
-    totalCost: { type: 'string' },
-    commission: { type: 'string' },
-    pnl: { type: 'string' },
-    pnlPercent: { type: 'string' },
-    openedAt: { type: ['string', 'null'], format: 'date-time' },
-    executedAt: { type: 'string', format: 'date-time' },
-  },
-} as const;
-
-const positionResponse = {
-  type: 'object',
-  required: ['id', 'symbol', 'side', 'quantity', 'entryPrice', 'margin', 'openedAt'],
-  additionalProperties: false,
-  properties: {
-    id: { type: 'string' },
-    refId: { type: ['string', 'null'] },
-    symbol: { type: 'string' },
-    side: { type: 'string' },
-    quantity: { type: 'string' },
-    entryPrice: { type: 'string' },
-    margin: { type: 'string' },
-    takeProfit: { type: ['string', 'null'] },
-    stopLoss: { type: ['string', 'null'] },
-    openedAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-  },
-} as const;
+// ─── Shared schemas ───────────────────────────────────────────────────────────
 
 const errorResponse = {
   type: 'object',
@@ -105,686 +35,512 @@ const errorResponse = {
   },
 } as const;
 
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
+// 🔐 Up to 12 integer digits and 8 decimals — matches the Decimal(20, 8) columns
+const decimalString = {
+  type: 'string',
+  pattern: '^\\d{1,12}(\\.\\d{1,8})?$',
+  maxLength: 21,
+} as const;
+const nullableDecimal = { ...decimalString, type: ['string', 'null'] } as const;
 
-function serializeAccount(account: Account) {
-  return {
-    id: account.id,
-    totalBalance: account.totalBalance.toString(),
-    availableBalance: account.availableBalance.toString(),
-    unrealizedPnl: account.unrealizedPnl.toString(),
-    realizedPnl: account.realizedPnl.toString(),
-    lastReset: account.lastReset.toISOString(),
-    resetCount: account.resetCount,
-  };
+/** Public ids: engine ids (`<ms>-<base64url>`), cuid, and pre-BP-1 browser refIds */
+const idParam = {
+  type: 'object',
+  required: ['id'],
+  additionalProperties: false,
+  properties: {
+    id: { type: 'string', minLength: 1, maxLength: 64, pattern: '^[A-Za-z0-9_-]+$' },
+  },
+} as const;
+
+const legParam = {
+  type: 'object',
+  required: ['id', 'leg'],
+  additionalProperties: false,
+  properties: {
+    ...idParam.properties,
+    leg: { type: 'string', enum: ['take-profit', 'stop-loss'] },
+  },
+} as const;
+
+/** Every mutating route answers { result, delta, sound? }. Delta shape: PaperDeltaDTO (SDK). */
+const actionResponse = (result: object) =>
+  ({
+    type: 'object',
+    required: ['result', 'delta'],
+    properties: {
+      result,
+      delta: { type: 'object', additionalProperties: true },
+      sound: { type: 'string', enum: ['placed', 'queued', 'filled', 'profit', 'loss'] },
+    },
+  }) as const;
+
+// Shape: PaperStateDTO (generated/CDSDK/types). No `required` list: with no `properties`
+// declared, fast-json-stringify emits invalid JSON for it.
+const stateResponse = { type: 'object', additionalProperties: true } as const;
+
+const secured = { security: [{ bearerAuth: [] }] } as const;
+
+// 🔐 Mutating routes: 60 requests per minute (on top of the global 100/min)
+const mutationRateLimit = { rateLimit: { max: 60, timeWindow: '1 minute' } } as const;
+
+const MAX_AMOUNT = new Decimal('1000000000'); // 1e9 USDT / price ceiling
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function userIdOf(request: { user: unknown }): string {
+  return (request.user as { userId: string }).userId;
 }
 
-function serializeOrder(order: Order) {
-  return {
-    id: order.id,
-    refId: order.refId,
-    symbol: order.symbol,
-    side: order.side,
-    orderType: order.orderType,
-    quantity: order.quantity.toString(),
-    limitPrice: order.limitPrice?.toString() ?? null,
-    stopPrice: order.stopPrice?.toString() ?? null,
-    takeProfit: order.takeProfit?.toString() ?? null,
-    stopLoss: order.stopLoss?.toString() ?? null,
-    status: order.status,
-    filledQuantity: order.filledQuantity.toString(),
-    averageFilledPrice: order.averageFilledPrice?.toString() ?? null,
-    margin: order.margin.toString(),
-    commission: order.commission.toString(),
-    rejectionReason: order.rejectionReason,
-    createdAt: order.createdAt.toISOString(),
-    updatedAt: order.updatedAt.toISOString(),
-    filledAt: order.filledAt?.toISOString() ?? null,
-    cancelledAt: order.cancelledAt?.toISOString() ?? null,
-  };
+/** A required positive, bounded decimal (the schema already checked the format). */
+function positive(value: string, field: string): Decimal {
+  const d = new Decimal(value);
+  if (d.lte(0) || d.gt(MAX_AMOUNT)) throw new TradingError(409, `${field} must be positive`);
+  return d;
 }
 
-function serializeTrade(trade: Trade) {
-  return {
-    id: trade.id,
-    refId: trade.refId,
-    symbol: trade.symbol,
-    side: trade.side,
-    quantity: trade.quantity.toString(),
-    executedPrice: trade.executedPrice.toString(),
-    entryPrice: trade.entryPrice?.toString() ?? null,
-    totalCost: trade.totalCost.toString(),
-    commission: trade.commission.toString(),
-    pnl: trade.pnl.toString(),
-    pnlPercent: trade.pnlPercent.toString(),
-    openedAt: trade.openedAt?.toISOString() ?? null,
-    executedAt: trade.executedAt.toISOString(),
-  };
+function optionalPositive(value: string | null | undefined, field: string): Decimal | null {
+  return value === null || value === undefined ? null : positive(value, field);
 }
 
-function serializePosition(position: Position) {
-  return {
-    id: position.id,
-    refId: position.refId,
-    symbol: position.symbol,
-    side: position.side,
-    quantity: position.quantity.toString(),
-    entryPrice: position.entryPrice.toString(),
-    margin: position.margin.toString(),
-    takeProfit: position.takeProfit?.toString() ?? null,
-    stopLoss: position.stopLoss?.toString() ?? null,
-    openedAt: position.openedAt.toISOString(),
-    updatedAt: position.updatedAt.toISOString(),
-  };
+/** Serialize an engine outcome; `notFound` turns a false / 'not-found' result into a 404. */
+function send<R>(
+  reply: FastifyReply,
+  executed: Executed<R>,
+  opts: { notFound?: (result: R) => boolean; map?: (result: R) => unknown } = {}
+) {
+  if (opts.notFound?.(executed.result)) return reply.status(404).send({ error: 'Not found' });
+  return reply.send({
+    result: opts.map ? opts.map(executed.result) : executed.result,
+    delta: executed.delta,
+    ...(executed.sound ? { sound: executed.sound } : {}),
+  });
 }
 
-// ─── ROUTES ───────────────────────────────────────────────────────────────────
+async function guarded(reply: FastifyReply, fn: () => Promise<unknown>) {
+  try {
+    return await fn();
+  } catch (err) {
+    if (err instanceof TradingError) {
+      return reply.status(err.statusCode).send({ error: err.message });
+    }
+    throw err; // 🔐 anything else → global handler → { error: 'Internal Server Error' }
+  }
+}
+
+// ─── Routes ───────────────────────────────────────────────────────────────────
 
 export async function paperRoutes(app: FastifyInstance) {
-  // ── GET ACCOUNT ─────────────────────────────────────────────────────────────
+  // ── GET /state — full account view ──────────────────────────────────────────
   app.get(
-    '/account',
+    '/state',
     {
       onRequest: [app.authenticate],
       schema: {
         tags: ['Paper Trading'],
-        summary: 'Get paper trading account summary',
-        security: [{ bearerAuth: [] }],
+        summary: 'Balance, positions, pending orders and recent history',
+        ...secured,
+        response: { 200: stateResponse, 401: errorResponse, 500: errorResponse },
+      },
+    },
+    async (request) => app.paperRepository.snapshot(userIdOf(request))
+  );
+
+  // ── POST /orders — place a market / limit / stop order ──────────────────────
+  app.post<{ Body: PlaceOrderRequest }>(
+    '/orders',
+    {
+      onRequest: [app.authenticate],
+      config: mutationRateLimit,
+      schema: {
+        tags: ['Paper Trading'],
+        summary: 'Place an order (market fills at the server live price)',
+        ...secured,
+        body: {
+          type: 'object',
+          required: ['symbol', 'side', 'type', 'usdtAmount'],
+          additionalProperties: false,
+          properties: {
+            symbol: { type: 'string', enum: [...ALLOWED_SYMBOLS] },
+            side: { type: 'string', enum: ['buy', 'sell'] },
+            type: { type: 'string', enum: ['market', 'limit', 'stop'] },
+            usdtAmount: decimalString,
+            triggerPrice: decimalString,
+            takeProfit: decimalString,
+            stopLoss: decimalString,
+          },
+        },
         response: {
-          200: accountResponse,
+          200: actionResponse({ type: ['string', 'null'] }),
+          400: errorResponse,
           401: errorResponse,
+          409: errorResponse,
+          429: errorResponse,
           500: errorResponse,
         },
-      } as const,
+      },
     },
-    async (request, reply) => {
-      const { userId } = request.user as { userId: string };
-
-      try {
-        let account = await app.prisma.account.findUnique({
-          where: { userId },
-        });
-
-        // Lazy-create account if it doesn't exist (e.g. for users migrated from Phase 1)
-        if (!account) {
-          account = await app.prisma.account.create({
-            data: { userId },
-          });
+    async (request, reply) =>
+      guarded(reply, async () => {
+        const b = request.body;
+        if (b.type !== 'market' && !b.triggerPrice) {
+          return reply.status(400).send({ error: 'triggerPrice is required for limit / stop' });
         }
-
-        return reply.send(serializeAccount(account));
-      } catch (err) {
-        app.log.error({ err, userId }, 'Failed to fetch account');
-        return reply.status(500).send({ error: 'Internal Server Error' });
-      }
-    }
+        const executed = await app.trading.placeOrder(userIdOf(request), {
+          symbol: b.symbol,
+          side: b.side,
+          type: b.type,
+          usdtAmount: positive(b.usdtAmount, 'usdtAmount'),
+          ...(b.type !== 'market' && b.triggerPrice
+            ? { triggerPrice: positive(b.triggerPrice, 'triggerPrice') }
+            : {}),
+          ...(b.takeProfit ? { takeProfit: positive(b.takeProfit, 'takeProfit') } : {}),
+          ...(b.stopLoss ? { stopLoss: positive(b.stopLoss, 'stopLoss') } : {}),
+        });
+        return send(reply, executed);
+      })
   );
 
-  // ── GET ORDERS ──────────────────────────────────────────────────────────────
-  app.get(
-    '/orders',
+  // ── DELETE /orders/:id — cancel a pending order ─────────────────────────────
+  app.delete<{ Params: { id: string } }>(
+    '/orders/:id',
     {
       onRequest: [app.authenticate],
+      config: mutationRateLimit,
       schema: {
         tags: ['Paper Trading'],
-        summary: 'Get order history (active and terminal)',
-        security: [{ bearerAuth: [] }],
-        querystring: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            status: { type: 'string' }, // optional filter
-            limit: { type: 'integer', default: 50, maximum: 200 },
-          },
-        },
+        summary: 'Cancel a pending order (refunds its reserve)',
+        ...secured,
+        params: idParam,
         response: {
-          200: {
-            type: 'array',
-            items: orderResponse,
-          },
+          200: actionResponse({ type: 'boolean' }),
+          401: errorResponse,
+          404: errorResponse,
+          409: errorResponse,
+          429: errorResponse,
           500: errorResponse,
         },
       },
     },
-    async (request, reply) => {
-      const { userId } = request.user as { userId: string };
-      const { status, limit } = request.query as { status?: string; limit: number };
-
-      try {
-        const orders = await app.prisma.order.findMany({
-          where: {
-            userId,
-            ...(status ? { status } : {}),
-          },
-          orderBy: { createdAt: 'desc' },
-          take: limit || 50,
-        });
-
-        return reply.send(orders.map(serializeOrder));
-      } catch (err) {
-        app.log.error({ err, userId }, 'Failed to fetch orders');
-        return reply.status(500).send({ error: 'Internal Server Error' });
-      }
-    }
+    async (request, reply) =>
+      guarded(reply, async () =>
+        send(reply, await app.trading.cancelOrder(userIdOf(request), request.params.id), {
+          notFound: (r) => r === false,
+        })
+      )
   );
 
-  // ── GET TRADES ──────────────────────────────────────────────────────────────
-  app.get(
-    '/trades',
+  // ── PATCH /orders/:id — edit a pending order ────────────────────────────────
+  app.patch<{ Params: { id: string }; Body: EditPendingOrderRequest }>(
+    '/orders/:id',
     {
       onRequest: [app.authenticate],
+      config: mutationRateLimit,
       schema: {
         tags: ['Paper Trading'],
-        summary: 'Get completed trade executions',
-        security: [{ bearerAuth: [] }],
-        querystring: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            limit: { type: 'integer', default: 50, maximum: 200 },
-          },
-        },
-        response: {
-          200: {
-            type: 'array',
-            items: tradeResponse,
-          },
-          500: errorResponse,
-        },
-      },
-    },
-    async (request, reply) => {
-      const { userId } = request.user as { userId: string };
-      const { limit } = request.query as { limit: number };
-
-      try {
-        const trades = await app.prisma.trade.findMany({
-          where: { userId },
-          orderBy: { executedAt: 'desc' },
-          take: limit || 50,
-        });
-
-        return reply.send(trades.map(serializeTrade));
-      } catch (err) {
-        app.log.error({ err, userId }, 'Failed to fetch trades');
-        return reply.status(500).send({ error: 'Internal Server Error' });
-      }
-    }
-  );
-
-  // ── GET POSITIONS ───────────────────────────────────────────────────────────
-  app.get(
-    '/positions',
-    {
-      onRequest: [app.authenticate],
-      schema: {
-        tags: ['Paper Trading'],
-        summary: 'Get active open positions',
-        security: [{ bearerAuth: [] }],
-        response: {
-          200: {
-            type: 'array',
-            items: positionResponse,
-          },
-          500: errorResponse,
-        },
-      },
-    },
-    async (request, reply) => {
-      const { userId } = request.user as { userId: string };
-
-      try {
-        const positions = await app.prisma.position.findMany({
-          where: { userId },
-          orderBy: { openedAt: 'desc' },
-        });
-
-        return reply.send(positions.map(serializePosition));
-      } catch (err) {
-        app.log.error({ err, userId }, 'Failed to fetch positions');
-        return reply.status(500).send({ error: 'Internal Server Error' });
-      }
-    }
-  );
-
-  // ── POST POSITIONS (CREATE) ────────────────────────────────────────────────
-  app.post(
-    '/positions',
-    {
-      onRequest: [app.authenticate],
-      schema: {
-        tags: ['Paper Trading'],
-        summary: 'Create a new open position',
-        security: [{ bearerAuth: [] }],
+        summary: 'Edit a pending order (price, amount, TP/SL)',
+        ...secured,
+        params: idParam,
         body: {
           type: 'object',
-          required: ['symbol', 'side', 'quantity', 'entryPrice', 'margin'],
+          required: ['triggerPrice', 'usdtAmount', 'takeProfit', 'stopLoss'],
           additionalProperties: false,
           properties: {
-            refId: { type: 'string', maxLength: 64 },
-            symbol: { type: 'string', enum: ALLOWED_SYMBOLS as unknown as string[] },
-            side: { type: 'string', enum: ['LONG', 'SHORT'] },
-            quantity: { type: 'string' },
-            entryPrice: { type: 'string' },
-            margin: { type: 'string' },
-            takeProfit: { type: ['string', 'null'] },
-            stopLoss: { type: ['string', 'null'] },
+            triggerPrice: decimalString,
+            usdtAmount: decimalString,
+            takeProfit: nullableDecimal,
+            stopLoss: nullableDecimal,
           },
         },
         response: {
-          201: positionResponse,
+          200: actionResponse({ type: 'string', enum: ['ok', 'rejected'] }),
           400: errorResponse,
+          401: errorResponse,
+          404: errorResponse,
+          409: errorResponse,
+          429: errorResponse,
+          500: errorResponse,
         },
       },
     },
-    async (request, reply) => {
-      const { userId } = request.user as { userId: string };
-      const body = request.body as CreatePositionRequest;
-
-      const account = await app.prisma.account.findUnique({ where: { userId } });
-      if (!account) return reply.status(400).send({ error: 'Account not found' });
-
-      const position = await app.prisma.position.create({
-        data: {
-          userId,
-          refId: body.refId,
-          accountId: account.id,
-          symbol: body.symbol,
-          side: body.side,
-          quantity: body.quantity,
-          entryPrice: body.entryPrice,
-          margin: body.margin,
-          takeProfit: body.takeProfit,
-          stopLoss: body.stopLoss,
-        },
-      });
-
-      return reply.status(201).send(serializePosition(position));
-    }
+    async (request, reply) =>
+      guarded(reply, async () => {
+        const b = request.body;
+        const executed = await app.trading.editOrder(
+          userIdOf(request),
+          request.params.id,
+          positive(b.triggerPrice, 'triggerPrice'),
+          positive(b.usdtAmount, 'usdtAmount'),
+          optionalPositive(b.takeProfit, 'takeProfit'),
+          optionalPositive(b.stopLoss, 'stopLoss')
+        );
+        return send(reply, executed, { notFound: (r) => r === 'not-found' });
+      })
   );
 
-  // ── POST ORDERS (CREATE) ───────────────────────────────────────────────────
-  app.post(
-    '/orders',
+  // ── DELETE /orders/:id/exits/:leg — cancel a pending order's TP or SL ───────
+  app.delete<{ Params: { id: string; leg: ExitLeg } }>(
+    '/orders/:id/exits/:leg',
     {
       onRequest: [app.authenticate],
+      config: mutationRateLimit,
       schema: {
         tags: ['Paper Trading'],
-        summary: 'Place a new paper order',
-        security: [{ bearerAuth: [] }],
-        body: {
-          type: 'object',
-          required: ['symbol', 'side', 'orderType', 'quantity'],
-          additionalProperties: false,
-          properties: {
-            refId: { type: 'string', maxLength: 64 },
-            symbol: { type: 'string', enum: ALLOWED_SYMBOLS as unknown as string[] },
-            side: { type: 'string', enum: ['BUY', 'SELL'] },
-            orderType: { type: 'string', enum: ['MARKET', 'LIMIT', 'STOP'] },
-            quantity: { type: 'string' }, // Decimal
-            limitPrice: { type: 'string' },
-            stopPrice: { type: 'string' },
-            takeProfit: { type: 'string' },
-            stopLoss: { type: 'string' },
-            margin: { type: 'string' },
-          },
-        },
+        summary: "Cancel a pending order's take-profit or stop-loss leg",
+        ...secured,
+        params: legParam,
         response: {
-          201: orderResponse,
-          400: errorResponse,
+          200: actionResponse({ type: 'boolean' }),
+          401: errorResponse,
+          404: errorResponse,
+          409: errorResponse,
+          429: errorResponse,
+          500: errorResponse,
         },
       },
     },
-    async (request, reply) => {
-      const { userId } = request.user as { userId: string };
-      const body = request.body as CreateOrderRequest;
-
-      const account = await app.prisma.account.findUnique({ where: { userId } });
-      if (!account) return reply.status(400).send({ error: 'Account not found' });
-
-      const order = await app.prisma.order.create({
-        data: {
-          userId,
-          refId: body.refId,
-          accountId: account.id,
-          symbol: body.symbol,
-          side: body.side,
-          orderType: body.orderType,
-          quantity: body.quantity,
-          limitPrice: body.limitPrice,
-          stopPrice: body.stopPrice,
-          takeProfit: body.takeProfit,
-          stopLoss: body.stopLoss,
-          margin: body.margin ?? '0', // ─── Changed from 0 to '0' ─────────
-          status: body.orderType === 'MARKET' ? 'FILLED' : 'PENDING',
-          filledQuantity: body.orderType === 'MARKET' ? body.quantity : '0',
-          averageFilledPrice: body.orderType === 'MARKET' ? body.limitPrice : null,
-          filledAt: body.orderType === 'MARKET' ? new Date() : null,
-        },
-      });
-
-      // 🔐 Side-effect removal: Market orders no longer automatically create positions.
-      // The client calls createPosition explicitly to ensure netting/merging logic
-      // remains the single source of truth.
-
-      return reply.status(201).send(serializeOrder(order));
-    }
+    async (request, reply) =>
+      guarded(reply, async () =>
+        send(
+          reply,
+          await app.trading.cancelOrderExit(
+            userIdOf(request),
+            request.params.id,
+            request.params.leg
+          ),
+          { notFound: (r) => r === false }
+        )
+      )
   );
 
-  // ── RESET ACCOUNT ───────────────────────────────────────────────────────────
+  // ── PATCH /positions/:id/tpsl — set / change / remove TP and SL ─────────────
+  app.patch<{ Params: { id: string }; Body: UpdatePositionExitsRequest }>(
+    '/positions/:id/tpsl',
+    {
+      onRequest: [app.authenticate],
+      config: mutationRateLimit,
+      schema: {
+        tags: ['Paper Trading'],
+        summary: "Set, change or remove a position's TP / SL",
+        ...secured,
+        params: idParam,
+        body: {
+          type: 'object',
+          required: ['takeProfit', 'stopLoss'],
+          additionalProperties: false,
+          properties: { takeProfit: nullableDecimal, stopLoss: nullableDecimal },
+        },
+        response: {
+          200: actionResponse({ type: 'boolean' }),
+          400: errorResponse,
+          401: errorResponse,
+          404: errorResponse,
+          409: errorResponse,
+          429: errorResponse,
+          500: errorResponse,
+        },
+      },
+    },
+    async (request, reply) =>
+      guarded(reply, async () =>
+        send(
+          reply,
+          await app.trading.updatePositionExits(
+            userIdOf(request),
+            request.params.id,
+            optionalPositive(request.body.takeProfit, 'takeProfit'),
+            optionalPositive(request.body.stopLoss, 'stopLoss')
+          ),
+          { notFound: (r) => r === false }
+        )
+      )
+  );
+
+  // ── DELETE /positions/:id/exits/:leg — cancel a position's TP or SL ─────────
+  app.delete<{ Params: { id: string; leg: ExitLeg } }>(
+    '/positions/:id/exits/:leg',
+    {
+      onRequest: [app.authenticate],
+      config: mutationRateLimit,
+      schema: {
+        tags: ['Paper Trading'],
+        summary: "Cancel a position's take-profit or stop-loss",
+        ...secured,
+        params: legParam,
+        response: {
+          200: actionResponse({ type: 'boolean' }),
+          401: errorResponse,
+          404: errorResponse,
+          409: errorResponse,
+          429: errorResponse,
+          500: errorResponse,
+        },
+      },
+    },
+    async (request, reply) =>
+      guarded(reply, async () =>
+        send(
+          reply,
+          await app.trading.cancelPositionExit(
+            userIdOf(request),
+            request.params.id,
+            request.params.leg
+          ),
+          { notFound: (r) => r === false }
+        )
+      )
+  );
+
+  // ── POST /positions/:id/close — close at the live price ─────────────────────
+  app.post<{ Params: { id: string } }>(
+    '/positions/:id/close',
+    {
+      onRequest: [app.authenticate],
+      config: mutationRateLimit,
+      schema: {
+        tags: ['Paper Trading'],
+        summary: 'Close a position at the server live price',
+        ...secured,
+        params: idParam,
+        response: {
+          200: actionResponse({ type: ['string', 'null'] }),
+          401: errorResponse,
+          404: errorResponse,
+          409: errorResponse,
+          429: errorResponse,
+          500: errorResponse,
+        },
+      },
+    },
+    async (request, reply) =>
+      guarded(reply, async () =>
+        send(reply, await app.trading.closePosition(userIdOf(request), request.params.id), {
+          notFound: (r) => r === null,
+          map: (pnl) => pnl?.toString() ?? null,
+        })
+      )
+  );
+
+  // ── PATCH /account/leverage ──────────────────────────────────────────────────
+  app.patch<{ Body: { leverage: number } }>(
+    '/account/leverage',
+    {
+      onRequest: [app.authenticate],
+      config: mutationRateLimit,
+      schema: {
+        tags: ['Paper Trading'],
+        summary: 'Set the account leverage (1–10)',
+        ...secured,
+        body: {
+          type: 'object',
+          required: ['leverage'],
+          additionalProperties: false,
+          properties: { leverage: { type: 'integer', minimum: 1, maximum: 10 } },
+        },
+        response: {
+          200: actionResponse({ type: 'integer' }),
+          400: errorResponse,
+          401: errorResponse,
+          409: errorResponse,
+          429: errorResponse,
+          500: errorResponse,
+        },
+      },
+    },
+    async (request, reply) =>
+      guarded(reply, async () =>
+        send(reply, await app.trading.setLeverage(userIdOf(request), request.body.leverage))
+      )
+  );
+
+  // ── POST /account/reset ──────────────────────────────────────────────────────
   app.post(
     '/account/reset',
     {
       onRequest: [app.authenticate],
+      // 🔐 Destructive — tighter limit
+      config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
       schema: {
         tags: ['Paper Trading'],
-        summary: 'Reset paper trading account to defaults',
-        security: [{ bearerAuth: [] }],
+        summary: 'Reset the paper account to $10,000 (wipes positions, orders and history)',
+        ...secured,
         response: {
-          200: accountResponse,
+          200: actionResponse({ type: 'boolean' }),
+          401: errorResponse,
+          409: errorResponse,
+          429: errorResponse,
           500: errorResponse,
         },
       },
     },
-    async (request, reply) => {
-      const { userId } = request.user as { userId: string };
-
-      try {
-        const account = await app.prisma.account.update({
-          where: { userId },
-          data: {
-            totalBalance: 10000,
-            availableBalance: 10000,
-            unrealizedPnl: 0,
-            realizedPnl: 0,
-            lastReset: new Date(),
-            resetCount: { increment: 1 },
-          },
-        });
-
-        // Clear all active orders and trades on reset?
-        // In paper trading, usually yes.
-        await app.prisma.order.deleteMany({ where: { userId } });
-        await app.prisma.trade.deleteMany({ where: { userId } });
-        await app.prisma.position.deleteMany({ where: { userId } });
-
-        return reply.send(serializeAccount(account));
-      } catch (err) {
-        app.log.error({ err, userId }, 'Failed to reset account');
-        return reply.status(500).send({ error: 'Internal Server Error' });
-      }
-    }
+    async (request, reply) =>
+      guarded(reply, async () => send(reply, await app.trading.reset(userIdOf(request))))
   );
 
-  // ── PATCH ACCOUNT ──────────────────────────────────────────────────────────
-  app.patch(
-    '/account',
+  // ── POST /journal, PATCH /journal/:id — the user's own notes ────────────────
+  const noteBody = {
+    type: 'object',
+    required: ['text'],
+    additionalProperties: false,
+    properties: { text: { type: 'string', minLength: 1, maxLength: 500 } },
+  } as const;
+
+  app.post<{ Body: JournalNoteRequest }>(
+    '/journal',
     {
       onRequest: [app.authenticate],
+      config: mutationRateLimit,
       schema: {
         tags: ['Paper Trading'],
-        summary: 'Sync paper trading account stats',
-        security: [{ bearerAuth: [] }],
-        body: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            totalBalance: { type: 'string' },
-            availableBalance: { type: 'string' },
-            unrealizedPnl: { type: 'string' },
-            realizedPnl: { type: 'string' },
-          },
-        },
+        summary: 'Add a journal note',
+        ...secured,
+        body: noteBody,
         response: {
-          200: accountResponse,
-          500: errorResponse,
-        },
-      },
-    },
-    async (request, reply) => {
-      const { userId } = request.user as { userId: string };
-      const body = request.body as Partial<SyncAccountResponse>;
-
-      try {
-        const account = await app.prisma.account.update({
-          where: { userId },
-          data: {
-            totalBalance: body.totalBalance,
-            availableBalance: body.availableBalance,
-            unrealizedPnl: body.unrealizedPnl,
-            realizedPnl: body.realizedPnl,
-          },
-        });
-
-        return reply.send(serializeAccount(account));
-      } catch (err) {
-        app.log.error({ err, userId }, 'Failed to update account');
-        return reply.status(500).send({ error: 'Internal Server Error' });
-      }
-    }
-  );
-
-  // ── PATCH ORDER (EDIT/CANCEL) ──────────────────────────────────────────────
-  app.patch(
-    '/orders/:id',
-    {
-      onRequest: [app.authenticate],
-      schema: {
-        tags: ['Paper Trading'],
-        summary: 'Update or cancel a paper order',
-        security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          additionalProperties: false,
-          properties: { id: { type: 'string' } },
-        },
-        body: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            status: { type: 'string', enum: ['FILLED', 'CANCELLED', 'REJECTED'] },
-            limitPrice: { type: 'string' },
-            stopPrice: { type: 'string' },
-            takeProfit: { type: ['string', 'null'] },
-            stopLoss: { type: ['string', 'null'] },
-            filledQuantity: { type: 'string' },
-            averageFilledPrice: { type: 'string' },
-            rejectionReason: { type: 'string' },
-            quantity: { type: 'string' },
-            margin: { type: 'string' },
-          },
-        },
-        response: {
-          200: orderResponse,
-          404: errorResponse,
-        },
-      },
-    },
-    async (request, reply) => {
-      const { userId } = request.user as { userId: string };
-      const { id } = request.params as { id: string };
-      const body = request.body as UpdateOrderRequest;
-
-      const existingOrder = await app.prisma.order.findFirst({
-        where: {
-          OR: [
-            { id, userId },
-            { refId: id, userId },
-          ],
-        },
-      });
-
-      if (!existingOrder) {
-        return reply.status(404).send({ error: 'Order not found' });
-      }
-
-      const order = await app.prisma.order.update({
-        where: { id: existingOrder.id },
-        data: {
-          ...body,
-          ...(body.status === 'CANCELLED' ? { cancelledAt: new Date() } : {}),
-          ...(body.status === 'FILLED' ? { filledAt: new Date() } : {}),
-        },
-      });
-
-      return reply.send(serializeOrder(order));
-    }
-  );
-
-  // ── POST TRADES (RECORD) ───────────────────────────────────────────────────
-  app.post(
-    '/trades',
-    {
-      onRequest: [app.authenticate],
-      schema: {
-        tags: ['Paper Trading'],
-        summary: 'Record a new trade execution',
-        security: [{ bearerAuth: [] }],
-        body: {
-          type: 'object',
-          required: ['symbol', 'side', 'quantity', 'executedPrice', 'totalCost'],
-          additionalProperties: false,
-          properties: {
-            refId: { type: 'string', maxLength: 64 },
-            symbol: { type: 'string', enum: ALLOWED_SYMBOLS as unknown as string[] },
-            side: { type: 'string', enum: ['BUY', 'SELL'] },
-            quantity: { type: 'string' },
-            executedPrice: { type: 'string' },
-            entryPrice: { type: 'string' },
-            totalCost: { type: 'string' },
-            commission: { type: 'string' },
-            pnl: { type: 'string' },
-            pnlPercent: { type: 'string' },
-            orderId: { type: 'string' },
-            openedAt: { type: 'string', format: 'date-time' },
-          },
-        },
-        response: {
-          201: tradeResponse,
+          200: actionResponse({ type: 'string' }),
           400: errorResponse,
+          401: errorResponse,
+          409: errorResponse,
+          429: errorResponse,
+          500: errorResponse,
         },
       },
     },
-    async (request, reply) => {
-      const { userId } = request.user as { userId: string };
-      const body = request.body as CreateTradeRequest;
-
-      const account = await app.prisma.account.findUnique({ where: { userId } });
-      if (!account) return reply.status(400).send({ error: 'Account not found' });
-
-      const trade = await app.prisma.trade.create({
-        data: {
-          userId,
-          refId: body.refId,
-          accountId: account.id,
-          symbol: body.symbol,
-          side: body.side,
-          quantity: body.quantity,
-          executedPrice: body.executedPrice,
-          entryPrice: body.entryPrice,
-          totalCost: body.totalCost,
-          commission: body.commission ?? '0',
-          pnl: body.pnl ?? '0',
-          pnlPercent: body.pnlPercent ?? '0',
-          orderId: body.orderId,
-          openedAt: body.openedAt,
-        },
-      });
-
-      return reply.status(201).send(serializeTrade(trade));
-    }
+    async (request, reply) =>
+      guarded(reply, async () =>
+        send(reply, await app.trading.addNote(userIdOf(request), request.body.text))
+      )
   );
 
-  // ── DELETE POSITION ────────────────────────────────────────────────────────
-  app.delete(
-    '/positions/:id',
+  app.patch<{ Params: { id: string }; Body: JournalNoteRequest }>(
+    '/journal/:id',
     {
       onRequest: [app.authenticate],
+      config: mutationRateLimit,
       schema: {
         tags: ['Paper Trading'],
-        summary: 'Remove an open position (when closed)',
-        security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          additionalProperties: false,
-          properties: { id: { type: 'string' } },
-        },
+        summary: 'Edit one of your journal notes (system entries are read-only)',
+        ...secured,
+        params: idParam,
+        body: noteBody,
         response: {
-          204: { type: 'null' },
+          200: actionResponse({ type: 'boolean' }),
+          400: errorResponse,
+          401: errorResponse,
+          409: errorResponse,
+          429: errorResponse,
+          500: errorResponse,
         },
       },
     },
-    async (request, reply) => {
-      const { userId } = request.user as { userId: string };
-      const { id } = request.params as { id: string };
-
-      await app.prisma.position.deleteMany({
-        where: {
-          OR: [
-            { id, userId },
-            { refId: id, userId },
-          ],
-        },
-      });
-
-      return reply.status(204).send();
-    }
+    async (request, reply) =>
+      guarded(reply, async () =>
+        send(
+          reply,
+          await app.trading.editNote(userIdOf(request), request.params.id, request.body.text)
+        )
+      )
   );
 
-  // ── PATCH POSITION (UPDATE EXITS) ──────────────────────────────────────────
-  app.patch(
-    '/positions/:id',
-    {
-      onRequest: [app.authenticate],
-      schema: {
-        tags: ['Paper Trading'],
-        summary: 'Update position TP/SL or quantity',
-        security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          additionalProperties: false,
-          properties: { id: { type: 'string' } },
-        },
-        body: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            quantity: { type: 'string' },
-            takeProfit: { type: ['string', 'null'] },
-            stopLoss: { type: ['string', 'null'] },
-            margin: { type: 'string' },
-          },
-        },
-        response: {
-          200: positionResponse,
-          404: errorResponse,
-        },
-      },
-    },
-    async (request, reply) => {
-      const { userId } = request.user as { userId: string };
-      const { id } = request.params as { id: string };
-      const body = request.body as UpdatePositionRequest;
-
-      const existingPosition = await app.prisma.position.findFirst({
-        where: {
-          OR: [
-            { id, userId },
-            { refId: id, userId },
-          ],
-        },
-      });
-
-      if (!existingPosition) {
-        return reply.status(404).send({ error: 'Position not found' });
-      }
-
-      const position = await app.prisma.position.update({
-        where: { id: existingPosition.id },
-        data: body,
-      });
-
-      return reply.send(serializePosition(position));
-    }
-  );
+  // ── Private WebSocket ────────────────────────────────────────────────────────
+  await privatePaperWs(app);
 }
