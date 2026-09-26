@@ -50,6 +50,15 @@ function closingSide(pos: Position): OrderSide {
   return pos.side === 'long' ? 'sell' : 'buy';
 }
 
+/**
+ * 🔐 Leverage as the money maths may use it: an integer in [1, MAX_LEVERAGE]. Every write path
+ * already clamps; re-clamping where a fill is sized means a bad stored value (manual DB fix,
+ * a future import) can never size a position.
+ */
+function clampLeverage(value: number): number {
+  return Math.min(Math.max(Number.isFinite(value) ? Math.round(value) : 1, 1), MAX_LEVERAGE);
+}
+
 function positive(v: Decimal | null | undefined): Decimal | undefined {
   return v && v.gt(0) ? v : undefined;
 }
@@ -81,7 +90,7 @@ class Draft {
   constructor(state: AccountState) {
     this.balance = state.balance;
     this.realizedPnl = state.realizedPnl;
-    this.leverage = state.leverage;
+    this.leverage = clampLeverage(state.leverage);
     this.positions = [...state.positions];
     this.pending = [...state.pendingOrders];
     this.initialPositionIds = new Set(state.positions.map((p) => p.id));
@@ -195,7 +204,7 @@ function placeMarketInto(
   ctx: EngineContext,
   opts: MarketOptions = {}
 ): string | null {
-  const leverage = opts.leverage ?? d.leverage;
+  const leverage = clampLeverage(opts.leverage ?? d.leverage);
   const { skipJournal, fromPending } = opts;
   let usdtAmount = usdtAmountIn;
   if (usdtAmount.lte(0) || price.lte(0)) return null;
@@ -1054,7 +1063,7 @@ export function fillPending(
 
 export function setLeverage(state: AccountState, value: number): ActionResult<number> {
   const d = new Draft(state);
-  d.leverage = Math.min(Math.max(Number.isFinite(value) ? Math.round(value) : 1, 1), MAX_LEVERAGE);
+  d.leverage = clampLeverage(value);
   return { delta: d.toDelta(), result: d.leverage };
 }
 

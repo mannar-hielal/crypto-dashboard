@@ -62,6 +62,9 @@ export interface LeaseStore {
   release(holder: string): Promise<void>;
 }
 
+/** Attempts per trigger before waiting for the next tick */
+const TRIGGER_ATTEMPTS = 2;
+
 /** Longest a symbol may go without a tick before the gap is backfilled from candles. */
 const DEFAULT_GAP_MS = 60_000;
 
@@ -280,9 +283,18 @@ export class MatchingEngine {
     this.inFlight.add(key);
     let executed = false;
     try {
-      executed = (await this.deps.trading.runTrigger(userId, trigger)) !== null;
-    } catch (err) {
-      log.error({ err, userId, kind: trigger.kind }, 'Trigger execution failed');
+      // A crossed level must not wait for the next tick because a user action held the account
+      // at the same moment: one immediate retry after a failure (e.g. repeated version conflicts).
+      for (let attempt = 1; attempt <= TRIGGER_ATTEMPTS; attempt++) {
+        try {
+          executed = (await this.deps.trading.runTrigger(userId, trigger)) !== null;
+          break;
+        } catch (err) {
+          if (attempt === TRIGGER_ATTEMPTS) {
+            log.error({ err, userId, kind: trigger.kind }, 'Trigger execution failed');
+          }
+        }
+      }
     } finally {
       this.inFlight.delete(key);
     }

@@ -1333,3 +1333,25 @@ describe('netting (one-way positions)', () => {
     });
   });
 });
+
+describe('leverage is re-clamped where a fill is sized (defense in depth)', () => {
+  it('an out-of-range stored leverage sizes the position at MAX_LEVERAGE (10)', async () => {
+    const { Decimal } = await import('@prisma/client/runtime/client');
+    const { placeMarket } = await import('../index.js');
+    const res = placeMarket(
+      {
+        balance: new Decimal(10_000),
+        realizedPnl: new Decimal(0),
+        leverage: 50, // e.g. a bad manual DB edit
+        positions: [],
+        pendingOrders: [],
+      },
+      { symbol: SYMBOL, side: 'buy', usdtAmount: new Decimal(1_000) },
+      new Decimal(50_000),
+      { now: 1, newId: () => 'x' }
+    );
+    // 1000 × 10 / 50000 — not × 50
+    expect(res.delta.positionsUpsert[0].quantity.toNumber()).toBeCloseTo(0.2);
+    expect(res.delta.account.leverage).toBe(10);
+  });
+});

@@ -495,6 +495,16 @@ describe('MatchingEngine', () => {
     await e.stop();
   });
 
+  it('retries a failed trigger once immediately instead of waiting for the next tick', async () => {
+    runTrigger.mockRejectedValueOnce(new Error('Account changed — please retry'));
+    runTrigger.mockResolvedValueOnce({ result: 'pos' });
+    const e = engine();
+    await e.start();
+    tick('BTCUSDT', 48_000);
+    await vi.waitFor(() => expect(runTrigger).toHaveBeenCalledTimes(2));
+    await e.stop();
+  });
+
   it('releases the lease on stop', async () => {
     const e = engine();
     await e.start();

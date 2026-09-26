@@ -106,7 +106,8 @@ describe('usePaperFeed', () => {
     const { fakePaperApi } = await import('@/test/fakePaperApi');
     fakePaperApi.getState.mockClear();
     renderHook(() => usePaperFeed());
-    await vi.waitFor(() => expect(fakePaperApi.getState).toHaveBeenCalledTimes(1));
+    await act(async () => undefined);
+    expect(fakePaperApi.getState).toHaveBeenCalledTimes(1);
   });
 
   it('hydrates from the snapshot and applies deltas with the server’s sound', () => {
@@ -139,14 +140,39 @@ describe('usePaperFeed', () => {
     expect(MockWebSocket.instances).toHaveLength(2);
   });
 
-  it('refreshes the token before reconnecting after a 4401 close', async () => {
+  it('after a 4401, reconnects right away once a fresh token arrives', async () => {
     const { refreshAccessToken } = await import('@/lib/session');
+    vi.mocked(refreshAccessToken).mockResolvedValueOnce('fresh-token');
     renderHook(() => usePaperFeed());
     last().serverOpen();
     await act(async () => last().serverClose(4401));
     expect(refreshAccessToken).toHaveBeenCalled();
-    await act(async () => vi.advanceTimersByTime(1_000));
     expect(MockWebSocket.instances).toHaveLength(2);
+  });
+
+  it('after a 4401 with a failed refresh, backs off instead of reconnecting with the stale token', async () => {
+    const { refreshAccessToken } = await import('@/lib/session');
+    vi.mocked(refreshAccessToken).mockResolvedValueOnce(null).mockResolvedValueOnce('fresh-token');
+    renderHook(() => usePaperFeed());
+    last().serverOpen();
+    await act(async () => last().serverClose(4401));
+    expect(MockWebSocket.instances).toHaveLength(1); // no reconnect with the stale token
+    await act(async () => vi.advanceTimersByTime(1_000)); // retry the refresh
+    expect(MockWebSocket.instances).toHaveLength(2);
+  });
+
+  it('retries the REST account load until the account is loaded', async () => {
+    const { fakePaperApi } = await import('@/test/fakePaperApi');
+    fakePaperApi.getState.mockClear();
+    fakePaperApi.getState.mockRejectedValueOnce(new Error('Failed to fetch'));
+    renderHook(() => usePaperFeed());
+    await act(async () => undefined);
+    expect(fakePaperApi.getState).toHaveBeenCalledTimes(1);
+    await act(async () => vi.advanceTimersByTime(1_000));
+    await vi.waitFor(() => expect(fakePaperApi.getState).toHaveBeenCalledTimes(2));
+    expect(usePaperStore.getState().isSyncing).toBe(false);
+    await act(async () => vi.advanceTimersByTime(60_000));
+    expect(fakePaperApi.getState).toHaveBeenCalledTimes(2); // stops once loaded
   });
 
   it('🔐 clears the account and closes without reconnecting on sign-out', () => {

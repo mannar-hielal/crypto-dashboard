@@ -68,6 +68,25 @@ export function usePaperFeed(): void {
     let attempt = 0;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
+    /**
+     * Expired / invalid token: reconnect only once a fresh token exists — reconnecting with the
+     * same token would just be rejected again. A transient refresh failure retries with backoff;
+     * a 401 signs the user out and the user effect tears this down.
+     */
+    const recoverAuth = () => {
+      void refreshAccessToken().then((token) => {
+        if (cancelled) return;
+        if (token) {
+          attempt = 0;
+          connect();
+        } else if (useAuthStore.getState().user) {
+          const delay = Math.min(RECONNECT_MAX_MS, RECONNECT_BASE_MS * 2 ** attempt);
+          attempt += 1;
+          reconnectTimer = setTimeout(recoverAuth, delay);
+        }
+      });
+    };
+
     const scheduleReconnect = () => {
       if (cancelled) return;
       const delay = Math.min(RECONNECT_MAX_MS, RECONNECT_BASE_MS * 2 ** attempt);
@@ -108,11 +127,7 @@ export function usePaperFeed(): void {
         wsRef.current = null;
         usePaperStore.setState({ isSyncing: true });
         if (e.code === WS_CLOSE_UNAUTHORIZED) {
-          // Expired / invalid token: get a fresh one, then reconnect (null = signed out)
-          void refreshAccessToken().then(() => {
-            // Signed out (401) → the user effect tears this down; otherwise retry with backoff
-            if (useAuthStore.getState().user) scheduleReconnect();
-          });
+          recoverAuth();
           return;
         }
         scheduleReconnect();
@@ -122,13 +137,30 @@ export function usePaperFeed(): void {
     }
 
     connect();
-    // REST fallback: load the account even if the socket can't connect (blocked proxy, …).
-    // hydrate() is version-gated, so whichever of this and the WS snapshot is newer wins.
-    void usePaperStore.getState().resync();
+
+    // REST fallback: load the account even if the socket can't connect (blocked proxy, …),
+    // retrying with backoff until something has loaded it. hydrate() is version-gated, so
+    // whichever of this and the WS snapshot is newer wins.
+    let loadAttempt = 0;
+    let loadTimer: ReturnType<typeof setTimeout> | null = null;
+    const loadAccount = () => {
+      if (cancelled || !usePaperStore.getState().isSyncing) return;
+      void usePaperStore
+        .getState()
+        .resync()
+        .then(() => {
+          if (cancelled || !usePaperStore.getState().isSyncing) return;
+          const delay = Math.min(RECONNECT_MAX_MS, RECONNECT_BASE_MS * 2 ** loadAttempt);
+          loadAttempt += 1;
+          loadTimer = setTimeout(loadAccount, delay);
+        });
+    };
+    loadAccount();
 
     return () => {
       cancelled = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (loadTimer) clearTimeout(loadTimer);
       const ws = wsRef.current;
       wsRef.current = null;
       if (ws) {
