@@ -12,9 +12,9 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { marketApi, type WsMessage } from '@crypto-dashboard/sdk';
+import { marketApi, type MarketCategory, type WsMessage } from '@crypto-dashboard/sdk';
 import { useLayoutStore, LAYOUT_PANE_COUNT } from '@/store/layoutStore';
-import { paneStores, lastKnownPrices } from '@/store/paneStore';
+import { paneStores, setLastKnownPrice } from '@/store/paneStore';
 import { INTERVAL_FETCH_LIMIT, type Interval } from '@/lib/markets';
 
 const RECONNECT_DELAY_MS = 3_000;
@@ -55,6 +55,7 @@ function sleep(ms: number): Promise<void> {
 
 function useSinglePaneFeed(
   paneIndex: 0 | 1 | 2 | 3,
+  category: MarketCategory,
   symbol: string,
   interval: Interval,
   isActive: boolean
@@ -130,7 +131,12 @@ function useSinglePaneFeed(
       let attempt = 0;
       while (!cancelled && !restDataApplied) {
         try {
-          const res = await marketApi.getCandles(symbol, interval, INTERVAL_FETCH_LIMIT[interval]);
+          const res = await marketApi.getCandles(
+            symbol,
+            interval,
+            INTERVAL_FETCH_LIMIT[interval],
+            category
+          );
           if (cancelled) return;
           // Use REST if the WS snapshot hasn't arrived yet, or if it has fewer
           // bars — common for higher intervals (1h/4h/1d) where the server-side
@@ -138,7 +144,7 @@ function useSinglePaneFeed(
           const currentBars = store.getState().bars.length;
           if (!store.getState().wsSnapshotReceived || res.candles.length > currentBars) {
             const last = res.candles[res.candles.length - 1];
-            if (last) lastKnownPrices.set(symbol, last.close);
+            if (last) setLastKnownPrice(category, symbol, last.close);
             store.getState().setSnapshot(res.candles, null);
             restDataApplied = true;
           }
@@ -150,7 +156,7 @@ function useSinglePaneFeed(
         } catch (err) {
           const delay = REST_RETRY_DELAYS_MS[attempt] ?? REST_HEALING_RETRY_DELAY_MS;
           console.error(
-            `[usePaneFeeds] Failed to fetch historical candles for ${symbol} ` +
+            `[usePaneFeeds] Failed to fetch historical candles for ${category}:${symbol} ` +
               `(attempt ${attempt}, retrying in ${delay}ms):`,
             err
           );
@@ -166,7 +172,7 @@ function useSinglePaneFeed(
     function connect() {
       if (cancelled) return;
 
-      const ws = new WebSocket(marketApi.wsUrl(symbol, interval));
+      const ws = new WebSocket(marketApi.wsUrl(symbol, interval, category));
       wsRef.current = ws;
 
       // ── Data-staleness watchdog ──────────────────────────────────────────────
@@ -196,7 +202,7 @@ function useSinglePaneFeed(
           if (msg.type === 'snapshot') {
             store.getState().setWsSnapshotReceived(true);
             const last = msg.bars[msg.bars.length - 1];
-            if (last) lastKnownPrices.set(symbol, last.kline.close);
+            if (last) setLastKnownPrice(category, symbol, last.kline.close);
             // If REST already loaded data (1000 bars), only update indicators
             // — don't overwrite with the WS cold-aggregator snapshot (~2-9 bars).
             // restDataApplied is a closure variable: reset per effect run (i.e. on
@@ -210,11 +216,11 @@ function useSinglePaneFeed(
               );
             }
           } else if (msg.type === 'bar') {
-            lastKnownPrices.set(symbol, msg.bar.kline.close);
+            setLastKnownPrice(category, symbol, msg.bar.kline.close);
             store.getState().addBar(msg.bar);
           } else if (msg.type === 'ticker') {
-            lastKnownPrices.set(symbol, msg.lastPrice);
-            store.getState().setBidAsk(msg.bid, msg.ask, msg.lastPrice);
+            setLastKnownPrice(category, symbol, msg.lastPrice);
+            store.getState().setTicker(msg);
           }
         } catch {
           // Ignore malformed messages
@@ -267,15 +273,19 @@ function useSinglePaneFeed(
       }
       store.getState().setConnected(false);
     };
-  }, [paneIndex, symbol, interval, isActive]);
+  }, [paneIndex, category, symbol, interval, isActive]);
 }
 
 // ─── Public hook — mounts 4 feeds (hook call count is always 4) ──────────────
 
 export function usePaneFeeds() {
   const layout = useLayoutStore((s) => s.layout);
-  // Per-pane selectors — a symbol/interval change on one pane must not
+  // Per-pane selectors — a category/symbol/interval change on one pane must not
   // re-render the feed hook (and restart effects) for the other three.
+  const category0 = useLayoutStore((s) => s.panes[0].category);
+  const category1 = useLayoutStore((s) => s.panes[1].category);
+  const category2 = useLayoutStore((s) => s.panes[2].category);
+  const category3 = useLayoutStore((s) => s.panes[3].category);
   const symbol0 = useLayoutStore((s) => s.panes[0].symbol);
   const interval0 = useLayoutStore((s) => s.panes[0].interval);
   const symbol1 = useLayoutStore((s) => s.panes[1].symbol);
@@ -286,8 +296,8 @@ export function usePaneFeeds() {
   const interval3 = useLayoutStore((s) => s.panes[3].interval);
   const count = LAYOUT_PANE_COUNT[layout];
 
-  useSinglePaneFeed(0, symbol0, interval0, count > 0);
-  useSinglePaneFeed(1, symbol1, interval1, count > 1);
-  useSinglePaneFeed(2, symbol2, interval2, count > 2);
-  useSinglePaneFeed(3, symbol3, interval3, count > 3);
+  useSinglePaneFeed(0, category0, symbol0, interval0, count > 0);
+  useSinglePaneFeed(1, category1, symbol1, interval1, count > 1);
+  useSinglePaneFeed(2, category2, symbol2, interval2, count > 2);
+  useSinglePaneFeed(3, category3, symbol3, interval3, count > 3);
 }
