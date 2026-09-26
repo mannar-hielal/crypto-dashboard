@@ -29,17 +29,18 @@ legitimate action, so the scripts lean permissive when uncertain.
 
 ## Files
 
-| Script                     | Hook                      | Blocks or warns                                                                                                     |
-| -------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `check-commit-message.py`  | PreToolUse (Bash)         | Blocks a `git commit` without an allowed prefix                                                                     |
-| `block-no-verify.py`       | PreToolUse (Bash)         | Blocks `--no-verify`/`-n`/`--no-gpg-sign`/gpgsign=false                                                             |
-| `check-branch-name.py`     | PreToolUse (Bash)         | Blocks a new branch not matching `<feat\|fix>/kebab-desc`                                                           |
-| `check-pr-body.py`         | PreToolUse (Bash)         | Blocks `gh pr create` missing a required template section                                                           |
-| `scan-staged-secrets.py`   | PreToolUse (Bash)         | Blocks a commit whose staged diff looks like a secret                                                               |
-| `block-generated-edits.py` | PreToolUse (Edit\|Write)  | Blocks hand-edits under `apps/server/generated/`                                                                    |
-| `post-edit-lint.py`        | PostToolUse (Edit\|Write) | Warns on hardcoded hex, `console.*`, `any`, bare `useStore()`, missing `AbortSignal.timeout`                        |
-| `session-start-context.py` | SessionStart              | Injects the non-negotiables + current branch as context                                                             |
-| `pre-stop-check.py`        | Stop                      | Blocks on a failing `pnpm audit` if deps changed; warns on untested route/plugin changes or unmentioned screenshots |
+| Script                           | Hook                            | Blocks or warns                                                                                                                          |
+| -------------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `check-commit-message.py`        | PreToolUse (Bash)               | Blocks a `git commit` without an allowed prefix                                                                                          |
+| `block-no-verify.py`             | PreToolUse (Bash)               | Blocks `--no-verify`/`-n`/`--no-gpg-sign`/gpgsign=false                                                                                  |
+| `check-branch-name.py`           | PreToolUse (Bash)               | Blocks a new branch not matching `<feat\|fix>/kebab-desc`                                                                                |
+| `check-pr-body.py`               | PreToolUse (Bash)               | Blocks `gh pr create` missing a required template section                                                                                |
+| `scan-staged-secrets.py`         | PreToolUse (Bash)               | Blocks a commit whose staged diff looks like a secret                                                                                    |
+| `check-claude-review-threads.py` | PreToolUse + PostToolUse (Bash) | Blocks `gh pr merge` while the PR has unresolved Claude review threads; flags them after `gh pr checks/view/create`, `gh run watch/view` |
+| `block-generated-edits.py`       | PreToolUse (Edit\|Write)        | Blocks hand-edits under `apps/server/generated/`                                                                                         |
+| `post-edit-lint.py`              | PostToolUse (Edit\|Write)       | Warns on hardcoded hex, `console.*`, `any`, bare `useStore()`, missing `AbortSignal.timeout`                                             |
+| `session-start-context.py`       | SessionStart                    | Injects the non-negotiables + current branch as context                                                                                  |
+| `pre-stop-check.py`              | Stop                            | Blocks on a failing `pnpm audit` if deps changed; warns on untested route/plugin changes or unmentioned screenshots                      |
 
 ## Testing a script by hand
 

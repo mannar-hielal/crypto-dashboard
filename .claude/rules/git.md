@@ -130,6 +130,27 @@ The checklist items map onto the other convention files:
 - ESLint + Prettier pass locally, type-check passes, tests pass →
   [`testing.md`](./testing.md#gates--what-passing-means-before-a-commitpr)
 
+## Review comments
+
+The `claude-review` CI job posts **inline review comments** on PRs. A green `claude-review` check
+only means the review ran. Its findings live in inline threads, which don't show up in PR
+comments or review bodies.
+
+- A PR is not ready to merge while it has an **unresolved Claude review thread**. This applies to a
+  feature/fix → `develop` PR and to a `develop` → `main` release PR alike.
+- Every thread goes through the [`pr-review-comments`](../skills/pr-review-comments/SKILL.md)
+  skill:
+  1. verify the claim against the current code;
+  2. draft a fix with a test, or draft a reply if the claim is wrong or already fixed;
+  3. **wait for the user's approval**;
+  4. then commit, reply and resolve.
+- Never resolve a thread just to unblock a merge.
+- Enforced by `.claude/hooks/check-claude-review-threads.py`:
+  - it blocks `gh pr merge` while Claude threads are unresolved;
+  - it flags them after `gh pr checks` / `gh pr view` / `gh pr create` / `gh run watch` / `gh run view`.
+- Why: PR #130 merged to `main` and deployed with two unresolved findings, because the
+  pre-merge check only read PR comments and review bodies.
+
 ## Cross-references
 
 - Process non-negotiables (no unrequested implementation, visual Q&A gate) → `.claude/skills/session-bootstrap`
