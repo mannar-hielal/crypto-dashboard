@@ -11,7 +11,8 @@
 import { useId, useState } from 'react';
 import { X, TrendingUp, TrendingDown, ArrowLeftRight, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { usePaperStore, COMMISSION_RATE } from '@/store/paperStore';
+import { leverageFor, usePaperStore } from '@/store/paperStore';
+import { orderPreview } from '@/lib/orderMath';
 import { bg, color, fontSize } from '@/lib/tokens';
 import { fmtMktPrice } from '@/lib/utils';
 import { Toggle } from '@/components/ui/Toggle';
@@ -38,7 +39,16 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
   const priceInputId = useId();
   const order = usePaperStore((s) => s.pendingOrders.find((o) => o.id === orderId));
   const balance = usePaperStore((s) => s.balance);
-  const leverage = usePaperStore((s) => s.leverage);
+  // The edit is re-priced at the symbol's current leverage (spot is 1×)
+  const leverage = usePaperStore((s) => {
+    const o = s.pendingOrders.find((x) => x.id === orderId);
+    return !o || o.category === 'spot' ? 1 : leverageFor(s, o.symbol);
+  });
+  const coinFree = usePaperStore((s) => {
+    const o = s.pendingOrders.find((x) => x.id === orderId);
+    const coin = o?.symbol.replace(/USDT$/, '');
+    return s.spotBalances.find((h) => h.coin === coin)?.free ?? 0;
+  });
   const editPendingOrder = usePaperStore((s) => s.editPendingOrder);
 
   // ── Local state (initialised from the live order) ───────────────────────────
@@ -58,6 +68,8 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
     order?.stopLoss ? fmtMktPrice(order.stopLoss, { useGrouping: false }) : ''
   );
   const [submitResult, setSubmitResult] = useState<'rejected' | null>(null);
+  /** The server's reason when it refused the edit (e.g. Bybit's minimum size) */
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   if (!order) {
     return (
@@ -105,10 +117,24 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
 
   const usdEquivalent = newQty * newPrice; // notional trade value
 
-  const oldReserved = activeOrder.usdtAmount + activeOrder.usdtAmount * COMMISSION_RATE;
+  // What the order holds now (stored when it was placed) comes back before the new reserve is
+  // taken: USDT for a perpetual order or a spot buy, coins for a spot sell.
+  const spotSell = activeOrder.category === 'spot' && activeOrder.side === 'sell';
+  const oldReserved = spotSell ? 0 : activeOrder.reserved;
   const scratchBalance = balance + oldReserved;
-  const newRequired = newUsdtAmount + newUsdtAmount * COMMISSION_RATE;
-  const insufficientFunds = newRequired > scratchBalance;
+  // The same estimate the order form shows (lib/orderMath): perpetual IM + taker open and close
+  // fee estimates, spot buy qty × price
+  const newRequired = orderPreview({
+    category: activeOrder.category,
+    side: activeOrder.side,
+    qty: newQty,
+    price: newPrice,
+    leverage,
+    baseAsset,
+  }).cost;
+  const insufficientFunds = spotSell
+    ? newQty > coinFree + activeOrder.reserved
+    : newRequired > scratchBalance;
 
   const tpVal = parseFloat(tpInput) || null;
   const slVal = parseFloat(slInput) || null;
@@ -166,15 +192,21 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
     }
   }
 
-  function handleConfirm() {
+  async function handleConfirm() {
     if (confirmDisabled) return;
-    const result = editPendingOrder(
+    setSubmitError(null);
+    const { result, error } = await editPendingOrder(
       orderId,
       newPrice,
-      newUsdtAmount,
+      newQty,
       tpEnabled && tpVal ? tpVal : null,
       slEnabled && slVal ? slVal : null
     );
+    if (result === 'error') {
+      // Refused or failed — nothing changed; keep the panel open and say why
+      setSubmitError(error ?? 'The order could not be changed');
+      return;
+    }
     if (result === 'rejected') {
       setSubmitResult('rejected');
       // Close after a short delay so the user can see the rejection
@@ -234,16 +266,21 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
       {/* ── Scrollable content ─────────────────────────────────────────────── */}
       <div className="flex flex-1 flex-col gap-0 overflow-y-auto">
         {/* ── Insufficient-funds banner ──────────────────────────────────── */}
-        {(insufficientFunds || submitResult === 'rejected') && (
+        {(insufficientFunds || submitResult === 'rejected' || submitError) && (
           <div
             className="mx-3 mt-3 flex items-start gap-2 rounded p-2"
             style={{ background: `${color.red}18`, border: `1px solid ${color.red}44` }}
           >
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: color.red }} />
             <p style={{ fontSize: fontSize.xs10, color: color.red }}>
-              {submitResult === 'rejected'
-                ? 'Order rejected — not enough funds.'
-                : `Not enough funds. Required: $${newRequired.toFixed(2)}, Available: $${scratchBalance.toFixed(2)}`}
+              {submitError
+                ? submitError
+                : submitResult === 'rejected'
+                  ? 'Order rejected — not enough funds.'
+                  : spotSell
+                    ? // A spot sell is limited by coins, not USDT
+                      `Not enough ${baseAsset}. Required: ${fmtMktPrice(newQty)}, Available: ${fmtMktPrice(coinFree + activeOrder.reserved)}`
+                    : `Not enough funds. Required: $${newRequired.toFixed(2)}, Available: $${scratchBalance.toFixed(2)}`}
             </p>
           </div>
         )}

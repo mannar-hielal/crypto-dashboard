@@ -133,6 +133,10 @@ const btcPosition: Position = {
   quantity: 0.001,
   entryPrice: 77_000,
   entryUsdtAmount: 77,
+  category: 'linear' as const,
+  leverage: 1,
+  entryFee: 0,
+  closeFeeReserve: 0,
   openedAt: 1_715_000_000_000,
 };
 
@@ -143,6 +147,10 @@ const ethPosition: Position = {
   quantity: 0.05,
   entryPrice: 3_000,
   entryUsdtAmount: 150,
+  category: 'linear' as const,
+  leverage: 1,
+  entryFee: 0,
+  closeFeeReserve: 0,
   openedAt: 1_715_000_001_000,
 };
 
@@ -152,8 +160,11 @@ const btcPendingOrder: PendingOrder = {
   side: 'buy',
   type: 'limit',
   usdtAmount: 200,
+  category: 'linear' as const,
+  reserved: 200,
   triggerPrice: 75_000,
   qty: 0.002667,
+  leverage: 1,
   placedAt: 1_715_000_000_000,
 };
 
@@ -166,6 +177,7 @@ const btcHistoricalOrder: HistoricalOrder = {
   fillPrice: 77_000,
   status: 'filled',
   commission: 0.054,
+  category: 'linear' as const,
   margin: 77,
   placingTime: 1_715_000_000_000,
   closingTime: 1_715_000_000_100,
@@ -175,14 +187,18 @@ const btcHistoricalOrder: HistoricalOrder = {
 
 beforeEach(() => {
   localStorage.clear();
-  usePaperStore.getState().reset();
+  usePaperStore.getState().clear();
   paneStores[0].setState({
     latestPrice: 77_000,
     isConnected: true,
     bid: 76_990,
     ask: 77_010,
   });
-  useLayoutStore.setState({ activePane: 0 });
+  // Positions / orders here are USDT Perpetual — the tables show the active pane's market
+  useLayoutStore.setState((s) => ({
+    activePane: 0,
+    panes: s.panes.map((p, i) => (i === 0 ? { ...p, category: 'linear' } : p)),
+  }));
 });
 
 afterEach(cleanup);

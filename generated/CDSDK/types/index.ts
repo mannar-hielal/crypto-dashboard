@@ -174,126 +174,261 @@ export interface UpdateUserResponse {
   user: User;
 }
 
-export interface SyncAccountResponse {
-  id: string;
-  totalBalance: string;
-  availableBalance: string;
-  unrealizedPnl: string;
+// ─── Paper trading (BYBIT_PARITY_PLAN BP-1: executed on the server) ───────────
+//
+// Money, prices and quantities are decimal strings (the server keeps them as Decimal); times are
+// Unix ms. The client converts to numbers for display only.
+//
+// BP-2: every record carries its market (`category`: 'spot' = Spot, 'linear' = USDT Perpetual).
+// Rows from before BP-2 are 'linear' — that trading became USDT Perpetual.
+
+export type PaperOrderSide = 'buy' | 'sell';
+export type PaperPositionSide = 'long' | 'short';
+/** take-profit / stop-loss: a spot TP / SL leg (a conditional sell protecting a coin balance) */
+export type PaperPendingType = 'limit' | 'stop' | 'take-profit' | 'stop-loss';
+export type PaperOrderType = 'market' | 'limit' | 'stop' | 'take-profit' | 'stop-loss';
+export type PaperOrderStatus = 'filled' | 'cancelled' | 'rejected';
+export type PaperExitLeg = 'take-profit' | 'stop-loss';
+export type PaperSound = 'placed' | 'queued' | 'filled' | 'profit' | 'loss';
+
+export interface PaperAccountDTO {
+  balance: string;
   realizedPnl: string;
-  lastReset: string;
-  resetCount: number;
+  /** Default USDT Perpetual leverage, for a symbol with no entry in `symbolLeverage` */
+  leverage: number;
+  /** USDT Perpetual leverage per symbol */
+  symbolLeverage: Record<string, number>;
+  /**
+   * Account version after this state / change. Every committed change bumps it by one, so a
+   * client ignores anything not newer than what it has — an HTTP response and the WebSocket push
+   * of the same change, or a late response after a newer push.
+   */
+  version: number;
 }
 
-export interface SyncOrderResponse {
+/** A USDT Perpetual position. */
+export interface PaperPositionDTO {
   id: string;
-  refId: string | null;
+  category: 'linear';
   symbol: string;
-  side: string;
-  orderType: string;
-  quantity: string;
-  limitPrice: string | null;
-  stopPrice: string | null;
-  takeProfit: string | null;
-  stopLoss: string | null;
-  status: string;
-  filledQuantity: string;
-  averageFilledPrice: string | null;
-  margin: string;
-  commission: string;
-  rejectionReason: string | null;
-  createdAt: string;
-  updatedAt: string;
-  filledAt: string | null;
-  cancelledAt: string | null;
-}
-
-export interface SyncTradeResponse {
-  id: string;
-  refId: string | null;
-  symbol: string;
-  side: string;
-  quantity: string;
-  executedPrice: string;
-  entryPrice: string | null;
-  totalCost: string;
-  commission: string;
-  pnl: string;
-  pnlPercent: string;
-  openedAt: string | null;
-  executedAt: string;
-}
-
-export interface SyncPositionResponse {
-  id: string;
-  refId: string | null;
-  symbol: string;
-  side: string;
+  side: PaperPositionSide;
   quantity: string;
   entryPrice: string;
-  margin: string;
-  takeProfit: string | null;
-  stopLoss: string | null;
-  openedAt: string;
-  updatedAt: string;
-}
-
-// ─── Request Types ───────────────────────────────────────────────────────────
-
-export interface CreateOrderRequest {
-  refId?: string;
-  symbol: string;
-  side: 'BUY' | 'SELL';
-  orderType: 'MARKET' | 'LIMIT' | 'STOP';
-  quantity: string;
-  limitPrice?: string;
-  stopPrice?: string;
+  /** Initial margin: quantity × entry / leverage */
+  entryUsdtAmount: string;
+  leverage: number;
+  marginMode: 'isolated';
+  /** Open fee charged */
+  entryFee: string;
+  /** Estimated close fee held with the margin (position margin = entryUsdtAmount + this) */
+  closeFeeReserve: string;
+  openedAt: number;
   takeProfit?: string;
   stopLoss?: string;
-  margin?: string;
 }
 
-export interface UpdateOrderRequest {
-  status?: 'FILLED' | 'CANCELLED' | 'REJECTED';
+export interface PaperPendingOrderDTO {
+  id: string;
+  category: MarketCategory;
+  symbol: string;
+  side: PaperOrderSide;
+  type: PaperPendingType;
+  /** Initial margin at the trigger price */
+  usdtAmount: string;
+  /**
+   * What placing it set aside, returned in full on cancel: USDT for a perpetual order or a spot
+   * buy, the locked coin quantity for a spot sell / TP / SL.
+   */
+  reserved: string;
+  /** Spot TP / SL pair id: both legs share one coin lock; filling one cancels the other */
+  ocoGroup?: string;
+  triggerPrice: string;
+  qty: string;
+  /** Leverage captured at placement — the fill uses it */
+  leverage: number;
+  takeProfit?: string;
+  stopLoss?: string;
+  placedAt: number;
+}
+
+/** A spot coin balance (the USDT wallet is `account.balance`). */
+export interface PaperSpotBalanceDTO {
+  coin: string;
+  /** Sellable now */
+  free: string;
+  /** Backing resting sell / TP / SL orders */
+  locked: string;
+  /** Average cost per coin in USDT, fees included */
+  avgCost: string;
+}
+
+export interface PaperOrderDTO {
+  id: string;
+  category: MarketCategory;
+  symbol: string;
+  side: PaperOrderSide;
+  type: PaperOrderType;
+  qty: string;
   limitPrice?: string;
   stopPrice?: string;
-  takeProfit?: string | null;
-  stopLoss?: string | null;
-  filledQuantity?: string;
-  averageFilledPrice?: string;
-  rejectionReason?: string;
-  quantity?: string;
+  fillPrice?: string;
+  status: PaperOrderStatus;
+  /** Fee charged, in `feeAsset` */
+  commission: string;
+  /** Fee rate of a fill, e.g. "0.00055"; absent on cancel / reject rows */
+  feeRate?: string;
+  feeAsset?: string;
+  /** True for a resting limit fill (maker fee), false for a taker fill */
+  isMaker?: boolean;
+  /** Initial margin and leverage of a USDT Perpetual entry fill */
   margin?: string;
+  leverage?: number;
+  placingTime: number;
+  closingTime: number;
+  rejectionReason?: string;
 }
 
-export interface CreateTradeRequest {
-  refId?: string;
+export interface PaperTradeDTO {
+  id: string;
+  category: MarketCategory;
   symbol: string;
-  side: 'BUY' | 'SELL';
-  quantity: string;
-  executedPrice: string;
-  entryPrice?: string;
-  totalCost: string;
-  commission?: string;
-  pnl?: string;
-  pnlPercent?: string;
-  orderId?: string;
-  openedAt?: string;
-}
-
-export interface CreatePositionRequest {
-  refId?: string;
-  symbol: string;
-  side: 'LONG' | 'SHORT';
+  side: PaperPositionSide;
   quantity: string;
   entryPrice: string;
-  margin: string;
-  takeProfit?: string | null;
-  stopLoss?: string | null;
+  exitPrice: string;
+  /** Gross PnL (price move only) */
+  pnl: string;
+  openedAt: number;
+  closedAt: number;
 }
 
-export interface UpdatePositionRequest {
-  quantity?: string;
-  margin?: string;
-  takeProfit?: string | null;
-  stopLoss?: string | null;
+export interface PaperJournalEntryDTO {
+  id: string;
+  time: number;
+  text: string;
+  isUserNote: boolean;
+  /** Net realized PnL on close entries */
+  pnl?: string;
+}
+
+export interface PaperBalanceEventDTO {
+  id: string;
+  time: number;
+  balanceBefore: string;
+  balanceAfter: string;
+  pnl: string;
+  action: string;
+}
+
+/** Full account view — GET /api/paper/state and the private WS `snapshot`. Lists newest first. */
+export interface PaperStateDTO {
+  account: PaperAccountDTO;
+  positions: PaperPositionDTO[];
+  spotBalances: PaperSpotBalanceDTO[];
+  pendingOrders: PaperPendingOrderDTO[];
+  orders: PaperOrderDTO[];
+  trades: PaperTradeDTO[];
+  journal: PaperJournalEntryDTO[];
+  balanceEvents: PaperBalanceEventDTO[];
+}
+
+/**
+ * What one engine action changed. List fields are newest first (index 0 = top of the list).
+ * Applying the same delta twice is harmless: everything is keyed by id.
+ */
+export interface PaperDeltaDTO {
+  account: PaperAccountDTO;
+  positionsUpsert: PaperPositionDTO[];
+  positionsRemove: string[];
+  spotUpsert: PaperSpotBalanceDTO[];
+  pendingUpsert: PaperPendingOrderDTO[];
+  pendingRemove: string[];
+  orders: PaperOrderDTO[];
+  trades: PaperTradeDTO[];
+  balanceEvents: PaperBalanceEventDTO[];
+  journal: PaperJournalEntryDTO[];
+  journalEdits: { id: string; text: string }[];
+  /** Account reset — clear every list before applying */
+  reset?: boolean;
+}
+
+/** Response of every mutating /api/paper endpoint. */
+export interface PaperActionResponse<R> {
+  result: R;
+  delta: PaperDeltaDTO;
+  sound?: PaperSound;
+}
+
+/** Discriminated union — what the server sends over the private /api/paper/ws. */
+/** Live price of a market the user holds or has orders on (for PnL of symbols no pane shows). */
+export interface PaperPriceDTO {
+  category: MarketCategory;
+  symbol: string;
+  last: number;
+  /** USDT Perpetual mark price */
+  mark?: number;
+}
+
+export type WsPaperMessage =
+  | { type: 'snapshot'; state: PaperStateDTO }
+  | { type: 'delta'; delta: PaperDeltaDTO; sound?: PaperSound }
+  /** At most once a second, only prices that changed */
+  | { type: 'prices'; items: PaperPriceDTO[] };
+
+/** First (and re-auth) message the client sends over /api/paper/ws. */
+export interface WsPaperAuthMessage {
+  type: 'auth';
+  token: string;
+}
+
+// ─── Paper trading requests (intent only — the server picks prices) ──────────
+
+/**
+ * Size is exactly one of `qty` (base coin), `value` (USDT notional, converted at the fill /
+ * trigger price) or — from a pre-BP-2 client — `usdtAmount` (initial margin).
+ */
+export interface PlaceOrderRequest {
+  /** Defaults to 'linear' */
+  category?: MarketCategory;
+  symbol: string;
+  side: PaperOrderSide;
+  /** Spot takes market and limit only */
+  type: 'market' | 'limit' | 'stop';
+  qty?: string;
+  value?: string;
+  usdtAmount?: string;
+  /** Required for limit / stop */
+  triggerPrice?: string;
+  takeProfit?: string;
+  stopLoss?: string;
+}
+
+/** TP / SL on spot coins already held — locks `qty` of the free balance behind an OCO pair. */
+export interface PlaceSpotExitsRequest {
+  symbol: string;
+  qty: string;
+  takeProfit?: string;
+  stopLoss?: string;
+}
+
+export interface EditPendingOrderRequest {
+  triggerPrice: string;
+  /** Size: exactly one of qty (base coin) or usdtAmount (initial margin, pre-BP-2 clients) */
+  qty?: string;
+  usdtAmount?: string;
+  takeProfit: string | null;
+  stopLoss: string | null;
+}
+
+export interface UpdatePositionExitsRequest {
+  takeProfit: string | null;
+  stopLoss: string | null;
+}
+
+export interface SetLeverageRequest {
+  leverage: number;
+}
+
+export interface JournalNoteRequest {
+  text: string;
 }

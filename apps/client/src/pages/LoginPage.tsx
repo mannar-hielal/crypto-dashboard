@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Link, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { authApi } from '@crypto-dashboard/sdk';
 import { useAuthStore } from '@/store/authStore';
@@ -18,6 +18,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { SeoHead } from '@/components/SeoHead';
+import { safeReturnPath } from '@/lib/marketRoutes';
 import { bg, color, fontSize, gradient, radius } from '@/lib/tokens';
 
 const loginSchema = z.object({
@@ -41,6 +42,7 @@ const formFieldVariants = {
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const setAuth = useAuthStore((s) => s.setAuth);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -48,6 +50,8 @@ export function LoginPage() {
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
   });
+
+  const returnTo = safeReturnPath((location.state as { from?: unknown } | null)?.from);
 
   const onSubmit = async (data: LoginFormData) => {
     setServerError(null);
@@ -57,7 +61,8 @@ export function LoginPage() {
         password: data.password,
       });
       setAuth(accessToken, user);
-      void navigate('/dashboard');
+      // Back to the market link that sent them here — 🔐 only an allow-listed market URL
+      void navigate(returnTo ?? '/dashboard', { replace: true });
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message.toLowerCase() : '';
       const isCreds =

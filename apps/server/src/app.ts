@@ -1,5 +1,6 @@
 import websocket from '@fastify/websocket';
 import bybitPlugin from './plugins/bybit.js';
+import tradingPlugin from './plugins/trading.js';
 import { marketRoutes } from './routes/market/index.js';
 import cookie from '@fastify/cookie';
 import Fastify, { type FastifyError } from 'fastify';
@@ -128,6 +129,36 @@ export async function buildApp() {
     });
   }
 
+  // ─── CUSTOM ERROR HANDLER ─────────────────────────────────────────────────
+  // 🔐 Must be set BEFORE any route is registered: Fastify fixes each route's error handler when
+  //    the route is defined, so routes registered earlier silently kept Fastify's default
+  //    handler — which returns err.message on a 500 (found in BP-1: a thrown internal error's
+  //    text reached the client).
+  // 🔐 Normalises ALL error responses to { error: string } so:
+  //    1. The documented schema (errorResponse) matches what the API actually returns.
+  //    2. Fastify's verbose validation payload ({ statusCode, code, error, message })
+  //       is never leaked to the client — hides internal implementation details.
+  //    3. 5xx errors are logged server-side while only a safe message goes out.
+  app.setErrorHandler((error: FastifyError, request, reply) => {
+    const statusCode = error.statusCode ?? 500;
+
+    if (statusCode >= 500) {
+      app.log.error(
+        { err: error, method: request.method, url: request.url },
+        'Unhandled server error'
+      );
+      // 🔐 Never leak internal details (DB errors, stack traces) to the client
+      // In development, we return the message to help debugging.
+      void reply.status(statusCode).send({
+        error: 'Internal Server Error',
+        ...(config.nodeEnv === 'development' && { message: error.message }),
+      });
+      return;
+    }
+
+    void reply.status(statusCode).send({ error: error.message ?? 'Bad Request' });
+  });
+
   // 🔐 Registered AFTER rate-limit so this public log sink is protected from abuse
   app.post('/api/csp-violation', async (request, reply) => {
     app.log.warn({ cspReport: request.body }, 'CSP violation reported');
@@ -160,35 +191,10 @@ export async function buildApp() {
   // ─── ROUTES ───────────────────────────────────────────────────────────────
   await app.register(authRoutes, { prefix: '/api/auth' });
   await app.register(bybitPlugin);
+  await app.register(tradingPlugin); // BP-1 server engine — needs prisma + bybit
   await app.register(marketRoutes, { prefix: '/api/market' });
   await app.register(paperRoutes, { prefix: '/api/paper' });
   await app.register(newsletterRoutes, { prefix: '/api/newsletter' });
-
-  // ─── CUSTOM ERROR HANDLER ─────────────────────────────────────────────────
-  // 🔐 Normalises ALL error responses to { error: string } so:
-  //    1. The documented schema (errorResponse) matches what the API actually returns.
-  //    2. Fastify's verbose validation payload ({ statusCode, code, error, message })
-  //       is never leaked to the client — hides internal implementation details.
-  //    3. 5xx errors are logged server-side while only a safe message goes out.
-  app.setErrorHandler((error: FastifyError, request, reply) => {
-    const statusCode = error.statusCode ?? 500;
-
-    if (statusCode >= 500) {
-      app.log.error(
-        { err: error, method: request.method, url: request.url },
-        'Unhandled server error'
-      );
-      // 🔐 Never leak internal details (DB errors, stack traces) to the client
-      // In development, we return the message to help debugging.
-      void reply.status(statusCode).send({
-        error: 'Internal Server Error',
-        ...(config.nodeEnv === 'development' && { message: error.message }),
-      });
-      return;
-    }
-
-    void reply.status(statusCode).send({ error: error.message ?? 'Bad Request' });
-  });
 
   // ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
   app.get(

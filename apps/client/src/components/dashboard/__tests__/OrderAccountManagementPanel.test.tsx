@@ -78,9 +78,13 @@ function seedState({
 
 beforeEach(() => {
   localStorage.clear();
-  usePaperStore.getState().reset();
+  usePaperStore.getState().clear();
   paneStores[0].setState({ latestPrice: 77_350, isConnected: true, bid: 77_340, ask: 77_360 });
-  useLayoutStore.setState({ activePane: 0 });
+  // USDT Perpetual (positions, leveraged orders); Spot's Assets tab has its own tests
+  useLayoutStore.setState((s) => ({
+    activePane: 0,
+    panes: s.panes.map((p, i) => (i === 0 ? { ...p, category: 'linear' } : p)),
+  }));
 });
 
 afterEach(() => {
@@ -137,8 +141,11 @@ describe('OrderAccountManagementPanel Orders filled sub-tab', () => {
           side: 'buy',
           type: 'stop',
           usdtAmount: 193.38,
+          category: 'linear' as const,
+          reserved: 193.38,
           triggerPrice: 77_375,
           qty: 0.0025,
+          leverage: 1,
           placedAt: 1_715_000_000_000,
         },
       ],
@@ -153,6 +160,7 @@ describe('OrderAccountManagementPanel Orders filled sub-tab', () => {
           fillPrice: 77_385.4,
           status: 'filled',
           commission: 0.1354,
+          category: 'linear' as const,
           margin: 193.38,
           placingTime: FIXTURE_NOW,
           closingTime: FIXTURE_NOW,
@@ -166,6 +174,7 @@ describe('OrderAccountManagementPanel Orders filled sub-tab', () => {
           stopPrice: 76_000,
           status: 'cancelled',
           commission: 0,
+          category: 'linear' as const,
           margin: 193.1,
           placingTime: FIXTURE_NOW,
           closingTime: FIXTURE_NOW,
@@ -195,6 +204,7 @@ describe('OrderAccountManagementPanel Orders filled sub-tab', () => {
           fillPrice: 77_385.4,
           status: 'filled',
           commission: 0.1354,
+          category: 'linear' as const,
           margin: 193.38,
           placingTime: FIXTURE_NOW,
           closingTime: FIXTURE_NOW,
@@ -226,6 +236,10 @@ describe('OrderAccountManagementPanel Orders filled sub-tab', () => {
           quantity: 0.0025,
           entryPrice: 77_385.4,
           entryUsdtAmount: 193.38,
+          category: 'linear' as const,
+          leverage: 1,
+          entryFee: 0,
+          closeFeeReserve: 0,
           openedAt: 1_715_000_000_100,
           takeProfit: 78_000,
           stopLoss: 76_000,
@@ -242,6 +256,7 @@ describe('OrderAccountManagementPanel Orders filled sub-tab', () => {
           fillPrice: 77_385.4,
           status: 'filled',
           commission: 0.1354,
+          category: 'linear' as const,
           margin: 193.38,
           placingTime: FIXTURE_NOW,
           closingTime: FIXTURE_NOW,
@@ -296,8 +311,11 @@ describe('Section 4 — Account Summary Bar', () => {
           side: 'buy',
           type: 'limit',
           usdtAmount: 200,
+          category: 'linear' as const,
+          reserved: 200,
           triggerPrice: 50_000,
           qty: 0.004,
+          leverage: 1,
           placedAt: Date.now(),
         } satisfies PendingOrder,
       ],
@@ -343,6 +361,10 @@ describe('Section 4 — Positions tab', () => {
           quantity: 0.002,
           entryPrice: 50_000,
           entryUsdtAmount: 100,
+          category: 'linear' as const,
+          leverage: 1,
+          entryFee: 0,
+          closeFeeReserve: 0,
           openedAt: Date.now(),
         } satisfies Position,
       ],
@@ -362,6 +384,10 @@ describe('Section 4 — Positions tab', () => {
           quantity: 0.002,
           entryPrice: 50_000,
           entryUsdtAmount: 100,
+          category: 'linear' as const,
+          leverage: 1,
+          entryFee: 0,
+          closeFeeReserve: 0,
           openedAt: Date.now(),
         } satisfies Position,
       ],
@@ -380,6 +406,10 @@ describe('Section 4 — Positions tab', () => {
           quantity: 0.001,
           entryPrice: 50_000,
           entryUsdtAmount: 50,
+          category: 'linear' as const,
+          leverage: 1,
+          entryFee: 0,
+          closeFeeReserve: 0,
           openedAt: Date.now(),
         },
         {
@@ -389,6 +419,10 @@ describe('Section 4 — Positions tab', () => {
           quantity: 0.01,
           entryPrice: 3_000,
           entryUsdtAmount: 30,
+          category: 'linear' as const,
+          leverage: 1,
+          entryFee: 0,
+          closeFeeReserve: 0,
           openedAt: Date.now(),
         },
       ] satisfies Position[],
@@ -408,6 +442,10 @@ describe('Section 4 — Positions tab', () => {
           quantity: 0.002,
           entryPrice: 50_000,
           entryUsdtAmount: 100,
+          category: 'linear' as const,
+          leverage: 1,
+          entryFee: 0,
+          closeFeeReserve: 0,
           openedAt: Date.now(),
           takeProfit: 55_000,
         } satisfies Position,
@@ -619,5 +657,152 @@ describe('Section 4.8–4.11 — Journal tab', () => {
     const row = entryEl.closest('tr')!;
     // No ±$X.XX badge within the journal row
     expect(within(row).queryByText(/[+-]\$[0-9]/)).toBeNull();
+  });
+});
+
+// ─── BP-2 — Spot Assets tab, per-market lists ─────────────────────────────────
+
+describe('BP-2 — markets in the account panel', () => {
+  const onSpot = () =>
+    useLayoutStore.setState((s) => ({
+      panes: s.panes.map((p, i) => (i === 0 ? { ...p, category: 'spot', symbol: 'BTCUSDT' } : p)),
+    }));
+
+  const perpOrder: PendingOrder = {
+    id: 'perp-1',
+    category: 'linear',
+    symbol: 'BTCUSDT',
+    side: 'buy',
+    type: 'limit',
+    usdtAmount: 100,
+    reserved: 100.11,
+    triggerPrice: 70_000,
+    qty: 0.001,
+    leverage: 1,
+    placedAt: FIXTURE_NOW,
+  };
+  const spotLeg: PendingOrder = {
+    id: 'grp-sl',
+    category: 'spot',
+    symbol: 'BTCUSDT',
+    side: 'sell',
+    type: 'stop-loss',
+    usdtAmount: 65,
+    reserved: 0.001,
+    triggerPrice: 65_000,
+    qty: 0.001,
+    leverage: 1,
+    placedAt: FIXTURE_NOW,
+    ocoGroup: 'grp',
+  };
+
+  it('on Spot, Assets replaces Positions and lists the USDT wallet and coins held', () => {
+    onSpot();
+    paneStores[0].setState({ latestPrice: 80_000 });
+    usePaperStore.setState({
+      balance: 5_000,
+      spotBalances: [{ coin: 'BTC', free: 0.05, locked: 0.01, avgCost: 70_000 }],
+      pendingOrders: [],
+    });
+    renderPanel();
+    expect(screen.queryByRole('button', { name: /^positions/i })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /^assets/i }));
+    const table = screen.getByRole('table');
+    expect(within(table).getByText('USDT')).toBeTruthy();
+    expect(within(table).getByText('BTC')).toBeTruthy();
+    // (80,000 − 70,000) × 0.06 = +600.00, with a + sign (never colour alone)
+    expect(within(table).getByText(/\+600\.00 \(\+14\.29%\)/)).toBeTruthy();
+  });
+
+  it('Assets → Sell switches the pane to that coin on Spot and prefills the form', async () => {
+    onSpot();
+    usePaperStore.setState({
+      spotBalances: [{ coin: 'ETH', free: 2, locked: 0, avgCost: 3_000 }],
+    });
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: /^assets/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sell' }));
+    const { useOrderPrefillStore } = await import('@/store/orderPrefillStore');
+    expect(useOrderPrefillStore.getState().request).toEqual({
+      category: 'spot',
+      symbol: 'ETHUSDT',
+      side: 'sell',
+      qty: 2,
+    });
+    expect(useLayoutStore.getState().panes[0]).toMatchObject({
+      category: 'spot',
+      symbol: 'ETHUSDT',
+    });
+  });
+
+  it('Orders shows the active market only', () => {
+    usePaperStore.setState({ pendingOrders: [perpOrder, spotLeg], orders: [], positions: [] });
+    renderPanel(); // USDT Perpetual (suite default)
+    fireEvent.click(screen.getByRole('button', { name: /^orders/i }));
+    // The perpetual limit (70,000) shows; the spot stop-loss leg (65,000) doesn't
+    expect(screen.queryAllByText(/70,000/).length).toBeGreaterThan(0);
+    expect(screen.queryAllByText(/65,000/).length).toBe(0);
+    cleanup();
+
+    onSpot();
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: /^orders/i }));
+    expect(screen.queryAllByText(/65,000/).length).toBeGreaterThan(0);
+    expect(screen.queryAllByText(/70,000/).length).toBe(0);
+  });
+
+  it('labels a spot stop-loss leg "Stop Loss" in the Type column (PR #136)', () => {
+    onSpot();
+    usePaperStore.setState({ pendingOrders: [spotLeg], orders: [], positions: [] });
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: /^orders/i }));
+    expect(screen.getByText('Stop Loss')).toBeTruthy();
+    expect(screen.queryByText('stop-loss')).toBeNull();
+  });
+
+  it('offers no TP / SL edit on a spot TP / SL order (it is cancelled and placed again)', () => {
+    onSpot();
+    usePaperStore.setState({ pendingOrders: [spotLeg], orders: [], positions: [] });
+    render(
+      <OrderAccountManagementPanel
+        size="open"
+        onSizeChange={vi.fn()}
+        isMaximized={false}
+        onToggleMaximize={vi.fn()}
+        onEditPendingOrder={vi.fn()}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^orders/i }));
+    expect(screen.queryByTitle('Edit TP')).toBeNull();
+    expect(screen.queryByTitle('Edit SL')).toBeNull();
+  });
+
+  it('shows a fill’s fee with its rate and liquidity', () => {
+    usePaperStore.setState({
+      orders: [
+        {
+          id: 'f1',
+          category: 'linear',
+          symbol: 'BTCUSDT',
+          side: 'buy',
+          type: 'market',
+          qty: 0.1,
+          fillPrice: 50_000,
+          status: 'filled',
+          commission: 2.75,
+          feeRate: 0.00055,
+          feeAsset: 'USDT',
+          isMaker: false,
+          placingTime: FIXTURE_NOW,
+          closingTime: FIXTURE_NOW,
+        },
+      ],
+      pendingOrders: [],
+      positions: [],
+    });
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: /^order history/i }));
+    expect(screen.getByText('2.7500 USDT')).toBeTruthy();
+    expect(screen.getByText('0.055% taker')).toBeTruthy();
   });
 });

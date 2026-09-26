@@ -9,7 +9,7 @@
 import { useState } from 'react';
 import { X, TrendingUp, TrendingDown } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { usePaperStore, COMMISSION_RATE } from '@/store/paperStore';
+import { usePaperStore } from '@/store/paperStore';
 import { paneStores, getLastKnownPrice } from '@/store/paneStore';
 import { useLayoutStore } from '@/store/layoutStore';
 import { useStore } from 'zustand';
@@ -32,7 +32,6 @@ interface PositionEditPanelProps {
 
 export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProps) {
   const position = usePaperStore((s) => s.positions.find((p) => p.id === positionId));
-  const leverage = usePaperStore((s) => s.leverage);
   const updatePositionExits = usePaperStore((s) => s.updatePositionExits);
 
   // Price feed for mark price (trade value calculation)
@@ -40,13 +39,18 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
   const lp1 = useStore(paneStores[1], (s) => s.latestPrice);
   const lp2 = useStore(paneStores[2], (s) => s.latestPrice);
   const lp3 = useStore(paneStores[3], (s) => s.latestPrice);
-  const paneSymbols = useLayoutStore(useShallow((s) => s.panes.map((p) => p.symbol)));
-  const priceBySymbol: Record<string, number> = {};
+  // Positions are USDT Perpetual: only a pane showing that market prices them (spot differs)
+  const paneMarkets = useLayoutStore(
+    useShallow((s) => s.panes.map((p) => `${p.category}:${p.symbol}`))
+  );
+  const priceByMarket: Record<string, number> = {};
   [lp0, lp1, lp2, lp3].forEach((lp, i) => {
-    if (lp !== null) priceBySymbol[paneSymbols[i]] = lp;
+    if (lp !== null) priceByMarket[paneMarkets[i]] = lp;
   });
   const markPrice = position
-    ? (priceBySymbol[position.symbol] ?? getLastKnownPrice(position.symbol) ?? position.entryPrice)
+    ? (priceByMarket[`linear:${position.symbol}`] ??
+      getLastKnownPrice(position.symbol, 'linear') ??
+      position.entryPrice)
     : 0;
 
   // ── Local state ─────────────────────────────────────────────────────────────
@@ -111,7 +115,9 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
 
   // Position info
   const tradeValue = position.entryPrice * position.quantity;
-  const commission = position.entryUsdtAmount * COMMISSION_RATE;
+  // The open fee actually charged (stored with the position)
+  const commission = position.entryFee;
+  const leverage = position.leverage;
   const rewardUsd =
     tpEnabled && tpVal ? Math.abs(tpVal - position.entryPrice) * position.quantity : null;
   const riskUsd =
@@ -132,7 +138,7 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
   // ── Handlers ────────────────────────────────────────────────────────────────
   function handleConfirm() {
     if (confirmDisabled) return;
-    updatePositionExits(
+    void updatePositionExits(
       positionId,
       tpEnabled && tpVal ? tpVal : null,
       slEnabled && slVal ? slVal : null

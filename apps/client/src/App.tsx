@@ -8,6 +8,7 @@ import { PWAInstallBanner } from '@/components/PWAInstallBanner';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { CookieBanner } from '@/components/CookieBanner';
 import { PageFallback } from '@/components/PageFallback';
+import { routeKey } from '@/lib/marketRoutes';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage').then((m) => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() =>
@@ -22,6 +23,9 @@ const ResetPasswordPage = lazy(() =>
 const ChartPage = lazy(() => import('@/pages/ChartPage').then((m) => ({ default: m.ChartPage })));
 const DashboardPage = lazy(() =>
   import('@/pages/DashboardPage').then((m) => ({ default: m.DashboardPage }))
+);
+const DashboardRedirect = lazy(() =>
+  import('@/pages/DashboardPage').then((m) => ({ default: m.DashboardRedirect }))
 );
 const TermsPage = lazy(() => import('@/pages/TermsPage').then((m) => ({ default: m.TermsPage })));
 const PrivacyPage = lazy(() =>
@@ -108,7 +112,7 @@ export default function App() {
           mode="wait" ensures the old page fully exits before the new one enters. */}
       <Suspense fallback={<PageFallback />}>
         <AnimatePresence mode="wait">
-          <Routes location={location} key={location.pathname}>
+          <Routes location={location} key={routeKey(location.pathname)}>
             {/* Landing page */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/features" element={<FeaturesPage />} />
@@ -133,7 +137,11 @@ export default function App() {
 
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>
-              <Route path="/dashboard" element={<DashboardPage />} />
+              {/* Market URLs (BP-2): /dashboard/spot/BTC/USDT, /dashboard/usdt/BTCUSDT.
+                  Bare /dashboard and anything else under it go to the active pane's market. */}
+              <Route path="/dashboard/spot/:base/:quote" element={<DashboardPage />} />
+              <Route path="/dashboard/usdt/:symbol" element={<DashboardPage />} />
+              <Route path="/dashboard/*" element={<DashboardRedirect />} />
               <Route path="/admin/newsletter" element={<AdminNewsletterPage />} />
             </Route>
 

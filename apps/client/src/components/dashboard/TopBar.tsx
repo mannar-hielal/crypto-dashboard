@@ -4,8 +4,10 @@ import { LogOut, ChevronDown, Settings, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@crypto-dashboard/sdk';
+import { usePaperStore } from '@/store/paperStore';
 import { bg, color, fontSize, gradient, radius } from '@/lib/tokens';
 import { SettingsModal } from './SettingsModal';
+import { TradeMenu } from './TradeMenu';
 
 interface TopBarProps {
   /**
@@ -22,7 +24,7 @@ interface TopBarProps {
  * TopBar — App-level header (row 1)
  *
  * Contains only application-wide chrome:
- *   • Logo + app name + Beta badge  (left)
+ *   • Logo + app name + Beta badge + Trade market menu (left; no menu on marketing pages)
  *   • User avatar + logout dropdown (right) — or, in `marketing` mode, a
  *     single Live Chart / Dashboard CTA
  *
@@ -59,6 +61,8 @@ export function TopBar({ marketing = false }: TopBarProps) {
         >
           Beta
         </span>
+
+        {!marketing && <TradeMenu />}
       </div>
 
       {/* ── Right: User menu, or a single CTA on marketing pages ─────────── */}
@@ -79,6 +83,8 @@ export function TopBar({ marketing = false }: TopBarProps) {
           <>
             <motion.button
               onClick={() => setMenuOpen((p) => !p)}
+              aria-expanded={menuOpen}
+              aria-haspopup="menu"
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               className="flex items-center gap-1.5 rounded-md px-2 py-1 transition-colors"
@@ -160,6 +166,8 @@ export function TopBar({ marketing = false }: TopBarProps) {
                             // fails — otherwise the user appears signed-in forever.
                           } finally {
                             useAuthStore.getState().clearAuth();
+                            // 🔐 Never leave the account on screen for the next user
+                            usePaperStore.getState().clear();
                           }
                         })();
                       }}

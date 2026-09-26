@@ -11,6 +11,22 @@
 - `T2 · RTL` — component integration test (@testing-library/react)
 - `T3 · Playwright` — e2e test (real browser, live WebSocket)
 
+> **Since BP-1 (2026-09-26) trading runs on the server.**
+>
+> - **T1 · Vitest rows** for Sections 1–4 and 7: the engine maths, fills, netting, journal and TP/SL / pending triggers
+>   are now tested against the real engine in `apps/server/src/trading/engine/__tests__/` (`actions.test.ts`,
+>   `triggers.test.ts`). They used to live in `apps/client/src/store/__tests__/paperStore.test.ts` and the two monitor
+>   test files, which are gone.
+> - **T2 · RTL rows:** component tests still render the real panels. They mock `paperApi` (`src/test/fakePaperApi.ts`)
+>   and assert the intent sent to the server.
+
+> **Since BP-2 (2026-09-26) there are two markets.** Sections 1–4 and 7–9 describe the leveraged form, which is now
+> **USDT Perpetual** — open `/dashboard/usdt/BTCUSDT` (or pick USDT Perpetual in the header Trade menu). Spot is
+> Section 14. Fees are Bybit's: USDT Perpetual 0.055% taker / 0.02% maker on notional (qty × price), Spot 0.1% in the
+> asset received; BP-1's flat 0.07% only survives on rows placed before BP-2. Numbers in older ✅ notes below were
+> taken at 0.07% and are kept as the record of that run. The engine's fee / fill / spot maths has worked-number
+> tests in `apps/server/src/trading/engine/__tests__/fees.test.ts` and `spot.test.ts`.
+
 **Test environment:** Local dev (`pnpm dev`). Symbol: BTCUSDT (live feed).
 **Reset account between sections** using the ⚙️ gear → Reset? button.
 
@@ -18,12 +34,13 @@
 
 ## Dual-platform setup (run when doing cross-platform checks)
 
-1. Open cryptopapertrade.com at `localhost:5173/dashboard` — reset account
+1. Open cryptopapertrade.com at `localhost:5173/dashboard/usdt/BTCUSDT` (or `/dashboard/spot/BTC/USDT` for Spot) — reset account
 2. Open TVP → Paper Trading → Bybit BTCUSDT Spot · 1m
 3. Reset TVP account
 4. Place identical orders in both apps within the same second
 5. Tolerance: entry prices within $1 (one SELL/BUY spread for BTC)
-6. PnL formula: `(exit − entry) × qty − (entry × qty × 0.0007) − (exit × qty × 0.0007)`
+6. PnL formula (USDT Perpetual, BP-2): `(exit − entry) × qty − entry × qty × fee₁ − exit × qty × 0.00055`, with
+   fee₁ = 0.00055 (market / stop / crossing limit) or 0.0002 (resting limit). Spot: `(exit − avgCost) × qty − exit × qty × 0.001`.
 
 ---
 
@@ -332,7 +349,7 @@
 | #     | Action                                              | Expected                                                                                                                                                                                     | Status | Tier        | Notes                                                                                                                                                                         |
 | ----- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 7.2.1 | Place limit buy at live − 2%; wait for fill         | Order History → Filled sub-tab: 1 row LIMIT / BUY / Fill Price ≈ trigger price                                                                                                               | ⬜     | T1 · Vitest |                                                                                                                                                                               |
-| 7.2.2 | Verify columns: Limit Price, Fill Price, Commission | Limit Price = your trigger; Fill Price ≈ trigger; Commission ≈ usdtAmount × 0.0007                                                                                                           | ⬜     | T1 · Vitest |                                                                                                                                                                               |
+| 7.2.2 | Verify columns: Limit Price, Fill Price, Commission | Limit Price = your trigger; **Fill Price = trigger** (a resting limit fills at its own price, BP-2 F4); Commission = qty × price × 0.0002 with "0.02% maker" under it                        | ⬜     | T1 · Vitest |                                                                                                                                                                               |
 | 7.2.3 | Orders tab — Filled sub-tab                         | Filled limit row is **also** visible in **Orders → Filled** sub-tab (TV-style), not only in Order History. Orders top-level badge remains at 0 after the limit entry fill (no active order). | ⬜     | T2 · RTL    | Updated 01.05.2026: Orders tab now has a Filled sub-tab (restored). Verify the filled limit row appears in both Orders → Filled and Order History → Filled; Orders badge = 0. |
 
 ### 7.3 Cancelled order appears in Order History
@@ -369,19 +386,19 @@
 
 > Open via the **⚙️ gear** button in the **Order & Account Management** panel header.
 
-| #    | Action                                                               | Expected                                                                                     | Status | Tier     | Notes                                                                         |
-| ---- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ------ | -------- | ----------------------------------------------------------------------------- |
-| 8.1  | Click ⚙️ gear button                                                 | Modal opens; "Account Settings" title visible                                                | ⬜     | T2 · RTL |                                                                               |
-| 8.2  | Account name field                                                   | Shows logged-in username; field is **read-only** (cannot type)                               | ⬜     | T2 · RTL |                                                                               |
-| 8.3  | Leverage field — view current value                                  | Amber badge shows the current leverage (e.g. `1×`); **5 buttons**: `1×` `2×` `3×` `5×` `10×` | ⬜     | T2 · RTL | Max allowed leverage is **10×**; no buttons above 10× exist.                  |
-| 8.4  | Commission field                                                     | Displays `0.07% Fixed · Taker` — read-only                                                   | ⬜     | T2 · RTL |                                                                               |
-| 8.5  | Select each leverage button in turn                                  | Selected button highlights in purple; amber badge updates to chosen value                    | ⬜     | T2 · RTL | Replaces old "Save disabled" row — Save is enabled and commits the selection. |
-| 8.6  | Click "Reset account" once                                           | Button changes to a confirm state (e.g. "Confirm reset?"); 3 s auto-cancel timer starts      | ⬜     | T2 · RTL |                                                                               |
-| 8.7  | Wait 3 s without confirming                                          | Button reverts to default "Reset account" text; no reset occurred                            | ⬜     | T2 · RTL | Use `vi.useFakeTimers()` to advance the clock 3 s without real waiting.       |
-| 8.8  | Click "Reset account" → immediately click confirm within 3 s         | Modal closes; balance resets to $10,000; positions/orders/journal cleared                    | ⬜     | T1+T2    | T1: `reset()` clears store state. T2: modal close + UI reflects reset.        |
-| 8.9  | Click ✕ (close) button on modal                                      | Modal dismisses; no reset; no changes                                                        | ⬜     | T2 · RTL |                                                                               |
-| 8.10 | Click backdrop (outside modal)                                       | Modal dismisses; confirm state cleared if it was pending                                     | ⬜     | T2 · RTL |                                                                               |
-| 8.11 | Open modal while in mid-confirm state; dismiss via backdrop; re-open | Confirm state is cleared on re-open — button shows default "Reset account"                   | ⬜     | T2 · RTL |                                                                               |
+| #    | Action                                                               | Expected                                                                                                    | Status | Tier     | Notes                                                                   |
+| ---- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------ | -------- | ----------------------------------------------------------------------- |
+| 8.1  | Click ⚙️ gear button                                                 | Modal opens; "Account Settings" title visible                                                               | ⬜     | T2 · RTL |                                                                         |
+| 8.2  | Account name field                                                   | Shows logged-in username; field is **read-only** (cannot type)                                              | ⬜     | T2 · RTL |                                                                         |
+| 8.3  | Leverage                                                             | **No leverage field** (BP-2): leverage is per symbol, set with the `1x ▾` chip in the trading panel (§14.5) | ⬜     | T2 · RTL | Removed with the per-symbol leverage.                                   |
+| 8.4  | Fees field                                                           | Displays `Spot 0.1%` and `Perpetual 0.055% taker · 0.02% maker` — read-only                                 | ⬜     | T2 · RTL |                                                                         |
+| 8.5  | Footer button                                                        | Reads **Done** and just closes the modal (nothing left to save)                                             | ⬜     | T2 · RTL | Was "Save" (it committed the account leverage).                         |
+| 8.6  | Click "Reset account" once                                           | Button changes to a confirm state (e.g. "Confirm reset?"); 3 s auto-cancel timer starts                     | ⬜     | T2 · RTL |                                                                         |
+| 8.7  | Wait 3 s without confirming                                          | Button reverts to default "Reset account" text; no reset occurred                                           | ⬜     | T2 · RTL | Use `vi.useFakeTimers()` to advance the clock 3 s without real waiting. |
+| 8.8  | Click "Reset account" → immediately click confirm within 3 s         | Modal closes; balance resets to $10,000; positions/orders/journal cleared                                   | ⬜     | T1+T2    | T1: `reset()` clears store state. T2: modal close + UI reflects reset.  |
+| 8.9  | Click ✕ (close) button on modal                                      | Modal dismisses; no reset; no changes                                                                       | ⬜     | T2 · RTL |                                                                         |
+| 8.10 | Click backdrop (outside modal)                                       | Modal dismisses; confirm state cleared if it was pending                                                    | ⬜     | T2 · RTL |                                                                         |
+| 8.11 | Open modal while in mid-confirm state; dismiss via backdrop; re-open | Confirm state is cleared on re-open — button shows default "Reset account"                                  | ⬜     | T2 · RTL |                                                                         |
 
 ---
 
@@ -521,3 +538,127 @@
 | 12.3.3 | `GET /api/market/risk-limit?symbol=BTCUSDT`              | Tiers lowest first; tier 1 `maintenanceMarginRate 0.0033`, `mmDeduction 0`                                                 | ✅     | T1 · Vitest | Live tier-1 MMR is 0.33%, not the 0.5% the parity plan §2 quoted — re-check before BP-3. |
 | 12.3.4 | `GET /api/market/risk-limit?symbol=PEPEUSDT` / no symbol | 400, no upstream call                                                                                                      | ✅     | T1 · Vitest |                                                                                          |
 | 12.3.5 | Bybit returns an error / rate limit                      | 502 `{ error: 'Failed to fetch market data' }` — no upstream text; a stale cached value is served if one exists            | ✅     | T1 · Vitest | Stale-on-error path is covered by code review, not a dedicated test.                     |
+
+---
+
+## Section 13 — Server trading engine (Bybit Parity BP-1)
+
+> Trades are executed and watched on the server (`apps/server/src/trading`). The browser sends intent only and mirrors
+> the account over the private WebSocket `/api/paper/ws`. Reference: `docs/BYBIT_PARITY_PLAN.md` BP-1.
+
+### 13.1 Intent only (F11)
+
+| #      | Action                                                                                           | Expected                                                                                | Status | Tier        | Notes                                                                  |
+| ------ | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- | ------ | ----------- | ---------------------------------------------------------------------- |
+| 13.1.1 | Market Buy $100                                                                                  | Request body has symbol / side / type / usdtAmount only; fill price = server live price | ✅     | T2 · RTL    | `TradingPanel.test` "sends intent only"; `services.test` server price. |
+| 13.1.2 | `curl -X POST /api/paper/orders` with an extra `price` / `balance` field                         | The fields are stripped and never reach the engine; the order fills at the server price | ✅     | T1 · Vitest | `paper.test` "a client-supplied price never reaches the engine".       |
+| 13.1.3 | Old endpoints: `PATCH /api/paper/account`, `POST /api/paper/trades`, `POST /api/paper/positions` | 404                                                                                     | ✅     | T1 · Vitest | Removed in BP-1.                                                       |
+| 13.1.4 | Market order while the server has no live price (feed down)                                      | 409 "Waiting for live price…", shown in the order form; form keeps its values           | ✅     | T1 + T2     | `paper.test` + `TradingPanel.test` "server rejection".                 |
+
+### 13.2 24/7 execution (F10)
+
+| #      | Action                                                                             | Expected                                                                                            | Status | Tier            | Notes                                                              |
+| ------ | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ------ | --------------- | ------------------------------------------------------------------ |
+| 13.2.1 | Place a limit a few $ past the price, **close the tab**, wait for the fill, reopen | Position open; journal has "Limit order filled — …"; Order History has the filled limit row         | ⬜     | T3 · Playwright | Needs live feed + a running server.                                |
+| 13.2.2 | Open a position with a TP near the price, close the tab, wait, reopen              | Position closed; "Auto-closed … Take-Profit hit at $X" in the journal; balance updated              | ⬜     | T3 · Playwright |                                                                    |
+| 13.2.3 | TP/SL on a symbol **no pane is showing**                                           | Still triggers (the browser only watched symbols open in a pane)                                    | ✅     | T1 · Vitest     | `triggers.test` symbol isolation / `services.test` MatchingEngine. |
+| 13.2.4 | Restart the server with open orders; price crosses during the downtime             | On restart a "Backfilling price gap" log line; the crossed order fills at its trigger, exactly once | ⬜     | T3              | Engine unit: `services.test` "backfills downtime".                 |
+
+### 13.3 Sync, sessions, safety fixes
+
+| #      | Action                                                                  | Expected                                                                              | Status | Tier            | Notes                                                                        |
+| ------ | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------ | --------------- | ---------------------------------------------------------------------------- |
+| 13.3.1 | Two tabs open; place / cancel / close in one                            | The other tab updates within ~1 s; each sound plays once per tab                      | ⬜     | T3 · Playwright | WS fan-out unit-tested in `paper.test`.                                      |
+| 13.3.2 | Log out, log in as another user on the same browser                     | Nothing of the first account is shown; `cd-paper-trading` is gone from localStorage   | ✅     | T1 · Vitest     | `usePaperFeed.test` sign-out + `paperStore.test` clear(). Logout leak fixed. |
+| 13.3.3 | Keep the dashboard open for 20+ minutes, then trade                     | Orders still work (access token refreshed ~60 s before expiry; WS re-authenticates)   | ⬜     | T3              | `usePaperFeed.test` re-auth / 4401 refresh.                                  |
+| 13.3.4 | S1 — a triggered order that can't fill                                  | Recorded as rejected ("Order could not be filled."), never silently dropped           | ✅     | T1 · Vitest     | `actions.test` "S1".                                                         |
+| 13.3.5 | S2 — place a limit at 1×, change leverage to 10×, let it fill           | Position size uses 1× (the order's own leverage)                                      | ✅     | T1 · Vitest     | `actions.test` "S2".                                                         |
+| 13.3.6 | S3 — a limit placed mid-candle after the candle already dipped below it | Does not fill until a tick after placement crosses it                                 | ✅     | T1 · Vitest     | `triggers.test` "S3".                                                        |
+| 13.3.7 | Filled limit / stop in Order History                                    | Row keeps its own type (LIMIT / STOP) — changed from the browser's temporary "MARKET" | ✅     | T1 · Vitest     | `actions.test` 3.1.3.                                                        |
+
+---
+
+## Section 14 — Markets, Bybit fees and fill prices (Bybit Parity BP-2)
+
+> Two markets: **Spot** (coin balances, 1×, no shorting) and **USDT Perpetual** (positions, per-symbol leverage).
+> Reference: `docs/BYBIT_PARITY_PLAN.md` BP-2. ✅ in the Tier column means automated; the Notes say where. "Live ✓"
+> rows were run against the dev server + the live Bybit feed on 2026-09-26 (22 checks, throwaway users deleted).
+
+### 14.1 Market URLs and the Trade menu
+
+| #       | Action                                                       | Expected                                                                                                        | Status | Tier     | Notes                                         |
+| ------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- | ------ | -------- | --------------------------------------------- |
+| 14.1.1  | Open `/dashboard`                                            | Redirects to the active pane's market URL, e.g. `/dashboard/spot/BTC/USDT`                                      | ✅     | T2 · RTL | `useMarketUrlSync.test` DashboardRedirect.    |
+| 14.1.2  | Open `/dashboard/usdt/ETHUSDT` directly                      | Active pane shows ETHUSDT USDT Perpetual (the URL wins over the saved layout)                                   | ✅     | T2 · RTL | `useMarketUrlSync.test`.                      |
+| 14.1.3  | Open `/dashboard/spot/btc/usdt`, `/dashboard/spot/PEPE/USDT` | First is replaced by `/dashboard/spot/BTC/USDT`; the unknown pair goes to the active pane's market              | ✅     | T1 + T2  | `marketRoutes.test`, `useMarketUrlSync.test`. |
+| 14.1.4  | Header **Trade ▾** → USDT Perpetual                          | Pane switches market, symbol kept; URL becomes `/dashboard/usdt/<symbol>`; ✓ + purple bar on the current market | ✅     | T2 · RTL | `TradeMenu.test`.                             |
+| 14.1.5  | Keyboard: focus Trade, ArrowDown, ArrowDown, Escape          | Opens on the current market, moves, wraps, closes back to the trigger                                           | ✅     | T2 · RTL | `TradeMenu.test`.                             |
+| 14.1.6  | Switch market / symbol, then browser **Back**                | Back returns to the previous market; switching pane focus does not add history entries                          | ✅     | T2 · RTL | `useMarketUrlSync.test` (PUSH / REPLACE).     |
+| 14.1.7  | Switch symbol or market                                      | The page does not reload: charts, feeds and the form stay mounted                                               | ✅     | T1       | `marketRoutes.test` routeKey.                 |
+| 14.1.8  | Logged out, open `/dashboard/usdt/ETHUSDT` → sign in         | Lands on `/dashboard/usdt/ETHUSDT`; a foreign `from` (`//evil.example`, `/admin/…`) lands on `/dashboard`       | ✅     | T2 · RTL | `LoginPage.returnTo.test` 🔐.                 |
+| 14.1.9  | In-panel **Spot \| USDT Perpetual** tabs                     | Same effect as the header menu; the SymbolBar and pane headers show "Spot" / "Perpetual" under / after the pair | ✅     | T2 · RTL | `TradingPanel.test` "market tabs".            |
+| 14.1.10 | Public `/chart`                                              | Trade menu works but the URL stays `/chart`                                                                     | ⬜     | Manual   |                                               |
+
+### 14.2 USDT Perpetual fees (VIP-0 taker 0.055% / maker 0.02%)
+
+| #      | Action                                                          | Expected                                                                                        | Status | Tier        | Notes                                           |
+| ------ | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ------ | ----------- | ----------------------------------------------- |
+| 14.2.1 | Market buy 0.1 BTC at 10× with the ask at 50,000                | IM 500, open fee 2.75, close-fee reserve 2.75 → balance −505.50; row "0.055% taker"             | ✅     | T1 · Vitest | `fees.test`. Live ✓ (fee = 0.055% of notional). |
+| 14.2.2 | Close it at bid 51,000                                          | Close fee 2.805; +599.945 back; realized +94.445                                                | ✅     | T1 · Vitest | `fees.test`.                                    |
+| 14.2.3 | Resting limit buy 0.1 @ 49,000 at 10×                           | Reserves 495.39 (IM + taker estimates); fills at **49,000** with a 0.98 maker fee; net −493.675 | ✅     | T1 · Vitest | `fees.test`. Live ✓ reserve.                    |
+| 14.2.4 | Cancel a resting order                                          | Refunds exactly what it reserved                                                                | ✅     | T1 · Vitest | Live ✓.                                         |
+| 14.2.5 | Order form estimate                                             | Cost = margin + est. open fee + est. close fee; "Fees: taker 0.055% · maker 0.02%" line         | ✅     | T2 · RTL    | `TradingPanel.test` 1.1.1, `orderMath.test`.    |
+| 14.2.6 | Pre-BP-2 position (entry fee 0.7 at 0.07%) closed at bid 51,000 | Uses its stored 0.7: realized +96.495 — old fees are never recomputed                           | ✅     | T1 · Vitest | `fees.test` "never recompute".                  |
+
+### 14.3 Fill prices
+
+| #      | Action                                                        | Expected                                                            | Status | Tier        | Notes                              |
+| ------ | ------------------------------------------------------------- | ------------------------------------------------------------------- | ------ | ----------- | ---------------------------------- |
+| 14.3.1 | Market buy / sell                                             | Buy fills at the ask, sell at the bid                               | ✅     | T1 · Vitest | `services.test`. Live ✓ ask / bid. |
+| 14.3.2 | Limit buy above the ask (crosses)                             | Fills now at the ask as a taker; no pending row; history says LIMIT | ✅     | T1 · Vitest | `fees.test`. Live ✓.               |
+| 14.3.3 | Stop buy triggers at 50,500 with the ask at 50,510            | Fills at 50,510 (taker)                                             | ✅     | T1 · Vitest | `triggers.test`, `fees.test`.      |
+| 14.3.4 | Long TP hit                                                   | Triggers on the last price, closes at the bid                       | ✅     | T1 · Vitest | `triggers.test`.                   |
+| 14.3.5 | Quote older than 10 s, or no bid / ask                        | 409 "Waiting for live price…"                                       | ✅     | T1 · Vitest | `services.test`.                   |
+| 14.3.6 | Backfilled trigger (server was down)                          | Fills at the level it crossed, not today's price                    | ✅     | T1 · Vitest | `services.test`.                   |
+| 14.3.7 | A spot tick never triggers a perpetual order (and vice versa) | Per-market trigger index                                            | ✅     | T1 · Vitest | `triggers.test`, `services.test`.  |
+
+### 14.4 Bybit size rules
+
+| #      | Action                                     | Expected                                            | Status | Tier        | Notes        |
+| ------ | ------------------------------------------ | --------------------------------------------------- | ------ | ----------- | ------------ |
+| 14.4.1 | Perp qty 0.0001 BTC                        | 422 "Order quantity lower than the minimum (0.001)" | ✅     | T1 · Vitest | Live ✓.      |
+| 14.4.2 | Limit price 10000.05 on BTCUSDT (tick 0.1) | 422 "Order price decimal too long (tick size 0.1)"  | ✅     | T1 · Vitest | Live ✓.      |
+| 14.4.3 | Spot order worth under 5 USDT              | 422 "Order value exceeded lower limit (5 USDT)"     | ✅     | T1 · Vitest | `spot.test`. |
+| 14.4.4 | Qty 0.1239 BTC (step 0.001)                | Rounded down to 0.123                               | ✅     | T1 · Vitest | `fees.test`. |
+
+### 14.5 Per-symbol leverage
+
+| #      | Action                                                 | Expected                                                                    | Status | Tier    | Notes                                     |
+| ------ | ------------------------------------------------------ | --------------------------------------------------------------------------- | ------ | ------- | ----------------------------------------- |
+| 14.5.1 | `1x ▾` chip → 5× → Confirm on ETHUSDT (no open trades) | ETHUSDT orders use 5×; other symbols keep their own / the default           | ✅     | T1 + T2 | `fees.test`, `TradingPanel.test`. Live ✓. |
+| 14.5.2 | With a BTCUSDT position or active order open           | Chip shows a lock; modal says leverage can't be changed; server answers 422 | ✅     | T1 + T2 | Live ✓.                                   |
+
+### 14.6 Spot
+
+| #       | Action                                            | Expected                                                                                             | Status | Tier        | Notes                                   |
+| ------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------ | ----------- | --------------------------------------- |
+| 14.6.1  | Spot market buy 0.1 BTC at ask 50,000             | −5,000 USDT; +0.0999 BTC (0.1% fee in BTC); avg cost 50,050.05; no position                          | ✅     | T1 · Vitest | `spot.test`. Live ✓ (0.002 → 0.001998). |
+| 14.6.2  | Sell 0.0999 BTC at bid 51,000                     | Fee 5.0949 USDT; +5,089.8051 USDT; realized +89.8051; closed trade in History                        | ✅     | T1 · Vitest | `spot.test`.                            |
+| 14.6.3  | Sell a coin you don't hold / more than free       | Refused (no shorting, F8): "Balance insufficient (… available)"                                      | ✅     | T1 + T2     | Live ✓.                                 |
+| 14.6.4  | Spot tabs                                         | Market and Limit only; no leverage chip; a sell has no TP / SL                                       | ✅     | T2 · RTL    | `TradingPanel.test`.                    |
+| 14.6.5  | Limit buy 0.1 @ 49,000 / limit sell 0.05 @ 52,000 | Buy reserves 4,900 USDT; sell locks 0.05 BTC, fills +2,597.40                                        | ✅     | T1 · Vitest | `spot.test`.                            |
+| 14.6.6  | Buy with TP + SL                                  | Two conditional sells (one OCO pair) lock what the buy received; the first to fire cancels the other | ✅     | T1 · Vitest | `spot.test`. Live ✓ (legs placed).      |
+| 14.6.7  | Assets tab → TP/SL on a coin held                 | Locks the chosen quantity behind the pair                                                            | ✅     | T1 + T2     | `spot.test`; modal manual ⬜.           |
+| 14.6.8  | Assets tab                                        | USDT row + each coin: balance / available / locked / avg cost / last / value / uPnL with +/−         | ✅     | T2 · RTL    | `OrderAccountManagementPanel.test`.     |
+| 14.6.9  | Assets → Sell                                     | Pane switches to that coin on Spot; the form is prefilled with the free quantity as a sell           | ✅     | T2 · RTL    |                                         |
+| 14.6.10 | On Spot, the bottom tabs                          | Assets replaces Positions; Orders / Order History show Spot rows only                                | ✅     | T2 · RTL    |                                         |
+
+### 14.7 Migration (D7) and deploy safety
+
+| #      | Action                                                                   | Expected                                                                                                                                                                               | Status | Tier        | Notes                            |
+| ------ | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ----------- | -------------------------------- |
+| 14.7.1 | Migrate a DB with pre-BP-2 rows                                          | Positions / orders / trades become `linear`; position leverage = qty × entry / margin; entry fee 0.07% of margin; PENDING reserved = margin × 1.0007; FILLED rows carry feeRate 0.0007 | ✅     | Manual      | Run on a scratch DB, 2026-09-26. |
+| 14.7.2 | Pre-BP-2 user (saved layout) opens `/dashboard` with perpetual positions | Lands once on USDT Perpetual at the newest position's symbol; never again                                                                                                              | ✅     | T2 · RTL    | `useMarketUrlSync.test`.         |
+| 14.7.3 | New user                                                                 | Starts on Spot                                                                                                                                                                         | ✅     | T1 · Vitest | `layoutStore.test`.              |
+| 14.7.4 | Old client (sends `usdtAmount`, no market)                               | Still trades USDT Perpetual (margin at the symbol's leverage)                                                                                                                          | ✅     | T1 · Vitest | `paper.test`. Live ✓.            |
+| 14.7.5 | Private WS                                                               | Pushes live prices (≤ 1/s, changed only) of the markets the account holds                                                                                                              | ✅     | T1 · Vitest | `paper.test`. Live ✓.            |

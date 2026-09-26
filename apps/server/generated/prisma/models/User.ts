@@ -234,6 +234,8 @@ export type UserWhereInput = {
   trades?: Prisma.TradeListRelationFilter
   orders?: Prisma.OrderListRelationFilter
   positions?: Prisma.PositionListRelationFilter
+  journalEntries?: Prisma.JournalEntryListRelationFilter
+  balanceEvents?: Prisma.BalanceEventListRelationFilter
   refreshTokens?: Prisma.RefreshTokenListRelationFilter
   passwordResetTokens?: Prisma.PasswordResetTokenListRelationFilter
   verificationTokens?: Prisma.VerificationTokenListRelationFilter
@@ -256,6 +258,8 @@ export type UserOrderByWithRelationInput = {
   trades?: Prisma.TradeOrderByRelationAggregateInput
   orders?: Prisma.OrderOrderByRelationAggregateInput
   positions?: Prisma.PositionOrderByRelationAggregateInput
+  journalEntries?: Prisma.JournalEntryOrderByRelationAggregateInput
+  balanceEvents?: Prisma.BalanceEventOrderByRelationAggregateInput
   refreshTokens?: Prisma.RefreshTokenOrderByRelationAggregateInput
   passwordResetTokens?: Prisma.PasswordResetTokenOrderByRelationAggregateInput
   verificationTokens?: Prisma.VerificationTokenOrderByRelationAggregateInput
@@ -281,6 +285,8 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   trades?: Prisma.TradeListRelationFilter
   orders?: Prisma.OrderListRelationFilter
   positions?: Prisma.PositionListRelationFilter
+  journalEntries?: Prisma.JournalEntryListRelationFilter
+  balanceEvents?: Prisma.BalanceEventListRelationFilter
   refreshTokens?: Prisma.RefreshTokenListRelationFilter
   passwordResetTokens?: Prisma.PasswordResetTokenListRelationFilter
   verificationTokens?: Prisma.VerificationTokenListRelationFilter
@@ -337,6 +343,8 @@ export type UserCreateInput = {
   trades?: Prisma.TradeCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   positions?: Prisma.PositionCreateNestedManyWithoutUserInput
+  journalEntries?: Prisma.JournalEntryCreateNestedManyWithoutUserInput
+  balanceEvents?: Prisma.BalanceEventCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
   verificationTokens?: Prisma.VerificationTokenCreateNestedManyWithoutUserInput
@@ -359,6 +367,8 @@ export type UserUncheckedCreateInput = {
   trades?: Prisma.TradeUncheckedCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   positions?: Prisma.PositionUncheckedCreateNestedManyWithoutUserInput
+  journalEntries?: Prisma.JournalEntryUncheckedCreateNestedManyWithoutUserInput
+  balanceEvents?: Prisma.BalanceEventUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
   verificationTokens?: Prisma.VerificationTokenUncheckedCreateNestedManyWithoutUserInput
@@ -381,6 +391,8 @@ export type UserUpdateInput = {
   trades?: Prisma.TradeUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   positions?: Prisma.PositionUpdateManyWithoutUserNestedInput
+  journalEntries?: Prisma.JournalEntryUpdateManyWithoutUserNestedInput
+  balanceEvents?: Prisma.BalanceEventUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
   verificationTokens?: Prisma.VerificationTokenUpdateManyWithoutUserNestedInput
@@ -403,6 +415,8 @@ export type UserUncheckedUpdateInput = {
   trades?: Prisma.TradeUncheckedUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   positions?: Prisma.PositionUncheckedUpdateManyWithoutUserNestedInput
+  journalEntries?: Prisma.JournalEntryUncheckedUpdateManyWithoutUserNestedInput
+  balanceEvents?: Prisma.BalanceEventUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
   verificationTokens?: Prisma.VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
@@ -626,6 +640,34 @@ export type UserUpdateOneRequiredWithoutTradesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutTradesInput, Prisma.UserUpdateWithoutTradesInput>, Prisma.UserUncheckedUpdateWithoutTradesInput>
 }
 
+export type UserCreateNestedOneWithoutJournalEntriesInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutJournalEntriesInput, Prisma.UserUncheckedCreateWithoutJournalEntriesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutJournalEntriesInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutJournalEntriesNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutJournalEntriesInput, Prisma.UserUncheckedCreateWithoutJournalEntriesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutJournalEntriesInput
+  upsert?: Prisma.UserUpsertWithoutJournalEntriesInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutJournalEntriesInput, Prisma.UserUpdateWithoutJournalEntriesInput>, Prisma.UserUncheckedUpdateWithoutJournalEntriesInput>
+}
+
+export type UserCreateNestedOneWithoutBalanceEventsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutBalanceEventsInput, Prisma.UserUncheckedCreateWithoutBalanceEventsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutBalanceEventsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutBalanceEventsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutBalanceEventsInput, Prisma.UserUncheckedCreateWithoutBalanceEventsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutBalanceEventsInput
+  upsert?: Prisma.UserUpsertWithoutBalanceEventsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutBalanceEventsInput, Prisma.UserUpdateWithoutBalanceEventsInput>, Prisma.UserUncheckedUpdateWithoutBalanceEventsInput>
+}
+
 export type UserCreateWithoutRefreshTokensInput = {
   id?: string
   email: string
@@ -642,6 +684,8 @@ export type UserCreateWithoutRefreshTokensInput = {
   trades?: Prisma.TradeCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   positions?: Prisma.PositionCreateNestedManyWithoutUserInput
+  journalEntries?: Prisma.JournalEntryCreateNestedManyWithoutUserInput
+  balanceEvents?: Prisma.BalanceEventCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
   verificationTokens?: Prisma.VerificationTokenCreateNestedManyWithoutUserInput
   emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
@@ -663,6 +707,8 @@ export type UserUncheckedCreateWithoutRefreshTokensInput = {
   trades?: Prisma.TradeUncheckedCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   positions?: Prisma.PositionUncheckedCreateNestedManyWithoutUserInput
+  journalEntries?: Prisma.JournalEntryUncheckedCreateNestedManyWithoutUserInput
+  balanceEvents?: Prisma.BalanceEventUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
   verificationTokens?: Prisma.VerificationTokenUncheckedCreateNestedManyWithoutUserInput
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
@@ -700,6 +746,8 @@ export type UserUpdateWithoutRefreshTokensInput = {
   trades?: Prisma.TradeUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   positions?: Prisma.PositionUpdateManyWithoutUserNestedInput
+  journalEntries?: Prisma.JournalEntryUpdateManyWithoutUserNestedInput
+  balanceEvents?: Prisma.BalanceEventUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
   verificationTokens?: Prisma.VerificationTokenUpdateManyWithoutUserNestedInput
   emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
@@ -721,6 +769,8 @@ export type UserUncheckedUpdateWithoutRefreshTokensInput = {
   trades?: Prisma.TradeUncheckedUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   positions?: Prisma.PositionUncheckedUpdateManyWithoutUserNestedInput
+  journalEntries?: Prisma.JournalEntryUncheckedUpdateManyWithoutUserNestedInput
+  balanceEvents?: Prisma.BalanceEventUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
   verificationTokens?: Prisma.VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
@@ -742,6 +792,8 @@ export type UserCreateWithoutPasswordResetTokensInput = {
   trades?: Prisma.TradeCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   positions?: Prisma.PositionCreateNestedManyWithoutUserInput
+  journalEntries?: Prisma.JournalEntryCreateNestedManyWithoutUserInput
+  balanceEvents?: Prisma.BalanceEventCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   verificationTokens?: Prisma.VerificationTokenCreateNestedManyWithoutUserInput
   emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
@@ -763,6 +815,8 @@ export type UserUncheckedCreateWithoutPasswordResetTokensInput = {
   trades?: Prisma.TradeUncheckedCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   positions?: Prisma.PositionUncheckedCreateNestedManyWithoutUserInput
+  journalEntries?: Prisma.JournalEntryUncheckedCreateNestedManyWithoutUserInput
+  balanceEvents?: Prisma.BalanceEventUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   verificationTokens?: Prisma.VerificationTokenUncheckedCreateNestedManyWithoutUserInput
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
@@ -800,6 +854,8 @@ export type UserUpdateWithoutPasswordResetTokensInput = {
   trades?: Prisma.TradeUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   positions?: Prisma.PositionUpdateManyWithoutUserNestedInput
+  journalEntries?: Prisma.JournalEntryUpdateManyWithoutUserNestedInput
+  balanceEvents?: Prisma.BalanceEventUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   verificationTokens?: Prisma.VerificationTokenUpdateManyWithoutUserNestedInput
   emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
@@ -821,6 +877,8 @@ export type UserUncheckedUpdateWithoutPasswordResetTokensInput = {
   trades?: Prisma.TradeUncheckedUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   positions?: Prisma.PositionUncheckedUpdateManyWithoutUserNestedInput
+  journalEntries?: Prisma.JournalEntryUncheckedUpdateManyWithoutUserNestedInput
+  balanceEvents?: Prisma.BalanceEventUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   verificationTokens?: Prisma.VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
@@ -842,6 +900,8 @@ export type UserCreateWithoutVerificationTokensInput = {
   trades?: Prisma.TradeCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   positions?: Prisma.PositionCreateNestedManyWithoutUserInput
+  journalEntries?: Prisma.JournalEntryCreateNestedManyWithoutUserInput
+  balanceEvents?: Prisma.BalanceEventCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
   emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
@@ -863,6 +923,8 @@ export type UserUncheckedCreateWithoutVerificationTokensInput = {
   trades?: Prisma.TradeUncheckedCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   positions?: Prisma.PositionUncheckedCreateNestedManyWithoutUserInput
+  journalEntries?: Prisma.JournalEntryUncheckedCreateNestedManyWithoutUserInput
+  balanceEvents?: Prisma.BalanceEventUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
@@ -900,6 +962,8 @@ export type UserUpdateWithoutVerificationTokensInput = {
   trades?: Prisma.TradeUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   positions?: Prisma.PositionUpdateManyWithoutUserNestedInput
+  journalEntries?: Prisma.JournalEntryUpdateManyWithoutUserNestedInput
+  balanceEvents?: Prisma.BalanceEventUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
   emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
@@ -921,6 +985,8 @@ export type UserUncheckedUpdateWithoutVerificationTokensInput = {
   trades?: Prisma.TradeUncheckedUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   positions?: Prisma.PositionUncheckedUpdateManyWithoutUserNestedInput
+  journalEntries?: Prisma.JournalEntryUncheckedUpdateManyWithoutUserNestedInput
+  balanceEvents?: Prisma.BalanceEventUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
@@ -942,6 +1008,8 @@ export type UserCreateWithoutEmailChangeTokensInput = {
   trades?: Prisma.TradeCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   positions?: Prisma.PositionCreateNestedManyWithoutUserInput
+  journalEntries?: Prisma.JournalEntryCreateNestedManyWithoutUserInput
+  balanceEvents?: Prisma.BalanceEventCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
   verificationTokens?: Prisma.VerificationTokenCreateNestedManyWithoutUserInput
@@ -963,6 +1031,8 @@ export type UserUncheckedCreateWithoutEmailChangeTokensInput = {
   trades?: Prisma.TradeUncheckedCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   positions?: Prisma.PositionUncheckedCreateNestedManyWithoutUserInput
+  journalEntries?: Prisma.JournalEntryUncheckedCreateNestedManyWithoutUserInput
+  balanceEvents?: Prisma.BalanceEventUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
   verificationTokens?: Prisma.VerificationTokenUncheckedCreateNestedManyWithoutUserInput
@@ -1000,6 +1070,8 @@ export type UserUpdateWithoutEmailChangeTokensInput = {
   trades?: Prisma.TradeUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   positions?: Prisma.PositionUpdateManyWithoutUserNestedInput
+  journalEntries?: Prisma.JournalEntryUpdateManyWithoutUserNestedInput
+  balanceEvents?: Prisma.BalanceEventUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
   verificationTokens?: Prisma.VerificationTokenUpdateManyWithoutUserNestedInput
@@ -1021,6 +1093,8 @@ export type UserUncheckedUpdateWithoutEmailChangeTokensInput = {
   trades?: Prisma.TradeUncheckedUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   positions?: Prisma.PositionUncheckedUpdateManyWithoutUserNestedInput
+  journalEntries?: Prisma.JournalEntryUncheckedUpdateManyWithoutUserNestedInput
+  balanceEvents?: Prisma.BalanceEventUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
   verificationTokens?: Prisma.VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
@@ -1041,6 +1115,8 @@ export type UserCreateWithoutAccountInput = {
   trades?: Prisma.TradeCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   positions?: Prisma.PositionCreateNestedManyWithoutUserInput
+  journalEntries?: Prisma.JournalEntryCreateNestedManyWithoutUserInput
+  balanceEvents?: Prisma.BalanceEventCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
   verificationTokens?: Prisma.VerificationTokenCreateNestedManyWithoutUserInput
@@ -1062,6 +1138,8 @@ export type UserUncheckedCreateWithoutAccountInput = {
   trades?: Prisma.TradeUncheckedCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   positions?: Prisma.PositionUncheckedCreateNestedManyWithoutUserInput
+  journalEntries?: Prisma.JournalEntryUncheckedCreateNestedManyWithoutUserInput
+  balanceEvents?: Prisma.BalanceEventUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
   verificationTokens?: Prisma.VerificationTokenUncheckedCreateNestedManyWithoutUserInput
@@ -1099,6 +1177,8 @@ export type UserUpdateWithoutAccountInput = {
   trades?: Prisma.TradeUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   positions?: Prisma.PositionUpdateManyWithoutUserNestedInput
+  journalEntries?: Prisma.JournalEntryUpdateManyWithoutUserNestedInput
+  balanceEvents?: Prisma.BalanceEventUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
   verificationTokens?: Prisma.VerificationTokenUpdateManyWithoutUserNestedInput
@@ -1120,6 +1200,8 @@ export type UserUncheckedUpdateWithoutAccountInput = {
   trades?: Prisma.TradeUncheckedUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   positions?: Prisma.PositionUncheckedUpdateManyWithoutUserNestedInput
+  journalEntries?: Prisma.JournalEntryUncheckedUpdateManyWithoutUserNestedInput
+  balanceEvents?: Prisma.BalanceEventUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
   verificationTokens?: Prisma.VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
@@ -1141,6 +1223,8 @@ export type UserCreateWithoutPositionsInput = {
   account?: Prisma.AccountCreateNestedOneWithoutUserInput
   trades?: Prisma.TradeCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
+  journalEntries?: Prisma.JournalEntryCreateNestedManyWithoutUserInput
+  balanceEvents?: Prisma.BalanceEventCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
   verificationTokens?: Prisma.VerificationTokenCreateNestedManyWithoutUserInput
@@ -1162,6 +1246,8 @@ export type UserUncheckedCreateWithoutPositionsInput = {
   account?: Prisma.AccountUncheckedCreateNestedOneWithoutUserInput
   trades?: Prisma.TradeUncheckedCreateNestedManyWithoutUserInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
+  journalEntries?: Prisma.JournalEntryUncheckedCreateNestedManyWithoutUserInput
+  balanceEvents?: Prisma.BalanceEventUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
   verificationTokens?: Prisma.VerificationTokenUncheckedCreateNestedManyWithoutUserInput
@@ -1199,6 +1285,8 @@ export type UserUpdateWithoutPositionsInput = {
   account?: Prisma.AccountUpdateOneWithoutUserNestedInput
   trades?: Prisma.TradeUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
+  journalEntries?: Prisma.JournalEntryUpdateManyWithoutUserNestedInput
+  balanceEvents?: Prisma.BalanceEventUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
   verificationTokens?: Prisma.VerificationTokenUpdateManyWithoutUserNestedInput
@@ -1220,6 +1308,8 @@ export type UserUncheckedUpdateWithoutPositionsInput = {
   account?: Prisma.AccountUncheckedUpdateOneWithoutUserNestedInput
   trades?: Prisma.TradeUncheckedUpdateManyWithoutUserNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
+  journalEntries?: Prisma.JournalEntryUncheckedUpdateManyWithoutUserNestedInput
+  balanceEvents?: Prisma.BalanceEventUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
   verificationTokens?: Prisma.VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
@@ -1241,6 +1331,8 @@ export type UserCreateWithoutOrdersInput = {
   account?: Prisma.AccountCreateNestedOneWithoutUserInput
   trades?: Prisma.TradeCreateNestedManyWithoutUserInput
   positions?: Prisma.PositionCreateNestedManyWithoutUserInput
+  journalEntries?: Prisma.JournalEntryCreateNestedManyWithoutUserInput
+  balanceEvents?: Prisma.BalanceEventCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
   verificationTokens?: Prisma.VerificationTokenCreateNestedManyWithoutUserInput
@@ -1262,6 +1354,8 @@ export type UserUncheckedCreateWithoutOrdersInput = {
   account?: Prisma.AccountUncheckedCreateNestedOneWithoutUserInput
   trades?: Prisma.TradeUncheckedCreateNestedManyWithoutUserInput
   positions?: Prisma.PositionUncheckedCreateNestedManyWithoutUserInput
+  journalEntries?: Prisma.JournalEntryUncheckedCreateNestedManyWithoutUserInput
+  balanceEvents?: Prisma.BalanceEventUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
   verificationTokens?: Prisma.VerificationTokenUncheckedCreateNestedManyWithoutUserInput
@@ -1299,6 +1393,8 @@ export type UserUpdateWithoutOrdersInput = {
   account?: Prisma.AccountUpdateOneWithoutUserNestedInput
   trades?: Prisma.TradeUpdateManyWithoutUserNestedInput
   positions?: Prisma.PositionUpdateManyWithoutUserNestedInput
+  journalEntries?: Prisma.JournalEntryUpdateManyWithoutUserNestedInput
+  balanceEvents?: Prisma.BalanceEventUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
   verificationTokens?: Prisma.VerificationTokenUpdateManyWithoutUserNestedInput
@@ -1320,6 +1416,8 @@ export type UserUncheckedUpdateWithoutOrdersInput = {
   account?: Prisma.AccountUncheckedUpdateOneWithoutUserNestedInput
   trades?: Prisma.TradeUncheckedUpdateManyWithoutUserNestedInput
   positions?: Prisma.PositionUncheckedUpdateManyWithoutUserNestedInput
+  journalEntries?: Prisma.JournalEntryUncheckedUpdateManyWithoutUserNestedInput
+  balanceEvents?: Prisma.BalanceEventUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
   verificationTokens?: Prisma.VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
@@ -1341,6 +1439,8 @@ export type UserCreateWithoutTradesInput = {
   account?: Prisma.AccountCreateNestedOneWithoutUserInput
   orders?: Prisma.OrderCreateNestedManyWithoutUserInput
   positions?: Prisma.PositionCreateNestedManyWithoutUserInput
+  journalEntries?: Prisma.JournalEntryCreateNestedManyWithoutUserInput
+  balanceEvents?: Prisma.BalanceEventCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
   verificationTokens?: Prisma.VerificationTokenCreateNestedManyWithoutUserInput
@@ -1362,6 +1462,8 @@ export type UserUncheckedCreateWithoutTradesInput = {
   account?: Prisma.AccountUncheckedCreateNestedOneWithoutUserInput
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
   positions?: Prisma.PositionUncheckedCreateNestedManyWithoutUserInput
+  journalEntries?: Prisma.JournalEntryUncheckedCreateNestedManyWithoutUserInput
+  balanceEvents?: Prisma.BalanceEventUncheckedCreateNestedManyWithoutUserInput
   refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
   verificationTokens?: Prisma.VerificationTokenUncheckedCreateNestedManyWithoutUserInput
@@ -1399,6 +1501,8 @@ export type UserUpdateWithoutTradesInput = {
   account?: Prisma.AccountUpdateOneWithoutUserNestedInput
   orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
   positions?: Prisma.PositionUpdateManyWithoutUserNestedInput
+  journalEntries?: Prisma.JournalEntryUpdateManyWithoutUserNestedInput
+  balanceEvents?: Prisma.BalanceEventUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
   verificationTokens?: Prisma.VerificationTokenUpdateManyWithoutUserNestedInput
@@ -1420,6 +1524,224 @@ export type UserUncheckedUpdateWithoutTradesInput = {
   account?: Prisma.AccountUncheckedUpdateOneWithoutUserNestedInput
   orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
   positions?: Prisma.PositionUncheckedUpdateManyWithoutUserNestedInput
+  journalEntries?: Prisma.JournalEntryUncheckedUpdateManyWithoutUserNestedInput
+  balanceEvents?: Prisma.BalanceEventUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  verificationTokens?: Prisma.VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutJournalEntriesInput = {
+  id?: string
+  email: string
+  username: string
+  password: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  emailVerifiedAt?: Date | string | null
+  termsAcceptedAt?: Date | string | null
+  termsAcceptedIp?: string | null
+  deletionRequestedAt?: Date | string | null
+  deletionWarningSentAt?: Date | string | null
+  account?: Prisma.AccountCreateNestedOneWithoutUserInput
+  trades?: Prisma.TradeCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrderCreateNestedManyWithoutUserInput
+  positions?: Prisma.PositionCreateNestedManyWithoutUserInput
+  balanceEvents?: Prisma.BalanceEventCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  verificationTokens?: Prisma.VerificationTokenCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutJournalEntriesInput = {
+  id?: string
+  email: string
+  username: string
+  password: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  emailVerifiedAt?: Date | string | null
+  termsAcceptedAt?: Date | string | null
+  termsAcceptedIp?: string | null
+  deletionRequestedAt?: Date | string | null
+  deletionWarningSentAt?: Date | string | null
+  account?: Prisma.AccountUncheckedCreateNestedOneWithoutUserInput
+  trades?: Prisma.TradeUncheckedCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
+  positions?: Prisma.PositionUncheckedCreateNestedManyWithoutUserInput
+  balanceEvents?: Prisma.BalanceEventUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  verificationTokens?: Prisma.VerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutJournalEntriesInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutJournalEntriesInput, Prisma.UserUncheckedCreateWithoutJournalEntriesInput>
+}
+
+export type UserUpsertWithoutJournalEntriesInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutJournalEntriesInput, Prisma.UserUncheckedUpdateWithoutJournalEntriesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutJournalEntriesInput, Prisma.UserUncheckedCreateWithoutJournalEntriesInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutJournalEntriesInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutJournalEntriesInput, Prisma.UserUncheckedUpdateWithoutJournalEntriesInput>
+}
+
+export type UserUpdateWithoutJournalEntriesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  account?: Prisma.AccountUpdateOneWithoutUserNestedInput
+  trades?: Prisma.TradeUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
+  positions?: Prisma.PositionUpdateManyWithoutUserNestedInput
+  balanceEvents?: Prisma.BalanceEventUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  verificationTokens?: Prisma.VerificationTokenUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutJournalEntriesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  account?: Prisma.AccountUncheckedUpdateOneWithoutUserNestedInput
+  trades?: Prisma.TradeUncheckedUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
+  positions?: Prisma.PositionUncheckedUpdateManyWithoutUserNestedInput
+  balanceEvents?: Prisma.BalanceEventUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  verificationTokens?: Prisma.VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutBalanceEventsInput = {
+  id?: string
+  email: string
+  username: string
+  password: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  emailVerifiedAt?: Date | string | null
+  termsAcceptedAt?: Date | string | null
+  termsAcceptedIp?: string | null
+  deletionRequestedAt?: Date | string | null
+  deletionWarningSentAt?: Date | string | null
+  account?: Prisma.AccountCreateNestedOneWithoutUserInput
+  trades?: Prisma.TradeCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrderCreateNestedManyWithoutUserInput
+  positions?: Prisma.PositionCreateNestedManyWithoutUserInput
+  journalEntries?: Prisma.JournalEntryCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  verificationTokens?: Prisma.VerificationTokenCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutBalanceEventsInput = {
+  id?: string
+  email: string
+  username: string
+  password: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  emailVerifiedAt?: Date | string | null
+  termsAcceptedAt?: Date | string | null
+  termsAcceptedIp?: string | null
+  deletionRequestedAt?: Date | string | null
+  deletionWarningSentAt?: Date | string | null
+  account?: Prisma.AccountUncheckedCreateNestedOneWithoutUserInput
+  trades?: Prisma.TradeUncheckedCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
+  positions?: Prisma.PositionUncheckedCreateNestedManyWithoutUserInput
+  journalEntries?: Prisma.JournalEntryUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  verificationTokens?: Prisma.VerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutBalanceEventsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutBalanceEventsInput, Prisma.UserUncheckedCreateWithoutBalanceEventsInput>
+}
+
+export type UserUpsertWithoutBalanceEventsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutBalanceEventsInput, Prisma.UserUncheckedUpdateWithoutBalanceEventsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutBalanceEventsInput, Prisma.UserUncheckedCreateWithoutBalanceEventsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutBalanceEventsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutBalanceEventsInput, Prisma.UserUncheckedUpdateWithoutBalanceEventsInput>
+}
+
+export type UserUpdateWithoutBalanceEventsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  account?: Prisma.AccountUpdateOneWithoutUserNestedInput
+  trades?: Prisma.TradeUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
+  positions?: Prisma.PositionUpdateManyWithoutUserNestedInput
+  journalEntries?: Prisma.JournalEntryUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  verificationTokens?: Prisma.VerificationTokenUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutBalanceEventsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  account?: Prisma.AccountUncheckedUpdateOneWithoutUserNestedInput
+  trades?: Prisma.TradeUncheckedUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
+  positions?: Prisma.PositionUncheckedUpdateManyWithoutUserNestedInput
+  journalEntries?: Prisma.JournalEntryUncheckedUpdateManyWithoutUserNestedInput
   refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
   passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
   verificationTokens?: Prisma.VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
@@ -1435,6 +1757,8 @@ export type UserCountOutputType = {
   trades: number
   orders: number
   positions: number
+  journalEntries: number
+  balanceEvents: number
   refreshTokens: number
   passwordResetTokens: number
   verificationTokens: number
@@ -1445,6 +1769,8 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   trades?: boolean | UserCountOutputTypeCountTradesArgs
   orders?: boolean | UserCountOutputTypeCountOrdersArgs
   positions?: boolean | UserCountOutputTypeCountPositionsArgs
+  journalEntries?: boolean | UserCountOutputTypeCountJournalEntriesArgs
+  balanceEvents?: boolean | UserCountOutputTypeCountBalanceEventsArgs
   refreshTokens?: boolean | UserCountOutputTypeCountRefreshTokensArgs
   passwordResetTokens?: boolean | UserCountOutputTypeCountPasswordResetTokensArgs
   verificationTokens?: boolean | UserCountOutputTypeCountVerificationTokensArgs
@@ -1480,6 +1806,20 @@ export type UserCountOutputTypeCountOrdersArgs<ExtArgs extends runtime.Types.Ext
  */
 export type UserCountOutputTypeCountPositionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.PositionWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountJournalEntriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.JournalEntryWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountBalanceEventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.BalanceEventWhereInput
 }
 
 /**
@@ -1527,6 +1867,8 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   trades?: boolean | Prisma.User$tradesArgs<ExtArgs>
   orders?: boolean | Prisma.User$ordersArgs<ExtArgs>
   positions?: boolean | Prisma.User$positionsArgs<ExtArgs>
+  journalEntries?: boolean | Prisma.User$journalEntriesArgs<ExtArgs>
+  balanceEvents?: boolean | Prisma.User$balanceEventsArgs<ExtArgs>
   refreshTokens?: boolean | Prisma.User$refreshTokensArgs<ExtArgs>
   passwordResetTokens?: boolean | Prisma.User$passwordResetTokensArgs<ExtArgs>
   verificationTokens?: boolean | Prisma.User$verificationTokensArgs<ExtArgs>
@@ -1582,6 +1924,8 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   trades?: boolean | Prisma.User$tradesArgs<ExtArgs>
   orders?: boolean | Prisma.User$ordersArgs<ExtArgs>
   positions?: boolean | Prisma.User$positionsArgs<ExtArgs>
+  journalEntries?: boolean | Prisma.User$journalEntriesArgs<ExtArgs>
+  balanceEvents?: boolean | Prisma.User$balanceEventsArgs<ExtArgs>
   refreshTokens?: boolean | Prisma.User$refreshTokensArgs<ExtArgs>
   passwordResetTokens?: boolean | Prisma.User$passwordResetTokensArgs<ExtArgs>
   verificationTokens?: boolean | Prisma.User$verificationTokensArgs<ExtArgs>
@@ -1598,6 +1942,8 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     trades: Prisma.$TradePayload<ExtArgs>[]
     orders: Prisma.$OrderPayload<ExtArgs>[]
     positions: Prisma.$PositionPayload<ExtArgs>[]
+    journalEntries: Prisma.$JournalEntryPayload<ExtArgs>[]
+    balanceEvents: Prisma.$BalanceEventPayload<ExtArgs>[]
     refreshTokens: Prisma.$RefreshTokenPayload<ExtArgs>[]
     passwordResetTokens: Prisma.$PasswordResetTokenPayload<ExtArgs>[]
     verificationTokens: Prisma.$VerificationTokenPayload<ExtArgs>[]
@@ -2013,6 +2359,8 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   trades<T extends Prisma.User$tradesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$tradesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TradePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   orders<T extends Prisma.User$ordersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$ordersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   positions<T extends Prisma.User$positionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$positionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PositionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  journalEntries<T extends Prisma.User$journalEntriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$journalEntriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$JournalEntryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  balanceEvents<T extends Prisma.User$balanceEventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$balanceEventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BalanceEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   refreshTokens<T extends Prisma.User$refreshTokensArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$refreshTokensArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RefreshTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   passwordResetTokens<T extends Prisma.User$passwordResetTokensArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$passwordResetTokensArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PasswordResetTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   verificationTokens<T extends Prisma.User$verificationTokensArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$verificationTokensArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$VerificationTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -2538,6 +2886,54 @@ export type User$positionsArgs<ExtArgs extends runtime.Types.Extensions.Internal
   take?: number
   skip?: number
   distinct?: Prisma.PositionScalarFieldEnum | Prisma.PositionScalarFieldEnum[]
+}
+
+/**
+ * User.journalEntries
+ */
+export type User$journalEntriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the JournalEntry
+   */
+  select?: Prisma.JournalEntrySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the JournalEntry
+   */
+  omit?: Prisma.JournalEntryOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.JournalEntryInclude<ExtArgs> | null
+  where?: Prisma.JournalEntryWhereInput
+  orderBy?: Prisma.JournalEntryOrderByWithRelationInput | Prisma.JournalEntryOrderByWithRelationInput[]
+  cursor?: Prisma.JournalEntryWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.JournalEntryScalarFieldEnum | Prisma.JournalEntryScalarFieldEnum[]
+}
+
+/**
+ * User.balanceEvents
+ */
+export type User$balanceEventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the BalanceEvent
+   */
+  select?: Prisma.BalanceEventSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the BalanceEvent
+   */
+  omit?: Prisma.BalanceEventOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BalanceEventInclude<ExtArgs> | null
+  where?: Prisma.BalanceEventWhereInput
+  orderBy?: Prisma.BalanceEventOrderByWithRelationInput | Prisma.BalanceEventOrderByWithRelationInput[]
+  cursor?: Prisma.BalanceEventWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.BalanceEventScalarFieldEnum | Prisma.BalanceEventScalarFieldEnum[]
 }
 
 /**

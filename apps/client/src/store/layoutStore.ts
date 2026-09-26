@@ -52,10 +52,7 @@ export interface PaneConfig {
   timeRangePreset: TimeRangePreset | null;
   indicators: IndicatorInstance[];
   chartType: ChartType;
-  /**
-   * Bybit market for this pane's history, candles and quotes. Everyone stays on 'spot' until the
-   * BP-2 market switch ships — that release also moves existing layouts to 'linear' (D7).
-   */
+  /** Bybit market for this pane's history, candles, quotes and orders (spot / USDT Perpetual). */
   category: MarketCategory;
 }
 
@@ -152,6 +149,13 @@ interface LayoutState {
   paneSizes: Record<LayoutId, PaneSizes>;
   /** Committed height (px) of the bottom panel after drag-to-resize — persisted */
   bottomPanelHeight: number;
+  /**
+   * D7 (BP-2): pre-BP-2 trading became USDT Perpetual. A layout saved before BP-2 starts false:
+   * the first time that user opens the dashboard with perpetual positions / orders, the active
+   * pane switches to USDT Perpetual once (useMarketHandoff), then this turns true for good.
+   * Fresh layouts start true — new users start on Spot.
+   */
+  marketHandoffDone: boolean;
 
   setLayout: (layout: LayoutId) => void;
   setActivePane: (index: number) => void;
@@ -161,6 +165,12 @@ interface LayoutState {
   setPaneChartType: (paneIndex: number, chartType: ChartType) => void;
   /** Follows symbol sync: with sync on, every pane switches market together. */
   setPaneCategory: (paneIndex: number, category: MarketCategory) => void;
+  /**
+   * Market and symbol in one update, so the pane's feed reconnects once (not once per field).
+   * Follows symbol sync like setPaneSymbol.
+   */
+  setPaneMarket: (paneIndex: number, category: MarketCategory, symbol: string) => void;
+  completeMarketHandoff: () => void;
   addIndicator: (paneIndex: number, instance: IndicatorInstance) => void;
   removeIndicator: (paneIndex: number, instanceId: string) => void;
   updateIndicator: (
@@ -192,6 +202,7 @@ export const useLayoutStore = create<LayoutState>()(
       },
       paneSizes: { ...DEFAULT_PANE_SIZES },
       bottomPanelHeight: 208,
+      marketHandoffDone: true,
 
       setLayout: (layout) => {
         const count = LAYOUT_PANE_COUNT[layout];
@@ -224,6 +235,21 @@ export const useLayoutStore = create<LayoutState>()(
           set({ panes: updated });
         }
       },
+
+      setPaneMarket: (paneIndex, category, symbol) => {
+        const { panes, syncOptions } = get();
+        const current = panes[paneIndex];
+        if (current?.category === category && current.symbol === symbol) return;
+        if (syncOptions.symbol) {
+          set({ panes: panes.map((p) => ({ ...p, symbol, category })) });
+        } else {
+          const updated = [...panes];
+          updated[paneIndex] = { ...updated[paneIndex], symbol, category };
+          set({ panes: updated });
+        }
+      },
+
+      completeMarketHandoff: () => set({ marketHandoffDone: true }),
 
       setPaneInterval: (paneIndex, interval) => {
         const { panes, syncOptions } = get();
@@ -335,7 +361,7 @@ export const useLayoutStore = create<LayoutState>()(
     }),
     {
       name: 'cd-layout',
-      version: 4,
+      version: 5,
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as Record<string, unknown>;
         // v1 → v2: add indicators to panes
@@ -359,6 +385,8 @@ export const useLayoutStore = create<LayoutState>()(
           const panes = state.panes as Array<Record<string, unknown>> | undefined;
           if (panes) state.panes = panes.map((pane) => ({ ...pane, category: 'spot' }));
         }
+        // v4 → v5: a layout from before BP-2 still owes the one-time USDT Perpetual hand-off (D7)
+        if (version < 5) state.marketHandoffDone = false;
         return state as unknown as LayoutState;
       },
       // Clamp activePane on hydration: persisted state could have an activePane
@@ -414,6 +442,7 @@ export const useLayoutStore = create<LayoutState>()(
             if (!merged.paneSizes[lid]) merged.paneSizes[lid] = DEFAULT_PANE_SIZES[lid];
           }
         }
+        if (typeof merged.marketHandoffDone !== 'boolean') merged.marketHandoffDone = true;
         // Ensure bottomPanelHeight is a valid number (field added after initial release)
         if (typeof merged.bottomPanelHeight !== 'number' || merged.bottomPanelHeight < 80) {
           merged.bottomPanelHeight = 208;

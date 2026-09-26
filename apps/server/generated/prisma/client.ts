@@ -77,6 +77,16 @@ export type Subscriber = Prisma.SubscriberModel
  */
 export type Account = Prisma.AccountModel
 /**
+ * Model SpotBalance
+ * 
+ */
+export type SpotBalance = Prisma.SpotBalanceModel
+/**
+ * Model SymbolSetting
+ * 
+ */
+export type SymbolSetting = Prisma.SymbolSettingModel
+/**
  * Model Position
  * 
  */
@@ -91,3 +101,18 @@ export type Order = Prisma.OrderModel
  * 
  */
 export type Trade = Prisma.TradeModel
+/**
+ * Model JournalEntry
+ * 
+ */
+export type JournalEntry = Prisma.JournalEntryModel
+/**
+ * Model BalanceEvent
+ * 
+ */
+export type BalanceEvent = Prisma.BalanceEventModel
+/**
+ * Model EngineLease
+ * 
+ */
+export type EngineLease = Prisma.EngineLeaseModel

@@ -219,6 +219,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
         setTimeout(() => {
           // Password change forces logout server-side
           clearAuth();
+          usePaperStore.getState().clear();
           window.location.href = '/login';
         }, 2000)
       );
@@ -247,8 +248,8 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
       await authApi.requestDeletion({ password: deletePassword }, accessToken);
       // Success: requestDeletion forces logout server-side
       clearAuth();
-      // Wipe localStorage as per plan
-      localStorage.removeItem('cd-paper-trading');
+      usePaperStore.getState().clear();
+      // Wipe localStorage as per plan (trading state is server-side since BP-1)
       localStorage.removeItem('cd-layout');
       localStorage.removeItem('cd-paper-col-prefs');
       localStorage.removeItem('cd-cookie-notice-dismissed');
@@ -276,7 +277,9 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
       },
       paperTrading: {
         balance: paperState.balance,
-        leverage: paperState.leverage,
+        spotBalances: paperState.spotBalances,
+        defaultLeverage: paperState.leverage,
+        symbolLeverage: paperState.symbolLeverage,
         realizedPnl: paperState.realizedPnl,
         positions: paperState.positions,
         pendingOrders: paperState.pendingOrders,

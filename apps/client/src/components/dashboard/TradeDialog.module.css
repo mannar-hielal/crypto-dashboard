@@ -1,0 +1,143 @@
+/* Trading dialogs — leverage chip + modal, spot TP / SL (BYBIT_PARITY_PLAN BP-2). Colours from tokens.ts via the
+   @theme mirror in index.css; bg.modal / shadow.modal / border.card values noted inline. */
+
+.chip {
+  display: flex;
+  flex-shrink: 0;
+  white-space: nowrap;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 2px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08); /* border.card */
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-brand-white);
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.chip:hover {
+  border-color: var(--color-brand-purple-dark);
+}
+
+.chip:focus-visible,
+.preset:focus-visible,
+.action:focus-visible {
+  outline: 2px solid var(--color-brand-purple-dark);
+  outline-offset: 3px;
+}
+
+.muted {
+  color: var(--color-brand-muted);
+  font-weight: 500;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.modal {
+  width: 100%;
+  max-width: 320px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08); /* border.card */
+  border-radius: 10px;
+  background: var(--color-bg-footer); /* bg.modal */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); /* shadow.modal */
+}
+
+.title {
+  margin: 0 0 12px;
+  color: var(--color-brand-white);
+  font-weight: 600;
+}
+
+.presets {
+  display: flex;
+  gap: 6px;
+}
+
+.preset {
+  flex: 1;
+  padding: 6px 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-brand-muted);
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.preset[aria-pressed='true'] {
+  border-color: var(--color-brand-purple);
+  color: var(--color-brand-white);
+}
+
+.preset:disabled,
+.action:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.note {
+  margin: 10px 0 0;
+  color: var(--color-brand-muted);
+  line-height: 1.375;
+}
+
+.error {
+  margin: 8px 0 0;
+  color: var(--color-brand-red);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.action {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 25px; /* radius.button */
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cancel {
+  background: var(--color-bg-surface);
+  color: var(--color-brand-muted);
+}
+
+.confirm {
+  background: linear-gradient(
+    90deg,
+    var(--color-brand-grad-from) 0%,
+    var(--color-brand-grad-to) 100%
+  ); /* gradient.brand */
+  color: var(--color-brand-white);
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fieldLabel {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--color-brand-muted);
+}

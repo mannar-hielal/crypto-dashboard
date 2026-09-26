@@ -28,7 +28,7 @@ Adapted from `tradermonty/claude-trading-skills` → `skills/backtest-expert/SKI
 2. **Codify entry/exit/sizing/filter/universe rules with zero discretion**. A discretionary rule cannot be backtested. If a rule says "draw a trendline by eye," it fails here — require a programmatic definition (e.g. "252-bar linear regression slope").
 3. **Initial backtest**: 5+ years (10+ preferred), multiple regimes (bull/bear/range/mix), realistic costs. Crypto specifics:
    - Bybit OHLCV via `/api/market/history?symbol=BTCUSDT&interval=1d&limit=1000` (1000-bar server max — for longer, walk back with `endTime` pagination).
-   - Account for 0.07% taker fee per side (`COMMISSION_RATE` from `paperStore.ts`).
+   - Account for Bybit's taker fee per side — USDT Perpetual 0.055%, Spot 0.1% (`FEE_RATES` from `@crypto-dashboard/sdk`).
    - Perp funding every 8h (3×/day) — if holding > 8h, model funding as a friction cost. Use Bybit's historical funding API if accessible; otherwise estimate 0.01%/8h as a baseline (long side pays in bull, receives in bear).
    - Slippage: model 1 tick on entry + 1 tick on exit minimum. For thicker book pairs (BTCUSDT) ~0.01% slippage; thinner pairs (DOGEUSDT) up to 0.1%.
 4. **Stress test parameters**: stop loss ±50–150% (crypto often wants ±75% due to vol), profit target ±50–150%, entry/exit timing ±15–30min, slippage 1.5–2× base, worst-case fills, partial fills/rejections. **Seek plateaus, not peaks.** A parameter plateau = robustness; a peak = overfit.
@@ -106,7 +106,7 @@ If you want a crypto-native evaluator with funding and 24/7 calendar in scope, p
 
 ## Output discipline
 
-- Always state sample size, date range tested, slippage assumption, funding-rate assumption, commission assumption (`COMMISSION_RATE = 0.0007`).
+- Always state sample size, date range tested, slippage assumption, funding-rate assumption, commission assumption (`FEE_RATES`: perp taker 0.00055 / maker 0.0002, spot 0.001).
 - Never claim a backtest edge on fewer than 30 trades.
 - OOS / IS expectancy ratio must be quoted next to any "Deploy" recommendation.
 - State the worst regime year and why — survivors of any dimension are still susceptible.

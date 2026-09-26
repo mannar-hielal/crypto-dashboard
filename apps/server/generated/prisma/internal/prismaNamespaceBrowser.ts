@@ -58,9 +58,14 @@ export const ModelName = {
   EmailChangeToken: 'EmailChangeToken',
   Subscriber: 'Subscriber',
   Account: 'Account',
+  SpotBalance: 'SpotBalance',
+  SymbolSetting: 'SymbolSetting',
   Position: 'Position',
   Order: 'Order',
-  Trade: 'Trade'
+  Trade: 'Trade',
+  JournalEntry: 'JournalEntry',
+  BalanceEvent: 'BalanceEvent',
+  EngineLease: 'EngineLease'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -162,6 +167,8 @@ export const AccountScalarFieldEnum = {
   availableBalance: 'availableBalance',
   unrealizedPnl: 'unrealizedPnl',
   realizedPnl: 'realizedPnl',
+  leverage: 'leverage',
+  version: 'version',
   lastReset: 'lastReset',
   resetCount: 'resetCount',
   createdAt: 'createdAt',
@@ -169,6 +176,30 @@ export const AccountScalarFieldEnum = {
 } as const
 
 export type AccountScalarFieldEnum = (typeof AccountScalarFieldEnum)[keyof typeof AccountScalarFieldEnum]
+
+
+export const SpotBalanceScalarFieldEnum = {
+  id: 'id',
+  accountId: 'accountId',
+  coin: 'coin',
+  free: 'free',
+  locked: 'locked',
+  avgCost: 'avgCost',
+  updatedAt: 'updatedAt'
+} as const
+
+export type SpotBalanceScalarFieldEnum = (typeof SpotBalanceScalarFieldEnum)[keyof typeof SpotBalanceScalarFieldEnum]
+
+
+export const SymbolSettingScalarFieldEnum = {
+  id: 'id',
+  accountId: 'accountId',
+  symbol: 'symbol',
+  leverage: 'leverage',
+  marginMode: 'marginMode'
+} as const
+
+export type SymbolSettingScalarFieldEnum = (typeof SymbolSettingScalarFieldEnum)[keyof typeof SymbolSettingScalarFieldEnum]
 
 
 export const PositionScalarFieldEnum = {
@@ -181,6 +212,11 @@ export const PositionScalarFieldEnum = {
   quantity: 'quantity',
   entryPrice: 'entryPrice',
   margin: 'margin',
+  category: 'category',
+  leverage: 'leverage',
+  marginMode: 'marginMode',
+  entryFee: 'entryFee',
+  closeFeeReserve: 'closeFeeReserve',
   takeProfit: 'takeProfit',
   stopLoss: 'stopLoss',
   openedAt: 'openedAt',
@@ -192,9 +228,11 @@ export type PositionScalarFieldEnum = (typeof PositionScalarFieldEnum)[keyof typ
 
 export const OrderScalarFieldEnum = {
   id: 'id',
+  seq: 'seq',
   refId: 'refId',
   userId: 'userId',
   accountId: 'accountId',
+  category: 'category',
   symbol: 'symbol',
   side: 'side',
   orderType: 'orderType',
@@ -207,6 +245,12 @@ export const OrderScalarFieldEnum = {
   averageFilledPrice: 'averageFilledPrice',
   margin: 'margin',
   commission: 'commission',
+  leverage: 'leverage',
+  reserved: 'reserved',
+  feeRate: 'feeRate',
+  feeAsset: 'feeAsset',
+  isMaker: 'isMaker',
+  ocoGroup: 'ocoGroup',
   status: 'status',
   rejectionReason: 'rejectionReason',
   createdAt: 'createdAt',
@@ -220,10 +264,12 @@ export type OrderScalarFieldEnum = (typeof OrderScalarFieldEnum)[keyof typeof Or
 
 export const TradeScalarFieldEnum = {
   id: 'id',
+  seq: 'seq',
   refId: 'refId',
   userId: 'userId',
   accountId: 'accountId',
   orderId: 'orderId',
+  category: 'category',
   symbol: 'symbol',
   side: 'side',
   quantity: 'quantity',
@@ -232,6 +278,7 @@ export const TradeScalarFieldEnum = {
   totalCost: 'totalCost',
   commission: 'commission',
   pnl: 'pnl',
+  grossPnl: 'grossPnl',
   pnlPercent: 'pnlPercent',
   openedAt: 'openedAt',
   executedAt: 'executedAt',
@@ -239,6 +286,48 @@ export const TradeScalarFieldEnum = {
 } as const
 
 export type TradeScalarFieldEnum = (typeof TradeScalarFieldEnum)[keyof typeof TradeScalarFieldEnum]
+
+
+export const JournalEntryScalarFieldEnum = {
+  id: 'id',
+  seq: 'seq',
+  userId: 'userId',
+  accountId: 'accountId',
+  time: 'time',
+  text: 'text',
+  isUserNote: 'isUserNote',
+  pnl: 'pnl',
+  createdAt: 'createdAt'
+} as const
+
+export type JournalEntryScalarFieldEnum = (typeof JournalEntryScalarFieldEnum)[keyof typeof JournalEntryScalarFieldEnum]
+
+
+export const BalanceEventScalarFieldEnum = {
+  id: 'id',
+  seq: 'seq',
+  userId: 'userId',
+  accountId: 'accountId',
+  time: 'time',
+  balanceBefore: 'balanceBefore',
+  balanceAfter: 'balanceAfter',
+  pnl: 'pnl',
+  action: 'action',
+  createdAt: 'createdAt'
+} as const
+
+export type BalanceEventScalarFieldEnum = (typeof BalanceEventScalarFieldEnum)[keyof typeof BalanceEventScalarFieldEnum]
+
+
+export const EngineLeaseScalarFieldEnum = {
+  id: 'id',
+  holder: 'holder',
+  expiresAt: 'expiresAt',
+  lastTickAt: 'lastTickAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type EngineLeaseScalarFieldEnum = (typeof EngineLeaseScalarFieldEnum)[keyof typeof EngineLeaseScalarFieldEnum]
 
 
 export const SortOrder = {

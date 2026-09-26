@@ -139,11 +139,4 @@ describe('lastKnownPrices', () => {
     expect(getLastKnownPrice('BTCUSDT', 'spot')).toBe(100);
     expect(getLastKnownPrice('BTCUSDT', 'linear')).toBe(99);
   });
-
-  it('defaults reads to spot (positions have no category until BP-2)', () => {
-    setLastKnownPrice('spot', 'ETHUSDT', 2000);
-    setLastKnownPrice('linear', 'SOLUSDT', 150);
-    expect(getLastKnownPrice('ETHUSDT')).toBe(2000);
-    expect(getLastKnownPrice('SOLUSDT')).toBeUndefined();
-  });
 });

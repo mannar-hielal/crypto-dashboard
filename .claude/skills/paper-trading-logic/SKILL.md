@@ -1,6 +1,6 @@
 ---
 name: paper-trading-logic
-description: Use for any work involving paperStore, paper trading, order placement/fill/cancel, TP/SL monitoring, bracket orders, journal entries, leverage, commission accounting, balance/PnL math, OrderAccountManagementPanel, TradingPanel, PositionEditPanel, PendingOrderEditPanel, useTPSLMonitor, usePendingOrderMonitor, or Bybit real-money integration. Covers exact business rules from docs/APP_LOG.md so logic bugs don't regress.
+description: Use for any work involving paperStore, paper trading, order placement/fill/cancel, TP/SL monitoring, bracket orders, journal entries, leverage, commission accounting, balance/PnL math, OrderAccountManagementPanel, TradingPanel, PositionEditPanel, PendingOrderEditPanel, the server engine (apps/server/src/trading: MatchingEngine, TradingService, engine/actions), usePaperFeed, or Bybit real-money integration. Covers exact business rules from docs/APP_LOG.md so logic bugs don't regress.
 ---
 
 # Paper Trading — Business Rules (cryptopapertrade.com)
@@ -9,46 +9,85 @@ Source of truth: `docs/APP_LOG.md` (sections "Business Logic Rules", "paperStore
 
 ## Files
 
-| File                                                                                       | Role                                                                                         |
-| ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
-| `apps/client/src/store/paperStore.ts`                                                      | All paper trading state + actions; exports `COMMISSION_RATE = 0.0007`                        |
-| `apps/client/src/hooks/useTPSLMonitor.ts`                                                  | Auto-close positions on TP/SL hit; exports pure `checkTPSL()` (unit-tested)                  |
-| `apps/client/src/hooks/usePendingOrderMonitor.ts`                                          | Executes limit/stop pending orders on price trigger                                          |
-| `apps/client/src/components/dashboard/TradingPanel.tsx`                                    | Right sidebar order entry; exports `OrderTab`                                                |
-| `apps/client/src/components/dashboard/OrderAccountManagementPanel.tsx`                     | Positions · Orders · Order History · Balance History · Journal tabs + Account Settings modal |
-| `apps/client/src/components/dashboard/PositionEditPanel.tsx` / `PendingOrderEditPanel.tsx` | TV-style edit panels wired via `editTarget` state in `DashboardPage`                         |
+**Since BP-1 (2026-09-26) the server executes every trade** (`docs/BYBIT_PARITY_PLAN.md` BP-1). Change trading
+rules in `apps/server/src/trading/engine/`, never in the client. **Since BP-2 there are two markets** (`category`):
+`'spot'` (coin balances, 1×, no shorting) and `'linear'` = USDT Perpetual (positions, per-symbol leverage). Every
+position, order, trade and trigger names its market.
 
-## State (`paperStore.ts`, persisted key `cd-paper-trading`, version 1 + `migrate`)
+| File                                                                                       | Role                                                                                                                                                                                 |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `apps/server/src/trading/engine/actions.ts`                                                | **USDT Perpetual rules**: pure, Decimal. Market with netting / flip, close, limit / stop (crossing = taker now), cancel / edit / exit legs, fills, per-symbol leverage, notes, reset |
+| `apps/server/src/trading/engine/spot.ts`                                                   | **Spot rules**: buy / sell, limit (USDT or coin lock), TP / SL OCO legs, fees in the received asset, average cost                                                                    |
+| `apps/server/src/trading/engine/draft.ts`                                                  | Shared working copy (incl. coin balances), order sizing (`qty` / `value` / legacy margin), book prices, record builders                                                              |
+| `apps/server/src/trading/bybitSpec.ts`                                                     | Bybit VIP-0 fee rates, rejection wording, qty-step / tick / minimum checks, fallback instrument rules                                                                                |
+| `apps/server/src/trading/engine/triggers.ts`                                               | `checkTPSL`, `checkPendingTrigger`, `evaluateTick` (live, tick price) and `evaluateCandle` (backfill sweep)                                                                          |
+| `apps/server/src/trading/engine/journal.ts` / `format.ts`                                  | Journal wording and `fmtPrice` (kept word for word from the browser engine)                                                                                                          |
+| `apps/server/src/trading/TradingService.ts`                                                | Intent → live quote (ask / bid, refused if > 10 s old) + instrument rules → engine → `AccountRepository` → `PaperEventBus`                                                           |
+| `apps/server/src/trading/MatchingEngine.ts`                                                | 24/7 TP/SL + pending triggers per market (`category:symbol`); the `EngineLease` single executor; gap backfill per market                                                             |
+| `apps/server/src/trading/AccountRepository.ts`                                             | One transaction per action, `Account.version` optimistic guard, `refId` for pre-BP-1 rows                                                                                            |
+| `apps/server/src/routes/paper/index.ts` / `ws.ts`                                          | Intent-only REST API and the private WS `/api/paper/ws`                                                                                                                              |
+| `apps/client/src/store/paperStore.ts`                                                      | **Read model**: `hydrate` / `applyDelta` (version-gated) / `clear`; actions call `paperApi`                                                                                          |
+| `apps/client/src/hooks/usePaperFeed.ts`                                                    | Private WS: snapshot + deltas, server-decided sounds                                                                                                                                 |
+| `apps/client/src/components/dashboard/TradingPanel.tsx`                                    | Order entry: market tabs, BTC / USDT amount, `1x ▾` leverage chip, per-market estimates (`lib/orderMath.ts`) — pre-validation only                                                   |
+| `apps/client/src/lib/marketRoutes.ts` / `hooks/useMarketUrlSync.ts`                        | Market URLs (`/dashboard/spot/BTC/USDT`, `/dashboard/usdt/BTCUSDT`) ↔ the active pane; D7 hand-off                                                                                   |
+| `apps/client/src/components/dashboard/OrderAccountManagementPanel.tsx`                     | Positions · Orders · Order History · Balance History · Journal tabs + Account Settings modal                                                                                         |
+| `apps/client/src/components/dashboard/PositionEditPanel.tsx` / `PendingOrderEditPanel.tsx` | TV-style edit panels                                                                                                                                                                 |
+
+Tests: engine `apps/server/src/trading/engine/__tests__/` (the ported store and monitor cases), services
+`apps/server/src/trading/__tests__/`, routes / WS `apps/server/src/__tests__/paper.test.ts`.
+
+## State
+
+The server holds everything: `Account` (balance = `availableBalance` = the USDT wallet, `realizedPnl`, default
+`leverage`, `version`), `SymbolSetting` (per-symbol leverage), `SpotBalance` (`free`, `locked`, `avgCost` per coin),
+`Position` (USDT Perpetual; `leverage`, `entryFee`, `closeFeeReserve`), `Order` (PENDING rows = pending orders with
+`reserved`, other rows = order history with `feeRate` / `feeAsset` / `isMaker`), `Trade`, `JournalEntry` and
+`BalanceEvent` (capped at 200 per user). The client mirrors it, not persisted:
 
 ```
-balance            free cash (entryUsdtAmount deducted at open)
+balance            free USDT (margin, fees and reserves already deducted)
+spotBalances[]     coin balances (free / locked / avgCost)
+symbolLeverage     per-symbol leverage (leverageFor(state, symbol); `leverage` = default)
 positions[]        open positions
-pendingOrders[]    limit/stop orders awaiting trigger
+pendingOrders[]    limit/stop orders awaiting trigger (carry their placement leverage)
 history[]          closed trades (MAX_HISTORY = 100)
-orders[]           all HistoricalOrder records (MAX_HISTORY * 2)
+orders[]           HistoricalOrder records (200)
 realizedPnl        net of all commissions
-balanceLog[]       balance change log (MAX_HISTORY * 2)
+balanceLog[]       balance change log (200)
 journal[]          trading journal (MAX_JOURNAL = 200)
+version            server account version — applyDelta ignores anything not newer
 ```
 
-**Every array cap uses `.slice(0, MAX_*)` on every `set` — no unbounded growth.** `bug-sweep` P4-59 enforces this for new fields.
+**Every client list is capped on every change (`prepend(..., MAX_*)`) — no unbounded growth.** `bug-sweep` P4-59 enforces this for new fields.
 
-## Commission (exact — do not approximate)
+## Fees (exact — do not approximate; BP-2, Bybit VIP-0)
 
-- `COMMISSION_RATE = 0.0007` (0.07% taker) — exported from `paperStore.ts`.
-- **Open**: `balance -= usdtAmount + usdtAmount * COMMISSION_RATE`.
-- **Close**: `commission = qty * exitPrice * COMMISSION_RATE`.
-- **Balance check**: `usdtAmount + usdtAmount * COMMISSION_RATE > balance` → reject.
-- `realizedPnl` = `gross_pnl − exitCommission − entryCommission` (both legs).
-- `BalanceEvent.pnl` = `pnl − exitCommission` (net balance impact at close).
-- Leverage: paper learning-app cap **max 10×** (`paperStore.leverage`, persisted via Account Settings modal). Trade value = `usdtAmount * leverage`.
+- Rates: `bybitSpec.ts` `FEE_RATES` (server) = `FEE_RATES` in `generated/CDSDK/spec/bybit.ts` (client estimates) — a
+  server test keeps them identical. **USDT Perpetual** taker 0.055% / maker 0.02%; **Spot** 0.1%.
+- **Liquidity:** market, stop, TP/SL and a limit that crosses the book at placement → taker; a resting limit → maker.
+- **Perp open:** `balance -= IM + openFee + estCloseFee` — IM = `qty × price / leverage`, fees on notional; the close
+  estimate is stored as `closeFeeReserve` and comes back at close.
+- **Perp close:** `balance += IM + closeFeeReserve + pnl − closeFee` (floored at 0);
+  `realizedPnl += pnl − closeFee − entryFee` (the **stored** entry fee).
+- **Resting order:** reserves IM + taker open + taker close at the trigger (`reserved`); cancel / edit / fill refund
+  exactly `reserved`.
+- **Spot:** a buy pays `qty × price` USDT and the fee comes out of the coins (rounded up to 8 dp); a sell needs
+  `free ≥ qty` and pays the fee in USDT. Realized = `(price − avgCost) × qty − fee`.
+- `BalanceEvent.pnl` = `pnl − closeFee` (net balance impact at close).
+- **Never recompute past fees:** pre-BP-2 rows carry the 0.07% they paid (migration backfill), and a row with no
+  stored fee is read at that legacy rate.
+- **Fill prices:** market buy at the ask, sell at the bid; a resting limit at its own price; stops / TP / SL trigger on
+  the last price and fill at the ask / bid; a backfilled trigger at the level it crossed.
+- **Size rules:** qty rounded down to `qtyStep`; below `minOrderQty` / `minNotional` or off the tick grid → 422 with
+  Bybit's wording, nothing written.
+- **Leverage:** per symbol, max 10×, refused while the symbol has an open position or active order.
 
 ## TP/SL bracket lifecycle (TV-style — easy to break)
 
 - **Long**: TP when `price >= takeProfit`; SL when `price <= stopLoss`.
 - **Short**: TP when `price <= takeProfit`; SL when `price >= stopLoss`.
 - `checkTPSL()` is **pure + exported + unit-tested** — keep doing that for any new pure logic (`bug-sweep` P6-84).
-- `useTPSLMonitor` evaluates positions matching the active symbol only — cross-symbol false triggers are a known bug risk; never extend the filter without a test.
+- The `MatchingEngine` evaluates a tick only against that symbol's accounts (`evaluateTick(symbol, …)`) — cross-symbol false triggers are the 4.18 regression; `triggers.test.ts` guards it.
 - **Bracket**: placing limit/stop with TP + SL creates 3 linked rows in the Orders tab: parent + TP child + SL child.
   - Pre-fill/trigger: parent = Working, children = Inactive.
   - Cancelling parent cancels all 3 (`cancelPendingOrder`).
@@ -65,7 +104,7 @@ journal[]          trading journal (MAX_JOURNAL = 200)
 - `placeLimitOrder` / `placeStopOrder`: deduct `usdtAmount + commission` immediately; reserve `usdtAmount` in `pendingOrders`; no historical fill row yet.
 - `cancelPendingOrder`: refunds `usdtAmount + commission`; writes cancelled parent `HistoricalOrder` + cancelled child TP/SL rows when present.
 - `cancelExitOrder`: cancels ONE active exit leg for an open position; keeps sibling leg active; writes cancelled `HistoricalOrder`.
-- Execution (pending → open position) is handled by `usePendingOrderMonitor` ✅.
+- Execution (pending → open position) is `fillPending` in the server engine, run 24/7 by the `MatchingEngine` ✅. It uses the order's placement leverage (S2) and records a rejected fill instead of dropping it (S1).
 
 ## Journal
 
@@ -73,7 +112,7 @@ journal[]          trading journal (MAX_JOURNAL = 200)
 - `isUserNote: true` → user-added/editable (`editJournalEntry` allowed).
 - `isUserNote: false` → system-generated, read-only (`editJournalEntry` guards at store level).
 - `pnl` (net = gross − exit commission) lives only on close entries — undefined on open/pending/user notes.
-- `closePosition` attaches it to the exec entry; `useTPSLMonitor` passes via `addJournalNote(text, false, netPnl)`.
+- `closePosition` attaches it to the exec entry; a TP/SL close (`closeOnExit`) attaches it to its "Auto-closed …" reason entry.
 
 ## Edit panels (`editTarget` state in `DashboardPage`)
 
