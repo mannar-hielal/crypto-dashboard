@@ -57,12 +57,23 @@ VALUE_FLAGS = {
                       "-R", "--repo"},
 }
 
-HEREDOC_RE = re.compile(r"<<-?\s*(['\"]?)(\w+)\1[^\n]*\n.*?\n\s*\2\s*(?=\n|$)", re.DOTALL)
+# Heredoc body up to its real terminator line: the tag alone at column 0, or after leading tabs
+# only for `<<-` (bash semantics). An indented or padded tag-like line inside the body doesn't end it.
+HEREDOC_RE = re.compile(
+    r"<<(-)?\s*(['\"]?)(\w+)\2[^\n]*\n(?:.*?\n)??(?(1)\t*)\3(?=\n|$)", re.DOTALL
+)
 # Shell separators: ; & | ( ) newline backtick — only when unquoted (see _segments).
 SEPARATOR_CHARS = ";&|()\n`"
 # Fallback only, for input shlex can't parse.
 SEGMENT_SPLIT_RE = re.compile(r"&&|\|\||[;|\n]|\$\(|`")
 ENV_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+# Words that can directly precede the real command in a clause, e.g. `if gh …`, `while ! gh …`,
+# `env X=1 gh …`, `time gh …`.
+LEADING_WORDS = {"{", "!", "$", "if", "elif", "then", "else", "while", "until", "do",
+                 "time", "command", "exec", "env", "nohup"}
+# Interpreters whose `-c <script>` argument is itself a shell command string.
+SHELLS = {"bash", "sh", "zsh", "dash", "ksh"}
+MAX_NESTING = 3
 PR_URL_RE = re.compile(r"/pull/(\d+)")
 VAR_REF_RE = re.compile(r"^\$(?:\{(\w+)\}|(\w+))$")
 
@@ -116,7 +127,7 @@ def _segments(command):
     return segments
 
 
-def gh_invocations(command):
+def gh_invocations(command, _depth=0):
     """Every `gh <group> <sub> ...` actually invoked by a shell command string.
 
     Returns a list of dicts: {sub: (group, sub), target: str|None, repo: str|None}, where
@@ -131,11 +142,16 @@ def gh_invocations(command):
         # Leading NAME=value words: remembered (a bare assignment sets a shell variable for the
         # rest of the command; a prefix one only for this command, but treating both as set is
         # the safer reading for a gate).
-        while tokens and (ENV_ASSIGN_RE.match(tokens[0]) or tokens[0] in ("{", "then", "do", "!", "$")):
+        while tokens and (ENV_ASSIGN_RE.match(tokens[0]) or tokens[0] in LEADING_WORDS):
             if ENV_ASSIGN_RE.match(tokens[0]):
                 name, _, value = tokens[0].partition("=")
                 variables[name] = value
             tokens = tokens[1:]
+        script = _shell_c_script(tokens)
+        if script is not None:
+            if _depth < MAX_NESTING:
+                found.extend(gh_invocations(script, _depth + 1))
+            continue
         if len(tokens) < 3 or tokens[0] != "gh":
             continue
         sub = (tokens[1], tokens[2])
@@ -151,6 +167,18 @@ def gh_invocations(command):
         )
         found.append(inv)
     return found
+
+
+def _shell_c_script(tokens):
+    """The script string of `bash -c '<script>'` (also `-lc`, `-ec`, `/bin/sh -c`), else None."""
+    if not tokens or tokens[0].rsplit("/", 1)[-1] not in SHELLS:
+        return None
+    for i, tok in enumerate(tokens[1:], start=1):
+        if tok.startswith("-") and not tok.startswith("--") and "c" in tok[1:]:
+            return tokens[i + 1] if i + 1 < len(tokens) else None
+        if not tok.startswith("-"):
+            return None  # `bash script.sh` — a file, not a -c string
+    return None
 
 
 def _expand(value, variables):

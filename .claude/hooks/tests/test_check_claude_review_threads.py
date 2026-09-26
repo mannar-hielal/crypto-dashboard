@@ -282,6 +282,47 @@ class ShellExpansions(unittest.TestCase):
         self.assertEqual(self.run_main("PostToolUse", "gh pr checks $PR")[0], 0)
 
 
+class ShellWrappers(unittest.TestCase):
+    """Review threads :134, :139, :60 — keywords, `bash -c`, and heredoc terminators."""
+
+    def test_while_not_prefix(self):
+        self.assertEqual(invs("while ! gh pr merge 130; do sleep 1; done"), [(MERGE, "130", None)])
+
+    def test_if_prefix(self):
+        self.assertEqual(invs("if gh pr merge 130 --auto; then echo done; fi"), [(MERGE, "130", None)])
+
+    def test_until_and_elif_prefixes(self):
+        self.assertEqual(invs("until gh pr merge 1; do :; done"), [(MERGE, "1", None)])
+        self.assertEqual(invs("if false; then :; elif gh pr merge 2; then :; fi"), [(MERGE, "2", None)])
+
+    def test_env_and_time_prefixes(self):
+        self.assertEqual(invs("env GH_DEBUG=1 gh pr merge 3"), [(MERGE, "3", None)])
+        self.assertEqual(invs("time gh pr merge 4"), [(MERGE, "4", None)])
+
+    def test_bash_c(self):
+        self.assertEqual(invs('bash -c "gh pr merge 130"'), [(MERGE, "130", None)])
+
+    def test_sh_c_single_quotes(self):
+        self.assertEqual(invs("sh -c 'gh pr merge 130 --squash'"), [(MERGE, "130", None)])
+
+    def test_bash_lc_and_absolute_path(self):
+        self.assertEqual(invs('/bin/bash -lc "cd x && gh pr merge 5"'), [(MERGE, "5", None)])
+
+    def test_bash_script_file_is_not_a_command_string(self):
+        self.assertEqual(invs("bash deploy.sh 130"), [])
+
+    def test_indented_tag_inside_heredoc_does_not_end_it(self):
+        cmd = "git commit -F - <<'EOF'\nexample:\n  EOF\ngh pr merge 999 should stay hidden\nEOF\n"
+        self.assertEqual(invs(cmd), [])
+
+    def test_dash_heredoc_allows_tab_indented_terminator(self):
+        cmd = "cat <<-EOF\n\tgh pr merge 9 hidden\n\tEOF\ngh pr merge 10"
+        self.assertEqual(invs(cmd), [(MERGE, "10", None)])
+
+    def test_empty_heredoc(self):
+        self.assertEqual(invs("cat <<EOF\nEOF\ngh pr merge 11"), [(MERGE, "11", None)])
+
+
 class FailOpen(unittest.TestCase):
     """Review thread :106 — an unknown/missing event never runs the check."""
 
