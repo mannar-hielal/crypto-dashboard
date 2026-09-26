@@ -51,6 +51,8 @@ targets. That parsing is pure and has unit tests, which make no `gh` or network 
 python3 .claude/hooks/tests/test_check_claude_review_threads.py
 ```
 
+They run as part of `pnpm test` (`pnpm test:hooks`), so the pre-commit hook and CI both run them.
+
 ## Testing a script by hand
 
 Each script just reads JSON from stdin, so it can be exercised directly without going through

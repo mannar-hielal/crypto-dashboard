@@ -56,6 +56,9 @@ VALUE_FLAGS = {
 }
 
 HEREDOC_RE = re.compile(r"<<-?\s*(['\"]?)(\w+)\1[^\n]*\n.*?\n\s*\2\s*(?=\n|$)", re.DOTALL)
+# Shell separators: ; & | ( ) newline backtick — only when unquoted (see _segments).
+SEPARATOR_CHARS = ";&|()\n`"
+# Fallback only, for input shlex can't parse.
 SEGMENT_SPLIT_RE = re.compile(r"&&|\|\||[;|\n]|\$\(|`")
 ENV_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 PR_URL_RE = re.compile(r"/pull/(\d+)")
@@ -80,22 +83,45 @@ query($o: String!, $n: String!, $p: Int!, $after: String) {
 # ─── Pure parsing (unit-tested) ─────────────────────────────────────────────────
 
 
+def _segments(command):
+    """Token lists of each simple command, split only on *unquoted* shell separators.
+
+    shlex with punctuation_chars keeps quoted text intact, so a `|` or `;` inside `--subject "…"`
+    or `--jq '…'` never splits a command. Newline is a separator only outside quotes.
+    Unparseable input (e.g. an unbalanced quote) falls back to a plain regex split.
+    """
+    lex = shlex.shlex(command, posix=True, punctuation_chars=SEPARATOR_CHARS)
+    lex.whitespace = " \t\r"
+    lex.whitespace_split = True
+    lex.commenters = "#"
+    try:
+        tokens = list(lex)
+    except ValueError:
+        return [seg.split() for seg in SEGMENT_SPLIT_RE.split(command)]
+
+    segments, current = [], []
+    for tok in tokens:
+        if tok and all(ch in SEPARATOR_CHARS for ch in tok):
+            segments.append(current)
+            current = []
+        else:
+            current.append(tok)
+    segments.append(current)
+    return segments
+
+
 def gh_invocations(command):
     """Every `gh <group> <sub> ...` actually invoked by a shell command string.
 
     Returns a list of dicts: {sub: (group, sub), target: str|None, repo: str|None}, where
     `target` is the PR number/URL/branch (or run id for `gh run`) the command names, and `repo`
     is its `-R/--repo` value. Heredoc bodies are dropped and the command is split into shell
-    segments first, so text that merely mentions `gh pr merge` never counts.
+    segments on unquoted separators, so text that merely mentions a gh command never counts.
     """
     stripped = HEREDOC_RE.sub("", command)
     found = []
-    for segment in SEGMENT_SPLIT_RE.split(stripped):
-        try:
-            tokens = shlex.split(segment, comments=True)
-        except ValueError:
-            tokens = segment.split()
-        while tokens and (ENV_ASSIGN_RE.match(tokens[0]) or tokens[0] in ("(", "{", "then", "do", "!")):
+    for tokens in _segments(stripped):
+        while tokens and (ENV_ASSIGN_RE.match(tokens[0]) or tokens[0] in ("{", "then", "do", "!", "$")):
             tokens = tokens[1:]
         if len(tokens) < 3 or tokens[0] != "gh":
             continue

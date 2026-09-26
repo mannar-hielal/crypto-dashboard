@@ -63,6 +63,37 @@ class InvocationDetection(unittest.TestCase):
         )
 
 
+class QuotedSeparators(unittest.TestCase):
+    """Review thread :93 — separators inside quotes never split a command."""
+
+    def test_pipe_in_quoted_subject_keeps_target(self):
+        self.assertEqual(invs('gh pr merge --subject "Fix | thing" 130'), [(MERGE, "130", None)])
+
+    def test_semicolon_in_quoted_body_keeps_target(self):
+        self.assertEqual(invs('gh pr merge --body "a; b" 7'), [(MERGE, "7", None)])
+
+    def test_pipe_in_quoted_title_keeps_create_head(self):
+        self.assertEqual(
+            invs('gh pr create --title "A | B" --head foo/bar'), [(("pr", "create"), "foo/bar", None)]
+        )
+
+    def test_newline_inside_quotes_is_not_a_separator(self):
+        self.assertEqual(invs('gh pr merge --body "line1\nline2" 8'), [(MERGE, "8", None)])
+
+    def test_unquoted_newline_is_a_separator(self):
+        self.assertEqual(invs("echo hi\ngh pr merge 4"), [(MERGE, "4", None)])
+
+    def test_command_substitution(self):
+        self.assertEqual(
+            invs("N=$(gh pr view 3 --json number --jq .number)"), [(("pr", "view"), "3", None)]
+        )
+
+    def test_unbalanced_quote_falls_back_to_plain_split(self):
+        # A shell would reject this command. The fallback still sees the merge, which errs on the
+        # side of checking (blocking) rather than letting a merge through unchecked.
+        self.assertEqual(invs('echo "oops; gh pr merge 5'), [(MERGE, "5", None)])
+
+
 class TargetParsing(unittest.TestCase):
     """Review threads :62 and :108 — the PR the command is about, not the current branch."""
 
