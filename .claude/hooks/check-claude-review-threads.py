@@ -235,10 +235,13 @@ def main():
     invocations = [inv for inv in gh_invocations(command) if inv["sub"] in wanted]
 
     reports = []
+    seen = set()
     for inv in invocations:
         resolved = resolve_pr(inv, cwd)
-        if resolved is None:
+        # One report per PR, however many gh calls in the command point at it
+        if resolved is None or resolved in seen:
             continue
+        seen.add(resolved)
         repo, pr = resolved
         threads = unresolved_claude_threads(repo, pr, cwd)
         if threads:

@@ -50,6 +50,14 @@ Then classify it:
 | **Not a real issue** | The scenario can't happen, or the behavior is intended    | Draft a reply with the evidence (`file:line`) |
 | **Out of scope**     | Real but belongs to a later phase or a separate change    | Draft a reply + where it's tracked (plan/doc) |
 
+**Known false positive: PRs that touch `.claude/`, `CLAUDE.md` or `.husky/`.** The review action
+treats the PR head as untrusted and restores those paths from the **base** branch before
+reviewing ("Restoring .claude, … from origin/develop" in the run log). Its working copy then shows
+the base versions. A PR that _adds_ hooks or skills can therefore be reviewed as if it _deletes_
+them, and new files can look missing. Check such claims against `git diff origin/<base>...HEAD`
+and the head branch, not the bot's view. When they're wrong, answer with **Not a real issue** and
+cite the diff.
+
 Don't take the bot's suggested patch as-is. Check it against the rest of the code and the
 conventions (`.claude/rules/*`, `api-best-practices`, `paper-trading-logic`, and so on). A
 suggested fix can be too blunt; for example, "reset `fetchedAt` to now" on a stale fallback

@@ -170,6 +170,31 @@ class Pagination(unittest.TestCase):
         self.assertIn("after=C1", seen[1])
 
 
+class Dedupe(unittest.TestCase):
+    """Several gh calls that resolve to the same PR produce a single report."""
+
+    def test_one_report_per_pr(self):
+        cmd = "gh pr checks 5; gh pr view 5 --json state; gh run view 9"
+
+        def fake_gh(args, cwd):
+            if args[:2] == ["run", "view"]:
+                return "feat/x"
+            if args[:2] == ["pr", "view"]:
+                return "5"
+            if args[:2] == ["repo", "view"]:
+                return "o/r"
+            return json.dumps({"data": {"repository": {"pullRequest": {"reviewThreads": {
+                "pageInfo": {"hasNextPage": False}, "nodes": [{"isResolved": False, "comments": {
+                    "nodes": [{"author": {"login": "claude"}, "path": "a.py", "line": 1}]}}]}}}}})
+
+        err = io.StringIO()
+        payload = {"hook_event_name": "PostToolUse", "tool_input": {"command": cmd}, "cwd": "."}
+        with mock.patch.object(sys, "stdin", io.StringIO(json.dumps(payload))), \
+             mock.patch.object(hook, "gh", fake_gh), redirect_stderr(err):
+            self.assertEqual(hook.main(), 2)
+        self.assertEqual(err.getvalue().count("PR #5 has"), 1)
+
+
 class FailOpen(unittest.TestCase):
     """Review thread :106 — an unknown/missing event never runs the check."""
 
