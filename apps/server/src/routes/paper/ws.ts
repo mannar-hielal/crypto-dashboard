@@ -44,7 +44,9 @@ export async function privatePaperWs(app: FastifyInstance): Promise<void> {
   app.get('/ws', { websocket: true }, (socket: WebSocket, request: FastifyRequest) => {
     const ip = request.ip;
 
-    // 🔐 Cross-site WebSocket hijacking guard: browsers always send Origin; only our app may connect
+    // 🔐 Cross-site WebSocket hijacking guard for browsers (which always send Origin): another site's
+    //    page can't open this socket. Non-browser clients can omit Origin — that's fine: the real
+    //    gate is the JWT in the first message, which a third-party page can't obtain.
     const origin = request.headers.origin;
     if (origin && origin !== config.corsOrigin) {
       socket.close(1008, 'Origin not allowed');

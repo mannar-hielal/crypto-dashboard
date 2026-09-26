@@ -153,6 +153,12 @@ describe('applyDelta()', () => {
     expect(usePaperStore.getState().positions.map((p) => p.id)).toEqual(['from-resync']);
   });
 
+  it('a snapshot older than the shown state is ignored (slow GET /state vs WS)', () => {
+    usePaperStore.getState().applyDelta(delta(1, { positionsUpsert: [position('p1')] }));
+    usePaperStore.getState().hydrate(emptyState()); // version 0 < 1
+    expect(usePaperStore.getState().positions).toHaveLength(1);
+  });
+
   it('a reset delta clears every list before applying', () => {
     const store = usePaperStore.getState();
     store.applyDelta(delta(1, { positionsUpsert: [position('p1')], journal: [journal('j1')] }));
@@ -193,6 +199,23 @@ describe('applyDelta()', () => {
     usePaperStore.getState().applyDelta(d, 'filled');
     expect(played).toHaveBeenCalledTimes(1);
     expect(played).toHaveBeenCalledWith('filled');
+  });
+});
+
+describe('applyDelta() before the account is loaded (review fix)', () => {
+  it('reloads the whole account instead of building on an empty view', async () => {
+    // Not hydrated yet (version -1): an order response arrives first
+    fakePaperApi.getState.mockResolvedValueOnce(
+      emptyState({
+        account: { balance: '8000', realizedPnl: '0', leverage: 1, version: 5 },
+        positions: [position('existing')],
+      })
+    );
+    expect(
+      usePaperStore.getState().applyDelta(delta(5, { positionsUpsert: [position('new')] }))
+    ).toBe(false);
+    await vi.waitFor(() => expect(usePaperStore.getState().version).toBe(5));
+    expect(usePaperStore.getState().positions.map((p) => p.id)).toEqual(['existing']);
   });
 });
 

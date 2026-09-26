@@ -448,6 +448,8 @@ export const usePaperStore = create<PaperState>()((set, get) => {
     ...EMPTY,
 
     hydrate: (state) => {
+      // A snapshot older than what's shown (a slow GET /state racing the WS) must not roll back
+      if (state.account.version < get().version) return;
       set({ ...mapServerState(state), isSyncing: false, lastSyncAt: Date.now() });
     },
 
@@ -455,9 +457,10 @@ export const usePaperStore = create<PaperState>()((set, get) => {
       const s = get();
       // Already applied (HTTP response + WS push of the same change) or stale (late response)
       if (delta.account.version <= s.version) return false;
-      // A skipped version means a change we never saw (e.g. an HTTP response overtook the WS
-      // push before it): applying this one would leave the gap on screen — reload instead.
-      if (s.version >= 0 && delta.account.version > s.version + 1) {
+      // Not loaded yet, or a skipped version (a change we never saw — e.g. an HTTP response that
+      // overtook the WS push before it): applying this delta onto an empty or incomplete view would
+      // hide the user's positions / history — reload the whole account instead.
+      if (s.version < 0 || delta.account.version > s.version + 1) {
         void get().resync();
         return false;
       }

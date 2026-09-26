@@ -542,13 +542,7 @@ export function closePosition(
   exitPrice: Decimal,
   ctx: EngineContext
 ): ActionResult<Decimal | null> {
-  const d = new Draft(state);
-  const pnl = closePositionInto(d, positionId, exitPrice, ctx);
-  return {
-    delta: d.toDelta(),
-    result: pnl,
-    ...(pnl ? { sound: pnl.gte(0) ? ('profit' as const) : ('loss' as const) } : {}),
-  };
+  return closePositionAs(state, positionId, exitPrice, ctx);
 }
 
 /** TP/SL auto-close (the browser's useTPSLMonitor). */
@@ -560,16 +554,10 @@ export function closeOnExit(
   ctx: EngineContext
 ): ActionResult<Decimal | null> {
   const pos = state.positions.find((p) => p.id === positionId);
-  const d = new Draft(state);
-  if (!pos) return { delta: d.toDelta(), result: null };
+  if (!pos) return closePositionAs(state, positionId, closePrice, ctx);
   const label = leg === 'take-profit' ? 'Take-Profit' : 'Stop-Loss';
   const reason = `Auto-closed ${pos.side.toUpperCase()} ${pos.symbol} — ${label} hit at $${fmtPrice(closePrice)}`;
-  const pnl = closePositionInto(d, positionId, closePrice, ctx, reason, leg);
-  return {
-    delta: d.toDelta(),
-    result: pnl,
-    ...(pnl ? { sound: pnl.gte(0) ? ('profit' as const) : ('loss' as const) } : {}),
-  };
+  return closePositionAs(state, positionId, closePrice, ctx, reason, leg);
 }
 
 // ─── Pending orders (paperStore.placeLimitOrder / placeStopOrder) ──────────────

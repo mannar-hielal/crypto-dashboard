@@ -14,6 +14,7 @@ import {
 } from '../engine/index.js';
 import {
   AccountRepository,
+  RecordNotFoundError,
   VersionConflictError,
   isEmptyDelta,
   type LoadedAccount,
@@ -195,6 +196,36 @@ describe('TradingService', () => {
     });
     expect(out?.sound).toBe('profit');
     expect(repo.state.positions).toHaveLength(0);
+  });
+
+  it('a queued market order fills at the price live when it executes, not when it was received', async () => {
+    let release: () => void = () => undefined;
+    let entered: () => void = () => undefined;
+    const blockerRunning = new Promise<void>((r) => (entered = r));
+    const originalMutate = repo.mutate.bind(repo);
+    let first = true;
+    repo.mutate = (async (userId: string, decide: never) => {
+      if (first) {
+        first = false;
+        entered();
+        await new Promise<void>((r) => (release = r)); // an earlier action still running
+      }
+      return originalMutate(userId, decide);
+    }) as never;
+
+    const blocker = trading.setLeverage('u1', 2); // occupies the user's queue
+    const order = trading.placeOrder('u1', {
+      symbol: 'BTCUSDT',
+      side: 'buy',
+      type: 'market',
+      usdtAmount: D(1_000),
+    });
+    await blockerRunning;
+    price = D(51_000); // the market moves while the order waits
+    release();
+    await blocker;
+    await order;
+    expect(repo.state.positions[0].entryPrice.toNumber()).toBe(51_000);
   });
 
   it('a no-op (cancel of an unknown order) writes nothing and pushes nothing', async () => {
@@ -617,6 +648,22 @@ describe('AccountRepository', () => {
     expect(tx.position.deleteMany).toHaveBeenCalledWith({
       where: { userId: 'u1', OR: [{ id: { in: ['legacy-1'] } }, { refId: { in: ['legacy-1'] } }] },
     });
+  });
+
+  it('editing a note that no longer exists rolls back with RecordNotFoundError (→ 404)', async () => {
+    const { prisma } = fakePrisma(1); // journalEntry.updateMany → { count: 0 }
+    const repo = new AccountRepository(prisma as never);
+    await expect(
+      repo.mutate('u1', () => ({
+        delta: {
+          ...placeDelta(),
+          positionsUpsert: [],
+          orders: [],
+          journalEdits: [{ id: 'gone', text: 'x' }],
+        },
+        result: true,
+      }))
+    ).rejects.toBeInstanceOf(RecordNotFoundError);
   });
 
   it('a reset wipes positions, orders, trades, journal and balance history', async () => {

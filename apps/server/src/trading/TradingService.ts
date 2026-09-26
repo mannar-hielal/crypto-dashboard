@@ -11,7 +11,11 @@ import { randomBytes } from 'node:crypto';
 import { Decimal } from '@prisma/client/runtime/client';
 import type { PaperDeltaDTO, PaperSound } from '@crypto-dashboard/sdk';
 import { logger } from '../logger.js';
-import { AccountRepository, VersionConflictError } from './AccountRepository.js';
+import {
+  AccountRepository,
+  RecordNotFoundError,
+  VersionConflictError,
+} from './AccountRepository.js';
 import { PaperEventBus } from './PaperEventBus.js';
 import { deltaDTO } from './mappers.js';
 import {
@@ -137,6 +141,7 @@ export class TradingService {
           if (err instanceof VersionConflictError) {
             throw new TradingError(409, 'Account changed — please retry');
           }
+          if (err instanceof RecordNotFoundError) throw new TradingError(404, 'Not found');
           throw err;
         }
       }
@@ -163,9 +168,13 @@ export class TradingService {
 
   async placeOrder(userId: string, intent: PlaceOrderIntent): Promise<Executed<string | null>> {
     if (intent.type === 'market') {
-      // 🔐 The fill price is the server's live price — the client never supplies one (F11)
-      const price = this.livePrice(intent.symbol);
-      return this.act(userId, (state, ctx) => placeMarket(state, intent, price, ctx));
+      // 🔐 The fill price is the server's live price — the client never supplies one (F11).
+      //    Fail fast when there is none, then read it again at execution time (inside decide):
+      //    the order may wait in the per-user queue or be retried after a version conflict.
+      this.livePrice(intent.symbol);
+      return this.act(userId, (state, ctx) =>
+        placeMarket(state, intent, this.livePrice(intent.symbol), ctx)
+      );
     }
     const { triggerPrice } = intent;
     if (!triggerPrice) throw new TradingError(409, 'Trigger price required');

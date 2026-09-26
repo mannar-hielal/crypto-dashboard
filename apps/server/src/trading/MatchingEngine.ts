@@ -177,11 +177,13 @@ export class MatchingEngine {
     // heartbeat path, so a slow backfill can't let the lease expire.
     if (lastTickAt) {
       const now = this.now();
-      void (async () => {
-        for (const symbol of [...this.symbolUsers.keys()]) {
-          await this.backfill(symbol, lastTickAt.getTime(), now);
-        }
-      })();
+      // Symbols are independent (separate fetches, separate triggers): catch up in parallel.
+      // Within one symbol, candles stay in time order (backfill()).
+      void Promise.all(
+        [...this.symbolUsers.keys()].map((symbol) =>
+          this.backfill(symbol, lastTickAt.getTime(), now)
+        )
+      );
     }
   }
 

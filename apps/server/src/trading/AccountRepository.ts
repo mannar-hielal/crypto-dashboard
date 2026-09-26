@@ -55,6 +55,14 @@ export function isEmptyDelta(delta: Delta, before: AccountState): boolean {
   );
 }
 
+/** A write targeted a row that doesn't exist for this user (the transaction is rolled back). */
+export class RecordNotFoundError extends Error {
+  constructor() {
+    super('Record not found');
+    this.name = 'RecordNotFoundError';
+  }
+}
+
 export class VersionConflictError extends Error {
   constructor() {
     super('Paper account changed concurrently');
@@ -202,10 +210,12 @@ export class AccountRepository {
     }
     for (const edit of delta.journalEdits) {
       // 🔐 Only the user's own notes are editable — system entries are read-only
-      await tx.journalEntry.updateMany({
+      const edited = await tx.journalEntry.updateMany({
         where: { id: edit.id, userId, isUserNote: true },
         data: { text: edit.text.slice(0, 500) },
       });
+      // Missing, pruned, someone else's or a system entry: nothing was edited — roll back (404)
+      if (edited.count === 0) throw new RecordNotFoundError();
     }
 
     if (delta.journal.length) await this.prune(tx, 'journalEntry', userId, MAX_JOURNAL);

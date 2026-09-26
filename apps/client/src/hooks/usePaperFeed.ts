@@ -122,6 +122,9 @@ export function usePaperFeed(): void {
     }
 
     connect();
+    // REST fallback: load the account even if the socket can't connect (blocked proxy, …).
+    // hydrate() is version-gated, so whichever of this and the WS snapshot is newer wins.
+    void usePaperStore.getState().resync();
 
     return () => {
       cancelled = true;

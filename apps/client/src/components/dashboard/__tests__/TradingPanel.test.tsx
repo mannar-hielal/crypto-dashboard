@@ -39,7 +39,7 @@ import { useLayoutStore } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
 import { usePaperStore } from '@/store/paperStore';
 import { useAuthStore } from '@/store/authStore';
-import { fakePaperApi, resetFakePaperApi } from '@/test/fakePaperApi';
+import { emptyState, fakePaperApi, resetFakePaperApi } from '@/test/fakePaperApi';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -141,7 +141,8 @@ function clickExecuteBtn() {
 
 beforeEach(() => {
   usePaperStore.getState().clear();
-  usePaperStore.setState({ isSyncing: false });
+  // The dashboard trades on a loaded account (a delta onto an unloaded one triggers a resync)
+  usePaperStore.getState().hydrate(emptyState());
   useAuthStore.setState({ accessToken: 'test-token' });
   resetFakePaperApi();
   localStorage.clear();
@@ -732,6 +733,7 @@ function setupBTCStores() {
 describe('Section 1.7.11 — SL typo safety rails (T2 · RTL)', () => {
   beforeEach(() => {
     usePaperStore.getState().clear();
+    usePaperStore.getState().hydrate(emptyState());
     useAuthStore.setState({ accessToken: 'test-token' });
     resetFakePaperApi();
     localStorage.clear();

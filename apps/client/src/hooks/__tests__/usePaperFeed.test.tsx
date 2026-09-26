@@ -21,6 +21,11 @@ vi.mock('@/hooks/TradingSoundContext', () => ({ useSoundActions: () => sounds })
 
 vi.mock('@/lib/session', () => ({ refreshAccessToken: vi.fn(async () => 'fresh-token') }));
 
+vi.mock('@crypto-dashboard/sdk', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@crypto-dashboard/sdk')>()),
+  paperApi: (await import('@/test/fakePaperApi')).fakePaperApi,
+}));
+
 class MockWebSocket {
   static OPEN = 1;
   static CONNECTING = 0;
@@ -95,6 +100,13 @@ describe('usePaperFeed', () => {
     expect(ws.url).not.toContain('token');
     ws.serverOpen();
     expect(JSON.parse(ws.sent[0])).toEqual({ type: 'auth', token: 'token-1' });
+  });
+
+  it('also loads the account over REST, in case the socket cannot connect', async () => {
+    const { fakePaperApi } = await import('@/test/fakePaperApi');
+    fakePaperApi.getState.mockClear();
+    renderHook(() => usePaperFeed());
+    await vi.waitFor(() => expect(fakePaperApi.getState).toHaveBeenCalledTimes(1));
   });
 
   it('hydrates from the snapshot and applies deltas with the server’s sound', () => {
