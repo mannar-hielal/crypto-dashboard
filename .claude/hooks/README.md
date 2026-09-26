@@ -42,6 +42,15 @@ legitimate action, so the scripts lean permissive when uncertain.
 | `session-start-context.py`       | SessionStart                    | Injects the non-negotiables + current branch as context                                                                                  |
 | `pre-stop-check.py`              | Stop                            | Blocks on a failing `pnpm audit` if deps changed; warns on untested route/plugin changes or unmentioned screenshots                      |
 
+## Unit tests
+
+`check-claude-review-threads.py` parses real shell commands: segments, heredocs, flags and PR
+targets. That parsing is pure and has unit tests, which make no `gh` or network calls:
+
+```bash
+python3 .claude/hooks/tests/test_check_claude_review_threads.py
+```
+
 ## Testing a script by hand
 
 Each script just reads JSON from stdin, so it can be exercised directly without going through
