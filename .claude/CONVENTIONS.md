@@ -38,6 +38,9 @@ each hook's docstring cites the convention section it encodes.
   rules, not code conventions, so they stay there rather than being duplicated here.
 - **`.claude/skills/add-page/SKILL.md`** is the checklist for adding, renaming or removing a page/route
   (route, `SeoHead`, sitemap, internal links, legal/CSP impact, post-deploy indexing).
+- **`.claude/skills/pr-review-comments/SKILL.md`** is the workflow for inline review comments from the
+  Claude GitHub bot: verify, draft a fix or reply, wait for approval, then commit, reply and resolve.
+  It is gated by the `check-claude-review-threads.py` hook (see `git.md` § Review comments).
 - Domain-specific deep dives (`lightweight-charts-patterns`, `drawing-tools`, `paper-trading-logic`)
   stay in `.claude/skills/` — these convention files link to them rather than re-explaining them.
 
