@@ -132,7 +132,7 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
   // ── Handlers ────────────────────────────────────────────────────────────────
   function handleConfirm() {
     if (confirmDisabled) return;
-    updatePositionExits(
+    void updatePositionExits(
       positionId,
       tpEnabled && tpVal ? tpVal : null,
       slEnabled && slVal ? slVal : null

@@ -27,10 +27,10 @@ model User {
 
   // ⚖️ Legal Compliance (Phase 1)
   termsAcceptedAt DateTime? // captures exactly when user agreed
-  termsAcceptedIp String?   // captures IP for legal audit trail
+  termsAcceptedIp String? // captures IP for legal audit trail
 
   // 🗑️ Account Deletion (Phase 3)
-  deletionRequestedAt  DateTime? // null = active; non-null = pending deletion
+  deletionRequestedAt   DateTime? // null = active; non-null = pending deletion
   deletionWarningSentAt DateTime? // null = warning not yet sent; non-null = already sent
 
   // Relations
@@ -38,10 +38,12 @@ model User {
   trades              Trade[]
   orders              Order[]
   positions           Position[]
+  journalEntries      JournalEntry[]
+  balanceEvents       BalanceEvent[]
   refreshTokens       RefreshToken[] // 🔐 active sessions
   passwordResetTokens PasswordResetToken[] // 🔐 pending resets
-  verificationTokens  VerificationToken[]  // 🔐 pending email verifications
-  emailChangeTokens   EmailChangeToken[]   // 🔐 pending email changes
+  verificationTokens  VerificationToken[] // 🔐 pending email verifications
+  emailChangeTokens   EmailChangeToken[] // 🔐 pending email changes
 
   @@index([email])
   @@index([username])
@@ -108,14 +110,13 @@ enum SubscriberStatus {
 }
 
 model Subscriber {
-  id         String            @id @default(cuid())
-  email      String            @unique
-  status     SubscriberStatus  @default(pending)
-  tokenHash  String            @unique // SHA-256 of verification token
+  id         String           @id @default(cuid())
+  email      String           @unique
+  status     SubscriberStatus @default(pending)
+  tokenHash  String           @unique // SHA-256 of verification token
   consentIp  String?
-  createdAt  DateTime          @default(now())
-  verifiedAt DateTime? 
-
+  createdAt  DateTime         @default(now())
+  verifiedAt DateTime?
 
   @@index([status])
   @@index([createdAt])
@@ -136,6 +137,12 @@ model Account {
   unrealizedPnl    Decimal @default(0) @db.Decimal(20, 8)
   realizedPnl      Decimal @default(0) @db.Decimal(20, 8)
 
+  // Account-wide leverage (1..MAX_LEVERAGE) — per-symbol leverage arrives in BP-2
+  leverage Int @default(1)
+  // Optimistic concurrency: every engine/API mutation bumps it (updateMany where version = v),
+  // so two concurrent mutations of one account can never both commit (BP-1)
+  version  Int @default(0)
+
   // Metadata
   lastReset  DateTime @default(now())
   resetCount Int      @default(0)
@@ -143,9 +150,11 @@ model Account {
   updatedAt  DateTime @updatedAt
 
   // Relations
-  trades Trade[]
-  orders Order[]
-  positions Position[]
+  trades         Trade[]
+  orders         Order[]
+  positions      Position[]
+  journalEntries JournalEntry[]
+  balanceEvents  BalanceEvent[]
 }
 
 // ============================================================================
@@ -169,7 +178,7 @@ model Position {
   takeProfit Decimal? @db.Decimal(20, 8)
   stopLoss   Decimal? @db.Decimal(20, 8)
 
-  openedAt DateTime @default(now())
+  openedAt  DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId])
@@ -183,6 +192,8 @@ model Position {
 
 model Order {
   id        String  @id @default(cuid())
+  // Insertion order: rows written in the same instant (one action) keep their display order
+  seq       Int     @default(autoincrement())
   refId     String? @unique // Client-side reference ID
   userId    String
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -206,6 +217,9 @@ model Order {
   // Financials
   margin     Decimal @default(0) @db.Decimal(20, 8)
   commission Decimal @default(0) @db.Decimal(20, 8)
+  // Leverage captured at placement — a pending order fills with it, not the account's
+  // leverage at fill time (BP-1 S2)
+  leverage   Int     @default(1)
 
   // State machine: PENDING -> PARTIALLY_FILLED -> FILLED | CANCELLED | REJECTED
   status          String    @default("PENDING")
@@ -225,6 +239,8 @@ model Order {
   @@index([symbol])
   @@index([status])
   @@index([createdAt])
+  @@index([status, symbol]) // matching engine's open-order scan
+  @@index([userId, seq])
 }
 
 // ============================================================================
@@ -233,6 +249,8 @@ model Order {
 
 model Trade {
   id        String  @id @default(cuid())
+  // Insertion order: rows written in the same instant (one action) keep their display order
+  seq       Int     @default(autoincrement())
   refId     String? @unique // Client-side reference ID
   userId    String
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -244,23 +262,88 @@ model Trade {
   // Trade execution details
   symbol        String
   side          String // "BUY" | "SELL"
-  quantity      Decimal @db.Decimal(20, 8)
-  executedPrice Decimal @db.Decimal(20, 8)
+  quantity      Decimal  @db.Decimal(20, 8)
+  executedPrice Decimal  @db.Decimal(20, 8)
   entryPrice    Decimal? @db.Decimal(20, 8)
-  totalCost     Decimal @db.Decimal(20, 8)
-  commission    Decimal @default(0) @db.Decimal(20, 8)
+  totalCost     Decimal  @db.Decimal(20, 8)
+  commission    Decimal  @default(0) @db.Decimal(20, 8)
 
-  // PnL
-  pnl        Decimal @default(0) @db.Decimal(20, 8)
-  pnlPercent Decimal @default(0) @db.Decimal(6, 4)
+  // PnL — pnl is net of both commission legs; grossPnl is the price move only (what the
+  // History tab shows)
+  pnl        Decimal  @default(0) @db.Decimal(20, 8)
+  grossPnl   Decimal? @db.Decimal(20, 8)
+  // (12, 4): a leveraged trade can return well over 100% (was (6, 4) — overflowed, BP-1 S4)
+  pnlPercent Decimal  @default(0) @db.Decimal(12, 4)
 
   // Metadata
   openedAt   DateTime?
-  executedAt DateTime @default(now())
-  createdAt  DateTime @default(now())
+  executedAt DateTime  @default(now())
+  createdAt  DateTime  @default(now())
 
   @@index([userId])
   @@index([accountId])
   @@index([symbol])
   @@index([executedAt])
+  @@index([userId, seq])
+}
+
+// ============================================================================
+// JOURNAL (engine events + user notes — BP-1: moved from browser localStorage)
+// ============================================================================
+
+model JournalEntry {
+  id         String   @id @default(cuid())
+  // Insertion order: rows written in the same instant (one action) keep their display order
+  seq        Int      @default(autoincrement())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId  String
+  account    Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  time       DateTime
+  text       String   @db.VarChar(500)
+  isUserNote Boolean  @default(false)
+  pnl        Decimal? @db.Decimal(20, 8)
+  createdAt  DateTime @default(now())
+
+  // Capped at 200 per user (pruned in the same transaction as each insert)
+  @@index([userId, seq])
+}
+
+// ============================================================================
+// BALANCE HISTORY (BP-1: moved from browser localStorage)
+// ============================================================================
+
+model BalanceEvent {
+  id            String   @id @default(cuid())
+  // Insertion order: rows written in the same instant (one action) keep their display order
+  seq           Int      @default(autoincrement())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId     String
+  account       Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  time          DateTime
+  balanceBefore Decimal  @db.Decimal(20, 8)
+  balanceAfter  Decimal  @db.Decimal(20, 8)
+  pnl           Decimal  @db.Decimal(20, 8)
+  action        String   @db.VarChar(300)
+  createdAt     DateTime @default(now())
+
+  // Capped at 200 per user (pruned in the same transaction as each insert)
+  @@index([userId, seq])
+}
+
+// ============================================================================
+// MATCHING ENGINE LEASE (BP-1 — exactly one executor across machines)
+// ============================================================================
+
+// A single row, id = 'matching-engine'. The holder renews expiresAt every few seconds; another
+// instance can take over only once it has expired. Plain Prisma updateMany/create — no raw SQL
+// advisory lock (web.md: no raw SQL).
+model EngineLease {
+  id         String    @id
+  holder     String
+  expiresAt  DateTime
+  // Last tick the holder evaluated — backfill after a restart/outage starts here
+  lastTickAt DateTime?
+  updatedAt  DateTime  @updatedAt
 }

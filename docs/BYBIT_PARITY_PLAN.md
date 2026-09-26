@@ -1,6 +1,6 @@
 # Bybit Parity Plan — Spot + USDT Perpetual
 
-> **Status:** BP-0 implemented (2026-09-26, branch `feat/bybit-parity-bp0`) · BP-1 … BP-5 not started.
+> **Status:** BP-0 implemented (2026-09-26, `feat/bybit-parity-bp0`) · BP-1 implemented (2026-09-26, `feat/bybit-parity-bp1`) · BP-2 … BP-5 not started.
 > **Created:** 2026-09-25 · **Owner:** Mannar Hielal
 > **Goal:** paper trading on cryptopapertrade.com behaves as close as possible to a Bybit Unified Trading
 > Account (UTA), VIP 0, one-way position mode — so what a user learns here transfers 1:1 to Bybit.
@@ -155,56 +155,86 @@ Bybit public WS (spot + linear) ──► MarketFeed ──tick──► Matchin
  Client ◄──private WS: order · position · execution · wallet · journal ◄────── EventBus
 ```
 
+**Agreed before implementation (2026-09-26):**
+
+- **Port + four safety fixes**, not a strict port. The trading maths is unchanged (0.07% fee, last-price fills,
+  same-side positions kept separate, account-wide leverage). The fixes:
+  - **S1:** a triggered pending order that can't fill is recorded as rejected, instead of vanishing after its reserve
+    was refunded.
+  - **S2:** a fill uses the leverage stored on the order at placement, not the current account leverage.
+  - **S3:** live triggers fire on the tick price, not on the forming candle's high/low, which could predate the order.
+  - **S4:** `Trade.pnlPercent` widened from `Decimal(6,4)`, which overflowed at ≥ 100%.
+- **One PR, no fallback flag.**
+- **Start fresh:** the journal, balance history and leverage that lived only in each browser are not imported.
+  Balances, positions, orders and trades were already on the server and are kept.
+
 **Server**
 
-- [ ] `apps/server/src/trading/engine/`: **pure functions** (no Prisma, no I/O) for triggering and filling orders.
-      Example: `evaluateTick(tick, openOrders, openPositions) → Event[]`. They are the port of `checkTPSL`,
-      `usePendingOrderMonitor`'s trigger logic and `paperStore`'s netting/close math. Being pure, they can be tested on
-      recorded price ticks with no browser.
-- [ ] `MatchingEngine` service:
-  - On boot, loads all open orders and positions into an in-memory index keyed by `(category, symbol)`.
-  - On every tick, evaluates only that symbol's bucket.
-  - Writes each result in **one Prisma transaction**. An optimistic `version` column on `Order`/`Position` makes
-    double fills and double closes impossible.
-- [ ] **Order API** replaces today's "client sends the result" calls:
-
-| Endpoint                          | Purpose                   |
-| --------------------------------- | ------------------------- |
-| `POST /paper/orders`              | Place an order            |
-| `DELETE /paper/orders/:id`        | Cancel an order           |
-| `PATCH /paper/orders/:id`         | Amend an order            |
-| `PATCH /paper/positions/:id/tpsl` | Change a position's TP/SL |
-| `POST /paper/positions/:id/close` | Close a position          |
-
-The client sends **intent only** (symbol, side, type, qty or USDT amount, price, TP/SL). The server picks the fill
-price and computes the fee and PnL (F11). The old endpoints that accept client-computed balances and positions are
-removed. The **legacy local→server migration push in `syncWithServer`** goes too; it is also part of the logout data-leak
-task.
-
-- [ ] **Private WS channel**, authenticated with the same JWT as REST (Bybit calls these its private
-      `order` / `position` / `execution` / `wallet` topics). The server pushes every state change to all of that user's
-      open tabs.
-- [ ] **Journal moves to the DB** (new `JournalEntry` table). Events that happen while the browser is closed ("SL hit
-      at 03:14") must still show up in the journal.
-- [ ] **Money math uses decimals** (Prisma `Decimal` / decimal.js), not JS floats, to avoid rounding drift over thousands
-      of fills.
-- [ ] **Resilience:**
-  - If the Bybit WS drops or the server restarts, backfill the gap: take last-price klines from
-    `/v5/market/kline` for the missed interval and run them through the same pure functions (candle high/low, as the
-    client does today).
-  - Leave a log line and a metric for every backfill.
-- [ ] **Single executor:** exactly one engine instance may execute trades. Take a Postgres advisory lock at start-up;
-      other Fly.io machines serve reads and WS but never run the engine.
-- [ ] **Order endpoints get a rate limit**, and all input is validated with allow-listed enums and finite, positive,
-      bounded numbers (`web.md`, `security.md`).
+- [x] `apps/server/src/trading/engine/`: **pure functions** (no Prisma, no I/O, no clock), using `Prisma.Decimal`
+      (the decimal.js Prisma ships, so no new dependency).
+  - Actions: `placeMarket` (netting and flip), `closePosition`, `placePending`, `cancelPending`, `fillPending`,
+    `editPending`, the exit-leg actions, notes and `reset`.
+  - `evaluateTick` / `evaluateCandle` and `executeTrigger`.
+  - Every journal and balance-history text is kept word for word.
+- [x] `MatchingEngine`:
+  - An index of accounts with open triggers, keyed by symbol and kept current from every committed delta.
+  - Spot ticks are evaluated per symbol bucket, and a burst of ticks can't re-fire a trigger that is still executing.
+  - **Changed from the plan:** it's keyed by `symbol` only, because every pane trades on the spot feed until BP-2.
+    Linear ticks are ignored.
+- [x] **One transaction per action**, `AccountRepository.mutate`.
+  - **Changed:** the optimistic `version` lives on `Account`, not on `Order` / `Position`. Every change to an account
+    bumps it with `updateMany({ where: { id, version } })`, so two concurrent changes to one account can't both commit.
+  - A `VersionConflictError` is retried up to 3 times. On one machine, a per-user queue in `TradingService` avoids most
+    conflicts in the first place.
+- [x] **Order API** (intent only, F11):
+  - `GET /paper/state` · `POST|DELETE|PATCH /paper/orders[/:id]` · `DELETE /paper/orders/:id/exits/:leg`
+  - `PATCH /paper/positions/:id/tpsl` · `DELETE /paper/positions/:id/exits/:leg` · `POST /paper/positions/:id/close`
+  - `PATCH /paper/account/leverage` · `POST /paper/account/reset` · `POST|PATCH /paper/journal[/:id]`
+  - Removed: every endpoint that accepted client-computed balances, positions, fills or trades, the old per-resource
+    GETs, and the `syncWithServer` legacy push. Also removed: the unused `Sync*` / `Create*` / `Update*` SDK types.
+- [x] **Private WS** `/api/paper/ws`:
+  - Auth is the first message `{ type: 'auth', token }` (never a token in the URL). The server answers with the snapshot,
+    then pushes a `delta` for every change.
+  - Caps: 5 sockets per user, 20 per IP and 500 in total. Messages are capped at 4 KB, the Origin is checked, and it
+    pings every 30 s.
+  - Every delta carries the account `version`, so a client applies each change exactly once.
+- [x] **Journal and balance history moved to the DB** (`JournalEntry`, `BalanceEvent`, capped at 200 per user).
+  - An auto-increment `seq` on those tables, `Order` and `Trade` keeps same-instant rows in display order.
+- [x] **Money maths in decimals**: Decimal in the engine, and decimal strings on the wire.
+- [x] **Resilience / backfill:**
+  - A symbol with no ticks for over 60 s, or an engine taking over after downtime (from `EngineLease.lastTickAt`), is
+    backfilled from spot 1m klines with the candle sweep.
+  - Candles that started before an order was placed are ignored (S3). Each backfill writes a log line; there is no
+    metrics system yet.
+- [x] **Single executor: changed from a Postgres advisory lock to an `EngineLease` row.** The rules forbid raw SQL.
+  - The holder renews every 10 s with a 30 s expiry, and takes the row over only once it has expired.
+  - Other machines serve the API and WS. `PaperEventBus` is in-process, so fan-out assumes one Fly machine, like the auth
+    grace map. Redis pub/sub is the path to scale out.
+- [x] **Rate limits:** mutating routes allow 60/min and reset 5/min. Input uses allow-listed enums and bounded decimal
+      strings (`^\d{1,12}(\.\d{1,8})?$`, positive).
+  - Unknown fields (e.g. a forged `price`) are **stripped** by Fastify's validator (`removeAdditional`), not rejected, so
+    they never reach the engine.
 
 **Client**
 
-- [ ] `paperStore` becomes a **read model**. It's hydrated from REST on load, then kept up to date by the private WS.
-      Actions call the order API. It keeps the optimistic "pending…" UI state, and the server's response replaces it.
-- [ ] Remove `useTPSLMonitor` and `usePendingOrderMonitor` (the server does this now). Sounds and toasts are driven by
-      the events the server pushes.
-- [ ] `localStorage` (`cd-paper-trading`) becomes a disposable cache, scoped to the user id and cleared on logout.
+- [x] `paperStore` is a **read model**:
+  - `hydrate()` from the WS snapshot, then `applyDelta()` with a version gate.
+  - Actions send intent and apply the response delta. They never throw into the UI: an order request returns
+    `{ id, error? }`.
+  - No `persist()`: `cd-paper-trading` is deleted on load, and `clear()` runs on logout, a user change, a password change
+    and account deletion (the logout data-leak fix).
+- [x] `useTPSLMonitor` / `usePendingOrderMonitor` and their tests are removed.
+  - The new `usePaperFeed` runs the private WS and plays the server-decided sound once per change.
+  - Also new: `useSessionRefresh` / `lib/session.ts`. The access token was only refreshed at app boot, so every
+    authenticated call failed after 15 minutes. It's now refreshed 60 s before it expires, and again after a 4401 close.
+- [ ] Optimistic "pending…" UI (a visible "Placing…" state on the submit button). **Not done:** it's a visual change,
+      which goes through the visual Q&A gate first. A double-submit ref guard is in place instead.
+
+**Found and fixed along the way (outside BP-1's scope):**
+
+- **Error handler leak:** `app.ts` set the sanitizing error handler **after** registering the routes. Fastify fixes a
+  route's error handler when the route is defined, so routes that let an error escape answered 500s with the raw
+  `err.message`. The handler is now set before any route.
 
 ### BP-2 — Market split, Bybit fees, Bybit fill prices
 

@@ -572,6 +572,8 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 ### ✅ Completed (added 2026-06-14 — Paper Trading Phase 3 Sync)
 
+> **Superseded 2026-09-26 by BP-1** (below): the server executes every trade; `syncWithServer`, the client-computed `/paper` endpoints and "client is source of truth" are gone.
+
 - **End-to-end synchronization (Phase 3)** — `paperStore.ts` now fully synchronizes its state (Account, Orders, Trades, Positions) with the PostgreSQL database via `paperApi`.
 - **Netting synchronization** — client-side position netting logic now triggers explicit server updates (`recordTrade`, `updatePosition`, `deletePosition`) to keep the database in lock-step.
 - **Reconciliation & Hydration** — `syncWithServer` hydration uses `refId || id` mapping to ensure local IDs are correctly matched to server records after page refresh, maintaining UI stability.
@@ -2138,3 +2140,107 @@ perp charts with no way back.
 
 **Gates:** type-check ✅ (server + client), lint ✅, format ✅, test ✅ (154 server + 435 client),
 audit ✅ (11 moderate, none high)
+
+---
+
+### feat: Bybit Parity BP-1 — server trading engine (2026-09-26) ✅
+
+**Context:** phase 2 of `docs/BYBIT_PARITY_PLAN.md` (D9, F10, F11). Before this, every trade ran in the browser
+(`paperStore.ts` + `useTPSLMonitor` / `usePendingOrderMonitor`) and the server stored whatever the browser sent,
+including balances, fill prices and PnL. As a result:
+
+- nothing was watched while the tab was closed;
+- only symbols open in a pane were checked;
+- persisted local state leaked into the next user's account after logout.
+
+**Agreed:** port the engine plus four safety fixes (S1–S4), one PR with no fallback flag, and start fresh (the
+browser-only journal, balance history and leverage are not imported). Details → parity plan, BP-1.
+
+**Server** (`apps/server/src/trading/`):
+
+- **`engine/`:** a pure port using Decimal; the same ids, journal text and balance-history text.
+  - Covers market with netting and flip, close, limit / stop, cancel / edit / exit legs, fills, notes and reset.
+  - `evaluateTick` (live: tick price, S3) and `evaluateCandle` (backfill: candle sweep that skips pre-placement
+    candles).
+- **Changes to the DB** (`AccountRepository`):
+  - One transaction per action, with an optimistic `Account.version` guard and up to 3 retries.
+  - Legacy rows are addressed by `refId`.
+- **`TradingService`:**
+  - Intent → server live price (spot) → engine → persist → `PaperEventBus`.
+  - A per-user queue, and triggers re-validated before they execute.
+- **`MatchingEngine`:**
+  - A per-symbol index of accounts with open triggers, kept current from committed deltas.
+  - A single executor via the `EngineLease` row (no raw SQL).
+  - Gap and downtime backfill from spot 1m klines.
+- **Routes** (`routes/paper`):
+  - Intent-only endpoints, `GET /state`, and the private WS `/api/paper/ws`.
+  - The WS uses first-message JWT auth, caps, a size guard, an Origin check and ping/pong. Every delta carries the
+    account version.
+  - The client-computed endpoints are removed.
+- **Prisma migration** `20260926090000_bp1_server_engine`:
+  - `Account.leverage` / `version`, `Order.leverage`, and `seq` ordering columns.
+  - `Trade.grossPnl`, and `pnlPercent` widened to `Decimal(12,4)` (S4).
+  - New `JournalEntry`, `BalanceEvent` and `EngineLease` tables.
+
+**Client:**
+
+- **`paperStore`:** now a read model — `hydrate`, `applyDelta` (version-gated, idempotent) and `clear`.
+  - Actions send intent and never throw into the UI.
+  - No persistence: `cd-paper-trading` is deleted, and the store is cleared on logout, user change, password change
+    and deletion.
+- **New hooks:**
+  - `usePaperFeed`: the private WS; plays the server-decided sounds once.
+  - `useSessionRefresh` + `lib/session.ts`: the access token was only refreshed at boot, so authenticated calls failed
+    after 15 minutes. It now refreshes 60 s before expiry and after a 4401.
+- **Removed:** the two monitors.
+- **Component changes:**
+  - `TradingPanel`: one async submit shared with the SL/TP confirm modal, with a double-submit ref guard. No price is
+    sent for a market order, and server errors are shown.
+  - `OrderAccountManagementPanel` / edit panels: await the calls; sounds now come from the server.
+
+**Found along the way:** `app.ts` set the sanitizing error handler after registering the routes, so any route that let
+an error escape answered 500s with the raw `err.message`. It now comes before every route, and a test covers it.
+
+**Not done (needs the visual Q&A gate):** a visible "Placing…" state on the submit button.
+
+**Tests:**
+
+- **Server:** 164 engine tests (100 ported store cases plus the monitor cases, with the duplicates removed, plus S1–S3,
+  netting and backfill), 23 service tests and 49 route / WS tests.
+- **Client:** store and feed tests rewritten; the component tests mock `paperApi` (`src/test/fakePaperApi.ts`).
+- **Plan:** `TRADING_TEST_PLAN.md` has a new Section 13.
+
+**Code review (10 findings, all fixed):**
+
+- **Client:** a delta that skips a version resyncs from `GET /state`, instead of leaving a missed change on screen.
+- **Engine index:**
+  - It subscribes before loading, buffering changes made during the load, and is rebuilt every 30 s, which also picks
+    up changes made on another machine.
+  - A trigger that didn't execute is refreshed from the DB, or evicted for a deleted account, instead of re-firing on
+    every tick.
+- **Lease:** renewal is armed before activation, and the downtime backfill runs off the heartbeat path.
+- **Backfill:** fetches Bybit's newest-first pages backwards, up to 7 days.
+- **Session:** only a 401 / 403 from `/refresh` signs the user out; a network blip or a 5xx retries every 10 s.
+- **Migration:** backfills `leverage` for pre-BP-1 pending orders (`round(qty × trigger / margin)`).
+- **Actions:** they return their error. A failed note keeps its draft, and a failed pending edit keeps the panel open.
+- **First account creation:** an `upsert`, so two tabs opening at once no longer race into a unique-key error.
+- **No-op actions** (not found / nothing to change): no write, no version bump, no push.
+
+**Also caught:** the generated `migration.sql` contained two dotenv log lines, which would have failed `migrate deploy`
+in production. They're removed.
+
+**Live verification** (running dev server + dev DB + live Bybit feed, throwaway users, now deleted) — 13 of 13
+checks pass:
+
+- market fill at the server price, with a forged `price` ignored;
+- both tabs get each delta;
+- a crossed limit is filled by the engine;
+- a crossed TP is auto-closed with the right journal line and sound;
+- a fill made while no tab was open appears on reconnect;
+- `/state` history;
+- manual close;
+- another user sees nothing and gets 404 on the first user's ids;
+- an invalid WS token closes with 4401.
+
+**Gates:** type-check ✅ (server + client), lint ✅, format ✅, test ✅ (395 server + 293 client + 57 hook), audit ✅
+(11 moderate, none high)

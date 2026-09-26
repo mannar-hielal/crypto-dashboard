@@ -38,7 +38,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const message = (data as { error?: string }).error ?? `HTTP ${res.status}`;
-    throw new Error(message);
+    // `status` lets callers tell an auth failure (401) from a transient one (network, 5xx)
+    throw Object.assign(new Error(message), { status: res.status });
   }
 
   return data;

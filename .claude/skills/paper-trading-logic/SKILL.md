@@ -1,6 +1,6 @@
 ---
 name: paper-trading-logic
-description: Use for any work involving paperStore, paper trading, order placement/fill/cancel, TP/SL monitoring, bracket orders, journal entries, leverage, commission accounting, balance/PnL math, OrderAccountManagementPanel, TradingPanel, PositionEditPanel, PendingOrderEditPanel, useTPSLMonitor, usePendingOrderMonitor, or Bybit real-money integration. Covers exact business rules from docs/APP_LOG.md so logic bugs don't regress.
+description: Use for any work involving paperStore, paper trading, order placement/fill/cancel, TP/SL monitoring, bracket orders, journal entries, leverage, commission accounting, balance/PnL math, OrderAccountManagementPanel, TradingPanel, PositionEditPanel, PendingOrderEditPanel, the server engine (apps/server/src/trading: MatchingEngine, TradingService, engine/actions), usePaperFeed, or Bybit real-money integration. Covers exact business rules from docs/APP_LOG.md so logic bugs don't regress.
 ---
 
 # Paper Trading — Business Rules (cryptopapertrade.com)
@@ -9,29 +9,46 @@ Source of truth: `docs/APP_LOG.md` (sections "Business Logic Rules", "paperStore
 
 ## Files
 
-| File                                                                                       | Role                                                                                         |
-| ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
-| `apps/client/src/store/paperStore.ts`                                                      | All paper trading state + actions; exports `COMMISSION_RATE = 0.0007`                        |
-| `apps/client/src/hooks/useTPSLMonitor.ts`                                                  | Auto-close positions on TP/SL hit; exports pure `checkTPSL()` (unit-tested)                  |
-| `apps/client/src/hooks/usePendingOrderMonitor.ts`                                          | Executes limit/stop pending orders on price trigger                                          |
-| `apps/client/src/components/dashboard/TradingPanel.tsx`                                    | Right sidebar order entry; exports `OrderTab`                                                |
-| `apps/client/src/components/dashboard/OrderAccountManagementPanel.tsx`                     | Positions · Orders · Order History · Balance History · Journal tabs + Account Settings modal |
-| `apps/client/src/components/dashboard/PositionEditPanel.tsx` / `PendingOrderEditPanel.tsx` | TV-style edit panels wired via `editTarget` state in `DashboardPage`                         |
+**Since BP-1 (2026-09-26) the server executes every trade** (`docs/BYBIT_PARITY_PLAN.md` BP-1). Change trading
+rules in `apps/server/src/trading/engine/`, never in the client.
 
-## State (`paperStore.ts`, persisted key `cd-paper-trading`, version 1 + `migrate`)
+| File                                                                                       | Role                                                                                                                          |
+| ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `apps/server/src/trading/engine/actions.ts`                                                | **The rules**: pure, Decimal. Market with netting / flip, close, limit / stop, cancel / edit / exit legs, fills, notes, reset |
+| `apps/server/src/trading/engine/triggers.ts`                                               | `checkTPSL`, `checkPendingTrigger`, `evaluateTick` (live, tick price) and `evaluateCandle` (backfill sweep)                   |
+| `apps/server/src/trading/engine/journal.ts` / `format.ts`                                  | Journal wording and `fmtPrice` (kept word for word from the browser engine)                                                   |
+| `apps/server/src/trading/TradingService.ts`                                                | Intent → server live price → engine → `AccountRepository` → `PaperEventBus`                                                   |
+| `apps/server/src/trading/MatchingEngine.ts`                                                | 24/7 TP/SL + pending triggers on every spot tick; the `EngineLease` single executor; gap backfill                             |
+| `apps/server/src/trading/AccountRepository.ts`                                             | One transaction per action, `Account.version` optimistic guard, `refId` for pre-BP-1 rows                                     |
+| `apps/server/src/routes/paper/index.ts` / `ws.ts`                                          | Intent-only REST API and the private WS `/api/paper/ws`                                                                       |
+| `apps/client/src/store/paperStore.ts`                                                      | **Read model**: `hydrate` / `applyDelta` (version-gated) / `clear`; actions call `paperApi`                                   |
+| `apps/client/src/hooks/usePaperFeed.ts`                                                    | Private WS: snapshot + deltas, server-decided sounds                                                                          |
+| `apps/client/src/components/dashboard/TradingPanel.tsx`                                    | Order entry (UX pre-validation only; the server re-validates)                                                                 |
+| `apps/client/src/components/dashboard/OrderAccountManagementPanel.tsx`                     | Positions · Orders · Order History · Balance History · Journal tabs + Account Settings modal                                  |
+| `apps/client/src/components/dashboard/PositionEditPanel.tsx` / `PendingOrderEditPanel.tsx` | TV-style edit panels                                                                                                          |
+
+Tests: engine `apps/server/src/trading/engine/__tests__/` (the ported store and monitor cases), services
+`apps/server/src/trading/__tests__/`, routes / WS `apps/server/src/__tests__/paper.test.ts`.
+
+## State
+
+The server holds everything: `Account` (balance = `availableBalance`, `realizedPnl`, `leverage`, `version`),
+`Position`, `Order` (PENDING rows = pending orders, other rows = order history), `Trade`, `JournalEntry` and
+`BalanceEvent` (capped at 200 per user). The client mirrors it, not persisted:
 
 ```
 balance            free cash (entryUsdtAmount deducted at open)
 positions[]        open positions
-pendingOrders[]    limit/stop orders awaiting trigger
+pendingOrders[]    limit/stop orders awaiting trigger (carry their placement leverage)
 history[]          closed trades (MAX_HISTORY = 100)
-orders[]           all HistoricalOrder records (MAX_HISTORY * 2)
+orders[]           HistoricalOrder records (200)
 realizedPnl        net of all commissions
-balanceLog[]       balance change log (MAX_HISTORY * 2)
+balanceLog[]       balance change log (200)
 journal[]          trading journal (MAX_JOURNAL = 200)
+version            server account version — applyDelta ignores anything not newer
 ```
 
-**Every array cap uses `.slice(0, MAX_*)` on every `set` — no unbounded growth.** `bug-sweep` P4-59 enforces this for new fields.
+**Every client list is capped on every change (`prepend(..., MAX_*)`) — no unbounded growth.** `bug-sweep` P4-59 enforces this for new fields.
 
 ## Commission (exact — do not approximate)
 
@@ -48,7 +65,7 @@ journal[]          trading journal (MAX_JOURNAL = 200)
 - **Long**: TP when `price >= takeProfit`; SL when `price <= stopLoss`.
 - **Short**: TP when `price <= takeProfit`; SL when `price >= stopLoss`.
 - `checkTPSL()` is **pure + exported + unit-tested** — keep doing that for any new pure logic (`bug-sweep` P6-84).
-- `useTPSLMonitor` evaluates positions matching the active symbol only — cross-symbol false triggers are a known bug risk; never extend the filter without a test.
+- The `MatchingEngine` evaluates a tick only against that symbol's accounts (`evaluateTick(symbol, …)`) — cross-symbol false triggers are the 4.18 regression; `triggers.test.ts` guards it.
 - **Bracket**: placing limit/stop with TP + SL creates 3 linked rows in the Orders tab: parent + TP child + SL child.
   - Pre-fill/trigger: parent = Working, children = Inactive.
   - Cancelling parent cancels all 3 (`cancelPendingOrder`).
@@ -65,7 +82,7 @@ journal[]          trading journal (MAX_JOURNAL = 200)
 - `placeLimitOrder` / `placeStopOrder`: deduct `usdtAmount + commission` immediately; reserve `usdtAmount` in `pendingOrders`; no historical fill row yet.
 - `cancelPendingOrder`: refunds `usdtAmount + commission`; writes cancelled parent `HistoricalOrder` + cancelled child TP/SL rows when present.
 - `cancelExitOrder`: cancels ONE active exit leg for an open position; keeps sibling leg active; writes cancelled `HistoricalOrder`.
-- Execution (pending → open position) is handled by `usePendingOrderMonitor` ✅.
+- Execution (pending → open position) is `fillPending` in the server engine, run 24/7 by the `MatchingEngine` ✅. It uses the order's placement leverage (S2) and records a rejected fill instead of dropping it (S1).
 
 ## Journal
 
@@ -73,7 +90,7 @@ journal[]          trading journal (MAX_JOURNAL = 200)
 - `isUserNote: true` → user-added/editable (`editJournalEntry` allowed).
 - `isUserNote: false` → system-generated, read-only (`editJournalEntry` guards at store level).
 - `pnl` (net = gross − exit commission) lives only on close entries — undefined on open/pending/user notes.
-- `closePosition` attaches it to the exec entry; `useTPSLMonitor` passes via `addJournalNote(text, false, netPnl)`.
+- `closePosition` attaches it to the exec entry; a TP/SL close (`closeOnExit`) attaches it to its "Auto-closed …" reason entry.
 
 ## Edit panels (`editTarget` state in `DashboardPage`)
 

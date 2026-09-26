@@ -33,13 +33,22 @@
 
 import React from 'react';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, within, waitFor } from '@testing-library/react';
 import { TradingPanel } from '../TradingPanel';
 import { useLayoutStore } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
 import { usePaperStore } from '@/store/paperStore';
+import { useAuthStore } from '@/store/authStore';
+import { emptyState, fakePaperApi, resetFakePaperApi } from '@/test/fakePaperApi';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
+
+// Trading runs on the server (BP-1): the panel sends an intent to paperApi. The fake answers
+// with a realistic delta so the store updates as it would against the real server.
+vi.mock('@crypto-dashboard/sdk', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@crypto-dashboard/sdk')>()),
+  paperApi: (await import('@/test/fakePaperApi')).fakePaperApi,
+}));
 
 // Framer-motion: forward all motion.* as plain HTML elements; skip animations.
 vi.mock('framer-motion', () => ({
@@ -131,7 +140,11 @@ function clickExecuteBtn() {
 // ─── Setup / Teardown ─────────────────────────────────────────────────────────
 
 beforeEach(() => {
-  usePaperStore.getState().reset();
+  usePaperStore.getState().clear();
+  // The dashboard trades on a loaded account (a delta onto an unloaded one triggers a resync)
+  usePaperStore.getState().hydrate(emptyState());
+  useAuthStore.setState({ accessToken: 'test-token' });
+  resetFakePaperApi();
   localStorage.clear();
   setupStores();
 });
@@ -160,14 +173,36 @@ describe('Section 1 — Market Orders (T2 · RTL)', () => {
       expect(commissionValue).toBeTruthy();
     });
 
-    it('1.1.2: clicking Buy clears the qty input', () => {
+    it('1.1.2: clicking Buy clears the qty input', async () => {
       renderPanel();
       const qtyInput = getQtyInput();
       fireEvent.change(qtyInput, { target: { value: '100' } });
 
       clickExecuteBtn();
 
-      expect((qtyInput as HTMLInputElement).value).toBe('');
+      await waitFor(() => expect((qtyInput as HTMLInputElement).value).toBe(''));
+    });
+
+    it('1.1.2 (BP-1): a market Buy sends intent only — no price — to the server', async () => {
+      renderPanel();
+      fireEvent.change(getQtyInput(), { target: { value: '100' } });
+      clickExecuteBtn();
+
+      await waitFor(() => expect(fakePaperApi.placeOrder).toHaveBeenCalledTimes(1));
+      const [body] = fakePaperApi.placeOrder.mock.calls[0];
+      expect(body).toMatchObject({ symbol: 'BTCUSDT', side: 'buy', type: 'market' });
+      expect(body).not.toHaveProperty('triggerPrice');
+      await waitFor(() => expect(usePaperStore.getState().positions).toHaveLength(1));
+    });
+
+    it('1.1.2 (BP-1): a server rejection keeps the form and shows the server message', async () => {
+      fakePaperApi.placeOrder.mockRejectedValueOnce(new Error('Waiting for live price…'));
+      renderPanel();
+      fireEvent.change(getQtyInput(), { target: { value: '100' } });
+      clickExecuteBtn();
+
+      expect(await screen.findByText('Waiting for live price…')).toBeTruthy();
+      expect(getQtyInput().value).toBe('100');
     });
   });
 
@@ -697,7 +732,10 @@ function setupBTCStores() {
 
 describe('Section 1.7.11 — SL typo safety rails (T2 · RTL)', () => {
   beforeEach(() => {
-    usePaperStore.getState().reset();
+    usePaperStore.getState().clear();
+    usePaperStore.getState().hydrate(emptyState());
+    useAuthStore.setState({ accessToken: 'test-token' });
+    resetFakePaperApi();
     localStorage.clear();
     setupBTCStores();
   });
@@ -743,6 +781,7 @@ describe('Section 1.7.11 — SL typo safety rails (T2 · RTL)', () => {
 
     // Modal dismissed, no order placed
     expect(screen.queryByTestId('sl-confirm-modal')).toBeNull();
+    expect(fakePaperApi.placeOrder).not.toHaveBeenCalled();
     expect(usePaperStore.getState().positions).toHaveLength(0);
   });
 
@@ -762,7 +801,7 @@ describe('Section 1.7.11 — SL typo safety rails (T2 · RTL)', () => {
     expect(screen.getByTestId('sl-confirm-modal')).toBeTruthy();
   });
 
-  it('1.7.11: clicking "Confirm SL/TP anyway" places the order and dismisses modal', () => {
+  it('1.7.11: clicking "Confirm SL/TP anyway" places the order and dismisses modal', async () => {
     renderPanel();
 
     fireEvent.change(getQtyInput(), { target: { value: '100' } });
@@ -777,9 +816,9 @@ describe('Section 1.7.11 — SL typo safety rails (T2 · RTL)', () => {
 
     // Modal gone
     expect(screen.queryByTestId('sl-confirm-modal')).toBeNull();
-    // Order placed (position created)
-    expect(usePaperStore.getState().positions).toHaveLength(1);
-    // Position has the typo SL as set
+    // Order sent with the typo SL as confirmed, and the position created
+    await waitFor(() => expect(usePaperStore.getState().positions).toHaveLength(1));
+    expect(fakePaperApi.placeOrder.mock.calls[0][0]).toMatchObject({ stopLoss: '7800' });
     expect(usePaperStore.getState().positions[0].stopLoss).toBe(7_800);
   });
 
