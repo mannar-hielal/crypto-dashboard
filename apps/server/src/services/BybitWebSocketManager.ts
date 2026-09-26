@@ -46,6 +46,12 @@ export class BybitWebSocketManager extends EventEmitter {
    * cleaned up in unsubscribe().
    */
   private tickerState: Map<string, Partial<TickerData>> = new Map();
+  /**
+   * When Bybit last sent a quote message per symbol (Unix ms) — set on every tickers / orderbook
+   * message, including ones that change nothing, so a quiet but live book is not mistaken for a
+   * stale one (BP-2: the engine refuses to fill on a stale quote). Bounded by subscribed symbols.
+   */
+  private quoteSeenAt: Map<string, number> = new Map();
 
   constructor(useTestnet: boolean = true, category: BybitCategory = 'spot') {
     super();
@@ -95,6 +101,7 @@ export class BybitWebSocketManager extends EventEmitter {
           // Quotes from before the drop are stale — start clean so the post-reconnect snapshot is
           // always emitted and spot never pairs a fresh lastPrice with a pre-drop bid/ask.
           this.tickerState.clear();
+          this.quoteSeenAt.clear();
 
           if (!this.isManuallyClosed) {
             this.reconnect();
@@ -122,6 +129,7 @@ export class BybitWebSocketManager extends EventEmitter {
 
     this.subscriptions.clear();
     this.tickerState.clear(); // free cached ticker state for all symbols
+    this.quoteSeenAt.clear();
     log.info('Manually closed');
   }
 
@@ -212,6 +220,7 @@ export class BybitWebSocketManager extends EventEmitter {
     const symbolStillActive = [...this.subscriptions.keys()].some((k) => k.includes(`|${symbol}`));
     if (!symbolStillActive) {
       this.tickerState.delete(symbol);
+      this.quoteSeenAt.delete(symbol);
     }
   }
 
@@ -298,6 +307,9 @@ export class BybitWebSocketManager extends EventEmitter {
       const parts = topic.split('.');
       const channelType = parts[0];
       const symbol = parts[parts.length - 1];
+      if (channelType === 'orderbook' || channelType === 'tickers') {
+        this.quoteSeenAt.set(symbol, Date.now());
+      }
 
       if (channelType === 'kline') {
         this.emitStream(channelType, this.parseKline(streamData, symbol));
@@ -606,6 +618,11 @@ export class BybitWebSocketManager extends EventEmitter {
    */
   isConnected(): boolean {
     return this.ws?.readyState === WebSocket.OPEN;
+  }
+
+  /** When Bybit last sent a quote message for `symbol` (Unix ms), or undefined. */
+  lastQuoteAt(symbol: string): number | undefined {
+    return this.quoteSeenAt.get(symbol);
   }
 
   /**

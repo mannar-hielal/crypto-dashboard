@@ -5,6 +5,9 @@
  * hits, funding later) to all of that user's open tabs — including changes the engine makes
  * while no tab is open, which the next connection picks up in its snapshot.
  *
+ * BP-2: also pushes, at most once a second, the live price of every market the user holds or has
+ * orders on (`prices`), so PnL is live for symbols no chart pane is showing.
+ *
  * 🔐 Auth: the first message must be `{ type: 'auth', token }` (the same JWT as REST) within
  *    AUTH_TIMEOUT_MS. Never a token in the URL — URLs end up in logs and browser history
  *    (web.md). A refreshed token can be re-sent at any time; when the current one expires the
@@ -13,7 +16,8 @@
 
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { WebSocket } from '@fastify/websocket';
-import type { WsPaperMessage } from '@crypto-dashboard/sdk';
+import { Decimal } from '@prisma/client/runtime/client';
+import type { MarketCategory, PaperPriceDTO, WsPaperMessage } from '@crypto-dashboard/sdk';
 import { config } from '../../config.js';
 import { logger } from '../../logger.js';
 
@@ -27,6 +31,27 @@ const AUTH_TIMEOUT_MS = 5_000;
 const MAX_MESSAGE_BYTES = 4 * 1024; // an auth message is well under 1 KB
 const PING_INTERVAL_MS = 30_000;
 const PONG_TIMEOUT_MS = 10_000;
+const PRICES_EVERY_MS = 1_000;
+
+type MarketKey = `${MarketCategory}:${string}`;
+
+/** The markets an account's PnL depends on: its positions, resting orders and coin balances. */
+export function marketsOf(account: {
+  positions: { category: MarketCategory; symbol: string }[];
+  pendingOrders: { category: MarketCategory; symbol: string }[];
+  spot: { coin: string; free: { toString(): string }; locked: { toString(): string } }[];
+}): Set<MarketKey> {
+  const keys = new Set<MarketKey>();
+  for (const p of account.positions) keys.add(`${p.category}:${p.symbol}`);
+  for (const o of account.pendingOrders) keys.add(`${o.category}:${o.symbol}`);
+  for (const h of account.spot) {
+    // Decimal, never Number: a tiny balance must not round to zero and drop its price feed
+    if (new Decimal(h.free.toString()).plus(h.locked.toString()).gt(0)) {
+      keys.add(`spot:${h.coin}USDT`);
+    }
+  }
+  return keys;
+}
 
 export const WS_CLOSE_UNAUTHORIZED = 4401;
 
@@ -61,6 +86,11 @@ export async function privatePaperWs(app: FastifyInstance): Promise<void> {
 
     let userId: string | null = null;
     let unsubscribe: (() => void) | null = null;
+    // Markets this account's PnL depends on, and the last price sent for each — bounded by
+    // 2 categories × ALLOWED_SYMBOLS (the only markets an account can hold)
+    let markets = new Set<MarketKey>();
+    const sentPrices = new Map<MarketKey, string>();
+    let pricesTimer: NodeJS.Timeout | null = null;
     let expiryTimer: NodeJS.Timeout | null = null;
     let pongTimer: NodeJS.Timeout | null = null;
     let released = false;
@@ -75,12 +105,30 @@ export async function privatePaperWs(app: FastifyInstance): Promise<void> {
       clearTimeout(authTimer);
       if (expiryTimer) clearTimeout(expiryTimer);
       if (pongTimer) clearTimeout(pongTimer);
+      if (pricesTimer) clearInterval(pricesTimer);
       clearInterval(pingTimer);
       unsubscribe?.();
       unsubscribe = null;
       active.delete(socket);
       bump(perIp, ip, -1);
       if (userId) bump(perUser, userId, -1);
+    };
+
+    /** Send the prices that changed since the last push (nothing when none did). */
+    const pushPrices = () => {
+      const items: PaperPriceDTO[] = [];
+      for (const key of markets) {
+        const [category, symbol] = key.split(':') as [MarketCategory, string];
+        const t = app.bybit.getTicker(category, symbol);
+        if (!t || !Number.isFinite(t.lastPrice)) continue;
+        const mark = category === 'linear' ? t.markPrice : undefined;
+        const stamp = `${t.lastPrice}|${mark ?? ''}`;
+        if (sentPrices.get(key) === stamp) continue;
+        sentPrices.set(key, stamp);
+        items.push({ category, symbol, last: t.lastPrice, ...(mark ? { mark } : {}) });
+      }
+      for (const key of sentPrices.keys()) if (!markets.has(key)) sentPrices.delete(key);
+      if (items.length) send({ type: 'prices', items });
     };
 
     const closeUnauthorized = (reason: string) => {
@@ -142,6 +190,7 @@ export async function privatePaperWs(app: FastifyInstance): Promise<void> {
       const buffered: WsPaperMessage[] = [];
       let snapshotSent = false;
       unsubscribe = app.paperEvents.subscribe(userId, (event) => {
+        markets = marketsOf(event.state);
         const message: WsPaperMessage = {
           type: 'delta',
           delta: event.delta,
@@ -152,9 +201,15 @@ export async function privatePaperWs(app: FastifyInstance): Promise<void> {
       });
       try {
         const state = await app.paperRepository.snapshot(userId);
+        if (released) return; // closed while the snapshot loaded — start no timer
         send({ type: 'snapshot', state });
         snapshotSent = true;
         for (const message of buffered) send(message);
+        if (!buffered.length) {
+          markets = marketsOf({ ...state, spot: state.spotBalances });
+        }
+        pushPrices();
+        pricesTimer = setInterval(pushPrices, PRICES_EVERY_MS);
       } catch (err) {
         log.error({ err }, 'Paper WS snapshot failed');
         socket.close(1011, 'Internal error');

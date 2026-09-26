@@ -53,6 +53,16 @@ export type Subscriber = Prisma.SubscriberModel
  */
 export type Account = Prisma.AccountModel
 /**
+ * Model SpotBalance
+ * 
+ */
+export type SpotBalance = Prisma.SpotBalanceModel
+/**
+ * Model SymbolSetting
+ * 
+ */
+export type SymbolSetting = Prisma.SymbolSettingModel
+/**
  * Model Position
  * 
  */

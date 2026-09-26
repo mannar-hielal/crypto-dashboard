@@ -1,5 +1,5 @@
 /**
- * paperStore tests — the read model of the server engine (BYBIT_PARITY_PLAN BP-1).
+ * paperStore tests — the read model of the server engine (BYBIT_PARITY_PLAN BP-1, BP-2).
  *
  * The trading maths (fills, fees, PnL, netting, journal wording) moved to the server and is
  * tested against the real engine there: apps/server/src/trading/engine/__tests__. These tests
@@ -13,7 +13,8 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { PaperDeltaDTO } from '@crypto-dashboard/sdk';
-import { mapServerState, setPaperSoundHandler, usePaperStore } from '../paperStore';
+import { leverageFor, mapServerState, setPaperSoundHandler, usePaperStore } from '../paperStore';
+import { getLastKnownPrice } from '../paneStore';
 import { useAuthStore } from '../authStore';
 import { emptyState, fakePaperApi, resetFakePaperApi } from '@/test/fakePaperApi';
 
@@ -24,9 +25,10 @@ vi.mock('@crypto-dashboard/sdk', async (importOriginal) => ({
 
 function delta(version: number, changes: Partial<PaperDeltaDTO> = {}): PaperDeltaDTO {
   return {
-    account: { balance: '9000', realizedPnl: '5', leverage: 2, version },
+    account: { balance: '9000', realizedPnl: '5', leverage: 2, symbolLeverage: {}, version },
     positionsUpsert: [],
     positionsRemove: [],
+    spotUpsert: [],
     pendingUpsert: [],
     pendingRemove: [],
     orders: [],
@@ -40,11 +42,16 @@ function delta(version: number, changes: Partial<PaperDeltaDTO> = {}): PaperDelt
 
 const position = (id: string, qty = '0.1') => ({
   id,
+  category: 'linear' as const,
   symbol: 'BTCUSDT',
   side: 'long' as const,
   quantity: qty,
   entryPrice: '50000',
   entryUsdtAmount: '5000',
+  leverage: 1,
+  marginMode: 'isolated' as const,
+  entryFee: '2.75',
+  closeFeeReserve: '2.75',
   openedAt: 1,
 });
 
@@ -68,7 +75,13 @@ describe('hydrate()', () => {
   it('maps a snapshot to view numbers and marks the store in sync', () => {
     usePaperStore.getState().hydrate(
       emptyState({
-        account: { balance: '8999.3', realizedPnl: '-1.25', leverage: 5, version: 7 },
+        account: {
+          balance: '8999.3',
+          realizedPnl: '-1.25',
+          leverage: 5,
+          symbolLeverage: {},
+          version: 7,
+        },
         positions: [{ ...position('p1'), takeProfit: '55000' }],
         journal: [{ ...journal('j1'), pnl: '12.5' }],
       })
@@ -87,6 +100,7 @@ describe('hydrate()', () => {
   it('mapServerState caps the history lists at the client limits', () => {
     const orders = Array.from({ length: 250 }, (_, i) => ({
       id: `o${i}`,
+      category: 'linear' as const,
       symbol: 'BTCUSDT',
       side: 'buy' as const,
       type: 'market' as const,
@@ -139,7 +153,7 @@ describe('applyDelta()', () => {
     usePaperStore.getState().applyDelta(delta(1));
     fakePaperApi.getState.mockResolvedValueOnce(
       emptyState({
-        account: { balance: '7777', realizedPnl: '0', leverage: 1, version: 3 },
+        account: { balance: '7777', realizedPnl: '0', leverage: 1, symbolLeverage: {}, version: 3 },
         positions: [position('from-resync')],
       })
     );
@@ -164,7 +178,7 @@ describe('applyDelta()', () => {
     store.applyDelta(delta(1, { positionsUpsert: [position('p1')], journal: [journal('j1')] }));
     usePaperStore.getState().applyDelta({
       ...delta(2),
-      account: { balance: '10000', realizedPnl: '0', leverage: 1, version: 2 },
+      account: { balance: '10000', realizedPnl: '0', leverage: 1, symbolLeverage: {}, version: 2 },
       positionsRemove: ['p1'],
       reset: true,
     });
@@ -207,7 +221,7 @@ describe('applyDelta() before the account is loaded (review fix)', () => {
     // Not hydrated yet (version -1): an order response arrives first
     fakePaperApi.getState.mockResolvedValueOnce(
       emptyState({
-        account: { balance: '8000', realizedPnl: '0', leverage: 1, version: 5 },
+        account: { balance: '8000', realizedPnl: '0', leverage: 1, symbolLeverage: {}, version: 5 },
         positions: [position('existing')],
       })
     );
@@ -225,7 +239,7 @@ describe('clear()', () => {
   it('drops everything, so a new user never sees the previous account', () => {
     usePaperStore.getState().hydrate(
       emptyState({
-        account: { balance: '1', realizedPnl: '0', leverage: 3, version: 9 },
+        account: { balance: '1', realizedPnl: '0', leverage: 3, symbolLeverage: {}, version: 9 },
         positions: [position('p1')],
       })
     );
@@ -243,29 +257,59 @@ describe('clear()', () => {
 describe('actions', () => {
   beforeEach(() => usePaperStore.getState().hydrate(emptyState()));
 
-  it('placeOrder sends intent only (no price) and applies the response delta', async () => {
-    const res = await usePaperStore.getState().placeOrder('BTCUSDT', 'buy', 1_000, 55_000);
+  const market = {
+    category: 'linear' as const,
+    symbol: 'BTCUSDT',
+    side: 'buy' as const,
+    type: 'market' as const,
+  };
+
+  it('placeOrder sends intent only (market, size — no price) and applies the delta', async () => {
+    const res = await usePaperStore
+      .getState()
+      .placeOrder({ ...market, size: { value: 1_000 }, takeProfit: 55_000 });
     expect(fakePaperApi.placeOrder).toHaveBeenCalledWith(
-      { symbol: 'BTCUSDT', side: 'buy', type: 'market', usdtAmount: '1000', takeProfit: '55000' },
+      {
+        category: 'linear',
+        symbol: 'BTCUSDT',
+        side: 'buy',
+        type: 'market',
+        value: '1000',
+        takeProfit: '55000',
+      },
       'test-token'
     );
     expect(res.id).toBeTruthy();
     expect(usePaperStore.getState().positions).toHaveLength(1);
   });
 
-  it('placeLimitOrder sends the trigger price', async () => {
-    await usePaperStore.getState().placeLimitOrder('ETHUSDT', 'sell', 3_100.5, 200);
+  it('a coin-quantity order sends qty, and a limit its trigger price', async () => {
+    await usePaperStore.getState().placeOrder({
+      category: 'spot',
+      symbol: 'ETHUSDT',
+      side: 'sell',
+      type: 'limit',
+      size: { qty: 0.25 },
+      triggerPrice: 3_100.5,
+    });
     expect(fakePaperApi.placeOrder.mock.calls[0][0]).toMatchObject({
+      category: 'spot',
       type: 'limit',
       triggerPrice: '3100.5',
-      usdtAmount: '200',
+      qty: '0.25',
     });
+    expect(fakePaperApi.placeOrder.mock.calls[0][0]).not.toHaveProperty('usdtAmount');
     expect(usePaperStore.getState().pendingOrders[0]).toMatchObject({ symbol: 'ETHUSDT' });
+  });
+
+  it('a market order never sends a trigger price', async () => {
+    await usePaperStore.getState().placeOrder({ ...market, size: { qty: 1 }, triggerPrice: 1 });
+    expect(fakePaperApi.placeOrder.mock.calls[0][0]).not.toHaveProperty('triggerPrice');
   });
 
   it('a failed order request returns the server message instead of throwing', async () => {
     fakePaperApi.placeOrder.mockRejectedValueOnce(new Error('Waiting for live price…'));
-    const res = await usePaperStore.getState().placeOrder('BTCUSDT', 'buy', 100);
+    const res = await usePaperStore.getState().placeOrder({ ...market, size: { value: 100 } });
     expect(res).toEqual({ id: null, error: 'Waiting for live price…' });
   });
 
@@ -274,18 +318,24 @@ describe('actions', () => {
     await expect(usePaperStore.getState().closePosition('p1')).resolves.toBe('boom');
   });
 
-  it('editPendingOrder returns the server result, not-found, or error on a failed request', async () => {
+  it('editPendingOrder sends a coin qty and returns the result, not-found, or the error', async () => {
     await expect(
-      usePaperStore.getState().editPendingOrder('o1', 50_000, 100, null, null)
-    ).resolves.toBe('ok');
+      usePaperStore.getState().editPendingOrder('o1', 50_000, 0.02, null, null)
+    ).resolves.toEqual({ result: 'ok' });
+    expect(fakePaperApi.editOrder.mock.calls[0][1]).toMatchObject({ qty: '0.02' });
     fakePaperApi.editOrder.mockRejectedValueOnce(new Error('Not found'));
     await expect(
-      usePaperStore.getState().editPendingOrder('o1', 50_000, 100, null, null)
-    ).resolves.toBe('not-found');
-    fakePaperApi.editOrder.mockRejectedValueOnce(new Error('Failed to fetch'));
+      usePaperStore.getState().editPendingOrder('o1', 50_000, 0.02, null, null)
+    ).resolves.toEqual({ result: 'not-found' });
+    fakePaperApi.editOrder.mockRejectedValueOnce(
+      new Error('Order quantity lower than the minimum (0.001)')
+    );
     await expect(
-      usePaperStore.getState().editPendingOrder('o1', 50_000, 100, null, null)
-    ).resolves.toBe('error');
+      usePaperStore.getState().editPendingOrder('o1', 50_000, 0.0001, null, null)
+    ).resolves.toEqual({
+      result: 'error',
+      error: 'Order quantity lower than the minimum (0.001)',
+    });
   });
 
   it('fire-and-forget actions report the failure instead of pretending success', async () => {
@@ -298,15 +348,78 @@ describe('actions', () => {
     await expect(usePaperStore.getState().addJournalNote('ok')).resolves.toBeNull();
   });
 
-  it('setLeverage clamps to 1..10 before sending', async () => {
-    await usePaperStore.getState().setLeverage(25);
-    expect(fakePaperApi.setLeverage).toHaveBeenCalledWith(10, 'test-token');
+  it('setSymbolLeverage clamps to 1..10 and sends it for that symbol', async () => {
+    await usePaperStore.getState().setSymbolLeverage('ETHUSDT', 25);
+    expect(fakePaperApi.setSymbolLeverage).toHaveBeenCalledWith('ETHUSDT', 10, 'test-token');
+  });
+
+  it('placeSpotExits sends the coin qty and the legs', async () => {
+    const res = await usePaperStore.getState().placeSpotExits('BTCUSDT', 0.05, undefined, 45_000);
+    expect(fakePaperApi.placeSpotExits).toHaveBeenCalledWith(
+      { symbol: 'BTCUSDT', qty: '0.05', stopLoss: '45000' },
+      'test-token'
+    );
+    expect(res.id).toBe('oco-1');
   });
 
   it('signed out: order requests fail cleanly without calling the API', async () => {
     useAuthStore.setState({ accessToken: null });
-    const res = await usePaperStore.getState().placeOrder('BTCUSDT', 'buy', 100);
+    const res = await usePaperStore.getState().placeOrder({ ...market, size: { value: 100 } });
     expect(res).toEqual({ id: null, error: 'Not signed in' });
     expect(fakePaperApi.placeOrder).not.toHaveBeenCalled();
+  });
+});
+
+// ─── BP-2: spot balances, per-symbol leverage, live prices ────────────────────
+
+describe('BP-2 read model', () => {
+  it('maps spot balances and per-symbol leverage from a snapshot', () => {
+    usePaperStore.getState().hydrate(
+      emptyState({
+        account: {
+          balance: '5000',
+          realizedPnl: '0',
+          leverage: 1,
+          symbolLeverage: { BTCUSDT: 10 },
+          version: 1,
+        },
+        spotBalances: [{ coin: 'BTC', free: '0.0999', locked: '0', avgCost: '50050.05' }],
+      })
+    );
+    const s = usePaperStore.getState();
+    expect(s.spotBalances).toEqual([{ coin: 'BTC', free: 0.0999, locked: 0, avgCost: 50_050.05 }]);
+    expect(leverageFor(s, 'BTCUSDT')).toBe(10);
+    expect(leverageFor(s, 'ETHUSDT')).toBe(1); // the account default
+  });
+
+  it('applyDelta replaces changed coin balances; a reset clears them', () => {
+    usePaperStore.getState().hydrate(
+      emptyState({
+        spotBalances: [
+          { coin: 'BTC', free: '1', locked: '0', avgCost: '1' },
+          { coin: 'ETH', free: '2', locked: '0', avgCost: '1' },
+        ],
+      })
+    );
+    usePaperStore
+      .getState()
+      .applyDelta(
+        delta(1, { spotUpsert: [{ coin: 'BTC', free: '0.5', locked: '0.5', avgCost: '1' }] })
+      );
+    expect(usePaperStore.getState().spotBalances).toEqual([
+      { coin: 'BTC', free: 0.5, locked: 0.5, avgCost: 1 },
+      { coin: 'ETH', free: 2, locked: 0, avgCost: 1 },
+    ]);
+    usePaperStore.getState().applyDelta(delta(2, { reset: true }));
+    expect(usePaperStore.getState().spotBalances).toEqual([]);
+  });
+
+  it('applyPrices feeds the last known price of each market', () => {
+    usePaperStore.getState().applyPrices([
+      { category: 'linear', symbol: 'SOLUSDT', last: 150 },
+      { category: 'spot', symbol: 'SOLUSDT', last: 149.9 },
+    ]);
+    expect(getLastKnownPrice('SOLUSDT', 'linear')).toBe(150);
+    expect(getLastKnownPrice('SOLUSDT', 'spot')).toBe(149.9);
   });
 });

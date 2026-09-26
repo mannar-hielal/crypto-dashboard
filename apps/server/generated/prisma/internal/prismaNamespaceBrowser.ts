@@ -58,6 +58,8 @@ export const ModelName = {
   EmailChangeToken: 'EmailChangeToken',
   Subscriber: 'Subscriber',
   Account: 'Account',
+  SpotBalance: 'SpotBalance',
+  SymbolSetting: 'SymbolSetting',
   Position: 'Position',
   Order: 'Order',
   Trade: 'Trade',
@@ -176,6 +178,30 @@ export const AccountScalarFieldEnum = {
 export type AccountScalarFieldEnum = (typeof AccountScalarFieldEnum)[keyof typeof AccountScalarFieldEnum]
 
 
+export const SpotBalanceScalarFieldEnum = {
+  id: 'id',
+  accountId: 'accountId',
+  coin: 'coin',
+  free: 'free',
+  locked: 'locked',
+  avgCost: 'avgCost',
+  updatedAt: 'updatedAt'
+} as const
+
+export type SpotBalanceScalarFieldEnum = (typeof SpotBalanceScalarFieldEnum)[keyof typeof SpotBalanceScalarFieldEnum]
+
+
+export const SymbolSettingScalarFieldEnum = {
+  id: 'id',
+  accountId: 'accountId',
+  symbol: 'symbol',
+  leverage: 'leverage',
+  marginMode: 'marginMode'
+} as const
+
+export type SymbolSettingScalarFieldEnum = (typeof SymbolSettingScalarFieldEnum)[keyof typeof SymbolSettingScalarFieldEnum]
+
+
 export const PositionScalarFieldEnum = {
   id: 'id',
   refId: 'refId',
@@ -186,6 +212,11 @@ export const PositionScalarFieldEnum = {
   quantity: 'quantity',
   entryPrice: 'entryPrice',
   margin: 'margin',
+  category: 'category',
+  leverage: 'leverage',
+  marginMode: 'marginMode',
+  entryFee: 'entryFee',
+  closeFeeReserve: 'closeFeeReserve',
   takeProfit: 'takeProfit',
   stopLoss: 'stopLoss',
   openedAt: 'openedAt',
@@ -201,6 +232,7 @@ export const OrderScalarFieldEnum = {
   refId: 'refId',
   userId: 'userId',
   accountId: 'accountId',
+  category: 'category',
   symbol: 'symbol',
   side: 'side',
   orderType: 'orderType',
@@ -214,6 +246,11 @@ export const OrderScalarFieldEnum = {
   margin: 'margin',
   commission: 'commission',
   leverage: 'leverage',
+  reserved: 'reserved',
+  feeRate: 'feeRate',
+  feeAsset: 'feeAsset',
+  isMaker: 'isMaker',
+  ocoGroup: 'ocoGroup',
   status: 'status',
   rejectionReason: 'rejectionReason',
   createdAt: 'createdAt',
@@ -232,6 +269,7 @@ export const TradeScalarFieldEnum = {
   userId: 'userId',
   accountId: 'accountId',
   orderId: 'orderId',
+  category: 'category',
   symbol: 'symbol',
   side: 'side',
   quantity: 'quantity',

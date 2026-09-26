@@ -32,19 +32,38 @@ import {
   positionData,
   positionDTO,
   positionFromRow,
+  spotData,
+  spotDTO,
+  spotFromRow,
   tradeData,
   tradeFromRow,
 } from './mappers.js';
 
-/** True when a delta changes nothing (the account values are unchanged and every list is empty). */
+/** Symbols whose leverage setting differs between two maps. */
+function changedLeverage(
+  before: Record<string, number>,
+  after: Record<string, number>
+): [string, number][] {
+  // symbol is a key of `after` itself (allow-listed symbols only) — safe, controlled access
+  // eslint-disable-next-line security/detect-object-injection
+  return Object.entries(after).filter(([symbol, lev]) => before[symbol] !== lev);
+}
+
+/**
+ * True when a delta changes nothing (the account values are unchanged and every list is empty).
+ * Every Delta field must be compared here — a field left out makes a change that only touches it
+ * look like a no-op, and it would never be written.
+ */
 export function isEmptyDelta(delta: Delta, before: AccountState): boolean {
   return (
     !delta.reset &&
     delta.account.balance.eq(before.balance) &&
     delta.account.realizedPnl.eq(before.realizedPnl) &&
     delta.account.leverage === before.leverage &&
+    changedLeverage(before.symbolLeverage, delta.account.symbolLeverage).length === 0 &&
     delta.positionsUpsert.length === 0 &&
     delta.positionsRemove.length === 0 &&
+    delta.spotUpsert.length === 0 &&
     delta.pendingUpsert.length === 0 &&
     delta.pendingRemove.length === 0 &&
     delta.orders.length === 0 &&
@@ -91,9 +110,11 @@ export class AccountRepository {
   async load(userId: string, tx: Tx | PrismaClient = this.prisma): Promise<LoadedAccount> {
     // upsert, not findUnique ?? create: two first-use loads (two tabs) must not race into P2002
     const account = await tx.account.upsert({ where: { userId }, create: { userId }, update: {} });
-    const [positions, pending] = await Promise.all([
+    const [positions, pending, settings, spot] = await Promise.all([
       tx.position.findMany({ where: { userId }, orderBy: [{ openedAt: 'asc' }, { id: 'asc' }] }),
       tx.order.findMany({ where: { userId, status: 'PENDING' }, orderBy: { seq: 'asc' } }),
+      tx.symbolSetting.findMany({ where: { accountId: account.id } }),
+      tx.spotBalance.findMany({ where: { accountId: account.id }, orderBy: { coin: 'asc' } }),
     ]);
     return {
       accountId: account.id,
@@ -102,6 +123,8 @@ export class AccountRepository {
         balance: new Decimal(account.availableBalance.toString()),
         realizedPnl: new Decimal(account.realizedPnl.toString()),
         leverage: account.leverage,
+        symbolLeverage: Object.fromEntries(settings.map((st) => [st.symbol, st.leverage])),
+        spot: spot.map(spotFromRow),
         positions: positions.map(positionFromRow),
         pendingOrders: pending.map(pendingFromRow),
       },
@@ -162,8 +185,30 @@ export class AccountRepository {
         tx.order.deleteMany({ where: { userId } }),
         tx.journalEntry.deleteMany({ where: { userId } }),
         tx.balanceEvent.deleteMany({ where: { userId } }),
+        tx.symbolSetting.deleteMany({ where: { accountId } }),
+        tx.spotBalance.deleteMany({ where: { accountId } }),
       ]);
       return;
+    }
+
+    for (const h of delta.spotUpsert) {
+      const data = spotData(h);
+      await tx.spotBalance.upsert({
+        where: { accountId_coin: { accountId, coin: h.coin } },
+        create: { ...data, accountId },
+        update: data,
+      });
+    }
+
+    for (const [symbol, lev] of changedLeverage(
+      loaded.state.symbolLeverage,
+      delta.account.symbolLeverage
+    )) {
+      await tx.symbolSetting.upsert({
+        where: { accountId_symbol: { accountId, symbol } },
+        create: { accountId, symbol, leverage: lev },
+        update: { leverage: lev },
+      });
     }
 
     if (delta.positionsRemove.length) {
@@ -271,9 +316,11 @@ export class AccountRepository {
         balance: state.balance.toString(),
         realizedPnl: state.realizedPnl.toString(),
         leverage: state.leverage,
+        symbolLeverage: state.symbolLeverage,
         version,
       },
       positions: state.positions.map(positionDTO),
+      spotBalances: state.spot.map(spotDTO),
       pendingOrders: state.pendingOrders.map(pendingDTO),
       orders: orders.map(historyOrderFromRow),
       trades: trades.map(tradeFromRow),
@@ -299,6 +346,8 @@ export class AccountRepository {
           balance: new Decimal(STARTING_BALANCE),
           realizedPnl: new Decimal(0),
           leverage: 1,
+          symbolLeverage: {},
+          spot: [],
           positions: [],
           pendingOrders: [],
         };

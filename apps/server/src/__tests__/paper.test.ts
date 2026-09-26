@@ -26,12 +26,14 @@ vi.mock('../plugins/prisma.js', () => {
 });
 
 import { buildApp } from '../app.js';
+import { marketsOf } from '../routes/paper/ws.js';
 import { TradingError, WAITING_FOR_PRICE } from '../trading/TradingService.js';
 
 const EMPTY_DELTA = {
-  account: { balance: '10000', realizedPnl: '0', leverage: 1, version: 1 },
+  account: { balance: '10000', realizedPnl: '0', leverage: 1, symbolLeverage: {}, version: 1 },
   positionsUpsert: [],
   positionsRemove: [],
+  spotUpsert: [],
   pendingUpsert: [],
   pendingRemove: [],
   orders: [],
@@ -42,8 +44,9 @@ const EMPTY_DELTA = {
 };
 
 const STATE: PaperStateDTO = {
-  account: { balance: '10000', realizedPnl: '0', leverage: 1, version: 0 },
+  account: { balance: '10000', realizedPnl: '0', leverage: 1, symbolLeverage: {}, version: 0 },
   positions: [],
+  spotBalances: [],
   pendingOrders: [],
   orders: [],
   trades: [],
@@ -86,6 +89,8 @@ describe('Paper Trading API (BP-1)', () => {
     ['DELETE', '/api/paper/positions/p1/exits/stop-loss'],
     ['POST', '/api/paper/positions/p1/close'],
     ['PATCH', '/api/paper/account/leverage'],
+    ['PATCH', '/api/paper/symbols/BTCUSDT/leverage'],
+    ['POST', '/api/paper/spot/exits'],
     ['POST', '/api/paper/account/reset'],
     ['POST', '/api/paper/journal'],
     ['PATCH', '/api/paper/journal/j1'],
@@ -136,9 +141,73 @@ describe('Paper Trading API (BP-1)', () => {
       expect(res.json()).toMatchObject({ result: 'pos-1', sound: 'placed' });
       const [calledUser, intent] = place.mock.calls[0];
       expect(calledUser).toBe(userId);
-      expect(intent.usdtAmount).toEqual(new Decimal('100.5'));
+      // A pre-BP-2 client (no category, usdtAmount = margin): today's leveraged trading
+      expect(intent.category).toBe('linear');
+      expect(intent.size).toEqual({ margin: new Decimal('100.5') });
       expect(intent.takeProfit).toEqual(new Decimal('55000'));
       expect(intent).not.toHaveProperty('triggerPrice');
+    });
+
+    it.each([
+      [{ qty: '0.01' }, { qty: new Decimal('0.01') }],
+      [{ value: '500' }, { value: new Decimal('500') }],
+    ])('passes the market and a %o size', async (size, expected) => {
+      const place = vi.spyOn(app.trading, 'placeOrder').mockResolvedValue(executed('pos-1'));
+      const res = await post({
+        category: 'spot',
+        symbol: 'BTCUSDT',
+        side: 'buy',
+        type: 'market',
+        ...size,
+      });
+      expect(res.statusCode).toBe(200);
+      expect(place.mock.calls[0][1]).toMatchObject({ category: 'spot', size: expected });
+    });
+
+    it.each([
+      [{}, 'no size'],
+      [{ qty: '1', value: '100' }, 'two sizes'],
+      [{ qty: '1', usdtAmount: '100' }, 'qty and usdtAmount'],
+    ])('400 for %o (%s)', async (size) => {
+      const res = await post({ symbol: 'BTCUSDT', side: 'buy', type: 'market', ...size });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('400 for a market outside the allowlist', async () => {
+      const res = await post({
+        category: 'inverse',
+        symbol: 'BTCUSDT',
+        side: 'buy',
+        type: 'market',
+        qty: '1',
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('🔐 a client-supplied fee or maker flag never reaches the engine', async () => {
+      const place = vi.spyOn(app.trading, 'placeOrder').mockResolvedValue(executed('pos-1'));
+      await post({
+        symbol: 'BTCUSDT',
+        side: 'buy',
+        type: 'market',
+        qty: '1',
+        fee: '0',
+        feeRate: '0',
+        isMaker: true,
+      });
+      const intent = place.mock.calls[0][1];
+      expect(intent).not.toHaveProperty('fee');
+      expect(intent).not.toHaveProperty('feeRate');
+      expect(intent).not.toHaveProperty('isMaker');
+    });
+
+    it("422 carries Bybit's rule message", async () => {
+      vi.spyOn(app.trading, 'placeOrder').mockRejectedValue(
+        new TradingError(422, 'Order quantity lower than the minimum (0.001)')
+      );
+      const res = await post({ symbol: 'BTCUSDT', side: 'buy', type: 'market', qty: '0.0001' });
+      expect(res.statusCode).toBe(422);
+      expect(res.json()).toEqual({ error: 'Order quantity lower than the minimum (0.001)' });
     });
 
     it('🔐 a client-supplied price never reaches the engine (unknown fields are stripped)', async () => {
@@ -263,9 +332,33 @@ describe('Paper Trading API (BP-1)', () => {
     });
     expect(res.statusCode).toBe(200);
     expect(res.json().result).toBe('rejected');
-    const [, , , , tp, sl] = edit.mock.calls[0];
-    expect(tp).toBeNull();
-    expect(sl).toEqual(new Decimal('48000'));
+    const [, , change] = edit.mock.calls[0];
+    expect(change).toEqual({
+      triggerPrice: new Decimal('50000'),
+      size: { margin: new Decimal('200') },
+      takeProfit: null,
+      stopLoss: new Decimal('48000'),
+    });
+  });
+
+  it('PATCH /orders/:id accepts a qty size and rejects two sizes', async () => {
+    const edit = vi.spyOn(app.trading, 'editOrder').mockResolvedValue(executed('ok' as const));
+    const payload = { triggerPrice: '50000', qty: '0.02', takeProfit: null, stopLoss: null };
+    const ok = await app.inject({
+      method: 'PATCH',
+      url: '/api/paper/orders/o-1',
+      headers: auth,
+      payload,
+    });
+    expect(ok.statusCode).toBe(200);
+    expect(edit.mock.calls[0][2].size).toEqual({ qty: new Decimal('0.02') });
+    const both = await app.inject({
+      method: 'PATCH',
+      url: '/api/paper/orders/o-1',
+      headers: auth,
+      payload: { ...payload, usdtAmount: '100' },
+    });
+    expect(both.statusCode).toBe(400);
   });
 
   it('DELETE /orders/:id/exits/:leg only accepts take-profit / stop-loss', async () => {
@@ -304,6 +397,70 @@ describe('Paper Trading API (BP-1)', () => {
       url: '/api/paper/account/leverage',
       headers: auth,
       payload: { leverage: 11 },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('PATCH /symbols/:symbol/leverage passes the symbol and leverage', async () => {
+    const set = vi.spyOn(app.trading, 'setSymbolLeverage').mockResolvedValue(executed(5));
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/api/paper/symbols/ETHUSDT/leverage',
+      headers: auth,
+      payload: { leverage: 5 },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().result).toBe(5);
+    expect(set).toHaveBeenCalledWith(userId, 'ETHUSDT', 5);
+  });
+
+  it.each([
+    ['/api/paper/symbols/PEPEUSDT/leverage', { leverage: 5 }, 'symbol outside the allowlist'],
+    ['/api/paper/symbols/BTCUSDT/leverage', { leverage: 0 }, 'below 1'],
+    ['/api/paper/symbols/BTCUSDT/leverage', { leverage: 11 }, 'above 10'],
+    ['/api/paper/symbols/BTCUSDT/leverage', { leverage: 2.5 }, 'not an integer'],
+  ])('PATCH %s %o → 400 (%s)', async (url, payload) => {
+    const res = await app.inject({ method: 'PATCH', url, headers: auth, payload });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('PATCH /symbols/:symbol/leverage → 422 while the symbol has open trades', async () => {
+    vi.spyOn(app.trading, 'setSymbolLeverage').mockRejectedValue(new TradingError(422, 'locked'));
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/api/paper/symbols/BTCUSDT/leverage',
+      headers: auth,
+      payload: { leverage: 5 },
+    });
+    expect(res.statusCode).toBe(422);
+  });
+
+  it('POST /spot/exits passes symbol, qty and the legs as Decimals', async () => {
+    const place = vi.spyOn(app.trading, 'placeSpotExits').mockResolvedValue(executed('grp'));
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/paper/spot/exits',
+      headers: auth,
+      payload: { symbol: 'BTCUSDT', qty: '0.05', stopLoss: '45000' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(place).toHaveBeenCalledWith(userId, {
+      symbol: 'BTCUSDT',
+      qty: new Decimal('0.05'),
+      stopLoss: new Decimal('45000'),
+    });
+  });
+
+  it.each([
+    [{ symbol: 'BTCUSDT', qty: '0.05' }, 'no leg'],
+    [{ symbol: 'PEPEUSDT', qty: '1', stopLoss: '1' }, 'symbol outside the allowlist'],
+    [{ symbol: 'BTCUSDT', stopLoss: '1' }, 'no qty'],
+  ])('POST /spot/exits %o → 400 (%s)', async (payload) => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/paper/spot/exits',
+      headers: auth,
+      payload,
     });
     expect(res.statusCode).toBe(400);
   });
@@ -415,6 +572,8 @@ describe('WS /api/paper/ws (BP-1)', () => {
         balance: new Decimal(1),
         realizedPnl: new Decimal(0),
         leverage: 1,
+        symbolLeverage: {},
+        spot: [],
         positions: [],
         pendingOrders: [],
       },
@@ -427,6 +586,8 @@ describe('WS /api/paper/ws (BP-1)', () => {
         balance: new Decimal(1),
         realizedPnl: new Decimal(0),
         leverage: 1,
+        symbolLeverage: {},
+        spot: [],
         positions: [],
         pendingOrders: [],
       },
@@ -438,6 +599,48 @@ describe('WS /api/paper/ws (BP-1)', () => {
     expect(a.messages).toHaveLength(2);
     a.ws.terminate();
     b.ws.terminate();
+  });
+
+  it('pushes live prices of the markets the account holds (not the others)', async () => {
+    vi.spyOn(app.paperRepository, 'snapshot').mockResolvedValue({
+      ...STATE,
+      spotBalances: [{ coin: 'ETH', free: '1', locked: '0', avgCost: '3000' }],
+      pendingOrders: [
+        {
+          id: 'o1',
+          category: 'linear',
+          symbol: 'BTCUSDT',
+          side: 'buy',
+          type: 'limit',
+          usdtAmount: '100',
+          reserved: '100.11',
+          triggerPrice: '40000',
+          qty: '0.0025',
+          leverage: 1,
+          placedAt: 1,
+        },
+      ],
+    });
+    vi.spyOn(app.bybit, 'getTicker').mockImplementation((category, symbol) => ({
+      category,
+      symbol,
+      lastPrice: symbol === 'BTCUSDT' ? 50_000 : 3_000,
+      bid: null,
+      ask: null,
+      ...(category === 'linear' ? { markPrice: 50_010 } : {}),
+    }));
+    const s = await open();
+    s.ws.send(JSON.stringify({ type: 'auth', token: tokenFor('prices-user') }));
+    const [, prices] = await s.next(2);
+    expect(prices).toEqual({
+      type: 'prices',
+      items: expect.arrayContaining([
+        { category: 'linear', symbol: 'BTCUSDT', last: 50_000, mark: 50_010 },
+        { category: 'spot', symbol: 'ETHUSDT', last: 3_000 },
+      ]),
+    });
+    expect((prices as { items: unknown[] }).items).toHaveLength(2);
+    s.ws.terminate();
   });
 
   it('🔐 a re-auth with another user’s token closes the socket (4401)', async () => {
@@ -464,5 +667,19 @@ describe('WS /api/paper/ws (BP-1)', () => {
     await sixth.closed;
     expect(sixth.code()).toBe(1013);
     for (const s of sockets) s.ws.terminate();
+  });
+});
+
+describe('marketsOf (PR #136 review)', () => {
+  it('keeps a tiny coin balance in the price feed (Decimal, never Number)', () => {
+    const keys = marketsOf({
+      positions: [],
+      pendingOrders: [],
+      spot: [
+        { coin: 'BTC', free: '0.00000001', locked: '0' },
+        { coin: 'ETH', free: '0', locked: '0' },
+      ],
+    });
+    expect([...keys]).toEqual(['spot:BTCUSDT']);
   });
 });

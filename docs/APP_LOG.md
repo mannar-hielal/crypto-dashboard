@@ -450,14 +450,21 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 ## 🔢 Business Logic Rules
 
-### Commission
+### Fees (BP-2 — Bybit VIP-0; the server charges, `apps/server/src/trading/bybitSpec.ts`)
 
-- `COMMISSION_RATE = 0.0007` (0.07% taker fee, exported from `paperStore.ts`)
-- Applied on **open**: `balance -= usdtAmount + usdtAmount * COMMISSION_RATE`
-- Applied on **close**: `commission = qty * exitPrice * COMMISSION_RATE`
-- Balance validation: `usdtAmount + usdtAmount * COMMISSION_RATE > balance` → reject
-- `realizedPnl` = `gross_pnl - exitCommission - entryCommission`
-- `BalanceEvent.pnl` = `pnl - exitCommission` (net impact on balance at close)
+- **USDT Perpetual:** taker 0.055% / maker 0.02%, on notional (`qty × price`). Market, stop, TP/SL and a limit that
+  crosses the book are taker; a resting limit that later fills is maker.
+  - **Open:** `balance -= IM + openFee + estCloseFee` (IM = `qty × price / leverage`; the close-fee estimate is taker and
+    stays with the position as `closeFeeReserve`).
+  - **Close:** `balance += IM + closeFeeReserve + pnl − closeFee`; `realizedPnl += pnl − closeFee − entryFee` (the
+    stored `entryFee`, never a recomputation).
+  - **Resting order:** reserves IM + taker open + taker close at its trigger (`Order.reserved`); cancel / edit / fill
+    refund exactly that.
+- **Spot:** 0.1% in the asset received — a buy pays in the coin, a sell in USDT. Realized PnL = `(price − avgCost) ×
+qty − fee`.
+- `BalanceEvent.pnl` = `pnl − closeFee` (net impact on balance at close).
+- Rows from before BP-2 keep the flat 0.07% they were charged (migration backfill); the client's estimates use the
+  SDK's copy of the rates (`FEE_RATES`), kept identical to the server's by a test.
 
 ### TP/SL rules (implemented in `checkTPSL()` + bracket lifecycle)
 
@@ -476,7 +483,7 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 ### State reset pattern
 
-- Use `key={prop}` on parent to reset child state on prop change (`TradingPanel` uses ``key={`${activePane}-${symbol}`}`)
+- Use `key={prop}` on parent to reset child state on prop change (`TradingPanel` uses ``key={`${activePane}-${category}-${symbol}`}``)
 - Never use during-render `setState`, never use `useEffect` + `setState` for reset
 
 ---
@@ -2244,3 +2251,88 @@ checks pass:
 
 **Gates:** type-check ✅ (server + client), lint ✅, format ✅, test ✅ (395 server + 293 client + 57 hook), audit ✅
 (11 moderate, none high)
+
+### feat: Bybit Parity BP-2 — Spot and USDT Perpetual, Bybit fees and fill prices (2026-09-26) ✅
+
+**Context:** phase 3 of `docs/BYBIT_PARITY_PLAN.md` (D1–D8, F3–F9). All leveraged trading was one flat-fee market
+filled at the last price, with account-wide leverage and shorting on everything. Planned with a subagent, then the
+owner answered 15 planning questions and a 10-question visual gate (plan and answers in
+`~/.claude/plans/bp2-market-split.md`; decisions recorded in the parity plan, BP-2). One PR.
+
+**Two markets:**
+
+- **Spot:** a coin balance per asset next to the one USDT wallet; 1×, no shorting (F8); market and limit orders; TP /
+  SL as an OCO pair of conditional sells that lock the coins (on a buy, or on coins held).
+- **USDT Perpetual:** what all pre-BP-2 trading became (D7 — column default `linear`); per-symbol leverage, locked
+  while the symbol has open trades; isolated margin.
+
+**Server:**
+
+- `bybitSpec.ts`: VIP-0 fee rates, Bybit's documented rejection wording, qty-step / tick / minimum checks, and a
+  dated fallback of mainnet instrument rules.
+- **Engine:** `draft.ts` (shared working copy — now tracks coin balances), `actions.ts` (USDT Perpetual: fees on
+  notional, stored entry fees and reserves, crossing limits fill now as taker, per-symbol leverage), `spot.ts`
+  (spot accounting, fees in the received asset, average cost, OCO legs), `triggers.ts` (per market; last-price
+  triggers, fill decided by `executeTrigger`: resting limit at its price, stop / TP / SL at the ask / bid).
+- **TradingService:** fills on the server's live quote — buys at the ask, sells at the bid — and refuses a quote
+  older than 10 s. The Bybit manager now records when each market's quote was last _seen_.
+- **MatchingEngine:** indexed by `category:symbol`; linear ticks now drive USDT Perpetual; gap detection and backfill
+  per market.
+- **Routes:** `category` + size (`qty` / `value`, or a pre-BP-2 `usdtAmount`) on orders and edits, `PATCH
+/symbols/:symbol/leverage`, `POST /spot/exits`; Bybit-rule refusals answer 422 and write nothing. The private WS
+  also pushes live prices of the markets an account holds (≤ 1/s, changes only).
+- **Migrations:** `bp2_linear_fees` (categories, stored fees / reserves backfilled at 0.07%, position leverage from
+  qty × entry / margin, `SymbolSetting`) and `bp2_spot` (`SpotBalance` with a non-negative CHECK, `Order.ocoGroup`).
+  Verified on a scratch DB with pre-BP-2 rows.
+
+**Client:**
+
+- **Market URLs** (`lib/marketRoutes.ts`, `hooks/useMarketUrlSync.ts`): `/dashboard/spot/BTC/USDT`,
+  `/dashboard/usdt/BTCUSDT`; bare `/dashboard` redirects. The URL follows the active pane both ways, deep links
+  survive sign-in (allow-listed 🔐), and the page-transition key groups every dashboard URL so switching market or
+  symbol never remounts the dashboard. Authenticated + noindex; `robots.txt` already disallows `/dashboard`.
+- **Header Trade ▾ menu** (`TradeMenu.tsx`) and in-panel Spot | USDT Perpetual tabs; "Spot" / "Perpetual" subtitle
+  on the pair.
+- **TradingPanel:** Amount as BTC or USDT with a 0–Max quick fill, per-market summary rows (perps: value, margin,
+  open / close fee estimates, cost; spot: value, fee in the received coin), `1x ▾` leverage chip + modal
+  (`LeverageChip.tsx`), no Stop tab or sell TP / SL on spot, Bybit minimum checks from the instruments cache.
+- **Bottom panel:** Assets tab on Spot (`AssetsTable.tsx`, with Sell prefill and a TP / SL modal), Positions on USDT
+  Perpetual; Orders / Order History filtered to the active market; fee + rate / liquidity per fill; leverage removed
+  from Account Settings.
+- **Stores:** `paperStore` gains spot balances, per-symbol leverage and a size-based `placeOrder(OrderRequest)`;
+  `layoutStore` v5 (`setPaneMarket`, the one-time D7 hand-off); `COMMISSION_RATE` and the hard-coded lot steps are gone.
+
+**Found along the way:**
+
+- A navigation from a component's first layout effect is lost (the router listens in its own, later layout effect),
+  so a lowercase deep link would never have been normalised — moved to a passive effect, covered by a test.
+- Spot TP / SL legs showed "—" as their price in the Orders tab.
+- The 256px panel can't fit "Isolated · 1x" next to both tabs — the owner chose the short `1x ▾` chip.
+
+**Code review** (independent subagent over the whole diff — no money leaks found; 9 findings, all fixed):
+
+- the pre-BP-2 account-leverage route could change the leverage of a symbol with open trades — changing the default
+  now pins the current leverage of every busy symbol, and an edit keeps the order's own leverage;
+- a 100% market buy in coin mode was sized at the last price but fills at the ask — previews and Max now use ask / bid;
+- a removed TP / SL of a resting spot buy was tagged USDT Perpetual; spot TP / SL placed SL before TP (SL won a
+  backfilled candle spanning both, unlike perpetual); a spot sell's proceeds / fee weren't on the 8-decimal grid;
+  a resting spot buy's TP / SL skipped the tick check;
+- TP / SL edit pencils showed on orders the server won't edit; default limit prices were rounded to 2 decimals
+  (DOGE / XRP / ADA limits crossed the book); server price pushes didn't re-render the account panel.
+
+**Tests:** server 508 (engine: `fees.test` and `spot.test` worked-number tables, per-market triggers; services;
+routes / WS), client 370 (market URLs and sync, Trade menu, order maths, layout v5, Spot form, Assets tab, login return
+path). `TRADING_TEST_PLAN.md` has a new Section 14.
+
+**Live verification** (running dev server + dev DB + live Bybit feed, throwaway users, now deleted) — 22 of 22:
+perp fills at the ask / bid; taker 0.055% on notional with the entry fee and close reserve stored; leverage locked by an
+open position and set per symbol; resting-limit reserve and exact refund; crossing limit fills now; minimum qty and
+off-tick rejections; spot buy at the ask with the fee in BTC; no spot shorting; no spot stops; spot TP / SL OCO lock;
+spot sell fee in USDT; snapshot carries spot and leverage; WS prices for held markets only; a pre-BP-2 intent still
+trades USDT Perpetual.
+
+**Not in BP-2 (see parity plan §8):** same-side positions stay separate; leverage changes wait for BP-3's re-margining;
+the ticker bar's static placeholder prices are unchanged.
+
+**Gates:** type-check ✅ (server + client), lint ✅, format ✅, test ✅ (508 server + 370 client), server + client
+build ✅, audit ✅ (11 moderate, none high)

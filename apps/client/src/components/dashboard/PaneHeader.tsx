@@ -91,6 +91,9 @@ export function PaneHeader({ paneIndex, isActive, onActivate }: PaneHeaderProps)
             {baseAsset}
           </span>
           <span style={{ fontSize: '9px', color: color.muted }}>/USDT</span>
+          <span style={{ fontSize: fontSize.xxs, color: color.muted }}>
+            {paneConfig.category === 'spot' ? 'Spot' : 'Perpetual'}
+          </span>
           <ChevronDown className="h-2.5 w-2.5" style={{ color: color.muted }} />
         </button>
 

@@ -180,7 +180,7 @@ Then run gates — `pnpm type-check` (server + client), `pnpm lint`, `pnpm forma
     - Short: TP < entry, SL > entry.
 72. `placeOrder` includes entry commission in balance check (`usdtAmount + fee > balance` → reject).
 73. `closePosition` applies `Math.max(0, returnAmount)` — balance never goes negative.
-74. `realizedPnl` subtracts BOTH legs of commission — entry commission (`entryUsdtAmount × COMMISSION_RATE`) AND exit commission (`qty × exitPrice × COMMISSION_RATE`). Omitting either overstates profit.
+74. `realizedPnl` subtracts BOTH fee legs — the **stored** entry fee (`Position.entryFee`, never recomputed at today's rate) AND the close fee (`qty × exitPrice × feeRate`). Omitting either overstates profit; recomputing the entry fee rewrites pre-BP-2 history (BP-2).
 75. `useTPSLMonitor` only evaluates positions matching active `symbol` — cross-symbol false triggers are a known bug risk.
 
 ## P5 — WebSocket — Server & Client (REVIEW §5)

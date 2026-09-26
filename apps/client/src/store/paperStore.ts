@@ -1,5 +1,9 @@
 /**
- * Paper Trading Store — read model of the server-side engine (BYBIT_PARITY_PLAN BP-1).
+ * Paper Trading Store — read model of the server-side engine (BYBIT_PARITY_PLAN BP-1, BP-2).
+ *
+ * BP-2: two markets — Spot (coin balances, `spotBalances`) and USDT Perpetual (positions, per-symbol
+ * leverage). Every record names its market (`category`). Fees shown before an order is sent are
+ * estimates from the SDK's copy of Bybit's rates (FEE_RATES); the server charges the real fee.
  *
  * The server executes every trade and checks TP/SL and pending orders 24/7
  * (apps/server/src/trading). This store only mirrors the account:
@@ -16,31 +20,34 @@
 
 import { create } from 'zustand';
 import {
+  MAX_LEVERAGE,
+  STARTING_BALANCE,
   paperApi,
+  type MarketCategory,
   type PaperDeltaDTO,
   type PaperExitLeg,
   type PaperOrderDTO,
   type PaperPendingOrderDTO,
+  type PaperPendingType,
   type PaperPositionDTO,
+  type PaperPriceDTO,
   type PaperSound,
+  type PaperSpotBalanceDTO,
   type PaperStateDTO,
 } from '@crypto-dashboard/sdk';
 import { useAuthStore } from './authStore';
+import { setLastKnownPrice } from './paneStore';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const STARTING_BALANCE = 10_000; // $10,000 USDT
 const MAX_HISTORY = 100;
 const MAX_ORDERS = 200;
 const MAX_BALANCE_LOG = 200;
 const MAX_JOURNAL = 200;
-/** 0.07% taker fee — used for UI estimates only; the server charges the real fee */
-export const COMMISSION_RATE = 0.0007;
 
-/** Maximum allowed leverage for paper trading (learning-app safety cap). */
-export const MAX_LEVERAGE = 10;
+export { MAX_LEVERAGE };
 
-/** Leverage options available in the Account Settings selector (capped at MAX_LEVERAGE). */
+/** Leverage presets for the USDT Perpetual leverage picker (capped at MAX_LEVERAGE). */
 export const CRYPTO_LEVERAGE_OPTIONS = [1, 2, 3, 5, MAX_LEVERAGE] as const;
 export type CryptoLeverage = (typeof CRYPTO_LEVERAGE_OPTIONS)[number];
 
@@ -49,20 +56,39 @@ const LEGACY_STORAGE_KEY = 'cd-paper-trading';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+/** A USDT Perpetual position (spot holds coin balances instead). */
 export interface Position {
   id: string;
+  category: 'linear';
   symbol: string;
   side: 'long' | 'short';
   quantity: number; // base-asset qty (e.g. BTC)
   entryPrice: number; // fill price (USD)
-  entryUsdtAmount: number; // margin reserved at entry
+  entryUsdtAmount: number; // initial margin
+  leverage: number;
+  /** Open fee charged (USDT) */
+  entryFee: number;
+  /** Estimated close fee held with the margin (position margin = entryUsdtAmount + this) */
+  closeFeeReserve: number;
   openedAt: number; // Unix ms
   takeProfit?: number;
   stopLoss?: number;
 }
 
+/** A spot coin balance. The USDT wallet is `balance`. */
+export interface SpotBalance {
+  coin: string;
+  /** Sellable now */
+  free: number;
+  /** Backing resting sell / TP / SL orders */
+  locked: number;
+  /** Average cost per coin in USDT, fees included */
+  avgCost: number;
+}
+
 export interface ClosedTrade {
   id: string;
+  category: MarketCategory;
   symbol: string;
   side: 'long' | 'short';
   quantity: number;
@@ -78,14 +104,20 @@ export type OrderType = 'market' | 'limit' | 'stop' | 'take-profit' | 'stop-loss
 
 export interface PendingOrder {
   id: string;
+  category: MarketCategory;
   symbol: string;
   side: 'buy' | 'sell';
-  type: 'limit' | 'stop';
-  usdtAmount: number; // reserved at placement
-  triggerPrice: number; // limit or stop trigger price
-  qty: number; // leveraged base-asset qty at placement
-  /** Leverage captured at placement — the fill uses it */
+  /** take-profit / stop-loss: a spot TP / SL leg protecting a coin balance */
+  type: PaperPendingType;
+  usdtAmount: number; // perpetual: initial margin at the trigger; spot: order value
+  /** What placing it set aside: USDT, or the locked coin quantity for a spot sell / TP / SL */
+  reserved: number;
+  triggerPrice: number; // limit or trigger price
+  qty: number; // base-asset qty
+  /** Leverage captured at placement — the fill uses it (1 on spot) */
   leverage: number;
+  /** Spot TP / SL pair id: filling one leg cancels the other */
+  ocoGroup?: string;
   takeProfit?: number;
   stopLoss?: number;
   placedAt: number;
@@ -93,6 +125,7 @@ export interface PendingOrder {
 
 export interface HistoricalOrder {
   id: string;
+  category: MarketCategory;
   symbol: string;
   side: 'buy' | 'sell';
   type: OrderType;
@@ -101,9 +134,17 @@ export interface HistoricalOrder {
   stopPrice?: number;
   fillPrice?: number;
   status: OrderStatus;
+  /** Fee charged, in `feeAsset` */
   commission: number;
+  /** Fee rate of a fill; absent on cancel / reject rows (and on pre-BP-2 cancels) */
+  feeRate?: number;
+  feeAsset?: string;
+  /** True for a maker (resting limit) fill */
+  isMaker?: boolean;
   /** USDT margin used for this order entry (omitted for closing orders) */
   margin?: number;
+  /** Leverage of a USDT Perpetual entry */
+  leverage?: number;
   placingTime: number;
   closingTime: number;
   /** Why the order was rejected (only set when status === 'rejected') */
@@ -139,6 +180,23 @@ export interface PlaceResult {
   error?: string;
 }
 
+/**
+ * An order as the user entered it. Size is a base-coin `qty` or a USDT notional `value`
+ * (Bybit's "by value"); the server converts a value at the fill / trigger price and rounds to
+ * the instrument's qty step.
+ */
+export interface OrderRequest {
+  category: MarketCategory;
+  symbol: string;
+  side: 'buy' | 'sell';
+  type: 'market' | 'limit' | 'stop';
+  size: { qty: number } | { value: number };
+  /** Limit price, or stop trigger */
+  triggerPrice?: number;
+  takeProfit?: number;
+  stopLoss?: number;
+}
+
 // ─── DTO → view mappers ───────────────────────────────────────────────────────
 
 const toNum = (v: string) => Number(v);
@@ -147,28 +205,44 @@ const optNum = (v: string | undefined) => (v === undefined ? undefined : Number(
 function positionFrom(p: PaperPositionDTO): Position {
   return {
     id: p.id,
+    category: 'linear',
     symbol: p.symbol,
     side: p.side,
     quantity: toNum(p.quantity),
     entryPrice: toNum(p.entryPrice),
     entryUsdtAmount: toNum(p.entryUsdtAmount),
+    leverage: p.leverage,
+    entryFee: toNum(p.entryFee),
+    closeFeeReserve: toNum(p.closeFeeReserve),
     openedAt: p.openedAt,
     ...(p.takeProfit !== undefined ? { takeProfit: toNum(p.takeProfit) } : {}),
     ...(p.stopLoss !== undefined ? { stopLoss: toNum(p.stopLoss) } : {}),
   };
 }
 
+function spotFrom(h: PaperSpotBalanceDTO): SpotBalance {
+  return {
+    coin: h.coin,
+    free: toNum(h.free),
+    locked: toNum(h.locked),
+    avgCost: toNum(h.avgCost),
+  };
+}
+
 function pendingFrom(o: PaperPendingOrderDTO): PendingOrder {
   return {
     id: o.id,
+    category: o.category,
     symbol: o.symbol,
     side: o.side,
     type: o.type,
     usdtAmount: toNum(o.usdtAmount),
+    reserved: toNum(o.reserved),
     triggerPrice: toNum(o.triggerPrice),
     qty: toNum(o.qty),
     leverage: o.leverage,
     placedAt: o.placedAt,
+    ...(o.ocoGroup ? { ocoGroup: o.ocoGroup } : {}),
     ...(o.takeProfit !== undefined ? { takeProfit: toNum(o.takeProfit) } : {}),
     ...(o.stopLoss !== undefined ? { stopLoss: toNum(o.stopLoss) } : {}),
   };
@@ -177,6 +251,7 @@ function pendingFrom(o: PaperPendingOrderDTO): PendingOrder {
 function orderFrom(o: PaperOrderDTO): HistoricalOrder {
   return {
     id: o.id,
+    category: o.category,
     symbol: o.symbol,
     side: o.side,
     type: o.type,
@@ -186,7 +261,11 @@ function orderFrom(o: PaperOrderDTO): HistoricalOrder {
     fillPrice: optNum(o.fillPrice),
     status: o.status,
     commission: toNum(o.commission),
+    feeRate: optNum(o.feeRate),
+    ...(o.feeAsset ? { feeAsset: o.feeAsset } : {}),
+    ...(o.isMaker !== undefined ? { isMaker: o.isMaker } : {}),
     margin: optNum(o.margin),
+    ...(o.leverage !== undefined ? { leverage: o.leverage } : {}),
     placingTime: o.placingTime,
     closingTime: o.closingTime,
     ...(o.rejectionReason ? { rejectionReason: o.rejectionReason } : {}),
@@ -196,6 +275,7 @@ function orderFrom(o: PaperOrderDTO): HistoricalOrder {
 function tradeFrom(t: PaperStateDTO['trades'][number]): ClosedTrade {
   return {
     id: t.id,
+    category: t.category,
     symbol: t.symbol,
     side: t.side,
     quantity: toNum(t.quantity),
@@ -235,6 +315,8 @@ export function mapServerState(state: PaperStateDTO) {
     balance: toNum(state.account.balance),
     realizedPnl: toNum(state.account.realizedPnl),
     leverage: state.account.leverage,
+    symbolLeverage: { ...state.account.symbolLeverage },
+    spotBalances: state.spotBalances.map(spotFrom),
     positions: state.positions.map(positionFrom),
     pendingOrders: state.pendingOrders.map(pendingFrom),
     orders: state.orders.map(orderFrom).slice(0, MAX_ORDERS),
@@ -253,6 +335,23 @@ function upsert<T extends { id: string }>(list: T[], removed: string[], changed:
       : [...next, item];
   }
   return next;
+}
+
+/** Replace changed coin balances by coin (a reset starts from none). */
+function upsertSpot(list: SpotBalance[], changed: SpotBalance[]): SpotBalance[] {
+  if (changed.length === 0) return list;
+  const byCoin = new Map(list.map((h) => [h.coin, h]));
+  for (const h of changed) byCoin.set(h.coin, h);
+  return [...byCoin.values()];
+}
+
+/** The leverage a new USDT Perpetual order on `symbol` gets. */
+export function leverageFor(
+  state: { leverage: number; symbolLeverage: Record<string, number> },
+  symbol: string
+): number {
+  // symbol comes from the allow-listed SYMBOLS — safe, controlled access
+  return state.symbolLeverage[symbol] ?? state.leverage;
 }
 
 /** Prepend new records (newest first), skipping ids already present, and cap the list. */
@@ -283,8 +382,14 @@ interface PaperState {
   realizedPnl: number;
   balanceLog: BalanceEvent[];
   journal: JournalEntry[];
-  /** Account-wide leverage (1–MAX_LEVERAGE); per-symbol leverage arrives in BP-2 */
+  /** Default USDT Perpetual leverage, for a symbol with no setting of its own */
   leverage: number;
+  /** USDT Perpetual leverage per symbol (read through leverageFor) */
+  symbolLeverage: Record<string, number>;
+  /** Spot coin balances */
+  spotBalances: SpotBalance[];
+  /** When the server last pushed prices (they go to lastKnownPrices; this lets views re-render) */
+  pricesAt: number;
   /** Server account version of the state shown (-1 = nothing loaded yet) */
   version: number;
 
@@ -301,28 +406,15 @@ interface PaperState {
   clear: () => void;
   /** Reload the whole account from the server (after a missed change). */
   resync: () => Promise<void>;
+  /** Live prices the server pushes for markets the account holds (feeds lastKnownPrices). */
+  applyPrices: (items: PaperPriceDTO[]) => void;
 
-  /** Market order at the server's live price. */
-  placeOrder: (
+  /** Market / limit / stop order (the server picks the fill price). */
+  placeOrder: (order: OrderRequest) => Promise<PlaceResult>;
+  /** Spot TP / SL on coins already held (locks `qty`). */
+  placeSpotExits: (
     symbol: string,
-    side: 'buy' | 'sell',
-    usdtAmount: number,
-    takeProfit?: number,
-    stopLoss?: number
-  ) => Promise<PlaceResult>;
-  placeLimitOrder: (
-    symbol: string,
-    side: 'buy' | 'sell',
-    triggerPrice: number,
-    usdtAmount: number,
-    takeProfit?: number,
-    stopLoss?: number
-  ) => Promise<PlaceResult>;
-  placeStopOrder: (
-    symbol: string,
-    side: 'buy' | 'sell',
-    triggerPrice: number,
-    usdtAmount: number,
+    qty: number,
     takeProfit?: number,
     stopLoss?: number
   ) => Promise<PlaceResult>;
@@ -339,16 +431,18 @@ interface PaperState {
     takeProfit: number | null,
     stopLoss: number | null
   ) => Promise<ActionError>;
+  /** Edit a pending order's price, base-coin qty and TP / SL. */
   editPendingOrder: (
     orderId: string,
     newTriggerPrice: number,
-    newUsdtAmount: number,
+    newQty: number,
     newTakeProfit: number | null,
     newStopLoss: number | null
-  ) => Promise<'ok' | 'rejected' | 'not-found' | 'error'>;
+  ) => Promise<{ result: 'ok' | 'rejected' | 'not-found' | 'error'; error?: string }>;
   addJournalNote: (text: string) => Promise<ActionError>;
   editJournalEntry: (entryId: string, text: string) => Promise<ActionError>;
-  setLeverage: (v: number) => Promise<ActionError>;
+  /** USDT Perpetual leverage for one symbol (refused while it has open trades). */
+  setSymbolLeverage: (symbol: string, v: number) => Promise<ActionError>;
   /** Reset the account back to the starting balance. */
   reset: () => Promise<ActionError>;
 }
@@ -363,6 +457,9 @@ const EMPTY = {
   balanceLog: [] as BalanceEvent[],
   journal: [] as JournalEntry[],
   leverage: 1,
+  symbolLeverage: {} as Record<string, number>,
+  spotBalances: [] as SpotBalance[],
+  pricesAt: 0,
   version: -1,
   isSyncing: true,
   lastSyncAt: null as number | null,
@@ -415,35 +512,6 @@ export const usePaperStore = create<PaperState>()((set, get) => {
 
   let resyncing: Promise<void> | null = null;
 
-  async function placePending(
-    type: 'limit' | 'stop',
-    symbol: string,
-    side: 'buy' | 'sell',
-    triggerPrice: number,
-    usdtAmount: number,
-    takeProfit?: number,
-    stopLoss?: number
-  ): Promise<PlaceResult> {
-    try {
-      const res = await paperApi.placeOrder(
-        {
-          symbol,
-          side,
-          type,
-          usdtAmount: dec(usdtAmount),
-          triggerPrice: dec(triggerPrice),
-          ...(takeProfit && takeProfit > 0 ? { takeProfit: dec(takeProfit) } : {}),
-          ...(stopLoss && stopLoss > 0 ? { stopLoss: dec(stopLoss) } : {}),
-        },
-        token()
-      );
-      applyResponse(res);
-      return { id: res.result };
-    } catch (err) {
-      return { id: null, error: errorMessage(err) };
-    }
-  }
-
   return {
     ...EMPTY,
 
@@ -478,6 +546,8 @@ export const usePaperStore = create<PaperState>()((set, get) => {
         balance: toNum(delta.account.balance),
         realizedPnl: toNum(delta.account.realizedPnl),
         leverage: delta.account.leverage,
+        symbolLeverage: { ...delta.account.symbolLeverage },
+        spotBalances: upsertSpot(delta.reset ? [] : s.spotBalances, delta.spotUpsert.map(spotFrom)),
         positions: upsert(
           delta.reset ? [] : s.positions,
           delta.positionsRemove,
@@ -519,14 +589,24 @@ export const usePaperStore = create<PaperState>()((set, get) => {
       return resyncing;
     },
 
-    placeOrder: async (symbol, side, usdtAmount, takeProfit, stopLoss) => {
+    applyPrices: (items) => {
+      for (const p of items) setLastKnownPrice(p.category, p.symbol, p.last);
+      if (items.length) set({ pricesAt: Date.now() });
+    },
+
+    placeOrder: async (order) => {
+      const { takeProfit, stopLoss, triggerPrice } = order;
       try {
         const res = await paperApi.placeOrder(
           {
-            symbol,
-            side,
-            type: 'market',
-            usdtAmount: dec(usdtAmount),
+            category: order.category,
+            symbol: order.symbol,
+            side: order.side,
+            type: order.type,
+            ...('qty' in order.size
+              ? { qty: dec(order.size.qty) }
+              : { value: dec(order.size.value) }),
+            ...(order.type !== 'market' && triggerPrice ? { triggerPrice: dec(triggerPrice) } : {}),
             ...(takeProfit && takeProfit > 0 ? { takeProfit: dec(takeProfit) } : {}),
             ...(stopLoss && stopLoss > 0 ? { stopLoss: dec(stopLoss) } : {}),
           },
@@ -539,8 +619,23 @@ export const usePaperStore = create<PaperState>()((set, get) => {
       }
     },
 
-    placeLimitOrder: (...args) => placePending('limit', ...args),
-    placeStopOrder: (...args) => placePending('stop', ...args),
+    placeSpotExits: async (symbol, qty, takeProfit, stopLoss) => {
+      try {
+        const res = await paperApi.placeSpotExits(
+          {
+            symbol,
+            qty: dec(qty),
+            ...(takeProfit && takeProfit > 0 ? { takeProfit: dec(takeProfit) } : {}),
+            ...(stopLoss && stopLoss > 0 ? { stopLoss: dec(stopLoss) } : {}),
+          },
+          token()
+        );
+        applyResponse(res);
+        return { id: res.result };
+      } catch (err) {
+        return { id: null, error: errorMessage(err) };
+      }
+    },
 
     closePosition: (positionId) => settle(() => paperApi.closePosition(positionId, token())),
 
@@ -564,30 +659,26 @@ export const usePaperStore = create<PaperState>()((set, get) => {
         )
       ),
 
-    editPendingOrder: async (
-      orderId,
-      newTriggerPrice,
-      newUsdtAmount,
-      newTakeProfit,
-      newStopLoss
-    ) => {
+    editPendingOrder: async (orderId, newTriggerPrice, newQty, newTakeProfit, newStopLoss) => {
       try {
         const res = await paperApi.editOrder(
           orderId,
           {
             triggerPrice: dec(newTriggerPrice),
-            usdtAmount: dec(newUsdtAmount),
+            qty: dec(newQty),
             takeProfit: newTakeProfit === null ? null : dec(newTakeProfit),
             stopLoss: newStopLoss === null ? null : dec(newStopLoss),
           },
           token()
         );
         applyResponse(res);
-        return res.result;
+        return { result: res.result };
       } catch (err) {
-        if (errorMessage(err) === 'Not found') return 'not-found';
+        const message = errorMessage(err);
+        if (message === 'Not found') return { result: 'not-found' };
         if (import.meta.env.DEV) console.error('[paperStore] edit failed:', err);
-        return 'error'; // request failed — nothing changed on the server
+        // Refused (Bybit's size / tick rules) or the request failed — nothing changed
+        return { result: 'error', error: message };
       }
     },
 
@@ -596,9 +687,9 @@ export const usePaperStore = create<PaperState>()((set, get) => {
     editJournalEntry: (entryId, text) =>
       settle(() => paperApi.editNote(entryId, { text }, token())),
 
-    setLeverage: (v) => {
+    setSymbolLeverage: (symbol, v) => {
       const leverage = Math.min(Math.max(Number.isFinite(v) ? Math.round(v) : 1, 1), MAX_LEVERAGE);
-      return settle(() => paperApi.setLeverage(leverage, token()));
+      return settle(() => paperApi.setSymbolLeverage(symbol, leverage, token()));
     },
 
     reset: () => settle(() => paperApi.resetAccount(token())),

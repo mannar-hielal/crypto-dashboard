@@ -1,12 +1,17 @@
 import { useState, useId, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
-import { X, ChevronUp, ChevronDown, ArrowLeftRight, Info, AlertTriangle } from 'lucide-react';
+import { X, ChevronUp, ChevronDown, Info, AlertTriangle } from 'lucide-react';
 import { useStore } from 'zustand';
+import type { MarketCategory } from '@crypto-dashboard/sdk';
 import { useLayoutStore } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
-import { usePaperStore, COMMISSION_RATE, type PlaceResult } from '@/store/paperStore';
-import { floorToLot } from '@/lib/markets';
+import { leverageFor, usePaperStore, type PlaceResult } from '@/store/paperStore';
+import { MARKETS } from '@/lib/marketRoutes';
+import { feeRatesLabel, floorToStep, maxQty, orderPreview } from '@/lib/orderMath';
+import { useInstrument } from '@/hooks/useInstruments';
+import { useOrderPrefillStore } from '@/store/orderPrefillStore';
 import { bg, color, fontSize } from '@/lib/tokens';
+import { LeverageChip } from './LeverageChip';
 import { Toggle } from '@/components/ui/Toggle';
 import { NumericInput } from '@/components/ui/NumericInput';
 import { FieldLabel } from '@/components/ui/FieldLabel';
@@ -16,7 +21,7 @@ import { computeSLTPWarnings } from '@/lib/sltpSanity';
 
 type OrderSide = 'buy' | 'sell';
 export type OrderTab = 'market' | 'limit' | 'stop';
-/** Whether the quantity input is expressed in base-asset units or USD */
+/** Whether the amount is a base-coin quantity or a USDT value (Bybit's "by value") */
 type QtyMode = 'units' | 'usd';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -26,6 +31,15 @@ const TABS: { id: OrderTab; label: string }[] = [
   { id: 'limit', label: 'Limit' },
   { id: 'stop', label: 'Stop' },
 ];
+
+/** Spot takes market and limit orders only */
+const SPOT_TABS = TABS.filter((t) => t.id !== 'stop');
+
+/** Quick-fill buttons: share of the maximum the account can trade */
+const SIZE_STEPS = [0, 25, 50, 75, 100] as const;
+
+const fmtUsd = (v: number) =>
+  v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 // ─── useOnlineStatus ──────────────────────────────────────────────────────────
 // Tracks navigator.onLine reactively so the submit button re-renders on
@@ -74,7 +88,15 @@ export function TradingPanel({
   // ── Store reads ───────────────────────────────────────────────────────────
   const activePane = useLayoutStore((s) => s.activePane);
   const symbol = useLayoutStore((s) => s.panes[s.activePane].symbol);
+  const category = useLayoutStore((s) => s.panes[s.activePane].category);
+  const isSpot = category === 'spot';
   const baseAsset = symbol.replace('USDT', '');
+  const instrument = useInstrument(category, symbol);
+  const qtyStep = instrument?.qtyStep ?? 0;
+  /** Decimals of the price tick (0.1 → 1, 0.00001 → 5); 2 until the rules load */
+  const priceDecimals = instrument?.tickSize
+    ? Math.max(0, Math.ceil(-Math.log10(instrument.tickSize) - 1e-9))
+    : 2;
 
   const activePaneStore = paneStores[activePane];
   // Always subscribe unconditionally so prices/spread/order-info are never
@@ -89,18 +111,29 @@ export function TradingPanel({
   const spread = bid != null && ask != null ? ask - bid : null;
 
   const balance = usePaperStore((s) => s.balance);
-  const leverage = usePaperStore((s) => s.leverage);
+  // Spot is 1× — leverage is a USDT Perpetual setting, per symbol
+  const leverage = usePaperStore((s) => (isSpot ? 1 : leverageFor(s, symbol)));
+  const coinFree = usePaperStore(
+    (s) => s.spotBalances.find((h) => h.coin === baseAsset)?.free ?? 0
+  );
   const placeOrder = usePaperStore((s) => s.placeOrder);
-  const placeLimitOrder = usePaperStore((s) => s.placeLimitOrder);
-  const placeStopOrder = usePaperStore((s) => s.placeStopOrder);
   // Guards against a second submit while an order request is in flight
   const submittingRef = useRef(false);
 
   // ── Local state ───────────────────────────────────────────────────────────
-  const [side, setSide] = useState<OrderSide>(initialSide);
-  const [tab, setTab] = useState<OrderTab>(initialTab);
-  const [qtyMode, setQtyMode] = useState<QtyMode>('usd');
-  const [qtyInput, setQtyInput] = useState('');
+  // Assets → Sell: a prefill request meant for this market and symbol, taken at mount (the form
+  // remounts when the market or symbol changes, so this is where a Sell of another coin lands)
+  const [initialPrefill] = useState(() => {
+    const r = useOrderPrefillStore.getState().request;
+    return r && r.category === category && r.symbol === symbol ? r : null;
+  });
+  const [side, setSide] = useState<OrderSide>(initialPrefill?.side ?? initialSide);
+  // Spot has no stop orders: a remembered Stop tab opens as Market there
+  const [tab, setTab] = useState<OrderTab>(
+    category === 'spot' && initialTab === 'stop' ? 'market' : initialTab
+  );
+  const [qtyMode, setQtyMode] = useState<QtyMode>(initialPrefill ? 'units' : 'usd');
+  const [qtyInput, setQtyInput] = useState(initialPrefill ? initialPrefill.qty.toString() : '');
   // Empty on every key-reset mount — displayPrice (below) falls back to latestPrice
   // so the field always reflects the new symbol's live price without useEffect.
   const [priceInput, setPriceInput] = useState('');
@@ -116,6 +149,23 @@ export function TradingPanel({
   /** Set to true after user explicitly confirms a suspicious SL/TP — skips the gate next call */
   const [sltpConfirmBypassed, setSltpConfirmBypassed] = useState(false);
   const executeAnim = useAnimation();
+
+  // Consume the mount-time prefill, and take later ones for this market and symbol live
+  useEffect(() => {
+    if (initialPrefill) {
+      useOrderPrefillStore.getState().clear();
+      onSideChange?.(initialPrefill.side);
+    }
+    return useOrderPrefillStore.subscribe(({ request: r }) => {
+      if (!r || r.category !== category || r.symbol !== symbol) return;
+      useOrderPrefillStore.getState().clear();
+      setSide(r.side);
+      onSideChange?.(r.side);
+      setQtyMode('units');
+      setQtyInput(r.qty.toString());
+      setFormError(null);
+    });
+  }, [initialPrefill, category, symbol, onSideChange]);
 
   // ── Derived values ────────────────────────────────────────────────────────
 
@@ -135,16 +185,22 @@ export function TradingPanel({
     if (tab === 'market' || latestPrice === null) return '';
     // Determine which side of the market this order should sit on when pending.
     const wantBelow = (tab === 'limit' && side === 'buy') || (tab === 'stop' && side === 'sell');
-    if (wantBelow) {
-      const p = bid != null ? bid : latestPrice * 0.9999;
-      return p.toFixed(2);
-    } else {
-      const p = ask != null ? ask : latestPrice * 1.0001;
-      return p.toFixed(2);
-    }
+    const p = wantBelow
+      ? bid != null
+        ? bid
+        : latestPrice * 0.9999
+      : ask != null
+        ? ask
+        : latestPrice * 1.0001;
+    return p.toFixed(priceDecimals);
   })();
 
-  const execPrice = tab === 'market' ? latestPrice : parseFloat(displayPrice) || null;
+  // A market order fills at the ask (buy) / bid (sell) on the server — preview and size it there,
+  // so a 100% (Max) buy never costs more than the balance
+  const execPrice =
+    tab === 'market'
+      ? ((side === 'buy' ? ask : bid) ?? latestPrice)
+      : parseFloat(displayPrice) || null;
 
   /**
    * True when a limit/stop order price is already past the market, meaning it
@@ -158,15 +214,20 @@ export function TradingPanel({
   const immediateWarning: { message: string; suggestion: string } | null = (() => {
     if (tab === 'market' || !execPrice || !latestPrice) return null;
     if (tab === 'limit') {
+      // A limit that crosses the book fills now as a taker, at the ask / bid (BP-2)
       if (side === 'buy' && execPrice >= latestPrice)
         return {
-          message: `Limit Buy price ($${execPrice.toLocaleString()}) is at or above market ($${latestPrice.toLocaleString()}) — this order will fill immediately.`,
-          suggestion: 'Use a Stop Buy if you want to enter when price rises to this level.',
+          message: `Limit Buy price ($${execPrice.toLocaleString()}) is at or above market ($${latestPrice.toLocaleString()}) — this order fills now at the ask, as a taker.`,
+          suggestion: isSpot
+            ? 'Use a lower price to wait for the market to come down to it.'
+            : 'Use a Stop Buy if you want to enter when price rises to this level.',
         };
       if (side === 'sell' && execPrice <= latestPrice)
         return {
-          message: `Limit Sell price ($${execPrice.toLocaleString()}) is at or below market ($${latestPrice.toLocaleString()}) — this order will fill immediately.`,
-          suggestion: 'Use a Stop Sell if you want to enter when price falls to this level.',
+          message: `Limit Sell price ($${execPrice.toLocaleString()}) is at or below market ($${latestPrice.toLocaleString()}) — this order fills now at the bid, as a taker.`,
+          suggestion: isSpot
+            ? 'Use a higher price to wait for the market to rise to it.'
+            : 'Use a Stop Sell if you want to enter when price falls to this level.',
         };
     }
     if (tab === 'stop') {
@@ -199,14 +260,10 @@ export function TradingPanel({
     return usdtAmount / execPrice;
   })();
 
-  /**
-   * Lot-size rounded qty — mirrors TVP's behaviour.
-   * In USD mode:  floor(inputUSD / price, lotDecimals) → actual filled qty
-   * In units mode: floor(inputQty, lotDecimals)
-   */
+  /** Quantity rounded down to Bybit's qty step for this market (the server does the same). */
   const units: number | null = (() => {
     if (rawUnits === null) return null;
-    return floorToLot(rawUnits, symbol);
+    return floorToStep(rawUnits, qtyStep);
   })();
 
   /**
@@ -225,12 +282,35 @@ export function TradingPanel({
     return null;
   })();
 
-  // margin/tradeValue/commission are all based on the lot-rounded actual filled amount
-  const margin = actualUsdAmount;
-  const tradeValue = actualUsdAmount !== null ? actualUsdAmount * leverage : null;
-  const commission = actualUsdAmount !== null ? actualUsdAmount * COMMISSION_RATE : null;
-  const marginPct = margin !== null ? Math.min(100, (margin / balance) * 100) : 0;
-  const marginExceeds = margin !== null && margin > balance;
+  /** Estimated value, margin, fees and cost of the lot-rounded order (lib/orderMath) */
+  const preview =
+    units !== null && execPrice
+      ? orderPreview({ category, side, qty: units, price: execPrice, leverage, baseAsset })
+      : null;
+  /** What this order can use: USDT, or — for a spot sell — the free coins */
+  const spotSell = isSpot && side === 'sell';
+  const cost = preview?.cost ?? null;
+  const costPct = spotSell
+    ? units !== null && coinFree > 0
+      ? Math.min(100, (units / coinFree) * 100)
+      : 0
+    : cost !== null && balance > 0
+      ? Math.min(100, (cost / balance) * 100)
+      : 0;
+  const costExceeds = spotSell
+    ? units !== null && units > coinFree
+    : cost !== null && cost > balance;
+  const maxUnits = execPrice
+    ? maxQty({
+        category,
+        side,
+        price: execPrice,
+        leverage,
+        usdtAvailable: balance,
+        coinFree,
+        step: qtyStep,
+      })
+    : 0;
 
   /** Estimated P&L if TP is hit */
   const tpPnl: number | null = (() => {
@@ -298,15 +378,14 @@ export function TradingPanel({
     setPriceInput('');
   }
 
-  function handleSwapQtyMode() {
-    // Convert the current input value to the other mode
+  function handleQtyMode(next: QtyMode) {
+    if (next === qtyMode) return;
+    // Convert the current input value to the other unit
     if (qtyInput && execPrice) {
       const v = parseFloat(qtyInput);
       if (!isNaN(v)) {
-        if (qtyMode === 'usd') {
-          // Show lot-rounded qty when switching to units mode
-          const rounded = floorToLot(v / execPrice, symbol);
-          setQtyInput(rounded.toFixed(6));
+        if (next === 'units') {
+          setQtyInput(floorToStep(v / execPrice, qtyStep).toString());
         } else {
           // actualUsdAmount already reflects rounded qty × price
           setQtyInput(
@@ -315,11 +394,32 @@ export function TradingPanel({
         }
       }
     }
-    setQtyMode((m) => (m === 'usd' ? 'units' : 'usd'));
+    setQtyMode(next);
     setFormError(null);
   }
 
-  function validate(): { amount: number; tp?: number; sl?: number } | null {
+  /** Quick-fill a share of the maximum the account can trade, in the current unit. */
+  function handleSizeStep(pct: number) {
+    setFormError(null);
+    if (!execPrice || pct === 0) {
+      setQtyInput('');
+      return;
+    }
+    const qty = floorToStep((maxUnits * pct) / 100, qtyStep);
+    if (qty <= 0) {
+      setQtyInput('');
+      return;
+    }
+    setQtyInput(qtyMode === 'units' ? qty.toString() : (qty * execPrice).toFixed(2));
+  }
+
+  function handleMarketChange(next: MarketCategory) {
+    if (next === category) return;
+    // The form remounts for the new market (DashboardPage keys it by market)
+    useLayoutStore.getState().setPaneMarket(activePane, next, symbol);
+  }
+
+  function validate(): { amount: number; units: number; tp?: number; sl?: number } | null {
     if (!execPrice || (tab === 'market' && (!isConnected || !isOnline))) {
       setFormError('Waiting for live price…');
       return null;
@@ -328,17 +428,31 @@ export function TradingPanel({
       setFormError(`Enter a ${qtyMode === 'usd' ? 'USD' : baseAsset} amount`);
       return null;
     }
-    if (!actualUsdAmount || actualUsdAmount <= 0) {
+    if (!actualUsdAmount || actualUsdAmount <= 0 || !units) {
       setFormError('Amount too small for minimum lot size');
       return null;
     }
-    if (actualUsdAmount + actualUsdAmount * COMMISSION_RATE > balance) {
+    // Bybit's minimums for this market (the server checks them too)
+    if (instrument && units < instrument.minOrderQty) {
+      setFormError(`Minimum quantity is ${instrument.minOrderQty} ${baseAsset}`);
+      return null;
+    }
+    if (instrument && actualUsdAmount < instrument.minNotional) {
+      setFormError(`Minimum order value is ${instrument.minNotional} USDT`);
+      return null;
+    }
+    if (spotSell && units > coinFree) {
+      setFormError(`Not enough ${baseAsset} available (spot can't be sold short)`);
+      return null;
+    }
+    if (!spotSell && (preview?.cost ?? Infinity) > balance) {
       setFormError('Insufficient balance');
       return null;
     }
 
-    const tp = tpEnabled && tpInput ? parseFloat(tpInput) : undefined;
-    const sl = slEnabled && slInput ? parseFloat(slInput) : undefined;
+    // Spot TP / SL protect what a buy receives — a spot sell has none
+    const tp = !spotSell && tpEnabled && tpInput ? parseFloat(tpInput) : undefined;
+    const sl = !spotSell && slEnabled && slInput ? parseFloat(slInput) : undefined;
 
     if (tp !== undefined) {
       if (isNaN(tp) || tp <= 0) {
@@ -368,7 +482,7 @@ export function TradingPanel({
         return null;
       }
     }
-    return { amount: actualUsdAmount, tp, sl };
+    return { amount: actualUsdAmount, units, tp, sl };
   }
 
   function handleExecute() {
@@ -393,9 +507,10 @@ export function TradingPanel({
   }
 
   /**
-   * Send the order to the server (BYBIT_PARITY_PLAN BP-1). A market order fills at the server's
-   * live price — execPrice is only this panel's preview. The server plays the placed / queued
-   * sound through the paper feed, so there is none here.
+   * Send the order to the server (BYBIT_PARITY_PLAN BP-1, BP-2). A market order fills at the
+   * server's live ask / bid — execPrice is only this panel's preview. The size goes as a coin
+   * quantity or, in USDT mode, as a value the server converts at the fill price. The server plays
+   * the placed / queued sound through the paper feed, so there is none here.
    */
   async function submitOrder() {
     if (submittingRef.current) return; // one request at a time (double-click guard)
@@ -405,12 +520,16 @@ export function TradingPanel({
     submittingRef.current = true;
     let result: PlaceResult;
     try {
-      result =
-        tab === 'market'
-          ? await placeOrder(symbol, side, v.amount, v.tp, v.sl)
-          : tab === 'limit'
-            ? await placeLimitOrder(symbol, side, execPrice, v.amount, v.tp, v.sl)
-            : await placeStopOrder(symbol, side, execPrice, v.amount, v.tp, v.sl);
+      result = await placeOrder({
+        category,
+        symbol,
+        side,
+        type: tab,
+        size: qtyMode === 'usd' ? { value: v.amount } : { qty: v.units },
+        ...(tab !== 'market' ? { triggerPrice: execPrice } : {}),
+        takeProfit: v.tp,
+        stopLoss: v.sl,
+      });
     } finally {
       submittingRef.current = false;
     }
@@ -464,6 +583,37 @@ export function TradingPanel({
         >
           <X className="h-3.5 w-3.5" />
         </motion.button>
+      </div>
+
+      {/* ── Market tabs (Figma 93:5515 / 93:7352) + leverage on USDT Perpetual ── */}
+      <div
+        className="flex shrink-0 items-center gap-3 border-b border-white/5 px-3"
+        role="tablist"
+        aria-label="Market"
+      >
+        {MARKETS.map((m) => {
+          const active = m.category === category;
+          return (
+            <button
+              key={m.category}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => handleMarketChange(m.category)}
+              className="relative whitespace-nowrap py-2 font-semibold transition-colors"
+              style={{ fontSize: fontSize.xs11, color: active ? color.white : color.muted }}
+            >
+              {m.title}
+              {active && (
+                <span
+                  className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
+                  style={{ background: color.purple }}
+                />
+              )}
+            </button>
+          );
+        })}
+        {!isSpot && <LeverageChip symbol={symbol} />}
       </div>
 
       {/* ── Sell / Buy side selector ─────────────────────────────────── */}
@@ -539,7 +689,7 @@ export function TradingPanel({
 
       {/* ── Order type tabs ──────────────────────────────────────────────── */}
       <div className="relative flex shrink-0 border-b border-white/5" role="tablist">
-        {TABS.map((t) => (
+        {(isSpot ? SPOT_TABS : TABS).map((t) => (
           <button
             key={t.id}
             role="tab"
@@ -597,21 +747,37 @@ export function TradingPanel({
           )}
         </AnimatePresence>
 
-        {/* Quantity input with Units ↔ USD swap */}
+        {/* Amount: a coin quantity or a USDT value (Bybit's "by Qty" / "by Value") */}
         <div>
           <div className="mb-1 flex items-center justify-between">
-            <FieldLabel>
-              {qtyMode === 'usd' ? 'Amount (USD)' : `Quantity (${baseAsset})`}
-            </FieldLabel>
-            <button
-              onClick={handleSwapQtyMode}
-              className="flex items-center gap-1 rounded px-1 py-0.5 transition-colors hover:text-white"
-              style={{ fontSize: fontSize.xs10, color: color.muted }}
-              title={`Switch to ${qtyMode === 'usd' ? 'Units' : 'USD'}`}
+            <FieldLabel>Amount</FieldLabel>
+            <div
+              className="flex overflow-hidden rounded border border-white/10"
+              role="group"
+              aria-label="Amount unit"
             >
-              <ArrowLeftRight className="h-3 w-3" />
-              {qtyMode === 'usd' ? 'Units' : 'USD'}
-            </button>
+              {(
+                [
+                  ['units', baseAsset],
+                  ['usd', 'USDT'],
+                ] as const
+              ).map(([mode, label]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  aria-pressed={qtyMode === mode}
+                  onClick={() => handleQtyMode(mode)}
+                  className="px-1.5 py-0.5 font-semibold transition-colors"
+                  style={{
+                    fontSize: fontSize.xs10,
+                    color: qtyMode === mode ? color.white : color.muted,
+                    background: qtyMode === mode ? bg.surface : 'transparent',
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <NumericInput
@@ -623,7 +789,7 @@ export function TradingPanel({
             min={0}
             value={qtyInput}
             placeholder={qtyMode === 'usd' ? '0.00' : '0.000000'}
-            suffix={qtyMode === 'usd' ? 'USD' : baseAsset}
+            suffix={qtyMode === 'usd' ? 'USDT' : baseAsset}
             onChange={(e) => {
               setQtyInput(e.target.value);
               setFormError(null);
@@ -637,160 +803,179 @@ export function TradingPanel({
             </p>
           )}
 
-          {/* Available balance hint */}
+          {/* Quick fill: share of what this order can use (Figma's 0–100% slider) */}
+          <div className="mt-2 flex justify-between gap-1" role="group" aria-label="Order size">
+            {SIZE_STEPS.map((pct) => (
+              <button
+                key={pct}
+                type="button"
+                onClick={() => handleSizeStep(pct)}
+                disabled={!execPrice}
+                aria-label={pct === 100 ? 'Max' : `${pct}%`}
+                className="flex-1 rounded py-0.5 tabular-nums transition-colors hover:text-white disabled:opacity-40"
+                style={{
+                  fontSize: fontSize.xxs,
+                  color: color.muted,
+                  border: `1px solid ${color.muted}20`,
+                }}
+              >
+                {pct === 100 ? 'Max' : `${pct}%`}
+              </button>
+            ))}
+          </div>
+
+          {/* Available: USDT, or the free coins for a spot sell */}
           <p className="mt-1" style={{ fontSize: fontSize.xs10, color: color.muted }}>
             Available{' '}
             <span className="text-white/60">
-              $
-              {balance.toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
+              {spotSell ? `${coinFree.toFixed(6)} ${baseAsset}` : `${fmtUsd(balance)} USDT`}
             </span>
           </p>
         </div>
 
-        {/* ── Exits (TP / SL) ──────────────────────────────────────────── */}
-        <div className="rounded-md border border-white/6" style={{ background: bg.page }}>
-          {/* Collapsible header */}
-          <button
-            onClick={() => setExitsOpen((o) => !o)}
-            className="flex w-full items-center justify-between px-2.5 py-2 text-xs font-semibold text-white/70 transition-colors hover:text-white"
-          >
-            <span>Exits</span>
-            {exitsOpen ? (
-              <ChevronUp className="h-3.5 w-3.5" />
-            ) : (
-              <ChevronDown className="h-3.5 w-3.5" />
-            )}
-          </button>
+        {/* ── Exits (TP / SL) — a spot sell has none ────────────────────── */}
+        {!spotSell && (
+          <div className="rounded-md border border-white/6" style={{ background: bg.page }}>
+            {/* Collapsible header */}
+            <button
+              onClick={() => setExitsOpen((o) => !o)}
+              className="flex w-full items-center justify-between px-2.5 py-2 text-xs font-semibold text-white/70 transition-colors hover:text-white"
+            >
+              <span>Exits</span>
+              {exitsOpen ? (
+                <ChevronUp className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronDown className="h-3.5 w-3.5" />
+              )}
+            </button>
 
-          <AnimatePresence initial={false}>
-            {exitsOpen && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
-              >
-                <div className="flex flex-col gap-2 border-t border-white/5 px-2.5 pb-2.5 pt-2">
-                  {/* Take Profit */}
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                      <Toggle
-                        checked={tpEnabled}
-                        label="Enable take profit"
-                        onChange={(v) => {
-                          setTpEnabled(v);
-                          if (!v) setTpInput('');
-                          setFormError(null);
-                        }}
-                      />
-                      <span
-                        className="text-xs"
-                        style={{ color: tpEnabled ? color.white : color.muted }}
-                      >
-                        Take profit, price
-                      </span>
-                    </div>
-                    {tpEnabled && (
-                      <NumericInput
-                        ariaLabel="Take profit price"
-                        testId="trading-tp-input"
-                        suffix="TP"
-                        suffixColor={`${color.green}b3`}
-                        borderColor={`${color.green}60`}
-                        suffixPadding="pr-12"
-                        step={0.01}
-                        min={0}
-                        value={tpInput}
-                        onChange={(e) => {
-                          setTpInput(e.target.value);
-                          setFormError(null);
-                        }}
-                      />
-                    )}
-                    <AnimatePresence initial={false}>
-                      {tpPnl !== null && (
-                        <motion.p
-                          key="tp-pnl"
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.15 }}
-                          className="overflow-hidden tabular-nums"
-                          style={{
-                            fontSize: fontSize.xs10,
-                            color: tpPnl >= 0 ? color.green : color.red,
+            <AnimatePresence initial={false}>
+              {exitsOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="flex flex-col gap-2 border-t border-white/5 px-2.5 pb-2.5 pt-2">
+                    {/* Take Profit */}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <Toggle
+                          checked={tpEnabled}
+                          label="Enable take profit"
+                          onChange={(v) => {
+                            setTpEnabled(v);
+                            if (!v) setTpInput('');
+                            setFormError(null);
                           }}
+                        />
+                        <span
+                          className="text-xs"
+                          style={{ color: tpEnabled ? color.white : color.muted }}
                         >
-                          {formatPnl(tpPnl)}
-                        </motion.p>
+                          Take profit, price
+                        </span>
+                      </div>
+                      {tpEnabled && (
+                        <NumericInput
+                          ariaLabel="Take profit price"
+                          testId="trading-tp-input"
+                          suffix="TP"
+                          suffixColor={`${color.green}b3`}
+                          borderColor={`${color.green}60`}
+                          suffixPadding="pr-12"
+                          step={0.01}
+                          min={0}
+                          value={tpInput}
+                          onChange={(e) => {
+                            setTpInput(e.target.value);
+                            setFormError(null);
+                          }}
+                        />
                       )}
-                    </AnimatePresence>
-                  </div>
+                      <AnimatePresence initial={false}>
+                        {tpPnl !== null && (
+                          <motion.p
+                            key="tp-pnl"
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.15 }}
+                            className="overflow-hidden tabular-nums"
+                            style={{
+                              fontSize: fontSize.xs10,
+                              color: tpPnl >= 0 ? color.green : color.red,
+                            }}
+                          >
+                            {formatPnl(tpPnl)}
+                          </motion.p>
+                        )}
+                      </AnimatePresence>
+                    </div>
 
-                  {/* Stop Loss */}
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                      <Toggle
-                        checked={slEnabled}
-                        label="Enable stop loss"
-                        onChange={(v) => {
-                          setSlEnabled(v);
-                          if (!v) setSlInput('');
-                          setFormError(null);
-                        }}
-                      />
-                      <span
-                        className="text-xs"
-                        style={{ color: slEnabled ? color.white : color.muted }}
-                      >
-                        Stop loss, price
-                      </span>
-                    </div>
-                    {slEnabled && (
-                      <NumericInput
-                        ariaLabel="Stop loss price"
-                        testId="trading-sl-input"
-                        suffix="SL"
-                        suffixColor={`${color.red}b3`}
-                        borderColor={`${color.red}60`}
-                        suffixPadding="pr-12"
-                        step={0.01}
-                        min={0}
-                        value={slInput}
-                        onChange={(e) => {
-                          setSlInput(e.target.value);
-                          setFormError(null);
-                        }}
-                      />
-                    )}
-                    <AnimatePresence initial={false}>
-                      {slPnl !== null && (
-                        <motion.p
-                          key="sl-pnl"
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.15 }}
-                          className="overflow-hidden tabular-nums"
-                          style={{
-                            fontSize: fontSize.xs10,
-                            color: slPnl >= 0 ? color.green : color.red,
+                    {/* Stop Loss */}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <Toggle
+                          checked={slEnabled}
+                          label="Enable stop loss"
+                          onChange={(v) => {
+                            setSlEnabled(v);
+                            if (!v) setSlInput('');
+                            setFormError(null);
                           }}
+                        />
+                        <span
+                          className="text-xs"
+                          style={{ color: slEnabled ? color.white : color.muted }}
                         >
-                          {formatPnl(slPnl)}
-                        </motion.p>
+                          Stop loss, price
+                        </span>
+                      </div>
+                      {slEnabled && (
+                        <NumericInput
+                          ariaLabel="Stop loss price"
+                          testId="trading-sl-input"
+                          suffix="SL"
+                          suffixColor={`${color.red}b3`}
+                          borderColor={`${color.red}60`}
+                          suffixPadding="pr-12"
+                          step={0.01}
+                          min={0}
+                          value={slInput}
+                          onChange={(e) => {
+                            setSlInput(e.target.value);
+                            setFormError(null);
+                          }}
+                        />
                       )}
-                    </AnimatePresence>
+                      <AnimatePresence initial={false}>
+                        {slPnl !== null && (
+                          <motion.p
+                            key="sl-pnl"
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.15 }}
+                            className="overflow-hidden tabular-nums"
+                            style={{
+                              fontSize: fontSize.xs10,
+                              color: slPnl >= 0 ? color.green : color.red,
+                            }}
+                          >
+                            {formatPnl(slPnl)}
+                          </motion.p>
+                        )}
+                      </AnimatePresence>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
 
         {/* ── Order Info ───────────────────────────────────────────────── */}
         <div className="rounded-md border border-white/6 p-2.5" style={{ background: bg.page }}>
@@ -798,25 +983,34 @@ export function TradingPanel({
             Order info
           </FieldLabel>
 
-          {/* Margin row + progress bar */}
+          {/* What the order uses (cost, or the coins for a spot sell) + progress bar */}
           <div className="mb-2">
             <div className="mb-1 flex items-center justify-between">
               <div
                 className="flex items-center gap-1"
                 style={{ fontSize: fontSize.xs10, color: color.muted }}
               >
-                <span>Margin</span>
-                <span title="Margin required to open this position (your input amount, deducted from balance)">
+                <span>{spotSell ? 'Selling' : 'Cost'}</span>
+                <span
+                  title={
+                    isSpot
+                      ? 'USDT this order takes from your balance'
+                      : 'Margin + estimated open and close fees — what this order takes from your balance'
+                  }
+                >
                   <Info className="h-3 w-3 opacity-60" />
                 </span>
               </div>
               <span
                 className="tabular-nums"
-                style={{ fontSize: fontSize.xs10, color: marginExceeds ? color.red : color.muted }}
+                style={{ fontSize: fontSize.xs10, color: costExceeds ? color.red : color.muted }}
               >
-                {margin !== null ? `$${margin.toFixed(2)}` : '—'}
-                {' / '}
-                <span style={{ color: color.white }}>${balance.toFixed(2)}</span>
+                {spotSell
+                  ? `${units !== null ? units.toFixed(6) : '—'} / `
+                  : `${cost !== null ? `$${cost.toFixed(2)}` : '—'} / `}
+                <span style={{ color: color.white }}>
+                  {spotSell ? `${coinFree.toFixed(6)} ${baseAsset}` : `$${balance.toFixed(2)}`}
+                </span>
               </span>
             </div>
             <div
@@ -825,23 +1019,49 @@ export function TradingPanel({
             >
               <motion.div
                 className="h-full rounded-full"
-                animate={{ width: `${marginPct}%` }}
+                animate={{ width: `${costPct}%` }}
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                style={{ background: marginExceeds ? color.red : color.green }}
-                title={marginExceeds ? 'Margin exceeds available balance' : undefined}
+                style={{ background: costExceeds ? color.red : color.green }}
+                title={costExceeds ? 'More than is available' : undefined}
               />
             </div>
           </div>
 
-          {/* Info rows */}
-          {[
-            { label: 'Leverage', value: `${leverage}:1` },
-            {
-              label: 'Trade value',
-              value: tradeValue !== null ? `$${tradeValue.toFixed(2)}` : '—',
-            },
-            { label: 'Commission', value: commission !== null ? `$${commission.toFixed(4)}` : '—' },
-          ].map(({ label, value }) => (
+          {/* Summary rows per market */}
+          {(isSpot
+            ? [
+                {
+                  label: 'Order value',
+                  value: preview ? `$${preview.value.toFixed(2)}` : '—',
+                },
+                {
+                  label: 'Est. fee',
+                  value:
+                    preview?.fee !== undefined
+                      ? `${preview.fee.toFixed(preview.feeAsset === 'USDT' ? 4 : 8)} ${preview.feeAsset}`
+                      : '—',
+                },
+              ]
+            : [
+                { label: 'Leverage', value: `${leverage}x` },
+                {
+                  label: 'Order value',
+                  value: preview ? `$${preview.value.toFixed(2)}` : '—',
+                },
+                {
+                  label: 'Margin',
+                  value: preview?.margin !== undefined ? `$${preview.margin.toFixed(2)}` : '—',
+                },
+                {
+                  label: 'Est. open fee',
+                  value: preview?.openFee !== undefined ? `$${preview.openFee.toFixed(4)}` : '—',
+                },
+                {
+                  label: 'Est. close fee',
+                  value: preview?.closeFee !== undefined ? `$${preview.closeFee.toFixed(4)}` : '—',
+                },
+              ]
+          ).map(({ label, value }) => (
             <div key={label} className="flex items-center justify-between py-0.5">
               <span style={{ fontSize: fontSize.xs10, color: color.muted }}>{label}</span>
               <span
@@ -852,6 +1072,9 @@ export function TradingPanel({
               </span>
             </div>
           ))}
+          <p className="mt-1" style={{ fontSize: fontSize.xxs, color: color.muted }}>
+            {feeRatesLabel(category)}
+          </p>
         </div>
 
         {/* ── Immediate-fill warning callout ───────────────────────────── */}

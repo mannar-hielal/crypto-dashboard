@@ -30,6 +30,9 @@ export type PositionAvgAggregateOutputType = {
   quantity: runtime.Decimal | null
   entryPrice: runtime.Decimal | null
   margin: runtime.Decimal | null
+  leverage: number | null
+  entryFee: runtime.Decimal | null
+  closeFeeReserve: runtime.Decimal | null
   takeProfit: runtime.Decimal | null
   stopLoss: runtime.Decimal | null
 }
@@ -38,6 +41,9 @@ export type PositionSumAggregateOutputType = {
   quantity: runtime.Decimal | null
   entryPrice: runtime.Decimal | null
   margin: runtime.Decimal | null
+  leverage: number | null
+  entryFee: runtime.Decimal | null
+  closeFeeReserve: runtime.Decimal | null
   takeProfit: runtime.Decimal | null
   stopLoss: runtime.Decimal | null
 }
@@ -52,6 +58,11 @@ export type PositionMinAggregateOutputType = {
   quantity: runtime.Decimal | null
   entryPrice: runtime.Decimal | null
   margin: runtime.Decimal | null
+  category: string | null
+  leverage: number | null
+  marginMode: string | null
+  entryFee: runtime.Decimal | null
+  closeFeeReserve: runtime.Decimal | null
   takeProfit: runtime.Decimal | null
   stopLoss: runtime.Decimal | null
   openedAt: Date | null
@@ -68,6 +79,11 @@ export type PositionMaxAggregateOutputType = {
   quantity: runtime.Decimal | null
   entryPrice: runtime.Decimal | null
   margin: runtime.Decimal | null
+  category: string | null
+  leverage: number | null
+  marginMode: string | null
+  entryFee: runtime.Decimal | null
+  closeFeeReserve: runtime.Decimal | null
   takeProfit: runtime.Decimal | null
   stopLoss: runtime.Decimal | null
   openedAt: Date | null
@@ -84,6 +100,11 @@ export type PositionCountAggregateOutputType = {
   quantity: number
   entryPrice: number
   margin: number
+  category: number
+  leverage: number
+  marginMode: number
+  entryFee: number
+  closeFeeReserve: number
   takeProfit: number
   stopLoss: number
   openedAt: number
@@ -96,6 +117,9 @@ export type PositionAvgAggregateInputType = {
   quantity?: true
   entryPrice?: true
   margin?: true
+  leverage?: true
+  entryFee?: true
+  closeFeeReserve?: true
   takeProfit?: true
   stopLoss?: true
 }
@@ -104,6 +128,9 @@ export type PositionSumAggregateInputType = {
   quantity?: true
   entryPrice?: true
   margin?: true
+  leverage?: true
+  entryFee?: true
+  closeFeeReserve?: true
   takeProfit?: true
   stopLoss?: true
 }
@@ -118,6 +145,11 @@ export type PositionMinAggregateInputType = {
   quantity?: true
   entryPrice?: true
   margin?: true
+  category?: true
+  leverage?: true
+  marginMode?: true
+  entryFee?: true
+  closeFeeReserve?: true
   takeProfit?: true
   stopLoss?: true
   openedAt?: true
@@ -134,6 +166,11 @@ export type PositionMaxAggregateInputType = {
   quantity?: true
   entryPrice?: true
   margin?: true
+  category?: true
+  leverage?: true
+  marginMode?: true
+  entryFee?: true
+  closeFeeReserve?: true
   takeProfit?: true
   stopLoss?: true
   openedAt?: true
@@ -150,6 +187,11 @@ export type PositionCountAggregateInputType = {
   quantity?: true
   entryPrice?: true
   margin?: true
+  category?: true
+  leverage?: true
+  marginMode?: true
+  entryFee?: true
+  closeFeeReserve?: true
   takeProfit?: true
   stopLoss?: true
   openedAt?: true
@@ -253,6 +295,11 @@ export type PositionGroupByOutputType = {
   quantity: runtime.Decimal
   entryPrice: runtime.Decimal
   margin: runtime.Decimal
+  category: string
+  leverage: number
+  marginMode: string
+  entryFee: runtime.Decimal
+  closeFeeReserve: runtime.Decimal
   takeProfit: runtime.Decimal | null
   stopLoss: runtime.Decimal | null
   openedAt: Date
@@ -292,6 +339,11 @@ export type PositionWhereInput = {
   quantity?: Prisma.DecimalFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   entryPrice?: Prisma.DecimalFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   margin?: Prisma.DecimalFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  category?: Prisma.StringFilter<"Position"> | string
+  leverage?: Prisma.IntFilter<"Position"> | number
+  marginMode?: Prisma.StringFilter<"Position"> | string
+  entryFee?: Prisma.DecimalFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  closeFeeReserve?: Prisma.DecimalFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.DecimalNullableFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.DecimalNullableFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   openedAt?: Prisma.DateTimeFilter<"Position"> | Date | string
@@ -310,6 +362,11 @@ export type PositionOrderByWithRelationInput = {
   quantity?: Prisma.SortOrder
   entryPrice?: Prisma.SortOrder
   margin?: Prisma.SortOrder
+  category?: Prisma.SortOrder
+  leverage?: Prisma.SortOrder
+  marginMode?: Prisma.SortOrder
+  entryFee?: Prisma.SortOrder
+  closeFeeReserve?: Prisma.SortOrder
   takeProfit?: Prisma.SortOrderInput | Prisma.SortOrder
   stopLoss?: Prisma.SortOrderInput | Prisma.SortOrder
   openedAt?: Prisma.SortOrder
@@ -331,6 +388,11 @@ export type PositionWhereUniqueInput = Prisma.AtLeast<{
   quantity?: Prisma.DecimalFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   entryPrice?: Prisma.DecimalFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   margin?: Prisma.DecimalFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  category?: Prisma.StringFilter<"Position"> | string
+  leverage?: Prisma.IntFilter<"Position"> | number
+  marginMode?: Prisma.StringFilter<"Position"> | string
+  entryFee?: Prisma.DecimalFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  closeFeeReserve?: Prisma.DecimalFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.DecimalNullableFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.DecimalNullableFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   openedAt?: Prisma.DateTimeFilter<"Position"> | Date | string
@@ -349,6 +411,11 @@ export type PositionOrderByWithAggregationInput = {
   quantity?: Prisma.SortOrder
   entryPrice?: Prisma.SortOrder
   margin?: Prisma.SortOrder
+  category?: Prisma.SortOrder
+  leverage?: Prisma.SortOrder
+  marginMode?: Prisma.SortOrder
+  entryFee?: Prisma.SortOrder
+  closeFeeReserve?: Prisma.SortOrder
   takeProfit?: Prisma.SortOrderInput | Prisma.SortOrder
   stopLoss?: Prisma.SortOrderInput | Prisma.SortOrder
   openedAt?: Prisma.SortOrder
@@ -373,6 +440,11 @@ export type PositionScalarWhereWithAggregatesInput = {
   quantity?: Prisma.DecimalWithAggregatesFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   entryPrice?: Prisma.DecimalWithAggregatesFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   margin?: Prisma.DecimalWithAggregatesFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  category?: Prisma.StringWithAggregatesFilter<"Position"> | string
+  leverage?: Prisma.IntWithAggregatesFilter<"Position"> | number
+  marginMode?: Prisma.StringWithAggregatesFilter<"Position"> | string
+  entryFee?: Prisma.DecimalWithAggregatesFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  closeFeeReserve?: Prisma.DecimalWithAggregatesFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.DecimalNullableWithAggregatesFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.DecimalNullableWithAggregatesFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   openedAt?: Prisma.DateTimeWithAggregatesFilter<"Position"> | Date | string
@@ -387,6 +459,11 @@ export type PositionCreateInput = {
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
   entryPrice: runtime.Decimal | runtime.DecimalJsLike | number | string
   margin: runtime.Decimal | runtime.DecimalJsLike | number | string
+  category?: string
+  leverage?: number
+  marginMode?: string
+  entryFee?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  closeFeeReserve?: runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   openedAt?: Date | string
@@ -405,6 +482,11 @@ export type PositionUncheckedCreateInput = {
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
   entryPrice: runtime.Decimal | runtime.DecimalJsLike | number | string
   margin: runtime.Decimal | runtime.DecimalJsLike | number | string
+  category?: string
+  leverage?: number
+  marginMode?: string
+  entryFee?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  closeFeeReserve?: runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   openedAt?: Date | string
@@ -419,6 +501,11 @@ export type PositionUpdateInput = {
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   entryPrice?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   margin?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  category?: Prisma.StringFieldUpdateOperationsInput | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  entryFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  closeFeeReserve?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   openedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -437,6 +524,11 @@ export type PositionUncheckedUpdateInput = {
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   entryPrice?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   margin?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  category?: Prisma.StringFieldUpdateOperationsInput | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  entryFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  closeFeeReserve?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   openedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -453,6 +545,11 @@ export type PositionCreateManyInput = {
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
   entryPrice: runtime.Decimal | runtime.DecimalJsLike | number | string
   margin: runtime.Decimal | runtime.DecimalJsLike | number | string
+  category?: string
+  leverage?: number
+  marginMode?: string
+  entryFee?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  closeFeeReserve?: runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   openedAt?: Date | string
@@ -467,6 +564,11 @@ export type PositionUpdateManyMutationInput = {
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   entryPrice?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   margin?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  category?: Prisma.StringFieldUpdateOperationsInput | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  entryFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  closeFeeReserve?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   openedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -483,6 +585,11 @@ export type PositionUncheckedUpdateManyInput = {
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   entryPrice?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   margin?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  category?: Prisma.StringFieldUpdateOperationsInput | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  entryFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  closeFeeReserve?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   openedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -509,6 +616,11 @@ export type PositionCountOrderByAggregateInput = {
   quantity?: Prisma.SortOrder
   entryPrice?: Prisma.SortOrder
   margin?: Prisma.SortOrder
+  category?: Prisma.SortOrder
+  leverage?: Prisma.SortOrder
+  marginMode?: Prisma.SortOrder
+  entryFee?: Prisma.SortOrder
+  closeFeeReserve?: Prisma.SortOrder
   takeProfit?: Prisma.SortOrder
   stopLoss?: Prisma.SortOrder
   openedAt?: Prisma.SortOrder
@@ -519,6 +631,9 @@ export type PositionAvgOrderByAggregateInput = {
   quantity?: Prisma.SortOrder
   entryPrice?: Prisma.SortOrder
   margin?: Prisma.SortOrder
+  leverage?: Prisma.SortOrder
+  entryFee?: Prisma.SortOrder
+  closeFeeReserve?: Prisma.SortOrder
   takeProfit?: Prisma.SortOrder
   stopLoss?: Prisma.SortOrder
 }
@@ -533,6 +648,11 @@ export type PositionMaxOrderByAggregateInput = {
   quantity?: Prisma.SortOrder
   entryPrice?: Prisma.SortOrder
   margin?: Prisma.SortOrder
+  category?: Prisma.SortOrder
+  leverage?: Prisma.SortOrder
+  marginMode?: Prisma.SortOrder
+  entryFee?: Prisma.SortOrder
+  closeFeeReserve?: Prisma.SortOrder
   takeProfit?: Prisma.SortOrder
   stopLoss?: Prisma.SortOrder
   openedAt?: Prisma.SortOrder
@@ -549,6 +669,11 @@ export type PositionMinOrderByAggregateInput = {
   quantity?: Prisma.SortOrder
   entryPrice?: Prisma.SortOrder
   margin?: Prisma.SortOrder
+  category?: Prisma.SortOrder
+  leverage?: Prisma.SortOrder
+  marginMode?: Prisma.SortOrder
+  entryFee?: Prisma.SortOrder
+  closeFeeReserve?: Prisma.SortOrder
   takeProfit?: Prisma.SortOrder
   stopLoss?: Prisma.SortOrder
   openedAt?: Prisma.SortOrder
@@ -559,6 +684,9 @@ export type PositionSumOrderByAggregateInput = {
   quantity?: Prisma.SortOrder
   entryPrice?: Prisma.SortOrder
   margin?: Prisma.SortOrder
+  leverage?: Prisma.SortOrder
+  entryFee?: Prisma.SortOrder
+  closeFeeReserve?: Prisma.SortOrder
   takeProfit?: Prisma.SortOrder
   stopLoss?: Prisma.SortOrder
 }
@@ -663,6 +791,11 @@ export type PositionCreateWithoutUserInput = {
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
   entryPrice: runtime.Decimal | runtime.DecimalJsLike | number | string
   margin: runtime.Decimal | runtime.DecimalJsLike | number | string
+  category?: string
+  leverage?: number
+  marginMode?: string
+  entryFee?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  closeFeeReserve?: runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   openedAt?: Date | string
@@ -679,6 +812,11 @@ export type PositionUncheckedCreateWithoutUserInput = {
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
   entryPrice: runtime.Decimal | runtime.DecimalJsLike | number | string
   margin: runtime.Decimal | runtime.DecimalJsLike | number | string
+  category?: string
+  leverage?: number
+  marginMode?: string
+  entryFee?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  closeFeeReserve?: runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   openedAt?: Date | string
@@ -724,6 +862,11 @@ export type PositionScalarWhereInput = {
   quantity?: Prisma.DecimalFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   entryPrice?: Prisma.DecimalFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   margin?: Prisma.DecimalFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  category?: Prisma.StringFilter<"Position"> | string
+  leverage?: Prisma.IntFilter<"Position"> | number
+  marginMode?: Prisma.StringFilter<"Position"> | string
+  entryFee?: Prisma.DecimalFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  closeFeeReserve?: Prisma.DecimalFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.DecimalNullableFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.DecimalNullableFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   openedAt?: Prisma.DateTimeFilter<"Position"> | Date | string
@@ -738,6 +881,11 @@ export type PositionCreateWithoutAccountInput = {
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
   entryPrice: runtime.Decimal | runtime.DecimalJsLike | number | string
   margin: runtime.Decimal | runtime.DecimalJsLike | number | string
+  category?: string
+  leverage?: number
+  marginMode?: string
+  entryFee?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  closeFeeReserve?: runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   openedAt?: Date | string
@@ -754,6 +902,11 @@ export type PositionUncheckedCreateWithoutAccountInput = {
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
   entryPrice: runtime.Decimal | runtime.DecimalJsLike | number | string
   margin: runtime.Decimal | runtime.DecimalJsLike | number | string
+  category?: string
+  leverage?: number
+  marginMode?: string
+  entryFee?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  closeFeeReserve?: runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   openedAt?: Date | string
@@ -795,6 +948,11 @@ export type PositionCreateManyUserInput = {
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
   entryPrice: runtime.Decimal | runtime.DecimalJsLike | number | string
   margin: runtime.Decimal | runtime.DecimalJsLike | number | string
+  category?: string
+  leverage?: number
+  marginMode?: string
+  entryFee?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  closeFeeReserve?: runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   openedAt?: Date | string
@@ -809,6 +967,11 @@ export type PositionUpdateWithoutUserInput = {
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   entryPrice?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   margin?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  category?: Prisma.StringFieldUpdateOperationsInput | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  entryFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  closeFeeReserve?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   openedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -825,6 +988,11 @@ export type PositionUncheckedUpdateWithoutUserInput = {
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   entryPrice?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   margin?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  category?: Prisma.StringFieldUpdateOperationsInput | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  entryFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  closeFeeReserve?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   openedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -840,6 +1008,11 @@ export type PositionUncheckedUpdateManyWithoutUserInput = {
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   entryPrice?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   margin?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  category?: Prisma.StringFieldUpdateOperationsInput | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  entryFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  closeFeeReserve?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   openedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -855,6 +1028,11 @@ export type PositionCreateManyAccountInput = {
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
   entryPrice: runtime.Decimal | runtime.DecimalJsLike | number | string
   margin: runtime.Decimal | runtime.DecimalJsLike | number | string
+  category?: string
+  leverage?: number
+  marginMode?: string
+  entryFee?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  closeFeeReserve?: runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   openedAt?: Date | string
@@ -869,6 +1047,11 @@ export type PositionUpdateWithoutAccountInput = {
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   entryPrice?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   margin?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  category?: Prisma.StringFieldUpdateOperationsInput | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  entryFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  closeFeeReserve?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   openedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -885,6 +1068,11 @@ export type PositionUncheckedUpdateWithoutAccountInput = {
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   entryPrice?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   margin?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  category?: Prisma.StringFieldUpdateOperationsInput | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  entryFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  closeFeeReserve?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   openedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -900,6 +1088,11 @@ export type PositionUncheckedUpdateManyWithoutAccountInput = {
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   entryPrice?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   margin?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  category?: Prisma.StringFieldUpdateOperationsInput | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  entryFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  closeFeeReserve?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   openedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -918,6 +1111,11 @@ export type PositionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   quantity?: boolean
   entryPrice?: boolean
   margin?: boolean
+  category?: boolean
+  leverage?: boolean
+  marginMode?: boolean
+  entryFee?: boolean
+  closeFeeReserve?: boolean
   takeProfit?: boolean
   stopLoss?: boolean
   openedAt?: boolean
@@ -936,6 +1134,11 @@ export type PositionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   quantity?: boolean
   entryPrice?: boolean
   margin?: boolean
+  category?: boolean
+  leverage?: boolean
+  marginMode?: boolean
+  entryFee?: boolean
+  closeFeeReserve?: boolean
   takeProfit?: boolean
   stopLoss?: boolean
   openedAt?: boolean
@@ -954,6 +1157,11 @@ export type PositionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   quantity?: boolean
   entryPrice?: boolean
   margin?: boolean
+  category?: boolean
+  leverage?: boolean
+  marginMode?: boolean
+  entryFee?: boolean
+  closeFeeReserve?: boolean
   takeProfit?: boolean
   stopLoss?: boolean
   openedAt?: boolean
@@ -972,13 +1180,18 @@ export type PositionSelectScalar = {
   quantity?: boolean
   entryPrice?: boolean
   margin?: boolean
+  category?: boolean
+  leverage?: boolean
+  marginMode?: boolean
+  entryFee?: boolean
+  closeFeeReserve?: boolean
   takeProfit?: boolean
   stopLoss?: boolean
   openedAt?: boolean
   updatedAt?: boolean
 }
 
-export type PositionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "refId" | "userId" | "accountId" | "symbol" | "side" | "quantity" | "entryPrice" | "margin" | "takeProfit" | "stopLoss" | "openedAt" | "updatedAt", ExtArgs["result"]["position"]>
+export type PositionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "refId" | "userId" | "accountId" | "symbol" | "side" | "quantity" | "entryPrice" | "margin" | "category" | "leverage" | "marginMode" | "entryFee" | "closeFeeReserve" | "takeProfit" | "stopLoss" | "openedAt" | "updatedAt", ExtArgs["result"]["position"]>
 export type PositionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   account?: boolean | Prisma.AccountDefaultArgs<ExtArgs>
@@ -1008,6 +1221,11 @@ export type $PositionPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     quantity: runtime.Decimal
     entryPrice: runtime.Decimal
     margin: runtime.Decimal
+    category: string
+    leverage: number
+    marginMode: string
+    entryFee: runtime.Decimal
+    closeFeeReserve: runtime.Decimal
     takeProfit: runtime.Decimal | null
     stopLoss: runtime.Decimal | null
     openedAt: Date
@@ -1446,6 +1664,11 @@ export interface PositionFieldRefs {
   readonly quantity: Prisma.FieldRef<"Position", 'Decimal'>
   readonly entryPrice: Prisma.FieldRef<"Position", 'Decimal'>
   readonly margin: Prisma.FieldRef<"Position", 'Decimal'>
+  readonly category: Prisma.FieldRef<"Position", 'String'>
+  readonly leverage: Prisma.FieldRef<"Position", 'Int'>
+  readonly marginMode: Prisma.FieldRef<"Position", 'String'>
+  readonly entryFee: Prisma.FieldRef<"Position", 'Decimal'>
+  readonly closeFeeReserve: Prisma.FieldRef<"Position", 'Decimal'>
   readonly takeProfit: Prisma.FieldRef<"Position", 'Decimal'>
   readonly stopLoss: Prisma.FieldRef<"Position", 'Decimal'>
   readonly openedAt: Prisma.FieldRef<"Position", 'DateTime'>

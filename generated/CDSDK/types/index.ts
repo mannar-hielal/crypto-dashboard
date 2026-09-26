@@ -178,10 +178,14 @@ export interface UpdateUserResponse {
 //
 // Money, prices and quantities are decimal strings (the server keeps them as Decimal); times are
 // Unix ms. The client converts to numbers for display only.
+//
+// BP-2: every record carries its market (`category`: 'spot' = Spot, 'linear' = USDT Perpetual).
+// Rows from before BP-2 are 'linear' — that trading became USDT Perpetual.
 
 export type PaperOrderSide = 'buy' | 'sell';
 export type PaperPositionSide = 'long' | 'short';
-export type PaperPendingType = 'limit' | 'stop';
+/** take-profit / stop-loss: a spot TP / SL leg (a conditional sell protecting a coin balance) */
+export type PaperPendingType = 'limit' | 'stop' | 'take-profit' | 'stop-loss';
 export type PaperOrderType = 'market' | 'limit' | 'stop' | 'take-profit' | 'stop-loss';
 export type PaperOrderStatus = 'filled' | 'cancelled' | 'rejected';
 export type PaperExitLeg = 'take-profit' | 'stop-loss';
@@ -190,7 +194,10 @@ export type PaperSound = 'placed' | 'queued' | 'filled' | 'profit' | 'loss';
 export interface PaperAccountDTO {
   balance: string;
   realizedPnl: string;
+  /** Default USDT Perpetual leverage, for a symbol with no entry in `symbolLeverage` */
   leverage: number;
+  /** USDT Perpetual leverage per symbol */
+  symbolLeverage: Record<string, number>;
   /**
    * Account version after this state / change. Every committed change bumps it by one, so a
    * client ignores anything not newer than what it has — an HTTP response and the WebSocket push
@@ -199,14 +206,22 @@ export interface PaperAccountDTO {
   version: number;
 }
 
+/** A USDT Perpetual position. */
 export interface PaperPositionDTO {
   id: string;
+  category: 'linear';
   symbol: string;
   side: PaperPositionSide;
   quantity: string;
   entryPrice: string;
-  /** Margin reserved at entry */
+  /** Initial margin: quantity × entry / leverage */
   entryUsdtAmount: string;
+  leverage: number;
+  marginMode: 'isolated';
+  /** Open fee charged */
+  entryFee: string;
+  /** Estimated close fee held with the margin (position margin = entryUsdtAmount + this) */
+  closeFeeReserve: string;
   openedAt: number;
   takeProfit?: string;
   stopLoss?: string;
@@ -214,10 +229,19 @@ export interface PaperPositionDTO {
 
 export interface PaperPendingOrderDTO {
   id: string;
+  category: MarketCategory;
   symbol: string;
   side: PaperOrderSide;
   type: PaperPendingType;
+  /** Initial margin at the trigger price */
   usdtAmount: string;
+  /**
+   * What placing it set aside, returned in full on cancel: USDT for a perpetual order or a spot
+   * buy, the locked coin quantity for a spot sell / TP / SL.
+   */
+  reserved: string;
+  /** Spot TP / SL pair id: both legs share one coin lock; filling one cancels the other */
+  ocoGroup?: string;
   triggerPrice: string;
   qty: string;
   /** Leverage captured at placement — the fill uses it */
@@ -227,8 +251,20 @@ export interface PaperPendingOrderDTO {
   placedAt: number;
 }
 
+/** A spot coin balance (the USDT wallet is `account.balance`). */
+export interface PaperSpotBalanceDTO {
+  coin: string;
+  /** Sellable now */
+  free: string;
+  /** Backing resting sell / TP / SL orders */
+  locked: string;
+  /** Average cost per coin in USDT, fees included */
+  avgCost: string;
+}
+
 export interface PaperOrderDTO {
   id: string;
+  category: MarketCategory;
   symbol: string;
   side: PaperOrderSide;
   type: PaperOrderType;
@@ -237,8 +273,16 @@ export interface PaperOrderDTO {
   stopPrice?: string;
   fillPrice?: string;
   status: PaperOrderStatus;
+  /** Fee charged, in `feeAsset` */
   commission: string;
+  /** Fee rate of a fill, e.g. "0.00055"; absent on cancel / reject rows */
+  feeRate?: string;
+  feeAsset?: string;
+  /** True for a resting limit fill (maker fee), false for a taker fill */
+  isMaker?: boolean;
+  /** Initial margin and leverage of a USDT Perpetual entry fill */
   margin?: string;
+  leverage?: number;
   placingTime: number;
   closingTime: number;
   rejectionReason?: string;
@@ -246,6 +290,7 @@ export interface PaperOrderDTO {
 
 export interface PaperTradeDTO {
   id: string;
+  category: MarketCategory;
   symbol: string;
   side: PaperPositionSide;
   quantity: string;
@@ -279,6 +324,7 @@ export interface PaperBalanceEventDTO {
 export interface PaperStateDTO {
   account: PaperAccountDTO;
   positions: PaperPositionDTO[];
+  spotBalances: PaperSpotBalanceDTO[];
   pendingOrders: PaperPendingOrderDTO[];
   orders: PaperOrderDTO[];
   trades: PaperTradeDTO[];
@@ -294,6 +340,7 @@ export interface PaperDeltaDTO {
   account: PaperAccountDTO;
   positionsUpsert: PaperPositionDTO[];
   positionsRemove: string[];
+  spotUpsert: PaperSpotBalanceDTO[];
   pendingUpsert: PaperPendingOrderDTO[];
   pendingRemove: string[];
   orders: PaperOrderDTO[];
@@ -313,9 +360,20 @@ export interface PaperActionResponse<R> {
 }
 
 /** Discriminated union — what the server sends over the private /api/paper/ws. */
+/** Live price of a market the user holds or has orders on (for PnL of symbols no pane shows). */
+export interface PaperPriceDTO {
+  category: MarketCategory;
+  symbol: string;
+  last: number;
+  /** USDT Perpetual mark price */
+  mark?: number;
+}
+
 export type WsPaperMessage =
   | { type: 'snapshot'; state: PaperStateDTO }
-  | { type: 'delta'; delta: PaperDeltaDTO; sound?: PaperSound };
+  | { type: 'delta'; delta: PaperDeltaDTO; sound?: PaperSound }
+  /** At most once a second, only prices that changed */
+  | { type: 'prices'; items: PaperPriceDTO[] };
 
 /** First (and re-auth) message the client sends over /api/paper/ws. */
 export interface WsPaperAuthMessage {
@@ -325,20 +383,39 @@ export interface WsPaperAuthMessage {
 
 // ─── Paper trading requests (intent only — the server picks prices) ──────────
 
+/**
+ * Size is exactly one of `qty` (base coin), `value` (USDT notional, converted at the fill /
+ * trigger price) or — from a pre-BP-2 client — `usdtAmount` (initial margin).
+ */
 export interface PlaceOrderRequest {
+  /** Defaults to 'linear' */
+  category?: MarketCategory;
   symbol: string;
   side: PaperOrderSide;
-  type: 'market' | PaperPendingType;
-  usdtAmount: string;
+  /** Spot takes market and limit only */
+  type: 'market' | 'limit' | 'stop';
+  qty?: string;
+  value?: string;
+  usdtAmount?: string;
   /** Required for limit / stop */
   triggerPrice?: string;
   takeProfit?: string;
   stopLoss?: string;
 }
 
+/** TP / SL on spot coins already held — locks `qty` of the free balance behind an OCO pair. */
+export interface PlaceSpotExitsRequest {
+  symbol: string;
+  qty: string;
+  takeProfit?: string;
+  stopLoss?: string;
+}
+
 export interface EditPendingOrderRequest {
   triggerPrice: string;
-  usdtAmount: string;
+  /** Size: exactly one of qty (base coin) or usdtAmount (initial margin, pre-BP-2 clients) */
+  qty?: string;
+  usdtAmount?: string;
   takeProfit: string | null;
   stopLoss: string | null;
 }

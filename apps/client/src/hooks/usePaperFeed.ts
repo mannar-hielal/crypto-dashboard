@@ -119,6 +119,8 @@ export function usePaperFeed(): void {
           store.hydrate(msg.state);
         } else if (msg.type === 'delta') {
           store.applyDelta(msg.delta, msg.sound);
+        } else if (msg.type === 'prices' && Array.isArray(msg.items)) {
+          store.applyPrices(msg.items);
         }
       };
 

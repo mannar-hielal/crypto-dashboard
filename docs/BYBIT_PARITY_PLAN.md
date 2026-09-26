@@ -1,6 +1,6 @@
 # Bybit Parity Plan — Spot + USDT Perpetual
 
-> **Status:** BP-0 implemented (2026-09-26, `feat/bybit-parity-bp0`) · BP-1 implemented (2026-09-26, `feat/bybit-parity-bp1`) · BP-2 … BP-5 not started.
+> **Status:** BP-0 implemented (2026-09-26, `feat/bybit-parity-bp0`) · BP-1 implemented (2026-09-26, `feat/bybit-parity-bp1`) · BP-2 implemented (2026-09-26, `feat/bybit-parity-bp2`) · BP-3 … BP-5 not started.
 > **Created:** 2026-09-25 · **Owner:** Mannar Hielal
 > **Goal:** paper trading on cryptopapertrade.com behaves as close as possible to a Bybit Unified Trading
 > Account (UTA), VIP 0, one-way position mode — so what a user learns here transfers 1:1 to Bybit.
@@ -31,7 +31,10 @@
 
 Use Bybit's own product names rather than the Bybit brand:
 
-- Market switch: **Spot** | **Derivatives** (Bybit's top-level split); contract type label **USDT Perpetual**.
+- Market switch: **Spot** | **USDT Perpetual** — a header **Trade ▾** menu (Bybit's header pattern) plus the same
+  switch as tabs at the top of the trading panel. Changed in BP-2 from "Spot | Derivatives": we offer one derivative,
+  and "Futures" would be wrong (no dated futures).
+- Market URLs follow Bybit's scheme under `/dashboard`: `/dashboard/spot/BTC/USDT`, `/dashboard/usdt/BTCUSDT`.
 - Symbol display in perps mode: `BTCUSDT` + a small **Perpetual** tag (Bybit's convention; TradingView shows the same
   instrument as `BYBIT:BTCUSDT.P`).
 - Keep the existing "market data: Bybit" attribution. Don't call the mode "Bybit Perps" or use Bybit's logo: that suggests
@@ -240,32 +243,73 @@ Bybit public WS (spot + linear) ──► MarketFeed ──tick──► Matchin
 
 All trading rules below are implemented **in the server engine**. The client only gets UI and display.
 
+> **Implemented 2026-09-26** (one PR, owner's choice). Owner decisions from the planning round
+> (`~/.claude/plans/bp2-market-split.md` Q1–Q15 + the 10-question visual gate):
+>
+> - **URLs:** `/dashboard/spot/BTC/USDT`, `/dashboard/usdt/BTCUSDT`; bare `/dashboard` redirects to the active pane's
+>   market. The URL always shows the active pane; it wins over the saved layout on load. Switching market or symbol
+>   pushes history, focusing another pane replaces it. Sign-in returns to an allow-listed market deep link only.
+> - **Controls:** header Trade ▾ menu **and** in-panel Spot | USDT Perpetual tabs, one action (`setPaneMarket`).
+>   The leverage chip reads `1x ▾` (the 256px panel has no room for "Isolated · 1x"; isolated is in its label and modal).
+> - **Perps size:** Bybit's by Qty (coin) / by Value (USDT) with a 0–Max quick fill; the form shows cost = IM + fee
+>   estimates. A pre-BP-2 client's `usdtAmount` (margin) is still accepted during the deploy window.
+> - **Leverage:** per symbol (`SymbolSetting`); **refused while the symbol has an open position or active order**
+>   (re-margining comes with BP-3). Account leverage stays as the default for symbols with no setting.
+> - **Margin mode:** isolated only. **Same-side positions:** stay separate (see §8).
+> - **Spot TP / SL:** attached to a buy, or placed on coins held (Assets tab) — an OCO pair of conditional sells sharing
+>   one coin lock; the first to fire sells at the bid and cancels the other.
+> - **Order tabs** show the active market only; Balance History and Journal stay account-wide.
+> - **D7:** existing positions / orders / trades became USDT Perpetual (column default). A layout saved before BP-2 gets
+>   a one-time switch to USDT Perpetual when that user opens bare `/dashboard` with perpetual positions / orders; new
+>   users start on Spot.
+>
+> **Changed from the plan / found on the way:**
+>
+> - **Stored fees, never recomputed:** the BP-1 engine derived a position's entry fee and a pending order's refund from
+>   the _current_ rate, so changing the rate would have silently recomputed migrated rows. `Position.entryFee`,
+>   `Position.closeFeeReserve` and `Order.reserved` now store what was charged; the migration backfills pre-BP-2 rows
+>   at the 0.07% they paid (and a position's leverage from qty × entry / margin).
+> - **Position margin** = IM (`margin`) + `closeFeeReserve`, stored separately rather than as one `positionMargin`.
+> - **Stale quotes:** Bybit's quote stream only emits changes, so the server records when each market's quote was last
+>   _seen_ (every tickers / orderbook message) and refuses to fill on a quote older than 10 s.
+> - **Rejections** (Bybit size / tick rules, spot balance, locked leverage) answer 422 with Bybit's documented wording
+>   (+ the minimum), and write nothing — like Bybit's API refusing the order. Funds rejections on perpetual orders are
+>   still recorded as rejected rows, as in BP-1.
+> - **Instrument rules** come from the instruments-info cache (refreshed hourly), with a bundled snapshot of mainnet
+>   values (fetched 2026-09-26) if Bybit is unreachable.
+> - **Live prices for held markets** are pushed over the private WS (≤ 1/s, changes only), so PnL is live for symbols
+>   no pane shows.
+> - **Spot coin amounts** stay on the stored 8-decimal grid (the coin fee is rounded up), and SpotBalance has a
+>   non-negative CHECK.
+> - A pure `lib/marketRoutes.ts` + `hooks/useMarketUrlSync.ts` handle the URL; the page-transition key groups every
+>   dashboard URL so a market change never remounts the dashboard.
+
 **Market switch (UI, visual Q&A first)**
 
-- [ ] Spot / Derivatives switch at the **top of the TradingPanel** (Bybit places it there). It sets the active pane's
+- [x] Spot / Derivatives switch at the **top of the TradingPanel** (Bybit places it there). It sets the active pane's
       category. The symbol picker shows the Perpetual tag in perps mode.
-- [ ] **Spot order form:** no leverage, Buy / Sell. Sell is limited to the free balance of the base coin, with a "Max"
+- [x] **Spot order form:** no leverage, Buy / Sell. Sell is limited to the free balance of the base coin, with a "Max"
       that fills the held quantity.
-- [ ] **Perps order form:** margin-mode + leverage chip on the form (`Isolated 10.00x`, Bybit layout). Leverage moves out
+- [x] **Perps order form:** margin-mode + leverage chip on the form (`Isolated 10.00x`, Bybit layout). Leverage moves out
       of the Account Settings modal and becomes **per symbol** (F6). The `MAX_LEVERAGE = 10` cap stays and is enforced
       on the server.
-- [ ] Bottom panel: in Spot mode Bybit has **no positions**, it has **Assets**. Add an Assets view (coin, balance,
+- [x] Bottom panel: in Spot mode Bybit has **no positions**, it has **Assets**. Add an Assets view (coin, balance,
       available, locked in orders, avg cost, last price, unrealised PnL) and hide the Positions tab for spot.
 
 **Account model (Bybit UTA, D8)**
 
-- [ ] One USDT wallet shared by both markets, starting at 10,000 USDT. Spot adds per-coin holdings:
+- [x] One USDT wallet shared by both markets, starting at 10,000 USDT. Spot adds per-coin holdings:
       `{ coin, free, locked, avgCost }`.
-- [ ] **Spot buy:** USDT −= qty × price; coin += qty − fee (fee in base coin).
-- [ ] **Spot sell:** requires `free ≥ qty`; coin −= qty; USDT += qty × price − fee (fee in USDT).
+- [x] **Spot buy:** USDT −= qty × price; coin += qty − fee (fee in base coin).
+- [x] **Spot sell:** requires `free ≥ qty`; coin −= qty; USDT += qty × price − fee (fee in USDT).
       Realised PnL = (sell − avgCost) × qty − fees.
-- [ ] Spot limit buy locks USDT; spot limit sell locks coin. Spot TP/SL are conditional sell orders that lock the coin.
-- [ ] Perps: position stores `category`, `leverage`, `marginMode`, `positionMargin` (IM). Netting/one-way behaviour unchanged.
+- [x] Spot limit buy locks USDT; spot limit sell locks coin. Spot TP/SL are conditional sell orders that lock the coin.
+- [x] Perps: position stores `category`, `leverage`, `marginMode`, `positionMargin` (IM). Netting/one-way behaviour unchanged.
 
 **Fees (F5)**
 
-- [ ] Replace `COMMISSION_RATE` with `feeRate(category, liquidity)` from `bybitSpec.ts`.
-- [ ] Liquidity rules:
+- [x] Replace `COMMISSION_RATE` with `feeRate(category, liquidity)` from `bybitSpec.ts`.
+- [x] Liquidity rules:
 
 | Order                                                   | Liquidity |
 | ------------------------------------------------------- | --------- |
@@ -273,23 +317,23 @@ All trading rules below are implemented **in the server engine**. The client onl
 | Limit that crosses the book at placement                | **Taker** |
 | Limit that rests and later fills                        | **Maker** |
 
-- [ ] Perps order cost (what's reserved) = IM + fee to open + estimated fee to close (Bybit's "order cost").
-- [ ] Every fill records `fee`, `feeRate`, `feeAsset`, `isMaker`. The UI shows the fee in the asset it was charged in.
-- [ ] Old history keeps its 0.07% values. **Never recompute past trades.**
+- [x] Perps order cost (what's reserved) = IM + fee to open + estimated fee to close (Bybit's "order cost").
+- [x] Every fill records `fee`, `feeRate`, `feeAsset`, `isMaker`. The UI shows the fee in the asset it was charged in.
+- [x] Old history keeps its 0.07% values. **Never recompute past trades.**
 
 **Fill prices (F3, F4)**
 
-- [ ] Market buy fills at **ask**, market sell at **bid**, using the server's latest quote. If the quote is stale, reject
+- [x] Market buy fills at **ask**, market sell at **bid**, using the server's latest quote. If the quote is stale, reject
       with "Waiting for live price…" rather than using last price.
-- [ ] A resting limit fills **at its limit price**. A limit that crosses the book at placement fills at the current
+- [x] A resting limit fills **at its limit price**. A limit that crosses the book at placement fills at the current
       ask/bid (taker).
-- [ ] Stops and TP/SL trigger on **last price**. Once triggered, they fill as a market order at ask/bid (taker).
-- [ ] Qty/price rounding uses `qtyStep`/`tickSize` from the instruments cache. Orders below `minOrderQty` or
+- [x] Stops and TP/SL trigger on **last price**. Once triggered, they fill as a market order at ask/bid (taker).
+- [x] Qty/price rounding uses `qtyStep`/`tickSize` from the instruments cache. Orders below `minOrderQty` or
       `minNotionalValue` are rejected with Bybit's wording (F9).
 
 **Shorting (F8)**
 
-- [ ] Spot: `side = sell` without enough coin is rejected by the engine. Perps: unchanged.
+- [x] Spot: `side = sell` without enough coin is rejected by the engine. Perps: unchanged.
 
 ### BP-3 — Mark price, isolated margin, liquidation
 
@@ -327,8 +371,12 @@ All trading rules below are implemented **in the server engine**. The client onl
 
 **Server (Prisma)**, the source of truth from BP-1 onward:
 
-- `Position`: add `category`, `leverage`, `marginMode`, `extraMargin`, `version`.
-- `Order`: add `category`, `isMaker`, `feeRate`, `triggerBy`, `reduceOnly`, `version`.
+- `Position`: add `category`, `leverage`, `marginMode`, `extraMargin`, `version`. **BP-2 added** `category`, `leverage`,
+  `marginMode`, `entryFee`, `closeFeeReserve` (`extraMargin` waits for BP-3).
+- `Order`: add `category`, `isMaker`, `feeRate`, `triggerBy`, `reduceOnly`, `version`. **BP-2 added** `category`,
+  `reserved`, `feeRate`, `feeAsset`, `isMaker`, `ocoGroup` (`triggerBy` / `reduceOnly` wait for BP-3).
+- **BP-2 also added** `Trade.category`, `SymbolSetting` (per-symbol leverage / margin mode) and `SpotBalance`
+  (`free`, `locked`, `avgCost`, non-negative CHECK).
 - `Trade`: add `category`, `fee`, `feeAsset`, `execType` (`Trade | Funding | Liquidation`), mirroring Bybit's
   execution list.
 - New tables:
@@ -369,11 +417,18 @@ All trading rules below are implemented **in the server engine**. The client onl
 
 ## 8. Known deliberate gaps vs Bybit
 
-| Gap                                               | Why                                    |
-| ------------------------------------------------- | -------------------------------------- |
-| Leverage capped at 10× (Bybit allows far more)    | Safety cap for a learning app          |
-| Fills at top of book only, no depth               | Simplicity; fine for small orders      |
-| Liquidation settles instantly at bankruptcy price | No liquidation engine / insurance fund |
+| Gap                                                                                                               | Why                                                                      |
+| ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Leverage capped at 10× (Bybit allows far more)                                                                    | Safety cap for a learning app                                            |
+| Fills at top of book only, no depth                                                                               | Simplicity; fine for small orders                                        |
+| Liquidation settles instantly at bankruptcy price                                                                 | No liquidation engine / insurance fund                                   |
+| Same-side positions are kept separate (Bybit's one-way mode merges them into one averaged position)               | Merging would recompute migrated positions; revisit with BP-3            |
+| Leverage can't change while a symbol has open trades                                                              | Re-margining open positions arrives with liquidation (BP-3)              |
+| Limits trigger on the last price, not the book                                                                    | No order-book simulation (§7)                                            |
+| A backfilled trigger (server was down) fills at the level it crossed, with the taker fee                          | There is no quote for the past                                           |
+| The close-fee estimate uses the entry price, not the bankruptcy price                                             | Bybit uses the bankruptcy price; lands with BP-3                         |
+| Spot TP / SL are placed or cancelled, not edited                                                                  | Cancel and place again                                                   |
+| A TP / SL pair attached to a spot buy uses the exact coins received (net of the fee), not floored to the qty step | Engine triggers have no instrument rules; the pair still sells correctly |
 
 ---
 

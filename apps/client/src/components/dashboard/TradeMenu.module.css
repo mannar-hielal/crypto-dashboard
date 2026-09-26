@@ -1,0 +1,140 @@
+/* Header "Trade" market menu (BYBIT_PARITY_PLAN BP-2). Colours from tokens.ts via the @theme
+   mirror in index.css: bg.panel, bg.surface, border.card, shadow.dropdown, color.purple. */
+
+.root {
+  position: relative;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-brand-muted);
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.trigger:hover,
+.trigger[aria-expanded='true'] {
+  color: var(--color-brand-white);
+}
+
+.trigger:focus-visible,
+.item:focus-visible {
+  outline: 2px solid var(--color-brand-purple-dark);
+  outline-offset: 3px;
+}
+
+.chevron {
+  transition: transform 0.15s;
+}
+
+.trigger[aria-expanded='true'] .chevron {
+  transform: rotate(180deg);
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+}
+
+.panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 300px;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid rgba(255, 255, 255, 0.08); /* border.card */
+  border-radius: 8px;
+  background: var(--color-bg-panel);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4); /* shadow.dropdown */
+}
+
+/* Mobile: full width under the header, 16px gutters */
+@media (max-width: 1023px) {
+  .root {
+    position: static;
+  }
+  .panel {
+    position: fixed;
+    top: 52px;
+    left: 16px;
+    right: 16px;
+    width: auto;
+  }
+}
+
+.item {
+  position: relative;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 10px 14px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.item:hover {
+  background: var(--color-bg-surface);
+}
+
+/* Current market: a 2px accent bar on the left */
+.item[aria-current='true']::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--color-brand-purple);
+}
+
+.text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  color: var(--color-brand-white);
+  font-weight: 600;
+}
+
+.description {
+  color: var(--color-brand-muted);
+  line-height: 1.375;
+}
+
+.check {
+  color: var(--color-brand-purple);
+  flex-shrink: 0;
+}
+
+.arrow {
+  color: var(--color-brand-muted);
+  flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger,
+  .chevron,
+  .item {
+    transition: none;
+  }
+}

@@ -7,7 +7,7 @@ import { Decimal } from '@prisma/client/runtime/client';
 import type { PrismaClient } from '../../generated/prisma/client.js';
 import { bybitRestBaseUrl } from '../services/BybitMarketInfo.js';
 import { logger } from '../logger.js';
-import type { Candle } from './engine/index.js';
+import type { Candle, Category } from './engine/index.js';
 import type { LeaseStore } from './MatchingEngine.js';
 
 const LEASE_ID = 'matching-engine';
@@ -73,7 +73,8 @@ const MAX_BACKFILL_MS = 7 * 24 * 60 * 60_000;
  * of a range, so pages are fetched backwards from `toMs` until `fromMs` is covered. A gap longer
  * than MAX_BACKFILL_MS is cut to its newest part, with a warning.
  */
-export async function fetchSpotCandles(
+export async function fetchCandles(
+  category: Category,
   symbol: string,
   fromMs: number,
   toMs: number
@@ -91,7 +92,7 @@ export async function fetchSpotCandles(
   const byStart = new Map<number, Candle>();
   let end = toMs;
   while (end >= start) {
-    const page = await fetchCandlePage(symbol, start, end);
+    const page = await fetchCandlePage(category, symbol, start, end);
     for (const c of page) byStart.set(c.start, c);
     if (page.length < MAX_BACKFILL_CANDLES) break; // reached the start of the range
     const oldest = Math.min(...page.map((c) => c.start));
@@ -101,9 +102,14 @@ export async function fetchSpotCandles(
   return [...byStart.values()].filter((c) => c.start >= start).sort((a, b) => a.start - b.start);
 }
 
-async function fetchCandlePage(symbol: string, start: number, end: number): Promise<Candle[]> {
+async function fetchCandlePage(
+  category: Category,
+  symbol: string,
+  start: number,
+  end: number
+): Promise<Candle[]> {
   const params = new URLSearchParams({
-    category: 'spot',
+    category,
     symbol,
     interval: '1',
     start: String(start),

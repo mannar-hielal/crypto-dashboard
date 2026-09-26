@@ -2,7 +2,11 @@
  * Pure engine tests — ported from apps/client/src/store/__tests__/paperStore.test.ts (BP-1).
  *
  * The browser store tests run here against the server engine through PaperHarness, which exposes
- * the store's old API. Numbers and journal text are unchanged. Differences:
+ * the store's old API. Journal text is unchanged. Differences:
+ * - BP-2 fees: Bybit's USDT Perpetual taker 0.055% on notional (qty × price) replaces the flat
+ *   0.07% on margin, and opening also reserves an estimated close fee (returned at close). At 1×
+ *   leverage notional = margin, so an open costs margin × (1 + 2 × TAKER). Fee maths has its own
+ *   worked-number tests in fees.test.ts.
  * - Fills: the browser tests simulated usePendingOrderMonitor step by step (fillPendingOrder →
  *   placeOrder(skipJournal) → addJournalNote); the engine does this in one fillPending action.
  * - A filled pending order is recorded with its own type (limit / stop), as the server already
@@ -13,11 +17,12 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { PaperHarness } from './harness.js';
+import { OPEN_RULES, PaperHarness, TAKER, flatQuote } from './harness.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const COMMISSION_RATE = 0.0007;
+/** What opening `margin` at 1× costs: margin + open fee + close-fee reserve (both taker) */
+const openCost = (margin: number) => margin + 2 * margin * TAKER;
 const STARTING_BALANCE = 10_000;
 const SYMBOL = 'BTCUSDT';
 
@@ -41,14 +46,14 @@ describe('paperStore', () => {
 
     it('deducts the USDT amount from balance on a buy', () => {
       store.placeOrder(SYMBOL, 'buy', 50_000, 1_000);
-      // balance = 10000 - 1000 (margin) - 0.7 (entry commission: 1000 * 0.0007) = 8999.3
-      expect(store.balance).toBeCloseTo(8_999.3);
+      // balance = 10000 - 1000 (margin) - 0.55 (open fee) - 0.55 (close-fee reserve) = 8998.9
+      expect(store.balance).toBeCloseTo(8_998.9);
     });
 
     it('deducts the USDT amount from balance on a sell (margin model)', () => {
       store.placeOrder(SYMBOL, 'sell', 50_000, 500);
-      // balance = 10000 - 500 (margin) - 0.35 (entry commission: 500 * 0.0007) = 9499.65
-      expect(store.balance).toBeCloseTo(9_499.65);
+      // balance = 10000 - 500 (margin) - 0.275 (open fee) - 0.275 (close-fee reserve) = 9499.45
+      expect(store.balance).toBeCloseTo(9_499.45);
     });
 
     it('creates a long position for a buy order', () => {
@@ -140,13 +145,13 @@ describe('paperStore', () => {
 
     it('returns margin + PnL to balance after a profitable long', () => {
       const id = store.placeOrder(SYMBOL, 'buy', 40_000, 4_000)!;
-      // Entry commission : 4000 * 0.0007 = 2.8  → balance after open = 5997.2
+      // Open fee 4000 * 0.00055 = 2.2, close-fee reserve 2.2 → balance after open = 5995.6
       // qty = 4000 / 40000 = 0.1 BTC; gross PnL = (50000 - 40000) * 0.1 = 1000
-      // Exit commission  : 0.1 * 50000 * 0.0007 = 3.5
-      // returnAmount = 4000 + 1000 - 3.5 = 4996.5
-      // final balance = 5997.2 + 4996.5 = 10993.7
+      // Close fee: 0.1 * 50000 * 0.00055 = 2.75
+      // returnAmount = 4000 + 2.2 (reserve back) + 1000 - 2.75 = 4999.45
+      // final balance = 5995.6 + 4999.45 = 10995.05
       store.closePosition(id, 50_000);
-      expect(store.balance).toBeCloseTo(10_993.7);
+      expect(store.balance).toBeCloseTo(10_995.05);
     });
 
     it('floors balance return at 0 — balance never goes negative', () => {
@@ -200,20 +205,20 @@ describe('paperStore', () => {
 
     it('attaches net PnL badge to the exec journal entry on a profitable close', () => {
       const id = store.placeOrder(SYMBOL, 'buy', 40_000, 4_000)!;
-      // qty = 0.1; gross PnL = (50000-40000)*0.1 = 1000; exit commission = 0.1*50000*0.0007 = 3.5
+      // qty = 0.1; gross PnL = (50000-40000)*0.1 = 1000; close fee = 0.1*50000*0.00055 = 2.75
       store.closePosition(id, 50_000);
       const journal = store.journal;
       const execEntry = journal.find((e) => e.id.includes('-exec'));
-      expect(execEntry?.pnl).toBeCloseTo(1_000 - 0.1 * 50_000 * COMMISSION_RATE);
+      expect(execEntry?.pnl).toBeCloseTo(1_000 - 0.1 * 50_000 * TAKER);
     });
 
     it('attaches negative net PnL badge to the exec journal entry on a losing close', () => {
       const id = store.placeOrder(SYMBOL, 'buy', 50_000, 5_000)!;
-      // qty = 0.1; gross PnL = (40000-50000)*0.1 = -1000; exit commission = 0.1*40000*0.0007 = 2.8
+      // qty = 0.1; gross PnL = (40000-50000)*0.1 = -1000; close fee = 0.1*40000*0.00055 = 2.2
       store.closePosition(id, 40_000);
       const journal = store.journal;
       const execEntry = journal.find((e) => e.id.includes('-exec'));
-      expect(execEntry?.pnl).toBeCloseTo(-1_000 - 0.1 * 40_000 * COMMISSION_RATE);
+      expect(execEntry?.pnl).toBeCloseTo(-1_000 - 0.1 * 40_000 * TAKER);
     });
 
     it('addJournalNote pnl is undefined when not provided', () => {
@@ -263,7 +268,7 @@ describe('paperStore', () => {
       expect(journalTexts).toEqual([
         'Stop-Loss modification confirmed for pending Long BTCUSDT @ $47000.00',
         'Take-Profit modification confirmed for pending Long BTCUSDT @ $56000.00',
-        'Modified LIMIT Long BTCUSDT — price $50000.00 → $49000.00, qty 0.020000 → 0.024490, reserved $1000.00 → $1200.00, TP $55000.00 → $56000.00, SL $48000.00 → $47000.00',
+        'Modified LIMIT Long BTCUSDT — price $50000.00 → $49000.00, qty 0.020000 → 0.024490, reserved $1001.10 → $1201.32, TP $55000.00 → $56000.00, SL $48000.00 → $47000.00',
       ]);
     });
 
@@ -483,8 +488,8 @@ describe('paperStore', () => {
           triggerPrice: 48_000,
           usdtAmount: 1_000,
         });
-        // Balance decreases by margin + entry commission
-        expect(balance).toBeCloseTo(balanceBefore - 1_000 - 1_000 * COMMISSION_RATE);
+        // Balance decreases by margin + estimated open and close fees (the reserve)
+        expect(balance).toBeCloseTo(balanceBefore - openCost(1_000));
       });
 
       it('2.1.5: filling a limit order creates a position and writes a fill journal entry', () => {
@@ -1051,8 +1056,8 @@ describe('paperStore', () => {
           triggerPrice: 55_000,
           usdtAmount: 1_000,
         });
-        // Balance reduced by margin + entry commission (reserved upfront)
-        expect(balance).toBeCloseTo(balanceBefore - 1_000 - 1_000 * COMMISSION_RATE);
+        // Balance reduced by margin + estimated fees (reserved upfront)
+        expect(balance).toBeCloseTo(balanceBefore - openCost(1_000));
       });
 
       it('3.1.2: stop buy fill opens a Long position, clears pendingOrders, journal has fill entry', () => {
@@ -1203,7 +1208,7 @@ describe('paperStore', () => {
     describe('3.5 Multiple stop orders coexist', () => {
       it('3.5.3: 4 concurrent stop orders all appear in pendingOrders, balance debited for all 4, journal has 4 placed entries', () => {
         const margin = 250;
-        const costEach = margin + margin * COMMISSION_RATE;
+        const costEach = openCost(margin);
         const initialBalance = store.balance;
 
         store.placeStopOrder(SYMBOL, 'buy', 55_000, margin); // buy 1
@@ -1243,13 +1248,16 @@ describe('BP-1 safety fixes', () => {
     expect(store.positions[0].quantity).toBeCloseTo(0.02);
   });
 
-  it('S2: editing a pending order re-captures the current leverage together with the new qty', () => {
+  it('S2 + BP-2: an edit keeps the order leverage; a default change leaves a symbol with an order pinned', () => {
     const orderId = store.placeLimitOrder(SYMBOL, 'buy', 50_000, 1_000)!;
+    // BP-2: leverage is per symbol and locked while the symbol has an order — changing the
+    // default pins BTCUSDT at its 1×, so the edit (and the fill) stay at 1×
     store.setLeverage(5);
+    expect(store.raw.symbolLeverage).toEqual({ [SYMBOL]: 1 });
     store.editPendingOrder(orderId, 50_000, 1_000, null, null);
-    expect(store.pendingOrders[0]).toMatchObject({ leverage: 5, qty: 0.1 });
+    expect(store.pendingOrders[0]).toMatchObject({ leverage: 1, qty: 0.02 });
     store.fillPending(orderId, 50_000);
-    expect(store.positions[0].quantity).toBeCloseTo(0.1);
+    expect(store.positions[0].quantity).toBeCloseTo(0.02);
   });
 
   it('S1: a triggered order that cannot fill is recorded as rejected, never dropped', () => {
@@ -1311,9 +1319,9 @@ describe('netting (one-way positions)', () => {
     store.placeOrder(SYMBOL, 'sell', 55_000, 550); // sell 0.01 at 55k → close half
     expect(store.positions[0].quantity).toBeCloseTo(0.01);
     expect(store.positions[0].entryUsdtAmount).toBeCloseTo(500);
-    // return = 500 margin + 50 pnl − 0.385 exit commission
+    // return = 500 margin + 0.275 (half the close-fee reserve) + 50 pnl − 0.3025 close fee
     expect(store.balance).toBeCloseTo(
-      balanceAfterOpen + 500 + 50 - 0.01 * 55_000 * COMMISSION_RATE
+      balanceAfterOpen + 500 + 1_000 * TAKER * 0.5 + 50 - 0.01 * 55_000 * TAKER
     );
     expect(store.history[0]).toMatchObject({ quantity: 0.01, pnl: 50 });
   });
@@ -1321,8 +1329,8 @@ describe('netting (one-way positions)', () => {
   it('realizedPnl subtracts both commission legs on a close', () => {
     const id = store.placeOrder(SYMBOL, 'buy', 40_000, 4_000)!;
     store.closePosition(id, 50_000);
-    // gross 1000 − exit 3.5 − entry 2.8
-    expect(store.realizedPnl).toBeCloseTo(1_000 - 3.5 - 2.8);
+    // gross 1000 − close fee 2.75 − open fee 2.2
+    expect(store.realizedPnl).toBeCloseTo(1_000 - 2.75 - 2.2);
   });
 
   it('a market order that would exceed the balance is recorded as rejected', () => {
@@ -1343,11 +1351,14 @@ describe('leverage is re-clamped where a fill is sized (defense in depth)', () =
         balance: new Decimal(10_000),
         realizedPnl: new Decimal(0),
         leverage: 50, // e.g. a bad manual DB edit
+        symbolLeverage: {},
+        spot: [],
         positions: [],
         pendingOrders: [],
       },
-      { symbol: SYMBOL, side: 'buy', usdtAmount: new Decimal(1_000) },
-      new Decimal(50_000),
+      { symbol: SYMBOL, side: 'buy', size: { margin: new Decimal(1_000) } },
+      flatQuote(50_000),
+      OPEN_RULES,
       { now: 1, newId: () => 'x' }
     );
     // 1000 × 10 / 50000 — not × 50

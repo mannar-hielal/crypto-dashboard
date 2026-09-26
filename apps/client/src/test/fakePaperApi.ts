@@ -22,6 +22,7 @@ import type {
   PaperActionResponse,
   PaperDeltaDTO,
   PaperStateDTO,
+  EditPendingOrderRequest,
   PlaceOrderRequest,
 } from '@crypto-dashboard/sdk';
 import { paneStores } from '@/store/paneStore';
@@ -37,10 +38,12 @@ export async function fakeDelta(changes: Partial<PaperDeltaDTO> = {}): Promise<P
       balance: String(s.balance),
       realizedPnl: String(s.realizedPnl),
       leverage: s.leverage,
+      symbolLeverage: {},
       version: Math.max(s.version, 0) + 1,
     },
     positionsUpsert: [],
     positionsRemove: [],
+    spotUpsert: [],
     pendingUpsert: [],
     pendingRemove: [],
     orders: [],
@@ -55,8 +58,9 @@ export async function fakeDelta(changes: Partial<PaperDeltaDTO> = {}): Promise<P
 /** An empty account snapshot (what a brand-new user gets). */
 export function emptyState(overrides: Partial<PaperStateDTO> = {}): PaperStateDTO {
   return {
-    account: { balance: '10000', realizedPnl: '0', leverage: 1, version: 0 },
+    account: { balance: '10000', realizedPnl: '0', leverage: 1, symbolLeverage: {}, version: 0 },
     positions: [],
+    spotBalances: [],
     pendingOrders: [],
     orders: [],
     trades: [],
@@ -77,19 +81,30 @@ export const fakePaperApi = {
     const id = `fake-${++seq}`;
     const tp = body.takeProfit ? { takeProfit: body.takeProfit } : {};
     const sl = body.stopLoss ? { stopLoss: body.stopLoss } : {};
+    const price = paneStores[0].getState().latestPrice ?? 1;
+    const trigger = Number(body.triggerPrice ?? price);
+    const at = body.type === 'market' ? price : trigger;
+    // Size as the real server takes it: qty, a USDT value, or (pre-BP-2) margin at 1×
+    const qty =
+      body.qty !== undefined ? Number(body.qty) : Number(body.value ?? body.usdtAmount ?? '0') / at;
+    const margin = String(qty * at);
     if (body.type === 'market') {
-      const price = paneStores[0].getState().latestPrice ?? 1;
       return ok(
         id,
         fakeDelta({
           positionsUpsert: [
             {
               id,
+              category: 'linear',
               symbol: body.symbol,
               side: body.side === 'buy' ? 'long' : 'short',
-              quantity: String(Number(body.usdtAmount) / price),
+              quantity: String(qty),
               entryPrice: String(price),
-              entryUsdtAmount: body.usdtAmount,
+              entryUsdtAmount: margin,
+              leverage: 1,
+              marginMode: 'isolated',
+              entryFee: '0',
+              closeFeeReserve: '0',
               openedAt: Date.now(),
               ...tp,
               ...sl,
@@ -98,19 +113,20 @@ export const fakePaperApi = {
         })
       );
     }
-    const trigger = Number(body.triggerPrice ?? '1');
     return ok(
       id,
       fakeDelta({
         pendingUpsert: [
           {
             id,
+            category: body.category ?? 'linear',
             symbol: body.symbol,
             side: body.side,
             type: body.type,
-            usdtAmount: body.usdtAmount,
+            usdtAmount: margin,
+            reserved: margin,
             triggerPrice: String(trigger),
-            qty: String(Number(body.usdtAmount) / trigger),
+            qty: String(qty),
             leverage: 1,
             placedAt: Date.now(),
             ...tp,
@@ -122,12 +138,16 @@ export const fakePaperApi = {
   }),
 
   cancelOrder: vi.fn(() => ok(true)),
-  editOrder: vi.fn(() => ok('ok' as const)),
+  editOrder: vi.fn<
+    (orderId: string, body: EditPendingOrderRequest) => Promise<PaperActionResponse<'ok'>>
+  >(() => ok('ok' as const)),
   cancelOrderExit: vi.fn(() => ok(true)),
   updatePositionExits: vi.fn(() => ok(true)),
   cancelPositionExit: vi.fn(() => ok(true)),
   closePosition: vi.fn(() => ok('0')),
   setLeverage: vi.fn((leverage: number) => ok(leverage)),
+  setSymbolLeverage: vi.fn((_symbol: string, leverage: number) => ok(leverage)),
+  placeSpotExits: vi.fn(() => ok('oco-1' as string | null)),
   resetAccount: vi.fn(() => ok(true)),
   addNote: vi.fn(() => ok('note')),
   editNote: vi.fn(() => ok(true)),

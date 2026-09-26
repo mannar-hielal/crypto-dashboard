@@ -277,7 +277,9 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
       },
       paperTrading: {
         balance: paperState.balance,
-        leverage: paperState.leverage,
+        spotBalances: paperState.spotBalances,
+        defaultLeverage: paperState.leverage,
+        symbolLeverage: paperState.symbolLeverage,
         realizedPnl: paperState.realizedPnl,
         positions: paperState.positions,
         pendingOrders: paperState.pendingOrders,

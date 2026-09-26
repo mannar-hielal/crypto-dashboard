@@ -35,6 +35,11 @@ export interface BybitService {
   subscribe(listener: (bar: LiveBar) => void): () => void;
   /** Latest quote for a category+symbol, so a new client doesn't wait for the next change. */
   getTicker(category: BybitCategory, symbol: string): TickerUpdate | undefined;
+  /**
+   * When Bybit last confirmed that quote (Unix ms) — also on messages that change nothing, so a
+   * quiet market isn't mistaken for a stale one. Undefined when there is no live quote.
+   */
+  quoteSeenAt(category: BybitCategory, symbol: string): number | undefined;
   /** Subscribe to best bid/ask + last-price updates in real time (no throttle). Returns an unsubscribe function. */
   subscribeTicker(listener: (update: TickerUpdate) => void): () => void;
 }
@@ -75,6 +80,7 @@ async function bybitPlugin(fastify: FastifyInstance): Promise<void> {
     const noopService: BybitService = {
       getSnapshot: () => [],
       getTicker: () => undefined,
+      quoteSeenAt: () => undefined,
       subscribe: () => () => undefined,
       subscribeTicker: () => () => undefined,
     };
@@ -236,6 +242,10 @@ async function bybitPlugin(fastify: FastifyInstance): Promise<void> {
 
   const service: BybitService = {
     getTicker: (category, symbol) => latestTickers.get(`${category}:${symbol}`),
+    quoteSeenAt: (category, symbol) =>
+      latestTickers.has(`${category}:${symbol}`)
+        ? managers.get(category)?.lastQuoteAt(symbol)
+        : undefined,
     getSnapshot: (category, symbol, interval) =>
       snapshots.get(`${category}:${symbol}:${interval}`) ?? [],
     subscribe: (listener) => {

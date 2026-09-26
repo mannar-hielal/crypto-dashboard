@@ -20,7 +20,11 @@ import {
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/shallow';
 import { paneStores, getLastKnownPrice } from '@/store/paneStore';
-import { usePaperStore, COMMISSION_RATE, CRYPTO_LEVERAGE_OPTIONS } from '@/store/paperStore';
+import { FEE_RATES, type MarketCategory } from '@crypto-dashboard/sdk';
+import { usePaperStore } from '@/store/paperStore';
+import { useOrderPrefillStore } from '@/store/orderPrefillStore';
+import { feeRateLine } from '@/lib/orderMath';
+import { AssetsTable } from './AssetsTable';
 import type { JournalEntry, HistoricalOrder, PendingOrder } from '@/store/paperStore';
 import type { PanelSize } from '@/pages/DashboardPage';
 import { bg, color, fontSize } from '@/lib/tokens';
@@ -33,7 +37,8 @@ const fmtQty = (n: number) => parseFloat(n.toFixed(6)).toString();
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type InfoTab = 'positions' | 'orders' | 'orderhistory' | 'balancehistory' | 'journal';
+/** 'assets' is the Spot counterpart of 'positions' (BP-2) — which one shows follows the market */
+type InfoTab = 'positions' | 'assets' | 'orders' | 'orderhistory' | 'balancehistory' | 'journal';
 type ColTab = 'positions' | 'orders' | 'orderhistory' | 'balancehistory';
 type OrderSubTab = 'all' | 'working' | 'inactive' | 'filled' | 'cancelled' | 'rejected';
 type OrderHistorySubTab = 'all' | 'filled' | 'cancelled' | 'rejected';
@@ -200,6 +205,31 @@ interface OrderAccountManagementPanelProps {
   onEditPendingOrder?: (orderId: string) => void;
 }
 
+/**
+ * Whether a pending order's TP / SL can be edited: entry orders only (not a spot TP / SL leg,
+ * which is cancelled and placed again), and not a spot sell (spot TP / SL protect a buy).
+ */
+function hasEditableExits(order: PendingOrder): boolean {
+  if (order.type !== 'limit' && order.type !== 'stop') return false;
+  return !(order.category === 'spot' && order.side === 'sell');
+}
+
+// ─── Sub-component: fee cell ──────────────────────────────────────────────────
+
+/** A fill's fee with its rate and liquidity underneath ("2.75 USDT" / "0.055% taker"). */
+function FeeCell({ order }: { order: HistoricalOrder }) {
+  const rate = feeRateLine(order);
+  const asset = order.feeAsset ?? 'USDT';
+  return (
+    <span className="flex flex-col items-end leading-tight">
+      <span>
+        {order.commission.toFixed(asset === 'USDT' ? 4 : 8)} {asset}
+      </span>
+      {rate && <span style={{ fontSize: fontSize.xxs }}>{rate}</span>}
+    </span>
+  );
+}
+
 // ─── Sub-component: journal row ───────────────────────────────────────────────
 
 interface JournalRowProps {
@@ -306,27 +336,20 @@ export function OrderAccountManagementPanel({
   onEditPosition,
   onEditPendingOrder,
 }: OrderAccountManagementPanelProps) {
-  const [infoTab, setInfoTab] = useState<InfoTab>('positions');
+  // Spot shows Assets where USDT Perpetual shows Positions; the chosen tab follows the market
+  const market = useLayoutStore((s) => (s.panes[s.activePane] ?? s.panes[0]).category);
+  const [chosenTab, setInfoTab] = useState<InfoTab>('positions');
+  const infoTab: InfoTab =
+    market === 'spot' && chosenTab === 'positions'
+      ? 'assets'
+      : market === 'linear' && chosenTab === 'assets'
+        ? 'positions'
+        : chosenTab;
   const [orderSubTab, setOrderSubTab] = useState<OrderSubTab>('all');
   const [orderHistorySubTab, setOrderHistorySubTab] = useState<OrderHistorySubTab>('all');
   const [showSettings, setShowSettings] = useState(false);
   const [confirmingReset, setConfirmingReset] = useState(false);
-  // Keep a local draft for the settings dialog, but refresh it from the
-  // persisted store value each time the dialog is opened.
-  const [draftLeverage, setDraftLeverage] = useState(() => usePaperStore.getState().leverage);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Sync draftLeverage with the stored value whenever the settings dialog opens.
-  // We read from the `leverage` reactive selector (already subscribed above) so
-  // the effect only runs when showSettings transitions to true.
-  const prevShowSettingsRef = useRef(showSettings);
-
-  useEffect(() => {
-    if (showSettings && !prevShowSettingsRef.current) {
-      setDraftLeverage(usePaperStore.getState().leverage);
-    }
-    prevShowSettingsRef.current = showSettings;
-  }, [showSettings]);
 
   // ── Column picker state ────────────────────────────────────────────────────
   const [colPickerOpen, setColPickerOpen] = useState(false);
@@ -376,27 +399,36 @@ export function OrderAccountManagementPanel({
   const [editText, setEditText] = useState('');
 
   // ── Store ─────────────────────────────────────────────────────────────────
-  // Build a per-symbol price map from all 4 pane stores so that positions in
-  // any symbol show the correct mark price regardless of which pane is active.
+  // Build a per-market price map from all 4 pane stores so that positions and coins in any
+  // market show the right price regardless of which pane is active. Keyed `category:symbol` —
+  // spot and perpetual prices differ (BP-2).
   const lp0 = useStore(paneStores[0], (s) => s.latestPrice);
   const lp1 = useStore(paneStores[1], (s) => s.latestPrice);
   const lp2 = useStore(paneStores[2], (s) => s.latestPrice);
   const lp3 = useStore(paneStores[3], (s) => s.latestPrice);
-  const paneSymbols = useLayoutStore(useShallow((s) => s.panes.map((p) => p.symbol)));
-  const priceBySymbol: Record<string, number> = {};
+  const paneMarkets = useLayoutStore(
+    useShallow((s) => s.panes.map((p) => `${p.category}:${p.symbol}`))
+  );
+  const priceByMarket: Record<string, number> = {};
   [lp0, lp1, lp2, lp3].forEach((lp, i) => {
-    if (lp !== null) priceBySymbol[paneSymbols[i]] = lp;
+    if (lp !== null) priceByMarket[paneMarkets[i]] = lp;
   });
-  // Helper: get the best available price for a symbol — live pane price first,
-  // then the last known price (persisted across symbol switches), then null.
-  function getPriceForSymbol(sym: string): number | null {
-    return priceBySymbol[sym] ?? getLastKnownPrice(sym) ?? null;
+  // Best available price for a market — live pane price first, then the last known price
+  // (other panes, the server's price push), then null.
+  function getPrice(category: MarketCategory, sym: string): number | null {
+    return priceByMarket[`${category}:${sym}`] ?? getLastKnownPrice(sym, category) ?? null;
   }
 
   const balance = usePaperStore((s) => s.balance);
   const positions = usePaperStore((s) => s.positions);
-  const pendingOrders = usePaperStore((s) => s.pendingOrders);
-  const orders = usePaperStore((s) => s.orders);
+  const allPendingOrders = usePaperStore((s) => s.pendingOrders);
+  const allOrders = usePaperStore((s) => s.orders);
+  const spotBalances = usePaperStore((s) => s.spotBalances);
+  // Re-render when the server pushes prices for markets no pane shows (lastKnownPrices isn't state)
+  usePaperStore((s) => s.pricesAt);
+  // Orders and Order History show the active market only (Bybit's layout)
+  const pendingOrders = allPendingOrders.filter((o) => o.category === market);
+  const orders = allOrders.filter((o) => o.category === market);
   const orderHistoryRows = orders;
   const filteredOrderHistoryRows =
     orderHistorySubTab === 'all'
@@ -412,8 +444,7 @@ export function OrderAccountManagementPanel({
   const addJournalNote = usePaperStore((s) => s.addJournalNote);
   const editJournalEntry = usePaperStore((s) => s.editJournalEntry);
   const reset = usePaperStore((s) => s.reset);
-  const leverage = usePaperStore((s) => s.leverage);
-  const setLeverage = usePaperStore((s) => s.setLeverage);
+  const prefillOrder = useOrderPrefillStore((s) => s.prefill);
   const username = useAuthStore((s) => s.user?.username ?? 'Account');
 
   // ── Balance history rows (sorted newest first) ────────────────────────────
@@ -457,13 +488,20 @@ export function OrderAccountManagementPanel({
     }
   }
 
-  // ── Derived account stats ──────────────────────────────────────────────────
-  const reserved = pendingOrders.reduce((s, o) => s + o.usdtAmount, 0);
-  // lockedPositionCapital = sum of all open-position margins (already deducted from balance)
-  const lockedPositionCapital = positions.reduce((sum, pos) => sum + pos.entryUsdtAmount, 0);
-  // unrealizedPnl = sum of mark-to-market PnL for all open positions
-  const unrealizedPnl = positions.reduce((sum, pos) => {
-    const markPrice = getPriceForSymbol(pos.symbol);
+  // ── Derived account stats (the whole account — both markets) ────────────────
+  // USDT set aside by resting orders (a spot sell locks coins, not USDT)
+  const reserved = allPendingOrders.reduce(
+    (s, o) => s + (o.category === 'spot' && o.side === 'sell' ? 0 : o.reserved),
+    0
+  );
+  // Position margin (IM + the close-fee estimate held with it), already out of the balance
+  const lockedPositionCapital = positions.reduce(
+    (sum, pos) => sum + pos.entryUsdtAmount + pos.closeFeeReserve,
+    0
+  );
+  // Mark-to-market PnL of open positions and of coins held against their average cost
+  const positionsPnl = positions.reduce((sum, pos) => {
+    const markPrice = getPrice('linear', pos.symbol);
     if (markPrice === null) return sum;
     const rawPnl =
       pos.side === 'long'
@@ -471,9 +509,25 @@ export function OrderAccountManagementPanel({
         : (pos.entryPrice - markPrice) * pos.quantity;
     return sum + rawPnl;
   }, 0);
-  // balance is already free cash (margin + commissions already deducted at open)
+  const assetRows = spotBalances.map((holding) => ({
+    holding,
+    price: getPrice('spot', `${holding.coin}USDT`),
+  }));
+  const coinValue = assetRows.reduce(
+    (sum, r) => sum + (r.holding.free + r.holding.locked) * (r.price ?? r.holding.avgCost),
+    0
+  );
+  const coinsPnl = assetRows.reduce(
+    (sum, r) =>
+      r.price === null
+        ? sum
+        : sum + (r.price - r.holding.avgCost) * (r.holding.free + r.holding.locked),
+    0
+  );
+  const unrealizedPnl = positionsPnl + coinsPnl;
+  // balance is already free cash (margin, fees and reserves already deducted)
   const available = balance;
-  const equity = balance + lockedPositionCapital + unrealizedPnl;
+  const equity = balance + reserved + lockedPositionCapital + positionsPnl + coinValue;
   // Win rate derived from balance log close entries (pnl !== 0)
   const closedPnlEntries = balanceLog.filter((e) => e.pnl !== 0);
   const totalTrades = closedPnlEntries.length;
@@ -501,7 +555,8 @@ export function OrderAccountManagementPanel({
 
   // Synthetic child orders for open positions (working) and pending brackets (inactive).
   const exitOrderRows: OrderDisplayRow[] = [];
-  for (const pos of positions) {
+  // Positions are USDT Perpetual: their TP / SL rows belong to that market's Orders tab
+  for (const pos of market === 'linear' ? positions : []) {
     if (pos.takeProfit) {
       exitOrderRows.push({
         kind: 'exit-order',
@@ -657,6 +712,13 @@ export function OrderAccountManagementPanel({
   }
 
   // ── Handlers ──────────────────────────────────────────────────────────────
+  /** Assets → Sell: put the free coins into the Spot form (TradingPanel takes the request). */
+  function handleSellAsset(symbol: string, qty: number) {
+    const { activePane, setPaneMarket } = useLayoutStore.getState();
+    setPaneMarket(activePane, 'spot', symbol);
+    prefillOrder({ category: 'spot', symbol, side: 'sell', qty });
+  }
+
   function handleClose(positionId: string) {
     // Closes at the server's live price; the server's profit / loss sound plays via the feed
     void closePosition(positionId);
@@ -840,75 +902,89 @@ export function OrderAccountManagementPanel({
               className="relative flex items-center overflow-x-auto border-b border-white/6 scrollbar-none"
               style={{ background: bg.panel }}
             >
-              {(['positions', 'orders', 'orderhistory', 'balancehistory', 'journal'] as const).map(
-                (tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => {
-                      setInfoTab(tab);
-                      setColPickerOpen(false);
-                    }}
-                    className="relative flex items-center gap-1.5 px-4 py-2 text-xs font-semibold capitalize transition-colors"
-                    style={{ color: infoTab === tab ? color.purple : color.muted }}
-                  >
-                    {infoTab === tab && (
-                      <motion.span
-                        layoutId="active-bottom-tab"
-                        className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t"
-                        style={{ background: color.purpleDark }}
-                      />
-                    )}
-                    {tab === 'orderhistory'
-                      ? 'Order History'
-                      : tab === 'balancehistory'
-                        ? 'Balance History'
-                        : tab}
-                    {tab === 'positions' && positions.length > 0 && (
-                      <span
-                        className="rounded-full px-1.5 py-px font-bold text-white"
-                        style={{ fontSize: fontSize.xxs, background: color.purpleDark }}
-                      >
-                        {positions.length}
-                      </span>
-                    )}
-                    {tab === 'orders' && activeOrdersBadgeCount > 0 && (
-                      <span
-                        className="rounded-full px-1.5 py-px font-bold text-white"
-                        style={{ fontSize: fontSize.xxs, background: color.amber }}
-                      >
-                        {activeOrdersBadgeCount}
-                      </span>
-                    )}
-                    {tab === 'orderhistory' && orderHistoryRows.length > 0 && (
-                      <span
-                        className="rounded-full bg-white/8 px-1.5 py-px font-semibold"
-                        style={{ fontSize: fontSize.xxs, color: color.muted }}
-                      >
-                        {orderHistoryRows.length}
-                      </span>
-                    )}
-                    {tab === 'balancehistory' && balanceHistoryRows.length > 0 && (
-                      <span
-                        className="rounded-full bg-white/8 px-1.5 py-px font-semibold"
-                        style={{ fontSize: fontSize.xxs, color: color.muted }}
-                      >
-                        {balanceHistoryRows.length}
-                      </span>
-                    )}
-                    {tab === 'journal' && journal.length > 0 && (
-                      <span
-                        className="rounded-full bg-white/8 px-1.5 py-px font-semibold"
-                        style={{ fontSize: fontSize.xxs, color: color.muted }}
-                      >
-                        {journal.length}
-                      </span>
-                    )}
-                  </button>
-                )
-              )}
+              {(
+                [
+                  market === 'spot' ? 'assets' : 'positions',
+                  'orders',
+                  'orderhistory',
+                  'balancehistory',
+                  'journal',
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => {
+                    setInfoTab(tab);
+                    setColPickerOpen(false);
+                  }}
+                  className="relative flex items-center gap-1.5 px-4 py-2 text-xs font-semibold capitalize transition-colors"
+                  style={{ color: infoTab === tab ? color.purple : color.muted }}
+                >
+                  {infoTab === tab && (
+                    <motion.span
+                      layoutId="active-bottom-tab"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t"
+                      style={{ background: color.purpleDark }}
+                    />
+                  )}
+                  {tab === 'orderhistory'
+                    ? 'Order History'
+                    : tab === 'balancehistory'
+                      ? 'Balance History'
+                      : tab}
+                  {tab === 'assets' && spotBalances.some((h) => h.free + h.locked > 0) && (
+                    <span
+                      className="rounded-full px-1.5 py-px font-bold text-white"
+                      style={{ fontSize: fontSize.xxs, background: color.purpleDark }}
+                    >
+                      {spotBalances.filter((h) => h.free + h.locked > 0).length}
+                    </span>
+                  )}
+                  {tab === 'positions' && positions.length > 0 && (
+                    <span
+                      className="rounded-full px-1.5 py-px font-bold text-white"
+                      style={{ fontSize: fontSize.xxs, background: color.purpleDark }}
+                    >
+                      {positions.length}
+                    </span>
+                  )}
+                  {tab === 'orders' && activeOrdersBadgeCount > 0 && (
+                    <span
+                      className="rounded-full px-1.5 py-px font-bold text-white"
+                      style={{ fontSize: fontSize.xxs, background: color.amber }}
+                    >
+                      {activeOrdersBadgeCount}
+                    </span>
+                  )}
+                  {tab === 'orderhistory' && orderHistoryRows.length > 0 && (
+                    <span
+                      className="rounded-full bg-white/8 px-1.5 py-px font-semibold"
+                      style={{ fontSize: fontSize.xxs, color: color.muted }}
+                    >
+                      {orderHistoryRows.length}
+                    </span>
+                  )}
+                  {tab === 'balancehistory' && balanceHistoryRows.length > 0 && (
+                    <span
+                      className="rounded-full bg-white/8 px-1.5 py-px font-semibold"
+                      style={{ fontSize: fontSize.xxs, color: color.muted }}
+                    >
+                      {balanceHistoryRows.length}
+                    </span>
+                  )}
+                  {tab === 'journal' && journal.length > 0 && (
+                    <span
+                      className="rounded-full bg-white/8 px-1.5 py-px font-semibold"
+                      style={{ fontSize: fontSize.xxs, color: color.muted }}
+                    >
+                      {journal.length}
+                    </span>
+                  )}
+                </button>
+              ))}
 
               {/* ── Column picker button — only for data tabs ─────────────── */}
-              {infoTab !== 'journal' && (
+              {infoTab !== 'journal' && infoTab !== 'assets' && (
                 <div className="relative ml-auto pr-2" ref={pickerRef}>
                   <motion.button
                     onClick={() => setColPickerOpen((o) => !o)}
@@ -1105,6 +1181,16 @@ export function OrderAccountManagementPanel({
                   transition={{ duration: 0.14, ease: 'easeOut' }}
                   className="flex min-h-0 flex-1 flex-col overflow-x-auto overflow-y-hidden"
                 >
+                  {/* ════ Assets (Spot) ═════════════════════════════════════════════ */}
+                  {infoTab === 'assets' && (
+                    <AssetsTable
+                      usdtBalance={balance}
+                      usdtReserved={reserved}
+                      rows={assetRows}
+                      onSell={handleSellAsset}
+                    />
+                  )}
+
                   {/* ════ Positions ════════════════════════════════════════════════ */}
                   {infoTab === 'positions' &&
                     (positions.length === 0 ? (
@@ -1143,7 +1229,7 @@ export function OrderAccountManagementPanel({
                           <tbody>
                             <AnimatePresence>
                               {positions.map((pos, i) => {
-                                const markPrice = getPriceForSymbol(pos.symbol) ?? pos.entryPrice;
+                                const markPrice = getPrice('linear', pos.symbol) ?? pos.entryPrice;
                                 const pnl =
                                   pos.side === 'long'
                                     ? (markPrice - pos.entryPrice) * pos.quantity
@@ -1151,7 +1237,8 @@ export function OrderAccountManagementPanel({
                                 const pnlPct = (pnl / pos.entryUsdtAmount) * 100;
                                 const isProfit = pnl >= 0;
                                 const margin = pos.entryUsdtAmount;
-                                const commission = pos.entryUsdtAmount * COMMISSION_RATE;
+                                // The open fee actually charged (stored with the position)
+                                const commission = pos.entryFee;
                                 const tradeValue = pos.entryPrice * pos.quantity;
                                 const marketValue = markPrice * pos.quantity;
 
@@ -1323,7 +1410,7 @@ export function OrderAccountManagementPanel({
                                         className="px-3 py-1.5 text-right tabular-nums"
                                         style={{ fontSize: fontSize.xs10, color: color.muted }}
                                       >
-                                        1:{leverage}
+                                        1:{pos.leverage}
                                       </td>
                                     )}
                                     {isVisible('positions', 'margin') && (
@@ -1541,23 +1628,23 @@ export function OrderAccountManagementPanel({
                                           className="rounded px-1 py-px font-bold uppercase"
                                           style={{
                                             fontSize: fontSize.xs10,
-                                            background: isExitOrder
-                                              ? ex!.exitType === 'Take Profit'
-                                                ? `${color.green}22`
-                                                : `${color.red}22`
-                                              : type === 'limit'
-                                                ? `${color.purpleDark}33`
-                                                : `${color.amber}22`,
-                                            color: isExitOrder
-                                              ? ex!.exitType === 'Take Profit'
-                                                ? color.green
-                                                : color.red
-                                              : type === 'limit'
-                                                ? color.purpleDark
-                                                : color.amber,
+                                            // Same pill as Order History: a spot TP / SL leg is a
+                                            // pending row but gets the green / red exit pill
+                                            ...(isExitOrder
+                                              ? {
+                                                  background:
+                                                    ex!.exitType === 'Take Profit'
+                                                      ? `${color.green}22`
+                                                      : `${color.red}22`,
+                                                  color:
+                                                    ex!.exitType === 'Take Profit'
+                                                      ? color.green
+                                                      : color.red,
+                                                }
+                                              : orderTypePillStyle(type, color)),
                                           }}
                                         >
-                                          {isExitOrder ? ex!.exitType : type}
+                                          {isExitOrder ? ex!.exitType : orderTypeLabel(type)}
                                         </span>
                                       </td>
                                     )}
@@ -1627,7 +1714,8 @@ export function OrderAccountManagementPanel({
                                               ? `$${fmtMktPrice(ex!.price)}`
                                               : '—'
                                             : isPending
-                                              ? type === 'limit'
+                                              ? // a spot take-profit leg rests at its price, like a limit
+                                                type === 'limit' || type === 'take-profit'
                                                 ? `$${fmtMktPrice(p!.triggerPrice)}`
                                                 : '—'
                                               : h!.limitPrice != null
@@ -1683,7 +1771,8 @@ export function OrderAccountManagementPanel({
                                               ? `$${fmtMktPrice(ex!.price)}`
                                               : '—'
                                             : isPending
-                                              ? type === 'stop'
+                                              ? // a spot stop-loss leg is a stop trigger
+                                                type === 'stop' || type === 'stop-loss'
                                                 ? `$${fmtMktPrice(p!.triggerPrice)}`
                                                 : '—'
                                               : h!.stopPrice != null
@@ -1709,16 +1798,18 @@ export function OrderAccountManagementPanel({
                                         }}
                                       >
                                         <span className="inline-flex items-center justify-end gap-1">
-                                          {isPending && (
-                                            <button
-                                              onClick={() => onEditPendingOrder?.(rowId)}
-                                              title="Edit TP"
-                                              className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
-                                              style={{ color: color.muted }}
-                                            >
-                                              <Pencil className="h-2.5 w-2.5" />
-                                            </button>
-                                          )}
+                                          {isPending &&
+                                            hasEditableExits(p!) &&
+                                            onEditPendingOrder && (
+                                              <button
+                                                onClick={() => onEditPendingOrder(rowId)}
+                                                title="Edit TP"
+                                                className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
+                                                style={{ color: color.muted }}
+                                              >
+                                                <Pencil className="h-2.5 w-2.5" />
+                                              </button>
+                                            )}
                                           {isPending && p!.takeProfit
                                             ? `$${fmtMktPrice(p!.takeProfit)}`
                                             : '—'}
@@ -1734,16 +1825,18 @@ export function OrderAccountManagementPanel({
                                         }}
                                       >
                                         <span className="inline-flex items-center justify-end gap-1">
-                                          {isPending && (
-                                            <button
-                                              onClick={() => onEditPendingOrder?.(rowId)}
-                                              title="Edit SL"
-                                              className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
-                                              style={{ color: color.muted }}
-                                            >
-                                              <Pencil className="h-2.5 w-2.5" />
-                                            </button>
-                                          )}
+                                          {isPending &&
+                                            hasEditableExits(p!) &&
+                                            onEditPendingOrder && (
+                                              <button
+                                                onClick={() => onEditPendingOrder(rowId)}
+                                                title="Edit SL"
+                                                className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
+                                                style={{ color: color.muted }}
+                                              >
+                                                <Pencil className="h-2.5 w-2.5" />
+                                              </button>
+                                            )}
                                           {isPending && p!.stopLoss
                                             ? `$${fmtMktPrice(p!.stopLoss)}`
                                             : '—'}
@@ -1755,9 +1848,7 @@ export function OrderAccountManagementPanel({
                                         className="px-3 py-1.5 text-right tabular-nums"
                                         style={{ fontSize: fontSize.xs10, color: color.muted }}
                                       >
-                                        {!isPending && !isExitOrder
-                                          ? h!.commission.toFixed(4)
-                                          : '—'}
+                                        {!isPending && !isExitOrder ? <FeeCell order={h!} /> : '—'}
                                       </td>
                                     )}
                                     {isVisible('orders', 'placedAt') && (
@@ -1782,7 +1873,11 @@ export function OrderAccountManagementPanel({
                                         className="px-3 py-1.5 text-right tabular-nums"
                                         style={{ fontSize: fontSize.xs10, color: color.muted }}
                                       >
-                                        1:{leverage}
+                                        {isPending && p!.category === 'linear'
+                                          ? `1:${p!.leverage}`
+                                          : h?.leverage
+                                            ? `1:${h.leverage}`
+                                            : '—'}
                                       </td>
                                     )}
                                     {isVisible('orders', 'margin') && (
@@ -2022,7 +2117,7 @@ export function OrderAccountManagementPanel({
                                         className="px-3 py-1.5 text-right tabular-nums"
                                         style={{ fontSize: fontSize.xs10, color: color.muted }}
                                       >
-                                        {o.commission > 0 ? o.commission.toFixed(4) : '—'}
+                                        {o.commission > 0 ? <FeeCell order={o} /> : '—'}
                                       </td>
                                     )}
                                     {isVisible('orderhistory', 'placingTime') && (
@@ -2055,7 +2150,7 @@ export function OrderAccountManagementPanel({
                                         className="px-3 py-1.5 text-right tabular-nums"
                                         style={{ fontSize: fontSize.xs10, color: color.muted }}
                                       >
-                                        1:{leverage}
+                                        {o.leverage ? `1:${o.leverage}` : '—'}
                                       </td>
                                     )}
                                     {isVisible('orderhistory', 'margin') && (
@@ -2396,66 +2491,14 @@ export function OrderAccountManagementPanel({
                     </div>
                   </div>
 
-                  {/* Leverage — Crypto (interactive) */}
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
-                      <label
-                        className="font-semibold uppercase tracking-wider"
-                        style={{ color: color.muted, fontSize: fontSize.xs11 }}
-                      >
-                        Leverage · Crypto
-                      </label>
-                      <span
-                        className="rounded px-1.5 py-px font-bold"
-                        style={{
-                          fontSize: fontSize.xs10,
-                          background:
-                            draftLeverage > 1
-                              ? `${color.amber}22`
-                              : `color-mix(in srgb, ${color.white} 6%, transparent)`,
-                          color: draftLeverage > 1 ? color.amber : color.muted,
-                        }}
-                      >
-                        {draftLeverage}×
-                      </span>
-                    </div>
-                    {/* 5-button grid — max 10× cap (learning-app safety) */}
-                    <div className="grid grid-cols-5 gap-1">
-                      {CRYPTO_LEVERAGE_OPTIONS.map((opt) => (
-                        <button
-                          key={opt}
-                          type="button"
-                          onClick={() => setDraftLeverage(opt)}
-                          className="rounded py-1 text-center font-semibold transition-colors"
-                          style={{
-                            fontSize: fontSize.xs10,
-                            background:
-                              draftLeverage === opt
-                                ? `${color.purple}33`
-                                : `color-mix(in srgb, ${color.white} 5%, transparent)`,
-                            color:
-                              draftLeverage === opt
-                                ? color.purple
-                                : `color-mix(in srgb, ${color.white} 55%, transparent)`,
-                            border:
-                              draftLeverage === opt
-                                ? `1px solid ${color.purple}66`
-                                : `1px solid color-mix(in srgb, ${color.white} 7%, transparent)`,
-                          }}
-                        >
-                          {opt}×
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Commission (read-only) */}
+                  {/* Fees (read-only) — Bybit VIP-0 rates; leverage is set per symbol in the
+                      trading panel (BP-2) */}
                   <div className="flex flex-col gap-1">
                     <label
                       className="text-xs font-medium"
                       style={{ color: color.muted, fontSize: fontSize.xs11 }}
                     >
-                      Commission
+                      Fees
                     </label>
                     <div
                       className="flex h-8 items-center justify-between rounded px-3"
@@ -2470,10 +2513,11 @@ export function OrderAccountManagementPanel({
                           color: `color-mix(in srgb, ${color.white} 60%, transparent)`,
                         }}
                       >
-                        {(COMMISSION_RATE * 100).toFixed(2)}% ({COMMISSION_RATE})
+                        Spot {Number(FEE_RATES.spot.taker) * 100}%
                       </span>
                       <span style={{ fontSize: fontSize.xs11, color: color.muted }}>
-                        Fixed · Taker
+                        Perpetual {Number(FEE_RATES.linear.taker) * 100}% taker ·{' '}
+                        {Number(FEE_RATES.linear.maker) * 100}% maker
                       </span>
                     </div>
                   </div>
@@ -2533,10 +2577,9 @@ export function OrderAccountManagementPanel({
                     )}
                   </AnimatePresence>
 
-                  {/* Save */}
+                  {/* Done */}
                   <button
                     onClick={() => {
-                      setLeverage(draftLeverage);
                       setShowSettings(false);
                       setConfirmingReset(false);
                     }}
@@ -2547,7 +2590,7 @@ export function OrderAccountManagementPanel({
                       fontSize: fontSize.xs,
                     }}
                   >
-                    Save
+                    Done
                   </button>
                 </div>
               </motion.div>

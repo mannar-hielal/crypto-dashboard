@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Link, Navigate, useLocation } from 'react-router';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -11,6 +11,8 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { usePaperFeed } from '@/hooks/usePaperFeed';
 import { useSessionRefresh } from '@/hooks/useSessionRefresh';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useMarketUrlSync, type DashboardEntryState } from '@/hooks/useMarketUrlSync';
+import { DASHBOARD_PATH, marketPath, parseMarketPath } from '@/lib/marketRoutes';
 import { TradingSoundProvider } from '@/hooks/TradingSoundContext';
 import { useLayoutStore } from '@/store/layoutStore';
 import { useAuthStore } from '@/store/authStore';
@@ -72,18 +74,56 @@ const MIN_PANEL_HEIGHT = 80;
  *   │   DashboardFooter    (h-7)                           │
  *   └──────────────────────────────────────────────────────┘
  */
+/**
+ * Bare /dashboard, and any /dashboard URL that names no market we trade, goes to the active
+ * pane's market URL. From bare /dashboard it marks the entry, for the one-time D7 hand-off.
+ */
+export function DashboardRedirect() {
+  const { pathname } = useLocation();
+  const target = useLayoutStore((s) => marketPath(s.panes[s.activePane] ?? s.panes[0]));
+  const state: DashboardEntryState | undefined =
+    pathname === DASHBOARD_PATH ? { fromDefault: true } : undefined;
+  return <Navigate to={target} replace state={state} />;
+}
+
+/**
+ * The trading dashboard at a market URL (/dashboard/spot/BTC/USDT, /dashboard/usdt/BTCUSDT).
+ * The URL's market is applied to the active pane before the dashboard first mounts, so a deep
+ * link never connects the saved layout's market first.
+ */
 export function DashboardPage() {
+  const { pathname } = useLocation();
+  const parsed = parseMarketPath(pathname);
+  useMarketUrlSync();
+  const matches = useLayoutStore((s) => {
+    const pane = s.panes[s.activePane] ?? s.panes[0];
+    return parsed !== null && pane.category === parsed.category && pane.symbol === parsed.symbol;
+  });
+  // Shown once the URL's market is on the pane, then kept mounted (back / forward updates it in
+  // place). A layout effect: it flips before paint, right after useMarketUrlSync applied the
+  // market — there's no render-time way to remember "has matched once" without it.
+  const [ready, setReady] = useState(matches);
+  useLayoutEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time gate, see above
+    if (matches) setReady(true);
+  }, [matches]);
+
+  if (!parsed) return <DashboardRedirect />;
+  const pair = parsed.symbol.replace(/USDT$/, '/USDT');
   return (
     <>
       <SeoHead
-        title="Dashboard"
+        title={`${pair} ${parsed.category === 'spot' ? 'Spot' : 'Perpetual'}`}
         description="Your crypto paper trading dashboard."
-        path="/dashboard"
+        path={parsed.canonical}
         noIndex
       />
-      <TradingSoundProvider>
-        <DashboardInner />
-      </TradingSoundProvider>
+      {/* Stays mounted once shown: later market changes (back / forward) update it in place */}
+      {ready && (
+        <TradingSoundProvider>
+          <DashboardInner />
+        </TradingSoundProvider>
+      )}
     </>
   );
 }
@@ -148,6 +188,7 @@ export function DashboardInner() {
   //    active pane's own data changes, not on every pane edit.
   const activePaneConfig = useLayoutStore((s) => s.panes[s.activePane] ?? s.panes[0]);
   const symbol = activePaneConfig.symbol;
+  const category = activePaneConfig.category;
   const setPaneTimeRangePreset = useLayoutStore((s) => s.setPaneTimeRangePreset);
   const setPaneInterval = useLayoutStore((s) => s.setPaneInterval);
   const setBottomPanelHeight = useLayoutStore((s) => s.setBottomPanelHeight);
@@ -517,7 +558,7 @@ export function DashboardInner() {
 
         {/* TradingPanel — always mounted so form state (amount, price, TP/SL) survives
             close/reopen. Width is animated to 0 when hidden.
-            key={`${activePane}-${symbol}`} still resets the form on symbol change. */}
+            key={`${activePane}-${category}-${symbol}`} still resets the form on a market change. */}
         <motion.div
           animate={
             isMobile
@@ -531,7 +572,7 @@ export function DashboardInner() {
           style={{ pointerEvents: isTradingPanelVisible ? 'auto' : 'none' }}
         >
           <TradingPanel
-            key={`${activePaneIndex}-${symbol}`}
+            key={`${activePaneIndex}-${category}-${symbol}`}
             onClose={() => setTradingPanelOpen(false)}
             initialTab={tradingTab}
             onTabChange={setTradingTab}

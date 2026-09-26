@@ -5,11 +5,13 @@
  * - Exactly one executor: the engine runs only while it holds the EngineLease row (see
  *   EngineLease). Other machines serve the API and WebSockets but never execute triggers.
  * - Index: every account with an open trigger (a position with TP/SL, or a pending order), keyed by
- *   symbol, so a tick only evaluates that symbol's accounts. It is loaded on activation and kept
- *   current from every committed delta on the event bus.
- * - Ticks: live spot last price, evaluated on the tick price (S3). A trigger is re-validated and
- *   executed through TradingService, so it serializes with the user's own clicks.
- * - Gaps: if a symbol's ticks stop for longer than GAP_MS (Bybit outage), or the engine starts
+ *   market (`category:symbol`, e.g. `linear:BTCUSDT`), so a tick only evaluates that market's
+ *   accounts — a USDT Perpetual position never triggers on a spot price (BP-2). It is loaded on
+ *   activation and kept current from every committed delta on the event bus.
+ * - Ticks: live last price of each market, evaluated on the tick price (S3). A trigger is
+ *   re-validated and executed through TradingService, so it serializes with the user's own
+ *   clicks; TradingService picks the fill price (limit at its price, stop / TP / SL at ask / bid).
+ * - Gaps: if a market's ticks stop for longer than GAP_MS (Bybit outage), or the engine starts
  *   after downtime (EngineLease.lastTickAt), the missed minutes are backfilled from 1m candles.
  */
 
@@ -20,6 +22,7 @@ import {
   evaluateTick,
   type AccountState,
   type Candle,
+  type Category,
   type Trigger,
 } from './engine/index.js';
 import type { PaperEventBus } from './PaperEventBus.js';
@@ -40,7 +43,12 @@ export interface MatchingEngineDeps {
   /** One account's current state, or null if it no longer exists (deleted user) */
   reloadUser: (userId: string) => Promise<AccountState | null>;
   subscribeTicker: (listener: (u: TickUpdate) => void) => () => void;
-  fetchCandles: (symbol: string, fromMs: number, toMs: number) => Promise<Candle[]>;
+  fetchCandles: (
+    category: Category,
+    symbol: string,
+    fromMs: number,
+    toMs: number
+  ) => Promise<Candle[]>;
   lease: LeaseStore;
   holder: string;
   now?: () => number;
@@ -68,6 +76,20 @@ const TRIGGER_ATTEMPTS = 2;
 /** Longest a symbol may go without a tick before the gap is backfilled from candles. */
 const DEFAULT_GAP_MS = 60_000;
 
+/** Index key of one market */
+type MarketKey = `${Category}:${string}`;
+
+const marketKey = (category: Category, symbol: string): MarketKey => `${category}:${symbol}`;
+
+function parseKey(key: MarketKey): { category: Category; symbol: string } {
+  const [category, symbol] = key.split(':') as [Category, string];
+  return { category, symbol };
+}
+
+function isCategory(v: string): v is Category {
+  return v === 'spot' || v === 'linear';
+}
+
 function hasTriggers(state: AccountState): boolean {
   return (
     state.pendingOrders.length > 0 ||
@@ -77,9 +99,11 @@ function hasTriggers(state: AccountState): boolean {
 
 export class MatchingEngine {
   private readonly users = new Map<string, AccountState>();
-  private readonly symbolUsers = new Map<string, Set<string>>();
+  /** Users with an open trigger per market — bounded by open positions / orders */
+  private readonly symbolUsers = new Map<MarketKey, Set<string>>();
   private readonly inFlight = new Set<string>();
-  private readonly lastTick = new Map<string, number>();
+  /** Last tick time per market — bounded: 2 categories × ALLOWED_SYMBOLS */
+  private readonly lastTick = new Map<MarketKey, number>();
   private unsubscribeTicks: (() => void) | null = null;
   private unsubscribeEvents: (() => void) | null = null;
   private timer: NodeJS.Timeout | null = null;
@@ -172,7 +196,7 @@ export class MatchingEngine {
     this.active = true;
     this.resyncTimer = setInterval(() => void this.rebuildIndex(), this.resyncEveryMs);
     log.info(
-      { accounts: this.users.size, symbols: this.symbolUsers.size },
+      { accounts: this.users.size, markets: this.symbolUsers.size },
       'Matching engine active'
     );
 
@@ -180,12 +204,13 @@ export class MatchingEngine {
     // heartbeat path, so a slow backfill can't let the lease expire.
     if (lastTickAt) {
       const now = this.now();
-      // Symbols are independent (separate fetches, separate triggers): catch up in parallel.
-      // Within one symbol, candles stay in time order (backfill()).
+      // Markets are independent (separate fetches, separate triggers): catch up in parallel.
+      // Within one market, candles stay in time order (backfill()).
       void Promise.all(
-        [...this.symbolUsers.keys()].map((symbol) =>
-          this.backfill(symbol, lastTickAt.getTime(), now)
-        )
+        [...this.symbolUsers.keys()].map((key) => {
+          const { category, symbol } = parseKey(key);
+          return this.backfill(category, symbol, lastTickAt.getTime(), now);
+        })
       );
     }
   }
@@ -236,41 +261,48 @@ export class MatchingEngine {
       this.users.delete(userId);
     } else {
       this.users.set(userId, state);
-      const symbols = new Set([
-        ...state.positions.map((p) => p.symbol),
-        ...state.pendingOrders.map((o) => o.symbol),
+      const keys = new Set<MarketKey>([
+        ...state.positions.map((p) => marketKey(p.category, p.symbol)),
+        ...state.pendingOrders.map((o) => marketKey(o.category, o.symbol)),
       ]);
-      for (const symbol of symbols) {
-        let set = this.symbolUsers.get(symbol);
+      for (const key of keys) {
+        let set = this.symbolUsers.get(key);
         if (!set) {
           set = new Set();
-          this.symbolUsers.set(symbol, set);
+          this.symbolUsers.set(key, set);
         }
         set.add(userId);
       }
     }
-    for (const [symbol, set] of this.symbolUsers) {
-      if (set.size === 0) this.symbolUsers.delete(symbol);
+    for (const [key, set] of this.symbolUsers) {
+      if (set.size === 0) this.symbolUsers.delete(key);
     }
   }
 
   private onTick(u: TickUpdate): void {
-    // BP-1: every pane trades on the spot feed; linear drives the engine from BP-2 on
-    if (u.category !== 'spot' || !Number.isFinite(u.lastPrice) || u.lastPrice <= 0) return;
+    if (!isCategory(u.category) || !Number.isFinite(u.lastPrice) || u.lastPrice <= 0) return;
+    const { category, symbol } = u;
+    const key = marketKey(category, symbol);
     const now = this.now();
-    const previous = this.lastTick.get(u.symbol);
-    this.lastTick.set(u.symbol, now);
+    const previous = this.lastTick.get(key);
+    this.lastTick.set(key, now);
     if (previous !== undefined && now - previous > this.gapMs) {
-      void this.backfill(u.symbol, previous, now);
+      void this.backfill(category, symbol, previous, now);
     }
 
-    const userIds = this.symbolUsers.get(u.symbol);
+    const userIds = this.symbolUsers.get(key);
     if (!userIds?.size) return;
     const price = new Decimal(u.lastPrice.toString());
     for (const userId of userIds) {
       const state = this.users.get(userId);
       if (!state) continue;
-      for (const trigger of evaluateTick(u.symbol, price, state.positions, state.pendingOrders)) {
+      for (const trigger of evaluateTick(
+        category,
+        symbol,
+        price,
+        state.positions,
+        state.pendingOrders
+      )) {
         void this.fire(userId, trigger);
       }
     }
@@ -315,29 +347,31 @@ export class MatchingEngine {
 
   private evict(userId: string): void {
     this.users.delete(userId);
-    for (const [symbol, set] of this.symbolUsers) {
+    for (const [key, set] of this.symbolUsers) {
       set.delete(userId);
-      if (set.size === 0) this.symbolUsers.delete(symbol);
+      if (set.size === 0) this.symbolUsers.delete(key);
     }
   }
 
-  /** Replay 1m candles for a gap, in time order, for every account watching `symbol`. */
-  async backfill(symbol: string, fromMs: number, toMs: number): Promise<void> {
-    if (!this.symbolUsers.get(symbol)?.size) return;
+  /** Replay 1m candles for a gap, in time order, for every account watching one market. */
+  async backfill(category: Category, symbol: string, fromMs: number, toMs: number): Promise<void> {
+    const key = marketKey(category, symbol);
+    if (!this.symbolUsers.get(key)?.size) return;
     let candles: Candle[];
     try {
-      candles = await this.deps.fetchCandles(symbol, fromMs, toMs);
+      candles = await this.deps.fetchCandles(category, symbol, fromMs, toMs);
     } catch (err) {
-      log.error({ err, symbol }, 'Backfill candle fetch failed');
+      log.error({ err, category, symbol }, 'Backfill candle fetch failed');
       return;
     }
-    log.info({ symbol, fromMs, toMs, candles: candles.length }, 'Backfilling price gap');
+    log.info({ category, symbol, fromMs, toMs, candles: candles.length }, 'Backfilling price gap');
     for (const candle of candles) {
-      for (const userId of [...(this.symbolUsers.get(symbol) ?? [])]) {
+      for (const userId of [...(this.symbolUsers.get(key) ?? [])]) {
         const state = this.users.get(userId);
         if (!state) continue;
         // Sequential: each execution updates the index before the next candle is evaluated
         for (const trigger of evaluateCandle(
+          category,
           symbol,
           candle,
           state.positions,

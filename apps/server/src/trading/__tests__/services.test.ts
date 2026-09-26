@@ -1,6 +1,6 @@
 /**
- * Service-layer tests for the BP-1 engine: TradingService, MatchingEngine, AccountRepository.
- * No database, network or Bybit feed: every dependency is an in-memory fake.
+ * Service-layer tests for the server engine (BP-1, BP-2): TradingService, MatchingEngine,
+ * AccountRepository. No database, network or Bybit feed: every dependency is an in-memory fake.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -20,7 +20,16 @@ import {
   type LoadedAccount,
 } from '../AccountRepository.js';
 import { PaperEventBus, type PaperEvent } from '../PaperEventBus.js';
-import { TradingError, TradingService, WAITING_FOR_PRICE } from '../TradingService.js';
+import {
+  MAX_QUOTE_AGE_MS,
+  TradingError,
+  TradingService,
+  WAITING_FOR_PRICE,
+  type MarketSource,
+  type TimedQuote,
+} from '../TradingService.js';
+import { fallbackRules } from '../bybitSpec.js';
+import { LEVERAGE_LOCKED } from '../engine/index.js';
 import { MatchingEngine, type LeaseStore, type TickUpdate } from '../MatchingEngine.js';
 
 const D = (n: number) => new Decimal(n);
@@ -30,6 +39,8 @@ function freshState(): AccountState {
     balance: D(STARTING_BALANCE),
     realizedPnl: D(0),
     leverage: 1,
+    symbolLeverage: {},
+    spot: [],
     positions: [],
     pendingOrders: [],
   };
@@ -70,8 +81,32 @@ describe('TradingService', () => {
   let repo: FakeRepo;
   let events: PaperEventBus;
   let published: PaperEvent[];
+  /** The live quote the fake market serves (bid = ask = last unless a test says otherwise) */
   let price: Decimal | undefined;
+  let book: Partial<TimedQuote>;
+  let now: number;
   let trading: TradingService;
+
+  const market: MarketSource = {
+    quote: () =>
+      price ? { last: price, bid: price, ask: price, seenAt: now, ...book } : undefined,
+    rules: () => ({
+      tickSize: D(0),
+      qtyStep: D(0),
+      minOrderQty: D(0),
+      minNotional: D(0),
+    }),
+  };
+
+  /** A USDT Perpetual market order sized by margin (the BP-1 client's usdtAmount) */
+  const market$ = (margin: number, extra: Record<string, unknown> = {}) => ({
+    category: 'linear' as const,
+    symbol: 'BTCUSDT',
+    side: 'buy' as const,
+    type: 'market' as const,
+    size: { margin: D(margin) },
+    ...extra,
+  });
 
   beforeEach(() => {
     repo = new FakeRepo();
@@ -79,20 +114,13 @@ describe('TradingService', () => {
     published = [];
     events.subscribeAll((e) => published.push(e));
     price = D(50_000);
-    trading = new TradingService(
-      repo as unknown as AccountRepository,
-      { lastPrice: () => price },
-      events
-    );
+    book = {};
+    now = 1_000_000;
+    trading = new TradingService(repo as unknown as AccountRepository, market, events, () => now);
   });
 
   it('fills a market order at the server price (not a client one) and publishes the delta', async () => {
-    const out = await trading.placeOrder('u1', {
-      symbol: 'BTCUSDT',
-      side: 'buy',
-      type: 'market',
-      usdtAmount: D(1_000),
-    });
+    const out = await trading.placeOrder('u1', market$(1_000));
     expect(out.result).toBeTruthy();
     expect(repo.state.positions[0].entryPrice.toNumber()).toBe(50_000);
     expect(out.delta.account.version).toBe(1);
@@ -105,24 +133,102 @@ describe('TradingService', () => {
 
   it('rejects a market order with 409 while there is no live price', async () => {
     price = undefined;
+    await expect(trading.placeOrder('u1', market$(100))).rejects.toEqual(
+      new TradingError(409, WAITING_FOR_PRICE)
+    );
+    expect(repo.writes).toBe(0);
+  });
+
+  it(`does not trade on a quote older than ${MAX_QUOTE_AGE_MS / 1000} s (stalled feed)`, async () => {
+    book = { seenAt: now - MAX_QUOTE_AGE_MS - 1 };
+    await expect(trading.placeOrder('u1', market$(100))).rejects.toEqual(
+      new TradingError(409, WAITING_FOR_PRICE)
+    );
+    book = { seenAt: now - MAX_QUOTE_AGE_MS };
+    await expect(trading.placeOrder('u1', market$(100))).resolves.toBeTruthy();
+  });
+
+  it('does not trade on a quote with no bid / ask yet', async () => {
+    book = { bid: D(0) };
+    await expect(trading.placeOrder('u1', market$(100))).rejects.toMatchObject({
+      statusCode: 409,
+    });
+  });
+
+  it('buys at the ask and sells at the bid', async () => {
+    book = { bid: D(49_990), ask: D(50_010) };
+    await trading.placeOrder('u1', market$(1_000));
+    await trading.placeOrder('u1', market$(1_000, { symbol: 'ETHUSDT', side: 'sell' }));
+    expect(repo.state.positions.map((p) => p.entryPrice.toNumber())).toEqual([50_010, 49_990]);
+  });
+
+  it('routes a spot order to the spot engine: buys coins at the ask, no position', async () => {
+    book = { ask: D(50_010) };
+    await trading.placeOrder('u1', {
+      ...market$(0),
+      category: 'spot',
+      size: { qty: D('0.1') },
+    });
+    expect(repo.state.positions).toHaveLength(0);
+    expect(repo.state.spot[0].coin).toBe('BTC');
+    expect(repo.state.spot[0].free.toString()).toBe('0.0999');
+    expect(repo.state.balance.toNumber()).toBeCloseTo(10_000 - 5_001);
+  });
+
+  it('refuses a spot stop order (spot takes market and limit only)', async () => {
     await expect(
       trading.placeOrder('u1', {
-        symbol: 'BTCUSDT',
-        side: 'buy',
-        type: 'market',
-        usdtAmount: D(100),
+        ...market$(100),
+        category: 'spot',
+        type: 'stop',
+        triggerPrice: D(51_000),
       })
-    ).rejects.toEqual(new TradingError(409, WAITING_FOR_PRICE));
+    ).rejects.toEqual(new TradingError(422, 'Spot supports market and limit orders'));
     expect(repo.writes).toBe(0);
+  });
+
+  it('a spot sell with no coins is refused (no shorting, F8)', async () => {
+    await expect(
+      trading.placeOrder('u1', {
+        ...market$(0),
+        category: 'spot',
+        side: 'sell',
+        size: { qty: D('0.1') },
+      })
+    ).rejects.toMatchObject({ statusCode: 422 });
+    expect(repo.writes).toBe(0);
+  });
+
+  it("answers 422 with Bybit's message when the size rules refuse an order", async () => {
+    const strict = new TradingService(
+      repo as unknown as AccountRepository,
+      { ...market, rules: () => fallbackRules('linear', 'BTCUSDT') },
+      events,
+      () => now
+    );
+    await expect(
+      strict.placeOrder('u1', { ...market$(0), size: { qty: D('0.0001') } })
+    ).rejects.toEqual(new TradingError(422, 'Order quantity lower than the minimum (0.001)'));
+    expect(repo.writes).toBe(0);
+    expect(published).toHaveLength(0);
+  });
+
+  it('refuses a leverage change while the symbol has an open position (422)', async () => {
+    await trading.placeOrder('u1', market$(1_000));
+    await expect(trading.setSymbolLeverage('u1', 'BTCUSDT', 5)).rejects.toEqual(
+      new TradingError(422, LEVERAGE_LOCKED)
+    );
+    await expect(trading.setSymbolLeverage('u1', 'ETHUSDT', 5)).resolves.toMatchObject({
+      result: 5,
+    });
+    expect(repo.state.symbolLeverage).toEqual({ ETHUSDT: 5 });
   });
 
   it('retries on a version conflict and succeeds', async () => {
     repo.conflictsLeft = 2;
     const out = await trading.placeOrder('u1', {
-      symbol: 'BTCUSDT',
-      side: 'buy',
+      ...market$(100),
       type: 'limit',
-      usdtAmount: D(100),
       triggerPrice: D(49_000),
     });
     expect(out.result).toBeTruthy();
@@ -137,33 +243,17 @@ describe('TradingService', () => {
 
   it('serializes one user’s concurrent actions (no lost update)', async () => {
     await Promise.all([
-      trading.placeOrder('u1', {
-        symbol: 'BTCUSDT',
-        side: 'buy',
-        type: 'market',
-        usdtAmount: D(1_000),
-      }),
-      trading.placeOrder('u1', {
-        symbol: 'BTCUSDT',
-        side: 'buy',
-        type: 'market',
-        usdtAmount: D(2_000),
-      }),
+      trading.placeOrder('u1', market$(1_000)),
+      trading.placeOrder('u1', market$(2_000)),
     ]);
     expect(repo.state.positions).toHaveLength(2);
-    // 10000 − 1000 − 0.7 − 2000 − 1.4
-    expect(repo.state.balance.toNumber()).toBeCloseTo(6_997.9);
+    // 10000 − (1000 + 2 × 0.55) − (2000 + 2 × 1.1): margin + open fee + close-fee reserve
+    expect(repo.state.balance.toNumber()).toBeCloseTo(6_996.7);
     expect(published.map((e) => e.delta.account.version)).toEqual([1, 2]);
   });
 
   it('runTrigger drops a stale trigger without writing (TP changed since the tick)', async () => {
-    await trading.placeOrder('u1', {
-      symbol: 'BTCUSDT',
-      side: 'buy',
-      type: 'market',
-      usdtAmount: D(1_000),
-      takeProfit: D(55_000),
-    });
+    await trading.placeOrder('u1', market$(1_000, { takeProfit: D(55_000) }));
     const positionId = repo.state.positions[0].id;
     await trading.updatePositionExits('u1', positionId, D(60_000), null);
     const writesBefore = repo.writes;
@@ -180,13 +270,7 @@ describe('TradingService', () => {
   });
 
   it('runTrigger executes a valid TP and plays profit', async () => {
-    await trading.placeOrder('u1', {
-      symbol: 'BTCUSDT',
-      side: 'buy',
-      type: 'market',
-      usdtAmount: D(1_000),
-      takeProfit: D(55_000),
-    });
+    await trading.placeOrder('u1', market$(1_000, { takeProfit: D(55_000) }));
     const positionId = repo.state.positions[0].id;
     const out = await trading.runTrigger('u1', {
       kind: 'exit',
@@ -196,6 +280,37 @@ describe('TradingService', () => {
     });
     expect(out?.sound).toBe('profit');
     expect(repo.state.positions).toHaveLength(0);
+  });
+
+  it('runTrigger fills a stop at the live ask, and a limit at its own price', async () => {
+    await trading.placeOrder('u1', { ...market$(1_000), type: 'stop', triggerPrice: D(51_000) });
+    await trading.placeOrder('u1', {
+      ...market$(1_000, { symbol: 'ETHUSDT' }),
+      type: 'limit',
+      triggerPrice: D(49_000),
+    });
+    const [stop, limit] = repo.state.pendingOrders;
+    price = D(51_000);
+    book = { ask: D(51_020) };
+    await trading.runTrigger('u1', { kind: 'fill', orderId: stop.id, price: D(51_000) });
+    price = D(48_900);
+    book = {};
+    await trading.runTrigger('u1', { kind: 'fill', orderId: limit.id, price: D(48_900) });
+    expect(repo.state.positions.map((p) => p.entryPrice.toNumber())).toEqual([51_020, 49_000]);
+  });
+
+  it('runTrigger fills a backfilled trigger at the level it crossed, not the live quote', async () => {
+    await trading.placeOrder('u1', { ...market$(1_000), type: 'stop', triggerPrice: D(51_000) });
+    const [stop] = repo.state.pendingOrders;
+    book = { ask: D(60_000) }; // today's price, long after the gap
+    price = D(60_000);
+    await trading.runTrigger('u1', {
+      kind: 'fill',
+      orderId: stop.id,
+      price: D(51_000),
+      fillAt: D(51_000),
+    });
+    expect(repo.state.positions[0].entryPrice.toNumber()).toBe(51_000);
   });
 
   it('a queued market order fills at the price live when it executes, not when it was received', async () => {
@@ -214,12 +329,7 @@ describe('TradingService', () => {
     }) as never;
 
     const blocker = trading.setLeverage('u1', 2); // occupies the user's queue
-    const order = trading.placeOrder('u1', {
-      symbol: 'BTCUSDT',
-      side: 'buy',
-      type: 'market',
-      usdtAmount: D(1_000),
-    });
+    const order = trading.placeOrder('u1', market$(1_000));
     await blockerRunning;
     price = D(51_000); // the market moves while the order waits
     release();
@@ -236,16 +346,12 @@ describe('TradingService', () => {
     expect(published).toHaveLength(0);
   });
 
-  it('closePosition uses the live price of the position’s symbol', async () => {
-    await trading.placeOrder('u1', {
-      symbol: 'BTCUSDT',
-      side: 'buy',
-      type: 'market',
-      usdtAmount: D(1_000),
-    });
-    price = D(55_000);
+  it('closePosition sells a long into the live bid of the position’s market', async () => {
+    await trading.placeOrder('u1', market$(1_000));
+    price = D(55_010);
+    book = { bid: D(55_000) };
     const out = await trading.closePosition('u1', repo.state.positions[0].id);
-    // 0.02 BTC × 5000
+    // 0.02 BTC × (55,000 − 50,000)
     expect(out.result?.toNumber()).toBeCloseTo(100);
   });
 });
@@ -265,10 +371,12 @@ describe('MatchingEngine', () => {
   function withLimit(state: AccountState, orderId: string, trigger: number, placedAt = 0) {
     state.pendingOrders.push({
       id: orderId,
+      category: 'linear',
       symbol: 'BTCUSDT',
       side: 'buy',
       type: 'limit',
       usdtAmount: D(100),
+      reserved: D(100.11),
       triggerPrice: D(trigger),
       qty: D(0.002),
       leverage: 1,
@@ -298,7 +406,7 @@ describe('MatchingEngine', () => {
     });
   }
 
-  const tick = (symbol: string, lastPrice: number, category = 'spot') =>
+  const tick = (symbol: string, lastPrice: number, category = 'linear') =>
     tickListener?.({ category, symbol, lastPrice });
 
   beforeEach(() => {
@@ -349,11 +457,27 @@ describe('MatchingEngine', () => {
     await e.stop();
   });
 
-  it('ignores linear ticks in BP-1 (every pane trades spot)', async () => {
+  it('a spot tick never triggers a USDT Perpetual order (per-market index)', async () => {
     const e = engine();
     await e.start();
-    tick('BTCUSDT', 1, 'linear');
+    tick('BTCUSDT', 1, 'spot');
     expect(runTrigger).not.toHaveBeenCalled();
+    tick('BTCUSDT', 48_000, 'linear');
+    expect(runTrigger).toHaveBeenCalledTimes(1);
+    await e.stop();
+  });
+
+  it('tracks gaps per market: a live spot feed does not hide a stalled linear one', async () => {
+    const e = engine();
+    await e.start();
+    tick('BTCUSDT', 49_500, 'linear');
+    clock += 120_000;
+    tick('BTCUSDT', 49_500, 'spot'); // spot keeps ticking
+    expect(fetchCandles).not.toHaveBeenCalled();
+    tick('BTCUSDT', 49_600, 'linear');
+    await vi.waitFor(() =>
+      expect(fetchCandles).toHaveBeenCalledWith('linear', 'BTCUSDT', 1_000_000, 1_120_000)
+    );
     await e.stop();
   });
 
@@ -398,13 +522,14 @@ describe('MatchingEngine', () => {
     clock += 120_000; // 2 minutes of silence
     tick('BTCUSDT', 49_600);
     await vi.waitFor(() =>
-      expect(fetchCandles).toHaveBeenCalledWith('BTCUSDT', 1_000_000, 1_120_000)
+      expect(fetchCandles).toHaveBeenCalledWith('linear', 'BTCUSDT', 1_000_000, 1_120_000)
     );
     await vi.waitFor(() =>
       expect(runTrigger).toHaveBeenCalledWith('u1', {
         kind: 'fill',
         orderId: 'o1',
-        price: D(49_000), // backfill fills at the crossed level
+        price: D(49_000),
+        fillAt: D(49_000), // backfill fills at the crossed level
       })
     );
     await e.stop();
@@ -414,7 +539,7 @@ describe('MatchingEngine', () => {
     lease.tryAcquire = vi.fn(async () => ({ acquired: true, lastTickAt: new Date(900_000) }));
     const e = engine();
     await e.start();
-    expect(fetchCandles).toHaveBeenCalledWith('BTCUSDT', 900_000, 1_000_000);
+    expect(fetchCandles).toHaveBeenCalledWith('linear', 'BTCUSDT', 900_000, 1_000_000);
     await e.stop();
   });
 
@@ -559,30 +684,38 @@ describe('AccountRepository', () => {
       trade: model('trade'),
       journalEntry: model('journalEntry'),
       balanceEvent: model('balanceEvent'),
+      symbolSetting: model('symbolSetting'),
+      spotBalance: model('spotBalance'),
     };
     const prisma = { ...tx, $transaction: vi.fn(async (fn: (t: typeof tx) => unknown) => fn(tx)) };
     return { prisma, calls, tx };
   }
 
   const placeDelta = (): Delta => ({
-    account: { balance: D(8_999.3), realizedPnl: D(0), leverage: 1 },
+    account: { balance: D(8_998.9), realizedPnl: D(0), leverage: 1, symbolLeverage: {} },
     positionsUpsert: [
       {
         id: 'p1',
+        category: 'linear',
         symbol: 'BTCUSDT',
         side: 'long',
         quantity: D(0.02),
         entryPrice: D(50_000),
         entryUsdtAmount: D(1_000),
+        leverage: 1,
+        entryFee: D(0.55),
+        closeFeeReserve: D(0.55),
         openedAt: 1,
       },
     ],
     positionsRemove: [],
+    spotUpsert: [],
     pendingUpsert: [],
     pendingRemove: [],
     orders: [
       {
         id: 'o-new',
+        category: 'linear',
         symbol: 'BTCUSDT',
         side: 'buy',
         type: 'market',
@@ -594,6 +727,7 @@ describe('AccountRepository', () => {
       },
       {
         id: 'o-old',
+        category: 'linear',
         symbol: 'BTCUSDT',
         side: 'buy',
         type: 'market',
@@ -680,9 +814,139 @@ describe('AccountRepository', () => {
     const { prisma, calls } = fakePrisma(1);
     const repo = new AccountRepository(prisma as never);
     await repo.mutate('u1', () => ({ delta: { ...placeDelta(), reset: true }, result: true }));
-    for (const table of ['position', 'trade', 'order', 'journalEntry', 'balanceEvent']) {
+    for (const table of [
+      'position',
+      'trade',
+      'order',
+      'journalEntry',
+      'balanceEvent',
+      'symbolSetting',
+      'spotBalance',
+    ]) {
       expect(calls).toContain(`${table}.deleteMany`);
     }
     expect(calls).not.toContain('position.create');
+  });
+
+  it('writes a changed per-symbol leverage as a SymbolSetting upsert', async () => {
+    const { prisma, tx } = fakePrisma(1);
+    const repo = new AccountRepository(prisma as never);
+    const empty = { ...placeDelta(), positionsUpsert: [], orders: [] };
+    await repo.mutate('u1', () => ({
+      delta: { ...empty, account: { ...empty.account, symbolLeverage: { ETHUSDT: 5 } } },
+      result: 5,
+    }));
+    expect(tx.symbolSetting.upsert).toHaveBeenCalledWith({
+      where: { accountId_symbol: { accountId: 'acc', symbol: 'ETHUSDT' } },
+      create: { accountId: 'acc', symbol: 'ETHUSDT', leverage: 5 },
+      update: { leverage: 5 },
+    });
+  });
+});
+
+describe('AccountRepository — spot balances', () => {
+  it('upserts each changed coin balance by (account, coin)', async () => {
+    const calls: { where: unknown; create: unknown; update: unknown }[] = [];
+    const model = () =>
+      new Proxy(
+        {},
+        {
+          get: (_t, method: string) =>
+            vi.fn(async (args: { where: unknown; create: unknown; update: unknown }) => {
+              if (method === 'upsert') calls.push(args);
+              if (method === 'updateMany') return { count: 1 };
+              if (method === 'findMany') return [];
+              return {
+                id: 'acc',
+                availableBalance: '10000',
+                realizedPnl: '0',
+                leverage: 1,
+                version: 0,
+              };
+            }),
+        }
+      );
+    const tx = {
+      account: model(),
+      position: model(),
+      order: model(),
+      trade: model(),
+      journalEntry: model(),
+      balanceEvent: model(),
+      symbolSetting: model(),
+      spotBalance: model(),
+    };
+    const repo = new AccountRepository({
+      ...tx,
+      $transaction: async (fn: (t: typeof tx) => unknown) => fn(tx),
+    } as never);
+    const holding = { coin: 'BTC', free: D(0.0999), locked: D(0), avgCost: D(50_050.05) };
+    await repo.mutate('u1', (loaded) => ({
+      delta: {
+        account: { ...loaded.state, symbolLeverage: {} },
+        positionsUpsert: [],
+        positionsRemove: [],
+        spotUpsert: [holding],
+        pendingUpsert: [],
+        pendingRemove: [],
+        orders: [],
+        trades: [],
+        balanceEvents: [],
+        journal: [],
+        journalEdits: [],
+      },
+      result: true,
+    }));
+    expect(calls).toContainEqual({
+      where: { accountId_coin: { accountId: 'acc', coin: 'BTC' } },
+      create: {
+        coin: 'BTC',
+        free: D(0.0999),
+        locked: D(0),
+        avgCost: D(50_050.05),
+        accountId: 'acc',
+      },
+      update: { coin: 'BTC', free: D(0.0999), locked: D(0), avgCost: D(50_050.05) },
+    });
+  });
+});
+
+describe('isEmptyDelta', () => {
+  const noChange = (state: AccountState): Delta => ({
+    account: {
+      balance: state.balance,
+      realizedPnl: state.realizedPnl,
+      leverage: state.leverage,
+      symbolLeverage: { ...state.symbolLeverage },
+    },
+    positionsUpsert: [],
+    positionsRemove: [],
+    spotUpsert: [],
+    pendingUpsert: [],
+    pendingRemove: [],
+    orders: [],
+    trades: [],
+    balanceEvents: [],
+    journal: [],
+    journalEdits: [],
+  });
+
+  it('is empty when nothing changed', () => {
+    const state = { ...freshState(), symbolLeverage: { BTCUSDT: 3 } };
+    expect(isEmptyDelta(noChange(state), state)).toBe(true);
+  });
+
+  it('is not empty when only a coin balance changed (it must be written)', () => {
+    const state = freshState();
+    const delta = noChange(state);
+    delta.spotUpsert = [{ coin: 'BTC', free: D(1), locked: D(0), avgCost: D(1) }];
+    expect(isEmptyDelta(delta, state)).toBe(false);
+  });
+
+  it('is not empty when only a per-symbol leverage changed (it must be written)', () => {
+    const state = freshState();
+    const delta = noChange(state);
+    delta.account.symbolLeverage = { BTCUSDT: 3 };
+    expect(isEmptyDelta(delta, state)).toBe(false);
   });
 });

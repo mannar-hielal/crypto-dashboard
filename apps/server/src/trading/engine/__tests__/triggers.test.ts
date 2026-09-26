@@ -8,6 +8,8 @@
  *   every symbol, and a tick of one symbol only ever triggers that symbol's items.
  * - effectiveCheckPrice (the forming-candle sweep) is no longer used live (S3); its rules survive
  *   in backfill (evaluateCandle), tested below together with the S3 placement guard.
+ * - BP-2: triggers are per market (category + symbol) and fire on the last price; where they fill
+ *   is executeTrigger's job (resting limit at its price, stop / TP / SL at the ask / bid).
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -36,12 +38,23 @@ function pending(side: 'buy' | 'sell', type: 'limit' | 'stop', triggerPrice: num
   return { side, type, triggerPrice: D(triggerPrice) };
 }
 
-/** What the matching engine does on a tick: evaluate, then execute each trigger in order. */
-function tick(h: PaperHarness, symbol: string, price: number): Trigger[] {
-  const triggers = evaluateTick(symbol, D(price), h.raw.positions, h.raw.pendingOrders);
+/**
+ * What the matching engine does on a USDT Perpetual tick: evaluate, then execute each trigger in
+ * order. `book` is the quote at that moment (default: bid = ask = the tick price).
+ */
+function tick(
+  h: PaperHarness,
+  symbol: string,
+  price: number,
+  book: { bid: number; ask: number } = { bid: price, ask: price }
+): Trigger[] {
+  const triggers = evaluateTick('linear', symbol, D(price), h.raw.positions, h.raw.pendingOrders);
+  const quote = { last: D(price), bid: D(book.bid), ask: D(book.ask) };
   let n = 0;
   for (const t of triggers) {
-    h.apply(executeTrigger(h.raw, t, { now: 1_800_000_000_000 + ++n, newId: () => `t-${n}` }));
+    h.apply(
+      executeTrigger(h.raw, t, quote, { now: 1_800_000_000_000 + ++n, newId: () => `t-${n}` })
+    );
   }
   return triggers;
 }
@@ -258,22 +271,66 @@ describe('evaluateTick() symbol isolation (4.18 regression)', () => {
   });
 });
 
-// ─── S3: live fills use the tick price, never a candle extreme ─────────────────
+// ─── S3 + BP-2: live triggers fire on the tick; fills follow Bybit ─────────────
 
-describe('S3 — live triggers use the tick price', () => {
-  it('a limit buy fills at the tick price that crossed it', () => {
+describe('live triggers — fire on the last price, fill like Bybit', () => {
+  it('F4: a resting limit buy fills at its own limit price as maker, not at the tick', () => {
     const h = new PaperHarness();
     h.placeLimitOrder('BTCUSDT', 'buy', 50_000, 1_000);
     tick(h, 'BTCUSDT', 49_990);
-    expect(h.positions[0].entryPrice).toBe(49_990);
+    expect(h.positions[0].entryPrice).toBe(50_000);
+    expect(h.orders[0]).toMatchObject({ type: 'limit', isMaker: true, feeRate: 0.0002 });
   });
 
-  it('a TP close uses the tick price in the journal and the trade', () => {
+  it('a stop buy triggers on the last price and fills at the ask, as taker', () => {
+    const h = new PaperHarness();
+    h.placeStopOrder('BTCUSDT', 'buy', 50_500, 1_000);
+    tick(h, 'BTCUSDT', 50_500, { bid: 50_490, ask: 50_510 });
+    expect(h.positions[0].entryPrice).toBe(50_510);
+    expect(h.orders[0]).toMatchObject({ type: 'stop', isMaker: false, feeRate: 0.00055 });
+  });
+
+  it('a stop sell fills at the bid', () => {
+    const h = new PaperHarness();
+    h.placeStopOrder('BTCUSDT', 'sell', 49_500, 1_000);
+    tick(h, 'BTCUSDT', 49_500, { bid: 49_480, ask: 49_520 });
+    expect(h.positions[0].entryPrice).toBe(49_480);
+  });
+
+  it('a long TP closes at the bid; the journal and trade show that price', () => {
     const h = new PaperHarness();
     h.placeOrder('BTCUSDT', 'buy', 50_000, 1_000, 55_000);
-    tick(h, 'BTCUSDT', 55_010);
-    expect(h.history[0].exitPrice).toBe(55_010);
+    tick(h, 'BTCUSDT', 55_010, { bid: 55_000, ask: 55_020 });
+    expect(h.history[0].exitPrice).toBe(55_000);
+    expect(h.journal.some((j) => j.text.includes('Take-Profit hit at $55000.00'))).toBe(true);
     expect(h.lastSound).toBe('profit');
+  });
+
+  it('a short SL closes at the ask', () => {
+    const h = new PaperHarness();
+    h.placeOrder('BTCUSDT', 'sell', 50_000, 1_000, undefined, 52_000);
+    tick(h, 'BTCUSDT', 52_000, { bid: 51_990, ask: 52_010 });
+    expect(h.history[0].exitPrice).toBe(52_010);
+  });
+
+  it('with no quote, a triggered stop fills at the price that triggered it', () => {
+    const h = new PaperHarness();
+    h.placeStopOrder('BTCUSDT', 'buy', 50_500, 1_000);
+    const [t] = evaluateTick('linear', 'BTCUSDT', D(50_600), h.raw.positions, h.raw.pendingOrders);
+    h.apply(executeTrigger(h.raw, t, undefined, { now: 1, newId: () => 'x' }));
+    expect(h.positions[0].entryPrice).toBe(50_600);
+  });
+
+  it('a spot tick never triggers a USDT Perpetual position or order', () => {
+    const h = new PaperHarness();
+    h.placeOrder('BTCUSDT', 'buy', 50_000, 1_000, 55_000, 45_000);
+    h.placeLimitOrder('BTCUSDT', 'buy', 49_000, 1_000);
+    expect(
+      evaluateTick('spot', 'BTCUSDT', D(40_000), h.raw.positions, h.raw.pendingOrders)
+    ).toHaveLength(0);
+    expect(
+      evaluateTick('linear', 'BTCUSDT', D(40_000), h.raw.positions, h.raw.pendingOrders)
+    ).toHaveLength(2);
   });
 
   it('no trigger while the tick stays on the untriggered side', () => {
@@ -300,10 +357,12 @@ describe('evaluateCandle() — backfill sweep', () => {
   ) {
     return {
       id: 'p1',
+      category: 'linear' as const,
       symbol: 'BTCUSDT',
       side,
       type,
       usdtAmount: D(100),
+      reserved: D(100.11),
       triggerPrice: D(trigger),
       qty: D(0.002),
       leverage: 1,
@@ -314,11 +373,15 @@ describe('evaluateCandle() — backfill sweep', () => {
   function positionItem(side: 'long' | 'short', tp?: number, sl?: number, openedAt = 0) {
     return {
       id: 'pos1',
+      category: 'linear' as const,
       symbol: 'BTCUSDT',
       side,
       quantity: D(0.01),
       entryPrice: D(50_000),
       entryUsdtAmount: D(500),
+      leverage: 1,
+      entryFee: D(0.275),
+      closeFeeReserve: D(0.275),
       openedAt,
       ...(tp !== undefined ? { takeProfit: D(tp) } : {}),
       ...(sl !== undefined ? { stopLoss: D(sl) } : {}),
@@ -327,6 +390,7 @@ describe('evaluateCandle() — backfill sweep', () => {
 
   it('Limit Buy uses the candle low and fills at the trigger price', () => {
     const [t] = evaluateCandle(
+      'linear',
       'BTCUSDT',
       candle(60_000, 49_900, 50_200),
       [],
@@ -334,11 +398,13 @@ describe('evaluateCandle() — backfill sweep', () => {
     );
     expect(t).toMatchObject({ kind: 'fill', orderId: 'p1' });
     expect(t.price.toNumber()).toBe(50_000);
+    expect(t.fillAt?.toNumber()).toBe(50_000); // no quote for the past: fill at the level
   });
 
   it('Stop Sell uses the candle low', () => {
     expect(
       evaluateCandle(
+        'linear',
         'BTCUSDT',
         candle(60_000, 44_900, 45_500),
         [],
@@ -350,6 +416,7 @@ describe('evaluateCandle() — backfill sweep', () => {
   it('Limit Sell uses the candle high', () => {
     expect(
       evaluateCandle(
+        'linear',
         'BTCUSDT',
         candle(60_000, 59_500, 60_200),
         [],
@@ -361,6 +428,7 @@ describe('evaluateCandle() — backfill sweep', () => {
   it('Stop Buy uses the candle high', () => {
     expect(
       evaluateCandle(
+        'linear',
         'BTCUSDT',
         candle(60_000, 54_800, 55_800),
         [],
@@ -372,6 +440,7 @@ describe('evaluateCandle() — backfill sweep', () => {
   it('no fill when the candle range never reaches the trigger', () => {
     expect(
       evaluateCandle(
+        'linear',
         'BTCUSDT',
         candle(60_000, 50_100, 50_300),
         [],
@@ -383,6 +452,7 @@ describe('evaluateCandle() — backfill sweep', () => {
   it('S3: ignores a candle that started before the order was placed', () => {
     expect(
       evaluateCandle(
+        'linear',
         'BTCUSDT',
         candle(60_000, 49_000, 51_000),
         [],
@@ -394,6 +464,7 @@ describe('evaluateCandle() — backfill sweep', () => {
   it('S3: ignores a candle that started before the position opened', () => {
     expect(
       evaluateCandle(
+        'linear',
         'BTCUSDT',
         candle(60_000, 40_000, 60_000),
         [positionItem('long', 55_000, 45_000, 60_500)],
@@ -404,6 +475,7 @@ describe('evaluateCandle() — backfill sweep', () => {
 
   it('closes at the crossed level; TP wins when the candle spans both', () => {
     const [t] = evaluateCandle(
+      'linear',
       'BTCUSDT',
       candle(60_000, 44_000, 56_000),
       [positionItem('long', 55_000, 45_000)],
@@ -411,10 +483,24 @@ describe('evaluateCandle() — backfill sweep', () => {
     );
     expect(t).toMatchObject({ kind: 'exit', leg: 'take-profit' });
     expect(t.price.toNumber()).toBe(55_000);
+    expect(t.fillAt?.toNumber()).toBe(55_000);
+  });
+
+  it('only sweeps the market it is given', () => {
+    expect(
+      evaluateCandle(
+        'spot',
+        'BTCUSDT',
+        candle(60_000, 44_000, 56_000),
+        [positionItem('long', 55_000, 45_000)],
+        [pendingItem('buy', 'limit', 50_000)]
+      )
+    ).toHaveLength(0);
   });
 
   it('short SL uses the candle high', () => {
     const [t] = evaluateCandle(
+      'linear',
       'BTCUSDT',
       candle(60_000, 49_000, 52_500),
       [positionItem('short', 45_000, 52_000)],
