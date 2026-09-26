@@ -435,6 +435,90 @@ describe('GET /api/market/instruments', () => {
     expect(symbols).not.toContain('ETHUSDT');
   });
 
+  it('serves the stale value on a failed refresh and backs off before retrying upstream', async () => {
+    const t0 = 1_800_000_000_000;
+    const now = vi.spyOn(Date, 'now').mockReturnValue(t0);
+    try {
+      stubInstrumentsFetch(spotInstrument);
+      await app.inject({ method: 'GET', url: '/api/market/instruments?category=spot' });
+
+      // 6 h + 1 ms later Bybit is down
+      now.mockReturnValue(t0 + 6 * 60 * 60 * 1000 + 1);
+      const failing = vi.fn().mockRejectedValue(new Error('ECONNRESET'));
+      vi.stubGlobal('fetch', failing);
+
+      const stale = await app.inject({
+        method: 'GET',
+        url: '/api/market/instruments?category=spot',
+      });
+      expect(stale.statusCode).toBe(200);
+      expect(stale.json<{ instruments: unknown[] }>().instruments).toHaveLength(9);
+      const callsAfterFirstFailure = failing.mock.calls.length;
+
+      // Within the 60 s back-off: stale value, no new upstream calls
+      now.mockReturnValue(t0 + 6 * 60 * 60 * 1000 + 30_000);
+      await app.inject({ method: 'GET', url: '/api/market/instruments?category=spot' });
+      await app.inject({ method: 'GET', url: '/api/market/instruments?category=spot' });
+      expect(failing).toHaveBeenCalledTimes(callsAfterFirstFailure);
+
+      // After the back-off: exactly one new upstream attempt
+      now.mockReturnValue(t0 + 6 * 60 * 60 * 1000 + 61_000);
+      await app.inject({ method: 'GET', url: '/api/market/instruments?category=spot' });
+      expect(failing.mock.calls.length).toBe(callsAfterFirstFailure * 2);
+    } finally {
+      now.mockRestore();
+    }
+  });
+
+  it('serves the symbols that loaded when one symbol call fails, and retries it soon', async () => {
+    const t0 = 1_800_000_000_000;
+    const now = vi.spyOn(Date, 'now').mockReturnValue(t0);
+    try {
+      let ethFails = true;
+      const fetchMock = vi.fn().mockImplementation(async (url: string) => {
+        const symbol = new URL(url).searchParams.get('symbol') ?? '';
+        if (symbol === 'ETHUSDT' && ethFails) throw new Error('rate limited');
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            retCode: 0,
+            retMsg: 'OK',
+            result: { list: [spotInstrument(symbol)] },
+          }),
+        };
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      const partial = await app.inject({
+        method: 'GET',
+        url: '/api/market/instruments?category=spot',
+      });
+      expect(partial.statusCode).toBe(200);
+      const symbols = partial
+        .json<{ instruments: { symbol: string }[] }>()
+        .instruments.map((i) => i.symbol);
+      expect(symbols).toHaveLength(8);
+      expect(symbols).not.toContain('ETHUSDT');
+
+      // Partial result is cached only briefly (5 min), not 6 h
+      now.mockReturnValue(t0 + 4 * 60_000);
+      await app.inject({ method: 'GET', url: '/api/market/instruments?category=spot' });
+      expect(fetchMock).toHaveBeenCalledTimes(9);
+
+      ethFails = false;
+      now.mockReturnValue(t0 + 5 * 60_000 + 1);
+      const full = await app.inject({
+        method: 'GET',
+        url: '/api/market/instruments?category=spot',
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(18);
+      expect(full.json<{ instruments: unknown[] }>().instruments).toHaveLength(9);
+    } finally {
+      now.mockRestore();
+    }
+  });
+
   it('returns 400 for an unsupported category', async () => {
     const res = await app.inject({
       method: 'GET',

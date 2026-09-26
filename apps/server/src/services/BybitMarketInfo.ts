@@ -3,8 +3,12 @@
  *
  * Instrument rules (tick size, qty step, min order size, max leverage) and risk-limit tiers
  * change rarely, so they are fetched from Bybit's public REST API on demand and cached for
- * CACHE_TTL_MS. Concurrent requests for the same key share one upstream fetch, and a failed
- * refresh serves the stale value when there is one.
+ * CACHE_TTL_MS. Concurrent requests for the same key share one upstream fetch.
+ *
+ * Failure handling (both keep an upstream outage from turning into a Bybit request storm):
+ * - A failed refresh serves the stale value and backs off STALE_RETRY_MS before trying again.
+ * - If only some symbols' instrument calls fail, the rest are served and cached for PARTIAL_TTL_MS
+ *   so the missing symbols are retried soon; if every call fails, the refresh fails.
  */
 
 import { config } from '../config.js';
@@ -56,6 +60,10 @@ interface BybitListResponse {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 h
+/** After a failed refresh, keep serving the stale value this long before retrying upstream. */
+const STALE_RETRY_MS = 60_000;
+/** A result with some symbols missing (their calls failed) is cached only this long. */
+const PARTIAL_TTL_MS = 5 * 60_000;
 const FETCH_TIMEOUT_MS = 8_000;
 
 export function bybitRestBaseUrl(): string {
@@ -68,27 +76,36 @@ export function bybitRestBaseUrl(): string {
 
 interface CacheEntry<T> {
   value: T;
-  fetchedAt: number;
+  expiresAt: number;
+}
+
+/** What a loader returns: the value plus how long it may be cached. */
+interface Loaded<T> {
+  value: T;
+  ttlMs: number;
 }
 
 const cache = new Map<string, CacheEntry<unknown>>();
 const inFlight = new Map<string, Promise<unknown>>();
 
-function cached<T>(key: string, load: () => Promise<T>): Promise<T> {
+function cached<T>(key: string, load: () => Promise<Loaded<T>>): Promise<T> {
   const entry = cache.get(key) as CacheEntry<T> | undefined;
-  if (entry && Date.now() - entry.fetchedAt < CACHE_TTL_MS) return Promise.resolve(entry.value);
+  if (entry && Date.now() < entry.expiresAt) return Promise.resolve(entry.value);
 
   const existing = inFlight.get(key) as Promise<T> | undefined;
   if (existing) return existing;
 
   const promise = load()
-    .then((value) => {
-      cache.set(key, { value, fetchedAt: Date.now() });
+    .then(({ value, ttlMs }) => {
+      cache.set(key, { value, expiresAt: Date.now() + ttlMs });
       return value;
     })
     .catch((err: unknown) => {
       if (entry) {
         log.warn({ err, key }, 'Bybit market info refresh failed — serving stale value');
+        // Back off before the next upstream attempt — otherwise every request during an
+        // outage past the TTL would start a fresh upstream load.
+        cache.set(key, { value: entry.value, expiresAt: Date.now() + STALE_RETRY_MS });
         return entry.value;
       }
       throw err;
@@ -200,16 +217,24 @@ export function parseRiskLimitTier(raw: unknown): RiskLimitTier | null {
 export function getInstruments(category: BybitCategory): Promise<Instrument[]> {
   return cached(`instruments:${category}`, async () => {
     // One request per symbol: an unfiltered spot request returns every Bybit spot pair.
-    const lists = await Promise.all(
+    // allSettled, not all: one rate-limited symbol must not throw away the other eight.
+    const results = await Promise.allSettled(
       ALLOWED_SYMBOLS.map((symbol) =>
         fetchBybitList('/v5/market/instruments-info', { category, symbol })
       )
     );
     const instruments: Instrument[] = [];
-    lists.forEach((list, i) => {
+    let failed = 0;
+    results.forEach((result, i) => {
       // i indexes the fixed ALLOWED_SYMBOLS tuple — safe, controlled access
       // eslint-disable-next-line security/detect-object-injection
       const symbol = ALLOWED_SYMBOLS[i];
+      if (result.status === 'rejected') {
+        failed++;
+        log.warn({ err: result.reason, category, symbol }, 'Instrument fetch failed — skipped');
+        return;
+      }
+      const list = result.value;
       const instrument = list.length > 0 ? parseInstrument(category, list[0]) : null;
       if (instrument) {
         instruments.push(instrument);
@@ -217,7 +242,11 @@ export function getInstruments(category: BybitCategory): Promise<Instrument[]> {
         log.warn({ category, symbol }, 'Instrument missing or malformed — skipped');
       }
     });
-    return instruments;
+    // Every call failed → fail the refresh so the caller gets the stale value (or a 502).
+    if (failed === results.length) {
+      throw new Error(`Bybit instruments-info failed for every symbol [category=${category}]`);
+    }
+    return { value: instruments, ttlMs: failed > 0 ? PARTIAL_TTL_MS : CACHE_TTL_MS };
   });
 }
 
@@ -230,6 +259,6 @@ export function getRiskLimit(symbol: AllowedSymbol): Promise<RiskLimitTier[]> {
       .filter((tier): tier is RiskLimitTier => tier !== null)
       .sort((a, b) => a.riskLimitValue - b.riskLimitValue);
     if (tiers.length === 0) throw new Error(`Bybit risk-limit empty [symbol=${symbol}]`);
-    return tiers;
+    return { value: tiers, ttlMs: CACHE_TTL_MS };
   });
 }
