@@ -121,6 +121,17 @@ class TargetParsing(unittest.TestCase):
     def test_repo_flag(self):
         self.assertEqual(invs("gh pr merge 3 -R other/repo"), [(MERGE, "3", "other/repo")])
 
+    def test_run_view_short_attempt_flag(self):
+        self.assertEqual(invs("gh run view -a 2 123456"), [(("run", "view"), "123456", None)])
+
+    def test_attached_short_repo_flag(self):
+        self.assertEqual(
+            invs("gh pr merge 5 -Rother-org/other-repo --squash"), [(MERGE, "5", "other-org/other-repo")]
+        )
+
+    def test_attached_short_value_flag_is_not_target(self):
+        self.assertEqual(invs("gh pr merge -t99 12"), [(MERGE, "12", None)])
+
     def test_no_target(self):
         self.assertEqual(invs("gh pr merge --merge"), [(MERGE, None, None)])
 

@@ -51,7 +51,7 @@ VALUE_FLAGS = {
                        "-r", "--reviewer", "-t", "--title", "-T", "--template", "--recover",
                        "-R", "--repo"},
     ("run", "watch"): {"-i", "--interval", "-R", "--repo"},
-    ("run", "view"): {"-j", "--job", "--attempt", "--json", "-q", "--jq", "-t", "--template",
+    ("run", "view"): {"-a", "--attempt", "-j", "--job", "--json", "-q", "--jq", "-t", "--template",
                       "-R", "--repo"},
 }
 
@@ -140,7 +140,10 @@ def _parse_args(sub, args):
         arg = args[i]
         if arg.startswith("-"):
             name, eq, value = arg.partition("=")
-            if name in value_flags and not eq:
+            if not eq and not arg.startswith("--") and len(arg) > 2 and arg[:2] in value_flags:
+                # Attached short form, e.g. `-Rowner/repo` or `-a2` (pflag accepts it)
+                name, value = arg[:2], arg[2:]
+            elif name in value_flags and not eq:
                 value = args[i + 1] if i + 1 < len(args) else None
                 i += 1
             if name in ("-R", "--repo"):
