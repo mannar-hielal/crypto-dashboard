@@ -244,6 +244,10 @@ export function SymbolBar({
           />
           <span className="tracking-wide">{activeEntry?.base ?? symbol.replace('USDT', '')}</span>
           <span style={{ fontSize: fontSize.xs11, color: color.muted }}>/USDT</span>
+          {/* Market subtitle, as in Figma 93:7352 ("Perpetual" under the pair) */}
+          <span className="font-normal" style={{ fontSize: fontSize.xxs, color: color.muted }}>
+            {paneConfig.category === 'spot' ? 'Spot' : 'Perpetual'}
+          </span>
           {symbolOpen ? (
             <ChevronUp className="h-3 w-3" style={{ color: color.muted }} />
           ) : (

@@ -100,8 +100,11 @@ function setupStores() {
     bid: PRICE - 10,
     ask: PRICE + 10,
   });
-  // layoutStore defaults to activePane=0, panes[0].symbol='BTCUSDT' — no change needed.
-  useLayoutStore.setState({ activePane: 0 });
+  // These cases are the leveraged (USDT Perpetual) form; Spot has its own section below
+  useLayoutStore.setState((s) => ({
+    activePane: 0,
+    panes: s.panes.map((p, i) => (i === 0 ? { ...p, symbol: 'BTCUSDT', category: 'linear' } : p)),
+  }));
 }
 
 function renderPanel(props: Partial<React.ComponentProps<typeof TradingPanel>> = {}) {
@@ -159,18 +162,17 @@ describe('Section 1 — Market Orders (T2 · RTL)', () => {
   // ── 1.1 Basic Buy ───────────────────────────────────────────────────────────
 
   describe('1.1 Basic Buy', () => {
-    it('1.1.1: order info shows Margin and Commission when qty is entered', () => {
+    it('1.1.1: order info shows value, margin and both fee estimates (Bybit taker 0.055%)', () => {
       renderPanel();
       const qtyInput = getQtyInput();
       fireEvent.change(qtyInput, { target: { value: '100' } });
 
-      // Margin label + value
+      // 100 USDT of value at 1×: margin $100, open and close fee 100 × 0.00055 = $0.0550 each
       expect(screen.getByText('Margin')).toBeTruthy();
-      // commission row
-      expect(screen.getByText('Commission')).toBeTruthy();
-      // Commission ≈ $0.0700 (100 × 0.0007)
-      const commissionValue = screen.getByText(/\$0\.0700/);
-      expect(commissionValue).toBeTruthy();
+      expect(screen.getByText('Est. open fee')).toBeTruthy();
+      expect(screen.getByText('Est. close fee')).toBeTruthy();
+      expect(screen.getAllByText('$0.0550')).toHaveLength(2);
+      expect(screen.getByText('Fees: taker 0.055% · maker 0.02%')).toBeTruthy();
     });
 
     it('1.1.2: clicking Buy clears the qty input', async () => {
@@ -222,48 +224,58 @@ describe('Section 1 — Market Orders (T2 · RTL)', () => {
 
   // ── 1.3 Units mode ──────────────────────────────────────────────────────────
 
-  describe('1.3 Units mode', () => {
-    it('1.3.1: clicking ⇄ Units toggles label to "Quantity (BTC)"', () => {
+  describe('1.3 Amount unit (BTC | USDT)', () => {
+    const unitBtn = (name: string) =>
+      within(screen.getByRole('group', { name: 'Amount unit' })).getByRole('button', { name });
+
+    it('1.3.1: the amount starts in USDT; BTC switches it to a coin quantity', () => {
       renderPanel();
-      // Default label is "Amount (USD)"
-      expect(screen.getByText('Amount (USD)')).toBeTruthy();
-
-      // Click the ⇄ Units button
-      const unitsBtn = screen.getByRole('button', { name: /units/i });
-      fireEvent.click(unitsBtn);
-
-      expect(screen.getByText('Quantity (BTC)')).toBeTruthy();
+      expect(unitBtn('USDT').getAttribute('aria-pressed')).toBe('true');
+      fireEvent.click(unitBtn('BTC'));
+      expect(unitBtn('BTC').getAttribute('aria-pressed')).toBe('true');
     });
 
-    it('1.3.2: in Units mode, typing in qty shows a USD equivalent', () => {
+    it('1.3.2: in BTC, typing a quantity shows its USDT value', () => {
       renderPanel();
-      const unitsBtn = screen.getByRole('button', { name: /units/i });
-      fireEvent.click(unitsBtn);
-
-      const qtyInput = getQtyInput();
-      // 0.002 BTC × $50,000 = $100 USD
-      fireEvent.change(qtyInput, { target: { value: '0.002' } });
-
-      // Equivalent "≈ $100.00" or similar should appear
-      const equiv = screen.getByText(/≈/);
-      expect(equiv.textContent).toMatch(/\$100/);
+      fireEvent.click(unitBtn('BTC'));
+      // 0.002 BTC × $50,000 = $100
+      fireEvent.change(getQtyInput(), { target: { value: '0.002' } });
+      expect(screen.getByText(/≈/).textContent).toMatch(/\$100/);
     });
 
-    it('1.3.3: switching back to USD shows BTC equivalent', () => {
+    it('1.3.3: switching back to USDT converts the amount to its value', () => {
       renderPanel();
-      // Go to Units mode
-      const unitsBtn = screen.getByRole('button', { name: /units/i });
-      fireEvent.click(unitsBtn);
+      fireEvent.click(unitBtn('BTC'));
+      fireEvent.change(getQtyInput(), { target: { value: '0.002' } });
+      fireEvent.click(unitBtn('USDT'));
+      // A market buy is valued at the ask (PRICE + 10): 0.002 × 50,010
+      expect(getQtyInput().value).toBe('100.02');
+    });
 
-      const qtyInput = getQtyInput();
-      fireEvent.change(qtyInput, { target: { value: '0.002' } });
+    it('1.3.4: USDT mode sends a value, BTC mode a quantity (the server converts)', async () => {
+      renderPanel();
+      fireEvent.change(getQtyInput(), { target: { value: '100' } });
+      clickExecuteBtn();
+      await waitFor(() => expect(fakePaperApi.placeOrder).toHaveBeenCalledTimes(1));
+      expect(fakePaperApi.placeOrder.mock.calls[0][0]).toMatchObject({
+        category: 'linear',
+        value: '100',
+      });
 
-      // Switch back to USD
-      const usdBtn = screen.getByRole('button', { name: /usd/i });
-      fireEvent.click(usdBtn);
+      fireEvent.click(unitBtn('BTC'));
+      fireEvent.change(getQtyInput(), { target: { value: '0.002' } });
+      clickExecuteBtn();
+      await waitFor(() => expect(fakePaperApi.placeOrder).toHaveBeenCalledTimes(2));
+      expect(fakePaperApi.placeOrder.mock.calls[1][0]).toMatchObject({ qty: '0.002' });
+      expect(fakePaperApi.placeOrder.mock.calls[1][0]).not.toHaveProperty('value');
+    });
 
-      // Combined: "Amount (USD)" label should be visible again
-      expect(screen.getByText('Amount (USD)')).toBeTruthy();
+    it('1.3.5: Max fills what the balance can pay after margin and both fees', () => {
+      renderPanel();
+      fireEvent.click(unitBtn('BTC'));
+      fireEvent.click(screen.getByRole('button', { name: 'Max' }));
+      // Sized at the ask, which a market buy fills at: 10,000 / (50,010 × (1 + 2 × 0.00055)) ≈ 0.19974
+      expect(Number(getQtyInput().value)).toBeCloseTo(0.19974, 5);
     });
   });
 
@@ -851,5 +863,109 @@ describe('Section 1.7.11 — SL typo safety rails (T2 · RTL)', () => {
 
     // Confirm modal should appear (large-distance warning)
     expect(screen.getByTestId('sl-confirm-modal')).toBeTruthy();
+  });
+});
+
+// ─── BP-2 — markets, Spot form, leverage ──────────────────────────────────────
+
+describe('BP-2 — market tabs and leverage', () => {
+  it('shows Spot | USDT Perpetual tabs and switches the pane market', () => {
+    renderPanel();
+    const tabs = within(screen.getByRole('tablist', { name: 'Market' }));
+    expect(tabs.getByRole('tab', { name: 'USDT Perpetual' }).getAttribute('aria-selected')).toBe(
+      'true'
+    );
+    fireEvent.click(tabs.getByRole('tab', { name: 'Spot' }));
+    const pane = useLayoutStore.getState().panes[0];
+    expect(pane).toMatchObject({ category: 'spot', symbol: 'BTCUSDT' });
+  });
+
+  it('shows the symbol leverage chip on USDT Perpetual', () => {
+    usePaperStore.setState({ symbolLeverage: { BTCUSDT: 5 } });
+    renderPanel();
+    expect(screen.getByRole('button', { name: /Leverage 5x, isolated margin/ })).toBeTruthy();
+  });
+
+  it('the chip says locked while the symbol has an open position', () => {
+    usePaperStore.setState({
+      positions: [
+        {
+          id: 'p1',
+          category: 'linear',
+          symbol: 'BTCUSDT',
+          side: 'long',
+          quantity: 0.1,
+          entryPrice: 50_000,
+          entryUsdtAmount: 5_000,
+          leverage: 1,
+          entryFee: 2.75,
+          closeFeeReserve: 2.75,
+          openedAt: 1,
+        },
+      ],
+    });
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: /\(locked\)/ }));
+    expect(screen.getByRole('dialog').textContent).toContain("Leverage can't be changed");
+  });
+});
+
+describe('BP-2 — Spot form', () => {
+  beforeEach(() => {
+    useLayoutStore.setState((s) => ({
+      panes: s.panes.map((p, i) => (i === 0 ? { ...p, category: 'spot' } : p)),
+    }));
+  });
+
+  it('offers Market and Limit only (no stop orders on spot), and no leverage chip', () => {
+    renderPanel();
+    expect(screen.queryByRole('tab', { name: 'Stop' })).toBeNull();
+    expect(screen.getByRole('tab', { name: 'Limit' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Leverage/ })).toBeNull();
+  });
+
+  it('a remembered Stop tab opens as Market on spot', () => {
+    renderPanel({ initialTab: 'stop' });
+    expect(screen.getByRole('tab', { name: 'Market' }).getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('a buy shows the fee in the coin received (0.1%)', () => {
+    renderPanel();
+    fireEvent.change(getQtyInput(), { target: { value: '100' } });
+    // 100 USDT at 50,000 = 0.002 BTC; fee 0.002 × 0.001 = 0.000002 BTC
+    expect(screen.getByText('0.00000200 BTC')).toBeTruthy();
+    expect(screen.getByText('Fee: 0.1%')).toBeTruthy();
+  });
+
+  it('a sell shows the free coins as available and has no TP / SL', () => {
+    usePaperStore.setState({
+      spotBalances: [{ coin: 'BTC', free: 0.5, locked: 0.1, avgCost: 40_000 }],
+    });
+    renderPanel({ initialSide: 'sell' });
+    expect(screen.getAllByText('0.500000 BTC').length).toBeGreaterThan(0);
+    expect(screen.queryByLabelText('Enable take profit')).toBeNull();
+  });
+
+  it('F8: selling more than the free coins is refused before sending (no shorting)', () => {
+    usePaperStore.setState({
+      spotBalances: [{ coin: 'BTC', free: 0.001, locked: 0, avgCost: 40_000 }],
+    });
+    renderPanel({ initialSide: 'sell' });
+    fireEvent.change(getQtyInput(), { target: { value: '1000' } });
+    clickExecuteBtn();
+    expect(screen.getByText(/Not enough BTC available/)).toBeTruthy();
+    expect(fakePaperApi.placeOrder).not.toHaveBeenCalled();
+  });
+
+  it('sends the order as a spot order', async () => {
+    renderPanel();
+    fireEvent.change(getQtyInput(), { target: { value: '100' } });
+    clickExecuteBtn();
+    await waitFor(() => expect(fakePaperApi.placeOrder).toHaveBeenCalledTimes(1));
+    expect(fakePaperApi.placeOrder.mock.calls[0][0]).toMatchObject({
+      category: 'spot',
+      side: 'buy',
+      type: 'market',
+    });
   });
 });

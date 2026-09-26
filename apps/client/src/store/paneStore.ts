@@ -33,14 +33,8 @@ export function setLastKnownPrice(category: MarketCategory, symbol: string, pric
   lastKnownPrices.set(`${category}:${symbol}`, price);
 }
 
-/**
- * Positions carry no category until BP-2; they trade at spot prices today, so spot is the
- * default.
- */
-export function getLastKnownPrice(
-  symbol: string,
-  category: MarketCategory = 'spot'
-): number | undefined {
+/** Last known price of one market — a position / order / coin balance names its own market. */
+export function getLastKnownPrice(symbol: string, category: MarketCategory): number | undefined {
   return lastKnownPrices.get(`${category}:${symbol}`);
 }
 

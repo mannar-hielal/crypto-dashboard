@@ -64,9 +64,10 @@ class MockWebSocket {
 const last = () => MockWebSocket.instances[MockWebSocket.instances.length - 1];
 
 const delta = (version: number) => ({
-  account: { balance: '9000', realizedPnl: '0', leverage: 1, version },
+  account: { balance: '9000', realizedPnl: '0', leverage: 1, symbolLeverage: {}, version },
   positionsUpsert: [],
   positionsRemove: [],
+  spotUpsert: [],
   pendingUpsert: [],
   pendingRemove: [],
   orders: [],

@@ -8,6 +8,7 @@
  *   - toggleSync(): toggles individual sync flags + snap-on-enable for symbol/interval
  *   - setPaneChartType() + persisted chartType migration/validation (v3)
  *   - setPaneCategory() + category sync + persisted category migration/validation (v4)
+ *   - setPaneMarket() (atomic market + symbol) and the D7 hand-off flag (v5)
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -371,6 +372,66 @@ describe('layoutStore', () => {
       expect(merged.panes).toHaveLength(4);
       expect(merged.panes[0].category).toBe('linear');
       expect(merged.panes[1].category).toBe('spot');
+    });
+  });
+
+  // ── BP-2: setPaneMarket + D7 hand-off flag ───────────────────────────────
+  describe('setPaneMarket()', () => {
+    it('sets market and symbol of one pane in a single update', () => {
+      let updates = 0;
+      const unsubscribe = useLayoutStore.subscribe(() => updates++);
+      useLayoutStore.getState().setPaneMarket(1, 'linear', 'SOLUSDT');
+      unsubscribe();
+      expect(updates).toBe(1); // one update → the pane feed reconnects once
+      expect(useLayoutStore.getState().panes[1]).toMatchObject({
+        category: 'linear',
+        symbol: 'SOLUSDT',
+      });
+      expect(useLayoutStore.getState().panes[0].category).toBe('spot');
+    });
+
+    it('is a no-op when the pane already shows that market', () => {
+      let updates = 0;
+      const unsubscribe = useLayoutStore.subscribe(() => updates++);
+      const { symbol, category } = useLayoutStore.getState().panes[0];
+      useLayoutStore.getState().setPaneMarket(0, category, symbol);
+      unsubscribe();
+      expect(updates).toBe(0);
+    });
+
+    it('follows symbol sync: every pane switches market and symbol', () => {
+      useLayoutStore.getState().toggleSync('symbol');
+      useLayoutStore.getState().setPaneMarket(0, 'linear', 'ETHUSDT');
+      for (const p of useLayoutStore.getState().panes) {
+        expect(p).toMatchObject({ category: 'linear', symbol: 'ETHUSDT' });
+      }
+    });
+  });
+
+  describe('marketHandoffDone (D7, v5)', () => {
+    const { migrate, merge } = useLayoutStore.persist.getOptions();
+
+    it('a layout saved before BP-2 still owes the hand-off', () => {
+      const v4 = { panes: [{ symbol: 'BTCUSDT', category: 'spot' }] };
+      expect((migrate!(v4, 4) as { marketHandoffDone: boolean }).marketHandoffDone).toBe(false);
+    });
+
+    it('a fresh layout never runs it (new users start on Spot)', () => {
+      expect(useLayoutStore.getInitialState().marketHandoffDone).toBe(true);
+    });
+
+    it('merge keeps a boolean and repairs anything else', () => {
+      const current = useLayoutStore.getState();
+      expect(merge!({ marketHandoffDone: false }, current).marketHandoffDone).toBe(false);
+      expect(
+        merge!({ marketHandoffDone: 'yes' as unknown as boolean }, current).marketHandoffDone
+      ).toBe(true);
+    });
+
+    it('completeMarketHandoff marks it done', () => {
+      useLayoutStore.setState({ marketHandoffDone: false });
+      useLayoutStore.getState().completeMarketHandoff();
+      expect(useLayoutStore.getState().marketHandoffDone).toBe(true);
     });
   });
 });
