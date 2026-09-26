@@ -1,11 +1,11 @@
 ---
 name: position-sizer
-description: Use when the user asks "how many coins/units should I buy", "what's my position size", "risk per trade", "Kelly criterion", "ATR-based sizing", "fractional sizing", or any Bybit crypto position sizing question on cryptopapertrade.com. Converts entry/stop into USDT-denominated coin-unit count using risk rules, ATR scaling, or Kelly. Tailored to the paper trading app's 10× leverage cap and 0.07% commission.
+description: Use when the user asks "how many coins/units should I buy", "what's my position size", "risk per trade", "Kelly criterion", "ATR-based sizing", "fractional sizing", or any Bybit crypto position sizing question on cryptopapertrade.com. Converts entry/stop into USDT-denominated coin-unit count using risk rules, ATR scaling, or Kelly. Tailored to the paper trading app's 10× leverage cap and Bybit VIP-0 fees (USDT Perpetual 0.055% taker / 0.02% maker, Spot 0.1%).
 ---
 
 # Position Sizer — cryptopapertrade.com (crypto-adapted)
 
-Adapted from `tradermonty/claude-trading-skills` → `skills/position-sizer/SKILL.md`. Math preserved; "shares" semantics swapped to crypto coin units, US-equity FINRA/PDT/short-borrow noise stripped, the app's 10× leverage cap and 0.0007 commission rate wired in.
+Adapted from `tradermonty/claude-trading-skills` → `skills/position-sizer/SKILL.md`. Math preserved; "shares" semantics swapped to crypto coin units, US-equity FINRA/PDT/short-borrow noise stripped, the app's 10× leverage cap and Bybit fee rates wired in (flat 0.0007 until BP-2).
 
 ## When to use
 
@@ -15,14 +15,14 @@ Adapted from `tradermonty/claude-trading-skills` → `skills/position-sizer/SKIL
 
 ## App context (cite these, do not recompute)
 
-| Constraint    | Source                                                                        | Value                               |
-| ------------- | ----------------------------------------------------------------------------- | ----------------------------------- |
-| Account size  | `paperStore.balance`                                                          | free cash                           |
-| Leverage cap  | `paperStore.leverage` (max 10× via Account Settings modal)                    | see **`paper-trading-logic`** skill |
-| Commission    | `COMMISSION_RATE` exported from `paperStore.ts`                               | 0.0007 (0.07%) taker                |
-| Balance check | `placeOrder` rejects if `usdtAmount + usdtAmount * COMMISSION_RATE > balance` | (entry commission included)         |
-| Trade value   | `usdtAmount * leverage`                                                       | notional exposure                   |
-| Persist path  | `cd-paper-trading` key, `paperStore.history[]` (MAX_HISTORY = 100)            | cap not breached here               |
+| Constraint    | Source                                                                         | Value                                         |
+| ------------- | ------------------------------------------------------------------------------ | --------------------------------------------- |
+| Account size  | `paperStore.balance`                                                           | free cash                                     |
+| Leverage cap  | `paperStore.leverage` (max 10× via Account Settings modal)                     | see **`paper-trading-logic`** skill           |
+| Fees          | `FEE_RATES` exported from `@crypto-dashboard/sdk` (BP-2)                       | perp 0.00055 taker / 0.0002 maker; spot 0.001 |
+| Balance check | perp: IM + open fee + est. close fee (taker, on notional) must fit the balance | (`lib/orderMath.ts` `orderPreview`)           |
+| Trade value   | `usdtAmount * leverage`                                                        | notional exposure                             |
+| Persist path  | `cd-paper-trading` key, `paperStore.history[]` (MAX_HISTORY = 100)             | cap not breached here                         |
 
 ## Methods (math is asset-agnostic)
 
@@ -34,7 +34,7 @@ risk_per_unit   = |entry_price - stop_price|         (per coin)
 coin_units      = floor(risk_dollars / risk_per_unit)
 usdt_amount     = coin_units * entry_price
 final_risk      = coin_units * risk_per_unit         (slightly less than risk_dollars due to floor)
-commission     = usdt_amount * COMMISSION_RATE       (0.0007)
+commission     = qty * price * 0.00055 (open, taker) + qty * price * 0.00055 (est. close)
 total_cost      = usdt_amount + commission           (deducted from balance at open)
 ```
 
@@ -96,7 +96,7 @@ Always present a comparison table — not a single answer:
     "stop_price": 76000.0,
     "risk_pct": 1.0,
     "leverage": 1,
-    "commission_rate": 0.0007
+    "commission_rate": 0.00055
   },
   "calculations": {
     "fixed_fractional": {
@@ -131,6 +131,6 @@ If `final_position_value > balance` even with leverage, the `TradingPanel` submi
 ## Output discipline
 
 - Never present one number — always the scenario table.
-- Cite the app constants used (`COMMISSION_RATE = 0.0007`, `leverage` from paperStore).
+- Cite the app constants used (`FEE_RATES` from the SDK, the symbol's leverage via `leverageFor`).
 - Reject Kelly if sample size below 30 with an explicit message.
 - Note "leverage > 5× not recommended — paper learning-app cap is 10×" when the user requests aggressive size.
