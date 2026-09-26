@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { fetchSpotCandles } from '../infra.js';
+import { fetchCandles } from '../infra.js';
 
 /** Fake Bybit kline endpoint over a fixed series of 1m candles. */
 function stubKlines(fromMs: number, count: number) {
@@ -30,19 +30,29 @@ function stubKlines(fromMs: number, count: number) {
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe('fetchSpotCandles()', () => {
+describe('fetchCandles()', () => {
   it('returns the whole range oldest first when it fits in one page', async () => {
     stubKlines(0, 10);
-    const candles = await fetchSpotCandles('BTCUSDT', 0, 9 * 60_000);
+    const candles = await fetchCandles('linear', 'BTCUSDT', 0, 9 * 60_000);
     expect(candles.map((c) => c.start)).toEqual(Array.from({ length: 10 }, (_, i) => i * 60_000));
   });
 
   it('pages backwards so a gap longer than 1000 minutes is replayed from its start', async () => {
     const fetchMock = stubKlines(0, 2_500);
-    const candles = await fetchSpotCandles('BTCUSDT', 0, 2_499 * 60_000);
+    const candles = await fetchCandles('linear', 'BTCUSDT', 0, 2_499 * 60_000);
     expect(candles).toHaveLength(2_500);
     expect(candles[0].start).toBe(0); // the oldest minutes are not lost
     expect(candles.at(-1)?.start).toBe(2_499 * 60_000);
     expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('fetches the candles of the market being backfilled', async () => {
+    const fetchMock = stubKlines(0, 10);
+    await fetchCandles('spot', 'BTCUSDT', 0, 9 * 60_000);
+    await fetchCandles('linear', 'BTCUSDT', 0, 9 * 60_000);
+    const categories = fetchMock.mock.calls.map(([url]) =>
+      new URL(url).searchParams.get('category')
+    );
+    expect(categories).toEqual(['spot', 'linear']);
   });
 });

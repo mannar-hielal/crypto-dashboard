@@ -137,7 +137,8 @@ model Account {
   unrealizedPnl    Decimal @default(0) @db.Decimal(20, 8)
   realizedPnl      Decimal @default(0) @db.Decimal(20, 8)
 
-  // Account-wide leverage (1..MAX_LEVERAGE) — per-symbol leverage arrives in BP-2
+  // Default leverage (1..MAX_LEVERAGE) for a symbol with no SymbolSetting row (BP-2: leverage is
+  // per symbol; this was the account-wide leverage in BP-1)
   leverage Int @default(1)
   // Optimistic concurrency: every engine/API mutation bumps it (updateMany where version = v),
   // so two concurrent mutations of one account can never both commit (BP-1)
@@ -155,6 +156,44 @@ model Account {
   positions      Position[]
   journalEntries JournalEntry[]
   balanceEvents  BalanceEvent[]
+  symbolSettings SymbolSetting[]
+  spotBalances   SpotBalance[]
+}
+
+// ============================================================================
+// SPOT COIN BALANCES (BP-2 — the USDT wallet is Account.availableBalance)
+// ============================================================================
+
+model SpotBalance {
+  id        String   @id @default(cuid())
+  accountId String
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  coin      String
+  // Sellable now
+  free      Decimal  @default(0) @db.Decimal(20, 8)
+  // Backing resting sell / TP / SL orders
+  locked    Decimal  @default(0) @db.Decimal(20, 8)
+  // Average cost per coin in USDT, fees included
+  avgCost   Decimal  @default(0) @db.Decimal(20, 8)
+  updatedAt DateTime @updatedAt
+
+  @@unique([accountId, coin])
+}
+
+// ============================================================================
+// PER-SYMBOL SETTINGS (BP-2 — USDT Perpetual leverage and margin mode per symbol)
+// ============================================================================
+
+model SymbolSetting {
+  id         String  @id @default(cuid())
+  accountId  String
+  account    Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  symbol     String
+  leverage   Int     @default(1)
+  // Only "isolated" in BP-2
+  marginMode String  @default("isolated")
+
+  @@unique([accountId, symbol])
 }
 
 // ============================================================================
@@ -173,7 +212,16 @@ model Position {
   side       String // "LONG" | "SHORT"
   quantity   Decimal @db.Decimal(20, 8)
   entryPrice Decimal @db.Decimal(20, 8)
-  margin     Decimal @db.Decimal(20, 8) // entryUsdtAmount
+  margin     Decimal @db.Decimal(20, 8) // initial margin (entryUsdtAmount)
+
+  // BP-2: every position is a USDT Perpetual (spot has coin balances, not positions)
+  category        String  @default("linear")
+  leverage        Int     @default(1)
+  marginMode      String  @default("isolated")
+  // Open fee actually charged — the close uses it, never a recomputation at today's rate
+  entryFee        Decimal @default(0) @db.Decimal(20, 8)
+  // Estimated close fee held with the margin at open (Bybit's position margin = IM + this)
+  closeFeeReserve Decimal @default(0) @db.Decimal(20, 8)
 
   takeProfit Decimal? @db.Decimal(20, 8)
   stopLoss   Decimal? @db.Decimal(20, 8)
@@ -184,6 +232,7 @@ model Position {
   @@index([userId])
   @@index([accountId])
   @@index([symbol])
+  @@index([category, symbol])
 }
 
 // ============================================================================
@@ -201,6 +250,7 @@ model Order {
   account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   // Order details
+  category  String  @default("linear") // "spot" | "linear" (BP-2)
   symbol    String
   side      String // "BUY" | "SELL" (or "LONG" | "SHORT" for positions)
   orderType String // "MARKET" | "LIMIT" | "STOP" | "TAKE_PROFIT" | "STOP_LOSS"
@@ -215,11 +265,20 @@ model Order {
   averageFilledPrice Decimal? @db.Decimal(20, 8)
 
   // Financials
-  margin     Decimal @default(0) @db.Decimal(20, 8)
-  commission Decimal @default(0) @db.Decimal(20, 8)
+  margin     Decimal  @default(0) @db.Decimal(20, 8)
+  commission Decimal  @default(0) @db.Decimal(20, 8)
   // Leverage captured at placement — a pending order fills with it, not the account's
   // leverage at fill time (BP-1 S2)
-  leverage   Int     @default(1)
+  leverage   Int      @default(1)
+  // PENDING rows: exactly what placing it took from the balance — cancel / edit / fill refund
+  // this, never a recomputation at today's fee rate (BP-2)
+  reserved   Decimal  @default(0) @db.Decimal(20, 8)
+  // Fee actually charged on a fill (BP-2). Null on pre-BP-2 non-fill rows.
+  feeRate    Decimal? @db.Decimal(10, 6)
+  feeAsset   String?
+  isMaker    Boolean?
+  // Spot TP / SL pair: both legs share one coin lock; filling one cancels the other
+  ocoGroup   String?
 
   // State machine: PENDING -> PARTIALLY_FILLED -> FILLED | CANCELLED | REJECTED
   status          String    @default("PENDING")
@@ -240,6 +299,7 @@ model Order {
   @@index([status])
   @@index([createdAt])
   @@index([status, symbol]) // matching engine's open-order scan
+  @@index([status, category, symbol])
   @@index([userId, seq])
 }
 
@@ -260,6 +320,7 @@ model Trade {
   order     Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
 
   // Trade execution details
+  category      String   @default("linear") // "spot" | "linear" (BP-2)
   symbol        String
   side          String // "BUY" | "SELL"
   quantity      Decimal  @db.Decimal(20, 8)

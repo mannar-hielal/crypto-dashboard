@@ -94,7 +94,7 @@ export function positionExitEditEntries(
 export function pendingEditEntries(
   order: PendingOrder,
   newTrigger: Decimal,
-  newUsdt: Decimal,
+  newReserved: Decimal,
   newQty: Decimal,
   newTp: Decimal | null,
   newSl: Decimal | null,
@@ -112,8 +112,8 @@ export function pendingEditEntries(
   if (!isSameNumber(order.qty, newQty)) {
     summary.push(`qty ${order.qty.toFixed(6)} → ${newQty.toFixed(6)}`);
   }
-  if (!isSameNumber(order.usdtAmount, newUsdt)) {
-    summary.push(`reserved $${order.usdtAmount.toFixed(2)} → $${newUsdt.toFixed(2)}`);
+  if (!isSameNumber(order.reserved, newReserved)) {
+    summary.push(`reserved $${order.reserved.toFixed(2)} → $${newReserved.toFixed(2)}`);
   }
   const tpPart = exitSummaryPart('TP', prevTp, newTp);
   if (tpPart) summary.push(tpPart);

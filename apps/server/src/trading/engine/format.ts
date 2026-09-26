@@ -18,8 +18,12 @@ export function pendingSideLabel(side: OrderSide): 'Long' | 'Short' {
   return side === 'buy' ? 'Long' : 'Short';
 }
 
-export function pendingTypeLabel(type: PendingType): 'LIMIT' | 'STOP' {
-  return type === 'limit' ? 'LIMIT' : 'STOP';
+export function pendingTypeLabel(
+  type: PendingType
+): 'LIMIT' | 'STOP' | 'TAKE-PROFIT' | 'STOP-LOSS' {
+  if (type === 'limit') return 'LIMIT';
+  if (type === 'stop') return 'STOP';
+  return type === 'take-profit' ? 'TAKE-PROFIT' : 'STOP-LOSS';
 }
 
 /** The browser engine's float tolerance for "did this value change". */

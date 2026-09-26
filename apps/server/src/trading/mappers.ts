@@ -3,6 +3,10 @@
  *
  * Rows written by the pre-BP-1 browser engine carry the browser's id in `refId`. The engine
  * addresses them by that id, so `refId ?? id` is the public id everywhere.
+ *
+ * BP-2: fees are stored where they were charged (Position.entryFee, Order.reserved, the fill's
+ * feeRate). The migration backfilled pre-BP-2 rows with the 0.07% they paid; a row an old server
+ * writes during a rolling deploy has none, so it is read at that same legacy rate.
  */
 
 import { Decimal } from '@prisma/client/runtime/client';
@@ -13,6 +17,7 @@ import type {
   PaperOrderDTO,
   PaperPendingOrderDTO,
   PaperPositionDTO,
+  PaperSpotBalanceDTO,
   PaperTradeDTO,
 } from '@crypto-dashboard/sdk';
 import type {
@@ -23,8 +28,12 @@ import type {
   JournalEntry,
   OrderType,
   PendingOrder,
+  PendingType,
   Position,
+  SpotHolding,
+  Category,
 } from './engine/index.js';
+import { LEGACY_FEE_RATE } from './bybitSpec.js';
 
 // ─── Row shapes (the Prisma model fields the mappers read) ────────────────────
 
@@ -38,6 +47,9 @@ export interface PositionRow {
   quantity: Dec;
   entryPrice: Dec;
   margin: Dec;
+  leverage: number;
+  entryFee: Dec;
+  closeFeeReserve: Dec;
   takeProfit: Dec | null;
   stopLoss: Dec | null;
   openedAt: Date;
@@ -46,6 +58,7 @@ export interface PositionRow {
 export interface OrderRow {
   id: string;
   refId: string | null;
+  category: string;
   symbol: string;
   side: string;
   orderType: string;
@@ -58,6 +71,11 @@ export interface OrderRow {
   margin: Dec;
   commission: Dec;
   leverage: number;
+  reserved: Dec;
+  feeRate: Dec | null;
+  feeAsset: string | null;
+  isMaker: boolean | null;
+  ocoGroup: string | null;
   status: string;
   rejectionReason: string | null;
   createdAt: Date;
@@ -69,6 +87,7 @@ export interface OrderRow {
 export interface TradeRow {
   id: string;
   refId: string | null;
+  category: string;
   symbol: string;
   side: string;
   quantity: Dec;
@@ -78,6 +97,13 @@ export interface TradeRow {
   grossPnl: Dec | null;
   openedAt: Date | null;
   executedAt: Date;
+}
+
+export interface SpotBalanceRow {
+  coin: string;
+  free: Dec;
+  locked: Dec;
+  avgCost: Dec;
 }
 
 export interface JournalRow {
@@ -99,6 +125,8 @@ export interface BalanceEventRow {
 
 const d = (v: Dec) => new Decimal(v.toString());
 const optD = (v: Dec | null) => (v === null ? undefined : d(v));
+const LEGACY = new Decimal(LEGACY_FEE_RATE);
+const categoryOf = (v: string): Category => (v === 'spot' ? 'spot' : 'linear');
 
 // ─── DB row → engine ───────────────────────────────────────────────────────────
 
@@ -121,36 +149,62 @@ const ORDER_TYPE_TO_DB: Record<OrderType, string> = {
 export function positionFromRow(r: PositionRow): Position {
   const tp = optD(r.takeProfit);
   const sl = optD(r.stopLoss);
+  const margin = d(r.margin);
+  const entryFee = d(r.entryFee);
   return {
     id: r.refId ?? r.id,
+    category: 'linear',
     symbol: r.symbol,
     side: r.side === 'SHORT' ? 'short' : 'long',
     quantity: d(r.quantity),
     entryPrice: d(r.entryPrice),
-    entryUsdtAmount: d(r.margin),
+    entryUsdtAmount: margin,
+    leverage: r.leverage,
+    // Every BP-2 open charges a fee, so 0 means an old-server row: it paid the legacy 0.07%
+    entryFee: entryFee.gt(0) ? entryFee : margin.times(LEGACY),
+    closeFeeReserve: d(r.closeFeeReserve),
     openedAt: r.openedAt.getTime(),
     ...(tp ? { takeProfit: tp } : {}),
     ...(sl ? { stopLoss: sl } : {}),
   };
 }
 
+const PENDING_TYPE_FROM_DB: Record<string, PendingType> = {
+  LIMIT: 'limit',
+  STOP: 'stop',
+  TAKE_PROFIT: 'take-profit',
+  STOP_LOSS: 'stop-loss',
+};
+
 export function pendingFromRow(r: OrderRow): PendingOrder {
   const tp = optD(r.takeProfit);
   const sl = optD(r.stopLoss);
-  const trigger = r.orderType === 'STOP' ? r.stopPrice : r.limitPrice;
+  const type = PENDING_TYPE_FROM_DB[r.orderType] ?? 'limit';
+  // A limit rests at limitPrice; stops and spot TP / SL legs trigger at stopPrice
+  const trigger = type === 'limit' ? r.limitPrice : r.stopPrice;
+  const margin = d(r.margin);
+  const reserved = d(r.reserved);
   return {
     id: r.refId ?? r.id,
+    category: categoryOf(r.category),
     symbol: r.symbol,
     side: r.side === 'SELL' ? 'sell' : 'buy',
-    type: r.orderType === 'STOP' ? 'stop' : 'limit',
-    usdtAmount: d(r.margin),
+    type,
+    usdtAmount: margin,
+    // 0 = placed by an old server during a rolling deploy: it took margin + 0.07%
+    reserved: reserved.gt(0) ? reserved : margin.plus(margin.times(LEGACY)),
     triggerPrice: d(trigger ?? r.limitPrice ?? r.stopPrice ?? '0'),
     qty: d(r.quantity),
     leverage: r.leverage,
     placedAt: r.createdAt.getTime(),
+    ...(r.ocoGroup ? { ocoGroup: r.ocoGroup } : {}),
     ...(tp ? { takeProfit: tp } : {}),
     ...(sl ? { stopLoss: sl } : {}),
   };
+}
+
+export function spotFromRow(r: SpotBalanceRow): SpotHolding {
+  return { coin: r.coin, free: d(r.free), locked: d(r.locked), avgCost: d(r.avgCost) };
 }
 
 export function historyOrderFromRow(r: OrderRow): PaperOrderDTO {
@@ -158,6 +212,7 @@ export function historyOrderFromRow(r: OrderRow): PaperOrderDTO {
   const closing = r.filledAt ?? r.cancelledAt ?? r.updatedAt;
   return {
     id: r.refId ?? r.id,
+    category: categoryOf(r.category),
     symbol: r.symbol,
     side: r.side === 'SELL' ? 'sell' : 'buy',
     type: ORDER_TYPE_FROM_DB[r.orderType] ?? 'market',
@@ -168,7 +223,10 @@ export function historyOrderFromRow(r: OrderRow): PaperOrderDTO {
     status:
       r.status === 'CANCELLED' ? 'cancelled' : r.status === 'REJECTED' ? 'rejected' : 'filled',
     commission: d(r.commission).toString(),
-    ...(margin.gt(0) ? { margin: margin.toString() } : {}),
+    ...(r.feeRate !== null ? { feeRate: d(r.feeRate).toString() } : {}),
+    ...(r.feeAsset !== null ? { feeAsset: r.feeAsset } : {}),
+    ...(r.isMaker !== null ? { isMaker: r.isMaker } : {}),
+    ...(margin.gt(0) ? { margin: margin.toString(), leverage: r.leverage } : {}),
     placingTime: r.createdAt.getTime(),
     closingTime: closing.getTime(),
     ...(r.rejectionReason ? { rejectionReason: r.rejectionReason } : {}),
@@ -178,6 +236,7 @@ export function historyOrderFromRow(r: OrderRow): PaperOrderDTO {
 export function tradeFromRow(r: TradeRow): PaperTradeDTO {
   return {
     id: r.refId ?? r.id,
+    category: categoryOf(r.category),
     symbol: r.symbol,
     // The trade row stores the closing side: SELL closed a long, BUY closed a short
     side: r.side === 'BUY' ? 'short' : 'long',
@@ -222,6 +281,10 @@ export function positionData(p: Position) {
     quantity: p.quantity,
     entryPrice: p.entryPrice,
     margin: p.entryUsdtAmount,
+    category: p.category,
+    leverage: p.leverage,
+    entryFee: p.entryFee,
+    closeFeeReserve: p.closeFeeReserve,
     takeProfit: p.takeProfit ?? null,
     stopLoss: p.stopLoss ?? null,
     openedAt: new Date(p.openedAt),
@@ -230,24 +293,32 @@ export function positionData(p: Position) {
 
 export function pendingData(o: PendingOrder) {
   return {
+    category: o.category,
     symbol: o.symbol,
     side: orderSideToDb(o.side),
-    orderType: o.type === 'limit' ? 'LIMIT' : 'STOP',
+    orderType: ORDER_TYPE_TO_DB[o.type],
     quantity: o.qty,
     limitPrice: o.type === 'limit' ? o.triggerPrice : null,
-    stopPrice: o.type === 'stop' ? o.triggerPrice : null,
+    stopPrice: o.type === 'limit' ? null : o.triggerPrice,
+    ocoGroup: o.ocoGroup ?? null,
     takeProfit: o.takeProfit ?? null,
     stopLoss: o.stopLoss ?? null,
     margin: o.usdtAmount,
+    reserved: o.reserved,
     leverage: o.leverage,
     status: 'PENDING',
     createdAt: new Date(o.placedAt),
   };
 }
 
+export function spotData(h: SpotHolding) {
+  return { coin: h.coin, free: h.free, locked: h.locked, avgCost: h.avgCost };
+}
+
 export function historyOrderData(o: HistoricalOrder) {
   const closedAt = new Date(o.closingTime);
   return {
+    category: o.category,
     symbol: o.symbol,
     side: orderSideToDb(o.side),
     orderType: ORDER_TYPE_TO_DB[o.type],
@@ -258,6 +329,9 @@ export function historyOrderData(o: HistoricalOrder) {
     filledQuantity: o.status === 'filled' ? o.qty : new Decimal(0),
     margin: o.margin ?? new Decimal(0),
     commission: o.commission,
+    feeRate: o.feeRate ?? null,
+    feeAsset: o.feeAsset ?? null,
+    isMaker: o.isMaker ?? null,
     leverage: o.leverage ?? 1,
     status: o.status.toUpperCase(),
     rejectionReason: o.rejectionReason ?? null,
@@ -274,6 +348,7 @@ export function tradeData(t: ClosedTrade) {
   const net = t.pnl.minus(t.exitCommission);
   const ratio = t.margin.gt(0) ? net.div(t.margin) : new Decimal(0);
   return {
+    category: t.category,
     symbol: t.symbol,
     side: t.side === 'long' ? 'SELL' : 'BUY',
     quantity: t.quantity,
@@ -318,11 +393,16 @@ const s = (v: Decimal) => v.toString();
 export function positionDTO(p: Position): PaperPositionDTO {
   return {
     id: p.id,
+    category: p.category,
     symbol: p.symbol,
     side: p.side,
     quantity: s(p.quantity),
     entryPrice: s(p.entryPrice),
     entryUsdtAmount: s(p.entryUsdtAmount),
+    leverage: p.leverage,
+    marginMode: 'isolated',
+    entryFee: s(p.entryFee),
+    closeFeeReserve: s(p.closeFeeReserve),
     openedAt: p.openedAt,
     ...(p.takeProfit ? { takeProfit: s(p.takeProfit) } : {}),
     ...(p.stopLoss ? { stopLoss: s(p.stopLoss) } : {}),
@@ -332,22 +412,30 @@ export function positionDTO(p: Position): PaperPositionDTO {
 export function pendingDTO(o: PendingOrder): PaperPendingOrderDTO {
   return {
     id: o.id,
+    category: o.category,
     symbol: o.symbol,
     side: o.side,
     type: o.type,
     usdtAmount: s(o.usdtAmount),
+    reserved: s(o.reserved),
     triggerPrice: s(o.triggerPrice),
     qty: s(o.qty),
     leverage: o.leverage,
     placedAt: o.placedAt,
+    ...(o.ocoGroup ? { ocoGroup: o.ocoGroup } : {}),
     ...(o.takeProfit ? { takeProfit: s(o.takeProfit) } : {}),
     ...(o.stopLoss ? { stopLoss: s(o.stopLoss) } : {}),
   };
 }
 
+export function spotDTO(h: SpotHolding): PaperSpotBalanceDTO {
+  return { coin: h.coin, free: s(h.free), locked: s(h.locked), avgCost: s(h.avgCost) };
+}
+
 export function orderDTO(o: HistoricalOrder): PaperOrderDTO {
   return {
     id: o.id,
+    category: o.category,
     symbol: o.symbol,
     side: o.side,
     type: o.type,
@@ -357,7 +445,11 @@ export function orderDTO(o: HistoricalOrder): PaperOrderDTO {
     ...(o.fillPrice ? { fillPrice: s(o.fillPrice) } : {}),
     status: o.status,
     commission: s(o.commission),
+    ...(o.feeRate ? { feeRate: s(o.feeRate) } : {}),
+    ...(o.feeAsset ? { feeAsset: o.feeAsset } : {}),
+    ...(o.isMaker !== undefined ? { isMaker: o.isMaker } : {}),
     ...(o.margin ? { margin: s(o.margin) } : {}),
+    ...(o.margin && o.leverage ? { leverage: o.leverage } : {}),
     placingTime: o.placingTime,
     closingTime: o.closingTime,
     ...(o.rejectionReason ? { rejectionReason: o.rejectionReason } : {}),
@@ -367,6 +459,7 @@ export function orderDTO(o: HistoricalOrder): PaperOrderDTO {
 export function tradeDTO(t: ClosedTrade): PaperTradeDTO {
   return {
     id: t.id,
+    category: t.category,
     symbol: t.symbol,
     side: t.side,
     quantity: s(t.quantity),
@@ -405,10 +498,12 @@ export function deltaDTO(delta: Delta, version: number): PaperDeltaDTO {
       balance: s(delta.account.balance),
       realizedPnl: s(delta.account.realizedPnl),
       leverage: delta.account.leverage,
+      symbolLeverage: delta.account.symbolLeverage,
       version,
     },
     positionsUpsert: delta.positionsUpsert.map(positionDTO),
     positionsRemove: delta.positionsRemove,
+    spotUpsert: delta.spotUpsert.map(spotDTO),
     pendingUpsert: delta.pendingUpsert.map(pendingDTO),
     pendingRemove: delta.pendingRemove,
     orders: delta.orders.map(orderDTO),

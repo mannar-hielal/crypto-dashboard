@@ -302,6 +302,8 @@ export type AccountWhereInput = {
   positions?: Prisma.PositionListRelationFilter
   journalEntries?: Prisma.JournalEntryListRelationFilter
   balanceEvents?: Prisma.BalanceEventListRelationFilter
+  symbolSettings?: Prisma.SymbolSettingListRelationFilter
+  spotBalances?: Prisma.SpotBalanceListRelationFilter
 }
 
 export type AccountOrderByWithRelationInput = {
@@ -323,6 +325,8 @@ export type AccountOrderByWithRelationInput = {
   positions?: Prisma.PositionOrderByRelationAggregateInput
   journalEntries?: Prisma.JournalEntryOrderByRelationAggregateInput
   balanceEvents?: Prisma.BalanceEventOrderByRelationAggregateInput
+  symbolSettings?: Prisma.SymbolSettingOrderByRelationAggregateInput
+  spotBalances?: Prisma.SpotBalanceOrderByRelationAggregateInput
 }
 
 export type AccountWhereUniqueInput = Prisma.AtLeast<{
@@ -347,6 +351,8 @@ export type AccountWhereUniqueInput = Prisma.AtLeast<{
   positions?: Prisma.PositionListRelationFilter
   journalEntries?: Prisma.JournalEntryListRelationFilter
   balanceEvents?: Prisma.BalanceEventListRelationFilter
+  symbolSettings?: Prisma.SymbolSettingListRelationFilter
+  spotBalances?: Prisma.SpotBalanceListRelationFilter
 }, "id" | "userId">
 
 export type AccountOrderByWithAggregationInput = {
@@ -405,6 +411,8 @@ export type AccountCreateInput = {
   positions?: Prisma.PositionCreateNestedManyWithoutAccountInput
   journalEntries?: Prisma.JournalEntryCreateNestedManyWithoutAccountInput
   balanceEvents?: Prisma.BalanceEventCreateNestedManyWithoutAccountInput
+  symbolSettings?: Prisma.SymbolSettingCreateNestedManyWithoutAccountInput
+  spotBalances?: Prisma.SpotBalanceCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateInput = {
@@ -425,6 +433,8 @@ export type AccountUncheckedCreateInput = {
   positions?: Prisma.PositionUncheckedCreateNestedManyWithoutAccountInput
   journalEntries?: Prisma.JournalEntryUncheckedCreateNestedManyWithoutAccountInput
   balanceEvents?: Prisma.BalanceEventUncheckedCreateNestedManyWithoutAccountInput
+  symbolSettings?: Prisma.SymbolSettingUncheckedCreateNestedManyWithoutAccountInput
+  spotBalances?: Prisma.SpotBalanceUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUpdateInput = {
@@ -445,6 +455,8 @@ export type AccountUpdateInput = {
   positions?: Prisma.PositionUpdateManyWithoutAccountNestedInput
   journalEntries?: Prisma.JournalEntryUpdateManyWithoutAccountNestedInput
   balanceEvents?: Prisma.BalanceEventUpdateManyWithoutAccountNestedInput
+  symbolSettings?: Prisma.SymbolSettingUpdateManyWithoutAccountNestedInput
+  spotBalances?: Prisma.SpotBalanceUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateInput = {
@@ -465,6 +477,8 @@ export type AccountUncheckedUpdateInput = {
   positions?: Prisma.PositionUncheckedUpdateManyWithoutAccountNestedInput
   journalEntries?: Prisma.JournalEntryUncheckedUpdateManyWithoutAccountNestedInput
   balanceEvents?: Prisma.BalanceEventUncheckedUpdateManyWithoutAccountNestedInput
+  symbolSettings?: Prisma.SymbolSettingUncheckedUpdateManyWithoutAccountNestedInput
+  spotBalances?: Prisma.SpotBalanceUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountCreateManyInput = {
@@ -634,6 +648,34 @@ export type IntFieldUpdateOperationsInput = {
   divide?: number
 }
 
+export type AccountCreateNestedOneWithoutSpotBalancesInput = {
+  create?: Prisma.XOR<Prisma.AccountCreateWithoutSpotBalancesInput, Prisma.AccountUncheckedCreateWithoutSpotBalancesInput>
+  connectOrCreate?: Prisma.AccountCreateOrConnectWithoutSpotBalancesInput
+  connect?: Prisma.AccountWhereUniqueInput
+}
+
+export type AccountUpdateOneRequiredWithoutSpotBalancesNestedInput = {
+  create?: Prisma.XOR<Prisma.AccountCreateWithoutSpotBalancesInput, Prisma.AccountUncheckedCreateWithoutSpotBalancesInput>
+  connectOrCreate?: Prisma.AccountCreateOrConnectWithoutSpotBalancesInput
+  upsert?: Prisma.AccountUpsertWithoutSpotBalancesInput
+  connect?: Prisma.AccountWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.AccountUpdateToOneWithWhereWithoutSpotBalancesInput, Prisma.AccountUpdateWithoutSpotBalancesInput>, Prisma.AccountUncheckedUpdateWithoutSpotBalancesInput>
+}
+
+export type AccountCreateNestedOneWithoutSymbolSettingsInput = {
+  create?: Prisma.XOR<Prisma.AccountCreateWithoutSymbolSettingsInput, Prisma.AccountUncheckedCreateWithoutSymbolSettingsInput>
+  connectOrCreate?: Prisma.AccountCreateOrConnectWithoutSymbolSettingsInput
+  connect?: Prisma.AccountWhereUniqueInput
+}
+
+export type AccountUpdateOneRequiredWithoutSymbolSettingsNestedInput = {
+  create?: Prisma.XOR<Prisma.AccountCreateWithoutSymbolSettingsInput, Prisma.AccountUncheckedCreateWithoutSymbolSettingsInput>
+  connectOrCreate?: Prisma.AccountCreateOrConnectWithoutSymbolSettingsInput
+  upsert?: Prisma.AccountUpsertWithoutSymbolSettingsInput
+  connect?: Prisma.AccountWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.AccountUpdateToOneWithWhereWithoutSymbolSettingsInput, Prisma.AccountUpdateWithoutSymbolSettingsInput>, Prisma.AccountUncheckedUpdateWithoutSymbolSettingsInput>
+}
+
 export type AccountCreateNestedOneWithoutPositionsInput = {
   create?: Prisma.XOR<Prisma.AccountCreateWithoutPositionsInput, Prisma.AccountUncheckedCreateWithoutPositionsInput>
   connectOrCreate?: Prisma.AccountCreateOrConnectWithoutPositionsInput
@@ -721,6 +763,8 @@ export type AccountCreateWithoutUserInput = {
   positions?: Prisma.PositionCreateNestedManyWithoutAccountInput
   journalEntries?: Prisma.JournalEntryCreateNestedManyWithoutAccountInput
   balanceEvents?: Prisma.BalanceEventCreateNestedManyWithoutAccountInput
+  symbolSettings?: Prisma.SymbolSettingCreateNestedManyWithoutAccountInput
+  spotBalances?: Prisma.SpotBalanceCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutUserInput = {
@@ -740,6 +784,8 @@ export type AccountUncheckedCreateWithoutUserInput = {
   positions?: Prisma.PositionUncheckedCreateNestedManyWithoutAccountInput
   journalEntries?: Prisma.JournalEntryUncheckedCreateNestedManyWithoutAccountInput
   balanceEvents?: Prisma.BalanceEventUncheckedCreateNestedManyWithoutAccountInput
+  symbolSettings?: Prisma.SymbolSettingUncheckedCreateNestedManyWithoutAccountInput
+  spotBalances?: Prisma.SpotBalanceUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutUserInput = {
@@ -775,6 +821,8 @@ export type AccountUpdateWithoutUserInput = {
   positions?: Prisma.PositionUpdateManyWithoutAccountNestedInput
   journalEntries?: Prisma.JournalEntryUpdateManyWithoutAccountNestedInput
   balanceEvents?: Prisma.BalanceEventUpdateManyWithoutAccountNestedInput
+  symbolSettings?: Prisma.SymbolSettingUpdateManyWithoutAccountNestedInput
+  spotBalances?: Prisma.SpotBalanceUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutUserInput = {
@@ -794,6 +842,208 @@ export type AccountUncheckedUpdateWithoutUserInput = {
   positions?: Prisma.PositionUncheckedUpdateManyWithoutAccountNestedInput
   journalEntries?: Prisma.JournalEntryUncheckedUpdateManyWithoutAccountNestedInput
   balanceEvents?: Prisma.BalanceEventUncheckedUpdateManyWithoutAccountNestedInput
+  symbolSettings?: Prisma.SymbolSettingUncheckedUpdateManyWithoutAccountNestedInput
+  spotBalances?: Prisma.SpotBalanceUncheckedUpdateManyWithoutAccountNestedInput
+}
+
+export type AccountCreateWithoutSpotBalancesInput = {
+  id?: string
+  totalBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  availableBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  unrealizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: number
+  version?: number
+  lastReset?: Date | string
+  resetCount?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  user: Prisma.UserCreateNestedOneWithoutAccountInput
+  trades?: Prisma.TradeCreateNestedManyWithoutAccountInput
+  orders?: Prisma.OrderCreateNestedManyWithoutAccountInput
+  positions?: Prisma.PositionCreateNestedManyWithoutAccountInput
+  journalEntries?: Prisma.JournalEntryCreateNestedManyWithoutAccountInput
+  balanceEvents?: Prisma.BalanceEventCreateNestedManyWithoutAccountInput
+  symbolSettings?: Prisma.SymbolSettingCreateNestedManyWithoutAccountInput
+}
+
+export type AccountUncheckedCreateWithoutSpotBalancesInput = {
+  id?: string
+  userId: string
+  totalBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  availableBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  unrealizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: number
+  version?: number
+  lastReset?: Date | string
+  resetCount?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  trades?: Prisma.TradeUncheckedCreateNestedManyWithoutAccountInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutAccountInput
+  positions?: Prisma.PositionUncheckedCreateNestedManyWithoutAccountInput
+  journalEntries?: Prisma.JournalEntryUncheckedCreateNestedManyWithoutAccountInput
+  balanceEvents?: Prisma.BalanceEventUncheckedCreateNestedManyWithoutAccountInput
+  symbolSettings?: Prisma.SymbolSettingUncheckedCreateNestedManyWithoutAccountInput
+}
+
+export type AccountCreateOrConnectWithoutSpotBalancesInput = {
+  where: Prisma.AccountWhereUniqueInput
+  create: Prisma.XOR<Prisma.AccountCreateWithoutSpotBalancesInput, Prisma.AccountUncheckedCreateWithoutSpotBalancesInput>
+}
+
+export type AccountUpsertWithoutSpotBalancesInput = {
+  update: Prisma.XOR<Prisma.AccountUpdateWithoutSpotBalancesInput, Prisma.AccountUncheckedUpdateWithoutSpotBalancesInput>
+  create: Prisma.XOR<Prisma.AccountCreateWithoutSpotBalancesInput, Prisma.AccountUncheckedCreateWithoutSpotBalancesInput>
+  where?: Prisma.AccountWhereInput
+}
+
+export type AccountUpdateToOneWithWhereWithoutSpotBalancesInput = {
+  where?: Prisma.AccountWhereInput
+  data: Prisma.XOR<Prisma.AccountUpdateWithoutSpotBalancesInput, Prisma.AccountUncheckedUpdateWithoutSpotBalancesInput>
+}
+
+export type AccountUpdateWithoutSpotBalancesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  totalBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  availableBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  unrealizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  resetCount?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  user?: Prisma.UserUpdateOneRequiredWithoutAccountNestedInput
+  trades?: Prisma.TradeUpdateManyWithoutAccountNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutAccountNestedInput
+  positions?: Prisma.PositionUpdateManyWithoutAccountNestedInput
+  journalEntries?: Prisma.JournalEntryUpdateManyWithoutAccountNestedInput
+  balanceEvents?: Prisma.BalanceEventUpdateManyWithoutAccountNestedInput
+  symbolSettings?: Prisma.SymbolSettingUpdateManyWithoutAccountNestedInput
+}
+
+export type AccountUncheckedUpdateWithoutSpotBalancesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  totalBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  availableBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  unrealizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  resetCount?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  trades?: Prisma.TradeUncheckedUpdateManyWithoutAccountNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutAccountNestedInput
+  positions?: Prisma.PositionUncheckedUpdateManyWithoutAccountNestedInput
+  journalEntries?: Prisma.JournalEntryUncheckedUpdateManyWithoutAccountNestedInput
+  balanceEvents?: Prisma.BalanceEventUncheckedUpdateManyWithoutAccountNestedInput
+  symbolSettings?: Prisma.SymbolSettingUncheckedUpdateManyWithoutAccountNestedInput
+}
+
+export type AccountCreateWithoutSymbolSettingsInput = {
+  id?: string
+  totalBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  availableBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  unrealizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: number
+  version?: number
+  lastReset?: Date | string
+  resetCount?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  user: Prisma.UserCreateNestedOneWithoutAccountInput
+  trades?: Prisma.TradeCreateNestedManyWithoutAccountInput
+  orders?: Prisma.OrderCreateNestedManyWithoutAccountInput
+  positions?: Prisma.PositionCreateNestedManyWithoutAccountInput
+  journalEntries?: Prisma.JournalEntryCreateNestedManyWithoutAccountInput
+  balanceEvents?: Prisma.BalanceEventCreateNestedManyWithoutAccountInput
+  spotBalances?: Prisma.SpotBalanceCreateNestedManyWithoutAccountInput
+}
+
+export type AccountUncheckedCreateWithoutSymbolSettingsInput = {
+  id?: string
+  userId: string
+  totalBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  availableBalance?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  unrealizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: number
+  version?: number
+  lastReset?: Date | string
+  resetCount?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  trades?: Prisma.TradeUncheckedCreateNestedManyWithoutAccountInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutAccountInput
+  positions?: Prisma.PositionUncheckedCreateNestedManyWithoutAccountInput
+  journalEntries?: Prisma.JournalEntryUncheckedCreateNestedManyWithoutAccountInput
+  balanceEvents?: Prisma.BalanceEventUncheckedCreateNestedManyWithoutAccountInput
+  spotBalances?: Prisma.SpotBalanceUncheckedCreateNestedManyWithoutAccountInput
+}
+
+export type AccountCreateOrConnectWithoutSymbolSettingsInput = {
+  where: Prisma.AccountWhereUniqueInput
+  create: Prisma.XOR<Prisma.AccountCreateWithoutSymbolSettingsInput, Prisma.AccountUncheckedCreateWithoutSymbolSettingsInput>
+}
+
+export type AccountUpsertWithoutSymbolSettingsInput = {
+  update: Prisma.XOR<Prisma.AccountUpdateWithoutSymbolSettingsInput, Prisma.AccountUncheckedUpdateWithoutSymbolSettingsInput>
+  create: Prisma.XOR<Prisma.AccountCreateWithoutSymbolSettingsInput, Prisma.AccountUncheckedCreateWithoutSymbolSettingsInput>
+  where?: Prisma.AccountWhereInput
+}
+
+export type AccountUpdateToOneWithWhereWithoutSymbolSettingsInput = {
+  where?: Prisma.AccountWhereInput
+  data: Prisma.XOR<Prisma.AccountUpdateWithoutSymbolSettingsInput, Prisma.AccountUncheckedUpdateWithoutSymbolSettingsInput>
+}
+
+export type AccountUpdateWithoutSymbolSettingsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  totalBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  availableBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  unrealizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  resetCount?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  user?: Prisma.UserUpdateOneRequiredWithoutAccountNestedInput
+  trades?: Prisma.TradeUpdateManyWithoutAccountNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutAccountNestedInput
+  positions?: Prisma.PositionUpdateManyWithoutAccountNestedInput
+  journalEntries?: Prisma.JournalEntryUpdateManyWithoutAccountNestedInput
+  balanceEvents?: Prisma.BalanceEventUpdateManyWithoutAccountNestedInput
+  spotBalances?: Prisma.SpotBalanceUpdateManyWithoutAccountNestedInput
+}
+
+export type AccountUncheckedUpdateWithoutSymbolSettingsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  totalBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  availableBalance?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  unrealizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  leverage?: Prisma.IntFieldUpdateOperationsInput | number
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  resetCount?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  trades?: Prisma.TradeUncheckedUpdateManyWithoutAccountNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutAccountNestedInput
+  positions?: Prisma.PositionUncheckedUpdateManyWithoutAccountNestedInput
+  journalEntries?: Prisma.JournalEntryUncheckedUpdateManyWithoutAccountNestedInput
+  balanceEvents?: Prisma.BalanceEventUncheckedUpdateManyWithoutAccountNestedInput
+  spotBalances?: Prisma.SpotBalanceUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountCreateWithoutPositionsInput = {
@@ -813,6 +1063,8 @@ export type AccountCreateWithoutPositionsInput = {
   orders?: Prisma.OrderCreateNestedManyWithoutAccountInput
   journalEntries?: Prisma.JournalEntryCreateNestedManyWithoutAccountInput
   balanceEvents?: Prisma.BalanceEventCreateNestedManyWithoutAccountInput
+  symbolSettings?: Prisma.SymbolSettingCreateNestedManyWithoutAccountInput
+  spotBalances?: Prisma.SpotBalanceCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutPositionsInput = {
@@ -832,6 +1084,8 @@ export type AccountUncheckedCreateWithoutPositionsInput = {
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutAccountInput
   journalEntries?: Prisma.JournalEntryUncheckedCreateNestedManyWithoutAccountInput
   balanceEvents?: Prisma.BalanceEventUncheckedCreateNestedManyWithoutAccountInput
+  symbolSettings?: Prisma.SymbolSettingUncheckedCreateNestedManyWithoutAccountInput
+  spotBalances?: Prisma.SpotBalanceUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutPositionsInput = {
@@ -867,6 +1121,8 @@ export type AccountUpdateWithoutPositionsInput = {
   orders?: Prisma.OrderUpdateManyWithoutAccountNestedInput
   journalEntries?: Prisma.JournalEntryUpdateManyWithoutAccountNestedInput
   balanceEvents?: Prisma.BalanceEventUpdateManyWithoutAccountNestedInput
+  symbolSettings?: Prisma.SymbolSettingUpdateManyWithoutAccountNestedInput
+  spotBalances?: Prisma.SpotBalanceUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutPositionsInput = {
@@ -886,6 +1142,8 @@ export type AccountUncheckedUpdateWithoutPositionsInput = {
   orders?: Prisma.OrderUncheckedUpdateManyWithoutAccountNestedInput
   journalEntries?: Prisma.JournalEntryUncheckedUpdateManyWithoutAccountNestedInput
   balanceEvents?: Prisma.BalanceEventUncheckedUpdateManyWithoutAccountNestedInput
+  symbolSettings?: Prisma.SymbolSettingUncheckedUpdateManyWithoutAccountNestedInput
+  spotBalances?: Prisma.SpotBalanceUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountCreateWithoutOrdersInput = {
@@ -905,6 +1163,8 @@ export type AccountCreateWithoutOrdersInput = {
   positions?: Prisma.PositionCreateNestedManyWithoutAccountInput
   journalEntries?: Prisma.JournalEntryCreateNestedManyWithoutAccountInput
   balanceEvents?: Prisma.BalanceEventCreateNestedManyWithoutAccountInput
+  symbolSettings?: Prisma.SymbolSettingCreateNestedManyWithoutAccountInput
+  spotBalances?: Prisma.SpotBalanceCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutOrdersInput = {
@@ -924,6 +1184,8 @@ export type AccountUncheckedCreateWithoutOrdersInput = {
   positions?: Prisma.PositionUncheckedCreateNestedManyWithoutAccountInput
   journalEntries?: Prisma.JournalEntryUncheckedCreateNestedManyWithoutAccountInput
   balanceEvents?: Prisma.BalanceEventUncheckedCreateNestedManyWithoutAccountInput
+  symbolSettings?: Prisma.SymbolSettingUncheckedCreateNestedManyWithoutAccountInput
+  spotBalances?: Prisma.SpotBalanceUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutOrdersInput = {
@@ -959,6 +1221,8 @@ export type AccountUpdateWithoutOrdersInput = {
   positions?: Prisma.PositionUpdateManyWithoutAccountNestedInput
   journalEntries?: Prisma.JournalEntryUpdateManyWithoutAccountNestedInput
   balanceEvents?: Prisma.BalanceEventUpdateManyWithoutAccountNestedInput
+  symbolSettings?: Prisma.SymbolSettingUpdateManyWithoutAccountNestedInput
+  spotBalances?: Prisma.SpotBalanceUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutOrdersInput = {
@@ -978,6 +1242,8 @@ export type AccountUncheckedUpdateWithoutOrdersInput = {
   positions?: Prisma.PositionUncheckedUpdateManyWithoutAccountNestedInput
   journalEntries?: Prisma.JournalEntryUncheckedUpdateManyWithoutAccountNestedInput
   balanceEvents?: Prisma.BalanceEventUncheckedUpdateManyWithoutAccountNestedInput
+  symbolSettings?: Prisma.SymbolSettingUncheckedUpdateManyWithoutAccountNestedInput
+  spotBalances?: Prisma.SpotBalanceUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountCreateWithoutTradesInput = {
@@ -997,6 +1263,8 @@ export type AccountCreateWithoutTradesInput = {
   positions?: Prisma.PositionCreateNestedManyWithoutAccountInput
   journalEntries?: Prisma.JournalEntryCreateNestedManyWithoutAccountInput
   balanceEvents?: Prisma.BalanceEventCreateNestedManyWithoutAccountInput
+  symbolSettings?: Prisma.SymbolSettingCreateNestedManyWithoutAccountInput
+  spotBalances?: Prisma.SpotBalanceCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutTradesInput = {
@@ -1016,6 +1284,8 @@ export type AccountUncheckedCreateWithoutTradesInput = {
   positions?: Prisma.PositionUncheckedCreateNestedManyWithoutAccountInput
   journalEntries?: Prisma.JournalEntryUncheckedCreateNestedManyWithoutAccountInput
   balanceEvents?: Prisma.BalanceEventUncheckedCreateNestedManyWithoutAccountInput
+  symbolSettings?: Prisma.SymbolSettingUncheckedCreateNestedManyWithoutAccountInput
+  spotBalances?: Prisma.SpotBalanceUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutTradesInput = {
@@ -1051,6 +1321,8 @@ export type AccountUpdateWithoutTradesInput = {
   positions?: Prisma.PositionUpdateManyWithoutAccountNestedInput
   journalEntries?: Prisma.JournalEntryUpdateManyWithoutAccountNestedInput
   balanceEvents?: Prisma.BalanceEventUpdateManyWithoutAccountNestedInput
+  symbolSettings?: Prisma.SymbolSettingUpdateManyWithoutAccountNestedInput
+  spotBalances?: Prisma.SpotBalanceUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutTradesInput = {
@@ -1070,6 +1342,8 @@ export type AccountUncheckedUpdateWithoutTradesInput = {
   positions?: Prisma.PositionUncheckedUpdateManyWithoutAccountNestedInput
   journalEntries?: Prisma.JournalEntryUncheckedUpdateManyWithoutAccountNestedInput
   balanceEvents?: Prisma.BalanceEventUncheckedUpdateManyWithoutAccountNestedInput
+  symbolSettings?: Prisma.SymbolSettingUncheckedUpdateManyWithoutAccountNestedInput
+  spotBalances?: Prisma.SpotBalanceUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountCreateWithoutJournalEntriesInput = {
@@ -1089,6 +1363,8 @@ export type AccountCreateWithoutJournalEntriesInput = {
   orders?: Prisma.OrderCreateNestedManyWithoutAccountInput
   positions?: Prisma.PositionCreateNestedManyWithoutAccountInput
   balanceEvents?: Prisma.BalanceEventCreateNestedManyWithoutAccountInput
+  symbolSettings?: Prisma.SymbolSettingCreateNestedManyWithoutAccountInput
+  spotBalances?: Prisma.SpotBalanceCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutJournalEntriesInput = {
@@ -1108,6 +1384,8 @@ export type AccountUncheckedCreateWithoutJournalEntriesInput = {
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutAccountInput
   positions?: Prisma.PositionUncheckedCreateNestedManyWithoutAccountInput
   balanceEvents?: Prisma.BalanceEventUncheckedCreateNestedManyWithoutAccountInput
+  symbolSettings?: Prisma.SymbolSettingUncheckedCreateNestedManyWithoutAccountInput
+  spotBalances?: Prisma.SpotBalanceUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutJournalEntriesInput = {
@@ -1143,6 +1421,8 @@ export type AccountUpdateWithoutJournalEntriesInput = {
   orders?: Prisma.OrderUpdateManyWithoutAccountNestedInput
   positions?: Prisma.PositionUpdateManyWithoutAccountNestedInput
   balanceEvents?: Prisma.BalanceEventUpdateManyWithoutAccountNestedInput
+  symbolSettings?: Prisma.SymbolSettingUpdateManyWithoutAccountNestedInput
+  spotBalances?: Prisma.SpotBalanceUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutJournalEntriesInput = {
@@ -1162,6 +1442,8 @@ export type AccountUncheckedUpdateWithoutJournalEntriesInput = {
   orders?: Prisma.OrderUncheckedUpdateManyWithoutAccountNestedInput
   positions?: Prisma.PositionUncheckedUpdateManyWithoutAccountNestedInput
   balanceEvents?: Prisma.BalanceEventUncheckedUpdateManyWithoutAccountNestedInput
+  symbolSettings?: Prisma.SymbolSettingUncheckedUpdateManyWithoutAccountNestedInput
+  spotBalances?: Prisma.SpotBalanceUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountCreateWithoutBalanceEventsInput = {
@@ -1181,6 +1463,8 @@ export type AccountCreateWithoutBalanceEventsInput = {
   orders?: Prisma.OrderCreateNestedManyWithoutAccountInput
   positions?: Prisma.PositionCreateNestedManyWithoutAccountInput
   journalEntries?: Prisma.JournalEntryCreateNestedManyWithoutAccountInput
+  symbolSettings?: Prisma.SymbolSettingCreateNestedManyWithoutAccountInput
+  spotBalances?: Prisma.SpotBalanceCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutBalanceEventsInput = {
@@ -1200,6 +1484,8 @@ export type AccountUncheckedCreateWithoutBalanceEventsInput = {
   orders?: Prisma.OrderUncheckedCreateNestedManyWithoutAccountInput
   positions?: Prisma.PositionUncheckedCreateNestedManyWithoutAccountInput
   journalEntries?: Prisma.JournalEntryUncheckedCreateNestedManyWithoutAccountInput
+  symbolSettings?: Prisma.SymbolSettingUncheckedCreateNestedManyWithoutAccountInput
+  spotBalances?: Prisma.SpotBalanceUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutBalanceEventsInput = {
@@ -1235,6 +1521,8 @@ export type AccountUpdateWithoutBalanceEventsInput = {
   orders?: Prisma.OrderUpdateManyWithoutAccountNestedInput
   positions?: Prisma.PositionUpdateManyWithoutAccountNestedInput
   journalEntries?: Prisma.JournalEntryUpdateManyWithoutAccountNestedInput
+  symbolSettings?: Prisma.SymbolSettingUpdateManyWithoutAccountNestedInput
+  spotBalances?: Prisma.SpotBalanceUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutBalanceEventsInput = {
@@ -1254,6 +1542,8 @@ export type AccountUncheckedUpdateWithoutBalanceEventsInput = {
   orders?: Prisma.OrderUncheckedUpdateManyWithoutAccountNestedInput
   positions?: Prisma.PositionUncheckedUpdateManyWithoutAccountNestedInput
   journalEntries?: Prisma.JournalEntryUncheckedUpdateManyWithoutAccountNestedInput
+  symbolSettings?: Prisma.SymbolSettingUncheckedUpdateManyWithoutAccountNestedInput
+  spotBalances?: Prisma.SpotBalanceUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 
@@ -1267,6 +1557,8 @@ export type AccountCountOutputType = {
   positions: number
   journalEntries: number
   balanceEvents: number
+  symbolSettings: number
+  spotBalances: number
 }
 
 export type AccountCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1275,6 +1567,8 @@ export type AccountCountOutputTypeSelect<ExtArgs extends runtime.Types.Extension
   positions?: boolean | AccountCountOutputTypeCountPositionsArgs
   journalEntries?: boolean | AccountCountOutputTypeCountJournalEntriesArgs
   balanceEvents?: boolean | AccountCountOutputTypeCountBalanceEventsArgs
+  symbolSettings?: boolean | AccountCountOutputTypeCountSymbolSettingsArgs
+  spotBalances?: boolean | AccountCountOutputTypeCountSpotBalancesArgs
 }
 
 /**
@@ -1322,6 +1616,20 @@ export type AccountCountOutputTypeCountBalanceEventsArgs<ExtArgs extends runtime
   where?: Prisma.BalanceEventWhereInput
 }
 
+/**
+ * AccountCountOutputType without action
+ */
+export type AccountCountOutputTypeCountSymbolSettingsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SymbolSettingWhereInput
+}
+
+/**
+ * AccountCountOutputType without action
+ */
+export type AccountCountOutputTypeCountSpotBalancesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SpotBalanceWhereInput
+}
+
 
 export type AccountSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1342,6 +1650,8 @@ export type AccountSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   positions?: boolean | Prisma.Account$positionsArgs<ExtArgs>
   journalEntries?: boolean | Prisma.Account$journalEntriesArgs<ExtArgs>
   balanceEvents?: boolean | Prisma.Account$balanceEventsArgs<ExtArgs>
+  symbolSettings?: boolean | Prisma.Account$symbolSettingsArgs<ExtArgs>
+  spotBalances?: boolean | Prisma.Account$spotBalancesArgs<ExtArgs>
   _count?: boolean | Prisma.AccountCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["account"]>
 
@@ -1400,6 +1710,8 @@ export type AccountInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   positions?: boolean | Prisma.Account$positionsArgs<ExtArgs>
   journalEntries?: boolean | Prisma.Account$journalEntriesArgs<ExtArgs>
   balanceEvents?: boolean | Prisma.Account$balanceEventsArgs<ExtArgs>
+  symbolSettings?: boolean | Prisma.Account$symbolSettingsArgs<ExtArgs>
+  spotBalances?: boolean | Prisma.Account$spotBalancesArgs<ExtArgs>
   _count?: boolean | Prisma.AccountCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type AccountIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1418,6 +1730,8 @@ export type $AccountPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     positions: Prisma.$PositionPayload<ExtArgs>[]
     journalEntries: Prisma.$JournalEntryPayload<ExtArgs>[]
     balanceEvents: Prisma.$BalanceEventPayload<ExtArgs>[]
+    symbolSettings: Prisma.$SymbolSettingPayload<ExtArgs>[]
+    spotBalances: Prisma.$SpotBalancePayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1832,6 +2146,8 @@ export interface Prisma__AccountClient<T, Null = never, ExtArgs extends runtime.
   positions<T extends Prisma.Account$positionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Account$positionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PositionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   journalEntries<T extends Prisma.Account$journalEntriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Account$journalEntriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$JournalEntryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   balanceEvents<T extends Prisma.Account$balanceEventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Account$balanceEventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BalanceEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  symbolSettings<T extends Prisma.Account$symbolSettingsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Account$symbolSettingsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SymbolSettingPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  spotBalances<T extends Prisma.Account$spotBalancesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Account$spotBalancesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SpotBalancePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2391,6 +2707,54 @@ export type Account$balanceEventsArgs<ExtArgs extends runtime.Types.Extensions.I
   take?: number
   skip?: number
   distinct?: Prisma.BalanceEventScalarFieldEnum | Prisma.BalanceEventScalarFieldEnum[]
+}
+
+/**
+ * Account.symbolSettings
+ */
+export type Account$symbolSettingsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SymbolSetting
+   */
+  select?: Prisma.SymbolSettingSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SymbolSetting
+   */
+  omit?: Prisma.SymbolSettingOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SymbolSettingInclude<ExtArgs> | null
+  where?: Prisma.SymbolSettingWhereInput
+  orderBy?: Prisma.SymbolSettingOrderByWithRelationInput | Prisma.SymbolSettingOrderByWithRelationInput[]
+  cursor?: Prisma.SymbolSettingWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SymbolSettingScalarFieldEnum | Prisma.SymbolSettingScalarFieldEnum[]
+}
+
+/**
+ * Account.spotBalances
+ */
+export type Account$spotBalancesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SpotBalance
+   */
+  select?: Prisma.SpotBalanceSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SpotBalance
+   */
+  omit?: Prisma.SpotBalanceOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SpotBalanceInclude<ExtArgs> | null
+  where?: Prisma.SpotBalanceWhereInput
+  orderBy?: Prisma.SpotBalanceOrderByWithRelationInput | Prisma.SpotBalanceOrderByWithRelationInput[]
+  cursor?: Prisma.SpotBalanceWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SpotBalanceScalarFieldEnum | Prisma.SpotBalanceScalarFieldEnum[]
 }
 
 /**

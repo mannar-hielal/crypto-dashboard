@@ -57,6 +57,7 @@ export type TradeMinAggregateOutputType = {
   userId: string | null
   accountId: string | null
   orderId: string | null
+  category: string | null
   symbol: string | null
   side: string | null
   quantity: runtime.Decimal | null
@@ -79,6 +80,7 @@ export type TradeMaxAggregateOutputType = {
   userId: string | null
   accountId: string | null
   orderId: string | null
+  category: string | null
   symbol: string | null
   side: string | null
   quantity: runtime.Decimal | null
@@ -101,6 +103,7 @@ export type TradeCountAggregateOutputType = {
   userId: number
   accountId: number
   orderId: number
+  category: number
   symbol: number
   side: number
   quantity: number
@@ -149,6 +152,7 @@ export type TradeMinAggregateInputType = {
   userId?: true
   accountId?: true
   orderId?: true
+  category?: true
   symbol?: true
   side?: true
   quantity?: true
@@ -171,6 +175,7 @@ export type TradeMaxAggregateInputType = {
   userId?: true
   accountId?: true
   orderId?: true
+  category?: true
   symbol?: true
   side?: true
   quantity?: true
@@ -193,6 +198,7 @@ export type TradeCountAggregateInputType = {
   userId?: true
   accountId?: true
   orderId?: true
+  category?: true
   symbol?: true
   side?: true
   quantity?: true
@@ -302,6 +308,7 @@ export type TradeGroupByOutputType = {
   userId: string
   accountId: string
   orderId: string | null
+  category: string
   symbol: string
   side: string
   quantity: runtime.Decimal
@@ -347,6 +354,7 @@ export type TradeWhereInput = {
   userId?: Prisma.StringFilter<"Trade"> | string
   accountId?: Prisma.StringFilter<"Trade"> | string
   orderId?: Prisma.StringNullableFilter<"Trade"> | string | null
+  category?: Prisma.StringFilter<"Trade"> | string
   symbol?: Prisma.StringFilter<"Trade"> | string
   side?: Prisma.StringFilter<"Trade"> | string
   quantity?: Prisma.DecimalFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -372,6 +380,7 @@ export type TradeOrderByWithRelationInput = {
   userId?: Prisma.SortOrder
   accountId?: Prisma.SortOrder
   orderId?: Prisma.SortOrderInput | Prisma.SortOrder
+  category?: Prisma.SortOrder
   symbol?: Prisma.SortOrder
   side?: Prisma.SortOrder
   quantity?: Prisma.SortOrder
@@ -400,6 +409,7 @@ export type TradeWhereUniqueInput = Prisma.AtLeast<{
   userId?: Prisma.StringFilter<"Trade"> | string
   accountId?: Prisma.StringFilter<"Trade"> | string
   orderId?: Prisma.StringNullableFilter<"Trade"> | string | null
+  category?: Prisma.StringFilter<"Trade"> | string
   symbol?: Prisma.StringFilter<"Trade"> | string
   side?: Prisma.StringFilter<"Trade"> | string
   quantity?: Prisma.DecimalFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -425,6 +435,7 @@ export type TradeOrderByWithAggregationInput = {
   userId?: Prisma.SortOrder
   accountId?: Prisma.SortOrder
   orderId?: Prisma.SortOrderInput | Prisma.SortOrder
+  category?: Prisma.SortOrder
   symbol?: Prisma.SortOrder
   side?: Prisma.SortOrder
   quantity?: Prisma.SortOrder
@@ -455,6 +466,7 @@ export type TradeScalarWhereWithAggregatesInput = {
   userId?: Prisma.StringWithAggregatesFilter<"Trade"> | string
   accountId?: Prisma.StringWithAggregatesFilter<"Trade"> | string
   orderId?: Prisma.StringNullableWithAggregatesFilter<"Trade"> | string | null
+  category?: Prisma.StringWithAggregatesFilter<"Trade"> | string
   symbol?: Prisma.StringWithAggregatesFilter<"Trade"> | string
   side?: Prisma.StringWithAggregatesFilter<"Trade"> | string
   quantity?: Prisma.DecimalWithAggregatesFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -474,6 +486,7 @@ export type TradeCreateInput = {
   id?: string
   seq?: number
   refId?: string | null
+  category?: string
   symbol: string
   side: string
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -499,6 +512,7 @@ export type TradeUncheckedCreateInput = {
   userId: string
   accountId: string
   orderId?: string | null
+  category?: string
   symbol: string
   side: string
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -518,6 +532,7 @@ export type TradeUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   seq?: Prisma.IntFieldUpdateOperationsInput | number
   refId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  category?: Prisma.StringFieldUpdateOperationsInput | string
   symbol?: Prisma.StringFieldUpdateOperationsInput | string
   side?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -543,6 +558,7 @@ export type TradeUncheckedUpdateInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   accountId?: Prisma.StringFieldUpdateOperationsInput | string
   orderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  category?: Prisma.StringFieldUpdateOperationsInput | string
   symbol?: Prisma.StringFieldUpdateOperationsInput | string
   side?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -565,6 +581,7 @@ export type TradeCreateManyInput = {
   userId: string
   accountId: string
   orderId?: string | null
+  category?: string
   symbol: string
   side: string
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -584,6 +601,7 @@ export type TradeUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   seq?: Prisma.IntFieldUpdateOperationsInput | number
   refId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  category?: Prisma.StringFieldUpdateOperationsInput | string
   symbol?: Prisma.StringFieldUpdateOperationsInput | string
   side?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -606,6 +624,7 @@ export type TradeUncheckedUpdateManyInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   accountId?: Prisma.StringFieldUpdateOperationsInput | string
   orderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  category?: Prisma.StringFieldUpdateOperationsInput | string
   symbol?: Prisma.StringFieldUpdateOperationsInput | string
   side?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -638,6 +657,7 @@ export type TradeCountOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   accountId?: Prisma.SortOrder
   orderId?: Prisma.SortOrder
+  category?: Prisma.SortOrder
   symbol?: Prisma.SortOrder
   side?: Prisma.SortOrder
   quantity?: Prisma.SortOrder
@@ -672,6 +692,7 @@ export type TradeMaxOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   accountId?: Prisma.SortOrder
   orderId?: Prisma.SortOrder
+  category?: Prisma.SortOrder
   symbol?: Prisma.SortOrder
   side?: Prisma.SortOrder
   quantity?: Prisma.SortOrder
@@ -694,6 +715,7 @@ export type TradeMinOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   accountId?: Prisma.SortOrder
   orderId?: Prisma.SortOrder
+  category?: Prisma.SortOrder
   symbol?: Prisma.SortOrder
   side?: Prisma.SortOrder
   quantity?: Prisma.SortOrder
@@ -851,6 +873,7 @@ export type TradeCreateWithoutUserInput = {
   id?: string
   seq?: number
   refId?: string | null
+  category?: string
   symbol: string
   side: string
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -874,6 +897,7 @@ export type TradeUncheckedCreateWithoutUserInput = {
   refId?: string | null
   accountId: string
   orderId?: string | null
+  category?: string
   symbol: string
   side: string
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -925,6 +949,7 @@ export type TradeScalarWhereInput = {
   userId?: Prisma.StringFilter<"Trade"> | string
   accountId?: Prisma.StringFilter<"Trade"> | string
   orderId?: Prisma.StringNullableFilter<"Trade"> | string | null
+  category?: Prisma.StringFilter<"Trade"> | string
   symbol?: Prisma.StringFilter<"Trade"> | string
   side?: Prisma.StringFilter<"Trade"> | string
   quantity?: Prisma.DecimalFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -944,6 +969,7 @@ export type TradeCreateWithoutAccountInput = {
   id?: string
   seq?: number
   refId?: string | null
+  category?: string
   symbol: string
   side: string
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -967,6 +993,7 @@ export type TradeUncheckedCreateWithoutAccountInput = {
   refId?: string | null
   userId: string
   orderId?: string | null
+  category?: string
   symbol: string
   side: string
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1012,6 +1039,7 @@ export type TradeCreateWithoutOrderInput = {
   id?: string
   seq?: number
   refId?: string | null
+  category?: string
   symbol: string
   side: string
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1035,6 +1063,7 @@ export type TradeUncheckedCreateWithoutOrderInput = {
   refId?: string | null
   userId: string
   accountId: string
+  category?: string
   symbol: string
   side: string
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1082,6 +1111,7 @@ export type TradeCreateManyUserInput = {
   refId?: string | null
   accountId: string
   orderId?: string | null
+  category?: string
   symbol: string
   side: string
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1101,6 +1131,7 @@ export type TradeUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   seq?: Prisma.IntFieldUpdateOperationsInput | number
   refId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  category?: Prisma.StringFieldUpdateOperationsInput | string
   symbol?: Prisma.StringFieldUpdateOperationsInput | string
   side?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1124,6 +1155,7 @@ export type TradeUncheckedUpdateWithoutUserInput = {
   refId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accountId?: Prisma.StringFieldUpdateOperationsInput | string
   orderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  category?: Prisma.StringFieldUpdateOperationsInput | string
   symbol?: Prisma.StringFieldUpdateOperationsInput | string
   side?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1145,6 +1177,7 @@ export type TradeUncheckedUpdateManyWithoutUserInput = {
   refId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   accountId?: Prisma.StringFieldUpdateOperationsInput | string
   orderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  category?: Prisma.StringFieldUpdateOperationsInput | string
   symbol?: Prisma.StringFieldUpdateOperationsInput | string
   side?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1166,6 +1199,7 @@ export type TradeCreateManyAccountInput = {
   refId?: string | null
   userId: string
   orderId?: string | null
+  category?: string
   symbol: string
   side: string
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1185,6 +1219,7 @@ export type TradeUpdateWithoutAccountInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   seq?: Prisma.IntFieldUpdateOperationsInput | number
   refId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  category?: Prisma.StringFieldUpdateOperationsInput | string
   symbol?: Prisma.StringFieldUpdateOperationsInput | string
   side?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1208,6 +1243,7 @@ export type TradeUncheckedUpdateWithoutAccountInput = {
   refId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   orderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  category?: Prisma.StringFieldUpdateOperationsInput | string
   symbol?: Prisma.StringFieldUpdateOperationsInput | string
   side?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1229,6 +1265,7 @@ export type TradeUncheckedUpdateManyWithoutAccountInput = {
   refId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   orderId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  category?: Prisma.StringFieldUpdateOperationsInput | string
   symbol?: Prisma.StringFieldUpdateOperationsInput | string
   side?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1250,6 +1287,7 @@ export type TradeCreateManyOrderInput = {
   refId?: string | null
   userId: string
   accountId: string
+  category?: string
   symbol: string
   side: string
   quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1269,6 +1307,7 @@ export type TradeUpdateWithoutOrderInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   seq?: Prisma.IntFieldUpdateOperationsInput | number
   refId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  category?: Prisma.StringFieldUpdateOperationsInput | string
   symbol?: Prisma.StringFieldUpdateOperationsInput | string
   side?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1292,6 +1331,7 @@ export type TradeUncheckedUpdateWithoutOrderInput = {
   refId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   accountId?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.StringFieldUpdateOperationsInput | string
   symbol?: Prisma.StringFieldUpdateOperationsInput | string
   side?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1313,6 +1353,7 @@ export type TradeUncheckedUpdateManyWithoutOrderInput = {
   refId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   accountId?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.StringFieldUpdateOperationsInput | string
   symbol?: Prisma.StringFieldUpdateOperationsInput | string
   side?: Prisma.StringFieldUpdateOperationsInput | string
   quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1337,6 +1378,7 @@ export type TradeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   userId?: boolean
   accountId?: boolean
   orderId?: boolean
+  category?: boolean
   symbol?: boolean
   side?: boolean
   quantity?: boolean
@@ -1362,6 +1404,7 @@ export type TradeSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   userId?: boolean
   accountId?: boolean
   orderId?: boolean
+  category?: boolean
   symbol?: boolean
   side?: boolean
   quantity?: boolean
@@ -1387,6 +1430,7 @@ export type TradeSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   userId?: boolean
   accountId?: boolean
   orderId?: boolean
+  category?: boolean
   symbol?: boolean
   side?: boolean
   quantity?: boolean
@@ -1412,6 +1456,7 @@ export type TradeSelectScalar = {
   userId?: boolean
   accountId?: boolean
   orderId?: boolean
+  category?: boolean
   symbol?: boolean
   side?: boolean
   quantity?: boolean
@@ -1427,7 +1472,7 @@ export type TradeSelectScalar = {
   createdAt?: boolean
 }
 
-export type TradeOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "seq" | "refId" | "userId" | "accountId" | "orderId" | "symbol" | "side" | "quantity" | "executedPrice" | "entryPrice" | "totalCost" | "commission" | "pnl" | "grossPnl" | "pnlPercent" | "openedAt" | "executedAt" | "createdAt", ExtArgs["result"]["trade"]>
+export type TradeOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "seq" | "refId" | "userId" | "accountId" | "orderId" | "category" | "symbol" | "side" | "quantity" | "executedPrice" | "entryPrice" | "totalCost" | "commission" | "pnl" | "grossPnl" | "pnlPercent" | "openedAt" | "executedAt" | "createdAt", ExtArgs["result"]["trade"]>
 export type TradeInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   account?: boolean | Prisma.AccountDefaultArgs<ExtArgs>
@@ -1458,6 +1503,7 @@ export type $TradePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     userId: string
     accountId: string
     orderId: string | null
+    category: string
     symbol: string
     side: string
     quantity: runtime.Decimal
@@ -1903,6 +1949,7 @@ export interface TradeFieldRefs {
   readonly userId: Prisma.FieldRef<"Trade", 'String'>
   readonly accountId: Prisma.FieldRef<"Trade", 'String'>
   readonly orderId: Prisma.FieldRef<"Trade", 'String'>
+  readonly category: Prisma.FieldRef<"Trade", 'String'>
   readonly symbol: Prisma.FieldRef<"Trade", 'String'>
   readonly side: Prisma.FieldRef<"Trade", 'String'>
   readonly quantity: Prisma.FieldRef<"Trade", 'Decimal'>

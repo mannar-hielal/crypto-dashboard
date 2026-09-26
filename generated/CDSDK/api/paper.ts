@@ -5,6 +5,7 @@ import type {
   PaperExitLeg,
   PaperStateDTO,
   PlaceOrderRequest,
+  PlaceSpotExitsRequest,
   UpdatePositionExitsRequest,
 } from '../types/index.js';
 
@@ -69,6 +70,14 @@ export const paperApi = {
       json('POST', body)
     ),
 
+  /** Spot TP / SL on coins already held. `result` is the OCO pair id. */
+  placeSpotExits: (body: PlaceSpotExitsRequest, accessToken: string) =>
+    request<PaperActionResponse<string | null>>(
+      '/api/paper/spot/exits',
+      accessToken,
+      json('POST', body)
+    ),
+
   cancelOrder: (orderId: string, accessToken: string) =>
     request<PaperActionResponse<boolean>>(
       `/api/paper/orders/${encodeURIComponent(orderId)}`,
@@ -116,6 +125,18 @@ export const paperApi = {
       { method: 'POST' }
     ),
 
+  /**
+   * USDT Perpetual leverage for one symbol. Refused (422) while the symbol has an open position or
+   * active orders.
+   */
+  setSymbolLeverage: (symbol: string, leverage: number, accessToken: string) =>
+    request<PaperActionResponse<number>>(
+      `/api/paper/symbols/${encodeURIComponent(symbol)}/leverage`,
+      accessToken,
+      json('PATCH', { leverage })
+    ),
+
+  /** Default leverage for symbols with no setting of their own (pre-BP-2 account leverage). */
   setLeverage: (leverage: number, accessToken: string) =>
     request<PaperActionResponse<number>>(
       '/api/paper/account/leverage',

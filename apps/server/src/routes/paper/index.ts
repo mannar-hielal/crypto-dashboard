@@ -1,9 +1,11 @@
 /**
- * Paper-trading API (BYBIT_PARITY_PLAN BP-1): intent-only endpoints.
+ * Paper-trading API (BYBIT_PARITY_PLAN BP-1, BP-2): intent-only endpoints.
  *
- * The client says *what* to do (symbol, side, amount, trigger price, TP/SL). The server picks
- * prices from its own live feed, runs the engine (apps/server/src/trading) and returns the
- * resulting delta, which is also pushed to the user's other tabs over the private WebSocket.
+ * The client says *what* to do (market, symbol, side, size, trigger price, TP/SL). The server
+ * picks prices from its own live quote, applies Bybit's instrument rules, runs the engine
+ * (apps/server/src/trading) and returns the resulting delta, which is also pushed to the user's
+ * other tabs over the private WebSocket. An order Bybit's rules refuse (size below the minimum,
+ * a price off the tick grid) answers 422 with Bybit's message.
  *
  * 🔐 F11: the old endpoints that stored client-computed balances, fill prices and PnL
  * (PATCH /account, POST /orders|trades|positions, PATCH/DELETE /orders|positions) are gone —
@@ -16,11 +18,12 @@ import type {
   EditPendingOrderRequest,
   JournalNoteRequest,
   PlaceOrderRequest,
+  PlaceSpotExitsRequest,
   UpdatePositionExitsRequest,
 } from '@crypto-dashboard/sdk';
-import { ALLOWED_SYMBOLS } from '../../constants.js';
+import { ALLOWED_CATEGORIES, ALLOWED_SYMBOLS } from '../../constants.js';
 import { TradingError, type Executed } from '../../trading/TradingService.js';
-import type { ExitLeg } from '../../trading/engine/index.js';
+import type { ExitLeg, OrderSize } from '../../trading/engine/index.js';
 import { privatePaperWs } from './ws.js';
 
 // ─── Shared schemas ───────────────────────────────────────────────────────────
@@ -92,6 +95,20 @@ function userIdOf(request: { user: unknown }): string {
   return (request.user as { userId: string }).userId;
 }
 
+/**
+ * The order size from a body that gives exactly one of qty / value / usdtAmount (the last from a
+ * pre-BP-2 client, as initial margin). Null when zero or several are given.
+ */
+function sizeOf(b: { qty?: string; value?: string; usdtAmount?: string }): OrderSize | null {
+  const given = [b.qty, b.value, b.usdtAmount].filter((v) => v !== undefined);
+  if (given.length !== 1) return null;
+  if (b.qty !== undefined) return { qty: positive(b.qty, 'qty') };
+  if (b.value !== undefined) return { value: positive(b.value, 'value') };
+  return { margin: positive(b.usdtAmount as string, 'usdtAmount') };
+}
+
+const SIZE_REQUIRED = 'Give the order size as exactly one of qty, value or usdtAmount';
+
 /** A required positive, bounded decimal (the schema already checked the format). */
 function positive(value: string, field: string): Decimal {
   const d = new Decimal(value);
@@ -154,16 +171,19 @@ export async function paperRoutes(app: FastifyInstance) {
       config: mutationRateLimit,
       schema: {
         tags: ['Paper Trading'],
-        summary: 'Place an order (market fills at the server live price)',
+        summary: 'Place an order (market fills at the server live ask / bid)',
         ...secured,
         body: {
           type: 'object',
-          required: ['symbol', 'side', 'type', 'usdtAmount'],
+          required: ['symbol', 'side', 'type'],
           additionalProperties: false,
           properties: {
+            category: { type: 'string', enum: [...ALLOWED_CATEGORIES] },
             symbol: { type: 'string', enum: [...ALLOWED_SYMBOLS] },
             side: { type: 'string', enum: ['buy', 'sell'] },
             type: { type: 'string', enum: ['market', 'limit', 'stop'] },
+            qty: decimalString,
+            value: decimalString,
             usdtAmount: decimalString,
             triggerPrice: decimalString,
             takeProfit: decimalString,
@@ -175,6 +195,7 @@ export async function paperRoutes(app: FastifyInstance) {
           400: errorResponse,
           401: errorResponse,
           409: errorResponse,
+          422: errorResponse,
           429: errorResponse,
           500: errorResponse,
         },
@@ -186,14 +207,66 @@ export async function paperRoutes(app: FastifyInstance) {
         if (b.type !== 'market' && !b.triggerPrice) {
           return reply.status(400).send({ error: 'triggerPrice is required for limit / stop' });
         }
+        const size = sizeOf(b);
+        if (!size) return reply.status(400).send({ error: SIZE_REQUIRED });
         const executed = await app.trading.placeOrder(userIdOf(request), {
+          // A pre-BP-2 client sends no market: its orders are today's leveraged trading
+          category: b.category ?? 'linear',
           symbol: b.symbol,
           side: b.side,
           type: b.type,
-          usdtAmount: positive(b.usdtAmount, 'usdtAmount'),
+          size,
           ...(b.type !== 'market' && b.triggerPrice
             ? { triggerPrice: positive(b.triggerPrice, 'triggerPrice') }
             : {}),
+          ...(b.takeProfit ? { takeProfit: positive(b.takeProfit, 'takeProfit') } : {}),
+          ...(b.stopLoss ? { stopLoss: positive(b.stopLoss, 'stopLoss') } : {}),
+        });
+        return send(reply, executed);
+      })
+  );
+
+  // ── POST /spot/exits — TP / SL on spot coins already held ───────────────────
+  app.post<{ Body: PlaceSpotExitsRequest }>(
+    '/spot/exits',
+    {
+      onRequest: [app.authenticate],
+      config: mutationRateLimit,
+      schema: {
+        tags: ['Paper Trading'],
+        summary: 'Place a spot take-profit / stop-loss pair on coins you hold (locks them)',
+        ...secured,
+        body: {
+          type: 'object',
+          required: ['symbol', 'qty'],
+          additionalProperties: false,
+          properties: {
+            symbol: { type: 'string', enum: [...ALLOWED_SYMBOLS] },
+            qty: decimalString,
+            takeProfit: decimalString,
+            stopLoss: decimalString,
+          },
+        },
+        response: {
+          200: actionResponse({ type: ['string', 'null'] }),
+          400: errorResponse,
+          401: errorResponse,
+          409: errorResponse,
+          422: errorResponse,
+          429: errorResponse,
+          500: errorResponse,
+        },
+      },
+    },
+    async (request, reply) =>
+      guarded(reply, async () => {
+        const b = request.body;
+        if (!b.takeProfit && !b.stopLoss) {
+          return reply.status(400).send({ error: 'takeProfit or stopLoss is required' });
+        }
+        const executed = await app.trading.placeSpotExits(userIdOf(request), {
+          symbol: b.symbol,
+          qty: positive(b.qty, 'qty'),
           ...(b.takeProfit ? { takeProfit: positive(b.takeProfit, 'takeProfit') } : {}),
           ...(b.stopLoss ? { stopLoss: positive(b.stopLoss, 'stopLoss') } : {}),
         });
@@ -217,6 +290,7 @@ export async function paperRoutes(app: FastifyInstance) {
           401: errorResponse,
           404: errorResponse,
           409: errorResponse,
+          422: errorResponse,
           429: errorResponse,
           500: errorResponse,
         },
@@ -243,10 +317,11 @@ export async function paperRoutes(app: FastifyInstance) {
         params: idParam,
         body: {
           type: 'object',
-          required: ['triggerPrice', 'usdtAmount', 'takeProfit', 'stopLoss'],
+          required: ['triggerPrice', 'takeProfit', 'stopLoss'],
           additionalProperties: false,
           properties: {
             triggerPrice: decimalString,
+            qty: decimalString,
             usdtAmount: decimalString,
             takeProfit: nullableDecimal,
             stopLoss: nullableDecimal,
@@ -258,6 +333,7 @@ export async function paperRoutes(app: FastifyInstance) {
           401: errorResponse,
           404: errorResponse,
           409: errorResponse,
+          422: errorResponse,
           429: errorResponse,
           500: errorResponse,
         },
@@ -266,14 +342,14 @@ export async function paperRoutes(app: FastifyInstance) {
     async (request, reply) =>
       guarded(reply, async () => {
         const b = request.body;
-        const executed = await app.trading.editOrder(
-          userIdOf(request),
-          request.params.id,
-          positive(b.triggerPrice, 'triggerPrice'),
-          positive(b.usdtAmount, 'usdtAmount'),
-          optionalPositive(b.takeProfit, 'takeProfit'),
-          optionalPositive(b.stopLoss, 'stopLoss')
-        );
+        const size = sizeOf(b);
+        if (!size) return reply.status(400).send({ error: SIZE_REQUIRED });
+        const executed = await app.trading.editOrder(userIdOf(request), request.params.id, {
+          triggerPrice: positive(b.triggerPrice, 'triggerPrice'),
+          size,
+          takeProfit: optionalPositive(b.takeProfit, 'takeProfit'),
+          stopLoss: optionalPositive(b.stopLoss, 'stopLoss'),
+        });
         return send(reply, executed, { notFound: (r) => r === 'not-found' });
       })
   );
@@ -294,6 +370,7 @@ export async function paperRoutes(app: FastifyInstance) {
           401: errorResponse,
           404: errorResponse,
           409: errorResponse,
+          422: errorResponse,
           429: errorResponse,
           500: errorResponse,
         },
@@ -336,6 +413,7 @@ export async function paperRoutes(app: FastifyInstance) {
           401: errorResponse,
           404: errorResponse,
           409: errorResponse,
+          422: errorResponse,
           429: errorResponse,
           500: errorResponse,
         },
@@ -372,6 +450,7 @@ export async function paperRoutes(app: FastifyInstance) {
           401: errorResponse,
           404: errorResponse,
           409: errorResponse,
+          422: errorResponse,
           429: errorResponse,
           500: errorResponse,
         },
@@ -407,6 +486,7 @@ export async function paperRoutes(app: FastifyInstance) {
           401: errorResponse,
           404: errorResponse,
           409: errorResponse,
+          422: errorResponse,
           429: errorResponse,
           500: errorResponse,
         },
@@ -421,7 +501,53 @@ export async function paperRoutes(app: FastifyInstance) {
       )
   );
 
-  // ── PATCH /account/leverage ──────────────────────────────────────────────────
+  // ── PATCH /symbols/:symbol/leverage — USDT Perpetual leverage per symbol ─────
+  app.patch<{ Params: { symbol: string }; Body: { leverage: number } }>(
+    '/symbols/:symbol/leverage',
+    {
+      onRequest: [app.authenticate],
+      config: mutationRateLimit,
+      schema: {
+        tags: ['Paper Trading'],
+        summary: "Set a symbol's USDT Perpetual leverage (1–10; locked while it has open trades)",
+        ...secured,
+        params: {
+          type: 'object',
+          required: ['symbol'],
+          additionalProperties: false,
+          properties: { symbol: { type: 'string', enum: [...ALLOWED_SYMBOLS] } },
+        },
+        body: {
+          type: 'object',
+          required: ['leverage'],
+          additionalProperties: false,
+          properties: { leverage: { type: 'integer', minimum: 1, maximum: 10 } },
+        },
+        response: {
+          200: actionResponse({ type: 'integer' }),
+          400: errorResponse,
+          401: errorResponse,
+          409: errorResponse,
+          422: errorResponse,
+          429: errorResponse,
+          500: errorResponse,
+        },
+      },
+    },
+    async (request, reply) =>
+      guarded(reply, async () =>
+        send(
+          reply,
+          await app.trading.setSymbolLeverage(
+            userIdOf(request),
+            request.params.symbol,
+            request.body.leverage
+          )
+        )
+      )
+  );
+
+  // ── PATCH /account/leverage — default leverage (pre-BP-2 clients; remove in BP-3) ──
   app.patch<{ Body: { leverage: number } }>(
     '/account/leverage',
     {
@@ -429,7 +555,7 @@ export async function paperRoutes(app: FastifyInstance) {
       config: mutationRateLimit,
       schema: {
         tags: ['Paper Trading'],
-        summary: 'Set the account leverage (1–10)',
+        summary: 'Set the default leverage for symbols without their own (1–10)',
         ...secured,
         body: {
           type: 'object',
@@ -442,6 +568,7 @@ export async function paperRoutes(app: FastifyInstance) {
           400: errorResponse,
           401: errorResponse,
           409: errorResponse,
+          422: errorResponse,
           429: errorResponse,
           500: errorResponse,
         },
@@ -468,6 +595,7 @@ export async function paperRoutes(app: FastifyInstance) {
           200: actionResponse({ type: 'boolean' }),
           401: errorResponse,
           409: errorResponse,
+          422: errorResponse,
           429: errorResponse,
           500: errorResponse,
         },
@@ -500,6 +628,7 @@ export async function paperRoutes(app: FastifyInstance) {
           400: errorResponse,
           401: errorResponse,
           409: errorResponse,
+          422: errorResponse,
           429: errorResponse,
           500: errorResponse,
         },
@@ -527,6 +656,7 @@ export async function paperRoutes(app: FastifyInstance) {
           400: errorResponse,
           401: errorResponse,
           409: errorResponse,
+          422: errorResponse,
           429: errorResponse,
           500: errorResponse,
         },

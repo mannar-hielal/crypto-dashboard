@@ -2,17 +2,20 @@
  * Trigger evaluation — pure port of the browser monitors (hooks/useTPSLMonitor.ts,
  * hooks/usePendingOrderMonitor.ts).
  *
- * Live: the server sees every tick, so triggers are checked on the tick price alone and fill at
- * that price (BP-1 S3). The browser also swept the forming candle's high/low, which could fire an
- * order on a price printed before the order existed.
+ * Live: the server sees every tick, so triggers are checked on the tick's last price alone (BP-1
+ * S3). Where they fill is decided by executeTrigger (BP-2): a resting limit at its own price, a
+ * stop / TP / SL at the live ask / bid.
  *
  * Backfill: after a gap (restart, Bybit outage), 1m candles are swept in time order using their
- * high/low, like the browser's candle sweep. The fill is at the crossed level, and a candle that
- * started before an order was placed is ignored.
+ * high/low, like the browser's candle sweep. There is no quote for the past, so the fill is at the
+ * crossed level (`fillAt`), and a candle that started before an order was placed is ignored.
+ *
+ * Every check is per market: a USDT Perpetual position never triggers on a spot price.
  */
 
 import type { Decimal } from '@prisma/client/runtime/client';
 import type {
+  Category,
   ExitLeg,
   OrderSide,
   PendingOrder,
@@ -43,30 +46,35 @@ export function checkPendingTrigger(
   order: { side: OrderSide; type: PendingType; triggerPrice: Decimal },
   price: Decimal
 ): boolean {
-  if (order.type === 'limit') {
-    // Limit buy fills at/below its price, limit sell at/above.
-    return order.side === 'buy' ? price.lte(order.triggerPrice) : price.gte(order.triggerPrice);
-  }
-  // Stop buy triggers at/above, stop sell at/below.
-  return order.side === 'buy' ? price.gte(order.triggerPrice) : price.lte(order.triggerPrice);
+  return triggersOnDrop(order) ? price.lte(order.triggerPrice) : price.gte(order.triggerPrice);
 }
 
-/** True for orders that trigger on a price drop (limit buy, stop sell). */
+/**
+ * True for orders that trigger on a price drop: limit buy, stop sell, and a spot stop-loss (a
+ * sell); a limit sell, stop buy and a spot take-profit (a sell) trigger on a rise.
+ */
 function triggersOnDrop(order: { side: OrderSide; type: PendingType }): boolean {
-  return (
-    (order.side === 'buy' && order.type === 'limit') ||
-    (order.side === 'sell' && order.type === 'stop')
-  );
+  const buy = order.side === 'buy';
+  switch (order.type) {
+    case 'limit':
+    case 'take-profit':
+      return buy;
+    case 'stop':
+    case 'stop-loss':
+      return !buy;
+  }
 }
 
 // ─── Triggers ──────────────────────────────────────────────────────────────────
 
+/** `price` is the last price that triggered it; `fillAt` is set only by a candle backfill. */
 export type Trigger =
-  | { kind: 'exit'; positionId: string; leg: ExitLeg; price: Decimal }
-  | { kind: 'fill'; orderId: string; price: Decimal };
+  | { kind: 'exit'; positionId: string; leg: ExitLeg; price: Decimal; fillAt?: Decimal }
+  | { kind: 'fill'; orderId: string; price: Decimal; fillAt?: Decimal };
 
-/** Live tick: every position / pending order of `symbol` that `price` triggers. */
+/** Live tick: every position / pending order of `category:symbol` that `price` triggers. */
 export function evaluateTick(
+  category: Category,
   symbol: string,
   price: Decimal,
   positions: Position[],
@@ -74,7 +82,7 @@ export function evaluateTick(
 ): Trigger[] {
   const triggers: Trigger[] = [];
   for (const pos of positions) {
-    if (pos.symbol !== symbol) continue;
+    if (pos.category !== category || pos.symbol !== symbol) continue;
     const hit = checkTPSL(pos, price);
     if (hit) {
       triggers.push({
@@ -86,7 +94,7 @@ export function evaluateTick(
     }
   }
   for (const order of pendingOrders) {
-    if (order.symbol !== symbol) continue;
+    if (order.category !== category || order.symbol !== symbol) continue;
     if (checkPendingTrigger(order, price))
       triggers.push({ kind: 'fill', orderId: order.id, price });
   }
@@ -106,6 +114,7 @@ export interface Candle {
  * skipped, because its range includes prices from before that item existed (S3).
  */
 export function evaluateCandle(
+  category: Category,
   symbol: string,
   candle: Candle,
   positions: Position[],
@@ -113,7 +122,9 @@ export function evaluateCandle(
 ): Trigger[] {
   const triggers: Trigger[] = [];
   for (const pos of positions) {
-    if (pos.symbol !== symbol || candle.start < pos.openedAt) continue;
+    if (pos.category !== category || pos.symbol !== symbol || candle.start < pos.openedAt) {
+      continue;
+    }
     const high = candle.high;
     const low = candle.low;
     let leg: ExitLeg | null = null;
@@ -126,14 +137,21 @@ export function evaluateCandle(
     }
     if (leg) {
       const level = (leg === 'take-profit' ? pos.takeProfit : pos.stopLoss) as Decimal;
-      triggers.push({ kind: 'exit', positionId: pos.id, leg, price: level });
+      triggers.push({ kind: 'exit', positionId: pos.id, leg, price: level, fillAt: level });
     }
   }
   for (const order of pendingOrders) {
-    if (order.symbol !== symbol || candle.start < order.placedAt) continue;
+    if (order.category !== category || order.symbol !== symbol || candle.start < order.placedAt) {
+      continue;
+    }
     const extreme = triggersOnDrop(order) ? candle.low : candle.high;
     if (checkPendingTrigger(order, extreme)) {
-      triggers.push({ kind: 'fill', orderId: order.id, price: order.triggerPrice });
+      triggers.push({
+        kind: 'fill',
+        orderId: order.id,
+        price: order.triggerPrice,
+        fillAt: order.triggerPrice,
+      });
     }
   }
   return triggers;

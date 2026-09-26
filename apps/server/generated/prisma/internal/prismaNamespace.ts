@@ -391,6 +391,8 @@ export const ModelName = {
   EmailChangeToken: 'EmailChangeToken',
   Subscriber: 'Subscriber',
   Account: 'Account',
+  SpotBalance: 'SpotBalance',
+  SymbolSetting: 'SymbolSetting',
   Position: 'Position',
   Order: 'Order',
   Trade: 'Trade',
@@ -412,7 +414,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "refreshToken" | "passwordResetToken" | "verificationToken" | "emailChangeToken" | "subscriber" | "account" | "position" | "order" | "trade" | "journalEntry" | "balanceEvent" | "engineLease"
+    modelProps: "user" | "refreshToken" | "passwordResetToken" | "verificationToken" | "emailChangeToken" | "subscriber" | "account" | "spotBalance" | "symbolSetting" | "position" | "order" | "trade" | "journalEntry" | "balanceEvent" | "engineLease"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -931,6 +933,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.AccountCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.AccountCountAggregateOutputType> | number
+        }
+      }
+    }
+    SpotBalance: {
+      payload: Prisma.$SpotBalancePayload<ExtArgs>
+      fields: Prisma.SpotBalanceFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.SpotBalanceFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SpotBalancePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.SpotBalanceFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SpotBalancePayload>
+        }
+        findFirst: {
+          args: Prisma.SpotBalanceFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SpotBalancePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.SpotBalanceFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SpotBalancePayload>
+        }
+        findMany: {
+          args: Prisma.SpotBalanceFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SpotBalancePayload>[]
+        }
+        create: {
+          args: Prisma.SpotBalanceCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SpotBalancePayload>
+        }
+        createMany: {
+          args: Prisma.SpotBalanceCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.SpotBalanceCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SpotBalancePayload>[]
+        }
+        delete: {
+          args: Prisma.SpotBalanceDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SpotBalancePayload>
+        }
+        update: {
+          args: Prisma.SpotBalanceUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SpotBalancePayload>
+        }
+        deleteMany: {
+          args: Prisma.SpotBalanceDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.SpotBalanceUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.SpotBalanceUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SpotBalancePayload>[]
+        }
+        upsert: {
+          args: Prisma.SpotBalanceUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SpotBalancePayload>
+        }
+        aggregate: {
+          args: Prisma.SpotBalanceAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateSpotBalance>
+        }
+        groupBy: {
+          args: Prisma.SpotBalanceGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SpotBalanceGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.SpotBalanceCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SpotBalanceCountAggregateOutputType> | number
+        }
+      }
+    }
+    SymbolSetting: {
+      payload: Prisma.$SymbolSettingPayload<ExtArgs>
+      fields: Prisma.SymbolSettingFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.SymbolSettingFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SymbolSettingPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.SymbolSettingFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SymbolSettingPayload>
+        }
+        findFirst: {
+          args: Prisma.SymbolSettingFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SymbolSettingPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.SymbolSettingFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SymbolSettingPayload>
+        }
+        findMany: {
+          args: Prisma.SymbolSettingFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SymbolSettingPayload>[]
+        }
+        create: {
+          args: Prisma.SymbolSettingCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SymbolSettingPayload>
+        }
+        createMany: {
+          args: Prisma.SymbolSettingCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.SymbolSettingCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SymbolSettingPayload>[]
+        }
+        delete: {
+          args: Prisma.SymbolSettingDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SymbolSettingPayload>
+        }
+        update: {
+          args: Prisma.SymbolSettingUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SymbolSettingPayload>
+        }
+        deleteMany: {
+          args: Prisma.SymbolSettingDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.SymbolSettingUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.SymbolSettingUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SymbolSettingPayload>[]
+        }
+        upsert: {
+          args: Prisma.SymbolSettingUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SymbolSettingPayload>
+        }
+        aggregate: {
+          args: Prisma.SymbolSettingAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateSymbolSetting>
+        }
+        groupBy: {
+          args: Prisma.SymbolSettingGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SymbolSettingGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.SymbolSettingCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SymbolSettingCountAggregateOutputType> | number
         }
       }
     }
@@ -1511,6 +1661,30 @@ export const AccountScalarFieldEnum = {
 export type AccountScalarFieldEnum = (typeof AccountScalarFieldEnum)[keyof typeof AccountScalarFieldEnum]
 
 
+export const SpotBalanceScalarFieldEnum = {
+  id: 'id',
+  accountId: 'accountId',
+  coin: 'coin',
+  free: 'free',
+  locked: 'locked',
+  avgCost: 'avgCost',
+  updatedAt: 'updatedAt'
+} as const
+
+export type SpotBalanceScalarFieldEnum = (typeof SpotBalanceScalarFieldEnum)[keyof typeof SpotBalanceScalarFieldEnum]
+
+
+export const SymbolSettingScalarFieldEnum = {
+  id: 'id',
+  accountId: 'accountId',
+  symbol: 'symbol',
+  leverage: 'leverage',
+  marginMode: 'marginMode'
+} as const
+
+export type SymbolSettingScalarFieldEnum = (typeof SymbolSettingScalarFieldEnum)[keyof typeof SymbolSettingScalarFieldEnum]
+
+
 export const PositionScalarFieldEnum = {
   id: 'id',
   refId: 'refId',
@@ -1521,6 +1695,11 @@ export const PositionScalarFieldEnum = {
   quantity: 'quantity',
   entryPrice: 'entryPrice',
   margin: 'margin',
+  category: 'category',
+  leverage: 'leverage',
+  marginMode: 'marginMode',
+  entryFee: 'entryFee',
+  closeFeeReserve: 'closeFeeReserve',
   takeProfit: 'takeProfit',
   stopLoss: 'stopLoss',
   openedAt: 'openedAt',
@@ -1536,6 +1715,7 @@ export const OrderScalarFieldEnum = {
   refId: 'refId',
   userId: 'userId',
   accountId: 'accountId',
+  category: 'category',
   symbol: 'symbol',
   side: 'side',
   orderType: 'orderType',
@@ -1549,6 +1729,11 @@ export const OrderScalarFieldEnum = {
   margin: 'margin',
   commission: 'commission',
   leverage: 'leverage',
+  reserved: 'reserved',
+  feeRate: 'feeRate',
+  feeAsset: 'feeAsset',
+  isMaker: 'isMaker',
+  ocoGroup: 'ocoGroup',
   status: 'status',
   rejectionReason: 'rejectionReason',
   createdAt: 'createdAt',
@@ -1567,6 +1752,7 @@ export const TradeScalarFieldEnum = {
   userId: 'userId',
   accountId: 'accountId',
   orderId: 'orderId',
+  category: 'category',
   symbol: 'symbol',
   side: 'side',
   quantity: 'quantity',
@@ -1864,6 +2050,8 @@ export type GlobalOmitConfig = {
   emailChangeToken?: Prisma.EmailChangeTokenOmit
   subscriber?: Prisma.SubscriberOmit
   account?: Prisma.AccountOmit
+  spotBalance?: Prisma.SpotBalanceOmit
+  symbolSetting?: Prisma.SymbolSettingOmit
   position?: Prisma.PositionOmit
   order?: Prisma.OrderOmit
   trade?: Prisma.TradeOmit
