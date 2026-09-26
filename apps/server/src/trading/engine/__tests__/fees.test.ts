@@ -444,3 +444,35 @@ describe('the default leverage can not get around the per-symbol lock', () => {
     expectDec(res.delta.pendingUpsert[0].usdtAmount, D(80).div(3).toString());
   });
 });
+
+describe('PR #136 review — editing a limit across the book is priced at the book', () => {
+  it('a buy edited far above the ask fills at the ask even when a reserve at the new limit would not fit', () => {
+    // 10×: 1 BTC at a 49,000 limit reserves ~4,954. Balance leaves no room for a reserve at
+    // 110,000 (~11,121), but at the 50,000 ask the fill costs ~5,055 — affordable.
+    const placed = placePending(
+      account({ balance: D(6_000) }),
+      {
+        symbol: 'BTCUSDT',
+        side: 'buy',
+        type: 'limit',
+        triggerPrice: D(49_000),
+        size: { qty: D(1) },
+      },
+      quote(49_990, 50_000),
+      BTC_RULES,
+      ctx
+    );
+    const order = placed.delta.pendingUpsert[0];
+    const res = editPending(
+      account({ balance: placed.delta.account.balance, pendingOrders: [order] }),
+      order.id,
+      { triggerPrice: D(110_000), size: { qty: D(1) }, takeProfit: null, stopLoss: null },
+      quote(49_990, 50_000),
+      BTC_RULES,
+      ctx
+    );
+    expect(res.result).toBe('ok');
+    expectDec(res.delta.positionsUpsert[0].entryPrice, '50000');
+    expect(res.delta.orders.some((o) => o.status === 'rejected')).toBe(false);
+  });
+});

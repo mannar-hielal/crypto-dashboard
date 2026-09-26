@@ -1628,23 +1628,23 @@ export function OrderAccountManagementPanel({
                                           className="rounded px-1 py-px font-bold uppercase"
                                           style={{
                                             fontSize: fontSize.xs10,
-                                            background: isExitOrder
-                                              ? ex!.exitType === 'Take Profit'
-                                                ? `${color.green}22`
-                                                : `${color.red}22`
-                                              : type === 'limit'
-                                                ? `${color.purpleDark}33`
-                                                : `${color.amber}22`,
-                                            color: isExitOrder
-                                              ? ex!.exitType === 'Take Profit'
-                                                ? color.green
-                                                : color.red
-                                              : type === 'limit'
-                                                ? color.purpleDark
-                                                : color.amber,
+                                            // Same pill as Order History: a spot TP / SL leg is a
+                                            // pending row but gets the green / red exit pill
+                                            ...(isExitOrder
+                                              ? {
+                                                  background:
+                                                    ex!.exitType === 'Take Profit'
+                                                      ? `${color.green}22`
+                                                      : `${color.red}22`,
+                                                  color:
+                                                    ex!.exitType === 'Take Profit'
+                                                      ? color.green
+                                                      : color.red,
+                                                }
+                                              : orderTypePillStyle(type, color)),
                                           }}
                                         >
-                                          {isExitOrder ? ex!.exitType : type}
+                                          {isExitOrder ? ex!.exitType : orderTypeLabel(type)}
                                         </span>
                                       </td>
                                     )}

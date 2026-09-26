@@ -50,18 +50,20 @@ async function tradingPlugin(fastify: FastifyInstance): Promise<void> {
 
   // Instrument rules per "category:symbol" — bounded: 2 categories × ALLOWED_SYMBOLS
   const rules = new Map<string, InstrumentRules>();
-  const refreshRules = async () => {
-    for (const category of ALLOWED_CATEGORIES) {
-      try {
-        for (const instrument of await getInstruments(category)) {
-          rules.set(`${category}:${instrument.symbol}`, rulesFromInstrument(instrument));
+  // The markets are independent: fetched in parallel, so a slow one never delays the other
+  const refreshRules = () =>
+    Promise.all(
+      ALLOWED_CATEGORIES.map(async (category) => {
+        try {
+          for (const instrument of await getInstruments(category)) {
+            rules.set(`${category}:${instrument.symbol}`, rulesFromInstrument(instrument));
+          }
+        } catch (err) {
+          // Keep the previous rules (or the bundled fallback) — trading never blocks on this
+          log.warn({ err, category }, 'Instrument rules refresh failed');
         }
-      } catch (err) {
-        // Keep the previous rules (or the bundled fallback) — trading never blocks on this
-        log.warn({ err, category }, 'Instrument rules refresh failed');
-      }
-    }
-  };
+      })
+    );
 
   const market: MarketSource = {
     quote: (category, symbol) => {

@@ -16,6 +16,7 @@
 
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { WebSocket } from '@fastify/websocket';
+import { Decimal } from '@prisma/client/runtime/client';
 import type { MarketCategory, PaperPriceDTO, WsPaperMessage } from '@crypto-dashboard/sdk';
 import { config } from '../../config.js';
 import { logger } from '../../logger.js';
@@ -44,7 +45,10 @@ export function marketsOf(account: {
   for (const p of account.positions) keys.add(`${p.category}:${p.symbol}`);
   for (const o of account.pendingOrders) keys.add(`${o.category}:${o.symbol}`);
   for (const h of account.spot) {
-    if (Number(h.free.toString()) + Number(h.locked.toString()) > 0) keys.add(`spot:${h.coin}USDT`);
+    // Decimal, never Number: a tiny balance must not round to zero and drop its price feed
+    if (new Decimal(h.free.toString()).plus(h.locked.toString()).gt(0)) {
+      keys.add(`spot:${h.coin}USDT`);
+    }
   }
   return keys;
 }

@@ -88,6 +88,17 @@ describe('store → URL', () => {
     expect(pane()).toMatchObject({ category: 'spot', symbol: 'BTCUSDT' });
   });
 
+  it('Back applies the URL without a phantom navigation, so Forward still works (PR #136)', () => {
+    renderAt('/dashboard/spot/BTC/USDT');
+    act(() => useLayoutStore.getState().setPaneMarket(0, 'linear', 'BTCUSDT'));
+    act(() => navigateRef.current!(-1));
+    expect(where()).toBe('/dashboard/spot/BTC/USDT');
+    expect(screen.getByTestId('where').dataset.type).toBe('POP');
+    act(() => navigateRef.current!(1));
+    expect(where()).toBe('/dashboard/usdt/BTCUSDT');
+    expect(pane()).toMatchObject({ category: 'linear', symbol: 'BTCUSDT' });
+  });
+
   it('focusing another pane replaces the entry instead of pushing one', () => {
     useLayoutStore.setState((s) => ({
       panes: s.panes.map((p, i) => (i === 1 ? { ...p, category: 'linear', symbol: 'ETHUSDT' } : p)),

@@ -751,6 +751,15 @@ describe('BP-2 — markets in the account panel', () => {
     expect(screen.queryAllByText(/70,000/).length).toBe(0);
   });
 
+  it('labels a spot stop-loss leg "Stop Loss" in the Type column (PR #136)', () => {
+    onSpot();
+    usePaperStore.setState({ pendingOrders: [spotLeg], orders: [], positions: [] });
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: /^orders/i }));
+    expect(screen.getByText('Stop Loss')).toBeTruthy();
+    expect(screen.queryByText('stop-loss')).toBeNull();
+  });
+
   it('offers no TP / SL edit on a spot TP / SL order (it is cancelled and placed again)', () => {
     onSpot();
     usePaperStore.setState({ pendingOrders: [spotLeg], orders: [], positions: [] });

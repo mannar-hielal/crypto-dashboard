@@ -53,9 +53,16 @@ export function useMarketUrlSync(): void {
   const pathname = location.pathname;
   const fromDefault = (location.state as DashboardEntryState | null)?.fromDefault === true;
 
+  /** The URL the store → URL direction compares against (never a render-time write) */
+  const pathnameRef = useRef(pathname);
+
   // ── URL → store (load, back / forward, a typed URL) ────────────────────────
   // Layout effect: applied before the feeds' effects subscribe, so the old market never connects.
   useLayoutEffect(() => {
+    // First: setPaneMarket below notifies the store → URL subscriber synchronously, and it must
+    // see that the URL already shows this market — else it navigates again (a phantom entry that
+    // wipes the Forward history)
+    pathnameRef.current = pathname;
     const parsed = parseMarketPath(pathname);
     if (!parsed) return; // DashboardRedirect handles URLs that name no market
     const current = activeMarket();
@@ -75,10 +82,6 @@ export function useMarketUrlSync(): void {
   }, [pathname, navigate, location.state]);
 
   // ── Store → URL ────────────────────────────────────────────────────────────
-  const pathnameRef = useRef(pathname);
-  useLayoutEffect(() => {
-    pathnameRef.current = pathname;
-  }, [pathname]);
   useEffect(() => {
     let previousPane = useLayoutStore.getState().activePane;
     return useLayoutStore.subscribe((state) => {

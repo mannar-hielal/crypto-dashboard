@@ -26,6 +26,7 @@ vi.mock('../plugins/prisma.js', () => {
 });
 
 import { buildApp } from '../app.js';
+import { marketsOf } from '../routes/paper/ws.js';
 import { TradingError, WAITING_FOR_PRICE } from '../trading/TradingService.js';
 
 const EMPTY_DELTA = {
@@ -666,5 +667,19 @@ describe('WS /api/paper/ws (BP-1)', () => {
     await sixth.closed;
     expect(sixth.code()).toBe(1013);
     for (const s of sockets) s.ws.terminate();
+  });
+});
+
+describe('marketsOf (PR #136 review)', () => {
+  it('keeps a tiny coin balance in the price feed (Decimal, never Number)', () => {
+    const keys = marketsOf({
+      positions: [],
+      pendingOrders: [],
+      spot: [
+        { coin: 'BTC', free: '0.00000001', locked: '0' },
+        { coin: 'ETH', free: '0', locked: '0' },
+      ],
+    });
+    expect([...keys]).toEqual(['spot:BTCUSDT']);
   });
 });

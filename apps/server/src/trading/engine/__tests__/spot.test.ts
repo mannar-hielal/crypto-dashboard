@@ -653,3 +653,32 @@ describe('spot — review fixes', () => {
     expectDec(btc(after)?.free, '0.0499');
   });
 });
+
+describe('PR #136 review — a crossing limit is priced at the book, not the limit', () => {
+  it('a buy limit above the ask is affordable at the ask even when qty × limit is not', () => {
+    // 1,000 USDT; ask 95; 10 @ limit 110 → costs 950 now (not 1,100)
+    const state = { ...fresh(), balance: D(1_000) };
+    const res = placeSpotLimit(
+      state,
+      { symbol: 'BTCUSDT', side: 'buy', triggerPrice: D(110), size: { qty: D(10) } },
+      quote(94, 95),
+      { ...RULES, minNotional: D(0) },
+      ctx()
+    );
+    expect(res.invalid).toBeUndefined();
+    expectDec(applyDelta(state, res.delta).balance, '50');
+    expectDec(res.delta.orders[0].fillPrice, '95');
+  });
+
+  it('a resting buy still needs qty × limit', () => {
+    const state = { ...fresh(), balance: D(1_000) };
+    const res = placeSpotLimit(
+      state,
+      { symbol: 'BTCUSDT', side: 'buy', triggerPrice: D(90), size: { qty: D(12) } },
+      quote(94, 95),
+      { ...RULES, minNotional: D(0) },
+      ctx()
+    );
+    expect(res.invalid).toContain('Balance insufficient');
+  });
+});

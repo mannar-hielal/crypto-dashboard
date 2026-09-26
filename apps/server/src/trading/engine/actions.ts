@@ -883,8 +883,11 @@ export function editPending(
   const reserve = pendingReserve(newQty, newTrigger, leverage);
   const typeLabel = pendingTypeLabel(order.type);
   const sideLabel = pendingSideLabel(order.side);
+  // A limit moved across the book trades now: its cost is decided at the ask / bid (below), not
+  // by a reserve priced at the new limit
+  const crossing = order.type === 'limit' && !!quote && crossesBook(order.side, newTrigger, quote);
 
-  if (reserve.total.gt(scratchBalance)) {
+  if (!crossing && reserve.total.gt(scratchBalance)) {
     // Not enough funds: reject the edit, cancel the order and its exit legs, refund the reserve.
     d.prependOrders(
       {
@@ -967,7 +970,7 @@ export function editPending(
   if (exitCancels.length) d.prependOrders(...exitCancels);
 
   // A limit moved across the book trades now (taker), with the edited TP / SL
-  if (order.type === 'limit' && quote && crossesBook(order.side, newTrigger, quote)) {
+  if (crossing && quote) {
     d.balance = d.balance.plus(oldReserved);
     d.removePending(orderId);
     const edited: PendingOrder = { ...order, triggerPrice: newTrigger, qty: newQty, leverage };

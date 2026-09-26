@@ -374,12 +374,13 @@ export function placeSpotLimit(
   const d = new Draft(state);
   const free = d.holding(coin).free;
   if (side === 'sell' && qty.gt(free)) return refused(state, null, REJECT_SPOT_BALANCE(free, coin));
-  if (side === 'buy' && qty.times(limit).gt(d.balance)) {
-    return refused(state, null, REJECT_SPOT_BALANCE(d.balance, 'USDT'));
-  }
 
   if (crossesBook(side, limit, quote)) {
     const fill = { symbol, qty, price: bookPrice(side, quote), isMaker: false };
+    // It trades now at the ask, so that's what it costs — not qty × the (higher) limit
+    if (side === 'buy' && qty.times(fill.price).gt(d.balance)) {
+      return refused(state, null, REJECT_SPOT_BALANCE(d.balance, 'USDT'));
+    }
     if (side === 'sell') {
       const pnl = sellInto(d, fill, 'free', ctx, { crossingLimit: limit });
       return { delta: d.toDelta(), result: d.orders[0].id, sound: pnl.gte(0) ? 'profit' : 'loss' };
@@ -388,6 +389,11 @@ export function placeSpotLimit(
     if (exitProblem) return refused(state, null, exitProblem);
     const id = buyInto(d, fill, ctx, { crossingLimit: limit, takeProfit: tp, stopLoss: sl });
     return { delta: d.toDelta(), result: id, sound: 'placed' };
+  }
+
+  // A resting buy takes qty × limit USDT
+  if (side === 'buy' && qty.times(limit).gt(d.balance)) {
+    return refused(state, null, REJECT_SPOT_BALANCE(d.balance, 'USDT'));
   }
 
   // TP / SL of a resting buy are checked against its limit (they attach once it fills)

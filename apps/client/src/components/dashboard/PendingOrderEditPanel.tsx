@@ -11,11 +11,8 @@
 import { useId, useState } from 'react';
 import { X, TrendingUp, TrendingDown, ArrowLeftRight, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { FEE_RATES } from '@crypto-dashboard/sdk';
 import { leverageFor, usePaperStore } from '@/store/paperStore';
-
-/** USDT Perpetual taker rate — a resting order reserves taker open + close fee estimates */
-const TAKER = Number(FEE_RATES.linear.taker);
+import { orderPreview } from '@/lib/orderMath';
 import { bg, color, fontSize } from '@/lib/tokens';
 import { fmtMktPrice } from '@/lib/utils';
 import { Toggle } from '@/components/ui/Toggle';
@@ -125,10 +122,16 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
   const spotSell = activeOrder.category === 'spot' && activeOrder.side === 'sell';
   const oldReserved = spotSell ? 0 : activeOrder.reserved;
   const scratchBalance = balance + oldReserved;
-  const newRequired =
-    activeOrder.category === 'spot'
-      ? newQty * newPrice
-      : newUsdtAmount + 2 * newQty * newPrice * TAKER;
+  // The same estimate the order form shows (lib/orderMath): perpetual IM + taker open and close
+  // fee estimates, spot buy qty × price
+  const newRequired = orderPreview({
+    category: activeOrder.category,
+    side: activeOrder.side,
+    qty: newQty,
+    price: newPrice,
+    leverage,
+    baseAsset,
+  }).cost;
   const insufficientFunds = spotSell
     ? newQty > coinFree + activeOrder.reserved
     : newRequired > scratchBalance;
@@ -274,7 +277,10 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
                 ? submitError
                 : submitResult === 'rejected'
                   ? 'Order rejected — not enough funds.'
-                  : `Not enough funds. Required: $${newRequired.toFixed(2)}, Available: $${scratchBalance.toFixed(2)}`}
+                  : spotSell
+                    ? // A spot sell is limited by coins, not USDT
+                      `Not enough ${baseAsset}. Required: ${fmtMktPrice(newQty)}, Available: ${fmtMktPrice(coinFree + activeOrder.reserved)}`
+                    : `Not enough funds. Required: $${newRequired.toFixed(2)}, Available: $${scratchBalance.toFixed(2)}`}
             </p>
           </div>
         )}
