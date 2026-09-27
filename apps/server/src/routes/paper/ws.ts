@@ -69,6 +69,9 @@ function bump(map: Map<string, number>, key: string, by: number): void {
 export async function privatePaperWs(app: FastifyInstance): Promise<void> {
   app.get('/ws', { websocket: true }, (socket: WebSocket, request: FastifyRequest) => {
     const ip = clientIp(request);
+    const openedAt = Date.now();
+    // reqId + visitor IP tie this socket to its upgrade request line and to a device (fly logs)
+    const conn = { reqId: request.id, clientIp: ip };
 
     // 🔐 Cross-site WebSocket hijacking guard for browsers (which always send Origin): another site's
     //    page can't open this socket. Non-browser clients can omit Origin — that's fine: the real
@@ -95,11 +98,36 @@ export async function privatePaperWs(app: FastifyInstance): Promise<void> {
     let expiryTimer: NodeJS.Timeout | null = null;
     let pongTimer: NodeJS.Timeout | null = null;
     let released = false;
+    let closeLogged = false;
 
     const send = (message: WsPaperMessage) => {
       if (socket.readyState === 1 /* OPEN */) socket.send(JSON.stringify(message));
     };
 
+    /**
+     * One "Paper WS closed" line per socket, with the close code (and the reason when the server
+     * closed it). Written by whichever close path sees the code first — never by the error path, which
+     * is always followed by the real close event (review #154).
+     */
+    const logClosed = (code: number, reason?: string, rejectedUserId?: string) => {
+      if (closeLogged) return;
+      closeLogged = true;
+      // A verified user refused before the socket was theirs (too many tabs) is named too
+      const who = userId ?? rejectedUserId;
+      log.info(
+        {
+          ...conn,
+          authenticated: userId !== null,
+          ...(who ? { userId: who } : {}),
+          code,
+          ...(reason ? { reason } : {}),
+          durationMs: Date.now() - openedAt,
+        },
+        'Paper WS closed'
+      );
+    };
+
+    /** Free the socket's timers, subscription and slots (idempotent; logs nothing). */
     const release = () => {
       if (released) return;
       released = true;
@@ -132,10 +160,17 @@ export async function privatePaperWs(app: FastifyInstance): Promise<void> {
       if (items.length) send({ type: 'prices', items });
     };
 
-    const closeUnauthorized = (reason: string) => {
-      socket.close(WS_CLOSE_UNAUTHORIZED, reason);
+    /**
+     * The server closes the socket: release (and log) with the code and reason it sent — the
+     * socket's own 'close' event comes later and finds it already released.
+     */
+    const closeWith = (code: number, reason: string, rejectedUserId?: string) => {
+      socket.close(code, reason);
       release();
+      logClosed(code, reason, rejectedUserId);
     };
+
+    const closeUnauthorized = (reason: string) => closeWith(WS_CLOSE_UNAUTHORIZED, reason);
 
     const authTimer = setTimeout(() => {
       if (!userId) closeUnauthorized('Auth timeout');
@@ -178,13 +213,13 @@ export async function privatePaperWs(app: FastifyInstance): Promise<void> {
       if (userId) return; // re-auth with a fresh token: nothing else to do
 
       if ((perUser.get(payload.userId) ?? 0) >= MAX_PER_USER) {
-        socket.close(1013, 'Too many open tabs');
-        release();
+        closeWith(1013, 'Too many open tabs', payload.userId);
         return;
       }
       userId = payload.userId;
       bump(perUser, userId, 1);
       clearTimeout(authTimer);
+      log.info({ ...conn, userId }, 'Paper WS connected');
 
       // Subscribe before loading the snapshot, buffering deltas until it's sent, so nothing
       // committed in between is lost. The client applies deltas idempotently.
@@ -213,24 +248,21 @@ export async function privatePaperWs(app: FastifyInstance): Promise<void> {
         pricesTimer = setInterval(pushPrices, PRICES_EVERY_MS);
       } catch (err) {
         log.error({ err }, 'Paper WS snapshot failed');
-        socket.close(1011, 'Internal error');
-        release();
+        closeWith(1011, 'Internal error');
       }
     };
 
     socket.on('message', (raw: Buffer) => {
       // 🔐 Size guard before JSON.parse
       if (raw.length > MAX_MESSAGE_BYTES) {
-        socket.close(1009, 'Message too large');
-        release();
+        closeWith(1009, 'Message too large');
         return;
       }
       let message: unknown;
       try {
         message = JSON.parse(raw.toString());
       } catch {
-        socket.close(1008, 'Malformed message');
-        release();
+        closeWith(1008, 'Malformed message');
         return;
       }
       const m = message as { type?: unknown; token?: unknown };
@@ -238,13 +270,17 @@ export async function privatePaperWs(app: FastifyInstance): Promise<void> {
         void authenticate(m.token);
         return;
       }
-      socket.close(1008, 'Unexpected message');
-      release();
+      closeWith(1008, 'Unexpected message');
     });
 
-    socket.on('close', release);
+    socket.on('close', (code: number) => {
+      release();
+      logClosed(code);
+    });
+    // Clean up on error too (web.md: a listener only on 'close' leaks on abnormal disconnects); the
+    // close line comes from the 'close' event that always follows, with the real code
     socket.on('error', (err: Error) => {
-      log.error({ err }, 'Paper WS error');
+      log.error({ err, ...conn }, 'Paper WS error');
       release();
     });
   });
