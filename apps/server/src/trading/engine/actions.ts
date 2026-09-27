@@ -1569,9 +1569,10 @@ export function settleFunding(
       time: ts,
     });
     const paid = charged.gt(0);
+    // Stamped at the funding timestamp, like the execution — a backfilled settlement runs later
     d.prependBalanceEvent({
       id: `bl-${id}`,
-      time: ctx.now,
+      time: ts,
       balanceBefore,
       balanceAfter: d.balance,
       pnl: charged.neg(),
@@ -1580,7 +1581,7 @@ export function settleFunding(
     d.prependJournal(
       systemEntry(
         `j-${id}`,
-        ctx.now,
+        ts,
         `Funding ${paid ? 'fee' : 'received'} ${paid ? '−' : '+'}$${charged.abs().toFixed(4)} · ${label} ${symbol} ${snap.qty.toFixed(6)} @ mark $${fmtPrice(mark)}, rate ${fmtRate(rate)}`,
         charged.neg()
       )

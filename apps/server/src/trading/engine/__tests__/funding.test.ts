@@ -112,6 +112,16 @@ describe('settleFunding — who pays', () => {
     );
     expect(res.sound).toBeUndefined(); // Bybit settles silently
   });
+
+  it('stamps the Balance History row and the journal line at the funding timestamp (review #143)', () => {
+    const state = holding('buy');
+    // A backfill runs hours after the timestamp it settles
+    const late = { ...ctx, now: TS + 5 * 3_600_000 };
+    const res = settleFunding(state, spec(state, '0.0001'), late);
+    expect(res.delta.fundings[0].time).toBe(TS);
+    expect(res.delta.balanceEvents[0].time).toBe(TS);
+    expect(res.delta.journal[0].time).toBe(TS);
+  });
 });
 
 describe('settleFunding — once per timestamp', () => {

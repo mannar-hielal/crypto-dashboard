@@ -600,8 +600,9 @@ All funding rules live **in the server engine**; the client gets display only.
   - A position closed or reduced after `ts` (a close in the seconds before the settlement ran) is still charged on its
     snapshot size — it was held at the timestamp, as on Bybit — from the balance.
   - `realizedPnl -= fee`; position `cumFunding += fee` (for the Positions row).
-  - **Idempotent:** `Position.lastFundingAt` (and, for the snapshot of a position that's gone, the execution row's
-    deterministic id `fund-<accountId>-<symbol>-<ts>`) makes a re-run a no-op — restart, retry or a second machine.
+  - **Idempotent:** `SymbolSetting.lastFundingAt` (per account + symbol, written in the same version-guarded
+    transaction) makes a re-run of a timestamp a no-op — restart, retry, a second machine, and also for a snapshot
+    position that's gone. Execution row id: `fund-<positionId>-<ts>`.
 - [x] **Records:** a `Funding` execution row (`Trade.execType = 'Funding'`, qty, mark as price, `feeRate` = rate, fee
       signed as Bybit), a journal line ("Funding fee −$0.42 · LONG BTCUSDT 0.015 @ mark $84,331.83, rate 0.0100%" /
       "Funding received +$…"), and a Balance History row (Bybit's transaction-log type `SETTLEMENT`). No sound (Bybit
@@ -634,7 +635,7 @@ All funding rules live **in the server engine**; the client gets display only.
       out `MAX_HISTORY`; they're returned as their own capped list (Bybit's execution list, for the later API-parity
       test) and shown through Balance History / journal / the Positions row.
 - [x] SDK: `PaperPositionDTO.cumFunding?`, `PaperTradeDTO.execType` adds `'Funding'` + `feeRate?`, `funding?`;
-      `PaperStateDTO.fundingExecutions?` (optional fields — a pre-BP-4 server sends none, the BP-3 lesson).
+      `PaperStateDTO.fundings?: PaperFundingDTO[]` and `PaperDeltaDTO.fundings?` (optional fields — a pre-BP-4 server sends none, the BP-3 lesson).
 
 **E. UI (visual Q&A gate first)**
 
