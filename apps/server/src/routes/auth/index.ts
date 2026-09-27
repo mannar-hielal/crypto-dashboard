@@ -1015,6 +1015,18 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: 'Invalid or expired reset token' });
     }
 
+    // Is this browser signed in to the account being reset? (Looked up before the sessions are
+    // revoked below, so the cookie can be cleared afterwards.)
+    // cookie name is a known constant — safe, controlled access
+    // eslint-disable-next-line security/detect-object-injection
+    const rawRefresh = request.cookies[REFRESH_TOKEN_COOKIE];
+    const browserSession = rawRefresh
+      ? await app.prisma.refreshToken.findUnique({
+          where: { tokenHash: hashToken(rawRefresh) },
+          select: { userId: true },
+        })
+      : null;
+
     const hashedPassword = await argon2.hash(password);
 
     // 🔐 Interactive transaction: consume the token FIRST so that if a concurrent
@@ -1047,6 +1059,11 @@ export async function authRoutes(app: FastifyInstance) {
 
     // 🔐 Invalidate all active sessions — force re-login after password change
     await app.prisma.refreshToken.deleteMany({ where: { userId: resetToken.userId } });
+    // …including this browser's, if it was one of them: clear its now-dead refresh cookie so the
+    // next page load doesn't present a revoked token and get a 401.
+    if (browserSession?.userId === resetToken.userId) {
+      void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
+    }
 
     return reply.send({ message: 'Password updated successfully. Please log in again.' });
   });

@@ -1035,6 +1035,53 @@ describe('POST /api/auth/reset-password', () => {
     expect(res.json<{ message: string }>().message).toMatch(/password updated/i);
   });
 
+  describe('refresh cookie of the browser doing the reset', () => {
+    const validReset = {
+      id: 'prt-1',
+      tokenHash: 'hashed',
+      userId: 'user-1',
+      expiresAt: FUTURE,
+      usedAt: null,
+    };
+    const resetWithCookie = () =>
+      app.inject({
+        method: 'POST',
+        url: '/api/auth/reset-password',
+        headers: { cookie: `refresh_token=${'f'.repeat(64)}` },
+        payload: { token: VALID_TOKEN, password: STRONG_PASSWORD },
+      });
+    const clearsRefreshCookie = (setCookie: string | string[] | undefined) =>
+      [setCookie ?? []].flat().some((c) => /^refresh_token=;/.test(c));
+
+    it('should clear the cookie when this browser was signed in to the reset account', async () => {
+      (app.prisma.passwordResetToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        validReset
+      );
+      (app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        userId: 'user-1',
+      });
+
+      const res = await resetWithCookie();
+
+      expect(res.statusCode).toBe(200);
+      expect(clearsRefreshCookie(res.headers['set-cookie'])).toBe(true);
+    });
+
+    it("should leave another account's session cookie alone", async () => {
+      (app.prisma.passwordResetToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        validReset
+      );
+      (app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        userId: 'someone-else',
+      });
+
+      const res = await resetWithCookie();
+
+      expect(res.statusCode).toBe(200);
+      expect(clearsRefreshCookie(res.headers['set-cookie'])).toBe(false);
+    });
+  });
+
   it('returns 400 when the token is not found in the DB', async () => {
     (app.prisma.passwordResetToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
       null
