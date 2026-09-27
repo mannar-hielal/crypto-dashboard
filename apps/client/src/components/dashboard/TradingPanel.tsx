@@ -488,6 +488,20 @@ export function TradingPanel({
       setFormError(`Not enough ${baseAsset} available (spot can't be sold short)`);
       return null;
     }
+    // Reduce-only / close-on-trigger needs an opposite position to shrink (server: Bybit 110017)
+    if (reducing) {
+      const pos = positions.find((p) => p.category === 'linear' && p.symbol === symbol);
+      if (!pos) {
+        setFormError('Reduce-only needs an open position on this symbol to reduce');
+        return null;
+      }
+      if ((pos.side === 'long') === (side === 'buy')) {
+        setFormError(
+          `Reduce-only can only reduce your ${pos.side} position — use ${pos.side === 'long' ? 'Sell' : 'Buy'}`
+        );
+        return null;
+      }
+    }
     // A reduce-only order closes: it holds no margin (the server caps it at the position)
     if (!spotSell && !reducing && (preview?.cost ?? Infinity) > balance) {
       setFormError('Insufficient balance');

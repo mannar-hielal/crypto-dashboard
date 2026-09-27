@@ -37,7 +37,7 @@ import { render, screen, fireEvent, cleanup, within, waitFor } from '@testing-li
 import { TradingPanel } from '../TradingPanel';
 import { useLayoutStore } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
-import { usePaperStore } from '@/store/paperStore';
+import { usePaperStore, type Position } from '@/store/paperStore';
 import { useAuthStore } from '@/store/authStore';
 import { emptyState, fakePaperApi, resetFakePaperApi } from '@/test/fakePaperApi';
 
@@ -1091,6 +1091,29 @@ describe('BP-3 — liquidation in the USDT Perpetual form', () => {
 
 // ─── BP-5 B — trigger source, reduce-only, close-on-trigger ─────────────────
 
+/** An open 0.1 BTC long (USDT Perpetual) for the reduce-only cases */
+function longPosition(): Position {
+  return {
+    id: 'p-long',
+    category: 'linear',
+    symbol: 'BTCUSDT',
+    side: 'long',
+    quantity: 0.1,
+    entryPrice: 50_000,
+    entryUsdtAmount: 500,
+    leverage: 10,
+    entryFee: 2.75,
+    closeFeeReserve: 2.475,
+    extraMargin: 0,
+    liqPrice: 45_148.99,
+    bustPrice: 45_000,
+    positionIM: 502.475,
+    positionMM: 18.975,
+    cumFunding: 0,
+    openedAt: 1,
+  };
+}
+
 describe('BP-5 B — order flags and trigger source (USDT Perpetual)', () => {
   it('a TP set to trigger on the mark price sends tpTriggerBy', async () => {
     renderPanel();
@@ -1111,8 +1134,31 @@ describe('BP-5 B — order flags and trigger source (USDT Perpetual)', () => {
     expect(fakePaperApi.placeOrder.mock.calls[0][0]).not.toHaveProperty('slTriggerBy');
   });
 
-  it('Reduce-only hides TP / SL, skips the balance check and sends reduceOnly', async () => {
+  it('Reduce-only with no position, or on the position side, is stopped before submit (review #146)', () => {
     renderPanel();
+    fireEvent.click(screen.getByLabelText('Reduce-only'));
+    fireEvent.change(getQtyInput(), { target: { value: '100' } });
+    clickExecuteBtn();
+    expect(
+      screen.getByText('Reduce-only needs an open position on this symbol to reduce')
+    ).toBeTruthy();
+    expect(fakePaperApi.placeOrder).not.toHaveBeenCalled();
+    cleanup();
+    usePaperStore.setState({ positions: [longPosition()] });
+    renderPanel();
+    fireEvent.click(screen.getByLabelText('Reduce-only'));
+    fireEvent.change(getQtyInput(), { target: { value: '100' } });
+    clickExecuteBtn(); // Buy on a long
+    expect(
+      screen.getByText('Reduce-only can only reduce your long position — use Sell')
+    ).toBeTruthy();
+    expect(fakePaperApi.placeOrder).not.toHaveBeenCalled();
+  });
+
+  it('Reduce-only hides TP / SL, skips the balance check and sends reduceOnly', async () => {
+    usePaperStore.setState({ positions: [longPosition()] });
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: /sell/i }));
     fireEvent.click(screen.getByLabelText('Reduce-only'));
     expect(screen.queryByText('Exits')).toBeNull();
     // Far more than the balance: a reduce-only order holds no margin (the server caps it)
@@ -1126,6 +1172,7 @@ describe('BP-5 B — order flags and trigger source (USDT Perpetual)', () => {
   });
 
   it('Close on trigger is offered for a stop order only, and implies reduce-only', async () => {
+    usePaperStore.setState({ positions: [longPosition()] });
     renderPanel();
     expect(screen.queryByLabelText('Close on trigger')).toBeNull();
     // A sell stop below the market: a stop-loss for a long
