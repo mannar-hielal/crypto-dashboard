@@ -18,6 +18,7 @@ import {
   MAX_ORDERS,
   STARTING_BALANCE,
   type AccountState,
+  type FundingSnapshot,
   type Delta,
 } from './engine/index.js';
 import {
@@ -43,6 +44,9 @@ import {
   type RiskTiersFor,
 } from './mappers.js';
 import { fallbackRiskTiers } from './bybitSpec.js';
+
+/** Most closing Trade rows read for one missed funding timestamp of one symbol (BP-5 F) */
+const CLOSED_POSITIONS_READ_LIMIT = 5_000;
 
 /** Symbols whose settled-funding marker differs between two maps (BP-4). */
 function changedFundingAt(before: Record<string, number>, after: Record<string, number>): string[] {
@@ -78,6 +82,7 @@ export function isEmptyDelta(delta: Delta, before: AccountState): boolean {
     delta.account.leverage === before.leverage &&
     changedLeverage(before.symbolLeverage, delta.account.symbolLeverage).length === 0 &&
     changedFundingAt(before.symbolFundingAt, delta.account.symbolFundingAt).length === 0 &&
+    delta.account.marginMode === (before.marginMode ?? 'ISOLATED_MARGIN') &&
     delta.positionsUpsert.length === 0 &&
     delta.positionsRemove.length === 0 &&
     delta.spotUpsert.length === 0 &&
@@ -86,6 +91,7 @@ export function isEmptyDelta(delta: Delta, before: AccountState): boolean {
     delta.orders.length === 0 &&
     delta.trades.length === 0 &&
     delta.fundings.length === 0 &&
+    delta.closedTradeFunding.length === 0 &&
     delta.balanceEvents.length === 0 &&
     delta.journal.length === 0 &&
     delta.journalEdits.length === 0
@@ -111,6 +117,8 @@ export interface LoadedAccount {
   accountId: string;
   version: number;
   state: AccountState;
+  /** The account was isolated before cross existed: show the one-time notice (BP-5 E, O2) */
+  marginModeNotice: boolean;
 }
 
 type Tx = Prisma.TransactionClient;
@@ -141,6 +149,7 @@ export class AccountRepository {
     return {
       accountId: account.id,
       version: account.version,
+      marginModeNotice: account.marginModeNotice,
       state: {
         balance: new Decimal(account.availableBalance.toString()),
         realizedPnl: new Decimal(account.realizedPnl.toString()),
@@ -158,6 +167,9 @@ export class AccountRepository {
         spot: spot.map(spotFromRow),
         positions: positions.map(positionFromRow),
         pendingOrders: pending.map(pendingFromRow),
+        ...(account.marginMode === 'REGULAR_MARGIN'
+          ? { marginMode: 'REGULAR_MARGIN' as const }
+          : {}),
       },
     };
   }
@@ -203,6 +215,11 @@ export class AccountRepository {
         totalBalance: balance.plus(realizedPnl),
         realizedPnl,
         leverage,
+        marginMode: delta.account.marginMode,
+        // A mode switch answers the one-time cross notice (BP-5 E)
+        ...(delta.account.marginMode !== (loaded.state.marginMode ?? 'ISOLATED_MARGIN')
+          ? { marginModeNotice: false }
+          : {}),
         version: { increment: 1 },
         ...(delta.reset ? { lastReset: new Date(), resetCount: { increment: 1 } } : {}),
       },
@@ -302,6 +319,37 @@ export class AccountRepository {
     for (const f of [...delta.fundings].reverse()) {
       await tx.trade.create({ data: { ...fundingData(f), id: f.id, userId, accountId } });
     }
+    // A fee for a position closed before its settlement goes onto its closes (BP-5 F): split over
+    // every close after the timestamp by the quantity each closed, as the fee was charged on their
+    // total (the last close takes the rounding remainder)
+    for (const f of delta.closedTradeFunding) {
+      const closes = await tx.trade.findMany({
+        where: {
+          userId,
+          symbol: f.symbol,
+          category: 'linear',
+          execType: { in: ['Trade', 'BustTrade'] },
+          openedAt: new Date(f.openedAt),
+          executedAt: { gte: new Date(f.ts) },
+        },
+        orderBy: { seq: 'asc' },
+        select: { id: true, quantity: true },
+      });
+      const total = closes.reduce((sum, c) => sum.plus(c.quantity.toString()), new Decimal(0));
+      if (total.lte(0)) continue;
+      let left = f.funding;
+      for (const [i, c] of closes.entries()) {
+        const share =
+          i === closes.length - 1
+            ? left
+            : f.funding.times(c.quantity.toString()).div(total).toDecimalPlaces(8);
+        left = left.minus(share);
+        await tx.trade.updateMany({
+          where: { id: c.id, userId },
+          data: { funding: { increment: share }, pnl: { decrement: share } },
+        });
+      }
+    }
     for (const b of [...delta.balanceEvents].reverse()) {
       await tx.balanceEvent.create({
         data: { ...balanceEventData(b), id: b.id, userId, accountId },
@@ -345,7 +393,7 @@ export class AccountRepository {
 
   /** Full account view for GET /api/paper/state and the private WS snapshot. */
   async snapshot(userId: string): Promise<PaperStateDTO> {
-    const { state, version } = await this.load(userId);
+    const { state, version, marginModeNotice } = await this.load(userId);
     const [orders, trades, journal, balanceEvents, fundings] = await Promise.all([
       this.prisma.order.findMany({
         where: { userId, status: { not: 'PENDING' } },
@@ -381,9 +429,13 @@ export class AccountRepository {
         realizedPnl: state.realizedPnl.toString(),
         leverage: state.leverage,
         symbolLeverage: state.symbolLeverage,
+        marginMode: state.marginMode ?? 'ISOLATED_MARGIN',
+        ...(marginModeNotice ? { marginModeNotice: true } : {}),
         version,
       },
-      positions: state.positions.map((p) => positionDTO(p, this.riskTiers(p.symbol))),
+      positions: state.positions.map((p) =>
+        positionDTO(p, this.riskTiers(p.symbol), state.marginMode)
+      ),
       spotBalances: state.spot.map(spotDTO),
       pendingOrders: state.pendingOrders.map(pendingDTO),
       orders: orders.map(historyOrderFromRow),
@@ -392,6 +444,45 @@ export class AccountRepository {
       balanceEvents: balanceEvents.map(balanceEventFromRow),
       fundings: fundings.map(fundingFromRow),
     };
+  }
+
+  /**
+   * USDT Perpetual positions held at funding timestamp `ts` on `symbol` and closed since (BP-5 F),
+   * per user, from the closing Trade rows: a position is one open time; its size at `ts` is what
+   * was closed after `ts`. Bounded read (a missed timestamp, one symbol).
+   */
+  async closedPositionsAt(symbol: string, ts: number): Promise<Map<string, FundingSnapshot[]>> {
+    const rows = await this.prisma.trade.findMany({
+      where: {
+        symbol,
+        category: 'linear',
+        execType: { in: ['Trade', 'BustTrade'] },
+        openedAt: { lte: new Date(ts) },
+        executedAt: { gt: new Date(ts) },
+      },
+      select: { userId: true, side: true, quantity: true, openedAt: true },
+      take: CLOSED_POSITIONS_READ_LIMIT,
+    });
+    const byUser = new Map<string, Map<number, FundingSnapshot>>();
+    for (const r of rows) {
+      if (!r.openedAt) continue;
+      const openedAt = r.openedAt.getTime();
+      let positions = byUser.get(r.userId);
+      if (!positions) {
+        positions = new Map();
+        byUser.set(r.userId, positions);
+      }
+      const qty = new Decimal(r.quantity.toString());
+      const known = positions.get(openedAt);
+      positions.set(openedAt, {
+        positionId: `closed-${openedAt}`,
+        // The trade row stores the closing side: SELL closed a long
+        side: r.side === 'BUY' ? 'short' : 'long',
+        qty: known ? known.qty.plus(qty) : qty,
+        openedAt,
+      });
+    }
+    return new Map([...byUser].map(([userId, positions]) => [userId, [...positions.values()]]));
   }
 
   /**

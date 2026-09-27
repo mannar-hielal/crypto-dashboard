@@ -73,13 +73,16 @@ const MAX_BACKFILL_MS = 7 * 24 * 60 * 60_000;
 /**
  * Which price a backfill candle is built from: the last traded price (`/v5/market/kline` — TP/SL,
  * stops and limit fills trigger on it) or the mark price (`/v5/market/mark-price-kline`, USDT
- * Perpetual only — liquidation triggers on it, BP-3).
+ * Perpetual only — liquidation triggers on it, BP-3) or the index price
+ * (`/v5/market/index-price-kline`, USDT Perpetual only — for a TP / SL / stop set to trigger on the
+ * index, BP-5 B). A leg set to the mark price reads the mark candles.
  */
-export type CandleSource = 'last' | 'mark';
+export type CandleSource = 'last' | 'mark' | 'index';
 
 const CANDLE_PATH: Record<CandleSource, string> = {
   last: '/v5/market/kline',
   mark: '/v5/market/mark-price-kline',
+  index: '/v5/market/index-price-kline',
 };
 
 /**

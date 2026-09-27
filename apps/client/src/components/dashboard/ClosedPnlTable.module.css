@@ -1,0 +1,47 @@
+.wrap {
+  flex: 1;
+  overflow: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.head th {
+  padding: 0.375rem 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.row {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.row:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.row td {
+  padding: 0.375rem 0.75rem;
+  white-space: nowrap;
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.pnl {
+  cursor: help;
+  font-weight: 600;
+}
+
+.empty {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+}

@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import * as argon2 from 'argon2';
-import { FastifyInstance, FastifyReply } from 'fastify';
+import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { Prisma } from '../../../generated/prisma/client.js';
 import { config } from '../../config.js';
 import { EmailService } from '../../services/EmailService.js';
@@ -57,6 +57,26 @@ async function withRefreshLock<T>(tokenHash: string, fn: () => Promise<T>): Prom
   }
 }
 const ACCESS_TOKEN_EXPIRY = '15m'; // Short-lived — lives only in Zustand memory
+
+// ─── REFRESH RATE LIMIT ───────────────────────────────────────────────────────
+// 🔐 Two buckets per client IP. A request that presents a refresh cookie — the credential this
+//    limit protects — keeps the strict 20 per 15 min. A request with no cookie is the app's boot
+//    probe for a signed-out visitor: it is answered 204 with no DB work and nothing issued, so it
+//    gets its own, looser bucket. Otherwise ~20 signed-out page loads (one person clicking
+//    around, or many visitors behind one NAT / CGNAT address) exhaust the budget and the next
+//    signed-in page load gets a 429 at boot and looks signed out.
+function hasRefreshCookie(request: FastifyRequest): boolean {
+  // cookie name is a known constant — safe, controlled access
+  // eslint-disable-next-line security/detect-object-injection
+  return Boolean(request.cookies?.[REFRESH_TOKEN_COOKIE]);
+}
+
+export const REFRESH_RATE_LIMIT = {
+  timeWindow: '15 minutes',
+  max: (request: FastifyRequest) => (hasRefreshCookie(request) ? 20 : 100),
+  keyGenerator: (request: FastifyRequest) =>
+    `${hasRefreshCookie(request) ? 'token' : 'probe'}:${request.ip}`,
+};
 
 // ─── TOKEN HELPERS ────────────────────────────────────────────────────────────
 // 🔐 SHA-256 hash stored in DB — if DB is breached, attacker gets hashes,
@@ -175,13 +195,14 @@ const refreshSchema = {
   tags: ['Auth'],
   summary: 'Refresh access token',
   description:
-    'Uses the httpOnly refresh token cookie (sameSite: none + secure in prod) to issue a new 15-min access token. Old refresh token is deleted and a new one is set (rotation).',
+    'Uses the httpOnly refresh token cookie (sameSite: none + secure in prod) to issue a new 15-min access token. Old refresh token is deleted and a new one is set (rotation). With no refresh cookie at all there is no session to restore: 204, no body, nothing issued. A cookie that is present but invalid, expired or replayed gets 401.',
   response: {
     200: {
       type: 'object',
       required: ['accessToken'],
       properties: { accessToken: { type: 'string' } },
     },
+    204: { type: 'null', description: 'No refresh cookie — no session to restore' },
     401: errorResponse,
   },
 };
@@ -703,13 +724,23 @@ export async function authRoutes(app: FastifyInstance) {
 
     app.log.info({ userId: stored.userId }, 'Token valid, updating user');
 
-    await app.prisma.$transaction([
-      app.prisma.user.update({
-        where: { id: stored.userId },
-        data: { emailVerifiedAt: new Date() },
-      }),
-      app.prisma.verificationToken.delete({ where: { id: stored.id } }),
-    ]);
+    // 🔐 Consume the token FIRST with deleteMany: a concurrent duplicate request (double click,
+    //    two tabs, a StrictMode double effect) gets count=0 and a 400, not a P2025 500.
+    try {
+      await app.prisma.$transaction(async (tx) => {
+        const { count } = await tx.verificationToken.deleteMany({ where: { id: stored.id } });
+        if (count === 0) throw new TokenConsumedError();
+        await tx.user.update({
+          where: { id: stored.userId },
+          data: { emailVerifiedAt: new Date() },
+        });
+      });
+    } catch (err) {
+      if (err instanceof TokenConsumedError) {
+        return reply.status(400).send({ error: 'Invalid or expired verification token' });
+      }
+      throw err;
+    }
 
     return reply.send({ message: 'Email verified successfully. You can now use all features.' });
   });
@@ -817,14 +848,17 @@ export async function authRoutes(app: FastifyInstance) {
   // ─── REFRESH ─────────────────────────────────────────────────────────────────
   app.post(
     '/refresh',
-    { schema: refreshSchema, config: { rateLimit: { max: 20, timeWindow: '15 minutes' } } },
+    { schema: refreshSchema, config: { rateLimit: REFRESH_RATE_LIMIT } },
     async (request, reply) => {
       // cookie name is a known constant — safe, controlled access
       // eslint-disable-next-line security/detect-object-injection
       const rawToken = request.cookies[REFRESH_TOKEN_COOKIE];
 
+      // The client probes this on every app boot. No cookie means a signed-out visitor, which
+      // is a normal answer, not a failed authentication: 204 and nothing issued. 🔐 A cookie
+      // that is present but rejected below still gets 401 (and replay detection still runs).
       if (!rawToken) {
-        return reply.status(401).send({ error: 'No refresh token' });
+        return reply.status(204).send();
       }
 
       const tokenHash = hashToken(rawToken);
@@ -981,6 +1015,18 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: 'Invalid or expired reset token' });
     }
 
+    // Is this browser signed in to the account being reset? (Looked up before the sessions are
+    // revoked below, so the cookie can be cleared afterwards.)
+    // cookie name is a known constant — safe, controlled access
+    // eslint-disable-next-line security/detect-object-injection
+    const rawRefresh = request.cookies[REFRESH_TOKEN_COOKIE];
+    const browserSession = rawRefresh
+      ? await app.prisma.refreshToken.findUnique({
+          where: { tokenHash: hashToken(rawRefresh) },
+          select: { userId: true },
+        })
+      : null;
+
     const hashedPassword = await argon2.hash(password);
 
     // 🔐 Interactive transaction: consume the token FIRST so that if a concurrent
@@ -1013,6 +1059,11 @@ export async function authRoutes(app: FastifyInstance) {
 
     // 🔐 Invalidate all active sessions — force re-login after password change
     await app.prisma.refreshToken.deleteMany({ where: { userId: resetToken.userId } });
+    // …including this browser's, if it was one of them: clear its now-dead refresh cookie so the
+    // next page load doesn't present a revoked token and get a 401.
+    if (browserSession?.userId === resetToken.userId) {
+      void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
+    }
 
     return reply.send({ message: 'Password updated successfully. Please log in again.' });
   });
@@ -1198,15 +1249,25 @@ export async function authRoutes(app: FastifyInstance) {
     const oldEmail = stored.user.email;
     const newEmail = stored.newEmail;
 
-    await app.prisma.$transaction([
-      app.prisma.user.update({
-        where: { id: stored.userId },
-        data: { email: newEmail, emailVerifiedAt: new Date() },
-      }),
-      app.prisma.emailChangeToken.delete({ where: { id: stored.id } }),
-      // 🔐 Standards: Security logout after email change
-      app.prisma.refreshToken.deleteMany({ where: { userId: stored.userId } }),
-    ]);
+    // 🔐 Consume the token FIRST with deleteMany: a concurrent duplicate request gets count=0
+    //    and a 400 (and no second security-alert email), not a P2025 500.
+    try {
+      await app.prisma.$transaction(async (tx) => {
+        const { count } = await tx.emailChangeToken.deleteMany({ where: { id: stored.id } });
+        if (count === 0) throw new TokenConsumedError();
+        await tx.user.update({
+          where: { id: stored.userId },
+          data: { email: newEmail, emailVerifiedAt: new Date() },
+        });
+        // 🔐 Standards: Security logout after email change
+        await tx.refreshToken.deleteMany({ where: { userId: stored.userId } });
+      });
+    } catch (err) {
+      if (err instanceof TokenConsumedError) {
+        return reply.status(400).send({ error: 'Invalid or expired token' });
+      }
+      throw err;
+    }
 
     await EmailService.sendEmailChangedSecurityAlert(oldEmail, oldEmail, newEmail);
     void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);

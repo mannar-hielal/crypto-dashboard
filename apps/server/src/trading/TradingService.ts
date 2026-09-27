@@ -22,18 +22,23 @@ import { deltaDTO } from './mappers.js';
 import type { RiskTier } from './bybitSpec.js';
 import {
   addNote,
+  adjustMargin,
   applyDelta,
   cancelExitLeg,
   cancelPending,
   cancelPendingExitLeg,
   checkPendingTrigger,
-  checkTPSL,
   closePosition,
   editNote,
   editPending,
   editSpotLimit,
   executeTrigger,
   isLiquidatable,
+  accountLiquidatable,
+  liquidateAccount,
+  legHit,
+  legTriggerBy,
+  orderTriggerBy,
   placeMarket,
   placePending,
   placeSpotExits,
@@ -43,6 +48,7 @@ import {
   setLeverage,
   setSymbolLeverage,
   settleFunding,
+  switchMarginMode,
   updatePositionExits,
   type AccountState,
   type ActionResult,
@@ -56,7 +62,9 @@ import {
   type PendingEdit,
   type Quote,
   type SpotExitsIntent,
+  type MarginMode,
   type Trigger,
+  type TriggerBy,
 } from './engine/index.js';
 
 const log = logger.child({ service: 'TradingService' });
@@ -105,6 +113,12 @@ export interface PlaceOrderIntent {
   triggerPrice?: Decimal;
   takeProfit?: Decimal;
   stopLoss?: Decimal;
+  /** BP-5 B: trigger sources, reduce-only and close-on-trigger (USDT Perpetual) */
+  triggerBy?: TriggerBy;
+  tpTriggerBy?: TriggerBy;
+  slTriggerBy?: TriggerBy;
+  reduceOnly?: boolean;
+  closeOnTrigger?: boolean;
 }
 
 export class TradingService {
@@ -126,6 +140,8 @@ export class TradingService {
       now,
       newId: () => `${now}-${randomBytes(6).toString('base64url')}`,
       riskTiers: (symbol) => this.market.riskTiers(symbol),
+      // Cross margin values positions at the fresh mark (BP-5 E); a stale one reads as unknown
+      markPrice: (symbol) => this.currentMark(symbol),
     };
   }
 
@@ -322,15 +338,25 @@ export class TradingService {
     return this.act(userId, (state, ctx) => cancelPendingExitLeg(state, orderId, leg, ctx));
   }
 
+  /**
+   * Set / change / remove a position's TP and SL. A new or changed leg is checked against the
+   * current price of its trigger source (O9) — with no fresh quote it waits for one.
+   */
   updatePositionExits(
     userId: string,
     positionId: string,
     takeProfit: Decimal | null,
-    stopLoss: Decimal | null
+    stopLoss: Decimal | null,
+    by: { tpTriggerBy?: TriggerBy; slTriggerBy?: TriggerBy } = {}
   ): Promise<Executed<boolean>> {
-    return this.act(userId, (state, ctx) =>
-      updatePositionExits(state, positionId, takeProfit, stopLoss, ctx)
-    );
+    return this.act(userId, (state, ctx) => {
+      const pos = state.positions.find((p) => p.id === positionId);
+      const q = pos ? this.currentQuote(pos.category, pos.symbol) : undefined;
+      return updatePositionExits(state, positionId, takeProfit, stopLoss, ctx, {
+        ...by,
+        prices: { last: q?.last, mark: q?.mark, index: q?.index },
+      });
+    });
   }
 
   cancelPositionExit(userId: string, positionId: string, leg: ExitLeg): Promise<Executed<boolean>> {
@@ -347,11 +373,40 @@ export class TradingService {
     });
   }
 
+  /**
+   * Add (amount > 0) or reduce (amount < 0) an isolated position's margin (BP-5 A). A reduction is
+   * checked against the live mark price. Result: the position's new extra margin.
+   */
+  adjustMargin(
+    userId: string,
+    positionId: string,
+    amount: Decimal
+  ): Promise<Executed<Decimal | null>> {
+    return this.act(userId, (state, ctx) => {
+      const pos = state.positions.find((p) => p.id === positionId);
+      return adjustMargin(
+        state,
+        positionId,
+        amount,
+        ctx,
+        pos ? this.currentMark(pos.symbol) : undefined
+      );
+    });
+  }
+
   /** Per-symbol leverage; an open position / active orders are re-margined (BP-3). */
   setSymbolLeverage(userId: string, symbol: string, leverage: number): Promise<Executed<number>> {
     return this.act(userId, (state, ctx) =>
       setSymbolLeverage(state, symbol, leverage, ctx, this.currentMark(symbol))
     );
+  }
+
+  /**
+   * Switch the account's margin mode (BP-5 E, Bybit set-margin-mode), checked against the fresh
+   * marks. Result: the mode in force.
+   */
+  setMarginMode(userId: string, mode: MarginMode): Promise<Executed<MarginMode>> {
+    return this.act(userId, (state, ctx) => switchMarginMode(state, mode, ctx));
   }
 
   /** Default leverage (pre-BP-2 clients' account-wide leverage). */
@@ -394,21 +449,54 @@ export class TradingService {
       const ctx =
         trigger.at !== undefined ? { ...liveCtx, now: Math.min(trigger.at, liveCtx.now) } : liveCtx;
       let market: { category: Category; symbol: string };
+      if (trigger.kind === 'account-liquidation') {
+        if (state.marginMode !== 'REGULAR_MARGIN') return null;
+        // Live: every held symbol needs a fresh mark — never liquidate on a stale one. A backfilled
+        // one takes the minute's worst mark for its symbol and the live marks for the others
+        const marks = new Map<string, Decimal>();
+        for (const p of state.positions) {
+          const m =
+            trigger.fillAt && p.symbol === trigger.symbol
+              ? trigger.price
+              : this.currentMark(p.symbol);
+          if (m) marks.set(p.symbol, m);
+          else if (!trigger.fillAt) return null;
+        }
+        const accountCtx = { ...ctx, markPrice: (symbol: string) => marks.get(symbol) };
+        if (!accountLiquidatable(state, accountCtx)) return null;
+        return liquidateAccount(state, accountCtx);
+      }
       if (trigger.kind === 'liquidation') {
         const pos = state.positions.find((p) => p.id === trigger.positionId);
-        if (!pos) return null;
-        const mark = trigger.fillAt ? trigger.price : this.currentMark(pos.symbol);
+        // A cross account has no per-position liquidation (the account is liquidated as a whole)
+        if (!pos || state.marginMode === 'REGULAR_MARGIN') return null;
+        // A backfilled one runs at the minute's worst mark: every tier step it reached (BP-5 C)
+        const mark = trigger.fillAt
+          ? (trigger.worstMark ?? trigger.price)
+          : this.currentMark(pos.symbol);
         if (!mark || !isLiquidatable(pos, mark, this.market.riskTiers(pos.symbol))) return null;
         return executeTrigger(state, { ...trigger, price: mark }, undefined, ctx);
       }
       if (trigger.kind === 'exit') {
         const pos = state.positions.find((p) => p.id === trigger.positionId);
-        const expected = trigger.leg === 'take-profit' ? 'TP' : 'SL';
-        if (!pos || checkTPSL(pos, trigger.price) !== expected) return null;
+        // Still set, still on the source it triggered on, and still reached
+        if (
+          !pos ||
+          legTriggerBy(pos, trigger.leg) !== (trigger.by ?? 'LastPrice') ||
+          !legHit(pos, trigger.leg, trigger.price)
+        ) {
+          return null;
+        }
         market = pos;
       } else {
         const order = state.pendingOrders.find((o) => o.id === trigger.orderId);
-        if (!order || !checkPendingTrigger(order, trigger.price)) return null;
+        if (
+          !order ||
+          orderTriggerBy(order) !== (trigger.by ?? 'LastPrice') ||
+          !checkPendingTrigger(order, trigger.price)
+        ) {
+          return null;
+        }
         market = order;
       }
       const quote = trigger.fillAt ? undefined : this.currentQuote(market.category, market.symbol);

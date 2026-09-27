@@ -265,9 +265,20 @@ describe('evaluateTick() symbol isolation (4.18 regression)', () => {
   });
 
   it('TP wins when one tick crosses both levels (misconfigured TP below SL)', () => {
-    h.placeOrder('BTCUSDT', 'buy', 50_000, 100, 40_000, 55_000);
+    // O9 refuses this pair on a new order (below); a position edited without a price check (the
+    // engine's unchecked path) can still hold it, and the tick then takes the TP
+    h.placeOrder('BTCUSDT', 'buy', 50_000, 100);
+    h.updatePositionExits(h.positions[0].id, 40_000, 55_000);
     const [t] = tick(h, 'BTCUSDT', 56_000);
     expect(t).toMatchObject({ kind: 'exit', leg: 'take-profit' });
+  });
+
+  it('O9: a new order with its TP / SL on the wrong side of the price is refused, as on Bybit', () => {
+    expect(h.placeOrder('BTCUSDT', 'buy', 50_000, 100, 40_000, 55_000)).toBeNull();
+    expect(h.lastInvalid).toBe(
+      'TakeProfit:40000 set for Buy position should be higher than base_price:50000??LastPrice'
+    );
+    expect(h.positions).toHaveLength(0);
   });
 });
 

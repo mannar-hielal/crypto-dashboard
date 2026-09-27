@@ -143,6 +143,12 @@ model Account {
   // Optimistic concurrency: every engine/API mutation bumps it (updateMany where version = v),
   // so two concurrent mutations of one account can never both commit (BP-1)
   version  Int @default(0)
+  // Margin mode, account-wide as in Bybit UTA (BP-5 E): "REGULAR_MARGIN" = cross (Bybit's default,
+  // and new accounts') | "ISOLATED_MARGIN". Accounts from before BP-5 were migrated to isolated
+  marginMode       String  @default("REGULAR_MARGIN")
+  // True for an account that was isolated before cross existed: the client shows a one-time
+  // notice about cross margin (O2). Cleared by a mode switch
+  marginModeNotice Boolean @default(false)
 
   // Metadata
   lastReset  DateTime @default(now())
@@ -237,6 +243,9 @@ model Position {
 
   takeProfit Decimal? @db.Decimal(20, 8)
   stopLoss   Decimal? @db.Decimal(20, 8)
+  // Price each exit leg triggers on (BP-5 B): "LastPrice" | "MarkPrice" | "IndexPrice"
+  tpTriggerBy String @default("LastPrice")
+  slTriggerBy String @default("LastPrice")
 
   openedAt  DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -293,6 +302,14 @@ model Order {
   ocoGroup   String?
   // Bybit createType of a system order: "CreateByLiq" = the close of a liquidated position (BP-3)
   createType String?
+  // BP-5 B: the price a stop order and its TP / SL legs trigger on ("LastPrice" | "MarkPrice" |
+  // "IndexPrice" — a limit always rests on the last price), and Bybit's reduce-only /
+  // close-on-trigger flags
+  triggerBy      String  @default("LastPrice")
+  tpTriggerBy    String  @default("LastPrice")
+  slTriggerBy    String  @default("LastPrice")
+  reduceOnly     Boolean @default(false)
+  closeOnTrigger Boolean @default(false)
 
   // State machine: PENDING -> PARTIALLY_FILLED -> FILLED | CANCELLED | REJECTED
   status          String    @default("PENDING")
@@ -357,6 +374,9 @@ model Trade {
   // A close's share of the position's funding (Closed P&L is net of it; realized PnL booked it at
   // each settlement)
   funding    Decimal  @default(0) @db.Decimal(20, 8)
+  // A close's share of the position's open fee (BP-5 D): Bybit's closedPnl = grossPnl − openFee −
+  // commission − funding. 0 on rows from before BP-5 (their open fee is only in realized PnL)
+  openFee    Decimal  @default(0) @db.Decimal(20, 8)
 
   // Metadata
   openedAt   DateTime?

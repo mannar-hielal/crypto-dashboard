@@ -2,9 +2,9 @@ import { useState, useId, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { X, ChevronUp, ChevronDown, Info, AlertTriangle } from 'lucide-react';
 import { useStore } from 'zustand';
-import type { MarketCategory } from '@crypto-dashboard/sdk';
+import type { MarketCategory, PaperTriggerBy } from '@crypto-dashboard/sdk';
 import { useLayoutStore } from '@/store/layoutStore';
-import { paneStores } from '@/store/paneStore';
+import { getLastKnownMarkPrice, paneStores } from '@/store/paneStore';
 import { leverageFor, usePaperStore, type PlaceResult } from '@/store/paperStore';
 import { MARKETS } from '@/lib/marketRoutes';
 import { feeRatesLabel, floorToStep, maxQty, orderPreview } from '@/lib/orderMath';
@@ -13,11 +13,17 @@ import { useOrderPrefillStore } from '@/store/orderPrefillStore';
 import { bg, color, fontSize } from '@/lib/tokens';
 import { LeverageChip } from './LeverageChip';
 import { LiquidationNotices } from './LiquidationNotices';
-import { LIQUIDATION_EXPLAINER } from '@/lib/positionMath';
+import {
+  LIQUIDATION_EXPLAINER,
+  crossAccountFigures,
+  crossOrderLiqEstimate,
+} from '@/lib/positionMath';
 import { fmtMktPrice } from '@/lib/utils';
 import { Toggle } from '@/components/ui/Toggle';
 import { NumericInput } from '@/components/ui/NumericInput';
 import { FieldLabel } from '@/components/ui/FieldLabel';
+import { TriggerBySelect } from '@/components/ui/TriggerBySelect';
+import { OrderFlags } from './OrderFlags';
 import { computeSLTPWarnings } from '@/lib/sltpSanity';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -113,7 +119,19 @@ export function TradingPanel({
 
   const spread = bid != null && ask != null ? ask - bid : null;
 
-  const balance = usePaperStore((s) => s.balance);
+  const freeBalance = usePaperStore((s) => s.balance);
+  const marginMode = usePaperStore((s) => s.marginMode);
+  const positions = usePaperStore((s) => s.positions);
+  const pendingOrders = usePaperStore((s) => s.pendingOrders);
+  // What an order can use: the free USDT, or in cross (BP-5 E) the account's available balance —
+  // margin balance − total IM at the live marks (unrealised profit counts, O5)
+  const crossMode = !isSpot && marginMode === 'REGULAR_MARGIN';
+  const balance = crossMode
+    ? crossAccountFigures(
+        { balance: freeBalance, positions, pendingOrders },
+        (sym) => getLastKnownMarkPrice(sym) ?? null
+      ).available
+    : freeBalance;
   // Spot is 1× — leverage is a USDT Perpetual setting, per symbol
   const leverage = usePaperStore((s) => (isSpot ? 1 : leverageFor(s, symbol)));
   const coinFree = usePaperStore(
@@ -151,6 +169,11 @@ export function TradingPanel({
   const [tpInput, setTpInput] = useState('');
   const [slInput, setSlInput] = useState('');
   const [exitsOpen, setExitsOpen] = useState(true);
+  // BP-5 B (USDT Perpetual): what the TP / SL trigger on, and the reduce-only flags
+  const [tpTriggerBy, setTpTriggerBy] = useState<PaperTriggerBy>('LastPrice');
+  const [slTriggerBy, setSlTriggerBy] = useState<PaperTriggerBy>('LastPrice');
+  const [reduceOnly, setReduceOnly] = useState(false);
+  const [closeOnTrigger, setCloseOnTrigger] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [bypassWarning, setBypassWarning] = useState(false);
   /** True when a blocking SL/TP sanity modal is waiting for user confirmation */
@@ -307,6 +330,8 @@ export function TradingPanel({
       : null;
   /** What this order can use: USDT, or — for a spot sell — the free coins */
   const spotSell = isSpot && side === 'sell';
+  /** A reduce-only / close-on-trigger perpetual order: no margin, no TP / SL (BP-5 B) */
+  const reducing = !isSpot && (reduceOnly || (tab === 'stop' && closeOnTrigger));
   const cost = preview?.cost ?? null;
   const costPct = spotSell
     ? units !== null && coinFree > 0
@@ -353,13 +378,13 @@ export function TradingPanel({
 
   // ── SL/TP sanity warnings ────────────────────────────────────────────────
   const slWarnings = computeSLTPWarnings(
-    slEnabled ? parseFloat(slInput) : NaN,
+    slEnabled && !reducing ? parseFloat(slInput) : NaN,
     execPrice ?? 0,
     latestPrice ?? 0,
     'SL'
   );
   const tpWarnings = computeSLTPWarnings(
-    tpEnabled ? parseFloat(tpInput) : NaN,
+    tpEnabled && !reducing ? parseFloat(tpInput) : NaN,
     execPrice ?? 0,
     latestPrice ?? 0,
     'TP'
@@ -463,14 +488,29 @@ export function TradingPanel({
       setFormError(`Not enough ${baseAsset} available (spot can't be sold short)`);
       return null;
     }
-    if (!spotSell && (preview?.cost ?? Infinity) > balance) {
+    // Reduce-only / close-on-trigger needs an opposite position to shrink (server: Bybit 110017)
+    if (reducing) {
+      const pos = positions.find((p) => p.category === 'linear' && p.symbol === symbol);
+      if (!pos) {
+        setFormError('Reduce-only needs an open position on this symbol to reduce');
+        return null;
+      }
+      if ((pos.side === 'long') === (side === 'buy')) {
+        setFormError(
+          `Reduce-only can only reduce your ${pos.side} position — use ${pos.side === 'long' ? 'Sell' : 'Buy'}`
+        );
+        return null;
+      }
+    }
+    // A reduce-only order closes: it holds no margin (the server caps it at the position)
+    if (!spotSell && !reducing && (preview?.cost ?? Infinity) > balance) {
       setFormError('Insufficient balance');
       return null;
     }
 
     // Spot TP / SL protect what a buy receives — a spot sell has none
-    const tp = !spotSell && tpEnabled && tpInput ? parseFloat(tpInput) : undefined;
-    const sl = !spotSell && slEnabled && slInput ? parseFloat(slInput) : undefined;
+    const tp = !spotSell && !reducing && tpEnabled && tpInput ? parseFloat(tpInput) : undefined;
+    const sl = !spotSell && !reducing && slEnabled && slInput ? parseFloat(slInput) : undefined;
 
     if (tp !== undefined) {
       if (isNaN(tp) || tp <= 0) {
@@ -548,6 +588,14 @@ export function TradingPanel({
         ...(tab !== 'market' ? { triggerPrice: execPrice } : {}),
         takeProfit: v.tp,
         stopLoss: v.sl,
+        ...(!isSpot
+          ? {
+              tpTriggerBy,
+              slTriggerBy,
+              ...(reducing ? { reduceOnly: true } : {}),
+              ...(tab === 'stop' && closeOnTrigger ? { closeOnTrigger: true } : {}),
+            }
+          : {}),
       });
     } finally {
       submittingRef.current = false;
@@ -854,10 +902,27 @@ export function TradingPanel({
               {spotSell ? `${coinFree.toFixed(6)} ${baseAsset}` : `${fmtUsd(balance)} USDT`}
             </span>
           </p>
+
+          {/* Reduce-only / close-on-trigger — USDT Perpetual (BP-5 B) */}
+          {!isSpot && (
+            <OrderFlags
+              reduceOnly={reduceOnly}
+              closeOnTrigger={closeOnTrigger}
+              showCloseOnTrigger={tab === 'stop'}
+              onReduceOnly={(v) => {
+                setReduceOnly(v);
+                setFormError(null);
+              }}
+              onCloseOnTrigger={(v) => {
+                setCloseOnTrigger(v);
+                setFormError(null);
+              }}
+            />
+          )}
         </div>
 
-        {/* ── Exits (TP / SL) — a spot sell has none ────────────────────── */}
-        {!spotSell && (
+        {/* ── Exits (TP / SL) — a spot sell and a reduce-only order have none ── */}
+        {!spotSell && !reducing && (
           <div className="rounded-md border border-white/6" style={{ background: bg.page }}>
             {/* Collapsible header */}
             <button
@@ -900,6 +965,15 @@ export function TradingPanel({
                         >
                           Take profit, price
                         </span>
+                        {tpEnabled && !isSpot && (
+                          <span className="ml-auto">
+                            <TriggerBySelect
+                              value={tpTriggerBy}
+                              onChange={setTpTriggerBy}
+                              ariaLabel="Take profit trigger price"
+                            />
+                          </span>
+                        )}
                       </div>
                       {tpEnabled && (
                         <NumericInput
@@ -956,6 +1030,15 @@ export function TradingPanel({
                         >
                           Stop loss, price
                         </span>
+                        {slEnabled && !isSpot && (
+                          <span className="ml-auto">
+                            <TriggerBySelect
+                              value={slTriggerBy}
+                              onChange={setSlTriggerBy}
+                              ariaLabel="Stop loss trigger price"
+                            />
+                          </span>
+                        )}
                       </div>
                       {slEnabled && (
                         <NumericInput
@@ -1077,8 +1160,25 @@ export function TradingPanel({
                 },
                 {
                   label: 'Est. liq. price',
-                  // 0 = a 1× long, which can't be liquidated
-                  value: preview?.liqPrice ? `$${fmtMktPrice(preview.liqPrice)}` : '—',
+                  // 0 = a 1× long, which can't be liquidated. Cross (BP-5 E): the account-wide
+                  // estimate for the position this order would leave
+                  value: (() => {
+                    const liq = crossMode
+                      ? crossOrderLiqEstimate(
+                          { balance: freeBalance, positions, pendingOrders },
+                          (sym) => getLastKnownMarkPrice(sym) ?? null,
+                          {
+                            symbol,
+                            side: side === 'buy' ? 'long' : 'short',
+                            qty: units ?? 0,
+                            price: execPrice ?? 0,
+                            leverage,
+                            openFee: preview?.openFee ?? 0,
+                          }
+                        )
+                      : preview?.liqPrice;
+                    return liq ? `$${fmtMktPrice(liq)}` : '—';
+                  })(),
                   tone: color.amber,
                   info: LIQUIDATION_EXPLAINER,
                 },

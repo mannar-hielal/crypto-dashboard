@@ -71,6 +71,8 @@ export type PositionMinAggregateOutputType = {
   cumFunding: runtime.Decimal | null
   takeProfit: runtime.Decimal | null
   stopLoss: runtime.Decimal | null
+  tpTriggerBy: string | null
+  slTriggerBy: string | null
   openedAt: Date | null
   updatedAt: Date | null
 }
@@ -94,6 +96,8 @@ export type PositionMaxAggregateOutputType = {
   cumFunding: runtime.Decimal | null
   takeProfit: runtime.Decimal | null
   stopLoss: runtime.Decimal | null
+  tpTriggerBy: string | null
+  slTriggerBy: string | null
   openedAt: Date | null
   updatedAt: Date | null
 }
@@ -117,6 +121,8 @@ export type PositionCountAggregateOutputType = {
   cumFunding: number
   takeProfit: number
   stopLoss: number
+  tpTriggerBy: number
+  slTriggerBy: number
   openedAt: number
   updatedAt: number
   _all: number
@@ -168,6 +174,8 @@ export type PositionMinAggregateInputType = {
   cumFunding?: true
   takeProfit?: true
   stopLoss?: true
+  tpTriggerBy?: true
+  slTriggerBy?: true
   openedAt?: true
   updatedAt?: true
 }
@@ -191,6 +199,8 @@ export type PositionMaxAggregateInputType = {
   cumFunding?: true
   takeProfit?: true
   stopLoss?: true
+  tpTriggerBy?: true
+  slTriggerBy?: true
   openedAt?: true
   updatedAt?: true
 }
@@ -214,6 +224,8 @@ export type PositionCountAggregateInputType = {
   cumFunding?: true
   takeProfit?: true
   stopLoss?: true
+  tpTriggerBy?: true
+  slTriggerBy?: true
   openedAt?: true
   updatedAt?: true
   _all?: true
@@ -324,6 +336,8 @@ export type PositionGroupByOutputType = {
   cumFunding: runtime.Decimal
   takeProfit: runtime.Decimal | null
   stopLoss: runtime.Decimal | null
+  tpTriggerBy: string
+  slTriggerBy: string
   openedAt: Date
   updatedAt: Date
   _count: PositionCountAggregateOutputType | null
@@ -370,6 +384,8 @@ export type PositionWhereInput = {
   cumFunding?: Prisma.DecimalFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.DecimalNullableFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.DecimalNullableFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tpTriggerBy?: Prisma.StringFilter<"Position"> | string
+  slTriggerBy?: Prisma.StringFilter<"Position"> | string
   openedAt?: Prisma.DateTimeFilter<"Position"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Position"> | Date | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -395,6 +411,8 @@ export type PositionOrderByWithRelationInput = {
   cumFunding?: Prisma.SortOrder
   takeProfit?: Prisma.SortOrderInput | Prisma.SortOrder
   stopLoss?: Prisma.SortOrderInput | Prisma.SortOrder
+  tpTriggerBy?: Prisma.SortOrder
+  slTriggerBy?: Prisma.SortOrder
   openedAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   user?: Prisma.UserOrderByWithRelationInput
@@ -423,6 +441,8 @@ export type PositionWhereUniqueInput = Prisma.AtLeast<{
   cumFunding?: Prisma.DecimalFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.DecimalNullableFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.DecimalNullableFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tpTriggerBy?: Prisma.StringFilter<"Position"> | string
+  slTriggerBy?: Prisma.StringFilter<"Position"> | string
   openedAt?: Prisma.DateTimeFilter<"Position"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Position"> | Date | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -448,6 +468,8 @@ export type PositionOrderByWithAggregationInput = {
   cumFunding?: Prisma.SortOrder
   takeProfit?: Prisma.SortOrderInput | Prisma.SortOrder
   stopLoss?: Prisma.SortOrderInput | Prisma.SortOrder
+  tpTriggerBy?: Prisma.SortOrder
+  slTriggerBy?: Prisma.SortOrder
   openedAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.PositionCountOrderByAggregateInput
@@ -479,6 +501,8 @@ export type PositionScalarWhereWithAggregatesInput = {
   cumFunding?: Prisma.DecimalWithAggregatesFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.DecimalNullableWithAggregatesFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.DecimalNullableWithAggregatesFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tpTriggerBy?: Prisma.StringWithAggregatesFilter<"Position"> | string
+  slTriggerBy?: Prisma.StringWithAggregatesFilter<"Position"> | string
   openedAt?: Prisma.DateTimeWithAggregatesFilter<"Position"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Position"> | Date | string
 }
@@ -500,6 +524,8 @@ export type PositionCreateInput = {
   cumFunding?: runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tpTriggerBy?: string
+  slTriggerBy?: string
   openedAt?: Date | string
   updatedAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutPositionsInput
@@ -525,6 +551,8 @@ export type PositionUncheckedCreateInput = {
   cumFunding?: runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tpTriggerBy?: string
+  slTriggerBy?: string
   openedAt?: Date | string
   updatedAt?: Date | string
 }
@@ -546,6 +574,8 @@ export type PositionUpdateInput = {
   cumFunding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tpTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  slTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
   openedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutPositionsNestedInput
@@ -571,6 +601,8 @@ export type PositionUncheckedUpdateInput = {
   cumFunding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tpTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  slTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
   openedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -594,6 +626,8 @@ export type PositionCreateManyInput = {
   cumFunding?: runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tpTriggerBy?: string
+  slTriggerBy?: string
   openedAt?: Date | string
   updatedAt?: Date | string
 }
@@ -615,6 +649,8 @@ export type PositionUpdateManyMutationInput = {
   cumFunding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tpTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  slTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
   openedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -638,6 +674,8 @@ export type PositionUncheckedUpdateManyInput = {
   cumFunding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tpTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  slTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
   openedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -671,6 +709,8 @@ export type PositionCountOrderByAggregateInput = {
   cumFunding?: Prisma.SortOrder
   takeProfit?: Prisma.SortOrder
   stopLoss?: Prisma.SortOrder
+  tpTriggerBy?: Prisma.SortOrder
+  slTriggerBy?: Prisma.SortOrder
   openedAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -707,6 +747,8 @@ export type PositionMaxOrderByAggregateInput = {
   cumFunding?: Prisma.SortOrder
   takeProfit?: Prisma.SortOrder
   stopLoss?: Prisma.SortOrder
+  tpTriggerBy?: Prisma.SortOrder
+  slTriggerBy?: Prisma.SortOrder
   openedAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -730,6 +772,8 @@ export type PositionMinOrderByAggregateInput = {
   cumFunding?: Prisma.SortOrder
   takeProfit?: Prisma.SortOrder
   stopLoss?: Prisma.SortOrder
+  tpTriggerBy?: Prisma.SortOrder
+  slTriggerBy?: Prisma.SortOrder
   openedAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -856,6 +900,8 @@ export type PositionCreateWithoutUserInput = {
   cumFunding?: runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tpTriggerBy?: string
+  slTriggerBy?: string
   openedAt?: Date | string
   updatedAt?: Date | string
   account: Prisma.AccountCreateNestedOneWithoutPositionsInput
@@ -879,6 +925,8 @@ export type PositionUncheckedCreateWithoutUserInput = {
   cumFunding?: runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tpTriggerBy?: string
+  slTriggerBy?: string
   openedAt?: Date | string
   updatedAt?: Date | string
 }
@@ -931,6 +979,8 @@ export type PositionScalarWhereInput = {
   cumFunding?: Prisma.DecimalFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.DecimalNullableFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.DecimalNullableFilter<"Position"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tpTriggerBy?: Prisma.StringFilter<"Position"> | string
+  slTriggerBy?: Prisma.StringFilter<"Position"> | string
   openedAt?: Prisma.DateTimeFilter<"Position"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Position"> | Date | string
 }
@@ -952,6 +1002,8 @@ export type PositionCreateWithoutAccountInput = {
   cumFunding?: runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tpTriggerBy?: string
+  slTriggerBy?: string
   openedAt?: Date | string
   updatedAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutPositionsInput
@@ -975,6 +1027,8 @@ export type PositionUncheckedCreateWithoutAccountInput = {
   cumFunding?: runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tpTriggerBy?: string
+  slTriggerBy?: string
   openedAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1023,6 +1077,8 @@ export type PositionCreateManyUserInput = {
   cumFunding?: runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tpTriggerBy?: string
+  slTriggerBy?: string
   openedAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1044,6 +1100,8 @@ export type PositionUpdateWithoutUserInput = {
   cumFunding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tpTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  slTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
   openedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   account?: Prisma.AccountUpdateOneRequiredWithoutPositionsNestedInput
@@ -1067,6 +1125,8 @@ export type PositionUncheckedUpdateWithoutUserInput = {
   cumFunding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tpTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  slTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
   openedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1089,6 +1149,8 @@ export type PositionUncheckedUpdateManyWithoutUserInput = {
   cumFunding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tpTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  slTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
   openedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1111,6 +1173,8 @@ export type PositionCreateManyAccountInput = {
   cumFunding?: runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tpTriggerBy?: string
+  slTriggerBy?: string
   openedAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1132,6 +1196,8 @@ export type PositionUpdateWithoutAccountInput = {
   cumFunding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tpTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  slTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
   openedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutPositionsNestedInput
@@ -1155,6 +1221,8 @@ export type PositionUncheckedUpdateWithoutAccountInput = {
   cumFunding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tpTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  slTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
   openedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1177,6 +1245,8 @@ export type PositionUncheckedUpdateManyWithoutAccountInput = {
   cumFunding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   takeProfit?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   stopLoss?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tpTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  slTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
   openedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1202,6 +1272,8 @@ export type PositionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   cumFunding?: boolean
   takeProfit?: boolean
   stopLoss?: boolean
+  tpTriggerBy?: boolean
+  slTriggerBy?: boolean
   openedAt?: boolean
   updatedAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -1227,6 +1299,8 @@ export type PositionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   cumFunding?: boolean
   takeProfit?: boolean
   stopLoss?: boolean
+  tpTriggerBy?: boolean
+  slTriggerBy?: boolean
   openedAt?: boolean
   updatedAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -1252,6 +1326,8 @@ export type PositionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   cumFunding?: boolean
   takeProfit?: boolean
   stopLoss?: boolean
+  tpTriggerBy?: boolean
+  slTriggerBy?: boolean
   openedAt?: boolean
   updatedAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -1277,11 +1353,13 @@ export type PositionSelectScalar = {
   cumFunding?: boolean
   takeProfit?: boolean
   stopLoss?: boolean
+  tpTriggerBy?: boolean
+  slTriggerBy?: boolean
   openedAt?: boolean
   updatedAt?: boolean
 }
 
-export type PositionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "refId" | "userId" | "accountId" | "symbol" | "side" | "quantity" | "entryPrice" | "margin" | "category" | "leverage" | "marginMode" | "entryFee" | "closeFeeReserve" | "extraMargin" | "cumFunding" | "takeProfit" | "stopLoss" | "openedAt" | "updatedAt", ExtArgs["result"]["position"]>
+export type PositionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "refId" | "userId" | "accountId" | "symbol" | "side" | "quantity" | "entryPrice" | "margin" | "category" | "leverage" | "marginMode" | "entryFee" | "closeFeeReserve" | "extraMargin" | "cumFunding" | "takeProfit" | "stopLoss" | "tpTriggerBy" | "slTriggerBy" | "openedAt" | "updatedAt", ExtArgs["result"]["position"]>
 export type PositionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   account?: boolean | Prisma.AccountDefaultArgs<ExtArgs>
@@ -1320,6 +1398,8 @@ export type $PositionPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     cumFunding: runtime.Decimal
     takeProfit: runtime.Decimal | null
     stopLoss: runtime.Decimal | null
+    tpTriggerBy: string
+    slTriggerBy: string
     openedAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["position"]>
@@ -1765,6 +1845,8 @@ export interface PositionFieldRefs {
   readonly cumFunding: Prisma.FieldRef<"Position", 'Decimal'>
   readonly takeProfit: Prisma.FieldRef<"Position", 'Decimal'>
   readonly stopLoss: Prisma.FieldRef<"Position", 'Decimal'>
+  readonly tpTriggerBy: Prisma.FieldRef<"Position", 'String'>
+  readonly slTriggerBy: Prisma.FieldRef<"Position", 'String'>
   readonly openedAt: Prisma.FieldRef<"Position", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Position", 'DateTime'>
 }

@@ -19,6 +19,7 @@ import {
   type HistoricalOrder,
   type InstrumentRules,
   type JournalEntry,
+  type MarginMode,
   type OrderSide,
   type PendingOrder,
   type PendingType,
@@ -168,6 +169,7 @@ export class Draft {
   leverage: number;
   symbolLeverage: Record<string, number>;
   symbolFundingAt: Record<string, number>;
+  marginMode: MarginMode;
   positions: Position[];
   pending: PendingOrder[];
   private spot: Map<string, SpotHolding>;
@@ -190,6 +192,7 @@ export class Draft {
     this.leverage = clampLeverage(state.leverage);
     this.symbolLeverage = { ...state.symbolLeverage };
     this.symbolFundingAt = { ...state.symbolFundingAt };
+    this.marginMode = state.marginMode ?? 'ISOLATED_MARGIN';
     this.positions = [...state.positions];
     this.pending = [...state.pendingOrders];
     this.spot = new Map(state.spot.map((h) => [h.coin, h]));
@@ -203,6 +206,7 @@ export class Draft {
   prependTrade(row: ClosedTrade): void {
     this.trades.unshift(row);
   }
+  readonly closedTradeFunding: Delta['closedTradeFunding'] = [];
   prependFunding(row: FundingExecution): void {
     this.fundings.unshift(row);
   }
@@ -271,6 +275,7 @@ export class Draft {
         leverage: this.leverage,
         symbolLeverage: this.symbolLeverage,
         symbolFundingAt: this.symbolFundingAt,
+        marginMode: this.marginMode,
       },
       positionsUpsert,
       positionsRemove,
@@ -280,6 +285,7 @@ export class Draft {
       orders: this.orders,
       trades: this.trades,
       fundings: this.fundings,
+      closedTradeFunding: this.closedTradeFunding,
       balanceEvents: this.balanceEvents,
       journal: this.journal,
       journalEdits: this.journalEdits,

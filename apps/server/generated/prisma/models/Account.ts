@@ -55,6 +55,8 @@ export type AccountMinAggregateOutputType = {
   realizedPnl: runtime.Decimal | null
   leverage: number | null
   version: number | null
+  marginMode: string | null
+  marginModeNotice: boolean | null
   lastReset: Date | null
   resetCount: number | null
   createdAt: Date | null
@@ -70,6 +72,8 @@ export type AccountMaxAggregateOutputType = {
   realizedPnl: runtime.Decimal | null
   leverage: number | null
   version: number | null
+  marginMode: string | null
+  marginModeNotice: boolean | null
   lastReset: Date | null
   resetCount: number | null
   createdAt: Date | null
@@ -85,6 +89,8 @@ export type AccountCountAggregateOutputType = {
   realizedPnl: number
   leverage: number
   version: number
+  marginMode: number
+  marginModeNotice: number
   lastReset: number
   resetCount: number
   createdAt: number
@@ -122,6 +128,8 @@ export type AccountMinAggregateInputType = {
   realizedPnl?: true
   leverage?: true
   version?: true
+  marginMode?: true
+  marginModeNotice?: true
   lastReset?: true
   resetCount?: true
   createdAt?: true
@@ -137,6 +145,8 @@ export type AccountMaxAggregateInputType = {
   realizedPnl?: true
   leverage?: true
   version?: true
+  marginMode?: true
+  marginModeNotice?: true
   lastReset?: true
   resetCount?: true
   createdAt?: true
@@ -152,6 +162,8 @@ export type AccountCountAggregateInputType = {
   realizedPnl?: true
   leverage?: true
   version?: true
+  marginMode?: true
+  marginModeNotice?: true
   lastReset?: true
   resetCount?: true
   createdAt?: true
@@ -254,6 +266,8 @@ export type AccountGroupByOutputType = {
   realizedPnl: runtime.Decimal
   leverage: number
   version: number
+  marginMode: string
+  marginModeNotice: boolean
   lastReset: Date
   resetCount: number
   createdAt: Date
@@ -292,6 +306,8 @@ export type AccountWhereInput = {
   realizedPnl?: Prisma.DecimalFilter<"Account"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: Prisma.IntFilter<"Account"> | number
   version?: Prisma.IntFilter<"Account"> | number
+  marginMode?: Prisma.StringFilter<"Account"> | string
+  marginModeNotice?: Prisma.BoolFilter<"Account"> | boolean
   lastReset?: Prisma.DateTimeFilter<"Account"> | Date | string
   resetCount?: Prisma.IntFilter<"Account"> | number
   createdAt?: Prisma.DateTimeFilter<"Account"> | Date | string
@@ -315,6 +331,8 @@ export type AccountOrderByWithRelationInput = {
   realizedPnl?: Prisma.SortOrder
   leverage?: Prisma.SortOrder
   version?: Prisma.SortOrder
+  marginMode?: Prisma.SortOrder
+  marginModeNotice?: Prisma.SortOrder
   lastReset?: Prisma.SortOrder
   resetCount?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -341,6 +359,8 @@ export type AccountWhereUniqueInput = Prisma.AtLeast<{
   realizedPnl?: Prisma.DecimalFilter<"Account"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: Prisma.IntFilter<"Account"> | number
   version?: Prisma.IntFilter<"Account"> | number
+  marginMode?: Prisma.StringFilter<"Account"> | string
+  marginModeNotice?: Prisma.BoolFilter<"Account"> | boolean
   lastReset?: Prisma.DateTimeFilter<"Account"> | Date | string
   resetCount?: Prisma.IntFilter<"Account"> | number
   createdAt?: Prisma.DateTimeFilter<"Account"> | Date | string
@@ -364,6 +384,8 @@ export type AccountOrderByWithAggregationInput = {
   realizedPnl?: Prisma.SortOrder
   leverage?: Prisma.SortOrder
   version?: Prisma.SortOrder
+  marginMode?: Prisma.SortOrder
+  marginModeNotice?: Prisma.SortOrder
   lastReset?: Prisma.SortOrder
   resetCount?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -387,6 +409,8 @@ export type AccountScalarWhereWithAggregatesInput = {
   realizedPnl?: Prisma.DecimalWithAggregatesFilter<"Account"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: Prisma.IntWithAggregatesFilter<"Account"> | number
   version?: Prisma.IntWithAggregatesFilter<"Account"> | number
+  marginMode?: Prisma.StringWithAggregatesFilter<"Account"> | string
+  marginModeNotice?: Prisma.BoolWithAggregatesFilter<"Account"> | boolean
   lastReset?: Prisma.DateTimeWithAggregatesFilter<"Account"> | Date | string
   resetCount?: Prisma.IntWithAggregatesFilter<"Account"> | number
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Account"> | Date | string
@@ -401,6 +425,8 @@ export type AccountCreateInput = {
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: number
   version?: number
+  marginMode?: string
+  marginModeNotice?: boolean
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -424,6 +450,8 @@ export type AccountUncheckedCreateInput = {
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: number
   version?: number
+  marginMode?: string
+  marginModeNotice?: boolean
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -445,6 +473,8 @@ export type AccountUpdateInput = {
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  marginModeNotice?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -468,6 +498,8 @@ export type AccountUncheckedUpdateInput = {
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  marginModeNotice?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -490,6 +522,8 @@ export type AccountCreateManyInput = {
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: number
   version?: number
+  marginMode?: string
+  marginModeNotice?: boolean
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -504,6 +538,8 @@ export type AccountUpdateManyMutationInput = {
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  marginModeNotice?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -519,6 +555,8 @@ export type AccountUncheckedUpdateManyInput = {
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  marginModeNotice?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -539,6 +577,8 @@ export type AccountCountOrderByAggregateInput = {
   realizedPnl?: Prisma.SortOrder
   leverage?: Prisma.SortOrder
   version?: Prisma.SortOrder
+  marginMode?: Prisma.SortOrder
+  marginModeNotice?: Prisma.SortOrder
   lastReset?: Prisma.SortOrder
   resetCount?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -564,6 +604,8 @@ export type AccountMaxOrderByAggregateInput = {
   realizedPnl?: Prisma.SortOrder
   leverage?: Prisma.SortOrder
   version?: Prisma.SortOrder
+  marginMode?: Prisma.SortOrder
+  marginModeNotice?: Prisma.SortOrder
   lastReset?: Prisma.SortOrder
   resetCount?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -579,6 +621,8 @@ export type AccountMinOrderByAggregateInput = {
   realizedPnl?: Prisma.SortOrder
   leverage?: Prisma.SortOrder
   version?: Prisma.SortOrder
+  marginMode?: Prisma.SortOrder
+  marginModeNotice?: Prisma.SortOrder
   lastReset?: Prisma.SortOrder
   resetCount?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -646,6 +690,10 @@ export type IntFieldUpdateOperationsInput = {
   decrement?: number
   multiply?: number
   divide?: number
+}
+
+export type BoolFieldUpdateOperationsInput = {
+  set?: boolean
 }
 
 export type AccountCreateNestedOneWithoutSpotBalancesInput = {
@@ -754,6 +802,8 @@ export type AccountCreateWithoutUserInput = {
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: number
   version?: number
+  marginMode?: string
+  marginModeNotice?: boolean
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -775,6 +825,8 @@ export type AccountUncheckedCreateWithoutUserInput = {
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: number
   version?: number
+  marginMode?: string
+  marginModeNotice?: boolean
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -812,6 +864,8 @@ export type AccountUpdateWithoutUserInput = {
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  marginModeNotice?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -833,6 +887,8 @@ export type AccountUncheckedUpdateWithoutUserInput = {
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  marginModeNotice?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -854,6 +910,8 @@ export type AccountCreateWithoutSpotBalancesInput = {
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: number
   version?: number
+  marginMode?: string
+  marginModeNotice?: boolean
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -876,6 +934,8 @@ export type AccountUncheckedCreateWithoutSpotBalancesInput = {
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: number
   version?: number
+  marginMode?: string
+  marginModeNotice?: boolean
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -912,6 +972,8 @@ export type AccountUpdateWithoutSpotBalancesInput = {
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  marginModeNotice?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -934,6 +996,8 @@ export type AccountUncheckedUpdateWithoutSpotBalancesInput = {
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  marginModeNotice?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -954,6 +1018,8 @@ export type AccountCreateWithoutSymbolSettingsInput = {
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: number
   version?: number
+  marginMode?: string
+  marginModeNotice?: boolean
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -976,6 +1042,8 @@ export type AccountUncheckedCreateWithoutSymbolSettingsInput = {
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: number
   version?: number
+  marginMode?: string
+  marginModeNotice?: boolean
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -1012,6 +1080,8 @@ export type AccountUpdateWithoutSymbolSettingsInput = {
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  marginModeNotice?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1034,6 +1104,8 @@ export type AccountUncheckedUpdateWithoutSymbolSettingsInput = {
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  marginModeNotice?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1054,6 +1126,8 @@ export type AccountCreateWithoutPositionsInput = {
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: number
   version?: number
+  marginMode?: string
+  marginModeNotice?: boolean
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -1076,6 +1150,8 @@ export type AccountUncheckedCreateWithoutPositionsInput = {
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: number
   version?: number
+  marginMode?: string
+  marginModeNotice?: boolean
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -1112,6 +1188,8 @@ export type AccountUpdateWithoutPositionsInput = {
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  marginModeNotice?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1134,6 +1212,8 @@ export type AccountUncheckedUpdateWithoutPositionsInput = {
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  marginModeNotice?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1154,6 +1234,8 @@ export type AccountCreateWithoutOrdersInput = {
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: number
   version?: number
+  marginMode?: string
+  marginModeNotice?: boolean
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -1176,6 +1258,8 @@ export type AccountUncheckedCreateWithoutOrdersInput = {
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: number
   version?: number
+  marginMode?: string
+  marginModeNotice?: boolean
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -1212,6 +1296,8 @@ export type AccountUpdateWithoutOrdersInput = {
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  marginModeNotice?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1234,6 +1320,8 @@ export type AccountUncheckedUpdateWithoutOrdersInput = {
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  marginModeNotice?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1254,6 +1342,8 @@ export type AccountCreateWithoutTradesInput = {
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: number
   version?: number
+  marginMode?: string
+  marginModeNotice?: boolean
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -1276,6 +1366,8 @@ export type AccountUncheckedCreateWithoutTradesInput = {
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: number
   version?: number
+  marginMode?: string
+  marginModeNotice?: boolean
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -1312,6 +1404,8 @@ export type AccountUpdateWithoutTradesInput = {
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  marginModeNotice?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1334,6 +1428,8 @@ export type AccountUncheckedUpdateWithoutTradesInput = {
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  marginModeNotice?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1354,6 +1450,8 @@ export type AccountCreateWithoutJournalEntriesInput = {
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: number
   version?: number
+  marginMode?: string
+  marginModeNotice?: boolean
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -1376,6 +1474,8 @@ export type AccountUncheckedCreateWithoutJournalEntriesInput = {
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: number
   version?: number
+  marginMode?: string
+  marginModeNotice?: boolean
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -1412,6 +1512,8 @@ export type AccountUpdateWithoutJournalEntriesInput = {
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  marginModeNotice?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1434,6 +1536,8 @@ export type AccountUncheckedUpdateWithoutJournalEntriesInput = {
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  marginModeNotice?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1454,6 +1558,8 @@ export type AccountCreateWithoutBalanceEventsInput = {
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: number
   version?: number
+  marginMode?: string
+  marginModeNotice?: boolean
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -1476,6 +1582,8 @@ export type AccountUncheckedCreateWithoutBalanceEventsInput = {
   realizedPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: number
   version?: number
+  marginMode?: string
+  marginModeNotice?: boolean
   lastReset?: Date | string
   resetCount?: number
   createdAt?: Date | string
@@ -1512,6 +1620,8 @@ export type AccountUpdateWithoutBalanceEventsInput = {
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  marginModeNotice?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1534,6 +1644,8 @@ export type AccountUncheckedUpdateWithoutBalanceEventsInput = {
   realizedPnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  marginMode?: Prisma.StringFieldUpdateOperationsInput | string
+  marginModeNotice?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lastReset?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   resetCount?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1640,6 +1752,8 @@ export type AccountSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   realizedPnl?: boolean
   leverage?: boolean
   version?: boolean
+  marginMode?: boolean
+  marginModeNotice?: boolean
   lastReset?: boolean
   resetCount?: boolean
   createdAt?: boolean
@@ -1664,6 +1778,8 @@ export type AccountSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   realizedPnl?: boolean
   leverage?: boolean
   version?: boolean
+  marginMode?: boolean
+  marginModeNotice?: boolean
   lastReset?: boolean
   resetCount?: boolean
   createdAt?: boolean
@@ -1680,6 +1796,8 @@ export type AccountSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   realizedPnl?: boolean
   leverage?: boolean
   version?: boolean
+  marginMode?: boolean
+  marginModeNotice?: boolean
   lastReset?: boolean
   resetCount?: boolean
   createdAt?: boolean
@@ -1696,13 +1814,15 @@ export type AccountSelectScalar = {
   realizedPnl?: boolean
   leverage?: boolean
   version?: boolean
+  marginMode?: boolean
+  marginModeNotice?: boolean
   lastReset?: boolean
   resetCount?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type AccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "totalBalance" | "availableBalance" | "unrealizedPnl" | "realizedPnl" | "leverage" | "version" | "lastReset" | "resetCount" | "createdAt" | "updatedAt", ExtArgs["result"]["account"]>
+export type AccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "totalBalance" | "availableBalance" | "unrealizedPnl" | "realizedPnl" | "leverage" | "version" | "marginMode" | "marginModeNotice" | "lastReset" | "resetCount" | "createdAt" | "updatedAt", ExtArgs["result"]["account"]>
 export type AccountInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   trades?: boolean | Prisma.Account$tradesArgs<ExtArgs>
@@ -1742,6 +1862,8 @@ export type $AccountPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     realizedPnl: runtime.Decimal
     leverage: number
     version: number
+    marginMode: string
+    marginModeNotice: boolean
     lastReset: Date
     resetCount: number
     createdAt: Date
@@ -2185,6 +2307,8 @@ export interface AccountFieldRefs {
   readonly realizedPnl: Prisma.FieldRef<"Account", 'Decimal'>
   readonly leverage: Prisma.FieldRef<"Account", 'Int'>
   readonly version: Prisma.FieldRef<"Account", 'Int'>
+  readonly marginMode: Prisma.FieldRef<"Account", 'String'>
+  readonly marginModeNotice: Prisma.FieldRef<"Account", 'Boolean'>
   readonly lastReset: Prisma.FieldRef<"Account", 'DateTime'>
   readonly resetCount: Prisma.FieldRef<"Account", 'Int'>
   readonly createdAt: Prisma.FieldRef<"Account", 'DateTime'>

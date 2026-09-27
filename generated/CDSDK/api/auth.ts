@@ -60,8 +60,11 @@ export const authApi = {
       body: JSON.stringify(body),
     }),
 
-  // Sends the httpOnly refresh_token cookie automatically — no body needed
-  refresh: () => request<RefreshResponse>('/api/auth/refresh', { method: 'POST' }),
+  // Sends the httpOnly refresh_token cookie automatically — no body needed.
+  // Resolves null when there is no session to restore (204: no refresh cookie was sent);
+  // a cookie the server rejects still throws with status 401.
+  refresh: async (): Promise<RefreshResponse | null> =>
+    (await request<RefreshResponse | undefined>('/api/auth/refresh', { method: 'POST' })) ?? null,
 
   // Clears the httpOnly cookie server-side — client discards accessToken from Zustand
   logout: () => request<void>('/api/auth/logout', { method: 'POST' }),

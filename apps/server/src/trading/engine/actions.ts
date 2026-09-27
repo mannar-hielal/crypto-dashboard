@@ -41,6 +41,7 @@ import {
   isOnTick,
   markHitsLiquidation,
   REJECT_PRICE_TICK,
+  type RiskTier,
 } from '../bybitSpec.js';
 import {
   Draft,
@@ -59,8 +60,21 @@ import {
   type OrderSize,
 } from './draft.js';
 import { fmtPrice, pendingSideLabel, pendingTypeLabel } from './format.js';
-import { riskOf, tiersFor } from './margin.js';
+import { crossFigures, riskOf, tiersFor } from './margin.js';
 import { cancelSpotPending, fillSpotPending } from './spot.js';
+import {
+  REJECT_REDUCE_ONLY_TPSL,
+  cancelReduceOnlyInto,
+  effectiveValue,
+  riskLimitProblem,
+  exitChecks,
+  exitSideProblem,
+  isReduceOnly,
+  reduceOnlyTarget,
+  triggerByOf,
+  trimReduceOnly,
+} from './orderRules.js';
+import type { PriceSet } from './triggers.js';
 import { pendingEditEntries, positionExitEditEntries, systemEntry } from './journal.js';
 import {
   REJECT_FILL_FAILED,
@@ -73,19 +87,21 @@ import {
   type ExitLeg,
   type HistoricalOrder,
   type InstrumentRules,
+  type MarginMode,
   type OrderSide,
   type PendingOrder,
   type Position,
   type PositionSide,
   type Quote,
   type SpotHolding,
+  type TriggerBy,
 } from './types.js';
 
 const FULL_CLOSE_EPSILON = new Decimal('1e-10');
 const TAKER = feeRate('linear', 'taker');
 const MAKER = feeRate('linear', 'maker');
 
-function closingSide(pos: Position): OrderSide {
+export function closingSide(pos: Position): OrderSide {
   return pos.side === 'long' ? 'sell' : 'buy';
 }
 
@@ -110,6 +126,19 @@ export function openCost(
 /** The position side an order opens. */
 const openSide = (side: OrderSide): PositionSide => (side === 'buy' ? 'long' : 'short');
 
+/** True when the account trades in cross margin (BP-5 E). */
+const isCross = (d: { marginMode: MarginMode }) => d.marginMode === 'REGULAR_MARGIN';
+
+/**
+ * What a new order or a margin change may use: the free balance in isolated margin, the account's
+ * available balance (margin balance − total IM, unrealised profit counting — O5) in cross.
+ */
+function availableFor(d: Draft, ctx: EngineContext): Decimal {
+  return isCross(d)
+    ? crossFigures({ balance: d.balance, positions: d.positions, orders: d.pending }, ctx).available
+    : d.balance;
+}
+
 /** What placing a pending order takes from the balance (priced at its trigger, taker fees). */
 export function pendingReserve(
   qty: Decimal,
@@ -122,8 +151,18 @@ export function pendingReserve(
 
 // ─── Settling a (partial) close ────────────────────────────────────────────────
 
-/** The money side of closing `closeQty` of `pos` at `price`, with the fee at `rate`. */
-function settle(pos: Position, closeQty: Decimal, price: Decimal, rate: Decimal) {
+/**
+ * The money side of closing `closeQty` of `pos` at `price`, with the fee at `rate`. In isolated
+ * margin a close can lose at most the position's margin (the return is never below 0); in cross
+ * (BP-5 E) a bigger loss comes out of the wallet.
+ */
+export function settle(
+  pos: Position,
+  closeQty: Decimal,
+  price: Decimal,
+  rate: Decimal,
+  cross = false
+) {
   const fraction = closeQty.div(pos.quantity);
   const pnl =
     pos.side === 'long'
@@ -135,8 +174,11 @@ function settle(pos: Position, closeQty: Decimal, price: Decimal, rate: Decimal)
   const entryFee = pos.entryFee.times(fraction);
   // The closed part's share of the funding already settled (booked then — not charged again)
   const funding = (pos.cumFunding ?? ZERO).times(fraction);
+  // Margin added by hand comes back with the part it backed (BP-5: pro rata on a partial close)
+  const extra = (pos.extraMargin ?? ZERO).times(fraction);
   // Margin and the close-fee estimate come back, plus the price move, minus the real close fee
-  const returnAmount = Decimal.max(0, margin.plus(reserve).plus(pnl).minus(fee));
+  const gross = margin.plus(extra).plus(reserve).plus(pnl).minus(fee);
+  const returnAmount = cross ? gross : Decimal.max(0, gross);
   return {
     fraction,
     pnl,
@@ -145,11 +187,16 @@ function settle(pos: Position, closeQty: Decimal, price: Decimal, rate: Decimal)
     reserve,
     entryFee,
     funding,
+    extra,
     returnAmount,
-    /** Net of the close fee — what the balance history and journal show */
-    netPnl: pnl.minus(fee),
+    /**
+     * Net of the close fee — what the balance history and journal show. In isolated margin a close
+     * past the bankruptcy price loses at most the part's margin: only what was actually lost is
+     * booked (BP-5 F), so realized PnL matches the wallet.
+     */
+    netPnl: returnAmount.minus(margin).minus(extra).minus(reserve),
     /** Net of both fees — what realized PnL accumulates */
-    realized: pnl.minus(fee).minus(entryFee),
+    realized: returnAmount.minus(margin).minus(extra).minus(reserve).minus(entryFee),
   };
 }
 
@@ -165,6 +212,10 @@ interface FillSpec {
   leverage: number;
   takeProfit?: Decimal;
   stopLoss?: Decimal;
+  tpTriggerBy?: TriggerBy;
+  slTriggerBy?: TriggerBy;
+  /** Reduce-only (BP-5 B): capped at the opposite position; never opens or flips one */
+  reduceOnly?: boolean;
 }
 
 interface FillOptions {
@@ -188,6 +239,9 @@ function pendingFillRecord(
     ...triggerPriceField(order.type, order.triggerPrice),
     leverage: order.leverage,
     placingTime: order.placedAt,
+    ...(order.reduceOnly ? { reduceOnly: true } : {}),
+    ...(order.closeOnTrigger ? { closeOnTrigger: true } : {}),
+    ...triggerByOf('triggerBy', order.triggerBy),
   };
 }
 
@@ -212,7 +266,43 @@ function incomingRecord(
   return { ...base, id, category: 'linear', type: 'market', placingTime: now };
 }
 
+/**
+ * Fill an order into the draft (the browser's placeOrder), then keep the symbol's reduce-only
+ * orders within the position the fill left (BP-5 B).
+ */
 function fillInto(
+  d: Draft,
+  spec: FillSpec,
+  ctx: EngineContext,
+  opts: FillOptions = {}
+): string | null {
+  const id = fillPositionInto(d, spec, ctx, opts);
+  trimReduceOnly(d, spec.symbol, spec.price, ctx);
+  return id;
+}
+
+/** The TP / SL an order attaches to its position (Full mode: it replaces the position's). */
+function withExitLegs(
+  pos: Position,
+  tp: Decimal | undefined,
+  sl: Decimal | undefined,
+  spec: Pick<FillSpec, 'tpTriggerBy' | 'slTriggerBy'>
+): Position {
+  const out: Position = { ...pos };
+  if (tp) {
+    out.takeProfit = tp;
+    delete out.tpTriggerBy;
+    Object.assign(out, triggerByOf('tpTriggerBy', spec.tpTriggerBy));
+  }
+  if (sl) {
+    out.stopLoss = sl;
+    delete out.slTriggerBy;
+    Object.assign(out, triggerByOf('slTriggerBy', spec.slTriggerBy));
+  }
+  return out;
+}
+
+function fillPositionInto(
   d: Draft,
   spec: FillSpec,
   ctx: EngineContext,
@@ -229,7 +319,15 @@ function fillInto(
   // ── Position netting (one-way): an opposite order closes existing positions first ──
   const oppositeSide = side === 'buy' ? 'short' : 'long';
   const existingOpp = d.positions.filter((p) => p.symbol === symbol && p.side === oppositeSide);
-  let remainingQty = spec.qty;
+  // Reduce-only: never more than the opposite position holds (BP-5 B)
+  const orderQty = spec.reduceOnly
+    ? Decimal.min(
+        spec.qty,
+        existingOpp.reduce((q, p) => q.plus(p.quantity), ZERO)
+      )
+    : spec.qty;
+  if (orderQty.lte(0)) return null;
+  let remainingQty = orderQty;
   let skipOrderRecord = false;
 
   if (existingOpp.length > 0) {
@@ -239,7 +337,7 @@ function fillInto(
 
       const closeQty = Decimal.min(remainingQty, pos.quantity);
       const isFullClose = closeQty.gte(pos.quantity.minus(FULL_CLOSE_EPSILON));
-      const s = settle(pos, closeQty, price, rate);
+      const s = settle(pos, closeQty, price, rate, isCross(d));
       const closeId = ctx.newId();
       closeFees = closeFees.plus(s.fee);
 
@@ -253,6 +351,7 @@ function fillInto(
         exitPrice: price,
         pnl: s.pnl,
         exitCommission: s.fee,
+        openFee: s.entryFee,
         margin: s.margin,
         openedAt: pos.openedAt,
         closedAt: now,
@@ -291,6 +390,7 @@ function fillInto(
           entryFee: pos.entryFee.minus(s.entryFee),
           closeFeeReserve: pos.closeFeeReserve.minus(s.reserve),
           ...(pos.cumFunding ? { cumFunding: pos.cumFunding.minus(s.funding) } : {}),
+          ...(pos.extraMargin ? { extraMargin: pos.extraMargin.minus(s.extra) } : {}),
         });
       }
     }
@@ -305,19 +405,20 @@ function fillInto(
         {
           symbol,
           side,
-          qty: spec.qty,
+          qty: orderQty,
           fillPrice: price,
           status: 'filled',
           commission: closeFees.plus(remainderFee),
           ...feeFields,
           closingTime: now,
+          ...(spec.reduceOnly ? { reduceOnly: true } : {}),
         },
         now,
         opts
       )
     );
 
-    if (remainingQty.lte(FULL_CLOSE_EPSILON)) return incomingOrderId;
+    if (remainingQty.lte(FULL_CLOSE_EPSILON) || spec.reduceOnly) return incomingOrderId;
 
     // Flip: open the remainder as a new position; its order record is already written.
     skipOrderRecord = true;
@@ -326,7 +427,7 @@ function fillInto(
   const positionSide = openSide(side);
   const cost = openCost(remainingQty, price, leverage, rate, positionSide);
   // Fees are part of the balance check, so a 100%-of-balance order can't go negative.
-  if (cost.total.gt(d.balance)) {
+  if (cost.total.gt(availableFor(d, ctx))) {
     const base = {
       symbol,
       side,
@@ -365,39 +466,49 @@ function fillInto(
       .plus(price.times(remainingQty))
       .div(quantity)
       .toDecimalPlaces(8);
-    d.setPosition({
-      ...existing,
-      quantity,
-      entryPrice,
-      entryUsdtAmount,
-      // Same leverage on both parts in practice (a leverage change re-margins the position and the
-      // symbol's orders); otherwise the merged position's effective leverage
-      leverage:
-        existing.leverage === leverage
-          ? leverage
-          : clampLeverage(quantity.times(entryPrice).div(entryUsdtAmount).toNumber()),
-      entryFee: existing.entryFee.plus(cost.openFee),
-      closeFeeReserve: existing.closeFeeReserve.plus(cost.closeFeeReserve),
-      // Bybit Full-mode TP/SL: a TP / SL attached to this order replaces the position's
-      ...(tp ? { takeProfit: tp } : {}),
-      ...(sl ? { stopLoss: sl } : {}),
-    });
+    d.setPosition(
+      withExitLegs(
+        {
+          ...existing,
+          quantity,
+          entryPrice,
+          entryUsdtAmount,
+          // Same leverage on both parts in practice (a leverage change re-margins the position and
+          // the symbol's orders); otherwise the merged position's effective leverage
+          leverage:
+            existing.leverage === leverage
+              ? leverage
+              : clampLeverage(quantity.times(entryPrice).div(entryUsdtAmount).toNumber()),
+          entryFee: existing.entryFee.plus(cost.openFee),
+          closeFeeReserve: existing.closeFeeReserve.plus(cost.closeFeeReserve),
+        },
+        // Bybit Full-mode TP/SL: a TP / SL attached to this order replaces the position's
+        tp,
+        sl,
+        spec
+      )
+    );
   } else {
-    d.setPosition({
-      id,
-      category: 'linear',
-      symbol,
-      side: positionSide,
-      quantity: remainingQty,
-      entryPrice: price,
-      entryUsdtAmount: cost.im,
-      leverage,
-      entryFee: cost.openFee,
-      closeFeeReserve: cost.closeFeeReserve,
-      openedAt: now,
-      ...(tp ? { takeProfit: tp } : {}),
-      ...(sl ? { stopLoss: sl } : {}),
-    });
+    d.setPosition(
+      withExitLegs(
+        {
+          id,
+          category: 'linear',
+          symbol,
+          side: positionSide,
+          quantity: remainingQty,
+          entryPrice: price,
+          entryUsdtAmount: cost.im,
+          leverage,
+          entryFee: cost.openFee,
+          closeFeeReserve: cost.closeFeeReserve,
+          openedAt: now,
+        },
+        tp,
+        sl,
+        spec
+      )
+    );
   }
 
   if (!skipOrderRecord) {
@@ -453,6 +564,15 @@ export interface MarketIntent {
   size: OrderSize;
   takeProfit?: Decimal;
   stopLoss?: Decimal;
+  /** What the TP / SL trigger on (BP-5 B); absent = LastPrice */
+  tpTriggerBy?: TriggerBy;
+  slTriggerBy?: TriggerBy;
+  reduceOnly?: boolean;
+}
+
+/** The quote's prices per trigger source (BP-5 B). */
+function quotePrices(quote: Quote): PriceSet<Decimal | undefined> {
+  return { last: quote.last, mark: quote.mark, index: quote.index };
 }
 
 /**
@@ -468,9 +588,34 @@ export function placeMarket(
 ): ActionResult<string | null> {
   const leverage = leverageFor(state, intent.symbol);
   const price = bookPrice(intent.side, quote);
-  const qty = resolveQty(intent.size, price, leverage, rules);
+  let qty = resolveQty(intent.size, price, leverage, rules);
+  const tp = positive(intent.takeProfit);
+  const sl = positive(intent.stopLoss);
+  if (intent.reduceOnly) {
+    // BP-5 B: shrinks the opposite position only — capped at its size, no TP / SL
+    if (tp || sl) return refused(state, null, REJECT_REDUCE_ONLY_TPSL);
+    const target = reduceOnlyTarget(state, intent.symbol, intent.side);
+    if ('invalid' in target) return refused(state, null, target.invalid);
+    if (qty.gt(target.pos.quantity)) qty = target.pos.quantity;
+  }
   const invalid = checkOrderSize('linear', rules, qty, price);
   if (invalid) return refused(state, null, invalid);
+  // O9: the TP / SL must be on the right side of the current price of its trigger source
+  const sideProblem = exitSideProblem(
+    openSide(intent.side),
+    exitChecks(tp, sl, intent.tpTriggerBy, intent.slTriggerBy),
+    { prices: quotePrices(quote) }
+  );
+  if (sideProblem) return refused(state, null, sideProblem);
+  if (!intent.reduceOnly) {
+    // Bybit 110090 (BP-5 C)
+    const capProblem = riskLimitProblem(
+      effectiveValue(state, intent.symbol, quote.mark, { side: intent.side, qty, price }),
+      leverage,
+      tiersFor(ctx, intent.symbol)
+    );
+    if (capProblem) return refused(state, null, capProblem);
+  }
 
   const d = new Draft(state);
   const id = fillInto(
@@ -482,8 +627,11 @@ export function placeMarket(
       price,
       isMaker: false,
       leverage,
-      takeProfit: intent.takeProfit,
-      stopLoss: intent.stopLoss,
+      takeProfit: tp,
+      stopLoss: sl,
+      tpTriggerBy: intent.tpTriggerBy,
+      slTriggerBy: intent.slTriggerBy,
+      reduceOnly: intent.reduceOnly,
     },
     ctx
   );
@@ -504,7 +652,7 @@ function closePositionInto(
   if (!pos) return null;
 
   // Every close is a taker order (market, or a triggered TP / SL)
-  const s = settle(pos, pos.quantity, exitPrice, TAKER);
+  const s = settle(pos, pos.quantity, exitPrice, TAKER, isCross(d));
   const now = ctx.now;
   const closedId = ctx.newId();
 
@@ -518,6 +666,7 @@ function closePositionInto(
     exitPrice,
     pnl: s.pnl,
     exitCommission: s.fee,
+    openFee: s.entryFee,
     margin: pos.entryUsdtAmount,
     openedAt: pos.openedAt,
     closedAt: now,
@@ -588,6 +737,8 @@ function closePositionInto(
   d.balance = d.balance.plus(s.returnAmount);
   d.realizedPnl = d.realizedPnl.plus(s.realized);
   d.removePosition(positionId);
+  // Nothing left for the symbol's reduce-only orders to reduce (BP-5 B)
+  trimReduceOnly(d, pos.symbol, exitPrice, ctx);
   return s.pnl;
 }
 
@@ -646,6 +797,124 @@ export function closeOnExit(
 
 // ─── Liquidation (BP-3) ────────────────────────────────────────────────────────
 
+/** Index of the tier a position is in (tiers lowest first). */
+function tierIndex(tiers: RiskTier[], value: Decimal): number {
+  const i = tiers.findIndex((t) => value.lte(t.riskLimitValue));
+  return i === -1 ? tiers.length - 1 : i;
+}
+
+/**
+ * Partial liquidation (BP-5 C): reduce a position above the lowest tier to the next lower tier's
+ * limit at the bankruptcy price, repeatedly, while `mark` still reaches its liquidation price.
+ * `remaining` is the position left for a full close (the lowest tier reached and still hit), or
+ * null when a step brought the liquidation price past the mark.
+ */
+function stepDownTiers(
+  d: Draft,
+  start: Position,
+  mark: Decimal,
+  ctx: EngineContext
+): { pnl: Decimal; remaining: Position | null } {
+  const tiers = tiersFor(ctx, start.symbol);
+  let pos = start;
+  let total = ZERO;
+  for (;;) {
+    const risk = riskOf(pos, tiers);
+    const idx = tierIndex(tiers, risk.positionValue);
+    if (idx <= 0) return { pnl: total, remaining: pos };
+    const keepQty = tiers[idx - 1].riskLimitValue
+      .div(pos.entryPrice)
+      .toDecimalPlaces(8, Decimal.ROUND_DOWN);
+    if (keepQty.lte(0) || keepQty.gte(pos.quantity)) return { pnl: total, remaining: pos };
+    const closeQty = pos.quantity.minus(keepQty);
+    const f = closeQty.div(pos.quantity);
+    const bust = risk.bustPrice;
+    const now = ctx.now;
+    const im = pos.entryUsdtAmount.times(f);
+    const reserve = pos.closeFeeReserve.times(f);
+    const extra = (pos.extraMargin ?? ZERO).times(f);
+    const entryFee = pos.entryFee.times(f);
+    const funding = (pos.cumFunding ?? ZERO).times(f);
+    const pnl =
+      pos.side === 'long'
+        ? bust.minus(pos.entryPrice).times(closeQty)
+        : pos.entryPrice.minus(bust).times(closeQty);
+    const netPnl = pnl.minus(reserve);
+    const stepId = ctx.newId();
+    const label = pos.side === 'long' ? 'LONG' : 'SHORT';
+
+    d.prependTrade({
+      id: `${pos.id}-liq-${stepId}`,
+      category: 'linear',
+      symbol: pos.symbol,
+      side: pos.side,
+      quantity: closeQty,
+      entryPrice: pos.entryPrice,
+      exitPrice: bust,
+      pnl,
+      exitCommission: reserve,
+      openFee: entryFee,
+      margin: im,
+      openedAt: pos.openedAt,
+      closedAt: now,
+      execType: 'BustTrade',
+      ...(funding.eq(0) ? {} : { funding }),
+    });
+    d.prependOrders({
+      id: `o-liq-${stepId}`,
+      category: 'linear',
+      symbol: pos.symbol,
+      side: closingSide(pos),
+      type: 'market',
+      qty: closeQty,
+      fillPrice: bust,
+      status: 'filled',
+      commission: reserve,
+      feeRate: TAKER,
+      feeAsset: 'USDT',
+      isMaker: false,
+      placingTime: now,
+      closingTime: now,
+      createType: 'CreateByLiq',
+      reduceOnly: true,
+    });
+    // The part's margin (IM + extra) is what the move to the bankruptcy price lost: nothing returns
+    d.prependBalanceEvent({
+      id: `bl-liq-${stepId}`,
+      time: now,
+      balanceBefore: d.balance,
+      balanceAfter: d.balance,
+      pnl: netPnl,
+      action: `Partial liquidation of ${pos.side} position for ${pos.symbol} at bankruptcy price ${bust.toFixed(4)} for ${closeQty.toFixed(6)} units`,
+    });
+    d.prependJournal(
+      systemEntry(
+        `j-liq-${stepId}`,
+        now,
+        `Partially liquidated ${label} ${pos.symbol} — mark price $${fmtPrice(mark)} reached the liquidation price ` +
+          `$${fmtPrice(risk.liqPrice)}; ${closeQty.toFixed(6)} closed at the bankruptcy price $${fmtPrice(bust)} ` +
+          `to step down to risk-limit tier ${idx}`,
+        netPnl
+      )
+    );
+    d.realizedPnl = d.realizedPnl.plus(netPnl).minus(entryFee);
+    total = total.plus(pnl);
+    pos = {
+      ...pos,
+      quantity: keepQty,
+      entryUsdtAmount: pos.entryUsdtAmount.minus(im),
+      closeFeeReserve: pos.closeFeeReserve.minus(reserve),
+      entryFee: pos.entryFee.minus(entryFee),
+      ...(pos.extraMargin ? { extraMargin: pos.extraMargin.minus(extra) } : {}),
+      ...(pos.cumFunding ? { cumFunding: pos.cumFunding.minus(funding) } : {}),
+    };
+    d.setPosition(pos);
+    if (!markHitsLiquidation(pos.side, riskOf(pos, tiers).liqPrice, mark)) {
+      return { pnl: total, remaining: null };
+    }
+  }
+}
+
 /**
  * Isolated-margin liquidation, as on Bybit: the mark price reached the position's liquidation
  * price, so the whole position closes at the bankruptcy price and its whole margin is lost — IM,
@@ -656,8 +925,15 @@ export function closeOnExit(
  * Before the close, the symbol's active USDT Perpetual orders are cancelled and their reserves
  * refunded (Bybit cancels a contract's active orders when it liquidates the position).
  *
- * `mark` is the mark price that triggered it (for the journal). Result: gross PnL, or null if the
- * position no longer exists.
+ * Partial liquidation (BP-5 C, O7): a position above the lowest risk-limit tier is first reduced
+ * by the part above the next lower tier's limit, at the bankruptcy price (a `BustTrade`, its fee
+ * from that part's reserve). The tier and liquidation price are then re-derived; while `mark` still
+ * reaches the new liquidation price the next step follows, and only in the lowest tier does the
+ * whole position close.
+ *
+ * `mark` is the mark price that triggered it (a backfill passes the candle's worst mark, so one
+ * minute can take several steps). Result: gross PnL of everything closed, or null if the position
+ * no longer exists.
  */
 export function liquidatePosition(
   state: AccountState,
@@ -670,8 +946,6 @@ export function liquidatePosition(
   if (!pos) return { delta: d.toDelta(), result: null };
 
   const now = ctx.now;
-  const risk = riskOf(pos, tiersFor(ctx, pos.symbol));
-  const bust = risk.bustPrice;
   const label = pos.side === 'long' ? 'LONG' : 'SHORT';
 
   // 1. Cancel the contract's active orders (refund their reserves)
@@ -704,46 +978,54 @@ export function liquidatePosition(
     d.removePending(order.id);
   }
 
-  // 2. Close the whole position at the bankruptcy price
+  // 2. Above the lowest risk-limit tier: step down tier by tier first (BP-5 C)
+  const stepped = stepDownTiers(d, pos, mark, ctx);
+  if (!stepped.remaining) return { delta: d.toDelta(), result: stepped.pnl, sound: 'liquidation' };
+  const last = stepped.remaining;
+  const risk = riskOf(last, tiersFor(ctx, last.symbol));
+  const bust = risk.bustPrice;
+
+  // 3. Close the whole (remaining) position at the bankruptcy price
   const pnl =
-    pos.side === 'long'
-      ? bust.minus(pos.entryPrice).times(pos.quantity)
-      : pos.entryPrice.minus(bust).times(pos.quantity);
-  const fee = pos.closeFeeReserve;
+    last.side === 'long'
+      ? bust.minus(last.entryPrice).times(last.quantity)
+      : last.entryPrice.minus(bust).times(last.quantity);
+  const fee = last.closeFeeReserve;
   const netPnl = pnl.minus(fee);
   const closedId = ctx.newId();
 
   d.prependTrade({
     id: positionId,
     category: 'linear',
-    symbol: pos.symbol,
-    side: pos.side,
-    quantity: pos.quantity,
-    entryPrice: pos.entryPrice,
+    symbol: last.symbol,
+    side: last.side,
+    quantity: last.quantity,
+    entryPrice: last.entryPrice,
     exitPrice: bust,
     pnl,
     exitCommission: fee,
-    margin: pos.entryUsdtAmount,
-    openedAt: pos.openedAt,
+    openFee: last.entryFee,
+    margin: last.entryUsdtAmount,
+    openedAt: last.openedAt,
     closedAt: now,
     execType: 'BustTrade',
-    ...(pos.cumFunding && !pos.cumFunding.eq(0) ? { funding: pos.cumFunding } : {}),
+    ...(last.cumFunding && !last.cumFunding.eq(0) ? { funding: last.cumFunding } : {}),
   });
   const legCancels: HistoricalOrder[] = [];
   for (const [leg, price] of [
-    ['take-profit', pos.takeProfit],
-    ['stop-loss', pos.stopLoss],
+    ['take-profit', last.takeProfit],
+    ['stop-loss', last.stopLoss],
   ] as const) {
     if (!price) continue;
     legCancels.push(
       cancelledLegRow(
         `o-cancel-${leg}-${positionId}-${now}`,
         leg,
-        pos.symbol,
+        last.symbol,
         closingSide(pos),
-        pos.quantity,
+        last.quantity,
         price,
-        pos.openedAt,
+        last.openedAt,
         now
       )
     );
@@ -752,10 +1034,10 @@ export function liquidatePosition(
     {
       id: `o-liq-${closedId}`,
       category: 'linear',
-      symbol: pos.symbol,
+      symbol: last.symbol,
       side: closingSide(pos),
       type: 'market',
-      qty: pos.quantity,
+      qty: last.quantity,
       fillPrice: bust,
       status: 'filled',
       commission: fee,
@@ -774,20 +1056,21 @@ export function liquidatePosition(
     balanceBefore: d.balance,
     balanceAfter: d.balance,
     pnl: netPnl,
-    action: `Liquidation of ${pos.side} position for ${pos.symbol} at bankruptcy price ${bust.toFixed(4)} for ${pos.quantity.toFixed(6)} units`,
+    action: `Liquidation of ${last.side} position for ${last.symbol} at bankruptcy price ${bust.toFixed(4)} for ${last.quantity.toFixed(6)} units`,
   });
   d.prependJournal(
     systemEntry(
       `j-liq-${closedId}`,
       now,
-      `Liquidated ${label} ${pos.symbol} — mark price $${fmtPrice(mark)} reached the liquidation price ` +
+      `Liquidated ${label} ${last.symbol} — mark price $${fmtPrice(mark)} reached the liquidation price ` +
         `$${fmtPrice(risk.liqPrice)}; closed at the bankruptcy price $${fmtPrice(bust)}`,
       netPnl
     )
   );
-  d.realizedPnl = d.realizedPnl.plus(netPnl).minus(pos.entryFee);
+  d.realizedPnl = d.realizedPnl.plus(netPnl).minus(last.entryFee);
+  const total = stepped.pnl.plus(pnl);
   d.removePosition(positionId);
-  return { delta: d.toDelta(), result: pnl, sound: 'liquidation' };
+  return { delta: d.toDelta(), result: total, sound: 'liquidation' };
 }
 
 // ─── Pending orders (paperStore.placeLimitOrder / placeStopOrder) ──────────────
@@ -800,6 +1083,13 @@ export interface PendingIntent {
   size: OrderSize;
   takeProfit?: Decimal;
   stopLoss?: Decimal;
+  /** A stop order's trigger source (BP-5 B); a limit always rests on the last price */
+  triggerBy?: TriggerBy;
+  tpTriggerBy?: TriggerBy;
+  slTriggerBy?: TriggerBy;
+  reduceOnly?: boolean;
+  /** Close-on-trigger — implies reduce-only (stop orders) */
+  closeOnTrigger?: boolean;
 }
 
 /**
@@ -820,9 +1110,42 @@ export function placePending(
     return refused(state, null, REJECT_PRICE_TICK(rules.tickSize));
   }
   const leverage = leverageFor(state, symbol);
-  const qty = resolveQty(intent.size, triggerPrice, leverage, rules);
+  let qty = resolveQty(intent.size, triggerPrice, leverage, rules);
+  const tp = positive(intent.takeProfit);
+  const sl = positive(intent.stopLoss);
+  const reduceOnly = isReduceOnly(intent);
+  if (reduceOnly) {
+    // BP-5 B: shrinks the opposite position only — capped at its size, reserves nothing
+    if (tp || sl) return refused(state, null, REJECT_REDUCE_ONLY_TPSL);
+    const target = reduceOnlyTarget(state, symbol, side);
+    if ('invalid' in target) return refused(state, null, target.invalid);
+    if (qty.gt(target.pos.quantity)) qty = target.pos.quantity;
+  }
   const invalid = checkOrderSize('linear', rules, qty, triggerPrice);
   if (invalid) return refused(state, null, invalid);
+  // O9: an order's TP / SL must be on the right side of the order's own price
+  const sideProblem = exitSideProblem(
+    openSide(side),
+    exitChecks(tp, sl, intent.tpTriggerBy, intent.slTriggerBy),
+    { order: triggerPrice }
+  );
+  if (sideProblem) return refused(state, null, sideProblem);
+  if (!reduceOnly) {
+    // Bybit 110090 (BP-5 C)
+    const capProblem = riskLimitProblem(
+      effectiveValue(state, symbol, quote?.mark, { side, qty, price: triggerPrice }),
+      leverage,
+      tiersFor(ctx, symbol)
+    );
+    if (capProblem) return refused(state, null, capProblem);
+  }
+  const flags = {
+    ...(type === 'stop' ? triggerByOf('triggerBy', intent.triggerBy) : {}),
+    ...(tp ? triggerByOf('tpTriggerBy', intent.tpTriggerBy) : {}),
+    ...(sl ? triggerByOf('slTriggerBy', intent.slTriggerBy) : {}),
+    ...(reduceOnly ? { reduceOnly: true } : {}),
+    ...(intent.closeOnTrigger ? { closeOnTrigger: true } : {}),
+  };
 
   const d = new Draft(state);
 
@@ -836,8 +1159,11 @@ export function placePending(
         price: bookPrice(side, quote),
         isMaker: false,
         leverage,
-        takeProfit: intent.takeProfit,
-        stopLoss: intent.stopLoss,
+        takeProfit: tp,
+        stopLoss: sl,
+        tpTriggerBy: intent.tpTriggerBy,
+        slTriggerBy: intent.slTriggerBy,
+        reduceOnly,
       },
       ctx,
       { crossingLimit: triggerPrice }
@@ -845,13 +1171,14 @@ export function placePending(
     return { delta: d.toDelta(), result: id, ...(id ? { sound: 'placed' as const } : {}) };
   }
 
-  const reserve = pendingReserve(qty, triggerPrice, leverage, side);
-  if (reserve.total.gt(d.balance)) return { delta: d.toDelta(), result: null };
+  // A reduce-only order closes: no IM, and its fee comes out of the position
+  const reserve = reduceOnly
+    ? { im: ZERO, total: ZERO }
+    : pendingReserve(qty, triggerPrice, leverage, side);
+  if (reserve.total.gt(availableFor(d, ctx))) return { delta: d.toDelta(), result: null };
 
   const id = ctx.newId();
   const now = ctx.now;
-  const tp = positive(intent.takeProfit);
-  const sl = positive(intent.stopLoss);
 
   d.setPending({
     id,
@@ -867,17 +1194,24 @@ export function placePending(
     placedAt: now,
     ...(tp ? { takeProfit: tp } : {}),
     ...(sl ? { stopLoss: sl } : {}),
+    ...flags,
   });
   d.prependJournal(
     systemEntry(
       `j-place-${type}-${id}`,
       now,
-      `Placed ${pendingTypeLabel(type)} ${pendingSideLabel(side)} ${symbol} @ $${fmtPrice(triggerPrice)}` +
+      `Placed ${reduceOnly ? 'reduce-only ' : ''}${pendingTypeLabel(type)} ${pendingSideLabel(side)} ${symbol} @ $${fmtPrice(triggerPrice)}` +
         ` (qty: ${qty.toFixed(6)}, reserved: $${reserve.total.toFixed(2)})`
     )
   );
   d.balance = d.balance.minus(reserve.total);
-  return { delta: d.toDelta(), result: id, sound: 'queued' };
+  // The reduce-only orders on a position together never exceed it (BP-5 B)
+  if (reduceOnly) trimReduceOnly(d, symbol, quote?.last ?? triggerPrice, ctx);
+  return {
+    delta: d.toDelta(),
+    result: d.pending.some((o) => o.id === id) ? id : null,
+    sound: 'queued',
+  };
 }
 
 /** paperStore.cancelPendingOrder — refunds exactly what placing it reserved. */
@@ -957,8 +1291,13 @@ export function cancelExitLeg(
     )
   );
   const updated = { ...pos };
-  if (leg === 'take-profit') delete updated.takeProfit;
-  else delete updated.stopLoss;
+  if (leg === 'take-profit') {
+    delete updated.takeProfit;
+    delete updated.tpTriggerBy;
+  } else {
+    delete updated.stopLoss;
+    delete updated.slTriggerBy;
+  }
   d.setPosition(updated);
   return { delta: d.toDelta(), result: true };
 }
@@ -998,10 +1337,26 @@ export function cancelPendingExitLeg(
     )
   );
   const updated = { ...order };
-  if (leg === 'take-profit') delete updated.takeProfit;
-  else delete updated.stopLoss;
+  if (leg === 'take-profit') {
+    delete updated.takeProfit;
+    delete updated.tpTriggerBy;
+  } else {
+    delete updated.stopLoss;
+    delete updated.slTriggerBy;
+  }
   d.setPending(updated);
   return { delta: d.toDelta(), result: true };
+}
+
+export interface ExitOptions {
+  /** New trigger sources (BP-5 B); absent = keep the leg's */
+  tpTriggerBy?: TriggerBy;
+  slTriggerBy?: TriggerBy;
+  /**
+   * Current prices per source (O9): a new or changed leg must be on the right side of its
+   * source's price. Absent = not checked (engine tests; the service always passes them).
+   */
+  prices?: PriceSet<Decimal | undefined>;
 }
 
 /** paperStore.updatePositionExits — set / change / remove TP and SL. */
@@ -1010,11 +1365,38 @@ export function updatePositionExits(
   positionId: string,
   takeProfit: Decimal | null,
   stopLoss: Decimal | null,
-  ctx: EngineContext
+  ctx: EngineContext,
+  opts: ExitOptions = {}
 ): ActionResult<boolean> {
   const d = new Draft(state);
   const pos = d.positions.find((p) => p.id === positionId);
   if (!pos) return { delta: d.toDelta(), result: false };
+  const tpBy = opts.tpTriggerBy ?? pos.tpTriggerBy ?? 'LastPrice';
+  const slBy = opts.slTriggerBy ?? pos.slTriggerBy ?? 'LastPrice';
+  if (opts.prices) {
+    // Only a leg that is new or changed is checked — an untouched leg may sit anywhere now
+    const changed = (
+      level: Decimal | null,
+      old: Decimal | undefined,
+      by: TriggerBy,
+      oldBy?: TriggerBy
+    ) => level !== null && (!old || !old.eq(level) || by !== (oldBy ?? 'LastPrice'));
+    const problem = exitSideProblem(
+      pos.side,
+      exitChecks(
+        changed(takeProfit, pos.takeProfit, tpBy, pos.tpTriggerBy)
+          ? (takeProfit ?? undefined)
+          : undefined,
+        changed(stopLoss, pos.stopLoss, slBy, pos.slTriggerBy)
+          ? (stopLoss ?? undefined)
+          : undefined,
+        tpBy,
+        slBy
+      ),
+      { prices: opts.prices }
+    );
+    if (problem) return refused(state, false, problem);
+  }
 
   const now = ctx.now;
   // Cancel records only when a leg is removed; a price edit is a silent in-place update.
@@ -1053,10 +1435,16 @@ export function updatePositionExits(
   if (entries.length) d.prependJournal(...entries);
 
   const updated: Position = { ...pos };
-  if (takeProfit !== null) updated.takeProfit = takeProfit;
-  else delete updated.takeProfit;
-  if (stopLoss !== null) updated.stopLoss = stopLoss;
-  else delete updated.stopLoss;
+  delete updated.tpTriggerBy;
+  delete updated.slTriggerBy;
+  if (takeProfit !== null) {
+    updated.takeProfit = takeProfit;
+    Object.assign(updated, triggerByOf('tpTriggerBy', tpBy));
+  } else delete updated.takeProfit;
+  if (stopLoss !== null) {
+    updated.stopLoss = stopLoss;
+    Object.assign(updated, triggerByOf('slTriggerBy', slBy));
+  } else delete updated.stopLoss;
   d.setPosition(updated);
   return { delta: d.toDelta(), result: true };
 }
@@ -1068,6 +1456,10 @@ export interface PendingEdit {
   size: OrderSize;
   takeProfit: Decimal | null;
   stopLoss: Decimal | null;
+  /** New trigger sources (BP-5 B); absent = keep the order's */
+  triggerBy?: TriggerBy;
+  tpTriggerBy?: TriggerBy;
+  slTriggerBy?: TriggerBy;
 }
 
 /**
@@ -1092,15 +1484,49 @@ export function editPending(
     return refused(state, 'rejected', REJECT_PRICE_TICK(rules.tickSize));
   }
   const leverage = clampLeverage(order.leverage);
-  const newQty = resolveQty(edit.size, newTrigger, leverage, rules);
+  let newQty = resolveQty(edit.size, newTrigger, leverage, rules);
+  const reduceOnly = isReduceOnly(order);
+  if (reduceOnly) {
+    if (positive(edit.takeProfit) || positive(edit.stopLoss)) {
+      return refused(state, 'rejected', REJECT_REDUCE_ONLY_TPSL);
+    }
+    const target = reduceOnlyTarget(state, order.symbol, order.side);
+    if ('invalid' in target) return refused(state, 'rejected', target.invalid);
+    if (newQty.gt(target.pos.quantity)) newQty = target.pos.quantity;
+  }
   const invalid = checkOrderSize('linear', rules, newQty, newTrigger);
   if (invalid) return refused(state, 'rejected', invalid);
+  const tpBy = edit.tpTriggerBy ?? order.tpTriggerBy;
+  const slBy = edit.slTriggerBy ?? order.slTriggerBy;
+  const sideProblem = exitSideProblem(
+    openSide(order.side),
+    exitChecks(edit.takeProfit ?? undefined, edit.stopLoss ?? undefined, tpBy, slBy),
+    { order: newTrigger }
+  );
+  if (sideProblem) return refused(state, 'rejected', sideProblem);
+  if (!reduceOnly) {
+    // Bybit 110090 (BP-5 C): valued without the order being edited, plus its new size
+    const others = { ...state, pendingOrders: state.pendingOrders.filter((o) => o.id !== orderId) };
+    const capProblem = riskLimitProblem(
+      effectiveValue(others, order.symbol, quote?.mark, {
+        side: order.side,
+        qty: newQty,
+        price: newTrigger,
+      }),
+      leverage,
+      tiersFor(ctx, order.symbol)
+    );
+    if (capProblem) return refused(state, 'rejected', capProblem);
+  }
 
   const d = new Draft(state);
   const now = ctx.now;
   const oldReserved = order.reserved;
-  const scratchBalance = d.balance.plus(oldReserved);
-  const reserve = pendingReserve(newQty, newTrigger, leverage, order.side);
+  // What the edited order may use: its old reserve comes back first
+  const scratchBalance = availableFor(d, ctx).plus(oldReserved);
+  const reserve = reduceOnly
+    ? { im: ZERO, total: ZERO }
+    : pendingReserve(newQty, newTrigger, leverage, order.side);
   const typeLabel = pendingTypeLabel(order.type);
   const sideLabel = pendingSideLabel(order.side);
   // A limit moved across the book trades now: its cost is decided at the ask / bid (below), not
@@ -1205,6 +1631,9 @@ export function editPending(
         leverage,
         takeProfit: edit.takeProfit ?? undefined,
         stopLoss: edit.stopLoss ?? undefined,
+        tpTriggerBy: tpBy,
+        slTriggerBy: slBy,
+        reduceOnly,
       },
       ctx,
       { fromPending: edited }
@@ -1235,12 +1664,23 @@ export function editPending(
     qty: newQty,
     leverage, // the fill uses it (S2)
   };
-  if (edit.takeProfit !== null) updated.takeProfit = edit.takeProfit;
-  else delete updated.takeProfit;
-  if (edit.stopLoss !== null) updated.stopLoss = edit.stopLoss;
-  else delete updated.stopLoss;
+  delete updated.triggerBy;
+  delete updated.tpTriggerBy;
+  delete updated.slTriggerBy;
+  if (order.type === 'stop') {
+    Object.assign(updated, triggerByOf('triggerBy', edit.triggerBy ?? order.triggerBy));
+  }
+  if (edit.takeProfit !== null) {
+    updated.takeProfit = edit.takeProfit;
+    Object.assign(updated, triggerByOf('tpTriggerBy', tpBy));
+  } else delete updated.takeProfit;
+  if (edit.stopLoss !== null) {
+    updated.stopLoss = edit.stopLoss;
+    Object.assign(updated, triggerByOf('slTriggerBy', slBy));
+  } else delete updated.stopLoss;
   d.setPending(updated);
   d.balance = d.balance.plus(oldReserved).minus(reserve.total);
+  if (reduceOnly) trimReduceOnly(d, order.symbol, quote?.last ?? newTrigger, ctx);
   return { delta: d.toDelta(), result: 'ok' };
 }
 
@@ -1261,6 +1701,12 @@ export function fillPending(
   const order = d.pending.find((o) => o.id === orderId);
   if (!order) return { delta: d.toDelta(), result: null };
 
+  // A reduce-only order with nothing left to reduce is cancelled, not filled (BP-5 B)
+  if (isReduceOnly(order) && 'invalid' in reduceOnlyTarget(d, order.symbol, order.side)) {
+    cancelReduceOnlyInto(d, order, ctx);
+    return { delta: d.toDelta(), result: null };
+  }
+
   d.balance = d.balance.plus(order.reserved);
   d.removePending(orderId);
 
@@ -1275,6 +1721,9 @@ export function fillPending(
       leverage: order.leverage,
       takeProfit: order.takeProfit,
       stopLoss: order.stopLoss,
+      tpTriggerBy: order.tpTriggerBy,
+      slTriggerBy: order.slTriggerBy,
+      reduceOnly: isReduceOnly(order),
     },
     ctx,
     { skipJournal: true, fromPending: order }
@@ -1360,32 +1809,54 @@ export function setSymbolLeverage(
   }
 
   const tiers = tiersFor(ctx, symbol);
+  // Bybit 110090: the new leverage's cap must hold what is open on the symbol (BP-5 C)
+  const capProblem = riskLimitProblem(effectiveValue(state, symbol, mark), next, tiers);
+  if (capProblem) return refused(state, current, capProblem);
   let change = ZERO; // margin moved from the wallet into positions / orders (negative = released)
   for (const pos of positions) {
     const im = pos.quantity.times(pos.entryPrice).div(next);
     const reserve = feeToClose(pos.side, pos.quantity, pos.entryPrice, next);
+    // A leverage change releases all the margin added by hand (Bybit, BP-5)
+    const extra = pos.extraMargin ?? ZERO;
     const updated: Position = {
       ...pos,
       leverage: next,
       entryUsdtAmount: im,
       closeFeeReserve: reserve,
+      extraMargin: ZERO,
     };
-    if (im.lt(pos.entryUsdtAmount)) {
-      // Less margin behind the position: it must not be liquidated by the change itself
+    if (!isCross(d) && im.lt(pos.entryUsdtAmount.plus(extra))) {
+      // Less margin behind the position: it must not be liquidated by the change itself (in cross
+      // the maintenance margin doesn't depend on the leverage)
       if (!mark) return refused(state, current, REJECT_LEVERAGE_NO_MARK);
       if (markHitsLiquidation(pos.side, riskOf(updated, tiers).liqPrice, mark)) {
         return refused(state, current, REJECT_LEVERAGE_LIQUIDATION);
       }
     }
-    change = change.plus(im.plus(reserve)).minus(pos.entryUsdtAmount.plus(pos.closeFeeReserve));
+    change = change
+      .plus(im.plus(reserve))
+      .minus(pos.entryUsdtAmount.plus(pos.closeFeeReserve).plus(extra));
     d.setPosition(updated);
   }
   for (const order of orders) {
+    // A reduce-only order holds no margin: only its recorded leverage changes
+    if (isReduceOnly(order)) {
+      d.setPending({ ...order, leverage: next });
+      continue;
+    }
     const reserve = pendingReserve(order.qty, order.triggerPrice, next, order.side);
     change = change.plus(reserve.total).minus(order.reserved);
     d.setPending({ ...order, leverage: next, usdtAmount: reserve.im, reserved: reserve.total });
   }
-  if (change.gt(d.balance)) return refused(state, current, REJECT_LEVERAGE_BALANCE);
+  const short = isCross(d)
+    ? // Cross: the account's available balance after the change (IM at mark) must stay ≥ 0
+      change.gt(0) &&
+      crossFigures(
+        { balance: d.balance.minus(change), positions: d.positions, orders: d.pending },
+        { ...ctx, markPrice: (sym) => (sym === symbol ? mark : undefined) ?? ctx.markPrice?.(sym) }
+      ).available.lt(0)
+    : change.gt(d.balance);
+  if (short) return refused(state, current, REJECT_LEVERAGE_BALANCE);
 
   const now = ctx.now;
   const moved = change.abs().toFixed(2);
@@ -1474,6 +1945,80 @@ export function resetAccount(state: AccountState): ActionResult<boolean> {
   return { delta: d.toDelta(), result: true };
 }
 
+// ─── Add / reduce margin (BP-5 A) ──────────────────────────────────────────────
+// Bybit POST /v5/position/add-margin (isolated): a signed amount moves between the wallet and the
+// position's margin; the leverage is unchanged and the liquidation price moves. Refusals follow
+// Bybit's retCodes (source: API v5 error codes, checked 2026-09-27). Bybit's max reducible amount is
+// not documented: only margin added by hand can be taken back, and never so much that the mark is
+// at or past the new liquidation price.
+
+export const REJECT_MARGIN_NO_POSITION = "You can't set margin without an open position"; // 110033
+export const REJECT_MARGIN_BALANCE = 'Insufficient available balance to add margin'; // 110014
+export const REJECT_MARGIN_MAX_REDUCE = 'Added margin more than max can reduce margin'; // 110078
+export const REJECT_MARGIN_LIQUIDATION =
+  'Liquidation will be triggered immediately by this adjustment'; // 110011
+export const REJECT_MARGIN_NO_MARK = 'Waiting for live price…';
+/** Bybit: margin is added / reduced per position only in isolated margin (BP-5 E) */
+export const REJECT_MARGIN_CROSS = 'Margin can only be added or reduced in isolated margin mode';
+
+/**
+ * Add (`amount` > 0) or reduce (`amount` < 0) the margin of an isolated position. Result: the
+ * position's new extra margin, or null when refused (`invalid` says why — nothing is written).
+ */
+export function adjustMargin(
+  state: AccountState,
+  positionId: string,
+  amount: Decimal,
+  ctx: EngineContext,
+  mark?: Decimal
+): ActionResult<Decimal | null> {
+  const pos = state.positions.find((p) => p.id === positionId);
+  if (!pos) return refused(state, null, REJECT_MARGIN_NO_POSITION);
+  if (state.marginMode === 'REGULAR_MARGIN') return refused(state, null, REJECT_MARGIN_CROSS);
+  if (amount.eq(0)) return { delta: new Draft(state).toDelta(), result: pos.extraMargin ?? ZERO };
+  const extra = pos.extraMargin ?? ZERO;
+  const nextExtra = extra.plus(amount);
+  if (amount.gt(0) && amount.gt(state.balance)) {
+    return refused(state, null, REJECT_MARGIN_BALANCE);
+  }
+  if (amount.lt(0)) {
+    if (nextExtra.lt(0)) return refused(state, null, REJECT_MARGIN_MAX_REDUCE);
+    if (!mark) return refused(state, null, REJECT_MARGIN_NO_MARK);
+  }
+  const tiers = tiersFor(ctx, pos.symbol);
+  const before = riskOf(pos, tiers);
+  const updated: Position = { ...pos, extraMargin: nextExtra };
+  const after = riskOf(updated, tiers);
+  if (mark && amount.lt(0) && markHitsLiquidation(pos.side, after.liqPrice, mark)) {
+    return refused(state, null, REJECT_MARGIN_LIQUIDATION);
+  }
+
+  const d = new Draft(state);
+  const now = ctx.now;
+  const verb = amount.gt(0) ? 'Add' : 'Reduce';
+  const label = pos.side === 'long' ? 'LONG' : 'SHORT';
+  d.setPosition(updated);
+  d.prependBalanceEvent({
+    id: `bl-margin-${positionId}-${now}`,
+    time: now,
+    balanceBefore: d.balance,
+    balanceAfter: d.balance.minus(amount),
+    pnl: ZERO,
+    action: `${verb} margin for ${pos.symbol}: ${amount.gt(0) ? '+' : '−'}$${amount.abs().toFixed(2)}`,
+  });
+  const liq = (v: Decimal) => (v.gt(0) ? `$${fmtPrice(v)}` : '—');
+  d.prependJournal(
+    systemEntry(
+      `j-margin-${positionId}-${now}`,
+      now,
+      `${verb === 'Add' ? 'Margin added to' : 'Margin reduced on'} ${label} ${pos.symbol}: ` +
+        `${amount.gt(0) ? '+' : '−'}$${amount.abs().toFixed(2)} (liq. price ${liq(before.liqPrice)} → ${liq(after.liqPrice)})`
+    )
+  );
+  d.balance = d.balance.minus(amount);
+  return { delta: d.toDelta(), result: nextExtra };
+}
+
 // ─── Funding (BP-4) ────────────────────────────────────────────────────────────
 
 /** A position as it was at the funding timestamp (the engine snapshots them at that instant). */
@@ -1481,6 +2026,8 @@ export interface FundingSnapshot {
   positionId: string;
   side: PositionSide;
   qty: Decimal;
+  /** The position's open time — finds its close if it closed before the settlement (BP-5 F) */
+  openedAt?: number;
 }
 
 export interface FundingSpec {
@@ -1539,7 +2086,11 @@ export function settleFunding(
     // What is actually charged: a paid fee the balance and the position's margin can't cover (the
     // position is already closed, the wallet is empty) is not collected
     let charged = fee;
-    if (fee.gt(0)) {
+    if (fee.gt(0) && isCross(d)) {
+      // Cross (BP-5 E): the wallet pays in full — a shortfall raises the account's MM rate instead
+      // of eating one position's margin
+      d.balance = d.balance.minus(fee);
+    } else if (fee.gt(0)) {
       const fromBalance = Decimal.min(fee, Decimal.max(ZERO, d.balance));
       d.balance = d.balance.minus(fromBalance);
       const shortfall = fee.minus(fromBalance);
@@ -1547,8 +2098,15 @@ export function settleFunding(
       if (shortfall.gt(0) && pos) {
         // 🔐 Never below zero margin: at worst the position is left at its bankruptcy price and the
         // next mark tick liquidates it
-        fromMargin = Decimal.min(shortfall, pos.entryUsdtAmount);
-        d.setPosition({ ...pos, entryUsdtAmount: pos.entryUsdtAmount.minus(fromMargin) });
+        // IM first, then the margin added by hand (BP-5)
+        const fromIm = Decimal.min(shortfall, pos.entryUsdtAmount);
+        const fromExtra = Decimal.min(shortfall.minus(fromIm), pos.extraMargin ?? ZERO);
+        fromMargin = fromIm.plus(fromExtra);
+        d.setPosition({
+          ...pos,
+          entryUsdtAmount: pos.entryUsdtAmount.minus(fromIm),
+          ...(fromExtra.gt(0) ? { extraMargin: (pos.extraMargin ?? ZERO).minus(fromExtra) } : {}),
+        });
       }
       charged = fromBalance.plus(fromMargin);
     } else {
@@ -1559,6 +2117,9 @@ export function settleFunding(
     const current = d.positions.find((p) => p.id === snap.positionId);
     if (current) {
       d.setPosition({ ...current, cumFunding: (current.cumFunding ?? ZERO).plus(charged) });
+    } else if (snap.openedAt !== undefined) {
+      // Closed since the timestamp: its close's Closed P&L takes the fee (BP-5 F)
+      d.closedTradeFunding.push({ symbol, openedAt: snap.openedAt, ts, funding: charged });
     }
 
     const id = `fund-${snap.positionId}-${ts}`;
@@ -1674,6 +2235,9 @@ export function applyDelta(state: AccountState, delta: Delta): AccountState {
     leverage: delta.account.leverage,
     symbolLeverage: delta.account.symbolLeverage,
     symbolFundingAt: delta.account.symbolFundingAt,
+    ...(delta.account.marginMode === 'REGULAR_MARGIN'
+      ? { marginMode: 'REGULAR_MARGIN' as const }
+      : {}),
     // A reset's own time is only known to the DB (Account.lastReset); the next load reads it
     ...(state.resetAt !== undefined && !delta.reset ? { resetAt: state.resetAt } : {}),
     spot: [...byCoin.values()],

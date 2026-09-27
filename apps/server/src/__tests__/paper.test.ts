@@ -90,6 +90,8 @@ describe('Paper Trading API (BP-1)', () => {
     ['POST', '/api/paper/positions/p1/close'],
     ['PATCH', '/api/paper/account/leverage'],
     ['PATCH', '/api/paper/symbols/BTCUSDT/leverage'],
+    ['POST', '/api/paper/positions/p1/margin'],
+    ['POST', '/api/paper/account/margin-mode'],
     ['POST', '/api/paper/spot/exits'],
     ['POST', '/api/paper/account/reset'],
     ['POST', '/api/paper/journal'],
@@ -171,6 +173,44 @@ describe('Paper Trading API (BP-1)', () => {
     ])('400 for %o (%s)', async (size) => {
       const res = await post({ symbol: 'BTCUSDT', side: 'buy', type: 'market', ...size });
       expect(res.statusCode).toBe(400);
+    });
+
+    it('passes trigger sources, reduce-only and close-on-trigger (BP-5 B)', async () => {
+      const place = vi.spyOn(app.trading, 'placeOrder').mockResolvedValue(executed('o-1'));
+      const res = await post({
+        symbol: 'BTCUSDT',
+        side: 'sell',
+        type: 'stop',
+        qty: '0.1',
+        triggerPrice: '48000',
+        triggerBy: 'MarkPrice',
+        closeOnTrigger: true,
+      });
+      expect(res.statusCode).toBe(200);
+      // Close-on-trigger implies reduce-only
+      expect(place.mock.calls[0][1]).toMatchObject({
+        triggerBy: 'MarkPrice',
+        closeOnTrigger: true,
+        reduceOnly: true,
+      });
+    });
+
+    it.each([
+      [{ triggerBy: 'BestPrice' }, 'an unknown trigger source'],
+      [{ tpTriggerBy: 'markprice' }, 'a trigger source in the wrong case'],
+      [{ reduceOnly: 'yes' }, 'a non-boolean reduce-only'],
+      [{ category: 'spot', reduceOnly: true }, 'reduce-only on spot'],
+    ])('400 for %o (%s, BP-5 B)', async (extra) => {
+      const place = vi.spyOn(app.trading, 'placeOrder').mockResolvedValue(executed('o-1'));
+      const res = await post({
+        symbol: 'BTCUSDT',
+        side: 'buy',
+        type: 'market',
+        qty: '1',
+        ...extra,
+      });
+      expect(res.statusCode).toBe(400);
+      expect(place).not.toHaveBeenCalled();
     });
 
     it('400 for a market outside the allowlist', async () => {
@@ -341,6 +381,25 @@ describe('Paper Trading API (BP-1)', () => {
     });
   });
 
+  it('PATCH /positions/:id/tpsl passes the legs trigger sources (BP-5 B)', async () => {
+    const update = vi.spyOn(app.trading, 'updatePositionExits').mockResolvedValue(executed(true));
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/api/paper/positions/p-1/tpsl',
+      headers: auth,
+      payload: { takeProfit: '55000', stopLoss: '48000', slTriggerBy: 'IndexPrice' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(update.mock.calls[0][4]).toEqual({ slTriggerBy: 'IndexPrice' });
+    const bad = await app.inject({
+      method: 'PATCH',
+      url: '/api/paper/positions/p-1/tpsl',
+      headers: auth,
+      payload: { takeProfit: null, stopLoss: null, tpTriggerBy: 'Last' },
+    });
+    expect(bad.statusCode).toBe(400);
+  });
+
   it('PATCH /orders/:id accepts a qty size and rejects two sizes', async () => {
     const edit = vi.spyOn(app.trading, 'editOrder').mockResolvedValue(executed('ok' as const));
     const payload = { triggerPrice: '50000', qty: '0.02', takeProfit: null, stopLoss: null };
@@ -399,6 +458,93 @@ describe('Paper Trading API (BP-1)', () => {
       payload: { leverage: 11 },
     });
     expect(res.statusCode).toBe(400);
+  });
+
+  it("POST /account/margin-mode passes Bybit's mode and answers a refusal as 422 (BP-5 E)", async () => {
+    const setMode = vi
+      .spyOn(app.trading, 'setMarginMode')
+      .mockResolvedValue(executed('REGULAR_MARGIN' as const));
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/paper/account/margin-mode',
+      headers: auth,
+      payload: { marginMode: 'REGULAR_MARGIN' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().result).toBe('REGULAR_MARGIN');
+    expect(setMode).toHaveBeenCalledWith(userId, 'REGULAR_MARGIN');
+
+    setMode.mockRejectedValueOnce(
+      new TradingError(422, 'Set margin mode failed: Waiting for the BTCUSDT mark price')
+    );
+    const refused = await app.inject({
+      method: 'POST',
+      url: '/api/paper/account/margin-mode',
+      headers: auth,
+      payload: { marginMode: 'ISOLATED_MARGIN' },
+    });
+    expect(refused.statusCode).toBe(422);
+    expect(refused.json()).toEqual({
+      error: 'Set margin mode failed: Waiting for the BTCUSDT mark price',
+    });
+  });
+
+  it.each([[{ marginMode: 'cross' }], [{ marginMode: 'PORTFOLIO_MARGIN' }], [{}]])(
+    'POST /account/margin-mode → 400 for %o (BP-5 E)',
+    async (payload) => {
+      const setMode = vi.spyOn(app.trading, 'setMarginMode');
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/paper/account/margin-mode',
+        headers: auth,
+        payload,
+      });
+      expect(res.statusCode).toBe(400);
+      expect(setMode).not.toHaveBeenCalled();
+    }
+  );
+
+  it('POST /positions/:id/margin passes the signed amount (BP-5 add / reduce margin)', async () => {
+    const adjust = vi
+      .spyOn(app.trading, 'adjustMargin')
+      .mockResolvedValue(executed(new Decimal('600') as never));
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/paper/positions/p1/margin',
+      headers: auth,
+      payload: { margin: '-400.5' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().result).toBe('600');
+    expect(adjust).toHaveBeenCalledWith(userId, 'p1', new Decimal('-400.5'));
+  });
+
+  it.each([
+    [{ margin: '1.12345' }, 'more than 4 decimals'],
+    [{ margin: 'abc' }, 'not a number'],
+    [{}, 'missing'],
+  ])('POST /positions/:id/margin %o → 400 (%s)', async (payload) => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/paper/positions/p1/margin',
+      headers: auth,
+      payload,
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('POST /positions/:id/margin answers a refusal as 422 in Bybit wording', async () => {
+    vi.spyOn(app.trading, 'adjustMargin').mockRejectedValue(
+      new TradingError(422, 'Insufficient available balance to add margin')
+    );
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/paper/positions/p1/margin',
+      headers: auth,
+      payload: { margin: '100' },
+    });
+    expect(res.statusCode).toBe(422);
+    expect(res.json().error).toBe('Insufficient available balance to add margin');
   });
 
   it('PATCH /symbols/:symbol/leverage passes the symbol and leverage', async () => {

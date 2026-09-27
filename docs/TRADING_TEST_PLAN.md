@@ -774,3 +774,67 @@
 | 16.3.1 | Perps pane header | MARK · INDEX · FUNDING / COUNTDOWN "0.0083% / 07:49:28", ticking each second; tooltip explains | ✅     | T2 + live | `SymbolBar.test`; screenshot ✓. |
 | 16.3.2 | Spot pane header  | No mark / index / funding stats                                                                | ✅     | T2 · RTL  |                                 |
 | 16.3.3 | Positions tab     | Funding column (default on; saved layouts get it once, before Close if its anchor is hidden)   | ✅     | T2 · RTL  | `columnPrefs` tests.            |
+
+## Section 17 — Cross margin, risk tiers and refinements (Bybit Parity BP-5)
+
+> Reference: `docs/BYBIT_PARITY_PLAN.md` BP-5 (owner decisions O1–O12). Worked position: long 0.1 BTC at 50,000,
+> 10× (IM 500, fee to close 2.475, liq ≈ 45,148.99 isolated). Live = the 2026-09-27 API + browser run on the dev
+> server (throwaway account, deleted).
+
+### 17.1 Add / reduce margin (isolated, A)
+
+| #      | Action                        | Expected                                                                               | Status | Tier        | Notes                     |
+| ------ | ----------------------------- | -------------------------------------------------------------------------------------- | ------ | ----------- | ------------------------- |
+| 17.1.1 | Add 1,000                     | Liq ≈ 35,110; balance −1,000; journal + Balance History; leverage unchanged            | ✅     | T1 + T2     | `margin.test`, OAMP test. |
+| 17.1.2 | Reduce past the added margin  | Refused (110078); reduce needs a fresh mark; a reduce that liquidates refused (110011) | ✅     | T1 · Vitest | `margin.test`.            |
+| 17.1.3 | Partial close / leverage move | Extra margin shrinks pro rata / is released in full                                    | ✅     | T1 · Vitest | `margin.test`.            |
+| 17.1.4 | Cross account                 | Refused ("isolated margin mode" only); the pencil is hidden                            | ✅     | T1 + live   | Live ✓ (422).             |
+
+### 17.2 Trigger source, reduce-only, TP / SL side (B)
+
+| #      | Action                                    | Expected                                                                                              | Status | Tier        | Notes                        |
+| ------ | ----------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------ | ----------- | ---------------------------- |
+| 17.2.1 | SL on Mark / TP on Index                  | Fires on that source only; a leg whose source is unknown on a tick isn't checked; backfill likewise   | ✅     | T1 · Vitest | `orderRules.test`, services. |
+| 17.2.2 | Leg moved to another source before firing | The stale trigger is dropped                                                                          | ✅     | T1 · Vitest | `services.test`.             |
+| 17.2.3 | Reduce-only market / resting              | Capped at the position, no margin, no TP / SL; wrong side / no position refused (110017)              | ✅     | T1 + live   | Live ✓.                      |
+| 17.2.4 | Position shrinks / closes                 | Resting reduce-only orders trimmed furthest-first, then cancelled                                     | ✅     | T1 · Vitest | `orderRules.test`.           |
+| 17.2.5 | Close-on-trigger stop                     | Implies reduce-only; order form offers it for Stop only                                               | ✅     | T1 + T2     | TradingPanel test; live ✓.   |
+| 17.2.6 | TP / SL on the wrong side (O9)            | Refused in Bybit's words vs the order price / the leg source's live price; untouched legs not checked | ✅     | T1 + live   | Live ✓ "…base_price…".       |
+| 17.2.7 | SL beyond liquidation                     | Accepted; amber warning in the position TP / SL panel                                                 | ✅     | T1 + T2     | `PositionEditPanel.test`.    |
+
+### 17.3 Risk tiers (C)
+
+| #      | Action                            | Expected                                                                                | Status | Tier        | Notes             |
+| ------ | --------------------------------- | --------------------------------------------------------------------------------------- | ------ | ----------- | ----------------- |
+| 17.3.1 | Order / edit / leverage past cap  | Refused (110090) naming the leverage to go down to; reduce-only not counted             | ✅     | T1 · Vitest | `riskTiers.test`. |
+| 17.3.2 | Liquidation above the lowest tier | Steps down to each lower tier's limit at bankruptcy; full close only in the lowest tier | ✅     | T1 · Vitest | `riskTiers.test`. |
+| 17.3.3 | Backfill                          | One mark candle can take several steps (worst mark)                                     | ✅     | T1 · Vitest |                   |
+| 17.3.4 | Leverage modal / MMR hover        | Tier, MMR, max position value at the chosen leverage                                    | ✅     | T2 + live   | Screenshot ✓.     |
+
+### 17.4 Closed P&L (D)
+
+| #      | Action        | Expected                                                                                        | Status | Tier      | Notes                        |
+| ------ | ------------- | ----------------------------------------------------------------------------------------------- | ------ | --------- | ---------------------------- |
+| 17.4.1 | Partial close | Row: closed qty, entry, exit, closedPnl = PnL − open fee − close fee − funding; hover breakdown | ✅     | T1 + live | Live ✓ −0.3741 on 0.004 BTC. |
+| 17.4.2 | Liquidation   | Exit type "Liquidation"; spot sells never listed                                                | ✅     | T2 · RTL  |                              |
+
+### 17.5 Cross margin (E)
+
+| #      | Action                          | Expected                                                                                                 | Status | Tier        | Notes                                 |
+| ------ | ------------------------------- | -------------------------------------------------------------------------------------------------------- | ------ | ----------- | ------------------------------------- |
+| 17.5.1 | New account                     | Cross; existing accounts isolated with a one-time notice (How it works / Switch to Cross)                | ✅     | T2 + live   | Live ✓; migration ✓ on the dev DB.    |
+| 17.5.2 | Figures                         | Margin balance, IM / MM at mark, rates, available — server = client estimate                             | ✅     | T1 · Vitest | `bybitSpec.test` parity.              |
+| 17.5.3 | Order on unrealised profit      | Accepted in cross, refused in isolated                                                                   | ✅     | T1 · Vitest | `cross.test`.                         |
+| 17.5.4 | Loss beyond a position's margin | From the wallet in cross; isolated books only what was lost                                              | ✅     | T1 · Vitest |                                       |
+| 17.5.5 | MM rate reaches 100%            | Orders cancelled, positions stepped down in contract order (BTC first), account ends ≥ 0                 | ✅     | T1 · Vitest | `cross.test`, services (fresh marks). |
+| 17.5.6 | Mode switch                     | Isolated → cross releases added margin; cross → isolated refused with every reason; same mode = no-op    | ✅     | T1 + live   | Live ✓ both ways.                     |
+| 17.5.7 | UI                              | `Cross 10x` chip; mode tabs + explainer; summary bar Margin balance / IM rate / MM meter; cross liq est. | ✅     | T2 + live   | Screenshots ✓.                        |
+
+### 17.6 Refinements (F) and parity (G)
+
+| #      | Action                                      | Expected                                              | Status | Tier        | Notes                           |
+| ------ | ------------------------------------------- | ----------------------------------------------------- | ------ | ----------- | ------------------------------- |
+| 17.6.1 | Stalled feed at a funding timestamp         | Settled at the mark candle, not a minutes-old mark    | ✅     | T1 · Vitest | `services.test`.                |
+| 17.6.2 | Closed before its funding settled           | The fee lands on that close's Trade row               | ✅     | T1 · Vitest | repository + engine tests.      |
+| 17.6.3 | Opened and closed while the engine was down | Charged by the backfill (from the closing Trade rows) | ✅     | T1 · Vitest | `services.test`.                |
+| 17.6.4 | Bybit testnet parity run                    | Every compared v5 field matches within 0.01           | ⏳     | Manual      | Needs the owner's testnet keys. |

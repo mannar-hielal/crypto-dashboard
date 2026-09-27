@@ -35,6 +35,8 @@ import {
   type PaperSound,
   type PaperSpotBalanceDTO,
   type PaperStateDTO,
+  type PaperTriggerBy,
+  type PaperMarginMode,
 } from '@crypto-dashboard/sdk';
 import { useAuthStore } from './authStore';
 import { setLastKnownMarkPrice, setLastKnownPrice } from './paneStore';
@@ -94,6 +96,14 @@ export interface Position {
   openedAt: number; // Unix ms
   takeProfit?: number;
   stopLoss?: number;
+  /** What each leg triggers on (BP-5 B); absent = LastPrice */
+  tpTriggerBy?: PaperTriggerBy;
+  slTriggerBy?: PaperTriggerBy;
+  /**
+   * 'cross' (BP-5 E): the liquidation price is then the account-level estimate
+   * (useCrossAccount); absent = isolated
+   */
+  marginMode?: 'cross';
 }
 
 /** A spot coin balance. The USDT wallet is `balance`. */
@@ -122,6 +132,13 @@ export interface ClosedTrade {
   liquidated?: boolean;
   /** The closed part's share of the position's funding (+ = paid) — Closed P&L nets it (BP-4) */
   funding?: number;
+  /**
+   * BP-5 D (absent from a pre-BP-5 server): the open-fee share, the close fee and Bybit's
+   * closedPnl = pnl − openFee − closeFee − funding
+   */
+  openFee?: number;
+  closeFee?: number;
+  closedPnl?: number;
 }
 
 /** One funding settlement on one position (Bybit execType Funding, BP-4). */
@@ -159,6 +176,13 @@ export interface PendingOrder {
   takeProfit?: number;
   stopLoss?: number;
   placedAt: number;
+  /** A stop order's trigger source (BP-5 B); absent = LastPrice */
+  triggerBy?: PaperTriggerBy;
+  tpTriggerBy?: PaperTriggerBy;
+  slTriggerBy?: PaperTriggerBy;
+  /** Only shrinks the opposite position; reserves nothing */
+  reduceOnly?: boolean;
+  closeOnTrigger?: boolean;
 }
 
 export interface HistoricalOrder {
@@ -189,6 +213,8 @@ export interface HistoricalOrder {
   rejectionReason?: string;
   /** The system order that closed a liquidated position (Bybit createType CreateByLiq) */
   liquidation?: boolean;
+  reduceOnly?: boolean;
+  closeOnTrigger?: boolean;
 }
 
 export interface BalanceEvent {
@@ -235,6 +261,12 @@ export interface OrderRequest {
   triggerPrice?: number;
   takeProfit?: number;
   stopLoss?: number;
+  /** USDT Perpetual (BP-5 B): a stop's trigger source, and the TP / SL sources */
+  triggerBy?: PaperTriggerBy;
+  tpTriggerBy?: PaperTriggerBy;
+  slTriggerBy?: PaperTriggerBy;
+  reduceOnly?: boolean;
+  closeOnTrigger?: boolean;
 }
 
 // ─── DTO → view mappers ───────────────────────────────────────────────────────
@@ -271,6 +303,9 @@ function positionFrom(p: PaperPositionDTO): Position {
     openedAt: p.openedAt,
     ...(p.takeProfit !== undefined ? { takeProfit: toNum(p.takeProfit) } : {}),
     ...(p.stopLoss !== undefined ? { stopLoss: toNum(p.stopLoss) } : {}),
+    ...(p.marginMode === 'cross' ? { marginMode: 'cross' as const } : {}),
+    ...(p.tpTriggerBy && p.tpTriggerBy !== 'LastPrice' ? { tpTriggerBy: p.tpTriggerBy } : {}),
+    ...(p.slTriggerBy && p.slTriggerBy !== 'LastPrice' ? { slTriggerBy: p.slTriggerBy } : {}),
   };
 }
 
@@ -299,6 +334,11 @@ function pendingFrom(o: PaperPendingOrderDTO): PendingOrder {
     ...(o.ocoGroup ? { ocoGroup: o.ocoGroup } : {}),
     ...(o.takeProfit !== undefined ? { takeProfit: toNum(o.takeProfit) } : {}),
     ...(o.stopLoss !== undefined ? { stopLoss: toNum(o.stopLoss) } : {}),
+    ...(o.triggerBy && o.triggerBy !== 'LastPrice' ? { triggerBy: o.triggerBy } : {}),
+    ...(o.tpTriggerBy && o.tpTriggerBy !== 'LastPrice' ? { tpTriggerBy: o.tpTriggerBy } : {}),
+    ...(o.slTriggerBy && o.slTriggerBy !== 'LastPrice' ? { slTriggerBy: o.slTriggerBy } : {}),
+    ...(o.reduceOnly ? { reduceOnly: true } : {}),
+    ...(o.closeOnTrigger ? { closeOnTrigger: true } : {}),
   };
 }
 
@@ -324,6 +364,8 @@ function orderFrom(o: PaperOrderDTO): HistoricalOrder {
     closingTime: o.closingTime,
     ...(o.rejectionReason ? { rejectionReason: o.rejectionReason } : {}),
     ...(o.createType === 'CreateByLiq' ? { liquidation: true } : {}),
+    ...(o.reduceOnly ? { reduceOnly: true } : {}),
+    ...(o.closeOnTrigger ? { closeOnTrigger: true } : {}),
   };
 }
 
@@ -341,6 +383,9 @@ function tradeFrom(t: PaperStateDTO['trades'][number]): ClosedTrade {
     closedAt: t.closedAt,
     ...(t.execType === 'BustTrade' ? { liquidated: true } : {}),
     ...(t.funding !== undefined ? { funding: toNum(t.funding) } : {}),
+    ...(t.openFee !== undefined ? { openFee: toNum(t.openFee) } : {}),
+    ...(t.closeFee !== undefined ? { closeFee: toNum(t.closeFee) } : {}),
+    ...(t.closedPnl !== undefined ? { closedPnl: toNum(t.closedPnl) } : {}),
   };
 }
 
@@ -386,6 +431,8 @@ export function mapServerState(state: PaperStateDTO) {
     realizedPnl: toNum(state.account.realizedPnl),
     leverage: state.account.leverage,
     symbolLeverage: { ...state.account.symbolLeverage },
+    marginMode: state.account.marginMode ?? ('ISOLATED_MARGIN' as const),
+    marginModeNotice: state.account.marginModeNotice ?? false,
     spotBalances: state.spotBalances.map(spotFrom),
     positions: state.positions.map(positionFrom),
     pendingOrders: state.pendingOrders.map(pendingFrom),
@@ -459,6 +506,10 @@ interface PaperState {
   leverage: number;
   /** USDT Perpetual leverage per symbol (read through leverageFor) */
   symbolLeverage: Record<string, number>;
+  /** Account-wide margin mode (BP-5 E): REGULAR_MARGIN = cross. A pre-BP-5 server = isolated */
+  marginMode: PaperMarginMode;
+  /** The account was isolated before cross existed: offer the one-time notice (O2) */
+  marginModeNotice: boolean;
   /** Spot coin balances */
   spotBalances: SpotBalance[];
   /** When the server last pushed prices (they go to lastKnownPrices; this lets views re-render) */
@@ -499,10 +550,17 @@ interface PaperState {
   /** Cancel one TP/SL leg of a pending order (the order keeps its reserve). */
   cancelPendingExitLeg: (pendingOrderId: string, exitType: PaperExitLeg) => Promise<ActionError>;
   /** Set / change / remove TP and SL on an open position (null removes a leg). */
+  /**
+   * Add (amount > 0) or reduce (amount < 0) an isolated position's margin (BP-5, Bybit add-margin).
+   * Resolves to the server's refusal text, or null.
+   */
+  adjustPositionMargin: (positionId: string, amount: number) => Promise<ActionError>;
   updatePositionExits: (
     positionId: string,
     takeProfit: number | null,
-    stopLoss: number | null
+    stopLoss: number | null,
+    /** What each leg triggers on (BP-5 B); absent = keep the leg's */
+    by?: { tpTriggerBy?: PaperTriggerBy; slTriggerBy?: PaperTriggerBy }
   ) => Promise<ActionError>;
   /** Edit a pending order's price, base-coin qty and TP / SL. */
   editPendingOrder: (
@@ -516,6 +574,8 @@ interface PaperState {
   editJournalEntry: (entryId: string, text: string) => Promise<ActionError>;
   /** USDT Perpetual leverage for one symbol (refused while it has open trades). */
   setSymbolLeverage: (symbol: string, v: number) => Promise<ActionError>;
+  /** Switch the account's margin mode (BP-5 E); resolves to the server's refusal text, or null. */
+  setMarginMode: (mode: PaperMarginMode) => Promise<ActionError>;
   /** Reset the account back to the starting balance. */
   reset: () => Promise<ActionError>;
 }
@@ -532,6 +592,8 @@ const EMPTY = {
   journal: [] as JournalEntry[],
   leverage: 1,
   symbolLeverage: {} as Record<string, number>,
+  marginMode: 'ISOLATED_MARGIN' as PaperMarginMode,
+  marginModeNotice: false,
   spotBalances: [] as SpotBalance[],
   pricesAt: 0,
   version: -1,
@@ -627,6 +689,10 @@ export const usePaperStore = create<PaperState>()((set, get) => {
         realizedPnl: toNum(delta.account.realizedPnl),
         leverage: delta.account.leverage,
         symbolLeverage: { ...delta.account.symbolLeverage },
+        // A switch answers the one-time notice (the server clears it too)
+        ...(delta.account.marginMode && delta.account.marginMode !== s.marginMode
+          ? { marginMode: delta.account.marginMode, marginModeNotice: false }
+          : {}),
         spotBalances: upsertSpot(delta.reset ? [] : s.spotBalances, delta.spotUpsert.map(spotFrom)),
         positions: upsert(
           delta.reset ? [] : s.positions,
@@ -694,6 +760,18 @@ export const usePaperStore = create<PaperState>()((set, get) => {
             ...(order.type !== 'market' && triggerPrice ? { triggerPrice: dec(triggerPrice) } : {}),
             ...(takeProfit && takeProfit > 0 ? { takeProfit: dec(takeProfit) } : {}),
             ...(stopLoss && stopLoss > 0 ? { stopLoss: dec(stopLoss) } : {}),
+            // BP-5 B — only what differs from Bybit's defaults is sent
+            ...(order.triggerBy && order.triggerBy !== 'LastPrice'
+              ? { triggerBy: order.triggerBy }
+              : {}),
+            ...(takeProfit && order.tpTriggerBy && order.tpTriggerBy !== 'LastPrice'
+              ? { tpTriggerBy: order.tpTriggerBy }
+              : {}),
+            ...(stopLoss && order.slTriggerBy && order.slTriggerBy !== 'LastPrice'
+              ? { slTriggerBy: order.slTriggerBy }
+              : {}),
+            ...(order.reduceOnly ? { reduceOnly: true } : {}),
+            ...(order.closeOnTrigger ? { closeOnTrigger: true } : {}),
           },
           token()
         );
@@ -732,13 +810,25 @@ export const usePaperStore = create<PaperState>()((set, get) => {
     cancelPendingExitLeg: (pendingOrderId, exitType) =>
       settle(() => paperApi.cancelOrderExit(pendingOrderId, exitType, token())),
 
-    updatePositionExits: (positionId, takeProfit, stopLoss) =>
+    adjustPositionMargin: (positionId, amount) =>
+      settle(() =>
+        paperApi.adjustPositionMargin(
+          positionId,
+          // Bybit takes at most 4 decimals
+          Number.isFinite(amount) ? Number(amount.toFixed(4)).toString() : '0',
+          token()
+        )
+      ),
+
+    updatePositionExits: (positionId, takeProfit, stopLoss, by = {}) =>
       settle(() =>
         paperApi.updatePositionExits(
           positionId,
           {
             takeProfit: takeProfit === null ? null : dec(takeProfit),
             stopLoss: stopLoss === null ? null : dec(stopLoss),
+            ...(takeProfit !== null && by.tpTriggerBy ? { tpTriggerBy: by.tpTriggerBy } : {}),
+            ...(stopLoss !== null && by.slTriggerBy ? { slTriggerBy: by.slTriggerBy } : {}),
           },
           token()
         )
@@ -776,6 +866,8 @@ export const usePaperStore = create<PaperState>()((set, get) => {
       const leverage = Math.min(Math.max(Number.isFinite(v) ? Math.round(v) : 1, 1), MAX_LEVERAGE);
       return settle(() => paperApi.setSymbolLeverage(symbol, leverage, token()));
     },
+
+    setMarginMode: (mode) => settle(() => paperApi.setMarginMode(mode, token())),
 
     reset: () => settle(() => paperApi.resetAccount(token())),
   };
