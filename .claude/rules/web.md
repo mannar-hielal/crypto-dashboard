@@ -87,6 +87,10 @@ supply-chain policy, secrets management, container hardening — see [`security.
   proxy link (172.16.0.0/12 — never the org-wide 6PN `fdaa::/16`, which other apps in the
   organisation can use) and only when it is one valid IP.
   Don't set Fastify `trustProxy` — the hop count varies by Fly edge.
+- Consequence of no `trustProxy`: in production `request.protocol` is always `'http'` (Fly
+  terminates TLS at its edge and forwards plain HTTP) and `request.host` is the `Host` header, not
+  `X-Forwarded-Host`. Never build an absolute URL, redirect or origin check from them — use
+  `config.clientUrl` (and the API's own public URL from config, if one is ever needed).
 
 ### Error handling
 
