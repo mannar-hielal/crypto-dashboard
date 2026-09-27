@@ -221,7 +221,7 @@ export interface OrderRequest {
 
 const toNum = (v: string) => Number(v);
 const optNum = (v: string | undefined) => (v === undefined ? undefined : Number(v));
-/** A risk figure a pre-BP-3 server doesn't send (the DTO type says it always does — not at runtime) */
+/** A BP-3 risk figure — optional on the DTO: a pre-BP-3 server sends none (unknown, not 0) */
 const optRisk = (v: string | undefined): number | null => (v === undefined ? null : Number(v));
 
 function positionFrom(p: PaperPositionDTO): Position {
