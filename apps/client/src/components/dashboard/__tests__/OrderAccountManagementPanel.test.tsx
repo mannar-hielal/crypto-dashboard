@@ -882,6 +882,14 @@ describe('BP-3 — mark price, liquidation price and MMR in the Positions tab', 
     expect(screen.getByTestId('position-mmr').textContent).toBe('4.7%');
   });
 
+  it('unknown risk figures (pre-BP-3 server) show — instead of a safe-looking 0% meter', () => {
+    usePaperStore.setState({ positions: [{ ...long10x, liqPrice: null, positionMM: null }] });
+    paneStores[0].setState({ markPrice: 49_000 });
+    renderPanel();
+    expect(screen.getByTestId('position-liq-price').textContent).toBe('—');
+    expect(screen.queryByTestId('position-mmr')).toBeNull();
+  });
+
   it('a position that can not be liquidated shows — for its liquidation price', () => {
     usePaperStore.setState({ positions: [{ ...long10x, liqPrice: 0 }] });
     renderPanel();

@@ -75,14 +75,17 @@ export interface Position {
   closeFeeReserve: number;
   /** Margin added on top of IM (0 until add / remove margin exists) */
   extraMargin: number;
-  /** Mark price at or past which it is liquidated; 0 = can't be liquidated (a 1× long) */
-  liqPrice: number;
-  /** Price it closes at when liquidated — the whole position margin is lost there */
-  bustPrice: number;
+  /**
+   * Mark price at or past which it is liquidated; 0 = can't be liquidated (a 1× long); null =
+   * unknown (a pre-BP-3 server sent none — never shown as "safe")
+   */
+  liqPrice: number | null;
+  /** Price it closes at when liquidated — the whole position margin is lost there; null = unknown */
+  bustPrice: number | null;
   /** Bybit positionIM: initial margin + fee to close */
   positionIM: number;
-  /** Bybit positionMM: maintenance margin (liquidation when equity falls to it) */
-  positionMM: number;
+  /** Bybit positionMM: maintenance margin (liquidation when equity falls to it); null = unknown */
+  positionMM: number | null;
   openedAt: number; // Unix ms
   takeProfit?: number;
   stopLoss?: number;
@@ -218,6 +221,8 @@ export interface OrderRequest {
 
 const toNum = (v: string) => Number(v);
 const optNum = (v: string | undefined) => (v === undefined ? undefined : Number(v));
+/** A BP-3 risk figure — optional on the DTO: a pre-BP-3 server sends none (unknown, not 0) */
+const optRisk = (v: string | undefined): number | null => (v === undefined ? null : Number(v));
 
 function positionFrom(p: PaperPositionDTO): Position {
   return {
@@ -232,10 +237,16 @@ function positionFrom(p: PaperPositionDTO): Position {
     entryFee: toNum(p.entryFee),
     closeFeeReserve: toNum(p.closeFeeReserve),
     extraMargin: toNum(p.extraMargin ?? '0'),
-    liqPrice: toNum(p.liqPrice ?? '0'),
-    bustPrice: toNum(p.bustPrice ?? '0'),
-    positionIM: toNum(p.positionIM ?? p.entryUsdtAmount),
-    positionMM: toNum(p.positionMM ?? '0'),
+    // A pre-BP-3 server (rolling deploy) sends no risk figures: they stay unknown (null), never
+    // "0", which would read as "can't be liquidated" / "no maintenance margin" — falsely safe
+    liqPrice: optRisk(p.liqPrice),
+    bustPrice: optRisk(p.bustPrice),
+    // positionIM = IM + fee to close (server formula), so it can be rebuilt from the stored parts
+    positionIM:
+      p.positionIM !== undefined
+        ? toNum(p.positionIM)
+        : toNum(p.entryUsdtAmount) + toNum(p.closeFeeReserve),
+    positionMM: optRisk(p.positionMM),
     openedAt: p.openedAt,
     ...(p.takeProfit !== undefined ? { takeProfit: toNum(p.takeProfit) } : {}),
     ...(p.stopLoss !== undefined ? { stopLoss: toNum(p.stopLoss) } : {}),

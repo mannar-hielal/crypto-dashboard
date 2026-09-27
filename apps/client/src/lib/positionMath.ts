@@ -30,7 +30,9 @@ export function positionMmrRate(
     'side' | 'entryPrice' | 'quantity' | 'positionIM' | 'positionMM' | 'extraMargin'
   >,
   mark: number
-): number {
+): number | null {
+  // Unknown (a pre-BP-3 server sent no MM): no rate rather than a falsely safe 0%
+  if (pos.positionMM === null) return null;
   const equity = pos.positionIM + pos.extraMargin + positionPnl(pos, mark);
   if (equity <= 0) return 1;
   return Math.max(0, pos.positionMM / equity);

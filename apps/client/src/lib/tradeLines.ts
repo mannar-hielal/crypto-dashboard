@@ -89,7 +89,7 @@ export function buildTradeLines(input: TradeLinesInput): TradeLineSpec[] {
           drag: { kind: 'positionSl', positionId: pos.id },
         });
       }
-      if (pos.liqPrice > 0) {
+      if (pos.liqPrice !== null && pos.liqPrice > 0) {
         lines.push({
           id: `pos:${pos.id}:liq`,
           price: pos.liqPrice,

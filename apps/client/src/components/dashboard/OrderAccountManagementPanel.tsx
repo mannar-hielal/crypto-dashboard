@@ -1373,12 +1373,18 @@ export function OrderAccountManagementPanel({
                                         style={{ color: color.amber }}
                                         data-testid="position-liq-price"
                                       >
-                                        {pos.liqPrice > 0 ? `$${fmtMktPrice(pos.liqPrice)}` : '—'}
+                                        {pos.liqPrice !== null && pos.liqPrice > 0
+                                          ? `$${fmtMktPrice(pos.liqPrice)}`
+                                          : '—'}
                                       </td>
                                     )}
                                     {isVisible('positions', 'mmr') && (
                                       <td className="px-3 py-1.5">
-                                        <MmrBar rate={mmrRate} />
+                                        {mmrRate !== null ? (
+                                          <MmrBar rate={mmrRate} />
+                                        ) : (
+                                          <span style={{ color: color.muted }}>—</span>
+                                        )}
                                       </td>
                                     )}
                                     {isVisible('positions', 'pnl') && (
@@ -1472,7 +1478,7 @@ export function OrderAccountManagementPanel({
                                     )}
                                     {isVisible('positions', 'mm') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
-                                        {pos.positionMM.toFixed(2)}
+                                        {pos.positionMM !== null ? pos.positionMM.toFixed(2) : '—'}
                                       </td>
                                     )}
                                     {isVisible('positions', 'expiry') && (

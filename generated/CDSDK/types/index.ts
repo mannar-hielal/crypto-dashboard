@@ -227,18 +227,23 @@ export interface PaperPositionDTO {
   entryFee: string;
   /** Estimated close fee held with the margin (position margin = entryUsdtAmount + this) */
   closeFeeReserve: string;
+  /*
+   * BP-3 risk figures. Every BP-3 server sends them all, but they are optional: a server from
+   * before BP-3 (rolling deploy) sends none. A missing figure is unknown — never read it as 0,
+   * which would mean "can't be liquidated" / "no maintenance margin".
+   */
   /** Margin added on top of IM (0 until add / remove margin exists) */
-  extraMargin: string;
+  extraMargin?: string;
   /** Mark price at or past which the position is liquidated; "0" = can't be liquidated (1× long) */
-  liqPrice: string;
+  liqPrice?: string;
   /** Price the position closes at when liquidated (its whole margin is lost there) */
-  bustPrice: string;
+  bustPrice?: string;
   /** Bybit positionIM: initial margin + fee to close */
-  positionIM: string;
+  positionIM?: string;
   /** Bybit positionMM: position value × MMR − deduction + fee to close */
-  positionMM: string;
+  positionMM?: string;
   /** Maintenance margin rate of the position's risk-limit tier */
-  mmr: string;
+  mmr?: string;
   openedAt: number;
   takeProfit?: string;
   stopLoss?: string;
