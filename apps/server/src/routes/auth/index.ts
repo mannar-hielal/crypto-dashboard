@@ -704,13 +704,23 @@ export async function authRoutes(app: FastifyInstance) {
 
     app.log.info({ userId: stored.userId }, 'Token valid, updating user');
 
-    await app.prisma.$transaction([
-      app.prisma.user.update({
-        where: { id: stored.userId },
-        data: { emailVerifiedAt: new Date() },
-      }),
-      app.prisma.verificationToken.delete({ where: { id: stored.id } }),
-    ]);
+    // 🔐 Consume the token FIRST with deleteMany: a concurrent duplicate request (double click,
+    //    two tabs, a StrictMode double effect) gets count=0 and a 400, not a P2025 500.
+    try {
+      await app.prisma.$transaction(async (tx) => {
+        const { count } = await tx.verificationToken.deleteMany({ where: { id: stored.id } });
+        if (count === 0) throw new TokenConsumedError();
+        await tx.user.update({
+          where: { id: stored.userId },
+          data: { emailVerifiedAt: new Date() },
+        });
+      });
+    } catch (err) {
+      if (err instanceof TokenConsumedError) {
+        return reply.status(400).send({ error: 'Invalid or expired verification token' });
+      }
+      throw err;
+    }
 
     return reply.send({ message: 'Email verified successfully. You can now use all features.' });
   });
@@ -1202,15 +1212,25 @@ export async function authRoutes(app: FastifyInstance) {
     const oldEmail = stored.user.email;
     const newEmail = stored.newEmail;
 
-    await app.prisma.$transaction([
-      app.prisma.user.update({
-        where: { id: stored.userId },
-        data: { email: newEmail, emailVerifiedAt: new Date() },
-      }),
-      app.prisma.emailChangeToken.delete({ where: { id: stored.id } }),
-      // 🔐 Standards: Security logout after email change
-      app.prisma.refreshToken.deleteMany({ where: { userId: stored.userId } }),
-    ]);
+    // 🔐 Consume the token FIRST with deleteMany: a concurrent duplicate request gets count=0
+    //    and a 400 (and no second security-alert email), not a P2025 500.
+    try {
+      await app.prisma.$transaction(async (tx) => {
+        const { count } = await tx.emailChangeToken.deleteMany({ where: { id: stored.id } });
+        if (count === 0) throw new TokenConsumedError();
+        await tx.user.update({
+          where: { id: stored.userId },
+          data: { email: newEmail, emailVerifiedAt: new Date() },
+        });
+        // 🔐 Standards: Security logout after email change
+        await tx.refreshToken.deleteMany({ where: { userId: stored.userId } });
+      });
+    } catch (err) {
+      if (err instanceof TokenConsumedError) {
+        return reply.status(400).send({ error: 'Invalid or expired token' });
+      }
+      throw err;
+    }
 
     await EmailService.sendEmailChangedSecurityAlert(oldEmail, oldEmail, newEmail);
     void reply.clearCookie(REFRESH_TOKEN_COOKIE, COOKIE_BASE_OPTIONS);
