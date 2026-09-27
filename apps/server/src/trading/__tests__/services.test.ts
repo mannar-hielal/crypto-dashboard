@@ -1785,21 +1785,25 @@ describe('AccountRepository', () => {
     ]);
   });
 
-  it('adds a late funding fee to the close of a position that closed before its settlement (BP-5 F)', async () => {
+  it('splits a late funding fee over every close after the timestamp by quantity (BP-5 F, review #146)', async () => {
     const { prisma, tx } = fakePrisma(1);
-    tx.trade.findFirst.mockResolvedValueOnce({ id: 't-close' });
+    // Two partial closes after the timestamp: 0.25 then 0.75 of a 1.0 position
+    tx.trade.findMany.mockResolvedValueOnce([
+      { id: 't-a', quantity: '0.25' },
+      { id: 't-b', quantity: '0.75' },
+    ]);
     const repo = new AccountRepository(prisma as never);
     const empty = { ...placeDelta(), positionsUpsert: [], orders: [] };
     await repo.mutate('u1', () => ({
       delta: {
         ...empty,
         closedTradeFunding: [
-          { symbol: 'BTCUSDT', openedAt: 1_000_000, ts: 1_100_000, funding: D('0.51') },
+          { symbol: 'BTCUSDT', openedAt: 1_000_000, ts: 1_100_000, funding: D('5') },
         ],
       },
       result: 1,
     }));
-    expect(tx.trade.findFirst).toHaveBeenCalledWith(
+    expect(tx.trade.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           userId: 'u1',
@@ -1807,13 +1811,16 @@ describe('AccountRepository', () => {
           openedAt: new Date(1_000_000),
           executedAt: { gte: new Date(1_100_000) },
         }),
-        orderBy: { seq: 'desc' },
       })
     );
-    // 🔐 scoped to the user's own row
+    // 🔐 each update scoped to the user's own row
     expect(tx.trade.updateMany).toHaveBeenCalledWith({
-      where: { id: 't-close', userId: 'u1' },
-      data: { funding: { increment: D('0.51') }, pnl: { decrement: D('0.51') } },
+      where: { id: 't-a', userId: 'u1' },
+      data: { funding: { increment: D('1.25') }, pnl: { decrement: D('1.25') } },
+    });
+    expect(tx.trade.updateMany).toHaveBeenCalledWith({
+      where: { id: 't-b', userId: 'u1' },
+      data: { funding: { increment: D('3.75') }, pnl: { decrement: D('3.75') } },
     });
   });
 

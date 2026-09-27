@@ -319,9 +319,11 @@ export class AccountRepository {
     for (const f of [...delta.fundings].reverse()) {
       await tx.trade.create({ data: { ...fundingData(f), id: f.id, userId, accountId } });
     }
-    // A fee for a position closed before its settlement goes onto that close (BP-5 F)
+    // A fee for a position closed before its settlement goes onto its closes (BP-5 F): split over
+    // every close after the timestamp by the quantity each closed, as the fee was charged on their
+    // total (the last close takes the rounding remainder)
     for (const f of delta.closedTradeFunding) {
-      const close = await tx.trade.findFirst({
+      const closes = await tx.trade.findMany({
         where: {
           userId,
           symbol: f.symbol,
@@ -330,13 +332,21 @@ export class AccountRepository {
           openedAt: new Date(f.openedAt),
           executedAt: { gte: new Date(f.ts) },
         },
-        orderBy: { seq: 'desc' },
-        select: { id: true },
+        orderBy: { seq: 'asc' },
+        select: { id: true, quantity: true },
       });
-      if (close) {
+      const total = closes.reduce((sum, c) => sum.plus(c.quantity.toString()), new Decimal(0));
+      if (total.lte(0)) continue;
+      let left = f.funding;
+      for (const [i, c] of closes.entries()) {
+        const share =
+          i === closes.length - 1
+            ? left
+            : f.funding.times(c.quantity.toString()).div(total).toDecimalPlaces(8);
+        left = left.minus(share);
         await tx.trade.updateMany({
-          where: { id: close.id, userId },
-          data: { funding: { increment: f.funding }, pnl: { decrement: f.funding } },
+          where: { id: c.id, userId },
+          data: { funding: { increment: share }, pnl: { decrement: share } },
         });
       }
     }
