@@ -22,8 +22,15 @@ export function refreshAccessToken(): Promise<string | null> {
   if (!inflight) {
     inflight = authApi
       .refresh()
-      .then(({ accessToken }) => {
-        const { user, setAuth } = useAuthStore.getState();
+      .then((res) => {
+        const { user, setAuth, clearAuth } = useAuthStore.getState();
+        if (!res) {
+          // No refresh cookie any more (expired, or cleared by a logout elsewhere): the
+          // session is gone, same as a 401.
+          clearAuth();
+          return null;
+        }
+        const { accessToken } = res;
         if (!user) return null; // signed out meanwhile — don't resurrect the session
         setAuth(accessToken, user);
         return accessToken;
@@ -40,6 +47,27 @@ export function refreshAccessToken(): Promise<string | null> {
       });
   }
   return inflight;
+}
+
+/**
+ * Boot-time session restore: trade the httpOnly refresh cookie for an access token, then load
+ * the user. A signed-out visitor (no cookie) gets `null` from refresh — no 401, no /me call.
+ * Any failure just ends the loading state so ProtectedRoute can redirect to /login.
+ */
+export async function restoreSession(): Promise<void> {
+  const { setAuth, setLoading } = useAuthStore.getState();
+  try {
+    const res = await authApi.refresh();
+    if (!res) {
+      setLoading(false);
+      return;
+    }
+    const { user } = await authApi.me(res.accessToken);
+    setAuth(res.accessToken, user);
+  } catch {
+    // Refresh rejected (expired / revoked cookie) or /me failed — stay signed out.
+    setLoading(false);
+  }
 }
 
 /**

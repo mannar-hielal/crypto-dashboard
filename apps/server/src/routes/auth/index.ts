@@ -175,13 +175,14 @@ const refreshSchema = {
   tags: ['Auth'],
   summary: 'Refresh access token',
   description:
-    'Uses the httpOnly refresh token cookie (sameSite: none + secure in prod) to issue a new 15-min access token. Old refresh token is deleted and a new one is set (rotation).',
+    'Uses the httpOnly refresh token cookie (sameSite: none + secure in prod) to issue a new 15-min access token. Old refresh token is deleted and a new one is set (rotation). With no refresh cookie at all there is no session to restore: 204, no body, nothing issued. A cookie that is present but invalid, expired or replayed gets 401.',
   response: {
     200: {
       type: 'object',
       required: ['accessToken'],
       properties: { accessToken: { type: 'string' } },
     },
+    204: { type: 'null', description: 'No refresh cookie — no session to restore' },
     401: errorResponse,
   },
 };
@@ -823,8 +824,11 @@ export async function authRoutes(app: FastifyInstance) {
       // eslint-disable-next-line security/detect-object-injection
       const rawToken = request.cookies[REFRESH_TOKEN_COOKIE];
 
+      // The client probes this on every app boot. No cookie means a signed-out visitor, which
+      // is a normal answer, not a failed authentication: 204 and nothing issued. 🔐 A cookie
+      // that is present but rejected below still gets 401 (and replay detection still runs).
       if (!rawToken) {
-        return reply.status(401).send({ error: 'No refresh token' });
+        return reply.status(204).send();
       }
 
       const tokenHash = hashToken(rawToken);

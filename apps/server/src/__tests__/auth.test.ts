@@ -381,9 +381,21 @@ describe('POST /api/auth/refresh', () => {
     expect(typeof res.json<{ accessToken: string }>().accessToken).toBe('string');
   });
 
-  it('returns 401 when no refresh token cookie is present', async () => {
+  it('should answer 204 with no token and no cookie when no refresh cookie is present', async () => {
+    const findUnique = app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>;
+    const create = app.prisma.refreshToken.create as ReturnType<typeof vi.fn>;
+    findUnique.mockClear();
+    create.mockClear();
+
     const res = await app.inject({ method: 'POST', url: '/api/auth/refresh' });
-    expect(res.statusCode).toBe(401);
+
+    // A signed-out visitor's boot probe is not an auth failure — no 401 in the browser console
+    expect(res.statusCode).toBe(204);
+    expect(res.body).toBe('');
+    // 🔐 nothing is issued and nothing is looked up
+    expect(res.headers['set-cookie']).toBeUndefined();
+    expect(findUnique).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
   });
 
   it('returns 401 when the token is not found in the DB (stolen/invalid)', async () => {
