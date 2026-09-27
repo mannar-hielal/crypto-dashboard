@@ -625,7 +625,11 @@ export class MatchingEngine {
     }
   }
 
-  /** Settle each account; returns the accounts whose write still failed after two attempts. */
+  /**
+   * Settle each account; returns the accounts whose write still failed after two attempts. An
+   * account that no longer exists (deleted after the timestamp) is dropped, not returned: its
+   * write can never succeed, and retrying it would hold the lease's recorded progress forever.
+   */
   private async runFunding(
     symbol: string,
     ts: number,
@@ -643,13 +647,27 @@ export class MatchingEngine {
           break;
         } catch (err) {
           if (attempt === TRIGGER_ATTEMPTS) {
-            log.error({ err, userId, symbol, ts }, 'Funding settlement failed');
-            failed.set(userId, positions);
+            if (await this.accountGone(userId)) {
+              log.info({ userId, symbol, ts }, 'Funding dropped: the account no longer exists');
+              this.evict(userId);
+            } else {
+              log.error({ err, userId, symbol, ts }, 'Funding settlement failed');
+              failed.set(userId, positions);
+            }
           }
         }
       }
     }
     return failed;
+  }
+
+  /** True only when the account is confirmed deleted (a failed lookup is not proof). */
+  private async accountGone(userId: string): Promise<boolean> {
+    try {
+      return (await this.deps.reloadUser(userId)) === null;
+    } catch {
+      return false;
+    }
   }
 
   /** Bybit's funding history for a gap, retried while this engine is active (never skipped). */

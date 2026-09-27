@@ -912,6 +912,7 @@ describe('MatchingEngine', () => {
         .mockRejectedValueOnce(new Error('db down'))
         .mockRejectedValueOnce(new Error('db down'))
         .mockResolvedValue(null);
+      reload = () => long(); // the account still exists — only the write failed
       const e = engine({
         fetchFundingHistory: vi.fn(async () => [{ ts: TS, rate: D('0.0001') }]),
         fundingCheckMs: 1_000_000,
@@ -923,6 +924,31 @@ describe('MatchingEngine', () => {
       clock = TS + 1_000;
       fundingTick(TS + 8 * 3_600_000, 0.0002, 50_100);
       await vi.waitFor(() => expect(runFunding).toHaveBeenCalledTimes(3)); // 2 failed + retried
+      await e.stop();
+    });
+
+    it('should drop a deleted account’s settlement instead of retrying it forever when the write fails', async () => {
+      open = new Map([['u1', long()]]);
+      // The user deleted their account after the timestamp: every write fails (FK), and the
+      // account is gone from the DB
+      runFunding.mockRejectedValue(new Error('Foreign key constraint violated'));
+      reload = () => null;
+      const e = engine({
+        fetchFundingHistory: vi.fn(async () => [{ ts: TS, rate: D('0.0001') }]),
+        fundingCheckMs: 1_000_000,
+        fundingRetryMs: 0,
+      });
+      await e.start();
+      clock = TS - 1_000;
+      fundingTick(TS, 0.0001, 50_000);
+      clock = TS + 1_000;
+      fundingTick(TS + 8 * 3_600_000, 0.0002, 50_100);
+      await vi.waitFor(() => expect(runFunding).toHaveBeenCalledTimes(2));
+      await new Promise((r) => setTimeout(r, 20));
+      expect(runFunding).toHaveBeenCalledTimes(2); // not retried after the account is found gone
+      // …and the lease's recorded progress is no longer held back before the timestamp
+      await (e as unknown as { heartbeat(): Promise<void> }).heartbeat();
+      expect(lease.renew).toHaveBeenLastCalledWith('me', expect.any(Number), new Date(TS + 1_000));
       await e.stop();
     });
 
