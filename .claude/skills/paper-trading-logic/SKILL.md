@@ -103,6 +103,11 @@ version            server account version — applyDelta ignores anything not ne
   close-fee reserve; nothing returns to the wallet; `realizedPnl += −(IM + extra) − reserve − entryFee`. Records:
   Trade `execType 'BustTrade'`, close order `createType 'CreateByLiq'`, TP / SL cancel rows, journal + balance event,
   sound `'liquidation'`.
+- **Funding (BP-4):** at each symbol's funding timestamp every position held then pays `size × mark × rate` (+ rate:
+  long pays, short receives), Bybit's settled rate; from the balance, shortfall from that position's margin; realized
+  PnL + `cumFunding`; `execType 'Funding'` row + journal + balance event; once per account/symbol/timestamp
+  (`SymbolSetting.lastFundingAt`); closes carry `funding` (Closed P&L), never charged twice. Engine:
+  `MatchingEngine` funding clock + `settleFunding` in `actions.ts`.
 - **One-way merge:** a same-side fill adds to the position — qty-weighted entry (8 dp), margin / entryFee /
   closeFeeReserve summed; a TP / SL attached to the new order replaces the position's.
 - **Client:** perp PnL uses the mark (`getLastKnownMarkPrice` / pane `markPrice`, falling back to last); helpers in

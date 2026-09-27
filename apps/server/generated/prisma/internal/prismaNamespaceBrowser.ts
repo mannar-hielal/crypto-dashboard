@@ -196,7 +196,8 @@ export const SymbolSettingScalarFieldEnum = {
   accountId: 'accountId',
   symbol: 'symbol',
   leverage: 'leverage',
-  marginMode: 'marginMode'
+  marginMode: 'marginMode',
+  lastFundingAt: 'lastFundingAt'
 } as const
 
 export type SymbolSettingScalarFieldEnum = (typeof SymbolSettingScalarFieldEnum)[keyof typeof SymbolSettingScalarFieldEnum]
@@ -218,6 +219,7 @@ export const PositionScalarFieldEnum = {
   entryFee: 'entryFee',
   closeFeeReserve: 'closeFeeReserve',
   extraMargin: 'extraMargin',
+  cumFunding: 'cumFunding',
   takeProfit: 'takeProfit',
   stopLoss: 'stopLoss',
   openedAt: 'openedAt',
@@ -283,6 +285,8 @@ export const TradeScalarFieldEnum = {
   grossPnl: 'grossPnl',
   pnlPercent: 'pnlPercent',
   execType: 'execType',
+  feeRate: 'feeRate',
+  funding: 'funding',
   openedAt: 'openedAt',
   executedAt: 'executedAt',
   createdAt: 'createdAt'

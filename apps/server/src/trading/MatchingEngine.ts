@@ -16,17 +16,24 @@
  * - Gaps: if a market's ticks stop for longer than GAP_MS (Bybit outage), or the engine starts
  *   after downtime (EngineLease.lastTickAt), the missed minutes are backfilled from 1m candles —
  *   last-price candles, plus mark-price candles for USDT Perpetual liquidation checks.
+ * - Funding (BP-4): a clock per USDT Perpetual symbol (the ticker's `nextFundingTime`) snapshots,
+ *   at the timestamp itself, every position open then, and settles it at Bybit's settled rate for
+ *   that timestamp (funding history; the last ticker rate as a fallback) and the mark at that
+ *   instant. A backfill replays missed timestamps in time order with the candle sweep.
  */
 
 import { Decimal } from '@prisma/client/runtime/client';
 import { logger } from '../logger.js';
 import { fallbackRiskTiers, type RiskTier } from './bybitSpec.js';
+import type { FundingRate } from './infra.js';
 import {
   evaluateCandle,
   evaluateTick,
   type AccountState,
   type Candle,
   type Category,
+  type FundingSnapshot,
+  type FundingSpec,
   type Trigger,
 } from './engine/index.js';
 import type { PaperEventBus } from './PaperEventBus.js';
@@ -40,10 +47,13 @@ export interface TickUpdate {
   lastPrice: number;
   /** USDT Perpetual mark price */
   markPrice?: number;
+  /** USDT Perpetual: the rate for the next funding settlement, and when it is (Unix ms) */
+  fundingRate?: number;
+  nextFundingTime?: number;
 }
 
 export interface MatchingEngineDeps {
-  trading: Pick<TradingService, 'runTrigger'>;
+  trading: Pick<TradingService, 'runTrigger' | 'runFunding'>;
   events: PaperEventBus;
   loadOpenTriggers: () => Promise<Map<string, AccountState>>;
   /** One account's current state, or null if it no longer exists (deleted user) */
@@ -58,6 +68,12 @@ export interface MatchingEngineDeps {
   ) => Promise<Candle[]>;
   /** USDT Perpetual risk-limit tiers (default: the bundled Bybit snapshot) */
   riskTiers?: (symbol: string) => RiskTier[];
+  /** Settled funding rates of a symbol with fromMs < ts ≤ toMs, oldest first (BP-4) */
+  fetchFundingHistory?: (symbol: string, fromMs: number, toMs: number) => Promise<FundingRate[]>;
+  /** How often the funding clock checks for a due timestamp */
+  fundingCheckMs?: number;
+  /** Wait between attempts to read a just-settled rate from Bybit's history */
+  fundingRetryMs?: number;
   lease: LeaseStore;
   holder: string;
   now?: () => number;
@@ -81,6 +97,19 @@ export interface LeaseStore {
 
 /** Attempts per trigger before waiting for the next tick */
 const TRIGGER_ATTEMPTS = 2;
+
+/** Reads of Bybit's funding history for a just-settled rate before falling back to the ticker's */
+const FUNDING_RATE_ATTEMPTS = 12;
+
+/** What the live ticker says about a symbol's next funding (BP-4). */
+interface FundingClock {
+  /** The next funding timestamp (Unix ms) */
+  nextTs: number;
+  /** The rate announced for it (the ticker's fundingRate while nextTs is ahead) */
+  rate?: Decimal;
+  /** The latest mark price */
+  mark?: Decimal;
+}
 
 /** Longest a symbol may go without a tick before the gap is backfilled from candles. */
 const DEFAULT_GAP_MS = 60_000;
@@ -126,6 +155,13 @@ export class MatchingEngine {
   private readonly gapMs: number;
   private readonly resyncEveryMs: number;
   private readonly riskTiers: (symbol: string) => RiskTier[];
+  /** Funding clock per USDT Perpetual symbol — bounded: ALLOWED_SYMBOLS */
+  private readonly fundingClocks = new Map<string, FundingClock>();
+  /** Last funding timestamp started per symbol (the DB marker is the real once-only guard) */
+  private readonly fundingStarted = new Map<string, number>();
+  private fundingTimer: NodeJS.Timeout | null = null;
+  private readonly fundingCheckMs: number;
+  private readonly fundingRetryMs: number;
 
   constructor(private readonly deps: MatchingEngineDeps) {
     this.now = deps.now ?? Date.now;
@@ -134,6 +170,8 @@ export class MatchingEngine {
     this.gapMs = deps.gapMs ?? DEFAULT_GAP_MS;
     this.resyncEveryMs = deps.resyncEveryMs ?? 30_000;
     this.riskTiers = deps.riskTiers ?? fallbackRiskTiers;
+    this.fundingCheckMs = deps.fundingCheckMs ?? 1_000;
+    this.fundingRetryMs = deps.fundingRetryMs ?? 10_000;
   }
 
   /** Start competing for the lease; activates as soon as this instance holds it. */
@@ -204,6 +242,7 @@ export class MatchingEngine {
     this.unsubscribeTicks = this.deps.subscribeTicker((u) => this.onTick(u));
     this.active = true;
     this.resyncTimer = setInterval(() => void this.rebuildIndex(), this.resyncEveryMs);
+    this.fundingTimer = setInterval(() => this.checkFunding(), this.fundingCheckMs);
     log.info(
       { accounts: this.users.size, markets: this.symbolUsers.size },
       'Matching engine active'
@@ -257,6 +296,10 @@ export class MatchingEngine {
     this.unsubscribeEvents = null;
     if (this.resyncTimer) clearInterval(this.resyncTimer);
     this.resyncTimer = null;
+    if (this.fundingTimer) clearInterval(this.fundingTimer);
+    this.fundingTimer = null;
+    this.fundingClocks.clear();
+    this.fundingStarted.clear();
     this.users.clear();
     this.symbolUsers.clear();
     this.lastTick.clear();
@@ -293,6 +336,7 @@ export class MatchingEngine {
     const { category, symbol } = u;
     const key = marketKey(category, symbol);
     const now = this.now();
+    if (category === 'linear') this.updateFundingClock(u);
     const previous = this.lastTick.get(key);
     this.lastTick.set(key, now);
     if (previous !== undefined && now - previous > this.gapMs) {
@@ -370,6 +414,112 @@ export class MatchingEngine {
     }
   }
 
+  // ─── Funding (BP-4) ─────────────────────────────────────────────────────────
+
+  private updateFundingClock(u: TickUpdate): void {
+    // A timestamp that has just passed is settled before the ticker's values move on to the next
+    // period (the new rate belongs to the next timestamp)
+    this.checkFunding();
+    const finite = (v: number | undefined): v is number => v !== undefined && Number.isFinite(v);
+    const clock = this.fundingClocks.get(u.symbol) ?? { nextTs: 0 };
+    if (finite(u.nextFundingTime) && u.nextFundingTime > 0) clock.nextTs = u.nextFundingTime;
+    if (finite(u.fundingRate)) clock.rate = new Decimal(u.fundingRate.toString());
+    if (finite(u.markPrice) && u.markPrice > 0) clock.mark = new Decimal(u.markPrice.toString());
+    this.fundingClocks.set(u.symbol, clock);
+  }
+
+  /** Start the settlement of every funding timestamp that is due. */
+  private checkFunding(): void {
+    const now = this.now();
+    for (const [symbol, clock] of this.fundingClocks) {
+      const ts = clock.nextTs;
+      if (!ts || ts > now || this.fundingStarted.get(symbol) === ts) continue;
+      this.fundingStarted.set(symbol, ts);
+      // The positions and the mark as they are at the timestamp, before anything moves on
+      const snapshots = this.fundingSnapshots(symbol, ts);
+      if (snapshots.size === 0) continue;
+      if (!clock.mark) {
+        log.error({ symbol, ts }, 'Funding skipped: no mark price at the timestamp');
+        continue;
+      }
+      void this.settleFundingLive(symbol, ts, clock.mark, clock.rate, snapshots);
+    }
+  }
+
+  /** Every indexed account's positions on `symbol` that were open at `ts`. */
+  private fundingSnapshots(symbol: string, ts: number): Map<string, FundingSnapshot[]> {
+    const out = new Map<string, FundingSnapshot[]>();
+    for (const userId of this.symbolUsers.get(marketKey('linear', symbol)) ?? []) {
+      const positions = (this.users.get(userId)?.positions ?? [])
+        .filter((p) => p.category === 'linear' && p.symbol === symbol && p.openedAt <= ts)
+        .map((p) => ({ positionId: p.id, side: p.side, qty: p.quantity }));
+      if (positions.length) out.set(userId, positions);
+    }
+    return out;
+  }
+
+  /** The rate Bybit settled at `ts` (funding history), else the ticker's announced rate. */
+  private async settledRate(
+    symbol: string,
+    ts: number,
+    fallback?: Decimal
+  ): Promise<Decimal | null> {
+    const fetchHistory = this.deps.fetchFundingHistory;
+    for (let attempt = 1; fetchHistory && attempt <= FUNDING_RATE_ATTEMPTS; attempt++) {
+      try {
+        const settled = (await fetchHistory(symbol, ts - 1, ts)).find((f) => f.ts === ts);
+        if (settled) return settled.rate;
+      } catch (err) {
+        log.warn({ err, symbol, ts, attempt }, 'Funding history read failed');
+      }
+      if (this.stopped || !this.active) return null;
+      await new Promise((resolve) => setTimeout(resolve, this.fundingRetryMs));
+    }
+    if (fallback) {
+      log.warn({ symbol, ts }, 'Funding settled at the ticker rate (history had no record)');
+      return fallback;
+    }
+    return null;
+  }
+
+  private async settleFundingLive(
+    symbol: string,
+    ts: number,
+    mark: Decimal,
+    announced: Decimal | undefined,
+    snapshots: Map<string, FundingSnapshot[]>
+  ): Promise<void> {
+    const rate = await this.settledRate(symbol, ts, announced);
+    if (!rate) {
+      log.error({ symbol, ts }, 'Funding skipped: no settled rate');
+      return;
+    }
+    await this.runFunding(symbol, ts, rate, mark, snapshots);
+  }
+
+  private async runFunding(
+    symbol: string,
+    ts: number,
+    rate: Decimal,
+    mark: Decimal,
+    snapshots: Map<string, FundingSnapshot[]>
+  ): Promise<void> {
+    log.info({ symbol, ts, rate: rate.toString(), accounts: snapshots.size }, 'Settling funding');
+    for (const [userId, positions] of snapshots) {
+      const spec: FundingSpec = { symbol, ts, rate, mark, positions };
+      for (let attempt = 1; attempt <= TRIGGER_ATTEMPTS; attempt++) {
+        try {
+          await this.deps.trading.runFunding(userId, spec);
+          break;
+        } catch (err) {
+          if (attempt === TRIGGER_ATTEMPTS) {
+            log.error({ err, userId, symbol, ts }, 'Funding settlement failed');
+          }
+        }
+      }
+    }
+  }
+
   /**
    * Replay 1m candles for a gap, in time order, for every account watching one market. USDT
    * Perpetual also replays the same minutes' mark-price candles, for liquidation (BP-3). If the
@@ -396,12 +546,36 @@ export class MatchingEngine {
         log.error({ err, category, symbol }, 'Backfill mark-price candle fetch failed');
       }
     }
+    // Funding timestamps missed in the gap (BP-4), settled in time order with the candles
+    let fundings: FundingRate[] = [];
+    if (category === 'linear' && this.deps.fetchFundingHistory) {
+      try {
+        fundings = await this.deps.fetchFundingHistory(symbol, fromMs, toMs);
+      } catch (err) {
+        log.error({ err, symbol }, 'Backfill funding history fetch failed');
+      }
+    }
+    const settleFundingUpTo = async (upTo: number) => {
+      while (fundings.length && fundings[0].ts <= upTo) {
+        const f = fundings.shift() as FundingRate;
+        const minute = Math.floor(f.ts / 60_000) * 60_000;
+        const mark = markByStart.get(minute)?.open;
+        const snapshots = this.fundingSnapshots(symbol, f.ts);
+        if (!mark) {
+          if (snapshots.size) log.error({ symbol, ts: f.ts }, 'Backfill funding skipped: no mark');
+          continue;
+        }
+        this.fundingStarted.set(symbol, Math.max(this.fundingStarted.get(symbol) ?? 0, f.ts));
+        if (snapshots.size) await this.runFunding(symbol, f.ts, f.rate, mark, snapshots);
+      }
+    };
     const tiers = this.riskTiers(symbol);
     log.info(
       { category, symbol, fromMs, toMs, candles: candles.length, markCandles: markByStart.size },
       'Backfilling price gap'
     );
     for (const candle of candles) {
+      await settleFundingUpTo(candle.start);
       const markCandle = markByStart.get(candle.start);
       const mark = markCandle ? { candle: markCandle, tiers } : undefined;
       for (const userId of [...(this.symbolUsers.get(key) ?? [])]) {
@@ -420,5 +594,6 @@ export class MatchingEngine {
         }
       }
     }
+    await settleFundingUpTo(toMs);
   }
 }

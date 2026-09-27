@@ -142,6 +142,7 @@ const btcPosition: Position = {
   bustPrice: 0,
   positionIM: 0,
   positionMM: 0,
+  cumFunding: 0,
   openedAt: 1_715_000_000_000,
 };
 
@@ -161,6 +162,7 @@ const ethPosition: Position = {
   bustPrice: 0,
   positionIM: 0,
   positionMM: 0,
+  cumFunding: 0,
   openedAt: 1_715_000_001_000,
 };
 

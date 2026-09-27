@@ -12,6 +12,7 @@ import type { PrismaClient, Prisma } from '../../generated/prisma/client.js';
 import type { PaperStateDTO } from '@crypto-dashboard/sdk';
 import {
   MAX_BALANCE_EVENTS,
+  MAX_FUNDINGS,
   MAX_HISTORY,
   MAX_JOURNAL,
   MAX_ORDERS,
@@ -22,6 +23,8 @@ import {
 import {
   balanceEventData,
   balanceEventFromRow,
+  fundingData,
+  fundingFromRow,
   historyOrderData,
   historyOrderFromRow,
   journalData,
@@ -40,6 +43,17 @@ import {
   type RiskTiersFor,
 } from './mappers.js';
 import { fallbackRiskTiers } from './bybitSpec.js';
+
+/** Symbols whose settled-funding marker differs between two maps (BP-4). */
+function changedFundingAt(before: Record<string, number>, after: Record<string, number>): string[] {
+  return (
+    Object.entries(after)
+      // symbol is a key of `after` itself (allow-listed symbols only) — safe, controlled access
+      // eslint-disable-next-line security/detect-object-injection
+      .filter(([symbol, ts]) => before[symbol] !== ts)
+      .map(([s]) => s)
+  );
+}
 
 /** Symbols whose leverage setting differs between two maps. */
 function changedLeverage(
@@ -63,6 +77,7 @@ export function isEmptyDelta(delta: Delta, before: AccountState): boolean {
     delta.account.realizedPnl.eq(before.realizedPnl) &&
     delta.account.leverage === before.leverage &&
     changedLeverage(before.symbolLeverage, delta.account.symbolLeverage).length === 0 &&
+    changedFundingAt(before.symbolFundingAt, delta.account.symbolFundingAt).length === 0 &&
     delta.positionsUpsert.length === 0 &&
     delta.positionsRemove.length === 0 &&
     delta.spotUpsert.length === 0 &&
@@ -70,6 +85,7 @@ export function isEmptyDelta(delta: Delta, before: AccountState): boolean {
     delta.pendingRemove.length === 0 &&
     delta.orders.length === 0 &&
     delta.trades.length === 0 &&
+    delta.fundings.length === 0 &&
     delta.balanceEvents.length === 0 &&
     delta.journal.length === 0 &&
     delta.journalEdits.length === 0
@@ -130,6 +146,11 @@ export class AccountRepository {
         realizedPnl: new Decimal(account.realizedPnl.toString()),
         leverage: account.leverage,
         symbolLeverage: Object.fromEntries(settings.map((st) => [st.symbol, st.leverage])),
+        symbolFundingAt: Object.fromEntries(
+          settings.flatMap((st) =>
+            st.lastFundingAt ? [[st.symbol, st.lastFundingAt.getTime()] as const] : []
+          )
+        ),
         spot: spot.map(spotFromRow),
         positions: positions.map(positionFromRow),
         pendingOrders: pending.map(pendingFromRow),
@@ -216,6 +237,26 @@ export class AccountRepository {
         update: { leverage: lev },
       });
     }
+    for (const symbol of changedFundingAt(
+      loaded.state.symbolFundingAt,
+      delta.account.symbolFundingAt
+    )) {
+      // symbol is a key of the delta's own map (allow-listed symbols only) — safe, controlled access
+      // eslint-disable-next-line security/detect-object-injection
+      const lastFundingAt = new Date(delta.account.symbolFundingAt[symbol]);
+      await tx.symbolSetting.upsert({
+        where: { accountId_symbol: { accountId, symbol } },
+        // A symbol with no setting yet keeps the account's default leverage
+        create: {
+          accountId,
+          symbol,
+          // eslint-disable-next-line security/detect-object-injection
+          leverage: delta.account.symbolLeverage[symbol] ?? delta.account.leverage,
+          lastFundingAt,
+        },
+        update: { lastFundingAt },
+      });
+    }
 
     if (delta.positionsRemove.length) {
       await tx.position.deleteMany({ where: byPublicId(userId, delta.positionsRemove) });
@@ -250,6 +291,9 @@ export class AccountRepository {
     }
     for (const t of [...delta.trades].reverse()) {
       await tx.trade.create({ data: { ...tradeData(t), id: t.id, userId, accountId } });
+    }
+    for (const f of [...delta.fundings].reverse()) {
+      await tx.trade.create({ data: { ...fundingData(f), id: f.id, userId, accountId } });
     }
     for (const b of [...delta.balanceEvents].reverse()) {
       await tx.balanceEvent.create({
@@ -295,14 +339,16 @@ export class AccountRepository {
   /** Full account view for GET /api/paper/state and the private WS snapshot. */
   async snapshot(userId: string): Promise<PaperStateDTO> {
     const { state, version } = await this.load(userId);
-    const [orders, trades, journal, balanceEvents] = await Promise.all([
+    const [orders, trades, journal, balanceEvents, fundings] = await Promise.all([
       this.prisma.order.findMany({
         where: { userId, status: { not: 'PENDING' } },
         orderBy: { seq: 'desc' },
         take: MAX_ORDERS,
       }),
+      // Closed trades only — funding settlements are their own list, so they can't crowd out
+      // MAX_HISTORY (BP-4)
       this.prisma.trade.findMany({
-        where: { userId },
+        where: { userId, execType: { not: 'Funding' } },
         orderBy: { seq: 'desc' },
         take: MAX_HISTORY,
       }),
@@ -315,6 +361,11 @@ export class AccountRepository {
         where: { userId },
         orderBy: { seq: 'desc' },
         take: MAX_BALANCE_EVENTS,
+      }),
+      this.prisma.trade.findMany({
+        where: { userId, execType: 'Funding' },
+        orderBy: { seq: 'desc' },
+        take: MAX_FUNDINGS,
       }),
     ]);
     return {
@@ -332,6 +383,7 @@ export class AccountRepository {
       trades: trades.map(tradeFromRow),
       journal: journal.map(journalFromRow),
       balanceEvents: balanceEvents.map(balanceEventFromRow),
+      fundings: fundings.map(fundingFromRow),
     };
   }
 
@@ -353,6 +405,7 @@ export class AccountRepository {
           realizedPnl: new Decimal(0),
           leverage: 1,
           symbolLeverage: {},
+          symbolFundingAt: {},
           spot: [],
           positions: [],
           pendingOrders: [],

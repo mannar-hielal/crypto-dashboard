@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import NumberFlow from '@number-flow/react';
 import { useStore } from 'zustand';
@@ -21,6 +21,8 @@ import { paneStores } from '@/store/paneStore';
 import { usePaperStore } from '@/store/paperStore';
 import { SYMBOLS } from '@/lib/markets';
 import { bg, color, fontSize } from '@/lib/tokens';
+import { fmtMktPrice } from '@/lib/utils';
+import { FUNDING_EXPLAINER, formatFundingCountdown, formatFundingRate } from '@/lib/funding';
 import { getIndicatorMeta } from '@/lib/indicators/catalog';
 
 import { SymbolPair } from '@/components/ui/CryptoIcon';
@@ -54,18 +56,78 @@ function StatItem({
   return (
     <div className="flex flex-col gap-px">
       <span
-        className="font-semibold uppercase tracking-wider"
+        className="whitespace-nowrap font-semibold uppercase tracking-wider"
         style={{ fontSize: fontSize.xxs, color: color.muted }}
       >
         {label}
       </span>
       <span
-        className="tabular-nums font-semibold"
+        className="whitespace-nowrap tabular-nums font-semibold"
         style={{ fontSize: fontSize.xs11, color: statColor }}
       >
         {value}
       </span>
     </div>
+  );
+}
+
+// ─── PerpStats — mark, index, funding / countdown (USDT Perpetual, BP-4) ───────
+
+/** Bybit's perpetual header stats. Its own 1 s countdown, so the rest of the bar doesn't tick. */
+function PerpStats({ paneIndex }: { paneIndex: number }) {
+  const store = paneStores[paneIndex] ?? paneStores[0];
+  const { markPrice, indexPrice, fundingRate, nextFundingTime } = useStore(
+    store,
+    useShallow((s) => ({
+      markPrice: s.markPrice,
+      indexPrice: s.indexPrice,
+      fundingRate: s.fundingRate,
+      nextFundingTime: s.nextFundingTime,
+    }))
+  );
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const fmt = (v: number | null) => (v !== null ? fmtMktPrice(v) : '—');
+  return (
+    <>
+      <StatItem label="Mark" value={fmt(markPrice)} />
+      <StatItem label="Index" value={fmt(indexPrice)} />
+      <div className="flex flex-col gap-px" data-testid="funding-stat" title={FUNDING_EXPLAINER}>
+        <span
+          className="flex items-center gap-1 whitespace-nowrap font-semibold uppercase tracking-wider"
+          style={{ fontSize: fontSize.xxs, color: color.muted }}
+        >
+          Funding / Countdown
+        </span>
+        <span
+          className="whitespace-nowrap tabular-nums font-semibold"
+          style={{ fontSize: fontSize.xs11 }}
+        >
+          {/* Positive: longs pay (red for a long); negative: shorts pay longs (green) */}
+          <span
+            style={{
+              color:
+                fundingRate === null
+                  ? `${color.white}99`
+                  : fundingRate > 0
+                    ? color.red
+                    : fundingRate < 0
+                      ? color.green
+                      : `${color.white}99`,
+            }}
+          >
+            {formatFundingRate(fundingRate)}
+          </span>
+          <span style={{ color: `${color.white}99` }}>
+            {' / '}
+            {formatFundingCountdown(nextFundingTime, now)}
+          </span>
+        </span>
+      </div>
+    </>
   );
 }
 
@@ -414,6 +476,7 @@ export function SymbolBar({
           }
         />
         <StatItem label="Volume (base)" value={periodVol !== null ? formatVol(periodVol) : '—'} />
+        {paneConfig.category === 'linear' && <PerpStats paneIndex={activePane} />}
       </div>
 
       <div className="flex-1" />

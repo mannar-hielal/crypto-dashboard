@@ -108,6 +108,8 @@ const POSITION_COLS: ColDef[] = [
   { id: 'mmr', label: 'MMR', align: 'left', defaultOn: true },
   { id: 'pnl', label: 'Unrealized P&L', align: 'right', defaultOn: true },
   { id: 'pnlPct', label: 'Unrealized P&L %', align: 'right', defaultOn: true },
+  // Funding settled on the position so far, as money moved (BP-4)
+  { id: 'funding', label: 'Funding', align: 'right', defaultOn: true },
   { id: 'tradeValue', label: 'Trade Value', align: 'right', defaultOn: true },
   { id: 'marketValue', label: 'Market Value', align: 'right', defaultOn: true },
   { id: 'leverage', label: 'Leverage', align: 'right', defaultOn: true },
@@ -1416,6 +1418,26 @@ export function OrderAccountManagementPanel({
                                       >
                                         {isProfit ? '+' : ''}
                                         {pnlPct.toFixed(2)}%
+                                      </td>
+                                    )}
+                                    {isVisible('positions', 'funding') && (
+                                      <td
+                                        className="px-3 py-1.5 text-right tabular-nums"
+                                        data-testid="position-funding"
+                                        style={{
+                                          // cumFunding + = paid (money out), − = received
+                                          color:
+                                            pos.cumFunding > 0
+                                              ? color.red
+                                              : pos.cumFunding < 0
+                                                ? color.green
+                                                : color.muted,
+                                        }}
+                                        title="Funding settled on this position so far (paid −, received +)"
+                                      >
+                                        {pos.cumFunding === 0
+                                          ? '0.00'
+                                          : `${pos.cumFunding > 0 ? '−' : '+'}${Math.abs(pos.cumFunding).toFixed(2)}`}
                                       </td>
                                     )}
                                     {isVisible('positions', 'tradeValue') && (

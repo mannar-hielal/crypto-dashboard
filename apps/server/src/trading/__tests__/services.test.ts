@@ -40,6 +40,7 @@ function freshState(): AccountState {
     realizedPnl: D(0),
     leverage: 1,
     symbolLeverage: {},
+    symbolFundingAt: {},
     spot: [],
     positions: [],
     pendingOrders: [],
@@ -437,9 +438,11 @@ describe('MatchingEngine', () => {
     return state;
   }
 
+  let runFunding: ReturnType<typeof vi.fn>;
+
   function engine(overrides: Partial<ConstructorParameters<typeof MatchingEngine>[0]> = {}) {
     return new MatchingEngine({
-      trading: { runTrigger } as never,
+      trading: { runTrigger, runFunding } as never,
       events,
       loadOpenTriggers: async () => open,
       reloadUser: async (userId: string) => reload(userId),
@@ -465,6 +468,7 @@ describe('MatchingEngine', () => {
     events = new PaperEventBus();
     tickListener = null;
     runTrigger = vi.fn().mockResolvedValue(null);
+    runFunding = vi.fn().mockResolvedValue(null);
     fetchCandles = vi.fn().mockResolvedValue([]);
     open = new Map([['u1', withLimit(freshState(), 'o1', 49_000)]]);
     clock = 1_000_000;
@@ -632,6 +636,125 @@ describe('MatchingEngine', () => {
     await e.stop();
   });
 
+  describe('funding (BP-4)', () => {
+    const TS = 1_100_000;
+    const long = (openedAt = 0): AccountState => ({
+      ...freshState(),
+      positions: [
+        {
+          id: 'p1',
+          category: 'linear',
+          symbol: 'BTCUSDT',
+          side: 'long',
+          quantity: D('0.1'),
+          entryPrice: D(50_000),
+          entryUsdtAmount: D(500),
+          leverage: 10,
+          entryFee: D('2.75'),
+          closeFeeReserve: D('2.475'),
+          openedAt,
+        },
+      ],
+    });
+    const fundingTick = (nextFundingTime: number, fundingRate: number, markPrice: number) =>
+      tickListener?.({
+        category: 'linear',
+        symbol: 'BTCUSDT',
+        lastPrice: markPrice,
+        markPrice,
+        fundingRate,
+        nextFundingTime,
+      });
+
+    it('settles at the timestamp: snapshot + mark taken then, at Bybit’s settled rate', async () => {
+      open = new Map([['u1', long()]]);
+      const fetchFundingHistory = vi.fn(async () => [{ ts: TS, rate: D('0.00015') }]);
+      const e = engine({ fetchFundingHistory, fundingCheckMs: 1_000_000 });
+      await e.start();
+      fundingTick(TS, 0.0001, 50_000);
+      expect(runFunding).not.toHaveBeenCalled();
+      clock = TS; // the timestamp arrives; the ticker already moved on to the next period
+      fundingTick(TS + 8 * 3_600_000, 0.0002, 50_100);
+      await vi.waitFor(() =>
+        expect(runFunding).toHaveBeenCalledWith('u1', {
+          symbol: 'BTCUSDT',
+          ts: TS,
+          rate: D('0.00015'),
+          mark: D(50_000), // the mark at the timestamp, not the next tick's
+          positions: [{ positionId: 'p1', side: 'long', qty: D('0.1') }],
+        })
+      );
+      expect(fetchFundingHistory).toHaveBeenCalledWith('BTCUSDT', TS - 1, TS);
+      fundingTick(TS + 8 * 3_600_000, 0.0002, 50_200); // the same timestamp never settles twice
+      expect(runFunding).toHaveBeenCalledTimes(1);
+      await e.stop();
+    });
+
+    it('falls back to the ticker’s announced rate when the history has no record', async () => {
+      open = new Map([['u1', long()]]);
+      const e = engine({
+        fetchFundingHistory: vi.fn(async () => []),
+        fundingCheckMs: 1_000_000,
+        fundingRetryMs: 0,
+      });
+      await e.start();
+      fundingTick(TS, 0.0001, 50_000);
+      clock = TS;
+      fundingTick(TS + 8 * 3_600_000, 0.0002, 50_100);
+      await vi.waitFor(() =>
+        expect(runFunding).toHaveBeenCalledWith('u1', expect.objectContaining({ rate: D(0.0001) }))
+      );
+      await e.stop();
+    });
+
+    it('a position opened after the timestamp is not charged', async () => {
+      open = new Map([['u1', long(TS + 1)]]);
+      const e = engine({ fetchFundingHistory: vi.fn(async () => []), fundingCheckMs: 1_000_000 });
+      await e.start();
+      fundingTick(TS, 0.0001, 50_000);
+      clock = TS + 5;
+      fundingTick(TS + 8 * 3_600_000, 0.0002, 50_100);
+      await new Promise((r) => setTimeout(r, 10));
+      expect(runFunding).not.toHaveBeenCalled();
+      await e.stop();
+    });
+
+    it('a backfilled gap settles missed funding at the mark candle’s open, in time order', async () => {
+      open = new Map([['u1', long()]]);
+      const order: string[] = [];
+      runTrigger.mockImplementation(async () => {
+        order.push('trigger');
+        return null;
+      });
+      runFunding.mockImplementation(async () => {
+        order.push('funding');
+        return null;
+      });
+      const fetchFundingHistory = vi.fn(async () => [{ ts: 1_020_000, rate: D('0.0001') }]);
+      fetchCandles.mockImplementation(
+        async (_c: string, _s: string, _f: number, _t: number, src?: string) =>
+          src === 'mark'
+            ? [
+                { start: 1_020_000, open: D(49_900), high: D(50_000), low: D(49_800) },
+                { start: 1_080_000, open: D(40_000), high: D(40_100), low: D(39_000) }, // liquidates
+              ]
+            : [
+                { start: 1_020_000, open: D(49_900), high: D(50_000), low: D(49_800) },
+                { start: 1_080_000, open: D(40_000), high: D(40_100), low: D(39_000) },
+              ]
+      );
+      const e = engine({ fetchFundingHistory, fundingCheckMs: 1_000_000 });
+      await e.start();
+      await e.backfill('linear', 'BTCUSDT', 1_000_000, 1_120_000);
+      expect(runFunding).toHaveBeenCalledWith(
+        'u1',
+        expect.objectContaining({ ts: 1_020_000, mark: D(49_900), rate: D('0.0001') })
+      );
+      expect(order).toEqual(['funding', 'trigger']); // funding at 1,020,000 before the later liquidation
+      await e.stop();
+    });
+  });
+
   it('backfills downtime from the previous holder’s last tick on activation', async () => {
     lease.tryAcquire = vi.fn(async () => ({ acquired: true, lastTickAt: new Date(900_000) }));
     const e = engine();
@@ -789,7 +912,13 @@ describe('AccountRepository', () => {
   }
 
   const placeDelta = (): Delta => ({
-    account: { balance: D(8_998.9), realizedPnl: D(0), leverage: 1, symbolLeverage: {} },
+    account: {
+      balance: D(8_998.9),
+      realizedPnl: D(0),
+      leverage: 1,
+      symbolLeverage: {},
+      symbolFundingAt: {},
+    },
     positionsUpsert: [
       {
         id: 'p1',
@@ -836,6 +965,7 @@ describe('AccountRepository', () => {
       },
     ],
     trades: [],
+    fundings: [],
     balanceEvents: [],
     journal: [],
     journalEdits: [],
@@ -939,6 +1069,64 @@ describe('AccountRepository', () => {
       update: { leverage: 5 },
     });
   });
+
+  it('writes a funding settlement as a Funding Trade row and marks the timestamp settled (BP-4)', async () => {
+    const { prisma, tx } = fakePrisma(1);
+    const repo = new AccountRepository(prisma as never);
+    const empty = { ...placeDelta(), positionsUpsert: [], orders: [] };
+    await repo.mutate('u1', () => ({
+      delta: {
+        ...empty,
+        account: { ...empty.account, symbolFundingAt: { BTCUSDT: 1_100_000 } },
+        fundings: [
+          {
+            id: 'fund-p1-1100000',
+            symbol: 'BTCUSDT',
+            side: 'long' as const,
+            qty: D('0.1'),
+            markPrice: D(51_000),
+            rate: D('0.0001'),
+            fee: D('0.51'),
+            time: 1_100_000,
+          },
+        ],
+      },
+      result: 1,
+    }));
+    expect(tx.trade.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        id: 'fund-p1-1100000',
+        execType: 'Funding',
+        executedPrice: D(51_000),
+        commission: D('0.51'),
+        pnl: D('-0.51'),
+        feeRate: D('0.0001'),
+        executedAt: new Date(1_100_000),
+      }),
+    });
+    expect(tx.symbolSetting.upsert).toHaveBeenCalledWith({
+      where: { accountId_symbol: { accountId: 'acc', symbol: 'BTCUSDT' } },
+      create: {
+        accountId: 'acc',
+        symbol: 'BTCUSDT',
+        leverage: 1,
+        lastFundingAt: new Date(1_100_000),
+      },
+      update: { lastFundingAt: new Date(1_100_000) },
+    });
+  });
+
+  it('the snapshot keeps funding rows out of the closed-trade history (BP-4)', async () => {
+    const { prisma } = fakePrisma(1);
+    const repo = new AccountRepository(prisma as never);
+    await repo.snapshot('u1');
+    expect(prisma.trade.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { userId: 'u1', execType: { not: 'Funding' } } })
+    );
+    expect(prisma.trade.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { userId: 'u1', execType: 'Funding' } })
+    );
+  });
 });
 
 describe('AccountRepository — spot balances', () => {
@@ -988,6 +1176,7 @@ describe('AccountRepository — spot balances', () => {
         pendingRemove: [],
         orders: [],
         trades: [],
+        fundings: [],
         balanceEvents: [],
         journal: [],
         journalEdits: [],
@@ -1015,6 +1204,7 @@ describe('isEmptyDelta', () => {
       realizedPnl: state.realizedPnl,
       leverage: state.leverage,
       symbolLeverage: { ...state.symbolLeverage },
+      symbolFundingAt: { ...state.symbolFundingAt },
     },
     positionsUpsert: [],
     positionsRemove: [],
@@ -1023,6 +1213,7 @@ describe('isEmptyDelta', () => {
     pendingRemove: [],
     orders: [],
     trades: [],
+    fundings: [],
     balanceEvents: [],
     journal: [],
     journalEdits: [],

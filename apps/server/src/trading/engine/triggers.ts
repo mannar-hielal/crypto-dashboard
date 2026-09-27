@@ -133,6 +133,8 @@ export function evaluateTick(
 export interface Candle {
   /** Candle start, Unix ms */
   start: number;
+  /** Price at the candle's start — a mark-price candle's open is the mark at a funding timestamp */
+  open?: Decimal;
   high: Decimal;
   low: Decimal;
 }

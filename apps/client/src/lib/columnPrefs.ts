@@ -8,7 +8,7 @@
 
 const COL_PREFS_KEY = 'cd-paper-col-prefs';
 const COL_PREFS_VERSION_KEY = 'cd-paper-col-prefs-version';
-const COL_PREFS_VERSION = 2;
+const COL_PREFS_VERSION = 3;
 
 /**
  * Default-on columns added in a later version. A saved column list replaces the defaults, so
@@ -18,6 +18,7 @@ const COL_PREFS_VERSION = 2;
 const ADDED_COLS: { version: number; tab: string; id: string; after: string }[] = [
   { version: 2, tab: 'positions', id: 'liq', after: 'mark' }, // BP-3
   { version: 2, tab: 'positions', id: 'mmr', after: 'liq' }, // BP-3
+  { version: 3, tab: 'positions', id: 'funding', after: 'pnlPct' }, // BP-4
 ];
 
 /** Bring a saved column layout up to COL_PREFS_VERSION (pure). */
@@ -29,9 +30,11 @@ export function migrateColPrefs(
   for (const add of ADDED_COLS) {
     const list = out[add.tab];
     if (add.version <= savedVersion || !list || list.includes(add.id)) continue;
-    const at = list.indexOf(add.after);
-    out[add.tab] =
-      at === -1 ? [...list, add.id] : [...list.slice(0, at + 1), add.id, ...list.slice(at + 1)];
+    // After its anchor; without it, before the trailing Close / Cancel action column, else last
+    const anchor = list.indexOf(add.after);
+    const action = list.findIndex((id) => id === 'close' || id === 'cancel');
+    const at = anchor !== -1 ? anchor + 1 : action !== -1 ? action : list.length;
+    out[add.tab] = [...list.slice(0, at), add.id, ...list.slice(at)];
   }
   return out;
 }

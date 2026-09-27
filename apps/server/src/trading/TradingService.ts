@@ -42,12 +42,14 @@ import {
   resetAccount,
   setLeverage,
   setSymbolLeverage,
+  settleFunding,
   updatePositionExits,
   type AccountState,
   type ActionResult,
   type Category,
   type EngineContext,
   type ExitLeg,
+  type FundingSpec,
   type InstrumentRules,
   type OrderSide,
   type OrderSize,
@@ -367,6 +369,15 @@ export class TradingService {
 
   editNote(userId: string, entryId: string, text: string): Promise<Executed<boolean>> {
     return this.act(userId, (state) => editNote(state, entryId, text));
+  }
+
+  /**
+   * Settle one funding timestamp for one account (BP-4). The engine supplies the settled rate, the
+   * mark at the timestamp and the account's positions as they were then; the action is a no-op if
+   * that timestamp was already settled. Result: the number of positions settled.
+   */
+  runFunding(userId: string, spec: FundingSpec): Promise<Executed<number> | null> {
+    return this.run(userId, (state, ctx) => settleFunding(state, spec, ctx));
   }
 
   /**
