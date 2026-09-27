@@ -707,6 +707,85 @@ describe('MatchingEngine', () => {
       await e.stop();
     });
 
+    it('a timestamp with no mark yet is retried and settles once the mark arrives (review #143)', async () => {
+      open = new Map([['u1', long()]]);
+      const e = engine({
+        fetchFundingHistory: vi.fn(async () => []),
+        fundingCheckMs: 1_000_000,
+        fundingRetryMs: 0,
+      });
+      await e.start();
+      tickListener?.({
+        category: 'linear',
+        symbol: 'BTCUSDT',
+        lastPrice: 50_000,
+        fundingRate: 0.0001,
+        nextFundingTime: TS,
+      });
+      clock = TS;
+      tickListener?.({
+        category: 'linear',
+        symbol: 'BTCUSDT',
+        lastPrice: 50_000,
+        fundingRate: 0.0002,
+        nextFundingTime: TS + 8 * 3_600_000,
+      });
+      expect(runFunding).not.toHaveBeenCalled(); // no mark yet — not dropped, retried
+      clock = TS + 2_000;
+      fundingTick(TS + 8 * 3_600_000, 0.0002, 50_050);
+      await vi.waitFor(() =>
+        expect(runFunding).toHaveBeenCalledWith(
+          'u1',
+          expect.objectContaining({ ts: TS, mark: D(50_050), rate: D(0.0001) })
+        )
+      );
+      await e.stop();
+    });
+
+    it('a position indexed a moment after the timestamp is still settled (review #143)', async () => {
+      open = new Map();
+      const e = engine({
+        fetchFundingHistory: vi.fn(async () => []),
+        fundingCheckMs: 1_000_000,
+        fundingRetryMs: 0,
+      });
+      await e.start();
+      fundingTick(TS, 0.0001, 50_000);
+      clock = TS;
+      fundingTick(TS + 8 * 3_600_000, 0.0002, 50_100); // nothing indexed yet
+      expect(runFunding).not.toHaveBeenCalled();
+      // The fill at the timestamp is committed and reindexed a moment later
+      events.publish({ userId: 'u1', state: long(TS), delta: {} as never });
+      clock = TS + 1_000;
+      fundingTick(TS + 8 * 3_600_000, 0.0002, 50_200);
+      await vi.waitFor(() =>
+        expect(runFunding).toHaveBeenCalledWith(
+          'u1',
+          expect.objectContaining({ ts: TS, mark: D(50_000) }) // the mark seen at the timestamp
+        )
+      );
+      await e.stop();
+    });
+
+    it('gives up on a timestamp after the grace period, then never settles it', async () => {
+      open = new Map();
+      const e = engine({
+        fetchFundingHistory: vi.fn(async () => []),
+        fundingCheckMs: 1_000_000,
+        fundingRetryMs: 0,
+      });
+      await e.start();
+      fundingTick(TS, 0.0001, 50_000);
+      clock = TS + 61_000;
+      fundingTick(TS + 8 * 3_600_000, 0.0002, 50_100);
+      events.publish({ userId: 'u1', state: long(0), delta: {} as never });
+      clock = TS + 62_000;
+      fundingTick(TS + 8 * 3_600_000, 0.0002, 50_100);
+      await new Promise((r) => setTimeout(r, 10));
+      expect(runFunding).not.toHaveBeenCalled();
+      await e.stop();
+    });
+
     it('a position opened after the timestamp is not charged', async () => {
       open = new Map([['u1', long(TS + 1)]]);
       const e = engine({ fetchFundingHistory: vi.fn(async () => []), fundingCheckMs: 1_000_000 });

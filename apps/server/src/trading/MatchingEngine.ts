@@ -101,6 +101,21 @@ const TRIGGER_ATTEMPTS = 2;
 /** Reads of Bybit's funding history for a just-settled rate before falling back to the ticker's */
 const FUNDING_RATE_ATTEMPTS = 12;
 
+/**
+ * How long a due funding timestamp keeps being retried when, at the timestamp, there is no mark
+ * price yet or a position filled at that instant isn't indexed yet — instead of being dropped
+ */
+const FUNDING_SNAPSHOT_GRACE_MS = 60_000;
+
+/** A funding timestamp that has passed and waits to be settled. */
+interface DueFunding {
+  ts: number;
+  /** The rate the ticker announced for it */
+  rate?: Decimal;
+  /** The mark seen at the timestamp (the latest one is used if none was seen yet) */
+  mark?: Decimal;
+}
+
 /** What the live ticker says about a symbol's next funding (BP-4). */
 interface FundingClock {
   /** The next funding timestamp (Unix ms) */
@@ -109,6 +124,8 @@ interface FundingClock {
   rate?: Decimal;
   /** The latest mark price */
   mark?: Decimal;
+  /** A passed timestamp not settled yet — kept when the ticker already moved on to the next one */
+  due?: DueFunding;
 }
 
 /** Longest a symbol may go without a tick before the gap is backfilled from candles. */
@@ -422,27 +439,53 @@ export class MatchingEngine {
     this.checkFunding();
     const finite = (v: number | undefined): v is number => v !== undefined && Number.isFinite(v);
     const clock = this.fundingClocks.get(u.symbol) ?? { nextTs: 0 };
-    if (finite(u.nextFundingTime) && u.nextFundingTime > 0) clock.nextTs = u.nextFundingTime;
+    if (finite(u.nextFundingTime) && u.nextFundingTime > clock.nextTs) {
+      // Moving on to the next period: a passed timestamp still unsettled stays due
+      const passed = clock.nextTs;
+      if (passed && passed <= this.now() && this.fundingStarted.get(u.symbol) !== passed) {
+        clock.due ??= { ts: passed, rate: clock.rate, mark: clock.mark };
+      }
+      clock.nextTs = u.nextFundingTime;
+    }
     if (finite(u.fundingRate)) clock.rate = new Decimal(u.fundingRate.toString());
     if (finite(u.markPrice) && u.markPrice > 0) clock.mark = new Decimal(u.markPrice.toString());
     this.fundingClocks.set(u.symbol, clock);
+    // A due timestamp that was only waiting for a mark price can go now
+    if (clock.due) this.checkFunding();
   }
 
-  /** Start the settlement of every funding timestamp that is due. */
+  /**
+   * Start the settlement of every funding timestamp that is due. A timestamp is only marked started
+   * once it is dispatched: with no mark yet, or no indexed position yet (a fill at that very instant
+   * not reindexed), it is retried on the next check for up to FUNDING_SNAPSHOT_GRACE_MS.
+   */
   private checkFunding(): void {
     const now = this.now();
     for (const [symbol, clock] of this.fundingClocks) {
-      const ts = clock.nextTs;
-      if (!ts || ts > now || this.fundingStarted.get(symbol) === ts) continue;
-      this.fundingStarted.set(symbol, ts);
-      // The positions and the mark as they are at the timestamp, before anything moves on
-      const snapshots = this.fundingSnapshots(symbol, ts);
-      if (snapshots.size === 0) continue;
-      if (!clock.mark) {
-        log.error({ symbol, ts }, 'Funding skipped: no mark price at the timestamp');
+      const due: DueFunding | undefined =
+        clock.due ??
+        (clock.nextTs && clock.nextTs <= now
+          ? { ts: clock.nextTs, rate: clock.rate, mark: clock.mark }
+          : undefined);
+      if (!due) continue;
+      if (this.fundingStarted.get(symbol) === due.ts) {
+        clock.due = undefined;
         continue;
       }
-      void this.settleFundingLive(symbol, ts, clock.mark, clock.rate, snapshots);
+      // The positions and the mark as they are at the timestamp, before anything moves on
+      const snapshots = this.fundingSnapshots(symbol, due.ts);
+      const mark = due.mark ?? clock.mark;
+      if (snapshots.size === 0 || !mark) {
+        if (now - due.ts > FUNDING_SNAPSHOT_GRACE_MS) {
+          this.fundingStarted.set(symbol, due.ts);
+          clock.due = undefined;
+          if (snapshots.size) log.error({ symbol, ts: due.ts }, 'Funding skipped: no mark price');
+        }
+        continue;
+      }
+      this.fundingStarted.set(symbol, due.ts);
+      clock.due = undefined;
+      void this.settleFundingLive(symbol, due.ts, mark, due.rate, snapshots);
     }
   }
 
