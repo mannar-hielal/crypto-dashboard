@@ -1,6 +1,6 @@
 # Bybit Parity Plan — Spot + USDT Perpetual
 
-> **Status:** BP-0 implemented (2026-09-26, `feat/bybit-parity-bp0`) · BP-1 implemented (2026-09-26, `feat/bybit-parity-bp1`) · BP-2 implemented (2026-09-26, `feat/bybit-parity-bp2`) · BP-3 implemented (2026-09-27, `feat/bybit-parity-bp3`) · BP-4 … BP-5 not started.
+> **Status:** BP-0 implemented (2026-09-26, `feat/bybit-parity-bp0`) · BP-1 implemented (2026-09-26, `feat/bybit-parity-bp1`) · BP-2 implemented (2026-09-26, `feat/bybit-parity-bp2`) · BP-3 implemented (2026-09-27, `feat/bybit-parity-bp3`) · BP-4 planned (2026-09-27) · BP-5 not started.
 > **Created:** 2026-09-25 · **Owner:** Mannar Hielal
 > **Goal:** paper trading on cryptopapertrade.com behaves as close as possible to a Bybit Unified Trading
 > Account (UTA), VIP 0, one-way position mode — so what a user learns here transfers 1:1 to Bybit.
@@ -539,13 +539,101 @@ All trading rules live **in the server engine**; the client gets display and est
 
 ### BP-4 — Funding
 
-- [ ] Engine scheduler: at each symbol's `nextFundingTime`, for every open perp position,
-      `payment = qty × markPrice × fundingRate`. Longs pay when the rate is positive; shorts receive.
-- [ ] Record each payment as a `Funding` execution (Bybit `execType` naming) and a journal line with the amount. Show it
-      in the Positions row (cumulative funding) and in Balance History.
-- [ ] Use the per-symbol `fundingIntervalHour` from the ticker (don't assume 8 h).
-- [ ] Backfill missed settlements after server downtime from `/v5/market/funding/history`.
-- [ ] Funding countdown + current rate in the perps order form header (Bybit shows it there).
+All funding rules live **in the server engine**; the client gets display only.
+
+> **Planned 2026-09-27.** Standing owner direction: mimic Bybit (the app will later be tested against Bybit's APIs).
+> Bybit's rules, checked 2026-09-27 (help centre "Funding Fee Calculation", API v5 funding history / execution list,
+> live tickers and instruments-info):
+>
+> - **Fee = position size × mark price at the funding timestamp × funding rate.** Positive rate: longs pay, shorts
+>   receive; negative: the reverse. Only a position **held at the timestamp** pays or receives.
+> - **Timestamps** are per symbol: `fundingInterval` (instruments-info, minutes — all 9 symbols are 480 today, but
+>   Bybit switches symbols to 4 h / 2 h / 1 h when rates hit their cap) and `nextFundingTime` on the linear ticker.
+> - **The rate** that settles at a timestamp is published by `/v5/market/funding/history` (`fundingRate`,
+>   `fundingRateTimestamp`; ≤ 200 per page, newest first; `startTime` alone is an error). The ticker's
+>   `fundingRate` is the rate for the **next** settlement.
+> - **Where it's paid from (UTA, isolated):** the available balance; only if that's short, the position margin —
+>   which moves the liquidation price toward the mark. Received funding goes to the wallet.
+> - **Records:** an execution with `execType = Funding`, `execQty` = position size, `execPrice` = mark price,
+>   `feeRate` = funding rate, `execFee` = the fee (**positive = paid, negative = received**); it never changes the
+>   position. Funding counts in realised PnL (position `cumRealisedPnl`, Closed P&L's "funding fee").
+>
+> **Where the code stands (2026-09-27):** the linear ticker already carries `fundingRate`, `nextFundingTime` and
+> `fundingIntervalHour` (server `BybitWebSocketManager`, client `paneStore`); instruments-info already parses
+> `fundingIntervalMin`. `Trade.execType` exists (`Trade | BustTrade`) and the mark price reaches the engine (BP-3).
+> Nothing settles funding yet.
+
+**A. Settlement in the engine**
+
+- [ ] **Funding clock** in `MatchingEngine` (the single executor, EngineLease): per linear symbol with open positions,
+      keep the next funding timestamp (ticker `nextFundingTime`, else the last settled timestamp + `fundingInterval`).
+      A timer fires **at** the timestamp — not "on the next tick" — and snapshots, from the in-memory index, every
+      position of that symbol open at that instant (`openedAt ≤ ts`): side and size.
+- [ ] **Rate and mark:** the rate is the settled one from `/v5/market/funding/history` for exactly `ts` (fetched just
+      after `ts`, retried with backoff for up to ~2 min — the record appears at settlement); if it never arrives, the
+      last ticker `fundingRate` seen before `ts`, and the source is logged. The mark price is the last linear-ticker mark
+      at or before `ts` (live), or the open of the mark-price kline minute starting at `ts` (backfill).
+- [ ] **Pure action** `settleFunding(state, { symbol, ts, rate, mark, positions: snapshot[] }, ctx)`:
+  - `fee = size × mark × rate` per snapshotted position (signed: long pays when `rate > 0`); rounded to 8 dp.
+  - Paid: from the balance; any shortfall from the position's margin (`entryUsdtAmount`), so its liquidation price moves
+    (BP-3 maths). Received: to the balance.
+  - A position closed or reduced after `ts` (a close in the seconds before the settlement ran) is still charged on its
+    snapshot size — it was held at the timestamp, as on Bybit — from the balance.
+  - `realizedPnl -= fee`; position `cumFunding += fee` (for the Positions row).
+  - **Idempotent:** `Position.lastFundingAt` (and, for the snapshot of a position that's gone, the execution row's
+    deterministic id `fund-<accountId>-<symbol>-<ts>`) makes a re-run a no-op — restart, retry or a second machine.
+- [ ] **Records:** a `Funding` execution row (`Trade.execType = 'Funding'`, qty, mark as price, `feeRate` = rate, fee
+      signed as Bybit), a journal line ("Funding fee −$0.42 · LONG BTCUSDT 0.015 @ mark $84,331.83, rate 0.0100%" /
+      "Funding received +$…"), and a Balance History row (Bybit's transaction-log type `SETTLEMENT`). No sound (Bybit
+      settles silently). Pushed as a normal delta.
+- [ ] **One transaction per account** through `TradingService.run` (per-user queue + version guard), fanned out across
+      the symbol's accounts like trigger execution.
+
+**B. Backfill after downtime**
+
+- [ ] On engine takeover (`EngineLease.lastTickAt`) or a feed gap: for each linear symbol with positions, fetch the
+      funding history over the gap and the mark-price kline minute at each settled `ts`; settle positions whose
+      `openedAt ≤ ts` and `lastFundingAt < ts`, in time order, interleaved with the BP-3 candle sweep so a funding
+      payment that pushes a position into liquidation is applied before the later candles.
+- [ ] Known gap (document in §8): a position closed **during** the downtime can't be charged for a timestamp it held
+      (the engine never saw it at `ts`).
+
+**C. Closed P&L includes funding (Bybit)**
+
+- [ ] On a close (manual, TP/SL, netting, liquidation), the closed-trade record carries the position's funding share
+      (`cumFunding × closed fraction`), and the closed PnL shown is net of it, as Bybit's Closed P&L. Realized PnL is
+      not charged twice (it was booked at each settlement).
+
+**D. Data & SDK**
+
+- [ ] Prisma: `Position.cumFunding Decimal(20,8) default 0`, `Position.lastFundingAt DateTime?`,
+      `Trade.feeRate Decimal?`, `Trade.funding Decimal default 0` (a close's funding share); `Trade.execType` gains
+      `'Funding'`. One committed migration.
+- [ ] History queries exclude `execType = 'Funding'` from the History tab (closed trades) so funding rows can't crowd
+      out `MAX_HISTORY`; they're returned as their own capped list (Bybit's execution list, for the later API-parity
+      test) and shown through Balance History / journal / the Positions row.
+- [ ] SDK: `PaperPositionDTO.cumFunding?`, `PaperTradeDTO.execType` adds `'Funding'` + `feeRate?`, `funding?`;
+      `PaperStateDTO.fundingExecutions?` (optional fields — a pre-BP-4 server sends none, the BP-3 lesson).
+
+**E. UI (visual Q&A gate first)**
+
+- [ ] **Funding rate / countdown** where Bybit puts it — the symbol header next to Mark and Index (`SymbolBar`, perps
+      only): "Funding 0.0022% · 04:12:33", the rate coloured by sign, with an ⓘ explaining who pays. Driven by the
+      pane's ticker (`fundingRate`, `nextFundingTime`); the countdown ticks locally.
+- [ ] Order form: est. funding per interval for the order ("Est. funding / 8h −$0.19") — optional, confirm in the gate.
+- [ ] Positions tab: a **Funding** column (cumulative, signed, opt-in or default — gate) and funding in the realised
+      figures; Balance History shows each payment; History tab shows a close's funding share.
+- [ ] Journal wording and the order-history / balance labels ("Funding fee").
+
+**F. Tests and docs**
+
+- [ ] Engine: long pays / short receives / negative rate; shortfall comes out of margin and moves the liquidation
+      price; snapshot of a position closed after `ts` still pays; idempotency (same `ts` twice); merge keeps `cumFunding`;
+      close carries the funding share.
+- [ ] Services: the funding clock fires at `ts` (fake timers), history-rate fetch with fallback, backfill ordering with
+      the candle sweep, single executor.
+- [ ] `infra.fetchFundingHistory` pagination (`endTime` paging, newest first) + retry/breaker (reuse `fetchWithRetry`).
+- [ ] `TRADING_TEST_PLAN.md` §16, `APP_LOG.md`, the `paper-trading-logic` skill.
 
 ### BP-5 — Cross margin, risk tiers, refinements
 
@@ -617,6 +705,7 @@ All trading rules live **in the server engine**; the client gets display and est
 | Liquidation settles instantly at bankruptcy price                                                                 | No liquidation engine / insurance fund                                                       |
 | A liquidated position closes in full, whatever its risk-limit tier                                                | Bybit may partially liquidate a higher-tier position down a tier; rare at our position sizes |
 | A stop-loss past the liquidation price is accepted                                                                | Bybit refuses it; follow-up                                                                  |
+| A position closed while the matching engine was down isn't charged funding for a timestamp it held                | The engine never saw it at that timestamp (BP-4 backfill only sees open positions)           |
 | Same-side positions are kept separate (Bybit's one-way mode merges them into one averaged position)               | Closed by BP-3 (merge + migration)                                                           |
 | Leverage can't change while a symbol has open trades                                                              | Closed by BP-3 (re-margining)                                                                |
 | Limits trigger on the last price, not the book                                                                    | No order-book simulation (§7)                                                                |
