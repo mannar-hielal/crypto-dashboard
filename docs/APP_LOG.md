@@ -487,6 +487,16 @@ qty − fee`.
 - Settled once per account and symbol and timestamp (`SymbolSetting.lastFundingAt`); a server gap is backfilled from
   Bybit's funding history in time order with the candle sweep.
 
+### Cross margin, risk tiers, order flags (BP-5 — `bybitSpec.ts`, `engine/cross.ts`, `engine/orderRules.ts`)
+
+- Margin mode is account-wide (Bybit UTA): new accounts cross, pre-BP-5 accounts isolated until switched. Cross values
+  every position at mark (margin balance, IM / MM rates, available balance); an order needs the available balance;
+  the account is liquidated when its MM rate reaches 100% (orders cancelled, positions stepped down in contract order).
+- Isolated: add / reduce margin per position; a higher-tier position is liquidated tier by tier.
+- An order, edit or leverage change may not pass the risk-limit cap of the leverage (110090).
+- TP / SL / stops trigger on Last (default), Mark or Index; a new TP / SL must be on the right side of the base price
+  (Bybit's wording); an SL past liquidation is allowed. Reduce-only / close-on-trigger only shrink a position.
+
 ### TP/SL rules (implemented in `checkTPSL()` + bracket lifecycle)
 
 - **Long**: TP when `price >= takeProfit`; SL when `price <= stopLoss`
@@ -2451,3 +2461,45 @@ the timestamp, rate fallback, backfill ordering, repository rows, history paging
 Section 16.
 
 **Gates:** type-check ✅, lint ✅, format ✅, test ✅ (563 server + 412 client)
+
+### feat: Bybit Parity BP-5 — cross margin, risk tiers, refinements (2026-09-27) ✅
+
+**Context:** phase 6 of `docs/BYBIT_PARITY_PLAN.md`, one release (O4). Owner decisions O1–O12 answered 2026-09-27;
+visual gate answered (all recommended). Bybit's rules checked in the help centre, API v5 and live endpoints.
+
+**Server (engine):**
+
+- **A — add / reduce margin** (isolated): `POST /paper/positions/:id/margin`, signed like Bybit's add-margin;
+  leverage unchanged, liq price moves; released on a leverage change, pro rata on a partial close; Bybit's refusals.
+- **B — trigger source + order flags:** TP / SL and stops trigger on Last / Mark / Index (live and backfill,
+  index-price candles when needed); reduce-only / close-on-trigger (capped, no margin, trimmed furthest-first,
+  cancelled with nothing to reduce); TP / SL side check vs the order price or the leg source's live price (O9).
+- **C — risk tiers:** 110090 cap on orders / edits / leverage (effective value per Bybit); partial liquidation steps
+  a position down the tiers at the bankruptcy price (live and backfill).
+- **D — Closed P&L:** `Trade.openFee`; DTO `openFee` / `closeFee` / `closedPnl` + v5 aliases.
+- **E — cross margin:** `Account.marginMode` (new accounts cross; existing isolated + `marginModeNotice`); account
+  figures (`bybitSpec.accountFigures`, parity-tested with the SDK); orders accepted against the available balance
+  (unrealised profit counts, O5); losses and funding from the wallet; account liquidation at a 100% MM rate in
+  contract order; `POST /paper/account/margin-mode` with Bybit's switch checks (O3).
+- **F — refinements:** funding at a mark within 10 s of the timestamp (else the candle); a late fee lands on the
+  closed trade; isolated realized PnL books only what was lost; the backfill charges positions closed during a gap.
+- **G — parity:** `trading/bybitParity.ts` adapter + diff; `tools/bybitParity.ts` manual testnet run
+  (`parity:testnet`, testnet only, keys never logged) — **not run yet** (needs the owner's testnet keys).
+- **Step 0:** risk tiers carry IMR / max leverage; the pre-BP-2 API logs every call (removal next release, O11).
+- Migrations: `bp5_trigger_by_reduce_only`, `bp5_trade_open_fee`, `bp5_cross_margin` (additive; the last sets
+  existing accounts to isolated).
+
+**Client:** `Cross 10x` / `Isolated 10x` chip with a mode + leverage modal (tabs, explainer, tier line); cross
+figures in the summary bar (Margin balance, IM rate, MM meter), cross liq estimates per position and in the order
+form; add / reduce margin dialog (isolated); Last ▾ beside TP and SL, Reduce-only / Close-on-trigger; position TP / SL
+checked against the live price with an amber past-liquidation warning; Closed P&L tab; one-time cross notice.
+
+**Live verification (dev, 2026-09-27):** new account = cross; order, cross add-margin refusal, switch to isolated,
+add margin, O9 refusal text, SL by mark, reduce-only close (closedPnl −0.3741 = PnL − fees), close-on-trigger capped
+with 0 reserved, wrong-side reduce-only refused, switch back (journal line), invalid mode 400. Browser: chip, modal,
+summary bar, Closed P&L tab screenshotted; the only console line was the signed-out `/refresh` 401 that
+`fix/auth-flow-console-errors` removes. Found and fixed: the order form's cross liq estimate (d9d5420).
+
+**Tests:** server 679, client 439. `TRADING_TEST_PLAN.md` Section 17.
+
+**Gates:** type-check ✅, lint ✅, format ✅, test ✅ (679 server + 439 client)
