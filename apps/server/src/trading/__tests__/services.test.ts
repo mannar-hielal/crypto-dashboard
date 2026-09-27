@@ -1151,6 +1151,7 @@ describe('AccountRepository', () => {
                     realizedPnl: '0',
                     leverage: 1,
                     version: 3,
+                    lastReset: new Date(500),
                   };
                 }
                 if (name === 'account' && method === 'updateMany') {
@@ -1267,6 +1268,17 @@ describe('AccountRepository', () => {
     const repo = new AccountRepository(prisma as never);
     expect(await repo.mutate('u1', () => null)).toBeNull();
     expect(tx.account.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('should load the account’s last reset time so funding from before it is never charged', async () => {
+    const { prisma } = fakePrisma(1);
+    const repo = new AccountRepository(prisma as never);
+    let loaded: AccountState | undefined;
+    await repo.mutate('u1', (l) => {
+      loaded = l.state;
+      return null;
+    });
+    expect(loaded?.resetAt).toBe(500);
   });
 
   it('inserts history oldest-first so the newest row gets the highest seq', async () => {
@@ -1431,6 +1443,7 @@ describe('AccountRepository — spot balances', () => {
                 realizedPnl: '0',
                 leverage: 1,
                 version: 0,
+                lastReset: new Date(0),
               };
             }),
         }

@@ -139,6 +139,12 @@ export interface AccountState {
    * no-op, so a restart, retry or second machine can never charge the same funding twice
    */
   symbolFundingAt: Record<string, number>;
+  /**
+   * When the account was last reset (Unix ms; its creation time if never). A reset wipes the
+   * positions and the funding markers, so a funding timestamp before it must never be charged to
+   * the fresh account — the engine may have snapshotted the old positions just before the reset.
+   */
+  resetAt?: number;
   /** Spot coin balances (the USDT wallet is `balance`) */
   spot: SpotHolding[];
   positions: Position[];

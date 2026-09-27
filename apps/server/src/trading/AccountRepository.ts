@@ -154,6 +154,7 @@ export class AccountRepository {
             st.lastFundingAt ? [[st.symbol, st.lastFundingAt.getTime()] as const] : []
           )
         ),
+        resetAt: account.lastReset.getTime(),
         spot: spot.map(spotFromRow),
         positions: positions.map(positionFromRow),
         pendingOrders: pending.map(pendingFromRow),

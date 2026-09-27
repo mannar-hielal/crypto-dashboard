@@ -1506,7 +1506,8 @@ const fmtRate = (rate: Decimal) => `${rate.times(100).toDecimalPlaces(4).toFixed
  *   timestamp), from the balance only. Received funding goes to the balance.
  * - Booked in realized PnL now (a later close carries the share, for Closed P&L, without charging
  *   it again) and in the position's `cumFunding`.
- * - Idempotent: a timestamp at or before `symbolFundingAt[symbol]` is a no-op.
+ * - Idempotent: a timestamp at or before `symbolFundingAt[symbol]` is a no-op, and so is one
+ *   before the account's last reset (the snapshot holds positions the reset wiped).
  */
 export function settleFunding(
   state: AccountState,
@@ -1519,7 +1520,9 @@ export function settleFunding(
   // symbol is an allow-listed symbol from the engine's own index — safe, controlled access
   // eslint-disable-next-line security/detect-object-injection
   const settledTo = state.symbolFundingAt[symbol];
-  if ((settledTo !== undefined && settledTo >= ts) || spec.positions.length === 0) {
+  // A reset after the timestamp wiped the snapshotted positions (and the marker): not this account's
+  const resetSince = state.resetAt !== undefined && state.resetAt > ts;
+  if ((settledTo !== undefined && settledTo >= ts) || resetSince || spec.positions.length === 0) {
     return { delta: d.toDelta(), result: 0 };
   }
 
@@ -1658,6 +1661,8 @@ export function applyDelta(state: AccountState, delta: Delta): AccountState {
     leverage: delta.account.leverage,
     symbolLeverage: delta.account.symbolLeverage,
     symbolFundingAt: delta.account.symbolFundingAt,
+    // A reset's own time is only known to the DB (Account.lastReset); the next load reads it
+    ...(state.resetAt !== undefined && !delta.reset ? { resetAt: state.resetAt } : {}),
     spot: [...byCoin.values()],
     positions: upsert(state.positions, delta.positionsRemove, delta.positionsUpsert),
     pendingOrders: upsert(state.pendingOrders, delta.pendingRemove, delta.pendingUpsert),

@@ -138,6 +138,25 @@ describe('settleFunding — once per timestamp', () => {
     expect(again.delta.fundings).toHaveLength(0);
     expect(again.delta.account.balance.toString()).toBe(state.balance.toString());
   });
+
+  it('should not charge a fresh account when it was reset after the timestamp', () => {
+    // The engine snapshotted the position at TS; the user reset the account before the settlement
+    // was written — the reset wiped the position and the funding marker
+    const held = holding('buy');
+    const snapshot = spec(held, '0.0001');
+    const afterReset = account({ symbolLeverage: {}, resetAt: TS + 5_000 });
+    const res = settleFunding(afterReset, snapshot, ctx);
+    expect(res.result).toBe(0);
+    expect(res.delta.fundings).toHaveLength(0);
+    expect(res.delta.journal).toHaveLength(0);
+    expect(res.delta.account.balance.toString()).toBe('10000');
+  });
+
+  it('should still settle when the last reset was before the timestamp', () => {
+    const state = { ...holding('buy'), resetAt: TS - 60_000 };
+    const res = settleFunding(state, spec(state, '0.0001'), ctx);
+    expect(res.result).toBe(1);
+  });
 });
 
 describe('settleFunding — where the money comes from', () => {
