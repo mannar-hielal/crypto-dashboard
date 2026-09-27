@@ -4,6 +4,7 @@ import { EmailService } from '../../services/EmailService.js';
 import { config } from '../../config.js';
 import type { SubscriberStatus } from '../../../generated/prisma/client.js';
 import type { FastifyRequest } from 'fastify';
+import { clientIp } from '../../lib/clientIp.js';
 
 // ─── HELPERS ────────────────────────────────────────────────────────────────
 
@@ -142,7 +143,7 @@ export async function newsletterRoutes(app: FastifyInstance) {
 
       const token = generateToken();
       const tokenHash = hashToken(token);
-      const ip = request.ip;
+      const ip = clientIp(request);
 
       try {
         await app.prisma.subscriber.create({
