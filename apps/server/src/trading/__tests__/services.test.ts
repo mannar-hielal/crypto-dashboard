@@ -786,6 +786,30 @@ describe('MatchingEngine', () => {
       await e.stop();
     });
 
+    it('a close committed just after the timestamp is still charged on the size held at it (review #143)', async () => {
+      open = new Map([['u1', long()]]);
+      const e = engine({
+        fetchFundingHistory: vi.fn(async () => []),
+        fundingCheckMs: 1_000_000,
+        fundingRetryMs: 0,
+      });
+      await e.start();
+      fundingTick(TS, 0.0001, 50_000);
+      clock = TS + 200; // no check has run since the timestamp passed
+      // The user's close commits and reaches the index before any tick or check
+      events.publish({ userId: 'u1', state: freshState(), delta: {} as never });
+      await vi.waitFor(() =>
+        expect(runFunding).toHaveBeenCalledWith(
+          'u1',
+          expect.objectContaining({
+            ts: TS,
+            positions: [{ positionId: 'p1', side: 'long', qty: D('0.1') }],
+          })
+        )
+      );
+      await e.stop();
+    });
+
     it('a position opened after the timestamp is not charged', async () => {
       open = new Map([['u1', long(TS + 1)]]);
       const e = engine({ fetchFundingHistory: vi.fn(async () => []), fundingCheckMs: 1_000_000 });

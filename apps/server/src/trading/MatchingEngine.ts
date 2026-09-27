@@ -177,6 +177,8 @@ export class MatchingEngine {
   /** Last funding timestamp started per symbol (the DB marker is the real once-only guard) */
   private readonly fundingStarted = new Map<string, number>();
   private fundingTimer: NodeJS.Timeout | null = null;
+  /** A timer at each symbol's next funding timestamp — bounded: ALLOWED_SYMBOLS */
+  private readonly fundingAlarms = new Map<string, NodeJS.Timeout>();
   private readonly fundingCheckMs: number;
   private readonly fundingRetryMs: number;
 
@@ -281,6 +283,10 @@ export class MatchingEngine {
   }
 
   private onEvent(userId: string, state: AccountState): void {
+    // 🔐 A funding timestamp that has passed is snapshotted from the positions as they were before
+    // this change — a close (or an add) committed just after the timestamp can't dodge (or add to)
+    // that settlement
+    if (this.active) this.checkFunding();
     if (this.buffered) this.buffered.push({ userId, state });
     else this.reindex(userId, state);
   }
@@ -317,6 +323,8 @@ export class MatchingEngine {
     this.fundingTimer = null;
     this.fundingClocks.clear();
     this.fundingStarted.clear();
+    for (const alarm of this.fundingAlarms.values()) clearTimeout(alarm);
+    this.fundingAlarms.clear();
     this.users.clear();
     this.symbolUsers.clear();
     this.lastTick.clear();
@@ -446,6 +454,18 @@ export class MatchingEngine {
         clock.due ??= { ts: passed, rate: clock.rate, mark: clock.mark };
       }
       clock.nextTs = u.nextFundingTime;
+      // Snapshot at the timestamp itself, not at the next tick or check
+      const previous = this.fundingAlarms.get(u.symbol);
+      if (previous) clearTimeout(previous);
+      const alarm = setTimeout(
+        () => {
+          this.fundingAlarms.delete(u.symbol);
+          if (this.active) this.checkFunding();
+        },
+        Math.max(0, u.nextFundingTime - this.now())
+      );
+      alarm.unref?.();
+      this.fundingAlarms.set(u.symbol, alarm);
     }
     if (finite(u.fundingRate)) clock.rate = new Decimal(u.fundingRate.toString());
     if (finite(u.markPrice) && u.markPrice > 0) clock.mark = new Decimal(u.markPrice.toString());
