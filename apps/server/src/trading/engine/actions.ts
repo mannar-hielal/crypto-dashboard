@@ -1511,7 +1511,8 @@ const fmtRate = (rate: Decimal) => `${rate.times(100).toDecimalPlaces(4).toFixed
 export function settleFunding(
   state: AccountState,
   spec: FundingSpec,
-  ctx: EngineContext
+  // Same shape as every action; every record is stamped at the funding timestamp, not ctx.now
+  _ctx: EngineContext
 ): ActionResult<number> {
   const d = new Draft(state);
   const { symbol, ts, rate, mark } = spec;
