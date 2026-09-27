@@ -12,6 +12,11 @@
  *   172.16.0.0/12 or fdaa::/16) — a request that somehow reached the app without crossing Fly's
  *   proxy can't pick its own IP;
  * - when it is exactly one valid IP.
+ *
+ * Accepted scope (review #149): that private network is Fly's 6PN mesh, so any machine in the same
+ * Fly organisation (another app, a `fly ssh` / WireGuard session) could also reach the app and set
+ * the header. This is Fly's own documented way to recover the client IP, and public traffic only
+ * arrives through Fly's proxy (`http_service`). Revisit if another app is added to the organisation.
  * Otherwise the socket address is used; in production that fallback is logged (throttled), so a
  * change in Fly's behaviour shows up instead of silently sharing one rate-limit bucket again.
  * Never key anything on `request.ip` directly.
