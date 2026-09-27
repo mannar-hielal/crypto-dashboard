@@ -46,6 +46,7 @@ function account(overrides: Partial<AccountState> = {}): AccountState {
     realizedPnl: D(0),
     leverage: 1,
     symbolLeverage: { BTCUSDT: 10 },
+    symbolFundingAt: {},
     spot: [],
     positions: [],
     pendingOrders: [],

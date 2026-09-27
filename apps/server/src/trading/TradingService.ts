@@ -42,12 +42,14 @@ import {
   resetAccount,
   setLeverage,
   setSymbolLeverage,
+  settleFunding,
   updatePositionExits,
   type AccountState,
   type ActionResult,
   type Category,
   type EngineContext,
   type ExitLeg,
+  type FundingSpec,
   type InstrumentRules,
   type OrderSide,
   type OrderSize,
@@ -370,6 +372,15 @@ export class TradingService {
   }
 
   /**
+   * Settle one funding timestamp for one account (BP-4). The engine supplies the settled rate, the
+   * mark at the timestamp and the account's positions as they were then; the action is a no-op if
+   * that timestamp was already settled. Result: the number of positions settled.
+   */
+  runFunding(userId: string, spec: FundingSpec): Promise<Executed<number> | null> {
+    return this.run(userId, (state, ctx) => settleFunding(state, spec, ctx));
+  }
+
+  /**
    * Execute an engine trigger (liquidation, TP/SL hit or pending fill). It is re-checked against
    * the account's current state first — an edit, cancel or earlier trigger may have made it
    * stale — and dropped if no longer valid. A stop / TP / SL fills at the live ask / bid when there
@@ -377,7 +388,11 @@ export class TradingService {
    * the current, fresh mark price (a backfilled one on the mark candle that triggered it).
    */
   runTrigger(userId: string, trigger: Trigger): Promise<Executed<unknown> | null> {
-    return this.run(userId, (state, ctx) => {
+    return this.run(userId, (state, liveCtx) => {
+      // A backfilled trigger happened in the past: its records (and a position it opens) are
+      // stamped at its candle, never later than now
+      const ctx =
+        trigger.at !== undefined ? { ...liveCtx, now: Math.min(trigger.at, liveCtx.now) } : liveCtx;
       let market: { category: Category; symbol: string };
       if (trigger.kind === 'liquidation') {
         const pos = state.positions.find((p) => p.id === trigger.positionId);

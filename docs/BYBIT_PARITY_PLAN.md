@@ -1,6 +1,7 @@
 # Bybit Parity Plan — Spot + USDT Perpetual
 
-> **Status:** BP-0 implemented (2026-09-26, `feat/bybit-parity-bp0`) · BP-1 implemented (2026-09-26, `feat/bybit-parity-bp1`) · BP-2 implemented (2026-09-26, `feat/bybit-parity-bp2`) · BP-3 implemented (2026-09-27, `feat/bybit-parity-bp3`) · BP-4 … BP-5 not started.
+> **Status:** BP-0 implemented (2026-09-26, `feat/bybit-parity-bp0`) · BP-1 implemented (2026-09-26, `feat/bybit-parity-bp1`) · BP-2 implemented (2026-09-26, `feat/bybit-parity-bp2`) · BP-3 implemented (2026-09-27, `feat/bybit-parity-bp3`) · BP-4 implemented (2026-09-27, `feat/bybit-parity-bp4`) · BP-5 planned (2026-09-27, owner decisions O1–O12
+> pending) · Integration audit of BP-0…BP-4: §10.
 > **Created:** 2026-09-25 · **Owner:** Mannar Hielal
 > **Goal:** paper trading on cryptopapertrade.com behaves as close as possible to a Bybit Unified Trading
 > Account (UTA), VIP 0, one-way position mode — so what a user learns here transfers 1:1 to Bybit.
@@ -116,6 +117,7 @@ BP-1 needs this feed on the server anyway.
       linear→spot fallback** (F1). The param defaults to `spot` so old cached clients keep working.
       Note: there was no retry/circuit breaker to keep, just a timeout + request coalescing.
       **Follow-up:** add `fetchWithRetry`/`CircuitBreaker` (api-best-practices) to all Bybit REST calls before BP-1.
+      **Done in BP-3** (Step 0).
 - [x] New cached endpoint `GET /market/instruments?category=` returns tick size, qty step, min qty/notional and max
       leverage for the 9 symbols, from `/v5/market/instruments-info`. Refresh every few hours. Add
       `GET /market/risk-limit?symbol=` (linear only) from `/v5/market/risk-limit`.
@@ -399,7 +401,8 @@ All trading rules live **in the server engine**; the client gets display and est
 > - **Client column layouts** saved before BP-3 get the Liq. Price and MMR columns once (`lib/columnPrefs.ts`).
 >
 > **Follow-ups (not in BP-3):** Bybit also refuses a stop-loss beyond the liquidation price (long SL ≤ liq) — not
-> enforced yet; a higher-tier position is liquidated in full (Bybit may partially liquidate down a tier);
+> enforced yet (**corrected 2026-09-27:** Bybit accepts such a stop-loss and validates TP / SL against the last price
+> instead — BP-5 B, O9); a higher-tier position is liquidated in full (Bybit may partially liquidate down a tier);
 > `PATCH /paper/account/leverage` (pre-BP-2 default leverage) is still served; the full API-parity test against
 > Bybit's testnet.
 >
@@ -539,22 +542,439 @@ All trading rules live **in the server engine**; the client gets display and est
 
 ### BP-4 — Funding
 
-- [ ] Engine scheduler: at each symbol's `nextFundingTime`, for every open perp position,
-      `payment = qty × markPrice × fundingRate`. Longs pay when the rate is positive; shorts receive.
-- [ ] Record each payment as a `Funding` execution (Bybit `execType` naming) and a journal line with the amount. Show it
-      in the Positions row (cumulative funding) and in Balance History.
-- [ ] Use the per-symbol `fundingIntervalHour` from the ticker (don't assume 8 h).
-- [ ] Backfill missed settlements after server downtime from `/v5/market/funding/history`.
-- [ ] Funding countdown + current rate in the perps order form header (Bybit shows it there).
+All funding rules live **in the server engine**; the client gets display only.
+
+> **Planned 2026-09-27.** Standing owner direction: mimic Bybit (the app will later be tested against Bybit's APIs).
+> Bybit's rules, checked 2026-09-27 (help centre "Funding Fee Calculation", API v5 funding history / execution list,
+> live tickers and instruments-info):
+>
+> - **Fee = position size × mark price at the funding timestamp × funding rate.** Positive rate: longs pay, shorts
+>   receive; negative: the reverse. Only a position **held at the timestamp** pays or receives.
+> - **Timestamps** are per symbol: `fundingInterval` (instruments-info, minutes — all 9 symbols are 480 today, but
+>   Bybit switches symbols to 4 h / 2 h / 1 h when rates hit their cap) and `nextFundingTime` on the linear ticker.
+> - **The rate** that settles at a timestamp is published by `/v5/market/funding/history` (`fundingRate`,
+>   `fundingRateTimestamp`; ≤ 200 per page, newest first; `startTime` alone is an error). The ticker's
+>   `fundingRate` is the rate for the **next** settlement.
+> - **Where it's paid from (UTA, isolated):** the available balance; only if that's short, the position margin —
+>   which moves the liquidation price toward the mark. Received funding goes to the wallet.
+> - **Records:** an execution with `execType = Funding`, `execQty` = position size, `execPrice` = mark price,
+>   `feeRate` = funding rate, `execFee` = the fee (**positive = paid, negative = received**); it never changes the
+>   position. Funding counts in realised PnL (position `cumRealisedPnl`, Closed P&L's "funding fee").
+>
+> **Implemented 2026-09-27** (one PR). Visual gate: funding rate + countdown in the symbol header next to Mark and
+> Index (like Bybit; the explanation is a hover tooltip on the stat), a **Funding** column on by default (money
+> moved: − paid in red, + received in green; saved column layouts get it once), payments listed in Balance History +
+> Journal (no Funding tab), **no** est.-funding row in the order form (Bybit has none).
+>
+> **Changed from the plan / found on the way:**
+>
+> - **Once-only marker per account + symbol, not per position:** `SymbolSetting.lastFundingAt` instead of
+>   `Position.lastFundingAt`. A snapshot can include a position closed seconds after the timestamp — a per-position
+>   marker couldn't guard that one; the per-symbol marker guards every position of the timestamp in the same
+>   transaction (version-guarded, so two machines can't both settle).
+> - **Only what's actually collected is booked:** if the balance and (for a still-open position) its margin can't
+>   cover a fee, the uncollected part is waived rather than left as a phantom realized loss.
+> - **The clock settles before the ticker moves on:** a linear tick first settles any timestamp that has passed, then
+>   takes the new `nextFundingTime` / rate (the new rate belongs to the next period). A 1 s timer covers a quiet feed.
+> - **Snapshot eligibility:** positions with `openedAt ≤ ts` in the engine's in-memory index at the timestamp.
+> - **Verified live** against Bybit and the dev DB: the 08:00 UTC settlement on 2026-09-27 (rate 0.00002285, mark
+>   84,755.02) charged a 0.01 BTC long exactly 0.01936652; a second run settled nothing; the row stayed out of the
+>   closed-trade history; the marker was set.
+>
+> **Where the code stood before BP-4 (2026-09-27):** the linear ticker already carries `fundingRate`, `nextFundingTime` and
+> `fundingIntervalHour` (server `BybitWebSocketManager`, client `paneStore`); instruments-info already parses
+> `fundingIntervalMin`. `Trade.execType` exists (`Trade | BustTrade`) and the mark price reaches the engine (BP-3).
+> Nothing settles funding yet.
+
+**A. Settlement in the engine**
+
+- [x] **Funding clock** in `MatchingEngine` (the single executor, EngineLease): per linear symbol with open positions,
+      keep the next funding timestamp (ticker `nextFundingTime`, else the last settled timestamp + `fundingInterval`).
+      A timer fires **at** the timestamp — not "on the next tick" — and snapshots, from the in-memory index, every
+      position of that symbol open at that instant (`openedAt ≤ ts`): side and size.
+- [x] **Rate and mark:** the rate is the settled one from `/v5/market/funding/history` for exactly `ts` (fetched just
+      after `ts`, retried with backoff for up to ~2 min — the record appears at settlement); if it never arrives, the
+      last ticker `fundingRate` seen before `ts`, and the source is logged. The mark price is the last linear-ticker mark
+      at or before `ts` (live), or the open of the mark-price kline minute starting at `ts` (backfill).
+- [x] **Pure action** `settleFunding(state, { symbol, ts, rate, mark, positions: snapshot[] }, ctx)`:
+  - `fee = size × mark × rate` per snapshotted position (signed: long pays when `rate > 0`); rounded to 8 dp.
+  - Paid: from the balance; any shortfall from the position's margin (`entryUsdtAmount`), so its liquidation price moves
+    (BP-3 maths). Received: to the balance.
+  - A position closed or reduced after `ts` (a close in the seconds before the settlement ran) is still charged on its
+    snapshot size — it was held at the timestamp, as on Bybit — from the balance.
+  - `realizedPnl -= fee`; position `cumFunding += fee` (for the Positions row).
+  - **Idempotent:** `SymbolSetting.lastFundingAt` (per account + symbol, written in the same version-guarded
+    transaction) makes a re-run of a timestamp a no-op — restart, retry, a second machine, and also for a snapshot
+    position that's gone. Execution row id: `fund-<positionId>-<ts>`.
+- [x] **Records:** a `Funding` execution row (`Trade.execType = 'Funding'`, qty, mark as price, `feeRate` = rate, fee
+      signed as Bybit), a journal line ("Funding fee −$0.42 · LONG BTCUSDT 0.015 @ mark $84,331.83, rate 0.0100%" /
+      "Funding received +$…"), and a Balance History row (Bybit's transaction-log type `SETTLEMENT`). No sound (Bybit
+      settles silently). Pushed as a normal delta.
+- [x] **One transaction per account** through `TradingService.run` (per-user queue + version guard), fanned out across
+      the symbol's accounts like trigger execution.
+
+**B. Backfill after downtime**
+
+- [x] On engine takeover (`EngineLease.lastTickAt`) or a feed gap: for each linear symbol with positions, fetch the
+      funding history over the gap and the mark-price kline minute at each settled `ts`; settle positions whose
+      `openedAt ≤ ts` and `lastFundingAt < ts`, in time order, interleaved with the BP-3 candle sweep so a funding
+      payment that pushes a position into liquidation is applied before the later candles.
+- [x] Known gap (document in §8): a position closed **during** the downtime can't be charged for a timestamp it held
+      (the engine never saw it at `ts`).
+
+**C. Closed P&L includes funding (Bybit)**
+
+- [x] On a close (manual, TP/SL, netting, liquidation), the closed-trade record carries the position's funding share
+      (`cumFunding × closed fraction`), and the closed PnL shown is net of it, as Bybit's Closed P&L. Realized PnL is
+      not charged twice (it was booked at each settlement).
+
+**D. Data & SDK**
+
+- [x] Prisma: `Position.cumFunding Decimal(20,8) default 0`, ~~`Position.lastFundingAt`~~ →
+      `SymbolSetting.lastFundingAt DateTime?` (see the notes),
+      `Trade.feeRate Decimal?`, `Trade.funding Decimal default 0` (a close's funding share); `Trade.execType` gains
+      `'Funding'`. One committed migration.
+- [x] History queries exclude `execType = 'Funding'` from the History tab (closed trades) so funding rows can't crowd
+      out `MAX_HISTORY`; they're returned as their own capped list (Bybit's execution list, for the later API-parity
+      test) and shown through Balance History / journal / the Positions row.
+- [x] SDK: `PaperPositionDTO.cumFunding?`, `PaperTradeDTO.execType` adds `'Funding'` + `feeRate?`, `funding?`;
+      `PaperStateDTO.fundings?: PaperFundingDTO[]` and `PaperDeltaDTO.fundings?` (optional fields — a pre-BP-4 server sends none, the BP-3 lesson).
+
+**E. UI (visual Q&A gate first)**
+
+- [x] **Funding rate / countdown** where Bybit puts it — the symbol header next to Mark and Index (`SymbolBar`, perps
+      only): "Funding 0.0022% · 04:12:33", the rate coloured by sign, with an ⓘ explaining who pays. Driven by the
+      pane's ticker (`fundingRate`, `nextFundingTime`); the countdown ticks locally.
+- ~~Order form: est. funding per interval~~ — declined in the visual gate (Bybit's order form has none).
+- [x] Positions tab: a **Funding** column (cumulative, signed, opt-in or default — gate) and funding in the realised
+      figures; Balance History shows each payment. A close's funding share is on the closed-trade record
+      (DTO, account export) — the app has no closed-trade tab to show it in (follow-up with Bybit's Closed P&L view).
+- [x] Journal wording and the order-history / balance labels ("Funding fee").
+
+**F. Tests and docs**
+
+- [x] Engine: long pays / short receives / negative rate; shortfall comes out of margin and moves the liquidation
+      price; snapshot of a position closed after `ts` still pays; idempotency (same `ts` twice); merge keeps `cumFunding`;
+      close carries the funding share.
+- [x] Services: the funding clock fires at `ts` (fake timers), history-rate fetch with fallback, backfill ordering with
+      the candle sweep, single executor.
+- [x] `infra.fetchFundingHistory` pagination (`endTime` paging, newest first) + retry/breaker (reuse `fetchWithRetry`).
+- [x] `TRADING_TEST_PLAN.md` §16, `APP_LOG.md`, the `paper-trading-logic` skill.
 
 ### BP-5 — Cross margin, risk tiers, refinements
 
-- [ ] **Cross margin:** Bybit UTA's default. Account-level maintenance margin, shared available balance, account
-      liquidation.
-- [ ] Full risk-limit tiers: risk-limit caps and a tier UI. (MMR / mmDeduction already step up with position value
-      since BP-3.)
-- [ ] Add/remove margin on an isolated position (`extraMargin` in the LP formula).
-- [ ] TP/SL trigger-by selector (Last / Mark / Index), plus reduce-only and close-on-trigger flags.
+All trading rules live **in the server engine**; the client gets display, estimates and the new controls.
+
+> **Planned 2026-09-27.** Standing owner direction: mimic Bybit (UTA, VIP 0, one-way mode), because the app
+> will later be tested against Bybit's v5 APIs. Bybit's rules below were checked on 2026-09-27 in the help centre
+> (each page's own "last updated" date in brackets), the API v5 docs and the live public endpoints:
+>
+> - **Margin mode is account-wide in UTA, and Cross is the default.** "The selected margin mode will apply to your
+>   entire account" — there is no per-symbol mode. New orders default to Cross at 10× in one-way mode
+>   [Differences between the margin modes, 2026-08-04; Getting started with perpetual trading, 2026-08-05]. It is
+>   switched with `POST /v5/account/set-margin-mode` (`ISOLATED_MARGIN` | `REGULAR_MARGIN` = cross | `PORTFOLIO_MARGIN`)
+>   and read from `GET /v5/account/account-info` → `marginMode`. The position's `tradeMode` field is deprecated
+>   (always 0).
+> - **Switching with open positions is allowed when checks pass.** Cross → Isolated: the wallet must cover the
+>   extra margin, and no position may end up with its mark at or past its new liquidation price. Isolated → Cross:
+>   the account IM rate after the switch must be ≤ 100%. A failure returns `3400045` with a `reasons[]` list.
+> - **Cross account figures** [Margin calculations, 2026-08-07; API `get-wallet-balance`]:
+>   - Margin balance = wallet balance + perpetual unrealised PnL (`totalMarginBalance`).
+>   - `totalInitialMargin` covers positions **and active orders**.
+>   - Account IM rate = total IM ÷ margin balance; account MM rate = total MM ÷ margin balance (haircut and order
+>     loss are 0 for us: the USDT collateral ratio is 1, and a spot order locks its own funds).
+>   - `totalAvailableBalance` = margin balance − total IM. At an IM rate ≥ 100% only orders that reduce a position
+>     are accepted.
+>   - In cross the position IM / MM are **mark-price based** (`size × mark / leverage + fee to close`,
+>     `size × mark × MMR − mmDeduction + fee to close`; changed 2025-09-02). Isolated keeps the entry-based IM.
+>   - A reduce-only or untriggered conditional order needs no IM. Whether unrealised _profit_ can fund new orders is
+>     unclear: two help-centre pages disagree, so the parity test settles it.
+> - **Cross liquidation** [UTA liquidation process, 2026-08-07]: when the **account MM rate reaches 100%**, Bybit
+>   cancels orders that increase positions, then all orders. It then liquidates positions by stepping their
+>   risk-limit tier down, in the contract-liquidity order (BTCUSDT, ETHUSDT, SOLUSDT, …), and stops as soon as the
+>   MM rate is below 100%. Positions close at the bankruptcy price.
+> - **Isolated partial liquidation** (same page): in the lowest tier the whole position closes at the bankruptcy
+>   price. Above it, Bybit first reduces the position by "the difference between the current position value and
+>   the lower tier value" (an IOC order), tier by tier, and liquidates in full only at the lowest tier.
+> - **Risk limits** [Risk limit (perpetual and futures), 2026-09-04; API `risk-limit`]:
+>   - UTA adjusts the tier automatically; `/v5/position/set-risk-limit` no longer exists.
+>   - The chosen leverage caps the position value: the cap is the highest tier whose `maxLeverage` ≥ the leverage.
+>   - The value checked is the "effective position value": max(long position + long order value, short position +
+>     short order value), with orders at mark. Reduce-only and close-on-trigger orders don't count.
+>   - Over the cap the order is refused (`110090` "…position may exceed the max limit. Please adjust your leverage
+>     to {{leverage}} or below…").
+>   - Live on 2026-09-27, the cap at 10× is 100 M USDT for BTCUSDT and 52 M for ETHUSDT — unreachable from a
+>     10,000 USDT start. The symbols with a small tier 1 (BNB / AVAX / LINK: 10,000 USDT) do change tier at our
+>     sizes.
+> - **Add / reduce margin (isolated)** [API `position/add-margin`; Getting started, 2026-08-05]:
+>   - Call: `POST /v5/position/add-margin` with a signed `margin` (+ add, − reduce; 4 dp). The response returns
+>     `positionIM`, `positionMM`, `liqPrice` and `leverage`.
+>   - The **leverage is unchanged**; the liquidation price moves.
+>   - A later **leverage change removes all extra margin**.
+>   - A **partial close shrinks the extra margin pro rata**; adding to the position spreads it over the whole.
+>   - Errors: `110078` (more than the max reducible), `110014` (insufficient balance to add), `110033` (no
+>     position), `110011` / `110046` (liquidation would trigger).
+>   - The max-reducible formula is not documented (verify on testnet).
+>   - Auto-add-margin (`set-auto-add-margin`, `autoAddMargin`) exists.
+> - **TP / SL, conditional orders, reduce-only, close-on-trigger** [API `create-order`, `trading-stop`; help
+>   > centre Reduce-only / Close-on-trigger, 2026-06-29; Take-profit / stop-loss, 2026-09-13]:
+>   - `tpTriggerBy` / `slTriggerBy` take `LastPrice` (default), `MarkPrice` or `IndexPrice`. A conditional order has
+>     `triggerBy` and `triggerDirection` (1 = rises to, 2 = falls to). `tpslMode` Full means the whole position,
+>     closed at market (the position list reports Full only).
+>   - `reduceOnly`: the order can only reduce the position and carries no TP / SL. It is rejected with no position,
+>     and it is cut back or cancelled when the position shrinks below it (the one furthest from the market first).
+>   - `closeOnTrigger`: when a closing order triggers without enough available balance, the contract's other active
+>     orders are cancelled or reduced to make room. It needs no margin, and TP / SL always behave this way.
+>   - **Bybit does not refuse a stop-loss beyond the liquidation price:** "the system allows you to set your preferred
+>     SL price, even if it's worse than the liquidation price… [it] may not be triggered, and will be canceled once
+>     liquidation takes place". What Bybit does refuse is a TP / SL on the wrong side of the **last price**: a long's
+>     TP must be above it and its SL below (retCode 10001 — seen in the wild, not in the docs). This corrects the
+>     BP-3 follow-up and the §8 row, which assumed a refusal.
+> - **Closed P&L** [API `position/closed-pnl`; P&L calculations, 2026-08-12]: "Closed P&L = position P&L − fee to
+>   open − fee to close − sum of all funding fees", prorated on a partial close. Fields: `closedPnl`,
+>   `avgEntryPrice`, `avgExitPrice`, `cumEntryValue`, `cumExitValue`, `openFee`, `closeFee`, `closedSize`, `qty`,
+>   `orderType`, `execType`, `leverage`, `fillCount`, `createdTime`, `updatedTime`.
+>
+> **Where the code stands (2026-09-27, after BP-4):**
+>
+> - **Isolated only.** `SymbolSetting.marginMode` and `Position.marginMode` default to `"isolated"` and are never
+>   read (`schema.prisma`). `PaperPositionDTO.marginMode` is the literal `'isolated'` (`mappers.ts:469`, SDK
+>   `types/index.ts:225`). `LeverageChip.tsx:41,157` says "Isolated".
+> - **No account-level margin.** The engine's `balance` is the available USDT: margin (IM + close-fee reserve) and
+>   pending-order reserves are taken out of it (`fillInto` `actions.ts:215`, `placePending` `actions.ts:810`).
+>   There is no account-level IM / MM or margin balance anywhere.
+> - **Tiers are chosen by position value** (`bybitSpec.tierFor` `bybitSpec.ts:228`, `positionRisk` `:273`), but
+>   `RiskTier` has no `maxLeverage` or initial-margin rate, so there is no cap check. `liquidatePosition`
+>   (`actions.ts:662`) always closes the whole position.
+> - **`Position.extraMargin` exists but is always 0** — in the schema, the mappers and `positionRisk`'s LP /
+>   bankruptcy terms. `settle` (`actions.ts:126`) neither returns it on a close nor prorates it on a partial close.
+>   `setSymbolLeverage` (`actions.ts:1344`) ignores it, where Bybit drops it on a leverage change. No action, route
+>   or UI changes it.
+> - **Last price only.** TP / SL, stops and limits trigger on the last price (`evaluateTick` `triggers.ts:119`,
+>   `checkTPSL` `:40`). The engine `Quote` has no index price: `plugins/trading.ts` passes last / bid / ask / mark.
+>   No `triggerBy`, `reduceOnly` or `closeOnTrigger` exists anywhere (schema, engine, SDK, client).
+> - **No server-side TP / SL validation.** `updatePositionExits` (`actions.ts:1008`) does no price-side check. The
+>   client checks TP / SL against the **entry** price (`PositionEditPanel.tsx:103-114`,
+>   `PendingOrderEditPanel.tsx:149-160`); Bybit checks against the last price.
+> - **Closed P&L has data but no view.** A close's funding share is on the `Trade` row (`Trade.funding`, net in
+>   `Trade.pnl`) and the DTO (`PaperTradeDTO.funding`), but no tab shows closed trades
+>   (`OrderAccountManagementPanel.tsx:50`).
+> - **The pre-BP-2 surface is still served**, although the client no longer calls it (only `test/fakePaperApi.ts`):
+>   - `PATCH /paper/account/leverage` (`routes/paper/index.ts:551`, marked "remove in BP-3"), with SDK
+>     `setLeverage`, `TradingService.setLeverage` and `actions.setLeverage` (`:1424`);
+>   - margin sizing by `usdtAmount` (`routes/paper/index.ts:99-110`).
+
+**Owner decisions needed** (recommended default first; nothing below is decided until the owner answers):
+
+- **O1 — Support cross margin at all?** It is Bybit's default and the mode most Bybit users trade in. But in cross,
+  one bad position can take the whole wallet — a harsh lesson in a learning app — and with the 10× cap it gives
+  little extra room. **Recommended: yes.** "Mimic Bybit" means the parity test will expect it, and cross vs
+  isolated is a core Bybit skill. Explain it in the mode modal (visual gate).
+- **O2 — Default mode for new accounts.** **Recommended: Cross, as on Bybit.** Existing accounts stay Isolated (no
+  silent change to open positions) and get a one-time notice. Alternative: Isolated for everyone until the user
+  opts in.
+- **O3 — Mode-switch rules.** **Recommended: Bybit's** (a switch with open positions is allowed when the checks
+  pass), because the parity test calls `set-margin-mode` with positions open. The simpler alternative allows a
+  switch only with nothing open.
+- **O4 — Split BP-5?** **Recommended: yes.** BP-5a = Step 0 + A–D + F–G (contained refinements), BP-5b = E (cross
+  margin: margin balance, account MM rate, account liquidation). Each gets its own PR and visual gate.
+- **O5 — Cross-mode unrealised profit.** **Recommended: follow the API formula** (`totalAvailableBalance` = margin
+  balance − IM, so profit counts), and confirm it with the testnet parity test before BP-5b ships.
+- **O6 — Risk-limit tier UI.** **Recommended: the current tier, the cap at the chosen leverage and the MMR in the
+  leverage modal, plus the tier on hover in the Positions row.** A full tier table is noise when the 10× cap is
+  unreachable for most symbols.
+- **O7 — Partial liquidation of higher-tier isolated positions.** **Recommended: implement it (C).** BNB / AVAX /
+  LINK positions over 10,000 USDT are already above tier 1 at our sizes, and cross liquidation (E) needs the same
+  tier-step code. Alternative: keep the §8 gap.
+- **O8 — Trigger by Index.** **Recommended: all three (Last / Mark / Index)**, as in Bybit's selector. The backfill
+  needs `/v5/market/index-price-kline` as a third candle source, which reuses the mark-candle fetcher.
+- **O9 — TP / SL validation.** **Recommended: follow Bybit.**
+  - The server checks TP / SL against the last price, with Bybit's wording.
+  - A stop-loss past the liquidation price is accepted, and the UI shows a non-blocking warning ("may not trigger —
+    liquidation comes first").
+  - This replaces today's client-side entry-price check and the planned "refuse SL beyond liquidation".
+- **O10 — Auto-add margin (Bybit's AMR toggle).** **Recommended: out (§7).** It hides the liquidation lesson;
+  revisit later.
+- **O11 — Remove the pre-BP-2 API** (`PATCH /paper/account/leverage`, `usdtAmount` sizing). **Recommended: yes, in
+  Step 0**, after one release that logs any call, to be sure no cached client still uses it.
+- **O12 — TP / SL mode.** **Recommended: Full only** (a market close of the whole position — what Bybit's position
+  list reports). Partial (limit TP / SL for part of the size) goes to §7.
+
+**Step 0: prerequisites and leftovers**
+
+- [ ] Re-verify the rules above on Bybit **testnet** before each sub-step ships, and write them into `bybitSpec.ts`
+      with `// source:, checked` comments. Include the undocumented points: max reducible margin, cross unrealised
+      profit, and the retCode of a risk-limit refusal.
+- [ ] `RiskTier` gains `maxLeverage` and `imr` (from `/v5/market/risk-limit`'s `maxLeverage` / `initialMargin`).
+      `FALLBACK_RISK_TIERS`, the SDK copy and the parity test are extended to match.
+- [ ] Remove the pre-BP-2 surface (O11): `PATCH /paper/account/leverage`, SDK `setLeverage`,
+      `TradingService.setLeverage`, `actions.setLeverage`, `usdtAmount` sizing and their tests. `Account.leverage`
+      stays as the default for unpinned symbols. Run the `security.md` refactor checklist.
+- [ ] Doc tidy from the audit (§10): the §5 wording, stale §8 rows, the BP-0 follow-up and the declined BP-4
+      checkbox — done in this plan revision; re-check at BP-5 close.
+
+**A. Add / reduce margin on an isolated position**
+
+- [ ] Pure action `adjustMargin(state, positionId, amount, ctx, mark)`, signed as Bybit (+ add, − reduce):
+  - `extraMargin += amount`, and the balance moves the other way.
+  - The leverage is unchanged; the liquidation / bankruptcy prices are re-derived (`positionRisk` already has the
+    `extra` terms).
+  - A journal line and a Balance History row ("Add margin for BTCUSDT: +$100.00").
+  - Refusals answer 422 and write nothing, in Bybit's wording:
+    - adding more than the available balance (`110014`);
+    - reducing below 0 extra or past the max reducible (`110078`);
+    - a change that would put the mark at or past the new liquidation price (`110011`);
+    - no position (`110033`);
+    - no fresh mark (`Waiting for live price…`).
+- [ ] Bybit's side effects of extra margin:
+  - `settle` returns it pro rata on a partial close and in full on a close.
+  - A same-side fill keeps it: it spreads over the merged size.
+  - `setSymbolLeverage` **releases all of it** to the wallet.
+  - `liquidatePosition` loses it (it is already in the bankruptcy price).
+  - A funding shortfall comes out of IM first, then extra margin.
+- [ ] Route `POST /paper/positions/:id/margin` (`{ margin: signedDecimal }`, bounded, `additionalProperties: false`,
+      rate-limited like the other mutations) and SDK `adjustPositionMargin`. The DTO's `positionIM` includes extra
+      margin if testnet confirms Bybit reports it that way.
+- [ ] **UI (visual gate):** an "Add / reduce margin" dialog from the Positions row (Bybit: the pencil next to
+      margin) with Add | Reduce tabs, the max amount, and the new liquidation price previewed.
+
+**B. TP / SL trigger-by, reduce-only, close-on-trigger, validation**
+
+- [ ] Schema (one migration), with Bybit's names in the DTO / SDK fields:
+  - `Position.tpTriggerBy`, `Position.slTriggerBy`, `Order.triggerBy`, `Order.tpTriggerBy`, `Order.slTriggerBy`
+    (`LastPrice | MarkPrice | IndexPrice`, default `LastPrice`);
+  - `Order.reduceOnly` and `Order.closeOnTrigger` (default false).
+- [ ] Engine:
+  - `Quote` / `TickUpdate` carry `index` (the linear ticker's `indexPrice`).
+  - `evaluateTick` picks each TP / SL and conditional trigger price by its trigger-by, and `checkTPSL` /
+    `checkPendingTrigger` take the price source.
+  - The backfill sweeps each trigger on its own source, which adds index-price candles (O8).
+  - Fills are unchanged (ask / bid, taker).
+- [ ] **Reduce-only:**
+  - It is rejected with no position, or when it would open or increase one, and it reserves no IM.
+  - It is capped at the position size at fill time, and can't carry TP / SL.
+  - A resting reduce-only order is cut back or cancelled when the position shrinks below it (furthest from the
+    market first).
+- [ ] **Close-on-trigger:**
+  - When a closing conditional triggers without the balance for its fee, the contract's other active orders are
+    cancelled or reduced (and refunded) to make room.
+  - It needs no margin.
+  - TP / SL already close without margin, so this only affects user conditionals.
+- [ ] **Validation (O9)**, server-side in `updatePositionExits` / `placePending` / `editPending` and the spot TP / SL
+      actions:
+  - A long's TP must be above the trigger-by price now and its SL below (the reverse for a short), in Bybit's
+    wording, on a fresh quote.
+  - A stop-loss beyond the liquidation price is **accepted**. The client warns, and the backfill already lets the
+    liquidation win (audit fix, §10).
+  - The client edit panels switch from the entry price to the same last-price rule.
+- [ ] **UI (visual gate):** a trigger-by selector (Last / Mark / Index) next to TP / SL in the order form and the
+      position TP/SL panel, plus Reduce-only and Close-on-trigger checkboxes in the order form (under the size, as
+      on Bybit) with ⓘ tooltips.
+
+**C. Risk-limit caps, tier info, partial liquidation**
+
+- [ ] Cap: refuse an order, a leverage change or an add-margin that would take the effective position value over the
+      cap for the symbol's leverage (the highest tier with `maxLeverage` ≥ leverage).
+  - Effective value = max(long position + long orders, short position + short orders), orders at mark, reduce-only
+    excluded.
+  - Bybit's `110090` wording, including the leverage to go down to.
+- [ ] Partial liquidation (O7): when the mark reaches the liquidation price of a position above the lowest tier:
+  1. Reduce it by the part above the next lower tier, at the bankruptcy price, with the taker fee from the reserve
+     and a `BustTrade` for that part.
+  2. Re-derive the tier and liquidation price, and repeat.
+  3. Close in full only in the lowest tier.
+
+  The backfill uses the same step (one mark candle can take several steps).
+
+- [ ] **UI (visual gate, O6):** the leverage modal shows the tier, the max position value at the chosen leverage and
+      the MMR; the Positions row shows the tier / MMR on hover.
+
+**D. Closed P&L**
+
+- [ ] A **Closed P&L** tab (Bybit's name) for USDT Perpetual under the positions panel:
+  - Columns: symbol, side, closed qty, entry price, exit price, closed P&L (net of both fees and the funding share),
+    exit type (Trade / Liquidation), time.
+  - Hover: open fee, close fee, funding.
+  - Data: the `Trade` rows except `Funding`, already sent in the snapshot and capped at `MAX_HISTORY`.
+- [ ] Store the open-fee share on the closing `Trade` row (`Trade.openFee`, prorated like `funding`) so the row holds
+      every input of Bybit's `closedPnl` — today the open fee is only in realized PnL. Add `avgEntryPrice` /
+      `avgExitPrice` / `closedSize` aliases for the parity test.
+- [ ] **UI (visual gate).**
+
+**E. Cross margin (BP-5b; O1–O3, O5)**
+
+- [ ] `Account.marginMode` (`ISOLATED_MARGIN` | `REGULAR_MARGIN`, Bybit's values; account-wide as in UTA; default
+      per O2), in one migration. Drop the unused per-symbol / per-position `marginMode` columns, or keep them as
+      read-only mirrors for the DTO.
+- [ ] Account figures, pure in `bybitSpec` and mirrored in the SDK with a parity test:
+  - margin balance = wallet (the USDT `balance` + every position's margin) + Σ unrealised PnL at mark;
+  - total IM = Σ positions' mark-based IM + active orders' IM;
+  - total MM = Σ mark-based MM;
+  - account IM / MM rates, and available balance = margin balance − total IM.
+
+  Spot orders keep locking their own funds; the USDT collateral ratio is 1.
+
+- [ ] Engine in cross:
+  - An order is accepted while the account IM rate after it is ≤ 100% (not "IM ≤ balance").
+  - Positions hold no isolated margin: IM is recomputed at mark on every evaluation.
+  - A realized loss comes out of the wallet.
+  - Funding is paid from the wallet; a shortfall raises the MM rate instead of moving one position's liquidation
+    price.
+- [ ] Account liquidation:
+  - The MatchingEngine evaluates a cross account's MM rate on every linear mark tick. The index is keyed by account
+    as well as by market, since every linear market moves the rate.
+  - At ≥ 100%: cancel orders that increase positions, then all orders. Then liquidate step by step in Bybit's
+    contract order (C's tier-step code), re-checking after each step, at the bankruptcy price.
+  - Each step writes a journal line, a Balance History row and a `BustTrade`.
+  - The backfill replays the mark candles of every symbol the account holds, minute by minute.
+- [ ] The liquidation price per position in cross is an estimate (every other position held constant), shown as
+      Bybit does.
+- [ ] Mode-switch action + `POST /paper/account/margin-mode` (Bybit's checks, O3), with a `3400045`-style refusal
+      listing the reasons.
+- [ ] **UI (visual gate):**
+  - a margin-mode control: the chip reads `Cross 10x ▾` / `Isolated 10x ▾`, with a mode modal like Bybit's;
+  - an account bar with margin balance, available balance, the IM / MM rates and a cross MM-rate meter;
+  - Positions show "Cross" and the estimated liquidation price;
+  - a liquidation explainer for cross.
+
+**F. Engine refinements deferred by the audit (§10)**
+
+- [ ] Funding during a stalled linear feed: the live clock settles at the last mark it saw, which may be minutes
+      old. Settle at the mark candle when the last mark is older than the quote-age rule (10 s).
+- [ ] A close committed between a funding timestamp and its settlement is correctly charged from the balance, but
+      its `Trade.funding` share misses that last fee. Attach it to the closed trade when the snapshot position is
+      gone, as Bybit's Closed P&L would include it.
+- [ ] `settle` clamps a close's return at 0 while realized PnL books the full loss. A fill past the bankruptcy price
+      is now rarer (the backfill liquidates first — audit fix), but realized PnL should book only what was lost.
+- [ ] Funding for a position opened and fully closed while the engine was down (§8): the backfill snapshots only
+      open positions. Source the snapshot for each missed timestamp from position history in the gap (the
+      `Trade` rows' `openedAt` / `executedAt` and quantities) so it is charged as on Bybit (raised in PR #143's
+      review).
+
+**G. API-parity test (Bybit testnet)**
+
+- [ ] A manual-run script (not CI; testnet keys from `config.ts`, never logged) that replays a fixed scenario on
+      Bybit testnet and on the paper engine, then diffs the v5 fields:
+  - Scenario: market / limit / conditional orders, merge, partial close, flip, leverage change, add / reduce margin,
+    TP / SL by each trigger, funding, liquidation.
+  - Fields: `position/list`, `execution/list`, `position/closed-pnl` and `account/wallet-balance`.
+  - Fill prices differ (there is no shared book), so it compares the maths given the same fills.
+- [ ] One adapter in `mappers.ts` maps the engine DTOs to Bybit's field names, so the test compares like with like.
+
+**Tests and docs**
+
+- [ ] Engine:
+  - add / reduce margin: refusals, the liquidation price moving, pro-rata partial close, release on a leverage
+    change;
+  - trigger-by per source, live and backfill;
+  - reduce-only caps and cancels, and close-on-trigger freeing margin;
+  - last-price validation and the risk-limit cap;
+  - partial liquidation stepping down tiers;
+  - cross: account rates, order acceptance, account liquidation order, funding.
+- [ ] Services: index keyed per cross account; a mark tick of any symbol re-evaluates the account; backfill across
+      symbols; the mode switch.
+- [ ] Client: store mapping of the new DTO fields (optional for an older server) and the new dialogs / tabs.
+- [ ] `TRADING_TEST_PLAN.md` §17 (BP-5), `APP_LOG.md`, the `paper-trading-logic` skill, and §8 updated.
 
 ---
 
@@ -563,13 +983,17 @@ All trading rules live **in the server engine**; the client gets display and est
 **Server (Prisma)**, the source of truth from BP-1 onward:
 
 - `Position`: add `category`, `leverage`, `marginMode`, `extraMargin`, `version`. **BP-2 added** `category`, `leverage`,
-  `marginMode`, `entryFee`, `closeFeeReserve` (`extraMargin` waits for BP-3).
+  `marginMode`, `entryFee`, `closeFeeReserve`; BP-3 added `extraMargin`. The per-row `version` was superseded by
+  `Account.version` (BP-1).
 - `Order`: add `category`, `isMaker`, `feeRate`, `triggerBy`, `reduceOnly`, `version`. **BP-2 added** `category`,
-  `reserved`, `feeRate`, `feeAsset`, `isMaker`, `ocoGroup` (`triggerBy` / `reduceOnly` wait for BP-3).
+  `reserved`, `feeRate`, `feeAsset`, `isMaker`, `ocoGroup`. `triggerBy` / `reduceOnly` (+ `closeOnTrigger`) moved to
+  BP-5 B; `version` superseded by `Account.version`.
 - **BP-2 also added** `Trade.category`, `SymbolSetting` (per-symbol leverage / margin mode) and `SpotBalance`
   (`free`, `locked`, `avgCost`, non-negative CHECK).
 - `Trade`: add `category`, `fee`, `feeAsset`, `execType` (`Trade | BustTrade | Funding`, Bybit's own `execType`
-  values), mirroring Bybit's execution list.
+  values), mirroring Bybit's execution list. As built: the fee is `Trade.commission` (linear fees are always USDT, so
+  there is no `Trade.feeAsset`); `execType` landed in BP-3 / BP-4, and **BP-4 added** `Trade.feeRate`, `Trade.funding`,
+  `Position.cumFunding` and `SymbolSetting.lastFundingAt` (+ `leveragePinned`).
 - **BP-3 added** `Position.extraMargin` (default 0), `Trade.execType` (`Trade` | `BustTrade`) and `Order.createType`
   (`CreateByLiq` for liquidations). Liquidation / bankruptcy prices are derived, not stored. The same migration
   merges existing same-side positions (one-way mode) and sets each symbol's leverage to its position's.
@@ -584,18 +1008,20 @@ All trading rules live **in the server engine**; the client gets display and est
 - Version bump. After BP-1 the persisted data is only a cache, so the migration can simply drop the old shape and let
   the server hydrate.
 - `COMMISSION_RATE` stays exported **only** for legacy display of old rows (or is removed once no reader remains).
+  **Removed** — the server reads legacy rows at `LEGACY_FEE_RATE` (`bybitSpec.ts`).
 
 ---
 
 ## 6. Rollout order and risk
 
-| Step | Risk                                          | Mitigation                                                                                                           |
-| ---- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| BP-0 | Feed regressions (chart, prices)              | Ship alone; compare old and new feeds side by side in dev                                                            |
-| BP-1 | Biggest change: execution moves to the server | Pure-port rule; existing tests ported first; shipped as one PR with no fallback flag (owner's choice)                |
-| BP-2 | UI changes                                    | Visual Q&A gate; spot and perps behind the market switch                                                             |
-| BP-3 | Users get liquidated for the first time       | In-app explainer + one-time notice at deploy; liquidation price visible before submit; no grace period (as on Bybit) |
-| BP-4 | Balance moves while user is away              | Every funding payment in the journal and Balance History                                                             |
+| Step | Risk                                            | Mitigation                                                                                                           |
+| ---- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| BP-0 | Feed regressions (chart, prices)                | Ship alone; compare old and new feeds side by side in dev                                                            |
+| BP-1 | Biggest change: execution moves to the server   | Pure-port rule; existing tests ported first; shipped as one PR with no fallback flag (owner's choice)                |
+| BP-2 | UI changes                                      | Visual Q&A gate; spot and perps behind the market switch                                                             |
+| BP-3 | Users get liquidated for the first time         | In-app explainer + one-time notice at deploy; liquidation price visible before submit; no grace period (as on Bybit) |
+| BP-4 | Balance moves while user is away                | Every funding payment in the journal and Balance History                                                             |
+| BP-5 | Cross margin: one position can drain the wallet | Owner decisions O1–O3 first; split BP-5a / BP-5b (O4); mode modal + cross liquidation explainer (visual gate)        |
 
 ---
 
@@ -605,25 +1031,24 @@ All trading rules live **in the server engine**; the client gets display and est
 - Spot margin trading, borrowing and interest.
 - Order-book depth simulation, slippage beyond best bid/ask, partial fills, ADL, insurance fund.
 - VIP fee tiers, fee coupons, USDC contracts, inverse contracts, options.
+- Proposed for BP-5 (owner to confirm, O10 / O12): auto-add margin (AMR) and Partial-mode TP / SL.
 
 ---
 
 ## 8. Known deliberate gaps vs Bybit
 
-| Gap                                                                                                               | Why                                                                                          |
-| ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Leverage capped at 10× (Bybit allows far more)                                                                    | Safety cap for a learning app                                                                |
-| Fills at top of book only, no depth                                                                               | Simplicity; fine for small orders                                                            |
-| Liquidation settles instantly at bankruptcy price                                                                 | No liquidation engine / insurance fund                                                       |
-| A liquidated position closes in full, whatever its risk-limit tier                                                | Bybit may partially liquidate a higher-tier position down a tier; rare at our position sizes |
-| A stop-loss past the liquidation price is accepted                                                                | Bybit refuses it; follow-up                                                                  |
-| Same-side positions are kept separate (Bybit's one-way mode merges them into one averaged position)               | Closed by BP-3 (merge + migration)                                                           |
-| Leverage can't change while a symbol has open trades                                                              | Closed by BP-3 (re-margining)                                                                |
-| Limits trigger on the last price, not the book                                                                    | No order-book simulation (§7)                                                                |
-| A backfilled trigger (server was down) fills at the level it crossed, with the taker fee                          | There is no quote for the past                                                               |
-| The close-fee estimate uses the entry price, not the bankruptcy price                                             | Closed by BP-3 for new positions; older rows keep what they reserved                         |
-| Spot TP / SL are placed or cancelled, not edited                                                                  | Cancel and place again                                                                       |
-| A TP / SL pair attached to a spot buy uses the exact coins received (net of the fee), not floored to the qty step | Engine triggers have no instrument rules; the pair still sells correctly                     |
+| Gap                                                                                                               | Why                                                                                |
+| ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Leverage capped at 10× (Bybit allows far more)                                                                    | Safety cap for a learning app                                                      |
+| Fills at top of book only, no depth                                                                               | Simplicity; fine for small orders                                                  |
+| Liquidation settles instantly at bankruptcy price                                                                 | No liquidation engine / insurance fund                                             |
+| A liquidated position closes in full, whatever its risk-limit tier                                                | Bybit steps a higher-tier position down tier by tier — BP-5 C (O7)                 |
+| TP / SL are checked against the entry price in the UI only, not against the last price on the server              | Bybit checks the last price (and accepts an SL past liquidation) — BP-5 B, O9      |
+| A position closed while the matching engine was down isn't charged funding for a timestamp it held                | The engine never saw it at that timestamp (BP-4 backfill only sees open positions) |
+| Limits trigger on the last price, not the book                                                                    | No order-book simulation (§7)                                                      |
+| A backfilled trigger (server was down) fills at the level it crossed, with the taker fee                          | There is no quote for the past                                                     |
+| Spot TP / SL are placed or cancelled, not edited                                                                  | Cancel and place again                                                             |
+| A TP / SL pair attached to a spot buy uses the exact coins received (net of the fee), not floored to the qty step | Engine triggers have no instrument rules; the pair still sells correctly           |
 
 ---
 
@@ -632,6 +1057,79 @@ All trading rules live **in the server engine**; the client gets display and est
 None blocking. Resolved on 2026-09-25: Q1 → D2, Q2 → D9 (server engine), Q3 → D7, Q4 → D8.
 Resolved on 2026-09-26 for BP-3: mimic Bybit as closely as possible (the app will later be tested against Bybit's
 APIs). That means merging same-side fills, re-margining in BP-3, every chart line Bybit draws, and no grace period at deploy.
+
+**Open for BP-5 (2026-09-27):** owner decisions O1–O12 in §4 BP-5 — above all whether to offer cross margin (O1), the
+default mode for new accounts (O2) and splitting BP-5 into BP-5a / BP-5b (O4). BP-5 doesn't start until they're
+answered.
+
+---
+
+## 10. Open points and integration audit after BP-4 (2026-09-27)
+
+Every open, deferred or "follow-up" item in this plan and in `TRADING_TEST_PLAN.md` §12–16 was checked against
+the code (branch `fix/bybit-parity-bp5-audit`, on top of BP-4). BP-0 … BP-4 were also read end to end together
+for cross-phase bugs.
+
+**Open points**
+
+| #   | Item (source)                                                                                 | Status (evidence)                                                                                                                                          | Goes to                                          |
+| --- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| 1   | `fetchWithRetry` / breaker on Bybit REST (BP-0 follow-up)                                     | Done in BP-3 (`infra.ts`, `BybitMarketInfo.ts`, `routes/market`); the BP-0 note was stale                                                                  | Closed (note updated)                            |
+| 2   | Refuse a stop-loss beyond the liquidation price (BP-3 follow-up, §8)                          | Not refused (`updatePositionExits` `actions.ts:1008`) — and **Bybit doesn't refuse it either** (help centre, 2026-09-13); Bybit checks TP/SL vs last price | BP-5 B (O9): last-price validation + UI warning  |
+| 3   | Partial liquidation of higher tiers (BP-3 follow-up, §8)                                      | Open: `liquidatePosition` closes in full (`actions.ts:662`)                                                                                                | BP-5 C (O7)                                      |
+| 4   | `PATCH /paper/account/leverage` still served (BP-3 follow-up)                                 | Open (`routes/paper/index.ts:551`, "remove in BP-3"); no client caller                                                                                     | BP-5 Step 0 (O11)                                |
+| 5   | Pre-BP-2 `usdtAmount` sizing "during the deploy window" (BP-2)                                | Still accepted (`routes/paper/index.ts:99-110`)                                                                                                            | BP-5 Step 0 (O11)                                |
+| 6   | Full API-parity test against Bybit testnet (BP-3 / BP-4 follow-up)                            | Open: no test exists                                                                                                                                       | BP-5 G                                           |
+| 7   | Closed P&L view with the funding share (BP-4 E)                                               | Data done (`Trade.funding`, DTO, store); no view (`OrderAccountManagementPanel.tsx:50`)                                                                    | BP-5 D                                           |
+| 8   | Cross margin; risk-limit caps + tier UI; add/remove margin; trigger-by etc. (BP-5)            | Open (see BP-5 "Where the code stands")                                                                                                                    | BP-5 A–C, E                                      |
+| 9   | §5: `Position.version` / `Order.version`, `triggerBy` / `reduceOnly` "wait for BP-3"          | Superseded (`Account.version`) / moved to BP-5 B                                                                                                           | Closed (§5 updated)                              |
+| 10  | §5: `Trade.fee` / `feeAsset`; `COMMISSION_RATE` "removed once no reader remains"              | Fee is `Trade.commission` (no `Trade.feeAsset`); `COMMISSION_RATE` is gone                                                                                 | Closed (§5 updated); field aliases in BP-5 D / G |
+| 11  | §8 rows "closed by BP-3" (same-side merge, leverage lock, close fee at entry)                 | Stale                                                                                                                                                      | Closed (rows removed)                            |
+| 12  | §8: a position closed during engine downtime isn't charged funding                            | Open by design                                                                                                                                             | BP-5 F (kept in §8 until then)                   |
+| 13  | §8: spot TP / SL can't be edited                                                              | Open (`spot.ts` refuses the edit)                                                                                                                          | BP-5 (low) — or keep in §8                       |
+| 14  | §8: other deliberate gaps (10× cap, top-of-book fills, instant bankruptcy settle…)            | Deliberate                                                                                                                                                 | Won't do (§7 / safety)                           |
+| 15  | BP-4 E: est. funding row in the order form                                                    | Declined in the visual gate (Bybit has none)                                                                                                               | Closed (marked declined)                         |
+| 16  | Test plan 12.1.1–12.1.3, 13.2.x, 13.3.x (live feed, tab closed, two tabs, refresh)            | Logic unit-tested (`market.test.ts`, `services.test.ts`, `paper.test.ts`, `usePaperFeed.test.tsx`); the ⬜ rows are manual browser checks (no Playwright)  | Manual check at the next release                 |
+| 17  | Test plan 12.2.5 (`setPaneCategory` via devtools), 12.2.6 (positions priced from spot)        | Superseded by the BP-2 market switch / fixed (positions priced by `category:symbol`, mark since BP-3)                                                      | Small doc fix: close the rows                    |
+| 18  | Test plan 14.1.10, 14.6.7, 15.6.2 (URL on Trade menu, Assets → TP/SL modal, mark-line toggle) | Logic covered; no component test for the click path                                                                                                        | Small: add RTL tests with BP-5 UI work           |
+| 19  | Test plan 15.4.9 (deploy with a position already past liquidation), 15.6.6 (drag feel)        | One-off deploy check / done manually (APP_LOG BP-3 notes)                                                                                                  | Mark done at the next test-plan pass             |
+
+**Integration audit: cross-phase bugs found and fixed** (each a separate `fix:` commit with a regression test that
+failed before the fix):
+
+| Severity | Where                                                              | Scenario                                                                                                                                                                                                                                                                                                  | Fix / test                                                                                                                                                          |
+| -------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| High     | `TradingService.runTrigger` + `triggers.evaluateCandle`            | BP-1 backfill × BP-3 / BP-4: a backfilled trigger ran with the wall clock, so a position a backfilled fill opened had `openedAt = now`. Every later candle of the gap skipped it (`candle.start < openedAt`): its TP / SL and liquidation were missed. Every funding timestamp in the gap skipped it too. | Backfilled triggers carry `at` = the candle's last millisecond; the engine stamps the records then. `services.test` "should stamp a backfilled fill at its candle…" |
+| High     | `MatchingEngine` funding (BP-4 × lease handoff)                    | A restart / handoff just after a funding timestamp — including mid-settlement, which the held-back lease progress was meant to replay — backfilled a history that didn't list the timestamp yet. The live clock had already moved on, so the settlement was never made.                                   | The first ticker after a takeover marks `next − fundingIntervalHour` due if it fell in the downtime; dropped if Bybit never lists it. Two `services.test` cases     |
+| Medium   | `MatchingEngine.runFunding` (BP-4 × account deletion)              | An account deleted between a timestamp and its settlement made every write fail. It was retried forever, holding `EngineLease.lastTickAt` before the timestamp, so every restart re-backfilled an ever-growing gap.                                                                                       | A confirmed-deleted account is dropped and evicted. `services.test` "should drop a deleted account's settlement…"                                                   |
+| Medium   | `triggers.evaluateCandle` (BP-3 backfill × SL accepted beyond liq) | A minute that crossed both a stop-loss set beyond the liquidation price and the liquidation price closed the position at the stop (past bankruptcy). The return was clamped at 0 while realized PnL booked more than the margin, and no liquidation was recorded. Bybit never fills such a stop.          | Liquidation wins when the hit stop is at / beyond the liquidation price. `liquidation.test` "should liquidate, not stop out…"                                       |
+| Low      | `settleFunding` (BP-4 × reset)                                     | A reset between a timestamp and its (delayed) settlement wiped the positions and the funding marker, and the fresh 10,000 USDT account was then charged for positions it never held.                                                                                                                      | `AccountState.resetAt` (from `Account.lastReset`); a timestamp before it is a no-op. `funding.test` "should not charge a fresh account…" + repository load test     |
+
+**Checked and found consistent:**
+
+- **Spot vs linear separation.** Every path keys by `category:symbol`: the index, ticks, gap / downtime backfill
+  (each market its own candles; mark candles and funding linear only), the funding clock (linear ticks only), the
+  snapshots (linear positions only), liquidation's order cancel (linear only), the private-WS price push and
+  re-margining (linear orders only).
+- **One-way merge.** It keeps `cumFunding`, `extraMargin` and the TP / SL rules. Partial close and netting prorate
+  margin, fees, reserve and `cumFunding`; a flip starts a clean position. The BP-3 merge migration sums stored values
+  only and writes one pinned `SymbolSetting` per symbol.
+- **Liquidation × funding.** A funding shortfall reduces IM, which raises the liquidation price; the next mark tick
+  liquidates at the bankruptcy price derived from the reduced IM. Liquidation carries the whole `cumFunding` as the
+  closed trade's funding share. A snapshot position liquidated after the timestamp is charged from the balance.
+- **Re-margining.** `setSymbolLeverage` recomputes IM from qty × entry (restoring any funding shortfall from the
+  wallet) and re-estimates the reserve at the new bankruptcy price. `cumFunding` is untouched. `extraMargin` is not
+  handled yet (always 0; BP-5 A).
+- **`closeFeeReserve` rules.** Legacy 0 / 0.07%-of-margin rows, BP-2 entry-price rows and BP-3 bankruptcy-price rows
+  are all used as stored through merge (summed), partial close (prorated) and liquidation (charged in full).
+- **`isEmptyDelta` and the repository.** `isEmptyDelta` compares every `Delta` field. `AccountRepository` writes
+  every field it reads: `leveragePinned` separates leverage rows from funding-marker rows (BP-4 review fix). A reset
+  wipes positions, orders, trades (fundings included), journal, balance history, `SymbolSetting` (markers included)
+  and spot balances.
+- **DTO ↔ client store.** Every BP-3 / BP-4 field is optional on the wire and mapped to "unknown" or 0 correctly for
+  an older server (`paperStore.ts` `positionFrom`, `mapServerState`, `applyDelta`).
+- **Migrations.** They apply in order on pre-BP-2 / BP-3 rows. BP-2 backfills stored fees, BP-3 merges and pins
+  leverage, and BP-4 and its marker fix are additive; the Prisma schema matches the mappers.
 
 ---
 
@@ -646,3 +1144,18 @@ APIs). That means merging same-side fills, re-margining in BP-3, every chart lin
 - [Bybit — Introduction to Funding Rate](https://www.bybit.com/en/help-center/article/Introduction-to-Funding-Rate)
 - [Bybit API v5 — Ticker stream](https://bybit-exchange.github.io/docs/v5/websocket/public/ticker)
 - [Bybit API v5 — Funding rate history](https://bybit-exchange.github.io/docs/v5/market/history-fund-rate)
+- [Bybit — Differences Between the Margin Modes Under the UTA](https://www.bybit.com/en/help-center/article/Differences-Between-the-Margin-Modes-Under-the-Unified-Trading-Account)
+- [Bybit — Margin Calculations Under Different Margin Modes](https://www.bybit.com/en/help-center/article/Margin-Calculations-Under-Different-Margin-Modes)
+- [Bybit — UTA Trading Rules / Liquidation Process](https://www.bybit.com/en/help-center/article/UTA-Trading-Rules)
+- [Bybit — Risk Limit (Perpetual and Futures)](https://www.bybit.com/en/help-center/article/Risk-Limit-Perpetual-and-Futures)
+- [Bybit — Introduction to Take Profit / Stop Loss](https://www.bybit.com/en/help-center/article/Introduction-to-Take-Profit-Stop-Loss-Perpetual-Futures-Contracts)
+- [Bybit — Reduce-Only Order](https://www.bybit.com/en/help-center/article/Reduce-Only-Order) ·
+  [Close-On-Trigger Order](https://www.bybit.com/en/help-center/article/Close-On-Trigger-Order)
+- [Bybit — Profit/Loss Calculations (USDT Contract)](https://www.bybit.com/en/help-center/article/Profit-Loss-calculations-USDT-Contract)
+- [Bybit API v5 — Set margin mode](https://bybit-exchange.github.io/docs/v5/account/set-margin-mode) ·
+  [Wallet balance](https://bybit-exchange.github.io/docs/v5/account/wallet-balance) ·
+  [Add / reduce margin](https://bybit-exchange.github.io/docs/v5/position/manual-add-margin) ·
+  [Risk limit](https://bybit-exchange.github.io/docs/v5/market/risk-limit) ·
+  [Create order](https://bybit-exchange.github.io/docs/v5/order/create-order) ·
+  [Closed P&L](https://bybit-exchange.github.io/docs/v5/position/close-pnl) ·
+  [Error codes](https://bybit-exchange.github.io/docs/v5/error)

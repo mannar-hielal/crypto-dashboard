@@ -133,6 +133,8 @@ function settle(pos: Position, closeQty: Decimal, price: Decimal, rate: Decimal)
   const margin = pos.entryUsdtAmount.times(fraction);
   const reserve = pos.closeFeeReserve.times(fraction);
   const entryFee = pos.entryFee.times(fraction);
+  // The closed part's share of the funding already settled (booked then — not charged again)
+  const funding = (pos.cumFunding ?? ZERO).times(fraction);
   // Margin and the close-fee estimate come back, plus the price move, minus the real close fee
   const returnAmount = Decimal.max(0, margin.plus(reserve).plus(pnl).minus(fee));
   return {
@@ -142,6 +144,7 @@ function settle(pos: Position, closeQty: Decimal, price: Decimal, rate: Decimal)
     margin,
     reserve,
     entryFee,
+    funding,
     returnAmount,
     /** Net of the close fee — what the balance history and journal show */
     netPnl: pnl.minus(fee),
@@ -253,6 +256,7 @@ function fillInto(
         margin: s.margin,
         openedAt: pos.openedAt,
         closedAt: now,
+        ...(s.funding.eq(0) ? {} : { funding: s.funding }),
       });
       if (!skipJournal) {
         const closedSide = pos.side === 'long' ? 'LONG' : 'SHORT';
@@ -286,6 +290,7 @@ function fillInto(
           entryUsdtAmount: pos.entryUsdtAmount.minus(s.margin),
           entryFee: pos.entryFee.minus(s.entryFee),
           closeFeeReserve: pos.closeFeeReserve.minus(s.reserve),
+          ...(pos.cumFunding ? { cumFunding: pos.cumFunding.minus(s.funding) } : {}),
         });
       }
     }
@@ -516,6 +521,7 @@ function closePositionInto(
     margin: pos.entryUsdtAmount,
     openedAt: pos.openedAt,
     closedAt: now,
+    ...(s.funding.eq(0) ? {} : { funding: s.funding }),
   });
 
   const closingOrder: HistoricalOrder = {
@@ -721,6 +727,7 @@ export function liquidatePosition(
     openedAt: pos.openedAt,
     closedAt: now,
     execType: 'BustTrade',
+    ...(pos.cumFunding && !pos.cumFunding.eq(0) ? { funding: pos.cumFunding } : {}),
   });
   const legCancels: HistoricalOrder[] = [];
   for (const [leg, price] of [
@@ -1462,16 +1469,152 @@ export function resetAccount(state: AccountState): ActionResult<boolean> {
   d.realizedPnl = ZERO;
   d.leverage = 1;
   d.symbolLeverage = {};
+  d.symbolFundingAt = {};
   d.reset = true;
   return { delta: d.toDelta(), result: true };
+}
+
+// ─── Funding (BP-4) ────────────────────────────────────────────────────────────
+
+/** A position as it was at the funding timestamp (the engine snapshots them at that instant). */
+export interface FundingSnapshot {
+  positionId: string;
+  side: PositionSide;
+  qty: Decimal;
+}
+
+export interface FundingSpec {
+  symbol: string;
+  /** The funding timestamp (Unix ms) */
+  ts: number;
+  /** Settled funding rate */
+  rate: Decimal;
+  /** Mark price at the timestamp */
+  mark: Decimal;
+  /** The account's positions on `symbol` held at `ts` */
+  positions: FundingSnapshot[];
+}
+
+const fmtRate = (rate: Decimal) => `${rate.times(100).toDecimalPlaces(4).toFixed(4)}%`;
+
+/**
+ * Settles one funding timestamp for one account, as Bybit (UTA, isolated margin):
+ * - fee = size × mark × rate for each position held at `ts`; a long pays a positive rate, a short
+ *   receives it (the reverse for a negative rate). Signed as Bybit's execFee: + = paid.
+ * - Paid from the balance; any shortfall from that position's margin, which moves its
+ *   liquidation price toward the mark. A position closed since `ts` still pays (it was held at the
+ *   timestamp), from the balance only. Received funding goes to the balance.
+ * - Booked in realized PnL now (a later close carries the share, for Closed P&L, without charging
+ *   it again) and in the position's `cumFunding`.
+ * - Idempotent: a timestamp at or before `symbolFundingAt[symbol]` is a no-op, and so is one
+ *   before the account's last reset (the snapshot holds positions the reset wiped).
+ */
+export function settleFunding(
+  state: AccountState,
+  spec: FundingSpec,
+  // Same shape as every action; every record is stamped at the funding timestamp, not ctx.now
+  _ctx: EngineContext
+): ActionResult<number> {
+  const d = new Draft(state);
+  const { symbol, ts, rate, mark } = spec;
+  // symbol is an allow-listed symbol from the engine's own index — safe, controlled access
+  // eslint-disable-next-line security/detect-object-injection
+  const settledTo = state.symbolFundingAt[symbol];
+  // A reset after the timestamp wiped the snapshotted positions (and the marker): not this account's
+  const resetSince = state.resetAt !== undefined && state.resetAt > ts;
+  if ((settledTo !== undefined && settledTo >= ts) || resetSince || spec.positions.length === 0) {
+    return { delta: d.toDelta(), result: 0 };
+  }
+
+  let settled = 0;
+  for (const snap of spec.positions) {
+    if (snap.qty.lte(0)) continue;
+    const signed = snap.qty.times(mark).times(rate).toDecimalPlaces(8);
+    const fee = snap.side === 'long' ? signed : signed.neg();
+    if (fee.eq(0)) continue;
+    const pos = d.positions.find((p) => p.id === snap.positionId);
+    const label = snap.side === 'long' ? 'LONG' : 'SHORT';
+    const balanceBefore = d.balance;
+
+    // What is actually charged: a paid fee the balance and the position's margin can't cover (the
+    // position is already closed, the wallet is empty) is not collected
+    let charged = fee;
+    if (fee.gt(0)) {
+      const fromBalance = Decimal.min(fee, Decimal.max(ZERO, d.balance));
+      d.balance = d.balance.minus(fromBalance);
+      const shortfall = fee.minus(fromBalance);
+      let fromMargin = ZERO;
+      if (shortfall.gt(0) && pos) {
+        // 🔐 Never below zero margin: at worst the position is left at its bankruptcy price and the
+        // next mark tick liquidates it
+        fromMargin = Decimal.min(shortfall, pos.entryUsdtAmount);
+        d.setPosition({ ...pos, entryUsdtAmount: pos.entryUsdtAmount.minus(fromMargin) });
+      }
+      charged = fromBalance.plus(fromMargin);
+    } else {
+      d.balance = d.balance.minus(fee);
+    }
+    if (charged.eq(0)) continue;
+    d.realizedPnl = d.realizedPnl.minus(charged);
+    const current = d.positions.find((p) => p.id === snap.positionId);
+    if (current) {
+      d.setPosition({ ...current, cumFunding: (current.cumFunding ?? ZERO).plus(charged) });
+    }
+
+    const id = `fund-${snap.positionId}-${ts}`;
+    d.prependFunding({
+      id,
+      symbol,
+      side: snap.side,
+      qty: snap.qty,
+      markPrice: mark,
+      rate,
+      fee: charged,
+      time: ts,
+    });
+    const paid = charged.gt(0);
+    // Stamped at the funding timestamp, like the execution — a backfilled settlement runs later
+    d.prependBalanceEvent({
+      id: `bl-${id}`,
+      time: ts,
+      balanceBefore,
+      balanceAfter: d.balance,
+      pnl: charged.neg(),
+      action: `Funding fee for ${label.toLowerCase()} ${symbol} (rate ${fmtRate(rate)}, mark ${mark.toFixed(4)}, ${snap.qty.toFixed(6)} units)`,
+    });
+    d.prependJournal(
+      systemEntry(
+        `j-${id}`,
+        ts,
+        `Funding ${paid ? 'fee' : 'received'} ${paid ? '−' : '+'}$${charged.abs().toFixed(4)} · ${label} ${symbol} ${snap.qty.toFixed(6)} @ mark $${fmtPrice(mark)}, rate ${fmtRate(rate)}`,
+        charged.neg()
+      )
+    );
+    settled++;
+  }
+  d.symbolFundingAt = { ...d.symbolFundingAt, [symbol]: ts };
+  return { delta: d.toDelta(), result: settled };
 }
 
 // ─── Trigger execution ─────────────────────────────────────────────────────────
 
 export type ExecutableTrigger =
-  | { kind: 'exit'; positionId: string; leg: ExitLeg; price: Decimal; fillAt?: Decimal }
-  | { kind: 'fill'; orderId: string; price: Decimal; fillAt?: Decimal }
-  | { kind: 'liquidation'; positionId: string; price: Decimal; fillAt?: Decimal };
+  | {
+      kind: 'exit';
+      positionId: string;
+      leg: ExitLeg;
+      price: Decimal;
+      fillAt?: Decimal;
+      at?: number;
+    }
+  | { kind: 'fill'; orderId: string; price: Decimal; fillAt?: Decimal; at?: number }
+  | {
+      kind: 'liquidation';
+      positionId: string;
+      price: Decimal;
+      fillAt?: Decimal;
+      at?: number;
+    };
 
 /**
  * Runs a trigger found by evaluateTick / evaluateCandle: a liquidation, a TP/SL close or a pending
@@ -1530,6 +1673,9 @@ export function applyDelta(state: AccountState, delta: Delta): AccountState {
     realizedPnl: delta.account.realizedPnl,
     leverage: delta.account.leverage,
     symbolLeverage: delta.account.symbolLeverage,
+    symbolFundingAt: delta.account.symbolFundingAt,
+    // A reset's own time is only known to the DB (Account.lastReset); the next load reads it
+    ...(state.resetAt !== undefined && !delta.reset ? { resetAt: state.resetAt } : {}),
     spot: [...byCoin.values()],
     positions: upsert(state.positions, delta.positionsRemove, delta.positionsUpsert),
     pendingOrders: upsert(state.pendingOrders, delta.pendingRemove, delta.pendingUpsert),

@@ -180,6 +180,7 @@ export class PaperHarness {
       realizedPnl: new Decimal(0),
       leverage: 1,
       symbolLeverage: {},
+      symbolFundingAt: {},
       spot: [],
       positions: [],
       pendingOrders: [],

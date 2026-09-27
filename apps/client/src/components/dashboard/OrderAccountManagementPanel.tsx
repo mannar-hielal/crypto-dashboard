@@ -32,6 +32,7 @@ import {
   positionPnl,
 } from '@/lib/positionMath';
 import { MmrBar } from './MmrBar';
+import { winRateFrom } from '@/lib/funding';
 import { loadColPrefs, saveColPrefs } from '@/lib/columnPrefs';
 import { AssetsTable } from './AssetsTable';
 import type { JournalEntry, HistoricalOrder, PendingOrder } from '@/store/paperStore';
@@ -108,6 +109,8 @@ const POSITION_COLS: ColDef[] = [
   { id: 'mmr', label: 'MMR', align: 'left', defaultOn: true },
   { id: 'pnl', label: 'Unrealized P&L', align: 'right', defaultOn: true },
   { id: 'pnlPct', label: 'Unrealized P&L %', align: 'right', defaultOn: true },
+  // Funding settled on the position so far, as money moved (BP-4)
+  { id: 'funding', label: 'Funding', align: 'right', defaultOn: true },
   { id: 'tradeValue', label: 'Trade Value', align: 'right', defaultOn: true },
   { id: 'marketValue', label: 'Market Value', align: 'right', defaultOn: true },
   { id: 'leverage', label: 'Leverage', align: 'right', defaultOn: true },
@@ -534,11 +537,8 @@ export function OrderAccountManagementPanel({
   // balance is already free cash (margin, fees and reserves already deducted)
   const available = balance;
   const equity = balance + reserved + lockedPositionCapital + positionsPnl + coinValue;
-  // Win rate derived from balance log close entries (pnl !== 0)
-  const closedPnlEntries = balanceLog.filter((e) => e.pnl !== 0);
-  const totalTrades = closedPnlEntries.length;
-  const winningTrades = closedPnlEntries.filter((e) => e.pnl > 0).length;
-  const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : null;
+  // Funding payments move money but aren't trades — excluded (BP-4)
+  const winRate = winRateFrom(balanceLog);
 
   // ── Unified order display rows (pending + historical + synthetic exit orders) ─
   /** Synthetic exit order derived from a live position's TP or SL level — mirrors TV "Working" orders */
@@ -1416,6 +1416,26 @@ export function OrderAccountManagementPanel({
                                       >
                                         {isProfit ? '+' : ''}
                                         {pnlPct.toFixed(2)}%
+                                      </td>
+                                    )}
+                                    {isVisible('positions', 'funding') && (
+                                      <td
+                                        className="px-3 py-1.5 text-right tabular-nums"
+                                        data-testid="position-funding"
+                                        style={{
+                                          // cumFunding + = paid (money out), − = received
+                                          color:
+                                            pos.cumFunding > 0
+                                              ? color.red
+                                              : pos.cumFunding < 0
+                                                ? color.green
+                                                : color.muted,
+                                        }}
+                                        title="Funding settled on this position so far (paid −, received +)"
+                                      >
+                                        {pos.cumFunding === 0
+                                          ? '0.00'
+                                          : `${pos.cumFunding > 0 ? '−' : '+'}${Math.abs(pos.cumFunding).toFixed(2)}`}
                                       </td>
                                     )}
                                     {isVisible('positions', 'tradeValue') && (

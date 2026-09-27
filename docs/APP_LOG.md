@@ -478,6 +478,15 @@ qty − fee`.
 - Leverage changes re-margin an open position and the symbol's orders (refused without the balance for it, or when a
   raise would put the position past its liquidation price at the current mark).
 
+### Funding (BP-4 — the server settles, `engine/actions.ts` `settleFunding`)
+
+- At each USDT Perpetual symbol's funding timestamp, every position held then pays or receives
+  `size × mark × rate` (positive rate: longs pay, shorts receive), at Bybit's settled rate for that timestamp.
+- Paid from the balance, any shortfall from that position's margin (its liquidation price moves); received to the
+  balance. Booked in realized PnL at settlement; a later close carries its share for Closed P&L (not charged twice).
+- Settled once per account and symbol and timestamp (`SymbolSetting.lastFundingAt`); a server gap is backfilled from
+  Bybit's funding history in time order with the candle sweep.
+
 ### TP/SL rules (implemented in `checkTPSL()` + bracket lifecycle)
 
 - **Long**: TP when `price >= takeProfit`; SL when `price <= stopLoss`
@@ -2404,3 +2413,41 @@ leverage preview, chart lines + drag hook). `TRADING_TEST_PLAN.md` Section 15.
 
 **Gates:** type-check ✅ (server + client), lint ✅, format ✅, test ✅ (545 server + 402 client), server + client
 build ✅, audit ✅ (11 moderate, none high)
+
+### feat: Bybit Parity BP-4 — funding (2026-09-27) ✅
+
+**Context:** phase 5 of `docs/BYBIT_PARITY_PLAN.md` (F7's last part). Perpetual positions never paid or received
+funding. Bybit's rules checked (help centre, API v5, live endpoints) and copied — owner direction "mimic Bybit".
+Visual gate: 4 questions.
+
+**Server:**
+
+- `settleFunding` (pure): fee = size × mark × rate per position held at the timestamp, signed as Bybit (+ = paid);
+  paid from the balance, shortfall from the position's margin; realized PnL + position `cumFunding`; a `Funding`
+  execution row, journal line and Balance History row; once per account/symbol/timestamp (`SymbolSetting.lastFundingAt`).
+- **MatchingEngine funding clock:** per linear symbol from the ticker's `nextFundingTime`; at the timestamp it
+  snapshots the positions and the mark, reads Bybit's settled rate from `/v5/market/funding/history` (the ticker's
+  announced rate as a fallback), then settles each account through `TradingService.runFunding`. Gap backfill replays
+  missed timestamps at the mark-candle open, interleaved with the candle sweep.
+- Closes carry their funding share (`Trade.funding`, Closed P&L net of it); funding rows are excluded from the
+  closed-trade history and sent as their own list.
+- Migration `bp4_funding`: `Position.cumFunding`, `SymbolSetting.lastFundingAt`, `Trade.feeRate` / `funding`, an
+  index on `(userId, execType, seq)`. Additive only.
+
+**Client:** MARK · INDEX · FUNDING / COUNTDOWN in the perpetual symbol header (live countdown, rate coloured by who
+pays, explanation tooltip); a Funding column in the Positions tab (default on, saved layouts migrated); funding in the
+store (`fundings`, `cumFunding`, a close's `funding`). New SDK fields are optional (a pre-BP-4 server sends none).
+
+**Live verification:** the 2026-09-27 08:00 UTC settlement (rate 0.00002285, mark 84,755.02) against the dev DB through
+the real service + repository: fee 0.01936652 (exact), second run settled nothing, row out of the closed-trade
+history, marker set; header + Funding column screenshotted on the running app (fixed: stat labels wrapped, the ⓘ was
+clipped — now a tooltip on the stat). Throwaway users deleted.
+
+**Not in BP-4:** a position closed while the engine was down isn't charged (§8); the app has no closed-trade tab to show
+a close's funding share (it's in the data and the export); no est.-funding row in the order form (Bybit has none).
+
+**Tests:** server 563 (settlement maths, idempotency, margin shortfall, closed-after-timestamp, funding share, clock at
+the timestamp, rate fallback, backfill ordering, repository rows, history paging), client 412. `TRADING_TEST_PLAN.md`
+Section 16.
+
+**Gates:** type-check ✅, lint ✅, format ✅, test ✅ (563 server + 412 client)

@@ -541,10 +541,6 @@ export type JournalEntryUncheckedUpdateManyWithoutAccountNestedInput = {
   deleteMany?: Prisma.JournalEntryScalarWhereInput | Prisma.JournalEntryScalarWhereInput[]
 }
 
-export type BoolFieldUpdateOperationsInput = {
-  set?: boolean
-}
-
 export type JournalEntryCreateWithoutUserInput = {
   id?: string
   seq?: number

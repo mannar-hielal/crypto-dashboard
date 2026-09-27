@@ -17,7 +17,8 @@
  * default). On a live tick liquidation is checked first — it closes the whole position, so a TP /
  * SL on the same tick has nothing left to close. In a candle backfill the order within one minute
  * is unknown; TP / SL is checked first there, because a stop-loss sits between the entry and the
- * liquidation price, so a continuous price path reaches it first.
+ * liquidation price, so a continuous price path reaches it first — unless the stop-loss was set
+ * beyond the liquidation price, which the path can't reach first: then the liquidation wins.
  */
 
 import type { Decimal } from '@prisma/client/runtime/client';
@@ -78,12 +79,30 @@ function triggersOnDrop(order: { side: OrderSide; type: PendingType }): boolean 
 
 /**
  * `price` is the price that triggered it — the last price, or for a liquidation the mark price.
- * `fillAt` is set only by a candle backfill.
+ * `fillAt` and `at` are set only by a candle backfill: the level it crossed, and when (the last
+ * millisecond of the candle's minute — the records are stamped then, not when the backfill ran, so
+ * a position it opens is still checked by the gap's later candles and funding timestamps).
  */
 export type Trigger =
-  | { kind: 'exit'; positionId: string; leg: ExitLeg; price: Decimal; fillAt?: Decimal }
-  | { kind: 'fill'; orderId: string; price: Decimal; fillAt?: Decimal }
-  | { kind: 'liquidation'; positionId: string; price: Decimal; fillAt?: Decimal };
+  | {
+      kind: 'exit';
+      positionId: string;
+      leg: ExitLeg;
+      price: Decimal;
+      fillAt?: Decimal;
+      at?: number;
+    }
+  | { kind: 'fill'; orderId: string; price: Decimal; fillAt?: Decimal; at?: number }
+  | {
+      kind: 'liquidation';
+      positionId: string;
+      price: Decimal;
+      fillAt?: Decimal;
+      at?: number;
+    };
+
+/** The last millisecond of a 1m candle — when a backfilled trigger in it is stamped. */
+const candleEnd = (candle: Candle) => candle.start + 60_000 - 1;
 
 /** The mark price of a USDT Perpetual tick and the symbol's risk-limit tiers (BP-3). */
 export interface MarkInput {
@@ -133,6 +152,8 @@ export function evaluateTick(
 export interface Candle {
   /** Candle start, Unix ms */
   start: number;
+  /** Price at the candle's start — a mark-price candle's open is the mark at a funding timestamp */
+  open?: Decimal;
   high: Decimal;
   low: Decimal;
 }
@@ -142,8 +163,9 @@ export interface Candle {
  * crossed level). A candle that started before the position opened / the order was placed is
  * skipped, because its range includes prices from before that item existed (S3).
  *
- * `mark` is the same minute's mark-price candle (USDT Perpetual): with no TP / SL hit, a position
- * whose liquidation price the mark range reached is liquidated.
+ * `mark` is the same minute's mark-price candle (USDT Perpetual): with no TP / SL hit — or a
+ * stop-loss set beyond the liquidation price, which the path can't reach first — a position whose
+ * liquidation price the mark range reached is liquidated.
  */
 export function evaluateCandle(
   category: Category,
@@ -168,20 +190,42 @@ export function evaluateCandle(
       if (pos.takeProfit !== undefined && low.lte(pos.takeProfit)) leg = 'take-profit';
       else if (pos.stopLoss !== undefined && high.gte(pos.stopLoss)) leg = 'stop-loss';
     }
-    if (leg) {
-      const level = (leg === 'take-profit' ? pos.takeProfit : pos.stopLoss) as Decimal;
-      triggers.push({ kind: 'exit', positionId: pos.id, leg, price: level, fillAt: level });
-    } else if (mark && mark.candle.start >= pos.openedAt) {
+    let liquidation: Trigger | null = null;
+    if (mark && mark.candle.start >= pos.openedAt) {
       const { liqPrice } = riskOf(pos, mark.tiers);
       const extreme = pos.side === 'long' ? mark.candle.low : mark.candle.high;
       if (markHitsLiquidation(pos.side, liqPrice, extreme)) {
-        triggers.push({
+        liquidation = {
           kind: 'liquidation',
           positionId: pos.id,
           price: liqPrice,
           fillAt: liqPrice,
-        });
+          at: candleEnd(mark.candle),
+        };
       }
+    }
+    // A stop-loss normally sits between the entry and the liquidation price, so it is reached
+    // first. One set beyond the liquidation price (Bybit accepts it) never fills: the price path
+    // reaches the liquidation price first
+    const stopBeyondLiq =
+      leg === 'stop-loss' &&
+      liquidation !== null &&
+      pos.stopLoss !== undefined &&
+      (pos.side === 'long'
+        ? pos.stopLoss.lte(liquidation.price)
+        : pos.stopLoss.gte(liquidation.price));
+    if (leg && !stopBeyondLiq) {
+      const level = (leg === 'take-profit' ? pos.takeProfit : pos.stopLoss) as Decimal;
+      triggers.push({
+        kind: 'exit',
+        positionId: pos.id,
+        leg,
+        price: level,
+        fillAt: level,
+        at: candleEnd(candle),
+      });
+    } else if (liquidation) {
+      triggers.push(liquidation);
     }
   }
   for (const order of pendingOrders) {
@@ -195,6 +239,7 @@ export function evaluateCandle(
         orderId: order.id,
         price: order.triggerPrice,
         fillAt: order.triggerPrice,
+        at: candleEnd(candle),
       });
     }
   }

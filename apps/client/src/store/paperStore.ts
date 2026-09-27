@@ -25,6 +25,7 @@ import {
   paperApi,
   type MarketCategory,
   type PaperDeltaDTO,
+  type PaperFundingDTO,
   type PaperExitLeg,
   type PaperOrderDTO,
   type PaperPendingOrderDTO,
@@ -41,6 +42,8 @@ import { setLastKnownMarkPrice, setLastKnownPrice } from './paneStore';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const MAX_HISTORY = 100;
+/** Funding settlements kept (BP-4) — same cap as the server's snapshot */
+const MAX_FUNDINGS = 100;
 const MAX_ORDERS = 200;
 const MAX_BALANCE_LOG = 200;
 const MAX_JOURNAL = 200;
@@ -86,6 +89,8 @@ export interface Position {
   positionIM: number;
   /** Bybit positionMM: maintenance margin (liquidation when equity falls to it); null = unknown */
   positionMM: number | null;
+  /** Funding settled on this position so far: positive = paid, negative = received (BP-4) */
+  cumFunding: number;
   openedAt: number; // Unix ms
   takeProfit?: number;
   stopLoss?: number;
@@ -115,6 +120,21 @@ export interface ClosedTrade {
   closedAt: number;
   /** True when it was closed by liquidation at the bankruptcy price (Bybit BustTrade) */
   liquidated?: boolean;
+  /** The closed part's share of the position's funding (+ = paid) — Closed P&L nets it (BP-4) */
+  funding?: number;
+}
+
+/** One funding settlement on one position (Bybit execType Funding, BP-4). */
+export interface FundingPayment {
+  id: string;
+  symbol: string;
+  side: 'long' | 'short';
+  qty: number;
+  markPrice: number;
+  rate: number;
+  /** Positive = paid, negative = received */
+  fee: number;
+  time: number;
 }
 
 export type OrderStatus = 'filled' | 'cancelled' | 'rejected';
@@ -247,6 +267,7 @@ function positionFrom(p: PaperPositionDTO): Position {
         ? toNum(p.positionIM)
         : toNum(p.entryUsdtAmount) + toNum(p.closeFeeReserve),
     positionMM: optRisk(p.positionMM),
+    cumFunding: toNum(p.cumFunding ?? '0'),
     openedAt: p.openedAt,
     ...(p.takeProfit !== undefined ? { takeProfit: toNum(p.takeProfit) } : {}),
     ...(p.stopLoss !== undefined ? { stopLoss: toNum(p.stopLoss) } : {}),
@@ -319,6 +340,7 @@ function tradeFrom(t: PaperStateDTO['trades'][number]): ClosedTrade {
     openedAt: t.openedAt,
     closedAt: t.closedAt,
     ...(t.execType === 'BustTrade' ? { liquidated: true } : {}),
+    ...(t.funding !== undefined ? { funding: toNum(t.funding) } : {}),
   };
 }
 
@@ -343,6 +365,19 @@ function balanceEventFrom(b: PaperStateDTO['balanceEvents'][number]): BalanceEve
   };
 }
 
+function fundingFrom(f: PaperFundingDTO): FundingPayment {
+  return {
+    id: f.id,
+    symbol: f.symbol,
+    side: f.side,
+    qty: toNum(f.qty),
+    markPrice: toNum(f.markPrice),
+    rate: toNum(f.rate),
+    fee: toNum(f.fee),
+    time: f.time,
+  };
+}
+
 /** Map a server snapshot to the store's view state (exported for tests). */
 export function mapServerState(state: PaperStateDTO) {
   return {
@@ -358,6 +393,7 @@ export function mapServerState(state: PaperStateDTO) {
     history: state.trades.map(tradeFrom).slice(0, MAX_HISTORY),
     journal: state.journal.map(journalFrom).slice(0, MAX_JOURNAL),
     balanceLog: state.balanceEvents.map(balanceEventFrom).slice(0, MAX_BALANCE_LOG),
+    fundings: (state.fundings ?? []).map(fundingFrom).slice(0, MAX_FUNDINGS),
   };
 }
 
@@ -413,6 +449,8 @@ interface PaperState {
   positions: Position[];
   pendingOrders: PendingOrder[];
   history: ClosedTrade[];
+  /** Funding settlements, newest first (BP-4) */
+  fundings: FundingPayment[];
   orders: HistoricalOrder[];
   realizedPnl: number;
   balanceLog: BalanceEvent[];
@@ -487,6 +525,7 @@ const EMPTY = {
   positions: [] as Position[],
   pendingOrders: [] as PendingOrder[],
   history: [] as ClosedTrade[],
+  fundings: [] as FundingPayment[],
   orders: [] as HistoricalOrder[],
   realizedPnl: 0,
   balanceLog: [] as BalanceEvent[],
@@ -568,8 +607,14 @@ export const usePaperStore = create<PaperState>()((set, get) => {
         return false;
       }
       const base = delta.reset
-        ? { orders: [], history: [], journal: [], balanceLog: [] }
-        : { orders: s.orders, history: s.history, journal: s.journal, balanceLog: s.balanceLog };
+        ? { orders: [], history: [], journal: [], balanceLog: [], fundings: [] }
+        : {
+            orders: s.orders,
+            history: s.history,
+            journal: s.journal,
+            balanceLog: s.balanceLog,
+            fundings: s.fundings,
+          };
       let journal = prepend(base.journal, delta.journal.map(journalFrom), MAX_JOURNAL);
       for (const edit of delta.journalEdits) {
         journal = journal.map((e) =>
@@ -595,6 +640,7 @@ export const usePaperStore = create<PaperState>()((set, get) => {
         ),
         orders: prepend(base.orders, delta.orders.map(orderFrom), MAX_ORDERS),
         history: prepend(base.history, delta.trades.map(tradeFrom), MAX_HISTORY),
+        fundings: prepend(base.fundings, (delta.fundings ?? []).map(fundingFrom), MAX_FUNDINGS),
         balanceLog: prepend(
           base.balanceLog,
           delta.balanceEvents.map(balanceEventFrom),

@@ -1362,6 +1362,7 @@ describe('leverage is re-clamped where a fill is sized (defense in depth)', () =
         realizedPnl: new Decimal(0),
         leverage: 50, // e.g. a bad manual DB edit
         symbolLeverage: {},
+        symbolFundingAt: {},
         spot: [],
         positions: [],
         pendingOrders: [],

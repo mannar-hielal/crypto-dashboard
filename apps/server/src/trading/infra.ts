@@ -1,6 +1,7 @@
 /**
  * Infrastructure adapters for the matching engine: the EngineLease store (Prisma) and the Bybit
- * 1m-candle sources used for backfill (BYBIT_PARITY_PLAN BP-1; mark-price candles BP-3).
+ * 1m-candle sources used for backfill (BYBIT_PARITY_PLAN BP-1; mark-price candles BP-3), and the
+ * settled funding rates (BP-4).
  */
 
 import { Decimal } from '@prisma/client/runtime/client';
@@ -149,8 +150,74 @@ async function fetchCandlePage(
   return list
     .map((item) => ({
       start: parseInt(item[0], 10),
+      open: new Decimal(item[1]),
       high: new Decimal(item[2]),
       low: new Decimal(item[3]),
     }))
     .filter((c) => Number.isFinite(c.start));
+}
+
+// ─── Funding history (BP-4) ─────────────────────────────────────────────────────
+
+interface BybitFundingResponse {
+  retCode: number;
+  retMsg: string;
+  result?: { list?: { fundingRate?: string; fundingRateTimestamp?: string }[] };
+}
+
+/** One settled funding: the rate Bybit applied at `ts`. */
+export interface FundingRate {
+  ts: number;
+  rate: Decimal;
+}
+
+const FUNDING_PAGE = 200;
+
+/**
+ * Settled funding rates of a USDT Perpetual symbol with `fromMs < ts ≤ toMs`, oldest first, from
+ * `/v5/market/funding/history` (newest first, ≤ 200 per page, paged back with `endTime`; `startTime`
+ * alone is an error, so both are always sent). Capped like the candle backfill (7 days).
+ */
+export async function fetchFundingHistory(
+  symbol: string,
+  fromMs: number,
+  toMs: number
+): Promise<FundingRate[]> {
+  const start = Math.max(fromMs, toMs - MAX_BACKFILL_MS);
+  const byTs = new Map<number, FundingRate>();
+  let end = toMs;
+  while (end > start) {
+    const params = new URLSearchParams({
+      category: 'linear',
+      symbol,
+      startTime: String(start),
+      endTime: String(end),
+      limit: String(FUNDING_PAGE),
+    });
+    const res = await fetchWithRetry(
+      `${bybitRestBaseUrl()}/v5/market/funding/history?${params.toString()}`,
+      bybitBreakers.backfill,
+      { timeoutMs: FETCH_TIMEOUT_MS }
+    );
+    if (!res.ok) throw new Error(`Bybit REST error: ${res.status}`);
+    const data = (await res.json()) as BybitFundingResponse;
+    const list = data.result?.list;
+    if (data.retCode !== 0 || !Array.isArray(list)) {
+      throw new Error(`Bybit API error: ${data.retMsg ?? 'unknown'} [funding history ${symbol}]`);
+    }
+    const page = list
+      .map((item) => ({
+        ts: parseInt(item.fundingRateTimestamp ?? '', 10),
+        rate: new Decimal(item.fundingRate ?? 'NaN'),
+      }))
+      .filter((f) => Number.isFinite(f.ts) && f.rate.isFinite());
+    for (const f of page) byTs.set(f.ts, f);
+    if (page.length < FUNDING_PAGE) break;
+    const oldest = Math.min(...page.map((f) => f.ts));
+    if (oldest <= start) break;
+    end = oldest - 1;
+  }
+  return [...byTs.values()]
+    .filter((f) => f.ts > fromMs && f.ts <= toMs)
+    .sort((a, b) => a.ts - b.ts);
 }
