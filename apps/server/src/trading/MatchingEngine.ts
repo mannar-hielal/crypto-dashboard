@@ -50,6 +50,8 @@ export interface TickUpdate {
   /** USDT Perpetual: the rate for the next funding settlement, and when it is (Unix ms) */
   fundingRate?: number;
   nextFundingTime?: number;
+  /** USDT Perpetual: hours between funding timestamps (the ticker's fundingIntervalHour) */
+  fundingIntervalHour?: number;
 }
 
 export interface MatchingEngineDeps {
@@ -114,6 +116,12 @@ interface DueFunding {
   rate?: Decimal;
   /** The mark seen at the timestamp (the latest one is used if none was seen yet) */
   mark?: Decimal;
+  /**
+   * Inferred after a takeover from the first ticker (its next timestamp − the interval), not seen
+   * live: the mark comes from that minute's mark-price candle, and if Bybit's history never lists
+   * the timestamp it was not one (the interval changed) and is dropped
+   */
+  inferred?: boolean;
 }
 
 /** What the live ticker says about a symbol's next funding (BP-4). */
@@ -183,6 +191,8 @@ export class MatchingEngine {
   private readonly fundingAlarms = new Map<string, NodeJS.Timeout>();
   private readonly fundingCheckMs: number;
   private readonly fundingRetryMs: number;
+  /** The previous holder's last recorded tick, on a takeover (downtime starts there) */
+  private resumeFrom: number | null = null;
 
   constructor(private readonly deps: MatchingEngineDeps) {
     this.now = deps.now ?? Date.now;
@@ -263,6 +273,7 @@ export class MatchingEngine {
   }
 
   private async activate(lastTickAt: Date | null): Promise<void> {
+    this.resumeFrom = lastTickAt ? lastTickAt.getTime() : null;
     // Subscribe before loading: a change committed while the index loads is buffered and
     // replayed on top of the load instead of being lost.
     this.unsubscribeEvents = this.deps.events.subscribeAll((e) => this.onEvent(e.userId, e.state));
@@ -335,6 +346,7 @@ export class MatchingEngine {
     this.fundingInFlight.clear();
     for (const alarm of this.fundingAlarms.values()) clearTimeout(alarm);
     this.fundingAlarms.clear();
+    this.resumeFrom = null;
     this.users.clear();
     this.symbolUsers.clear();
     this.lastTick.clear();
@@ -457,6 +469,7 @@ export class MatchingEngine {
     this.checkFunding();
     const finite = (v: number | undefined): v is number => v !== undefined && Number.isFinite(v);
     const clock = this.fundingClocks.get(u.symbol) ?? { nextTs: 0 };
+    if (clock.nextTs === 0) this.inferMissedFunding(u, clock);
     if (finite(u.nextFundingTime) && u.nextFundingTime > clock.nextTs) {
       // Moving on to the next period: a passed timestamp still unsettled stays due
       const passed = clock.nextTs;
@@ -485,6 +498,23 @@ export class MatchingEngine {
   }
 
   /**
+   * After a takeover, the symbol's first ticker already names the *next* timestamp. The one before
+   * it (next − interval) may have passed during the downtime, and the takeover backfill can miss it:
+   * Bybit's funding history lists a timestamp only a little after it (and a restart in the middle
+   * of a settlement is exactly then). Mark it due; the per-account marker makes it a no-op for any
+   * account the backfill (or the previous holder) already settled.
+   */
+  private inferMissedFunding(u: TickUpdate, clock: FundingClock): void {
+    const { nextFundingTime, fundingIntervalHour } = u;
+    if (this.resumeFrom === null || nextFundingTime === undefined || !fundingIntervalHour) return;
+    if (!Number.isFinite(nextFundingTime) || !Number.isFinite(fundingIntervalHour)) return;
+    const previous = nextFundingTime - fundingIntervalHour * 3_600_000;
+    if (previous <= this.resumeFrom || previous > this.now()) return;
+    if (this.fundingStarted.get(u.symbol) === previous) return;
+    clock.due = { ts: previous, inferred: true };
+  }
+
+  /**
    * Start the settlement of every funding timestamp that is due. A timestamp is only marked started
    * once it is dispatched: with no mark yet, or no indexed position yet (a fill at that very instant
    * not reindexed), it is retried on the next check for up to FUNDING_SNAPSHOT_GRACE_MS.
@@ -504,7 +534,8 @@ export class MatchingEngine {
       }
       // The positions and the mark as they are at the timestamp, before anything moves on
       const snapshots = this.fundingSnapshots(symbol, due.ts);
-      const mark = due.mark ?? clock.mark;
+      // An inferred timestamp was never seen live: today's mark isn't the mark at it
+      const mark = due.inferred ? undefined : (due.mark ?? clock.mark);
       const expired = now - due.ts > FUNDING_SNAPSHOT_GRACE_MS;
       // Nobody held a position at the timestamp: nothing to settle once the grace is over
       if (snapshots.size === 0) {
@@ -516,10 +547,17 @@ export class MatchingEngine {
       }
       // Positions but no live mark: wait for one during the grace, then settle at Bybit's
       // mark-price candle for that minute (never dropped)
-      if (!mark && !expired) continue;
+      if (!mark && !expired && !due.inferred) continue;
       this.fundingStarted.set(symbol, due.ts);
       clock.due = undefined;
-      void this.settleFundingAt(symbol, due.ts, mark, { announced: due.rate }, snapshots);
+      void this.settleFundingAt(
+        symbol,
+        due.ts,
+        mark,
+        { announced: due.rate },
+        snapshots,
+        due.inferred
+      );
     }
   }
 
@@ -590,25 +628,31 @@ export class MatchingEngine {
     ts: number,
     knownMark: Decimal | undefined,
     rates: { settled?: Decimal; announced?: Decimal },
-    snapshots: Map<string, FundingSnapshot[]>
+    snapshots: Map<string, FundingSnapshot[]>,
+    inferred = false
   ): Promise<void> {
     const pause = () => new Promise((resolve) => setTimeout(resolve, this.fundingRetryMs));
     const live = () => !this.stopped && this.active;
     this.fundingInFlight.set(symbol, ts);
     try {
+      // The rate first: an inferred timestamp Bybit never settled is dropped before any mark read
+      let rate = rates.settled ?? (await this.settledRate(symbol, ts, rates.announced));
+      if (!rate && inferred) {
+        log.warn({ symbol, ts }, 'Inferred funding timestamp not in Bybit history — skipped');
+        return;
+      }
+      while (!rate) {
+        if (!live()) return;
+        log.error({ symbol, ts }, 'Funding not settled yet: no settled rate — retrying');
+        await pause();
+        rate = await this.settledRate(symbol, ts, rates.announced);
+      }
       let mark = knownMark ?? (await this.markAt(symbol, ts));
       while (!mark) {
         if (!live()) return;
         log.error({ symbol, ts }, 'Funding not settled yet: no mark price — retrying');
         await pause();
         mark = await this.markAt(symbol, ts);
-      }
-      let rate = rates.settled ?? (await this.settledRate(symbol, ts, rates.announced));
-      while (!rate) {
-        if (!live()) return;
-        log.error({ symbol, ts }, 'Funding not settled yet: no settled rate — retrying');
-        await pause();
-        rate = await this.settledRate(symbol, ts, rates.announced);
       }
       let pending = snapshots;
       for (;;) {

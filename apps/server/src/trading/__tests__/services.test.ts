@@ -1001,6 +1001,74 @@ describe('MatchingEngine', () => {
       await e.stop();
     });
 
+    it('should settle a timestamp missed across a restart even when Bybit had not published it at takeover', async () => {
+      open = new Map([['u1', long()]]);
+      // The previous engine stopped just before TS (or mid-settlement); this one takes over 3 s
+      // after TS, before Bybit's funding history lists the TS record
+      lease.tryAcquire = vi.fn(async () => ({
+        acquired: true,
+        lastTickAt: new Date(TS - 5_000),
+      }));
+      clock = TS + 3_000;
+      let reads = 0;
+      const fetchFundingHistory = vi.fn(async () =>
+        ++reads > 1 ? [{ ts: TS, rate: D('0.0001') }] : []
+      );
+      fetchCandles.mockImplementation(
+        async (_c: string, _s: string, from: number, to: number, src?: string) =>
+          src === 'mark' && to - from === 60_000
+            ? [{ start: from, open: D(49_990), high: D(50_000), low: D(49_980) }]
+            : []
+      );
+      const e = engine({ fetchFundingHistory, fundingCheckMs: 1_000_000, fundingRetryMs: 0 });
+      await e.start();
+      await vi.waitFor(() => expect(reads).toBeGreaterThanOrEqual(1)); // the takeover backfill read
+      // The first ticker already announces the next period
+      tickListener?.({
+        category: 'linear',
+        symbol: 'BTCUSDT',
+        lastPrice: 50_100,
+        markPrice: 50_100,
+        fundingRate: 0.0002,
+        nextFundingTime: TS + 8 * 3_600_000,
+        fundingIntervalHour: 8,
+      });
+      await vi.waitFor(() =>
+        expect(runFunding).toHaveBeenCalledWith(
+          'u1',
+          expect.objectContaining({ ts: TS, rate: D('0.0001'), mark: D(49_990) })
+        )
+      );
+      await e.stop();
+    });
+
+    it('should skip an inferred takeover timestamp that Bybit’s history never lists (interval changed)', async () => {
+      open = new Map([['u1', long()]]);
+      lease.tryAcquire = vi.fn(async () => ({
+        acquired: true,
+        lastTickAt: new Date(TS - 5_000),
+      }));
+      clock = TS + 3_000;
+      const fetchFundingHistory = vi.fn(async () => []);
+      const e = engine({ fetchFundingHistory, fundingCheckMs: 1_000_000, fundingRetryMs: 0 });
+      await e.start();
+      tickListener?.({
+        category: 'linear',
+        symbol: 'BTCUSDT',
+        lastPrice: 50_100,
+        markPrice: 50_100,
+        nextFundingTime: TS + 8 * 3_600_000,
+        fundingIntervalHour: 8,
+      });
+      await vi.waitFor(() => expect(fetchFundingHistory.mock.calls.length).toBeGreaterThan(12));
+      await new Promise((r) => setTimeout(r, 20));
+      const reads = fetchFundingHistory.mock.calls.length;
+      await new Promise((r) => setTimeout(r, 20));
+      expect(fetchFundingHistory.mock.calls.length).toBe(reads); // gave up — not retried forever
+      expect(runFunding).not.toHaveBeenCalled();
+      await e.stop();
+    });
+
     it('a backfill whose candles can’t be read still settles funding, at the mark candle of the minute', async () => {
       open = new Map([['u1', long()]]);
       fetchCandles.mockImplementation(
