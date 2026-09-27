@@ -84,7 +84,8 @@ supply-chain policy, secrets management, container hardening — see [`security.
   `clientIp(request)` (`apps/server/src/lib/clientIp.ts`), never `request.ip`. In production requests
   cross one or two Fly proxy hops, so the socket and `X-Forwarded-For` are Fly's addresses; the
   visitor is Fly's `Fly-Client-IP` header, read only in production on a Fly Machine (`FLY_APP_NAME` set), only from a socket on Fly's
-  private proxy network (172.16.0.0/12, fdaa::/16) and only when it is one valid IP.
+  proxy link (172.16.0.0/12 — never the org-wide 6PN `fdaa::/16`, which other apps in the
+  organisation can use) and only when it is one valid IP.
   Don't set Fastify `trustProxy` — the hop count varies by Fly edge.
 
 ### Error handling
