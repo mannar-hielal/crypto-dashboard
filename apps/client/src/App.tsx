@@ -1,8 +1,7 @@
 import { useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, useLocation, Navigate } from 'react-router';
 import { AnimatePresence } from 'framer-motion';
-import { authApi } from '@crypto-dashboard/sdk';
-import { useAuthStore } from '@/store/authStore';
+import { restoreSession } from '@/lib/session';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { PWAInstallBanner } from '@/components/PWAInstallBanner';
 import { OfflineBanner } from '@/components/OfflineBanner';
@@ -71,10 +70,6 @@ const AdminNewsletterPage = lazy(() =>
 let refreshInitiated = false;
 
 export default function App() {
-  // Use individual selectors so App only re-renders when setAuth/setLoading themselves change,
-  // not on every unrelated store update (e.g. user data changing after login).
-  const setAuth = useAuthStore((state) => state.setAuth);
-  const setLoading = useAuthStore((state) => state.setLoading);
   const location = useLocation();
 
   useEffect(() => {
@@ -84,17 +79,8 @@ export default function App() {
     // 🔐 On every app boot, try to restore the session silently.
     // The browser sends the httpOnly refresh_token cookie automatically.
     // If it's valid, we get a new access token and the user stays logged in.
-    authApi
-      .refresh()
-      .then(({ accessToken }) => {
-        return authApi.me(accessToken).then(({ user }) => setAuth(accessToken, user));
-      })
-      .catch(() => {
-        // Refresh failed (first visit, expired token, logged out on another tab).
-        // Clear the loading state so ProtectedRoute redirects to /login.
-        setLoading(false);
-      });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    void restoreSession();
+  }, []);
 
   return (
     <>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams, Link } from 'react-router';
 import { SeoHead } from '@/components/SeoHead';
 import { motion } from 'framer-motion';
@@ -9,6 +9,9 @@ import { bg, color, gradient } from '@/lib/tokens';
 export function VerifyEmailChangePage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
+  // The link is single-use: post it once even though StrictMode runs mount effects twice in
+  // dev — a second post always fails and could overwrite the success screen with an error.
+  const hasAttempted = useRef(false);
 
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>(
     !token ? 'error' : 'loading'
@@ -16,7 +19,8 @@ export function VerifyEmailChangePage() {
   const [message, setMessage] = useState(() => (!token ? 'Missing verification token.' : ''));
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || hasAttempted.current) return;
+    hasAttempted.current = true;
 
     const verify = async () => {
       try {

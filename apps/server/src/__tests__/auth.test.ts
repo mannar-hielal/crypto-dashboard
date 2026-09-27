@@ -79,6 +79,7 @@ vi.mock('../plugins/prisma.js', () => {
 });
 
 import { buildApp } from '../app.js';
+import { EmailService } from '../services/EmailService.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const validUser = {
@@ -381,9 +382,21 @@ describe('POST /api/auth/refresh', () => {
     expect(typeof res.json<{ accessToken: string }>().accessToken).toBe('string');
   });
 
-  it('returns 401 when no refresh token cookie is present', async () => {
+  it('should answer 204 with no token and no cookie when no refresh cookie is present', async () => {
+    const findUnique = app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>;
+    const create = app.prisma.refreshToken.create as ReturnType<typeof vi.fn>;
+    findUnique.mockClear();
+    create.mockClear();
+
     const res = await app.inject({ method: 'POST', url: '/api/auth/refresh' });
-    expect(res.statusCode).toBe(401);
+
+    // A signed-out visitor's boot probe is not an auth failure — no 401 in the browser console
+    expect(res.statusCode).toBe(204);
+    expect(res.body).toBe('');
+    // 🔐 nothing is issued and nothing is looked up
+    expect(res.headers['set-cookie']).toBeUndefined();
+    expect(findUnique).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
   });
 
   it('returns 401 when the token is not found in the DB (stolen/invalid)', async () => {
@@ -665,6 +678,31 @@ describe('POST /api/auth/verify-email', () => {
     expect(res.json<{ message: string }>().message).toMatch(/verified successfully/i);
   });
 
+  it('should answer 400, not 500, when a concurrent duplicate request already consumed the token', async () => {
+    (app.prisma.verificationToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'vt-1',
+      tokenHash: 'hashed',
+      userId: 'user-1',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      user: { id: 'user-1', email: 'verify@example.com' },
+    });
+    (app.prisma.verificationToken.deleteMany as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      count: 0,
+    });
+    const update = app.prisma.user.update as ReturnType<typeof vi.fn>;
+    update.mockClear();
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/verify-email',
+      payload: { token: VALID_TOKEN },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toEqual({ error: 'Invalid or expired verification token' });
+    expect(update).not.toHaveBeenCalled();
+  });
+
   it('returns 400 for an invalid or expired verification token', async () => {
     (app.prisma.verificationToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
       null
@@ -710,6 +748,36 @@ describe('POST /api/auth/verify-email-change', () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.json<{ message: string }>().message).toMatch(/email updated successfully/i);
+  });
+
+  it('should answer 400, not 500, when a concurrent duplicate request already consumed the token', async () => {
+    (app.prisma.emailChangeToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'ect-1',
+      tokenHash: 'hashed',
+      userId: 'user-1',
+      newEmail: 'new-email@example.com',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      user: { id: 'user-1', email: 'old-email@example.com', username: 'testuser' },
+    });
+    (app.prisma.emailChangeToken.deleteMany as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      count: 0,
+    });
+    const update = app.prisma.user.update as ReturnType<typeof vi.fn>;
+    const alert = EmailService.sendEmailChangedSecurityAlert as ReturnType<typeof vi.fn>;
+    update.mockClear();
+    alert.mockClear();
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/verify-email-change',
+      payload: { token: VALID_TOKEN },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toEqual({ error: 'Invalid or expired token' });
+    // 🔐 the loser changes nothing and sends no second security alert
+    expect(update).not.toHaveBeenCalled();
+    expect(alert).not.toHaveBeenCalled();
   });
 
   it('returns 400 for an invalid email change token', async () => {
@@ -964,6 +1032,53 @@ describe('POST /api/auth/reset-password', () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.json<{ message: string }>().message).toMatch(/password updated/i);
+  });
+
+  describe('refresh cookie of the browser doing the reset', () => {
+    const validReset = {
+      id: 'prt-1',
+      tokenHash: 'hashed',
+      userId: 'user-1',
+      expiresAt: FUTURE,
+      usedAt: null,
+    };
+    const resetWithCookie = () =>
+      app.inject({
+        method: 'POST',
+        url: '/api/auth/reset-password',
+        headers: { cookie: `refresh_token=${'f'.repeat(64)}` },
+        payload: { token: VALID_TOKEN, password: STRONG_PASSWORD },
+      });
+    const clearsRefreshCookie = (setCookie: string | string[] | undefined) =>
+      [setCookie ?? []].flat().some((c) => /^refresh_token=;/.test(c));
+
+    it('should clear the cookie when this browser was signed in to the reset account', async () => {
+      (app.prisma.passwordResetToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        validReset
+      );
+      (app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        userId: 'user-1',
+      });
+
+      const res = await resetWithCookie();
+
+      expect(res.statusCode).toBe(200);
+      expect(clearsRefreshCookie(res.headers['set-cookie'])).toBe(true);
+    });
+
+    it("should leave another account's session cookie alone", async () => {
+      (app.prisma.passwordResetToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        validReset
+      );
+      (app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        userId: 'someone-else',
+      });
+
+      const res = await resetWithCookie();
+
+      expect(res.statusCode).toBe(200);
+      expect(clearsRefreshCookie(res.headers['set-cookie'])).toBe(false);
+    });
   });
 
   it('returns 400 when the token is not found in the DB', async () => {

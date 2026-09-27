@@ -80,6 +80,10 @@ supply-chain policy, secrets management, container hardening — see [`security.
 - High-risk routes (register, login, email flows) get a per-route `rateLimit` config.
 - Rate-limit `skip` callbacks return `process.env.NODE_ENV !== 'production'` so the test suite
   never trips the limiter.
+- Per-IP limits key on `request.ip`, which is only the visitor's IP because production sets
+  `trustProxy: 1` (`trustProxyFor` in `app.ts` — Fly's proxy appends the client IP to
+  `X-Forwarded-For`). Never trust more than one hop, and never outside production: a client could
+  forge the header to dodge the limits.
 
 ### Error handling
 
