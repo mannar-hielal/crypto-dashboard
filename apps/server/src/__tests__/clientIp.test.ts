@@ -1,25 +1,50 @@
 /**
  * 🔐 The visitor's IP behind Fly's proxy (lib/clientIp.ts): production reads `Fly-Client-IP` — the
  * address Fly accepted the connection from — because the socket and `X-Forwarded-For` hops are Fly's
- * own addresses (two hops: edge + region). Only a single valid IP is accepted, and only in
- * production.
+ * own addresses (two hops: edge + region). The header is trusted only from Fly's private proxy
+ * network, only as a single valid IP, and only in production; a fallback is logged (throttled).
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import Fastify from 'fastify';
 import rateLimit from '@fastify/rate-limit';
-import { clientIpFor, requestLogSerializerFor } from '../lib/clientIp.js';
+import { clientIpFor, isFlyProxyPeer, requestLogSerializerFor } from '../lib/clientIp.js';
 
-const FLY_EDGE = '66.241.124.224'; // what the socket / XFF showed in production
+/** The socket peer of public traffic in production (Fly's proxy, from the 2026-09-27 logs) */
+const FLY_PROXY = '172.16.23.42';
 
-async function ipSeen(nodeEnv: string, headers: Record<string, string>) {
-  const read = clientIpFor(nodeEnv);
+async function ipSeen(
+  nodeEnv: string,
+  headers: Record<string, string>,
+  opts: { peer?: string; url?: string; warn?: (c: Record<string, unknown>) => void } = {}
+) {
+  const read = clientIpFor(nodeEnv, opts.warn ?? (() => undefined));
   const app = Fastify();
-  app.get('/ip', async (request) => ({ ip: read(request) }));
-  const res = await app.inject({ method: 'GET', url: '/ip', remoteAddress: FLY_EDGE, headers });
+  app.get(opts.url ?? '/ip', async (request) => ({ ip: read(request) }));
+  const res = await app.inject({
+    method: 'GET',
+    url: opts.url ?? '/ip',
+    remoteAddress: opts.peer ?? FLY_PROXY,
+    headers,
+  });
   await app.close();
   return res.json<{ ip: string }>().ip;
 }
+
+describe('isFlyProxyPeer', () => {
+  it.each([
+    ['172.16.23.42', true],
+    ['172.19.23.41', true],
+    ['::ffff:172.16.23.42', true],
+    ['fdaa:0:1::3', true],
+    ['66.241.124.224', false], // a Fly public edge address — not the private proxy hop
+    ['89.217.38.229', false],
+    ['10.0.0.1', false],
+    ['not-an-ip', false],
+  ])('%s → %s', (ip, expected) => {
+    expect(isFlyProxyPeer(ip)).toBe(expected);
+  });
+});
 
 describe('clientIpFor', () => {
   it('production: the visitor is Fly-Client-IP (IPv4 and IPv6)', async () => {
@@ -36,31 +61,57 @@ describe('clientIpFor', () => {
     ).toBe('89.217.38.229');
   });
 
+  it('production: a connection not from Fly’s proxy network cannot choose its IP (review #149)', async () => {
+    expect(
+      await ipSeen('production', { 'fly-client-ip': '1.2.3.4' }, { peer: '203.0.113.50' })
+    ).toBe('203.0.113.50');
+  });
+
   it.each([['not-an-ip'], ['1.2.3.4, 5.6.7.8'], ['']])(
     'production: a malformed header (%o) falls back to the socket address',
     async (value) => {
-      expect(await ipSeen('production', { 'fly-client-ip': value })).toBe(FLY_EDGE);
+      expect(await ipSeen('production', { 'fly-client-ip': value })).toBe(FLY_PROXY);
     }
   );
 
   it('outside production the header is ignored', async () => {
-    expect(await ipSeen('development', { 'fly-client-ip': '1.2.3.4' })).toBe(FLY_EDGE);
-    expect(await ipSeen('test', { 'fly-client-ip': '1.2.3.4' })).toBe(FLY_EDGE);
+    expect(await ipSeen('development', { 'fly-client-ip': '1.2.3.4' })).toBe(FLY_PROXY);
+    expect(await ipSeen('test', { 'fly-client-ip': '1.2.3.4' })).toBe(FLY_PROXY);
   });
 
-  it('rate limits count each visitor separately, even from one Fly proxy address', async () => {
+  it('production: a fallback is logged, throttled, never for /health, never with the header value (review #149)', async () => {
+    const warn = vi.fn();
+    const read = clientIpFor('production', warn);
+    const req = (url: string, headers: Record<string, string> = {}) => ({
+      ip: FLY_PROXY,
+      url,
+      headers,
+    });
+    read(req('/health'));
+    expect(warn).not.toHaveBeenCalled();
+    read(req('/api/x', { 'fly-client-ip': 'garbage' }));
+    read(req('/api/x')); // within the throttle window
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith({ fromFlyProxy: true, headerPresent: true });
+    // A good request never warns
+    warn.mockClear();
+    read(req('/api/x', { 'fly-client-ip': '89.217.38.229' }));
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('rate limits count each visitor separately, even behind one Fly proxy address', async () => {
     const app = Fastify();
     await app.register(rateLimit, {
       max: 1,
       timeWindow: '1 minute',
-      keyGenerator: clientIpFor('production'),
+      keyGenerator: clientIpFor('production', () => undefined),
     });
     app.get('/x', async () => ({ ok: true }));
     const hit = (ip: string) =>
       app.inject({
         method: 'GET',
         url: '/x',
-        remoteAddress: FLY_EDGE,
+        remoteAddress: FLY_PROXY,
         headers: { 'fly-client-ip': ip },
       });
     expect((await hit('89.217.38.229')).statusCode).toBe(200);
@@ -74,7 +125,7 @@ describe('clientIpFor', () => {
     await app.register(rateLimit, {
       max: 100,
       timeWindow: '1 minute',
-      keyGenerator: clientIpFor('production'),
+      keyGenerator: clientIpFor('production', () => undefined),
     });
     app.post('/login', { config: { rateLimit: { max: 1, timeWindow: '1 hour' } } }, async () => ({
       ok: true,
@@ -83,7 +134,7 @@ describe('clientIpFor', () => {
       app.inject({
         method: 'POST',
         url: '/login',
-        remoteAddress: FLY_EDGE,
+        remoteAddress: FLY_PROXY,
         headers: { 'fly-client-ip': ip },
       });
     expect((await hit('89.217.38.229')).statusCode).toBe(200);
@@ -105,7 +156,7 @@ describe('clientIpFor', () => {
     await app.inject({
       method: 'GET',
       url: '/x',
-      remoteAddress: FLY_EDGE,
+      remoteAddress: FLY_PROXY,
       headers: { 'fly-client-ip': '89.217.38.229' },
     });
     await app.close();
