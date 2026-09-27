@@ -1599,9 +1599,22 @@ export function settleFunding(
 // ─── Trigger execution ─────────────────────────────────────────────────────────
 
 export type ExecutableTrigger =
-  | { kind: 'exit'; positionId: string; leg: ExitLeg; price: Decimal; fillAt?: Decimal }
-  | { kind: 'fill'; orderId: string; price: Decimal; fillAt?: Decimal }
-  | { kind: 'liquidation'; positionId: string; price: Decimal; fillAt?: Decimal };
+  | {
+      kind: 'exit';
+      positionId: string;
+      leg: ExitLeg;
+      price: Decimal;
+      fillAt?: Decimal;
+      at?: number;
+    }
+  | { kind: 'fill'; orderId: string; price: Decimal; fillAt?: Decimal; at?: number }
+  | {
+      kind: 'liquidation';
+      positionId: string;
+      price: Decimal;
+      fillAt?: Decimal;
+      at?: number;
+    };
 
 /**
  * Runs a trigger found by evaluateTick / evaluateCandle: a liquidation, a TP/SL close or a pending

@@ -388,7 +388,11 @@ export class TradingService {
    * the current, fresh mark price (a backfilled one on the mark candle that triggered it).
    */
   runTrigger(userId: string, trigger: Trigger): Promise<Executed<unknown> | null> {
-    return this.run(userId, (state, ctx) => {
+    return this.run(userId, (state, liveCtx) => {
+      // A backfilled trigger happened in the past: its records (and a position it opens) are
+      // stamped at its candle, never later than now
+      const ctx =
+        trigger.at !== undefined ? { ...liveCtx, now: Math.min(trigger.at, liveCtx.now) } : liveCtx;
       let market: { category: Category; symbol: string };
       if (trigger.kind === 'liquidation') {
         const pos = state.positions.find((p) => p.id === trigger.positionId);

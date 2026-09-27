@@ -335,6 +335,54 @@ describe('TradingService', () => {
     expect(repo.state.positions[0].entryPrice.toNumber()).toBe(51_000);
   });
 
+  it('should stamp a backfilled fill at its candle, so later candles of the gap still check its TP', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      const T = 1_800_000_000_000;
+      vi.setSystemTime(T);
+      now = T;
+      await trading.placeOrder('u1', {
+        ...market$(1_000),
+        type: 'limit',
+        triggerPrice: D(49_000),
+        takeProfit: D(52_000),
+      });
+      // The engine was down for 10 minutes: the limit filled in minute 1, the TP hit in minute 2
+      vi.setSystemTime(T + 600_000);
+      const candles: Candle[] = [
+        { start: T + 60_000, low: D(48_900), high: D(49_500) },
+        { start: T + 120_000, low: D(51_000), high: D(52_100) },
+      ];
+      const engine = new MatchingEngine({
+        trading,
+        events,
+        loadOpenTriggers: async () => new Map([['u1', repo.state]]),
+        reloadUser: async () => repo.state,
+        subscribeTicker: () => () => undefined,
+        fetchCandles: vi.fn(async (_c: string, _s: string, _f: number, _t: number, src?: string) =>
+          src === 'mark' ? [] : candles
+        ),
+        lease: {
+          tryAcquire: async () => ({ acquired: true, lastTickAt: null }),
+          renew: async () => true,
+          release: async () => undefined,
+        },
+        holder: 'me',
+        renewEveryMs: 1_000_000,
+      });
+      await engine.start();
+      await engine.backfill('linear', 'BTCUSDT', T, T + 600_000);
+      await engine.stop();
+      // The fill happened in minute 1 (not "now"), so minute 2's TP closed it
+      expect(repo.state.positions).toHaveLength(0);
+      const [trade] = published.at(-1)?.delta.trades ?? [];
+      expect(trade?.openedAt).toBeLessThan(T + 120_000);
+      expect(trade?.closedAt).toBeLessThan(T + 180_000);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('runTrigger liquidates on a fresh mark past the liquidation price, never on a stale one (BP-3)', async () => {
     await trading.setSymbolLeverage('u1', 'BTCUSDT', 10);
     await trading.placeOrder('u1', market$(500)); // long 0.1 @ 50,000 at 10×: liq ≈ 45,149
@@ -586,6 +634,7 @@ describe('MatchingEngine', () => {
         orderId: 'o1',
         price: D(49_000),
         fillAt: D(49_000), // backfill fills at the crossed level
+        at: 1_030_000 + 59_999, // …stamped in its candle's minute, not when the backfill ran
       })
     );
     await e.stop();

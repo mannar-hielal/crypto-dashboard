@@ -78,12 +78,30 @@ function triggersOnDrop(order: { side: OrderSide; type: PendingType }): boolean 
 
 /**
  * `price` is the price that triggered it — the last price, or for a liquidation the mark price.
- * `fillAt` is set only by a candle backfill.
+ * `fillAt` and `at` are set only by a candle backfill: the level it crossed, and when (the last
+ * millisecond of the candle's minute — the records are stamped then, not when the backfill ran, so
+ * a position it opens is still checked by the gap's later candles and funding timestamps).
  */
 export type Trigger =
-  | { kind: 'exit'; positionId: string; leg: ExitLeg; price: Decimal; fillAt?: Decimal }
-  | { kind: 'fill'; orderId: string; price: Decimal; fillAt?: Decimal }
-  | { kind: 'liquidation'; positionId: string; price: Decimal; fillAt?: Decimal };
+  | {
+      kind: 'exit';
+      positionId: string;
+      leg: ExitLeg;
+      price: Decimal;
+      fillAt?: Decimal;
+      at?: number;
+    }
+  | { kind: 'fill'; orderId: string; price: Decimal; fillAt?: Decimal; at?: number }
+  | {
+      kind: 'liquidation';
+      positionId: string;
+      price: Decimal;
+      fillAt?: Decimal;
+      at?: number;
+    };
+
+/** The last millisecond of a 1m candle — when a backfilled trigger in it is stamped. */
+const candleEnd = (candle: Candle) => candle.start + 60_000 - 1;
 
 /** The mark price of a USDT Perpetual tick and the symbol's risk-limit tiers (BP-3). */
 export interface MarkInput {
@@ -172,7 +190,14 @@ export function evaluateCandle(
     }
     if (leg) {
       const level = (leg === 'take-profit' ? pos.takeProfit : pos.stopLoss) as Decimal;
-      triggers.push({ kind: 'exit', positionId: pos.id, leg, price: level, fillAt: level });
+      triggers.push({
+        kind: 'exit',
+        positionId: pos.id,
+        leg,
+        price: level,
+        fillAt: level,
+        at: candleEnd(candle),
+      });
     } else if (mark && mark.candle.start >= pos.openedAt) {
       const { liqPrice } = riskOf(pos, mark.tiers);
       const extreme = pos.side === 'long' ? mark.candle.low : mark.candle.high;
@@ -182,6 +207,7 @@ export function evaluateCandle(
           positionId: pos.id,
           price: liqPrice,
           fillAt: liqPrice,
+          at: candleEnd(mark.candle),
         });
       }
     }
@@ -197,6 +223,7 @@ export function evaluateCandle(
         orderId: order.id,
         price: order.triggerPrice,
         fillAt: order.triggerPrice,
+        at: candleEnd(candle),
       });
     }
   }

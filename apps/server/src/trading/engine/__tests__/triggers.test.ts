@@ -399,6 +399,7 @@ describe('evaluateCandle() — backfill sweep', () => {
     expect(t).toMatchObject({ kind: 'fill', orderId: 'p1' });
     expect(t.price.toNumber()).toBe(50_000);
     expect(t.fillAt?.toNumber()).toBe(50_000); // no quote for the past: fill at the level
+    expect(t.at).toBe(60_000 + 59_999); // stamped in the candle's minute, not when it ran
   });
 
   it('Stop Sell uses the candle low', () => {
