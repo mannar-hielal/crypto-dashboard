@@ -154,6 +154,22 @@ describe('evaluateCandle — backfilled liquidation (mark-price candles)', () =>
     expect(triggers[0]).toMatchObject({ kind: 'exit', leg: 'stop-loss' });
   });
 
+  it('should liquidate, not stop out, when the stop-loss sits beyond the liquidation price', () => {
+    // Long 10× @ 50,000: liquidation ≈ 45,149. A stop-loss at 44,000 is accepted (as on Bybit),
+    // but a continuous path reaches the liquidation price first — the stop never fills
+    const state = openAt10x('buy', { stopLoss: D(44_000) });
+    const triggers = evaluateCandle(
+      'linear',
+      'BTCUSDT',
+      candle(ctx.now, 46_000, 43_900),
+      state.positions,
+      [],
+      { candle: candle(ctx.now, 45_950, 43_950), tiers: TIERS }
+    );
+    expect(triggers).toHaveLength(1);
+    expect(triggers[0]).toMatchObject({ kind: 'liquidation' });
+  });
+
   it('ignores a mark candle that started before the position opened', () => {
     const state = openAt10x('buy');
     const triggers = evaluateCandle(
