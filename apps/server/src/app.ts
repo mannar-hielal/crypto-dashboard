@@ -46,7 +46,9 @@ export async function buildApp() {
         : {
             level: config.logLevel,
             // The visitor's IP, not Fly's proxy (see lib/clientIp.ts)
-            serializers: { req: requestLogSerializerFor(config.nodeEnv) },
+            serializers: {
+              req: requestLogSerializerFor({ nodeEnv: config.nodeEnv, onFly: config.onFly }),
+            },
           },
     ajv: {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Fastify's AJV plugin typing is incompatible with ajv-formats in this install.

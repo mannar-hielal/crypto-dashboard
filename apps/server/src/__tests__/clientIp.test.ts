@@ -16,9 +16,14 @@ const FLY_PROXY = '172.16.23.42';
 async function ipSeen(
   nodeEnv: string,
   headers: Record<string, string>,
-  opts: { peer?: string; url?: string; warn?: (c: Record<string, unknown>) => void } = {}
+  opts: {
+    peer?: string;
+    url?: string;
+    onFly?: boolean;
+    warn?: (c: Record<string, unknown>) => void;
+  } = {}
 ) {
-  const read = clientIpFor(nodeEnv, opts.warn ?? (() => undefined));
+  const read = clientIpFor({ nodeEnv, onFly: opts.onFly ?? true }, opts.warn ?? (() => undefined));
   const app = Fastify();
   app.get(opts.url ?? '/ip', async (request) => ({ ip: read(request) }));
   const res = await app.inject({
@@ -67,6 +72,17 @@ describe('clientIpFor', () => {
     ).toBe('203.0.113.50');
   });
 
+  it('production off Fly (FLY_APP_NAME unset): the header is never trusted, even from a 172.16/12 peer (review #150)', async () => {
+    // e.g. the image on a plain Docker host: a sibling container on the 172.17.0.0/16 bridge
+    expect(
+      await ipSeen(
+        'production',
+        { 'fly-client-ip': '1.2.3.4' },
+        { peer: '172.17.0.3', onFly: false }
+      )
+    ).toBe('172.17.0.3');
+  });
+
   it.each([['not-an-ip'], ['1.2.3.4, 5.6.7.8'], ['']])(
     'production: a malformed header (%o) falls back to the socket address',
     async (value) => {
@@ -81,7 +97,7 @@ describe('clientIpFor', () => {
 
   it('production: a fallback is logged, throttled, never for /health, never with the header value (review #149)', async () => {
     const warn = vi.fn();
-    const read = clientIpFor('production', warn);
+    const read = clientIpFor({ nodeEnv: 'production', onFly: true }, warn);
     const req = (url: string, headers: Record<string, string> = {}) => ({
       ip: FLY_PROXY,
       url,
@@ -92,7 +108,7 @@ describe('clientIpFor', () => {
     read(req('/api/x', { 'fly-client-ip': 'garbage' }));
     read(req('/api/x')); // within the throttle window
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn).toHaveBeenCalledWith({ fromFlyProxy: true, headerPresent: true });
+    expect(warn).toHaveBeenCalledWith({ onFly: true, fromFlyProxy: true, headerPresent: true });
     // A good request never warns
     warn.mockClear();
     read(req('/api/x', { 'fly-client-ip': '89.217.38.229' }));
@@ -104,7 +120,7 @@ describe('clientIpFor', () => {
     await app.register(rateLimit, {
       max: 1,
       timeWindow: '1 minute',
-      keyGenerator: clientIpFor('production', () => undefined),
+      keyGenerator: clientIpFor({ nodeEnv: 'production', onFly: true }, () => undefined),
     });
     app.get('/x', async () => ({ ok: true }));
     const hit = (ip: string) =>
@@ -125,7 +141,7 @@ describe('clientIpFor', () => {
     await app.register(rateLimit, {
       max: 100,
       timeWindow: '1 minute',
-      keyGenerator: clientIpFor('production', () => undefined),
+      keyGenerator: clientIpFor({ nodeEnv: 'production', onFly: true }, () => undefined),
     });
     app.post('/login', { config: { rateLimit: { max: 1, timeWindow: '1 hour' } } }, async () => ({
       ok: true,
@@ -149,7 +165,7 @@ describe('clientIpFor', () => {
       logger: {
         level: 'info',
         stream: { write: (line: string) => void lines.push(line) },
-        serializers: { req: requestLogSerializerFor('production') },
+        serializers: { req: requestLogSerializerFor({ nodeEnv: 'production', onFly: true }) },
       },
     });
     app.get('/x', async () => ({ ok: true }));

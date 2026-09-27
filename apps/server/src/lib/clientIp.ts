@@ -7,7 +7,8 @@
  * `X-Forwarded-For` hops are Fly's addresses, not the visitor's (seen in the production logs on
  * 2026-09-27). Fly's proxy sets `Fly-Client-IP` to the address it accepted the connection from,
  * so that header is the visitor. It is trusted only:
- * - in production;
+ * - in production, on a Fly Machine (`FLY_APP_NAME` set — review #150: the same image run off Fly,
+ *   e.g. on a Docker host whose bridge network is in 172.16.0.0/12, must never trust it);
  * - when the connection itself comes from Fly's private proxy network (the socket peer is in
  *   172.16.0.0/12 or fdaa::/16) — a request that somehow reached the app without crossing Fly's
  *   proxy can't pick its own IP;
@@ -52,27 +53,33 @@ export function isFlyProxyPeer(address: string): boolean {
 
 type IpSource = Pick<FastifyRequest, 'ip' | 'headers' | 'url'>;
 
+/** Where the server runs: production, and whether on a Fly Machine. */
+export interface IpEnv {
+  nodeEnv: string;
+  onFly: boolean;
+}
+
 /** A client-IP reader for one environment (exported for tests). */
 export function clientIpFor(
-  nodeEnv: string,
+  env: IpEnv,
   warn: (context: Record<string, unknown>) => void = (context) =>
     log.warn(context, 'Visitor IP unavailable — using the socket address')
 ): (request: IpSource) => string {
   let lastWarnAt = 0;
   return (request) => {
-    if (nodeEnv !== 'production') return request.ip;
+    if (env.nodeEnv !== 'production') return request.ip;
     // header name is a known constant — safe, controlled access
     // eslint-disable-next-line security/detect-object-injection
     const header = request.headers[FLY_CLIENT_IP];
     const value = typeof header === 'string' ? header.trim() : '';
-    const fromFly = isFlyProxyPeer(request.ip);
+    const fromFly = env.onFly && isFlyProxyPeer(request.ip);
     if (fromFly && value && isIP(value)) return value;
     if (request.url !== HEALTH_PATH) {
       const now = Date.now();
       if (now - lastWarnAt >= WARN_EVERY_MS) {
         lastWarnAt = now;
         // No header values in the log line — only what went wrong
-        warn({ fromFlyProxy: fromFly, headerPresent: header !== undefined });
+        warn({ onFly: env.onFly, fromFlyProxy: fromFly, headerPresent: header !== undefined });
       }
     }
     return request.ip;
@@ -80,15 +87,15 @@ export function clientIpFor(
 }
 
 /** The visitor's IP for this environment. */
-export const clientIp = clientIpFor(config.nodeEnv);
+export const clientIp = clientIpFor({ nodeEnv: config.nodeEnv, onFly: config.onFly });
 
 /**
  * Fastify's request log line (`incoming request`) with the visitor's IP as `remoteAddress` — the
  * default logs the socket, which in production is Fly's proxy.
  */
-export function requestLogSerializerFor(nodeEnv: string) {
+export function requestLogSerializerFor(env: IpEnv) {
   // Logging must never itself warn: the request's own reader already reports a fallback
-  const read = clientIpFor(nodeEnv, () => undefined);
+  const read = clientIpFor(env, () => undefined);
   return (request: Pick<FastifyRequest, 'ip' | 'headers' | 'method' | 'url' | 'host'>) => ({
     method: request.method,
     url: request.url,
