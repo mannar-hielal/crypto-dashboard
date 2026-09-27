@@ -78,6 +78,7 @@ export function isEmptyDelta(delta: Delta, before: AccountState): boolean {
     delta.account.leverage === before.leverage &&
     changedLeverage(before.symbolLeverage, delta.account.symbolLeverage).length === 0 &&
     changedFundingAt(before.symbolFundingAt, delta.account.symbolFundingAt).length === 0 &&
+    delta.account.marginMode === (before.marginMode ?? 'ISOLATED_MARGIN') &&
     delta.positionsUpsert.length === 0 &&
     delta.positionsRemove.length === 0 &&
     delta.spotUpsert.length === 0 &&
@@ -111,6 +112,8 @@ export interface LoadedAccount {
   accountId: string;
   version: number;
   state: AccountState;
+  /** The account was isolated before cross existed: show the one-time notice (BP-5 E, O2) */
+  marginModeNotice: boolean;
 }
 
 type Tx = Prisma.TransactionClient;
@@ -141,6 +144,7 @@ export class AccountRepository {
     return {
       accountId: account.id,
       version: account.version,
+      marginModeNotice: account.marginModeNotice,
       state: {
         balance: new Decimal(account.availableBalance.toString()),
         realizedPnl: new Decimal(account.realizedPnl.toString()),
@@ -158,6 +162,9 @@ export class AccountRepository {
         spot: spot.map(spotFromRow),
         positions: positions.map(positionFromRow),
         pendingOrders: pending.map(pendingFromRow),
+        ...(account.marginMode === 'REGULAR_MARGIN'
+          ? { marginMode: 'REGULAR_MARGIN' as const }
+          : {}),
       },
     };
   }
@@ -203,6 +210,11 @@ export class AccountRepository {
         totalBalance: balance.plus(realizedPnl),
         realizedPnl,
         leverage,
+        marginMode: delta.account.marginMode,
+        // A mode switch answers the one-time cross notice (BP-5 E)
+        ...(delta.account.marginMode !== (loaded.state.marginMode ?? 'ISOLATED_MARGIN')
+          ? { marginModeNotice: false }
+          : {}),
         version: { increment: 1 },
         ...(delta.reset ? { lastReset: new Date(), resetCount: { increment: 1 } } : {}),
       },
@@ -345,7 +357,7 @@ export class AccountRepository {
 
   /** Full account view for GET /api/paper/state and the private WS snapshot. */
   async snapshot(userId: string): Promise<PaperStateDTO> {
-    const { state, version } = await this.load(userId);
+    const { state, version, marginModeNotice } = await this.load(userId);
     const [orders, trades, journal, balanceEvents, fundings] = await Promise.all([
       this.prisma.order.findMany({
         where: { userId, status: { not: 'PENDING' } },
@@ -381,9 +393,13 @@ export class AccountRepository {
         realizedPnl: state.realizedPnl.toString(),
         leverage: state.leverage,
         symbolLeverage: state.symbolLeverage,
+        marginMode: state.marginMode ?? 'ISOLATED_MARGIN',
+        ...(marginModeNotice ? { marginModeNotice: true } : {}),
         version,
       },
-      positions: state.positions.map((p) => positionDTO(p, this.riskTiers(p.symbol))),
+      positions: state.positions.map((p) =>
+        positionDTO(p, this.riskTiers(p.symbol), state.marginMode)
+      ),
       spotBalances: state.spot.map(spotDTO),
       pendingOrders: state.pendingOrders.map(pendingDTO),
       orders: orders.map(historyOrderFromRow),

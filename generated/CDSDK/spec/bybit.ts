@@ -161,3 +161,99 @@ export function estimatePositionRisk(
     bustPrice: Math.max(0, bustPrice),
   };
 }
+
+// ─── Cross margin (BP-5 E) ─────────────────────────────────────────────────────
+// Mirrors the server's bybitSpec.accountFigures (a parity test holds them together).
+
+export interface CrossPositionEstimate {
+  side: 'long' | 'short';
+  qty: number;
+  entryPrice: number;
+  leverage: number;
+  /** Live mark (the entry price when unknown) */
+  mark: number;
+  tiers: RiskTierEstimate[];
+}
+
+export interface AccountFiguresEstimate {
+  walletBalance: number;
+  unrealisedPnl: number;
+  marginBalance: number;
+  totalIM: number;
+  totalMM: number;
+  /** Infinity when the margin balance is 0 or less */
+  imRate: number;
+  mmRate: number;
+  available: number;
+}
+
+const tierAt = (tiers: RiskTierEstimate[], value: number) =>
+  tiers.find((t) => value <= t.riskLimitValue) ?? tiers[tiers.length - 1] ?? DEFAULT_TIER;
+
+/** Bybit's mark-based position IM in cross: size × mark / leverage + fee to close at mark. */
+export function crossPositionIMEstimate(p: CrossPositionEstimate): number {
+  return (p.qty * p.mark) / p.leverage + feeToCloseEstimate(p.side, p.qty, p.mark, p.leverage);
+}
+
+/** Bybit's mark-based position MM in cross. */
+export function crossPositionMMEstimate(p: CrossPositionEstimate): number {
+  const value = p.qty * p.mark;
+  const tier = tierAt(p.tiers, value);
+  return (
+    value * tier.mmr - tier.mmDeduction + feeToCloseEstimate(p.side, p.qty, p.mark, p.leverage)
+  );
+}
+
+const upnl = (p: CrossPositionEstimate) =>
+  p.side === 'long' ? (p.mark - p.entryPrice) * p.qty : (p.entryPrice - p.mark) * p.qty;
+
+/** Margin balance, IM, MM, the rates and the available balance of a cross account. */
+export function accountFiguresEstimate(
+  walletBalance: number,
+  positions: CrossPositionEstimate[],
+  ordersIM: number
+): AccountFiguresEstimate {
+  let unrealisedPnl = 0;
+  let totalIM = ordersIM;
+  let totalMM = 0;
+  for (const p of positions) {
+    unrealisedPnl += upnl(p);
+    totalIM += crossPositionIMEstimate(p);
+    totalMM += crossPositionMMEstimate(p);
+  }
+  const marginBalance = walletBalance + unrealisedPnl;
+  const rate = (part: number) => (marginBalance <= 0 ? Infinity : part / marginBalance);
+  return {
+    walletBalance,
+    unrealisedPnl,
+    marginBalance,
+    totalIM,
+    totalMM,
+    imRate: rate(totalIM),
+    mmRate: rate(totalMM),
+    available: marginBalance - totalIM,
+  };
+}
+
+/**
+ * Estimated liquidation price of one position in cross (Bybit shows an estimate): the mark at which
+ * the account's margin balance falls to its maintenance margin, every other position held constant
+ * and the position's tier held at its current one. 0 = it can't be liquidated by its own price.
+ */
+export function crossLiqPriceEstimate(
+  p: CrossPositionEstimate,
+  figures: Pick<AccountFiguresEstimate, 'marginBalance' | 'totalMM'>
+): number {
+  const tier = tierAt(p.tiers, p.qty * p.mark);
+  const taker = Number(FEE_RATES.linear.taker);
+  const q = p.qty;
+  if (q <= 0) return 0;
+  // MM of this position at price x: x · q · k − deduction (tier and fee factor fixed)
+  const k = tier.mmr + (p.side === 'long' ? 1 - 1 / p.leverage : 1 + 1 / p.leverage) * taker;
+  const mmOthers = figures.totalMM - crossPositionMMEstimate(p);
+  const liq =
+    p.side === 'long'
+      ? (mmOthers - tier.mmDeduction - figures.marginBalance + q * p.mark) / (q * (1 - k))
+      : (figures.marginBalance + q * p.mark - mmOthers + tier.mmDeduction) / (q * (1 + k));
+  return Number.isFinite(liq) && liq > 0 ? liq : 0;
+}

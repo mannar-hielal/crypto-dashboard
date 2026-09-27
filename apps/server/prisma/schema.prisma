@@ -143,6 +143,12 @@ model Account {
   // Optimistic concurrency: every engine/API mutation bumps it (updateMany where version = v),
   // so two concurrent mutations of one account can never both commit (BP-1)
   version  Int @default(0)
+  // Margin mode, account-wide as in Bybit UTA (BP-5 E): "REGULAR_MARGIN" = cross (Bybit's default,
+  // and new accounts') | "ISOLATED_MARGIN". Accounts from before BP-5 were migrated to isolated
+  marginMode       String  @default("REGULAR_MARGIN")
+  // True for an account that was isolated before cross existed: the client shows a one-time
+  // notice about cross margin (O2). Cleared by a mode switch
+  marginModeNotice Boolean @default(false)
 
   // Metadata
   lastReset  DateTime @default(now())

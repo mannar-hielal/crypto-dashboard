@@ -39,6 +39,7 @@ import type {
   SpotHolding,
   Category,
   TriggerBy,
+  MarginMode,
 } from './engine/index.js';
 import { fallbackRiskTiers, LEGACY_FEE_RATE, type RiskTier } from './bybitSpec.js';
 import { riskOf } from './engine/margin.js';
@@ -522,8 +523,18 @@ export function balanceEventData(b: BalanceEvent) {
 
 const s = (v: Decimal) => v.toString();
 
-export function positionDTO(p: Position, tiers: RiskTier[]): PaperPositionDTO {
+/**
+ * A position on the wire. In cross margin (BP-5 E) its liquidation / bankruptcy prices depend on
+ * the whole account and the live marks, so they are left out (unknown) — the client estimates them
+ * live from the account figures, as Bybit shows an estimate.
+ */
+export function positionDTO(
+  p: Position,
+  tiers: RiskTier[],
+  mode: MarginMode = 'ISOLATED_MARGIN'
+): PaperPositionDTO {
   const risk = riskOf(p, tiers);
+  const cross = mode === 'REGULAR_MARGIN';
   return {
     id: p.id,
     category: p.category,
@@ -533,13 +544,17 @@ export function positionDTO(p: Position, tiers: RiskTier[]): PaperPositionDTO {
     entryPrice: s(p.entryPrice),
     entryUsdtAmount: s(p.entryUsdtAmount),
     leverage: p.leverage,
-    marginMode: 'isolated',
+    marginMode: cross ? 'cross' : 'isolated',
     entryFee: s(p.entryFee),
     closeFeeReserve: s(p.closeFeeReserve),
     extraMargin: s(p.extraMargin ?? new Decimal(0)),
     cumFunding: s(p.cumFunding ?? new Decimal(0)),
-    liqPrice: s(risk.liqPrice.toDecimalPlaces(8)),
-    bustPrice: s(risk.bustPrice.toDecimalPlaces(8)),
+    ...(cross
+      ? {}
+      : {
+          liqPrice: s(risk.liqPrice.toDecimalPlaces(8)),
+          bustPrice: s(risk.bustPrice.toDecimalPlaces(8)),
+        }),
     positionIM: s(risk.positionIM.toDecimalPlaces(8)),
     positionMM: s(risk.positionMM.toDecimalPlaces(8)),
     mmr: s(risk.mmr),
@@ -676,9 +691,12 @@ export function deltaDTO(
       realizedPnl: s(delta.account.realizedPnl),
       leverage: delta.account.leverage,
       symbolLeverage: delta.account.symbolLeverage,
+      marginMode: delta.account.marginMode,
       version,
     },
-    positionsUpsert: delta.positionsUpsert.map((p) => positionDTO(p, riskTiers(p.symbol))),
+    positionsUpsert: delta.positionsUpsert.map((p) =>
+      positionDTO(p, riskTiers(p.symbol), delta.account.marginMode)
+    ),
     positionsRemove: delta.positionsRemove,
     spotUpsert: delta.spotUpsert.map(spotDTO),
     pendingUpsert: delta.pendingUpsert.map(pendingDTO),

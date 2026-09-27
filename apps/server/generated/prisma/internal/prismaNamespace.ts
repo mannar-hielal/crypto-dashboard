@@ -1652,6 +1652,8 @@ export const AccountScalarFieldEnum = {
   realizedPnl: 'realizedPnl',
   leverage: 'leverage',
   version: 'version',
+  marginMode: 'marginMode',
+  marginModeNotice: 'marginModeNotice',
   lastReset: 'lastReset',
   resetCount: 'resetCount',
   createdAt: 'createdAt',

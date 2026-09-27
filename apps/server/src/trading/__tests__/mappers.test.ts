@@ -211,3 +211,16 @@ describe('mappers — BP-5 D Closed P&L', () => {
     expect(tradeFromRow(row)).toMatchObject({ openFee: '1.375', closedPnl: '47.2225' });
   });
 });
+
+describe('mappers — BP-5 E cross positions', () => {
+  it('a cross position says so and leaves the isolated liquidation / bankruptcy prices out', () => {
+    const tiers = fallbackRiskTiers('BTCUSDT');
+    const cross = positionDTO(position, tiers, 'REGULAR_MARGIN');
+    expect(cross.marginMode).toBe('cross');
+    expect(cross).not.toHaveProperty('liqPrice');
+    expect(cross).not.toHaveProperty('bustPrice');
+    const iso = positionDTO(position, tiers);
+    expect(iso.marginMode).toBe('isolated');
+    expect(iso.liqPrice).toBeDefined();
+  });
+});

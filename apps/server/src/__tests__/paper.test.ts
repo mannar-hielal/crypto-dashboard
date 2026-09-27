@@ -91,6 +91,7 @@ describe('Paper Trading API (BP-1)', () => {
     ['PATCH', '/api/paper/account/leverage'],
     ['PATCH', '/api/paper/symbols/BTCUSDT/leverage'],
     ['POST', '/api/paper/positions/p1/margin'],
+    ['POST', '/api/paper/account/margin-mode'],
     ['POST', '/api/paper/spot/exits'],
     ['POST', '/api/paper/account/reset'],
     ['POST', '/api/paper/journal'],
@@ -458,6 +459,50 @@ describe('Paper Trading API (BP-1)', () => {
     });
     expect(res.statusCode).toBe(400);
   });
+
+  it("POST /account/margin-mode passes Bybit's mode and answers a refusal as 422 (BP-5 E)", async () => {
+    const setMode = vi
+      .spyOn(app.trading, 'setMarginMode')
+      .mockResolvedValue(executed('REGULAR_MARGIN' as const));
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/paper/account/margin-mode',
+      headers: auth,
+      payload: { marginMode: 'REGULAR_MARGIN' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().result).toBe('REGULAR_MARGIN');
+    expect(setMode).toHaveBeenCalledWith(userId, 'REGULAR_MARGIN');
+
+    setMode.mockRejectedValueOnce(
+      new TradingError(422, 'Set margin mode failed: Waiting for the BTCUSDT mark price')
+    );
+    const refused = await app.inject({
+      method: 'POST',
+      url: '/api/paper/account/margin-mode',
+      headers: auth,
+      payload: { marginMode: 'ISOLATED_MARGIN' },
+    });
+    expect(refused.statusCode).toBe(422);
+    expect(refused.json()).toEqual({
+      error: 'Set margin mode failed: Waiting for the BTCUSDT mark price',
+    });
+  });
+
+  it.each([[{ marginMode: 'cross' }], [{ marginMode: 'PORTFOLIO_MARGIN' }], [{}]])(
+    'POST /account/margin-mode → 400 for %o (BP-5 E)',
+    async (payload) => {
+      const setMode = vi.spyOn(app.trading, 'setMarginMode');
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/paper/account/margin-mode',
+        headers: auth,
+        payload,
+      });
+      expect(res.statusCode).toBe(400);
+      expect(setMode).not.toHaveBeenCalled();
+    }
+  );
 
   it('POST /positions/:id/margin passes the signed amount (BP-5 add / reduce margin)', async () => {
     const adjust = vi

@@ -34,6 +34,8 @@ import {
   editSpotLimit,
   executeTrigger,
   isLiquidatable,
+  accountLiquidatable,
+  liquidateAccount,
   legHit,
   legTriggerBy,
   orderTriggerBy,
@@ -46,6 +48,7 @@ import {
   setLeverage,
   setSymbolLeverage,
   settleFunding,
+  switchMarginMode,
   updatePositionExits,
   type AccountState,
   type ActionResult,
@@ -59,6 +62,7 @@ import {
   type PendingEdit,
   type Quote,
   type SpotExitsIntent,
+  type MarginMode,
   type Trigger,
   type TriggerBy,
 } from './engine/index.js';
@@ -136,6 +140,8 @@ export class TradingService {
       now,
       newId: () => `${now}-${randomBytes(6).toString('base64url')}`,
       riskTiers: (symbol) => this.market.riskTiers(symbol),
+      // Cross margin values positions at the fresh mark (BP-5 E); a stale one reads as unknown
+      markPrice: (symbol) => this.currentMark(symbol),
     };
   }
 
@@ -395,6 +401,14 @@ export class TradingService {
     );
   }
 
+  /**
+   * Switch the account's margin mode (BP-5 E, Bybit set-margin-mode), checked against the fresh
+   * marks. Result: the mode in force.
+   */
+  setMarginMode(userId: string, mode: MarginMode): Promise<Executed<MarginMode>> {
+    return this.act(userId, (state, ctx) => switchMarginMode(state, mode, ctx));
+  }
+
   /** Default leverage (pre-BP-2 clients' account-wide leverage). */
   setLeverage(userId: string, leverage: number): Promise<Executed<number>> {
     return this.act(userId, (state) => setLeverage(state, leverage));
@@ -435,9 +449,27 @@ export class TradingService {
       const ctx =
         trigger.at !== undefined ? { ...liveCtx, now: Math.min(trigger.at, liveCtx.now) } : liveCtx;
       let market: { category: Category; symbol: string };
+      if (trigger.kind === 'account-liquidation') {
+        if (state.marginMode !== 'REGULAR_MARGIN') return null;
+        // Live: every held symbol needs a fresh mark — never liquidate on a stale one. A backfilled
+        // one takes the minute's worst mark for its symbol and the live marks for the others
+        const marks = new Map<string, Decimal>();
+        for (const p of state.positions) {
+          const m =
+            trigger.fillAt && p.symbol === trigger.symbol
+              ? trigger.price
+              : this.currentMark(p.symbol);
+          if (m) marks.set(p.symbol, m);
+          else if (!trigger.fillAt) return null;
+        }
+        const accountCtx = { ...ctx, markPrice: (symbol: string) => marks.get(symbol) };
+        if (!accountLiquidatable(state, accountCtx)) return null;
+        return liquidateAccount(state, accountCtx);
+      }
       if (trigger.kind === 'liquidation') {
         const pos = state.positions.find((p) => p.id === trigger.positionId);
-        if (!pos) return null;
+        // A cross account has no per-position liquidation (the account is liquidated as a whole)
+        if (!pos || state.marginMode === 'REGULAR_MARGIN') return null;
         // A backfilled one runs at the minute's worst mark: every tier step it reached (BP-5 C)
         const mark = trigger.fillAt
           ? (trigger.worstMark ?? trigger.price)

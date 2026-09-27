@@ -36,7 +36,10 @@ import {
   type FundingSpec,
   type Trigger,
   type TriggerBy,
+  accountLiquidatable,
 } from './engine/index.js';
+
+const isCross = (state: AccountState) => state.marginMode === 'REGULAR_MARGIN';
 import type { PaperEventBus } from './PaperEventBus.js';
 import type { TradingService } from './TradingService.js';
 
@@ -174,6 +177,11 @@ export class MatchingEngine {
   private readonly inFlight = new Set<string>();
   /** Last tick time per market — bounded: 2 categories × ALLOWED_SYMBOLS */
   private readonly lastTick = new Map<MarketKey, number>();
+  /**
+   * Last mark price seen per USDT Perpetual symbol — a cross account is valued with every symbol it
+   * holds (BP-5 E). Bounded: ALLOWED_SYMBOLS.
+   */
+  private readonly marks = new Map<string, Decimal>();
   private unsubscribeTicks: (() => void) | null = null;
   private unsubscribeEvents: (() => void) | null = null;
   private timer: NodeJS.Timeout | null = null;
@@ -366,7 +374,16 @@ export class MatchingEngine {
     this.users.clear();
     this.symbolUsers.clear();
     this.lastTick.clear();
+    this.marks.clear();
     this.active = false;
+  }
+
+  /** A cross account's MM rate at the engine's last marks (`symbol` at `mark` when given). */
+  private crossLiquidatable(state: AccountState, symbol?: string, mark?: Decimal): boolean {
+    return accountLiquidatable(state, {
+      riskTiers: this.riskTiers,
+      markPrice: (s) => (s === symbol && mark ? mark : this.marks.get(s)),
+    });
   }
 
   /** True when a position leg or stop order of this market triggers on the index price. */
@@ -438,6 +455,7 @@ export class MatchingEngine {
       u.markPrice > 0
         ? { price: new Decimal(u.markPrice.toString()), tiers: this.riskTiers(symbol) }
         : undefined;
+    if (mark) this.marks.set(symbol, mark.price);
     const index =
       category === 'linear' &&
       u.indexPrice !== undefined &&
@@ -454,17 +472,27 @@ export class MatchingEngine {
         price,
         state.positions,
         state.pendingOrders,
-        mark,
+        // A cross account has no per-position liquidation (BP-5 E)
+        mark && isCross(state) ? { ...mark, liquidation: false } : mark,
         index
       )) {
         void this.fire(userId, trigger);
+      }
+      if (mark && isCross(state) && this.crossLiquidatable(state)) {
+        void this.fire(userId, { kind: 'account-liquidation', symbol, price: mark.price });
       }
     }
   }
 
   /** Execute one trigger; a trigger already executing (a burst of ticks) is not re-fired. */
   private async fire(userId: string, trigger: Trigger): Promise<void> {
-    const key = `${userId}:${trigger.kind === 'fill' ? trigger.orderId : trigger.positionId}`;
+    const key = `${userId}:${
+      trigger.kind === 'fill'
+        ? trigger.orderId
+        : trigger.kind === 'account-liquidation'
+          ? 'account'
+          : trigger.positionId
+    }`;
     if (this.inFlight.has(key)) return;
     this.inFlight.add(key);
     let executed = false;
@@ -862,6 +890,7 @@ export class MatchingEngine {
       for (const userId of [...(this.symbolUsers.get(key) ?? [])]) {
         const state = this.users.get(userId);
         if (!state) continue;
+        const cross = isCross(state);
         // Sequential: each execution updates the index before the next candle is evaluated
         for (const trigger of evaluateCandle(
           category,
@@ -869,10 +898,26 @@ export class MatchingEngine {
           candle,
           state.positions,
           state.pendingOrders,
-          mark,
+          mark && cross ? { ...mark, liquidation: false } : mark,
           indexByStart.get(candle.start)
         )) {
           await this.fire(userId, trigger);
+        }
+        // Cross (BP-5 E): the account at this symbol's worst mark of the minute, the other
+        // symbols at their last marks
+        const current = this.users.get(userId);
+        const held = current?.positions.find((p) => p.symbol === symbol);
+        if (markCandle && current && held && isCross(current)) {
+          const worst = held.side === 'long' ? markCandle.low : markCandle.high;
+          if (this.crossLiquidatable(current, symbol, worst)) {
+            await this.fire(userId, {
+              kind: 'account-liquidation',
+              symbol,
+              price: worst,
+              fillAt: worst,
+              at: markCandle.start + 60_000 - 1,
+            });
+          }
         }
       }
     }

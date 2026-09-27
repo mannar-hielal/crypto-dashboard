@@ -453,10 +453,6 @@ export type SymbolSettingUncheckedUpdateManyWithoutAccountNestedInput = {
   deleteMany?: Prisma.SymbolSettingScalarWhereInput | Prisma.SymbolSettingScalarWhereInput[]
 }
 
-export type BoolFieldUpdateOperationsInput = {
-  set?: boolean
-}
-
 export type SymbolSettingCreateWithoutAccountInput = {
   id?: string
   symbol: string

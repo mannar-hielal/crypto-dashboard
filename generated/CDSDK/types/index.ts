@@ -201,6 +201,13 @@ export interface PaperAccountDTO {
   /** USDT Perpetual leverage per symbol */
   symbolLeverage: Record<string, number>;
   /**
+   * Bybit UTA margin mode, account-wide (BP-5 E): REGULAR_MARGIN = cross. Absent from a pre-BP-5
+   * server (= isolated).
+   */
+  marginMode?: PaperMarginMode;
+  /** Snapshot only: the account was isolated before cross existed — show the one-time notice */
+  marginModeNotice?: boolean;
+  /**
    * Account version after this state / change. Every committed change bumps it by one, so a
    * client ignores anything not newer than what it has — an HTTP response and the WebSocket push
    * of the same change, or a late response after a newer push.
@@ -222,7 +229,8 @@ export interface PaperPositionDTO {
   /** Initial margin: quantity × entry / leverage */
   entryUsdtAmount: string;
   leverage: number;
-  marginMode: 'isolated';
+  /** 'cross' (BP-5 E): liqPrice / bustPrice are then absent — estimate them from the account */
+  marginMode: 'isolated' | 'cross';
   /** Open fee charged */
   entryFee: string;
   /** Estimated close fee held with the margin (position margin = entryUsdtAmount + this) */
@@ -253,6 +261,9 @@ export interface PaperPositionDTO {
   tpTriggerBy?: PaperTriggerBy;
   slTriggerBy?: PaperTriggerBy;
 }
+
+/** Bybit's account margin mode (UTA): REGULAR_MARGIN = cross (BP-5 E) */
+export type PaperMarginMode = 'ISOLATED_MARGIN' | 'REGULAR_MARGIN';
 
 /** Bybit's `triggerBy`: the price a TP / SL or stop order triggers on (BP-5 B) */
 export type PaperTriggerBy = 'LastPrice' | 'MarkPrice' | 'IndexPrice';

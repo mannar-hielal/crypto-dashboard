@@ -23,7 +23,13 @@ import type {
 } from '@crypto-dashboard/sdk';
 import { ALLOWED_CATEGORIES, ALLOWED_SYMBOLS } from '../../constants.js';
 import { TradingError, type Executed } from '../../trading/TradingService.js';
-import { TRIGGER_BY, type ExitLeg, type OrderSize } from '../../trading/engine/index.js';
+import {
+  MARGIN_MODES,
+  TRIGGER_BY,
+  type ExitLeg,
+  type MarginMode,
+  type OrderSize,
+} from '../../trading/engine/index.js';
 import { privatePaperWs } from './ws.js';
 import { logger } from '../../logger.js';
 
@@ -644,6 +650,40 @@ export async function paperRoutes(app: FastifyInstance) {
             request.body.leverage
           )
         )
+      )
+  );
+
+  // ── POST /account/margin-mode — cross / isolated, account-wide (BP-5 E) ──────
+  app.post<{ Body: { marginMode: MarginMode } }>(
+    '/account/margin-mode',
+    {
+      onRequest: [app.authenticate],
+      config: mutationRateLimit,
+      schema: {
+        tags: ['Paper Trading'],
+        summary:
+          "Switch the account's margin mode (Bybit set-margin-mode: REGULAR_MARGIN = cross); allowed with open positions when Bybit's checks pass",
+        ...secured,
+        body: {
+          type: 'object',
+          required: ['marginMode'],
+          additionalProperties: false,
+          properties: { marginMode: { type: 'string', enum: [...MARGIN_MODES] } },
+        },
+        response: {
+          200: actionResponse({ type: 'string', enum: [...MARGIN_MODES] }),
+          400: errorResponse,
+          401: errorResponse,
+          409: errorResponse,
+          422: errorResponse,
+          429: errorResponse,
+          500: errorResponse,
+        },
+      },
+    },
+    async (request, reply) =>
+      guarded(reply, async () =>
+        send(reply, await app.trading.setMarginMode(userIdOf(request), request.body.marginMode))
       )
   );
 

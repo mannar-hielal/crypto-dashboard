@@ -348,3 +348,112 @@ export function markHitsLiquidation(side: PositionSide, liqPrice: Decimal, mark:
   if (liqPrice.lte(0) || mark.lte(0)) return false;
   return side === 'long' ? mark.lte(liqPrice) : mark.gte(liqPrice);
 }
+
+// ─── Cross margin (BP-5 E) ─────────────────────────────────────────────────────
+/*
+ * Bybit UTA cross-margin account figures (help centre "Margin calculations", 2026-08-07; API
+ * get-wallet-balance), for USDT Perpetual with USDT collateral (collateral ratio 1, no haircut):
+ *
+ *   margin balance = wallet balance + Σ unrealised PnL at mark          (totalMarginBalance)
+ *   position IM    = size × mark / leverage + fee to close (at mark)     (mark-based since 2025-09)
+ *   position MM    = size × mark × MMR − mmDeduction + fee to close
+ *   total IM       = Σ position IM + active orders' IM                   (totalInitialMargin)
+ *   IM rate        = total IM ÷ margin balance; MM rate = total MM ÷ margin balance
+ *   available      = margin balance − total IM                           (totalAvailableBalance)
+ *
+ * An order is accepted while it fits in the available balance (IM rate ≤ 100%); the account is
+ * liquidated when the MM rate reaches 100%.
+ */
+
+/** One position for the account figures, valued at `mark`. */
+export interface CrossPositionInput {
+  side: PositionSide;
+  quantity: Decimal;
+  entryPrice: Decimal;
+  leverage: number;
+  mark: Decimal;
+  tiers: RiskTier[];
+}
+
+export interface AccountFigures {
+  walletBalance: Decimal;
+  unrealisedPnl: Decimal;
+  marginBalance: Decimal;
+  totalIM: Decimal;
+  totalMM: Decimal;
+  /** Infinity when the margin balance is 0 or less */
+  imRate: Decimal;
+  mmRate: Decimal;
+  available: Decimal;
+}
+
+/** Bybit's mark-based position IM in cross. */
+export function crossPositionIM(p: CrossPositionInput): Decimal {
+  return p.quantity
+    .times(p.mark)
+    .div(p.leverage)
+    .plus(feeToClose(p.side, p.quantity, p.mark, p.leverage));
+}
+
+/** Bybit's mark-based position MM in cross (its tier chosen by the value at mark). */
+export function crossPositionMM(p: CrossPositionInput): Decimal {
+  const value = p.quantity.times(p.mark);
+  const tier = tierFor(p.tiers, value);
+  return value
+    .times(tier.mmr)
+    .minus(tier.mmDeduction)
+    .plus(feeToClose(p.side, p.quantity, p.mark, p.leverage));
+}
+
+export function unrealisedPnl(
+  p: Pick<CrossPositionInput, 'side' | 'quantity' | 'entryPrice' | 'mark'>
+): Decimal {
+  return p.side === 'long'
+    ? p.mark.minus(p.entryPrice).times(p.quantity)
+    : p.entryPrice.minus(p.mark).times(p.quantity);
+}
+
+const rate = (part: Decimal, of: Decimal) => (of.lte(0) ? new Decimal(Infinity) : part.div(of));
+
+/** The account figures from the wallet balance, the positions at mark and the orders' IM. */
+export function accountFigures(
+  walletBalance: Decimal,
+  positions: CrossPositionInput[],
+  ordersIM: Decimal
+): AccountFigures {
+  let upnl = new Decimal(0);
+  let im = ordersIM;
+  let mm = new Decimal(0);
+  for (const p of positions) {
+    upnl = upnl.plus(unrealisedPnl(p));
+    im = im.plus(crossPositionIM(p));
+    mm = mm.plus(crossPositionMM(p));
+  }
+  const marginBalance = walletBalance.plus(upnl);
+  return {
+    walletBalance,
+    unrealisedPnl: upnl,
+    marginBalance,
+    totalIM: im,
+    totalMM: mm,
+    imRate: rate(im, marginBalance),
+    mmRate: rate(mm, marginBalance),
+    available: marginBalance.minus(im),
+  };
+}
+
+/**
+ * Bybit's liquidation order across contracts in cross (most liquid first — UTA liquidation
+ * process, 2026-08-07); a symbol not listed goes last.
+ */
+export const CROSS_LIQUIDATION_ORDER = [
+  'BTCUSDT',
+  'ETHUSDT',
+  'SOLUSDT',
+  'XRPUSDT',
+  'BNBUSDT',
+  'DOGEUSDT',
+  'ADAUSDT',
+  'AVAXUSDT',
+  'LINKUSDT',
+] as const;

@@ -3,6 +3,7 @@ import type {
   JournalNoteRequest,
   PaperActionResponse,
   PaperExitLeg,
+  PaperMarginMode,
   PaperStateDTO,
   PlaceOrderRequest,
   PlaceSpotExitsRequest,
@@ -147,6 +148,17 @@ export const paperApi = {
       `/api/paper/symbols/${encodeURIComponent(symbol)}/leverage`,
       accessToken,
       json('PATCH', { leverage })
+    ),
+
+  /**
+   * Switch the account's margin mode (BP-5 E, Bybit set-margin-mode): REGULAR_MARGIN = cross.
+   * Allowed with open positions when Bybit's checks pass; refused (422) with every reason listed.
+   */
+  setMarginMode: (marginMode: PaperMarginMode, accessToken: string) =>
+    request<PaperActionResponse<PaperMarginMode>>(
+      '/api/paper/account/margin-mode',
+      accessToken,
+      json('POST', { marginMode })
     ),
 
   /** Default leverage for symbols with no setting of their own (pre-BP-2 account leverage). */

@@ -20,6 +20,7 @@ import {
   positionCap,
   positionRisk,
   tierFor,
+  accountFigures,
 } from '../bybitSpec.js';
 import { MAX_LEVERAGE, STARTING_BALANCE } from '../engine/index.js';
 import { ALLOWED_SYMBOLS } from '../../constants.js';
@@ -171,5 +172,76 @@ describe('position cap by leverage (BP-5 C)', () => {
         }
       }
     }
+  });
+});
+
+describe('cross account figures (BP-5 E) — server and client estimate agree', () => {
+  const tiersB = fallbackRiskTiers('BTCUSDT');
+  const tiersE = fallbackRiskTiers('ETHUSDT');
+  const serverPos = (mark: number) => [
+    {
+      side: 'long' as const,
+      quantity: new Decimal('0.1'),
+      entryPrice: new Decimal(50_000),
+      leverage: 10,
+      mark: new Decimal(mark),
+      tiers: tiersB,
+    },
+    {
+      side: 'short' as const,
+      quantity: new Decimal('2'),
+      entryPrice: new Decimal(2_500),
+      leverage: 5,
+      mark: new Decimal(2_600),
+      tiers: tiersE,
+    },
+  ];
+  const clientPos = (mark: number) => [
+    {
+      side: 'long' as const,
+      qty: 0.1,
+      entryPrice: 50_000,
+      leverage: 10,
+      mark,
+      tiers: sdk.riskTiersFor('BTCUSDT'),
+    },
+    {
+      side: 'short' as const,
+      qty: 2,
+      entryPrice: 2_500,
+      leverage: 5,
+      mark: 2_600,
+      tiers: sdk.riskTiersFor('ETHUSDT'),
+    },
+  ];
+
+  it('the figures match', () => {
+    const server = accountFigures(new Decimal(2_000), serverPos(48_000), new Decimal(30));
+    const client = sdk.accountFiguresEstimate(2_000, clientPos(48_000), 30);
+    const pairs: [number, Decimal][] = [
+      [client.walletBalance, server.walletBalance],
+      [client.unrealisedPnl, server.unrealisedPnl],
+      [client.marginBalance, server.marginBalance],
+      [client.totalIM, server.totalIM],
+      [client.totalMM, server.totalMM],
+      [client.available, server.available],
+    ];
+    for (const [c, sv] of pairs) expect(c).toBeCloseTo(sv.toNumber(), 8);
+    expect(client.mmRate).toBeCloseTo(server.mmRate.toNumber(), 10);
+  });
+
+  it('at the estimated cross liquidation price the server MM rate is 100%', () => {
+    const client = sdk.accountFiguresEstimate(2_000, clientPos(48_000), 0);
+    const liq = sdk.crossLiqPriceEstimate(clientPos(48_000)[0], client);
+    expect(liq).toBeGreaterThan(0);
+    expect(liq).toBeLessThan(48_000);
+    const at = accountFigures(new Decimal(2_000), serverPos(liq), new Decimal(0));
+    expect(at.mmRate.toNumber()).toBeCloseTo(1, 6);
+  });
+
+  it('a margin balance of 0 or less gives an infinite rate (never divides by it)', () => {
+    const f = accountFigures(new Decimal(-5_000), serverPos(50_000), new Decimal(0));
+    expect(f.mmRate.isFinite()).toBe(false);
+    expect(sdk.accountFiguresEstimate(-5_000, clientPos(50_000), 0).mmRate).toBe(Infinity);
   });
 });

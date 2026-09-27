@@ -156,7 +156,20 @@ export interface SpotHolding {
 }
 
 /** What the engine needs to decide an action for one account. */
+/**
+ * Bybit UTA margin mode, account-wide (BP-5 E): 'REGULAR_MARGIN' = cross, 'ISOLATED_MARGIN'.
+ * Absent on an engine state = isolated (every account before BP-5, and the engine tests).
+ */
+export type MarginMode = 'ISOLATED_MARGIN' | 'REGULAR_MARGIN';
+export const MARGIN_MODES: readonly MarginMode[] = ['ISOLATED_MARGIN', 'REGULAR_MARGIN'];
+
 export interface AccountState {
+  /**
+   * USDT not tied up anywhere. In isolated mode it can't go below 0. In cross mode positions and
+   * orders still hold their margin here (the bookkeeping is the same), but an order is accepted
+   * against the account's available balance — unrealised profit counts — and a loss beyond a
+   * position's margin comes out of it, so it can go below 0 while the margin balance is positive.
+   */
   balance: Decimal;
   realizedPnl: Decimal;
   /** Default leverage for a symbol with no per-symbol setting */
@@ -178,6 +191,8 @@ export interface AccountState {
   spot: SpotHolding[];
   positions: Position[];
   pendingOrders: PendingOrder[];
+  /** Absent = ISOLATED_MARGIN (BP-5 E) */
+  marginMode?: MarginMode;
 }
 
 // ─── Records the engine writes ─────────────────────────────────────────────────
@@ -296,6 +311,8 @@ export interface Delta {
     leverage: number;
     symbolLeverage: Record<string, number>;
     symbolFundingAt: Record<string, number>;
+    /** BP-5 E */
+    marginMode: MarginMode;
   };
   positionsUpsert: Position[];
   positionsRemove: string[];
@@ -335,4 +352,9 @@ export interface EngineContext {
   newId: () => string;
   /** USDT Perpetual risk-limit tiers of a symbol (BP-3). Default: the bundled Bybit snapshot. */
   riskTiers?: (symbol: string) => RiskTier[];
+  /**
+   * The fresh USDT Perpetual mark price of a symbol (BP-5 E: cross margin values every position at
+   * mark). Absent / undefined for a symbol = its entry price (no unrealised PnL).
+   */
+  markPrice?: (symbol: string) => Decimal | undefined;
 }

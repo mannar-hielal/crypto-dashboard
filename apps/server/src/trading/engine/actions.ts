@@ -60,7 +60,7 @@ import {
   type OrderSize,
 } from './draft.js';
 import { fmtPrice, pendingSideLabel, pendingTypeLabel } from './format.js';
-import { riskOf, tiersFor } from './margin.js';
+import { crossFigures, riskOf, tiersFor } from './margin.js';
 import { cancelSpotPending, fillSpotPending } from './spot.js';
 import {
   REJECT_REDUCE_ONLY_TPSL,
@@ -87,6 +87,7 @@ import {
   type ExitLeg,
   type HistoricalOrder,
   type InstrumentRules,
+  type MarginMode,
   type OrderSide,
   type PendingOrder,
   type Position,
@@ -100,7 +101,7 @@ const FULL_CLOSE_EPSILON = new Decimal('1e-10');
 const TAKER = feeRate('linear', 'taker');
 const MAKER = feeRate('linear', 'maker');
 
-function closingSide(pos: Position): OrderSide {
+export function closingSide(pos: Position): OrderSide {
   return pos.side === 'long' ? 'sell' : 'buy';
 }
 
@@ -125,6 +126,19 @@ export function openCost(
 /** The position side an order opens. */
 const openSide = (side: OrderSide): PositionSide => (side === 'buy' ? 'long' : 'short');
 
+/** True when the account trades in cross margin (BP-5 E). */
+const isCross = (d: { marginMode: MarginMode }) => d.marginMode === 'REGULAR_MARGIN';
+
+/**
+ * What a new order or a margin change may use: the free balance in isolated margin, the account's
+ * available balance (margin balance − total IM, unrealised profit counting — O5) in cross.
+ */
+function availableFor(d: Draft, ctx: EngineContext): Decimal {
+  return isCross(d)
+    ? crossFigures({ balance: d.balance, positions: d.positions, orders: d.pending }, ctx).available
+    : d.balance;
+}
+
 /** What placing a pending order takes from the balance (priced at its trigger, taker fees). */
 export function pendingReserve(
   qty: Decimal,
@@ -137,8 +151,18 @@ export function pendingReserve(
 
 // ─── Settling a (partial) close ────────────────────────────────────────────────
 
-/** The money side of closing `closeQty` of `pos` at `price`, with the fee at `rate`. */
-function settle(pos: Position, closeQty: Decimal, price: Decimal, rate: Decimal) {
+/**
+ * The money side of closing `closeQty` of `pos` at `price`, with the fee at `rate`. In isolated
+ * margin a close can lose at most the position's margin (the return is never below 0); in cross
+ * (BP-5 E) a bigger loss comes out of the wallet.
+ */
+export function settle(
+  pos: Position,
+  closeQty: Decimal,
+  price: Decimal,
+  rate: Decimal,
+  cross = false
+) {
   const fraction = closeQty.div(pos.quantity);
   const pnl =
     pos.side === 'long'
@@ -153,7 +177,8 @@ function settle(pos: Position, closeQty: Decimal, price: Decimal, rate: Decimal)
   // Margin added by hand comes back with the part it backed (BP-5: pro rata on a partial close)
   const extra = (pos.extraMargin ?? ZERO).times(fraction);
   // Margin and the close-fee estimate come back, plus the price move, minus the real close fee
-  const returnAmount = Decimal.max(0, margin.plus(extra).plus(reserve).plus(pnl).minus(fee));
+  const gross = margin.plus(extra).plus(reserve).plus(pnl).minus(fee);
+  const returnAmount = cross ? gross : Decimal.max(0, gross);
   return {
     fraction,
     pnl,
@@ -308,7 +333,7 @@ function fillPositionInto(
 
       const closeQty = Decimal.min(remainingQty, pos.quantity);
       const isFullClose = closeQty.gte(pos.quantity.minus(FULL_CLOSE_EPSILON));
-      const s = settle(pos, closeQty, price, rate);
+      const s = settle(pos, closeQty, price, rate, isCross(d));
       const closeId = ctx.newId();
       closeFees = closeFees.plus(s.fee);
 
@@ -398,7 +423,7 @@ function fillPositionInto(
   const positionSide = openSide(side);
   const cost = openCost(remainingQty, price, leverage, rate, positionSide);
   // Fees are part of the balance check, so a 100%-of-balance order can't go negative.
-  if (cost.total.gt(d.balance)) {
+  if (cost.total.gt(availableFor(d, ctx))) {
     const base = {
       symbol,
       side,
@@ -623,7 +648,7 @@ function closePositionInto(
   if (!pos) return null;
 
   // Every close is a taker order (market, or a triggered TP / SL)
-  const s = settle(pos, pos.quantity, exitPrice, TAKER);
+  const s = settle(pos, pos.quantity, exitPrice, TAKER, isCross(d));
   const now = ctx.now;
   const closedId = ctx.newId();
 
@@ -1146,7 +1171,7 @@ export function placePending(
   const reserve = reduceOnly
     ? { im: ZERO, total: ZERO }
     : pendingReserve(qty, triggerPrice, leverage, side);
-  if (reserve.total.gt(d.balance)) return { delta: d.toDelta(), result: null };
+  if (reserve.total.gt(availableFor(d, ctx))) return { delta: d.toDelta(), result: null };
 
   const id = ctx.newId();
   const now = ctx.now;
@@ -1493,7 +1518,8 @@ export function editPending(
   const d = new Draft(state);
   const now = ctx.now;
   const oldReserved = order.reserved;
-  const scratchBalance = d.balance.plus(oldReserved);
+  // What the edited order may use: its old reserve comes back first
+  const scratchBalance = availableFor(d, ctx).plus(oldReserved);
   const reserve = reduceOnly
     ? { im: ZERO, total: ZERO }
     : pendingReserve(newQty, newTrigger, leverage, order.side);
@@ -1795,8 +1821,9 @@ export function setSymbolLeverage(
       closeFeeReserve: reserve,
       extraMargin: ZERO,
     };
-    if (im.lt(pos.entryUsdtAmount.plus(extra))) {
-      // Less margin behind the position: it must not be liquidated by the change itself
+    if (!isCross(d) && im.lt(pos.entryUsdtAmount.plus(extra))) {
+      // Less margin behind the position: it must not be liquidated by the change itself (in cross
+      // the maintenance margin doesn't depend on the leverage)
       if (!mark) return refused(state, current, REJECT_LEVERAGE_NO_MARK);
       if (markHitsLiquidation(pos.side, riskOf(updated, tiers).liqPrice, mark)) {
         return refused(state, current, REJECT_LEVERAGE_LIQUIDATION);
@@ -1817,7 +1844,15 @@ export function setSymbolLeverage(
     change = change.plus(reserve.total).minus(order.reserved);
     d.setPending({ ...order, leverage: next, usdtAmount: reserve.im, reserved: reserve.total });
   }
-  if (change.gt(d.balance)) return refused(state, current, REJECT_LEVERAGE_BALANCE);
+  const short = isCross(d)
+    ? // Cross: the account's available balance after the change (IM at mark) must stay ≥ 0
+      change.gt(0) &&
+      crossFigures(
+        { balance: d.balance.minus(change), positions: d.positions, orders: d.pending },
+        { ...ctx, markPrice: (sym) => (sym === symbol ? mark : undefined) ?? ctx.markPrice?.(sym) }
+      ).available.lt(0)
+    : change.gt(d.balance);
+  if (short) return refused(state, current, REJECT_LEVERAGE_BALANCE);
 
   const now = ctx.now;
   const moved = change.abs().toFixed(2);
@@ -1919,6 +1954,8 @@ export const REJECT_MARGIN_MAX_REDUCE = 'Added margin more than max can reduce m
 export const REJECT_MARGIN_LIQUIDATION =
   'Liquidation will be triggered immediately by this adjustment'; // 110011
 export const REJECT_MARGIN_NO_MARK = 'Waiting for live price…';
+/** Bybit: margin is added / reduced per position only in isolated margin (BP-5 E) */
+export const REJECT_MARGIN_CROSS = 'Margin can only be added or reduced in isolated margin mode';
 
 /**
  * Add (`amount` > 0) or reduce (`amount` < 0) the margin of an isolated position. Result: the
@@ -1933,6 +1970,7 @@ export function adjustMargin(
 ): ActionResult<Decimal | null> {
   const pos = state.positions.find((p) => p.id === positionId);
   if (!pos) return refused(state, null, REJECT_MARGIN_NO_POSITION);
+  if (state.marginMode === 'REGULAR_MARGIN') return refused(state, null, REJECT_MARGIN_CROSS);
   if (amount.eq(0)) return { delta: new Draft(state).toDelta(), result: pos.extraMargin ?? ZERO };
   const extra = pos.extraMargin ?? ZERO;
   const nextExtra = extra.plus(amount);
@@ -2042,7 +2080,11 @@ export function settleFunding(
     // What is actually charged: a paid fee the balance and the position's margin can't cover (the
     // position is already closed, the wallet is empty) is not collected
     let charged = fee;
-    if (fee.gt(0)) {
+    if (fee.gt(0) && isCross(d)) {
+      // Cross (BP-5 E): the wallet pays in full — a shortfall raises the account's MM rate instead
+      // of eating one position's margin
+      d.balance = d.balance.minus(fee);
+    } else if (fee.gt(0)) {
       const fromBalance = Decimal.min(fee, Decimal.max(ZERO, d.balance));
       d.balance = d.balance.minus(fromBalance);
       const shortfall = fee.minus(fromBalance);
@@ -2184,6 +2226,9 @@ export function applyDelta(state: AccountState, delta: Delta): AccountState {
     leverage: delta.account.leverage,
     symbolLeverage: delta.account.symbolLeverage,
     symbolFundingAt: delta.account.symbolFundingAt,
+    ...(delta.account.marginMode === 'REGULAR_MARGIN'
+      ? { marginMode: 'REGULAR_MARGIN' as const }
+      : {}),
     // A reset's own time is only known to the DB (Account.lastReset); the next load reads it
     ...(state.resetAt !== undefined && !delta.reset ? { resetAt: state.resetAt } : {}),
     spot: [...byCoin.values()],

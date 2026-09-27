@@ -152,6 +152,17 @@ export type Trigger =
       at?: number;
     }
   | {
+      /**
+       * A cross account whose MM rate reached 100% (BP-5 E). `price` is the mark of `symbol` that
+       * triggered it (a backfill: the minute's worst mark, with `fillAt` set to it).
+       */
+      kind: 'account-liquidation';
+      symbol: string;
+      price: Decimal;
+      fillAt?: Decimal;
+      at?: number;
+    }
+  | {
       kind: 'liquidation';
       positionId: string;
       price: Decimal;
@@ -171,6 +182,11 @@ const candleEnd = (candle: Candle) => candle.start + 60_000 - 1;
 export interface MarkInput {
   price: Decimal;
   tiers: RiskTier[];
+  /**
+   * False for a cross-margin account (BP-5 E): its positions have no isolated liquidation price —
+   * the account is liquidated as a whole (cross.ts). The mark still drives Mark-price TP / SL.
+   */
+  liquidation?: boolean;
 }
 
 /** True when `mark` has reached the position's liquidation price. */
@@ -199,7 +215,7 @@ export function evaluateTick(
   const triggers: Trigger[] = [];
   for (const pos of positions) {
     if (pos.category !== category || pos.symbol !== symbol) continue;
-    if (mark && isLiquidatable(pos, mark.price, mark.tiers)) {
+    if (mark && mark.liquidation !== false && isLiquidatable(pos, mark.price, mark.tiers)) {
       triggers.push({ kind: 'liquidation', positionId: pos.id, price: mark.price });
       continue;
     }
@@ -251,7 +267,7 @@ export function evaluateCandle(
   candle: Candle,
   positions: Position[],
   pendingOrders: PendingOrder[],
-  mark?: { candle: Candle; tiers: RiskTier[] },
+  mark?: { candle: Candle; tiers: RiskTier[]; liquidation?: boolean },
   index?: Candle
 ): Trigger[] {
   const candles: PriceSet<Candle> = { last: candle, mark: mark?.candle, index };
@@ -275,7 +291,7 @@ export function evaluateCandle(
       }
     }
     let liquidation: Trigger | null = null;
-    if (mark && mark.candle.start >= pos.openedAt) {
+    if (mark && mark.liquidation !== false && mark.candle.start >= pos.openedAt) {
       const { liqPrice } = riskOf(pos, mark.tiers);
       const extreme = pos.side === 'long' ? mark.candle.low : mark.candle.high;
       if (markHitsLiquidation(pos.side, liqPrice, extreme)) {

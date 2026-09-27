@@ -58,7 +58,12 @@ class FakeRepo {
     _userId: string,
     decide: (loaded: LoadedAccount) => T | null
   ): Promise<(T & { before: AccountState; version: number; changed: boolean }) | null> {
-    const loaded = { accountId: 'acc', version: this.version, state: this.state };
+    const loaded = {
+      accountId: 'acc',
+      version: this.version,
+      state: this.state,
+      marginModeNotice: false,
+    };
     const outcome = decide(loaded);
     if (!outcome) return null;
     if (isEmptyDelta(outcome.delta, this.state)) {
@@ -328,6 +333,29 @@ describe('TradingService', () => {
     await expect(trading.updatePositionExits('u1', positionId, null, null)).resolves.toMatchObject({
       result: true,
     });
+  });
+
+  it('runTrigger liquidates a cross account only on fresh marks past its maintenance margin (BP-5 E)', async () => {
+    repo.state = {
+      ...freshState(),
+      balance: D(600),
+      symbolLeverage: { BTCUSDT: 10 },
+      marginMode: 'REGULAR_MARGIN',
+    };
+    book = { mark: D(50_000) };
+    await trading.placeOrder('u1', { ...market$(0), size: { qty: new Decimal('0.1') } });
+    expect(repo.state.positions).toHaveLength(1);
+    const trigger = { kind: 'account-liquidation' as const, symbol: 'BTCUSDT', price: D(44_100) };
+    // The live mark is still 50,000: nothing to liquidate
+    await expect(trading.runTrigger('u1', trigger)).resolves.toBeNull();
+    // A stale mark is never used
+    price = D(44_100);
+    book = { mark: D(44_100), seenAt: now - MAX_QUOTE_AGE_MS - 1 };
+    await expect(trading.runTrigger('u1', trigger)).resolves.toBeNull();
+    book = { mark: D(44_100) };
+    const out = await trading.runTrigger('u1', trigger);
+    expect(out?.sound).toBe('liquidation');
+    expect(repo.state.positions).toHaveLength(0);
   });
 
   it('runTrigger executes a valid TP and plays profit', async () => {
@@ -759,6 +787,40 @@ describe('MatchingEngine', () => {
         by: 'IndexPrice',
       })
     );
+    await e.stop();
+  });
+
+  it('a cross account is liquidated as a whole on the account MM rate, never per position (BP-5 E)', async () => {
+    const state: AccountState = { ...freshState(), balance: D(95), marginMode: 'REGULAR_MARGIN' };
+    state.positions.push({
+      id: 'p1',
+      category: 'linear',
+      symbol: 'BTCUSDT',
+      side: 'long',
+      quantity: D(0.1),
+      entryPrice: D(50_000),
+      entryUsdtAmount: D(500),
+      leverage: 10,
+      entryFee: D(2.75),
+      closeFeeReserve: D(2.475),
+      openedAt: 0,
+    });
+    open = new Map([['u1', state]]);
+    const e = engine();
+    await e.start();
+    // Past the isolated liquidation price (≈ 45,149), but the account's margin balance (≈ 107.5)
+    // still covers its maintenance margin (≈ 17.1)
+    tickListener?.({ category: 'linear', symbol: 'BTCUSDT', lastPrice: 45_100, markPrice: 45_100 });
+    expect(runTrigger).not.toHaveBeenCalled();
+    tickListener?.({ category: 'linear', symbol: 'BTCUSDT', lastPrice: 44_100, markPrice: 44_100 });
+    await vi.waitFor(() =>
+      expect(runTrigger).toHaveBeenCalledWith('u1', {
+        kind: 'account-liquidation',
+        symbol: 'BTCUSDT',
+        price: D(44_100),
+      })
+    );
+    expect(runTrigger).toHaveBeenCalledTimes(1);
     await e.stop();
   });
 
@@ -1779,6 +1841,7 @@ describe('isEmptyDelta', () => {
       leverage: state.leverage,
       symbolLeverage: { ...state.symbolLeverage },
       symbolFundingAt: { ...state.symbolFundingAt },
+      marginMode: state.marginMode ?? 'ISOLATED_MARGIN',
     },
     positionsUpsert: [],
     positionsRemove: [],
@@ -1809,6 +1872,13 @@ describe('isEmptyDelta', () => {
     const state = freshState();
     const delta = noChange(state);
     delta.account.symbolLeverage = { BTCUSDT: 3 };
+    expect(isEmptyDelta(delta, state)).toBe(false);
+  });
+
+  it('is not empty when only the margin mode changed (it must be written, BP-5 E)', () => {
+    const state = freshState();
+    const delta = noChange(state);
+    delta.account.marginMode = 'REGULAR_MARGIN';
     expect(isEmptyDelta(delta, state)).toBe(false);
   });
 });
