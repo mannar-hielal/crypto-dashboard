@@ -38,6 +38,21 @@ export function getLastKnownPrice(symbol: string, category: MarketCategory): num
   return lastKnownPrices.get(`${category}:${symbol}`);
 }
 
+/**
+ * Last known USDT Perpetual mark price per symbol (BP-3) — perp unrealised PnL and liquidation use
+ * the mark, not the last price. Fed by linear pane tickers and the server's price push. Bounded:
+ * 9 symbols.
+ */
+export const lastKnownMarkPrices = new Map<string, number>();
+
+export function setLastKnownMarkPrice(symbol: string, price: number): void {
+  if (Number.isFinite(price) && price > 0) lastKnownMarkPrices.set(symbol, price);
+}
+
+export function getLastKnownMarkPrice(symbol: string): number | undefined {
+  return lastKnownMarkPrices.get(symbol);
+}
+
 // ─── State shape ─────────────────────────────────────────────────────────────
 
 export interface PaneMarketState {

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { CandlestickChart, ChevronDown } from 'lucide-react';
-import { CHART_TYPES, type ChartType } from '@/store/layoutStore';
+import { CHART_TYPES, useLayoutStore, type ChartType } from '@/store/layoutStore';
 import { color, fontSize, bg } from '@/lib/tokens';
 // Same trigger/menu styling as the interval dropdown it sits next to.
 import styles from './IntervalDropdown.module.css';
@@ -16,9 +16,15 @@ interface ChartTypeDropdownProps {
   onChange: (chartType: ChartType) => void;
 }
 
-/** Candle-type switch (Candles / Heikin Ashi) for the active pane. */
+/**
+ * Candle-type switch (Candles / Heikin Ashi) for the active pane, plus — on USDT Perpetual — the
+ * mark-price line toggle (BP-3).
+ */
 export function ChartTypeDropdown({ value, onChange }: ChartTypeDropdownProps) {
   const [open, setOpen] = useState(false);
+  const isPerp = useLayoutStore((s) => (s.panes[s.activePane] ?? s.panes[0]).category === 'linear');
+  const showMark = useLayoutStore((s) => s.showMarkPriceLine);
+  const toggleMark = useLayoutStore((s) => s.toggleMarkPriceLine);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
@@ -99,6 +105,26 @@ export function ChartTypeDropdown({ value, onChange }: ChartTypeDropdownProps) {
                   {CHART_TYPE_LABELS[type]}
                 </button>
               ))}
+              {isPerp && (
+                <>
+                  <div role="separator" className={styles.separator} />
+                  <button
+                    type="button"
+                    role="menuitemcheckbox"
+                    aria-checked={showMark}
+                    className={styles.item}
+                    style={{
+                      color: showMark ? color.purple : color.muted,
+                      fontSize: fontSize.xs11,
+                      justifyContent: 'flex-start',
+                      whiteSpace: 'nowrap',
+                    }}
+                    onClick={toggleMark}
+                  >
+                    {showMark ? '✓ ' : ''}Mark price line
+                  </button>
+                </>
+              )}
             </div>
           </>,
           document.body

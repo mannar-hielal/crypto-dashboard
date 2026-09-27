@@ -1,0 +1,36 @@
+.notice {
+  margin: 0.5rem 0.75rem 0;
+  border-radius: 0.375rem;
+  border: 1px solid;
+  padding: 0.5rem 0.625rem;
+  line-height: 1.4;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.dismiss {
+  flex-shrink: 0;
+  border-radius: 9999px;
+  padding: 0.125rem;
+  opacity: 0.7;
+  transition: opacity 120ms;
+}
+
+.dismiss:hover {
+  opacity: 1;
+}
+
+.link {
+  margin-top: 0.25rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.details {
+  margin-top: 0.375rem;
+}

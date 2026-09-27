@@ -137,6 +137,11 @@ const btcPosition: Position = {
   leverage: 1,
   entryFee: 0,
   closeFeeReserve: 0,
+  extraMargin: 0,
+  liqPrice: 0,
+  bustPrice: 0,
+  positionIM: 0,
+  positionMM: 0,
   openedAt: 1_715_000_000_000,
 };
 
@@ -151,6 +156,11 @@ const ethPosition: Position = {
   leverage: 1,
   entryFee: 0,
   closeFeeReserve: 0,
+  extraMargin: 0,
+  liqPrice: 0,
+  bustPrice: 0,
+  positionIM: 0,
+  positionMM: 0,
   openedAt: 1_715_000_001_000,
 };
 

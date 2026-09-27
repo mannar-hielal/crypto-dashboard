@@ -482,6 +482,8 @@
 ## Section 11 — Multi-Symbol PnL (`lastKnownPrices`)
 
 > Verifies that positions in non-active symbols retain correct mark price and PnL display.
+> **BP-3:** USDT Perpetual PnL now uses the **mark** price (`lastKnownMarkPrices` via `setLastKnownMarkPrice`, fed by
+> linear pane tickers and the server's `prices` push), falling back to the last price until a mark arrives (15.1).
 > Since BP-0, `lastKnownPrices` is keyed `category:symbol` (`spot:BTCUSDT`, `linear:BTCUSDT`) via
 > `setLastKnownPrice` / `getLastKnownPrice` in `paneStore.ts`. Positions have no category until BP-2,
 > so readers default to spot — seed `spot:` keys in these tests.
@@ -601,14 +603,14 @@
 
 ### 14.2 USDT Perpetual fees (VIP-0 taker 0.055% / maker 0.02%)
 
-| #      | Action                                                          | Expected                                                                                        | Status | Tier        | Notes                                           |
-| ------ | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ------ | ----------- | ----------------------------------------------- |
-| 14.2.1 | Market buy 0.1 BTC at 10× with the ask at 50,000                | IM 500, open fee 2.75, close-fee reserve 2.75 → balance −505.50; row "0.055% taker"             | ✅     | T1 · Vitest | `fees.test`. Live ✓ (fee = 0.055% of notional). |
-| 14.2.2 | Close it at bid 51,000                                          | Close fee 2.805; +599.945 back; realized +94.445                                                | ✅     | T1 · Vitest | `fees.test`.                                    |
-| 14.2.3 | Resting limit buy 0.1 @ 49,000 at 10×                           | Reserves 495.39 (IM + taker estimates); fills at **49,000** with a 0.98 maker fee; net −493.675 | ✅     | T1 · Vitest | `fees.test`. Live ✓ reserve.                    |
-| 14.2.4 | Cancel a resting order                                          | Refunds exactly what it reserved                                                                | ✅     | T1 · Vitest | Live ✓.                                         |
-| 14.2.5 | Order form estimate                                             | Cost = margin + est. open fee + est. close fee; "Fees: taker 0.055% · maker 0.02%" line         | ✅     | T2 · RTL    | `TradingPanel.test` 1.1.1, `orderMath.test`.    |
-| 14.2.6 | Pre-BP-2 position (entry fee 0.7 at 0.07%) closed at bid 51,000 | Uses its stored 0.7: realized +96.495 — old fees are never recomputed                           | ✅     | T1 · Vitest | `fees.test` "never recompute".                  |
+| #      | Action                                                          | Expected                                                                                                         | Status | Tier        | Notes                                           |
+| ------ | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------ | ----------- | ----------------------------------------------- |
+| 14.2.1 | Market buy 0.1 BTC at 10× with the ask at 50,000                | IM 500, open fee 2.75, fee to close 2.475 (BP-3: at the bankruptcy price) → balance −505.225; row "0.055% taker" | ✅     | T1 · Vitest | `fees.test`. Live ✓ (fee = 0.055% of notional). |
+| 14.2.2 | Close it at bid 51,000                                          | Close fee 2.805; +599.67 back; realized +94.445                                                                  | ✅     | T1 · Vitest | `fees.test`.                                    |
+| 14.2.3 | Resting limit buy 0.1 @ 49,000 at 10×                           | Reserves 495.1205 (IM + taker open fee + fee to close); fills at **49,000** with a 0.98 maker fee; net −493.4055 | ✅     | T1 · Vitest | `fees.test`. Live ✓ reserve.                    |
+| 14.2.4 | Cancel a resting order                                          | Refunds exactly what it reserved                                                                                 | ✅     | T1 · Vitest | Live ✓.                                         |
+| 14.2.5 | Order form estimate                                             | Cost = margin + est. open fee + est. close fee; "Fees: taker 0.055% · maker 0.02%" line                          | ✅     | T2 · RTL    | `TradingPanel.test` 1.1.1, `orderMath.test`.    |
+| 14.2.6 | Pre-BP-2 position (entry fee 0.7 at 0.07%) closed at bid 51,000 | Uses its stored 0.7: realized +96.495 — old fees are never recomputed                                            | ✅     | T1 · Vitest | `fees.test` "never recompute".                  |
 
 ### 14.3 Fill prices
 
@@ -633,10 +635,10 @@
 
 ### 14.5 Per-symbol leverage
 
-| #      | Action                                                 | Expected                                                                    | Status | Tier    | Notes                                     |
-| ------ | ------------------------------------------------------ | --------------------------------------------------------------------------- | ------ | ------- | ----------------------------------------- |
-| 14.5.1 | `1x ▾` chip → 5× → Confirm on ETHUSDT (no open trades) | ETHUSDT orders use 5×; other symbols keep their own / the default           | ✅     | T1 + T2 | `fees.test`, `TradingPanel.test`. Live ✓. |
-| 14.5.2 | With a BTCUSDT position or active order open           | Chip shows a lock; modal says leverage can't be changed; server answers 422 | ✅     | T1 + T2 | Live ✓.                                   |
+| #      | Action                                                 | Expected                                                            | Status | Tier    | Notes                                     |
+| ------ | ------------------------------------------------------ | ------------------------------------------------------------------- | ------ | ------- | ----------------------------------------- |
+| 14.5.1 | `1x ▾` chip → 5× → Confirm on ETHUSDT (no open trades) | ETHUSDT orders use 5×; other symbols keep their own / the default   | ✅     | T1 + T2 | `fees.test`, `TradingPanel.test`. Live ✓. |
+| 14.5.2 | With a BTCUSDT position or active order open           | ~~Chip shows a lock; 422~~ — superseded by BP-3 re-margining (15.5) | ✅     | T1 + T2 | See 15.5.                                 |
 
 ### 14.6 Spot
 
@@ -662,3 +664,74 @@
 | 14.7.3 | New user                                                                 | Starts on Spot                                                                                                                                                                         | ✅     | T1 · Vitest | `layoutStore.test`.              |
 | 14.7.4 | Old client (sends `usdtAmount`, no market)                               | Still trades USDT Perpetual (margin at the symbol's leverage)                                                                                                                          | ✅     | T1 · Vitest | `paper.test`. Live ✓.            |
 | 14.7.5 | Private WS                                                               | Pushes live prices (≤ 1/s, changed only) of the markets the account holds                                                                                                              | ✅     | T1 · Vitest | `paper.test`. Live ✓.            |
+
+---
+
+## Section 15 — Mark price, one-way positions, liquidation, re-margining (Bybit Parity BP-3)
+
+> Reference: `docs/BYBIT_PARITY_PLAN.md` BP-3 and Bybit's UTA isolated-mode formulas in
+> `apps/server/src/trading/bybitSpec.ts`. Worked position used below: **long 0.1 BTC @ 50,000 at 10×** — IM 500,
+> fee to close 2.475, BTCUSDT tier 1 MMR 0.33% → liquidation ≈ **45,148.99**, bankruptcy **45,000**.
+
+### 15.1 Mark price
+
+| #      | Action                                          | Expected                                                                        | Status | Tier        | Notes                                    |
+| ------ | ----------------------------------------------- | ------------------------------------------------------------------------------- | ------ | ----------- | ---------------------------------------- |
+| 15.1.1 | Positions tab with a perp position; mark ≠ last | PnL, PnL %, equity and the summary bar use the **mark**; "Mark Price" column    | ✅     | T2 · RTL    | `OrderAccountManagementPanel.test` BP-3. |
+| 15.1.2 | Mark price of a symbol no pane shows            | Comes from the server's `prices` push (`mark`)                                  | ✅     | T1 · Vitest | `paperStore.test` applyPrices.           |
+| 15.1.3 | TP / SL / stop on a perp position               | Still trigger on the **last** price (Bybit default); only liquidation uses mark | ✅     | T1 · Vitest | `liquidation.test` evaluateTick.         |
+
+### 15.2 One-way mode (one position per symbol)
+
+| #      | Action                                  | Expected                                                                                                                    | Status | Tier        | Notes                                              |
+| ------ | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------ | ----------- | -------------------------------------------------- |
+| 15.2.1 | Buy 0.01 @ 50,000 then 0.005 @ 60,000   | One long 0.015 @ 53,333.33; margins and fees summed; journal "Added to LONG …"                                              | ✅     | T1 · Vitest | `actions.test` merge.                              |
+| 15.2.2 | Add with a TP attached                  | The new TP replaces the position's (Bybit Full-mode TP/SL); without one the position keeps its own                          | ✅     | T1 · Vitest | `fillInto`.                                        |
+| 15.2.3 | Migrate a DB with 3 same-side BTC longs | Merged into the oldest: qty summed, qty-weighted entry, newest TP / SL, one journal line, SymbolSetting = position leverage | ✅     | Manual      | Dry run on dev Postgres (rolled back), 2026-09-27. |
+
+### 15.3 Liquidation and bankruptcy prices
+
+| #      | Action                                                     | Expected                                                                                                             | Status | Tier        | Notes                                  |
+| ------ | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------ | ----------- | -------------------------------------- |
+| 15.3.1 | Bybit's worked example (1 BTC @ 40,000, 50×, +3,000 extra) | Fee to close 21.56, IM 821.56, MM 221.56, liquidation **36,380.25**                                                  | ✅     | T1 · Vitest | `bybitSpec.test` (reproduced exactly). |
+| 15.3.2 | Worked long / short at 10×                                 | Long liq ≈ 45,148.99, bust 45,000; short liq ≈ 54,819.10, bust 55,000                                                | ✅     | T1 · Vitest | `liquidation.test`.                    |
+| 15.3.3 | A 1× long                                                  | Can't be liquidated: liquidation price shows "—"                                                                     | ✅     | T1 + T2     |                                        |
+| 15.3.4 | Tier by position value (BNB 9k vs 60k)                     | MMR 0.67% vs 0.77% — Bybit UTA moves positions between tiers automatically                                           | ✅     | T1 · Vitest | `bybitSpec.test`.                      |
+| 15.3.5 | Client estimate vs server                                  | SDK `estimatePositionRisk` matches the server maths                                                                  | ✅     | T1 · Vitest | `bybitSpec.test` parity.               |
+| 15.3.6 | Order form, 0.1 BTC at 10× (ask 50,010)                    | "Est. liq. price $45,158.02" in amber with the ⓘ explainer                                                           | ✅     | T2 · RTL    | `TradingPanel.test` BP-3.              |
+| 15.3.7 | Positions tab                                              | Liq. Price (amber) and MMR meter columns; IM / MM / Last Price opt-in; saved column layouts get the new columns once | ✅     | T2 · RTL    | `columnPrefs` migration tests.         |
+
+### 15.4 Liquidation in the engine
+
+| #      | Action                                                    | Expected                                                                                                                                             | Status | Tier        | Notes                                |
+| ------ | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ----------- | ------------------------------------ |
+| 15.4.1 | Mark reaches the liquidation price                        | Whole position closes at the bankruptcy price; balance unchanged (margin lost); realized −(IM + fee to close) − open fee                             | ✅     | T1 · Vitest | `liquidation.test`.                  |
+| 15.4.2 | Records                                                   | Trade `execType BustTrade`; close order `createType CreateByLiq` ("Liquidation" in Order History); TP / SL cancelled; journal + Balance History line | ✅     | T1 + T2     |                                      |
+| 15.4.3 | Active orders on the symbol                               | Cancelled and refunded first; other symbols untouched                                                                                                | ✅     | T1 · Vitest | `liquidation.test`.                  |
+| 15.4.4 | Position with no TP / SL                                  | Still watched by the engine (indexed) and liquidated on the mark tick                                                                                | ✅     | T1 · Vitest | `services.test` MatchingEngine.      |
+| 15.4.5 | Stale mark (> 10 s) or mark moved back                    | Never liquidates                                                                                                                                     | ✅     | T1 · Vitest | `services.test` runTrigger.          |
+| 15.4.6 | Server gap                                                | Backfill replays mark-price klines; within one minute a stop-loss wins over liquidation                                                              | ✅     | T1 · Vitest | `liquidation.test`, `services.test`. |
+| 15.4.7 | Liquidation sound                                         | Distinct from the loss sound; listed in Sound Settings                                                                                               | ✅     | T2 · RTL    | `usePaperFeed.test`.                 |
+| 15.4.8 | Notices                                                   | One-time "Positions can now be liquidated" banner (+ "How liquidation works"); a liquidation notice until dismissed                                  | ✅     | T2 · RTL    | `TradingPanel.test` BP-3.            |
+| 15.4.9 | Deploy with a position already past its liquidation price | Liquidated on the first mark tick (no grace period, as on Bybit)                                                                                     | ⬜     | Manual      | Watch on the first deploy.           |
+
+### 15.5 Re-margining (leverage change with a position open)
+
+| #      | Action                                                           | Expected                                                                                           | Status | Tier        | Notes                         |
+| ------ | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------ | ----------- | ----------------------------- |
+| 15.5.1 | 10× → 5× with the worked position                                | IM 500 → 1,000, fee to close → 2.2; 499.725 more margin from the wallet; journal + Balance History | ✅     | T1 · Vitest | `fees.test` re-margining.     |
+| 15.5.2 | Lowering without the balance for it                              | 422 "Insufficient available balance to change leverage …"                                          | ✅     | T1 · Vitest |                               |
+| 15.5.3 | Raising with no fresh mark / mark past the new liquidation price | 422 "Waiting for live price…" / "Leverage can't be raised: …"                                      | ✅     | T1 · Vitest | `fees.test`, `services.test`. |
+| 15.5.4 | Active orders on the symbol                                      | Re-reserved at the new leverage (stop 0.1 @ 60,000: 606.27 → 2,005.5 at 3×)                        | ✅     | T1 · Vitest |                               |
+| 15.5.5 | Leverage modal                                                   | Unlocked; previews "Position margin $X → $Y" and "Liq. price A → B"; shows a refusal inline        | ✅     | T2 · RTL    | `TradingPanel.test`.          |
+
+### 15.6 Chart lines
+
+| #      | Action                                      | Expected                                                                                               | Status | Tier        | Notes                                    |
+| ------ | ------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------ | ----------- | ---------------------------------------- |
+| 15.6.1 | Perp pane with a position and a limit order | Entry (side, qty, live PnL), TP / SL (dashed), Liq. (amber dashed), order + its TP / SL (dotted), Mark | ✅     | T1 · Vitest | `tradeLines.test`, `useTradeLines.test`. |
+| 15.6.2 | Chart type menu → "Mark price line"         | Toggles the mark line (perps only, persisted, default on)                                              | ⬜     | Manual      |                                          |
+| 15.6.3 | Drag a TP line, then Confirm                | Price rounded to the tick; amend sent only after Confirm; Cancel restores the line                     | ✅     | T2 · RTL    | `useTradeLines.test`.                    |
+| 15.6.4 | With a drawing tool active                  | Lines don't take the pointer                                                                           | ✅     | T2 · RTL    |                                          |
+| 15.6.5 | Spot TP / SL leg                            | Drawn but not draggable (placed or cancelled, never edited)                                            | ✅     | T1 · Vitest |                                          |
+| 15.6.6 | Real chart: drag feel, labels, cursor       | ns-resize cursor on hover; chart doesn't pan while dragging a line                                     | ⬜     | Manual      | Screenshot for the PR.                   |

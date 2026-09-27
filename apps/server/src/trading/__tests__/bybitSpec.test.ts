@@ -7,15 +7,23 @@ import { describe, it, expect } from 'vitest';
 import { Decimal } from '@prisma/client/runtime/client';
 import * as sdk from '../../../../../generated/CDSDK/spec/bybit.js';
 import {
+  FALLBACK_RISK_TIERS,
   FEE_RATES,
   LEGACY_FEE_RATE,
   checkOrderSize,
+  fallbackRiskTiers,
   fallbackRules,
+  feeToClose,
   floorToStep,
   isOnTick,
+  markHitsLiquidation,
+  positionRisk,
+  tierFor,
 } from '../bybitSpec.js';
 import { MAX_LEVERAGE, STARTING_BALANCE } from '../engine/index.js';
 import { ALLOWED_SYMBOLS } from '../../constants.js';
+
+const D = (v: number | string) => new Decimal(v);
 
 describe('bybitSpec', () => {
   it('fee rates and account constants match the client copy in the SDK', () => {
@@ -50,5 +58,85 @@ describe('bybitSpec', () => {
     expect(checkOrderSize('spot', rules, new Decimal('0.00001'), new Decimal(50_000))).toBe(
       'Order value exceeded lower limit (5 USDT)'
     );
+  });
+
+  it('the risk-limit tier snapshot matches the client copy and covers every allowed symbol', () => {
+    expect(sdk.FALLBACK_RISK_TIERS).toEqual(FALLBACK_RISK_TIERS);
+    for (const symbol of ALLOWED_SYMBOLS) {
+      expect(fallbackRiskTiers(symbol).length, symbol).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('isolated margin — Bybit’s worked example (BP-3)', () => {
+  // https://www.bybit.com/en/help-center/article/Liquidation-Price-Calculation-under-Isolated-Mode-Unified-Trading-Account
+  // Long 1 BTC @ 40,000, 50×, MMR 0.5%, deduction 0, 3,000 USDT extra margin added by hand.
+  const tiers = [{ riskLimitValue: D(2_000_000), mmr: D('0.005'), mmDeduction: D(0) }];
+  const input = {
+    side: 'long' as const,
+    quantity: D(1),
+    entryPrice: D(40_000),
+    im: D(800),
+    closeFeeReserve: feeToClose('long', D(1), D(40_000), 50),
+    extraMargin: D(3_000),
+  };
+
+  it('fee to close = 1 × 40,000 × (1 − 1/50) × 0.055% = 21.56', () => {
+    expect(input.closeFeeReserve.toString()).toBe('21.56');
+  });
+
+  it('IM 821.56, MM 221.56, liquidation price 36,380.25', () => {
+    const risk = positionRisk(input, tiers);
+    expect(risk.positionIM.toString()).toBe('821.56');
+    expect(risk.positionMM.toString()).toBe('221.56');
+    expect(risk.liqPrice.toFixed(2)).toBe('36380.25');
+  });
+
+  it('without the extra margin: (40,000 − 800) / 0.995 ≈ 39,396.98; bankruptcy 39,200', () => {
+    const risk = positionRisk({ ...input, extraMargin: D(0) }, tiers);
+    expect(risk.liqPrice.toFixed(2)).toBe('39396.98');
+    expect(risk.bustPrice.toString()).toBe('39200');
+  });
+
+  it('the client estimate matches the server maths', () => {
+    const cases = [
+      { side: 'long' as const, qty: 0.1, entry: 50_000, lev: 10, symbol: 'BTCUSDT' },
+      { side: 'short' as const, qty: 0.1, entry: 50_000, lev: 10, symbol: 'BTCUSDT' },
+      { side: 'long' as const, qty: 400, entry: 1.2, lev: 7, symbol: 'ADAUSDT' },
+      { side: 'short' as const, qty: 30, entry: 610, lev: 3, symbol: 'BNBUSDT' },
+    ];
+    for (const c of cases) {
+      const server = positionRisk(
+        {
+          side: c.side,
+          quantity: D(c.qty),
+          entryPrice: D(c.entry),
+          im: D(c.qty).times(c.entry).div(c.lev),
+          closeFeeReserve: feeToClose(c.side, D(c.qty), D(c.entry), c.lev),
+          extraMargin: D(0),
+        },
+        fallbackRiskTiers(c.symbol)
+      );
+      const client = sdk.estimatePositionRisk(
+        { side: c.side, qty: c.qty, entryPrice: c.entry, leverage: c.lev },
+        sdk.riskTiersFor(c.symbol)
+      );
+      expect(client.liqPrice).toBeCloseTo(server.liqPrice.toNumber(), 6);
+      expect(client.bustPrice).toBeCloseTo(server.bustPrice.toNumber(), 6);
+      expect(client.positionMM).toBeCloseTo(server.positionMM.toNumber(), 6);
+    }
+  });
+
+  it('picks the tier by position value (Bybit UTA moves positions between tiers)', () => {
+    const bnb = fallbackRiskTiers('BNBUSDT');
+    expect(tierFor(bnb, D(9_000)).mmr.toString()).toBe('0.0067');
+    expect(tierFor(bnb, D(60_000)).mmr.toString()).toBe('0.0077');
+    expect(tierFor(bnb, D(99_000_000)).mmr.toString()).toBe('0.0357'); // past the last tier
+  });
+
+  it('a liquidation price of 0 never liquidates', () => {
+    expect(markHitsLiquidation('long', D(0), D(1))).toBe(false);
+    expect(markHitsLiquidation('long', D(100), D(100))).toBe(true);
+    expect(markHitsLiquidation('short', D(100), D(99))).toBe(false);
   });
 });

@@ -2,6 +2,7 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { OrderAccountManagementPanel } from '../OrderAccountManagementPanel';
+import { migrateColPrefs } from '@/lib/columnPrefs';
 import {
   usePaperStore,
   type BalanceEvent,
@@ -79,7 +80,13 @@ function seedState({
 beforeEach(() => {
   localStorage.clear();
   usePaperStore.getState().clear();
-  paneStores[0].setState({ latestPrice: 77_350, isConnected: true, bid: 77_340, ask: 77_360 });
+  paneStores[0].setState({
+    latestPrice: 77_350,
+    isConnected: true,
+    bid: 77_340,
+    ask: 77_360,
+    markPrice: null,
+  });
   // USDT Perpetual (positions, leveraged orders); Spot's Assets tab has its own tests
   useLayoutStore.setState((s) => ({
     activePane: 0,
@@ -240,6 +247,11 @@ describe('OrderAccountManagementPanel Orders filled sub-tab', () => {
           leverage: 1,
           entryFee: 0,
           closeFeeReserve: 0,
+          extraMargin: 0,
+          liqPrice: 0,
+          bustPrice: 0,
+          positionIM: 0,
+          positionMM: 0,
           openedAt: 1_715_000_000_100,
           takeProfit: 78_000,
           stopLoss: 76_000,
@@ -365,6 +377,11 @@ describe('Section 4 — Positions tab', () => {
           leverage: 1,
           entryFee: 0,
           closeFeeReserve: 0,
+          extraMargin: 0,
+          liqPrice: 0,
+          bustPrice: 0,
+          positionIM: 0,
+          positionMM: 0,
           openedAt: Date.now(),
         } satisfies Position,
       ],
@@ -388,6 +405,11 @@ describe('Section 4 — Positions tab', () => {
           leverage: 1,
           entryFee: 0,
           closeFeeReserve: 0,
+          extraMargin: 0,
+          liqPrice: 0,
+          bustPrice: 0,
+          positionIM: 0,
+          positionMM: 0,
           openedAt: Date.now(),
         } satisfies Position,
       ],
@@ -410,6 +432,11 @@ describe('Section 4 — Positions tab', () => {
           leverage: 1,
           entryFee: 0,
           closeFeeReserve: 0,
+          extraMargin: 0,
+          liqPrice: 0,
+          bustPrice: 0,
+          positionIM: 0,
+          positionMM: 0,
           openedAt: Date.now(),
         },
         {
@@ -423,6 +450,11 @@ describe('Section 4 — Positions tab', () => {
           leverage: 1,
           entryFee: 0,
           closeFeeReserve: 0,
+          extraMargin: 0,
+          liqPrice: 0,
+          bustPrice: 0,
+          positionIM: 0,
+          positionMM: 0,
           openedAt: Date.now(),
         },
       ] satisfies Position[],
@@ -446,6 +478,11 @@ describe('Section 4 — Positions tab', () => {
           leverage: 1,
           entryFee: 0,
           closeFeeReserve: 0,
+          extraMargin: 0,
+          liqPrice: 0,
+          bustPrice: 0,
+          positionIM: 0,
+          positionMM: 0,
           openedAt: Date.now(),
           takeProfit: 55_000,
         } satisfies Position,
@@ -804,5 +841,69 @@ describe('BP-2 — markets in the account panel', () => {
     fireEvent.click(screen.getByRole('button', { name: /^order history/i }));
     expect(screen.getByText('2.7500 USDT')).toBeTruthy();
     expect(screen.getByText('0.055% taker')).toBeTruthy();
+  });
+});
+
+describe('BP-3 — mark price, liquidation price and MMR in the Positions tab', () => {
+  const long10x: Position = {
+    id: 'p-liq',
+    symbol: 'BTCUSDT',
+    side: 'long',
+    quantity: 0.1,
+    entryPrice: 50_000,
+    entryUsdtAmount: 500,
+    category: 'linear',
+    leverage: 10,
+    entryFee: 2.75,
+    closeFeeReserve: 2.475,
+    extraMargin: 0,
+    liqPrice: 45_148.99,
+    bustPrice: 45_000,
+    positionIM: 502.475,
+    positionMM: 18.975,
+    openedAt: FIXTURE_NOW,
+  };
+
+  it('values the position at the mark price, not the last price, and shows the liquidation price', () => {
+    usePaperStore.setState({ positions: [long10x] });
+    // Last 77,350 (pane 0 default); mark 49,000 → PnL (49,000 − 50,000) × 0.1 = −100
+    paneStores[0].setState({ markPrice: 49_000 });
+    renderPanel();
+    expect(screen.getByText('Mark Price')).toBeTruthy();
+    expect(screen.getByText('Liq. Price')).toBeTruthy();
+    expect(screen.getByTestId('position-liq-price').textContent).toBe('$45,148.99');
+    expect(screen.getAllByText('-100.00').length).toBeGreaterThan(0);
+  });
+
+  it('shows the maintenance-margin rate: 18.975 / (502.475 − 100) ≈ 4.7%', () => {
+    usePaperStore.setState({ positions: [long10x] });
+    paneStores[0].setState({ markPrice: 49_000 });
+    renderPanel();
+    expect(screen.getByTestId('position-mmr').textContent).toBe('4.7%');
+  });
+
+  it('a position that can not be liquidated shows — for its liquidation price', () => {
+    usePaperStore.setState({ positions: [{ ...long10x, liqPrice: 0 }] });
+    renderPanel();
+    expect(screen.getByTestId('position-liq-price').textContent).toBe('—');
+  });
+});
+
+describe('migrateColPrefs()', () => {
+  it('adds the BP-3 columns to a saved Positions layout once, after Mark Price', () => {
+    const saved = { positions: ['symbol', 'mark', 'pnl', 'close'] };
+    expect(migrateColPrefs(saved, 1).positions).toEqual([
+      'symbol',
+      'mark',
+      'liq',
+      'mmr',
+      'pnl',
+      'close',
+    ]);
+  });
+
+  it('keeps the user’s choice once the layout is at the current version', () => {
+    const saved = { positions: ['symbol', 'mark', 'pnl', 'close'] };
+    expect(migrateColPrefs(saved, 2)).toEqual(saved);
   });
 });

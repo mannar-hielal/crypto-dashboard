@@ -167,11 +167,13 @@ describe('Section 1 — Market Orders (T2 · RTL)', () => {
       const qtyInput = getQtyInput();
       fireEvent.change(qtyInput, { target: { value: '100' } });
 
-      // 100 USDT of value at 1×: margin $100, open and close fee 100 × 0.00055 = $0.0550 each
+      // 100 USDT of value at 1×: margin $100, open fee 100 × 0.00055 = $0.0550. Bybit prices the
+      // fee to close at the bankruptcy price, which is 0 for a 1× long → $0.0000 (BP-3)
       expect(screen.getByText('Margin')).toBeTruthy();
       expect(screen.getByText('Est. open fee')).toBeTruthy();
       expect(screen.getByText('Est. close fee')).toBeTruthy();
-      expect(screen.getAllByText('$0.0550')).toHaveLength(2);
+      expect(screen.getAllByText('$0.0550')).toHaveLength(1);
+      expect(screen.getByText('$0.0000')).toBeTruthy();
       expect(screen.getByText('Fees: taker 0.055% · maker 0.02%')).toBeTruthy();
     });
 
@@ -274,8 +276,9 @@ describe('Section 1 — Market Orders (T2 · RTL)', () => {
       renderPanel();
       fireEvent.click(unitBtn('BTC'));
       fireEvent.click(screen.getByRole('button', { name: 'Max' }));
-      // Sized at the ask, which a market buy fills at: 10,000 / (50,010 × (1 + 2 × 0.00055)) ≈ 0.19974
-      expect(Number(getQtyInput().value)).toBeCloseTo(0.19974, 5);
+      // Sized at the ask, which a market buy fills at. At 1× a long's fee to close is 0 (bankruptcy
+      // price 0): 10,000 / (50,010 × 1.00055) ≈ 0.19985
+      expect(Number(getQtyInput().value)).toBeCloseTo(0.19985, 5);
     });
   });
 
@@ -886,7 +889,7 @@ describe('BP-2 — market tabs and leverage', () => {
     expect(screen.getByRole('button', { name: /Leverage 5x, isolated margin/ })).toBeTruthy();
   });
 
-  it('the chip says locked while the symbol has an open position', () => {
+  it('re-margins an open position: the modal previews the new margin and liquidation price (BP-3)', async () => {
     usePaperStore.setState({
       positions: [
         {
@@ -899,14 +902,46 @@ describe('BP-2 — market tabs and leverage', () => {
           entryUsdtAmount: 5_000,
           leverage: 1,
           entryFee: 2.75,
-          closeFeeReserve: 2.75,
+          closeFeeReserve: 0,
+          extraMargin: 0,
+          liqPrice: 0,
+          bustPrice: 0,
+          positionIM: 5_000,
+          positionMM: 16.5,
           openedAt: 1,
         },
       ],
     });
     renderPanel();
-    fireEvent.click(screen.getByRole('button', { name: /\(locked\)/ }));
-    expect(screen.getByRole('dialog').textContent).toContain("Leverage can't be changed");
+    fireEvent.click(screen.getByRole('button', { name: /Leverage 1x, isolated margin/ }));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.textContent).toContain('re-margined at the new leverage');
+    fireEvent.click(within(dialog).getByRole('button', { name: '5×' }));
+    // 5×: IM 1,000 + fee to close 5,000 × 0.8 × 0.055% = 2.20; liq (5,000 − 1,000) / 0.09967
+    const preview = within(dialog).getByTestId('remargin-preview');
+    expect(preview.textContent).toContain('Position margin: $5000.00 → $1002.20');
+    expect(preview.textContent).toContain('Liq. price: — → $40,132.44');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
+    await waitFor(() =>
+      expect(fakePaperApi.setSymbolLeverage).toHaveBeenCalledWith('BTCUSDT', 5, 'test-token')
+    );
+  });
+
+  it('shows the server’s refusal of a leverage change inline', async () => {
+    fakePaperApi.setSymbolLeverage.mockRejectedValueOnce(
+      new Error(
+        'Insufficient available balance to change leverage (more margin is needed at the new leverage).'
+      )
+    );
+    usePaperStore.setState({ symbolLeverage: { BTCUSDT: 10 } });
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: /Leverage 10x, isolated margin/ }));
+    const dialog = screen.getByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: '1×' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
+    expect((await within(dialog).findByRole('alert')).textContent).toContain(
+      'Insufficient available balance'
+    );
   });
 });
 
@@ -967,5 +1002,88 @@ describe('BP-2 — Spot form', () => {
       side: 'buy',
       type: 'market',
     });
+  });
+});
+
+describe('BP-3 — liquidation in the USDT Perpetual form', () => {
+  const unitBtn = (name: string) =>
+    within(screen.getByRole('group', { name: 'Amount unit' })).getByRole('button', { name });
+
+  it('shows the estimated liquidation price of the position the order would open', () => {
+    usePaperStore.setState({ symbolLeverage: { BTCUSDT: 10 } });
+    renderPanel();
+    fireEvent.click(unitBtn('BTC'));
+    fireEvent.change(getQtyInput(), { target: { value: '0.1' } });
+    // Long 0.1 at the ask 50,010, 10×: (5,001 − 500.1) / (0.1 × (1 − 0.33%)) ≈ 45,158.02
+    expect(screen.getByText('Est. liq. price')).toBeTruthy();
+    expect(screen.getByTestId('order-est-liq-price').textContent).toBe('$45,158.02');
+  });
+
+  it('a 1× long can not be liquidated: the estimate shows —', () => {
+    renderPanel();
+    fireEvent.change(getQtyInput(), { target: { value: '100' } });
+    expect(screen.getByTestId('order-est-liq-price').textContent).toBe('—');
+  });
+
+  it('reads "Placing…" and is disabled while the order request is in flight', async () => {
+    let release: () => void = () => undefined;
+    const original = fakePaperApi.placeOrder.getMockImplementation();
+    fakePaperApi.placeOrder.mockImplementationOnce(async (body) => {
+      await new Promise<void>((r) => (release = r));
+      return original!(body);
+    });
+    renderPanel();
+    fireEvent.change(getQtyInput(), { target: { value: '100' } });
+    clickExecuteBtn();
+    await waitFor(() => expect(screen.getByText('Placing…')).toBeTruthy());
+    expect(getExecuteBtn().disabled).toBe(true);
+    release();
+    await waitFor(() => expect(screen.queryByText('Placing…')).toBeNull());
+  });
+
+  it('shows the one-time "positions can now be liquidated" notice until dismissed', () => {
+    const { unmount } = renderPanel();
+    expect(screen.getByText('Positions can now be liquidated')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'How liquidation works' }));
+    expect(screen.getByText(/closed at the bankruptcy price/)).toBeTruthy();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Dismiss liquidation notice' })[0]);
+    expect(screen.queryByText('Positions can now be liquidated')).toBeNull();
+    unmount();
+    renderPanel();
+    expect(screen.queryByText('Positions can now be liquidated')).toBeNull();
+  });
+
+  it('tells the user when a position was liquidated, until they dismiss it', () => {
+    usePaperStore.setState({
+      history: [
+        {
+          id: 't1',
+          category: 'linear',
+          symbol: 'BTCUSDT',
+          side: 'long',
+          quantity: 0.1,
+          entryPrice: 50_000,
+          exitPrice: 45_000,
+          pnl: -500,
+          openedAt: 1,
+          closedAt: 2,
+          liquidated: true,
+        },
+      ],
+    });
+    renderPanel();
+    const alert = screen.getByRole('alert');
+    expect(alert.textContent).toContain('BTCUSDT Long was liquidated');
+    expect(alert.textContent).toContain('Position margin lost: $500.00');
+    fireEvent.click(within(alert).getByRole('button', { name: 'Dismiss liquidation notice' }));
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('shows no liquidation notices on Spot', () => {
+    useLayoutStore.setState((s) => ({
+      panes: s.panes.map((p, i) => (i === 0 ? { ...p, category: 'spot' } : p)),
+    }));
+    renderPanel();
+    expect(screen.queryByText('Positions can now be liquidated')).toBeNull();
   });
 });

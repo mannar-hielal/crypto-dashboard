@@ -10,7 +10,7 @@ import { useState } from 'react';
 import { X, TrendingUp, TrendingDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { usePaperStore } from '@/store/paperStore';
-import { paneStores, getLastKnownPrice } from '@/store/paneStore';
+import { paneStores, getLastKnownMarkPrice, getLastKnownPrice } from '@/store/paneStore';
 import { useLayoutStore } from '@/store/layoutStore';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/shallow';
@@ -34,7 +34,11 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
   const position = usePaperStore((s) => s.positions.find((p) => p.id === positionId));
   const updatePositionExits = usePaperStore((s) => s.updatePositionExits);
 
-  // Price feed for mark price (trade value calculation)
+  // Mark price (what Bybit values a position at, BP-3), falling back to the last price
+  const mp0 = useStore(paneStores[0], (s) => s.markPrice);
+  const mp1 = useStore(paneStores[1], (s) => s.markPrice);
+  const mp2 = useStore(paneStores[2], (s) => s.markPrice);
+  const mp3 = useStore(paneStores[3], (s) => s.markPrice);
   const lp0 = useStore(paneStores[0], (s) => s.latestPrice);
   const lp1 = useStore(paneStores[1], (s) => s.latestPrice);
   const lp2 = useStore(paneStores[2], (s) => s.latestPrice);
@@ -44,11 +48,17 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
     useShallow((s) => s.panes.map((p) => `${p.category}:${p.symbol}`))
   );
   const priceByMarket: Record<string, number> = {};
+  const markByMarket: Record<string, number> = {};
   [lp0, lp1, lp2, lp3].forEach((lp, i) => {
     if (lp !== null) priceByMarket[paneMarkets[i]] = lp;
   });
+  [mp0, mp1, mp2, mp3].forEach((mp, i) => {
+    if (mp !== null) markByMarket[paneMarkets[i]] = mp;
+  });
   const markPrice = position
-    ? (priceByMarket[`linear:${position.symbol}`] ??
+    ? (markByMarket[`linear:${position.symbol}`] ??
+      getLastKnownMarkPrice(position.symbol) ??
+      priceByMarket[`linear:${position.symbol}`] ??
       getLastKnownPrice(position.symbol, 'linear') ??
       position.entryPrice)
     : 0;

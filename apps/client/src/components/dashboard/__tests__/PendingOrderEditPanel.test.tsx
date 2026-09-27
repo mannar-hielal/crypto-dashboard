@@ -54,7 +54,8 @@ describe('PendingOrderEditPanel', () => {
   });
 
   it('a perpetual buy is limited by USDT: IM + both taker fee estimates (orderPreview)', () => {
-    // 1 BTC at 49,000, 10×: 4,900 + 2 × 26.95 = 4,953.90; available 4,000 + the 495.39 it holds
+    // 1 BTC at 49,000, 10×: IM 4,900 + open fee 26.95 + fee to close at the bankruptcy price
+    // 49,000 × 0.9 × 0.055% = 24.255 → 4,951.20; available 4,000 + the 495.39 it holds
     usePaperStore.setState({
       balance: 4_000,
       pendingOrders: [perpBuy],
@@ -63,7 +64,7 @@ describe('PendingOrderEditPanel', () => {
     render(<PendingOrderEditPanel orderId="p1" onClose={() => undefined} />);
     fireEvent.change(screen.getByDisplayValue('0.100000'), { target: { value: '1' } });
     expect(screen.getByText(/Not enough funds/).textContent).toBe(
-      'Not enough funds. Required: $4953.90, Available: $4495.39'
+      'Not enough funds. Required: $4951.20, Available: $4495.39'
     );
   });
 });

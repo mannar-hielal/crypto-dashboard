@@ -126,8 +126,9 @@ export const paperApi = {
     ),
 
   /**
-   * USDT Perpetual leverage for one symbol. Refused (422) while the symbol has an open position or
-   * active orders.
+   * USDT Perpetual leverage for one symbol. An open position and active orders on it are
+   * re-margined at the new leverage (BP-3); refused (422) when the wallet can't cover the extra
+   * margin, or when raising it would put the position past its liquidation price.
    */
   setSymbolLeverage: (symbol: string, leverage: number, accessToken: string) =>
     request<PaperActionResponse<number>>(

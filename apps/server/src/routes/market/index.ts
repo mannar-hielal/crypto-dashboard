@@ -4,6 +4,7 @@ import type { LiveBar, IndicatorSnapshot, TickerUpdate } from '../../plugins/byb
 import { logger } from '../../logger.js';
 import { ALLOWED_CATEGORIES, ALLOWED_SYMBOLS, type BybitCategory } from '../../constants.js';
 import { bybitRestBaseUrl, getInstruments, getRiskLimit } from '../../services/BybitMarketInfo.js';
+import { bybitBreakers, fetchWithRetry } from '../../lib/fetchWithRetry.js';
 
 const log = logger.child({ route: 'market' });
 
@@ -128,7 +129,7 @@ async function fetchHistoricalCandlesFromBybit(
   });
   const url = `${bybitRestBaseUrl()}/v5/market/kline?${params.toString()}`;
 
-  const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+  const res = await fetchWithRetry(url, bybitBreakers.kline, { timeoutMs: 10_000, attempts: 2 });
 
   if (!res.ok) {
     throw new Error(`Bybit REST error: ${res.status}`);

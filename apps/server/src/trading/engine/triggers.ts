@@ -11,9 +11,18 @@
  * crossed level (`fillAt`), and a candle that started before an order was placed is ignored.
  *
  * Every check is per market: a USDT Perpetual position never triggers on a spot price.
+ *
+ * Liquidation (BP-3): a USDT Perpetual position is liquidated when the **mark** price reaches its
+ * liquidation price; TP / SL, stops and limits keep triggering on the **last** price (Bybit's
+ * default). On a live tick liquidation is checked first — it closes the whole position, so a TP /
+ * SL on the same tick has nothing left to close. In a candle backfill the order within one minute
+ * is unknown; TP / SL is checked first there, because a stop-loss sits between the entry and the
+ * liquidation price, so a continuous price path reaches it first.
  */
 
 import type { Decimal } from '@prisma/client/runtime/client';
+import { markHitsLiquidation, type RiskTier } from '../bybitSpec.js';
+import { riskOf } from './margin.js';
 import type {
   Category,
   ExitLeg,
@@ -67,10 +76,25 @@ function triggersOnDrop(order: { side: OrderSide; type: PendingType }): boolean 
 
 // ─── Triggers ──────────────────────────────────────────────────────────────────
 
-/** `price` is the last price that triggered it; `fillAt` is set only by a candle backfill. */
+/**
+ * `price` is the price that triggered it — the last price, or for a liquidation the mark price.
+ * `fillAt` is set only by a candle backfill.
+ */
 export type Trigger =
   | { kind: 'exit'; positionId: string; leg: ExitLeg; price: Decimal; fillAt?: Decimal }
-  | { kind: 'fill'; orderId: string; price: Decimal; fillAt?: Decimal };
+  | { kind: 'fill'; orderId: string; price: Decimal; fillAt?: Decimal }
+  | { kind: 'liquidation'; positionId: string; price: Decimal; fillAt?: Decimal };
+
+/** The mark price of a USDT Perpetual tick and the symbol's risk-limit tiers (BP-3). */
+export interface MarkInput {
+  price: Decimal;
+  tiers: RiskTier[];
+}
+
+/** True when `mark` has reached the position's liquidation price. */
+export function isLiquidatable(pos: Position, mark: Decimal, tiers: RiskTier[]): boolean {
+  return markHitsLiquidation(pos.side, riskOf(pos, tiers).liqPrice, mark);
+}
 
 /** Live tick: every position / pending order of `category:symbol` that `price` triggers. */
 export function evaluateTick(
@@ -78,11 +102,16 @@ export function evaluateTick(
   symbol: string,
   price: Decimal,
   positions: Position[],
-  pendingOrders: PendingOrder[]
+  pendingOrders: PendingOrder[],
+  mark?: MarkInput
 ): Trigger[] {
   const triggers: Trigger[] = [];
   for (const pos of positions) {
     if (pos.category !== category || pos.symbol !== symbol) continue;
+    if (mark && isLiquidatable(pos, mark.price, mark.tiers)) {
+      triggers.push({ kind: 'liquidation', positionId: pos.id, price: mark.price });
+      continue;
+    }
     const hit = checkTPSL(pos, price);
     if (hit) {
       triggers.push({
@@ -112,13 +141,17 @@ export interface Candle {
  * Backfill for one candle. The high/low sweep follows the browser (TP before SL; fill at the
  * crossed level). A candle that started before the position opened / the order was placed is
  * skipped, because its range includes prices from before that item existed (S3).
+ *
+ * `mark` is the same minute's mark-price candle (USDT Perpetual): with no TP / SL hit, a position
+ * whose liquidation price the mark range reached is liquidated.
  */
 export function evaluateCandle(
   category: Category,
   symbol: string,
   candle: Candle,
   positions: Position[],
-  pendingOrders: PendingOrder[]
+  pendingOrders: PendingOrder[],
+  mark?: { candle: Candle; tiers: RiskTier[] }
 ): Trigger[] {
   const triggers: Trigger[] = [];
   for (const pos of positions) {
@@ -138,6 +171,17 @@ export function evaluateCandle(
     if (leg) {
       const level = (leg === 'take-profit' ? pos.takeProfit : pos.stopLoss) as Decimal;
       triggers.push({ kind: 'exit', positionId: pos.id, leg, price: level, fillAt: level });
+    } else if (mark && mark.candle.start >= pos.openedAt) {
+      const { liqPrice } = riskOf(pos, mark.tiers);
+      const extreme = pos.side === 'long' ? mark.candle.low : mark.candle.high;
+      if (markHitsLiquidation(pos.side, liqPrice, extreme)) {
+        triggers.push({
+          kind: 'liquidation',
+          positionId: pos.id,
+          price: liqPrice,
+          fillAt: liqPrice,
+        });
+      }
     }
   }
   for (const order of pendingOrders) {

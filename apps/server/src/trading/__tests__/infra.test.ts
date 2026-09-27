@@ -4,6 +4,7 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { fetchCandles } from '../infra.js';
+import { resetBybitBreakers } from '../../lib/fetchWithRetry.js';
 
 /** Fake Bybit kline endpoint over a fixed series of 1m candles. */
 function stubKlines(fromMs: number, count: number) {
@@ -28,7 +29,10 @@ function stubKlines(fromMs: number, count: number) {
   return fetchMock;
 }
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  resetBybitBreakers();
+});
 
 describe('fetchCandles()', () => {
   it('returns the whole range oldest first when it fits in one page', async () => {
@@ -54,5 +58,24 @@ describe('fetchCandles()', () => {
       new URL(url).searchParams.get('category')
     );
     expect(categories).toEqual(['spot', 'linear']);
+  });
+
+  it('reads mark-price candles from the mark-price kline endpoint (liquidation backfill, BP-3)', async () => {
+    const fetchMock = stubKlines(0, 10);
+    const candles = await fetchCandles('linear', 'BTCUSDT', 0, 9 * 60_000, 'mark');
+    expect(candles).toHaveLength(10);
+    expect(new URL(fetchMock.mock.calls[0][0]).pathname).toBe('/v5/market/mark-price-kline');
+  });
+
+  it('retries a transient upstream failure', async () => {
+    const fetchMock = stubKlines(0, 10);
+    const impl = fetchMock.getMockImplementation();
+    fetchMock.mockImplementationOnce(async () => {
+      throw new Error('ECONNRESET');
+    });
+    if (impl) fetchMock.mockImplementation(impl);
+    const candles = await fetchCandles('linear', 'BTCUSDT', 0, 9 * 60_000);
+    expect(candles).toHaveLength(10);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

@@ -16,14 +16,23 @@ import {
   Minimize2,
   SlidersHorizontal,
   AlertTriangle,
+  Info,
 } from 'lucide-react';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/shallow';
-import { paneStores, getLastKnownPrice } from '@/store/paneStore';
+import { paneStores, getLastKnownMarkPrice, getLastKnownPrice } from '@/store/paneStore';
 import { FEE_RATES, type MarketCategory } from '@crypto-dashboard/sdk';
 import { usePaperStore } from '@/store/paperStore';
 import { useOrderPrefillStore } from '@/store/orderPrefillStore';
 import { feeRateLine } from '@/lib/orderMath';
+import {
+  LIQUIDATION_EXPLAINER,
+  MMR_EXPLAINER,
+  positionMmrRate,
+  positionPnl,
+} from '@/lib/positionMath';
+import { MmrBar } from './MmrBar';
+import { loadColPrefs, saveColPrefs } from '@/lib/columnPrefs';
 import { AssetsTable } from './AssetsTable';
 import type { JournalEntry, HistoricalOrder, PendingOrder } from '@/store/paperStore';
 import type { PanelSize } from '@/pages/DashboardPage';
@@ -92,13 +101,19 @@ const POSITION_COLS: ColDef[] = [
   { id: 'entry', label: 'Avg Fill Price', align: 'right', defaultOn: true },
   { id: 'tp', label: 'Take Profit', align: 'right', defaultOn: true },
   { id: 'sl', label: 'Stop Loss', align: 'right', defaultOn: true },
-  { id: 'mark', label: 'Last Price', align: 'right', defaultOn: true },
+  // Bybit values a perpetual position at the mark price (BP-3)
+  { id: 'mark', label: 'Mark Price', align: 'right', defaultOn: true },
+  { id: 'last', label: 'Last Price', align: 'right', defaultOn: false },
+  { id: 'liq', label: 'Liq. Price', align: 'right', defaultOn: true },
+  { id: 'mmr', label: 'MMR', align: 'left', defaultOn: true },
   { id: 'pnl', label: 'Unrealized P&L', align: 'right', defaultOn: true },
   { id: 'pnlPct', label: 'Unrealized P&L %', align: 'right', defaultOn: true },
   { id: 'tradeValue', label: 'Trade Value', align: 'right', defaultOn: true },
   { id: 'marketValue', label: 'Market Value', align: 'right', defaultOn: true },
   { id: 'leverage', label: 'Leverage', align: 'right', defaultOn: true },
   { id: 'margin', label: 'Margin', align: 'right', defaultOn: true },
+  { id: 'im', label: 'IM', align: 'right', defaultOn: false },
+  { id: 'mm', label: 'MM', align: 'right', defaultOn: false },
   { id: 'expiry', label: 'Expiration Date', align: 'right', defaultOn: false },
   { id: 'orderId', label: 'Order ID', align: 'right', defaultOn: false },
   { id: 'openedAt', label: 'Opened At', align: 'right', defaultOn: false },
@@ -171,25 +186,6 @@ const SESSION_START = Date.now();
 const BENCH_TTL_MS = 120_000; // 2 minutes, hardcoded — mirrors TV behaviour
 
 // ─── Column prefs persistence ─────────────────────────────────────────────────
-
-const COL_PREFS_KEY = 'cd-paper-col-prefs';
-
-function loadColPrefs(): Record<string, string[]> {
-  try {
-    const raw = localStorage.getItem(COL_PREFS_KEY);
-    return raw ? (JSON.parse(raw) as Record<string, string[]>) : {};
-  } catch {
-    return {};
-  }
-}
-
-function saveColPrefs(prefs: Record<string, string[]>) {
-  try {
-    localStorage.setItem(COL_PREFS_KEY, JSON.stringify(prefs));
-  } catch {
-    // ignore storage errors
-  }
-}
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -418,6 +414,20 @@ export function OrderAccountManagementPanel({
   function getPrice(category: MarketCategory, sym: string): number | null {
     return priceByMarket[`${category}:${sym}`] ?? getLastKnownPrice(sym, category) ?? null;
   }
+  // USDT Perpetual mark price — what Bybit values a position at (BP-3): a perp pane's live mark,
+  // then the last known mark (server push), then the last price while no mark has arrived yet.
+  const mp0 = useStore(paneStores[0], (s) => s.markPrice);
+  const mp1 = useStore(paneStores[1], (s) => s.markPrice);
+  const mp2 = useStore(paneStores[2], (s) => s.markPrice);
+  const mp3 = useStore(paneStores[3], (s) => s.markPrice);
+  const markBySymbol: Record<string, number> = {};
+  [mp0, mp1, mp2, mp3].forEach((mp, i) => {
+    const [category, sym] = paneMarkets[i].split(':');
+    if (mp !== null && category === 'linear') markBySymbol[sym] = mp;
+  });
+  function getMark(sym: string): number | null {
+    return markBySymbol[sym] ?? getLastKnownMarkPrice(sym) ?? getPrice('linear', sym);
+  }
 
   const balance = usePaperStore((s) => s.balance);
   const positions = usePaperStore((s) => s.positions);
@@ -499,15 +509,11 @@ export function OrderAccountManagementPanel({
     (sum, pos) => sum + pos.entryUsdtAmount + pos.closeFeeReserve,
     0
   );
-  // Mark-to-market PnL of open positions and of coins held against their average cost
+  // Mark-to-market PnL of open positions (at the mark price, as Bybit) and of coins held against
+  // their average cost
   const positionsPnl = positions.reduce((sum, pos) => {
-    const markPrice = getPrice('linear', pos.symbol);
-    if (markPrice === null) return sum;
-    const rawPnl =
-      pos.side === 'long'
-        ? (markPrice - pos.entryPrice) * pos.quantity
-        : (pos.entryPrice - markPrice) * pos.quantity;
-    return sum + rawPnl;
+    const markPrice = getMark(pos.symbol);
+    return markPrice === null ? sum : sum + positionPnl(pos, markPrice);
   }, 0);
   const assetRows = spotBalances.map((holding) => ({
     holding,
@@ -1220,7 +1226,20 @@ export function OrderAccountManagementPanel({
                                     key={col.id}
                                     className={`px-3 py-1.5 font-semibold uppercase tracking-wider text-${col.align}`}
                                   >
-                                    {col.label}
+                                    {col.id === 'liq' || col.id === 'mmr' ? (
+                                      <span className="inline-flex items-center gap-1">
+                                        {col.label}
+                                        <span
+                                          title={
+                                            col.id === 'liq' ? LIQUIDATION_EXPLAINER : MMR_EXPLAINER
+                                          }
+                                        >
+                                          <Info className="h-3 w-3 opacity-60" />
+                                        </span>
+                                      </span>
+                                    ) : (
+                                      col.label
+                                    )}
                                   </th>
                                 )
                               )}
@@ -1229,11 +1248,10 @@ export function OrderAccountManagementPanel({
                           <tbody>
                             <AnimatePresence>
                               {positions.map((pos, i) => {
-                                const markPrice = getPrice('linear', pos.symbol) ?? pos.entryPrice;
-                                const pnl =
-                                  pos.side === 'long'
-                                    ? (markPrice - pos.entryPrice) * pos.quantity
-                                    : (pos.entryPrice - markPrice) * pos.quantity;
+                                const markPrice = getMark(pos.symbol) ?? pos.entryPrice;
+                                const lastPrice = getPrice('linear', pos.symbol);
+                                const pnl = positionPnl(pos, markPrice);
+                                const mmrRate = positionMmrRate(pos, markPrice);
                                 const pnlPct = (pnl / pos.entryUsdtAmount) * 100;
                                 const isProfit = pnl >= 0;
                                 const margin = pos.entryUsdtAmount;
@@ -1344,6 +1362,25 @@ export function OrderAccountManagementPanel({
                                         ${fmtMktPrice(markPrice)}
                                       </td>
                                     )}
+                                    {isVisible('positions', 'last') && (
+                                      <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                        {lastPrice !== null ? `$${fmtMktPrice(lastPrice)}` : '—'}
+                                      </td>
+                                    )}
+                                    {isVisible('positions', 'liq') && (
+                                      <td
+                                        className="px-3 py-1.5 text-right tabular-nums"
+                                        style={{ color: color.amber }}
+                                        data-testid="position-liq-price"
+                                      >
+                                        {pos.liqPrice > 0 ? `$${fmtMktPrice(pos.liqPrice)}` : '—'}
+                                      </td>
+                                    )}
+                                    {isVisible('positions', 'mmr') && (
+                                      <td className="px-3 py-1.5">
+                                        <MmrBar rate={mmrRate} />
+                                      </td>
+                                    )}
                                     {isVisible('positions', 'pnl') && (
                                       <td
                                         className="px-3 py-1.5 text-right tabular-nums font-semibold"
@@ -1426,6 +1463,16 @@ export function OrderAccountManagementPanel({
                                             USD
                                           </span>
                                         </span>
+                                      </td>
+                                    )}
+                                    {isVisible('positions', 'im') && (
+                                      <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                        {pos.positionIM.toFixed(2)}
+                                      </td>
+                                    )}
+                                    {isVisible('positions', 'mm') && (
+                                      <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                        {pos.positionMM.toFixed(2)}
                                       </td>
                                     )}
                                     {isVisible('positions', 'expiry') && (
@@ -2050,10 +2097,17 @@ export function OrderAccountManagementPanel({
                                           className="rounded px-1 py-px font-bold"
                                           style={{
                                             fontSize: fontSize.xs10,
-                                            ...orderTypePillStyle(o.type, color),
+                                            ...(o.liquidation
+                                              ? { background: `${color.red}22`, color: color.red }
+                                              : orderTypePillStyle(o.type, color)),
                                           }}
+                                          title={
+                                            o.liquidation
+                                              ? 'Closed by liquidation at the bankruptcy price (Bybit CreateByLiq)'
+                                              : undefined
+                                          }
                                         >
-                                          {orderTypeLabel(o.type)}
+                                          {o.liquidation ? 'Liquidation' : orderTypeLabel(o.type)}
                                         </span>
                                       </td>
                                     )}

@@ -1700,6 +1700,7 @@ export const PositionScalarFieldEnum = {
   marginMode: 'marginMode',
   entryFee: 'entryFee',
   closeFeeReserve: 'closeFeeReserve',
+  extraMargin: 'extraMargin',
   takeProfit: 'takeProfit',
   stopLoss: 'stopLoss',
   openedAt: 'openedAt',
@@ -1734,6 +1735,7 @@ export const OrderScalarFieldEnum = {
   feeAsset: 'feeAsset',
   isMaker: 'isMaker',
   ocoGroup: 'ocoGroup',
+  createType: 'createType',
   status: 'status',
   rejectionReason: 'rejectionReason',
   createdAt: 'createdAt',
@@ -1763,6 +1765,7 @@ export const TradeScalarFieldEnum = {
   pnl: 'pnl',
   grossPnl: 'grossPnl',
   pnlPercent: 'pnlPercent',
+  execType: 'execType',
   openedAt: 'openedAt',
   executedAt: 'executedAt',
   createdAt: 'createdAt'

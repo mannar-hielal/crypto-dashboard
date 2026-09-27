@@ -4,19 +4,23 @@
  *
  * - Exactly one executor: the engine runs only while it holds the EngineLease row (see
  *   EngineLease). Other machines serve the API and WebSockets but never execute triggers.
- * - Index: every account with an open trigger (a position with TP/SL, or a pending order), keyed by
+ * - Index: every account with an open trigger (any open position — it can be liquidated, BP-3 — or
+ *   a pending order), keyed by
  *   market (`category:symbol`, e.g. `linear:BTCUSDT`), so a tick only evaluates that market's
  *   accounts — a USDT Perpetual position never triggers on a spot price (BP-2). It is loaded on
  *   activation and kept current from every committed delta on the event bus.
- * - Ticks: live last price of each market, evaluated on the tick price (S3). A trigger is
+ * - Ticks: live last price of each market, evaluated on the tick price (S3); a USDT Perpetual tick
+ *   also carries the mark price, which liquidation is checked on (BP-3). A trigger is
  *   re-validated and executed through TradingService, so it serializes with the user's own
  *   clicks; TradingService picks the fill price (limit at its price, stop / TP / SL at ask / bid).
  * - Gaps: if a market's ticks stop for longer than GAP_MS (Bybit outage), or the engine starts
- *   after downtime (EngineLease.lastTickAt), the missed minutes are backfilled from 1m candles.
+ *   after downtime (EngineLease.lastTickAt), the missed minutes are backfilled from 1m candles —
+ *   last-price candles, plus mark-price candles for USDT Perpetual liquidation checks.
  */
 
 import { Decimal } from '@prisma/client/runtime/client';
 import { logger } from '../logger.js';
+import { fallbackRiskTiers, type RiskTier } from './bybitSpec.js';
 import {
   evaluateCandle,
   evaluateTick,
@@ -34,6 +38,8 @@ export interface TickUpdate {
   category: string;
   symbol: string;
   lastPrice: number;
+  /** USDT Perpetual mark price */
+  markPrice?: number;
 }
 
 export interface MatchingEngineDeps {
@@ -47,8 +53,11 @@ export interface MatchingEngineDeps {
     category: Category,
     symbol: string,
     fromMs: number,
-    toMs: number
+    toMs: number,
+    source?: 'last' | 'mark'
   ) => Promise<Candle[]>;
+  /** USDT Perpetual risk-limit tiers (default: the bundled Bybit snapshot) */
+  riskTiers?: (symbol: string) => RiskTier[];
   lease: LeaseStore;
   holder: string;
   now?: () => number;
@@ -90,11 +99,9 @@ function isCategory(v: string): v is Category {
   return v === 'spot' || v === 'linear';
 }
 
+/** Any open position can be liquidated (BP-3), so every position is a trigger. */
 function hasTriggers(state: AccountState): boolean {
-  return (
-    state.pendingOrders.length > 0 ||
-    state.positions.some((p) => p.takeProfit !== undefined || p.stopLoss !== undefined)
-  );
+  return state.pendingOrders.length > 0 || state.positions.length > 0;
 }
 
 export class MatchingEngine {
@@ -118,6 +125,7 @@ export class MatchingEngine {
   private readonly leaseTtlMs: number;
   private readonly gapMs: number;
   private readonly resyncEveryMs: number;
+  private readonly riskTiers: (symbol: string) => RiskTier[];
 
   constructor(private readonly deps: MatchingEngineDeps) {
     this.now = deps.now ?? Date.now;
@@ -125,6 +133,7 @@ export class MatchingEngine {
     this.leaseTtlMs = deps.leaseTtlMs ?? 30_000;
     this.gapMs = deps.gapMs ?? DEFAULT_GAP_MS;
     this.resyncEveryMs = deps.resyncEveryMs ?? 30_000;
+    this.riskTiers = deps.riskTiers ?? fallbackRiskTiers;
   }
 
   /** Start competing for the lease; activates as soon as this instance holds it. */
@@ -293,6 +302,13 @@ export class MatchingEngine {
     const userIds = this.symbolUsers.get(key);
     if (!userIds?.size) return;
     const price = new Decimal(u.lastPrice.toString());
+    const mark =
+      category === 'linear' &&
+      u.markPrice !== undefined &&
+      Number.isFinite(u.markPrice) &&
+      u.markPrice > 0
+        ? { price: new Decimal(u.markPrice.toString()), tiers: this.riskTiers(symbol) }
+        : undefined;
     for (const userId of userIds) {
       const state = this.users.get(userId);
       if (!state) continue;
@@ -301,7 +317,8 @@ export class MatchingEngine {
         symbol,
         price,
         state.positions,
-        state.pendingOrders
+        state.pendingOrders,
+        mark
       )) {
         void this.fire(userId, trigger);
       }
@@ -310,7 +327,7 @@ export class MatchingEngine {
 
   /** Execute one trigger; a trigger already executing (a burst of ticks) is not re-fired. */
   private async fire(userId: string, trigger: Trigger): Promise<void> {
-    const key = `${userId}:${trigger.kind === 'exit' ? trigger.positionId : trigger.orderId}`;
+    const key = `${userId}:${trigger.kind === 'fill' ? trigger.orderId : trigger.positionId}`;
     if (this.inFlight.has(key)) return;
     this.inFlight.add(key);
     let executed = false;
@@ -353,7 +370,12 @@ export class MatchingEngine {
     }
   }
 
-  /** Replay 1m candles for a gap, in time order, for every account watching one market. */
+  /**
+   * Replay 1m candles for a gap, in time order, for every account watching one market. USDT
+   * Perpetual also replays the same minutes' mark-price candles, for liquidation (BP-3). If the
+   * mark candles can't be fetched the gap is still replayed for TP / SL and fills; liquidation
+   * then waits for the next live mark tick.
+   */
   async backfill(category: Category, symbol: string, fromMs: number, toMs: number): Promise<void> {
     const key = marketKey(category, symbol);
     if (!this.symbolUsers.get(key)?.size) return;
@@ -364,8 +386,24 @@ export class MatchingEngine {
       log.error({ err, category, symbol }, 'Backfill candle fetch failed');
       return;
     }
-    log.info({ category, symbol, fromMs, toMs, candles: candles.length }, 'Backfilling price gap');
+    const markByStart = new Map<number, Candle>();
+    if (category === 'linear') {
+      try {
+        for (const c of await this.deps.fetchCandles(category, symbol, fromMs, toMs, 'mark')) {
+          markByStart.set(c.start, c);
+        }
+      } catch (err) {
+        log.error({ err, category, symbol }, 'Backfill mark-price candle fetch failed');
+      }
+    }
+    const tiers = this.riskTiers(symbol);
+    log.info(
+      { category, symbol, fromMs, toMs, candles: candles.length, markCandles: markByStart.size },
+      'Backfilling price gap'
+    );
     for (const candle of candles) {
+      const markCandle = markByStart.get(candle.start);
+      const mark = markCandle ? { candle: markCandle, tiers } : undefined;
       for (const userId of [...(this.symbolUsers.get(key) ?? [])]) {
         const state = this.users.get(userId);
         if (!state) continue;
@@ -375,7 +413,8 @@ export class MatchingEngine {
           symbol,
           candle,
           state.positions,
-          state.pendingOrders
+          state.pendingOrders,
+          mark
         )) {
           await this.fire(userId, trigger);
         }

@@ -2,14 +2,17 @@
  * BP-2 USDT Perpetual fees and fill prices — worked numbers (docs/TRADING_TEST_PLAN.md §11–12).
  *
  * Bybit VIP-0: taker 0.055%, maker 0.02%, on notional (qty × price). Opening costs initial margin
- * + open fee + an estimated close fee (taker), which stays with the position and comes back at
- * close. Stored fees are never recomputed: a pre-BP-2 position closes against the 0.07% it paid.
+ * + open fee + Bybit's estimated fee to close (taker, priced at the bankruptcy price
+ * entry × (1 ∓ 1/leverage) since BP-3), which stays with the position and comes back at close.
+ * Stored fees are never recomputed: a pre-BP-2 position closes against the 0.07% it paid.
  */
 
 import { describe, it, expect } from 'vitest';
 import { Decimal } from '@prisma/client/runtime/client';
 import {
-  LEVERAGE_LOCKED,
+  REJECT_LEVERAGE_BALANCE,
+  REJECT_LEVERAGE_LIQUIDATION,
+  REJECT_LEVERAGE_NO_MARK,
   cancelPending,
   closePosition,
   editPending,
@@ -72,11 +75,11 @@ describe('market open — 10×, qty 0.1 at ask 50,000', () => {
     expectDec(pos.entryPrice, '50000');
   });
 
-  it('IM 500, open fee 2.75, close-fee reserve 2.75 → costs 505.50', () => {
+  it('IM 500, open fee 2.75, fee to close 5,000 × 0.9 × 0.055% = 2.475 → costs 505.225', () => {
     expectDec(pos.entryUsdtAmount, '500');
     expectDec(pos.entryFee, '2.75');
-    expectDec(pos.closeFeeReserve, '2.75');
-    expectDec(res.delta.account.balance, '9494.5');
+    expectDec(pos.closeFeeReserve, '2.475');
+    expectDec(res.delta.account.balance, '9494.775');
     expect(pos.leverage).toBe(10);
   });
 
@@ -86,12 +89,12 @@ describe('market open — 10×, qty 0.1 at ask 50,000', () => {
     expectDec(res.delta.orders[0].commission, '2.75');
   });
 
-  it('closing at bid 51,000: close fee 2.805, +599.945 back, realized +94.445', () => {
+  it('closing at bid 51,000: close fee 2.805, +599.67 back, realized +94.445', () => {
     const open = account({ balance: res.delta.account.balance, positions: [pos] });
     const closed = closePosition(open, pos.id, quote(51_000, 51_010), ctx);
     expectDec(closed.delta.trades[0].exitPrice, '51000');
     expectDec(closed.delta.trades[0].exitCommission, '2.805');
-    expectDec(closed.delta.account.balance.minus(open.balance), '599.945');
+    expectDec(closed.delta.account.balance.minus(open.balance), '599.67');
     expectDec(closed.delta.account.realizedPnl, '94.445');
   });
 
@@ -130,12 +133,12 @@ describe('resting limit — fills at its own price as maker (F4)', () => {
   );
   const order = placed.delta.pendingUpsert[0];
 
-  it('reserves IM 490 + taker estimates 2.695 × 2 = 495.39', () => {
-    expectDec(order.reserved, '495.39');
-    expectDec(placed.delta.account.balance, '9504.61');
+  it('reserves IM 490 + taker open fee 2.695 + fee to close 2.4255 = 495.1205', () => {
+    expectDec(order.reserved, '495.1205');
+    expectDec(placed.delta.account.balance, '9504.8795');
   });
 
-  it('fills at 49,000 (not the tick) with a 0.98 maker fee: net −493.675', () => {
+  it('fills at 49,000 (not the tick) with a 0.98 maker fee: net −493.4055', () => {
     const state = account({ balance: placed.delta.account.balance, pendingOrders: [order] });
     const filled = executeTrigger(
       state,
@@ -148,7 +151,7 @@ describe('resting limit — fills at its own price as maker (F4)', () => {
     expectDec(pos.entryFee, '0.98');
     expect(filled.delta.orders[0]).toMatchObject({ type: 'limit', isMaker: true });
     expectDec(filled.delta.orders[0].feeRate, '0.0002');
-    expectDec(D(10_000).minus(filled.delta.account.balance), '493.675');
+    expectDec(D(10_000).minus(filled.delta.account.balance), '493.4055');
   });
 
   it('cancel refunds exactly the reserve', () => {
@@ -354,30 +357,76 @@ describe('per-symbol leverage', () => {
   });
 
   it('sets the leverage of a symbol with no open trades', () => {
-    const res = setSymbolLeverage(account(), 'ETHUSDT', 5);
+    const res = setSymbolLeverage(account(), 'ETHUSDT', 5, ctx);
     expect(res.result).toBe(5);
     expect(res.delta.account.symbolLeverage).toEqual({ BTCUSDT: 10, ETHUSDT: 5 });
   });
 
   it('clamps to [1, 10]', () => {
-    expect(setSymbolLeverage(account(), 'ETHUSDT', 50).result).toBe(10);
+    expect(setSymbolLeverage(account(), 'ETHUSDT', 50, ctx).result).toBe(10);
   });
+});
 
-  it('is refused while the symbol has an open position (Q6)', () => {
-    const open = placeMarket(
-      account(),
-      { symbol: 'BTCUSDT', side: 'buy', size: { qty: D('0.1') } },
-      quote(49_990, 50_000),
-      BTC_RULES,
-      ctx
+describe('leverage change with an open position — re-margining (BP-3)', () => {
+  // Long 0.1 BTC @ 50,000 at 10×: IM 500, fee to close 2.475, balance 9,494.775
+  const open = placeMarket(
+    account(),
+    { symbol: 'BTCUSDT', side: 'buy', size: { qty: D('0.1') } },
+    quote(49_990, 50_000),
+    BTC_RULES,
+    ctx
+  );
+  const state = (balance = open.delta.account.balance) =>
+    account({ balance, positions: open.delta.positionsUpsert });
+
+  it('lowering 10× → 5× moves IM 500 → 1,000 and re-estimates the fee to close (2.2)', () => {
+    const res = setSymbolLeverage(state(), 'BTCUSDT', 5, ctx);
+    expect(res.invalid).toBeUndefined();
+    const pos = res.delta.positionsUpsert[0];
+    expect(pos.leverage).toBe(5);
+    expectDec(pos.entryUsdtAmount, '1000');
+    expectDec(pos.closeFeeReserve, '2.2');
+    // 1,002.2 − 502.475 = 499.725 more margin from the wallet
+    expectDec(res.delta.account.balance, '8995.05');
+    expect(res.delta.account.symbolLeverage).toEqual({ BTCUSDT: 5 });
+    expect(res.delta.balanceEvents[0].action).toBe('Adjust margin for BTCUSDT: leverage 10x → 5x');
+    expect(res.delta.journal[0].text).toBe(
+      'Leverage for BTCUSDT changed 10x → 5x (margin added: $499.73)'
     );
-    const state = account({ positions: open.delta.positionsUpsert });
-    const res = setSymbolLeverage(state, 'BTCUSDT', 3);
-    expect(res.invalid).toBe(LEVERAGE_LOCKED);
-    expect(res.delta.account.symbolLeverage).toEqual({ BTCUSDT: 10 });
   });
 
-  it('is refused while the symbol has an active order', () => {
+  it('lowering is refused when the wallet can not cover the extra margin', () => {
+    const res = setSymbolLeverage(state(D(100)), 'BTCUSDT', 5, ctx);
+    expect(res.invalid).toBe(REJECT_LEVERAGE_BALANCE);
+    expect(res.delta.positionsUpsert).toHaveLength(0);
+  });
+
+  it('raising releases margin, and needs a live mark price', () => {
+    const low = setSymbolLeverage(state(), 'BTCUSDT', 2, ctx);
+    const at2x = account({
+      balance: low.delta.account.balance,
+      positions: low.delta.positionsUpsert,
+      symbolLeverage: low.delta.account.symbolLeverage,
+    });
+    expect(setSymbolLeverage(at2x, 'BTCUSDT', 10, ctx).invalid).toBe(REJECT_LEVERAGE_NO_MARK);
+    const res = setSymbolLeverage(at2x, 'BTCUSDT', 10, ctx, D(50_000));
+    expectDec(res.delta.positionsUpsert[0].entryUsdtAmount, '500');
+    expectDec(res.delta.account.balance, open.delta.account.balance.toString());
+  });
+
+  it('raising is refused when the mark price is already past the new liquidation price', () => {
+    const low = setSymbolLeverage(state(), 'BTCUSDT', 2, ctx);
+    const at2x = account({
+      balance: low.delta.account.balance,
+      positions: low.delta.positionsUpsert,
+      symbolLeverage: low.delta.account.symbolLeverage,
+    });
+    // At 10× the liquidation price is ≈ 45,149; the mark is at 45,000
+    const res = setSymbolLeverage(at2x, 'BTCUSDT', 10, ctx, D(45_000));
+    expect(res.invalid).toBe(REJECT_LEVERAGE_LIQUIDATION);
+  });
+
+  it('re-reserves the symbol’s active orders at the new leverage', () => {
     const placed = placePending(
       account(),
       {
@@ -391,10 +440,17 @@ describe('per-symbol leverage', () => {
       BTC_RULES,
       ctx
     );
-    expect(
-      setSymbolLeverage(account({ pendingOrders: placed.delta.pendingUpsert }), 'BTCUSDT', 3)
-        .invalid
-    ).toBe(LEVERAGE_LOCKED);
+    const withOrder = account({
+      balance: placed.delta.account.balance,
+      pendingOrders: placed.delta.pendingUpsert,
+    });
+    // 10×: 600 + 3.3 + 2.97 = 606.27; 3×: 2,000 + 3.3 + 2.2 = 2,005.5
+    expectDec(placed.delta.pendingUpsert[0].reserved, '606.27');
+    const res = setSymbolLeverage(withOrder, 'BTCUSDT', 3, ctx);
+    const order = res.delta.pendingUpsert[0];
+    expect(order.leverage).toBe(3);
+    expectDec(order.reserved, '2005.5');
+    expectDec(withOrder.balance.minus(res.delta.account.balance), '1399.23');
   });
 });
 

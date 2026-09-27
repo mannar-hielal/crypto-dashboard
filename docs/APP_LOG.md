@@ -454,8 +454,9 @@ ask: number | null; // best ask from Bybit orderbook.1
 
 - **USDT Perpetual:** taker 0.055% / maker 0.02%, on notional (`qty × price`). Market, stop, TP/SL and a limit that
   crosses the book are taker; a resting limit that later fills is maker.
-  - **Open:** `balance -= IM + openFee + estCloseFee` (IM = `qty × price / leverage`; the close-fee estimate is taker and
-    stays with the position as `closeFeeReserve`).
+  - **Open:** `balance -= IM + openFee + estCloseFee` (IM = `qty × price / leverage`; the close-fee estimate is taker,
+    priced at the bankruptcy price `price × (1 ∓ 1/leverage)` since BP-3, and stays with the position as
+    `closeFeeReserve`).
   - **Close:** `balance += IM + closeFeeReserve + pnl − closeFee`; `realizedPnl += pnl − closeFee − entryFee` (the
     stored `entryFee`, never a recomputation).
   - **Resting order:** reserves IM + taker open + taker close at its trigger (`Order.reserved`); cancel / edit / fill
@@ -465,6 +466,17 @@ qty − fee`.
 - `BalanceEvent.pnl` = `pnl − closeFee` (net impact on balance at close).
 - Rows from before BP-2 keep the flat 0.07% they were charged (migration backfill); the client's estimates use the
   SDK's copy of the rates (`FEE_RATES`), kept identical to the server's by a test.
+
+### Isolated margin & liquidation (BP-3 — the server decides, `apps/server/src/trading/bybitSpec.ts`)
+
+- One position per USDT Perpetual symbol (one-way mode): same-side fills merge at the qty-weighted entry.
+- Perp positions are valued at the **mark** price (PnL, equity, MMR); TP / SL / stops still trigger on the last price.
+- Liquidation price, bankruptcy price, IM and MM follow Bybit's UTA isolated-mode formulas with the risk-limit tier
+  of the position's value; they are derived, not stored.
+- When the mark reaches the liquidation price: the symbol's active orders are cancelled and refunded, the position
+  closes at the bankruptcy price, its whole margin is lost (execType `BustTrade`, createType `CreateByLiq`).
+- Leverage changes re-margin an open position and the symbol's orders (refused without the balance for it, or when a
+  raise would put the position past its liquidation price at the current mark).
 
 ### TP/SL rules (implemented in `checkTPSL()` + bracket lifecycle)
 
@@ -2335,4 +2347,60 @@ trades USDT Perpetual.
 the ticker bar's static placeholder prices are unchanged.
 
 **Gates:** type-check ✅ (server + client), lint ✅, format ✅, test ✅ (508 server + 370 client), server + client
+build ✅, audit ✅ (11 moderate, none high)
+
+### feat: Bybit Parity BP-3 — mark price, one-way positions, isolated liquidation, re-margining, chart lines (2026-09-27) ✅
+
+**Context:** phase 4 of `docs/BYBIT_PARITY_PLAN.md` (F6, F7). Leveraged positions had no mark price, no liquidation
+and no re-margining, same-side fills stayed separate, and the chart drew no trade lines. Owner direction: **mimic
+Bybit as closely as possible** (the app will later be tested against Bybit's APIs) — merge same-side fills, re-margin
+on leverage change, draw every line Bybit draws (draggable), no grace period at deploy. Visual gate: 8 questions.
+
+**Server:**
+
+- `bybitSpec.ts`: Bybit's UTA isolated-mode maths — fee to close at the bankruptcy price, positionIM / MM, liquidation
+  and bankruptcy prices (reproduces Bybit's worked example 36,380.25 exactly), risk-limit tier by position value, and
+  a dated tier snapshot (the SDK copy is parity-tested).
+- **Engine:** same-side fills merge (one-way mode); `liquidatePosition` (cancel the symbol's orders, close at the
+  bankruptcy price, whole margin lost, `BustTrade` / `CreateByLiq`, `'liquidation'` sound); `setSymbolLeverage`
+  re-margins the position and the symbol's orders; `evaluateTick` / `evaluateCandle` check liquidation on the mark.
+- **MatchingEngine** indexes every open position (not only TP/SL ones), reads the mark from linear ticks, and
+  backfills gaps with mark-price klines too. **TradingService** re-checks a liquidation on a fresh (≤ 10 s) mark and
+  passes the live mark to re-margining. Risk tiers refresh hourly with the instrument rules.
+- Liquidation / bankruptcy prices, positionIM / MM and MMR are derived and sent with every position — not stored.
+- **Migration** `bp3_liquidation`: `Position.extraMargin`, `Trade.execType`, `Order.createType`; merges existing
+  same-side positions (stored values only, newest TP/SL) and sets each symbol's leverage to its position's. Dry-run on
+  real Postgres in a rolled-back transaction.
+- **`lib/fetchWithRetry.ts`** (BP-0 follow-up): timeout + bounded retry (network / 429 / 5xx) + a circuit breaker
+  per Bybit upstream, on every Bybit REST call.
+
+**Client:**
+
+- Perp PnL / equity at the **mark** price (`lastKnownMarkPrices`, pane mark, server push); Positions tab: Mark Price,
+  amber Liq. Price and a Bybit-style **MMR meter** (Last Price / IM / MM opt-in; saved column layouts migrated once,
+  `lib/columnPrefs.ts`); Order History labels a liquidation close.
+- Order form: **Est. liq. price** (includes the open position, one-way), fee to close at the bankruptcy price,
+  "Placing…" submit state. Leverage modal unlocked with a margin / liq-price preview and inline refusals.
+- One-time "Positions can now be liquidated" banner with the explainer, a liquidation notice until dismissed,
+  ⓘ tooltips, a distinct liquidation sound (Sound Settings entry).
+- **Chart lines** (`lib/tradeLines.ts`, `hooks/useTradeLines.ts`): entry with live PnL, TP / SL, liquidation, orders
+  and their TP / SL, mark (toggle in the Chart type menu). TP / SL / order lines drag to amend, tick-rounded, sent only
+  after a confirm; lines don't take the pointer while a drawing tool is active.
+
+**Live verification** (running dev server + live Bybit feed, throwaway user, deleted after): 10× long 0.01 BTC @ 84,466
+→ liq 76,271.09 / bust 76,019.4 / fee to close 0.418 (formula-exact); a second buy merged; 10× → 5× re-margined
+(liq 67,796.53, same as the modal's preview) and back to 10× on the live mark; journal and Balance History lines; UI
+screenshots of the Positions columns, MMR meter, notice banner, Est. liq. price, leverage preview; a real mouse drag of
+the TP line → confirm → server TP 84,600 → 84,635.3. Fixed from the screenshots: the confirm popover clipped at the
+chart's top edge; 1 px dashed lines looked dotted (now large dashes).
+
+**Not in BP-3 (parity plan §8 / follow-ups):** a stop-loss past the liquidation price is accepted (Bybit refuses it);
+higher-tier positions liquidate in full; the pre-BP-2 account-leverage route is still served; the API-parity test
+against Bybit testnet.
+
+**Tests:** server 545 (Bybit worked example, liquidation, re-margining, merge, mark-candle backfill, engine index,
+retry / breaker), client 402 (mark PnL, columns + prefs migration, MMR meter, order-form estimate, notices, Placing…,
+leverage preview, chart lines + drag hook). `TRADING_TEST_PLAN.md` Section 15.
+
+**Gates:** type-check ✅ (server + client), lint ✅, format ✅, test ✅ (545 server + 402 client), server + client
 build ✅, audit ✅ (11 moderate, none high)

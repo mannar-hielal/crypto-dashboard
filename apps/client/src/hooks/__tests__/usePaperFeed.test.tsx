@@ -16,6 +16,7 @@ const sounds = {
   playOrderFilled: vi.fn(),
   playProfit: vi.fn(),
   playLoss: vi.fn(),
+  playLiquidation: vi.fn(),
 };
 vi.mock('@/hooks/TradingSoundContext', () => ({ useSoundActions: () => sounds }));
 
@@ -121,6 +122,16 @@ describe('usePaperFeed', () => {
     act(() => ws.serverSend({ type: 'delta', delta: delta(1), sound: 'filled' }));
     expect(usePaperStore.getState().balance).toBe(9000);
     expect(sounds.playOrderFilled).toHaveBeenCalledTimes(1);
+  });
+
+  it('plays the distinct liquidation sound the server picks for a liquidation (BP-3)', () => {
+    renderHook(() => usePaperFeed());
+    const ws = last();
+    ws.serverOpen();
+    act(() => ws.serverSend({ type: 'snapshot', state: emptyState() }));
+    act(() => ws.serverSend({ type: 'delta', delta: delta(1), sound: 'liquidation' }));
+    expect(sounds.playLiquidation).toHaveBeenCalledTimes(1);
+    expect(sounds.playLoss).not.toHaveBeenCalled();
   });
 
   it('re-sends auth on the open socket when the token is refreshed', () => {

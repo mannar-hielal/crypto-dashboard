@@ -21,14 +21,22 @@ import { MatchingEngine } from '../trading/MatchingEngine.js';
 import { PaperEventBus } from '../trading/PaperEventBus.js';
 import { TradingService, type MarketSource } from '../trading/TradingService.js';
 import { fetchCandles, prismaLeaseStore } from '../trading/infra.js';
-import { fallbackRules, rulesFromInstrument } from '../trading/bybitSpec.js';
+import {
+  fallbackRiskTiers,
+  fallbackRules,
+  riskTiersFromBybit,
+  rulesFromInstrument,
+  type RiskTier,
+} from '../trading/bybitSpec.js';
 import type { Category, InstrumentRules } from '../trading/engine/index.js';
-import { getInstruments } from '../services/BybitMarketInfo.js';
-import { ALLOWED_CATEGORIES } from '../constants.js';
+import { getInstruments, getRiskLimit } from '../services/BybitMarketInfo.js';
+import { ALLOWED_CATEGORIES, ALLOWED_SYMBOLS } from '../constants.js';
 
 const log = logger.child({ plugin: 'trading' });
 
-/** Instrument rules are refreshed from Bybit's instruments-info this often (they rarely change). */
+/**
+ * Instrument rules and risk-limit tiers are refreshed from Bybit this often (they rarely change).
+ */
 const RULES_REFRESH_MS = 60 * 60_000;
 
 const toDecimal = (v: number | null | undefined) =>
@@ -45,7 +53,23 @@ declare module 'fastify' {
 }
 
 async function tradingPlugin(fastify: FastifyInstance): Promise<void> {
-  const repo = new AccountRepository(fastify.prisma);
+  // USDT Perpetual risk-limit tiers per symbol (BP-3) — bounded: ALLOWED_SYMBOLS
+  const tiers = new Map<string, RiskTier[]>();
+  const riskTiers = (symbol: string) => tiers.get(symbol) ?? fallbackRiskTiers(symbol);
+  const refreshTiers = () =>
+    Promise.all(
+      ALLOWED_SYMBOLS.map(async (symbol) => {
+        try {
+          const live = riskTiersFromBybit(await getRiskLimit(symbol));
+          if (live.length > 0) tiers.set(symbol, live);
+        } catch (err) {
+          // Keep the previous tiers (or the bundled snapshot) — liquidation never blocks on this
+          log.warn({ err, symbol }, 'Risk-limit tiers refresh failed');
+        }
+      })
+    );
+
+  const repo = new AccountRepository(fastify.prisma, riskTiers);
   const events = new PaperEventBus();
 
   // Instrument rules per "category:symbol" — bounded: 2 categories × ALLOWED_SYMBOLS
@@ -72,11 +96,13 @@ async function tradingPlugin(fastify: FastifyInstance): Promise<void> {
       const last = toDecimal(t?.lastPrice);
       const bid = toDecimal(t?.bid);
       const ask = toDecimal(t?.ask);
+      const mark = category === 'linear' ? toDecimal(t?.markPrice) : undefined;
       if (!last || !bid || !ask || seenAt === undefined) return undefined;
-      return { last, bid, ask, seenAt };
+      return { last, bid, ask, seenAt, ...(mark ? { mark } : {}) };
     },
     rules: (category: Category, symbol) =>
       rules.get(`${category}:${symbol}`) ?? fallbackRules(category, symbol),
+    riskTiers,
   };
   const trading = new TradingService(repo, market, events);
 
@@ -93,6 +119,7 @@ async function tradingPlugin(fastify: FastifyInstance): Promise<void> {
     reloadUser: (userId) => repo.loadIfExists(userId),
     subscribeTicker: (listener) => fastify.bybit.subscribeTicker(listener),
     fetchCandles,
+    riskTiers,
     lease: prismaLeaseStore(fastify.prisma),
     holder: `${hostname()}-${process.pid}-${randomBytes(4).toString('hex')}`,
   });
@@ -101,7 +128,11 @@ async function tradingPlugin(fastify: FastifyInstance): Promise<void> {
   let rulesTimer: NodeJS.Timeout | null = null;
   fastify.addHook('onReady', async () => {
     void refreshRules();
-    rulesTimer = setInterval(() => void refreshRules(), RULES_REFRESH_MS);
+    void refreshTiers();
+    rulesTimer = setInterval(() => {
+      void refreshRules();
+      void refreshTiers();
+    }, RULES_REFRESH_MS);
     rulesTimer.unref();
     void engine.start().catch((err: unknown) => {
       log.error({ err }, 'Matching engine failed to start');
