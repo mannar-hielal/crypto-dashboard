@@ -20,7 +20,7 @@ import { AccountRepository } from '../trading/AccountRepository.js';
 import { MatchingEngine } from '../trading/MatchingEngine.js';
 import { PaperEventBus } from '../trading/PaperEventBus.js';
 import { TradingService, type MarketSource } from '../trading/TradingService.js';
-import { fetchCandles, prismaLeaseStore } from '../trading/infra.js';
+import { fetchCandles, fetchFundingHistory, prismaLeaseStore } from '../trading/infra.js';
 import {
   fallbackRiskTiers,
   fallbackRules,
@@ -119,6 +119,7 @@ async function tradingPlugin(fastify: FastifyInstance): Promise<void> {
     reloadUser: (userId) => repo.loadIfExists(userId),
     subscribeTicker: (listener) => fastify.bybit.subscribeTicker(listener),
     fetchCandles,
+    fetchFundingHistory,
     riskTiers,
     lease: prismaLeaseStore(fastify.prisma),
     holder: `${hostname()}-${process.pid}-${randomBytes(4).toString('hex')}`,

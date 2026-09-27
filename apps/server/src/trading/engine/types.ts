@@ -1,5 +1,5 @@
 /**
- * Paper-trading engine types (BYBIT_PARITY_PLAN BP-1, BP-2, BP-3).
+ * Paper-trading engine types (BYBIT_PARITY_PLAN BP-1, BP-2, BP-3, BP-4).
  *
  * Money and quantities are Decimal; times are Unix ms. Everything in engine/ is pure: no
  * Prisma client, no I/O, no clock, no randomness. The caller supplies `now`, `newId`, the live
@@ -19,6 +19,8 @@ export const MAX_HISTORY = 100;
 export const MAX_ORDERS = 200;
 export const MAX_BALANCE_EVENTS = 200;
 export const MAX_JOURNAL = 200;
+/** Funding settlements sent with the snapshot (BP-4) */
+export const MAX_FUNDINGS = 100;
 export const REJECT_NOT_ENOUGH_FUNDS = 'Not enough funds to complete the order.';
 export const REJECT_FILL_FAILED = 'Order could not be filled.';
 
@@ -82,6 +84,8 @@ export interface Position {
   closeFeeReserve: Decimal;
   /** Margin added by hand on top of IM (BP-5; absent / 0 until then) */
   extraMargin?: Decimal;
+  /** Funding settled on this position so far, signed as Bybit: positive = paid (BP-4) */
+  cumFunding?: Decimal;
   openedAt: number;
   takeProfit?: Decimal;
   stopLoss?: Decimal;
@@ -130,6 +134,17 @@ export interface AccountState {
   leverage: number;
   /** USDT Perpetual leverage per symbol (BP-2) */
   symbolLeverage: Record<string, number>;
+  /**
+   * Last funding timestamp settled per symbol (Unix ms, BP-4) — a settlement at or before it is a
+   * no-op, so a restart, retry or second machine can never charge the same funding twice
+   */
+  symbolFundingAt: Record<string, number>;
+  /**
+   * When the account was last reset (Unix ms; its creation time if never). A reset wipes the
+   * positions and the funding markers, so a funding timestamp before it must never be charged to
+   * the fresh account — the engine may have snapshotted the old positions just before the reset.
+   */
+  resetAt?: number;
   /** Spot coin balances (the USDT wallet is `balance`) */
   spot: SpotHolding[];
   positions: Position[];
@@ -165,8 +180,8 @@ export interface HistoricalOrder {
   createType?: 'CreateByLiq';
 }
 
-/** Bybit's execution type: a normal fill, or a liquidation at the bankruptcy price (BP-3) */
-export type ExecType = 'Trade' | 'BustTrade';
+/** Bybit's execution type: a normal fill, a liquidation at the bankruptcy price (BP-3), funding (BP-4) */
+export type ExecType = 'Trade' | 'BustTrade' | 'Funding';
 
 export interface ClosedTrade {
   id: string;
@@ -185,6 +200,28 @@ export interface ClosedTrade {
   closedAt: number;
   /** Absent = 'Trade' */
   execType?: ExecType;
+  /** The closed part's share of the position's funding (signed, + = paid) — Closed P&L nets it (BP-4) */
+  funding?: Decimal;
+}
+
+/**
+ * One funding settlement on one position (Bybit execution `execType = Funding`, BP-4): it moves
+ * money, never the position.
+ */
+export interface FundingExecution {
+  id: string;
+  symbol: string;
+  side: PositionSide;
+  /** Position size at the funding timestamp */
+  qty: Decimal;
+  /** Mark price at the funding timestamp */
+  markPrice: Decimal;
+  /** Settled funding rate */
+  rate: Decimal;
+  /** qty × mark × rate, signed as Bybit's execFee: positive = paid, negative = received */
+  fee: Decimal;
+  /** The funding timestamp (Unix ms) */
+  time: number;
 }
 
 export interface BalanceEvent {
@@ -220,6 +257,7 @@ export interface Delta {
     realizedPnl: Decimal;
     leverage: number;
     symbolLeverage: Record<string, number>;
+    symbolFundingAt: Record<string, number>;
   };
   positionsUpsert: Position[];
   positionsRemove: string[];
@@ -229,6 +267,8 @@ export interface Delta {
   pendingRemove: string[];
   orders: HistoricalOrder[];
   trades: ClosedTrade[];
+  /** Funding settlements (BP-4) */
+  fundings: FundingExecution[];
   balanceEvents: BalanceEvent[];
   journal: JournalEntry[];
   journalEdits: { id: string; text: string }[];

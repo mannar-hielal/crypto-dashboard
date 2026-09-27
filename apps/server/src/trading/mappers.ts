@@ -17,6 +17,7 @@ import { Decimal } from '@prisma/client/runtime/client';
 import type {
   PaperBalanceEventDTO,
   PaperDeltaDTO,
+  PaperFundingDTO,
   PaperJournalEntryDTO,
   PaperOrderDTO,
   PaperPendingOrderDTO,
@@ -28,6 +29,7 @@ import type {
   BalanceEvent,
   ClosedTrade,
   Delta,
+  FundingExecution,
   HistoricalOrder,
   JournalEntry,
   OrderType,
@@ -59,6 +61,7 @@ export interface PositionRow {
   entryFee: Dec;
   closeFeeReserve: Dec;
   extraMargin: Dec;
+  cumFunding: Dec;
   takeProfit: Dec | null;
   stopLoss: Dec | null;
   openedAt: Date;
@@ -106,6 +109,9 @@ export interface TradeRow {
   pnl: Dec;
   grossPnl: Dec | null;
   execType: string;
+  commission: Dec;
+  feeRate: Dec | null;
+  funding: Dec;
   openedAt: Date | null;
   executedAt: Date;
 }
@@ -175,6 +181,7 @@ export function positionFromRow(r: PositionRow): Position {
     entryFee: entryFee.gt(0) ? entryFee : margin.times(LEGACY),
     closeFeeReserve: d(r.closeFeeReserve),
     ...(d(r.extraMargin).gt(0) ? { extraMargin: d(r.extraMargin) } : {}),
+    ...(d(r.cumFunding).eq(0) ? {} : { cumFunding: d(r.cumFunding) }),
     openedAt: r.openedAt.getTime(),
     ...(tp ? { takeProfit: tp } : {}),
     ...(sl ? { stopLoss: sl } : {}),
@@ -260,6 +267,21 @@ export function tradeFromRow(r: TradeRow): PaperTradeDTO {
     openedAt: r.openedAt?.getTime() ?? 0,
     closedAt: r.executedAt.getTime(),
     ...(r.execType === 'BustTrade' ? { execType: 'BustTrade' as const } : {}),
+    ...(d(r.funding).eq(0) ? {} : { funding: d(r.funding).toString() }),
+  };
+}
+
+/** A `Funding` Trade row → the wire execution (BP-4). */
+export function fundingFromRow(r: TradeRow): PaperFundingDTO {
+  return {
+    id: r.refId ?? r.id,
+    symbol: r.symbol,
+    side: r.side === 'BUY' ? 'short' : 'long',
+    qty: d(r.quantity).toString(),
+    markPrice: d(r.executedPrice).toString(),
+    rate: (r.feeRate ? d(r.feeRate) : new Decimal(0)).toString(),
+    fee: d(r.commission).toString(),
+    time: r.executedAt.getTime(),
   };
 }
 
@@ -300,6 +322,7 @@ export function positionData(p: Position) {
     entryFee: p.entryFee,
     closeFeeReserve: p.closeFeeReserve,
     extraMargin: p.extraMargin ?? new Decimal(0),
+    cumFunding: p.cumFunding ?? new Decimal(0),
     takeProfit: p.takeProfit ?? null,
     stopLoss: p.stopLoss ?? null,
     openedAt: new Date(p.openedAt),
@@ -361,7 +384,9 @@ export function historyOrderData(o: HistoricalOrder) {
 const PNL_PERCENT_LIMIT = new Decimal('99999999');
 
 export function tradeData(t: ClosedTrade) {
-  const net = t.pnl.minus(t.exitCommission);
+  // Closed P&L as Bybit shows it: net of the close fee and of the closed part's funding
+  const funding = t.funding ?? new Decimal(0);
+  const net = t.pnl.minus(t.exitCommission).minus(funding);
   const ratio = t.margin.gt(0) ? net.div(t.margin) : new Decimal(0);
   return {
     category: t.category,
@@ -381,6 +406,29 @@ export function tradeData(t: ClosedTrade) {
     openedAt: new Date(t.openedAt),
     executedAt: new Date(t.closedAt),
     execType: t.execType ?? 'Trade',
+    funding,
+  };
+}
+
+/**
+ * A funding settlement as a Trade row (Bybit execution `execType = Funding`, BP-4). The side is
+ * stored like a close (SELL = long), price = mark, commission = the fee (+ = paid), pnl = −fee.
+ */
+export function fundingData(f: FundingExecution) {
+  return {
+    category: 'linear',
+    symbol: f.symbol,
+    side: f.side === 'long' ? 'SELL' : 'BUY',
+    quantity: f.qty,
+    executedPrice: f.markPrice,
+    totalCost: f.qty.times(f.markPrice),
+    commission: f.fee,
+    pnl: f.fee.neg(),
+    grossPnl: new Decimal(0),
+    pnlPercent: new Decimal(0),
+    execType: 'Funding',
+    feeRate: f.rate,
+    executedAt: new Date(f.time),
   };
 }
 
@@ -422,6 +470,7 @@ export function positionDTO(p: Position, tiers: RiskTier[]): PaperPositionDTO {
     entryFee: s(p.entryFee),
     closeFeeReserve: s(p.closeFeeReserve),
     extraMargin: s(p.extraMargin ?? new Decimal(0)),
+    cumFunding: s(p.cumFunding ?? new Decimal(0)),
     liqPrice: s(risk.liqPrice.toDecimalPlaces(8)),
     bustPrice: s(risk.bustPrice.toDecimalPlaces(8)),
     positionIM: s(risk.positionIM.toDecimalPlaces(8)),
@@ -494,6 +543,20 @@ export function tradeDTO(t: ClosedTrade): PaperTradeDTO {
     openedAt: t.openedAt,
     closedAt: t.closedAt,
     ...(t.execType === 'BustTrade' ? { execType: 'BustTrade' as const } : {}),
+    ...(t.funding && !t.funding.eq(0) ? { funding: s(t.funding) } : {}),
+  };
+}
+
+export function fundingDTO(f: FundingExecution): PaperFundingDTO {
+  return {
+    id: f.id,
+    symbol: f.symbol,
+    side: f.side,
+    qty: s(f.qty),
+    markPrice: s(f.markPrice),
+    rate: s(f.rate),
+    fee: s(f.fee),
+    time: f.time,
   };
 }
 
@@ -538,6 +601,7 @@ export function deltaDTO(
     pendingRemove: delta.pendingRemove,
     orders: delta.orders.map(orderDTO),
     trades: delta.trades.map(tradeDTO),
+    ...(delta.fundings.length ? { fundings: delta.fundings.map(fundingDTO) } : {}),
     balanceEvents: delta.balanceEvents.map(balanceEventDTO),
     journal: delta.journal.map(journalDTO),
     journalEdits: delta.journalEdits,

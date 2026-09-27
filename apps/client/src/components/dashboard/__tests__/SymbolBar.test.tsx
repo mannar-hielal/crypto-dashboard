@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { SymbolBar } from '../SymbolBar';
 import { useLayoutStore } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
@@ -108,5 +108,54 @@ describe('SymbolBar trade button', () => {
 
     fireEvent.click(tradeButton);
     expect(onToggleTrading).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('SymbolBar — USDT Perpetual stats (BP-4)', () => {
+  const bar = () => (
+    <SymbolBar
+      tradingPanelOpen
+      onToggleTrading={vi.fn()}
+      leftToolbarOpen
+      onToggleLeftToolbar={vi.fn()}
+    />
+  );
+
+  beforeEach(() => {
+    setupStores();
+    vi.useFakeTimers({ now: 1_000_000 });
+    paneStores[0].setState({
+      markPrice: 84_331.83,
+      indexPrice: 84_320.1,
+      fundingRate: 0.00002184,
+      nextFundingTime: 1_000_000 + 3_723_000,
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    cleanup();
+  });
+
+  it('shows mark, index and the funding rate with a live countdown on perps', () => {
+    useLayoutStore.setState((s) => ({
+      panes: s.panes.map((p, i) => (i === 0 ? { ...p, category: 'linear' } : p)),
+    }));
+    render(bar());
+    expect(screen.getByText('Mark')).toBeTruthy();
+    expect(screen.getByText('Index')).toBeTruthy();
+    const funding = screen.getByTestId('funding-stat');
+    expect(funding.textContent).toContain('0.0022% / 01:02:03');
+    act(() => vi.advanceTimersByTime(3_000));
+    expect(funding.textContent).toContain('01:02:00');
+  });
+
+  it('shows none of them on Spot', () => {
+    useLayoutStore.setState((s) => ({
+      panes: s.panes.map((p, i) => (i === 0 ? { ...p, category: 'spot' } : p)),
+    }));
+    render(bar());
+    expect(screen.queryByTestId('funding-stat')).toBeNull();
+    expect(screen.queryByText('Mark')).toBeNull();
   });
 });

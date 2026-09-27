@@ -51,3 +51,6 @@ tv-website-full/
 # OS
 .DS_Store
 Thumbs.db
+
+# Claude Code subagent worktrees (local, never committed)
+.claude/worktrees/

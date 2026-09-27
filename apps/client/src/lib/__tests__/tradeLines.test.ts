@@ -22,6 +22,7 @@ const long: Position = {
   bustPrice: 45_000,
   positionIM: 502.475,
   positionMM: 18.975,
+  cumFunding: 0,
   openedAt: 1,
   takeProfit: 55_000,
   stopLoss: 47_000,

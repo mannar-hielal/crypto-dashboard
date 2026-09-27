@@ -191,7 +191,7 @@ export type PaperOrderStatus = 'filled' | 'cancelled' | 'rejected';
 export type PaperExitLeg = 'take-profit' | 'stop-loss';
 export type PaperSound = 'placed' | 'queued' | 'filled' | 'profit' | 'loss' | 'liquidation';
 /** Bybit's execution type: a normal fill, or a liquidation at the bankruptcy price */
-export type PaperExecType = 'Trade' | 'BustTrade';
+export type PaperExecType = 'Trade' | 'BustTrade' | 'Funding';
 
 export interface PaperAccountDTO {
   balance: string;
@@ -244,6 +244,8 @@ export interface PaperPositionDTO {
   positionMM?: string;
   /** Maintenance margin rate of the position's risk-limit tier */
   mmr?: string;
+  /** Funding settled on this position so far, signed as Bybit: positive = paid (BP-4; absent before) */
+  cumFunding?: string;
   openedAt: number;
   takeProfit?: string;
   stopLoss?: string;
@@ -326,6 +328,28 @@ export interface PaperTradeDTO {
   closedAt: number;
   /** 'BustTrade' = closed by liquidation at the bankruptcy price; absent = a normal close */
   execType?: PaperExecType;
+  /** The closed part's share of the position's funding (+ = paid); Closed P&L is net of it (BP-4) */
+  funding?: string;
+}
+
+/**
+ * One funding settlement on one position (Bybit execution `execType = Funding`, BP-4). It moves
+ * money, never the position.
+ */
+export interface PaperFundingDTO {
+  id: string;
+  symbol: string;
+  side: PaperPositionSide;
+  /** Position size at the funding timestamp */
+  qty: string;
+  /** Mark price at the funding timestamp */
+  markPrice: string;
+  /** Settled funding rate, e.g. "0.0001" */
+  rate: string;
+  /** qty × mark × rate, signed as Bybit's execFee: positive = paid, negative = received */
+  fee: string;
+  /** The funding timestamp (Unix ms) */
+  time: number;
 }
 
 export interface PaperJournalEntryDTO {
@@ -356,6 +380,8 @@ export interface PaperStateDTO {
   trades: PaperTradeDTO[];
   journal: PaperJournalEntryDTO[];
   balanceEvents: PaperBalanceEventDTO[];
+  /** Funding settlements, newest first (BP-4; absent from an older server) */
+  fundings?: PaperFundingDTO[];
 }
 
 /**
@@ -371,6 +397,8 @@ export interface PaperDeltaDTO {
   pendingRemove: string[];
   orders: PaperOrderDTO[];
   trades: PaperTradeDTO[];
+  /** Funding settlements this change made (BP-4) */
+  fundings?: PaperFundingDTO[];
   balanceEvents: PaperBalanceEventDTO[];
   journal: PaperJournalEntryDTO[];
   journalEdits: { id: string; text: string }[];

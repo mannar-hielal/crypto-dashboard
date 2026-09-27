@@ -735,3 +735,42 @@
 | 15.6.4 | With a drawing tool active                  | Lines don't take the pointer                                                                           | ✅     | T2 · RTL    |                                          |
 | 15.6.5 | Spot TP / SL leg                            | Drawn but not draggable (placed or cancelled, never edited)                                            | ✅     | T1 · Vitest |                                          |
 | 15.6.6 | Real chart: drag feel, labels, cursor       | ns-resize cursor on hover; chart doesn't pan while dragging a line                                     | ⬜     | Manual      | Screenshot for the PR.                   |
+
+---
+
+## Section 16 — Funding (Bybit Parity BP-4)
+
+> Reference: `docs/BYBIT_PARITY_PLAN.md` BP-4. fee = size × mark × rate at the funding timestamp; a positive rate: longs
+> pay, shorts receive. Worked position: long 0.1 BTC at 10× (IM 500), mark 51,000, rate 0.01% → fee **0.51**.
+
+### 16.1 Settlement
+
+| #      | Action                                             | Expected                                                                                                   | Status | Tier        | Notes                              |
+| ------ | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------ | ----------- | ---------------------------------- |
+| 16.1.1 | Long, rate +0.01%                                  | Pays 0.51: balance −0.51, realized −0.51, position Funding −0.51 (red)                                     | ✅     | T1 + T2     | `funding.test`, OAMP test.         |
+| 16.1.2 | Short, rate +0.01% / long, rate −0.02%             | Receives 0.51 / 1.02 (green, "+")                                                                          | ✅     | T1 · Vitest | `funding.test`.                    |
+| 16.1.3 | Balance too low                                    | The shortfall comes out of the position margin; its liquidation price moves toward the mark                | ✅     | T1 · Vitest | `funding.test`.                    |
+| 16.1.4 | Position closed seconds after the timestamp        | Still pays (held at the timestamp), from the balance                                                       | ✅     | T1 · Vitest | `funding.test`.                    |
+| 16.1.5 | Position opened after the timestamp                | Not charged                                                                                                | ✅     | T1 · Vitest | `services.test` MatchingEngine.    |
+| 16.1.6 | Same timestamp twice (restart, retry, 2nd machine) | Settles once (`SymbolSetting.lastFundingAt`)                                                               | ✅     | T1 + live   | Live ✓ 2026-09-27 (second run: 0). |
+| 16.1.7 | Records                                            | Funding execution row (`execType Funding`, mark as price, rate, signed fee), journal line, Balance History | ✅     | T1 + live   | Live ✓: fee 0.01936652 exact.      |
+| 16.1.8 | Rate source                                        | Bybit's settled rate from funding history for exactly that timestamp; the ticker's announced rate if none  | ✅     | T1 · Vitest | `services.test`.                   |
+| 16.1.9 | Mark at the timestamp                              | The mark seen at the timestamp, not the next tick's                                                        | ✅     | T1 · Vitest | `services.test`.                   |
+
+### 16.2 Backfill, closes, history
+
+| #      | Action                                  | Expected                                                                                                  | Status | Tier        | Notes            |
+| ------ | --------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------ | ----------- | ---------------- |
+| 16.2.1 | Server gap spanning a funding timestamp | Settled at the mark-price candle's open, in time order with the candle sweep (before a later liquidation) | ✅     | T1 · Vitest | `services.test`. |
+| 16.2.2 | Close after funding                     | The closed-trade record carries the funding share; realized PnL isn't charged again                       | ✅     | T1 · Vitest | `funding.test`.  |
+| 16.2.3 | Same-side add                           | The merged position keeps its funding so far                                                              | ✅     | T1 · Vitest |                  |
+| 16.2.4 | Snapshot                                | Funding rows never crowd out closed-trade history (own capped list)                                       | ✅     | T1 + live   |                  |
+| 16.2.5 | Funding history paging / 7-day cap      | Oldest first; both `startTime` and `endTime` sent                                                         | ✅     | T1 · Vitest | `infra.test`.    |
+
+### 16.3 UI
+
+| #      | Action            | Expected                                                                                       | Status | Tier      | Notes                           |
+| ------ | ----------------- | ---------------------------------------------------------------------------------------------- | ------ | --------- | ------------------------------- |
+| 16.3.1 | Perps pane header | MARK · INDEX · FUNDING / COUNTDOWN "0.0083% / 07:49:28", ticking each second; tooltip explains | ✅     | T2 + live | `SymbolBar.test`; screenshot ✓. |
+| 16.3.2 | Spot pane header  | No mark / index / funding stats                                                                | ✅     | T2 · RTL  |                                 |
+| 16.3.3 | Positions tab     | Funding column (default on; saved layouts get it once, before Close if its anchor is hidden)   | ✅     | T2 · RTL  | `columnPrefs` tests.            |

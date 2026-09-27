@@ -15,6 +15,7 @@ import {
   type ClosedTrade,
   type Delta,
   type ExitLeg,
+  type FundingExecution,
   type HistoricalOrder,
   type InstrumentRules,
   type JournalEntry,
@@ -166,11 +167,13 @@ export class Draft {
   realizedPnl: Decimal;
   leverage: number;
   symbolLeverage: Record<string, number>;
+  symbolFundingAt: Record<string, number>;
   positions: Position[];
   pending: PendingOrder[];
   private spot: Map<string, SpotHolding>;
   readonly orders: HistoricalOrder[] = [];
   readonly trades: ClosedTrade[] = [];
+  readonly fundings: FundingExecution[] = [];
   readonly balanceEvents: BalanceEvent[] = [];
   readonly journal: JournalEntry[] = [];
   readonly journalEdits: { id: string; text: string }[] = [];
@@ -186,6 +189,7 @@ export class Draft {
     this.realizedPnl = state.realizedPnl;
     this.leverage = clampLeverage(state.leverage);
     this.symbolLeverage = { ...state.symbolLeverage };
+    this.symbolFundingAt = { ...state.symbolFundingAt };
     this.positions = [...state.positions];
     this.pending = [...state.pendingOrders];
     this.spot = new Map(state.spot.map((h) => [h.coin, h]));
@@ -198,6 +202,9 @@ export class Draft {
   }
   prependTrade(row: ClosedTrade): void {
     this.trades.unshift(row);
+  }
+  prependFunding(row: FundingExecution): void {
+    this.fundings.unshift(row);
   }
   prependBalanceEvent(row: BalanceEvent): void {
     this.balanceEvents.unshift(row);
@@ -263,6 +270,7 @@ export class Draft {
         realizedPnl: this.realizedPnl,
         leverage: this.leverage,
         symbolLeverage: this.symbolLeverage,
+        symbolFundingAt: this.symbolFundingAt,
       },
       positionsUpsert,
       positionsRemove,
@@ -271,6 +279,7 @@ export class Draft {
       pendingRemove,
       orders: this.orders,
       trades: this.trades,
+      fundings: this.fundings,
       balanceEvents: this.balanceEvents,
       journal: this.journal,
       journalEdits: this.journalEdits,

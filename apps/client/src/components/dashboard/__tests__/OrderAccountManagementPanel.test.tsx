@@ -252,6 +252,7 @@ describe('OrderAccountManagementPanel Orders filled sub-tab', () => {
           bustPrice: 0,
           positionIM: 0,
           positionMM: 0,
+          cumFunding: 0,
           openedAt: 1_715_000_000_100,
           takeProfit: 78_000,
           stopLoss: 76_000,
@@ -382,6 +383,7 @@ describe('Section 4 — Positions tab', () => {
           bustPrice: 0,
           positionIM: 0,
           positionMM: 0,
+          cumFunding: 0,
           openedAt: Date.now(),
         } satisfies Position,
       ],
@@ -410,6 +412,7 @@ describe('Section 4 — Positions tab', () => {
           bustPrice: 0,
           positionIM: 0,
           positionMM: 0,
+          cumFunding: 0,
           openedAt: Date.now(),
         } satisfies Position,
       ],
@@ -437,6 +440,7 @@ describe('Section 4 — Positions tab', () => {
           bustPrice: 0,
           positionIM: 0,
           positionMM: 0,
+          cumFunding: 0,
           openedAt: Date.now(),
         },
         {
@@ -455,6 +459,7 @@ describe('Section 4 — Positions tab', () => {
           bustPrice: 0,
           positionIM: 0,
           positionMM: 0,
+          cumFunding: 0,
           openedAt: Date.now(),
         },
       ] satisfies Position[],
@@ -483,6 +488,7 @@ describe('Section 4 — Positions tab', () => {
           bustPrice: 0,
           positionIM: 0,
           positionMM: 0,
+          cumFunding: 0,
           openedAt: Date.now(),
           takeProfit: 55_000,
         } satisfies Position,
@@ -861,6 +867,7 @@ describe('BP-3 — mark price, liquidation price and MMR in the Positions tab', 
     bustPrice: 45_000,
     positionIM: 502.475,
     positionMM: 18.975,
+    cumFunding: 0,
     openedAt: FIXTURE_NOW,
   };
 
@@ -898,20 +905,67 @@ describe('BP-3 — mark price, liquidation price and MMR in the Positions tab', 
 });
 
 describe('migrateColPrefs()', () => {
-  it('adds the BP-3 columns to a saved Positions layout once, after Mark Price', () => {
-    const saved = { positions: ['symbol', 'mark', 'pnl', 'close'] };
+  it('adds the BP-3 and BP-4 columns to a v1 Positions layout once', () => {
+    const saved = { positions: ['symbol', 'mark', 'pnl', 'pnlPct', 'close'] };
     expect(migrateColPrefs(saved, 1).positions).toEqual([
       'symbol',
       'mark',
       'liq',
       'mmr',
       'pnl',
+      'pnlPct',
+      'funding',
+      'close',
+    ]);
+  });
+
+  it('a v2 layout only gets the BP-4 Funding column; without its anchor it goes before Close', () => {
+    const saved = { positions: ['symbol', 'mark', 'liq', 'pnl', 'close'] };
+    expect(migrateColPrefs(saved, 2).positions).toEqual([
+      'symbol',
+      'mark',
+      'liq',
+      'pnl',
+      'funding',
       'close',
     ]);
   });
 
   it('keeps the user’s choice once the layout is at the current version', () => {
     const saved = { positions: ['symbol', 'mark', 'pnl', 'close'] };
-    expect(migrateColPrefs(saved, 2)).toEqual(saved);
+    expect(migrateColPrefs(saved, 3)).toEqual(saved);
+  });
+});
+
+describe('BP-4 — funding in the Positions tab', () => {
+  const base: Position = {
+    id: 'p-fund',
+    symbol: 'BTCUSDT',
+    side: 'long',
+    quantity: 0.1,
+    entryPrice: 50_000,
+    entryUsdtAmount: 500,
+    category: 'linear',
+    leverage: 10,
+    entryFee: 2.75,
+    closeFeeReserve: 2.475,
+    extraMargin: 0,
+    liqPrice: 45_148.99,
+    bustPrice: 45_000,
+    positionIM: 502.475,
+    positionMM: 18.975,
+    cumFunding: 0.51,
+    openedAt: FIXTURE_NOW,
+  };
+
+  it('shows funding paid as money out (−, red) and received as money in (+)', () => {
+    usePaperStore.setState({ positions: [base] });
+    const { unmount } = renderPanel();
+    expect(screen.getByText('Funding')).toBeTruthy();
+    expect(screen.getByTestId('position-funding').textContent).toBe('−0.51');
+    unmount();
+    usePaperStore.setState({ positions: [{ ...base, cumFunding: -0.2 }] });
+    renderPanel();
+    expect(screen.getByTestId('position-funding').textContent).toBe('+0.20');
   });
 });

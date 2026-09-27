@@ -908,6 +908,7 @@ describe('BP-2 — market tabs and leverage', () => {
           bustPrice: 0,
           positionIM: 5_000,
           positionMM: 16.5,
+          cumFunding: 0,
           openedAt: 1,
         },
       ],

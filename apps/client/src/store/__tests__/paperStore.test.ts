@@ -103,6 +103,7 @@ describe('hydrate()', () => {
       liqPrice: 45_148.99,
       bustPrice: 45_000,
       positionMM: 19.25,
+      cumFunding: 0,
     });
     expect(s.positions[0].stopLoss).toBeUndefined();
     expect(s.journal[0].pnl).toBe(12.5);
@@ -450,6 +451,25 @@ describe('BP-2 read model', () => {
     ]);
     expect(getLastKnownPrice('SOLUSDT', 'linear')).toBe(150);
     expect(getLastKnownPrice('SOLUSDT', 'spot')).toBe(149.9);
+  });
+
+  it('keeps funding settlements from the snapshot and from deltas, newest first (BP-4)', () => {
+    const fund = (id: string, fee: string) => ({
+      id,
+      symbol: 'BTCUSDT',
+      side: 'long' as const,
+      qty: '0.1',
+      markPrice: '51000',
+      rate: '0.0001',
+      fee,
+      time: 1,
+    });
+    usePaperStore.getState().hydrate(emptyState({ fundings: [fund('f1', '0.51')] }));
+    expect(usePaperStore.getState().fundings).toEqual([
+      expect.objectContaining({ id: 'f1', fee: 0.51, rate: 0.0001 }),
+    ]);
+    usePaperStore.getState().applyDelta({ ...delta(1), fundings: [fund('f2', '-0.2')] });
+    expect(usePaperStore.getState().fundings.map((f) => f.id)).toEqual(['f2', 'f1']);
   });
 
   it('applyPrices keeps the USDT Perpetual mark price apart from the last price (BP-3)', () => {

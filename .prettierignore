@@ -21,3 +21,6 @@ tv-website-full/
 # HTTP Archive files — not source code
 *.har
 
+
+# Claude Code subagent worktrees
+.claude/worktrees/
