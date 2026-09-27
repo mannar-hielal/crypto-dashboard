@@ -4,7 +4,7 @@ import { X, ChevronUp, ChevronDown, Info, AlertTriangle } from 'lucide-react';
 import { useStore } from 'zustand';
 import type { MarketCategory, PaperTriggerBy } from '@crypto-dashboard/sdk';
 import { useLayoutStore } from '@/store/layoutStore';
-import { paneStores } from '@/store/paneStore';
+import { getLastKnownMarkPrice, paneStores } from '@/store/paneStore';
 import { leverageFor, usePaperStore, type PlaceResult } from '@/store/paperStore';
 import { MARKETS } from '@/lib/marketRoutes';
 import { feeRatesLabel, floorToStep, maxQty, orderPreview } from '@/lib/orderMath';
@@ -13,7 +13,7 @@ import { useOrderPrefillStore } from '@/store/orderPrefillStore';
 import { bg, color, fontSize } from '@/lib/tokens';
 import { LeverageChip } from './LeverageChip';
 import { LiquidationNotices } from './LiquidationNotices';
-import { LIQUIDATION_EXPLAINER } from '@/lib/positionMath';
+import { LIQUIDATION_EXPLAINER, crossAccountFigures } from '@/lib/positionMath';
 import { fmtMktPrice } from '@/lib/utils';
 import { Toggle } from '@/components/ui/Toggle';
 import { NumericInput } from '@/components/ui/NumericInput';
@@ -115,7 +115,19 @@ export function TradingPanel({
 
   const spread = bid != null && ask != null ? ask - bid : null;
 
-  const balance = usePaperStore((s) => s.balance);
+  const freeBalance = usePaperStore((s) => s.balance);
+  const marginMode = usePaperStore((s) => s.marginMode);
+  const positions = usePaperStore((s) => s.positions);
+  const pendingOrders = usePaperStore((s) => s.pendingOrders);
+  // What an order can use: the free USDT, or in cross (BP-5 E) the account's available balance —
+  // margin balance − total IM at the live marks (unrealised profit counts, O5)
+  const balance =
+    !isSpot && marginMode === 'REGULAR_MARGIN'
+      ? crossAccountFigures(
+          { balance: freeBalance, positions, pendingOrders },
+          (sym) => getLastKnownMarkPrice(sym) ?? null
+        ).available
+      : freeBalance;
   // Spot is 1× — leverage is a USDT Perpetual setting, per symbol
   const leverage = usePaperStore((s) => (isSpot ? 1 : leverageFor(s, symbol)));
   const coinFree = usePaperStore(

@@ -32,13 +32,19 @@ import {
   positionPnl,
   riskTierInfo,
   riskTierLabel,
+  crossAccountFigures,
+  crossLiqPrice,
 } from '@/lib/positionMath';
+
+const CROSS_MM_RATE_HELP =
+  "Account maintenance margin rate (cross): total maintenance margin ÷ margin balance. At 100% the account's positions are liquidated.";
 import { MmrBar } from './MmrBar';
 import { AdjustMarginDialog } from './AdjustMarginDialog';
 import { winRateFrom } from '@/lib/funding';
 import { loadColPrefs, saveColPrefs } from '@/lib/columnPrefs';
 import { AssetsTable } from './AssetsTable';
 import { ClosedPnlTable } from './ClosedPnlTable';
+import { CrossMarginNotice } from './CrossMarginNotice';
 import type { JournalEntry, HistoricalOrder, PendingOrder } from '@/store/paperStore';
 import type { PanelSize } from '@/pages/DashboardPage';
 import { bg, color, fontSize } from '@/lib/tokens';
@@ -550,8 +556,15 @@ export function OrderAccountManagementPanel({
     0
   );
   const unrealizedPnl = positionsPnl + coinsPnl;
-  // balance is already free cash (margin, fees and reserves already deducted)
-  const available = balance;
+  // Cross margin (BP-5 E): the account figures at the live marks
+  const marginMode = usePaperStore((s) => s.marginMode);
+  const cross =
+    marginMode === 'REGULAR_MARGIN'
+      ? crossAccountFigures({ balance, positions, pendingOrders: allPendingOrders }, getMark)
+      : null;
+  // Isolated: balance is already free cash (margin, fees and reserves deducted). Cross: Bybit's
+  // available balance (margin balance − total IM)
+  const available = cross ? cross.available : balance;
   const equity = balance + reserved + lockedPositionCapital + positionsPnl + coinValue;
   // Funding payments move money but aren't trades — excluded (BP-4)
   const winRate = winRateFrom(balanceLog);
@@ -858,6 +871,9 @@ export function OrderAccountManagementPanel({
             transition={{ duration: 0.15 }}
             className="flex min-h-0 flex-1 flex-col"
           >
+            {/* One-time notice for pre-BP-5 isolated accounts (BP-5 E, O2) */}
+            <CrossMarginNotice />
+
             {/* ── Account Summary Bar ─────────────────────────────────────── */}
             <div
               className="flex shrink-0 items-center gap-4 overflow-x-auto border-b border-white/4 px-3 py-1.5 scrollbar-none"
@@ -900,6 +916,23 @@ export function OrderAccountManagementPanel({
                     value: winRate !== null ? `${winRate.toFixed(0)}%` : '—',
                     col: winRate !== null ? (winRate >= 50 ? color.green : color.red) : undefined,
                   },
+                  // Cross margin (BP-5 E): Bybit's account figures
+                  ...(cross
+                    ? [
+                        {
+                          label: 'Margin Balance',
+                          value: `$${cross.marginBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                          col: undefined,
+                        },
+                        {
+                          label: 'IM Rate',
+                          value: Number.isFinite(cross.imRate)
+                            ? `${(cross.imRate * 100).toFixed(2)}%`
+                            : '—',
+                          col: undefined,
+                        },
+                      ]
+                    : []),
                 ] as { label: string; value: string; col: string | undefined }[]
               ).map(({ label, value, col }) => (
                 <div key={label} className="flex shrink-0 flex-col gap-px">
@@ -917,6 +950,18 @@ export function OrderAccountManagementPanel({
                   </span>
                 </div>
               ))}
+              {cross && (
+                <div className="flex shrink-0 flex-col gap-px" data-testid="account-mm-rate">
+                  <span
+                    style={{ fontSize: fontSize.xs10, color: color.muted }}
+                    className="whitespace-nowrap font-medium uppercase tracking-wider"
+                    title={CROSS_MM_RATE_HELP}
+                  >
+                    MM Rate
+                  </span>
+                  <MmrBar rate={Number.isFinite(cross.mmRate) ? cross.mmRate : 1} />
+                </div>
+              )}
             </div>
 
             {/* ── Tab bar ─────────────────────────────────────────────────── */}
@@ -1271,7 +1316,12 @@ export function OrderAccountManagementPanel({
                                 const markPrice = getMark(pos.symbol) ?? pos.entryPrice;
                                 const lastPrice = getPrice('linear', pos.symbol);
                                 const pnl = positionPnl(pos, markPrice);
-                                const mmrRate = positionMmrRate(pos, markPrice);
+                                // Cross: the account's MM rate (liquidation is account-wide)
+                                const mmrRate = cross
+                                  ? Number.isFinite(cross.mmRate)
+                                    ? cross.mmRate
+                                    : 1
+                                  : positionMmrRate(pos, markPrice);
                                 const pnlPct = (pnl / pos.entryUsdtAmount) * 100;
                                 const isProfit = pnl >= 0;
                                 // Position margin as Bybit shows it: IM + margin added by hand
@@ -1394,9 +1444,15 @@ export function OrderAccountManagementPanel({
                                         style={{ color: color.amber }}
                                         data-testid="position-liq-price"
                                       >
-                                        {pos.liqPrice !== null && pos.liqPrice > 0
-                                          ? `$${fmtMktPrice(pos.liqPrice)}`
-                                          : '—'}
+                                        {(() => {
+                                          // Cross: Bybit's estimate from the whole account
+                                          const liq = cross
+                                            ? crossLiqPrice(pos, getMark(pos.symbol), cross)
+                                            : pos.liqPrice;
+                                          return liq !== null && liq > 0
+                                            ? `$${fmtMktPrice(liq)}`
+                                            : '—';
+                                        })()}
                                       </td>
                                     )}
                                     {isVisible('positions', 'mmr') && (
@@ -1510,16 +1566,19 @@ export function OrderAccountManagementPanel({
                                     {isVisible('positions', 'margin') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
                                         <span className="inline-flex items-center gap-1">
-                                          <button
-                                            type="button"
-                                            onClick={() => setMarginDialogFor(pos.id)}
-                                            title="Add / reduce margin"
-                                            aria-label={`Adjust margin for ${pos.symbol}`}
-                                            className="opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 hover:text-white"
-                                            style={{ color: color.muted }}
-                                          >
-                                            <Pencil className="h-2.5 w-2.5" />
-                                          </button>
+                                          {/* Isolated only — cross has no per-position margin */}
+                                          {!cross && (
+                                            <button
+                                              type="button"
+                                              onClick={() => setMarginDialogFor(pos.id)}
+                                              title="Add / reduce margin"
+                                              aria-label={`Adjust margin for ${pos.symbol}`}
+                                              className="opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 hover:text-white"
+                                              style={{ color: color.muted }}
+                                            >
+                                              <Pencil className="h-2.5 w-2.5" />
+                                            </button>
+                                          )}
                                           <span>{margin.toFixed(2)}</span>
                                           <span
                                             style={{

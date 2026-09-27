@@ -36,6 +36,7 @@ import {
   type PaperSpotBalanceDTO,
   type PaperStateDTO,
   type PaperTriggerBy,
+  type PaperMarginMode,
 } from '@crypto-dashboard/sdk';
 import { useAuthStore } from './authStore';
 import { setLastKnownMarkPrice, setLastKnownPrice } from './paneStore';
@@ -98,6 +99,11 @@ export interface Position {
   /** What each leg triggers on (BP-5 B); absent = LastPrice */
   tpTriggerBy?: PaperTriggerBy;
   slTriggerBy?: PaperTriggerBy;
+  /**
+   * 'cross' (BP-5 E): the liquidation price is then the account-level estimate
+   * (useCrossAccount); absent = isolated
+   */
+  marginMode?: 'cross';
 }
 
 /** A spot coin balance. The USDT wallet is `balance`. */
@@ -297,6 +303,7 @@ function positionFrom(p: PaperPositionDTO): Position {
     openedAt: p.openedAt,
     ...(p.takeProfit !== undefined ? { takeProfit: toNum(p.takeProfit) } : {}),
     ...(p.stopLoss !== undefined ? { stopLoss: toNum(p.stopLoss) } : {}),
+    ...(p.marginMode === 'cross' ? { marginMode: 'cross' as const } : {}),
     ...(p.tpTriggerBy && p.tpTriggerBy !== 'LastPrice' ? { tpTriggerBy: p.tpTriggerBy } : {}),
     ...(p.slTriggerBy && p.slTriggerBy !== 'LastPrice' ? { slTriggerBy: p.slTriggerBy } : {}),
   };
@@ -424,6 +431,8 @@ export function mapServerState(state: PaperStateDTO) {
     realizedPnl: toNum(state.account.realizedPnl),
     leverage: state.account.leverage,
     symbolLeverage: { ...state.account.symbolLeverage },
+    marginMode: state.account.marginMode ?? ('ISOLATED_MARGIN' as const),
+    marginModeNotice: state.account.marginModeNotice ?? false,
     spotBalances: state.spotBalances.map(spotFrom),
     positions: state.positions.map(positionFrom),
     pendingOrders: state.pendingOrders.map(pendingFrom),
@@ -497,6 +506,10 @@ interface PaperState {
   leverage: number;
   /** USDT Perpetual leverage per symbol (read through leverageFor) */
   symbolLeverage: Record<string, number>;
+  /** Account-wide margin mode (BP-5 E): REGULAR_MARGIN = cross. A pre-BP-5 server = isolated */
+  marginMode: PaperMarginMode;
+  /** The account was isolated before cross existed: offer the one-time notice (O2) */
+  marginModeNotice: boolean;
   /** Spot coin balances */
   spotBalances: SpotBalance[];
   /** When the server last pushed prices (they go to lastKnownPrices; this lets views re-render) */
@@ -561,6 +574,8 @@ interface PaperState {
   editJournalEntry: (entryId: string, text: string) => Promise<ActionError>;
   /** USDT Perpetual leverage for one symbol (refused while it has open trades). */
   setSymbolLeverage: (symbol: string, v: number) => Promise<ActionError>;
+  /** Switch the account's margin mode (BP-5 E); resolves to the server's refusal text, or null. */
+  setMarginMode: (mode: PaperMarginMode) => Promise<ActionError>;
   /** Reset the account back to the starting balance. */
   reset: () => Promise<ActionError>;
 }
@@ -577,6 +592,8 @@ const EMPTY = {
   journal: [] as JournalEntry[],
   leverage: 1,
   symbolLeverage: {} as Record<string, number>,
+  marginMode: 'ISOLATED_MARGIN' as PaperMarginMode,
+  marginModeNotice: false,
   spotBalances: [] as SpotBalance[],
   pricesAt: 0,
   version: -1,
@@ -672,6 +689,10 @@ export const usePaperStore = create<PaperState>()((set, get) => {
         realizedPnl: toNum(delta.account.realizedPnl),
         leverage: delta.account.leverage,
         symbolLeverage: { ...delta.account.symbolLeverage },
+        // A switch answers the one-time notice (the server clears it too)
+        ...(delta.account.marginMode && delta.account.marginMode !== s.marginMode
+          ? { marginMode: delta.account.marginMode, marginModeNotice: false }
+          : {}),
         spotBalances: upsertSpot(delta.reset ? [] : s.spotBalances, delta.spotUpsert.map(spotFrom)),
         positions: upsert(
           delta.reset ? [] : s.positions,
@@ -845,6 +866,8 @@ export const usePaperStore = create<PaperState>()((set, get) => {
       const leverage = Math.min(Math.max(Number.isFinite(v) ? Math.round(v) : 1, 1), MAX_LEVERAGE);
       return settle(() => paperApi.setSymbolLeverage(symbol, leverage, token()));
     },
+
+    setMarginMode: (mode) => settle(() => paperApi.setMarginMode(mode, token())),
 
     reset: () => settle(() => paperApi.resetAccount(token())),
   };

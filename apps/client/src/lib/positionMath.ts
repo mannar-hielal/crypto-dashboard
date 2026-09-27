@@ -7,13 +7,16 @@
  */
 
 import {
+  accountFiguresEstimate,
+  crossLiqPriceEstimate,
   estimatePositionRisk,
   feeToCloseEstimate,
   positionCapEstimate,
   riskTiersFor,
   tierIndexEstimate,
 } from '@crypto-dashboard/sdk';
-import type { ClosedTrade, Position } from '@/store/paperStore';
+import type { AccountFiguresEstimate } from '@crypto-dashboard/sdk';
+import type { ClosedTrade, PendingOrder, Position } from '@/store/paperStore';
 
 /** Unrealised PnL of a position at `price` (the mark price for Bybit parity). */
 export function positionPnl(
@@ -175,3 +178,61 @@ export function closedPnlBreakdown(t: ClosedTrade): string {
     part('Funding', t.funding ?? 0),
   ].join(' · ');
 }
+
+// ─── Cross margin (BP-5 E) ─────────────────────────────────────────────────────
+
+/** Wallet, positions and orders — what the cross account figures are computed from. */
+export interface CrossAccountInput {
+  balance: number;
+  positions: Position[];
+  pendingOrders: PendingOrder[];
+}
+
+const crossInput = (pos: Position, mark: number | null) => ({
+  side: pos.side,
+  qty: pos.quantity,
+  entryPrice: pos.entryPrice,
+  leverage: pos.leverage,
+  mark: mark ?? pos.entryPrice,
+  tiers: riskTiersFor(pos.symbol),
+});
+
+/**
+ * Bybit's cross account figures, live: the wallet (free USDT + what positions and orders hold)
+ * and every position at `markOf` (its entry price when unknown). Mirrors the server's
+ * bybitSpec.accountFigures.
+ */
+export function crossAccountFigures(
+  s: CrossAccountInput,
+  markOf: (symbol: string) => number | null
+): AccountFiguresEstimate {
+  const linearOrders = s.pendingOrders.filter((o) => o.category === 'linear');
+  let wallet = s.balance;
+  for (const p of s.positions) wallet += p.entryUsdtAmount + p.closeFeeReserve + p.extraMargin;
+  for (const o of linearOrders) wallet += o.reserved;
+  return accountFiguresEstimate(
+    wallet,
+    s.positions.map((p) => crossInput(p, markOf(p.symbol))),
+    linearOrders.reduce((sum, o) => sum + o.reserved, 0)
+  );
+}
+
+/** A cross position's estimated liquidation price (every other position held constant). */
+export function crossLiqPrice(
+  pos: Position,
+  mark: number | null,
+  figures: AccountFiguresEstimate
+): number {
+  return crossLiqPriceEstimate(crossInput(pos, mark), figures);
+}
+
+/** Cross margin, for the mode modal: one bad position can use the whole balance. */
+export const CROSS_EXPLAINER =
+  'Cross margin: your whole available balance backs every position, and unrealised profit can ' +
+  'open new ones. If the account maintenance margin rate reaches 100%, positions are liquidated ' +
+  '— and a big loss can take the whole balance, not just one position margin.';
+
+/** Isolated margin, for the mode modal. */
+export const ISOLATED_EXPLAINER =
+  'Isolated margin: each position has its own margin. A liquidation loses only that margin; ' +
+  'you can add or reduce it per position.';

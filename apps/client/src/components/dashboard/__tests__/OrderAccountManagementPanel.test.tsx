@@ -871,6 +871,45 @@ describe('BP-3 — mark price, liquidation price and MMR in the Positions tab', 
     openedAt: FIXTURE_NOW,
   };
 
+  it('cross (BP-5 E): account figures in the summary bar, the estimated liq price, no margin pencil', () => {
+    usePaperStore.setState({
+      positions: [{ ...long10x, marginMode: 'cross', liqPrice: null, bustPrice: null }],
+      balance: 95,
+      marginMode: 'REGULAR_MARGIN',
+    });
+    paneStores[0].setState({ markPrice: 49_000 });
+    renderPanel();
+    // Wallet 597.475, −100 at mark: margin balance 497.475; MM 18.5955 → 3.7%
+    expect(screen.getByText('Margin Balance').nextElementSibling?.textContent).toBe('$497.48');
+    // Available = margin balance − IM at mark (492.4255)
+    expect(screen.getByText('Available').nextElementSibling?.textContent).toBe('$5.05');
+    expect(
+      within(screen.getByTestId('account-mm-rate')).getByTestId('position-mmr').textContent
+    ).toBe('3.7%');
+    // The position's liquidation price: where the margin balance meets the MM (≈ 44,193)
+    expect(screen.getByTestId('position-liq-price').textContent).toMatch(/^\$44,19\d/);
+    expect(screen.queryByRole('button', { name: 'Adjust margin for BTCUSDT' })).toBeNull();
+  });
+
+  it('shows the one-time cross notice to a pre-BP-5 isolated account; Switch to Cross asks the server', async () => {
+    const setMarginMode = vi.fn(async () => null);
+    const realSet = usePaperStore.getState().setMarginMode;
+    usePaperStore.setState({ marginModeNotice: true, setMarginMode });
+    renderPanel();
+    const notice = screen.getByTestId('cross-margin-notice');
+    fireEvent.click(within(notice).getByRole('button', { name: 'How it works' }));
+    expect(notice.textContent).toContain('whole available balance backs every position');
+    fireEvent.click(within(notice).getByRole('button', { name: 'Switch to Cross' }));
+    await waitFor(() => expect(setMarginMode).toHaveBeenCalledWith('REGULAR_MARGIN'));
+    // Dismissed: gone, and remembered
+    fireEvent.click(
+      within(notice).getByRole('button', { name: 'Dismiss the cross margin notice' })
+    );
+    expect(screen.queryByTestId('cross-margin-notice')).toBeNull();
+    expect(localStorage.getItem('cd-cross-margin-notice-dismissed')).toBe('1');
+    usePaperStore.setState({ setMarginMode: realSet });
+  });
+
   it('values the position at the mark price, not the last price, and shows the liquidation price', () => {
     usePaperStore.setState({ positions: [long10x] });
     // Last 77,350 (pane 0 default); mark 49,000 → PnL (49,000 − 50,000) × 0.1 = −100

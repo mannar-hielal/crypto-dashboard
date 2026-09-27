@@ -1163,3 +1163,44 @@ describe('BP-5 C — tier info in the leverage modal (O6)', () => {
     );
   });
 });
+
+describe('BP-5 E — margin mode in the leverage chip and modal', () => {
+  it('the chip names the mode; switching to Cross calls the server before the leverage', async () => {
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: 'Leverage 1x, isolated margin' }));
+    expect(screen.getByText(/^Isolated 1x/)).toBeTruthy();
+    const dialog = screen.getByRole('dialog', { name: /Adjust leverage/ });
+    fireEvent.click(within(dialog).getByRole('tab', { name: 'Cross' }));
+    expect(within(dialog).getByTestId('margin-mode-explainer').textContent).toContain(
+      'applies to your whole account'
+    );
+    fireEvent.click(within(dialog).getByRole('button', { name: '5×' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
+    await waitFor(() =>
+      expect(fakePaperApi.setMarginMode).toHaveBeenCalledWith('REGULAR_MARGIN', 'test-token')
+    );
+    await waitFor(() => expect(fakePaperApi.setSymbolLeverage).toHaveBeenCalled());
+    expect(fakePaperApi.setMarginMode.mock.invocationCallOrder[0]).toBeLessThan(
+      fakePaperApi.setSymbolLeverage.mock.invocationCallOrder[0]
+    );
+  });
+
+  it('a refused switch shows every reason inline and leaves the leverage alone', async () => {
+    fakePaperApi.setMarginMode.mockRejectedValueOnce(
+      new Error(
+        'Set margin mode failed: The BTCUSDT position would be liquidated immediately in isolated margin'
+      )
+    );
+    usePaperStore.setState({ marginMode: 'REGULAR_MARGIN' });
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: 'Leverage 1x, cross margin' }));
+    const dialog = screen.getByRole('dialog', { name: /Adjust leverage/ });
+    fireEvent.click(within(dialog).getByRole('tab', { name: 'Isolated' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: '5×' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
+    expect((await within(dialog).findByRole('alert')).textContent).toContain(
+      'would be liquidated immediately'
+    );
+    expect(fakePaperApi.setSymbolLeverage).not.toHaveBeenCalled();
+  });
+});

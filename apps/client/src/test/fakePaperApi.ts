@@ -154,6 +154,7 @@ export const fakePaperApi = {
   closePosition: vi.fn(() => ok('0')),
   setLeverage: vi.fn((leverage: number) => ok(leverage)),
   setSymbolLeverage: vi.fn((_symbol: string, leverage: number) => ok(leverage)),
+  setMarginMode: vi.fn((mode: 'ISOLATED_MARGIN' | 'REGULAR_MARGIN') => ok(mode)),
   placeSpotExits: vi.fn(() => ok('oco-1' as string | null)),
   resetAccount: vi.fn(() => ok(true)),
   addNote: vi.fn(() => ok('note')),
