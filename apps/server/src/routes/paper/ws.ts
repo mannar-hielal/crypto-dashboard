@@ -109,14 +109,16 @@ export async function privatePaperWs(app: FastifyInstance): Promise<void> {
      * closed it). Written by whichever close path sees the code first — never by the error path, which
      * is always followed by the real close event (review #154).
      */
-    const logClosed = (code: number, reason?: string) => {
+    const logClosed = (code: number, reason?: string, rejectedUserId?: string) => {
       if (closeLogged) return;
       closeLogged = true;
+      // A verified user refused before the socket was theirs (too many tabs) is named too
+      const who = userId ?? rejectedUserId;
       log.info(
         {
           ...conn,
           authenticated: userId !== null,
-          ...(userId ? { userId } : {}),
+          ...(who ? { userId: who } : {}),
           code,
           ...(reason ? { reason } : {}),
           durationMs: Date.now() - openedAt,
@@ -162,10 +164,10 @@ export async function privatePaperWs(app: FastifyInstance): Promise<void> {
      * The server closes the socket: release (and log) with the code and reason it sent — the
      * socket's own 'close' event comes later and finds it already released.
      */
-    const closeWith = (code: number, reason: string) => {
+    const closeWith = (code: number, reason: string, rejectedUserId?: string) => {
       socket.close(code, reason);
       release();
-      logClosed(code, reason);
+      logClosed(code, reason, rejectedUserId);
     };
 
     const closeUnauthorized = (reason: string) => closeWith(WS_CLOSE_UNAUTHORIZED, reason);
@@ -211,7 +213,7 @@ export async function privatePaperWs(app: FastifyInstance): Promise<void> {
       if (userId) return; // re-auth with a fresh token: nothing else to do
 
       if ((perUser.get(payload.userId) ?? 0) >= MAX_PER_USER) {
-        closeWith(1013, 'Too many open tabs');
+        closeWith(1013, 'Too many open tabs', payload.userId);
         return;
       }
       userId = payload.userId;

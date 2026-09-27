@@ -171,4 +171,28 @@ describe('WebSocket connection logging', () => {
     expect(closes).toHaveLength(1);
     expect(closes[0]).toMatchObject({ authenticated: false, code: expect.any(Number) });
   });
+
+  it('trading socket: a user refused for too many tabs is named in the close line (review #154)', async () => {
+    vi.spyOn(app.paperRepository, 'snapshot').mockResolvedValue(STATE);
+    const token = app.jwt.sign({ userId: 'u-tabs', email: 'tabs@x.test' });
+    const open: Awaited<ReturnType<FastifyInstance['injectWS']>>[] = [];
+    // MAX_PER_USER (5) tabs are signed in; the sixth is refused
+    for (let i = 0; i < 6; i++) {
+      const ws = await app.injectWS('/api/paper/ws');
+      ws.send(JSON.stringify({ type: 'auth', token }));
+      open.push(ws);
+      await until(
+        () => linesFor('Paper WS connected').length > i || linesFor('Paper WS closed').length > 0
+      );
+    }
+    await until(() => linesFor('Paper WS closed').length > 0);
+    expect(linesFor('Paper WS closed')[0]).toMatchObject({
+      authenticated: false,
+      userId: 'u-tabs',
+      code: 1013,
+      reason: 'Too many open tabs',
+    });
+    for (const ws of open) ws.terminate();
+    await until(() => linesFor('Paper WS closed').length >= 6);
+  });
 });
