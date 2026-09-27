@@ -32,6 +32,7 @@ import {
   positionPnl,
 } from '@/lib/positionMath';
 import { MmrBar } from './MmrBar';
+import { winRateFrom } from '@/lib/funding';
 import { loadColPrefs, saveColPrefs } from '@/lib/columnPrefs';
 import { AssetsTable } from './AssetsTable';
 import type { JournalEntry, HistoricalOrder, PendingOrder } from '@/store/paperStore';
@@ -536,11 +537,8 @@ export function OrderAccountManagementPanel({
   // balance is already free cash (margin, fees and reserves already deducted)
   const available = balance;
   const equity = balance + reserved + lockedPositionCapital + positionsPnl + coinValue;
-  // Win rate derived from balance log close entries (pnl !== 0)
-  const closedPnlEntries = balanceLog.filter((e) => e.pnl !== 0);
-  const totalTrades = closedPnlEntries.length;
-  const winningTrades = closedPnlEntries.filter((e) => e.pnl > 0).length;
-  const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : null;
+  // Funding payments move money but aren't trades — excluded (BP-4)
+  const winRate = winRateFrom(balanceLog);
 
   // ── Unified order display rows (pending + historical + synthetic exit orders) ─
   /** Synthetic exit order derived from a live position's TP or SL level — mirrors TV "Working" orders */

@@ -25,3 +25,25 @@ export const FUNDING_EXPLAINER =
   'position value (size × mark price) × the funding rate. A positive rate: longs pay shorts; a ' +
   'negative rate: shorts pay longs. It is paid from your available balance (then from the ' +
   'position margin if the balance is short), and it shows in Balance History and the Journal.';
+
+/**
+ * The start of every funding settlement's Balance History action — the server writes
+ * "Funding fee for long BTCUSDT (rate …)" (engine/actions.ts settleFunding; its exact wording is
+ * pinned by apps/server/src/trading/engine/__tests__/funding.test.ts).
+ */
+const FUNDING_ACTION_PREFIX = 'Funding fee for ';
+
+/** True for a funding payment's Balance History row: money moved, not a closed trade. */
+export function isFundingBalanceEvent(e: { action: string }): boolean {
+  return e.action.startsWith(FUNDING_ACTION_PREFIX);
+}
+
+/**
+ * Win rate (%) of closed trades from Balance History: rows with a non-zero PnL are closes, except
+ * funding payments (BP-4), which are neither wins nor losses. Null with no closed trade.
+ */
+export function winRateFrom(balanceLog: { pnl: number; action: string }[]): number | null {
+  const closes = balanceLog.filter((e) => e.pnl !== 0 && !isFundingBalanceEvent(e));
+  if (closes.length === 0) return null;
+  return (closes.filter((e) => e.pnl > 0).length / closes.length) * 100;
+}
