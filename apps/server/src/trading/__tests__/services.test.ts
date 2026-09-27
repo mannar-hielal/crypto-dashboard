@@ -1131,6 +1131,40 @@ describe('MatchingEngine', () => {
       await e.stop();
     });
 
+    it('keeps the lease held before a slow settlement when the next timestamp overlaps it (review #144)', async () => {
+      open = new Map([['u1', long()]]);
+      const TS2 = TS + 8 * 3_600_000;
+      const TS3 = TS2 + 8 * 3_600_000;
+      reload = () => long(); // the account exists — its failed write is retried, not dropped
+      // TS keeps failing to write (a DB blip that outlasts the interval); TS2 settles fine
+      runFunding.mockImplementation(async (_u: string, spec: { ts: number }) => {
+        if (spec.ts === TS) throw new Error('db blip');
+        return null;
+      });
+      const e = engine({
+        fetchFundingHistory: vi.fn(async (_s: string, _from: number, to: number) => [
+          { ts: to, rate: D('0.0001') },
+        ]),
+        fundingCheckMs: 1_000_000,
+        fundingRetryMs: 5,
+        gapMs: Number.MAX_SAFE_INTEGER, // no gap backfill in this test
+      });
+      await e.start();
+      clock = TS - 1_000;
+      fundingTick(TS, 0.0001, 50_000);
+      clock = TS + 1_000;
+      fundingTick(TS2, 0.0001, 50_000); // TS dispatched — keeps retrying
+      clock = TS2 + 1_000;
+      fundingTick(TS3, 0.0001, 50_000); // TS2 dispatched — settles
+      await vi.waitFor(() =>
+        expect(runFunding).toHaveBeenCalledWith('u1', expect.objectContaining({ ts: TS2 }))
+      );
+      await (e as unknown as { heartbeat(): Promise<void> }).heartbeat();
+      // Still held before TS, not TS2: a restart now replays TS
+      expect(lease.renew).toHaveBeenLastCalledWith('me', expect.any(Number), new Date(TS - 1));
+      await e.stop();
+    });
+
     it('a position opened after the timestamp is not charged', async () => {
       open = new Map([['u1', long(TS + 1)]]);
       const e = engine({ fetchFundingHistory: vi.fn(async () => []), fundingCheckMs: 1_000_000 });
