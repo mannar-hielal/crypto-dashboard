@@ -157,6 +157,11 @@ export type Trigger =
       price: Decimal;
       fillAt?: Decimal;
       at?: number;
+      /**
+       * Backfill: the candle's worst mark (its low for a long, high for a short). A partial
+       * liquidation steps down every tier it reaches in that minute (BP-5 C).
+       */
+      worstMark?: Decimal;
     };
 
 /** The last millisecond of a 1m candle — when a backfilled trigger in it is stamped. */
@@ -280,6 +285,7 @@ export function evaluateCandle(
           price: liqPrice,
           fillAt: liqPrice,
           at: candleEnd(mark.candle),
+          worstMark: extreme,
         };
       }
     }

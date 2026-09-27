@@ -30,6 +30,8 @@ import {
   MMR_EXPLAINER,
   positionMmrRate,
   positionPnl,
+  riskTierInfo,
+  riskTierLabel,
 } from '@/lib/positionMath';
 import { MmrBar } from './MmrBar';
 import { AdjustMarginDialog } from './AdjustMarginDialog';
@@ -1385,7 +1387,17 @@ export function OrderAccountManagementPanel({
                                     {isVisible('positions', 'mmr') && (
                                       <td className="px-3 py-1.5">
                                         {mmrRate !== null ? (
-                                          <MmrBar rate={mmrRate} />
+                                          <MmrBar
+                                            rate={mmrRate}
+                                            title={(() => {
+                                              const info = riskTierInfo(
+                                                pos.symbol,
+                                                pos.quantity * pos.entryPrice,
+                                                pos.leverage
+                                              );
+                                              return info ? riskTierLabel(info) : undefined;
+                                            })()}
+                                          />
                                         ) : (
                                           <span style={{ color: color.muted }}>—</span>
                                         )}

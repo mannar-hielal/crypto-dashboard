@@ -160,4 +160,16 @@ describe('position cap by leverage (BP-5 C)', () => {
       );
     }
   });
+
+  it('the client tier index matches the server tierFor at and around every boundary (BP-5 C)', () => {
+    for (const symbol of ALLOWED_SYMBOLS) {
+      const tiers = fallbackRiskTiers(symbol);
+      const est = sdk.riskTiersFor(symbol);
+      for (const t of tiers) {
+        for (const v of [t.riskLimitValue, t.riskLimitValue.plus(1)]) {
+          expect(sdk.tierIndexEstimate(est, v.toNumber())).toBe(tiers.indexOf(tierFor(tiers, v)));
+        }
+      }
+    }
+  });
 });

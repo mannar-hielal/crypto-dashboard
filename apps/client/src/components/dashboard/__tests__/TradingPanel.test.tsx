@@ -1151,3 +1151,15 @@ describe('BP-5 B — order flags and trigger source (USDT Perpetual)', () => {
     expect(screen.queryByLabelText('Reduce-only')).toBeNull();
   });
 });
+
+describe('BP-5 C — tier info in the leverage modal (O6)', () => {
+  it('shows the tier and the max position value at the chosen leverage', () => {
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: /Leverage \d+x, isolated margin/ }));
+    const dialog = screen.getByRole('dialog', { name: /Adjust leverage/ });
+    fireEvent.click(within(dialog).getByRole('button', { name: '10×' }));
+    expect(within(dialog).getByTestId('leverage-tier-info').textContent).toBe(
+      'Risk-limit tier 1 (up to 300,000 USDT) · MMR 0.33% · Max position value at 10×: 100,000,000 USDT'
+    );
+  });
+});

@@ -15,7 +15,7 @@ import {
   usePaperStore,
   type Position,
 } from '@/store/paperStore';
-import { remarginPreview } from '@/lib/positionMath';
+import { remarginPreview, riskTierInfo, riskTierLabel } from '@/lib/positionMath';
 import { fmtMktPrice } from '@/lib/utils';
 import { color, fontSize, zIndex } from '@/lib/tokens';
 import styles from './TradeDialog.module.css';
@@ -77,6 +77,24 @@ function RemarginPreview({ position, leverage, symbol }: RemarginPreviewProps) {
         </dd>
       </div>
     </dl>
+  );
+}
+
+interface TierLineProps {
+  symbol: string;
+  leverage: number;
+  positionValue: number;
+}
+
+/** The position's risk-limit tier and the max position value at the chosen leverage (O6). */
+function TierLine({ symbol, leverage, positionValue }: TierLineProps) {
+  const info = riskTierInfo(symbol, positionValue, leverage);
+  if (!info) return null;
+  return (
+    <p className={styles.note} style={{ fontSize: fontSize.xs10 }} data-testid="leverage-tier-info">
+      {riskTierLabel(info)} · Max position value at {leverage}×:{' '}
+      {info.cap !== null ? `${info.cap.toLocaleString('en-US')} USDT` : '—'}
+    </p>
   );
 }
 
@@ -160,6 +178,11 @@ function LeverageModal({ symbol, current, onClose }: LeverageModalProps) {
         {position && choice !== current && (
           <RemarginPreview position={position} leverage={choice} symbol={symbol} />
         )}
+        <TierLine
+          symbol={symbol}
+          leverage={choice}
+          positionValue={position ? position.quantity * position.entryPrice : 0}
+        />
         {error && (
           <p className={styles.error} role="alert" style={{ fontSize: fontSize.xs10 }}>
             {error}

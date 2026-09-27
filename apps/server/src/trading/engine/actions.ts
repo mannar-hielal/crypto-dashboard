@@ -41,6 +41,7 @@ import {
   isOnTick,
   markHitsLiquidation,
   REJECT_PRICE_TICK,
+  type RiskTier,
 } from '../bybitSpec.js';
 import {
   Draft,
@@ -64,6 +65,8 @@ import { cancelSpotPending, fillSpotPending } from './spot.js';
 import {
   REJECT_REDUCE_ONLY_TPSL,
   cancelReduceOnlyInto,
+  effectiveValue,
+  riskLimitProblem,
   exitChecks,
   exitSideProblem,
   isReduceOnly,
@@ -574,6 +577,15 @@ export function placeMarket(
     { prices: quotePrices(quote) }
   );
   if (sideProblem) return refused(state, null, sideProblem);
+  if (!intent.reduceOnly) {
+    // Bybit 110090 (BP-5 C)
+    const capProblem = riskLimitProblem(
+      effectiveValue(state, intent.symbol, quote.mark, { side: intent.side, qty, price }),
+      leverage,
+      tiersFor(ctx, intent.symbol)
+    );
+    if (capProblem) return refused(state, null, capProblem);
+  }
 
   const d = new Draft(state);
   const id = fillInto(
@@ -754,6 +766,123 @@ export function closeOnExit(
 
 // ─── Liquidation (BP-3) ────────────────────────────────────────────────────────
 
+/** Index of the tier a position is in (tiers lowest first). */
+function tierIndex(tiers: RiskTier[], value: Decimal): number {
+  const i = tiers.findIndex((t) => value.lte(t.riskLimitValue));
+  return i === -1 ? tiers.length - 1 : i;
+}
+
+/**
+ * Partial liquidation (BP-5 C): reduce a position above the lowest tier to the next lower tier's
+ * limit at the bankruptcy price, repeatedly, while `mark` still reaches its liquidation price.
+ * `remaining` is the position left for a full close (the lowest tier reached and still hit), or
+ * null when a step brought the liquidation price past the mark.
+ */
+function stepDownTiers(
+  d: Draft,
+  start: Position,
+  mark: Decimal,
+  ctx: EngineContext
+): { pnl: Decimal; remaining: Position | null } {
+  const tiers = tiersFor(ctx, start.symbol);
+  let pos = start;
+  let total = ZERO;
+  for (;;) {
+    const risk = riskOf(pos, tiers);
+    const idx = tierIndex(tiers, risk.positionValue);
+    if (idx <= 0) return { pnl: total, remaining: pos };
+    const keepQty = tiers[idx - 1].riskLimitValue
+      .div(pos.entryPrice)
+      .toDecimalPlaces(8, Decimal.ROUND_DOWN);
+    if (keepQty.lte(0) || keepQty.gte(pos.quantity)) return { pnl: total, remaining: pos };
+    const closeQty = pos.quantity.minus(keepQty);
+    const f = closeQty.div(pos.quantity);
+    const bust = risk.bustPrice;
+    const now = ctx.now;
+    const im = pos.entryUsdtAmount.times(f);
+    const reserve = pos.closeFeeReserve.times(f);
+    const extra = (pos.extraMargin ?? ZERO).times(f);
+    const entryFee = pos.entryFee.times(f);
+    const funding = (pos.cumFunding ?? ZERO).times(f);
+    const pnl =
+      pos.side === 'long'
+        ? bust.minus(pos.entryPrice).times(closeQty)
+        : pos.entryPrice.minus(bust).times(closeQty);
+    const netPnl = pnl.minus(reserve);
+    const stepId = ctx.newId();
+    const label = pos.side === 'long' ? 'LONG' : 'SHORT';
+
+    d.prependTrade({
+      id: `${pos.id}-liq-${stepId}`,
+      category: 'linear',
+      symbol: pos.symbol,
+      side: pos.side,
+      quantity: closeQty,
+      entryPrice: pos.entryPrice,
+      exitPrice: bust,
+      pnl,
+      exitCommission: reserve,
+      margin: im,
+      openedAt: pos.openedAt,
+      closedAt: now,
+      execType: 'BustTrade',
+      ...(funding.eq(0) ? {} : { funding }),
+    });
+    d.prependOrders({
+      id: `o-liq-${stepId}`,
+      category: 'linear',
+      symbol: pos.symbol,
+      side: closingSide(pos),
+      type: 'market',
+      qty: closeQty,
+      fillPrice: bust,
+      status: 'filled',
+      commission: reserve,
+      feeRate: TAKER,
+      feeAsset: 'USDT',
+      isMaker: false,
+      placingTime: now,
+      closingTime: now,
+      createType: 'CreateByLiq',
+      reduceOnly: true,
+    });
+    // The part's margin (IM + extra) is what the move to the bankruptcy price lost: nothing returns
+    d.prependBalanceEvent({
+      id: `bl-liq-${stepId}`,
+      time: now,
+      balanceBefore: d.balance,
+      balanceAfter: d.balance,
+      pnl: netPnl,
+      action: `Partial liquidation of ${pos.side} position for ${pos.symbol} at bankruptcy price ${bust.toFixed(4)} for ${closeQty.toFixed(6)} units`,
+    });
+    d.prependJournal(
+      systemEntry(
+        `j-liq-${stepId}`,
+        now,
+        `Partially liquidated ${label} ${pos.symbol} — mark price $${fmtPrice(mark)} reached the liquidation price ` +
+          `$${fmtPrice(risk.liqPrice)}; ${closeQty.toFixed(6)} closed at the bankruptcy price $${fmtPrice(bust)} ` +
+          `to step down to risk-limit tier ${idx}`,
+        netPnl
+      )
+    );
+    d.realizedPnl = d.realizedPnl.plus(netPnl).minus(entryFee);
+    total = total.plus(pnl);
+    pos = {
+      ...pos,
+      quantity: keepQty,
+      entryUsdtAmount: pos.entryUsdtAmount.minus(im),
+      closeFeeReserve: pos.closeFeeReserve.minus(reserve),
+      entryFee: pos.entryFee.minus(entryFee),
+      ...(pos.extraMargin ? { extraMargin: pos.extraMargin.minus(extra) } : {}),
+      ...(pos.cumFunding ? { cumFunding: pos.cumFunding.minus(funding) } : {}),
+    };
+    d.setPosition(pos);
+    if (!markHitsLiquidation(pos.side, riskOf(pos, tiers).liqPrice, mark)) {
+      return { pnl: total, remaining: null };
+    }
+  }
+}
+
 /**
  * Isolated-margin liquidation, as on Bybit: the mark price reached the position's liquidation
  * price, so the whole position closes at the bankruptcy price and its whole margin is lost — IM,
@@ -764,8 +893,15 @@ export function closeOnExit(
  * Before the close, the symbol's active USDT Perpetual orders are cancelled and their reserves
  * refunded (Bybit cancels a contract's active orders when it liquidates the position).
  *
- * `mark` is the mark price that triggered it (for the journal). Result: gross PnL, or null if the
- * position no longer exists.
+ * Partial liquidation (BP-5 C, O7): a position above the lowest risk-limit tier is first reduced
+ * by the part above the next lower tier's limit, at the bankruptcy price (a `BustTrade`, its fee
+ * from that part's reserve). The tier and liquidation price are then re-derived; while `mark` still
+ * reaches the new liquidation price the next step follows, and only in the lowest tier does the
+ * whole position close.
+ *
+ * `mark` is the mark price that triggered it (a backfill passes the candle's worst mark, so one
+ * minute can take several steps). Result: gross PnL of everything closed, or null if the position
+ * no longer exists.
  */
 export function liquidatePosition(
   state: AccountState,
@@ -778,8 +914,6 @@ export function liquidatePosition(
   if (!pos) return { delta: d.toDelta(), result: null };
 
   const now = ctx.now;
-  const risk = riskOf(pos, tiersFor(ctx, pos.symbol));
-  const bust = risk.bustPrice;
   const label = pos.side === 'long' ? 'LONG' : 'SHORT';
 
   // 1. Cancel the contract's active orders (refund their reserves)
@@ -812,46 +946,53 @@ export function liquidatePosition(
     d.removePending(order.id);
   }
 
-  // 2. Close the whole position at the bankruptcy price
+  // 2. Above the lowest risk-limit tier: step down tier by tier first (BP-5 C)
+  const stepped = stepDownTiers(d, pos, mark, ctx);
+  if (!stepped.remaining) return { delta: d.toDelta(), result: stepped.pnl, sound: 'liquidation' };
+  const last = stepped.remaining;
+  const risk = riskOf(last, tiersFor(ctx, last.symbol));
+  const bust = risk.bustPrice;
+
+  // 3. Close the whole (remaining) position at the bankruptcy price
   const pnl =
-    pos.side === 'long'
-      ? bust.minus(pos.entryPrice).times(pos.quantity)
-      : pos.entryPrice.minus(bust).times(pos.quantity);
-  const fee = pos.closeFeeReserve;
+    last.side === 'long'
+      ? bust.minus(last.entryPrice).times(last.quantity)
+      : last.entryPrice.minus(bust).times(last.quantity);
+  const fee = last.closeFeeReserve;
   const netPnl = pnl.minus(fee);
   const closedId = ctx.newId();
 
   d.prependTrade({
     id: positionId,
     category: 'linear',
-    symbol: pos.symbol,
-    side: pos.side,
-    quantity: pos.quantity,
-    entryPrice: pos.entryPrice,
+    symbol: last.symbol,
+    side: last.side,
+    quantity: last.quantity,
+    entryPrice: last.entryPrice,
     exitPrice: bust,
     pnl,
     exitCommission: fee,
-    margin: pos.entryUsdtAmount,
-    openedAt: pos.openedAt,
+    margin: last.entryUsdtAmount,
+    openedAt: last.openedAt,
     closedAt: now,
     execType: 'BustTrade',
-    ...(pos.cumFunding && !pos.cumFunding.eq(0) ? { funding: pos.cumFunding } : {}),
+    ...(last.cumFunding && !last.cumFunding.eq(0) ? { funding: last.cumFunding } : {}),
   });
   const legCancels: HistoricalOrder[] = [];
   for (const [leg, price] of [
-    ['take-profit', pos.takeProfit],
-    ['stop-loss', pos.stopLoss],
+    ['take-profit', last.takeProfit],
+    ['stop-loss', last.stopLoss],
   ] as const) {
     if (!price) continue;
     legCancels.push(
       cancelledLegRow(
         `o-cancel-${leg}-${positionId}-${now}`,
         leg,
-        pos.symbol,
+        last.symbol,
         closingSide(pos),
-        pos.quantity,
+        last.quantity,
         price,
-        pos.openedAt,
+        last.openedAt,
         now
       )
     );
@@ -860,10 +1001,10 @@ export function liquidatePosition(
     {
       id: `o-liq-${closedId}`,
       category: 'linear',
-      symbol: pos.symbol,
+      symbol: last.symbol,
       side: closingSide(pos),
       type: 'market',
-      qty: pos.quantity,
+      qty: last.quantity,
       fillPrice: bust,
       status: 'filled',
       commission: fee,
@@ -882,20 +1023,21 @@ export function liquidatePosition(
     balanceBefore: d.balance,
     balanceAfter: d.balance,
     pnl: netPnl,
-    action: `Liquidation of ${pos.side} position for ${pos.symbol} at bankruptcy price ${bust.toFixed(4)} for ${pos.quantity.toFixed(6)} units`,
+    action: `Liquidation of ${last.side} position for ${last.symbol} at bankruptcy price ${bust.toFixed(4)} for ${last.quantity.toFixed(6)} units`,
   });
   d.prependJournal(
     systemEntry(
       `j-liq-${closedId}`,
       now,
-      `Liquidated ${label} ${pos.symbol} — mark price $${fmtPrice(mark)} reached the liquidation price ` +
+      `Liquidated ${label} ${last.symbol} — mark price $${fmtPrice(mark)} reached the liquidation price ` +
         `$${fmtPrice(risk.liqPrice)}; closed at the bankruptcy price $${fmtPrice(bust)}`,
       netPnl
     )
   );
-  d.realizedPnl = d.realizedPnl.plus(netPnl).minus(pos.entryFee);
+  d.realizedPnl = d.realizedPnl.plus(netPnl).minus(last.entryFee);
+  const total = stepped.pnl.plus(pnl);
   d.removePosition(positionId);
-  return { delta: d.toDelta(), result: pnl, sound: 'liquidation' };
+  return { delta: d.toDelta(), result: total, sound: 'liquidation' };
 }
 
 // ─── Pending orders (paperStore.placeLimitOrder / placeStopOrder) ──────────────
@@ -955,6 +1097,15 @@ export function placePending(
     { order: triggerPrice }
   );
   if (sideProblem) return refused(state, null, sideProblem);
+  if (!reduceOnly) {
+    // Bybit 110090 (BP-5 C)
+    const capProblem = riskLimitProblem(
+      effectiveValue(state, symbol, quote?.mark, { side, qty, price: triggerPrice }),
+      leverage,
+      tiersFor(ctx, symbol)
+    );
+    if (capProblem) return refused(state, null, capProblem);
+  }
   const flags = {
     ...(type === 'stop' ? triggerByOf('triggerBy', intent.triggerBy) : {}),
     ...(tp ? triggerByOf('tpTriggerBy', intent.tpTriggerBy) : {}),
@@ -1320,6 +1471,20 @@ export function editPending(
     { order: newTrigger }
   );
   if (sideProblem) return refused(state, 'rejected', sideProblem);
+  if (!reduceOnly) {
+    // Bybit 110090 (BP-5 C): valued without the order being edited, plus its new size
+    const others = { ...state, pendingOrders: state.pendingOrders.filter((o) => o.id !== orderId) };
+    const capProblem = riskLimitProblem(
+      effectiveValue(others, order.symbol, quote?.mark, {
+        side: order.side,
+        qty: newQty,
+        price: newTrigger,
+      }),
+      leverage,
+      tiersFor(ctx, order.symbol)
+    );
+    if (capProblem) return refused(state, 'rejected', capProblem);
+  }
 
   const d = new Draft(state);
   const now = ctx.now;
@@ -1610,6 +1775,9 @@ export function setSymbolLeverage(
   }
 
   const tiers = tiersFor(ctx, symbol);
+  // Bybit 110090: the new leverage's cap must hold what is open on the symbol (BP-5 C)
+  const capProblem = riskLimitProblem(effectiveValue(state, symbol, mark), next, tiers);
+  if (capProblem) return refused(state, current, capProblem);
   let change = ZERO; // margin moved from the wallet into positions / orders (negative = released)
   for (const pos of positions) {
     const im = pos.quantity.times(pos.entryPrice).div(next);

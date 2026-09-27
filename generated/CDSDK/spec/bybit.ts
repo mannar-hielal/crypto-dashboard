@@ -83,6 +83,12 @@ export function positionCapEstimate(tiers: RiskTierEstimate[], leverage: number)
   return cap;
 }
 
+/** Index (0-based) of the tier a position of `positionValue` USDT is in — the server's tierFor. */
+export function tierIndexEstimate(tiers: RiskTierEstimate[], positionValue: number): number {
+  const i = tiers.findIndex((t) => positionValue <= t.riskLimitValue);
+  return i === -1 ? tiers.length - 1 : i;
+}
+
 /** Bybit's estimated fee to close, priced at the bankruptcy price entry × (1 ∓ 1/leverage). */
 export function feeToCloseEstimate(
   side: 'long' | 'short',

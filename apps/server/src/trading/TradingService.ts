@@ -438,7 +438,10 @@ export class TradingService {
       if (trigger.kind === 'liquidation') {
         const pos = state.positions.find((p) => p.id === trigger.positionId);
         if (!pos) return null;
-        const mark = trigger.fillAt ? trigger.price : this.currentMark(pos.symbol);
+        // A backfilled one runs at the minute's worst mark: every tier step it reached (BP-5 C)
+        const mark = trigger.fillAt
+          ? (trigger.worstMark ?? trigger.price)
+          : this.currentMark(pos.symbol);
         if (!mark || !isLiquidatable(pos, mark, this.market.riskTiers(pos.symbol))) return null;
         return executeTrigger(state, { ...trigger, price: mark }, undefined, ctx);
       }

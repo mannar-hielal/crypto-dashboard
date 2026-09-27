@@ -6,7 +6,13 @@
  * server (Bybit's isolated-margin maths); this only combines them with a live price.
  */
 
-import { estimatePositionRisk, feeToCloseEstimate, riskTiersFor } from '@crypto-dashboard/sdk';
+import {
+  estimatePositionRisk,
+  feeToCloseEstimate,
+  positionCapEstimate,
+  riskTiersFor,
+  tierIndexEstimate,
+} from '@crypto-dashboard/sdk';
 import type { Position } from '@/store/paperStore';
 
 /** Unrealised PnL of a position at `price` (the mark price for Bybit parity). */
@@ -111,4 +117,41 @@ export function remarginPreview(
     riskTiersFor(symbol)
   );
   return { margin: im + closeFeeReserve, liqPrice: risk.liqPrice };
+}
+
+/** Risk-limit tier facts for the leverage modal and the MMR hover (BP-5 C, O6). */
+export interface RiskTierInfo {
+  /** 1-based, as Bybit numbers its tiers */
+  tierNo: number;
+  mmr: number;
+  /** The tier's upper position value (USDT) */
+  limit: number;
+  /** Largest position value allowed at the leverage — null when no tier allows it */
+  cap: number | null;
+}
+
+/**
+ * The tier a position of `positionValue` USDT is in (0 = no position: the first tier) and the
+ * position-value cap at `leverage`, from the bundled tier snapshot. Null for an unknown symbol.
+ */
+export function riskTierInfo(
+  symbol: string,
+  positionValue: number,
+  leverage: number
+): RiskTierInfo | null {
+  const tiers = riskTiersFor(symbol);
+  if (!tiers.length) return null;
+  const i = tierIndexEstimate(tiers, positionValue);
+  return {
+    tierNo: i + 1,
+    mmr: tiers[i].mmr,
+    limit: tiers[i].riskLimitValue,
+    cap: positionCapEstimate(tiers, leverage),
+  };
+}
+
+/** "Risk-limit tier 1 (up to 2,000,000 USDT) · MMR 0.5%" */
+export function riskTierLabel(info: RiskTierInfo): string {
+  const pct = Number((info.mmr * 100).toFixed(4));
+  return `Risk-limit tier ${info.tierNo} (up to ${info.limit.toLocaleString('en-US')} USDT) · MMR ${pct}%`;
 }

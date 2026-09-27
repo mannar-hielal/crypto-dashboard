@@ -13,9 +13,13 @@
  * price and its stop-loss below it; a short's the reverse. The base price is the order price for a
  * limit / stop order, and the current price of the leg's trigger source for a market order or a
  * position. A stop-loss beyond the liquidation price is accepted (the client warns).
+ *
+ * Risk-limit cap (BP-5 C): an order or a leverage change may not take the symbol's effective
+ * position value past the cap of its leverage (Bybit 110090).
  */
 
 import type { Decimal } from '@prisma/client/runtime/client';
+import { positionCap, type RiskTier } from '../bybitSpec.js';
 import { Draft, ZERO } from './draft.js';
 import { fmtPrice, pendingSideLabel, pendingTypeLabel } from './format.js';
 import { systemEntry } from './journal.js';
@@ -214,4 +218,64 @@ export function triggerByOf<K extends string>(
   by: TriggerBy | undefined
 ): { [P in K]?: TriggerBy } {
   return by && by !== 'LastPrice' ? ({ [key]: by } as { [P in K]?: TriggerBy }) : {};
+}
+
+// ─── Risk-limit cap (BP-5 C) ───────────────────────────────────────────────────
+
+/** Bybit 110090 — the effective position value would pass the cap for the leverage */
+export const REJECT_RISK_LIMIT = (leverage: number | null) =>
+  leverage === null
+    ? 'The position may exceed the max limit.'
+    : `The position may exceed the max limit. Please adjust your leverage to ${leverage} or below.`;
+
+/**
+ * Bybit's effective position value for a symbol: max(long position + buy orders, short position +
+ * sell orders), valued at `price` (the mark) when known, else at each item's own price. Reduce-only
+ * and close-on-trigger orders don't count. `add` is an order being placed.
+ */
+export function effectiveValue(
+  state: Pick<AccountState, 'positions' | 'pendingOrders'>,
+  symbol: string,
+  price?: Decimal,
+  add?: { side: OrderSide; qty: Decimal; price: Decimal }
+): Decimal {
+  let long = ZERO;
+  let short = ZERO;
+  for (const p of state.positions) {
+    if (p.category !== 'linear' || p.symbol !== symbol) continue;
+    const v = p.quantity.times(price ?? p.entryPrice);
+    if (p.side === 'long') long = long.plus(v);
+    else short = short.plus(v);
+  }
+  const orders = state.pendingOrders.filter(
+    (o) => o.category === 'linear' && o.symbol === symbol && !isReduceOnly(o)
+  );
+  for (const o of [...orders, ...(add ? [{ ...add, triggerPrice: add.price }] : [])]) {
+    const v = o.qty.times(price ?? o.triggerPrice);
+    if (o.side === 'buy') long = long.plus(v);
+    else short = short.plus(v);
+  }
+  return long.gt(short) ? long : short;
+}
+
+/**
+ * Bybit 110090: the effective value must stay within the cap of the symbol's leverage (the highest
+ * tier whose max leverage is at least it). The refusal names the highest whole leverage whose cap
+ * would hold the value.
+ */
+export function riskLimitProblem(
+  value: Decimal,
+  leverage: number,
+  tiers: RiskTier[]
+): string | null {
+  const cap = positionCap(tiers, leverage);
+  if (!cap || value.lte(cap)) return null;
+  let allowed: number | null = null;
+  for (const t of tiers) {
+    if (t.riskLimitValue.gte(value)) {
+      const lev = Math.floor(t.maxLeverage.toNumber());
+      if (lev >= 1 && (allowed === null || lev > allowed)) allowed = lev;
+    }
+  }
+  return REJECT_RISK_LIMIT(allowed === null ? null : Math.min(allowed, leverage));
 }

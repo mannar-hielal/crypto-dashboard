@@ -889,6 +889,15 @@ describe('BP-3 — mark price, liquidation price and MMR in the Positions tab', 
     expect(screen.getByTestId('position-mmr').textContent).toBe('4.7%');
   });
 
+  it('shows the risk-limit tier and MMR on hover of the meter (BP-5 C, O6)', () => {
+    usePaperStore.setState({ positions: [long10x] });
+    paneStores[0].setState({ markPrice: 49_000 });
+    renderPanel();
+    expect(screen.getByTestId('position-mmr').getAttribute('title')).toBe(
+      'Risk-limit tier 1 (up to 300,000 USDT) · MMR 0.33%'
+    );
+  });
+
   it('unknown risk figures (pre-BP-3 server) show — instead of a safe-looking 0% meter', () => {
     usePaperStore.setState({ positions: [{ ...long10x, liqPrice: null, positionMM: null }] });
     paneStores[0].setState({ markPrice: 49_000 });
