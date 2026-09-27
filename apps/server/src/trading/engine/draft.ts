@@ -206,6 +206,7 @@ export class Draft {
   prependTrade(row: ClosedTrade): void {
     this.trades.unshift(row);
   }
+  readonly closedTradeFunding: Delta['closedTradeFunding'] = [];
   prependFunding(row: FundingExecution): void {
     this.fundings.unshift(row);
   }
@@ -284,6 +285,7 @@ export class Draft {
       orders: this.orders,
       trades: this.trades,
       fundings: this.fundings,
+      closedTradeFunding: this.closedTradeFunding,
       balanceEvents: this.balanceEvents,
       journal: this.journal,
       journalEdits: this.journalEdits,

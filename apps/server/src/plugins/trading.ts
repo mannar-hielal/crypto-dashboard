@@ -121,6 +121,7 @@ async function tradingPlugin(fastify: FastifyInstance): Promise<void> {
     subscribeTicker: (listener) => fastify.bybit.subscribeTicker(listener),
     fetchCandles,
     fetchFundingHistory,
+    closedPositionsAt: (symbol, ts) => repo.closedPositionsAt(symbol, ts),
     riskTiers,
     lease: prismaLeaseStore(fastify.prisma),
     holder: `${hostname()}-${process.pid}-${randomBytes(4).toString('hex')}`,

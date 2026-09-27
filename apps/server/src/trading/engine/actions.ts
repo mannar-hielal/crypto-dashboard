@@ -189,10 +189,14 @@ export function settle(
     funding,
     extra,
     returnAmount,
-    /** Net of the close fee — what the balance history and journal show */
-    netPnl: pnl.minus(fee),
+    /**
+     * Net of the close fee — what the balance history and journal show. In isolated margin a close
+     * past the bankruptcy price loses at most the part's margin: only what was actually lost is
+     * booked (BP-5 F), so realized PnL matches the wallet.
+     */
+    netPnl: returnAmount.minus(margin).minus(extra).minus(reserve),
     /** Net of both fees — what realized PnL accumulates */
-    realized: pnl.minus(fee).minus(entryFee),
+    realized: returnAmount.minus(margin).minus(extra).minus(reserve).minus(entryFee),
   };
 }
 
@@ -2022,6 +2026,8 @@ export interface FundingSnapshot {
   positionId: string;
   side: PositionSide;
   qty: Decimal;
+  /** The position's open time — finds its close if it closed before the settlement (BP-5 F) */
+  openedAt?: number;
 }
 
 export interface FundingSpec {
@@ -2111,6 +2117,9 @@ export function settleFunding(
     const current = d.positions.find((p) => p.id === snap.positionId);
     if (current) {
       d.setPosition({ ...current, cumFunding: (current.cumFunding ?? ZERO).plus(charged) });
+    } else if (snap.openedAt !== undefined) {
+      // Closed since the timestamp: its close's Closed P&L takes the fee (BP-5 F)
+      d.closedTradeFunding.push({ symbol, openedAt: snap.openedAt, ts, funding: charged });
     }
 
     const id = `fund-${snap.positionId}-${ts}`;

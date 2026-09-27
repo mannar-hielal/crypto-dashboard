@@ -18,6 +18,7 @@ import {
   MAX_ORDERS,
   STARTING_BALANCE,
   type AccountState,
+  type FundingSnapshot,
   type Delta,
 } from './engine/index.js';
 import {
@@ -43,6 +44,9 @@ import {
   type RiskTiersFor,
 } from './mappers.js';
 import { fallbackRiskTiers } from './bybitSpec.js';
+
+/** Most closing Trade rows read for one missed funding timestamp of one symbol (BP-5 F) */
+const CLOSED_POSITIONS_READ_LIMIT = 5_000;
 
 /** Symbols whose settled-funding marker differs between two maps (BP-4). */
 function changedFundingAt(before: Record<string, number>, after: Record<string, number>): string[] {
@@ -87,6 +91,7 @@ export function isEmptyDelta(delta: Delta, before: AccountState): boolean {
     delta.orders.length === 0 &&
     delta.trades.length === 0 &&
     delta.fundings.length === 0 &&
+    delta.closedTradeFunding.length === 0 &&
     delta.balanceEvents.length === 0 &&
     delta.journal.length === 0 &&
     delta.journalEdits.length === 0
@@ -314,6 +319,27 @@ export class AccountRepository {
     for (const f of [...delta.fundings].reverse()) {
       await tx.trade.create({ data: { ...fundingData(f), id: f.id, userId, accountId } });
     }
+    // A fee for a position closed before its settlement goes onto that close (BP-5 F)
+    for (const f of delta.closedTradeFunding) {
+      const close = await tx.trade.findFirst({
+        where: {
+          userId,
+          symbol: f.symbol,
+          category: 'linear',
+          execType: { in: ['Trade', 'BustTrade'] },
+          openedAt: new Date(f.openedAt),
+          executedAt: { gte: new Date(f.ts) },
+        },
+        orderBy: { seq: 'desc' },
+        select: { id: true },
+      });
+      if (close) {
+        await tx.trade.updateMany({
+          where: { id: close.id, userId },
+          data: { funding: { increment: f.funding }, pnl: { decrement: f.funding } },
+        });
+      }
+    }
     for (const b of [...delta.balanceEvents].reverse()) {
       await tx.balanceEvent.create({
         data: { ...balanceEventData(b), id: b.id, userId, accountId },
@@ -408,6 +434,45 @@ export class AccountRepository {
       balanceEvents: balanceEvents.map(balanceEventFromRow),
       fundings: fundings.map(fundingFromRow),
     };
+  }
+
+  /**
+   * USDT Perpetual positions held at funding timestamp `ts` on `symbol` and closed since (BP-5 F),
+   * per user, from the closing Trade rows: a position is one open time; its size at `ts` is what
+   * was closed after `ts`. Bounded read (a missed timestamp, one symbol).
+   */
+  async closedPositionsAt(symbol: string, ts: number): Promise<Map<string, FundingSnapshot[]>> {
+    const rows = await this.prisma.trade.findMany({
+      where: {
+        symbol,
+        category: 'linear',
+        execType: { in: ['Trade', 'BustTrade'] },
+        openedAt: { lte: new Date(ts) },
+        executedAt: { gt: new Date(ts) },
+      },
+      select: { userId: true, side: true, quantity: true, openedAt: true },
+      take: CLOSED_POSITIONS_READ_LIMIT,
+    });
+    const byUser = new Map<string, Map<number, FundingSnapshot>>();
+    for (const r of rows) {
+      if (!r.openedAt) continue;
+      const openedAt = r.openedAt.getTime();
+      let positions = byUser.get(r.userId);
+      if (!positions) {
+        positions = new Map();
+        byUser.set(r.userId, positions);
+      }
+      const qty = new Decimal(r.quantity.toString());
+      const known = positions.get(openedAt);
+      positions.set(openedAt, {
+        positionId: `closed-${openedAt}`,
+        // The trade row stores the closing side: SELL closed a long
+        side: r.side === 'BUY' ? 'short' : 'long',
+        qty: known ? known.qty.plus(qty) : qty,
+        openedAt,
+      });
+    }
+    return new Map([...byUser].map(([userId, positions]) => [userId, [...positions.values()]]));
   }
 
   /**

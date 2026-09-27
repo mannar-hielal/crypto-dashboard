@@ -154,6 +154,14 @@ describe('BP-5 E — order acceptance and losses in cross', () => {
     expect(close('REGULAR_MARGIN').toString()).toBe('-499.725');
   });
 
+  it('isolated: a close past the bankruptcy price books only what was lost to realized PnL (BP-5 F)', () => {
+    const { state } = buy(account('ISOLATED_MARGIN'), 'BTCUSDT', '0.1', 50_000);
+    const res = closePosition(state, state.positions[0].id, flat(40_000), ctxAt());
+    // IM 500 + fee reserve 2.475 + open fee 2.75 — not the −1,000 price move
+    expect(res.delta.account.realizedPnl.toString()).toBe('-505.225');
+    expect(res.delta.balanceEvents[0].pnl.toString()).toBe('-502.475');
+  });
+
   it('funding is paid from the wallet in full, never out of a position margin', () => {
     const { state } = buy(account('REGULAR_MARGIN'), 'BTCUSDT', '0.1', 50_000);
     const broke = { ...state, balance: D(0) };
@@ -271,5 +279,28 @@ describe('BP-5 E — margin-mode switch (Bybit set-margin-mode, O3)', () => {
     const res = switchMarginMode(s, 'REGULAR_MARGIN', ctxAt());
     expect(res.delta.journal).toEqual([]);
     expect(res.result).toBe('REGULAR_MARGIN');
+  });
+});
+
+describe('BP-5 F — funding for a position closed before its settlement', () => {
+  it('is charged from the wallet and handed to that close (Closed P&L)', () => {
+    const s = account('ISOLATED_MARGIN');
+    const res = settleFunding(
+      s,
+      {
+        symbol: 'BTCUSDT',
+        ts: 1_800_000_000_000,
+        rate: D('0.0001'),
+        mark: D(50_000),
+        positions: [
+          { positionId: 'gone', side: 'long', qty: D('0.1'), openedAt: 1_700_000_000_000 },
+        ],
+      },
+      ctxAt()
+    );
+    expect(res.delta.account.balance.toString()).toBe('9999.5');
+    expect(res.delta.closedTradeFunding).toEqual([
+      { symbol: 'BTCUSDT', openedAt: 1_700_000_000_000, ts: 1_800_000_000_000, funding: D('0.5') },
+    ]);
   });
 });

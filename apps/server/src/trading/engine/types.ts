@@ -324,6 +324,12 @@ export interface Delta {
   trades: ClosedTrade[];
   /** Funding settlements (BP-4) */
   fundings: FundingExecution[];
+  /**
+   * A funding fee for a position closed between the timestamp and its settlement (BP-5 F): added
+   * to that close's Trade row (its funding share, and its net PnL) so Closed P&L includes it, as
+   * Bybit's would. Matched by symbol + the position's open time, the latest close after `ts`.
+   */
+  closedTradeFunding: { symbol: string; openedAt: number; ts: number; funding: Decimal }[];
   balanceEvents: BalanceEvent[];
   journal: JournalEntry[];
   journalEdits: { id: string; text: string }[];
