@@ -41,6 +41,7 @@ export type SymbolSettingMinAggregateOutputType = {
   leverage: number | null
   marginMode: string | null
   lastFundingAt: Date | null
+  leveragePinned: boolean | null
 }
 
 export type SymbolSettingMaxAggregateOutputType = {
@@ -50,6 +51,7 @@ export type SymbolSettingMaxAggregateOutputType = {
   leverage: number | null
   marginMode: string | null
   lastFundingAt: Date | null
+  leveragePinned: boolean | null
 }
 
 export type SymbolSettingCountAggregateOutputType = {
@@ -59,6 +61,7 @@ export type SymbolSettingCountAggregateOutputType = {
   leverage: number
   marginMode: number
   lastFundingAt: number
+  leveragePinned: number
   _all: number
 }
 
@@ -78,6 +81,7 @@ export type SymbolSettingMinAggregateInputType = {
   leverage?: true
   marginMode?: true
   lastFundingAt?: true
+  leveragePinned?: true
 }
 
 export type SymbolSettingMaxAggregateInputType = {
@@ -87,6 +91,7 @@ export type SymbolSettingMaxAggregateInputType = {
   leverage?: true
   marginMode?: true
   lastFundingAt?: true
+  leveragePinned?: true
 }
 
 export type SymbolSettingCountAggregateInputType = {
@@ -96,6 +101,7 @@ export type SymbolSettingCountAggregateInputType = {
   leverage?: true
   marginMode?: true
   lastFundingAt?: true
+  leveragePinned?: true
   _all?: true
 }
 
@@ -192,6 +198,7 @@ export type SymbolSettingGroupByOutputType = {
   leverage: number
   marginMode: string
   lastFundingAt: Date | null
+  leveragePinned: boolean
   _count: SymbolSettingCountAggregateOutputType | null
   _avg: SymbolSettingAvgAggregateOutputType | null
   _sum: SymbolSettingSumAggregateOutputType | null
@@ -224,6 +231,7 @@ export type SymbolSettingWhereInput = {
   leverage?: Prisma.IntFilter<"SymbolSetting"> | number
   marginMode?: Prisma.StringFilter<"SymbolSetting"> | string
   lastFundingAt?: Prisma.DateTimeNullableFilter<"SymbolSetting"> | Date | string | null
+  leveragePinned?: Prisma.BoolFilter<"SymbolSetting"> | boolean
   account?: Prisma.XOR<Prisma.AccountScalarRelationFilter, Prisma.AccountWhereInput>
 }
 
@@ -234,6 +242,7 @@ export type SymbolSettingOrderByWithRelationInput = {
   leverage?: Prisma.SortOrder
   marginMode?: Prisma.SortOrder
   lastFundingAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  leveragePinned?: Prisma.SortOrder
   account?: Prisma.AccountOrderByWithRelationInput
 }
 
@@ -248,6 +257,7 @@ export type SymbolSettingWhereUniqueInput = Prisma.AtLeast<{
   leverage?: Prisma.IntFilter<"SymbolSetting"> | number
   marginMode?: Prisma.StringFilter<"SymbolSetting"> | string
   lastFundingAt?: Prisma.DateTimeNullableFilter<"SymbolSetting"> | Date | string | null
+  leveragePinned?: Prisma.BoolFilter<"SymbolSetting"> | boolean
   account?: Prisma.XOR<Prisma.AccountScalarRelationFilter, Prisma.AccountWhereInput>
 }, "id" | "accountId_symbol">
 
@@ -258,6 +268,7 @@ export type SymbolSettingOrderByWithAggregationInput = {
   leverage?: Prisma.SortOrder
   marginMode?: Prisma.SortOrder
   lastFundingAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  leveragePinned?: Prisma.SortOrder
   _count?: Prisma.SymbolSettingCountOrderByAggregateInput
   _avg?: Prisma.SymbolSettingAvgOrderByAggregateInput
   _max?: Prisma.SymbolSettingMaxOrderByAggregateInput
@@ -275,6 +286,7 @@ export type SymbolSettingScalarWhereWithAggregatesInput = {
   leverage?: Prisma.IntWithAggregatesFilter<"SymbolSetting"> | number
   marginMode?: Prisma.StringWithAggregatesFilter<"SymbolSetting"> | string
   lastFundingAt?: Prisma.DateTimeNullableWithAggregatesFilter<"SymbolSetting"> | Date | string | null
+  leveragePinned?: Prisma.BoolWithAggregatesFilter<"SymbolSetting"> | boolean
 }
 
 export type SymbolSettingCreateInput = {
@@ -283,6 +295,7 @@ export type SymbolSettingCreateInput = {
   leverage?: number
   marginMode?: string
   lastFundingAt?: Date | string | null
+  leveragePinned?: boolean
   account: Prisma.AccountCreateNestedOneWithoutSymbolSettingsInput
 }
 
@@ -293,6 +306,7 @@ export type SymbolSettingUncheckedCreateInput = {
   leverage?: number
   marginMode?: string
   lastFundingAt?: Date | string | null
+  leveragePinned?: boolean
 }
 
 export type SymbolSettingUpdateInput = {
@@ -301,6 +315,7 @@ export type SymbolSettingUpdateInput = {
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   marginMode?: Prisma.StringFieldUpdateOperationsInput | string
   lastFundingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leveragePinned?: Prisma.BoolFieldUpdateOperationsInput | boolean
   account?: Prisma.AccountUpdateOneRequiredWithoutSymbolSettingsNestedInput
 }
 
@@ -311,6 +326,7 @@ export type SymbolSettingUncheckedUpdateInput = {
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   marginMode?: Prisma.StringFieldUpdateOperationsInput | string
   lastFundingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leveragePinned?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type SymbolSettingCreateManyInput = {
@@ -320,6 +336,7 @@ export type SymbolSettingCreateManyInput = {
   leverage?: number
   marginMode?: string
   lastFundingAt?: Date | string | null
+  leveragePinned?: boolean
 }
 
 export type SymbolSettingUpdateManyMutationInput = {
@@ -328,6 +345,7 @@ export type SymbolSettingUpdateManyMutationInput = {
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   marginMode?: Prisma.StringFieldUpdateOperationsInput | string
   lastFundingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leveragePinned?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type SymbolSettingUncheckedUpdateManyInput = {
@@ -337,6 +355,7 @@ export type SymbolSettingUncheckedUpdateManyInput = {
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   marginMode?: Prisma.StringFieldUpdateOperationsInput | string
   lastFundingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leveragePinned?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type SymbolSettingListRelationFilter = {
@@ -361,6 +380,7 @@ export type SymbolSettingCountOrderByAggregateInput = {
   leverage?: Prisma.SortOrder
   marginMode?: Prisma.SortOrder
   lastFundingAt?: Prisma.SortOrder
+  leveragePinned?: Prisma.SortOrder
 }
 
 export type SymbolSettingAvgOrderByAggregateInput = {
@@ -374,6 +394,7 @@ export type SymbolSettingMaxOrderByAggregateInput = {
   leverage?: Prisma.SortOrder
   marginMode?: Prisma.SortOrder
   lastFundingAt?: Prisma.SortOrder
+  leveragePinned?: Prisma.SortOrder
 }
 
 export type SymbolSettingMinOrderByAggregateInput = {
@@ -383,6 +404,7 @@ export type SymbolSettingMinOrderByAggregateInput = {
   leverage?: Prisma.SortOrder
   marginMode?: Prisma.SortOrder
   lastFundingAt?: Prisma.SortOrder
+  leveragePinned?: Prisma.SortOrder
 }
 
 export type SymbolSettingSumOrderByAggregateInput = {
@@ -431,12 +453,17 @@ export type SymbolSettingUncheckedUpdateManyWithoutAccountNestedInput = {
   deleteMany?: Prisma.SymbolSettingScalarWhereInput | Prisma.SymbolSettingScalarWhereInput[]
 }
 
+export type BoolFieldUpdateOperationsInput = {
+  set?: boolean
+}
+
 export type SymbolSettingCreateWithoutAccountInput = {
   id?: string
   symbol: string
   leverage?: number
   marginMode?: string
   lastFundingAt?: Date | string | null
+  leveragePinned?: boolean
 }
 
 export type SymbolSettingUncheckedCreateWithoutAccountInput = {
@@ -445,6 +472,7 @@ export type SymbolSettingUncheckedCreateWithoutAccountInput = {
   leverage?: number
   marginMode?: string
   lastFundingAt?: Date | string | null
+  leveragePinned?: boolean
 }
 
 export type SymbolSettingCreateOrConnectWithoutAccountInput = {
@@ -483,6 +511,7 @@ export type SymbolSettingScalarWhereInput = {
   leverage?: Prisma.IntFilter<"SymbolSetting"> | number
   marginMode?: Prisma.StringFilter<"SymbolSetting"> | string
   lastFundingAt?: Prisma.DateTimeNullableFilter<"SymbolSetting"> | Date | string | null
+  leveragePinned?: Prisma.BoolFilter<"SymbolSetting"> | boolean
 }
 
 export type SymbolSettingCreateManyAccountInput = {
@@ -491,6 +520,7 @@ export type SymbolSettingCreateManyAccountInput = {
   leverage?: number
   marginMode?: string
   lastFundingAt?: Date | string | null
+  leveragePinned?: boolean
 }
 
 export type SymbolSettingUpdateWithoutAccountInput = {
@@ -499,6 +529,7 @@ export type SymbolSettingUpdateWithoutAccountInput = {
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   marginMode?: Prisma.StringFieldUpdateOperationsInput | string
   lastFundingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leveragePinned?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type SymbolSettingUncheckedUpdateWithoutAccountInput = {
@@ -507,6 +538,7 @@ export type SymbolSettingUncheckedUpdateWithoutAccountInput = {
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   marginMode?: Prisma.StringFieldUpdateOperationsInput | string
   lastFundingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leveragePinned?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 export type SymbolSettingUncheckedUpdateManyWithoutAccountInput = {
@@ -515,6 +547,7 @@ export type SymbolSettingUncheckedUpdateManyWithoutAccountInput = {
   leverage?: Prisma.IntFieldUpdateOperationsInput | number
   marginMode?: Prisma.StringFieldUpdateOperationsInput | string
   lastFundingAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  leveragePinned?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
 
 
@@ -526,6 +559,7 @@ export type SymbolSettingSelect<ExtArgs extends runtime.Types.Extensions.Interna
   leverage?: boolean
   marginMode?: boolean
   lastFundingAt?: boolean
+  leveragePinned?: boolean
   account?: boolean | Prisma.AccountDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["symbolSetting"]>
 
@@ -536,6 +570,7 @@ export type SymbolSettingSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   leverage?: boolean
   marginMode?: boolean
   lastFundingAt?: boolean
+  leveragePinned?: boolean
   account?: boolean | Prisma.AccountDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["symbolSetting"]>
 
@@ -546,6 +581,7 @@ export type SymbolSettingSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   leverage?: boolean
   marginMode?: boolean
   lastFundingAt?: boolean
+  leveragePinned?: boolean
   account?: boolean | Prisma.AccountDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["symbolSetting"]>
 
@@ -556,9 +592,10 @@ export type SymbolSettingSelectScalar = {
   leverage?: boolean
   marginMode?: boolean
   lastFundingAt?: boolean
+  leveragePinned?: boolean
 }
 
-export type SymbolSettingOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "accountId" | "symbol" | "leverage" | "marginMode" | "lastFundingAt", ExtArgs["result"]["symbolSetting"]>
+export type SymbolSettingOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "accountId" | "symbol" | "leverage" | "marginMode" | "lastFundingAt" | "leveragePinned", ExtArgs["result"]["symbolSetting"]>
 export type SymbolSettingInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   account?: boolean | Prisma.AccountDefaultArgs<ExtArgs>
 }
@@ -581,6 +618,7 @@ export type $SymbolSettingPayload<ExtArgs extends runtime.Types.Extensions.Inter
     leverage: number
     marginMode: string
     lastFundingAt: Date | null
+    leveragePinned: boolean
   }, ExtArgs["result"]["symbolSetting"]>
   composites: {}
 }
@@ -1011,6 +1049,7 @@ export interface SymbolSettingFieldRefs {
   readonly leverage: Prisma.FieldRef<"SymbolSetting", 'Int'>
   readonly marginMode: Prisma.FieldRef<"SymbolSetting", 'String'>
   readonly lastFundingAt: Prisma.FieldRef<"SymbolSetting", 'DateTime'>
+  readonly leveragePinned: Prisma.FieldRef<"SymbolSetting", 'Boolean'>
 }
     
 

@@ -145,7 +145,10 @@ export class AccountRepository {
         balance: new Decimal(account.availableBalance.toString()),
         realizedPnl: new Decimal(account.realizedPnl.toString()),
         leverage: account.leverage,
-        symbolLeverage: Object.fromEntries(settings.map((st) => [st.symbol, st.leverage])),
+        // Only a real per-symbol choice pins leverage — a funding-marker-only row doesn't (BP-4)
+        symbolLeverage: Object.fromEntries(
+          settings.filter((st) => st.leveragePinned).map((st) => [st.symbol, st.leverage])
+        ),
         symbolFundingAt: Object.fromEntries(
           settings.flatMap((st) =>
             st.lastFundingAt ? [[st.symbol, st.lastFundingAt.getTime()] as const] : []
@@ -234,7 +237,7 @@ export class AccountRepository {
       await tx.symbolSetting.upsert({
         where: { accountId_symbol: { accountId, symbol } },
         create: { accountId, symbol, leverage: lev },
-        update: { leverage: lev },
+        update: { leverage: lev, leveragePinned: true },
       });
     }
     for (const symbol of changedFundingAt(
@@ -246,12 +249,15 @@ export class AccountRepository {
       const lastFundingAt = new Date(delta.account.symbolFundingAt[symbol]);
       await tx.symbolSetting.upsert({
         where: { accountId_symbol: { accountId, symbol } },
-        // A symbol with no setting yet keeps the account's default leverage
+        // A row created just for the marker doesn't pin leverage: the symbol keeps following the
+        // account default (the leverage value is a placeholder, never read)
         create: {
           accountId,
           symbol,
           // eslint-disable-next-line security/detect-object-injection
           leverage: delta.account.symbolLeverage[symbol] ?? delta.account.leverage,
+          // eslint-disable-next-line security/detect-object-injection
+          leveragePinned: delta.account.symbolLeverage[symbol] !== undefined,
           lastFundingAt,
         },
         update: { lastFundingAt },

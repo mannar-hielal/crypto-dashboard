@@ -197,7 +197,8 @@ export const SymbolSettingScalarFieldEnum = {
   symbol: 'symbol',
   leverage: 'leverage',
   marginMode: 'marginMode',
-  lastFundingAt: 'lastFundingAt'
+  lastFundingAt: 'lastFundingAt',
+  leveragePinned: 'leveragePinned'
 } as const
 
 export type SymbolSettingScalarFieldEnum = (typeof SymbolSettingScalarFieldEnum)[keyof typeof SymbolSettingScalarFieldEnum]

@@ -1310,7 +1310,8 @@ describe('AccountRepository', () => {
     expect(tx.symbolSetting.upsert).toHaveBeenCalledWith({
       where: { accountId_symbol: { accountId: 'acc', symbol: 'ETHUSDT' } },
       create: { accountId: 'acc', symbol: 'ETHUSDT', leverage: 5 },
-      update: { leverage: 5 },
+      // A real choice (re-)pins a row that may have existed only for the funding marker
+      update: { leverage: 5, leveragePinned: true },
     });
   });
 
@@ -1354,10 +1355,23 @@ describe('AccountRepository', () => {
         accountId: 'acc',
         symbol: 'BTCUSDT',
         leverage: 1,
+        leveragePinned: false, // a marker-only row: BTCUSDT keeps following the account default
         lastFundingAt: new Date(1_100_000),
       },
       update: { lastFundingAt: new Date(1_100_000) },
     });
+  });
+
+  it('a funding-marker-only SymbolSetting row does not pin the symbol’s leverage (review #143)', async () => {
+    const { prisma, tx } = fakePrisma(1);
+    tx.symbolSetting.findMany.mockResolvedValueOnce([
+      { symbol: 'BTCUSDT', leverage: 1, leveragePinned: false, lastFundingAt: new Date(1_100_000) },
+      { symbol: 'ETHUSDT', leverage: 5, leveragePinned: true, lastFundingAt: null },
+    ]);
+    const repo = new AccountRepository(prisma as never);
+    const loaded = await repo.load('u1', tx as never);
+    expect(loaded.state.symbolLeverage).toEqual({ ETHUSDT: 5 });
+    expect(loaded.state.symbolFundingAt).toEqual({ BTCUSDT: 1_100_000 });
   });
 
   it('the snapshot keeps funding rows out of the closed-trade history (BP-4)', async () => {

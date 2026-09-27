@@ -195,6 +195,9 @@ model SymbolSetting {
   // Last funding timestamp settled for this account and symbol (BP-4) — a settlement at or before it
   // is a no-op, so the same funding is never charged twice
   lastFundingAt DateTime?
+  // False when the row exists only for lastFundingAt: its leverage is then not a per-symbol choice
+  // and the symbol keeps following the account default (BP-4)
+  leveragePinned Boolean @default(true)
 
   @@unique([accountId, symbol])
 }
