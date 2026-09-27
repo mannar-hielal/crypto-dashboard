@@ -30,6 +30,9 @@ export function UnverifiedPage() {
   const handleSignOut = async () => {
     try {
       await authApi.logout();
+    } catch {
+      // 🔐 The local session must clear even if the server call fails (offline, 5xx) —
+      // and a failure must not escape the click handler as an uncaught rejection.
     } finally {
       clearAuth();
       void navigate('/login');
