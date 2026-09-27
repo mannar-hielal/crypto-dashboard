@@ -98,25 +98,37 @@ export async function privatePaperWs(app: FastifyInstance): Promise<void> {
     let expiryTimer: NodeJS.Timeout | null = null;
     let pongTimer: NodeJS.Timeout | null = null;
     let released = false;
+    let closeLogged = false;
 
     const send = (message: WsPaperMessage) => {
       if (socket.readyState === 1 /* OPEN */) socket.send(JSON.stringify(message));
     };
 
-    const release = (code?: number, reason?: string) => {
-      if (released) return;
-      released = true;
+    /**
+     * One "Paper WS closed" line per socket, with the close code (and the reason when the server
+     * closed it). Written by whichever close path sees the code first — never by the error path, which
+     * is always followed by the real close event (review #154).
+     */
+    const logClosed = (code: number, reason?: string) => {
+      if (closeLogged) return;
+      closeLogged = true;
       log.info(
         {
           ...conn,
           authenticated: userId !== null,
           ...(userId ? { userId } : {}),
-          ...(code !== undefined ? { code } : {}),
+          code,
           ...(reason ? { reason } : {}),
           durationMs: Date.now() - openedAt,
         },
         'Paper WS closed'
       );
+    };
+
+    /** Free the socket's timers, subscription and slots (idempotent; logs nothing). */
+    const release = () => {
+      if (released) return;
+      released = true;
       clearTimeout(authTimer);
       if (expiryTimer) clearTimeout(expiryTimer);
       if (pongTimer) clearTimeout(pongTimer);
@@ -152,7 +164,8 @@ export async function privatePaperWs(app: FastifyInstance): Promise<void> {
      */
     const closeWith = (code: number, reason: string) => {
       socket.close(code, reason);
-      release(code, reason);
+      release();
+      logClosed(code, reason);
     };
 
     const closeUnauthorized = (reason: string) => closeWith(WS_CLOSE_UNAUTHORIZED, reason);
@@ -258,7 +271,12 @@ export async function privatePaperWs(app: FastifyInstance): Promise<void> {
       closeWith(1008, 'Unexpected message');
     });
 
-    socket.on('close', (code: number) => release(code));
+    socket.on('close', (code: number) => {
+      release();
+      logClosed(code);
+    });
+    // Clean up on error too (web.md: a listener only on 'close' leaks on abnormal disconnects); the
+    // close line comes from the 'close' event that always follows, with the real code
     socket.on('error', (err: Error) => {
       log.error({ err, ...conn }, 'Paper WS error');
       release();

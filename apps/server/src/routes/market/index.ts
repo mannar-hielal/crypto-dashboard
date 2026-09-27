@@ -499,7 +499,8 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
       });
 
       socket.on('error', (err: Error) => {
-        log.error({ err, reqId: request.id }, 'Client WebSocket error');
+        // The disconnect line is written once, by the 'close' event that always follows
+        log.error({ err, ...conn }, 'Client WebSocket error');
         unsubscribe();
         unsubscribeTicker();
         releaseConnection();

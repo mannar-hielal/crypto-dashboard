@@ -150,4 +150,25 @@ describe('WebSocket connection logging', () => {
     expect(linesFor('Paper WS connected')).toHaveLength(0);
     ws.terminate();
   });
+
+  it('trading socket: an error then its close logs one close line, with the real close code (review #154)', async () => {
+    const ws = await app.injectWS('/api/paper/ws');
+    // A frame with the reserved RSV2 bit set: the server's ws raises a protocol error, then closes
+    const raw = (ws as unknown as { _socket: { write(b: Buffer): void } })._socket;
+    raw.write(Buffer.from([0xa1, 0x80, 0, 0, 0, 0]));
+    await until(() => linesFor('Paper WS error').length > 0);
+    // The error path cleans up but writes no close line — the code isn't known yet
+    expect(linesFor('Paper WS closed')).toHaveLength(0);
+    // The connection then goes away (in production: the close-handshake timeout ends the socket),
+    // and the real close event arrives
+    const server = (app as unknown as { websocketServer: { clients: Set<{ terminate(): void }> } })
+      .websocketServer;
+    for (const peer of server.clients) peer.terminate();
+    await until(() => linesFor('Paper WS closed').length > 0);
+    await new Promise((r) => setTimeout(r, 50)); // any second line would have arrived by now
+    expect(linesFor('Paper WS error')).toHaveLength(1);
+    const closes = linesFor('Paper WS closed');
+    expect(closes).toHaveLength(1);
+    expect(closes[0]).toMatchObject({ authenticated: false, code: expect.any(Number) });
+  });
 });
