@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import * as argon2 from 'argon2';
-import { FastifyInstance, FastifyReply } from 'fastify';
+import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { Prisma } from '../../../generated/prisma/client.js';
 import { config } from '../../config.js';
 import { EmailService } from '../../services/EmailService.js';
@@ -57,6 +57,26 @@ async function withRefreshLock<T>(tokenHash: string, fn: () => Promise<T>): Prom
   }
 }
 const ACCESS_TOKEN_EXPIRY = '15m'; // Short-lived — lives only in Zustand memory
+
+// ─── REFRESH RATE LIMIT ───────────────────────────────────────────────────────
+// 🔐 Two buckets per client IP. A request that presents a refresh cookie — the credential this
+//    limit protects — keeps the strict 20 per 15 min. A request with no cookie is the app's boot
+//    probe for a signed-out visitor: it is answered 204 with no DB work and nothing issued, so it
+//    gets its own, looser bucket. Otherwise ~20 signed-out page loads (one person clicking
+//    around, or many visitors behind one NAT / CGNAT address) exhaust the budget and the next
+//    signed-in page load gets a 429 at boot and looks signed out.
+function hasRefreshCookie(request: FastifyRequest): boolean {
+  // cookie name is a known constant — safe, controlled access
+  // eslint-disable-next-line security/detect-object-injection
+  return Boolean(request.cookies?.[REFRESH_TOKEN_COOKIE]);
+}
+
+export const REFRESH_RATE_LIMIT = {
+  timeWindow: '15 minutes',
+  max: (request: FastifyRequest) => (hasRefreshCookie(request) ? 20 : 100),
+  keyGenerator: (request: FastifyRequest) =>
+    `${hasRefreshCookie(request) ? 'token' : 'probe'}:${request.ip}`,
+};
 
 // ─── TOKEN HELPERS ────────────────────────────────────────────────────────────
 // 🔐 SHA-256 hash stored in DB — if DB is breached, attacker gets hashes,
@@ -828,7 +848,7 @@ export async function authRoutes(app: FastifyInstance) {
   // ─── REFRESH ─────────────────────────────────────────────────────────────────
   app.post(
     '/refresh',
-    { schema: refreshSchema, config: { rateLimit: { max: 20, timeWindow: '15 minutes' } } },
+    { schema: refreshSchema, config: { rateLimit: REFRESH_RATE_LIMIT } },
     async (request, reply) => {
       // cookie name is a known constant — safe, controlled access
       // eslint-disable-next-line security/detect-object-injection
