@@ -764,7 +764,15 @@ All trading rules live **in the server engine**; the client gets display, estima
 >     `setLeverage`, `TradingService.setLeverage` and `actions.setLeverage` (`:1424`);
 >   - margin sizing by `usdtAmount` (`routes/paper/index.ts:99-110`).
 
-**Owner decisions needed** (recommended default first; nothing below is decided until the owner answers):
+**Owner decisions — answered 2026-09-27:** O1 yes (offer cross) · O2 new accounts start in **Cross**, existing accounts
+stay Isolated with a one-time notice · O3 Bybit's switch rules (allowed with open positions when the checks pass) ·
+O4 **one BP-5** (not split — the recommendation was to split; E ships in the same release as the rest) · O5 unrealised
+profit counts, per Bybit's API formula (confirm on testnet) · O6 tier info in the leverage modal + hover in the
+Positions row · O7 implement partial liquidation · O8 Last / Mark / Index · O9 follow Bybit (last-price check; a
+stop-loss past liquidation is accepted with a UI warning) · O10 auto-add margin left out (§7) · O11 remove the pre-BP-2
+API after one release that logs any call · O12 Full TP / SL only (Partial → §7).
+
+The options as they were put to the owner (recommended default first):
 
 - **O1 — Support cross margin at all?** It is Bybit's default and the mode most Bybit users trade in. But in cross,
   one bad position can take the whole wallet — a harsh lesson in a learning app — and with the 10× cap it gives
@@ -779,7 +787,7 @@ All trading rules live **in the server engine**; the client gets display, estima
 - **O4 — Split BP-5?** **Recommended: yes.** BP-5a = Step 0 + A–D + F–G (contained refinements), BP-5b = E (cross
   margin: margin balance, account MM rate, account liquidation). Each gets its own PR and visual gate.
 - **O5 — Cross-mode unrealised profit.** **Recommended: follow the API formula** (`totalAvailableBalance` = margin
-  balance − IM, so profit counts), and confirm it with the testnet parity test before BP-5b ships.
+  balance − IM, so profit counts), and confirm it with the testnet parity test before cross ships.
 - **O6 — Risk-limit tier UI.** **Recommended: the current tier, the cap at the chosen leverage and the MMR in the
   leverage modal, plus the tier on hover in the Positions row.** A full tier table is noise when the 10× cap is
   unreachable for most symbols.
@@ -901,7 +909,7 @@ All trading rules live **in the server engine**; the client gets display, estima
       `avgExitPrice` / `closedSize` aliases for the parity test.
 - [ ] **UI (visual gate).**
 
-**E. Cross margin (BP-5b; O1–O3, O5)**
+**E. Cross margin (O1–O3, O5 — same release as A–D, O4)**
 
 - [ ] `Account.marginMode` (`ISOLATED_MARGIN` | `REGULAR_MARGIN`, Bybit's values; account-wide as in UTA; default
       per O2), in one migration. Drop the unused per-symbol / per-position `marginMode` columns, or keep them as
@@ -1014,14 +1022,14 @@ All trading rules live **in the server engine**; the client gets display, estima
 
 ## 6. Rollout order and risk
 
-| Step | Risk                                            | Mitigation                                                                                                           |
-| ---- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| BP-0 | Feed regressions (chart, prices)                | Ship alone; compare old and new feeds side by side in dev                                                            |
-| BP-1 | Biggest change: execution moves to the server   | Pure-port rule; existing tests ported first; shipped as one PR with no fallback flag (owner's choice)                |
-| BP-2 | UI changes                                      | Visual Q&A gate; spot and perps behind the market switch                                                             |
-| BP-3 | Users get liquidated for the first time         | In-app explainer + one-time notice at deploy; liquidation price visible before submit; no grace period (as on Bybit) |
-| BP-4 | Balance moves while user is away                | Every funding payment in the journal and Balance History                                                             |
-| BP-5 | Cross margin: one position can drain the wallet | Owner decisions O1–O3 first; split BP-5a / BP-5b (O4); mode modal + cross liquidation explainer (visual gate)        |
+| Step | Risk                                            | Mitigation                                                                                                                   |
+| ---- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| BP-0 | Feed regressions (chart, prices)                | Ship alone; compare old and new feeds side by side in dev                                                                    |
+| BP-1 | Biggest change: execution moves to the server   | Pure-port rule; existing tests ported first; shipped as one PR with no fallback flag (owner's choice)                        |
+| BP-2 | UI changes                                      | Visual Q&A gate; spot and perps behind the market switch                                                                     |
+| BP-3 | Users get liquidated for the first time         | In-app explainer + one-time notice at deploy; liquidation price visible before submit; no grace period (as on Bybit)         |
+| BP-4 | Balance moves while user is away                | Every funding payment in the journal and Balance History                                                                     |
+| BP-5 | Cross margin: one position can drain the wallet | O1–O3 answered (cross offered, new accounts Cross); one release (O4); mode modal + cross liquidation explainer (visual gate) |
 
 ---
 
@@ -1058,9 +1066,9 @@ None blocking. Resolved on 2026-09-25: Q1 → D2, Q2 → D9 (server engine), Q3 
 Resolved on 2026-09-26 for BP-3: mimic Bybit as closely as possible (the app will later be tested against Bybit's
 APIs). That means merging same-side fills, re-margining in BP-3, every chart line Bybit draws, and no grace period at deploy.
 
-**Open for BP-5 (2026-09-27):** owner decisions O1–O12 in §4 BP-5 — above all whether to offer cross margin (O1), the
-default mode for new accounts (O2) and splitting BP-5 into BP-5a / BP-5b (O4). BP-5 doesn't start until they're
-answered.
+**Resolved on 2026-09-27 for BP-5:** owner decisions O1–O12 in §4 BP-5 — offer cross margin, new accounts start in
+Cross, Bybit's switch rules, one BP-5 release (not split), partial liquidation, Last / Mark / Index triggers, Bybit's
+TP / SL validation, no auto-add margin, the old API removed after a logging release, Full TP / SL only.
 
 ---
 
