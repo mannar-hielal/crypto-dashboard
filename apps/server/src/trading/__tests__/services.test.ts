@@ -1094,6 +1094,43 @@ describe('MatchingEngine', () => {
       await e.stop();
     });
 
+    it('freezes each account’s snapshot while a settlement waits for a mark (review #143)', async () => {
+      open = new Map([
+        ['u1', long()],
+        ['u2', long()],
+      ]);
+      const e = engine({
+        fetchFundingHistory: vi.fn(async () => [{ ts: TS, rate: D('0.0001') }]),
+        fundingCheckMs: 1_000_000,
+        fundingRetryMs: 0,
+      });
+      await e.start();
+      const noMark = (nextFundingTime: number) =>
+        tickListener?.({
+          category: 'linear',
+          symbol: 'BTCUSDT',
+          lastPrice: 50_000,
+          fundingRate: 0.0001,
+          nextFundingTime,
+        });
+      clock = TS - 1_000;
+      noMark(TS);
+      clock = TS + 1_000;
+      noMark(TS + 8 * 3_600_000); // due, no mark yet → waits
+      // While it waits: u1 closes its position, u2 doubles it
+      events.publish({ userId: 'u1', state: freshState(), delta: {} as never });
+      const doubled = long();
+      doubled.positions[0] = { ...doubled.positions[0], quantity: D('0.2') };
+      events.publish({ userId: 'u2', state: doubled, delta: {} as never });
+      clock = TS + 2_000;
+      fundingTick(TS + 8 * 3_600_000, 0.0001, 50_000); // the mark arrives
+      const held = [{ positionId: 'p1', side: 'long', qty: D('0.1') }];
+      await vi.waitFor(() => expect(runFunding).toHaveBeenCalledTimes(2));
+      expect(runFunding).toHaveBeenCalledWith('u1', expect.objectContaining({ positions: held }));
+      expect(runFunding).toHaveBeenCalledWith('u2', expect.objectContaining({ positions: held }));
+      await e.stop();
+    });
+
     it('a position opened after the timestamp is not charged', async () => {
       open = new Map([['u1', long(TS + 1)]]);
       const e = engine({ fetchFundingHistory: vi.fn(async () => []), fundingCheckMs: 1_000_000 });

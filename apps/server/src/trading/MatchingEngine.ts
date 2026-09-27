@@ -122,6 +122,12 @@ interface DueFunding {
    * the timestamp it was not one (the interval changed) and is dropped
    */
   inferred?: boolean;
+  /**
+   * Each account's positions as first seen for this timestamp — frozen: a close or an add while
+   * the settlement waits (for a mark, say) can't change what that account is charged. An account
+   * indexed later (a fill at the timestamp itself) is still added.
+   */
+  snapshots?: Map<string, FundingSnapshot[]>;
 }
 
 /** What the live ticker says about a symbol's next funding (BP-4). */
@@ -522,18 +528,23 @@ export class MatchingEngine {
   private checkFunding(): void {
     const now = this.now();
     for (const [symbol, clock] of this.fundingClocks) {
-      const due: DueFunding | undefined =
-        clock.due ??
-        (clock.nextTs && clock.nextTs <= now
-          ? { ts: clock.nextTs, rate: clock.rate, mark: clock.mark }
-          : undefined);
+      let due = clock.due;
+      if (!due && clock.nextTs && clock.nextTs <= now) {
+        // Kept on the clock so its snapshot stays frozen across retries
+        due = { ts: clock.nextTs, rate: clock.rate, mark: clock.mark };
+        clock.due = due;
+      }
       if (!due) continue;
       if (this.fundingStarted.get(symbol) === due.ts) {
         clock.due = undefined;
         continue;
       }
-      // The positions and the mark as they are at the timestamp, before anything moves on
-      const snapshots = this.fundingSnapshots(symbol, due.ts);
+      // The positions and the mark as they are at the timestamp, before anything moves on: each
+      // account's snapshot is taken once and never updated (only accounts not seen yet are added)
+      const snapshots = (due.snapshots ??= new Map<string, FundingSnapshot[]>());
+      for (const [userId, positions] of this.fundingSnapshots(symbol, due.ts)) {
+        if (!snapshots.has(userId)) snapshots.set(userId, positions);
+      }
       // An inferred timestamp was never seen live: today's mark isn't the mark at it
       const mark = due.inferred ? undefined : (due.mark ?? clock.mark);
       const expired = now - due.ts > FUNDING_SNAPSHOT_GRACE_MS;
