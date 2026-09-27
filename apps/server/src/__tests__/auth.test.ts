@@ -59,7 +59,6 @@ vi.mock('../plugins/prisma.js', () => {
         findUnique: vi.fn(),
         delete: vi.fn().mockResolvedValue({}),
         deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
-        deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       // Supports both transaction forms used in production code:
       //   Array form:       $transaction([op1, op2])          → runs ops concurrently via Promise.all
