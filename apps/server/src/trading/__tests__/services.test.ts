@@ -810,6 +810,29 @@ describe('MatchingEngine', () => {
       await e.stop();
     });
 
+    it('holds the lease’s recorded progress before a funding still being settled (review #143)', async () => {
+      open = new Map([['u1', long()]]);
+      let release: (v: { ts: number; rate: Decimal }[]) => void = () => undefined;
+      const fetchFundingHistory = vi.fn(
+        () => new Promise<{ ts: number; rate: Decimal }[]>((r) => (release = r))
+      );
+      const e = engine({ fetchFundingHistory, fundingCheckMs: 1_000_000 });
+      await e.start();
+      clock = TS - 1_000; // ticks a few seconds apart — no gap backfill in this test
+      fundingTick(TS, 0.0001, 50_000);
+      clock = TS + 5_000;
+      fundingTick(TS + 8 * 3_600_000, 0.0002, 50_100); // due → in flight (rate lookup pending)
+      const heartbeat = () => (e as unknown as { heartbeat(): Promise<void> }).heartbeat();
+      await heartbeat();
+      // A restart now would backfill from before the timestamp, so it replays the settlement
+      expect(lease.renew).toHaveBeenLastCalledWith('me', expect.any(Number), new Date(TS - 1));
+      release([{ ts: TS, rate: D('0.0001') }]);
+      await vi.waitFor(() => expect(runFunding).toHaveBeenCalled());
+      await heartbeat();
+      expect(lease.renew).toHaveBeenLastCalledWith('me', expect.any(Number), new Date(TS + 5_000));
+      await e.stop();
+    });
+
     it('a position opened after the timestamp is not charged', async () => {
       open = new Map([['u1', long(TS + 1)]]);
       const e = engine({ fetchFundingHistory: vi.fn(async () => []), fundingCheckMs: 1_000_000 });

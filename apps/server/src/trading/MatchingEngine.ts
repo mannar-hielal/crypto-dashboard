@@ -177,6 +177,8 @@ export class MatchingEngine {
   /** Last funding timestamp started per symbol (the DB marker is the real once-only guard) */
   private readonly fundingStarted = new Map<string, number>();
   private fundingTimer: NodeJS.Timeout | null = null;
+  /** Funding timestamp being settled per symbol, until every account is written — bounded */
+  private readonly fundingInFlight = new Map<string, number>();
   /** A timer at each symbol's next funding timestamp — bounded: ALLOWED_SYMBOLS */
   private readonly fundingAlarms = new Map<string, NodeJS.Timeout>();
   private readonly fundingCheckMs: number;
@@ -247,9 +249,16 @@ export class MatchingEngine {
     }
   }
 
+  /**
+   * The progress recorded on the lease — where the next holder's downtime backfill starts. Held
+   * back to just before the oldest funding timestamp still being settled (BP-4): a deploy, crash or
+   * lease handoff in the middle of a settlement makes the next holder replay it (the per-symbol
+   * marker keeps accounts already written from being charged twice).
+   */
   private latestTick(): Date | null {
     let latest = 0;
     for (const t of this.lastTick.values()) latest = Math.max(latest, t);
+    for (const ts of this.fundingInFlight.values()) latest = Math.min(latest, ts - 1);
     return latest > 0 ? new Date(latest) : null;
   }
 
@@ -323,6 +332,7 @@ export class MatchingEngine {
     this.fundingTimer = null;
     this.fundingClocks.clear();
     this.fundingStarted.clear();
+    this.fundingInFlight.clear();
     for (const alarm of this.fundingAlarms.values()) clearTimeout(alarm);
     this.fundingAlarms.clear();
     this.users.clear();
@@ -552,12 +562,17 @@ export class MatchingEngine {
     announced: Decimal | undefined,
     snapshots: Map<string, FundingSnapshot[]>
   ): Promise<void> {
-    const rate = await this.settledRate(symbol, ts, announced);
-    if (!rate) {
-      log.error({ symbol, ts }, 'Funding skipped: no settled rate');
-      return;
+    this.fundingInFlight.set(symbol, ts);
+    try {
+      const rate = await this.settledRate(symbol, ts, announced);
+      if (!rate) {
+        log.error({ symbol, ts }, 'Funding skipped: no settled rate');
+        return;
+      }
+      await this.runFunding(symbol, ts, rate, mark, snapshots);
+    } finally {
+      if (this.fundingInFlight.get(symbol) === ts) this.fundingInFlight.delete(symbol);
     }
-    await this.runFunding(symbol, ts, rate, mark, snapshots);
   }
 
   private async runFunding(
