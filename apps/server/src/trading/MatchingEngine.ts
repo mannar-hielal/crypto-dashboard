@@ -191,8 +191,13 @@ export class MatchingEngine {
   /** Last funding timestamp started per symbol (the DB marker is the real once-only guard) */
   private readonly fundingStarted = new Map<string, number>();
   private fundingTimer: NodeJS.Timeout | null = null;
-  /** Funding timestamp being settled per symbol, until every account is written — bounded */
-  private readonly fundingInFlight = new Map<string, number>();
+  /**
+   * Funding timestamps still being settled per symbol, until every account is written — a set: a
+   * slow settlement can overlap the next timestamp's. Bounded: an entry leaves when its settlement
+   * finishes or the engine deactivates (then the held-back lease progress makes the next holder
+   * replay it)
+   */
+  private readonly fundingInFlight = new Map<string, Set<number>>();
   /** A timer at each symbol's next funding timestamp — bounded: ALLOWED_SYMBOLS */
   private readonly fundingAlarms = new Map<string, NodeJS.Timeout>();
   private readonly fundingCheckMs: number;
@@ -274,7 +279,9 @@ export class MatchingEngine {
   private latestTick(): Date | null {
     let latest = 0;
     for (const t of this.lastTick.values()) latest = Math.max(latest, t);
-    for (const ts of this.fundingInFlight.values()) latest = Math.min(latest, ts - 1);
+    for (const pending of this.fundingInFlight.values()) {
+      for (const ts of pending) latest = Math.min(latest, ts - 1);
+    }
     return latest > 0 ? new Date(latest) : null;
   }
 
@@ -644,7 +651,13 @@ export class MatchingEngine {
   ): Promise<void> {
     const pause = () => new Promise((resolve) => setTimeout(resolve, this.fundingRetryMs));
     const live = () => !this.stopped && this.active;
-    this.fundingInFlight.set(symbol, ts);
+    // Every timestamp still settling is held — a slow one isn't forgotten when the next one starts
+    let pending = this.fundingInFlight.get(symbol);
+    if (!pending) {
+      pending = new Set();
+      this.fundingInFlight.set(symbol, pending);
+    }
+    pending.add(ts);
     try {
       // The rate first: an inferred timestamp Bybit never settled is dropped before any mark read
       let rate = rates.settled ?? (await this.settledRate(symbol, ts, rates.announced));
@@ -676,7 +689,9 @@ export class MatchingEngine {
         await pause();
       }
     } finally {
-      if (this.fundingInFlight.get(symbol) === ts) this.fundingInFlight.delete(symbol);
+      const still = this.fundingInFlight.get(symbol);
+      still?.delete(ts);
+      if (still?.size === 0) this.fundingInFlight.delete(symbol);
     }
   }
 
