@@ -237,6 +237,9 @@ model Position {
 
   takeProfit Decimal? @db.Decimal(20, 8)
   stopLoss   Decimal? @db.Decimal(20, 8)
+  // Price each exit leg triggers on (BP-5 B): "LastPrice" | "MarkPrice" | "IndexPrice"
+  tpTriggerBy String @default("LastPrice")
+  slTriggerBy String @default("LastPrice")
 
   openedAt  DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -293,6 +296,14 @@ model Order {
   ocoGroup   String?
   // Bybit createType of a system order: "CreateByLiq" = the close of a liquidated position (BP-3)
   createType String?
+  // BP-5 B: the price a stop order and its TP / SL legs trigger on ("LastPrice" | "MarkPrice" |
+  // "IndexPrice" — a limit always rests on the last price), and Bybit's reduce-only /
+  // close-on-trigger flags
+  triggerBy      String  @default("LastPrice")
+  tpTriggerBy    String  @default("LastPrice")
+  slTriggerBy    String  @default("LastPrice")
+  reduceOnly     Boolean @default(false)
+  closeOnTrigger Boolean @default(false)
 
   // State machine: PENDING -> PARTIALLY_FILLED -> FILLED | CANCELLED | REJECTED
   status          String    @default("PENDING")

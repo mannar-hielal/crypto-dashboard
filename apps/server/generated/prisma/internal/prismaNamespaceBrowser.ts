@@ -223,6 +223,8 @@ export const PositionScalarFieldEnum = {
   cumFunding: 'cumFunding',
   takeProfit: 'takeProfit',
   stopLoss: 'stopLoss',
+  tpTriggerBy: 'tpTriggerBy',
+  slTriggerBy: 'slTriggerBy',
   openedAt: 'openedAt',
   updatedAt: 'updatedAt'
 } as const
@@ -256,6 +258,11 @@ export const OrderScalarFieldEnum = {
   isMaker: 'isMaker',
   ocoGroup: 'ocoGroup',
   createType: 'createType',
+  triggerBy: 'triggerBy',
+  tpTriggerBy: 'tpTriggerBy',
+  slTriggerBy: 'slTriggerBy',
+  reduceOnly: 'reduceOnly',
+  closeOnTrigger: 'closeOnTrigger',
   status: 'status',
   rejectionReason: 'rejectionReason',
   createdAt: 'createdAt',

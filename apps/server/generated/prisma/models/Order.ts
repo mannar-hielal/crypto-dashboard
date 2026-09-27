@@ -84,6 +84,11 @@ export type OrderMinAggregateOutputType = {
   isMaker: boolean | null
   ocoGroup: string | null
   createType: string | null
+  triggerBy: string | null
+  tpTriggerBy: string | null
+  slTriggerBy: string | null
+  reduceOnly: boolean | null
+  closeOnTrigger: boolean | null
   status: string | null
   rejectionReason: string | null
   createdAt: Date | null
@@ -118,6 +123,11 @@ export type OrderMaxAggregateOutputType = {
   isMaker: boolean | null
   ocoGroup: string | null
   createType: string | null
+  triggerBy: string | null
+  tpTriggerBy: string | null
+  slTriggerBy: string | null
+  reduceOnly: boolean | null
+  closeOnTrigger: boolean | null
   status: string | null
   rejectionReason: string | null
   createdAt: Date | null
@@ -152,6 +162,11 @@ export type OrderCountAggregateOutputType = {
   isMaker: number
   ocoGroup: number
   createType: number
+  triggerBy: number
+  tpTriggerBy: number
+  slTriggerBy: number
+  reduceOnly: number
+  closeOnTrigger: number
   status: number
   rejectionReason: number
   createdAt: number
@@ -220,6 +235,11 @@ export type OrderMinAggregateInputType = {
   isMaker?: true
   ocoGroup?: true
   createType?: true
+  triggerBy?: true
+  tpTriggerBy?: true
+  slTriggerBy?: true
+  reduceOnly?: true
+  closeOnTrigger?: true
   status?: true
   rejectionReason?: true
   createdAt?: true
@@ -254,6 +274,11 @@ export type OrderMaxAggregateInputType = {
   isMaker?: true
   ocoGroup?: true
   createType?: true
+  triggerBy?: true
+  tpTriggerBy?: true
+  slTriggerBy?: true
+  reduceOnly?: true
+  closeOnTrigger?: true
   status?: true
   rejectionReason?: true
   createdAt?: true
@@ -288,6 +313,11 @@ export type OrderCountAggregateInputType = {
   isMaker?: true
   ocoGroup?: true
   createType?: true
+  triggerBy?: true
+  tpTriggerBy?: true
+  slTriggerBy?: true
+  reduceOnly?: true
+  closeOnTrigger?: true
   status?: true
   rejectionReason?: true
   createdAt?: true
@@ -409,6 +439,11 @@ export type OrderGroupByOutputType = {
   isMaker: boolean | null
   ocoGroup: string | null
   createType: string | null
+  triggerBy: string
+  tpTriggerBy: string
+  slTriggerBy: string
+  reduceOnly: boolean
+  closeOnTrigger: boolean
   status: string
   rejectionReason: string | null
   createdAt: Date
@@ -466,6 +501,11 @@ export type OrderWhereInput = {
   isMaker?: Prisma.BoolNullableFilter<"Order"> | boolean | null
   ocoGroup?: Prisma.StringNullableFilter<"Order"> | string | null
   createType?: Prisma.StringNullableFilter<"Order"> | string | null
+  triggerBy?: Prisma.StringFilter<"Order"> | string
+  tpTriggerBy?: Prisma.StringFilter<"Order"> | string
+  slTriggerBy?: Prisma.StringFilter<"Order"> | string
+  reduceOnly?: Prisma.BoolFilter<"Order"> | boolean
+  closeOnTrigger?: Prisma.BoolFilter<"Order"> | boolean
   status?: Prisma.StringFilter<"Order"> | string
   rejectionReason?: Prisma.StringNullableFilter<"Order"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Order"> | Date | string
@@ -503,6 +543,11 @@ export type OrderOrderByWithRelationInput = {
   isMaker?: Prisma.SortOrderInput | Prisma.SortOrder
   ocoGroup?: Prisma.SortOrderInput | Prisma.SortOrder
   createType?: Prisma.SortOrderInput | Prisma.SortOrder
+  triggerBy?: Prisma.SortOrder
+  tpTriggerBy?: Prisma.SortOrder
+  slTriggerBy?: Prisma.SortOrder
+  reduceOnly?: Prisma.SortOrder
+  closeOnTrigger?: Prisma.SortOrder
   status?: Prisma.SortOrder
   rejectionReason?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -543,6 +588,11 @@ export type OrderWhereUniqueInput = Prisma.AtLeast<{
   isMaker?: Prisma.BoolNullableFilter<"Order"> | boolean | null
   ocoGroup?: Prisma.StringNullableFilter<"Order"> | string | null
   createType?: Prisma.StringNullableFilter<"Order"> | string | null
+  triggerBy?: Prisma.StringFilter<"Order"> | string
+  tpTriggerBy?: Prisma.StringFilter<"Order"> | string
+  slTriggerBy?: Prisma.StringFilter<"Order"> | string
+  reduceOnly?: Prisma.BoolFilter<"Order"> | boolean
+  closeOnTrigger?: Prisma.BoolFilter<"Order"> | boolean
   status?: Prisma.StringFilter<"Order"> | string
   rejectionReason?: Prisma.StringNullableFilter<"Order"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Order"> | Date | string
@@ -580,6 +630,11 @@ export type OrderOrderByWithAggregationInput = {
   isMaker?: Prisma.SortOrderInput | Prisma.SortOrder
   ocoGroup?: Prisma.SortOrderInput | Prisma.SortOrder
   createType?: Prisma.SortOrderInput | Prisma.SortOrder
+  triggerBy?: Prisma.SortOrder
+  tpTriggerBy?: Prisma.SortOrder
+  slTriggerBy?: Prisma.SortOrder
+  reduceOnly?: Prisma.SortOrder
+  closeOnTrigger?: Prisma.SortOrder
   status?: Prisma.SortOrder
   rejectionReason?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -622,6 +677,11 @@ export type OrderScalarWhereWithAggregatesInput = {
   isMaker?: Prisma.BoolNullableWithAggregatesFilter<"Order"> | boolean | null
   ocoGroup?: Prisma.StringNullableWithAggregatesFilter<"Order"> | string | null
   createType?: Prisma.StringNullableWithAggregatesFilter<"Order"> | string | null
+  triggerBy?: Prisma.StringWithAggregatesFilter<"Order"> | string
+  tpTriggerBy?: Prisma.StringWithAggregatesFilter<"Order"> | string
+  slTriggerBy?: Prisma.StringWithAggregatesFilter<"Order"> | string
+  reduceOnly?: Prisma.BoolWithAggregatesFilter<"Order"> | boolean
+  closeOnTrigger?: Prisma.BoolWithAggregatesFilter<"Order"> | boolean
   status?: Prisma.StringWithAggregatesFilter<"Order"> | string
   rejectionReason?: Prisma.StringNullableWithAggregatesFilter<"Order"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Order"> | Date | string
@@ -654,6 +714,11 @@ export type OrderCreateInput = {
   isMaker?: boolean | null
   ocoGroup?: string | null
   createType?: string | null
+  triggerBy?: string
+  tpTriggerBy?: string
+  slTriggerBy?: string
+  reduceOnly?: boolean
+  closeOnTrigger?: boolean
   status?: string
   rejectionReason?: string | null
   createdAt?: Date | string
@@ -691,6 +756,11 @@ export type OrderUncheckedCreateInput = {
   isMaker?: boolean | null
   ocoGroup?: string | null
   createType?: string | null
+  triggerBy?: string
+  tpTriggerBy?: string
+  slTriggerBy?: string
+  reduceOnly?: boolean
+  closeOnTrigger?: boolean
   status?: string
   rejectionReason?: string | null
   createdAt?: Date | string
@@ -724,6 +794,11 @@ export type OrderUpdateInput = {
   isMaker?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   ocoGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  tpTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  slTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  reduceOnly?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  closeOnTrigger?: Prisma.BoolFieldUpdateOperationsInput | boolean
   status?: Prisma.StringFieldUpdateOperationsInput | string
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -761,6 +836,11 @@ export type OrderUncheckedUpdateInput = {
   isMaker?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   ocoGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  tpTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  slTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  reduceOnly?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  closeOnTrigger?: Prisma.BoolFieldUpdateOperationsInput | boolean
   status?: Prisma.StringFieldUpdateOperationsInput | string
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -796,6 +876,11 @@ export type OrderCreateManyInput = {
   isMaker?: boolean | null
   ocoGroup?: string | null
   createType?: string | null
+  triggerBy?: string
+  tpTriggerBy?: string
+  slTriggerBy?: string
+  reduceOnly?: boolean
+  closeOnTrigger?: boolean
   status?: string
   rejectionReason?: string | null
   createdAt?: Date | string
@@ -828,6 +913,11 @@ export type OrderUpdateManyMutationInput = {
   isMaker?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   ocoGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  tpTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  slTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  reduceOnly?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  closeOnTrigger?: Prisma.BoolFieldUpdateOperationsInput | boolean
   status?: Prisma.StringFieldUpdateOperationsInput | string
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -862,6 +952,11 @@ export type OrderUncheckedUpdateManyInput = {
   isMaker?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   ocoGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  tpTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  slTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  reduceOnly?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  closeOnTrigger?: Prisma.BoolFieldUpdateOperationsInput | boolean
   status?: Prisma.StringFieldUpdateOperationsInput | string
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -906,6 +1001,11 @@ export type OrderCountOrderByAggregateInput = {
   isMaker?: Prisma.SortOrder
   ocoGroup?: Prisma.SortOrder
   createType?: Prisma.SortOrder
+  triggerBy?: Prisma.SortOrder
+  tpTriggerBy?: Prisma.SortOrder
+  slTriggerBy?: Prisma.SortOrder
+  reduceOnly?: Prisma.SortOrder
+  closeOnTrigger?: Prisma.SortOrder
   status?: Prisma.SortOrder
   rejectionReason?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -956,6 +1056,11 @@ export type OrderMaxOrderByAggregateInput = {
   isMaker?: Prisma.SortOrder
   ocoGroup?: Prisma.SortOrder
   createType?: Prisma.SortOrder
+  triggerBy?: Prisma.SortOrder
+  tpTriggerBy?: Prisma.SortOrder
+  slTriggerBy?: Prisma.SortOrder
+  reduceOnly?: Prisma.SortOrder
+  closeOnTrigger?: Prisma.SortOrder
   status?: Prisma.SortOrder
   rejectionReason?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -990,6 +1095,11 @@ export type OrderMinOrderByAggregateInput = {
   isMaker?: Prisma.SortOrder
   ocoGroup?: Prisma.SortOrder
   createType?: Prisma.SortOrder
+  triggerBy?: Prisma.SortOrder
+  tpTriggerBy?: Prisma.SortOrder
+  slTriggerBy?: Prisma.SortOrder
+  reduceOnly?: Prisma.SortOrder
+  closeOnTrigger?: Prisma.SortOrder
   status?: Prisma.SortOrder
   rejectionReason?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -1147,6 +1257,11 @@ export type OrderCreateWithoutUserInput = {
   isMaker?: boolean | null
   ocoGroup?: string | null
   createType?: string | null
+  triggerBy?: string
+  tpTriggerBy?: string
+  slTriggerBy?: string
+  reduceOnly?: boolean
+  closeOnTrigger?: boolean
   status?: string
   rejectionReason?: string | null
   createdAt?: Date | string
@@ -1182,6 +1297,11 @@ export type OrderUncheckedCreateWithoutUserInput = {
   isMaker?: boolean | null
   ocoGroup?: string | null
   createType?: string | null
+  triggerBy?: string
+  tpTriggerBy?: string
+  slTriggerBy?: string
+  reduceOnly?: boolean
+  closeOnTrigger?: boolean
   status?: string
   rejectionReason?: string | null
   createdAt?: Date | string
@@ -1246,6 +1366,11 @@ export type OrderScalarWhereInput = {
   isMaker?: Prisma.BoolNullableFilter<"Order"> | boolean | null
   ocoGroup?: Prisma.StringNullableFilter<"Order"> | string | null
   createType?: Prisma.StringNullableFilter<"Order"> | string | null
+  triggerBy?: Prisma.StringFilter<"Order"> | string
+  tpTriggerBy?: Prisma.StringFilter<"Order"> | string
+  slTriggerBy?: Prisma.StringFilter<"Order"> | string
+  reduceOnly?: Prisma.BoolFilter<"Order"> | boolean
+  closeOnTrigger?: Prisma.BoolFilter<"Order"> | boolean
   status?: Prisma.StringFilter<"Order"> | string
   rejectionReason?: Prisma.StringNullableFilter<"Order"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Order"> | Date | string
@@ -1278,6 +1403,11 @@ export type OrderCreateWithoutAccountInput = {
   isMaker?: boolean | null
   ocoGroup?: string | null
   createType?: string | null
+  triggerBy?: string
+  tpTriggerBy?: string
+  slTriggerBy?: string
+  reduceOnly?: boolean
+  closeOnTrigger?: boolean
   status?: string
   rejectionReason?: string | null
   createdAt?: Date | string
@@ -1313,6 +1443,11 @@ export type OrderUncheckedCreateWithoutAccountInput = {
   isMaker?: boolean | null
   ocoGroup?: string | null
   createType?: string | null
+  triggerBy?: string
+  tpTriggerBy?: string
+  slTriggerBy?: string
+  reduceOnly?: boolean
+  closeOnTrigger?: boolean
   status?: string
   rejectionReason?: string | null
   createdAt?: Date | string
@@ -1372,6 +1507,11 @@ export type OrderCreateWithoutTradesInput = {
   isMaker?: boolean | null
   ocoGroup?: string | null
   createType?: string | null
+  triggerBy?: string
+  tpTriggerBy?: string
+  slTriggerBy?: string
+  reduceOnly?: boolean
+  closeOnTrigger?: boolean
   status?: string
   rejectionReason?: string | null
   createdAt?: Date | string
@@ -1408,6 +1548,11 @@ export type OrderUncheckedCreateWithoutTradesInput = {
   isMaker?: boolean | null
   ocoGroup?: string | null
   createType?: string | null
+  triggerBy?: string
+  tpTriggerBy?: string
+  slTriggerBy?: string
+  reduceOnly?: boolean
+  closeOnTrigger?: boolean
   status?: string
   rejectionReason?: string | null
   createdAt?: Date | string
@@ -1456,6 +1601,11 @@ export type OrderUpdateWithoutTradesInput = {
   isMaker?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   ocoGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  tpTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  slTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  reduceOnly?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  closeOnTrigger?: Prisma.BoolFieldUpdateOperationsInput | boolean
   status?: Prisma.StringFieldUpdateOperationsInput | string
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1492,6 +1642,11 @@ export type OrderUncheckedUpdateWithoutTradesInput = {
   isMaker?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   ocoGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  tpTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  slTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  reduceOnly?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  closeOnTrigger?: Prisma.BoolFieldUpdateOperationsInput | boolean
   status?: Prisma.StringFieldUpdateOperationsInput | string
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1525,6 +1680,11 @@ export type OrderCreateManyUserInput = {
   isMaker?: boolean | null
   ocoGroup?: string | null
   createType?: string | null
+  triggerBy?: string
+  tpTriggerBy?: string
+  slTriggerBy?: string
+  reduceOnly?: boolean
+  closeOnTrigger?: boolean
   status?: string
   rejectionReason?: string | null
   createdAt?: Date | string
@@ -1557,6 +1717,11 @@ export type OrderUpdateWithoutUserInput = {
   isMaker?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   ocoGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  tpTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  slTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  reduceOnly?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  closeOnTrigger?: Prisma.BoolFieldUpdateOperationsInput | boolean
   status?: Prisma.StringFieldUpdateOperationsInput | string
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1592,6 +1757,11 @@ export type OrderUncheckedUpdateWithoutUserInput = {
   isMaker?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   ocoGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  tpTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  slTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  reduceOnly?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  closeOnTrigger?: Prisma.BoolFieldUpdateOperationsInput | boolean
   status?: Prisma.StringFieldUpdateOperationsInput | string
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1626,6 +1796,11 @@ export type OrderUncheckedUpdateManyWithoutUserInput = {
   isMaker?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   ocoGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  tpTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  slTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  reduceOnly?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  closeOnTrigger?: Prisma.BoolFieldUpdateOperationsInput | boolean
   status?: Prisma.StringFieldUpdateOperationsInput | string
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1659,6 +1834,11 @@ export type OrderCreateManyAccountInput = {
   isMaker?: boolean | null
   ocoGroup?: string | null
   createType?: string | null
+  triggerBy?: string
+  tpTriggerBy?: string
+  slTriggerBy?: string
+  reduceOnly?: boolean
+  closeOnTrigger?: boolean
   status?: string
   rejectionReason?: string | null
   createdAt?: Date | string
@@ -1691,6 +1871,11 @@ export type OrderUpdateWithoutAccountInput = {
   isMaker?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   ocoGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  tpTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  slTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  reduceOnly?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  closeOnTrigger?: Prisma.BoolFieldUpdateOperationsInput | boolean
   status?: Prisma.StringFieldUpdateOperationsInput | string
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1726,6 +1911,11 @@ export type OrderUncheckedUpdateWithoutAccountInput = {
   isMaker?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   ocoGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  tpTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  slTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  reduceOnly?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  closeOnTrigger?: Prisma.BoolFieldUpdateOperationsInput | boolean
   status?: Prisma.StringFieldUpdateOperationsInput | string
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1760,6 +1950,11 @@ export type OrderUncheckedUpdateManyWithoutAccountInput = {
   isMaker?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   ocoGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  triggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  tpTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  slTriggerBy?: Prisma.StringFieldUpdateOperationsInput | string
+  reduceOnly?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  closeOnTrigger?: Prisma.BoolFieldUpdateOperationsInput | boolean
   status?: Prisma.StringFieldUpdateOperationsInput | string
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1825,6 +2020,11 @@ export type OrderSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   isMaker?: boolean
   ocoGroup?: boolean
   createType?: boolean
+  triggerBy?: boolean
+  tpTriggerBy?: boolean
+  slTriggerBy?: boolean
+  reduceOnly?: boolean
+  closeOnTrigger?: boolean
   status?: boolean
   rejectionReason?: boolean
   createdAt?: boolean
@@ -1863,6 +2063,11 @@ export type OrderSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   isMaker?: boolean
   ocoGroup?: boolean
   createType?: boolean
+  triggerBy?: boolean
+  tpTriggerBy?: boolean
+  slTriggerBy?: boolean
+  reduceOnly?: boolean
+  closeOnTrigger?: boolean
   status?: boolean
   rejectionReason?: boolean
   createdAt?: boolean
@@ -1899,6 +2104,11 @@ export type OrderSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   isMaker?: boolean
   ocoGroup?: boolean
   createType?: boolean
+  triggerBy?: boolean
+  tpTriggerBy?: boolean
+  slTriggerBy?: boolean
+  reduceOnly?: boolean
+  closeOnTrigger?: boolean
   status?: boolean
   rejectionReason?: boolean
   createdAt?: boolean
@@ -1935,6 +2145,11 @@ export type OrderSelectScalar = {
   isMaker?: boolean
   ocoGroup?: boolean
   createType?: boolean
+  triggerBy?: boolean
+  tpTriggerBy?: boolean
+  slTriggerBy?: boolean
+  reduceOnly?: boolean
+  closeOnTrigger?: boolean
   status?: boolean
   rejectionReason?: boolean
   createdAt?: boolean
@@ -1943,7 +2158,7 @@ export type OrderSelectScalar = {
   updatedAt?: boolean
 }
 
-export type OrderOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "seq" | "refId" | "userId" | "accountId" | "category" | "symbol" | "side" | "orderType" | "quantity" | "limitPrice" | "stopPrice" | "takeProfit" | "stopLoss" | "filledQuantity" | "averageFilledPrice" | "margin" | "commission" | "leverage" | "reserved" | "feeRate" | "feeAsset" | "isMaker" | "ocoGroup" | "createType" | "status" | "rejectionReason" | "createdAt" | "filledAt" | "cancelledAt" | "updatedAt", ExtArgs["result"]["order"]>
+export type OrderOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "seq" | "refId" | "userId" | "accountId" | "category" | "symbol" | "side" | "orderType" | "quantity" | "limitPrice" | "stopPrice" | "takeProfit" | "stopLoss" | "filledQuantity" | "averageFilledPrice" | "margin" | "commission" | "leverage" | "reserved" | "feeRate" | "feeAsset" | "isMaker" | "ocoGroup" | "createType" | "triggerBy" | "tpTriggerBy" | "slTriggerBy" | "reduceOnly" | "closeOnTrigger" | "status" | "rejectionReason" | "createdAt" | "filledAt" | "cancelledAt" | "updatedAt", ExtArgs["result"]["order"]>
 export type OrderInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   account?: boolean | Prisma.AccountDefaultArgs<ExtArgs>
@@ -1992,6 +2207,11 @@ export type $OrderPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     isMaker: boolean | null
     ocoGroup: string | null
     createType: string | null
+    triggerBy: string
+    tpTriggerBy: string
+    slTriggerBy: string
+    reduceOnly: boolean
+    closeOnTrigger: boolean
     status: string
     rejectionReason: string | null
     createdAt: Date
@@ -2449,6 +2669,11 @@ export interface OrderFieldRefs {
   readonly isMaker: Prisma.FieldRef<"Order", 'Boolean'>
   readonly ocoGroup: Prisma.FieldRef<"Order", 'String'>
   readonly createType: Prisma.FieldRef<"Order", 'String'>
+  readonly triggerBy: Prisma.FieldRef<"Order", 'String'>
+  readonly tpTriggerBy: Prisma.FieldRef<"Order", 'String'>
+  readonly slTriggerBy: Prisma.FieldRef<"Order", 'String'>
+  readonly reduceOnly: Prisma.FieldRef<"Order", 'Boolean'>
+  readonly closeOnTrigger: Prisma.FieldRef<"Order", 'Boolean'>
   readonly status: Prisma.FieldRef<"Order", 'String'>
   readonly rejectionReason: Prisma.FieldRef<"Order", 'String'>
   readonly createdAt: Prisma.FieldRef<"Order", 'DateTime'>

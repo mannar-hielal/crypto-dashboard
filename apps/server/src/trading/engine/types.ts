@@ -36,7 +36,16 @@ export interface Quote {
   ask: Decimal;
   /** Mark price (USDT Perpetual only) — unrealised PnL and liquidation use it (BP-3) */
   mark?: Decimal;
+  /** Index price (USDT Perpetual only) — a TP / SL / stop set to trigger on it uses it (BP-5 B) */
+  index?: Decimal;
 }
+
+/**
+ * The price a USDT Perpetual TP / SL or stop order triggers on — Bybit's `triggerBy` (BP-5 B).
+ * Absent = LastPrice, Bybit's default. A limit order always rests on the last price.
+ */
+export type TriggerBy = 'LastPrice' | 'MarkPrice' | 'IndexPrice';
+export const TRIGGER_BY: readonly TriggerBy[] = ['LastPrice', 'MarkPrice', 'IndexPrice'];
 
 /** Bybit instrument rules the engine enforces (instruments-info). 0 = no constraint. */
 export interface InstrumentRules {
@@ -89,6 +98,9 @@ export interface Position {
   openedAt: number;
   takeProfit?: Decimal;
   stopLoss?: Decimal;
+  /** What each exit leg triggers on (BP-5 B); absent = LastPrice */
+  tpTriggerBy?: TriggerBy;
+  slTriggerBy?: TriggerBy;
 }
 
 export interface PendingOrder {
@@ -115,6 +127,23 @@ export interface PendingOrder {
   takeProfit?: Decimal;
   stopLoss?: Decimal;
   placedAt: number;
+  /** A stop order's trigger source (BP-5 B); absent = LastPrice. Limits always use the last price */
+  triggerBy?: TriggerBy;
+  /** Trigger source of the TP / SL the fill attaches to the position; absent = LastPrice */
+  tpTriggerBy?: TriggerBy;
+  slTriggerBy?: TriggerBy;
+  /**
+   * Reduce-only (BP-5 B): the order can only shrink the opposite position — it reserves nothing,
+   * carries no TP / SL, and is trimmed when the position shrinks below the reduce-only quantity
+   * resting on it.
+   */
+  reduceOnly?: boolean;
+  /**
+   * Close-on-trigger (implies reduce-only). On Bybit it may cancel other orders to free margin for
+   * the close; here a close never needs free margin (its fee comes out of the position), so it
+   * behaves exactly like reduce-only.
+   */
+  closeOnTrigger?: boolean;
 }
 
 /** A spot coin balance. `free` can be sold; `locked` backs resting sell / TP / SL orders. */
@@ -178,6 +207,10 @@ export interface HistoricalOrder {
   rejectionReason?: string;
   /** Bybit's createType for a system order: 'CreateByLiq' = the liquidation close (BP-3) */
   createType?: 'CreateByLiq';
+  /** Bybit's order flags (BP-5 B) — set only when true / not LastPrice */
+  reduceOnly?: boolean;
+  closeOnTrigger?: boolean;
+  triggerBy?: TriggerBy;
 }
 
 /** Bybit's execution type: a normal fill, a liquidation at the bankruptcy price (BP-3), funding (BP-4) */

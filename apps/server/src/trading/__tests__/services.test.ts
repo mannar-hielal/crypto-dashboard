@@ -291,6 +291,45 @@ describe('TradingService', () => {
     expect(repo.state.positions).toHaveLength(1);
   });
 
+  it('runTrigger drops a trigger found on another source than the leg is now set to (BP-5 B)', async () => {
+    book = { mark: D(50_000) };
+    await trading.placeOrder('u1', market$(1_000, { stopLoss: D(48_000) }));
+    const positionId = repo.state.positions[0].id;
+    // The tick found the SL on the last price; the user has since moved it to the mark
+    await trading.updatePositionExits('u1', positionId, null, D(48_000), {
+      slTriggerBy: 'MarkPrice',
+    });
+    const trigger = {
+      kind: 'exit' as const,
+      positionId,
+      leg: 'stop-loss' as const,
+      price: D(47_900),
+    };
+    await expect(trading.runTrigger('u1', trigger)).resolves.toBeNull();
+    price = D(47_900); // closes at the live bid
+    const out = await trading.runTrigger('u1', { ...trigger, by: 'MarkPrice' });
+    expect(out?.sound).toBe('loss');
+  });
+
+  it('checks a changed TP / SL against the live price of its source (O9, BP-5 B)', async () => {
+    book = { mark: D(49_000) };
+    await trading.placeOrder('u1', market$(1_000));
+    const positionId = repo.state.positions[0].id;
+    await expect(
+      trading.updatePositionExits('u1', positionId, null, D(49_500), { slTriggerBy: 'MarkPrice' })
+    ).rejects.toEqual(
+      new TradingError(
+        422,
+        'StopLoss:49500 set for Buy position should be lower than base_price:49000??MarkPrice'
+      )
+    );
+    // Removing a leg needs no price at all
+    price = undefined;
+    await expect(trading.updatePositionExits('u1', positionId, null, null)).resolves.toMatchObject({
+      result: true,
+    });
+  });
+
   it('runTrigger executes a valid TP and plays profit', async () => {
     await trading.placeOrder('u1', market$(1_000, { takeProfit: D(55_000) }));
     const positionId = repo.state.positions[0].id;
@@ -668,6 +707,56 @@ describe('MatchingEngine', () => {
         kind: 'liquidation',
         positionId: 'p1',
         price: D(45_100),
+      })
+    );
+    await e.stop();
+  });
+
+  it('fires a mark-price stop-loss on the mark and an index-price TP on the index (BP-5 B)', async () => {
+    const state = freshState();
+    state.positions.push({
+      id: 'p1',
+      category: 'linear',
+      symbol: 'BTCUSDT',
+      side: 'long',
+      quantity: D('0.1'),
+      entryPrice: D(50_000),
+      entryUsdtAmount: D(500),
+      leverage: 10,
+      entryFee: D('2.75'),
+      closeFeeReserve: D('2.475'),
+      openedAt: 0,
+      takeProfit: D(52_000),
+      tpTriggerBy: 'IndexPrice',
+      stopLoss: D(48_000),
+      slTriggerBy: 'MarkPrice',
+    });
+    open = new Map([['u1', state]]);
+    const e = engine();
+    await e.start();
+    // Last past both levels; mark and index not: nothing
+    tickListener?.({
+      category: 'linear',
+      symbol: 'BTCUSDT',
+      lastPrice: 47_000,
+      markPrice: 49_000,
+      indexPrice: 49_000,
+    });
+    expect(runTrigger).not.toHaveBeenCalled();
+    tickListener?.({
+      category: 'linear',
+      symbol: 'BTCUSDT',
+      lastPrice: 50_000,
+      markPrice: 50_000,
+      indexPrice: 52_000,
+    });
+    await vi.waitFor(() =>
+      expect(runTrigger).toHaveBeenCalledWith('u1', {
+        kind: 'exit',
+        positionId: 'p1',
+        leg: 'take-profit',
+        price: D(52_000),
+        by: 'IndexPrice',
       })
     );
     await e.stop();

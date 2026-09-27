@@ -35,6 +35,7 @@ import {
   type FundingSnapshot,
   type FundingSpec,
   type Trigger,
+  type TriggerBy,
 } from './engine/index.js';
 import type { PaperEventBus } from './PaperEventBus.js';
 import type { TradingService } from './TradingService.js';
@@ -47,6 +48,8 @@ export interface TickUpdate {
   lastPrice: number;
   /** USDT Perpetual mark price */
   markPrice?: number;
+  /** USDT Perpetual index price — a TP / SL / stop set to trigger on the index uses it (BP-5 B) */
+  indexPrice?: number;
   /** USDT Perpetual: the rate for the next funding settlement, and when it is (Unix ms) */
   fundingRate?: number;
   nextFundingTime?: number;
@@ -66,7 +69,7 @@ export interface MatchingEngineDeps {
     symbol: string,
     fromMs: number,
     toMs: number,
-    source?: 'last' | 'mark'
+    source?: 'last' | 'mark' | 'index'
   ) => Promise<Candle[]>;
   /** USDT Perpetual risk-limit tiers (default: the bundled Bybit snapshot) */
   riskTiers?: (symbol: string) => RiskTier[];
@@ -366,6 +369,28 @@ export class MatchingEngine {
     this.active = false;
   }
 
+  /** True when a position leg or stop order of this market triggers on the index price. */
+  private watchesIndex(key: MarketKey): boolean {
+    for (const userId of this.symbolUsers.get(key) ?? []) {
+      const state = this.users.get(userId);
+      if (!state) continue;
+      const onIndex = (by?: TriggerBy) => by === 'IndexPrice';
+      if (
+        state.positions.some(
+          (p) =>
+            marketKey(p.category, p.symbol) === key &&
+            (onIndex(p.tpTriggerBy) || onIndex(p.slTriggerBy))
+        ) ||
+        state.pendingOrders.some(
+          (o) => marketKey(o.category, o.symbol) === key && onIndex(o.triggerBy)
+        )
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /** Keep only accounts with open triggers in the index. Bounded by open positions/orders. */
   private reindex(userId: string, state: AccountState): void {
     for (const set of this.symbolUsers.values()) set.delete(userId);
@@ -413,6 +438,13 @@ export class MatchingEngine {
       u.markPrice > 0
         ? { price: new Decimal(u.markPrice.toString()), tiers: this.riskTiers(symbol) }
         : undefined;
+    const index =
+      category === 'linear' &&
+      u.indexPrice !== undefined &&
+      Number.isFinite(u.indexPrice) &&
+      u.indexPrice > 0
+        ? new Decimal(u.indexPrice.toString())
+        : undefined;
     for (const userId of userIds) {
       const state = this.users.get(userId);
       if (!state) continue;
@@ -422,7 +454,8 @@ export class MatchingEngine {
         price,
         state.positions,
         state.pendingOrders,
-        mark
+        mark,
+        index
       )) {
         void this.fire(userId, trigger);
       }
@@ -789,6 +822,17 @@ export class MatchingEngine {
         log.error({ err, category, symbol }, 'Backfill mark-price candle fetch failed');
       }
     }
+    // Index-price candles only when some leg / stop of this market triggers on the index (BP-5 B)
+    const indexByStart = new Map<number, Candle>();
+    if (category === 'linear' && this.watchesIndex(key)) {
+      try {
+        for (const c of await this.deps.fetchCandles(category, symbol, fromMs, toMs, 'index')) {
+          indexByStart.set(c.start, c);
+        }
+      } catch (err) {
+        log.error({ err, category, symbol }, 'Backfill index-price candle fetch failed');
+      }
+    }
     // Settled in time order with the candles
     const settleFundingUpTo = async (upTo: number) => {
       while (fundings.length && fundings[0].ts <= upTo) {
@@ -825,7 +869,8 @@ export class MatchingEngine {
           candle,
           state.positions,
           state.pendingOrders,
-          mark
+          mark,
+          indexByStart.get(candle.start)
         )) {
           await this.fire(userId, trigger);
         }

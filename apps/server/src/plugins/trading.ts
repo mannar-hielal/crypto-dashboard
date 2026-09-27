@@ -97,8 +97,9 @@ async function tradingPlugin(fastify: FastifyInstance): Promise<void> {
       const bid = toDecimal(t?.bid);
       const ask = toDecimal(t?.ask);
       const mark = category === 'linear' ? toDecimal(t?.markPrice) : undefined;
+      const index = category === 'linear' ? toDecimal(t?.indexPrice) : undefined;
       if (!last || !bid || !ask || seenAt === undefined) return undefined;
-      return { last, bid, ask, seenAt, ...(mark ? { mark } : {}) };
+      return { last, bid, ask, seenAt, ...(mark ? { mark } : {}), ...(index ? { index } : {}) };
     },
     rules: (category: Category, symbol) =>
       rules.get(`${category}:${symbol}`) ?? fallbackRules(category, symbol),

@@ -28,13 +28,15 @@ import {
   cancelPending,
   cancelPendingExitLeg,
   checkPendingTrigger,
-  checkTPSL,
   closePosition,
   editNote,
   editPending,
   editSpotLimit,
   executeTrigger,
   isLiquidatable,
+  legHit,
+  legTriggerBy,
+  orderTriggerBy,
   placeMarket,
   placePending,
   placeSpotExits,
@@ -58,6 +60,7 @@ import {
   type Quote,
   type SpotExitsIntent,
   type Trigger,
+  type TriggerBy,
 } from './engine/index.js';
 
 const log = logger.child({ service: 'TradingService' });
@@ -106,6 +109,12 @@ export interface PlaceOrderIntent {
   triggerPrice?: Decimal;
   takeProfit?: Decimal;
   stopLoss?: Decimal;
+  /** BP-5 B: trigger sources, reduce-only and close-on-trigger (USDT Perpetual) */
+  triggerBy?: TriggerBy;
+  tpTriggerBy?: TriggerBy;
+  slTriggerBy?: TriggerBy;
+  reduceOnly?: boolean;
+  closeOnTrigger?: boolean;
 }
 
 export class TradingService {
@@ -323,15 +332,25 @@ export class TradingService {
     return this.act(userId, (state, ctx) => cancelPendingExitLeg(state, orderId, leg, ctx));
   }
 
+  /**
+   * Set / change / remove a position's TP and SL. A new or changed leg is checked against the
+   * current price of its trigger source (O9) — with no fresh quote it waits for one.
+   */
   updatePositionExits(
     userId: string,
     positionId: string,
     takeProfit: Decimal | null,
-    stopLoss: Decimal | null
+    stopLoss: Decimal | null,
+    by: { tpTriggerBy?: TriggerBy; slTriggerBy?: TriggerBy } = {}
   ): Promise<Executed<boolean>> {
-    return this.act(userId, (state, ctx) =>
-      updatePositionExits(state, positionId, takeProfit, stopLoss, ctx)
-    );
+    return this.act(userId, (state, ctx) => {
+      const pos = state.positions.find((p) => p.id === positionId);
+      const q = pos ? this.currentQuote(pos.category, pos.symbol) : undefined;
+      return updatePositionExits(state, positionId, takeProfit, stopLoss, ctx, {
+        ...by,
+        prices: { last: q?.last, mark: q?.mark, index: q?.index },
+      });
+    });
   }
 
   cancelPositionExit(userId: string, positionId: string, leg: ExitLeg): Promise<Executed<boolean>> {
@@ -425,12 +444,24 @@ export class TradingService {
       }
       if (trigger.kind === 'exit') {
         const pos = state.positions.find((p) => p.id === trigger.positionId);
-        const expected = trigger.leg === 'take-profit' ? 'TP' : 'SL';
-        if (!pos || checkTPSL(pos, trigger.price) !== expected) return null;
+        // Still set, still on the source it triggered on, and still reached
+        if (
+          !pos ||
+          legTriggerBy(pos, trigger.leg) !== (trigger.by ?? 'LastPrice') ||
+          !legHit(pos, trigger.leg, trigger.price)
+        ) {
+          return null;
+        }
         market = pos;
       } else {
         const order = state.pendingOrders.find((o) => o.id === trigger.orderId);
-        if (!order || !checkPendingTrigger(order, trigger.price)) return null;
+        if (
+          !order ||
+          orderTriggerBy(order) !== (trigger.by ?? 'LastPrice') ||
+          !checkPendingTrigger(order, trigger.price)
+        ) {
+          return null;
+        }
         market = order;
       }
       const quote = trigger.fillAt ? undefined : this.currentQuote(market.category, market.symbol);

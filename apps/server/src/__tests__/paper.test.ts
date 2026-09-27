@@ -174,6 +174,44 @@ describe('Paper Trading API (BP-1)', () => {
       expect(res.statusCode).toBe(400);
     });
 
+    it('passes trigger sources, reduce-only and close-on-trigger (BP-5 B)', async () => {
+      const place = vi.spyOn(app.trading, 'placeOrder').mockResolvedValue(executed('o-1'));
+      const res = await post({
+        symbol: 'BTCUSDT',
+        side: 'sell',
+        type: 'stop',
+        qty: '0.1',
+        triggerPrice: '48000',
+        triggerBy: 'MarkPrice',
+        closeOnTrigger: true,
+      });
+      expect(res.statusCode).toBe(200);
+      // Close-on-trigger implies reduce-only
+      expect(place.mock.calls[0][1]).toMatchObject({
+        triggerBy: 'MarkPrice',
+        closeOnTrigger: true,
+        reduceOnly: true,
+      });
+    });
+
+    it.each([
+      [{ triggerBy: 'BestPrice' }, 'an unknown trigger source'],
+      [{ tpTriggerBy: 'markprice' }, 'a trigger source in the wrong case'],
+      [{ reduceOnly: 'yes' }, 'a non-boolean reduce-only'],
+      [{ category: 'spot', reduceOnly: true }, 'reduce-only on spot'],
+    ])('400 for %o (%s, BP-5 B)', async (extra) => {
+      const place = vi.spyOn(app.trading, 'placeOrder').mockResolvedValue(executed('o-1'));
+      const res = await post({
+        symbol: 'BTCUSDT',
+        side: 'buy',
+        type: 'market',
+        qty: '1',
+        ...extra,
+      });
+      expect(res.statusCode).toBe(400);
+      expect(place).not.toHaveBeenCalled();
+    });
+
     it('400 for a market outside the allowlist', async () => {
       const res = await post({
         category: 'inverse',
@@ -340,6 +378,25 @@ describe('Paper Trading API (BP-1)', () => {
       takeProfit: null,
       stopLoss: new Decimal('48000'),
     });
+  });
+
+  it('PATCH /positions/:id/tpsl passes the legs trigger sources (BP-5 B)', async () => {
+    const update = vi.spyOn(app.trading, 'updatePositionExits').mockResolvedValue(executed(true));
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/api/paper/positions/p-1/tpsl',
+      headers: auth,
+      payload: { takeProfit: '55000', stopLoss: '48000', slTriggerBy: 'IndexPrice' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(update.mock.calls[0][4]).toEqual({ slTriggerBy: 'IndexPrice' });
+    const bad = await app.inject({
+      method: 'PATCH',
+      url: '/api/paper/positions/p-1/tpsl',
+      headers: auth,
+      payload: { takeProfit: null, stopLoss: null, tpTriggerBy: 'Last' },
+    });
+    expect(bad.statusCode).toBe(400);
   });
 
   it('PATCH /orders/:id accepts a qty size and rejects two sizes', async () => {

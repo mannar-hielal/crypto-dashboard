@@ -23,7 +23,7 @@ import type {
 } from '@crypto-dashboard/sdk';
 import { ALLOWED_CATEGORIES, ALLOWED_SYMBOLS } from '../../constants.js';
 import { TradingError, type Executed } from '../../trading/TradingService.js';
-import type { ExitLeg, OrderSize } from '../../trading/engine/index.js';
+import { TRIGGER_BY, type ExitLeg, type OrderSize } from '../../trading/engine/index.js';
 import { privatePaperWs } from './ws.js';
 import { logger } from '../../logger.js';
 
@@ -135,6 +135,21 @@ function optionalPositive(value: string | null | undefined, field: string): Deci
 }
 
 /** Serialize an engine outcome; `notFound` turns a false / 'not-found' result into a 404. */
+/** Bybit's trigger sources (BP-5 B) */
+const triggerByEnum = { type: 'string', enum: [...TRIGGER_BY] } as const;
+
+/** The USDT Perpetual order flags of a place-order body (BP-5 B), only when set. */
+function linearFlags(b: PlaceOrderRequest) {
+  return {
+    ...(b.triggerBy ? { triggerBy: b.triggerBy } : {}),
+    ...(b.tpTriggerBy ? { tpTriggerBy: b.tpTriggerBy } : {}),
+    ...(b.slTriggerBy ? { slTriggerBy: b.slTriggerBy } : {}),
+    ...(b.reduceOnly ? { reduceOnly: true } : {}),
+    // Close-on-trigger implies reduce-only
+    ...(b.closeOnTrigger ? { closeOnTrigger: true, reduceOnly: true } : {}),
+  };
+}
+
 function send<R>(
   reply: FastifyReply,
   executed: Executed<R>,
@@ -202,6 +217,12 @@ export async function paperRoutes(app: FastifyInstance) {
             triggerPrice: decimalString,
             takeProfit: decimalString,
             stopLoss: decimalString,
+            // BP-5 B (USDT Perpetual): trigger sources, reduce-only, close-on-trigger
+            triggerBy: triggerByEnum,
+            tpTriggerBy: triggerByEnum,
+            slTriggerBy: triggerByEnum,
+            reduceOnly: { type: 'boolean' },
+            closeOnTrigger: { type: 'boolean' },
           },
         },
         response: {
@@ -223,6 +244,12 @@ export async function paperRoutes(app: FastifyInstance) {
         }
         const size = sizeOf(b);
         if (!size) return reply.status(400).send({ error: SIZE_REQUIRED });
+        const category = b.category ?? 'linear';
+        if (category === 'spot' && (b.reduceOnly || b.closeOnTrigger)) {
+          return reply
+            .status(400)
+            .send({ error: 'reduceOnly / closeOnTrigger are perpetual-only' });
+        }
         const executed = await app.trading.placeOrder(userIdOf(request), {
           // A pre-BP-2 client sends no market: its orders are today's leveraged trading
           category: b.category ?? 'linear',
@@ -235,6 +262,7 @@ export async function paperRoutes(app: FastifyInstance) {
             : {}),
           ...(b.takeProfit ? { takeProfit: positive(b.takeProfit, 'takeProfit') } : {}),
           ...(b.stopLoss ? { stopLoss: positive(b.stopLoss, 'stopLoss') } : {}),
+          ...(category === 'linear' ? linearFlags(b) : {}),
         });
         return send(reply, executed);
       })
@@ -339,6 +367,9 @@ export async function paperRoutes(app: FastifyInstance) {
             usdtAmount: decimalString,
             takeProfit: nullableDecimal,
             stopLoss: nullableDecimal,
+            triggerBy: triggerByEnum,
+            tpTriggerBy: triggerByEnum,
+            slTriggerBy: triggerByEnum,
           },
         },
         response: {
@@ -363,6 +394,9 @@ export async function paperRoutes(app: FastifyInstance) {
           size,
           takeProfit: optionalPositive(b.takeProfit, 'takeProfit'),
           stopLoss: optionalPositive(b.stopLoss, 'stopLoss'),
+          ...(b.triggerBy ? { triggerBy: b.triggerBy } : {}),
+          ...(b.tpTriggerBy ? { tpTriggerBy: b.tpTriggerBy } : {}),
+          ...(b.slTriggerBy ? { slTriggerBy: b.slTriggerBy } : {}),
         });
         return send(reply, executed, { notFound: (r) => r === 'not-found' });
       })
@@ -419,7 +453,12 @@ export async function paperRoutes(app: FastifyInstance) {
           type: 'object',
           required: ['takeProfit', 'stopLoss'],
           additionalProperties: false,
-          properties: { takeProfit: nullableDecimal, stopLoss: nullableDecimal },
+          properties: {
+            takeProfit: nullableDecimal,
+            stopLoss: nullableDecimal,
+            tpTriggerBy: triggerByEnum,
+            slTriggerBy: triggerByEnum,
+          },
         },
         response: {
           200: actionResponse({ type: 'boolean' }),
@@ -441,7 +480,11 @@ export async function paperRoutes(app: FastifyInstance) {
             userIdOf(request),
             request.params.id,
             optionalPositive(request.body.takeProfit, 'takeProfit'),
-            optionalPositive(request.body.stopLoss, 'stopLoss')
+            optionalPositive(request.body.stopLoss, 'stopLoss'),
+            {
+              ...(request.body.tpTriggerBy ? { tpTriggerBy: request.body.tpTriggerBy } : {}),
+              ...(request.body.slTriggerBy ? { slTriggerBy: request.body.slTriggerBy } : {}),
+            }
           ),
           { notFound: (r) => r === false }
         )

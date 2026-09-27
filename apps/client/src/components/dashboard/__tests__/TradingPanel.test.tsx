@@ -1088,3 +1088,66 @@ describe('BP-3 — liquidation in the USDT Perpetual form', () => {
     expect(screen.queryByText('Positions can now be liquidated')).toBeNull();
   });
 });
+
+// ─── BP-5 B — trigger source, reduce-only, close-on-trigger ─────────────────
+
+describe('BP-5 B — order flags and trigger source (USDT Perpetual)', () => {
+  it('a TP set to trigger on the mark price sends tpTriggerBy', async () => {
+    renderPanel();
+    fireEvent.change(getQtyInput(), { target: { value: '100' } });
+    const [tpToggle] = screen.getAllByRole('switch');
+    fireEvent.click(tpToggle);
+    fireEvent.change(getTpInput(), { target: { value: '55000' } });
+    fireEvent.change(screen.getByLabelText('Take profit trigger price'), {
+      target: { value: 'MarkPrice' },
+    });
+    clickExecuteBtn();
+    await waitFor(() => expect(fakePaperApi.placeOrder).toHaveBeenCalledTimes(1));
+    expect(fakePaperApi.placeOrder.mock.calls[0][0]).toMatchObject({
+      takeProfit: '55000',
+      tpTriggerBy: 'MarkPrice',
+    });
+    // LastPrice is the default: never sent for the SL that wasn't set
+    expect(fakePaperApi.placeOrder.mock.calls[0][0]).not.toHaveProperty('slTriggerBy');
+  });
+
+  it('Reduce-only hides TP / SL, skips the balance check and sends reduceOnly', async () => {
+    renderPanel();
+    fireEvent.click(screen.getByLabelText('Reduce-only'));
+    expect(screen.queryByText('Exits')).toBeNull();
+    // Far more than the balance: a reduce-only order holds no margin (the server caps it)
+    fireEvent.change(getQtyInput(), { target: { value: '1000000' } });
+    clickExecuteBtn();
+    await waitFor(() => expect(fakePaperApi.placeOrder).toHaveBeenCalledTimes(1));
+    const [body] = fakePaperApi.placeOrder.mock.calls[0];
+    expect(body).toMatchObject({ reduceOnly: true });
+    expect(body).not.toHaveProperty('takeProfit');
+    expect(screen.queryByText('Insufficient balance')).toBeNull();
+  });
+
+  it('Close on trigger is offered for a stop order only, and implies reduce-only', async () => {
+    renderPanel();
+    expect(screen.queryByLabelText('Close on trigger')).toBeNull();
+    // A sell stop below the market: a stop-loss for a long
+    fireEvent.click(screen.getByRole('button', { name: /sell/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /stop/i }));
+    fireEvent.change(getPriceInput(), { target: { value: '48000' } });
+    fireEvent.click(screen.getByLabelText('Close on trigger'));
+    fireEvent.change(getQtyInput(), { target: { value: '100' } });
+    clickExecuteBtn();
+    await waitFor(() => expect(fakePaperApi.placeOrder).toHaveBeenCalledTimes(1));
+    expect(fakePaperApi.placeOrder.mock.calls[0][0]).toMatchObject({
+      type: 'stop',
+      closeOnTrigger: true,
+      reduceOnly: true,
+    });
+  });
+
+  it('spot has no reduce-only', () => {
+    useLayoutStore.setState((s) => ({
+      panes: s.panes.map((p, i) => (i === 0 ? { ...p, category: 'spot' } : p)),
+    }));
+    renderPanel();
+    expect(screen.queryByLabelText('Reduce-only')).toBeNull();
+  });
+});

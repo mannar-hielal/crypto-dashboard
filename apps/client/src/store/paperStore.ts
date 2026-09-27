@@ -35,6 +35,7 @@ import {
   type PaperSound,
   type PaperSpotBalanceDTO,
   type PaperStateDTO,
+  type PaperTriggerBy,
 } from '@crypto-dashboard/sdk';
 import { useAuthStore } from './authStore';
 import { setLastKnownMarkPrice, setLastKnownPrice } from './paneStore';
@@ -94,6 +95,9 @@ export interface Position {
   openedAt: number; // Unix ms
   takeProfit?: number;
   stopLoss?: number;
+  /** What each leg triggers on (BP-5 B); absent = LastPrice */
+  tpTriggerBy?: PaperTriggerBy;
+  slTriggerBy?: PaperTriggerBy;
 }
 
 /** A spot coin balance. The USDT wallet is `balance`. */
@@ -159,6 +163,13 @@ export interface PendingOrder {
   takeProfit?: number;
   stopLoss?: number;
   placedAt: number;
+  /** A stop order's trigger source (BP-5 B); absent = LastPrice */
+  triggerBy?: PaperTriggerBy;
+  tpTriggerBy?: PaperTriggerBy;
+  slTriggerBy?: PaperTriggerBy;
+  /** Only shrinks the opposite position; reserves nothing */
+  reduceOnly?: boolean;
+  closeOnTrigger?: boolean;
 }
 
 export interface HistoricalOrder {
@@ -189,6 +200,8 @@ export interface HistoricalOrder {
   rejectionReason?: string;
   /** The system order that closed a liquidated position (Bybit createType CreateByLiq) */
   liquidation?: boolean;
+  reduceOnly?: boolean;
+  closeOnTrigger?: boolean;
 }
 
 export interface BalanceEvent {
@@ -235,6 +248,12 @@ export interface OrderRequest {
   triggerPrice?: number;
   takeProfit?: number;
   stopLoss?: number;
+  /** USDT Perpetual (BP-5 B): a stop's trigger source, and the TP / SL sources */
+  triggerBy?: PaperTriggerBy;
+  tpTriggerBy?: PaperTriggerBy;
+  slTriggerBy?: PaperTriggerBy;
+  reduceOnly?: boolean;
+  closeOnTrigger?: boolean;
 }
 
 // ─── DTO → view mappers ───────────────────────────────────────────────────────
@@ -271,6 +290,8 @@ function positionFrom(p: PaperPositionDTO): Position {
     openedAt: p.openedAt,
     ...(p.takeProfit !== undefined ? { takeProfit: toNum(p.takeProfit) } : {}),
     ...(p.stopLoss !== undefined ? { stopLoss: toNum(p.stopLoss) } : {}),
+    ...(p.tpTriggerBy && p.tpTriggerBy !== 'LastPrice' ? { tpTriggerBy: p.tpTriggerBy } : {}),
+    ...(p.slTriggerBy && p.slTriggerBy !== 'LastPrice' ? { slTriggerBy: p.slTriggerBy } : {}),
   };
 }
 
@@ -299,6 +320,11 @@ function pendingFrom(o: PaperPendingOrderDTO): PendingOrder {
     ...(o.ocoGroup ? { ocoGroup: o.ocoGroup } : {}),
     ...(o.takeProfit !== undefined ? { takeProfit: toNum(o.takeProfit) } : {}),
     ...(o.stopLoss !== undefined ? { stopLoss: toNum(o.stopLoss) } : {}),
+    ...(o.triggerBy && o.triggerBy !== 'LastPrice' ? { triggerBy: o.triggerBy } : {}),
+    ...(o.tpTriggerBy && o.tpTriggerBy !== 'LastPrice' ? { tpTriggerBy: o.tpTriggerBy } : {}),
+    ...(o.slTriggerBy && o.slTriggerBy !== 'LastPrice' ? { slTriggerBy: o.slTriggerBy } : {}),
+    ...(o.reduceOnly ? { reduceOnly: true } : {}),
+    ...(o.closeOnTrigger ? { closeOnTrigger: true } : {}),
   };
 }
 
@@ -324,6 +350,8 @@ function orderFrom(o: PaperOrderDTO): HistoricalOrder {
     closingTime: o.closingTime,
     ...(o.rejectionReason ? { rejectionReason: o.rejectionReason } : {}),
     ...(o.createType === 'CreateByLiq' ? { liquidation: true } : {}),
+    ...(o.reduceOnly ? { reduceOnly: true } : {}),
+    ...(o.closeOnTrigger ? { closeOnTrigger: true } : {}),
   };
 }
 
@@ -507,7 +535,9 @@ interface PaperState {
   updatePositionExits: (
     positionId: string,
     takeProfit: number | null,
-    stopLoss: number | null
+    stopLoss: number | null,
+    /** What each leg triggers on (BP-5 B); absent = keep the leg's */
+    by?: { tpTriggerBy?: PaperTriggerBy; slTriggerBy?: PaperTriggerBy }
   ) => Promise<ActionError>;
   /** Edit a pending order's price, base-coin qty and TP / SL. */
   editPendingOrder: (
@@ -699,6 +729,18 @@ export const usePaperStore = create<PaperState>()((set, get) => {
             ...(order.type !== 'market' && triggerPrice ? { triggerPrice: dec(triggerPrice) } : {}),
             ...(takeProfit && takeProfit > 0 ? { takeProfit: dec(takeProfit) } : {}),
             ...(stopLoss && stopLoss > 0 ? { stopLoss: dec(stopLoss) } : {}),
+            // BP-5 B — only what differs from Bybit's defaults is sent
+            ...(order.triggerBy && order.triggerBy !== 'LastPrice'
+              ? { triggerBy: order.triggerBy }
+              : {}),
+            ...(takeProfit && order.tpTriggerBy && order.tpTriggerBy !== 'LastPrice'
+              ? { tpTriggerBy: order.tpTriggerBy }
+              : {}),
+            ...(stopLoss && order.slTriggerBy && order.slTriggerBy !== 'LastPrice'
+              ? { slTriggerBy: order.slTriggerBy }
+              : {}),
+            ...(order.reduceOnly ? { reduceOnly: true } : {}),
+            ...(order.closeOnTrigger ? { closeOnTrigger: true } : {}),
           },
           token()
         );
@@ -747,13 +789,15 @@ export const usePaperStore = create<PaperState>()((set, get) => {
         )
       ),
 
-    updatePositionExits: (positionId, takeProfit, stopLoss) =>
+    updatePositionExits: (positionId, takeProfit, stopLoss, by = {}) =>
       settle(() =>
         paperApi.updatePositionExits(
           positionId,
           {
             takeProfit: takeProfit === null ? null : dec(takeProfit),
             stopLoss: stopLoss === null ? null : dec(stopLoss),
+            ...(takeProfit !== null && by.tpTriggerBy ? { tpTriggerBy: by.tpTriggerBy } : {}),
+            ...(stopLoss !== null && by.slTriggerBy ? { slTriggerBy: by.slTriggerBy } : {}),
           },
           token()
         )

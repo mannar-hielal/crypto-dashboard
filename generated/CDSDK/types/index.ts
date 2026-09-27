@@ -249,7 +249,13 @@ export interface PaperPositionDTO {
   openedAt: number;
   takeProfit?: string;
   stopLoss?: string;
+  /** Price each exit leg triggers on (BP-5 B); absent = LastPrice */
+  tpTriggerBy?: PaperTriggerBy;
+  slTriggerBy?: PaperTriggerBy;
 }
+
+/** Bybit's `triggerBy`: the price a TP / SL or stop order triggers on (BP-5 B) */
+export type PaperTriggerBy = 'LastPrice' | 'MarkPrice' | 'IndexPrice';
 
 export interface PaperPendingOrderDTO {
   id: string;
@@ -273,6 +279,15 @@ export interface PaperPendingOrderDTO {
   takeProfit?: string;
   stopLoss?: string;
   placedAt: number;
+  /** A stop order's trigger source (BP-5 B); absent = LastPrice. A limit rests on the last price */
+  triggerBy?: PaperTriggerBy;
+  /** Trigger source of the TP / SL the fill attaches; absent = LastPrice */
+  tpTriggerBy?: PaperTriggerBy;
+  slTriggerBy?: PaperTriggerBy;
+  /** Reduce-only: only shrinks the opposite position; reserves nothing and carries no TP / SL */
+  reduceOnly?: boolean;
+  /** Close-on-trigger (implies reduce-only) */
+  closeOnTrigger?: boolean;
 }
 
 /** A spot coin balance (the USDT wallet is `account.balance`). */
@@ -312,6 +327,10 @@ export interface PaperOrderDTO {
   rejectionReason?: string;
   /** 'CreateByLiq' = the system order that closed a liquidated position */
   createType?: 'CreateByLiq';
+  /** Bybit order flags (BP-5 B) — present only when set */
+  reduceOnly?: boolean;
+  closeOnTrigger?: boolean;
+  triggerBy?: PaperTriggerBy;
 }
 
 export interface PaperTradeDTO {
@@ -455,6 +474,15 @@ export interface PlaceOrderRequest {
   triggerPrice?: string;
   takeProfit?: string;
   stopLoss?: string;
+  /** USDT Perpetual (BP-5 B): a stop order's trigger source (default LastPrice) */
+  triggerBy?: PaperTriggerBy;
+  /** What the attached TP / SL trigger on (default LastPrice) */
+  tpTriggerBy?: PaperTriggerBy;
+  slTriggerBy?: PaperTriggerBy;
+  /** Only shrink the opposite position: capped at its size, no margin, no TP / SL */
+  reduceOnly?: boolean;
+  /** Close-on-trigger (implies reduceOnly) */
+  closeOnTrigger?: boolean;
 }
 
 /** TP / SL on spot coins already held — locks `qty` of the free balance behind an OCO pair. */
@@ -472,11 +500,18 @@ export interface EditPendingOrderRequest {
   usdtAmount?: string;
   takeProfit: string | null;
   stopLoss: string | null;
+  /** BP-5 B: new trigger sources; absent = keep the order's */
+  triggerBy?: PaperTriggerBy;
+  tpTriggerBy?: PaperTriggerBy;
+  slTriggerBy?: PaperTriggerBy;
 }
 
 export interface UpdatePositionExitsRequest {
   takeProfit: string | null;
   stopLoss: string | null;
+  /** BP-5 B: what each leg triggers on; absent = keep the leg's */
+  tpTriggerBy?: PaperTriggerBy;
+  slTriggerBy?: PaperTriggerBy;
 }
 
 export interface SetLeverageRequest {

@@ -38,6 +38,7 @@ import type {
   Position,
   SpotHolding,
   Category,
+  TriggerBy,
 } from './engine/index.js';
 import { fallbackRiskTiers, LEGACY_FEE_RATE, type RiskTier } from './bybitSpec.js';
 import { riskOf } from './engine/margin.js';
@@ -64,6 +65,8 @@ export interface PositionRow {
   cumFunding: Dec;
   takeProfit: Dec | null;
   stopLoss: Dec | null;
+  tpTriggerBy: string;
+  slTriggerBy: string;
   openedAt: Date;
 }
 
@@ -89,6 +92,11 @@ export interface OrderRow {
   isMaker: boolean | null;
   ocoGroup: string | null;
   createType: string | null;
+  triggerBy: string;
+  tpTriggerBy: string;
+  slTriggerBy: string;
+  reduceOnly: boolean;
+  closeOnTrigger: boolean;
   status: string;
   rejectionReason: string | null;
   createdAt: Date;
@@ -145,6 +153,13 @@ const optD = (v: Dec | null) => (v === null ? undefined : d(v));
 const LEGACY = new Decimal(LEGACY_FEE_RATE);
 const categoryOf = (v: string): Category => (v === 'spot' ? 'spot' : 'linear');
 
+/**
+ * A stored trigger source → the engine's (BP-5 B). LastPrice — the default — and anything unknown
+ * are left out, so the field is present only when it changes behaviour.
+ */
+const triggerByField = <K extends string>(key: K, v: string): { [P in K]?: TriggerBy } =>
+  v === 'MarkPrice' || v === 'IndexPrice' ? ({ [key]: v } as { [P in K]?: TriggerBy }) : {};
+
 // ─── DB row → engine ───────────────────────────────────────────────────────────
 
 const ORDER_TYPE_FROM_DB: Record<string, OrderType> = {
@@ -185,6 +200,8 @@ export function positionFromRow(r: PositionRow): Position {
     openedAt: r.openedAt.getTime(),
     ...(tp ? { takeProfit: tp } : {}),
     ...(sl ? { stopLoss: sl } : {}),
+    ...triggerByField('tpTriggerBy', r.tpTriggerBy),
+    ...triggerByField('slTriggerBy', r.slTriggerBy),
   };
 }
 
@@ -219,6 +236,11 @@ export function pendingFromRow(r: OrderRow): PendingOrder {
     ...(r.ocoGroup ? { ocoGroup: r.ocoGroup } : {}),
     ...(tp ? { takeProfit: tp } : {}),
     ...(sl ? { stopLoss: sl } : {}),
+    ...triggerByField('triggerBy', r.triggerBy),
+    ...triggerByField('tpTriggerBy', r.tpTriggerBy),
+    ...triggerByField('slTriggerBy', r.slTriggerBy),
+    ...(r.reduceOnly ? { reduceOnly: true } : {}),
+    ...(r.closeOnTrigger ? { closeOnTrigger: true } : {}),
   };
 }
 
@@ -250,6 +272,9 @@ export function historyOrderFromRow(r: OrderRow): PaperOrderDTO {
     closingTime: closing.getTime(),
     ...(r.rejectionReason ? { rejectionReason: r.rejectionReason } : {}),
     ...(r.createType === 'CreateByLiq' ? { createType: 'CreateByLiq' as const } : {}),
+    ...(r.reduceOnly ? { reduceOnly: true } : {}),
+    ...(r.closeOnTrigger ? { closeOnTrigger: true } : {}),
+    ...triggerByField('triggerBy', r.triggerBy),
   };
 }
 
@@ -325,6 +350,8 @@ export function positionData(p: Position) {
     cumFunding: p.cumFunding ?? new Decimal(0),
     takeProfit: p.takeProfit ?? null,
     stopLoss: p.stopLoss ?? null,
+    tpTriggerBy: p.tpTriggerBy ?? 'LastPrice',
+    slTriggerBy: p.slTriggerBy ?? 'LastPrice',
     openedAt: new Date(p.openedAt),
   };
 }
@@ -344,6 +371,11 @@ export function pendingData(o: PendingOrder) {
     margin: o.usdtAmount,
     reserved: o.reserved,
     leverage: o.leverage,
+    triggerBy: o.triggerBy ?? 'LastPrice',
+    tpTriggerBy: o.tpTriggerBy ?? 'LastPrice',
+    slTriggerBy: o.slTriggerBy ?? 'LastPrice',
+    reduceOnly: o.reduceOnly ?? false,
+    closeOnTrigger: o.closeOnTrigger ?? false,
     status: 'PENDING',
     createdAt: new Date(o.placedAt),
   };
@@ -374,6 +406,9 @@ export function historyOrderData(o: HistoricalOrder) {
     status: o.status.toUpperCase(),
     rejectionReason: o.rejectionReason ?? null,
     createType: o.createType ?? null,
+    triggerBy: o.triggerBy ?? 'LastPrice',
+    reduceOnly: o.reduceOnly ?? false,
+    closeOnTrigger: o.closeOnTrigger ?? false,
     createdAt: new Date(o.placingTime),
     filledAt: o.status === 'filled' ? closedAt : null,
     cancelledAt: o.status === 'filled' ? null : closedAt,
@@ -479,6 +514,8 @@ export function positionDTO(p: Position, tiers: RiskTier[]): PaperPositionDTO {
     openedAt: p.openedAt,
     ...(p.takeProfit ? { takeProfit: s(p.takeProfit) } : {}),
     ...(p.stopLoss ? { stopLoss: s(p.stopLoss) } : {}),
+    ...(p.tpTriggerBy ? { tpTriggerBy: p.tpTriggerBy } : {}),
+    ...(p.slTriggerBy ? { slTriggerBy: p.slTriggerBy } : {}),
   };
 }
 
@@ -498,6 +535,11 @@ export function pendingDTO(o: PendingOrder): PaperPendingOrderDTO {
     ...(o.ocoGroup ? { ocoGroup: o.ocoGroup } : {}),
     ...(o.takeProfit ? { takeProfit: s(o.takeProfit) } : {}),
     ...(o.stopLoss ? { stopLoss: s(o.stopLoss) } : {}),
+    ...(o.triggerBy ? { triggerBy: o.triggerBy } : {}),
+    ...(o.tpTriggerBy ? { tpTriggerBy: o.tpTriggerBy } : {}),
+    ...(o.slTriggerBy ? { slTriggerBy: o.slTriggerBy } : {}),
+    ...(o.reduceOnly ? { reduceOnly: true } : {}),
+    ...(o.closeOnTrigger ? { closeOnTrigger: true } : {}),
   };
 }
 
@@ -527,6 +569,9 @@ export function orderDTO(o: HistoricalOrder): PaperOrderDTO {
     closingTime: o.closingTime,
     ...(o.rejectionReason ? { rejectionReason: o.rejectionReason } : {}),
     ...(o.createType ? { createType: o.createType } : {}),
+    ...(o.reduceOnly ? { reduceOnly: true } : {}),
+    ...(o.closeOnTrigger ? { closeOnTrigger: true } : {}),
+    ...(o.triggerBy ? { triggerBy: o.triggerBy } : {}),
   };
 }
 
