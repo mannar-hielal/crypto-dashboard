@@ -135,8 +135,10 @@ function settle(pos: Position, closeQty: Decimal, price: Decimal, rate: Decimal)
   const entryFee = pos.entryFee.times(fraction);
   // The closed part's share of the funding already settled (booked then — not charged again)
   const funding = (pos.cumFunding ?? ZERO).times(fraction);
+  // Margin added by hand comes back with the part it backed (BP-5: pro rata on a partial close)
+  const extra = (pos.extraMargin ?? ZERO).times(fraction);
   // Margin and the close-fee estimate come back, plus the price move, minus the real close fee
-  const returnAmount = Decimal.max(0, margin.plus(reserve).plus(pnl).minus(fee));
+  const returnAmount = Decimal.max(0, margin.plus(extra).plus(reserve).plus(pnl).minus(fee));
   return {
     fraction,
     pnl,
@@ -145,6 +147,7 @@ function settle(pos: Position, closeQty: Decimal, price: Decimal, rate: Decimal)
     reserve,
     entryFee,
     funding,
+    extra,
     returnAmount,
     /** Net of the close fee — what the balance history and journal show */
     netPnl: pnl.minus(fee),
@@ -291,6 +294,7 @@ function fillInto(
           entryFee: pos.entryFee.minus(s.entryFee),
           closeFeeReserve: pos.closeFeeReserve.minus(s.reserve),
           ...(pos.cumFunding ? { cumFunding: pos.cumFunding.minus(s.funding) } : {}),
+          ...(pos.extraMargin ? { extraMargin: pos.extraMargin.minus(s.extra) } : {}),
         });
       }
     }
@@ -1364,20 +1368,25 @@ export function setSymbolLeverage(
   for (const pos of positions) {
     const im = pos.quantity.times(pos.entryPrice).div(next);
     const reserve = feeToClose(pos.side, pos.quantity, pos.entryPrice, next);
+    // A leverage change releases all the margin added by hand (Bybit, BP-5)
+    const extra = pos.extraMargin ?? ZERO;
     const updated: Position = {
       ...pos,
       leverage: next,
       entryUsdtAmount: im,
       closeFeeReserve: reserve,
+      extraMargin: ZERO,
     };
-    if (im.lt(pos.entryUsdtAmount)) {
+    if (im.lt(pos.entryUsdtAmount.plus(extra))) {
       // Less margin behind the position: it must not be liquidated by the change itself
       if (!mark) return refused(state, current, REJECT_LEVERAGE_NO_MARK);
       if (markHitsLiquidation(pos.side, riskOf(updated, tiers).liqPrice, mark)) {
         return refused(state, current, REJECT_LEVERAGE_LIQUIDATION);
       }
     }
-    change = change.plus(im.plus(reserve)).minus(pos.entryUsdtAmount.plus(pos.closeFeeReserve));
+    change = change
+      .plus(im.plus(reserve))
+      .minus(pos.entryUsdtAmount.plus(pos.closeFeeReserve).plus(extra));
     d.setPosition(updated);
   }
   for (const order of orders) {
@@ -1474,6 +1483,77 @@ export function resetAccount(state: AccountState): ActionResult<boolean> {
   return { delta: d.toDelta(), result: true };
 }
 
+// ─── Add / reduce margin (BP-5 A) ──────────────────────────────────────────────
+// Bybit POST /v5/position/add-margin (isolated): a signed amount moves between the wallet and the
+// position's margin; the leverage is unchanged and the liquidation price moves. Refusals follow
+// Bybit's retCodes (source: API v5 error codes, checked 2026-09-27). Bybit's max reducible amount is
+// not documented: only margin added by hand can be taken back, and never so much that the mark is
+// at or past the new liquidation price.
+
+export const REJECT_MARGIN_NO_POSITION = "You can't set margin without an open position"; // 110033
+export const REJECT_MARGIN_BALANCE = 'Insufficient available balance to add margin'; // 110014
+export const REJECT_MARGIN_MAX_REDUCE = 'Added margin more than max can reduce margin'; // 110078
+export const REJECT_MARGIN_LIQUIDATION =
+  'Liquidation will be triggered immediately by this adjustment'; // 110011
+export const REJECT_MARGIN_NO_MARK = 'Waiting for live price…';
+
+/**
+ * Add (`amount` > 0) or reduce (`amount` < 0) the margin of an isolated position. Result: the
+ * position's new extra margin, or null when refused (`invalid` says why — nothing is written).
+ */
+export function adjustMargin(
+  state: AccountState,
+  positionId: string,
+  amount: Decimal,
+  ctx: EngineContext,
+  mark?: Decimal
+): ActionResult<Decimal | null> {
+  const pos = state.positions.find((p) => p.id === positionId);
+  if (!pos) return refused(state, null, REJECT_MARGIN_NO_POSITION);
+  if (amount.eq(0)) return { delta: new Draft(state).toDelta(), result: pos.extraMargin ?? ZERO };
+  const extra = pos.extraMargin ?? ZERO;
+  const nextExtra = extra.plus(amount);
+  if (amount.gt(0) && amount.gt(state.balance)) {
+    return refused(state, null, REJECT_MARGIN_BALANCE);
+  }
+  if (amount.lt(0)) {
+    if (nextExtra.lt(0)) return refused(state, null, REJECT_MARGIN_MAX_REDUCE);
+    if (!mark) return refused(state, null, REJECT_MARGIN_NO_MARK);
+  }
+  const tiers = tiersFor(ctx, pos.symbol);
+  const before = riskOf(pos, tiers);
+  const updated: Position = { ...pos, extraMargin: nextExtra };
+  const after = riskOf(updated, tiers);
+  if (mark && amount.lt(0) && markHitsLiquidation(pos.side, after.liqPrice, mark)) {
+    return refused(state, null, REJECT_MARGIN_LIQUIDATION);
+  }
+
+  const d = new Draft(state);
+  const now = ctx.now;
+  const verb = amount.gt(0) ? 'Add' : 'Reduce';
+  const label = pos.side === 'long' ? 'LONG' : 'SHORT';
+  d.setPosition(updated);
+  d.prependBalanceEvent({
+    id: `bl-margin-${positionId}-${now}`,
+    time: now,
+    balanceBefore: d.balance,
+    balanceAfter: d.balance.minus(amount),
+    pnl: ZERO,
+    action: `${verb} margin for ${pos.symbol}: ${amount.gt(0) ? '+' : '−'}$${amount.abs().toFixed(2)}`,
+  });
+  const liq = (v: Decimal) => (v.gt(0) ? `$${fmtPrice(v)}` : '—');
+  d.prependJournal(
+    systemEntry(
+      `j-margin-${positionId}-${now}`,
+      now,
+      `${verb === 'Add' ? 'Margin added to' : 'Margin reduced on'} ${label} ${pos.symbol}: ` +
+        `${amount.gt(0) ? '+' : '−'}$${amount.abs().toFixed(2)} (liq. price ${liq(before.liqPrice)} → ${liq(after.liqPrice)})`
+    )
+  );
+  d.balance = d.balance.minus(amount);
+  return { delta: d.toDelta(), result: nextExtra };
+}
+
 // ─── Funding (BP-4) ────────────────────────────────────────────────────────────
 
 /** A position as it was at the funding timestamp (the engine snapshots them at that instant). */
@@ -1547,8 +1627,15 @@ export function settleFunding(
       if (shortfall.gt(0) && pos) {
         // 🔐 Never below zero margin: at worst the position is left at its bankruptcy price and the
         // next mark tick liquidates it
-        fromMargin = Decimal.min(shortfall, pos.entryUsdtAmount);
-        d.setPosition({ ...pos, entryUsdtAmount: pos.entryUsdtAmount.minus(fromMargin) });
+        // IM first, then the margin added by hand (BP-5)
+        const fromIm = Decimal.min(shortfall, pos.entryUsdtAmount);
+        const fromExtra = Decimal.min(shortfall.minus(fromIm), pos.extraMargin ?? ZERO);
+        fromMargin = fromIm.plus(fromExtra);
+        d.setPosition({
+          ...pos,
+          entryUsdtAmount: pos.entryUsdtAmount.minus(fromIm),
+          ...(fromExtra.gt(0) ? { extraMargin: (pos.extraMargin ?? ZERO).minus(fromExtra) } : {}),
+        });
       }
       charged = fromBalance.plus(fromMargin);
     } else {

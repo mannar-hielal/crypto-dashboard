@@ -52,6 +52,12 @@ const decimalString = {
   maxLength: 21,
 } as const;
 const nullableDecimal = { ...decimalString, type: ['string', 'null'] } as const;
+/** A signed USDT amount with at most 4 decimals (Bybit add-margin: + add, − reduce) */
+const signedMarginString = {
+  type: 'string',
+  maxLength: 20,
+  pattern: '^-?\\d{1,12}(\\.\\d{1,4})?$',
+} as const;
 
 /** Public ids: engine ids (`<ms>-<base64url>`), cuid, and pre-BP-1 browser refIds */
 const idParam = {
@@ -440,6 +446,48 @@ export async function paperRoutes(app: FastifyInstance) {
           { notFound: (r) => r === false }
         )
       )
+  );
+
+  // ── POST /positions/:id/margin — add / reduce an isolated position's margin (BP-5 A) ──
+  app.post<{ Params: { id: string }; Body: { margin: string } }>(
+    '/positions/:id/margin',
+    {
+      onRequest: [app.authenticate],
+      config: mutationRateLimit,
+      schema: {
+        tags: ['Paper Trading'],
+        summary: "Add (+) or reduce (−) an isolated position's margin, as Bybit's add-margin",
+        ...secured,
+        params: idParam,
+        body: {
+          type: 'object',
+          required: ['margin'],
+          additionalProperties: false,
+          properties: { margin: signedMarginString },
+        },
+        response: {
+          200: actionResponse({ type: ['string', 'null'] }),
+          400: errorResponse,
+          401: errorResponse,
+          404: errorResponse,
+          409: errorResponse,
+          422: errorResponse,
+          429: errorResponse,
+          500: errorResponse,
+        },
+      },
+    },
+    async (request, reply) =>
+      guarded(reply, async () => {
+        const amount = new Decimal(request.body.margin);
+        // 🔐 Bounded like every other amount; the engine checks balance / liquidation
+        if (amount.abs().gt(MAX_AMOUNT)) throw new TradingError(409, 'margin out of range');
+        return send(
+          reply,
+          await app.trading.adjustMargin(userIdOf(request), request.params.id, amount),
+          { map: (extra) => extra?.toString() ?? null }
+        );
+      })
   );
 
   // ── DELETE /positions/:id/exits/:leg — cancel a position's TP or SL ─────────

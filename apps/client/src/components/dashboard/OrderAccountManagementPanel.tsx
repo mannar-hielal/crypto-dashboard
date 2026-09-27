@@ -32,6 +32,7 @@ import {
   positionPnl,
 } from '@/lib/positionMath';
 import { MmrBar } from './MmrBar';
+import { AdjustMarginDialog } from './AdjustMarginDialog';
 import { winRateFrom } from '@/lib/funding';
 import { loadColPrefs, saveColPrefs } from '@/lib/columnPrefs';
 import { AssetsTable } from './AssetsTable';
@@ -395,6 +396,8 @@ export function OrderAccountManagementPanel({
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [noteText, setNoteText] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
+  // Add / reduce margin dialog (BP-5 A): the position it is open for
+  const [marginDialogFor, setMarginDialogFor] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
 
   // ── Store ─────────────────────────────────────────────────────────────────
@@ -1254,7 +1257,8 @@ export function OrderAccountManagementPanel({
                                 const mmrRate = positionMmrRate(pos, markPrice);
                                 const pnlPct = (pnl / pos.entryUsdtAmount) * 100;
                                 const isProfit = pnl >= 0;
-                                const margin = pos.entryUsdtAmount;
+                                // Position margin as Bybit shows it: IM + margin added by hand
+                                const margin = pos.entryUsdtAmount + pos.extraMargin;
                                 // The open fee actually charged (stored with the position)
                                 const commission = pos.entryFee;
                                 const tradeValue = pos.entryPrice * pos.quantity;
@@ -1479,6 +1483,16 @@ export function OrderAccountManagementPanel({
                                     {isVisible('positions', 'margin') && (
                                       <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
                                         <span className="inline-flex items-center gap-1">
+                                          <button
+                                            type="button"
+                                            onClick={() => setMarginDialogFor(pos.id)}
+                                            title="Add / reduce margin"
+                                            aria-label={`Adjust margin for ${pos.symbol}`}
+                                            className="opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 hover:text-white"
+                                            style={{ color: color.muted }}
+                                          >
+                                            <Pencil className="h-2.5 w-2.5" />
+                                          </button>
                                           <span>{margin.toFixed(2)}</span>
                                           <span
                                             style={{
@@ -2678,6 +2692,15 @@ export function OrderAccountManagementPanel({
           </>
         )}
       </AnimatePresence>
+
+      {/* ── Add / reduce margin (BP-5 A) ─────────────────────────────────── */}
+      {marginDialogFor &&
+        (() => {
+          const pos = positions.find((p) => p.id === marginDialogFor);
+          return pos ? (
+            <AdjustMarginDialog position={pos} onClose={() => setMarginDialogFor(null)} />
+          ) : null;
+        })()}
     </div>
   );
 }

@@ -90,6 +90,7 @@ describe('Paper Trading API (BP-1)', () => {
     ['POST', '/api/paper/positions/p1/close'],
     ['PATCH', '/api/paper/account/leverage'],
     ['PATCH', '/api/paper/symbols/BTCUSDT/leverage'],
+    ['POST', '/api/paper/positions/p1/margin'],
     ['POST', '/api/paper/spot/exits'],
     ['POST', '/api/paper/account/reset'],
     ['POST', '/api/paper/journal'],
@@ -399,6 +400,49 @@ describe('Paper Trading API (BP-1)', () => {
       payload: { leverage: 11 },
     });
     expect(res.statusCode).toBe(400);
+  });
+
+  it('POST /positions/:id/margin passes the signed amount (BP-5 add / reduce margin)', async () => {
+    const adjust = vi
+      .spyOn(app.trading, 'adjustMargin')
+      .mockResolvedValue(executed(new Decimal('600') as never));
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/paper/positions/p1/margin',
+      headers: auth,
+      payload: { margin: '-400.5' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().result).toBe('600');
+    expect(adjust).toHaveBeenCalledWith(userId, 'p1', new Decimal('-400.5'));
+  });
+
+  it.each([
+    [{ margin: '1.12345' }, 'more than 4 decimals'],
+    [{ margin: 'abc' }, 'not a number'],
+    [{}, 'missing'],
+  ])('POST /positions/:id/margin %o → 400 (%s)', async (payload) => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/paper/positions/p1/margin',
+      headers: auth,
+      payload,
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('POST /positions/:id/margin answers a refusal as 422 in Bybit wording', async () => {
+    vi.spyOn(app.trading, 'adjustMargin').mockRejectedValue(
+      new TradingError(422, 'Insufficient available balance to add margin')
+    );
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/paper/positions/p1/margin',
+      headers: auth,
+      payload: { margin: '100' },
+    });
+    expect(res.statusCode).toBe(422);
+    expect(res.json().error).toBe('Insufficient available balance to add margin');
   });
 
   it('PATCH /symbols/:symbol/leverage passes the symbol and leverage', async () => {

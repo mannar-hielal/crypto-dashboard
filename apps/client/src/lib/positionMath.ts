@@ -52,6 +52,40 @@ export const MMR_EXPLAINER =
   'the mark price — as Bybit shows it. At 100% the position is liquidated.';
 
 /**
+ * The liquidation price after adding (amount > 0) or reducing (amount < 0) an isolated position's
+ * margin by hand (BP-5): the leverage and IM are unchanged, only the extra margin moves.
+ */
+export function adjustMarginPreview(
+  pos: Pick<
+    Position,
+    | 'side'
+    | 'quantity'
+    | 'entryPrice'
+    | 'leverage'
+    | 'entryUsdtAmount'
+    | 'closeFeeReserve'
+    | 'extraMargin'
+  >,
+  amount: number,
+  symbol: string
+): { liqPrice: number; extraMargin: number } {
+  const extraMargin = Math.max(0, pos.extraMargin + amount);
+  const risk = estimatePositionRisk(
+    {
+      side: pos.side,
+      qty: pos.quantity,
+      entryPrice: pos.entryPrice,
+      leverage: pos.leverage,
+      im: pos.entryUsdtAmount,
+      closeFeeReserve: pos.closeFeeReserve,
+      extraMargin,
+    },
+    riskTiersFor(symbol)
+  );
+  return { liqPrice: risk.liqPrice, extraMargin };
+}
+
+/**
  * What a leverage change would do to an open position (Bybit re-margining, BP-3): the new
  * position margin (IM + fee to close at the new bankruptcy price) and the new liquidation price.
  * The server decides; this is the preview in the leverage modal.

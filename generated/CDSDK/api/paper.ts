@@ -110,6 +110,18 @@ export const paperApi = {
       json('PATCH', body)
     ),
 
+  /**
+   * Add (positive) or reduce (negative) an isolated position's margin, as Bybit's add-margin
+   * (BP-5). `margin` is a signed decimal string with at most 4 decimals. `result` is the position's
+   * new extra margin (decimal string). Refused (422) in Bybit's wording.
+   */
+  adjustPositionMargin: (positionId: string, margin: string, accessToken: string) =>
+    request<PaperActionResponse<string | null>>(
+      `/api/paper/positions/${encodeURIComponent(positionId)}/margin`,
+      accessToken,
+      json('POST', { margin })
+    ),
+
   cancelPositionExit: (positionId: string, leg: PaperExitLeg, accessToken: string) =>
     request<PaperActionResponse<boolean>>(
       `/api/paper/positions/${encodeURIComponent(positionId)}/exits/${leg}`,

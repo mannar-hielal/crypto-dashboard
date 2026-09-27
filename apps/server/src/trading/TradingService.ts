@@ -22,6 +22,7 @@ import { deltaDTO } from './mappers.js';
 import type { RiskTier } from './bybitSpec.js';
 import {
   addNote,
+  adjustMargin,
   applyDelta,
   cancelExitLeg,
   cancelPending,
@@ -344,6 +345,27 @@ export class TradingService {
       const zero = new Decimal(0);
       if (!pos) return closePosition(state, positionId, { last: zero, bid: zero, ask: zero }, ctx);
       return closePosition(state, positionId, this.liveQuote(pos.category, pos.symbol), ctx);
+    });
+  }
+
+  /**
+   * Add (amount > 0) or reduce (amount < 0) an isolated position's margin (BP-5 A). A reduction is
+   * checked against the live mark price. Result: the position's new extra margin.
+   */
+  adjustMargin(
+    userId: string,
+    positionId: string,
+    amount: Decimal
+  ): Promise<Executed<Decimal | null>> {
+    return this.act(userId, (state, ctx) => {
+      const pos = state.positions.find((p) => p.id === positionId);
+      return adjustMargin(
+        state,
+        positionId,
+        amount,
+        ctx,
+        pos ? this.currentMark(pos.symbol) : undefined
+      );
     });
   }
 

@@ -149,6 +149,7 @@ export const fakePaperApi = {
   >(() => ok('ok' as const)),
   cancelOrderExit: vi.fn(() => ok(true)),
   updatePositionExits: vi.fn(() => ok(true)),
+  adjustPositionMargin: vi.fn(() => ok('0' as string | null)),
   cancelPositionExit: vi.fn(() => ok(true)),
   closePosition: vi.fn(() => ok('0')),
   setLeverage: vi.fn((leverage: number) => ok(leverage)),

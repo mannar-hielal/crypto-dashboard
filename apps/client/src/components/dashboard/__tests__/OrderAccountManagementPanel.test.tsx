@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { OrderAccountManagementPanel } from '../OrderAccountManagementPanel';
 import { migrateColPrefs } from '@/lib/columnPrefs';
 import {
@@ -967,5 +967,71 @@ describe('BP-4 — funding in the Positions tab', () => {
     usePaperStore.setState({ positions: [{ ...base, cumFunding: -0.2 }] });
     renderPanel();
     expect(screen.getByTestId('position-funding').textContent).toBe('+0.20');
+  });
+});
+
+describe('BP-5 A — add / reduce margin from the Positions row', () => {
+  // The tests stub the store action; clear() resets data only, so put the real one back
+  const realAdjust = usePaperStore.getState().adjustPositionMargin;
+  afterEach(() => usePaperStore.setState({ adjustPositionMargin: realAdjust }));
+
+  const pos: Position = {
+    id: 'p-margin',
+    symbol: 'BTCUSDT',
+    side: 'long',
+    quantity: 0.1,
+    entryPrice: 50_000,
+    entryUsdtAmount: 500,
+    category: 'linear',
+    leverage: 10,
+    entryFee: 2.75,
+    closeFeeReserve: 2.475,
+    extraMargin: 0,
+    liqPrice: 45_148.99,
+    bustPrice: 45_000,
+    positionIM: 502.475,
+    positionMM: 18.975,
+    cumFunding: 0,
+    openedAt: FIXTURE_NOW,
+  };
+
+  it('the pencil on Margin opens the dialog, previews the new liq. price and sends the amount', async () => {
+    const adjust = vi.fn(async () => null);
+    usePaperStore.setState({ positions: [pos], balance: 5_000, adjustPositionMargin: adjust });
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: 'Adjust margin for BTCUSDT' }));
+    const dialog = screen.getByRole('dialog', { name: /Adjust margin/ });
+    fireEvent.change(within(dialog).getByLabelText('Margin amount'), {
+      target: { value: '1000' },
+    });
+    // IM 500 + 1,000 added → liq ≈ 35,110 (server maths: margin.test)
+    expect(within(dialog).getByTestId('adjust-margin-preview').textContent).toMatch(
+      /\$45,148\.99 → \$35,1/
+    );
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(adjust).toHaveBeenCalledWith('p-margin', 1000));
+  });
+
+  it('Reduce is limited to the margin added by hand, and a refusal shows inline', async () => {
+    const adjust = vi.fn(
+      async () => 'Liquidation will be triggered immediately by this adjustment'
+    );
+    usePaperStore.setState({
+      positions: [{ ...pos, extraMargin: 300 }],
+      adjustPositionMargin: adjust,
+    });
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: 'Adjust margin for BTCUSDT' }));
+    const dialog = screen.getByRole('dialog', { name: /Adjust margin/ });
+    fireEvent.click(within(dialog).getByRole('tab', { name: 'Reduce' }));
+    expect(dialog.textContent).toContain('Max reducible (margin you added): $300.00');
+    fireEvent.change(within(dialog).getByLabelText('Margin amount'), { target: { value: '400' } });
+    expect(
+      (within(dialog).getByRole('button', { name: 'Confirm' }) as HTMLButtonElement).disabled
+    ).toBe(true);
+    fireEvent.change(within(dialog).getByLabelText('Margin amount'), { target: { value: '300' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
+    expect((await within(dialog).findByRole('alert')).textContent).toContain('Liquidation will be');
+    expect(adjust).toHaveBeenCalledWith('p-margin', -300);
   });
 });

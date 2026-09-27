@@ -499,6 +499,11 @@ interface PaperState {
   /** Cancel one TP/SL leg of a pending order (the order keeps its reserve). */
   cancelPendingExitLeg: (pendingOrderId: string, exitType: PaperExitLeg) => Promise<ActionError>;
   /** Set / change / remove TP and SL on an open position (null removes a leg). */
+  /**
+   * Add (amount > 0) or reduce (amount < 0) an isolated position's margin (BP-5, Bybit add-margin).
+   * Resolves to the server's refusal text, or null.
+   */
+  adjustPositionMargin: (positionId: string, amount: number) => Promise<ActionError>;
   updatePositionExits: (
     positionId: string,
     takeProfit: number | null,
@@ -731,6 +736,16 @@ export const usePaperStore = create<PaperState>()((set, get) => {
 
     cancelPendingExitLeg: (pendingOrderId, exitType) =>
       settle(() => paperApi.cancelOrderExit(pendingOrderId, exitType, token())),
+
+    adjustPositionMargin: (positionId, amount) =>
+      settle(() =>
+        paperApi.adjustPositionMargin(
+          positionId,
+          // Bybit takes at most 4 decimals
+          Number.isFinite(amount) ? Number(amount.toFixed(4)).toString() : '0',
+          token()
+        )
+      ),
 
     updatePositionExits: (positionId, takeProfit, stopLoss) =>
       settle(() =>
