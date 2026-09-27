@@ -38,6 +38,7 @@ export type TradeAvgAggregateOutputType = {
   pnlPercent: runtime.Decimal | null
   feeRate: runtime.Decimal | null
   funding: runtime.Decimal | null
+  openFee: runtime.Decimal | null
 }
 
 export type TradeSumAggregateOutputType = {
@@ -52,6 +53,7 @@ export type TradeSumAggregateOutputType = {
   pnlPercent: runtime.Decimal | null
   feeRate: runtime.Decimal | null
   funding: runtime.Decimal | null
+  openFee: runtime.Decimal | null
 }
 
 export type TradeMinAggregateOutputType = {
@@ -75,6 +77,7 @@ export type TradeMinAggregateOutputType = {
   execType: string | null
   feeRate: runtime.Decimal | null
   funding: runtime.Decimal | null
+  openFee: runtime.Decimal | null
   openedAt: Date | null
   executedAt: Date | null
   createdAt: Date | null
@@ -101,6 +104,7 @@ export type TradeMaxAggregateOutputType = {
   execType: string | null
   feeRate: runtime.Decimal | null
   funding: runtime.Decimal | null
+  openFee: runtime.Decimal | null
   openedAt: Date | null
   executedAt: Date | null
   createdAt: Date | null
@@ -127,6 +131,7 @@ export type TradeCountAggregateOutputType = {
   execType: number
   feeRate: number
   funding: number
+  openFee: number
   openedAt: number
   executedAt: number
   createdAt: number
@@ -146,6 +151,7 @@ export type TradeAvgAggregateInputType = {
   pnlPercent?: true
   feeRate?: true
   funding?: true
+  openFee?: true
 }
 
 export type TradeSumAggregateInputType = {
@@ -160,6 +166,7 @@ export type TradeSumAggregateInputType = {
   pnlPercent?: true
   feeRate?: true
   funding?: true
+  openFee?: true
 }
 
 export type TradeMinAggregateInputType = {
@@ -183,6 +190,7 @@ export type TradeMinAggregateInputType = {
   execType?: true
   feeRate?: true
   funding?: true
+  openFee?: true
   openedAt?: true
   executedAt?: true
   createdAt?: true
@@ -209,6 +217,7 @@ export type TradeMaxAggregateInputType = {
   execType?: true
   feeRate?: true
   funding?: true
+  openFee?: true
   openedAt?: true
   executedAt?: true
   createdAt?: true
@@ -235,6 +244,7 @@ export type TradeCountAggregateInputType = {
   execType?: true
   feeRate?: true
   funding?: true
+  openFee?: true
   openedAt?: true
   executedAt?: true
   createdAt?: true
@@ -348,6 +358,7 @@ export type TradeGroupByOutputType = {
   execType: string
   feeRate: runtime.Decimal | null
   funding: runtime.Decimal
+  openFee: runtime.Decimal
   openedAt: Date | null
   executedAt: Date
   createdAt: Date
@@ -397,6 +408,7 @@ export type TradeWhereInput = {
   execType?: Prisma.StringFilter<"Trade"> | string
   feeRate?: Prisma.DecimalNullableFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: Prisma.DecimalFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: Prisma.DecimalFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Prisma.DateTimeNullableFilter<"Trade"> | Date | string | null
   executedAt?: Prisma.DateTimeFilter<"Trade"> | Date | string
   createdAt?: Prisma.DateTimeFilter<"Trade"> | Date | string
@@ -426,6 +438,7 @@ export type TradeOrderByWithRelationInput = {
   execType?: Prisma.SortOrder
   feeRate?: Prisma.SortOrderInput | Prisma.SortOrder
   funding?: Prisma.SortOrder
+  openFee?: Prisma.SortOrder
   openedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   executedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -458,6 +471,7 @@ export type TradeWhereUniqueInput = Prisma.AtLeast<{
   execType?: Prisma.StringFilter<"Trade"> | string
   feeRate?: Prisma.DecimalNullableFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: Prisma.DecimalFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: Prisma.DecimalFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Prisma.DateTimeNullableFilter<"Trade"> | Date | string | null
   executedAt?: Prisma.DateTimeFilter<"Trade"> | Date | string
   createdAt?: Prisma.DateTimeFilter<"Trade"> | Date | string
@@ -487,6 +501,7 @@ export type TradeOrderByWithAggregationInput = {
   execType?: Prisma.SortOrder
   feeRate?: Prisma.SortOrderInput | Prisma.SortOrder
   funding?: Prisma.SortOrder
+  openFee?: Prisma.SortOrder
   openedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   executedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -521,6 +536,7 @@ export type TradeScalarWhereWithAggregatesInput = {
   execType?: Prisma.StringWithAggregatesFilter<"Trade"> | string
   feeRate?: Prisma.DecimalNullableWithAggregatesFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: Prisma.DecimalWithAggregatesFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: Prisma.DecimalWithAggregatesFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Trade"> | Date | string | null
   executedAt?: Prisma.DateTimeWithAggregatesFilter<"Trade"> | Date | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Trade"> | Date | string
@@ -544,6 +560,7 @@ export type TradeCreateInput = {
   execType?: string
   feeRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Date | string | null
   executedAt?: Date | string
   createdAt?: Date | string
@@ -573,6 +590,7 @@ export type TradeUncheckedCreateInput = {
   execType?: string
   feeRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Date | string | null
   executedAt?: Date | string
   createdAt?: Date | string
@@ -596,6 +614,7 @@ export type TradeUpdateInput = {
   execType?: Prisma.StringFieldUpdateOperationsInput | string
   feeRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -625,6 +644,7 @@ export type TradeUncheckedUpdateInput = {
   execType?: Prisma.StringFieldUpdateOperationsInput | string
   feeRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -651,6 +671,7 @@ export type TradeCreateManyInput = {
   execType?: string
   feeRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Date | string | null
   executedAt?: Date | string
   createdAt?: Date | string
@@ -674,6 +695,7 @@ export type TradeUpdateManyMutationInput = {
   execType?: Prisma.StringFieldUpdateOperationsInput | string
   feeRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -700,6 +722,7 @@ export type TradeUncheckedUpdateManyInput = {
   execType?: Prisma.StringFieldUpdateOperationsInput | string
   feeRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -736,6 +759,7 @@ export type TradeCountOrderByAggregateInput = {
   execType?: Prisma.SortOrder
   feeRate?: Prisma.SortOrder
   funding?: Prisma.SortOrder
+  openFee?: Prisma.SortOrder
   openedAt?: Prisma.SortOrder
   executedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -753,6 +777,7 @@ export type TradeAvgOrderByAggregateInput = {
   pnlPercent?: Prisma.SortOrder
   feeRate?: Prisma.SortOrder
   funding?: Prisma.SortOrder
+  openFee?: Prisma.SortOrder
 }
 
 export type TradeMaxOrderByAggregateInput = {
@@ -776,6 +801,7 @@ export type TradeMaxOrderByAggregateInput = {
   execType?: Prisma.SortOrder
   feeRate?: Prisma.SortOrder
   funding?: Prisma.SortOrder
+  openFee?: Prisma.SortOrder
   openedAt?: Prisma.SortOrder
   executedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -802,6 +828,7 @@ export type TradeMinOrderByAggregateInput = {
   execType?: Prisma.SortOrder
   feeRate?: Prisma.SortOrder
   funding?: Prisma.SortOrder
+  openFee?: Prisma.SortOrder
   openedAt?: Prisma.SortOrder
   executedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -819,6 +846,7 @@ export type TradeSumOrderByAggregateInput = {
   pnlPercent?: Prisma.SortOrder
   feeRate?: Prisma.SortOrder
   funding?: Prisma.SortOrder
+  openFee?: Prisma.SortOrder
 }
 
 export type TradeCreateNestedManyWithoutUserInput = {
@@ -965,6 +993,7 @@ export type TradeCreateWithoutUserInput = {
   execType?: string
   feeRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Date | string | null
   executedAt?: Date | string
   createdAt?: Date | string
@@ -992,6 +1021,7 @@ export type TradeUncheckedCreateWithoutUserInput = {
   execType?: string
   feeRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Date | string | null
   executedAt?: Date | string
   createdAt?: Date | string
@@ -1047,6 +1077,7 @@ export type TradeScalarWhereInput = {
   execType?: Prisma.StringFilter<"Trade"> | string
   feeRate?: Prisma.DecimalNullableFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: Prisma.DecimalFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: Prisma.DecimalFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Prisma.DateTimeNullableFilter<"Trade"> | Date | string | null
   executedAt?: Prisma.DateTimeFilter<"Trade"> | Date | string
   createdAt?: Prisma.DateTimeFilter<"Trade"> | Date | string
@@ -1070,6 +1101,7 @@ export type TradeCreateWithoutAccountInput = {
   execType?: string
   feeRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Date | string | null
   executedAt?: Date | string
   createdAt?: Date | string
@@ -1097,6 +1129,7 @@ export type TradeUncheckedCreateWithoutAccountInput = {
   execType?: string
   feeRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Date | string | null
   executedAt?: Date | string
   createdAt?: Date | string
@@ -1146,6 +1179,7 @@ export type TradeCreateWithoutOrderInput = {
   execType?: string
   feeRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Date | string | null
   executedAt?: Date | string
   createdAt?: Date | string
@@ -1173,6 +1207,7 @@ export type TradeUncheckedCreateWithoutOrderInput = {
   execType?: string
   feeRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Date | string | null
   executedAt?: Date | string
   createdAt?: Date | string
@@ -1224,6 +1259,7 @@ export type TradeCreateManyUserInput = {
   execType?: string
   feeRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Date | string | null
   executedAt?: Date | string
   createdAt?: Date | string
@@ -1247,6 +1283,7 @@ export type TradeUpdateWithoutUserInput = {
   execType?: Prisma.StringFieldUpdateOperationsInput | string
   feeRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1274,6 +1311,7 @@ export type TradeUncheckedUpdateWithoutUserInput = {
   execType?: Prisma.StringFieldUpdateOperationsInput | string
   feeRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1299,6 +1337,7 @@ export type TradeUncheckedUpdateManyWithoutUserInput = {
   execType?: Prisma.StringFieldUpdateOperationsInput | string
   feeRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1324,6 +1363,7 @@ export type TradeCreateManyAccountInput = {
   execType?: string
   feeRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Date | string | null
   executedAt?: Date | string
   createdAt?: Date | string
@@ -1347,6 +1387,7 @@ export type TradeUpdateWithoutAccountInput = {
   execType?: Prisma.StringFieldUpdateOperationsInput | string
   feeRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1374,6 +1415,7 @@ export type TradeUncheckedUpdateWithoutAccountInput = {
   execType?: Prisma.StringFieldUpdateOperationsInput | string
   feeRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1399,6 +1441,7 @@ export type TradeUncheckedUpdateManyWithoutAccountInput = {
   execType?: Prisma.StringFieldUpdateOperationsInput | string
   feeRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1424,6 +1467,7 @@ export type TradeCreateManyOrderInput = {
   execType?: string
   feeRate?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Date | string | null
   executedAt?: Date | string
   createdAt?: Date | string
@@ -1447,6 +1491,7 @@ export type TradeUpdateWithoutOrderInput = {
   execType?: Prisma.StringFieldUpdateOperationsInput | string
   feeRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1474,6 +1519,7 @@ export type TradeUncheckedUpdateWithoutOrderInput = {
   execType?: Prisma.StringFieldUpdateOperationsInput | string
   feeRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1499,6 +1545,7 @@ export type TradeUncheckedUpdateManyWithoutOrderInput = {
   execType?: Prisma.StringFieldUpdateOperationsInput | string
   feeRate?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   funding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  openFee?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1527,6 +1574,7 @@ export type TradeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   execType?: boolean
   feeRate?: boolean
   funding?: boolean
+  openFee?: boolean
   openedAt?: boolean
   executedAt?: boolean
   createdAt?: boolean
@@ -1556,6 +1604,7 @@ export type TradeSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   execType?: boolean
   feeRate?: boolean
   funding?: boolean
+  openFee?: boolean
   openedAt?: boolean
   executedAt?: boolean
   createdAt?: boolean
@@ -1585,6 +1634,7 @@ export type TradeSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   execType?: boolean
   feeRate?: boolean
   funding?: boolean
+  openFee?: boolean
   openedAt?: boolean
   executedAt?: boolean
   createdAt?: boolean
@@ -1614,12 +1664,13 @@ export type TradeSelectScalar = {
   execType?: boolean
   feeRate?: boolean
   funding?: boolean
+  openFee?: boolean
   openedAt?: boolean
   executedAt?: boolean
   createdAt?: boolean
 }
 
-export type TradeOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "seq" | "refId" | "userId" | "accountId" | "orderId" | "category" | "symbol" | "side" | "quantity" | "executedPrice" | "entryPrice" | "totalCost" | "commission" | "pnl" | "grossPnl" | "pnlPercent" | "execType" | "feeRate" | "funding" | "openedAt" | "executedAt" | "createdAt", ExtArgs["result"]["trade"]>
+export type TradeOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "seq" | "refId" | "userId" | "accountId" | "orderId" | "category" | "symbol" | "side" | "quantity" | "executedPrice" | "entryPrice" | "totalCost" | "commission" | "pnl" | "grossPnl" | "pnlPercent" | "execType" | "feeRate" | "funding" | "openFee" | "openedAt" | "executedAt" | "createdAt", ExtArgs["result"]["trade"]>
 export type TradeInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   account?: boolean | Prisma.AccountDefaultArgs<ExtArgs>
@@ -1664,6 +1715,7 @@ export type $TradePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     execType: string
     feeRate: runtime.Decimal | null
     funding: runtime.Decimal
+    openFee: runtime.Decimal
     openedAt: Date | null
     executedAt: Date
     createdAt: Date
@@ -2113,6 +2165,7 @@ export interface TradeFieldRefs {
   readonly execType: Prisma.FieldRef<"Trade", 'String'>
   readonly feeRate: Prisma.FieldRef<"Trade", 'Decimal'>
   readonly funding: Prisma.FieldRef<"Trade", 'Decimal'>
+  readonly openFee: Prisma.FieldRef<"Trade", 'Decimal'>
   readonly openedAt: Prisma.FieldRef<"Trade", 'DateTime'>
   readonly executedAt: Prisma.FieldRef<"Trade", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Trade", 'DateTime'>

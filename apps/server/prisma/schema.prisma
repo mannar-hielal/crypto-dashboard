@@ -368,6 +368,9 @@ model Trade {
   // A close's share of the position's funding (Closed P&L is net of it; realized PnL booked it at
   // each settlement)
   funding    Decimal  @default(0) @db.Decimal(20, 8)
+  // A close's share of the position's open fee (BP-5 D): Bybit's closedPnl = grossPnl − openFee −
+  // commission − funding. 0 on rows from before BP-5 (their open fee is only in realized PnL)
+  openFee    Decimal  @default(0) @db.Decimal(20, 8)
 
   // Metadata
   openedAt   DateTime?

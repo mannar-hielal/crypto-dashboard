@@ -235,6 +235,11 @@ export interface ClosedTrade {
   execType?: ExecType;
   /** The closed part's share of the position's funding (signed, + = paid) — Closed P&L nets it (BP-4) */
   funding?: Decimal;
+  /**
+   * The closed part's share of the open fee (BP-5 D) — with it the row holds every input of
+   * Bybit's closedPnl = PnL − open fee − close fee − funding. Absent on spot sells.
+   */
+  openFee?: Decimal;
 }
 
 /**

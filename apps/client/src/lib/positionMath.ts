@@ -13,7 +13,7 @@ import {
   riskTiersFor,
   tierIndexEstimate,
 } from '@crypto-dashboard/sdk';
-import type { Position } from '@/store/paperStore';
+import type { ClosedTrade, Position } from '@/store/paperStore';
 
 /** Unrealised PnL of a position at `price` (the mark price for Bybit parity). */
 export function positionPnl(
@@ -154,4 +154,24 @@ export function riskTierInfo(
 export function riskTierLabel(info: RiskTierInfo): string {
   const pct = Number((info.mmr * 100).toFixed(4));
   return `Risk-limit tier ${info.tierNo} (up to ${info.limit.toLocaleString('en-US')} USDT) · MMR ${pct}%`;
+}
+
+// ─── Closed P&L (BP-5 D) ───────────────────────────────────────────────────────
+
+const fmtUsd4 = (n: number) => `${n < 0 ? '-' : ''}$${Math.abs(n).toFixed(4)}`;
+
+/** Closed P&L as the server computed it; a pre-BP-5 server sent only the gross PnL and funding */
+export function closedPnlOf(t: ClosedTrade): number {
+  return t.closedPnl ?? t.pnl - (t.funding ?? 0);
+}
+
+/** "Open fee $1.3750 · Close fee $1.4025 · Funding $0.0000" */
+export function closedPnlBreakdown(t: ClosedTrade): string {
+  const part = (label: string, v: number | undefined) =>
+    `${label} ${v === undefined ? '—' : fmtUsd4(v)}`;
+  return [
+    part('Open fee', t.openFee),
+    part('Close fee', t.closeFee),
+    part('Funding', t.funding ?? 0),
+  ].join(' · ');
 }

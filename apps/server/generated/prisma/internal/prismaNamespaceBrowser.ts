@@ -295,6 +295,7 @@ export const TradeScalarFieldEnum = {
   execType: 'execType',
   feeRate: 'feeRate',
   funding: 'funding',
+  openFee: 'openFee',
   openedAt: 'openedAt',
   executedAt: 'executedAt',
   createdAt: 'createdAt'

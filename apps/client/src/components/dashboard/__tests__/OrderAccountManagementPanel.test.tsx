@@ -1044,3 +1044,66 @@ describe('BP-5 A — add / reduce margin from the Positions row', () => {
     expect(adjust).toHaveBeenCalledWith('p-margin', -300);
   });
 });
+
+describe('BP-5 D — Closed P&L tab', () => {
+  it('lists USDT Perpetual closes with Bybit closedPnl and the fee / funding breakdown on hover', () => {
+    usePaperStore.setState({
+      history: [
+        {
+          id: 't1',
+          category: 'linear',
+          symbol: 'BTCUSDT',
+          side: 'long',
+          quantity: 0.05,
+          entryPrice: 50_000,
+          exitPrice: 51_000,
+          pnl: 50,
+          openedAt: FIXTURE_NOW - 60_000,
+          closedAt: FIXTURE_NOW,
+          openFee: 1.375,
+          closeFee: 1.4025,
+          closedPnl: 47.2225,
+        },
+        {
+          id: 't2',
+          category: 'linear',
+          symbol: 'ETHUSDT',
+          side: 'short',
+          quantity: 1,
+          entryPrice: 3_000,
+          exitPrice: 3_300,
+          pnl: -300,
+          openedAt: FIXTURE_NOW - 120_000,
+          closedAt: FIXTURE_NOW - 60_000,
+          liquidated: true,
+          funding: 0.5,
+        },
+        {
+          id: 't3',
+          category: 'spot',
+          symbol: 'BTCUSDT',
+          side: 'long',
+          quantity: 0.01,
+          entryPrice: 50_000,
+          exitPrice: 51_000,
+          pnl: 10,
+          openedAt: FIXTURE_NOW - 60_000,
+          closedAt: FIXTURE_NOW,
+        },
+      ],
+    });
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: /Closed P&L/ }));
+    const rows = screen.getAllByTestId('closed-pnl-row');
+    expect(rows).toHaveLength(2); // the spot sell is not a closed position
+    const [btc, eth] = screen.getAllByTestId('closed-pnl-value');
+    expect(btc.textContent).toBe('+47.2225 USDT');
+    expect(btc.getAttribute('title')).toBe(
+      'Open fee $1.3750 · Close fee $1.4025 · Funding $0.0000'
+    );
+    // A pre-BP-5 row: gross − funding, fees unknown
+    expect(eth.textContent).toBe('-300.5000 USDT');
+    expect(eth.getAttribute('title')).toBe('Open fee — · Close fee — · Funding $0.5000');
+    expect(rows[1].textContent).toContain('Liquidation');
+  });
+});

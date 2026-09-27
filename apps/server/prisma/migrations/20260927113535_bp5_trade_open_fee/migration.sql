@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Trade" ADD COLUMN     "openFee" DECIMAL(20,8) NOT NULL DEFAULT 0;

@@ -349,6 +349,17 @@ export interface PaperTradeDTO {
   execType?: PaperExecType;
   /** The closed part's share of the position's funding (+ = paid); Closed P&L is net of it (BP-4) */
   funding?: string;
+  /*
+   * BP-5 D — Bybit's Closed P&L (optional: a pre-BP-5 server sends none). closedPnl = pnl −
+   * openFee − closeFee − funding. openFee is "0" on closes from before BP-5.
+   */
+  openFee?: string;
+  closeFee?: string;
+  closedPnl?: string;
+  /** Bybit v5 names (position/closed-pnl), for API parity */
+  avgEntryPrice?: string;
+  avgExitPrice?: string;
+  closedSize?: string;
 }
 
 /**

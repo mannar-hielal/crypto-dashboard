@@ -120,6 +120,7 @@ export interface TradeRow {
   commission: Dec;
   feeRate: Dec | null;
   funding: Dec;
+  openFee: Dec;
   openedAt: Date | null;
   executedAt: Date;
 }
@@ -278,7 +279,32 @@ export function historyOrderFromRow(r: OrderRow): PaperOrderDTO {
   };
 }
 
+/**
+ * Bybit's Closed P&L fields for a close (BP-5 D): closedPnl = gross − open fee − close fee −
+ * funding, plus the v5 names (avgEntryPrice / avgExitPrice / closedSize) for the parity test.
+ */
+function closedPnlFields(
+  gross: Decimal,
+  openFee: Decimal,
+  closeFee: Decimal,
+  funding: Decimal,
+  t: { entryPrice: string; exitPrice: string; quantity: string }
+) {
+  return {
+    openFee: openFee.toString(),
+    closeFee: closeFee.toString(),
+    closedPnl: gross.minus(openFee).minus(closeFee).minus(funding).toString(),
+    avgEntryPrice: t.entryPrice,
+    avgExitPrice: t.exitPrice,
+    closedSize: t.quantity,
+  };
+}
+
 export function tradeFromRow(r: TradeRow): PaperTradeDTO {
+  const entryPrice = (r.entryPrice ? d(r.entryPrice) : new Decimal(0)).toString();
+  const exitPrice = d(r.executedPrice).toString();
+  const quantity = d(r.quantity).toString();
+  const gross = d(r.grossPnl ?? r.pnl);
   return {
     id: r.refId ?? r.id,
     category: categoryOf(r.category),
@@ -288,11 +314,16 @@ export function tradeFromRow(r: TradeRow): PaperTradeDTO {
     quantity: d(r.quantity).toString(),
     entryPrice: (r.entryPrice ? d(r.entryPrice) : new Decimal(0)).toString(),
     exitPrice: d(r.executedPrice).toString(),
-    pnl: d(r.grossPnl ?? r.pnl).toString(),
+    pnl: gross.toString(),
     openedAt: r.openedAt?.getTime() ?? 0,
     closedAt: r.executedAt.getTime(),
     ...(r.execType === 'BustTrade' ? { execType: 'BustTrade' as const } : {}),
     ...(d(r.funding).eq(0) ? {} : { funding: d(r.funding).toString() }),
+    ...closedPnlFields(gross, d(r.openFee), d(r.commission), d(r.funding), {
+      entryPrice,
+      exitPrice,
+      quantity,
+    }),
   };
 }
 
@@ -442,6 +473,7 @@ export function tradeData(t: ClosedTrade) {
     executedAt: new Date(t.closedAt),
     execType: t.execType ?? 'Trade',
     funding,
+    openFee: t.openFee ?? new Decimal(0),
   };
 }
 
@@ -589,6 +621,13 @@ export function tradeDTO(t: ClosedTrade): PaperTradeDTO {
     closedAt: t.closedAt,
     ...(t.execType === 'BustTrade' ? { execType: 'BustTrade' as const } : {}),
     ...(t.funding && !t.funding.eq(0) ? { funding: s(t.funding) } : {}),
+    ...closedPnlFields(
+      t.pnl,
+      t.openFee ?? new Decimal(0),
+      t.exitCommission,
+      t.funding ?? new Decimal(0),
+      { entryPrice: s(t.entryPrice), exitPrice: s(t.exitPrice), quantity: s(t.quantity) }
+    ),
   };
 }
 

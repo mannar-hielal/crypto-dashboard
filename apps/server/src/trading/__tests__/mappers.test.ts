@@ -14,11 +14,22 @@ import {
   positionDTO,
   positionData,
   positionFromRow,
+  tradeDTO,
+  tradeData,
+  tradeFromRow,
   type OrderRow,
   type PositionRow,
+  type TradeRow,
 } from '../mappers.js';
 import { fallbackRiskTiers } from '../bybitSpec.js';
-import type { HistoricalOrder, PendingOrder, Position } from '../engine/index.js';
+import {
+  applyDelta,
+  placeMarket,
+  type AccountState,
+  type HistoricalOrder,
+  type PendingOrder,
+  type Position,
+} from '../engine/index.js';
 
 const D = (v: number | string) => new Decimal(v);
 
@@ -141,5 +152,62 @@ describe('mappers — BP-5 B order flags', () => {
     expect(dto).toMatchObject({ reduceOnly: true, status: 'cancelled' });
     expect(dto).not.toHaveProperty('closeOnTrigger');
     expect(dto).not.toHaveProperty('triggerBy');
+  });
+});
+
+describe('mappers — BP-5 D Closed P&L', () => {
+  it('a close carries its open-fee share, and closedPnl = PnL − open fee − close fee − funding', () => {
+    const ctx = { now: 1_800_000_000_000, newId: () => 'c1' };
+    const q = (p: number) => ({ last: D(p), bid: D(p), ask: D(p) });
+    const rules = { tickSize: D(0), qtyStep: D(0), minOrderQty: D(0), minNotional: D(0) };
+    let s: AccountState = {
+      balance: D(10_000),
+      realizedPnl: D(0),
+      leverage: 10,
+      symbolLeverage: { BTCUSDT: 10 },
+      symbolFundingAt: {},
+      spot: [],
+      positions: [],
+      pendingOrders: [],
+    };
+    s = applyDelta(
+      s,
+      placeMarket(
+        s,
+        { symbol: 'BTCUSDT', side: 'buy', size: { qty: D('0.1') } },
+        q(50_000),
+        rules,
+        ctx
+      ).delta
+    );
+    // Half closed: its open-fee share is half of 2.75
+    const half = placeMarket(
+      s,
+      { symbol: 'BTCUSDT', side: 'sell', size: { qty: D('0.05') } },
+      q(51_000),
+      rules,
+      { ...ctx, newId: () => 'c2' }
+    );
+    const [trade] = half.delta.trades;
+    expect(trade.openFee?.toString()).toBe('1.375');
+    const dto = tradeDTO(trade);
+    // gross 50, close fee 0.05 × 51,000 × 0.055% = 1.4025
+    expect(dto).toMatchObject({
+      pnl: '50',
+      openFee: '1.375',
+      closeFee: '1.4025',
+      closedPnl: '47.2225',
+      avgEntryPrice: '50000',
+      avgExitPrice: '51000',
+      closedSize: '0.05',
+    });
+    // The DB row round-trips to the same figures
+    const row = {
+      ...tradeData(trade),
+      id: 'db-t',
+      refId: trade.id,
+      feeRate: null,
+    } as unknown as TradeRow;
+    expect(tradeFromRow(row)).toMatchObject({ openFee: '1.375', closedPnl: '47.2225' });
   });
 });

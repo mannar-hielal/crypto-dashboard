@@ -38,6 +38,7 @@ import { AdjustMarginDialog } from './AdjustMarginDialog';
 import { winRateFrom } from '@/lib/funding';
 import { loadColPrefs, saveColPrefs } from '@/lib/columnPrefs';
 import { AssetsTable } from './AssetsTable';
+import { ClosedPnlTable } from './ClosedPnlTable';
 import type { JournalEntry, HistoricalOrder, PendingOrder } from '@/store/paperStore';
 import type { PanelSize } from '@/pages/DashboardPage';
 import { bg, color, fontSize } from '@/lib/tokens';
@@ -51,7 +52,14 @@ const fmtQty = (n: number) => parseFloat(n.toFixed(6)).toString();
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 /** 'assets' is the Spot counterpart of 'positions' (BP-2) — which one shows follows the market */
-type InfoTab = 'positions' | 'assets' | 'orders' | 'orderhistory' | 'balancehistory' | 'journal';
+type InfoTab =
+  | 'positions'
+  | 'assets'
+  | 'closedpnl'
+  | 'orders'
+  | 'orderhistory'
+  | 'balancehistory'
+  | 'journal';
 type ColTab = 'positions' | 'orders' | 'orderhistory' | 'balancehistory';
 type OrderSubTab = 'all' | 'working' | 'inactive' | 'filled' | 'cancelled' | 'rejected';
 type OrderHistorySubTab = 'all' | 'filled' | 'cancelled' | 'rejected';
@@ -346,7 +354,10 @@ export function OrderAccountManagementPanel({
       ? 'assets'
       : market === 'linear' && chosenTab === 'assets'
         ? 'positions'
-        : chosenTab;
+        : // Closed P&L is USDT Perpetual only (BP-5 D)
+          market === 'spot' && chosenTab === 'closedpnl'
+          ? 'assets'
+          : chosenTab;
   const [orderSubTab, setOrderSubTab] = useState<OrderSubTab>('all');
   const [orderHistorySubTab, setOrderHistorySubTab] = useState<OrderHistorySubTab>('all');
   const [showSettings, setShowSettings] = useState(false);
@@ -915,7 +926,9 @@ export function OrderAccountManagementPanel({
             >
               {(
                 [
-                  market === 'spot' ? 'assets' : 'positions',
+                  ...(market === 'spot'
+                    ? (['assets'] as const)
+                    : (['positions', 'closedpnl'] as const)),
                   'orders',
                   'orderhistory',
                   'balancehistory',
@@ -942,7 +955,9 @@ export function OrderAccountManagementPanel({
                     ? 'Order History'
                     : tab === 'balancehistory'
                       ? 'Balance History'
-                      : tab}
+                      : tab === 'closedpnl'
+                        ? 'Closed P&L'
+                        : tab}
                   {tab === 'assets' && spotBalances.some((h) => h.free + h.locked > 0) && (
                     <span
                       className="rounded-full px-1.5 py-px font-bold text-white"
@@ -995,7 +1010,7 @@ export function OrderAccountManagementPanel({
               ))}
 
               {/* ── Column picker button — only for data tabs ─────────────── */}
-              {infoTab !== 'journal' && infoTab !== 'assets' && (
+              {infoTab !== 'journal' && infoTab !== 'assets' && infoTab !== 'closedpnl' && (
                 <div className="relative ml-auto pr-2" ref={pickerRef}>
                   <motion.button
                     onClick={() => setColPickerOpen((o) => !o)}
@@ -2394,6 +2409,9 @@ export function OrderAccountManagementPanel({
                         </table>
                       </div>
                     ))}
+
+                  {/* ════ Closed P&L (BP-5 D) ═══════════════════════════════ */}
+                  {infoTab === 'closedpnl' && <ClosedPnlTable />}
 
                   {/* ════ Journal ════════════════════════════════════════════ */}
                   {infoTab === 'journal' && (

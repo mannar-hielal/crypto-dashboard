@@ -126,6 +126,13 @@ export interface ClosedTrade {
   liquidated?: boolean;
   /** The closed part's share of the position's funding (+ = paid) — Closed P&L nets it (BP-4) */
   funding?: number;
+  /**
+   * BP-5 D (absent from a pre-BP-5 server): the open-fee share, the close fee and Bybit's
+   * closedPnl = pnl − openFee − closeFee − funding
+   */
+  openFee?: number;
+  closeFee?: number;
+  closedPnl?: number;
 }
 
 /** One funding settlement on one position (Bybit execType Funding, BP-4). */
@@ -369,6 +376,9 @@ function tradeFrom(t: PaperStateDTO['trades'][number]): ClosedTrade {
     closedAt: t.closedAt,
     ...(t.execType === 'BustTrade' ? { liquidated: true } : {}),
     ...(t.funding !== undefined ? { funding: toNum(t.funding) } : {}),
+    ...(t.openFee !== undefined ? { openFee: toNum(t.openFee) } : {}),
+    ...(t.closeFee !== undefined ? { closeFee: toNum(t.closeFee) } : {}),
+    ...(t.closedPnl !== undefined ? { closedPnl: toNum(t.closedPnl) } : {}),
   };
 }
 
