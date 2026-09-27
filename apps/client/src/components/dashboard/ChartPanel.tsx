@@ -31,6 +31,8 @@ import {
 import { runPaneDataPush } from '@/lib/chartSync';
 import { toHeikinAshi } from '@/lib/heikinAshi';
 import { IndicatorWidgets } from '@/components/indicators/IndicatorWidgets';
+import { useTradeLines } from '@/hooks/useTradeLines';
+import { TradeLineAmend } from './TradeLineAmend';
 
 const CHART_BG = chartColors.bg;
 
@@ -618,6 +620,15 @@ export function ChartPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // create once
 
+  // ── Position / order lines (BP-3) — after the chart exists (effect order) ──
+  const { amend, confirmAmend, cancelAmend } = useTradeLines({
+    paneIndex,
+    chartRef,
+    candleRef,
+    containerRef,
+    toolActive: !!activeToolType,
+  });
+
   // ── Re-persist on symbol change ──────────────────────────────────────────
   useEffect(() => {
     const manager = managerRef.current;
@@ -1032,6 +1043,15 @@ export function ChartPanel({
   return (
     <div className="relative h-full w-full" style={{ background: CHART_BG }}>
       <div ref={containerRef} className="h-full w-full" />
+
+      {/* ── Confirm a dragged TP / SL / order line (BP-3) ─────────────── */}
+      {amend && (
+        <TradeLineAmend
+          amend={amend}
+          onConfirm={() => void confirmAmend()}
+          onCancel={cancelAmend}
+        />
+      )}
 
       {/* ── Zoom-in selection overlay ─────────────────────────────────── */}
       {activeToolType === 'zoom-in' && (

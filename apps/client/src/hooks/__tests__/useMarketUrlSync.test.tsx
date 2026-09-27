@@ -129,6 +129,12 @@ describe('D7 — the one-time move to USDT Perpetual', () => {
     marginMode: 'isolated' as const,
     entryFee: '0',
     closeFeeReserve: '0',
+    extraMargin: '0',
+    liqPrice: '0',
+    bustPrice: '0',
+    positionIM: '10',
+    positionMM: '0',
+    mmr: '0.0033',
     openedAt,
   });
 

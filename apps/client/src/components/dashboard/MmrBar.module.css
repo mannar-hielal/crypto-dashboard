@@ -1,0 +1,20 @@
+.meter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.segments {
+  display: inline-flex;
+  gap: 1px;
+}
+
+.segment {
+  width: 0.25rem;
+  height: 0.5rem;
+  border-radius: 1px;
+}
+
+.value {
+  font-variant-numeric: tabular-nums;
+}

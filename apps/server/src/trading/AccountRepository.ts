@@ -37,7 +37,9 @@ import {
   spotFromRow,
   tradeData,
   tradeFromRow,
+  type RiskTiersFor,
 } from './mappers.js';
+import { fallbackRiskTiers } from './bybitSpec.js';
 
 /** Symbols whose leverage setting differs between two maps. */
 function changedLeverage(
@@ -104,7 +106,11 @@ const byPublicId = (userId: string, ids: string[]) => ({
 });
 
 export class AccountRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    /** Risk-limit tiers for the positions' liquidation figures in the snapshot (BP-3) */
+    private readonly riskTiers: RiskTiersFor = fallbackRiskTiers
+  ) {}
 
   /** The account's engine state (creates the account on first use, as GET /account always did). */
   async load(userId: string, tx: Tx | PrismaClient = this.prisma): Promise<LoadedAccount> {
@@ -319,7 +325,7 @@ export class AccountRepository {
         symbolLeverage: state.symbolLeverage,
         version,
       },
-      positions: state.positions.map(positionDTO),
+      positions: state.positions.map((p) => positionDTO(p, this.riskTiers(p.symbol))),
       spotBalances: state.spot.map(spotDTO),
       pendingOrders: state.pendingOrders.map(pendingDTO),
       orders: orders.map(historyOrderFromRow),
@@ -329,13 +335,13 @@ export class AccountRepository {
     };
   }
 
-  /** Every open trigger (TP/SL positions and pending orders), grouped by user — engine boot. */
+  /**
+   * Every open trigger, grouped by user — engine boot. Every open position is one: besides its
+   * TP / SL, any USDT Perpetual position can be liquidated (BP-3). Plus every pending order.
+   */
   async loadOpenTriggers(): Promise<Map<string, AccountState>> {
     const [positions, pending] = await Promise.all([
-      this.prisma.position.findMany({
-        where: { OR: [{ takeProfit: { not: null } }, { stopLoss: { not: null } }] },
-        orderBy: [{ openedAt: 'asc' }, { id: 'asc' }],
-      }),
+      this.prisma.position.findMany({ orderBy: [{ openedAt: 'asc' }, { id: 'asc' }] }),
       this.prisma.order.findMany({ where: { status: 'PENDING' }, orderBy: { seq: 'asc' } }),
     ]);
     const byUser = new Map<string, AccountState>();

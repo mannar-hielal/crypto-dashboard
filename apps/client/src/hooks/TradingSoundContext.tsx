@@ -19,6 +19,7 @@ export function TradingSoundProvider({ children }: { children: ReactNode }) {
     playOrderFilled,
     playProfit,
     playLoss,
+    playLiquidation,
   } = useTradingSound();
 
   const settings = useMemo(() => ({ volume, muted }), [volume, muted]);
@@ -31,8 +32,18 @@ export function TradingSoundProvider({ children }: { children: ReactNode }) {
       playOrderFilled,
       playProfit,
       playLoss,
+      playLiquidation,
     }),
-    [setVolume, toggleMute, playOrderPlaced, playOrderQueued, playOrderFilled, playProfit, playLoss]
+    [
+      setVolume,
+      toggleMute,
+      playOrderPlaced,
+      playOrderQueued,
+      playOrderFilled,
+      playProfit,
+      playLoss,
+      playLiquidation,
+    ]
   );
 
   return (

@@ -10,6 +10,7 @@ const PREVIEWS = [
   { label: 'Order filled', fn: 'playOrderFilled', color: color.purple } as const,
   { label: 'Closed with profit', fn: 'playProfit', color: color.green } as const,
   { label: 'Closed with loss', fn: 'playLoss', color: color.red } as const,
+  { label: 'Position liquidated', fn: 'playLiquidation', color: color.red } as const,
 ] as const;
 
 export function SoundSettings() {

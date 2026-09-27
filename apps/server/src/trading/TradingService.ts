@@ -1,5 +1,5 @@
 /**
- * Executes paper-trading intents for a user (BYBIT_PARITY_PLAN BP-1, BP-2).
+ * Executes paper-trading intents for a user (BYBIT_PARITY_PLAN BP-1, BP-2, BP-3).
  *
  * The browser sends intent only (market, symbol, side, size, trigger price, TP/SL). The server
  * picks the fill price from its own live quote (ask / bid of that market), applies Bybit's
@@ -19,6 +19,7 @@ import {
 } from './AccountRepository.js';
 import { PaperEventBus } from './PaperEventBus.js';
 import { deltaDTO } from './mappers.js';
+import type { RiskTier } from './bybitSpec.js';
 import {
   addNote,
   applyDelta,
@@ -32,6 +33,7 @@ import {
   editPending,
   editSpotLimit,
   executeTrigger,
+  isLiquidatable,
   placeMarket,
   placePending,
   placeSpotExits,
@@ -78,10 +80,12 @@ export interface TimedQuote extends Quote {
   seenAt: number;
 }
 
-/** Live quotes and instrument rules per market (the server's own Bybit feed and cache). */
+/** Live quotes, instrument rules and risk-limit tiers per market (the server's Bybit feed and cache). */
 export interface MarketSource {
   quote(category: Category, symbol: string): TimedQuote | undefined;
   rules(category: Category, symbol: string): InstrumentRules;
+  /** USDT Perpetual risk-limit tiers, lowest first (BP-3) */
+  riskTiers(symbol: string): RiskTier[];
 }
 
 export interface Executed<R> {
@@ -101,13 +105,6 @@ export interface PlaceOrderIntent {
   stopLoss?: Decimal;
 }
 
-function engineContext(): EngineContext {
-  const now = Date.now();
-  // `${now}-${random}` like the browser engine's ids, with more entropy: ids are primary keys
-  // shared by every account.
-  return { now, newId: () => `${now}-${randomBytes(6).toString('base64url')}` };
-}
-
 export class TradingService {
   /** Per-user promise chain — one mutation at a time per account on this machine. */
   private readonly queues = new Map<string, Promise<unknown>>();
@@ -118,6 +115,17 @@ export class TradingService {
     private readonly events: PaperEventBus,
     private readonly now: () => number = Date.now
   ) {}
+
+  private engineContext(): EngineContext {
+    const now = Date.now();
+    // `${now}-${random}` like the browser engine's ids, with more entropy: ids are primary keys
+    // shared by every account.
+    return {
+      now,
+      newId: () => `${now}-${randomBytes(6).toString('base64url')}`,
+      riskTiers: (symbol) => this.market.riskTiers(symbol),
+    };
+  }
 
   private withUserQueue<T>(userId: string, fn: () => Promise<T>): Promise<T> {
     const previous = this.queues.get(userId) ?? Promise.resolve();
@@ -143,12 +151,14 @@ export class TradingService {
       for (let attempt = 1; ; attempt++) {
         try {
           const outcome = await this.repo.mutate(userId, (loaded) =>
-            decide(loaded.state, engineContext())
+            decide(loaded.state, this.engineContext())
           );
           if (!outcome) return null;
           // Refused by Bybit's rules before anything changed (nothing was written)
           if (outcome.invalid) throw new TradingError(422, outcome.invalid);
-          const dto = deltaDTO(outcome.delta, outcome.version);
+          const dto = deltaDTO(outcome.delta, outcome.version, (symbol) =>
+            this.market.riskTiers(symbol)
+          );
           if (!outcome.changed) return { result: outcome.result, delta: dto }; // no-op: nothing to push
           this.events.publish({
             userId,
@@ -188,6 +198,12 @@ export class TradingService {
     if (!q || q.bid.lte(0) || q.ask.lte(0) || q.last.lte(0)) return undefined;
     if (this.now() - q.seenAt > MAX_QUOTE_AGE_MS) return undefined;
     return q;
+  }
+
+  /** The fresh USDT Perpetual mark price, else undefined (never liquidate on a stale mark). */
+  private currentMark(symbol: string): Decimal | undefined {
+    const mark = this.currentQuote('linear', symbol)?.mark;
+    return mark && mark.gt(0) ? mark : undefined;
   }
 
   /** 🔐 The quote a fill uses — the client never supplies a price (F11). */
@@ -329,8 +345,11 @@ export class TradingService {
     });
   }
 
+  /** Per-symbol leverage; an open position / active orders are re-margined (BP-3). */
   setSymbolLeverage(userId: string, symbol: string, leverage: number): Promise<Executed<number>> {
-    return this.act(userId, (state) => setSymbolLeverage(state, symbol, leverage));
+    return this.act(userId, (state, ctx) =>
+      setSymbolLeverage(state, symbol, leverage, ctx, this.currentMark(symbol))
+    );
   }
 
   /** Default leverage (pre-BP-2 clients' account-wide leverage). */
@@ -351,14 +370,22 @@ export class TradingService {
   }
 
   /**
-   * Execute an engine trigger (TP/SL hit or pending fill). It is re-checked against the account's
-   * current state first — an edit, cancel or earlier trigger may have made it stale — and
-   * dropped if no longer valid. A stop / TP / SL fills at the live ask / bid when there is a fresh
-   * quote, otherwise at the level it triggered on.
+   * Execute an engine trigger (liquidation, TP/SL hit or pending fill). It is re-checked against
+   * the account's current state first — an edit, cancel or earlier trigger may have made it
+   * stale — and dropped if no longer valid. A stop / TP / SL fills at the live ask / bid when there
+   * is a fresh quote, otherwise at the level it triggered on. A live liquidation is re-checked on
+   * the current, fresh mark price (a backfilled one on the mark candle that triggered it).
    */
   runTrigger(userId: string, trigger: Trigger): Promise<Executed<unknown> | null> {
     return this.run(userId, (state, ctx) => {
       let market: { category: Category; symbol: string };
+      if (trigger.kind === 'liquidation') {
+        const pos = state.positions.find((p) => p.id === trigger.positionId);
+        if (!pos) return null;
+        const mark = trigger.fillAt ? trigger.price : this.currentMark(pos.symbol);
+        if (!mark || !isLiquidatable(pos, mark, this.market.riskTiers(pos.symbol))) return null;
+        return executeTrigger(state, { ...trigger, price: mark }, undefined, ctx);
+      }
       if (trigger.kind === 'exit') {
         const pos = state.positions.find((p) => p.id === trigger.positionId);
         const expected = trigger.leg === 'take-profit' ? 'TP' : 'SL';

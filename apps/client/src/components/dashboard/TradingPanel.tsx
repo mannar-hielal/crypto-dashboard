@@ -12,6 +12,9 @@ import { useInstrument } from '@/hooks/useInstruments';
 import { useOrderPrefillStore } from '@/store/orderPrefillStore';
 import { bg, color, fontSize } from '@/lib/tokens';
 import { LeverageChip } from './LeverageChip';
+import { LiquidationNotices } from './LiquidationNotices';
+import { LIQUIDATION_EXPLAINER } from '@/lib/positionMath';
+import { fmtMktPrice } from '@/lib/utils';
 import { Toggle } from '@/components/ui/Toggle';
 import { NumericInput } from '@/components/ui/NumericInput';
 import { FieldLabel } from '@/components/ui/FieldLabel';
@@ -117,8 +120,14 @@ export function TradingPanel({
     (s) => s.spotBalances.find((h) => h.coin === baseAsset)?.free ?? 0
   );
   const placeOrder = usePaperStore((s) => s.placeOrder);
+  // The symbol's open position (one-way mode) — the liquidation estimate includes it (BP-3)
+  const openPosition = usePaperStore((s) =>
+    isSpot ? undefined : s.positions.find((p) => p.symbol === symbol)
+  );
   // Guards against a second submit while an order request is in flight
   const submittingRef = useRef(false);
+  /** An order request is in flight — the submit button reads "Placing…" */
+  const [placing, setPlacing] = useState(false);
 
   // ── Local state ───────────────────────────────────────────────────────────
   // Assets → Sell: a prefill request meant for this market and symbol, taken at mount (the form
@@ -285,7 +294,16 @@ export function TradingPanel({
   /** Estimated value, margin, fees and cost of the lot-rounded order (lib/orderMath) */
   const preview =
     units !== null && execPrice
-      ? orderPreview({ category, side, qty: units, price: execPrice, leverage, baseAsset })
+      ? orderPreview({
+          category,
+          side,
+          qty: units,
+          price: execPrice,
+          leverage,
+          baseAsset,
+          symbol,
+          existing: openPosition,
+        })
       : null;
   /** What this order can use: USDT, or — for a spot sell — the free coins */
   const spotSell = isSpot && side === 'sell';
@@ -518,6 +536,7 @@ export function TradingPanel({
     if (!v || !execPrice) return;
 
     submittingRef.current = true;
+    setPlacing(true);
     let result: PlaceResult;
     try {
       result = await placeOrder({
@@ -532,6 +551,7 @@ export function TradingPanel({
       });
     } finally {
       submittingRef.current = false;
+      setPlacing(false);
     }
 
     if (!result.id) {
@@ -615,6 +635,9 @@ export function TradingPanel({
         })}
         {!isSpot && <LeverageChip symbol={symbol} />}
       </div>
+
+      {/* ── Liquidation notices (USDT Perpetual, BP-3) ───────────────────── */}
+      {!isSpot && <LiquidationNotices />}
 
       {/* ── Sell / Buy side selector ─────────────────────────────────── */}
       <div className="relative flex shrink-0 border-b border-white/5">
@@ -1053,6 +1076,13 @@ export function TradingPanel({
                   value: preview?.margin !== undefined ? `$${preview.margin.toFixed(2)}` : '—',
                 },
                 {
+                  label: 'Est. liq. price',
+                  // 0 = a 1× long, which can't be liquidated
+                  value: preview?.liqPrice ? `$${fmtMktPrice(preview.liqPrice)}` : '—',
+                  tone: color.amber,
+                  info: LIQUIDATION_EXPLAINER,
+                },
+                {
                   label: 'Est. open fee',
                   value: preview?.openFee !== undefined ? `$${preview.openFee.toFixed(4)}` : '—',
                 },
@@ -1061,14 +1091,25 @@ export function TradingPanel({
                   value: preview?.closeFee !== undefined ? `$${preview.closeFee.toFixed(4)}` : '—',
                 },
               ]
-          ).map(({ label, value }) => (
-            <div key={label} className="flex items-center justify-between py-0.5">
-              <span style={{ fontSize: fontSize.xs10, color: color.muted }}>{label}</span>
+          ).map((row: { label: string; value: string; tone?: string; info?: string }) => (
+            <div key={row.label} className="flex items-center justify-between py-0.5">
+              <span
+                className="flex items-center gap-1"
+                style={{ fontSize: fontSize.xs10, color: color.muted }}
+              >
+                {row.label}
+                {row.info && (
+                  <span title={row.info}>
+                    <Info className="h-3 w-3 opacity-60" />
+                  </span>
+                )}
+              </span>
               <span
                 className="tabular-nums"
-                style={{ fontSize: fontSize.xs10, color: color.white }}
+                style={{ fontSize: fontSize.xs10, color: row.tone ?? color.white }}
+                data-testid={row.info ? 'order-est-liq-price' : undefined}
               >
-                {value}
+                {row.value}
               </span>
             </div>
           ))}
@@ -1257,6 +1298,7 @@ export function TradingPanel({
           animate={executeAnim}
           aria-label={`Execute ${isBuy ? 'buy' : 'sell'} ${tab} order`}
           disabled={
+            placing ||
             !latestPrice ||
             !qtyInput ||
             parseFloat(qtyInput) <= 0 ||
@@ -1271,7 +1313,13 @@ export function TradingPanel({
           }}
         >
           <span className="text-sm font-bold" style={{ color: isBuy ? bg.page : color.white }}>
-            {bypassWarning && immediateWarning ? 'Place anyway' : isBuy ? 'Buy' : 'Sell'}
+            {placing
+              ? 'Placing…'
+              : bypassWarning && immediateWarning
+                ? 'Place anyway'
+                : isBuy
+                  ? 'Buy'
+                  : 'Sell'}
           </span>
           <span
             className="font-semibold opacity-80"

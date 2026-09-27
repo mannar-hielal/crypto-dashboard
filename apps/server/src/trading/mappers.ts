@@ -7,6 +7,10 @@
  * BP-2: fees are stored where they were charged (Position.entryFee, Order.reserved, the fill's
  * feeRate). The migration backfilled pre-BP-2 rows with the 0.07% they paid; a row an old server
  * writes during a rolling deploy has none, so it is read at that same legacy rate.
+ *
+ * BP-3: a position's liquidation / bankruptcy price, IM and MM are derived from it and the symbol's
+ * risk-limit tiers when it is sent (bybitSpec.positionRisk) — never stored, so a tier change or
+ * a re-margin can't leave a stale liquidation price behind.
  */
 
 import { Decimal } from '@prisma/client/runtime/client';
@@ -33,7 +37,11 @@ import type {
   SpotHolding,
   Category,
 } from './engine/index.js';
-import { LEGACY_FEE_RATE } from './bybitSpec.js';
+import { fallbackRiskTiers, LEGACY_FEE_RATE, type RiskTier } from './bybitSpec.js';
+import { riskOf } from './engine/margin.js';
+
+/** Risk-limit tiers of a USDT Perpetual symbol. */
+export type RiskTiersFor = (symbol: string) => RiskTier[];
 
 // ─── Row shapes (the Prisma model fields the mappers read) ────────────────────
 
@@ -50,6 +58,7 @@ export interface PositionRow {
   leverage: number;
   entryFee: Dec;
   closeFeeReserve: Dec;
+  extraMargin: Dec;
   takeProfit: Dec | null;
   stopLoss: Dec | null;
   openedAt: Date;
@@ -76,6 +85,7 @@ export interface OrderRow {
   feeAsset: string | null;
   isMaker: boolean | null;
   ocoGroup: string | null;
+  createType: string | null;
   status: string;
   rejectionReason: string | null;
   createdAt: Date;
@@ -95,6 +105,7 @@ export interface TradeRow {
   entryPrice: Dec | null;
   pnl: Dec;
   grossPnl: Dec | null;
+  execType: string;
   openedAt: Date | null;
   executedAt: Date;
 }
@@ -163,6 +174,7 @@ export function positionFromRow(r: PositionRow): Position {
     // Every BP-2 open charges a fee, so 0 means an old-server row: it paid the legacy 0.07%
     entryFee: entryFee.gt(0) ? entryFee : margin.times(LEGACY),
     closeFeeReserve: d(r.closeFeeReserve),
+    ...(d(r.extraMargin).gt(0) ? { extraMargin: d(r.extraMargin) } : {}),
     openedAt: r.openedAt.getTime(),
     ...(tp ? { takeProfit: tp } : {}),
     ...(sl ? { stopLoss: sl } : {}),
@@ -230,6 +242,7 @@ export function historyOrderFromRow(r: OrderRow): PaperOrderDTO {
     placingTime: r.createdAt.getTime(),
     closingTime: closing.getTime(),
     ...(r.rejectionReason ? { rejectionReason: r.rejectionReason } : {}),
+    ...(r.createType === 'CreateByLiq' ? { createType: 'CreateByLiq' as const } : {}),
   };
 }
 
@@ -246,6 +259,7 @@ export function tradeFromRow(r: TradeRow): PaperTradeDTO {
     pnl: d(r.grossPnl ?? r.pnl).toString(),
     openedAt: r.openedAt?.getTime() ?? 0,
     closedAt: r.executedAt.getTime(),
+    ...(r.execType === 'BustTrade' ? { execType: 'BustTrade' as const } : {}),
   };
 }
 
@@ -285,6 +299,7 @@ export function positionData(p: Position) {
     leverage: p.leverage,
     entryFee: p.entryFee,
     closeFeeReserve: p.closeFeeReserve,
+    extraMargin: p.extraMargin ?? new Decimal(0),
     takeProfit: p.takeProfit ?? null,
     stopLoss: p.stopLoss ?? null,
     openedAt: new Date(p.openedAt),
@@ -335,6 +350,7 @@ export function historyOrderData(o: HistoricalOrder) {
     leverage: o.leverage ?? 1,
     status: o.status.toUpperCase(),
     rejectionReason: o.rejectionReason ?? null,
+    createType: o.createType ?? null,
     createdAt: new Date(o.placingTime),
     filledAt: o.status === 'filled' ? closedAt : null,
     cancelledAt: o.status === 'filled' ? null : closedAt,
@@ -364,6 +380,7 @@ export function tradeData(t: ClosedTrade) {
     ).toDecimalPlaces(4),
     openedAt: new Date(t.openedAt),
     executedAt: new Date(t.closedAt),
+    execType: t.execType ?? 'Trade',
   };
 }
 
@@ -390,7 +407,8 @@ export function balanceEventData(b: BalanceEvent) {
 
 const s = (v: Decimal) => v.toString();
 
-export function positionDTO(p: Position): PaperPositionDTO {
+export function positionDTO(p: Position, tiers: RiskTier[]): PaperPositionDTO {
+  const risk = riskOf(p, tiers);
   return {
     id: p.id,
     category: p.category,
@@ -403,6 +421,12 @@ export function positionDTO(p: Position): PaperPositionDTO {
     marginMode: 'isolated',
     entryFee: s(p.entryFee),
     closeFeeReserve: s(p.closeFeeReserve),
+    extraMargin: s(p.extraMargin ?? new Decimal(0)),
+    liqPrice: s(risk.liqPrice.toDecimalPlaces(8)),
+    bustPrice: s(risk.bustPrice.toDecimalPlaces(8)),
+    positionIM: s(risk.positionIM.toDecimalPlaces(8)),
+    positionMM: s(risk.positionMM.toDecimalPlaces(8)),
+    mmr: s(risk.mmr),
     openedAt: p.openedAt,
     ...(p.takeProfit ? { takeProfit: s(p.takeProfit) } : {}),
     ...(p.stopLoss ? { stopLoss: s(p.stopLoss) } : {}),
@@ -453,6 +477,7 @@ export function orderDTO(o: HistoricalOrder): PaperOrderDTO {
     placingTime: o.placingTime,
     closingTime: o.closingTime,
     ...(o.rejectionReason ? { rejectionReason: o.rejectionReason } : {}),
+    ...(o.createType ? { createType: o.createType } : {}),
   };
 }
 
@@ -468,6 +493,7 @@ export function tradeDTO(t: ClosedTrade): PaperTradeDTO {
     pnl: s(t.pnl),
     openedAt: t.openedAt,
     closedAt: t.closedAt,
+    ...(t.execType === 'BustTrade' ? { execType: 'BustTrade' as const } : {}),
   };
 }
 
@@ -492,7 +518,11 @@ export function balanceEventDTO(b: BalanceEvent): PaperBalanceEventDTO {
   };
 }
 
-export function deltaDTO(delta: Delta, version: number): PaperDeltaDTO {
+export function deltaDTO(
+  delta: Delta,
+  version: number,
+  riskTiers: RiskTiersFor = fallbackRiskTiers
+): PaperDeltaDTO {
   return {
     account: {
       balance: s(delta.account.balance),
@@ -501,7 +531,7 @@ export function deltaDTO(delta: Delta, version: number): PaperDeltaDTO {
       symbolLeverage: delta.account.symbolLeverage,
       version,
     },
-    positionsUpsert: delta.positionsUpsert.map(positionDTO),
+    positionsUpsert: delta.positionsUpsert.map((p) => positionDTO(p, riskTiers(p.symbol))),
     positionsRemove: delta.positionsRemove,
     spotUpsert: delta.spotUpsert.map(spotDTO),
     pendingUpsert: delta.pendingUpsert.map(pendingDTO),

@@ -36,7 +36,7 @@ import {
   type PaperStateDTO,
 } from '@crypto-dashboard/sdk';
 import { useAuthStore } from './authStore';
-import { setLastKnownPrice } from './paneStore';
+import { setLastKnownMarkPrice, setLastKnownPrice } from './paneStore';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -56,7 +56,10 @@ const LEGACY_STORAGE_KEY = 'cd-paper-trading';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-/** A USDT Perpetual position (spot holds coin balances instead). */
+/**
+ * A USDT Perpetual position (spot holds coin balances instead) — one per symbol (one-way mode).
+ * The margin figures are the server's, from Bybit's isolated-margin maths (BP-3).
+ */
 export interface Position {
   id: string;
   category: 'linear';
@@ -70,6 +73,19 @@ export interface Position {
   entryFee: number;
   /** Estimated close fee held with the margin (position margin = entryUsdtAmount + this) */
   closeFeeReserve: number;
+  /** Margin added on top of IM (0 until add / remove margin exists) */
+  extraMargin: number;
+  /**
+   * Mark price at or past which it is liquidated; 0 = can't be liquidated (a 1× long); null =
+   * unknown (a pre-BP-3 server sent none — never shown as "safe")
+   */
+  liqPrice: number | null;
+  /** Price it closes at when liquidated — the whole position margin is lost there; null = unknown */
+  bustPrice: number | null;
+  /** Bybit positionIM: initial margin + fee to close */
+  positionIM: number;
+  /** Bybit positionMM: maintenance margin (liquidation when equity falls to it); null = unknown */
+  positionMM: number | null;
   openedAt: number; // Unix ms
   takeProfit?: number;
   stopLoss?: number;
@@ -97,6 +113,8 @@ export interface ClosedTrade {
   pnl: number; // gross realized PnL in USDT (negative = loss)
   openedAt: number;
   closedAt: number;
+  /** True when it was closed by liquidation at the bankruptcy price (Bybit BustTrade) */
+  liquidated?: boolean;
 }
 
 export type OrderStatus = 'filled' | 'cancelled' | 'rejected';
@@ -149,6 +167,8 @@ export interface HistoricalOrder {
   closingTime: number;
   /** Why the order was rejected (only set when status === 'rejected') */
   rejectionReason?: string;
+  /** The system order that closed a liquidated position (Bybit createType CreateByLiq) */
+  liquidation?: boolean;
 }
 
 export interface BalanceEvent {
@@ -201,6 +221,8 @@ export interface OrderRequest {
 
 const toNum = (v: string) => Number(v);
 const optNum = (v: string | undefined) => (v === undefined ? undefined : Number(v));
+/** A BP-3 risk figure — optional on the DTO: a pre-BP-3 server sends none (unknown, not 0) */
+const optRisk = (v: string | undefined): number | null => (v === undefined ? null : Number(v));
 
 function positionFrom(p: PaperPositionDTO): Position {
   return {
@@ -214,6 +236,17 @@ function positionFrom(p: PaperPositionDTO): Position {
     leverage: p.leverage,
     entryFee: toNum(p.entryFee),
     closeFeeReserve: toNum(p.closeFeeReserve),
+    extraMargin: toNum(p.extraMargin ?? '0'),
+    // A pre-BP-3 server (rolling deploy) sends no risk figures: they stay unknown (null), never
+    // "0", which would read as "can't be liquidated" / "no maintenance margin" — falsely safe
+    liqPrice: optRisk(p.liqPrice),
+    bustPrice: optRisk(p.bustPrice),
+    // positionIM = IM + fee to close (server formula), so it can be rebuilt from the stored parts
+    positionIM:
+      p.positionIM !== undefined
+        ? toNum(p.positionIM)
+        : toNum(p.entryUsdtAmount) + toNum(p.closeFeeReserve),
+    positionMM: optRisk(p.positionMM),
     openedAt: p.openedAt,
     ...(p.takeProfit !== undefined ? { takeProfit: toNum(p.takeProfit) } : {}),
     ...(p.stopLoss !== undefined ? { stopLoss: toNum(p.stopLoss) } : {}),
@@ -269,6 +302,7 @@ function orderFrom(o: PaperOrderDTO): HistoricalOrder {
     placingTime: o.placingTime,
     closingTime: o.closingTime,
     ...(o.rejectionReason ? { rejectionReason: o.rejectionReason } : {}),
+    ...(o.createType === 'CreateByLiq' ? { liquidation: true } : {}),
   };
 }
 
@@ -284,6 +318,7 @@ function tradeFrom(t: PaperStateDTO['trades'][number]): ClosedTrade {
     pnl: toNum(t.pnl),
     openedAt: t.openedAt,
     closedAt: t.closedAt,
+    ...(t.execType === 'BustTrade' ? { liquidated: true } : {}),
   };
 }
 
@@ -590,7 +625,11 @@ export const usePaperStore = create<PaperState>()((set, get) => {
     },
 
     applyPrices: (items) => {
-      for (const p of items) setLastKnownPrice(p.category, p.symbol, p.last);
+      for (const p of items) {
+        setLastKnownPrice(p.category, p.symbol, p.last);
+        if (p.category === 'linear' && p.mark !== undefined)
+          setLastKnownMarkPrice(p.symbol, p.mark);
+      }
       if (items.length) set({ pricesAt: Date.now() });
     },
 

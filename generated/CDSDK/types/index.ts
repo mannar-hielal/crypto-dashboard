@@ -189,7 +189,9 @@ export type PaperPendingType = 'limit' | 'stop' | 'take-profit' | 'stop-loss';
 export type PaperOrderType = 'market' | 'limit' | 'stop' | 'take-profit' | 'stop-loss';
 export type PaperOrderStatus = 'filled' | 'cancelled' | 'rejected';
 export type PaperExitLeg = 'take-profit' | 'stop-loss';
-export type PaperSound = 'placed' | 'queued' | 'filled' | 'profit' | 'loss';
+export type PaperSound = 'placed' | 'queued' | 'filled' | 'profit' | 'loss' | 'liquidation';
+/** Bybit's execution type: a normal fill, or a liquidation at the bankruptcy price */
+export type PaperExecType = 'Trade' | 'BustTrade';
 
 export interface PaperAccountDTO {
   balance: string;
@@ -206,7 +208,10 @@ export interface PaperAccountDTO {
   version: number;
 }
 
-/** A USDT Perpetual position. */
+/**
+ * A USDT Perpetual position — one per symbol (one-way mode). The margin figures follow Bybit's
+ * isolated-margin maths and its v5 position field names (BP-3).
+ */
 export interface PaperPositionDTO {
   id: string;
   category: 'linear';
@@ -222,6 +227,23 @@ export interface PaperPositionDTO {
   entryFee: string;
   /** Estimated close fee held with the margin (position margin = entryUsdtAmount + this) */
   closeFeeReserve: string;
+  /*
+   * BP-3 risk figures. Every BP-3 server sends them all, but they are optional: a server from
+   * before BP-3 (rolling deploy) sends none. A missing figure is unknown — never read it as 0,
+   * which would mean "can't be liquidated" / "no maintenance margin".
+   */
+  /** Margin added on top of IM (0 until add / remove margin exists) */
+  extraMargin?: string;
+  /** Mark price at or past which the position is liquidated; "0" = can't be liquidated (1× long) */
+  liqPrice?: string;
+  /** Price the position closes at when liquidated (its whole margin is lost there) */
+  bustPrice?: string;
+  /** Bybit positionIM: initial margin + fee to close */
+  positionIM?: string;
+  /** Bybit positionMM: position value × MMR − deduction + fee to close */
+  positionMM?: string;
+  /** Maintenance margin rate of the position's risk-limit tier */
+  mmr?: string;
   openedAt: number;
   takeProfit?: string;
   stopLoss?: string;
@@ -286,6 +308,8 @@ export interface PaperOrderDTO {
   placingTime: number;
   closingTime: number;
   rejectionReason?: string;
+  /** 'CreateByLiq' = the system order that closed a liquidated position */
+  createType?: 'CreateByLiq';
 }
 
 export interface PaperTradeDTO {
@@ -300,6 +324,8 @@ export interface PaperTradeDTO {
   pnl: string;
   openedAt: number;
   closedAt: number;
+  /** 'BustTrade' = closed by liquidation at the bankruptcy price; absent = a normal close */
+  execType?: PaperExecType;
 }
 
 export interface PaperJournalEntryDTO {

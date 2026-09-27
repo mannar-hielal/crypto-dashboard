@@ -68,6 +68,7 @@ export type TradeMinAggregateOutputType = {
   pnl: runtime.Decimal | null
   grossPnl: runtime.Decimal | null
   pnlPercent: runtime.Decimal | null
+  execType: string | null
   openedAt: Date | null
   executedAt: Date | null
   createdAt: Date | null
@@ -91,6 +92,7 @@ export type TradeMaxAggregateOutputType = {
   pnl: runtime.Decimal | null
   grossPnl: runtime.Decimal | null
   pnlPercent: runtime.Decimal | null
+  execType: string | null
   openedAt: Date | null
   executedAt: Date | null
   createdAt: Date | null
@@ -114,6 +116,7 @@ export type TradeCountAggregateOutputType = {
   pnl: number
   grossPnl: number
   pnlPercent: number
+  execType: number
   openedAt: number
   executedAt: number
   createdAt: number
@@ -163,6 +166,7 @@ export type TradeMinAggregateInputType = {
   pnl?: true
   grossPnl?: true
   pnlPercent?: true
+  execType?: true
   openedAt?: true
   executedAt?: true
   createdAt?: true
@@ -186,6 +190,7 @@ export type TradeMaxAggregateInputType = {
   pnl?: true
   grossPnl?: true
   pnlPercent?: true
+  execType?: true
   openedAt?: true
   executedAt?: true
   createdAt?: true
@@ -209,6 +214,7 @@ export type TradeCountAggregateInputType = {
   pnl?: true
   grossPnl?: true
   pnlPercent?: true
+  execType?: true
   openedAt?: true
   executedAt?: true
   createdAt?: true
@@ -319,6 +325,7 @@ export type TradeGroupByOutputType = {
   pnl: runtime.Decimal
   grossPnl: runtime.Decimal | null
   pnlPercent: runtime.Decimal
+  execType: string
   openedAt: Date | null
   executedAt: Date
   createdAt: Date
@@ -365,6 +372,7 @@ export type TradeWhereInput = {
   pnl?: Prisma.DecimalFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: Prisma.DecimalNullableFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: Prisma.DecimalFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: Prisma.StringFilter<"Trade"> | string
   openedAt?: Prisma.DateTimeNullableFilter<"Trade"> | Date | string | null
   executedAt?: Prisma.DateTimeFilter<"Trade"> | Date | string
   createdAt?: Prisma.DateTimeFilter<"Trade"> | Date | string
@@ -391,6 +399,7 @@ export type TradeOrderByWithRelationInput = {
   pnl?: Prisma.SortOrder
   grossPnl?: Prisma.SortOrderInput | Prisma.SortOrder
   pnlPercent?: Prisma.SortOrder
+  execType?: Prisma.SortOrder
   openedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   executedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -420,6 +429,7 @@ export type TradeWhereUniqueInput = Prisma.AtLeast<{
   pnl?: Prisma.DecimalFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: Prisma.DecimalNullableFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: Prisma.DecimalFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: Prisma.StringFilter<"Trade"> | string
   openedAt?: Prisma.DateTimeNullableFilter<"Trade"> | Date | string | null
   executedAt?: Prisma.DateTimeFilter<"Trade"> | Date | string
   createdAt?: Prisma.DateTimeFilter<"Trade"> | Date | string
@@ -446,6 +456,7 @@ export type TradeOrderByWithAggregationInput = {
   pnl?: Prisma.SortOrder
   grossPnl?: Prisma.SortOrderInput | Prisma.SortOrder
   pnlPercent?: Prisma.SortOrder
+  execType?: Prisma.SortOrder
   openedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   executedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -477,6 +488,7 @@ export type TradeScalarWhereWithAggregatesInput = {
   pnl?: Prisma.DecimalWithAggregatesFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: Prisma.DecimalNullableWithAggregatesFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: Prisma.DecimalWithAggregatesFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: Prisma.StringWithAggregatesFilter<"Trade"> | string
   openedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Trade"> | Date | string | null
   executedAt?: Prisma.DateTimeWithAggregatesFilter<"Trade"> | Date | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Trade"> | Date | string
@@ -497,6 +509,7 @@ export type TradeCreateInput = {
   pnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: string
   openedAt?: Date | string | null
   executedAt?: Date | string
   createdAt?: Date | string
@@ -523,6 +536,7 @@ export type TradeUncheckedCreateInput = {
   pnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: string
   openedAt?: Date | string | null
   executedAt?: Date | string
   createdAt?: Date | string
@@ -543,6 +557,7 @@ export type TradeUpdateInput = {
   pnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: Prisma.StringFieldUpdateOperationsInput | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -569,6 +584,7 @@ export type TradeUncheckedUpdateInput = {
   pnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: Prisma.StringFieldUpdateOperationsInput | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -592,6 +608,7 @@ export type TradeCreateManyInput = {
   pnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: string
   openedAt?: Date | string | null
   executedAt?: Date | string
   createdAt?: Date | string
@@ -612,6 +629,7 @@ export type TradeUpdateManyMutationInput = {
   pnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: Prisma.StringFieldUpdateOperationsInput | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -635,6 +653,7 @@ export type TradeUncheckedUpdateManyInput = {
   pnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: Prisma.StringFieldUpdateOperationsInput | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -668,6 +687,7 @@ export type TradeCountOrderByAggregateInput = {
   pnl?: Prisma.SortOrder
   grossPnl?: Prisma.SortOrder
   pnlPercent?: Prisma.SortOrder
+  execType?: Prisma.SortOrder
   openedAt?: Prisma.SortOrder
   executedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -703,6 +723,7 @@ export type TradeMaxOrderByAggregateInput = {
   pnl?: Prisma.SortOrder
   grossPnl?: Prisma.SortOrder
   pnlPercent?: Prisma.SortOrder
+  execType?: Prisma.SortOrder
   openedAt?: Prisma.SortOrder
   executedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -726,6 +747,7 @@ export type TradeMinOrderByAggregateInput = {
   pnl?: Prisma.SortOrder
   grossPnl?: Prisma.SortOrder
   pnlPercent?: Prisma.SortOrder
+  execType?: Prisma.SortOrder
   openedAt?: Prisma.SortOrder
   executedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -884,6 +906,7 @@ export type TradeCreateWithoutUserInput = {
   pnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: string
   openedAt?: Date | string | null
   executedAt?: Date | string
   createdAt?: Date | string
@@ -908,6 +931,7 @@ export type TradeUncheckedCreateWithoutUserInput = {
   pnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: string
   openedAt?: Date | string | null
   executedAt?: Date | string
   createdAt?: Date | string
@@ -960,6 +984,7 @@ export type TradeScalarWhereInput = {
   pnl?: Prisma.DecimalFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: Prisma.DecimalNullableFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: Prisma.DecimalFilter<"Trade"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: Prisma.StringFilter<"Trade"> | string
   openedAt?: Prisma.DateTimeNullableFilter<"Trade"> | Date | string | null
   executedAt?: Prisma.DateTimeFilter<"Trade"> | Date | string
   createdAt?: Prisma.DateTimeFilter<"Trade"> | Date | string
@@ -980,6 +1005,7 @@ export type TradeCreateWithoutAccountInput = {
   pnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: string
   openedAt?: Date | string | null
   executedAt?: Date | string
   createdAt?: Date | string
@@ -1004,6 +1030,7 @@ export type TradeUncheckedCreateWithoutAccountInput = {
   pnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: string
   openedAt?: Date | string | null
   executedAt?: Date | string
   createdAt?: Date | string
@@ -1050,6 +1077,7 @@ export type TradeCreateWithoutOrderInput = {
   pnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: string
   openedAt?: Date | string | null
   executedAt?: Date | string
   createdAt?: Date | string
@@ -1074,6 +1102,7 @@ export type TradeUncheckedCreateWithoutOrderInput = {
   pnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: string
   openedAt?: Date | string | null
   executedAt?: Date | string
   createdAt?: Date | string
@@ -1122,6 +1151,7 @@ export type TradeCreateManyUserInput = {
   pnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: string
   openedAt?: Date | string | null
   executedAt?: Date | string
   createdAt?: Date | string
@@ -1142,6 +1172,7 @@ export type TradeUpdateWithoutUserInput = {
   pnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: Prisma.StringFieldUpdateOperationsInput | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1166,6 +1197,7 @@ export type TradeUncheckedUpdateWithoutUserInput = {
   pnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: Prisma.StringFieldUpdateOperationsInput | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1188,6 +1220,7 @@ export type TradeUncheckedUpdateManyWithoutUserInput = {
   pnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: Prisma.StringFieldUpdateOperationsInput | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1210,6 +1243,7 @@ export type TradeCreateManyAccountInput = {
   pnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: string
   openedAt?: Date | string | null
   executedAt?: Date | string
   createdAt?: Date | string
@@ -1230,6 +1264,7 @@ export type TradeUpdateWithoutAccountInput = {
   pnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: Prisma.StringFieldUpdateOperationsInput | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1254,6 +1289,7 @@ export type TradeUncheckedUpdateWithoutAccountInput = {
   pnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: Prisma.StringFieldUpdateOperationsInput | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1276,6 +1312,7 @@ export type TradeUncheckedUpdateManyWithoutAccountInput = {
   pnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: Prisma.StringFieldUpdateOperationsInput | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1298,6 +1335,7 @@ export type TradeCreateManyOrderInput = {
   pnl?: runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: string
   openedAt?: Date | string | null
   executedAt?: Date | string
   createdAt?: Date | string
@@ -1318,6 +1356,7 @@ export type TradeUpdateWithoutOrderInput = {
   pnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: Prisma.StringFieldUpdateOperationsInput | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1342,6 +1381,7 @@ export type TradeUncheckedUpdateWithoutOrderInput = {
   pnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: Prisma.StringFieldUpdateOperationsInput | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1364,6 +1404,7 @@ export type TradeUncheckedUpdateManyWithoutOrderInput = {
   pnl?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   grossPnl?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   pnlPercent?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  execType?: Prisma.StringFieldUpdateOperationsInput | string
   openedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   executedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1389,6 +1430,7 @@ export type TradeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   pnl?: boolean
   grossPnl?: boolean
   pnlPercent?: boolean
+  execType?: boolean
   openedAt?: boolean
   executedAt?: boolean
   createdAt?: boolean
@@ -1415,6 +1457,7 @@ export type TradeSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   pnl?: boolean
   grossPnl?: boolean
   pnlPercent?: boolean
+  execType?: boolean
   openedAt?: boolean
   executedAt?: boolean
   createdAt?: boolean
@@ -1441,6 +1484,7 @@ export type TradeSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   pnl?: boolean
   grossPnl?: boolean
   pnlPercent?: boolean
+  execType?: boolean
   openedAt?: boolean
   executedAt?: boolean
   createdAt?: boolean
@@ -1467,12 +1511,13 @@ export type TradeSelectScalar = {
   pnl?: boolean
   grossPnl?: boolean
   pnlPercent?: boolean
+  execType?: boolean
   openedAt?: boolean
   executedAt?: boolean
   createdAt?: boolean
 }
 
-export type TradeOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "seq" | "refId" | "userId" | "accountId" | "orderId" | "category" | "symbol" | "side" | "quantity" | "executedPrice" | "entryPrice" | "totalCost" | "commission" | "pnl" | "grossPnl" | "pnlPercent" | "openedAt" | "executedAt" | "createdAt", ExtArgs["result"]["trade"]>
+export type TradeOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "seq" | "refId" | "userId" | "accountId" | "orderId" | "category" | "symbol" | "side" | "quantity" | "executedPrice" | "entryPrice" | "totalCost" | "commission" | "pnl" | "grossPnl" | "pnlPercent" | "execType" | "openedAt" | "executedAt" | "createdAt", ExtArgs["result"]["trade"]>
 export type TradeInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   account?: boolean | Prisma.AccountDefaultArgs<ExtArgs>
@@ -1514,6 +1559,7 @@ export type $TradePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     pnl: runtime.Decimal
     grossPnl: runtime.Decimal | null
     pnlPercent: runtime.Decimal
+    execType: string
     openedAt: Date | null
     executedAt: Date
     createdAt: Date
@@ -1960,6 +2006,7 @@ export interface TradeFieldRefs {
   readonly pnl: Prisma.FieldRef<"Trade", 'Decimal'>
   readonly grossPnl: Prisma.FieldRef<"Trade", 'Decimal'>
   readonly pnlPercent: Prisma.FieldRef<"Trade", 'Decimal'>
+  readonly execType: Prisma.FieldRef<"Trade", 'String'>
   readonly openedAt: Prisma.FieldRef<"Trade", 'DateTime'>
   readonly executedAt: Prisma.FieldRef<"Trade", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Trade", 'DateTime'>

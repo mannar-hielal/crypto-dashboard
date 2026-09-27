@@ -12,6 +12,7 @@
  */
 
 import { config } from '../config.js';
+import { bybitBreakers, fetchWithRetry, resetBybitBreakers } from '../lib/fetchWithRetry.js';
 import { logger } from '../logger.js';
 import { ALLOWED_SYMBOLS, type AllowedSymbol, type BybitCategory } from '../constants.js';
 
@@ -121,13 +122,14 @@ function cached<T>(key: string, load: () => Promise<Loaded<T>>): Promise<T> {
 export function clearMarketInfoCache(): void {
   cache.clear();
   inFlight.clear();
+  resetBybitBreakers();
 }
 
 // ─── Upstream fetch ───────────────────────────────────────────────────────────
 
 async function fetchBybitList(path: string, params: Record<string, string>): Promise<unknown[]> {
   const url = `${bybitRestBaseUrl()}${path}?${new URLSearchParams(params).toString()}`;
-  const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+  const res = await fetchWithRetry(url, bybitBreakers.marketInfo, { timeoutMs: FETCH_TIMEOUT_MS });
   if (!res.ok) throw new Error(`Bybit REST error: ${res.status}`);
 
   const data = (await res.json()) as BybitListResponse;
