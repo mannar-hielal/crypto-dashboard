@@ -226,6 +226,50 @@ export function crossLiqPrice(
   return crossLiqPriceEstimate(crossInput(pos, mark), figures);
 }
 
+/**
+ * The order form's estimated liquidation price in cross: the position this order would leave
+ * (merged with an open one on the same side), with the account's other positions at their marks
+ * and the wallet less the open fee. Null when the order reduces or flips a position (not
+ * estimated) or nothing is sized yet.
+ */
+export function crossOrderLiqEstimate(
+  s: CrossAccountInput,
+  markOf: (symbol: string) => number | null,
+  order: {
+    symbol: string;
+    side: 'long' | 'short';
+    qty: number;
+    price: number;
+    leverage: number;
+    openFee: number;
+  }
+): number | null {
+  if (!(order.qty > 0) || !(order.price > 0)) return null;
+  const existing = s.positions.find((p) => p.symbol === order.symbol);
+  if (existing && existing.side !== order.side) return null;
+  const qty = (existing?.quantity ?? 0) + order.qty;
+  const entry = existing
+    ? (existing.quantity * existing.entryPrice + order.qty * order.price) / qty
+    : order.price;
+  const now = crossAccountFigures(s, markOf);
+  const others = s.positions.filter((p) => p.symbol !== order.symbol);
+  const merged = {
+    side: order.side,
+    qty,
+    entryPrice: entry,
+    leverage: order.leverage,
+    mark: markOf(order.symbol) ?? order.price,
+    tiers: riskTiersFor(order.symbol),
+  };
+  const linearOrders = s.pendingOrders.filter((o) => o.category === 'linear');
+  const figures = accountFiguresEstimate(
+    now.walletBalance - order.openFee,
+    [...others.map((p) => crossInput(p, markOf(p.symbol))), merged],
+    linearOrders.reduce((sum, o) => sum + o.reserved, 0)
+  );
+  return crossLiqPriceEstimate(merged, figures);
+}
+
 /** Cross margin, for the mode modal: one bad position can use the whole balance. */
 export const CROSS_EXPLAINER =
   'Cross margin: your whole available balance backs every position, and unrealised profit can ' +

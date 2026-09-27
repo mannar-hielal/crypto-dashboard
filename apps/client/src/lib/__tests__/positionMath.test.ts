@@ -23,3 +23,67 @@ describe('riskTierInfo / riskTierLabel', () => {
     expect(riskTierInfo('FOOUSDT', 1, 10)).toBeNull();
   });
 });
+
+describe('crossOrderLiqEstimate (BP-5 E)', () => {
+  it('estimates where the account MM rate reaches 100% for the position the order leaves', async () => {
+    const { accountFiguresEstimate, riskTiersFor } = await import('@crypto-dashboard/sdk');
+    const { crossOrderLiqEstimate } = await import('@/lib/positionMath');
+    // An empty cross account of 600 USDT; buy 0.1 BTC at 50,000, 10× (open fee 2.75)
+    const liq = crossOrderLiqEstimate(
+      { balance: 600, positions: [], pendingOrders: [] },
+      () => null,
+      { symbol: 'BTCUSDT', side: 'long', qty: 0.1, price: 50_000, leverage: 10, openFee: 2.75 }
+    );
+    expect(liq).toBeGreaterThan(44_100);
+    expect(liq).toBeLessThan(45_000);
+    // At that mark the account is exactly at its maintenance margin
+    const at = accountFiguresEstimate(
+      597.25,
+      [
+        {
+          side: 'long',
+          qty: 0.1,
+          entryPrice: 50_000,
+          leverage: 10,
+          mark: liq as number,
+          tiers: riskTiersFor('BTCUSDT'),
+        },
+      ],
+      0
+    );
+    expect(at.mmRate).toBeCloseTo(1, 6);
+  });
+
+  it('is not estimated for an order that reduces or flips the position', async () => {
+    const { crossOrderLiqEstimate } = await import('@/lib/positionMath');
+    const long = {
+      id: 'p',
+      category: 'linear' as const,
+      symbol: 'BTCUSDT',
+      side: 'long' as const,
+      quantity: 0.1,
+      entryPrice: 50_000,
+      entryUsdtAmount: 500,
+      leverage: 10,
+      entryFee: 2.75,
+      closeFeeReserve: 2.475,
+      extraMargin: 0,
+      liqPrice: null,
+      bustPrice: null,
+      positionIM: 502.475,
+      positionMM: null,
+      cumFunding: 0,
+      openedAt: 1,
+    };
+    expect(
+      crossOrderLiqEstimate({ balance: 100, positions: [long], pendingOrders: [] }, () => null, {
+        symbol: 'BTCUSDT',
+        side: 'short',
+        qty: 0.05,
+        price: 50_000,
+        leverage: 10,
+        openFee: 1,
+      })
+    ).toBeNull();
+  });
+});
