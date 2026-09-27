@@ -39,6 +39,11 @@ interface Config {
   resendFromEmail: string;
   clientUrl: string;
   adminEmail: string;
+  /**
+   * True when the process runs on a Fly Machine (Fly sets FLY_APP_NAME on every Machine). Gates
+   * trusting Fly's `Fly-Client-IP` header (lib/clientIp.ts) — the same image run elsewhere must not.
+   */
+  onFly: boolean;
 }
 
 function loadConfig(): Config {
@@ -57,6 +62,7 @@ function loadConfig(): Config {
     bybitApiKey: getEnv('BYBIT_API_KEY'),
     bybitApiSecret: getEnv('BYBIT_API_SECRET'),
     bybitTestnet: getEnv('BYBIT_TESTNET', 'true').toLowerCase() === 'true',
+    onFly: getEnv('FLY_APP_NAME') !== '',
     jwtSecret: getEnv('JWT_SECRET'),
     logLevel: (getEnv('LOG_LEVEL', 'info') as Config['logLevel']) || 'info',
     corsOrigin: getEnv('CORS_ORIGIN', 'http://localhost:5173'),

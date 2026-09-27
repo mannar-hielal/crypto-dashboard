@@ -5,6 +5,7 @@ import { logger } from '../../logger.js';
 import { ALLOWED_CATEGORIES, ALLOWED_SYMBOLS, type BybitCategory } from '../../constants.js';
 import { bybitRestBaseUrl, getInstruments, getRiskLimit } from '../../services/BybitMarketInfo.js';
 import { bybitBreakers, fetchWithRetry } from '../../lib/fetchWithRetry.js';
+import { clientIp } from '../../lib/clientIp.js';
 
 const log = logger.child({ route: 'market' });
 
@@ -354,26 +355,26 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
       const intervalRaw = request.query.interval ?? '1m';
 
       // 🔐 Enforce connection caps before any work — reject excess connections.
-      const clientIp = request.ip;
-      const currentIpCount = ipCounts.get(clientIp) ?? 0;
+      const visitorIp = clientIp(request);
+      const currentIpCount = ipCounts.get(visitorIp) ?? 0;
       if (activeWs.size >= MAX_WS_CONNECTIONS || currentIpCount >= MAX_WS_PER_IP) {
-        fastify.log.warn({ clientIp }, 'WS connection limit reached — rejecting');
+        fastify.log.warn({ clientIp: visitorIp }, 'WS connection limit reached — rejecting');
         socket.close(1013, 'Connection limit reached');
         return;
       }
       activeWs.add(socket);
-      ipCounts.set(clientIp, currentIpCount + 1);
+      ipCounts.set(visitorIp, currentIpCount + 1);
 
       let released = false;
       const releaseConnection = () => {
         if (released) return;
         released = true;
         activeWs.delete(socket);
-        const remaining = (ipCounts.get(clientIp) ?? 1) - 1;
+        const remaining = (ipCounts.get(visitorIp) ?? 1) - 1;
         if (remaining <= 0) {
-          ipCounts.delete(clientIp);
+          ipCounts.delete(visitorIp);
         } else {
-          ipCounts.set(clientIp, remaining);
+          ipCounts.set(visitorIp, remaining);
         }
       };
 
