@@ -35,7 +35,11 @@ import {
   type FundingSnapshot,
   type FundingSpec,
   type Trigger,
+  type TriggerBy,
+  accountLiquidatable,
 } from './engine/index.js';
+
+const isCross = (state: AccountState) => state.marginMode === 'REGULAR_MARGIN';
 import type { PaperEventBus } from './PaperEventBus.js';
 import type { TradingService } from './TradingService.js';
 
@@ -47,6 +51,8 @@ export interface TickUpdate {
   lastPrice: number;
   /** USDT Perpetual mark price */
   markPrice?: number;
+  /** USDT Perpetual index price — a TP / SL / stop set to trigger on the index uses it (BP-5 B) */
+  indexPrice?: number;
   /** USDT Perpetual: the rate for the next funding settlement, and when it is (Unix ms) */
   fundingRate?: number;
   nextFundingTime?: number;
@@ -66,12 +72,17 @@ export interface MatchingEngineDeps {
     symbol: string,
     fromMs: number,
     toMs: number,
-    source?: 'last' | 'mark'
+    source?: 'last' | 'mark' | 'index'
   ) => Promise<Candle[]>;
   /** USDT Perpetual risk-limit tiers (default: the bundled Bybit snapshot) */
   riskTiers?: (symbol: string) => RiskTier[];
   /** Settled funding rates of a symbol with fromMs < ts ≤ toMs, oldest first (BP-4) */
   fetchFundingHistory?: (symbol: string, fromMs: number, toMs: number) => Promise<FundingRate[]>;
+  /**
+   * Positions held at a funding timestamp that have been closed since, per user (BP-5 F) — the
+   * backfill settles them too: a position opened and closed while the engine was down still pays.
+   */
+  closedPositionsAt?: (symbol: string, ts: number) => Promise<Map<string, FundingSnapshot[]>>;
   /** How often the funding clock checks for a due timestamp */
   fundingCheckMs?: number;
   /** Wait between attempts to read a just-settled rate from Bybit's history */
@@ -108,6 +119,20 @@ const FUNDING_RATE_ATTEMPTS = 12;
  * price yet or a position filled at that instant isn't indexed yet — instead of being dropped
  */
 const FUNDING_SNAPSHOT_GRACE_MS = 60_000;
+/**
+ * A live mark this far from a funding timestamp is not the mark at it (a stalled feed): the
+ * settlement reads Bybit's mark-price candle for that minute instead (BP-5 F; the quote-age rule).
+ */
+const FUNDING_MARK_MAX_AGE_MS = 10_000;
+
+/** The clock's mark if it was seen close enough to `ts` to be the mark at it. */
+function markNear(clock: FundingClock, ts: number): Decimal | undefined {
+  return clock.mark !== undefined &&
+    clock.markAt !== undefined &&
+    Math.abs(ts - clock.markAt) <= FUNDING_MARK_MAX_AGE_MS
+    ? clock.mark
+    : undefined;
+}
 
 /** A funding timestamp that has passed and waits to be settled. */
 interface DueFunding {
@@ -138,6 +163,8 @@ interface FundingClock {
   rate?: Decimal;
   /** The latest mark price */
   mark?: Decimal;
+  /** When `mark` was seen (Unix ms) — a funding timestamp settles only at a mark near it (BP-5 F) */
+  markAt?: number;
   /** A passed timestamp not settled yet — kept when the ticker already moved on to the next one */
   due?: DueFunding;
 }
@@ -171,6 +198,11 @@ export class MatchingEngine {
   private readonly inFlight = new Set<string>();
   /** Last tick time per market — bounded: 2 categories × ALLOWED_SYMBOLS */
   private readonly lastTick = new Map<MarketKey, number>();
+  /**
+   * Last mark price seen per USDT Perpetual symbol — a cross account is valued with every symbol it
+   * holds (BP-5 E). Bounded: ALLOWED_SYMBOLS.
+   */
+  private readonly marks = new Map<string, Decimal>();
   private unsubscribeTicks: (() => void) | null = null;
   private unsubscribeEvents: (() => void) | null = null;
   private timer: NodeJS.Timeout | null = null;
@@ -363,7 +395,38 @@ export class MatchingEngine {
     this.users.clear();
     this.symbolUsers.clear();
     this.lastTick.clear();
+    this.marks.clear();
     this.active = false;
+  }
+
+  /** A cross account's MM rate at the engine's last marks (`symbol` at `mark` when given). */
+  private crossLiquidatable(state: AccountState, symbol?: string, mark?: Decimal): boolean {
+    return accountLiquidatable(state, {
+      riskTiers: this.riskTiers,
+      markPrice: (s) => (s === symbol && mark ? mark : this.marks.get(s)),
+    });
+  }
+
+  /** True when a position leg or stop order of this market triggers on the index price. */
+  private watchesIndex(key: MarketKey): boolean {
+    for (const userId of this.symbolUsers.get(key) ?? []) {
+      const state = this.users.get(userId);
+      if (!state) continue;
+      const onIndex = (by?: TriggerBy) => by === 'IndexPrice';
+      if (
+        state.positions.some(
+          (p) =>
+            marketKey(p.category, p.symbol) === key &&
+            (onIndex(p.tpTriggerBy) || onIndex(p.slTriggerBy))
+        ) ||
+        state.pendingOrders.some(
+          (o) => marketKey(o.category, o.symbol) === key && onIndex(o.triggerBy)
+        )
+      ) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /** Keep only accounts with open triggers in the index. Bounded by open positions/orders. */
@@ -413,6 +476,14 @@ export class MatchingEngine {
       u.markPrice > 0
         ? { price: new Decimal(u.markPrice.toString()), tiers: this.riskTiers(symbol) }
         : undefined;
+    if (mark) this.marks.set(symbol, mark.price);
+    const index =
+      category === 'linear' &&
+      u.indexPrice !== undefined &&
+      Number.isFinite(u.indexPrice) &&
+      u.indexPrice > 0
+        ? new Decimal(u.indexPrice.toString())
+        : undefined;
     for (const userId of userIds) {
       const state = this.users.get(userId);
       if (!state) continue;
@@ -422,16 +493,27 @@ export class MatchingEngine {
         price,
         state.positions,
         state.pendingOrders,
-        mark
+        // A cross account has no per-position liquidation (BP-5 E)
+        mark && isCross(state) ? { ...mark, liquidation: false } : mark,
+        index
       )) {
         void this.fire(userId, trigger);
+      }
+      if (mark && isCross(state) && this.crossLiquidatable(state)) {
+        void this.fire(userId, { kind: 'account-liquidation', symbol, price: mark.price });
       }
     }
   }
 
   /** Execute one trigger; a trigger already executing (a burst of ticks) is not re-fired. */
   private async fire(userId: string, trigger: Trigger): Promise<void> {
-    const key = `${userId}:${trigger.kind === 'fill' ? trigger.orderId : trigger.positionId}`;
+    const key = `${userId}:${
+      trigger.kind === 'fill'
+        ? trigger.orderId
+        : trigger.kind === 'account-liquidation'
+          ? 'account'
+          : trigger.positionId
+    }`;
     if (this.inFlight.has(key)) return;
     this.inFlight.add(key);
     let executed = false;
@@ -487,7 +569,7 @@ export class MatchingEngine {
       // Moving on to the next period: a passed timestamp still unsettled stays due
       const passed = clock.nextTs;
       if (passed && passed <= this.now() && this.fundingStarted.get(u.symbol) !== passed) {
-        clock.due ??= { ts: passed, rate: clock.rate, mark: clock.mark };
+        clock.due ??= { ts: passed, rate: clock.rate, mark: markNear(clock, passed) };
       }
       clock.nextTs = u.nextFundingTime;
       // Snapshot at the timestamp itself, not at the next tick or check
@@ -504,7 +586,10 @@ export class MatchingEngine {
       this.fundingAlarms.set(u.symbol, alarm);
     }
     if (finite(u.fundingRate)) clock.rate = new Decimal(u.fundingRate.toString());
-    if (finite(u.markPrice) && u.markPrice > 0) clock.mark = new Decimal(u.markPrice.toString());
+    if (finite(u.markPrice) && u.markPrice > 0) {
+      clock.mark = new Decimal(u.markPrice.toString());
+      clock.markAt = this.now();
+    }
     this.fundingClocks.set(u.symbol, clock);
     // A due timestamp that was only waiting for a mark price can go now
     if (clock.due) this.checkFunding();
@@ -538,7 +623,7 @@ export class MatchingEngine {
       let due = clock.due;
       if (!due && clock.nextTs && clock.nextTs <= now) {
         // Kept on the clock so its snapshot stays frozen across retries
-        due = { ts: clock.nextTs, rate: clock.rate, mark: clock.mark };
+        due = { ts: clock.nextTs, rate: clock.rate, mark: markNear(clock, clock.nextTs) };
         clock.due = due;
       }
       if (!due) continue;
@@ -553,7 +638,7 @@ export class MatchingEngine {
         if (!snapshots.has(userId)) snapshots.set(userId, positions);
       }
       // An inferred timestamp was never seen live: today's mark isn't the mark at it
-      const mark = due.inferred ? undefined : (due.mark ?? clock.mark);
+      const mark = due.inferred ? undefined : (due.mark ?? markNear(clock, due.ts));
       const expired = now - due.ts > FUNDING_SNAPSHOT_GRACE_MS;
       // Nobody held a position at the timestamp: nothing to settle once the grace is over
       if (snapshots.size === 0) {
@@ -565,7 +650,9 @@ export class MatchingEngine {
       }
       // Positions but no live mark: wait for one during the grace, then settle at Bybit's
       // mark-price candle for that minute (never dropped)
-      if (!mark && !expired && !due.inferred) continue;
+      // A mark that exists but is stale (the feed stalled around the timestamp) won't become the
+      // mark at it by waiting: the candle is read now
+      if (!mark && !expired && !due.inferred && clock.mark === undefined) continue;
       this.fundingStarted.set(symbol, due.ts);
       clock.due = undefined;
       void this.settleFundingAt(
@@ -585,10 +672,35 @@ export class MatchingEngine {
     for (const userId of this.symbolUsers.get(marketKey('linear', symbol)) ?? []) {
       const positions = (this.users.get(userId)?.positions ?? [])
         .filter((p) => p.category === 'linear' && p.symbol === symbol && p.openedAt <= ts)
-        .map((p) => ({ positionId: p.id, side: p.side, qty: p.quantity }));
+        .map((p) => ({ positionId: p.id, side: p.side, qty: p.quantity, openedAt: p.openedAt }));
       if (positions.length) out.set(userId, positions);
     }
     return out;
+  }
+
+  /**
+   * Add the positions held at `ts` and closed since (BP-5 F) to a backfill's snapshots. A position
+   * still open (same open time) is already in them; a failed read keeps what there is — the
+   * timestamp is still settled for the open positions, with a warning.
+   */
+  private async withClosedPositions(
+    symbol: string,
+    ts: number,
+    snapshots: Map<string, FundingSnapshot[]>
+  ): Promise<Map<string, FundingSnapshot[]>> {
+    const load = this.deps.closedPositionsAt;
+    if (!load) return snapshots;
+    try {
+      for (const [userId, closed] of await load(symbol, ts)) {
+        const open = snapshots.get(userId) ?? [];
+        const known = new Set(open.map((p) => p.openedAt));
+        const extra = closed.filter((p) => !known.has(p.openedAt));
+        if (extra.length) snapshots.set(userId, [...open, ...extra]);
+      }
+    } catch (err) {
+      log.warn({ err, symbol, ts }, 'Closed positions for a missed funding timestamp not read');
+    }
+    return snapshots;
   }
 
   /** The mark price at `ts` from Bybit's 1m mark-price candle for that minute (its open). */
@@ -768,11 +880,25 @@ export class MatchingEngine {
    */
   async backfill(category: Category, symbol: string, fromMs: number, toMs: number): Promise<void> {
     const key = marketKey(category, symbol);
-    if (!this.symbolUsers.get(key)?.size) return;
+    const watched = !!this.symbolUsers.get(key)?.size;
+    // Nobody holds anything here now — but a position opened and closed in the gap still owes its
+    // funding (BP-5 F): only the funding is replayed then
+    const closedFunding = category === 'linear' && !!this.deps.closedPositionsAt;
+    if (!watched && !closedFunding) return;
     // Funding timestamps missed in the gap (BP-4) — fetched first: they are settled even if the
     // candles can't be read (their mark then comes from the mark-price candle of that minute)
     const fundings: FundingRate[] =
       category === 'linear' ? await this.fundingHistoryFor(symbol, fromMs, toMs) : [];
+    if (!watched) {
+      for (const f of fundings) {
+        const snapshots = await this.withClosedPositions(symbol, f.ts, new Map());
+        this.fundingStarted.set(symbol, Math.max(this.fundingStarted.get(symbol) ?? 0, f.ts));
+        if (snapshots.size) {
+          await this.settleFundingAt(symbol, f.ts, undefined, { settled: f.rate }, snapshots);
+        }
+      }
+      return;
+    }
     let candles: Candle[] = [];
     try {
       candles = await this.deps.fetchCandles(category, symbol, fromMs, toMs);
@@ -789,12 +915,27 @@ export class MatchingEngine {
         log.error({ err, category, symbol }, 'Backfill mark-price candle fetch failed');
       }
     }
+    // Index-price candles only when some leg / stop of this market triggers on the index (BP-5 B)
+    const indexByStart = new Map<number, Candle>();
+    if (category === 'linear' && this.watchesIndex(key)) {
+      try {
+        for (const c of await this.deps.fetchCandles(category, symbol, fromMs, toMs, 'index')) {
+          indexByStart.set(c.start, c);
+        }
+      } catch (err) {
+        log.error({ err, category, symbol }, 'Backfill index-price candle fetch failed');
+      }
+    }
     // Settled in time order with the candles
     const settleFundingUpTo = async (upTo: number) => {
       while (fundings.length && fundings[0].ts <= upTo) {
         const f = fundings.shift() as FundingRate;
         const minute = Math.floor(f.ts / 60_000) * 60_000;
-        const snapshots = this.fundingSnapshots(symbol, f.ts);
+        const snapshots = await this.withClosedPositions(
+          symbol,
+          f.ts,
+          this.fundingSnapshots(symbol, f.ts)
+        );
         this.fundingStarted.set(symbol, Math.max(this.fundingStarted.get(symbol) ?? 0, f.ts));
         if (!snapshots.size) continue;
         await this.settleFundingAt(
@@ -818,6 +959,7 @@ export class MatchingEngine {
       for (const userId of [...(this.symbolUsers.get(key) ?? [])]) {
         const state = this.users.get(userId);
         if (!state) continue;
+        const cross = isCross(state);
         // Sequential: each execution updates the index before the next candle is evaluated
         for (const trigger of evaluateCandle(
           category,
@@ -825,9 +967,26 @@ export class MatchingEngine {
           candle,
           state.positions,
           state.pendingOrders,
-          mark
+          mark && cross ? { ...mark, liquidation: false } : mark,
+          indexByStart.get(candle.start)
         )) {
           await this.fire(userId, trigger);
+        }
+        // Cross (BP-5 E): the account at this symbol's worst mark of the minute, the other
+        // symbols at their last marks
+        const current = this.users.get(userId);
+        const held = current?.positions.find((p) => p.symbol === symbol);
+        if (markCandle && current && held && isCross(current)) {
+          const worst = held.side === 'long' ? markCandle.low : markCandle.high;
+          if (this.crossLiquidatable(current, symbol, worst)) {
+            await this.fire(userId, {
+              kind: 'account-liquidation',
+              symbol,
+              price: worst,
+              fillAt: worst,
+              at: markCandle.start + 60_000 - 1,
+            });
+          }
         }
       }
     }

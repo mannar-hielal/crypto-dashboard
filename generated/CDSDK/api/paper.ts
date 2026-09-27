@@ -3,6 +3,7 @@ import type {
   JournalNoteRequest,
   PaperActionResponse,
   PaperExitLeg,
+  PaperMarginMode,
   PaperStateDTO,
   PlaceOrderRequest,
   PlaceSpotExitsRequest,
@@ -110,6 +111,18 @@ export const paperApi = {
       json('PATCH', body)
     ),
 
+  /**
+   * Add (positive) or reduce (negative) an isolated position's margin, as Bybit's add-margin
+   * (BP-5). `margin` is a signed decimal string with at most 4 decimals. `result` is the position's
+   * new extra margin (decimal string). Refused (422) in Bybit's wording.
+   */
+  adjustPositionMargin: (positionId: string, margin: string, accessToken: string) =>
+    request<PaperActionResponse<string | null>>(
+      `/api/paper/positions/${encodeURIComponent(positionId)}/margin`,
+      accessToken,
+      json('POST', { margin })
+    ),
+
   cancelPositionExit: (positionId: string, leg: PaperExitLeg, accessToken: string) =>
     request<PaperActionResponse<boolean>>(
       `/api/paper/positions/${encodeURIComponent(positionId)}/exits/${leg}`,
@@ -135,6 +148,17 @@ export const paperApi = {
       `/api/paper/symbols/${encodeURIComponent(symbol)}/leverage`,
       accessToken,
       json('PATCH', { leverage })
+    ),
+
+  /**
+   * Switch the account's margin mode (BP-5 E, Bybit set-margin-mode): REGULAR_MARGIN = cross.
+   * Allowed with open positions when Bybit's checks pass; refused (422) with every reason listed.
+   */
+  setMarginMode: (marginMode: PaperMarginMode, accessToken: string) =>
+    request<PaperActionResponse<PaperMarginMode>>(
+      '/api/paper/account/margin-mode',
+      accessToken,
+      json('POST', { marginMode })
     ),
 
   /** Default leverage for symbols with no setting of their own (pre-BP-2 account leverage). */

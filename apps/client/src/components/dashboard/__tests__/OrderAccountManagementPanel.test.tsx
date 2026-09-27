@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { OrderAccountManagementPanel } from '../OrderAccountManagementPanel';
 import { migrateColPrefs } from '@/lib/columnPrefs';
 import {
@@ -871,6 +871,45 @@ describe('BP-3 — mark price, liquidation price and MMR in the Positions tab', 
     openedAt: FIXTURE_NOW,
   };
 
+  it('cross (BP-5 E): account figures in the summary bar, the estimated liq price, no margin pencil', () => {
+    usePaperStore.setState({
+      positions: [{ ...long10x, marginMode: 'cross', liqPrice: null, bustPrice: null }],
+      balance: 95,
+      marginMode: 'REGULAR_MARGIN',
+    });
+    paneStores[0].setState({ markPrice: 49_000 });
+    renderPanel();
+    // Wallet 597.475, −100 at mark: margin balance 497.475; MM 18.5955 → 3.7%
+    expect(screen.getByText('Margin Balance').nextElementSibling?.textContent).toBe('$497.48');
+    // Available = margin balance − IM at mark (492.4255)
+    expect(screen.getByText('Available').nextElementSibling?.textContent).toBe('$5.05');
+    expect(
+      within(screen.getByTestId('account-mm-rate')).getByTestId('position-mmr').textContent
+    ).toBe('3.7%');
+    // The position's liquidation price: where the margin balance meets the MM (≈ 44,193)
+    expect(screen.getByTestId('position-liq-price').textContent).toMatch(/^\$44,19\d/);
+    expect(screen.queryByRole('button', { name: 'Adjust margin for BTCUSDT' })).toBeNull();
+  });
+
+  it('shows the one-time cross notice to a pre-BP-5 isolated account; Switch to Cross asks the server', async () => {
+    const setMarginMode = vi.fn(async () => null);
+    const realSet = usePaperStore.getState().setMarginMode;
+    usePaperStore.setState({ marginModeNotice: true, setMarginMode });
+    renderPanel();
+    const notice = screen.getByTestId('cross-margin-notice');
+    fireEvent.click(within(notice).getByRole('button', { name: 'How it works' }));
+    expect(notice.textContent).toContain('whole available balance backs every position');
+    fireEvent.click(within(notice).getByRole('button', { name: 'Switch to Cross' }));
+    await waitFor(() => expect(setMarginMode).toHaveBeenCalledWith('REGULAR_MARGIN'));
+    // Dismissed: gone, and remembered
+    fireEvent.click(
+      within(notice).getByRole('button', { name: 'Dismiss the cross margin notice' })
+    );
+    expect(screen.queryByTestId('cross-margin-notice')).toBeNull();
+    expect(localStorage.getItem('cd-cross-margin-notice-dismissed')).toBe('1');
+    usePaperStore.setState({ setMarginMode: realSet });
+  });
+
   it('values the position at the mark price, not the last price, and shows the liquidation price', () => {
     usePaperStore.setState({ positions: [long10x] });
     // Last 77,350 (pane 0 default); mark 49,000 → PnL (49,000 − 50,000) × 0.1 = −100
@@ -887,6 +926,15 @@ describe('BP-3 — mark price, liquidation price and MMR in the Positions tab', 
     paneStores[0].setState({ markPrice: 49_000 });
     renderPanel();
     expect(screen.getByTestId('position-mmr').textContent).toBe('4.7%');
+  });
+
+  it('shows the risk-limit tier and MMR on hover of the meter (BP-5 C, O6)', () => {
+    usePaperStore.setState({ positions: [long10x] });
+    paneStores[0].setState({ markPrice: 49_000 });
+    renderPanel();
+    expect(screen.getByTestId('position-mmr').getAttribute('title')).toBe(
+      'Risk-limit tier 1 (up to 300,000 USDT) · MMR 0.33%'
+    );
   });
 
   it('unknown risk figures (pre-BP-3 server) show — instead of a safe-looking 0% meter', () => {
@@ -967,5 +1015,134 @@ describe('BP-4 — funding in the Positions tab', () => {
     usePaperStore.setState({ positions: [{ ...base, cumFunding: -0.2 }] });
     renderPanel();
     expect(screen.getByTestId('position-funding').textContent).toBe('+0.20');
+  });
+});
+
+describe('BP-5 A — add / reduce margin from the Positions row', () => {
+  // The tests stub the store action; clear() resets data only, so put the real one back
+  const realAdjust = usePaperStore.getState().adjustPositionMargin;
+  afterEach(() => usePaperStore.setState({ adjustPositionMargin: realAdjust }));
+
+  const pos: Position = {
+    id: 'p-margin',
+    symbol: 'BTCUSDT',
+    side: 'long',
+    quantity: 0.1,
+    entryPrice: 50_000,
+    entryUsdtAmount: 500,
+    category: 'linear',
+    leverage: 10,
+    entryFee: 2.75,
+    closeFeeReserve: 2.475,
+    extraMargin: 0,
+    liqPrice: 45_148.99,
+    bustPrice: 45_000,
+    positionIM: 502.475,
+    positionMM: 18.975,
+    cumFunding: 0,
+    openedAt: FIXTURE_NOW,
+  };
+
+  it('the pencil on Margin opens the dialog, previews the new liq. price and sends the amount', async () => {
+    const adjust = vi.fn(async () => null);
+    usePaperStore.setState({ positions: [pos], balance: 5_000, adjustPositionMargin: adjust });
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: 'Adjust margin for BTCUSDT' }));
+    const dialog = screen.getByRole('dialog', { name: /Adjust margin/ });
+    fireEvent.change(within(dialog).getByLabelText('Margin amount'), {
+      target: { value: '1000' },
+    });
+    // IM 500 + 1,000 added → liq ≈ 35,110 (server maths: margin.test)
+    expect(within(dialog).getByTestId('adjust-margin-preview').textContent).toMatch(
+      /\$45,148\.99 → \$35,1/
+    );
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(adjust).toHaveBeenCalledWith('p-margin', 1000));
+  });
+
+  it('Reduce is limited to the margin added by hand, and a refusal shows inline', async () => {
+    const adjust = vi.fn(
+      async () => 'Liquidation will be triggered immediately by this adjustment'
+    );
+    usePaperStore.setState({
+      positions: [{ ...pos, extraMargin: 300 }],
+      adjustPositionMargin: adjust,
+    });
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: 'Adjust margin for BTCUSDT' }));
+    const dialog = screen.getByRole('dialog', { name: /Adjust margin/ });
+    fireEvent.click(within(dialog).getByRole('tab', { name: 'Reduce' }));
+    expect(dialog.textContent).toContain('Max reducible (margin you added): $300.00');
+    fireEvent.change(within(dialog).getByLabelText('Margin amount'), { target: { value: '400' } });
+    expect(
+      (within(dialog).getByRole('button', { name: 'Confirm' }) as HTMLButtonElement).disabled
+    ).toBe(true);
+    fireEvent.change(within(dialog).getByLabelText('Margin amount'), { target: { value: '300' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
+    expect((await within(dialog).findByRole('alert')).textContent).toContain('Liquidation will be');
+    expect(adjust).toHaveBeenCalledWith('p-margin', -300);
+  });
+});
+
+describe('BP-5 D — Closed P&L tab', () => {
+  it('lists USDT Perpetual closes with Bybit closedPnl and the fee / funding breakdown on hover', () => {
+    usePaperStore.setState({
+      history: [
+        {
+          id: 't1',
+          category: 'linear',
+          symbol: 'BTCUSDT',
+          side: 'long',
+          quantity: 0.05,
+          entryPrice: 50_000,
+          exitPrice: 51_000,
+          pnl: 50,
+          openedAt: FIXTURE_NOW - 60_000,
+          closedAt: FIXTURE_NOW,
+          openFee: 1.375,
+          closeFee: 1.4025,
+          closedPnl: 47.2225,
+        },
+        {
+          id: 't2',
+          category: 'linear',
+          symbol: 'ETHUSDT',
+          side: 'short',
+          quantity: 1,
+          entryPrice: 3_000,
+          exitPrice: 3_300,
+          pnl: -300,
+          openedAt: FIXTURE_NOW - 120_000,
+          closedAt: FIXTURE_NOW - 60_000,
+          liquidated: true,
+          funding: 0.5,
+        },
+        {
+          id: 't3',
+          category: 'spot',
+          symbol: 'BTCUSDT',
+          side: 'long',
+          quantity: 0.01,
+          entryPrice: 50_000,
+          exitPrice: 51_000,
+          pnl: 10,
+          openedAt: FIXTURE_NOW - 60_000,
+          closedAt: FIXTURE_NOW,
+        },
+      ],
+    });
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: /Closed P&L/ }));
+    const rows = screen.getAllByTestId('closed-pnl-row');
+    expect(rows).toHaveLength(2); // the spot sell is not a closed position
+    const [btc, eth] = screen.getAllByTestId('closed-pnl-value');
+    expect(btc.textContent).toBe('+47.2225 USDT');
+    expect(btc.getAttribute('title')).toBe(
+      'Open fee $1.3750 · Close fee $1.4025 · Funding $0.0000'
+    );
+    // A pre-BP-5 row: gross − funding, fees unknown
+    expect(eth.textContent).toBe('-300.5000 USDT');
+    expect(eth.getAttribute('title')).toBe('Open fee — · Close fee — · Funding $0.5000');
+    expect(rows[1].textContent).toContain('Liquidation');
   });
 });

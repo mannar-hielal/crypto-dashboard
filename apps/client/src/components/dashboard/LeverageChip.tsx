@@ -4,6 +4,10 @@
  * leverage can change while the symbol has an open position or active orders: the server
  * re-margins them (BP-3). The modal previews the position's new margin and liquidation price and
  * shows the server's refusal (not enough balance, or a raise the mark price would liquidate).
+ *
+ * BP-5 E: the chip reads `Cross 10x` / `Isolated 10x`, and the modal also switches the account's
+ * margin mode (Cross | Isolated tabs with an explainer). The mode is account-wide, as in Bybit UTA;
+ * the server applies Bybit's switch checks and its refusal lists every reason.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -15,7 +19,14 @@ import {
   usePaperStore,
   type Position,
 } from '@/store/paperStore';
-import { remarginPreview } from '@/lib/positionMath';
+import {
+  CROSS_EXPLAINER,
+  ISOLATED_EXPLAINER,
+  remarginPreview,
+  riskTierInfo,
+  riskTierLabel,
+} from '@/lib/positionMath';
+import type { PaperMarginMode } from '@crypto-dashboard/sdk';
 import { fmtMktPrice } from '@/lib/utils';
 import { color, fontSize, zIndex } from '@/lib/tokens';
 import styles from './TradeDialog.module.css';
@@ -26,7 +37,9 @@ interface LeverageChipProps {
 
 export function LeverageChip({ symbol }: LeverageChipProps) {
   const leverage = usePaperStore((s) => leverageFor(s, symbol));
+  const marginMode = usePaperStore((s) => s.marginMode);
   const [open, setOpen] = useState(false);
+  const cross = marginMode === 'REGULAR_MARGIN';
 
   return (
     <>
@@ -36,13 +49,19 @@ export function LeverageChip({ symbol }: LeverageChipProps) {
         style={{ fontSize: fontSize.xs11 }}
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
-        aria-label={`Leverage ${leverage}x, isolated margin`}
+        aria-label={`Leverage ${leverage}x, ${cross ? 'cross' : 'isolated'} margin`}
       >
-        {/* "Isolated margin" is in the label and the modal — the 256px panel has no room here */}
-        {leverage}x
+        {cross ? 'Cross' : 'Isolated'} {leverage}x
         <ChevronDown size={12} aria-hidden="true" />
       </button>
-      {open && <LeverageModal symbol={symbol} current={leverage} onClose={() => setOpen(false)} />}
+      {open && (
+        <LeverageModal
+          symbol={symbol}
+          current={leverage}
+          currentMode={marginMode}
+          onClose={() => setOpen(false)}
+        />
+      )}
     </>
   );
 }
@@ -80,14 +99,41 @@ function RemarginPreview({ position, leverage, symbol }: RemarginPreviewProps) {
   );
 }
 
+interface TierLineProps {
+  symbol: string;
+  leverage: number;
+  positionValue: number;
+}
+
+/** The position's risk-limit tier and the max position value at the chosen leverage (O6). */
+function TierLine({ symbol, leverage, positionValue }: TierLineProps) {
+  const info = riskTierInfo(symbol, positionValue, leverage);
+  if (!info) return null;
+  return (
+    <p className={styles.note} style={{ fontSize: fontSize.xs10 }} data-testid="leverage-tier-info">
+      {riskTierLabel(info)} · Max position value at {leverage}×:{' '}
+      {info.cap !== null ? `${info.cap.toLocaleString('en-US')} USDT` : '—'}
+    </p>
+  );
+}
+
 interface LeverageModalProps {
   symbol: string;
   current: number;
+  currentMode: PaperMarginMode;
   onClose: () => void;
 }
 
-function LeverageModal({ symbol, current, onClose }: LeverageModalProps) {
+const MODE_TABS: readonly (readonly [PaperMarginMode, string])[] = [
+  ['REGULAR_MARGIN', 'Cross'],
+  ['ISOLATED_MARGIN', 'Isolated'],
+];
+
+function LeverageModal({ symbol, current, currentMode, onClose }: LeverageModalProps) {
   const setSymbolLeverage = usePaperStore((s) => s.setSymbolLeverage);
+  const setMarginMode = usePaperStore((s) => s.setMarginMode);
+  const [mode, setMode] = useState<PaperMarginMode>(currentMode);
+  const cross = mode === 'REGULAR_MARGIN';
   const position = usePaperStore((s) => s.positions.find((p) => p.symbol === symbol));
   const hasOrders = usePaperStore((s) =>
     s.pendingOrders.some((o) => o.symbol === symbol && o.category === 'linear')
@@ -108,9 +154,11 @@ function LeverageModal({ symbol, current, onClose }: LeverageModalProps) {
   }, [onClose]);
 
   async function confirm() {
-    if (choice === current) return onClose();
+    if (choice === current && mode === currentMode) return onClose();
     setSaving(true);
-    const err = await setSymbolLeverage(symbol, choice);
+    // The mode first (account-wide), then this symbol's leverage
+    const modeErr = mode !== currentMode ? await setMarginMode(mode) : null;
+    const err = modeErr ?? (choice !== current ? await setSymbolLeverage(symbol, choice) : null);
     setSaving(false);
     if (err) setError(err);
     else onClose();
@@ -135,6 +183,33 @@ function LeverageModal({ symbol, current, onClose }: LeverageModalProps) {
         <h2 id="leverage-title" className={styles.title} style={{ fontSize: fontSize.xs }}>
           Adjust leverage — {symbol}
         </h2>
+        <div className={styles.presets} role="tablist" aria-label="Margin mode">
+          {MODE_TABS.map(([m, label]) => (
+            <button
+              key={m}
+              type="button"
+              role="tab"
+              className={styles.preset}
+              style={{ fontSize: fontSize.xs11 }}
+              aria-selected={mode === m}
+              aria-pressed={mode === m}
+              onClick={() => {
+                setMode(m);
+                setError(null);
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <p
+          className={styles.note}
+          style={{ fontSize: fontSize.xs10 }}
+          data-testid="margin-mode-explainer"
+        >
+          {cross ? CROSS_EXPLAINER : ISOLATED_EXPLAINER}
+          {mode !== currentMode && ' The margin mode applies to your whole account.'}
+        </p>
         <div className={styles.presets} role="group" aria-label="Leverage">
           {CRYPTO_LEVERAGE_OPTIONS.map((lev) => (
             <button
@@ -154,12 +229,18 @@ function LeverageModal({ symbol, current, onClose }: LeverageModalProps) {
         </div>
         <p className={styles.note} style={{ fontSize: fontSize.xs10 }}>
           {position || hasOrders
-            ? 'Isolated margin · max 10×. Your open position and active orders on this symbol are re-margined at the new leverage.'
-            : 'Isolated margin · max 10×. Applies to new orders on this symbol.'}
+            ? `${cross ? 'Cross' : 'Isolated'} margin · max 10×. Your open position and active orders on this symbol are re-margined at the new leverage.`
+            : `${cross ? 'Cross' : 'Isolated'} margin · max 10×. Applies to new orders on this symbol.`}
         </p>
-        {position && choice !== current && (
+        {/* The isolated preview; in cross the liquidation price is an account-wide estimate */}
+        {!cross && position && choice !== current && (
           <RemarginPreview position={position} leverage={choice} symbol={symbol} />
         )}
+        <TierLine
+          symbol={symbol}
+          leverage={choice}
+          positionValue={position ? position.quantity * position.entryPrice : 0}
+        />
         {error && (
           <p className={styles.error} role="alert" style={{ fontSize: fontSize.xs10 }}>
             {error}

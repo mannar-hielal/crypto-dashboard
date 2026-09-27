@@ -14,7 +14,9 @@ rules in `apps/server/src/trading/engine/`, never in the client. **Since BP-2 th
 `'spot'` (coin balances, 1×, no shorting) and `'linear'` = USDT Perpetual (positions, per-symbol leverage). Every
 position, order, trade and trigger names its market. **Since BP-3** a USDT Perpetual symbol has **one** position
 (one-way mode: same-side fills merge), is valued at the **mark** price, and is **liquidated** when the mark reaches
-its liquidation price (isolated margin, Bybit's formulas).
+its liquidation price (isolated margin, Bybit's formulas). **Since BP-5** the margin mode is account-wide (`Account.marginMode`:
+`REGULAR_MARGIN` = cross — new accounts — or `ISOLATED_MARGIN`); TP / SL / stops trigger on Last / Mark / Index;
+orders can be reduce-only / close-on-trigger; a risk-limit cap (110090) and partial liquidation by tier apply.
 
 | File                                                                                       | Role                                                                                                                                                                                         |
 | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -23,6 +25,9 @@ its liquidation price (isolated margin, Bybit's formulas).
 | `apps/server/src/trading/engine/draft.ts`                                                  | Shared working copy (incl. coin balances), order sizing (`qty` / `value` / legacy margin), book prices, record builders                                                                      |
 | `apps/server/src/trading/bybitSpec.ts`                                                     | Bybit VIP-0 fee rates, rejection wording, qty-step / tick / minimum checks, fallback instrument rules; BP-3 isolated margin: `feeToClose`, `positionRisk` (liq / bust / IM / MM), risk tiers |
 | `apps/server/src/trading/engine/margin.ts`                                                 | `riskOf(position, tiers)`, `tiersFor(ctx, symbol)` — engine adapter over the bybitSpec margin maths                                                                                          |
+| `apps/server/src/trading/engine/cross.ts`                                                  | BP-5 cross margin: `accountLiquidatable`, `liquidateAccount` (contract order, tier steps), `switchMarginMode` (Bybit's checks)                                                               |
+| `apps/server/src/trading/engine/orderRules.ts`                                             | BP-5 reduce-only (`reduceOnlyTarget`, `trimReduceOnly`), O9 TP / SL side check (`exitSideProblem`), risk-limit cap (`effectiveValue`, `riskLimitProblem`)                                    |
+| `apps/server/src/trading/bybitParity.ts` / `src/tools/bybitParity.ts`                      | BP-5 G: DTO → Bybit v5 field adapter + diff; the manual testnet parity run (`parity:testnet`)                                                                                                |
 | `apps/server/src/trading/engine/triggers.ts`                                               | `checkTPSL`, `checkPendingTrigger`, `evaluateTick` (live, tick price) and `evaluateCandle` (backfill sweep)                                                                                  |
 | `apps/server/src/trading/engine/journal.ts` / `format.ts`                                  | Journal wording and `fmtPrice` (kept word for word from the browser engine)                                                                                                                  |
 | `apps/server/src/trading/TradingService.ts`                                                | Intent → live quote (ask / bid, refused if > 10 s old) + instrument rules → engine → `AccountRepository` → `PaperEventBus`                                                                   |
@@ -108,6 +113,19 @@ version            server account version — applyDelta ignores anything not ne
   PnL + `cumFunding`; `execType 'Funding'` row + journal + balance event; once per account/symbol/timestamp
   (`SymbolSetting.lastFundingAt`); closes carry `funding` (Closed P&L), never charged twice. Engine:
   `MatchingEngine` funding clock + `settleFunding` in `actions.ts`.
+- **Cross margin (BP-5 E):** `bybitSpec.accountFigures` — margin balance = wallet + Σ UPL at mark; IM / MM are
+  **mark-based** (`size × mark / lev + fee to close`, `size × mark × MMR − ded + fee to close`); available = margin
+  balance − total IM (orders' reserves count). Wallet = `balance` + what positions / linear orders hold (the same
+  bookkeeping as isolated; `balance` may go below 0 in cross). An order needs `cost ≤ available` (unrealised profit
+  counts); a close's loss beyond its margin and funding come out of the wallet; no per-position liquidation — at an
+  MM rate ≥ 100% `liquidateAccount` cancels linear orders and steps positions down in `CROSS_LIQUIDATION_ORDER` at
+  the estimated bankruptcy price, re-checking after each step. The client estimates cross liq prices
+  (`crossLiqPriceEstimate`); the server omits them for cross positions. The SDK mirror must stay parity-tested.
+- **Isolated extras (BP-5):** `extraMargin` (add / reduce; released on a leverage change or a switch to cross);
+  partial liquidation above tier 1 (`stepDownTiers`); a clamped close books only what was lost.
+- **Order flags (BP-5 B):** `tpTriggerBy` / `slTriggerBy` / `triggerBy` absent = LastPrice (only non-defaults are
+  stored on the engine objects / DTOs); `reduceOnly` / `closeOnTrigger` hold no margin, never open or flip, and are
+  trimmed by `trimReduceOnly` after every fill / close. New / changed TP / SL go through `exitSideProblem`.
 - **One-way merge:** a same-side fill adds to the position — qty-weighted entry (8 dp), margin / entryFee /
   closeFeeReserve summed; a TP / SL attached to the new order replaces the position's.
 - **Client:** perp PnL uses the mark (`getLastKnownMarkPrice` / pane `markPrice`, falling back to last); helpers in

@@ -23,8 +23,21 @@ import type {
 } from '@crypto-dashboard/sdk';
 import { ALLOWED_CATEGORIES, ALLOWED_SYMBOLS } from '../../constants.js';
 import { TradingError, type Executed } from '../../trading/TradingService.js';
-import type { ExitLeg, OrderSize } from '../../trading/engine/index.js';
+import {
+  MARGIN_MODES,
+  TRIGGER_BY,
+  type ExitLeg,
+  type MarginMode,
+  type OrderSize,
+} from '../../trading/engine/index.js';
 import { privatePaperWs } from './ws.js';
+import { logger } from '../../logger.js';
+
+/**
+ * The pre-BP-2 API (account-wide leverage, margin sizing by usdtAmount) is logged, not yet removed
+ * (BP-5, owner decision O11): it goes one release after nothing has been logged.
+ */
+const legacyLog = logger.child({ route: 'paper-legacy-api' });
 
 // ─── Shared schemas ───────────────────────────────────────────────────────────
 
@@ -45,6 +58,12 @@ const decimalString = {
   maxLength: 21,
 } as const;
 const nullableDecimal = { ...decimalString, type: ['string', 'null'] } as const;
+/** A signed USDT amount with at most 4 decimals (Bybit add-margin: + add, − reduce) */
+const signedMarginString = {
+  type: 'string',
+  maxLength: 20,
+  pattern: '^-?\\d{1,12}(\\.\\d{1,4})?$',
+} as const;
 
 /** Public ids: engine ids (`<ms>-<base64url>`), cuid, and pre-BP-1 browser refIds */
 const idParam = {
@@ -104,6 +123,7 @@ function sizeOf(b: { qty?: string; value?: string; usdtAmount?: string }): Order
   if (given.length !== 1) return null;
   if (b.qty !== undefined) return { qty: positive(b.qty, 'qty') };
   if (b.value !== undefined) return { value: positive(b.value, 'value') };
+  legacyLog.warn({ field: 'usdtAmount' }, 'Pre-BP-2 order sizing used');
   return { margin: positive(b.usdtAmount as string, 'usdtAmount') };
 }
 
@@ -121,6 +141,21 @@ function optionalPositive(value: string | null | undefined, field: string): Deci
 }
 
 /** Serialize an engine outcome; `notFound` turns a false / 'not-found' result into a 404. */
+/** Bybit's trigger sources (BP-5 B) */
+const triggerByEnum = { type: 'string', enum: [...TRIGGER_BY] } as const;
+
+/** The USDT Perpetual order flags of a place-order body (BP-5 B), only when set. */
+function linearFlags(b: PlaceOrderRequest) {
+  return {
+    ...(b.triggerBy ? { triggerBy: b.triggerBy } : {}),
+    ...(b.tpTriggerBy ? { tpTriggerBy: b.tpTriggerBy } : {}),
+    ...(b.slTriggerBy ? { slTriggerBy: b.slTriggerBy } : {}),
+    ...(b.reduceOnly ? { reduceOnly: true } : {}),
+    // Close-on-trigger implies reduce-only
+    ...(b.closeOnTrigger ? { closeOnTrigger: true, reduceOnly: true } : {}),
+  };
+}
+
 function send<R>(
   reply: FastifyReply,
   executed: Executed<R>,
@@ -188,6 +223,12 @@ export async function paperRoutes(app: FastifyInstance) {
             triggerPrice: decimalString,
             takeProfit: decimalString,
             stopLoss: decimalString,
+            // BP-5 B (USDT Perpetual): trigger sources, reduce-only, close-on-trigger
+            triggerBy: triggerByEnum,
+            tpTriggerBy: triggerByEnum,
+            slTriggerBy: triggerByEnum,
+            reduceOnly: { type: 'boolean' },
+            closeOnTrigger: { type: 'boolean' },
           },
         },
         response: {
@@ -209,6 +250,12 @@ export async function paperRoutes(app: FastifyInstance) {
         }
         const size = sizeOf(b);
         if (!size) return reply.status(400).send({ error: SIZE_REQUIRED });
+        const category = b.category ?? 'linear';
+        if (category === 'spot' && (b.reduceOnly || b.closeOnTrigger)) {
+          return reply
+            .status(400)
+            .send({ error: 'reduceOnly / closeOnTrigger are perpetual-only' });
+        }
         const executed = await app.trading.placeOrder(userIdOf(request), {
           // A pre-BP-2 client sends no market: its orders are today's leveraged trading
           category: b.category ?? 'linear',
@@ -221,6 +268,7 @@ export async function paperRoutes(app: FastifyInstance) {
             : {}),
           ...(b.takeProfit ? { takeProfit: positive(b.takeProfit, 'takeProfit') } : {}),
           ...(b.stopLoss ? { stopLoss: positive(b.stopLoss, 'stopLoss') } : {}),
+          ...(category === 'linear' ? linearFlags(b) : {}),
         });
         return send(reply, executed);
       })
@@ -325,6 +373,9 @@ export async function paperRoutes(app: FastifyInstance) {
             usdtAmount: decimalString,
             takeProfit: nullableDecimal,
             stopLoss: nullableDecimal,
+            triggerBy: triggerByEnum,
+            tpTriggerBy: triggerByEnum,
+            slTriggerBy: triggerByEnum,
           },
         },
         response: {
@@ -349,6 +400,9 @@ export async function paperRoutes(app: FastifyInstance) {
           size,
           takeProfit: optionalPositive(b.takeProfit, 'takeProfit'),
           stopLoss: optionalPositive(b.stopLoss, 'stopLoss'),
+          ...(b.triggerBy ? { triggerBy: b.triggerBy } : {}),
+          ...(b.tpTriggerBy ? { tpTriggerBy: b.tpTriggerBy } : {}),
+          ...(b.slTriggerBy ? { slTriggerBy: b.slTriggerBy } : {}),
         });
         return send(reply, executed, { notFound: (r) => r === 'not-found' });
       })
@@ -405,7 +459,12 @@ export async function paperRoutes(app: FastifyInstance) {
           type: 'object',
           required: ['takeProfit', 'stopLoss'],
           additionalProperties: false,
-          properties: { takeProfit: nullableDecimal, stopLoss: nullableDecimal },
+          properties: {
+            takeProfit: nullableDecimal,
+            stopLoss: nullableDecimal,
+            tpTriggerBy: triggerByEnum,
+            slTriggerBy: triggerByEnum,
+          },
         },
         response: {
           200: actionResponse({ type: 'boolean' }),
@@ -427,11 +486,57 @@ export async function paperRoutes(app: FastifyInstance) {
             userIdOf(request),
             request.params.id,
             optionalPositive(request.body.takeProfit, 'takeProfit'),
-            optionalPositive(request.body.stopLoss, 'stopLoss')
+            optionalPositive(request.body.stopLoss, 'stopLoss'),
+            {
+              ...(request.body.tpTriggerBy ? { tpTriggerBy: request.body.tpTriggerBy } : {}),
+              ...(request.body.slTriggerBy ? { slTriggerBy: request.body.slTriggerBy } : {}),
+            }
           ),
           { notFound: (r) => r === false }
         )
       )
+  );
+
+  // ── POST /positions/:id/margin — add / reduce an isolated position's margin (BP-5 A) ──
+  app.post<{ Params: { id: string }; Body: { margin: string } }>(
+    '/positions/:id/margin',
+    {
+      onRequest: [app.authenticate],
+      config: mutationRateLimit,
+      schema: {
+        tags: ['Paper Trading'],
+        summary: "Add (+) or reduce (−) an isolated position's margin, as Bybit's add-margin",
+        ...secured,
+        params: idParam,
+        body: {
+          type: 'object',
+          required: ['margin'],
+          additionalProperties: false,
+          properties: { margin: signedMarginString },
+        },
+        response: {
+          200: actionResponse({ type: ['string', 'null'] }),
+          400: errorResponse,
+          401: errorResponse,
+          404: errorResponse,
+          409: errorResponse,
+          422: errorResponse,
+          429: errorResponse,
+          500: errorResponse,
+        },
+      },
+    },
+    async (request, reply) =>
+      guarded(reply, async () => {
+        const amount = new Decimal(request.body.margin);
+        // 🔐 Bounded like every other amount; the engine checks balance / liquidation
+        if (amount.abs().gt(MAX_AMOUNT)) throw new TradingError(409, 'margin out of range');
+        return send(
+          reply,
+          await app.trading.adjustMargin(userIdOf(request), request.params.id, amount),
+          { map: (extra) => extra?.toString() ?? null }
+        );
+      })
   );
 
   // ── DELETE /positions/:id/exits/:leg — cancel a position's TP or SL ─────────
@@ -548,6 +653,40 @@ export async function paperRoutes(app: FastifyInstance) {
       )
   );
 
+  // ── POST /account/margin-mode — cross / isolated, account-wide (BP-5 E) ──────
+  app.post<{ Body: { marginMode: MarginMode } }>(
+    '/account/margin-mode',
+    {
+      onRequest: [app.authenticate],
+      config: mutationRateLimit,
+      schema: {
+        tags: ['Paper Trading'],
+        summary:
+          "Switch the account's margin mode (Bybit set-margin-mode: REGULAR_MARGIN = cross); allowed with open positions when Bybit's checks pass",
+        ...secured,
+        body: {
+          type: 'object',
+          required: ['marginMode'],
+          additionalProperties: false,
+          properties: { marginMode: { type: 'string', enum: [...MARGIN_MODES] } },
+        },
+        response: {
+          200: actionResponse({ type: 'string', enum: [...MARGIN_MODES] }),
+          400: errorResponse,
+          401: errorResponse,
+          409: errorResponse,
+          422: errorResponse,
+          429: errorResponse,
+          500: errorResponse,
+        },
+      },
+    },
+    async (request, reply) =>
+      guarded(reply, async () =>
+        send(reply, await app.trading.setMarginMode(userIdOf(request), request.body.marginMode))
+      )
+  );
+
   // ── PATCH /account/leverage — default leverage (pre-BP-2 clients; remove in BP-3) ──
   app.patch<{ Body: { leverage: number } }>(
     '/account/leverage',
@@ -575,10 +714,12 @@ export async function paperRoutes(app: FastifyInstance) {
         },
       },
     },
-    async (request, reply) =>
-      guarded(reply, async () =>
+    async (request, reply) => {
+      legacyLog.warn({ route: 'PATCH /account/leverage' }, 'Pre-BP-2 account leverage route used');
+      return guarded(reply, async () =>
         send(reply, await app.trading.setLeverage(userIdOf(request), request.body.leverage))
-      )
+      );
+    }
   );
 
   // ── POST /account/reset ──────────────────────────────────────────────────────

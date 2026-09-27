@@ -480,3 +480,67 @@ describe('BP-2 read model', () => {
     expect(getLastKnownMarkPrice('AVAXUSDT')).toBe(29.95);
   });
 });
+
+// ─── BP-5 E — cross margin ────────────────────────────────────────────────────
+
+describe('margin mode (BP-5 E)', () => {
+  it('a pre-BP-5 server (no mode) reads as isolated with no notice', () => {
+    usePaperStore.getState().hydrate(emptyState());
+    expect(usePaperStore.getState().marginMode).toBe('ISOLATED_MARGIN');
+    expect(usePaperStore.getState().marginModeNotice).toBe(false);
+  });
+
+  it('maps the mode and the one-time notice, and a switch clears the notice', () => {
+    usePaperStore.getState().hydrate(
+      emptyState({
+        account: {
+          balance: '10000',
+          realizedPnl: '0',
+          leverage: 1,
+          symbolLeverage: {},
+          marginMode: 'ISOLATED_MARGIN',
+          marginModeNotice: true,
+          version: 3,
+        },
+      })
+    );
+    expect(usePaperStore.getState().marginModeNotice).toBe(true);
+    usePaperStore.getState().applyDelta(
+      delta(4, {
+        account: {
+          balance: '10000',
+          realizedPnl: '0',
+          leverage: 1,
+          symbolLeverage: {},
+          marginMode: 'REGULAR_MARGIN',
+          version: 4,
+        },
+      })
+    );
+    expect(usePaperStore.getState().marginMode).toBe('REGULAR_MARGIN');
+    expect(usePaperStore.getState().marginModeNotice).toBe(false);
+  });
+
+  it('a cross position has no server liquidation price (unknown) and is flagged cross', () => {
+    const cross = { ...position('p1'), marginMode: 'cross' as const };
+    // A cross position carries no isolated liquidation / bankruptcy price
+    delete (cross as Partial<typeof cross>).liqPrice;
+    delete (cross as Partial<typeof cross>).bustPrice;
+    usePaperStore.getState().hydrate(emptyState({ positions: [cross] }));
+    const [p] = usePaperStore.getState().positions;
+    expect(p.marginMode).toBe('cross');
+    expect(p.liqPrice).toBeNull();
+  });
+
+  it('setMarginMode sends Bybit mode name and returns the server refusal', async () => {
+    usePaperStore.getState().hydrate(emptyState());
+    await usePaperStore.getState().setMarginMode('REGULAR_MARGIN');
+    expect(fakePaperApi.setMarginMode).toHaveBeenCalledWith('REGULAR_MARGIN', 'test-token');
+    fakePaperApi.setMarginMode.mockRejectedValueOnce(
+      new Error('Set margin mode failed: Waiting for the BTCUSDT mark price')
+    );
+    expect(await usePaperStore.getState().setMarginMode('ISOLATED_MARGIN')).toBe(
+      'Set margin mode failed: Waiting for the BTCUSDT mark price'
+    );
+  });
+});

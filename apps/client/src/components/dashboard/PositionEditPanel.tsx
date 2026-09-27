@@ -4,9 +4,15 @@
  * TV-style right-column panel for editing TP/SL exits on an open position.
  * Replaces the TradingPanel in the right slot when the user clicks the pencil
  * icon on a position's TP or SL cell in OrderAccountManagementPanel.
+ *
+ * BP-5 B: each leg picks the price it triggers on (Last / Mark / Index), and a new or changed leg
+ * is checked against that price now — as the server does (owner decision O9, Bybit's rule) —
+ * instead of against the entry price. A stop-loss beyond the liquidation price is allowed, with an
+ * amber warning: the position would be liquidated before it triggers.
  */
 
 import { useState } from 'react';
+import type { PaperTriggerBy } from '@crypto-dashboard/sdk';
 import { X, TrendingUp, TrendingDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { usePaperStore } from '@/store/paperStore';
@@ -20,6 +26,13 @@ import { Toggle } from '@/components/ui/Toggle';
 import { NumericInput } from '@/components/ui/NumericInput';
 import { FieldLabel } from '@/components/ui/FieldLabel';
 import { WarningText } from '@/components/ui/WarningText';
+import { TriggerBySelect } from '@/components/ui/TriggerBySelect';
+
+const SOURCE_LABEL: Record<PaperTriggerBy, string> = {
+  LastPrice: 'last',
+  MarkPrice: 'mark',
+  IndexPrice: 'index',
+};
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -55,6 +68,13 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
   [mp0, mp1, mp2, mp3].forEach((mp, i) => {
     if (mp !== null) markByMarket[paneMarkets[i]] = mp;
   });
+  // The live prices a leg can trigger on (index isn't streamed to the browser: the server checks it)
+  const lastNow = position
+    ? (priceByMarket[`linear:${position.symbol}`] ?? getLastKnownPrice(position.symbol, 'linear'))
+    : null;
+  const markNow = position
+    ? (markByMarket[`linear:${position.symbol}`] ?? getLastKnownMarkPrice(position.symbol))
+    : null;
   const markPrice = position
     ? (markByMarket[`linear:${position.symbol}`] ??
       getLastKnownMarkPrice(position.symbol) ??
@@ -72,6 +92,14 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
   const [slInput, setSlInput] = useState(() =>
     position?.stopLoss ? fmtMktPrice(position.stopLoss, { useGrouping: false }) : ''
   );
+  const [tpTriggerBy, setTpTriggerBy] = useState<PaperTriggerBy>(
+    () => position?.tpTriggerBy ?? 'LastPrice'
+  );
+  const [slTriggerBy, setSlTriggerBy] = useState<PaperTriggerBy>(
+    () => position?.slTriggerBy ?? 'LastPrice'
+  );
+  const [saving, setSaving] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
 
   if (!position) {
     return (
@@ -96,23 +124,40 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
   const tpVal = parseFloat(tpInput) || null;
   const slVal = parseFloat(slInput) || null;
 
-  // Direction-aware TP/SL warnings
-  const tpWarning: string | null =
-    tpEnabled && tpVal != null
-      ? isLong && tpVal <= position.entryPrice
-        ? 'Take Profit must be above entry price for a long position.'
-        : !isLong && tpVal >= position.entryPrice
-          ? 'Take Profit must be below entry price for a short position.'
-          : null
-      : null;
+  /** The live price a leg triggers on — null when the browser doesn't have it (index) */
+  const sourcePrice = (by: PaperTriggerBy): number | null =>
+    by === 'LastPrice' ? lastNow : by === 'MarkPrice' ? markNow : null;
 
-  const slWarning: string | null =
-    slEnabled && slVal != null
-      ? isLong && slVal >= position.entryPrice
-        ? 'Stop Loss must be below entry price for a long position.'
-        : !isLong && slVal <= position.entryPrice
-          ? 'Stop Loss must be above entry price for a short position.'
-          : null
+  /**
+   * O9 (Bybit): a long's TP above the price it triggers on and its SL below; a short's the
+   * reverse. Only a new or changed leg is checked — an untouched one may sit anywhere by now.
+   */
+  const sideWarning = (
+    leg: 'TP' | 'SL',
+    val: number | null,
+    by: PaperTriggerBy,
+    old: number | undefined,
+    oldBy: PaperTriggerBy | undefined
+  ): string | null => {
+    if (val == null || (old === val && by === (oldBy ?? 'LastPrice'))) return null;
+    const ref = sourcePrice(by);
+    if (ref == null) return null;
+    const above = isLong === (leg === 'TP');
+    if (above ? val > ref : val < ref) return null;
+    const name = leg === 'TP' ? 'Take Profit' : 'Stop Loss';
+    return `${name} must be ${above ? 'above' : 'below'} the ${SOURCE_LABEL[by]} price ($${fmtMktPrice(ref)}) for a ${isLong ? 'long' : 'short'} position.`;
+  };
+  const tpWarning = tpEnabled
+    ? sideWarning('TP', tpVal, tpTriggerBy, position.takeProfit, position.tpTriggerBy)
+    : null;
+  const slWarning = slEnabled
+    ? sideWarning('SL', slVal, slTriggerBy, position.stopLoss, position.slTriggerBy)
+    : null;
+  // Allowed, as on Bybit — but the liquidation comes first
+  const liq = position.liqPrice;
+  const slPastLiquidation =
+    slEnabled && slVal != null && liq != null && liq > 0 && (isLong ? slVal <= liq : slVal >= liq)
+      ? `Stop Loss is beyond the liquidation price ($${fmtMktPrice(liq)}) — the position would be liquidated before it triggers.`
       : null;
 
   // Risk / Reward
@@ -139,6 +184,7 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
   // Disabled when: a direction warning is active, or a toggle is on but the
   // parsed value is missing/zero (would silently remove the leg).
   const confirmDisabled = !!(
+    saving ||
     tpWarning ||
     slWarning ||
     (tpEnabled && !tpVal) ||
@@ -146,14 +192,20 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
   );
 
   // ── Handlers ────────────────────────────────────────────────────────────────
-  function handleConfirm() {
+  // The server has the final word (O9 on its own fresh prices): a refusal stays in the panel
+  async function handleConfirm() {
     if (confirmDisabled) return;
-    void updatePositionExits(
+    setSaving(true);
+    setServerError(null);
+    const err = await updatePositionExits(
       positionId,
       tpEnabled && tpVal ? tpVal : null,
-      slEnabled && slVal ? slVal : null
+      slEnabled && slVal ? slVal : null,
+      { tpTriggerBy, slTriggerBy }
     );
-    onClose();
+    setSaving(false);
+    if (err) setServerError(err);
+    else onClose();
   }
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -234,6 +286,15 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
               <span style={{ fontSize: fontSize.xs, color: tpEnabled ? color.white : color.muted }}>
                 Take profit, price
               </span>
+              {tpEnabled && (
+                <span className="ml-auto">
+                  <TriggerBySelect
+                    value={tpTriggerBy}
+                    onChange={setTpTriggerBy}
+                    ariaLabel="Take profit trigger price"
+                  />
+                </span>
+              )}
             </div>
             {tpEnabled && (
               <NumericInput
@@ -257,6 +318,15 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
               <span style={{ fontSize: fontSize.xs, color: slEnabled ? color.white : color.muted }}>
                 Stop loss, price
               </span>
+              {slEnabled && (
+                <span className="ml-auto">
+                  <TriggerBySelect
+                    value={slTriggerBy}
+                    onChange={setSlTriggerBy}
+                    ariaLabel="Stop loss trigger price"
+                  />
+                </span>
+              )}
             </div>
             {slEnabled && (
               <NumericInput
@@ -271,7 +341,13 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
               />
             )}
             {slWarning && <WarningText>{slWarning}</WarningText>}
+            {!slWarning && slPastLiquidation && <WarningText>{slPastLiquidation}</WarningText>}
           </div>
+          {serverError && (
+            <p role="alert" style={{ fontSize: fontSize.xs10, color: color.red }}>
+              {serverError}
+            </p>
+          )}
         </div>
 
         {/* ── Divider ───────────────────────────────────────────────────── */}
@@ -332,7 +408,7 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
         style={{ borderColor: `color-mix(in srgb, ${color.white} 7%, transparent)` }}
       >
         <motion.button
-          onClick={handleConfirm}
+          onClick={() => void handleConfirm()}
           disabled={confirmDisabled}
           whileTap={!confirmDisabled ? { scale: 0.97 } : {}}
           className="w-full rounded py-2 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"

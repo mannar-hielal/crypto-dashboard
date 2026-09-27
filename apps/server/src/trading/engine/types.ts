@@ -36,7 +36,16 @@ export interface Quote {
   ask: Decimal;
   /** Mark price (USDT Perpetual only) — unrealised PnL and liquidation use it (BP-3) */
   mark?: Decimal;
+  /** Index price (USDT Perpetual only) — a TP / SL / stop set to trigger on it uses it (BP-5 B) */
+  index?: Decimal;
 }
+
+/**
+ * The price a USDT Perpetual TP / SL or stop order triggers on — Bybit's `triggerBy` (BP-5 B).
+ * Absent = LastPrice, Bybit's default. A limit order always rests on the last price.
+ */
+export type TriggerBy = 'LastPrice' | 'MarkPrice' | 'IndexPrice';
+export const TRIGGER_BY: readonly TriggerBy[] = ['LastPrice', 'MarkPrice', 'IndexPrice'];
 
 /** Bybit instrument rules the engine enforces (instruments-info). 0 = no constraint. */
 export interface InstrumentRules {
@@ -89,6 +98,9 @@ export interface Position {
   openedAt: number;
   takeProfit?: Decimal;
   stopLoss?: Decimal;
+  /** What each exit leg triggers on (BP-5 B); absent = LastPrice */
+  tpTriggerBy?: TriggerBy;
+  slTriggerBy?: TriggerBy;
 }
 
 export interface PendingOrder {
@@ -115,6 +127,23 @@ export interface PendingOrder {
   takeProfit?: Decimal;
   stopLoss?: Decimal;
   placedAt: number;
+  /** A stop order's trigger source (BP-5 B); absent = LastPrice. Limits always use the last price */
+  triggerBy?: TriggerBy;
+  /** Trigger source of the TP / SL the fill attaches to the position; absent = LastPrice */
+  tpTriggerBy?: TriggerBy;
+  slTriggerBy?: TriggerBy;
+  /**
+   * Reduce-only (BP-5 B): the order can only shrink the opposite position — it reserves nothing,
+   * carries no TP / SL, and is trimmed when the position shrinks below the reduce-only quantity
+   * resting on it.
+   */
+  reduceOnly?: boolean;
+  /**
+   * Close-on-trigger (implies reduce-only). On Bybit it may cancel other orders to free margin for
+   * the close; here a close never needs free margin (its fee comes out of the position), so it
+   * behaves exactly like reduce-only.
+   */
+  closeOnTrigger?: boolean;
 }
 
 /** A spot coin balance. `free` can be sold; `locked` backs resting sell / TP / SL orders. */
@@ -127,7 +156,20 @@ export interface SpotHolding {
 }
 
 /** What the engine needs to decide an action for one account. */
+/**
+ * Bybit UTA margin mode, account-wide (BP-5 E): 'REGULAR_MARGIN' = cross, 'ISOLATED_MARGIN'.
+ * Absent on an engine state = isolated (every account before BP-5, and the engine tests).
+ */
+export type MarginMode = 'ISOLATED_MARGIN' | 'REGULAR_MARGIN';
+export const MARGIN_MODES: readonly MarginMode[] = ['ISOLATED_MARGIN', 'REGULAR_MARGIN'];
+
 export interface AccountState {
+  /**
+   * USDT not tied up anywhere. In isolated mode it can't go below 0. In cross mode positions and
+   * orders still hold their margin here (the bookkeeping is the same), but an order is accepted
+   * against the account's available balance — unrealised profit counts — and a loss beyond a
+   * position's margin comes out of it, so it can go below 0 while the margin balance is positive.
+   */
   balance: Decimal;
   realizedPnl: Decimal;
   /** Default leverage for a symbol with no per-symbol setting */
@@ -149,6 +191,8 @@ export interface AccountState {
   spot: SpotHolding[];
   positions: Position[];
   pendingOrders: PendingOrder[];
+  /** Absent = ISOLATED_MARGIN (BP-5 E) */
+  marginMode?: MarginMode;
 }
 
 // ─── Records the engine writes ─────────────────────────────────────────────────
@@ -178,6 +222,10 @@ export interface HistoricalOrder {
   rejectionReason?: string;
   /** Bybit's createType for a system order: 'CreateByLiq' = the liquidation close (BP-3) */
   createType?: 'CreateByLiq';
+  /** Bybit's order flags (BP-5 B) — set only when true / not LastPrice */
+  reduceOnly?: boolean;
+  closeOnTrigger?: boolean;
+  triggerBy?: TriggerBy;
 }
 
 /** Bybit's execution type: a normal fill, a liquidation at the bankruptcy price (BP-3), funding (BP-4) */
@@ -202,6 +250,11 @@ export interface ClosedTrade {
   execType?: ExecType;
   /** The closed part's share of the position's funding (signed, + = paid) — Closed P&L nets it (BP-4) */
   funding?: Decimal;
+  /**
+   * The closed part's share of the open fee (BP-5 D) — with it the row holds every input of
+   * Bybit's closedPnl = PnL − open fee − close fee − funding. Absent on spot sells.
+   */
+  openFee?: Decimal;
 }
 
 /**
@@ -258,6 +311,8 @@ export interface Delta {
     leverage: number;
     symbolLeverage: Record<string, number>;
     symbolFundingAt: Record<string, number>;
+    /** BP-5 E */
+    marginMode: MarginMode;
   };
   positionsUpsert: Position[];
   positionsRemove: string[];
@@ -269,6 +324,12 @@ export interface Delta {
   trades: ClosedTrade[];
   /** Funding settlements (BP-4) */
   fundings: FundingExecution[];
+  /**
+   * A funding fee for a position closed between the timestamp and its settlement (BP-5 F): added
+   * to that close's Trade row (its funding share, and its net PnL) so Closed P&L includes it, as
+   * Bybit's would. Matched by symbol + the position's open time, the latest close after `ts`.
+   */
+  closedTradeFunding: { symbol: string; openedAt: number; ts: number; funding: Decimal }[];
   balanceEvents: BalanceEvent[];
   journal: JournalEntry[];
   journalEdits: { id: string; text: string }[];
@@ -297,4 +358,9 @@ export interface EngineContext {
   newId: () => string;
   /** USDT Perpetual risk-limit tiers of a symbol (BP-3). Default: the bundled Bybit snapshot. */
   riskTiers?: (symbol: string) => RiskTier[];
+  /**
+   * The fresh USDT Perpetual mark price of a symbol (BP-5 E: cross margin values every position at
+   * mark). Absent / undefined for a symbol = its entry price (no unrealised PnL).
+   */
+  markPrice?: (symbol: string) => Decimal | undefined;
 }

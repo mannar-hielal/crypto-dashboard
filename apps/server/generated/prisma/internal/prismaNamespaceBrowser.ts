@@ -169,6 +169,8 @@ export const AccountScalarFieldEnum = {
   realizedPnl: 'realizedPnl',
   leverage: 'leverage',
   version: 'version',
+  marginMode: 'marginMode',
+  marginModeNotice: 'marginModeNotice',
   lastReset: 'lastReset',
   resetCount: 'resetCount',
   createdAt: 'createdAt',
@@ -223,6 +225,8 @@ export const PositionScalarFieldEnum = {
   cumFunding: 'cumFunding',
   takeProfit: 'takeProfit',
   stopLoss: 'stopLoss',
+  tpTriggerBy: 'tpTriggerBy',
+  slTriggerBy: 'slTriggerBy',
   openedAt: 'openedAt',
   updatedAt: 'updatedAt'
 } as const
@@ -256,6 +260,11 @@ export const OrderScalarFieldEnum = {
   isMaker: 'isMaker',
   ocoGroup: 'ocoGroup',
   createType: 'createType',
+  triggerBy: 'triggerBy',
+  tpTriggerBy: 'tpTriggerBy',
+  slTriggerBy: 'slTriggerBy',
+  reduceOnly: 'reduceOnly',
+  closeOnTrigger: 'closeOnTrigger',
   status: 'status',
   rejectionReason: 'rejectionReason',
   createdAt: 'createdAt',
@@ -288,6 +297,7 @@ export const TradeScalarFieldEnum = {
   execType: 'execType',
   feeRate: 'feeRate',
   funding: 'funding',
+  openFee: 'openFee',
   openedAt: 'openedAt',
   executedAt: 'executedAt',
   createdAt: 'createdAt'

@@ -37,7 +37,7 @@ import { render, screen, fireEvent, cleanup, within, waitFor } from '@testing-li
 import { TradingPanel } from '../TradingPanel';
 import { useLayoutStore } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
-import { usePaperStore } from '@/store/paperStore';
+import { usePaperStore, type Position } from '@/store/paperStore';
 import { useAuthStore } from '@/store/authStore';
 import { emptyState, fakePaperApi, resetFakePaperApi } from '@/test/fakePaperApi';
 
@@ -1086,5 +1086,168 @@ describe('BP-3 — liquidation in the USDT Perpetual form', () => {
     }));
     renderPanel();
     expect(screen.queryByText('Positions can now be liquidated')).toBeNull();
+  });
+});
+
+// ─── BP-5 B — trigger source, reduce-only, close-on-trigger ─────────────────
+
+/** An open 0.1 BTC long (USDT Perpetual) for the reduce-only cases */
+function longPosition(): Position {
+  return {
+    id: 'p-long',
+    category: 'linear',
+    symbol: 'BTCUSDT',
+    side: 'long',
+    quantity: 0.1,
+    entryPrice: 50_000,
+    entryUsdtAmount: 500,
+    leverage: 10,
+    entryFee: 2.75,
+    closeFeeReserve: 2.475,
+    extraMargin: 0,
+    liqPrice: 45_148.99,
+    bustPrice: 45_000,
+    positionIM: 502.475,
+    positionMM: 18.975,
+    cumFunding: 0,
+    openedAt: 1,
+  };
+}
+
+describe('BP-5 B — order flags and trigger source (USDT Perpetual)', () => {
+  it('a TP set to trigger on the mark price sends tpTriggerBy', async () => {
+    renderPanel();
+    fireEvent.change(getQtyInput(), { target: { value: '100' } });
+    const [tpToggle] = screen.getAllByRole('switch');
+    fireEvent.click(tpToggle);
+    fireEvent.change(getTpInput(), { target: { value: '55000' } });
+    fireEvent.change(screen.getByLabelText('Take profit trigger price'), {
+      target: { value: 'MarkPrice' },
+    });
+    clickExecuteBtn();
+    await waitFor(() => expect(fakePaperApi.placeOrder).toHaveBeenCalledTimes(1));
+    expect(fakePaperApi.placeOrder.mock.calls[0][0]).toMatchObject({
+      takeProfit: '55000',
+      tpTriggerBy: 'MarkPrice',
+    });
+    // LastPrice is the default: never sent for the SL that wasn't set
+    expect(fakePaperApi.placeOrder.mock.calls[0][0]).not.toHaveProperty('slTriggerBy');
+  });
+
+  it('Reduce-only with no position, or on the position side, is stopped before submit (review #146)', () => {
+    renderPanel();
+    fireEvent.click(screen.getByLabelText('Reduce-only'));
+    fireEvent.change(getQtyInput(), { target: { value: '100' } });
+    clickExecuteBtn();
+    expect(
+      screen.getByText('Reduce-only needs an open position on this symbol to reduce')
+    ).toBeTruthy();
+    expect(fakePaperApi.placeOrder).not.toHaveBeenCalled();
+    cleanup();
+    usePaperStore.setState({ positions: [longPosition()] });
+    renderPanel();
+    fireEvent.click(screen.getByLabelText('Reduce-only'));
+    fireEvent.change(getQtyInput(), { target: { value: '100' } });
+    clickExecuteBtn(); // Buy on a long
+    expect(
+      screen.getByText('Reduce-only can only reduce your long position — use Sell')
+    ).toBeTruthy();
+    expect(fakePaperApi.placeOrder).not.toHaveBeenCalled();
+  });
+
+  it('Reduce-only hides TP / SL, skips the balance check and sends reduceOnly', async () => {
+    usePaperStore.setState({ positions: [longPosition()] });
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: /sell/i }));
+    fireEvent.click(screen.getByLabelText('Reduce-only'));
+    expect(screen.queryByText('Exits')).toBeNull();
+    // Far more than the balance: a reduce-only order holds no margin (the server caps it)
+    fireEvent.change(getQtyInput(), { target: { value: '1000000' } });
+    clickExecuteBtn();
+    await waitFor(() => expect(fakePaperApi.placeOrder).toHaveBeenCalledTimes(1));
+    const [body] = fakePaperApi.placeOrder.mock.calls[0];
+    expect(body).toMatchObject({ reduceOnly: true });
+    expect(body).not.toHaveProperty('takeProfit');
+    expect(screen.queryByText('Insufficient balance')).toBeNull();
+  });
+
+  it('Close on trigger is offered for a stop order only, and implies reduce-only', async () => {
+    usePaperStore.setState({ positions: [longPosition()] });
+    renderPanel();
+    expect(screen.queryByLabelText('Close on trigger')).toBeNull();
+    // A sell stop below the market: a stop-loss for a long
+    fireEvent.click(screen.getByRole('button', { name: /sell/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /stop/i }));
+    fireEvent.change(getPriceInput(), { target: { value: '48000' } });
+    fireEvent.click(screen.getByLabelText('Close on trigger'));
+    fireEvent.change(getQtyInput(), { target: { value: '100' } });
+    clickExecuteBtn();
+    await waitFor(() => expect(fakePaperApi.placeOrder).toHaveBeenCalledTimes(1));
+    expect(fakePaperApi.placeOrder.mock.calls[0][0]).toMatchObject({
+      type: 'stop',
+      closeOnTrigger: true,
+      reduceOnly: true,
+    });
+  });
+
+  it('spot has no reduce-only', () => {
+    useLayoutStore.setState((s) => ({
+      panes: s.panes.map((p, i) => (i === 0 ? { ...p, category: 'spot' } : p)),
+    }));
+    renderPanel();
+    expect(screen.queryByLabelText('Reduce-only')).toBeNull();
+  });
+});
+
+describe('BP-5 C — tier info in the leverage modal (O6)', () => {
+  it('shows the tier and the max position value at the chosen leverage', () => {
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: /Leverage \d+x, isolated margin/ }));
+    const dialog = screen.getByRole('dialog', { name: /Adjust leverage/ });
+    fireEvent.click(within(dialog).getByRole('button', { name: '10×' }));
+    expect(within(dialog).getByTestId('leverage-tier-info').textContent).toBe(
+      'Risk-limit tier 1 (up to 300,000 USDT) · MMR 0.33% · Max position value at 10×: 100,000,000 USDT'
+    );
+  });
+});
+
+describe('BP-5 E — margin mode in the leverage chip and modal', () => {
+  it('the chip names the mode; switching to Cross calls the server before the leverage', async () => {
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: 'Leverage 1x, isolated margin' }));
+    expect(screen.getByText(/^Isolated 1x/)).toBeTruthy();
+    const dialog = screen.getByRole('dialog', { name: /Adjust leverage/ });
+    fireEvent.click(within(dialog).getByRole('tab', { name: 'Cross' }));
+    expect(within(dialog).getByTestId('margin-mode-explainer').textContent).toContain(
+      'applies to your whole account'
+    );
+    fireEvent.click(within(dialog).getByRole('button', { name: '5×' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
+    await waitFor(() =>
+      expect(fakePaperApi.setMarginMode).toHaveBeenCalledWith('REGULAR_MARGIN', 'test-token')
+    );
+    await waitFor(() => expect(fakePaperApi.setSymbolLeverage).toHaveBeenCalled());
+    expect(fakePaperApi.setMarginMode.mock.invocationCallOrder[0]).toBeLessThan(
+      fakePaperApi.setSymbolLeverage.mock.invocationCallOrder[0]
+    );
+  });
+
+  it('a refused switch shows every reason inline and leaves the leverage alone', async () => {
+    fakePaperApi.setMarginMode.mockRejectedValueOnce(
+      new Error(
+        'Set margin mode failed: The BTCUSDT position would be liquidated immediately in isolated margin'
+      )
+    );
+    usePaperStore.setState({ marginMode: 'REGULAR_MARGIN' });
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: 'Leverage 1x, cross margin' }));
+    const dialog = screen.getByRole('dialog', { name: /Adjust leverage/ });
+    fireEvent.click(within(dialog).getByRole('tab', { name: 'Isolated' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: '5×' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
+    expect((await within(dialog).findByRole('alert')).textContent).toContain(
+      'would be liquidated immediately'
+    );
+    expect(fakePaperApi.setSymbolLeverage).not.toHaveBeenCalled();
   });
 });

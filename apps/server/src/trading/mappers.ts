@@ -38,6 +38,8 @@ import type {
   Position,
   SpotHolding,
   Category,
+  TriggerBy,
+  MarginMode,
 } from './engine/index.js';
 import { fallbackRiskTiers, LEGACY_FEE_RATE, type RiskTier } from './bybitSpec.js';
 import { riskOf } from './engine/margin.js';
@@ -64,6 +66,8 @@ export interface PositionRow {
   cumFunding: Dec;
   takeProfit: Dec | null;
   stopLoss: Dec | null;
+  tpTriggerBy: string;
+  slTriggerBy: string;
   openedAt: Date;
 }
 
@@ -89,6 +93,11 @@ export interface OrderRow {
   isMaker: boolean | null;
   ocoGroup: string | null;
   createType: string | null;
+  triggerBy: string;
+  tpTriggerBy: string;
+  slTriggerBy: string;
+  reduceOnly: boolean;
+  closeOnTrigger: boolean;
   status: string;
   rejectionReason: string | null;
   createdAt: Date;
@@ -112,6 +121,7 @@ export interface TradeRow {
   commission: Dec;
   feeRate: Dec | null;
   funding: Dec;
+  openFee: Dec;
   openedAt: Date | null;
   executedAt: Date;
 }
@@ -144,6 +154,13 @@ const d = (v: Dec) => new Decimal(v.toString());
 const optD = (v: Dec | null) => (v === null ? undefined : d(v));
 const LEGACY = new Decimal(LEGACY_FEE_RATE);
 const categoryOf = (v: string): Category => (v === 'spot' ? 'spot' : 'linear');
+
+/**
+ * A stored trigger source → the engine's (BP-5 B). LastPrice — the default — and anything unknown
+ * are left out, so the field is present only when it changes behaviour.
+ */
+const triggerByField = <K extends string>(key: K, v: string): { [P in K]?: TriggerBy } =>
+  v === 'MarkPrice' || v === 'IndexPrice' ? ({ [key]: v } as { [P in K]?: TriggerBy }) : {};
 
 // ─── DB row → engine ───────────────────────────────────────────────────────────
 
@@ -185,6 +202,8 @@ export function positionFromRow(r: PositionRow): Position {
     openedAt: r.openedAt.getTime(),
     ...(tp ? { takeProfit: tp } : {}),
     ...(sl ? { stopLoss: sl } : {}),
+    ...triggerByField('tpTriggerBy', r.tpTriggerBy),
+    ...triggerByField('slTriggerBy', r.slTriggerBy),
   };
 }
 
@@ -219,6 +238,11 @@ export function pendingFromRow(r: OrderRow): PendingOrder {
     ...(r.ocoGroup ? { ocoGroup: r.ocoGroup } : {}),
     ...(tp ? { takeProfit: tp } : {}),
     ...(sl ? { stopLoss: sl } : {}),
+    ...triggerByField('triggerBy', r.triggerBy),
+    ...triggerByField('tpTriggerBy', r.tpTriggerBy),
+    ...triggerByField('slTriggerBy', r.slTriggerBy),
+    ...(r.reduceOnly ? { reduceOnly: true } : {}),
+    ...(r.closeOnTrigger ? { closeOnTrigger: true } : {}),
   };
 }
 
@@ -250,10 +274,38 @@ export function historyOrderFromRow(r: OrderRow): PaperOrderDTO {
     closingTime: closing.getTime(),
     ...(r.rejectionReason ? { rejectionReason: r.rejectionReason } : {}),
     ...(r.createType === 'CreateByLiq' ? { createType: 'CreateByLiq' as const } : {}),
+    ...(r.reduceOnly ? { reduceOnly: true } : {}),
+    ...(r.closeOnTrigger ? { closeOnTrigger: true } : {}),
+    ...triggerByField('triggerBy', r.triggerBy),
+  };
+}
+
+/**
+ * Bybit's Closed P&L fields for a close (BP-5 D): closedPnl = gross − open fee − close fee −
+ * funding, plus the v5 names (avgEntryPrice / avgExitPrice / closedSize) for the parity test.
+ */
+function closedPnlFields(
+  gross: Decimal,
+  openFee: Decimal,
+  closeFee: Decimal,
+  funding: Decimal,
+  t: { entryPrice: string; exitPrice: string; quantity: string }
+) {
+  return {
+    openFee: openFee.toString(),
+    closeFee: closeFee.toString(),
+    closedPnl: gross.minus(openFee).minus(closeFee).minus(funding).toString(),
+    avgEntryPrice: t.entryPrice,
+    avgExitPrice: t.exitPrice,
+    closedSize: t.quantity,
   };
 }
 
 export function tradeFromRow(r: TradeRow): PaperTradeDTO {
+  const entryPrice = (r.entryPrice ? d(r.entryPrice) : new Decimal(0)).toString();
+  const exitPrice = d(r.executedPrice).toString();
+  const quantity = d(r.quantity).toString();
+  const gross = d(r.grossPnl ?? r.pnl);
   return {
     id: r.refId ?? r.id,
     category: categoryOf(r.category),
@@ -263,11 +315,16 @@ export function tradeFromRow(r: TradeRow): PaperTradeDTO {
     quantity: d(r.quantity).toString(),
     entryPrice: (r.entryPrice ? d(r.entryPrice) : new Decimal(0)).toString(),
     exitPrice: d(r.executedPrice).toString(),
-    pnl: d(r.grossPnl ?? r.pnl).toString(),
+    pnl: gross.toString(),
     openedAt: r.openedAt?.getTime() ?? 0,
     closedAt: r.executedAt.getTime(),
     ...(r.execType === 'BustTrade' ? { execType: 'BustTrade' as const } : {}),
     ...(d(r.funding).eq(0) ? {} : { funding: d(r.funding).toString() }),
+    ...closedPnlFields(gross, d(r.openFee), d(r.commission), d(r.funding), {
+      entryPrice,
+      exitPrice,
+      quantity,
+    }),
   };
 }
 
@@ -325,6 +382,8 @@ export function positionData(p: Position) {
     cumFunding: p.cumFunding ?? new Decimal(0),
     takeProfit: p.takeProfit ?? null,
     stopLoss: p.stopLoss ?? null,
+    tpTriggerBy: p.tpTriggerBy ?? 'LastPrice',
+    slTriggerBy: p.slTriggerBy ?? 'LastPrice',
     openedAt: new Date(p.openedAt),
   };
 }
@@ -344,6 +403,11 @@ export function pendingData(o: PendingOrder) {
     margin: o.usdtAmount,
     reserved: o.reserved,
     leverage: o.leverage,
+    triggerBy: o.triggerBy ?? 'LastPrice',
+    tpTriggerBy: o.tpTriggerBy ?? 'LastPrice',
+    slTriggerBy: o.slTriggerBy ?? 'LastPrice',
+    reduceOnly: o.reduceOnly ?? false,
+    closeOnTrigger: o.closeOnTrigger ?? false,
     status: 'PENDING',
     createdAt: new Date(o.placedAt),
   };
@@ -374,6 +438,9 @@ export function historyOrderData(o: HistoricalOrder) {
     status: o.status.toUpperCase(),
     rejectionReason: o.rejectionReason ?? null,
     createType: o.createType ?? null,
+    triggerBy: o.triggerBy ?? 'LastPrice',
+    reduceOnly: o.reduceOnly ?? false,
+    closeOnTrigger: o.closeOnTrigger ?? false,
     createdAt: new Date(o.placingTime),
     filledAt: o.status === 'filled' ? closedAt : null,
     cancelledAt: o.status === 'filled' ? null : closedAt,
@@ -407,6 +474,7 @@ export function tradeData(t: ClosedTrade) {
     executedAt: new Date(t.closedAt),
     execType: t.execType ?? 'Trade',
     funding,
+    openFee: t.openFee ?? new Decimal(0),
   };
 }
 
@@ -455,8 +523,18 @@ export function balanceEventData(b: BalanceEvent) {
 
 const s = (v: Decimal) => v.toString();
 
-export function positionDTO(p: Position, tiers: RiskTier[]): PaperPositionDTO {
+/**
+ * A position on the wire. In cross margin (BP-5 E) its liquidation / bankruptcy prices depend on
+ * the whole account and the live marks, so they are left out (unknown) — the client estimates them
+ * live from the account figures, as Bybit shows an estimate.
+ */
+export function positionDTO(
+  p: Position,
+  tiers: RiskTier[],
+  mode: MarginMode = 'ISOLATED_MARGIN'
+): PaperPositionDTO {
   const risk = riskOf(p, tiers);
+  const cross = mode === 'REGULAR_MARGIN';
   return {
     id: p.id,
     category: p.category,
@@ -466,19 +544,25 @@ export function positionDTO(p: Position, tiers: RiskTier[]): PaperPositionDTO {
     entryPrice: s(p.entryPrice),
     entryUsdtAmount: s(p.entryUsdtAmount),
     leverage: p.leverage,
-    marginMode: 'isolated',
+    marginMode: cross ? 'cross' : 'isolated',
     entryFee: s(p.entryFee),
     closeFeeReserve: s(p.closeFeeReserve),
     extraMargin: s(p.extraMargin ?? new Decimal(0)),
     cumFunding: s(p.cumFunding ?? new Decimal(0)),
-    liqPrice: s(risk.liqPrice.toDecimalPlaces(8)),
-    bustPrice: s(risk.bustPrice.toDecimalPlaces(8)),
+    ...(cross
+      ? {}
+      : {
+          liqPrice: s(risk.liqPrice.toDecimalPlaces(8)),
+          bustPrice: s(risk.bustPrice.toDecimalPlaces(8)),
+        }),
     positionIM: s(risk.positionIM.toDecimalPlaces(8)),
     positionMM: s(risk.positionMM.toDecimalPlaces(8)),
     mmr: s(risk.mmr),
     openedAt: p.openedAt,
     ...(p.takeProfit ? { takeProfit: s(p.takeProfit) } : {}),
     ...(p.stopLoss ? { stopLoss: s(p.stopLoss) } : {}),
+    ...(p.tpTriggerBy ? { tpTriggerBy: p.tpTriggerBy } : {}),
+    ...(p.slTriggerBy ? { slTriggerBy: p.slTriggerBy } : {}),
   };
 }
 
@@ -498,6 +582,11 @@ export function pendingDTO(o: PendingOrder): PaperPendingOrderDTO {
     ...(o.ocoGroup ? { ocoGroup: o.ocoGroup } : {}),
     ...(o.takeProfit ? { takeProfit: s(o.takeProfit) } : {}),
     ...(o.stopLoss ? { stopLoss: s(o.stopLoss) } : {}),
+    ...(o.triggerBy ? { triggerBy: o.triggerBy } : {}),
+    ...(o.tpTriggerBy ? { tpTriggerBy: o.tpTriggerBy } : {}),
+    ...(o.slTriggerBy ? { slTriggerBy: o.slTriggerBy } : {}),
+    ...(o.reduceOnly ? { reduceOnly: true } : {}),
+    ...(o.closeOnTrigger ? { closeOnTrigger: true } : {}),
   };
 }
 
@@ -527,6 +616,9 @@ export function orderDTO(o: HistoricalOrder): PaperOrderDTO {
     closingTime: o.closingTime,
     ...(o.rejectionReason ? { rejectionReason: o.rejectionReason } : {}),
     ...(o.createType ? { createType: o.createType } : {}),
+    ...(o.reduceOnly ? { reduceOnly: true } : {}),
+    ...(o.closeOnTrigger ? { closeOnTrigger: true } : {}),
+    ...(o.triggerBy ? { triggerBy: o.triggerBy } : {}),
   };
 }
 
@@ -544,6 +636,13 @@ export function tradeDTO(t: ClosedTrade): PaperTradeDTO {
     closedAt: t.closedAt,
     ...(t.execType === 'BustTrade' ? { execType: 'BustTrade' as const } : {}),
     ...(t.funding && !t.funding.eq(0) ? { funding: s(t.funding) } : {}),
+    ...closedPnlFields(
+      t.pnl,
+      t.openFee ?? new Decimal(0),
+      t.exitCommission,
+      t.funding ?? new Decimal(0),
+      { entryPrice: s(t.entryPrice), exitPrice: s(t.exitPrice), quantity: s(t.quantity) }
+    ),
   };
 }
 
@@ -592,9 +691,12 @@ export function deltaDTO(
       realizedPnl: s(delta.account.realizedPnl),
       leverage: delta.account.leverage,
       symbolLeverage: delta.account.symbolLeverage,
+      marginMode: delta.account.marginMode,
       version,
     },
-    positionsUpsert: delta.positionsUpsert.map((p) => positionDTO(p, riskTiers(p.symbol))),
+    positionsUpsert: delta.positionsUpsert.map((p) =>
+      positionDTO(p, riskTiers(p.symbol), delta.account.marginMode)
+    ),
     positionsRemove: delta.positionsRemove,
     spotUpsert: delta.spotUpsert.map(spotDTO),
     pendingUpsert: delta.pendingUpsert.map(pendingDTO),

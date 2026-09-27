@@ -15,7 +15,13 @@ function mmrColor(rate: number): string {
  * Bybit-style maintenance-margin-rate meter for one position (BP-3): fills toward 100%, where the
  * position is liquidated.
  */
-export function MmrBar({ rate }: { rate: number }) {
+interface MmrBarProps {
+  rate: number;
+  /** Hover text — the position's risk-limit tier and MMR (BP-5 C) */
+  title?: string;
+}
+
+export function MmrBar({ rate, title }: MmrBarProps) {
   const pct = Math.min(100, Math.max(0, rate * 100));
   const filled = Math.min(SEGMENTS.length, Math.ceil((pct / 100) * SEGMENTS.length));
   const tone = mmrColor(rate);
@@ -24,6 +30,7 @@ export function MmrBar({ rate }: { rate: number }) {
       className={styles.meter}
       data-testid="position-mmr"
       aria-label={`Maintenance margin rate ${pct.toFixed(0)}%`}
+      title={title}
     >
       <span className={styles.segments} aria-hidden>
         {SEGMENTS.map((id, i) => (

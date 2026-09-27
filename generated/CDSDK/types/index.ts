@@ -201,6 +201,13 @@ export interface PaperAccountDTO {
   /** USDT Perpetual leverage per symbol */
   symbolLeverage: Record<string, number>;
   /**
+   * Bybit UTA margin mode, account-wide (BP-5 E): REGULAR_MARGIN = cross. Absent from a pre-BP-5
+   * server (= isolated).
+   */
+  marginMode?: PaperMarginMode;
+  /** Snapshot only: the account was isolated before cross existed — show the one-time notice */
+  marginModeNotice?: boolean;
+  /**
    * Account version after this state / change. Every committed change bumps it by one, so a
    * client ignores anything not newer than what it has — an HTTP response and the WebSocket push
    * of the same change, or a late response after a newer push.
@@ -222,7 +229,8 @@ export interface PaperPositionDTO {
   /** Initial margin: quantity × entry / leverage */
   entryUsdtAmount: string;
   leverage: number;
-  marginMode: 'isolated';
+  /** 'cross' (BP-5 E): liqPrice / bustPrice are then absent — estimate them from the account */
+  marginMode: 'isolated' | 'cross';
   /** Open fee charged */
   entryFee: string;
   /** Estimated close fee held with the margin (position margin = entryUsdtAmount + this) */
@@ -249,7 +257,16 @@ export interface PaperPositionDTO {
   openedAt: number;
   takeProfit?: string;
   stopLoss?: string;
+  /** Price each exit leg triggers on (BP-5 B); absent = LastPrice */
+  tpTriggerBy?: PaperTriggerBy;
+  slTriggerBy?: PaperTriggerBy;
 }
+
+/** Bybit's account margin mode (UTA): REGULAR_MARGIN = cross (BP-5 E) */
+export type PaperMarginMode = 'ISOLATED_MARGIN' | 'REGULAR_MARGIN';
+
+/** Bybit's `triggerBy`: the price a TP / SL or stop order triggers on (BP-5 B) */
+export type PaperTriggerBy = 'LastPrice' | 'MarkPrice' | 'IndexPrice';
 
 export interface PaperPendingOrderDTO {
   id: string;
@@ -273,6 +290,15 @@ export interface PaperPendingOrderDTO {
   takeProfit?: string;
   stopLoss?: string;
   placedAt: number;
+  /** A stop order's trigger source (BP-5 B); absent = LastPrice. A limit rests on the last price */
+  triggerBy?: PaperTriggerBy;
+  /** Trigger source of the TP / SL the fill attaches; absent = LastPrice */
+  tpTriggerBy?: PaperTriggerBy;
+  slTriggerBy?: PaperTriggerBy;
+  /** Reduce-only: only shrinks the opposite position; reserves nothing and carries no TP / SL */
+  reduceOnly?: boolean;
+  /** Close-on-trigger (implies reduce-only) */
+  closeOnTrigger?: boolean;
 }
 
 /** A spot coin balance (the USDT wallet is `account.balance`). */
@@ -312,6 +338,10 @@ export interface PaperOrderDTO {
   rejectionReason?: string;
   /** 'CreateByLiq' = the system order that closed a liquidated position */
   createType?: 'CreateByLiq';
+  /** Bybit order flags (BP-5 B) — present only when set */
+  reduceOnly?: boolean;
+  closeOnTrigger?: boolean;
+  triggerBy?: PaperTriggerBy;
 }
 
 export interface PaperTradeDTO {
@@ -330,6 +360,17 @@ export interface PaperTradeDTO {
   execType?: PaperExecType;
   /** The closed part's share of the position's funding (+ = paid); Closed P&L is net of it (BP-4) */
   funding?: string;
+  /*
+   * BP-5 D — Bybit's Closed P&L (optional: a pre-BP-5 server sends none). closedPnl = pnl −
+   * openFee − closeFee − funding. openFee is "0" on closes from before BP-5.
+   */
+  openFee?: string;
+  closeFee?: string;
+  closedPnl?: string;
+  /** Bybit v5 names (position/closed-pnl), for API parity */
+  avgEntryPrice?: string;
+  avgExitPrice?: string;
+  closedSize?: string;
 }
 
 /**
@@ -455,6 +496,15 @@ export interface PlaceOrderRequest {
   triggerPrice?: string;
   takeProfit?: string;
   stopLoss?: string;
+  /** USDT Perpetual (BP-5 B): a stop order's trigger source (default LastPrice) */
+  triggerBy?: PaperTriggerBy;
+  /** What the attached TP / SL trigger on (default LastPrice) */
+  tpTriggerBy?: PaperTriggerBy;
+  slTriggerBy?: PaperTriggerBy;
+  /** Only shrink the opposite position: capped at its size, no margin, no TP / SL */
+  reduceOnly?: boolean;
+  /** Close-on-trigger (implies reduceOnly) */
+  closeOnTrigger?: boolean;
 }
 
 /** TP / SL on spot coins already held — locks `qty` of the free balance behind an OCO pair. */
@@ -472,11 +522,18 @@ export interface EditPendingOrderRequest {
   usdtAmount?: string;
   takeProfit: string | null;
   stopLoss: string | null;
+  /** BP-5 B: new trigger sources; absent = keep the order's */
+  triggerBy?: PaperTriggerBy;
+  tpTriggerBy?: PaperTriggerBy;
+  slTriggerBy?: PaperTriggerBy;
 }
 
 export interface UpdatePositionExitsRequest {
   takeProfit: string | null;
   stopLoss: string | null;
+  /** BP-5 B: what each leg triggers on; absent = keep the leg's */
+  tpTriggerBy?: PaperTriggerBy;
+  slTriggerBy?: PaperTriggerBy;
 }
 
 export interface SetLeverageRequest {

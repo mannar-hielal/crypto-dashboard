@@ -12,7 +12,8 @@
     "prisma:studio": "prisma studio",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "parity:testnet": "tsx src/tools/bybitParity.ts"
   },
   "dependencies": {
     "@crypto-dashboard/sdk": "workspace:*",
