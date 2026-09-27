@@ -1,5 +1,5 @@
 /**
- * Paper-trading engine types (BYBIT_PARITY_PLAN BP-1, BP-2).
+ * Paper-trading engine types (BYBIT_PARITY_PLAN BP-1, BP-2, BP-3).
  *
  * Money and quantities are Decimal; times are Unix ms. Everything in engine/ is pure: no
  * Prisma client, no I/O, no clock, no randomness. The caller supplies `now`, `newId`, the live
@@ -7,6 +7,7 @@
  */
 
 import type { Decimal } from '@prisma/client/runtime/client';
+import type { RiskTier } from '../bybitSpec.js';
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 // Fee rates live in ../bybitSpec.ts (Bybit VIP-0, BP-2) — BP-1's flat COMMISSION_RATE is gone.
@@ -31,6 +32,8 @@ export interface Quote {
   last: Decimal;
   bid: Decimal;
   ask: Decimal;
+  /** Mark price (USDT Perpetual only) — unrealised PnL and liquidation use it (BP-3) */
+  mark?: Decimal;
 }
 
 /** Bybit instrument rules the engine enforces (instruments-info). 0 = no constraint. */
@@ -55,7 +58,11 @@ export type OrderType = 'market' | 'limit' | 'stop' | 'take-profit' | 'stop-loss
 export type OrderStatus = 'filled' | 'cancelled' | 'rejected';
 export type ExitLeg = 'take-profit' | 'stop-loss';
 
-/** A USDT Perpetual position (spot holds coin balances, not positions). */
+/**
+ * A USDT Perpetual position (spot holds coin balances, not positions). One-way mode (BP-3): at most
+ * one position per symbol — a same-side fill is merged into it at the averaged entry price.
+ * Liquidation and bankruptcy prices are derived from it (bybitSpec.positionRisk), never stored.
+ */
 export interface Position {
   id: string;
   category: 'linear';
@@ -73,6 +80,8 @@ export interface Position {
    * 0 on pre-BP-2 positions, which reserved none.
    */
   closeFeeReserve: Decimal;
+  /** Margin added by hand on top of IM (BP-5; absent / 0 until then) */
+  extraMargin?: Decimal;
   openedAt: number;
   takeProfit?: Decimal;
   stopLoss?: Decimal;
@@ -152,7 +161,12 @@ export interface HistoricalOrder {
   placingTime: number;
   closingTime: number;
   rejectionReason?: string;
+  /** Bybit's createType for a system order: 'CreateByLiq' = the liquidation close (BP-3) */
+  createType?: 'CreateByLiq';
 }
+
+/** Bybit's execution type: a normal fill, or a liquidation at the bankruptcy price (BP-3) */
+export type ExecType = 'Trade' | 'BustTrade';
 
 export interface ClosedTrade {
   id: string;
@@ -169,6 +183,8 @@ export interface ClosedTrade {
   margin: Decimal;
   openedAt: number;
   closedAt: number;
+  /** Absent = 'Trade' */
+  execType?: ExecType;
 }
 
 export interface BalanceEvent {
@@ -220,7 +236,7 @@ export interface Delta {
   reset?: boolean;
 }
 
-export type Sound = 'placed' | 'queued' | 'filled' | 'profit' | 'loss';
+export type Sound = 'placed' | 'queued' | 'filled' | 'profit' | 'loss' | 'liquidation';
 
 export interface ActionResult<R> {
   delta: Delta;
@@ -239,4 +255,6 @@ export interface EngineContext {
   now: number;
   /** A unique id fragment (the browser used `${Date.now()}-${random5}`) */
   newId: () => string;
+  /** USDT Perpetual risk-limit tiers of a symbol (BP-3). Default: the bundled Bybit snapshot. */
+  riskTiers?: (symbol: string) => RiskTier[];
 }

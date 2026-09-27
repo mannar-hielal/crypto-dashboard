@@ -12,26 +12,29 @@ Source of truth: `docs/APP_LOG.md` (sections "Business Logic Rules", "paperStore
 **Since BP-1 (2026-09-26) the server executes every trade** (`docs/BYBIT_PARITY_PLAN.md` BP-1). Change trading
 rules in `apps/server/src/trading/engine/`, never in the client. **Since BP-2 there are two markets** (`category`):
 `'spot'` (coin balances, 1×, no shorting) and `'linear'` = USDT Perpetual (positions, per-symbol leverage). Every
-position, order, trade and trigger names its market.
+position, order, trade and trigger names its market. **Since BP-3** a USDT Perpetual symbol has **one** position
+(one-way mode: same-side fills merge), is valued at the **mark** price, and is **liquidated** when the mark reaches
+its liquidation price (isolated margin, Bybit's formulas).
 
-| File                                                                                       | Role                                                                                                                                                                                 |
-| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `apps/server/src/trading/engine/actions.ts`                                                | **USDT Perpetual rules**: pure, Decimal. Market with netting / flip, close, limit / stop (crossing = taker now), cancel / edit / exit legs, fills, per-symbol leverage, notes, reset |
-| `apps/server/src/trading/engine/spot.ts`                                                   | **Spot rules**: buy / sell, limit (USDT or coin lock), TP / SL OCO legs, fees in the received asset, average cost                                                                    |
-| `apps/server/src/trading/engine/draft.ts`                                                  | Shared working copy (incl. coin balances), order sizing (`qty` / `value` / legacy margin), book prices, record builders                                                              |
-| `apps/server/src/trading/bybitSpec.ts`                                                     | Bybit VIP-0 fee rates, rejection wording, qty-step / tick / minimum checks, fallback instrument rules                                                                                |
-| `apps/server/src/trading/engine/triggers.ts`                                               | `checkTPSL`, `checkPendingTrigger`, `evaluateTick` (live, tick price) and `evaluateCandle` (backfill sweep)                                                                          |
-| `apps/server/src/trading/engine/journal.ts` / `format.ts`                                  | Journal wording and `fmtPrice` (kept word for word from the browser engine)                                                                                                          |
-| `apps/server/src/trading/TradingService.ts`                                                | Intent → live quote (ask / bid, refused if > 10 s old) + instrument rules → engine → `AccountRepository` → `PaperEventBus`                                                           |
-| `apps/server/src/trading/MatchingEngine.ts`                                                | 24/7 TP/SL + pending triggers per market (`category:symbol`); the `EngineLease` single executor; gap backfill per market                                                             |
-| `apps/server/src/trading/AccountRepository.ts`                                             | One transaction per action, `Account.version` optimistic guard, `refId` for pre-BP-1 rows                                                                                            |
-| `apps/server/src/routes/paper/index.ts` / `ws.ts`                                          | Intent-only REST API and the private WS `/api/paper/ws`                                                                                                                              |
-| `apps/client/src/store/paperStore.ts`                                                      | **Read model**: `hydrate` / `applyDelta` (version-gated) / `clear`; actions call `paperApi`                                                                                          |
-| `apps/client/src/hooks/usePaperFeed.ts`                                                    | Private WS: snapshot + deltas, server-decided sounds                                                                                                                                 |
-| `apps/client/src/components/dashboard/TradingPanel.tsx`                                    | Order entry: market tabs, BTC / USDT amount, `1x ▾` leverage chip, per-market estimates (`lib/orderMath.ts`) — pre-validation only                                                   |
-| `apps/client/src/lib/marketRoutes.ts` / `hooks/useMarketUrlSync.ts`                        | Market URLs (`/dashboard/spot/BTC/USDT`, `/dashboard/usdt/BTCUSDT`) ↔ the active pane; D7 hand-off                                                                                   |
-| `apps/client/src/components/dashboard/OrderAccountManagementPanel.tsx`                     | Positions · Orders · Order History · Balance History · Journal tabs + Account Settings modal                                                                                         |
-| `apps/client/src/components/dashboard/PositionEditPanel.tsx` / `PendingOrderEditPanel.tsx` | TV-style edit panels                                                                                                                                                                 |
+| File                                                                                       | Role                                                                                                                                                                                         |
+| ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/server/src/trading/engine/actions.ts`                                                | **USDT Perpetual rules**: pure, Decimal. Market with netting / flip, close, limit / stop (crossing = taker now), cancel / edit / exit legs, fills, per-symbol leverage, notes, reset         |
+| `apps/server/src/trading/engine/spot.ts`                                                   | **Spot rules**: buy / sell, limit (USDT or coin lock), TP / SL OCO legs, fees in the received asset, average cost                                                                            |
+| `apps/server/src/trading/engine/draft.ts`                                                  | Shared working copy (incl. coin balances), order sizing (`qty` / `value` / legacy margin), book prices, record builders                                                                      |
+| `apps/server/src/trading/bybitSpec.ts`                                                     | Bybit VIP-0 fee rates, rejection wording, qty-step / tick / minimum checks, fallback instrument rules; BP-3 isolated margin: `feeToClose`, `positionRisk` (liq / bust / IM / MM), risk tiers |
+| `apps/server/src/trading/engine/margin.ts`                                                 | `riskOf(position, tiers)`, `tiersFor(ctx, symbol)` — engine adapter over the bybitSpec margin maths                                                                                          |
+| `apps/server/src/trading/engine/triggers.ts`                                               | `checkTPSL`, `checkPendingTrigger`, `evaluateTick` (live, tick price) and `evaluateCandle` (backfill sweep)                                                                                  |
+| `apps/server/src/trading/engine/journal.ts` / `format.ts`                                  | Journal wording and `fmtPrice` (kept word for word from the browser engine)                                                                                                                  |
+| `apps/server/src/trading/TradingService.ts`                                                | Intent → live quote (ask / bid, refused if > 10 s old) + instrument rules → engine → `AccountRepository` → `PaperEventBus`                                                                   |
+| `apps/server/src/trading/MatchingEngine.ts`                                                | 24/7 TP/SL + pending triggers per market (`category:symbol`); the `EngineLease` single executor; gap backfill per market                                                                     |
+| `apps/server/src/trading/AccountRepository.ts`                                             | One transaction per action, `Account.version` optimistic guard, `refId` for pre-BP-1 rows                                                                                                    |
+| `apps/server/src/routes/paper/index.ts` / `ws.ts`                                          | Intent-only REST API and the private WS `/api/paper/ws`                                                                                                                                      |
+| `apps/client/src/store/paperStore.ts`                                                      | **Read model**: `hydrate` / `applyDelta` (version-gated) / `clear`; actions call `paperApi`                                                                                                  |
+| `apps/client/src/hooks/usePaperFeed.ts`                                                    | Private WS: snapshot + deltas, server-decided sounds                                                                                                                                         |
+| `apps/client/src/components/dashboard/TradingPanel.tsx`                                    | Order entry: market tabs, BTC / USDT amount, `1x ▾` leverage chip, per-market estimates (`lib/orderMath.ts`) — pre-validation only                                                           |
+| `apps/client/src/lib/marketRoutes.ts` / `hooks/useMarketUrlSync.ts`                        | Market URLs (`/dashboard/spot/BTC/USDT`, `/dashboard/usdt/BTCUSDT`) ↔ the active pane; D7 hand-off                                                                                           |
+| `apps/client/src/components/dashboard/OrderAccountManagementPanel.tsx`                     | Positions · Orders · Order History · Balance History · Journal tabs + Account Settings modal                                                                                                 |
+| `apps/client/src/components/dashboard/PositionEditPanel.tsx` / `PendingOrderEditPanel.tsx` | TV-style edit panels                                                                                                                                                                         |
 
 Tests: engine `apps/server/src/trading/engine/__tests__/` (the ported store and monitor cases), services
 `apps/server/src/trading/__tests__/`, routes / WS `apps/server/src/__tests__/paper.test.ts`.
@@ -80,7 +83,31 @@ version            server account version — applyDelta ignores anything not ne
   the last price and fill at the ask / bid; a backfilled trigger at the level it crossed.
 - **Size rules:** qty rounded down to `qtyStep`; below `minOrderQty` / `minNotional` or off the tick grid → 422 with
   Bybit's wording, nothing written.
-- **Leverage:** per symbol, max 10×, refused while the symbol has an open position or active order.
+- **Leverage:** per symbol, max 10×. Changing it with a position / active orders **re-margins** them (BP-3): IM =
+  `qty × entry / newLev`, fee to close re-estimated; lowering needs the extra margin in the wallet, raising is refused
+  without a fresh mark or when the mark is already past the new liquidation price (422, nothing written).
+
+## Isolated margin & liquidation (BP-3 — exact, see `bybitSpec.ts` for the source and the worked example)
+
+- **Fee to close** (reserved at open, Bybit's estimate): `qty × entry × (1 ∓ 1/leverage) × taker` (− long, + short) —
+  priced at the bankruptcy price. A 1× long reserves 0.
+- **Liq. price** long `= (entry × qty − IM − extra/(1 − taker) − mmDeduction) / (qty × (1 − MMR))`; short
+  `= (entry × qty + IM + extra/(1 + taker) + mmDeduction) / (qty × (1 + MMR))`. IM is the position's **stored**
+  margin. 0 = can't be liquidated (1× long). **Bankruptcy** = `entry ∓ (IM + extra) / qty`.
+- **Tier** = the risk-limit tier the position **value** falls in (not always tier 1). Live tiers refresh hourly;
+  `FALLBACK_RISK_TIERS` must equal the SDK copy.
+- **Derived, never stored:** liq / bust / positionIM / positionMM / mmr are computed when evaluated or sent.
+- **Trigger:** mark ≤ liq (long) / ≥ liq (short), on a mark ≤ 10 s old. Liquidation is checked before TP / SL on a
+  live tick; in a candle backfill TP / SL first (a stop sits before the liquidation price).
+- **Settlement:** cancel + refund the symbol's active orders; close all at the bankruptcy price; fee = the whole
+  close-fee reserve; nothing returns to the wallet; `realizedPnl += −(IM + extra) − reserve − entryFee`. Records:
+  Trade `execType 'BustTrade'`, close order `createType 'CreateByLiq'`, TP / SL cancel rows, journal + balance event,
+  sound `'liquidation'`.
+- **One-way merge:** a same-side fill adds to the position — qty-weighted entry (8 dp), margin / entryFee /
+  closeFeeReserve summed; a TP / SL attached to the new order replaces the position's.
+- **Client:** perp PnL uses the mark (`getLastKnownMarkPrice` / pane `markPrice`, falling back to last); helpers in
+  `lib/positionMath.ts`; order-form estimate `orderMath.estimateLiqPrice`; chart lines `lib/tradeLines.ts` +
+  `hooks/useTradeLines.ts`.
 
 ## TP/SL bracket lifecycle (TV-style — easy to break)
 

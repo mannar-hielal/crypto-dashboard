@@ -552,3 +552,11 @@
   cursor: pointer;
   border: 2px solid var(--exgen-panel);
 }
+
+/* Chart position / order lines that can be dragged to amend them (BP-3, hooks/useTradeLines.ts).
+   A data attribute, not React state, so hovering never re-renders the chart; !important beats
+   lightweight-charts' own canvas cursor. */
+[data-trade-line-hover='true'] canvas,
+[data-trade-line-drag='true'] canvas {
+  cursor: ns-resize !important;
+}

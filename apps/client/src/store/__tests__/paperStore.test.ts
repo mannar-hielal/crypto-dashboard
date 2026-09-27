@@ -14,7 +14,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { PaperDeltaDTO } from '@crypto-dashboard/sdk';
 import { leverageFor, mapServerState, setPaperSoundHandler, usePaperStore } from '../paperStore';
-import { getLastKnownPrice } from '../paneStore';
+import { getLastKnownMarkPrice, getLastKnownPrice } from '../paneStore';
 import { useAuthStore } from '../authStore';
 import { emptyState, fakePaperApi, resetFakePaperApi } from '@/test/fakePaperApi';
 
@@ -52,6 +52,12 @@ const position = (id: string, qty = '0.1') => ({
   marginMode: 'isolated' as const,
   entryFee: '2.75',
   closeFeeReserve: '2.75',
+  extraMargin: '0',
+  liqPrice: '45148.99',
+  bustPrice: '45000',
+  positionIM: '502.75',
+  positionMM: '19.25',
+  mmr: '0.0033',
   openedAt: 1,
 });
 
@@ -92,6 +98,12 @@ describe('hydrate()', () => {
     expect(s.leverage).toBe(5);
     expect(s.version).toBe(7);
     expect(s.positions[0]).toMatchObject({ quantity: 0.1, entryPrice: 50_000, takeProfit: 55_000 });
+    // BP-3: the server's liquidation figures come through as numbers
+    expect(s.positions[0]).toMatchObject({
+      liqPrice: 45_148.99,
+      bustPrice: 45_000,
+      positionMM: 19.25,
+    });
     expect(s.positions[0].stopLoss).toBeUndefined();
     expect(s.journal[0].pnl).toBe(12.5);
     expect(s.isSyncing).toBe(false);
@@ -421,5 +433,13 @@ describe('BP-2 read model', () => {
     ]);
     expect(getLastKnownPrice('SOLUSDT', 'linear')).toBe(150);
     expect(getLastKnownPrice('SOLUSDT', 'spot')).toBe(149.9);
+  });
+
+  it('applyPrices keeps the USDT Perpetual mark price apart from the last price (BP-3)', () => {
+    usePaperStore
+      .getState()
+      .applyPrices([{ category: 'linear', symbol: 'AVAXUSDT', last: 30, mark: 29.95 }]);
+    expect(getLastKnownPrice('AVAXUSDT', 'linear')).toBe(30);
+    expect(getLastKnownMarkPrice('AVAXUSDT')).toBe(29.95);
   });
 });

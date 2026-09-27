@@ -14,7 +14,7 @@
 import { useEffect, useRef } from 'react';
 import { marketApi, type MarketCategory, type WsMessage } from '@crypto-dashboard/sdk';
 import { useLayoutStore, LAYOUT_PANE_COUNT } from '@/store/layoutStore';
-import { paneStores, setLastKnownPrice } from '@/store/paneStore';
+import { paneStores, setLastKnownMarkPrice, setLastKnownPrice } from '@/store/paneStore';
 import { INTERVAL_FETCH_LIMIT, type Interval } from '@/lib/markets';
 
 const RECONNECT_DELAY_MS = 3_000;
@@ -220,6 +220,9 @@ function useSinglePaneFeed(
             store.getState().addBar(msg.bar);
           } else if (msg.type === 'ticker') {
             setLastKnownPrice(category, symbol, msg.lastPrice);
+            if (category === 'linear' && msg.markPrice !== undefined) {
+              setLastKnownMarkPrice(symbol, msg.markPrice);
+            }
             store.getState().setTicker(msg);
           }
         } catch {

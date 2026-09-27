@@ -58,3 +58,9 @@
   background: rgba(255, 255, 255, 0.06);
   color: rgba(255, 255, 255, 0.9);
 }
+
+.separator {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--color-bg-surface);
+}

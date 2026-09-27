@@ -7,7 +7,7 @@ import { describe, it, expect } from 'vitest';
 import { feeRateLine, feeRatesLabel, floorToStep, maxQty, orderPreview } from '../orderMath';
 
 describe('orderPreview()', () => {
-  it('USDT Perpetual, 10×, 0.1 BTC at 50,000: IM 500, fees 2.75 + 2.75, cost 505.50', () => {
+  it('USDT Perpetual, 10×, 0.1 BTC at 50,000: IM 500, fees 2.75 + 2.475, cost 505.225', () => {
     const p = orderPreview({
       category: 'linear',
       side: 'buy',
@@ -19,8 +19,37 @@ describe('orderPreview()', () => {
     expect(p.value).toBeCloseTo(5_000);
     expect(p.margin).toBeCloseTo(500);
     expect(p.openFee).toBeCloseTo(2.75);
-    expect(p.closeFee).toBeCloseTo(2.75);
-    expect(p.cost).toBeCloseTo(505.5);
+    // Bybit's fee to close is priced at the bankruptcy price: 5,000 × (1 − 1/10) × 0.055%
+    expect(p.closeFee).toBeCloseTo(2.475);
+    expect(p.cost).toBeCloseTo(505.225);
+  });
+
+  it('estimates the liquidation price of the position the order leaves (BP-3)', () => {
+    const base = {
+      category: 'linear' as const,
+      qty: 0.1,
+      price: 50_000,
+      leverage: 10,
+      baseAsset: 'BTC',
+      symbol: 'BTCUSDT',
+    };
+    // Same numbers as the server engine's liquidation.test.ts
+    expect(orderPreview({ ...base, side: 'buy' }).liqPrice).toBeCloseTo(45_148.99, 2);
+    expect(orderPreview({ ...base, side: 'sell' }).liqPrice).toBeCloseTo(54_819.1, 1);
+    // Adding to a long at the same price and leverage leaves the same liquidation price
+    const existing = {
+      side: 'long' as const,
+      quantity: 0.1,
+      entryPrice: 50_000,
+      entryUsdtAmount: 500,
+      closeFeeReserve: 2.475,
+      extraMargin: 0,
+    };
+    expect(orderPreview({ ...base, side: 'buy', existing }).liqPrice).toBeCloseTo(45_148.99, 2);
+    // Selling part of the long only reduces it: no new position to estimate
+    expect(orderPreview({ ...base, side: 'sell', qty: 0.05, existing }).liqPrice).toBeUndefined();
+    // A 1× long can't be liquidated
+    expect(orderPreview({ ...base, side: 'buy', leverage: 1 }).liqPrice).toBe(0);
   });
 
   it('Spot buy: pays the value; the 0.1% fee comes out of the coins received', () => {
@@ -56,9 +85,11 @@ describe('orderPreview()', () => {
 describe('maxQty()', () => {
   const base = { price: 50_000, leverage: 1, usdtAvailable: 10_000, coinFree: 0.3, step: 0.001 };
 
-  it('USDT Perpetual keeps room for both fee estimates', () => {
-    // 10,000 / (50,000 × (1 + 0.0011)) = 0.19978 → floored to the step
+  it('USDT Perpetual keeps room for the open fee and the fee to close', () => {
+    // 1× long: the fee to close at bankruptcy (price 0) is 0 → 10,000 / (50,000 × 1.00055)
     expect(maxQty({ ...base, category: 'linear', side: 'buy' })).toBe(0.199);
+    // 1× short: bankruptcy at 2 × entry → 10,000 / (50,000 × (1 + 0.00055 + 0.0011)) = 0.19967
+    expect(maxQty({ ...base, category: 'linear', side: 'sell' })).toBe(0.199);
   });
 
   it('Spot buy uses the USDT balance; spot sell the free coins only', () => {

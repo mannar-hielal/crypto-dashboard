@@ -4,9 +4,11 @@
  * The browser store tests run here against the server engine through PaperHarness, which exposes
  * the store's old API. Journal text is unchanged. Differences:
  * - BP-2 fees: Bybit's USDT Perpetual taker 0.055% on notional (qty × price) replaces the flat
- *   0.07% on margin, and opening also reserves an estimated close fee (returned at close). At 1×
- *   leverage notional = margin, so an open costs margin × (1 + 2 × TAKER). Fee maths has its own
- *   worked-number tests in fees.test.ts.
+ *   0.07% on margin, and opening also reserves Bybit's fee to close (returned at close), priced at
+ *   the bankruptcy price entry × (1 ∓ 1/leverage) since BP-3. At 1× leverage notional = margin and
+ *   a long's bankruptcy price is 0, so a long open costs margin × (1 + TAKER) and a short
+ *   margin × (1 + 3 × TAKER). Fee maths has its own worked-number tests in fees.test.ts.
+ * - BP-3 one-way mode: a same-side fill merges into the symbol's one position.
  * - Fills: the browser tests simulated usePendingOrderMonitor step by step (fillPendingOrder →
  *   placeOrder(skipJournal) → addJournalNote); the engine does this in one fillPending action.
  * - A filled pending order is recorded with its own type (limit / stop), as the server already
@@ -21,8 +23,12 @@ import { OPEN_RULES, PaperHarness, TAKER, flatQuote } from './harness.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/** What opening `margin` at 1× costs: margin + open fee + close-fee reserve (both taker) */
-const openCost = (margin: number) => margin + 2 * margin * TAKER;
+/**
+ * What opening `margin` at 1× costs: margin + open fee + fee to close at the bankruptcy price
+ * (0 for a 1× long, 2 × notional for a 1× short), both taker
+ */
+const openCost = (margin: number, side: 'buy' | 'sell' = 'buy') =>
+  margin + margin * TAKER + (side === 'sell' ? 2 * margin * TAKER : 0);
 const STARTING_BALANCE = 10_000;
 const SYMBOL = 'BTCUSDT';
 
@@ -46,14 +52,14 @@ describe('paperStore', () => {
 
     it('deducts the USDT amount from balance on a buy', () => {
       store.placeOrder(SYMBOL, 'buy', 50_000, 1_000);
-      // balance = 10000 - 1000 (margin) - 0.55 (open fee) - 0.55 (close-fee reserve) = 8998.9
-      expect(store.balance).toBeCloseTo(8_998.9);
+      // balance = 10000 - 1000 (margin) - 0.55 (open fee) - 0 (fee to close: bankruptcy at 0) = 8999.45
+      expect(store.balance).toBeCloseTo(8_999.45);
     });
 
     it('deducts the USDT amount from balance on a sell (margin model)', () => {
       store.placeOrder(SYMBOL, 'sell', 50_000, 500);
-      // balance = 10000 - 500 (margin) - 0.275 (open fee) - 0.275 (close-fee reserve) = 9499.45
-      expect(store.balance).toBeCloseTo(9_499.45);
+      // balance = 10000 - 500 (margin) - 0.275 (open fee) - 0.55 (fee to close at 2 × entry)
+      expect(store.balance).toBeCloseTo(9_499.175);
     });
 
     it('creates a long position for a buy order', () => {
@@ -100,10 +106,15 @@ describe('paperStore', () => {
       expect(store.positions).toHaveLength(0);
     });
 
-    it('allows opening multiple same-side positions', () => {
+    it('merges a same-side order into the one position (one-way mode, BP-3)', () => {
       store.placeOrder(SYMBOL, 'buy', 50_000, 500);
-      store.placeOrder(SYMBOL, 'buy', 50_000, 300);
-      expect(store.positions).toHaveLength(2);
+      store.placeOrder(SYMBOL, 'buy', 60_000, 300);
+      expect(store.positions).toHaveLength(1);
+      // 0.01 @ 50,000 + 0.005 @ 60,000 → 0.015 @ 53,333.33…
+      expect(store.positions[0].quantity).toBeCloseTo(0.015);
+      expect(store.positions[0].entryPrice).toBeCloseTo(53_333.3333, 3);
+      expect(store.positions[0].entryUsdtAmount).toBeCloseTo(800);
+      expect(store.journal[0].text).toBe('Added to LONG BTCUSDT @ $60000.00 (qty: 0.005000)');
     });
   });
 
@@ -268,7 +279,7 @@ describe('paperStore', () => {
       expect(journalTexts).toEqual([
         'Stop-Loss modification confirmed for pending Long BTCUSDT @ $47000.00',
         'Take-Profit modification confirmed for pending Long BTCUSDT @ $56000.00',
-        'Modified LIMIT Long BTCUSDT — price $50000.00 → $49000.00, qty 0.020000 → 0.024490, reserved $1001.10 → $1201.32, TP $55000.00 → $56000.00, SL $48000.00 → $47000.00',
+        'Modified LIMIT Long BTCUSDT — price $50000.00 → $49000.00, qty 0.020000 → 0.024490, reserved $1000.55 → $1200.66, TP $55000.00 → $56000.00, SL $48000.00 → $47000.00',
       ]);
     });
 
@@ -1208,7 +1219,6 @@ describe('paperStore', () => {
     describe('3.5 Multiple stop orders coexist', () => {
       it('3.5.3: 4 concurrent stop orders all appear in pendingOrders, balance debited for all 4, journal has 4 placed entries', () => {
         const margin = 250;
-        const costEach = openCost(margin);
         const initialBalance = store.balance;
 
         store.placeStopOrder(SYMBOL, 'buy', 55_000, margin); // buy 1
@@ -1217,7 +1227,9 @@ describe('paperStore', () => {
         store.placeStopOrder(SYMBOL, 'sell', 44_000, margin); // sell 2
 
         expect(store.pendingOrders).toHaveLength(4);
-        expect(store.balance).toBeCloseTo(initialBalance - 4 * costEach);
+        expect(store.balance).toBeCloseTo(
+          initialBalance - 2 * openCost(margin, 'buy') - 2 * openCost(margin, 'sell')
+        );
 
         const placedEntries = store.journal.filter((e) => e.text.includes('Placed STOP'));
         expect(placedEntries).toHaveLength(4);
@@ -1319,10 +1331,8 @@ describe('netting (one-way positions)', () => {
     store.placeOrder(SYMBOL, 'sell', 55_000, 550); // sell 0.01 at 55k → close half
     expect(store.positions[0].quantity).toBeCloseTo(0.01);
     expect(store.positions[0].entryUsdtAmount).toBeCloseTo(500);
-    // return = 500 margin + 0.275 (half the close-fee reserve) + 50 pnl − 0.3025 close fee
-    expect(store.balance).toBeCloseTo(
-      balanceAfterOpen + 500 + 1_000 * TAKER * 0.5 + 50 - 0.01 * 55_000 * TAKER
-    );
+    // return = 500 margin + 0 (a 1× long reserves no fee to close) + 50 pnl − 0.3025 close fee
+    expect(store.balance).toBeCloseTo(balanceAfterOpen + 500 + 50 - 0.01 * 55_000 * TAKER);
     expect(store.history[0]).toMatchObject({ quantity: 0.01, pnl: 50 });
   });
 

@@ -156,6 +156,8 @@ interface LayoutState {
    * Fresh layouts start true — new users start on Spot.
    */
   marketHandoffDone: boolean;
+  /** USDT Perpetual charts draw the mark price as a line (BP-3; Chart type menu, default on) */
+  showMarkPriceLine: boolean;
 
   setLayout: (layout: LayoutId) => void;
   setActivePane: (index: number) => void;
@@ -186,6 +188,7 @@ interface LayoutState {
   toggleSync: (key: keyof SyncOptions) => void;
   setPaneSizes: (layout: LayoutId, sizes: PaneSizes) => void;
   setBottomPanelHeight: (height: number) => void;
+  toggleMarkPriceLine: () => void;
 }
 
 export const useLayoutStore = create<LayoutState>()(
@@ -358,10 +361,13 @@ export const useLayoutStore = create<LayoutState>()(
         set((s) => ({ paneSizes: { ...s.paneSizes, [layout]: sizes } })),
 
       setBottomPanelHeight: (height) => set({ bottomPanelHeight: height }),
+
+      showMarkPriceLine: true,
+      toggleMarkPriceLine: () => set((s) => ({ showMarkPriceLine: !s.showMarkPriceLine })),
     }),
     {
       name: 'cd-layout',
-      version: 5,
+      version: 6,
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as Record<string, unknown>;
         // v1 → v2: add indicators to panes
@@ -387,6 +393,8 @@ export const useLayoutStore = create<LayoutState>()(
         }
         // v4 → v5: a layout from before BP-2 still owes the one-time USDT Perpetual hand-off (D7)
         if (version < 5) state.marketHandoffDone = false;
+        // v5 → v6: the USDT Perpetual mark-price line (BP-3), on by default
+        if (version < 6) state.showMarkPriceLine = true;
         return state as unknown as LayoutState;
       },
       // Clamp activePane on hydration: persisted state could have an activePane
@@ -443,6 +451,7 @@ export const useLayoutStore = create<LayoutState>()(
           }
         }
         if (typeof merged.marketHandoffDone !== 'boolean') merged.marketHandoffDone = true;
+        if (typeof merged.showMarkPriceLine !== 'boolean') merged.showMarkPriceLine = true;
         // Ensure bottomPanelHeight is a valid number (field added after initial release)
         if (typeof merged.bottomPanelHeight !== 'number' || merged.bottomPanelHeight < 80) {
           merged.bottomPanelHeight = 208;

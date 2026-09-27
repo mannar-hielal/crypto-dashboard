@@ -24,8 +24,14 @@ const RECONNECT_MAX_MS = 30_000;
 export function usePaperFeed(): void {
   const userId = useAuthStore((s) => s.user?.id ?? null);
   const accessToken = useAuthStore((s) => s.accessToken);
-  const { playOrderPlaced, playOrderQueued, playOrderFilled, playProfit, playLoss } =
-    useSoundActions();
+  const {
+    playOrderPlaced,
+    playOrderQueued,
+    playOrderFilled,
+    playProfit,
+    playLoss,
+    playLiquidation,
+  } = useSoundActions();
 
   const wsRef = useRef<WebSocket | null>(null);
   const tokenRef = useRef(accessToken);
@@ -44,10 +50,12 @@ export function usePaperFeed(): void {
           return playProfit();
         case 'loss':
           return playLoss();
+        case 'liquidation':
+          return playLiquidation();
       }
     });
     return () => setPaperSoundHandler(null);
-  }, [playOrderPlaced, playOrderQueued, playOrderFilled, playProfit, playLoss]);
+  }, [playOrderPlaced, playOrderQueued, playOrderFilled, playProfit, playLoss, playLiquidation]);
 
   // ── Keep the socket's auth current when the token is refreshed ────────────
   useEffect(() => {

@@ -124,6 +124,7 @@ export interface TradingSoundAPI {
   playOrderFilled: () => void;
   playProfit: () => void;
   playLoss: () => void;
+  playLiquidation: () => void;
 }
 
 export function useTradingSound(): TradingSoundAPI {
@@ -351,6 +352,29 @@ export function useTradingSound(): TradingSoundAPI {
     });
   }, []);
 
+  /**
+   * LIQUIDATION — an unmistakable alert, unlike any close sound (BP-3)
+   * Three falling square-wave pulses A4 → E4 → A3: the position is gone, not merely at a loss.
+   */
+  const playLiquidation = useCallback(() => {
+    const ready = getReady();
+    if (!ready) return;
+    const { ctx, master } = ready;
+    const now = ctx.currentTime;
+    [440, 329.63, 220].forEach((freq, i) => {
+      scheduleNote({
+        freq,
+        type: 'square',
+        gain: 0.16,
+        startTime: now + i * 0.17,
+        duration: 0.15,
+        attackTime: 0.005,
+        releaseTime: 0.1,
+        masterGain: master,
+      });
+    });
+  }, []);
+
   return {
     volume: settings.volume,
     muted: settings.muted,
@@ -361,5 +385,6 @@ export function useTradingSound(): TradingSoundAPI {
     playOrderFilled,
     playProfit,
     playLoss,
+    playLiquidation,
   };
 }

@@ -1,14 +1,23 @@
 /**
- * USDT Perpetual leverage for one symbol (BYBIT_PARITY_PLAN BP-2): a "10x" chip (isolated margin,
- * named in its label and the modal) that opens a modal with the presets. Leverage is per symbol and locked while that symbol has an open
- * position or active order (the server refuses the change; the modal says why up front).
+ * USDT Perpetual leverage for one symbol (BYBIT_PARITY_PLAN BP-2, BP-3): a "10x" chip (isolated
+ * margin, named in its label and the modal) that opens a modal with the presets. As on Bybit, the
+ * leverage can change while the symbol has an open position or active orders: the server
+ * re-margins them (BP-3). The modal previews the position's new margin and liquidation price and
+ * shows the server's refusal (not enough balance, or a raise the mark price would liquidate).
  */
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, Lock } from 'lucide-react';
-import { CRYPTO_LEVERAGE_OPTIONS, leverageFor, usePaperStore } from '@/store/paperStore';
-import { fontSize, zIndex } from '@/lib/tokens';
+import { ChevronDown } from 'lucide-react';
+import {
+  CRYPTO_LEVERAGE_OPTIONS,
+  leverageFor,
+  usePaperStore,
+  type Position,
+} from '@/store/paperStore';
+import { remarginPreview } from '@/lib/positionMath';
+import { fmtMktPrice } from '@/lib/utils';
+import { color, fontSize, zIndex } from '@/lib/tokens';
 import styles from './TradeDialog.module.css';
 
 interface LeverageChipProps {
@@ -17,11 +26,6 @@ interface LeverageChipProps {
 
 export function LeverageChip({ symbol }: LeverageChipProps) {
   const leverage = usePaperStore((s) => leverageFor(s, symbol));
-  const locked = usePaperStore(
-    (s) =>
-      s.positions.some((p) => p.symbol === symbol) ||
-      s.pendingOrders.some((o) => o.symbol === symbol && o.category === 'linear')
-  );
   const [open, setOpen] = useState(false);
 
   return (
@@ -32,37 +36,62 @@ export function LeverageChip({ symbol }: LeverageChipProps) {
         style={{ fontSize: fontSize.xs11 }}
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
-        aria-label={`Leverage ${leverage}x, isolated margin${locked ? ' (locked)' : ''}`}
+        aria-label={`Leverage ${leverage}x, isolated margin`}
       >
         {/* "Isolated margin" is in the label and the modal — the 256px panel has no room here */}
         {leverage}x
-        {locked ? (
-          <Lock size={11} aria-hidden="true" />
-        ) : (
-          <ChevronDown size={12} aria-hidden="true" />
-        )}
+        <ChevronDown size={12} aria-hidden="true" />
       </button>
-      {open && (
-        <LeverageModal
-          symbol={symbol}
-          current={leverage}
-          locked={locked}
-          onClose={() => setOpen(false)}
-        />
-      )}
+      {open && <LeverageModal symbol={symbol} current={leverage} onClose={() => setOpen(false)} />}
     </>
+  );
+}
+
+interface RemarginPreviewProps {
+  position: Position;
+  leverage: number;
+  symbol: string;
+}
+
+/** "Margin: $500.00 → $1,000.00 · Liq. price: $45,148.99 → $40,xxx" for the chosen leverage. */
+function RemarginPreview({ position, leverage, symbol }: RemarginPreviewProps) {
+  const next = remarginPreview(position, leverage, symbol);
+  const margin = position.entryUsdtAmount + position.closeFeeReserve;
+  const fmtLiq = (v: number) => (v > 0 ? `$${fmtMktPrice(v)}` : '—');
+  return (
+    <dl
+      className={`${styles.note} ${styles.preview}`}
+      style={{ fontSize: fontSize.xs10 }}
+      data-testid="remargin-preview"
+    >
+      <div>
+        <dt>Position margin: </dt>
+        <dd style={{ color: color.white }}>
+          ${margin.toFixed(2)} → ${next.margin.toFixed(2)}
+        </dd>
+      </div>
+      <div>
+        <dt>Liq. price: </dt>
+        <dd style={{ color: color.amber }}>
+          {fmtLiq(position.liqPrice)} → {fmtLiq(next.liqPrice)}
+        </dd>
+      </div>
+    </dl>
   );
 }
 
 interface LeverageModalProps {
   symbol: string;
   current: number;
-  locked: boolean;
   onClose: () => void;
 }
 
-function LeverageModal({ symbol, current, locked, onClose }: LeverageModalProps) {
+function LeverageModal({ symbol, current, onClose }: LeverageModalProps) {
   const setSymbolLeverage = usePaperStore((s) => s.setSymbolLeverage);
+  const position = usePaperStore((s) => s.positions.find((p) => p.symbol === symbol));
+  const hasOrders = usePaperStore((s) =>
+    s.pendingOrders.some((o) => o.symbol === symbol && o.category === 'linear')
+  );
   const [choice, setChoice] = useState(current);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -114,18 +143,23 @@ function LeverageModal({ symbol, current, locked, onClose }: LeverageModalProps)
               className={styles.preset}
               style={{ fontSize: fontSize.xs11 }}
               aria-pressed={choice === lev}
-              disabled={locked}
-              onClick={() => setChoice(lev)}
+              onClick={() => {
+                setChoice(lev);
+                setError(null);
+              }}
             >
               {lev}×
             </button>
           ))}
         </div>
         <p className={styles.note} style={{ fontSize: fontSize.xs10 }}>
-          {locked
-            ? "Leverage can't be changed while you have an open position or active orders on this symbol."
+          {position || hasOrders
+            ? 'Isolated margin · max 10×. Your open position and active orders on this symbol are re-margined at the new leverage.'
             : 'Isolated margin · max 10×. Applies to new orders on this symbol.'}
         </p>
+        {position && choice !== current && (
+          <RemarginPreview position={position} leverage={choice} symbol={symbol} />
+        )}
         {error && (
           <p className={styles.error} role="alert" style={{ fontSize: fontSize.xs10 }}>
             {error}
@@ -144,7 +178,7 @@ function LeverageModal({ symbol, current, locked, onClose }: LeverageModalProps)
             type="button"
             className={`${styles.action} ${styles.confirm}`}
             style={{ fontSize: fontSize.xs11 }}
-            disabled={locked || saving}
+            disabled={saving}
             onClick={() => void confirm()}
           >
             {saving ? 'Saving…' : 'Confirm'}

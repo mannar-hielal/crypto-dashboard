@@ -36,7 +36,7 @@ import {
   type PaperStateDTO,
 } from '@crypto-dashboard/sdk';
 import { useAuthStore } from './authStore';
-import { setLastKnownPrice } from './paneStore';
+import { setLastKnownMarkPrice, setLastKnownPrice } from './paneStore';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -56,7 +56,10 @@ const LEGACY_STORAGE_KEY = 'cd-paper-trading';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-/** A USDT Perpetual position (spot holds coin balances instead). */
+/**
+ * A USDT Perpetual position (spot holds coin balances instead) — one per symbol (one-way mode).
+ * The margin figures are the server's, from Bybit's isolated-margin maths (BP-3).
+ */
 export interface Position {
   id: string;
   category: 'linear';
@@ -70,6 +73,16 @@ export interface Position {
   entryFee: number;
   /** Estimated close fee held with the margin (position margin = entryUsdtAmount + this) */
   closeFeeReserve: number;
+  /** Margin added on top of IM (0 until add / remove margin exists) */
+  extraMargin: number;
+  /** Mark price at or past which it is liquidated; 0 = can't be liquidated (a 1× long) */
+  liqPrice: number;
+  /** Price it closes at when liquidated — the whole position margin is lost there */
+  bustPrice: number;
+  /** Bybit positionIM: initial margin + fee to close */
+  positionIM: number;
+  /** Bybit positionMM: maintenance margin (liquidation when equity falls to it) */
+  positionMM: number;
   openedAt: number; // Unix ms
   takeProfit?: number;
   stopLoss?: number;
@@ -97,6 +110,8 @@ export interface ClosedTrade {
   pnl: number; // gross realized PnL in USDT (negative = loss)
   openedAt: number;
   closedAt: number;
+  /** True when it was closed by liquidation at the bankruptcy price (Bybit BustTrade) */
+  liquidated?: boolean;
 }
 
 export type OrderStatus = 'filled' | 'cancelled' | 'rejected';
@@ -149,6 +164,8 @@ export interface HistoricalOrder {
   closingTime: number;
   /** Why the order was rejected (only set when status === 'rejected') */
   rejectionReason?: string;
+  /** The system order that closed a liquidated position (Bybit createType CreateByLiq) */
+  liquidation?: boolean;
 }
 
 export interface BalanceEvent {
@@ -214,6 +231,11 @@ function positionFrom(p: PaperPositionDTO): Position {
     leverage: p.leverage,
     entryFee: toNum(p.entryFee),
     closeFeeReserve: toNum(p.closeFeeReserve),
+    extraMargin: toNum(p.extraMargin ?? '0'),
+    liqPrice: toNum(p.liqPrice ?? '0'),
+    bustPrice: toNum(p.bustPrice ?? '0'),
+    positionIM: toNum(p.positionIM ?? p.entryUsdtAmount),
+    positionMM: toNum(p.positionMM ?? '0'),
     openedAt: p.openedAt,
     ...(p.takeProfit !== undefined ? { takeProfit: toNum(p.takeProfit) } : {}),
     ...(p.stopLoss !== undefined ? { stopLoss: toNum(p.stopLoss) } : {}),
@@ -269,6 +291,7 @@ function orderFrom(o: PaperOrderDTO): HistoricalOrder {
     placingTime: o.placingTime,
     closingTime: o.closingTime,
     ...(o.rejectionReason ? { rejectionReason: o.rejectionReason } : {}),
+    ...(o.createType === 'CreateByLiq' ? { liquidation: true } : {}),
   };
 }
 
@@ -284,6 +307,7 @@ function tradeFrom(t: PaperStateDTO['trades'][number]): ClosedTrade {
     pnl: toNum(t.pnl),
     openedAt: t.openedAt,
     closedAt: t.closedAt,
+    ...(t.execType === 'BustTrade' ? { liquidated: true } : {}),
   };
 }
 
@@ -590,7 +614,11 @@ export const usePaperStore = create<PaperState>()((set, get) => {
     },
 
     applyPrices: (items) => {
-      for (const p of items) setLastKnownPrice(p.category, p.symbol, p.last);
+      for (const p of items) {
+        setLastKnownPrice(p.category, p.symbol, p.last);
+        if (p.category === 'linear' && p.mark !== undefined)
+          setLastKnownMarkPrice(p.symbol, p.mark);
+      }
       if (items.length) set({ pricesAt: Date.now() });
     },
 

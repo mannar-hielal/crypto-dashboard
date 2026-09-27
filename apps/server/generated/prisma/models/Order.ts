@@ -83,6 +83,7 @@ export type OrderMinAggregateOutputType = {
   feeAsset: string | null
   isMaker: boolean | null
   ocoGroup: string | null
+  createType: string | null
   status: string | null
   rejectionReason: string | null
   createdAt: Date | null
@@ -116,6 +117,7 @@ export type OrderMaxAggregateOutputType = {
   feeAsset: string | null
   isMaker: boolean | null
   ocoGroup: string | null
+  createType: string | null
   status: string | null
   rejectionReason: string | null
   createdAt: Date | null
@@ -149,6 +151,7 @@ export type OrderCountAggregateOutputType = {
   feeAsset: number
   isMaker: number
   ocoGroup: number
+  createType: number
   status: number
   rejectionReason: number
   createdAt: number
@@ -216,6 +219,7 @@ export type OrderMinAggregateInputType = {
   feeAsset?: true
   isMaker?: true
   ocoGroup?: true
+  createType?: true
   status?: true
   rejectionReason?: true
   createdAt?: true
@@ -249,6 +253,7 @@ export type OrderMaxAggregateInputType = {
   feeAsset?: true
   isMaker?: true
   ocoGroup?: true
+  createType?: true
   status?: true
   rejectionReason?: true
   createdAt?: true
@@ -282,6 +287,7 @@ export type OrderCountAggregateInputType = {
   feeAsset?: true
   isMaker?: true
   ocoGroup?: true
+  createType?: true
   status?: true
   rejectionReason?: true
   createdAt?: true
@@ -402,6 +408,7 @@ export type OrderGroupByOutputType = {
   feeAsset: string | null
   isMaker: boolean | null
   ocoGroup: string | null
+  createType: string | null
   status: string
   rejectionReason: string | null
   createdAt: Date
@@ -458,6 +465,7 @@ export type OrderWhereInput = {
   feeAsset?: Prisma.StringNullableFilter<"Order"> | string | null
   isMaker?: Prisma.BoolNullableFilter<"Order"> | boolean | null
   ocoGroup?: Prisma.StringNullableFilter<"Order"> | string | null
+  createType?: Prisma.StringNullableFilter<"Order"> | string | null
   status?: Prisma.StringFilter<"Order"> | string
   rejectionReason?: Prisma.StringNullableFilter<"Order"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Order"> | Date | string
@@ -494,6 +502,7 @@ export type OrderOrderByWithRelationInput = {
   feeAsset?: Prisma.SortOrderInput | Prisma.SortOrder
   isMaker?: Prisma.SortOrderInput | Prisma.SortOrder
   ocoGroup?: Prisma.SortOrderInput | Prisma.SortOrder
+  createType?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   rejectionReason?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -533,6 +542,7 @@ export type OrderWhereUniqueInput = Prisma.AtLeast<{
   feeAsset?: Prisma.StringNullableFilter<"Order"> | string | null
   isMaker?: Prisma.BoolNullableFilter<"Order"> | boolean | null
   ocoGroup?: Prisma.StringNullableFilter<"Order"> | string | null
+  createType?: Prisma.StringNullableFilter<"Order"> | string | null
   status?: Prisma.StringFilter<"Order"> | string
   rejectionReason?: Prisma.StringNullableFilter<"Order"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Order"> | Date | string
@@ -569,6 +579,7 @@ export type OrderOrderByWithAggregationInput = {
   feeAsset?: Prisma.SortOrderInput | Prisma.SortOrder
   isMaker?: Prisma.SortOrderInput | Prisma.SortOrder
   ocoGroup?: Prisma.SortOrderInput | Prisma.SortOrder
+  createType?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   rejectionReason?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -610,6 +621,7 @@ export type OrderScalarWhereWithAggregatesInput = {
   feeAsset?: Prisma.StringNullableWithAggregatesFilter<"Order"> | string | null
   isMaker?: Prisma.BoolNullableWithAggregatesFilter<"Order"> | boolean | null
   ocoGroup?: Prisma.StringNullableWithAggregatesFilter<"Order"> | string | null
+  createType?: Prisma.StringNullableWithAggregatesFilter<"Order"> | string | null
   status?: Prisma.StringWithAggregatesFilter<"Order"> | string
   rejectionReason?: Prisma.StringNullableWithAggregatesFilter<"Order"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Order"> | Date | string
@@ -641,6 +653,7 @@ export type OrderCreateInput = {
   feeAsset?: string | null
   isMaker?: boolean | null
   ocoGroup?: string | null
+  createType?: string | null
   status?: string
   rejectionReason?: string | null
   createdAt?: Date | string
@@ -677,6 +690,7 @@ export type OrderUncheckedCreateInput = {
   feeAsset?: string | null
   isMaker?: boolean | null
   ocoGroup?: string | null
+  createType?: string | null
   status?: string
   rejectionReason?: string | null
   createdAt?: Date | string
@@ -709,6 +723,7 @@ export type OrderUpdateInput = {
   feeAsset?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMaker?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   ocoGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -745,6 +760,7 @@ export type OrderUncheckedUpdateInput = {
   feeAsset?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMaker?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   ocoGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -779,6 +795,7 @@ export type OrderCreateManyInput = {
   feeAsset?: string | null
   isMaker?: boolean | null
   ocoGroup?: string | null
+  createType?: string | null
   status?: string
   rejectionReason?: string | null
   createdAt?: Date | string
@@ -810,6 +827,7 @@ export type OrderUpdateManyMutationInput = {
   feeAsset?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMaker?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   ocoGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -843,6 +861,7 @@ export type OrderUncheckedUpdateManyInput = {
   feeAsset?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMaker?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   ocoGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -886,6 +905,7 @@ export type OrderCountOrderByAggregateInput = {
   feeAsset?: Prisma.SortOrder
   isMaker?: Prisma.SortOrder
   ocoGroup?: Prisma.SortOrder
+  createType?: Prisma.SortOrder
   status?: Prisma.SortOrder
   rejectionReason?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -935,6 +955,7 @@ export type OrderMaxOrderByAggregateInput = {
   feeAsset?: Prisma.SortOrder
   isMaker?: Prisma.SortOrder
   ocoGroup?: Prisma.SortOrder
+  createType?: Prisma.SortOrder
   status?: Prisma.SortOrder
   rejectionReason?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -968,6 +989,7 @@ export type OrderMinOrderByAggregateInput = {
   feeAsset?: Prisma.SortOrder
   isMaker?: Prisma.SortOrder
   ocoGroup?: Prisma.SortOrder
+  createType?: Prisma.SortOrder
   status?: Prisma.SortOrder
   rejectionReason?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -1124,6 +1146,7 @@ export type OrderCreateWithoutUserInput = {
   feeAsset?: string | null
   isMaker?: boolean | null
   ocoGroup?: string | null
+  createType?: string | null
   status?: string
   rejectionReason?: string | null
   createdAt?: Date | string
@@ -1158,6 +1181,7 @@ export type OrderUncheckedCreateWithoutUserInput = {
   feeAsset?: string | null
   isMaker?: boolean | null
   ocoGroup?: string | null
+  createType?: string | null
   status?: string
   rejectionReason?: string | null
   createdAt?: Date | string
@@ -1221,6 +1245,7 @@ export type OrderScalarWhereInput = {
   feeAsset?: Prisma.StringNullableFilter<"Order"> | string | null
   isMaker?: Prisma.BoolNullableFilter<"Order"> | boolean | null
   ocoGroup?: Prisma.StringNullableFilter<"Order"> | string | null
+  createType?: Prisma.StringNullableFilter<"Order"> | string | null
   status?: Prisma.StringFilter<"Order"> | string
   rejectionReason?: Prisma.StringNullableFilter<"Order"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Order"> | Date | string
@@ -1252,6 +1277,7 @@ export type OrderCreateWithoutAccountInput = {
   feeAsset?: string | null
   isMaker?: boolean | null
   ocoGroup?: string | null
+  createType?: string | null
   status?: string
   rejectionReason?: string | null
   createdAt?: Date | string
@@ -1286,6 +1312,7 @@ export type OrderUncheckedCreateWithoutAccountInput = {
   feeAsset?: string | null
   isMaker?: boolean | null
   ocoGroup?: string | null
+  createType?: string | null
   status?: string
   rejectionReason?: string | null
   createdAt?: Date | string
@@ -1344,6 +1371,7 @@ export type OrderCreateWithoutTradesInput = {
   feeAsset?: string | null
   isMaker?: boolean | null
   ocoGroup?: string | null
+  createType?: string | null
   status?: string
   rejectionReason?: string | null
   createdAt?: Date | string
@@ -1379,6 +1407,7 @@ export type OrderUncheckedCreateWithoutTradesInput = {
   feeAsset?: string | null
   isMaker?: boolean | null
   ocoGroup?: string | null
+  createType?: string | null
   status?: string
   rejectionReason?: string | null
   createdAt?: Date | string
@@ -1426,6 +1455,7 @@ export type OrderUpdateWithoutTradesInput = {
   feeAsset?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMaker?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   ocoGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1461,6 +1491,7 @@ export type OrderUncheckedUpdateWithoutTradesInput = {
   feeAsset?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMaker?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   ocoGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1493,6 +1524,7 @@ export type OrderCreateManyUserInput = {
   feeAsset?: string | null
   isMaker?: boolean | null
   ocoGroup?: string | null
+  createType?: string | null
   status?: string
   rejectionReason?: string | null
   createdAt?: Date | string
@@ -1524,6 +1556,7 @@ export type OrderUpdateWithoutUserInput = {
   feeAsset?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMaker?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   ocoGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1558,6 +1591,7 @@ export type OrderUncheckedUpdateWithoutUserInput = {
   feeAsset?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMaker?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   ocoGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1591,6 +1625,7 @@ export type OrderUncheckedUpdateManyWithoutUserInput = {
   feeAsset?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMaker?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   ocoGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1623,6 +1658,7 @@ export type OrderCreateManyAccountInput = {
   feeAsset?: string | null
   isMaker?: boolean | null
   ocoGroup?: string | null
+  createType?: string | null
   status?: string
   rejectionReason?: string | null
   createdAt?: Date | string
@@ -1654,6 +1690,7 @@ export type OrderUpdateWithoutAccountInput = {
   feeAsset?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMaker?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   ocoGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1688,6 +1725,7 @@ export type OrderUncheckedUpdateWithoutAccountInput = {
   feeAsset?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMaker?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   ocoGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1721,6 +1759,7 @@ export type OrderUncheckedUpdateManyWithoutAccountInput = {
   feeAsset?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isMaker?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
   ocoGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1785,6 +1824,7 @@ export type OrderSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   feeAsset?: boolean
   isMaker?: boolean
   ocoGroup?: boolean
+  createType?: boolean
   status?: boolean
   rejectionReason?: boolean
   createdAt?: boolean
@@ -1822,6 +1862,7 @@ export type OrderSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   feeAsset?: boolean
   isMaker?: boolean
   ocoGroup?: boolean
+  createType?: boolean
   status?: boolean
   rejectionReason?: boolean
   createdAt?: boolean
@@ -1857,6 +1898,7 @@ export type OrderSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   feeAsset?: boolean
   isMaker?: boolean
   ocoGroup?: boolean
+  createType?: boolean
   status?: boolean
   rejectionReason?: boolean
   createdAt?: boolean
@@ -1892,6 +1934,7 @@ export type OrderSelectScalar = {
   feeAsset?: boolean
   isMaker?: boolean
   ocoGroup?: boolean
+  createType?: boolean
   status?: boolean
   rejectionReason?: boolean
   createdAt?: boolean
@@ -1900,7 +1943,7 @@ export type OrderSelectScalar = {
   updatedAt?: boolean
 }
 
-export type OrderOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "seq" | "refId" | "userId" | "accountId" | "category" | "symbol" | "side" | "orderType" | "quantity" | "limitPrice" | "stopPrice" | "takeProfit" | "stopLoss" | "filledQuantity" | "averageFilledPrice" | "margin" | "commission" | "leverage" | "reserved" | "feeRate" | "feeAsset" | "isMaker" | "ocoGroup" | "status" | "rejectionReason" | "createdAt" | "filledAt" | "cancelledAt" | "updatedAt", ExtArgs["result"]["order"]>
+export type OrderOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "seq" | "refId" | "userId" | "accountId" | "category" | "symbol" | "side" | "orderType" | "quantity" | "limitPrice" | "stopPrice" | "takeProfit" | "stopLoss" | "filledQuantity" | "averageFilledPrice" | "margin" | "commission" | "leverage" | "reserved" | "feeRate" | "feeAsset" | "isMaker" | "ocoGroup" | "createType" | "status" | "rejectionReason" | "createdAt" | "filledAt" | "cancelledAt" | "updatedAt", ExtArgs["result"]["order"]>
 export type OrderInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   account?: boolean | Prisma.AccountDefaultArgs<ExtArgs>
@@ -1948,6 +1991,7 @@ export type $OrderPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     feeAsset: string | null
     isMaker: boolean | null
     ocoGroup: string | null
+    createType: string | null
     status: string
     rejectionReason: string | null
     createdAt: Date
@@ -2404,6 +2448,7 @@ export interface OrderFieldRefs {
   readonly feeAsset: Prisma.FieldRef<"Order", 'String'>
   readonly isMaker: Prisma.FieldRef<"Order", 'Boolean'>
   readonly ocoGroup: Prisma.FieldRef<"Order", 'String'>
+  readonly createType: Prisma.FieldRef<"Order", 'String'>
   readonly status: Prisma.FieldRef<"Order", 'String'>
   readonly rejectionReason: Prisma.FieldRef<"Order", 'String'>
   readonly createdAt: Prisma.FieldRef<"Order", 'DateTime'>

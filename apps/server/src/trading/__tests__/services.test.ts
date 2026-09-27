@@ -28,8 +28,8 @@ import {
   type MarketSource,
   type TimedQuote,
 } from '../TradingService.js';
-import { fallbackRules } from '../bybitSpec.js';
-import { LEVERAGE_LOCKED } from '../engine/index.js';
+import { fallbackRiskTiers, fallbackRules } from '../bybitSpec.js';
+import { REJECT_LEVERAGE_LIQUIDATION, REJECT_LEVERAGE_NO_MARK } from '../engine/index.js';
 import { MatchingEngine, type LeaseStore, type TickUpdate } from '../MatchingEngine.js';
 
 const D = (n: number) => new Decimal(n);
@@ -96,6 +96,7 @@ describe('TradingService', () => {
       minOrderQty: D(0),
       minNotional: D(0),
     }),
+    riskTiers: (symbol) => fallbackRiskTiers(symbol),
   };
 
   /** A USDT Perpetual market order sized by margin (the BP-1 client's usdtAmount) */
@@ -213,15 +214,32 @@ describe('TradingService', () => {
     expect(published).toHaveLength(0);
   });
 
-  it('refuses a leverage change while the symbol has an open position (422)', async () => {
-    await trading.placeOrder('u1', market$(1_000));
+  it('re-margins an open position on a leverage change, using the live mark price (BP-3)', async () => {
+    await trading.placeOrder('u1', market$(1_000)); // 1×: qty 0.02 @ 50,000
+    // Raising leverage lowers the margin: it needs a fresh mark price to check liquidation
     await expect(trading.setSymbolLeverage('u1', 'BTCUSDT', 5)).rejects.toEqual(
-      new TradingError(422, LEVERAGE_LOCKED)
+      new TradingError(422, REJECT_LEVERAGE_NO_MARK)
     );
-    await expect(trading.setSymbolLeverage('u1', 'ETHUSDT', 5)).resolves.toMatchObject({
+    book = { mark: D(50_000) };
+    const before = repo.state.balance;
+    await expect(trading.setSymbolLeverage('u1', 'BTCUSDT', 5)).resolves.toMatchObject({
       result: 5,
     });
-    expect(repo.state.symbolLeverage).toEqual({ ETHUSDT: 5 });
+    const pos = repo.state.positions[0];
+    expect(pos.leverage).toBe(5);
+    expect(pos.entryUsdtAmount.toNumber()).toBe(200);
+    expect(repo.state.balance.gt(before.plus(790))).toBe(true); // ~800 of margin released
+    expect(repo.state.symbolLeverage).toEqual({ BTCUSDT: 5 });
+  });
+
+  it('refuses a leverage raise the live mark price would liquidate (422)', async () => {
+    await trading.placeOrder('u1', market$(1_000)); // long 0.02 @ 50,000
+    // At 10× the liquidation price would be ≈ 45,149 — the mark is already below it
+    book = { mark: D(45_100) };
+    await expect(trading.setSymbolLeverage('u1', 'BTCUSDT', 10)).rejects.toEqual(
+      new TradingError(422, REJECT_LEVERAGE_LIQUIDATION)
+    );
+    expect(repo.state.positions[0].leverage).toBe(1);
   });
 
   it('retries on a version conflict and succeeds', async () => {
@@ -246,9 +264,12 @@ describe('TradingService', () => {
       trading.placeOrder('u1', market$(1_000)),
       trading.placeOrder('u1', market$(2_000)),
     ]);
-    expect(repo.state.positions).toHaveLength(2);
-    // 10000 − (1000 + 2 × 0.55) − (2000 + 2 × 1.1): margin + open fee + close-fee reserve
-    expect(repo.state.balance.toNumber()).toBeCloseTo(6_996.7);
+    // One-way mode: both fills end up in one position (BP-3)
+    expect(repo.state.positions).toHaveLength(1);
+    expect(repo.state.positions[0].quantity.toNumber()).toBeCloseTo(0.06);
+    // 10000 − (1000 + 0.55) − (2000 + 1.1): margin + open fee. At 1× a long's bankruptcy price is
+    // 0, so Bybit's fee to close (priced there) is 0
+    expect(repo.state.balance.toNumber()).toBeCloseTo(6_998.35);
     expect(published.map((e) => e.delta.account.version)).toEqual([1, 2]);
   });
 
@@ -311,6 +332,37 @@ describe('TradingService', () => {
       fillAt: D(51_000),
     });
     expect(repo.state.positions[0].entryPrice.toNumber()).toBe(51_000);
+  });
+
+  it('runTrigger liquidates on a fresh mark past the liquidation price, never on a stale one (BP-3)', async () => {
+    await trading.setSymbolLeverage('u1', 'BTCUSDT', 10);
+    await trading.placeOrder('u1', market$(500)); // long 0.1 @ 50,000 at 10×: liq ≈ 45,149
+    const [pos] = repo.state.positions;
+    const trigger = { kind: 'liquidation' as const, positionId: pos.id, price: D(45_100) };
+
+    book = { mark: D(45_100), seenAt: now - MAX_QUOTE_AGE_MS - 1 }; // stalled feed
+    await expect(trading.runTrigger('u1', trigger)).resolves.toBeNull();
+    book = { mark: D(46_000) }; // the mark moved back above the liquidation price
+    await expect(trading.runTrigger('u1', trigger)).resolves.toBeNull();
+    expect(repo.state.positions).toHaveLength(1);
+
+    book = { mark: D(45_100) };
+    const out = await trading.runTrigger('u1', trigger);
+    expect(out?.sound).toBe('liquidation');
+    expect(repo.state.positions).toHaveLength(0);
+    expect(out?.delta.trades[0]).toMatchObject({ execType: 'BustTrade', exitPrice: '45000' });
+  });
+
+  it('sends the liquidation figures with every position (Bybit field names)', async () => {
+    await trading.setSymbolLeverage('u1', 'BTCUSDT', 10);
+    const out = await trading.placeOrder('u1', market$(500));
+    expect(out.delta.positionsUpsert[0]).toMatchObject({
+      liqPrice: expect.stringMatching(/^45148\.9/),
+      bustPrice: '45000',
+      positionIM: '502.475',
+      mmr: '0.0033',
+      extraMargin: '0',
+    });
   });
 
   it('a queued market order fills at the price live when it executes, not when it was received', async () => {
@@ -531,6 +583,51 @@ describe('MatchingEngine', () => {
         price: D(49_000),
         fillAt: D(49_000), // backfill fills at the crossed level
       })
+    );
+    await e.stop();
+  });
+
+  it('indexes a position with no TP / SL and liquidates it on the mark price (BP-3)', async () => {
+    const state = freshState();
+    state.positions.push({
+      id: 'p1',
+      category: 'linear',
+      symbol: 'BTCUSDT',
+      side: 'long',
+      quantity: D('0.1'),
+      entryPrice: D(50_000),
+      entryUsdtAmount: D(500),
+      leverage: 10,
+      entryFee: D('2.75'),
+      closeFeeReserve: D('2.475'),
+      openedAt: 0,
+    });
+    open = new Map([['u1', state]]);
+    const e = engine();
+    await e.start();
+    tickListener?.({ category: 'linear', symbol: 'BTCUSDT', lastPrice: 45_300, markPrice: 45_200 });
+    expect(runTrigger).not.toHaveBeenCalled(); // above the liquidation price (≈ 45,149)
+    tick('BTCUSDT', 45_300); // no mark on this tick: nothing to check
+    expect(runTrigger).not.toHaveBeenCalled();
+    tickListener?.({ category: 'linear', symbol: 'BTCUSDT', lastPrice: 45_300, markPrice: 45_100 });
+    await vi.waitFor(() =>
+      expect(runTrigger).toHaveBeenCalledWith('u1', {
+        kind: 'liquidation',
+        positionId: 'p1',
+        price: D(45_100),
+      })
+    );
+    await e.stop();
+  });
+
+  it('backfills a linear gap with mark-price candles too, for liquidation', async () => {
+    const e = engine();
+    await e.start();
+    tick('BTCUSDT', 49_500);
+    clock += 120_000;
+    tick('BTCUSDT', 49_600);
+    await vi.waitFor(() =>
+      expect(fetchCandles).toHaveBeenCalledWith('linear', 'BTCUSDT', 1_000_000, 1_120_000, 'mark')
     );
     await e.stop();
   });

@@ -509,7 +509,8 @@ export async function paperRoutes(app: FastifyInstance) {
       config: mutationRateLimit,
       schema: {
         tags: ['Paper Trading'],
-        summary: "Set a symbol's USDT Perpetual leverage (1–10; locked while it has open trades)",
+        summary:
+          "Set a symbol's USDT Perpetual leverage (1–10); re-margins its open position and orders",
         ...secured,
         params: {
           type: 'object',

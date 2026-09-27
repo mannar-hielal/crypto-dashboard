@@ -141,3 +141,14 @@
   margin-bottom: 4px;
   color: var(--color-brand-muted);
 }
+
+/* Leverage modal: what the change does to the open position (BP-3) */
+.preview {
+  margin: 0.25rem 0 0;
+}
+
+.preview dt,
+.preview dd {
+  display: inline;
+  margin: 0;
+}

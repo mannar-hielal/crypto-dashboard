@@ -24,6 +24,7 @@ vi.mock('../plugins/prisma.js', () => {
 
 import { buildApp } from '../app.js';
 import { clearMarketInfoCache } from '../services/BybitMarketInfo.js';
+import { resetBybitBreakers } from '../lib/fetchWithRetry.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -64,6 +65,7 @@ describe('GET /api/market/candles', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    resetBybitBreakers();
   });
 
   // ── Happy path ──────────────────────────────────────────────────────────────
@@ -364,6 +366,7 @@ describe('GET /api/market/instruments', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    resetBybitBreakers();
   });
 
   it('normalises spot rules (basePrecision → qtyStep, minOrderAmt → minNotional)', async () => {
@@ -461,10 +464,11 @@ describe('GET /api/market/instruments', () => {
       await app.inject({ method: 'GET', url: '/api/market/instruments?category=spot' });
       expect(failing).toHaveBeenCalledTimes(callsAfterFirstFailure);
 
-      // After the back-off: exactly one new upstream attempt
+      // After the back-off: upstream is tried again (the circuit breaker, open after repeated
+      // failures, lets calls through again after its own 60 s reset)
       now.mockReturnValue(t0 + 6 * 60 * 60 * 1000 + 61_000);
       await app.inject({ method: 'GET', url: '/api/market/instruments?category=spot' });
-      expect(failing.mock.calls.length).toBe(callsAfterFirstFailure * 2);
+      expect(failing.mock.calls.length).toBeGreaterThan(callsAfterFirstFailure);
     } finally {
       now.mockRestore();
     }
@@ -501,10 +505,11 @@ describe('GET /api/market/instruments', () => {
       expect(symbols).toHaveLength(8);
       expect(symbols).not.toContain('ETHUSDT');
 
+      // ETHUSDT was retried (3 attempts) before being skipped: 8 + 3 calls
       // Partial result is cached only briefly (5 min), not 6 h
       now.mockReturnValue(t0 + 4 * 60_000);
       await app.inject({ method: 'GET', url: '/api/market/instruments?category=spot' });
-      expect(fetchMock).toHaveBeenCalledTimes(9);
+      expect(fetchMock).toHaveBeenCalledTimes(11);
 
       ethFails = false;
       now.mockReturnValue(t0 + 5 * 60_000 + 1);
@@ -512,7 +517,7 @@ describe('GET /api/market/instruments', () => {
         method: 'GET',
         url: '/api/market/instruments?category=spot',
       });
-      expect(fetchMock).toHaveBeenCalledTimes(18);
+      expect(fetchMock).toHaveBeenCalledTimes(20);
       expect(full.json<{ instruments: unknown[] }>().instruments).toHaveLength(9);
     } finally {
       now.mockRestore();
@@ -560,6 +565,7 @@ describe('GET /api/market/risk-limit', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    resetBybitBreakers();
   });
 
   it('returns linear risk-limit tiers, lowest tier first, with mmDeduction "" → 0', async () => {
@@ -656,6 +662,7 @@ describe('WS /api/market/ws — category', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    resetBybitBreakers();
   });
 
   /** Resolve with the close code the server sends. */
