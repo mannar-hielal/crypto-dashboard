@@ -564,10 +564,15 @@ export class MatchingEngine {
   ): Promise<void> {
     this.fundingInFlight.set(symbol, ts);
     try {
-      const rate = await this.settledRate(symbol, ts, announced);
-      if (!rate) {
-        log.error({ symbol, ts }, 'Funding skipped: no settled rate');
-        return;
+      // Money is never dropped: with no settled rate yet (Bybit's history failing and no ticker
+      // rate seen), keep trying while this engine is active. The lease's recorded progress stays
+      // held before `ts` meanwhile, so a restart replays it.
+      let rate = await this.settledRate(symbol, ts, announced);
+      while (!rate) {
+        if (this.stopped || !this.active) return;
+        log.error({ symbol, ts }, 'Funding not settled yet: no settled rate — retrying');
+        await new Promise((resolve) => setTimeout(resolve, this.fundingRetryMs));
+        rate = await this.settledRate(symbol, ts, announced);
       }
       await this.runFunding(symbol, ts, rate, mark, snapshots);
     } finally {

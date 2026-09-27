@@ -833,6 +833,41 @@ describe('MatchingEngine', () => {
       await e.stop();
     });
 
+    it('keeps retrying a settlement with no rate at all instead of dropping it (review #143)', async () => {
+      open = new Map([['u1', long()]]);
+      let calls = 0;
+      const fetchFundingHistory = vi.fn(async () =>
+        ++calls > 30 ? [{ ts: TS, rate: D('0.0001') }] : []
+      );
+      const e = engine({ fetchFundingHistory, fundingCheckMs: 1_000_000, fundingRetryMs: 0 });
+      await e.start();
+      clock = TS - 1_000;
+      // The ticker never announced a rate (no fundingRate) — no fallback
+      tickListener?.({
+        category: 'linear',
+        symbol: 'BTCUSDT',
+        lastPrice: 50_000,
+        markPrice: 50_000,
+        nextFundingTime: TS,
+      });
+      clock = TS + 1_000;
+      tickListener?.({
+        category: 'linear',
+        symbol: 'BTCUSDT',
+        lastPrice: 50_000,
+        markPrice: 50_000,
+        nextFundingTime: TS + 8 * 3_600_000,
+      });
+      await vi.waitFor(() =>
+        expect(runFunding).toHaveBeenCalledWith(
+          'u1',
+          expect.objectContaining({ ts: TS, rate: D('0.0001') })
+        )
+      );
+      expect(calls).toBeGreaterThan(12); // past the first round of history reads
+      await e.stop();
+    });
+
     it('a position opened after the timestamp is not charged', async () => {
       open = new Map([['u1', long(TS + 1)]]);
       const e = engine({ fetchFundingHistory: vi.fn(async () => []), fundingCheckMs: 1_000_000 });
