@@ -868,6 +868,89 @@ describe('MatchingEngine', () => {
       await e.stop();
     });
 
+    it('with no live mark past the grace, settles at the mark-price candle instead of dropping it (review #143)', async () => {
+      open = new Map([['u1', long()]]);
+      fetchCandles.mockImplementation(
+        async (_c: string, _s: string, from: number, _t: number, src?: string) =>
+          src === 'mark' ? [{ start: from, open: D(49_950), high: D(50_000), low: D(49_900) }] : []
+      );
+      const e = engine({
+        fetchFundingHistory: vi.fn(async () => [{ ts: TS, rate: D('0.0001') }]),
+        fundingCheckMs: 1_000_000,
+        fundingRetryMs: 0,
+      });
+      await e.start();
+      const noMarkTick = (nextFundingTime: number) =>
+        tickListener?.({
+          category: 'linear',
+          symbol: 'BTCUSDT',
+          lastPrice: 50_000,
+          fundingRate: 0.0001,
+          nextFundingTime,
+        });
+      clock = TS - 1_000;
+      noMarkTick(TS);
+      for (let t = TS; t <= TS + 60_000; t += 20_000) {
+        clock = t; // ticks keep flowing (no gap backfill), none carries a mark
+        noMarkTick(TS + 8 * 3_600_000);
+      }
+      expect(runFunding).not.toHaveBeenCalled(); // still inside the grace
+      clock = TS + 61_000;
+      noMarkTick(TS + 8 * 3_600_000);
+      await vi.waitFor(() =>
+        expect(runFunding).toHaveBeenCalledWith(
+          'u1',
+          expect.objectContaining({ ts: TS, mark: D(49_950) })
+        )
+      );
+      await e.stop();
+    });
+
+    it('retries an account whose funding write fails instead of dropping it', async () => {
+      open = new Map([['u1', long()]]);
+      runFunding
+        .mockRejectedValueOnce(new Error('db down'))
+        .mockRejectedValueOnce(new Error('db down'))
+        .mockResolvedValue(null);
+      const e = engine({
+        fetchFundingHistory: vi.fn(async () => [{ ts: TS, rate: D('0.0001') }]),
+        fundingCheckMs: 1_000_000,
+        fundingRetryMs: 0,
+      });
+      await e.start();
+      clock = TS - 1_000;
+      fundingTick(TS, 0.0001, 50_000);
+      clock = TS + 1_000;
+      fundingTick(TS + 8 * 3_600_000, 0.0002, 50_100);
+      await vi.waitFor(() => expect(runFunding).toHaveBeenCalledTimes(3)); // 2 failed + retried
+      await e.stop();
+    });
+
+    it('a backfill whose candles can’t be read still settles funding, at the mark candle of the minute', async () => {
+      open = new Map([['u1', long()]]);
+      fetchCandles.mockImplementation(
+        async (_c: string, _s: string, from: number, to: number, src?: string) => {
+          if (src !== 'mark') throw new Error('kline down');
+          // Only the single-minute read of the funding minute succeeds
+          return to - from === 60_000
+            ? [{ start: from, open: D(49_700), high: D(49_800), low: D(49_600) }]
+            : [];
+        }
+      );
+      const e = engine({
+        fetchFundingHistory: vi.fn(async () => [{ ts: 1_020_000, rate: D('0.0001') }]),
+        fundingCheckMs: 1_000_000,
+        fundingRetryMs: 0,
+      });
+      await e.start();
+      await e.backfill('linear', 'BTCUSDT', 1_000_000, 1_120_000);
+      expect(runFunding).toHaveBeenCalledWith(
+        'u1',
+        expect.objectContaining({ ts: 1_020_000, mark: D(49_700), rate: D('0.0001') })
+      );
+      await e.stop();
+    });
+
     it('a position opened after the timestamp is not charged', async () => {
       open = new Map([['u1', long(TS + 1)]]);
       const e = engine({ fetchFundingHistory: vi.fn(async () => []), fundingCheckMs: 1_000_000 });
