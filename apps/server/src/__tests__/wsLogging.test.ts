@@ -124,13 +124,28 @@ describe('WebSocket connection logging', () => {
     });
   });
 
-  it('trading socket: a socket closed before signing in logs one unauthenticated close', async () => {
+  it('trading socket: an invalid token logs the 4401 close code and its reason', async () => {
+    const ws = await app.injectWS('/api/paper/ws');
+    ws.send(JSON.stringify({ type: 'auth', token: 'not-a-jwt' }));
+    await until(() => linesFor('Paper WS closed').length > 0);
+    expect(linesFor('Paper WS closed')).toEqual([
+      expect.objectContaining({ authenticated: false, code: 4401, reason: expect.any(String) }),
+    ]);
+    ws.terminate();
+  });
+
+  it('trading socket: a server-closed socket logs one unauthenticated close with the code and reason', async () => {
     const ws = await app.injectWS('/api/paper/ws');
     ws.send(JSON.stringify({ type: 'subscribe' })); // unexpected first message → 1008
     await until(() => linesFor('Paper WS closed').length > 0);
     const closes = linesFor('Paper WS closed');
     expect(closes).toHaveLength(1);
-    expect(closes[0]).toMatchObject({ authenticated: false });
+    // A close the server initiates carries the code and reason it sent (review #154)
+    expect(closes[0]).toMatchObject({
+      authenticated: false,
+      code: 1008,
+      reason: 'Unexpected message',
+    });
     expect(closes[0]).not.toHaveProperty('userId');
     expect(linesFor('Paper WS connected')).toHaveLength(0);
     ws.terminate();

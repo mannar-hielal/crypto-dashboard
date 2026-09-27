@@ -103,7 +103,7 @@ export async function privatePaperWs(app: FastifyInstance): Promise<void> {
       if (socket.readyState === 1 /* OPEN */) socket.send(JSON.stringify(message));
     };
 
-    const release = (code?: number) => {
+    const release = (code?: number, reason?: string) => {
       if (released) return;
       released = true;
       log.info(
@@ -112,6 +112,7 @@ export async function privatePaperWs(app: FastifyInstance): Promise<void> {
           authenticated: userId !== null,
           ...(userId ? { userId } : {}),
           ...(code !== undefined ? { code } : {}),
+          ...(reason ? { reason } : {}),
           durationMs: Date.now() - openedAt,
         },
         'Paper WS closed'
@@ -145,10 +146,16 @@ export async function privatePaperWs(app: FastifyInstance): Promise<void> {
       if (items.length) send({ type: 'prices', items });
     };
 
-    const closeUnauthorized = (reason: string) => {
-      socket.close(WS_CLOSE_UNAUTHORIZED, reason);
-      release();
+    /**
+     * The server closes the socket: release (and log) with the code and reason it sent — the
+     * socket's own 'close' event comes later and finds it already released.
+     */
+    const closeWith = (code: number, reason: string) => {
+      socket.close(code, reason);
+      release(code, reason);
     };
+
+    const closeUnauthorized = (reason: string) => closeWith(WS_CLOSE_UNAUTHORIZED, reason);
 
     const authTimer = setTimeout(() => {
       if (!userId) closeUnauthorized('Auth timeout');
@@ -191,8 +198,7 @@ export async function privatePaperWs(app: FastifyInstance): Promise<void> {
       if (userId) return; // re-auth with a fresh token: nothing else to do
 
       if ((perUser.get(payload.userId) ?? 0) >= MAX_PER_USER) {
-        socket.close(1013, 'Too many open tabs');
-        release();
+        closeWith(1013, 'Too many open tabs');
         return;
       }
       userId = payload.userId;
@@ -227,24 +233,21 @@ export async function privatePaperWs(app: FastifyInstance): Promise<void> {
         pricesTimer = setInterval(pushPrices, PRICES_EVERY_MS);
       } catch (err) {
         log.error({ err }, 'Paper WS snapshot failed');
-        socket.close(1011, 'Internal error');
-        release();
+        closeWith(1011, 'Internal error');
       }
     };
 
     socket.on('message', (raw: Buffer) => {
       // 🔐 Size guard before JSON.parse
       if (raw.length > MAX_MESSAGE_BYTES) {
-        socket.close(1009, 'Message too large');
-        release();
+        closeWith(1009, 'Message too large');
         return;
       }
       let message: unknown;
       try {
         message = JSON.parse(raw.toString());
       } catch {
-        socket.close(1008, 'Malformed message');
-        release();
+        closeWith(1008, 'Malformed message');
         return;
       }
       const m = message as { type?: unknown; token?: unknown };
@@ -252,8 +255,7 @@ export async function privatePaperWs(app: FastifyInstance): Promise<void> {
         void authenticate(m.token);
         return;
       }
-      socket.close(1008, 'Unexpected message');
-      release();
+      closeWith(1008, 'Unexpected message');
     });
 
     socket.on('close', (code: number) => release(code));
