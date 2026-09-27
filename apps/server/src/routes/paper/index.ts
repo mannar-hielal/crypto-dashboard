@@ -25,6 +25,13 @@ import { ALLOWED_CATEGORIES, ALLOWED_SYMBOLS } from '../../constants.js';
 import { TradingError, type Executed } from '../../trading/TradingService.js';
 import type { ExitLeg, OrderSize } from '../../trading/engine/index.js';
 import { privatePaperWs } from './ws.js';
+import { logger } from '../../logger.js';
+
+/**
+ * The pre-BP-2 API (account-wide leverage, margin sizing by usdtAmount) is logged, not yet removed
+ * (BP-5, owner decision O11): it goes one release after nothing has been logged.
+ */
+const legacyLog = logger.child({ route: 'paper-legacy-api' });
 
 // ─── Shared schemas ───────────────────────────────────────────────────────────
 
@@ -104,6 +111,7 @@ function sizeOf(b: { qty?: string; value?: string; usdtAmount?: string }): Order
   if (given.length !== 1) return null;
   if (b.qty !== undefined) return { qty: positive(b.qty, 'qty') };
   if (b.value !== undefined) return { value: positive(b.value, 'value') };
+  legacyLog.warn({ field: 'usdtAmount' }, 'Pre-BP-2 order sizing used');
   return { margin: positive(b.usdtAmount as string, 'usdtAmount') };
 }
 
@@ -575,10 +583,12 @@ export async function paperRoutes(app: FastifyInstance) {
         },
       },
     },
-    async (request, reply) =>
-      guarded(reply, async () =>
+    async (request, reply) => {
+      legacyLog.warn({ route: 'PATCH /account/leverage' }, 'Pre-BP-2 account leverage route used');
+      return guarded(reply, async () =>
         send(reply, await app.trading.setLeverage(userIdOf(request), request.body.leverage))
-      )
+      );
+    }
   );
 
   // ── POST /account/reset ──────────────────────────────────────────────────────

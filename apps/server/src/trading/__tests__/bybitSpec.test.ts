@@ -17,6 +17,7 @@ import {
   floorToStep,
   isOnTick,
   markHitsLiquidation,
+  positionCap,
   positionRisk,
   tierFor,
 } from '../bybitSpec.js';
@@ -131,12 +132,32 @@ describe('isolated margin — Bybit’s worked example (BP-3)', () => {
     const bnb = fallbackRiskTiers('BNBUSDT');
     expect(tierFor(bnb, D(9_000)).mmr.toString()).toBe('0.0067');
     expect(tierFor(bnb, D(60_000)).mmr.toString()).toBe('0.0077');
-    expect(tierFor(bnb, D(99_000_000)).mmr.toString()).toBe('0.0357'); // past the last tier
+    // past the last tier: the last one
+    expect(tierFor(bnb, D(9e12)).mmr.toString()).toBe(bnb[bnb.length - 1].mmr.toString());
   });
 
   it('a liquidation price of 0 never liquidates', () => {
     expect(markHitsLiquidation('long', D(0), D(1))).toBe(false);
     expect(markHitsLiquidation('long', D(100), D(100))).toBe(true);
     expect(markHitsLiquidation('short', D(100), D(99))).toBe(false);
+  });
+});
+
+describe('position cap by leverage (BP-5 C)', () => {
+  it('is the risk limit of the highest tier that still allows the leverage', () => {
+    // Live 2026-09-27: BTCUSDT allows 10× up to 100 M USDT, ETHUSDT up to 52 M (plan BP-5)
+    expect(positionCap(fallbackRiskTiers('BTCUSDT'), 10)?.toString()).toBe('100000000');
+    expect(positionCap(fallbackRiskTiers('ETHUSDT'), 10)?.toString()).toBe('52000000');
+    // Lower leverage reaches no further than the table
+    const bnb = fallbackRiskTiers('BNBUSDT');
+    expect(positionCap(bnb, 1)?.gte(positionCap(bnb, 10) ?? 0)).toBe(true);
+  });
+
+  it('the client estimate matches', () => {
+    for (const symbol of ALLOWED_SYMBOLS) {
+      expect(sdk.positionCapEstimate(sdk.riskTiersFor(symbol), 10)).toBe(
+        positionCap(fallbackRiskTiers(symbol), 10)?.toNumber() ?? null
+      );
+    }
   });
 });

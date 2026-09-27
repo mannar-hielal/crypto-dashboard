@@ -772,6 +772,16 @@ Positions row · O7 implement partial liquidation · O8 Last / Mark / Index · O
 stop-loss past liquidation is accepted with a UI warning) · O10 auto-add margin left out (§7) · O11 remove the pre-BP-2
 API after one release that logs any call · O12 Full TP / SL only (Partial → §7).
 
+**Visual gate — answered 2026-09-27** (all recommended): one chip `Cross 10x ▾` / `Isolated 10x ▾` opening a mode +
+leverage modal (account-wide Cross | Isolated tabs with an explainer, presets, tier line) · cross figures added to the
+account summary bar (Margin balance, IM rate, MM rate with a meter; Isolated keeps today's bar) · add / reduce margin
+from a pencil on the Margin cell (Add | Reduce, max, new liq. price; hidden in Cross) · compact order form: a
+`Last ▾` trigger-by dropdown beside TP and SL, Reduce-only and Close-on-trigger checkboxes under the amount (perps;
+Close-on-trigger for Stop orders; Reduce-only hides TP / SL) · a **Closed P&L** tab after Positions (symbol, side,
+qty, entry, exit, closed P&L, type, time; hover shows open fee, close fee, funding) · an amber inline warning under a
+stop-loss past the liquidation price · tier info on hover of the MMR meter · a one-time banner for existing Isolated
+accounts with How it works + Switch to Cross.
+
 The options as they were put to the owner (recommended default first):
 
 - **O1 — Support cross margin at all?** It is Bybit's default and the mode most Bybit users trade in. But in cross,
