@@ -4,6 +4,7 @@ import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { Prisma } from '../../../generated/prisma/client.js';
 import { config } from '../../config.js';
 import { EmailService } from '../../services/EmailService.js';
+import { clientIp } from '../../lib/clientIp.js';
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 // 🔐 argon2 is now the gold standard (OWASP recommendation) over bcrypt.
@@ -75,7 +76,7 @@ export const REFRESH_RATE_LIMIT = {
   timeWindow: '15 minutes',
   max: (request: FastifyRequest) => (hasRefreshCookie(request) ? 20 : 100),
   keyGenerator: (request: FastifyRequest) =>
-    `${hasRefreshCookie(request) ? 'token' : 'probe'}:${request.ip}`,
+    `${hasRefreshCookie(request) ? 'token' : 'probe'}:${clientIp(request)}`,
 };
 
 // ─── TOKEN HELPERS ────────────────────────────────────────────────────────────
@@ -619,7 +620,7 @@ export async function authRoutes(app: FastifyInstance) {
               username: normalizedUsername,
               password: hashedPassword,
               termsAcceptedAt: new Date(),
-              termsAcceptedIp: request.ip,
+              termsAcceptedIp: clientIp(request),
               account: { create: {} },
             },
           });

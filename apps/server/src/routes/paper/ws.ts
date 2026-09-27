@@ -20,6 +20,7 @@ import { Decimal } from '@prisma/client/runtime/client';
 import type { MarketCategory, PaperPriceDTO, WsPaperMessage } from '@crypto-dashboard/sdk';
 import { config } from '../../config.js';
 import { logger } from '../../logger.js';
+import { clientIp } from '../../lib/clientIp.js';
 
 const log = logger.child({ route: 'paperWs' });
 
@@ -67,7 +68,7 @@ function bump(map: Map<string, number>, key: string, by: number): void {
 
 export async function privatePaperWs(app: FastifyInstance): Promise<void> {
   app.get('/ws', { websocket: true }, (socket: WebSocket, request: FastifyRequest) => {
-    const ip = request.ip;
+    const ip = clientIp(request);
 
     // 🔐 Cross-site WebSocket hijacking guard for browsers (which always send Origin): another site's
     //    page can't open this socket. Non-browser clients can omit Origin — that's fine: the real

@@ -12,6 +12,7 @@ import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { config } from './config.js';
+import { clientIp, requestLogSerializerFor } from './lib/clientIp.js';
 import { prismaPlugin } from './plugins/prisma.js';
 import { authPlugin } from './plugins/auth.js';
 import { authRoutes } from './routes/auth/index.js';
@@ -36,22 +37,17 @@ const CSP_DIRECTIVES = {
   reportUri: '/api/csp-violation',
 };
 
-/**
- * 🔐 Which proxy hops Fastify trusts for the client IP (`request.ip`). In production every request
- * comes through Fly's proxy, which appends the real client IP to `X-Forwarded-For` — trusting
- * exactly that one hop makes `request.ip` the visitor (per-IP rate limits, `termsAcceptedIp`), not
- * Fly's private address. Never more than one hop: a client could then prepend a fake address to
- * dodge the limits. Elsewhere nothing sits in front of the server, so no header is trusted.
- */
-export function trustProxyFor(nodeEnv: string): number | false {
-  return nodeEnv === 'production' ? 1 : false;
-}
-
 export async function buildApp() {
   const app = Fastify({
-    trustProxy: trustProxyFor(config.nodeEnv),
     // Disable Fastify's logger in tests to reduce terminal noise
-    logger: config.nodeEnv === 'test' ? false : { level: config.logLevel },
+    logger:
+      config.nodeEnv === 'test'
+        ? false
+        : {
+            level: config.logLevel,
+            // The visitor's IP, not Fly's proxy (see lib/clientIp.ts)
+            serializers: { req: requestLogSerializerFor(config.nodeEnv) },
+          },
     ajv: {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Fastify's AJV plugin typing is incompatible with ajv-formats in this install.
       plugins: [ajvFormats as any],
@@ -138,6 +134,8 @@ export async function buildApp() {
     await app.register(rateLimit, {
       max: 100,
       timeWindow: '1 minute',
+      // 🔐 Per visitor, not per Fly proxy address — routes' own limits inherit it
+      keyGenerator: clientIp,
     });
   }
 
