@@ -109,6 +109,23 @@ describe('hydrate()', () => {
     expect(s.isSyncing).toBe(false);
   });
 
+  it('a pre-BP-3 server’s position (no risk figures) reads as unknown, never as safe', () => {
+    // Rolling deploy: the DTO type says these always come, an old server sends none of them
+    const old: Record<string, unknown> = { ...position('p1') };
+    for (const k of ['liqPrice', 'bustPrice', 'positionIM', 'positionMM']) delete old[k];
+    usePaperStore
+      .getState()
+      .hydrate(emptyState({ positions: [old as unknown as ReturnType<typeof position>] }));
+    const p = usePaperStore.getState().positions[0];
+    expect(p.liqPrice).toBeNull(); // not 0 = "can't be liquidated"
+    expect(p.bustPrice).toBeNull();
+    expect(p.positionMM).toBeNull(); // not 0 = "no maintenance margin"
+    // positionIM = IM + fee to close, rebuilt from the stored parts
+    expect(p.positionIM).toBeCloseTo(
+      Number(position('p1').entryUsdtAmount) + Number(position('p1').closeFeeReserve)
+    );
+  });
+
   it('mapServerState caps the history lists at the client limits', () => {
     const orders = Array.from({ length: 250 }, (_, i) => ({
       id: `o${i}`,

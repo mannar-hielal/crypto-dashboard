@@ -57,7 +57,7 @@ interface RemarginPreviewProps {
 function RemarginPreview({ position, leverage, symbol }: RemarginPreviewProps) {
   const next = remarginPreview(position, leverage, symbol);
   const margin = position.entryUsdtAmount + position.closeFeeReserve;
-  const fmtLiq = (v: number) => (v > 0 ? `$${fmtMktPrice(v)}` : '—');
+  const fmtLiq = (v: number | null) => (v !== null && v > 0 ? `$${fmtMktPrice(v)}` : '—');
   return (
     <dl
       className={`${styles.note} ${styles.preview}`}
