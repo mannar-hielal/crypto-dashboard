@@ -946,6 +946,10 @@ All trading rules live **in the server engine**; the client gets display, estima
       gone, as Bybit's Closed P&L would include it.
 - [ ] `settle` clamps a close's return at 0 while realized PnL books the full loss. A fill past the bankruptcy price
       is now rarer (the backfill liquidates first — audit fix), but realized PnL should book only what was lost.
+- [ ] Funding for a position opened and fully closed while the engine was down (§8): the backfill snapshots only
+      open positions. Source the snapshot for each missed timestamp from position history in the gap (the
+      `Trade` rows' `openedAt` / `executedAt` and quantities) so it is charged as on Bybit (raised in PR #143's
+      review).
 
 **G. API-parity test (Bybit testnet)**
 
@@ -1081,7 +1085,7 @@ for cross-phase bugs.
 | 9   | §5: `Position.version` / `Order.version`, `triggerBy` / `reduceOnly` "wait for BP-3"          | Superseded (`Account.version`) / moved to BP-5 B                                                                                                           | Closed (§5 updated)                              |
 | 10  | §5: `Trade.fee` / `feeAsset`; `COMMISSION_RATE` "removed once no reader remains"              | Fee is `Trade.commission` (no `Trade.feeAsset`); `COMMISSION_RATE` is gone                                                                                 | Closed (§5 updated); field aliases in BP-5 D / G |
 | 11  | §8 rows "closed by BP-3" (same-side merge, leverage lock, close fee at entry)                 | Stale                                                                                                                                                      | Closed (rows removed)                            |
-| 12  | §8: a position closed during engine downtime isn't charged funding                            | Open by design                                                                                                                                             | Won't do (kept in §8)                            |
+| 12  | §8: a position closed during engine downtime isn't charged funding                            | Open by design                                                                                                                                             | BP-5 F (kept in §8 until then)                   |
 | 13  | §8: spot TP / SL can't be edited                                                              | Open (`spot.ts` refuses the edit)                                                                                                                          | BP-5 (low) — or keep in §8                       |
 | 14  | §8: other deliberate gaps (10× cap, top-of-book fills, instant bankruptcy settle…)            | Deliberate                                                                                                                                                 | Won't do (§7 / safety)                           |
 | 15  | BP-4 E: est. funding row in the order form                                                    | Declined in the visual gate (Bybit has none)                                                                                                               | Closed (marked declined)                         |
