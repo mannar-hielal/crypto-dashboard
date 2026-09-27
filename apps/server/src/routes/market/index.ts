@@ -392,7 +392,11 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
       const symbol = symbolRaw; // AllowedSymbol
       const interval = intervalRaw; // AllowedInterval
 
-      log.info({ category, symbol, interval }, 'Client connected to live feed');
+      // reqId + visitor IP tie the connect / disconnect pair to the upgrade's request line and
+      // to a device, so lingering or churning feeds can be traced (fly logs)
+      const connectedAt = Date.now();
+      const conn = { reqId: request.id, clientIp: visitorIp, category, symbol, interval };
+      log.info(conn, 'Client connected to live feed');
 
       // ① Subscribe to live bar updates and forward to this client. Buffer bars
       //    matching this connection while a REST-backed snapshot is in flight
@@ -484,15 +488,19 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
       }
 
       // ④ Clean up listeners when client disconnects
-      socket.on('close', () => {
+      socket.on('close', (code: number) => {
         unsubscribe();
         unsubscribeTicker();
         releaseConnection();
-        log.info({ category, symbol, interval }, 'Client disconnected from live feed');
+        log.info(
+          { ...conn, code, durationMs: Date.now() - connectedAt },
+          'Client disconnected from live feed'
+        );
       });
 
       socket.on('error', (err: Error) => {
-        log.error({ err }, 'Client WebSocket error');
+        // The disconnect line is written once, by the 'close' event that always follows
+        log.error({ err, ...conn }, 'Client WebSocket error');
         unsubscribe();
         unsubscribeTicker();
         releaseConnection();
