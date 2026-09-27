@@ -9,15 +9,15 @@
  * so that header is the visitor. It is trusted only:
  * - in production, on a Fly Machine (`FLY_APP_NAME` set — review #150: the same image run off Fly,
  *   e.g. on a Docker host whose bridge network is in 172.16.0.0/12, must never trust it);
- * - when the connection itself comes from Fly's private proxy network (the socket peer is in
- *   172.16.0.0/12 or fdaa::/16) — a request that somehow reached the app without crossing Fly's
- *   proxy can't pick its own IP;
+ * - when the connection itself comes from Fly's proxy — the Machine's private IPv4 link, 172.16.0.0/12
+ *   (every public request and health check in the production logs arrived from there:
+ *   172.16.23.42, 172.19.23.41);
  * - when it is exactly one valid IP.
  *
- * Accepted scope (review #149): that private network is Fly's 6PN mesh, so any machine in the same
- * Fly organisation (another app, a `fly ssh` / WireGuard session) could also reach the app and set
- * the header. This is Fly's own documented way to recover the client IP, and public traffic only
- * arrives through Fly's proxy (`http_service`). Revisit if another app is added to the organisation.
+ * Fly's organisation-wide 6PN network (fdaa::/16) is deliberately NOT trusted (review #150): other
+ * apps in the organisation — `crypto-dashboard-db` today — and `fly ssh` / WireGuard sessions reach
+ * the app over it and could otherwise set the header. Fly's proxy doesn't connect over it, so if
+ * that ever changed, requests fall back to the socket address and the warning below shows it.
  * Otherwise the socket address is used; in production that fallback is logged (throttled), so a
  * change in Fly's behaviour shows up instead of silently sharing one rate-limit bucket again.
  * Never key anything on `request.ip` directly.
@@ -36,19 +36,16 @@ const HEALTH_PATH = '/health';
 /** At most one fallback warning per this many ms (bounded — no per-request log flood) */
 const WARN_EVERY_MS = 60_000;
 
-/** Fly's private network: the proxy that forwards public traffic to the machine lives here */
+/** The Machine's private IPv4 link, where Fly's proxy connects from (not the org's 6PN mesh) */
 const FLY_PROXY_NETWORK = new BlockList();
 FLY_PROXY_NETWORK.addSubnet('172.16.0.0', 12, 'ipv4');
-FLY_PROXY_NETWORK.addSubnet('fdaa::', 16, 'ipv6');
 
-/** True when `address` (the socket peer) is on Fly's private proxy network. */
+/** True when `address` (the socket peer) is Fly's proxy, on the Machine's private IPv4 link. */
 export function isFlyProxyPeer(address: string): boolean {
   // An IPv4 peer can arrive IPv4-mapped on a dual-stack socket
   const ip = address.startsWith('::ffff:') ? address.slice('::ffff:'.length) : address;
   const family = isIP(ip);
-  if (family === 4) return FLY_PROXY_NETWORK.check(ip, 'ipv4');
-  if (family === 6) return FLY_PROXY_NETWORK.check(ip, 'ipv6');
-  return false;
+  return family === 4 && FLY_PROXY_NETWORK.check(ip, 'ipv4');
 }
 
 type IpSource = Pick<FastifyRequest, 'ip' | 'headers' | 'url'>;

@@ -41,7 +41,8 @@ describe('isFlyProxyPeer', () => {
     ['172.16.23.42', true],
     ['172.19.23.41', true],
     ['::ffff:172.16.23.42', true],
-    ['fdaa:0:1::3', true],
+    // Fly's org-wide 6PN mesh: other apps (the DB) and fly ssh reach the app here (review #150)
+    ['fdaa:0:1::3', false],
     ['66.241.124.224', false], // a Fly public edge address — not the private proxy hop
     ['89.217.38.229', false],
     ['10.0.0.1', false],
@@ -81,6 +82,12 @@ describe('clientIpFor', () => {
         { peer: '172.17.0.3', onFly: false }
       )
     ).toBe('172.17.0.3');
+  });
+
+  it('production: another app in the organisation (a 6PN peer) cannot choose its IP (review #150)', async () => {
+    expect(
+      await ipSeen('production', { 'fly-client-ip': '1.2.3.4' }, { peer: 'fdaa:0:1a2b::5' })
+    ).toBe('fdaa:0:1a2b::5');
   });
 
   it.each([['not-an-ip'], ['1.2.3.4, 5.6.7.8'], ['']])(
