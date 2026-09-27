@@ -69,6 +69,9 @@ function bump(map: Map<string, number>, key: string, by: number): void {
 export async function privatePaperWs(app: FastifyInstance): Promise<void> {
   app.get('/ws', { websocket: true }, (socket: WebSocket, request: FastifyRequest) => {
     const ip = clientIp(request);
+    const openedAt = Date.now();
+    // reqId + visitor IP tie this socket to its upgrade request line and to a device (fly logs)
+    const conn = { reqId: request.id, clientIp: ip };
 
     // 🔐 Cross-site WebSocket hijacking guard for browsers (which always send Origin): another site's
     //    page can't open this socket. Non-browser clients can omit Origin — that's fine: the real
@@ -100,9 +103,19 @@ export async function privatePaperWs(app: FastifyInstance): Promise<void> {
       if (socket.readyState === 1 /* OPEN */) socket.send(JSON.stringify(message));
     };
 
-    const release = () => {
+    const release = (code?: number) => {
       if (released) return;
       released = true;
+      log.info(
+        {
+          ...conn,
+          authenticated: userId !== null,
+          ...(userId ? { userId } : {}),
+          ...(code !== undefined ? { code } : {}),
+          durationMs: Date.now() - openedAt,
+        },
+        'Paper WS closed'
+      );
       clearTimeout(authTimer);
       if (expiryTimer) clearTimeout(expiryTimer);
       if (pongTimer) clearTimeout(pongTimer);
@@ -185,6 +198,7 @@ export async function privatePaperWs(app: FastifyInstance): Promise<void> {
       userId = payload.userId;
       bump(perUser, userId, 1);
       clearTimeout(authTimer);
+      log.info({ ...conn, userId }, 'Paper WS connected');
 
       // Subscribe before loading the snapshot, buffering deltas until it's sent, so nothing
       // committed in between is lost. The client applies deltas idempotently.
@@ -242,9 +256,9 @@ export async function privatePaperWs(app: FastifyInstance): Promise<void> {
       release();
     });
 
-    socket.on('close', release);
+    socket.on('close', (code: number) => release(code));
     socket.on('error', (err: Error) => {
-      log.error({ err }, 'Paper WS error');
+      log.error({ err, ...conn }, 'Paper WS error');
       release();
     });
   });
