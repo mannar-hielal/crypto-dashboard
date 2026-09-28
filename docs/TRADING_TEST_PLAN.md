@@ -325,7 +325,8 @@ _P1 — persistence (6)_
 - [ ] `/paper/**` and `/auth/**` route tests with real transactions, incl. `Account.version` and `deleteMany` races
       — T2i (P1)
 - [x] Coverage thresholds in both `vitest.config.ts` and `test:coverage` in CI — (P1a). Floors at today's numbers:
-      server 82% lines, engine 97% lines / 85% branches, client 46% lines; raised as tests land
+      server 82% lines, engine 97% lines / 85% branches, client 46% lines; raised as tests land (client 48% lines
+      after the M1 account-panel tests)
 - [ ] SDK ↔ server contract test against the generated OpenAPI document (A4; A8 names no step) — T2i
 
 _P2 — replay feed and browser tests (7)_
