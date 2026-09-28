@@ -120,6 +120,23 @@ async function main(): Promise<number> {
     },
     { timeout: REQUEST_TIMEOUT_MS } // the library's default is 5 minutes
   );
+  /**
+   * The scenario's view of the client: once the deadline has fired, every call throws before it is
+   * sent, so no new request (mutating or not) can reach Bybit alongside the cleanup. The cleanup uses
+   * `client` directly.
+   */
+  const live = new Proxy(client, {
+    get(target, prop, receiver) {
+      const value: unknown = Reflect.get(target, prop, receiver);
+      if (typeof value !== 'function') return value;
+      return (...args: unknown[]) => {
+        if (phase !== 'run') {
+          throw new Error(`${String(prop)}: not sent — the parity run passed its deadline`);
+        }
+        return (value as (...a: unknown[]) => unknown).apply(target, args);
+      };
+    },
+  });
   const tiers = riskTiersFromBybit(await getRiskLimit(SYMBOL));
   let seq = 0;
   const ctx = (): EngineContext => ({
@@ -147,7 +164,7 @@ async function main(): Promise<number> {
     for (let i = 0; i < 10; i++) {
       const list = ok(
         'execution/list',
-        await client.getExecutionList({ category: 'linear', symbol: SYMBOL, orderId })
+        await live.getExecutionList({ category: 'linear', symbol: SYMBOL, orderId })
       ).list;
       if (list.length) return list[0];
       await pause(500);
@@ -155,7 +172,7 @@ async function main(): Promise<number> {
     throw new Error(`No execution for order ${orderId}`);
   };
   const bybitPosition = async () =>
-    ok('position/list', await client.getPositionInfo({ category: 'linear', symbol: SYMBOL }))
+    ok('position/list', await live.getPositionInfo({ category: 'linear', symbol: SYMBOL }))
       .list[0] as unknown as Row;
 
   // Close whatever is still open (either side), and leave the account isolated as found. A cleanup
@@ -226,8 +243,12 @@ async function main(): Promise<number> {
 
   try {
     // ── 1. Isolated, 10×, market buy ──────────────────────────────────────────
-    await client.setMarginMode('ISOLATED_MARGIN');
-    await client
+    // Usually already isolated (the cleanup leaves it so); a refusal is logged, not fatal
+    const isolated = await live.setMarginMode('ISOLATED_MARGIN');
+    if (isolated.retCode !== 0) {
+      log.warn({ retCode: isolated.retCode, retMsg: isolated.retMsg }, 'set-margin-mode isolated');
+    }
+    await live
       .setLeverage({
         category: 'linear',
         symbol: SYMBOL,
@@ -237,7 +258,7 @@ async function main(): Promise<number> {
       .catch(() => undefined); // 110043 "leverage not modified" is fine
     const buy = ok(
       'order/create',
-      await client.submitOrder({
+      await live.submitOrder({
         category: 'linear',
         symbol: SYMBOL,
         side: 'Buy',
@@ -265,7 +286,7 @@ async function main(): Promise<number> {
     // ── 2. Add margin ─────────────────────────────────────────────────────────
     ok(
       'position/add-margin',
-      await client.addOrReduceMargin({ category: 'linear', symbol: SYMBOL, margin: '10' })
+      await live.addOrReduceMargin({ category: 'linear', symbol: SYMBOL, margin: '10' })
     );
     state = applyDelta(
       state,
@@ -283,7 +304,7 @@ async function main(): Promise<number> {
     const sl = new Decimal(buyFill.execPrice).times('0.95').toDecimalPlaces(1).toString();
     ok(
       'position/trading-stop',
-      await client.setTradingStop({
+      await live.setTradingStop({
         category: 'linear',
         symbol: SYMBOL,
         stopLoss: sl,
@@ -307,7 +328,7 @@ async function main(): Promise<number> {
     const half = new Decimal(QTY).div(2).toString();
     const sell = ok(
       'order/create',
-      await client.submitOrder({
+      await live.submitOrder({
         category: 'linear',
         symbol: SYMBOL,
         side: 'Sell',
@@ -328,7 +349,7 @@ async function main(): Promise<number> {
     await pause(1_000);
     const bybitClose = ok(
       'position/closed-pnl',
-      await client.getClosedPnL({ category: 'linear', symbol: SYMBOL, limit: 1 })
+      await live.getClosedPnL({ category: 'linear', symbol: SYMBOL, limit: 1 })
     ).list[0] as unknown as Row;
     check(
       'reduce-only half close — closed P&L',
@@ -338,10 +359,10 @@ async function main(): Promise<number> {
     );
 
     // ── 5. Cross: the account figures of what is left ─────────────────────────
-    await client.setMarginMode('REGULAR_MARGIN');
+    ok('set-margin-mode cross', await live.setMarginMode('REGULAR_MARGIN'));
     const wallet = ok(
       'account/wallet-balance',
-      await client.getWalletBalance({ accountType: 'UNIFIED' })
+      await live.getWalletBalance({ accountType: 'UNIFIED' })
     ).list[0] as unknown as Row & { totalWalletBalance: string };
     const bybitPos = await bybitPosition();
     const figures = accountFigures(
