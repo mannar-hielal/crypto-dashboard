@@ -133,6 +133,7 @@ export const GUIDE_ANCHORS = [
   'acct-settings.done',
   'acct-settings.close',
   'acct-settings.backdrop',
+  'acct-settings.error',
   // positions
   'positions.row',
   'positions.row.pnl',

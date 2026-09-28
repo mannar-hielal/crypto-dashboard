@@ -373,6 +373,10 @@ export function OrderAccountManagementPanel({
   const [orderHistorySubTab, setOrderHistorySubTab] = useState<OrderHistorySubTab>('all');
   const [showSettings, setShowSettings] = useState(false);
   const [confirmingReset, setConfirmingReset] = useState(false);
+  /** A reset request in flight: the button reads "Resetting…" and the modal stays open */
+  const [resetting, setResetting] = useState(false);
+  /** Set when the last reset failed — the modal stays open and says so (the account is unchanged) */
+  const [resetFailed, setResetFailed] = useState(false);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Column picker state ────────────────────────────────────────────────────
@@ -810,7 +814,10 @@ export function OrderAccountManagementPanel({
         <div className="flex items-center gap-0.5">
           <SoundSettings />
           <motion.button
-            onClick={() => setShowSettings(true)}
+            onClick={() => {
+              setResetFailed(false);
+              setShowSettings(true);
+            }}
             {...guide('account.settings')}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
@@ -2772,11 +2779,17 @@ export function OrderAccountManagementPanel({
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.88 }}
                         transition={{ duration: 0.12 }}
-                        onClick={() => {
-                          reset();
+                        onClick={async () => {
                           setConfirmingReset(false);
                           if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
-                          setShowSettings(false);
+                          setResetFailed(false);
+                          setResetting(true);
+                          const error = await reset();
+                          setResetting(false);
+                          // Close only once the server has reset the account; a failure keeps the
+                          // modal open and says so, so it never looks like a reset that didn't happen
+                          if (error) setResetFailed(true);
+                          else setShowSettings(false);
                         }}
                         className="flex h-7 items-center gap-1.5 rounded px-3 text-xs font-bold"
                         style={{
@@ -2796,7 +2809,9 @@ export function OrderAccountManagementPanel({
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.88 }}
                         transition={{ duration: 0.12 }}
+                        disabled={resetting}
                         onClick={() => {
+                          setResetFailed(false);
                           setConfirmingReset(true);
                           resetTimerRef.current = setTimeout(() => setConfirmingReset(false), 3000);
                         }}
@@ -2808,7 +2823,7 @@ export function OrderAccountManagementPanel({
                           fontSize: fontSize.xs,
                         }}
                       >
-                        Reset account
+                        {resetting ? 'Resetting…' : 'Reset account'}
                       </motion.button>
                     )}
                   </AnimatePresence>
@@ -2830,6 +2845,16 @@ export function OrderAccountManagementPanel({
                     Done
                   </button>
                 </div>
+                {resetFailed && (
+                  <p
+                    {...guide('acct-settings.error')}
+                    role="alert"
+                    className="px-4 pb-3 text-xs"
+                    style={{ color: color.red, fontSize: fontSize.xs }}
+                  >
+                    ⚠ Reset failed — your account is unchanged. Try again.
+                  </p>
+                )}
               </motion.div>
             </motion.div>
           </>
