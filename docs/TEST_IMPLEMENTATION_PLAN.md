@@ -109,7 +109,7 @@ export function guide(anchor: GuideAnchor, key?: string) {
 5. Anchors carry no user data (no email, no balance) — they ship to production.
 6. Playwright gets a custom selector engine (`guide=trade.submit`, `guide=positions.row@linear:BTCUSDT`), see F4.
 
-**Starter list for Stages 0–3** (≈110 anchors; components named where they live today)
+**Starter list for Stages 0–3** (165 anchors; components named where they live today)
 
 | Area (component)                                                                                                         | Anchors                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -132,7 +132,7 @@ helper `src/test/guide.ts` are in (step 3 of the agreed sequence). The attribute
 component, and the check script (rule 4) switches on once components use the anchors — with no uses yet it would
 flag every entry.
 
-Effort **S**: the registry, the helper, the check script and ~110 attribute additions spread over 20 components;
+Effort **S**: the registry, the helper, the check script and ~165 attribute additions spread over 20 components;
 no behaviour change (a UI change only in the DOM, so no visual Q&A gate is needed — state that in the PR).
 
 ## F2. Test data and isolation
@@ -304,7 +304,7 @@ scenario, `scenarios/spotMarketBuy.ts`, are in, with tests that every anchor is 
 exists in `TRADING_TEST_PLAN.md`. The e2e runner (F4) and the tour overlay consume them later.
 
 Step builders (`apps/client/src/guide/steps.ts`) keep scenarios short and identical across uses:
-`openMarket('spot', 'BTCUSDT')`, `chooseSide('buy')`, `chooseType('market')`, `enterAmount('0.1', 'coin')`,
+`openMarket('spot')`, `chooseSide('buy')`, `chooseType('market')`, `enterAmount('0.1', 'coin')`,
 `enableTp('52000')`, `submit()`, `openTab('assets')`, `setIsolated(10)`.
 
 **Worked example — "Spot market buy"** (cases 14.6.1, 14.6.8)
