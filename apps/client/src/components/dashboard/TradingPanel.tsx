@@ -11,6 +11,7 @@ import { feeRatesLabel, floorToStep, maxQty, orderPreview } from '@/lib/orderMat
 import { useInstrument } from '@/hooks/useInstruments';
 import { useOrderPrefillStore } from '@/store/orderPrefillStore';
 import { bg, color, fontSize } from '@/lib/tokens';
+import { guide } from '@/lib/guideAnchors';
 import { LeverageChip } from './LeverageChip';
 import { LiquidationNotices } from './LiquidationNotices';
 import {
@@ -40,6 +41,13 @@ const TABS: { id: OrderTab; label: string }[] = [
   { id: 'limit', label: 'Limit' },
   { id: 'stop', label: 'Stop' },
 ];
+
+/** Guide anchor of each order-type tab (F1) */
+const TAB_ANCHORS = {
+  market: 'trade.type.market',
+  limit: 'trade.type.limit',
+  stop: 'trade.type.stop',
+} as const;
 
 /** Spot takes market and limit orders only */
 const SPOT_TABS = TABS.filter((t) => t.id !== 'stop');
@@ -665,6 +673,7 @@ export function TradingPanel({
           return (
             <button
               key={m.category}
+              {...guide(m.category === 'spot' ? 'trade.market.spot' : 'trade.market.perp')}
               type="button"
               role="tab"
               aria-selected={active}
@@ -692,6 +701,7 @@ export function TradingPanel({
       <div className="relative flex shrink-0 border-b border-white/5">
         {/* Sell */}
         <button
+          {...guide('trade.side.sell')}
           onClick={() => handleSideChange('sell')}
           className="flex flex-1 flex-col items-center py-2 transition-colors"
           style={{
@@ -717,6 +727,7 @@ export function TradingPanel({
 
         {/* Spread badge */}
         <div
+          {...guide('trade.spread')}
           className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded px-1 text-center tabular-nums"
           style={{
             background: bg.surface,
@@ -735,6 +746,7 @@ export function TradingPanel({
 
         {/* Buy */}
         <button
+          {...guide('trade.side.buy')}
           onClick={() => handleSideChange('buy')}
           className="flex flex-1 flex-col items-center py-2 transition-colors"
           style={{
@@ -764,6 +776,7 @@ export function TradingPanel({
         {(isSpot ? SPOT_TABS : TABS).map((t) => (
           <button
             key={t.id}
+            {...guide(TAB_ANCHORS[t.id])}
             role="tab"
             aria-selected={tab === t.id}
             onClick={() => handleTabChange(t.id)}
@@ -806,6 +819,7 @@ export function TradingPanel({
                 id={priceInputId}
                 ariaLabel="Order price"
                 testId="trading-price-input"
+                anchor="trade.price"
                 suffix="USDT"
                 step={0.01}
                 min={0}
@@ -836,6 +850,7 @@ export function TradingPanel({
               ).map(([mode, label]) => (
                 <button
                   key={mode}
+                  {...guide('trade.amount-unit', mode === 'units' ? 'coin' : 'usdt')}
                   type="button"
                   aria-pressed={qtyMode === mode}
                   onClick={() => handleQtyMode(mode)}
@@ -857,6 +872,7 @@ export function TradingPanel({
             name="qty"
             ariaLabel="Order amount"
             testId="trading-qty-input"
+            anchor="trade.amount"
             step={qtyMode === 'usd' ? '0.01' : '0.000001'}
             min={0}
             value={qtyInput}
@@ -1380,6 +1396,7 @@ export function TradingPanel({
         <AnimatePresence>
           {formError && (
             <motion.p
+              {...guide('trade.error')}
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
@@ -1395,6 +1412,7 @@ export function TradingPanel({
       {/* ── Submit button (sticky bottom) ────────────────────────────── */}
       <div className="shrink-0 border-t border-white/5 p-3">
         <motion.button
+          {...guide('trade.submit')}
           onClick={handleExecute}
           animate={executeAnim}
           aria-label={`Execute ${isBuy ? 'buy' : 'sell'} ${tab} order`}

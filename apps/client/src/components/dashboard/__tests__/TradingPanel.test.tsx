@@ -40,6 +40,7 @@ import { paneStores } from '@/store/paneStore';
 import { usePaperStore, type Position } from '@/store/paperStore';
 import { useAuthStore } from '@/store/authStore';
 import { emptyState, fakePaperApi, resetFakePaperApi } from '@/test/fakePaperApi';
+import { getByGuide } from '@/test/guide';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -1250,5 +1251,46 @@ describe('BP-5 E — margin mode in the leverage chip and modal', () => {
       'would be liquidated immediately'
     );
     expect(fakePaperApi.setSymbolLeverage).not.toHaveBeenCalled();
+  });
+});
+
+// ─── Section 9 — Sell / Buy prices and spread ─────────────────────────────────
+
+describe('Section 9 — spread (T2 · RTL)', () => {
+  function quote(bid: number | null, ask: number | null) {
+    paneStores[0].setState({ bid, ask });
+  }
+
+  it('should show a spread under 1 with 4 decimals and the raw quotes on hover (9.5)', () => {
+    quote(49_999.9, 50_000);
+    const { container } = renderPanel();
+
+    const spread = getByGuide(container, 'trade.spread');
+    expect(spread.textContent).toBe('0.1000');
+    expect(spread.getAttribute('title')).toBe('Bid: 49,999.9 · Ask: 50,000');
+    // Sell is the best bid, Buy the best ask — not a mid-price
+    expect(getByGuide(container, 'trade.side.sell').textContent).toContain('49,999.9');
+    expect(getByGuide(container, 'trade.side.buy').textContent).toContain('50,000');
+  });
+
+  it('should show a spread of 1 or more with 2 decimals (9.5)', () => {
+    quote(50_000, 50_001.25);
+    const { container } = renderPanel();
+
+    const spread = getByGuide(container, 'trade.spread');
+    expect(spread.textContent).toBe('1.25');
+    expect(spread.getAttribute('title')).toBe('Bid: 50,000 · Ask: 50,001.25');
+    expect(getByGuide(container, 'trade.side.buy').textContent).toContain('50,001.25');
+  });
+
+  it('should show — and fall back to the last price when there is no two-sided quote', () => {
+    quote(null, null);
+    const { container } = renderPanel();
+
+    const spread = getByGuide(container, 'trade.spread');
+    expect(spread.textContent).toBe('—');
+    expect(spread.getAttribute('title')).toBe('Spread — awaiting bid/ask feed');
+    expect(getByGuide(container, 'trade.side.sell').textContent).toContain('50,000');
+    expect(getByGuide(container, 'trade.side.buy').textContent).toContain('50,000');
   });
 });
