@@ -2,7 +2,9 @@ name: Deploy
 
 on:
   # Triggers AFTER the CI workflow finishes on main — no duplicate runs
-  # CI already handles type-check/lint/build; deploy only needs to know it passed
+  # CI already handles type-check/lint/tests (with coverage floors)/build and the Postgres integration
+  # job (migrations, drift, repository); deploy only needs to know the whole workflow passed — a
+  # migration that drifts from schema.prisma must block a deploy
   workflow_run:
     workflows: ['CI']
     branches: [main]

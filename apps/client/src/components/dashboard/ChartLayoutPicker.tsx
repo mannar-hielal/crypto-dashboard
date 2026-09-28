@@ -12,6 +12,7 @@ import { motion } from 'framer-motion';
 import { useLayoutStore } from '@/store/layoutStore';
 import type { LayoutId, SyncOptions } from '@/store/layoutStore';
 import { bg, color, fontSize } from '@/lib/tokens';
+import { guide } from '@/lib/guideAnchors';
 
 // ─── Layout icon SVG paths (from TVP markup reference) ────────────────
 
@@ -68,6 +69,7 @@ export function ChartLayoutPicker() {
       {/* Trigger button — shows the active layout icon */}
       <motion.button
         ref={triggerRef}
+        {...guide('layout.picker')}
         onClick={() => {
           setOpen((p) => !p);
           const rect = triggerRef.current?.getBoundingClientRect();
@@ -124,6 +126,7 @@ export function ChartLayoutPicker() {
                     return (
                       <motion.button
                         key={id}
+                        {...guide('layout.option', id)}
                         onClick={() => {
                           setLayout(id);
                           setOpen(false);
@@ -169,6 +172,7 @@ export function ChartLayoutPicker() {
                   return (
                     <button
                       key={key}
+                      {...guide('layout.sync', key)}
                       onClick={() => toggleSync(key)}
                       className="flex w-full items-center justify-between rounded px-1.5 py-1 transition-colors hover:bg-white/4"
                     >

@@ -49,6 +49,7 @@ import type { JournalEntry, HistoricalOrder, PendingOrder } from '@/store/paperS
 import type { PanelSize } from '@/pages/DashboardPage';
 import { bg, color, fontSize } from '@/lib/tokens';
 import { fmtMktPrice } from '@/lib/utils';
+import { guide, type GuideAnchor } from '@/lib/guideAnchors';
 import { useLayoutStore } from '@/store/layoutStore';
 import { SoundSettings } from './SoundSettings';
 
@@ -270,7 +271,10 @@ function JournalRow({
   const isEditing = editingId === entry.id;
 
   return (
-    <tr className="group border-b border-white/3 transition-colors hover:bg-white/2">
+    <tr
+      {...guide('journal.entry', entry.id)}
+      className="group border-b border-white/3 transition-colors hover:bg-white/2"
+    >
       {/* Time */}
       <td
         className="shrink-0 whitespace-nowrap px-3 py-1.5 font-mono tabular-nums"
@@ -311,6 +315,7 @@ function JournalRow({
             <span>{entry.text}</span>
             {entry.pnl !== undefined && (
               <span
+                {...guide('journal.entry.pnl', entry.id)}
                 className="shrink-0 rounded px-1.5 py-px font-semibold tabular-nums"
                 style={{
                   fontSize: fontSize.xs10,
@@ -368,6 +373,10 @@ export function OrderAccountManagementPanel({
   const [orderHistorySubTab, setOrderHistorySubTab] = useState<OrderHistorySubTab>('all');
   const [showSettings, setShowSettings] = useState(false);
   const [confirmingReset, setConfirmingReset] = useState(false);
+  /** A reset request in flight: the button reads "Resetting…" and the modal stays open */
+  const [resetting, setResetting] = useState(false);
+  /** Set when the last reset failed — the modal stays open and says so (the account is unchanged) */
+  const [resetFailed, setResetFailed] = useState(false);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Column picker state ────────────────────────────────────────────────────
@@ -805,7 +814,11 @@ export function OrderAccountManagementPanel({
         <div className="flex items-center gap-0.5">
           <SoundSettings />
           <motion.button
-            onClick={() => setShowSettings(true)}
+            onClick={() => {
+              setResetFailed(false);
+              setShowSettings(true);
+            }}
+            {...guide('account.settings')}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             title="Account settings"
@@ -883,16 +896,19 @@ export function OrderAccountManagementPanel({
                 [
                   {
                     label: 'Balance',
+                    anchor: 'account.summary.balance',
                     value: `$${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                     col: undefined,
                   },
                   {
                     label: 'Equity',
+                    anchor: 'account.summary.equity',
                     value: `$${equity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                     col: undefined,
                   },
                   {
                     label: 'Unrealized P&L',
+                    anchor: 'account.summary.upnl',
                     value: `${unrealizedPnl >= 0 ? '+' : ''}$${unrealizedPnl.toFixed(2)}`,
                     col: unrealizedPnl >= 0 ? color.green : color.red,
                   },
@@ -933,8 +949,13 @@ export function OrderAccountManagementPanel({
                         },
                       ]
                     : []),
-                ] as { label: string; value: string; col: string | undefined }[]
-              ).map(({ label, value, col }) => (
+                ] as {
+                  label: string;
+                  anchor?: GuideAnchor;
+                  value: string;
+                  col: string | undefined;
+                }[]
+              ).map(({ label, anchor, value, col }) => (
                 <div key={label} className="flex shrink-0 flex-col gap-px">
                   <span
                     style={{ fontSize: fontSize.xs10, color: color.muted }}
@@ -943,6 +964,7 @@ export function OrderAccountManagementPanel({
                     {label}
                   </span>
                   <span
+                    {...(anchor ? guide(anchor) : {})}
                     className="whitespace-nowrap tabular-nums font-semibold"
                     style={{ fontSize: fontSize.xs11, color: col ?? `${color.white}bf` }}
                   >
@@ -982,6 +1004,7 @@ export function OrderAccountManagementPanel({
               ).map((tab) => (
                 <button
                   key={tab}
+                  {...guide('account.tab', tab)}
                   onClick={() => {
                     setInfoTab(tab);
                     setColPickerOpen(false);
@@ -1005,6 +1028,7 @@ export function OrderAccountManagementPanel({
                         : tab}
                   {tab === 'assets' && spotBalances.some((h) => h.free + h.locked > 0) && (
                     <span
+                      {...guide('account.tab.badge', 'assets')}
                       className="rounded-full px-1.5 py-px font-bold text-white"
                       style={{ fontSize: fontSize.xxs, background: color.purpleDark }}
                     >
@@ -1013,6 +1037,7 @@ export function OrderAccountManagementPanel({
                   )}
                   {tab === 'positions' && positions.length > 0 && (
                     <span
+                      {...guide('account.tab.badge', 'positions')}
                       className="rounded-full px-1.5 py-px font-bold text-white"
                       style={{ fontSize: fontSize.xxs, background: color.purpleDark }}
                     >
@@ -1021,6 +1046,7 @@ export function OrderAccountManagementPanel({
                   )}
                   {tab === 'orders' && activeOrdersBadgeCount > 0 && (
                     <span
+                      {...guide('account.tab.badge', 'orders')}
                       className="rounded-full px-1.5 py-px font-bold text-white"
                       style={{ fontSize: fontSize.xxs, background: color.amber }}
                     >
@@ -1029,6 +1055,7 @@ export function OrderAccountManagementPanel({
                   )}
                   {tab === 'orderhistory' && orderHistoryRows.length > 0 && (
                     <span
+                      {...guide('account.tab.badge', 'orderhistory')}
                       className="rounded-full bg-white/8 px-1.5 py-px font-semibold"
                       style={{ fontSize: fontSize.xxs, color: color.muted }}
                     >
@@ -1037,6 +1064,7 @@ export function OrderAccountManagementPanel({
                   )}
                   {tab === 'balancehistory' && balanceHistoryRows.length > 0 && (
                     <span
+                      {...guide('account.tab.badge', 'balancehistory')}
                       className="rounded-full bg-white/8 px-1.5 py-px font-semibold"
                       style={{ fontSize: fontSize.xxs, color: color.muted }}
                     >
@@ -1045,6 +1073,7 @@ export function OrderAccountManagementPanel({
                   )}
                   {tab === 'journal' && journal.length > 0 && (
                     <span
+                      {...guide('account.tab.badge', 'journal')}
                       className="rounded-full bg-white/8 px-1.5 py-px font-semibold"
                       style={{ fontSize: fontSize.xxs, color: color.muted }}
                     >
@@ -1059,6 +1088,7 @@ export function OrderAccountManagementPanel({
                 <div className="relative ml-auto pr-2" ref={pickerRef}>
                   <motion.button
                     onClick={() => setColPickerOpen((o) => !o)}
+                    {...guide('account.columns')}
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     title="Customize columns"
@@ -1150,6 +1180,7 @@ export function OrderAccountManagementPanel({
                   return (
                     <button
                       key={sub}
+                      {...guide('orders.subtab', sub)}
                       onClick={() => setOrderSubTab(sub)}
                       className="relative flex items-center gap-1 px-3 py-1.5 transition-colors"
                       style={{
@@ -1170,6 +1201,7 @@ export function OrderAccountManagementPanel({
                       </span>
                       {count > 0 && (
                         <span
+                          {...guide('orders.subtab.count', sub)}
                           className="rounded-full px-1 py-px tabular-nums"
                           style={{
                             fontSize: fontSize.xxs,
@@ -1203,6 +1235,7 @@ export function OrderAccountManagementPanel({
                   return (
                     <button
                       key={sub}
+                      {...guide('orders.subtab', sub)}
                       onClick={() => setOrderHistorySubTab(sub)}
                       className="relative flex items-center gap-1 px-3 py-1.5 transition-colors"
                       style={{
@@ -1223,6 +1256,7 @@ export function OrderAccountManagementPanel({
                       </span>
                       {count > 0 && (
                         <span
+                          {...guide('orders.subtab.count', sub)}
                           className="rounded-full px-1 py-px tabular-nums"
                           style={{
                             fontSize: fontSize.xxs,
@@ -1334,6 +1368,7 @@ export function OrderAccountManagementPanel({
                                 return (
                                   <motion.tr
                                     key={pos.id}
+                                    {...guide('positions.row', `${pos.category}:${pos.symbol}`)}
                                     custom={i}
                                     variants={rowVariants}
                                     initial="hidden"
@@ -1429,7 +1464,10 @@ export function OrderAccountManagementPanel({
                                       </td>
                                     )}
                                     {isVisible('positions', 'mark') && (
-                                      <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                      <td
+                                        {...guide('positions.row.mark')}
+                                        className="px-3 py-1.5 text-right tabular-nums text-white/60"
+                                      >
                                         ${fmtMktPrice(markPrice)}
                                       </td>
                                     )}
@@ -1480,7 +1518,7 @@ export function OrderAccountManagementPanel({
                                         style={{ color: isProfit ? color.green : color.red }}
                                       >
                                         <span className="inline-flex items-center gap-1">
-                                          <span>
+                                          <span {...guide('positions.row.pnl')}>
                                             {isProfit ? '+' : ''}
                                             {pnl.toFixed(2)}
                                           </span>
@@ -1637,6 +1675,7 @@ export function OrderAccountManagementPanel({
                                     {isVisible('positions', 'close') && (
                                       <td className="px-3 py-1.5 text-center">
                                         <motion.button
+                                          {...guide('positions.row.close')}
                                           onClick={() => handleClose(pos.id)}
                                           whileHover={{ scale: 1.2 }}
                                           whileTap={{ scale: 0.9 }}
@@ -1739,6 +1778,7 @@ export function OrderAccountManagementPanel({
                                 return (
                                   <motion.tr
                                     key={rowId}
+                                    {...guide('orders.row', rowId)}
                                     custom={i}
                                     variants={rowVariants}
                                     initial="hidden"
@@ -1768,6 +1808,7 @@ export function OrderAccountManagementPanel({
                                       <td className="px-3 py-1.5">
                                         <span className="inline-flex items-center gap-1">
                                           <span
+                                            {...guide('orders.row.status', rowId)}
                                             className="rounded px-1.5 py-px font-bold uppercase"
                                             style={{
                                               fontSize: fontSize.xs10,
@@ -2184,6 +2225,7 @@ export function OrderAccountManagementPanel({
                                 return (
                                   <motion.tr
                                     key={o.id}
+                                    {...guide('order-history.row', o.id)}
                                     custom={i}
                                     variants={rowVariants}
                                     initial="hidden"
@@ -2220,6 +2262,7 @@ export function OrderAccountManagementPanel({
                                     {isVisible('orderhistory', 'type') && (
                                       <td className="px-3 py-1.5">
                                         <span
+                                          {...guide('order-history.row.type', o.id)}
                                           className="rounded px-1 py-px font-bold"
                                           style={{
                                             fontSize: fontSize.xs10,
@@ -2255,7 +2298,10 @@ export function OrderAccountManagementPanel({
                                       </td>
                                     )}
                                     {isVisible('orderhistory', 'fillPrice') && (
-                                      <td className="px-3 py-1.5 text-right tabular-nums text-white/80">
+                                      <td
+                                        {...guide('order-history.row.fill-price', o.id)}
+                                        className="px-3 py-1.5 text-right tabular-nums text-white/80"
+                                      >
                                         {o.fillPrice != null ? `$${fmtMktPrice(o.fillPrice)}` : '—'}
                                       </td>
                                     )}
@@ -2263,6 +2309,7 @@ export function OrderAccountManagementPanel({
                                       <td className="px-3 py-1.5">
                                         {o.status === 'rejected' ? (
                                           <span
+                                            {...guide('order-history.row.status', o.id)}
                                             className="inline-flex items-center gap-1"
                                             title={o.rejectionReason ?? 'Order rejected'}
                                             style={{ color: color.red, cursor: 'default' }}
@@ -2280,6 +2327,7 @@ export function OrderAccountManagementPanel({
                                           </span>
                                         ) : (
                                           <span
+                                            {...guide('order-history.row.status', o.id)}
                                             className="rounded px-1.5 py-px font-bold capitalize"
                                             style={{
                                               fontSize: fontSize.xs10,
@@ -2294,6 +2342,7 @@ export function OrderAccountManagementPanel({
                                     )}
                                     {isVisible('orderhistory', 'commission') && (
                                       <td
+                                        {...guide('order-history.row.commission', o.id)}
                                         className="px-3 py-1.5 text-right tabular-nums"
                                         style={{ fontSize: fontSize.xs10, color: color.muted }}
                                       >
@@ -2398,6 +2447,7 @@ export function OrderAccountManagementPanel({
                                 return (
                                   <motion.tr
                                     key={entry.id}
+                                    {...guide('balance-history.row', entry.id)}
                                     custom={i}
                                     variants={rowVariants}
                                     initial="hidden"
@@ -2488,6 +2538,7 @@ export function OrderAccountManagementPanel({
                           >
                             <input
                               autoFocus
+                              {...guide('journal.note-input')}
                               value={noteText}
                               onChange={(e) => setNoteText(e.target.value)}
                               onKeyDown={(e) => {
@@ -2533,6 +2584,7 @@ export function OrderAccountManagementPanel({
                         >
                           <span>No journal entries yet — place a trade to see activity.</span>
                           <button
+                            {...guide('journal.add-note')}
                             onClick={() => setIsAddingNote(true)}
                             className="flex items-center gap-1 transition-colors hover:brightness-125"
                             style={{ fontSize: fontSize.xs11, color: color.purple }}
@@ -2564,6 +2616,7 @@ export function OrderAccountManagementPanel({
                                 </th>
                                 <th className="px-2 py-1.5 text-right" style={{ minWidth: 28 }}>
                                   <button
+                                    {...guide('journal.add-note')}
                                     onClick={() => setIsAddingNote(true)}
                                     title="Add journal note"
                                     className="ml-auto flex items-center justify-center transition-colors hover:text-brand-purple"
@@ -2613,7 +2666,10 @@ export function OrderAccountManagementPanel({
               transition={{ duration: 0.15 }}
               className="fixed inset-0 z-40 flex items-center justify-center"
               style={{ background: 'rgba(0,0,0,0.55)' }}
+              {...guide('acct-settings.backdrop')}
               onClick={() => {
+                // A reset in flight must finish in view: its failure would otherwise go unseen
+                if (resetting) return;
                 setShowSettings(false);
                 setConfirmingReset(false);
                 if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
@@ -2622,6 +2678,7 @@ export function OrderAccountManagementPanel({
               {/* Modal — inside backdrop so it's naturally centered; stop-propagation prevents backdrop-click closing */}
               <motion.div
                 key="settings-modal"
+                {...guide('acct-settings.modal')}
                 initial={{ opacity: 0, scale: 0.93, y: 8 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.93, y: 8 }}
@@ -2640,7 +2697,10 @@ export function OrderAccountManagementPanel({
                 >
                   <span className="text-sm font-semibold text-white/90">Account Settings</span>
                   <button
+                    {...guide('acct-settings.close')}
+                    disabled={resetting}
                     onClick={() => {
+                      if (resetting) return;
                       setShowSettings(false);
                       setConfirmingReset(false);
                       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
@@ -2663,6 +2723,7 @@ export function OrderAccountManagementPanel({
                       Account name
                     </label>
                     <div
+                      {...guide('acct-settings.name')}
                       className="flex h-8 items-center rounded px-3 text-xs text-white/60"
                       style={{
                         background: `color-mix(in srgb, ${color.white} 4%, transparent)`,
@@ -2684,6 +2745,7 @@ export function OrderAccountManagementPanel({
                       Fees
                     </label>
                     <div
+                      {...guide('acct-settings.fees')}
                       className="flex h-8 items-center justify-between rounded px-3"
                       style={{
                         background: `color-mix(in srgb, ${color.white} 4%, transparent)`,
@@ -2716,15 +2778,22 @@ export function OrderAccountManagementPanel({
                     {confirmingReset ? (
                       <motion.button
                         key="confirm-reset"
+                        {...guide('acct-settings.reset')}
                         initial={{ opacity: 0, scale: 0.88 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.88 }}
                         transition={{ duration: 0.12 }}
-                        onClick={() => {
-                          reset();
+                        onClick={async () => {
                           setConfirmingReset(false);
                           if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
-                          setShowSettings(false);
+                          setResetFailed(false);
+                          setResetting(true);
+                          const error = await reset();
+                          setResetting(false);
+                          // Close only once the server has reset the account; a failure keeps the
+                          // modal open and says so, so it never looks like a reset that didn't happen
+                          if (error) setResetFailed(true);
+                          else setShowSettings(false);
                         }}
                         className="flex h-7 items-center gap-1.5 rounded px-3 text-xs font-bold"
                         style={{
@@ -2739,11 +2808,14 @@ export function OrderAccountManagementPanel({
                     ) : (
                       <motion.button
                         key="reset-btn"
+                        {...guide('acct-settings.reset')}
                         initial={{ opacity: 0, scale: 0.88 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.88 }}
                         transition={{ duration: 0.12 }}
+                        disabled={resetting}
                         onClick={() => {
+                          setResetFailed(false);
                           setConfirmingReset(true);
                           resetTimerRef.current = setTimeout(() => setConfirmingReset(false), 3000);
                         }}
@@ -2755,14 +2827,17 @@ export function OrderAccountManagementPanel({
                           fontSize: fontSize.xs,
                         }}
                       >
-                        Reset account
+                        {resetting ? 'Resetting…' : 'Reset account'}
                       </motion.button>
                     )}
                   </AnimatePresence>
 
                   {/* Done */}
                   <button
+                    {...guide('acct-settings.done')}
+                    disabled={resetting}
                     onClick={() => {
+                      if (resetting) return;
                       setShowSettings(false);
                       setConfirmingReset(false);
                     }}
@@ -2776,6 +2851,16 @@ export function OrderAccountManagementPanel({
                     Done
                   </button>
                 </div>
+                {resetFailed && (
+                  <p
+                    {...guide('acct-settings.error')}
+                    role="alert"
+                    className="px-4 pb-3 text-xs"
+                    style={{ color: color.red, fontSize: fontSize.xs }}
+                  >
+                    ⚠ Reset failed — your account is unchanged. Try again.
+                  </p>
+                )}
               </motion.div>
             </motion.div>
           </>

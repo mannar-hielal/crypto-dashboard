@@ -408,6 +408,47 @@ describe('layoutStore', () => {
     });
   });
 
+  // ── Persistence across a reload (cd-layout) ──────────────────────────────────
+
+  describe('persistence (cd-layout)', () => {
+    /** What persist wrote to localStorage, as a reload would read it. */
+    function saved(): string {
+      const raw = localStorage.getItem('cd-layout');
+      if (raw === null) throw new Error('cd-layout was never written');
+      return raw;
+    }
+
+    /** A reload: the store starts from defaults and reads `raw` back from localStorage. */
+    async function reloadFrom(raw: string) {
+      resetStore();
+      localStorage.setItem('cd-layout', raw);
+      await useLayoutStore.persist.rehydrate();
+    }
+
+    it('should restore the 2h layout when the page reloads (10.1.7)', async () => {
+      useLayoutStore.getState().setLayout('2h');
+      const raw = saved();
+      expect(JSON.parse(raw).state.layout).toBe('2h');
+
+      await reloadFrom(raw);
+
+      expect(useLayoutStore.getState().layout).toBe('2h');
+    });
+
+    it('should restore every sync toggle as it was left when the page reloads (10.4.8)', async () => {
+      // Defaults: symbol off, interval off, crosshair on, time range on
+      useLayoutStore.getState().toggleSync('symbol');
+      useLayoutStore.getState().toggleSync('crosshair');
+      const expected = { symbol: true, interval: false, crosshair: false, timeRange: true };
+      expect(useLayoutStore.getState().syncOptions).toEqual(expected);
+      const raw = saved();
+
+      await reloadFrom(raw);
+
+      expect(useLayoutStore.getState().syncOptions).toEqual(expected);
+    });
+  });
+
   describe('marketHandoffDone (D7, v5)', () => {
     const { migrate, merge } = useLayoutStore.persist.getOptions();
 

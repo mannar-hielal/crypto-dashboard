@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:int": "vitest run --config vitest.int.config.ts",
     "parity:testnet": "tsx src/tools/bybitParity.ts"
   },
   "dependencies": {

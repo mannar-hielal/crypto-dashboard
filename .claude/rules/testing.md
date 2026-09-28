@@ -22,7 +22,12 @@ correct without depending on real infrastructure, and the suite stays fast and d
   of React. Hooks are expensive to set up in isolation; a pure helper (e.g. `checkTPSL`) needs no
   React/store scaffolding to test. See [`react.md`](./react.md#hooks--effects).
 - Tests never depend on a real database, a real external API, or a real network call. Prisma and
-  any outbound service (e.g. `EmailService`) are always mocked.
+  any outbound service (e.g. `EmailService`) are always mocked. **One exception:** integration
+  tests named `*.int.test.ts` (server, `src/__tests__/int/`) run on a real Postgres through
+  `pnpm --filter @crypto-dashboard/server test:int` (`vitest.int.config.ts`, CI job
+  "Integration (Postgres)"). `pnpm test` and the pre-commit hook exclude them, so they still need
+  no database. They use a throwaway database whose name ends in `_int` / `_test`, migrated with
+  `prisma migrate deploy` (never a reset), and each file clears its own rows.
 - New tests import from `src/`, never from `dist/` or `generated/`.
 - `pnpm test` must pass for the whole suite (server + client), with no skipped tests, before a
   change is considered mergeable.
@@ -61,7 +66,9 @@ correct without depending on real infrastructure, and the suite stays fast and d
 - Exercise routes by injecting into the built app, not by starting a real HTTP listener:
   `app.inject({ method: 'GET', url: '...' })`.
 - Coverage: `pnpm test:coverage` uses the v8 provider, includes `src/**/*.ts`, excludes
-  `src/index.ts` and `src/**/__tests__/**`.
+  `src/index.ts` and `src/**/__tests__/**`, and fails below the `coverage.thresholds` floors in each
+  package's `vitest.config.ts` (raised as tests land, never lowered). The pre-commit hook and CI both
+  run it.
 
 ## Client tests (`apps/client`, Vitest, `environment: 'jsdom'`)
 
@@ -80,18 +87,19 @@ correct without depending on real infrastructure, and the suite stays fast and d
 ## Gates — what "passing" means before a commit/PR
 
 Pre-commit hook (`.husky/pre-commit`), in order: `audit` → `type-check` (server + client) →
-`test` → `lint-staged` → `lint`. CI (`ci.yml`) additionally runs `format:check` and `build`.
+`test:coverage` + `test:hooks` → `lint-staged` → `lint`. CI (`ci.yml`) additionally runs
+`format:check`, `build` and the Postgres integration job (`test:int`, CI only — it needs a database).
 A change is not ready to push until all of these are green locally — don't rely on CI to catch a
 gate that `pnpm test`/`pnpm lint`/`pnpm type-check` would have caught first.
 
-| Command                                             | What it verifies                                      |
-| --------------------------------------------------- | ----------------------------------------------------- |
-| `pnpm run audit`                                    | No high/critical CVEs in dependencies                 |
-| `pnpm --filter @crypto-dashboard/server type-check` | Server TS compiles clean                              |
-| `pnpm --filter @crypto-dashboard/client type-check` | Client TS compiles clean (`tsconfig.app.json`)        |
-| `pnpm test`                                         | Server + client Vitest suites, no skips               |
-| `pnpm format:check`                                 | Prettier formatting is consistent                     |
-| `pnpm lint`                                         | ESLint (flat config), zero errors across all packages |
+| Command                                             | What it verifies                                       |
+| --------------------------------------------------- | ------------------------------------------------------ |
+| `pnpm run audit`                                    | No high/critical CVEs in dependencies                  |
+| `pnpm --filter @crypto-dashboard/server type-check` | Server TS compiles clean                               |
+| `pnpm --filter @crypto-dashboard/client type-check` | Client TS compiles clean (`tsconfig.app.json`)         |
+| `pnpm test:coverage`                                | The Vitest suites, no skips, above the coverage floors |
+| `pnpm format:check`                                 | Prettier formatting is consistent                      |
+| `pnpm lint`                                         | ESLint (flat config), zero errors across all packages  |
 
 ## Cross-references
 

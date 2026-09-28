@@ -41,6 +41,7 @@ import { canDriveTimeSync, isPanePushingData, isTimeSyncPeer } from '@/lib/chart
 import { ChartPanel } from '@/components/dashboard/ChartPanel';
 import { PaneHeader } from '@/components/dashboard/PaneHeader';
 import { color } from '@/lib/tokens';
+import { guide } from '@/lib/guideAnchors';
 
 /** Inputs for canDriveTimeSync — read at event time, never a stale closure. */
 function paneHistory(paneIndex: number) {
@@ -392,7 +393,12 @@ export function MultiChartArea({
           const isActive = activePane === paneIndex;
 
           return (
-            <div key={paneIndex} className="relative flex min-h-0 min-w-0 flex-col overflow-hidden">
+            <div
+              key={paneIndex}
+              {...guide('pane', String(paneIndex))}
+              data-active={isActive ? 'true' : undefined}
+              className="relative flex min-h-0 min-w-0 flex-col overflow-hidden"
+            >
               {paneCount > 1 && (
                 <PaneHeader
                   paneIndex={paneIndex}
@@ -402,6 +408,7 @@ export function MultiChartArea({
               )}
 
               <div
+                {...guide('pane.chart', String(paneIndex))}
                 className="relative flex-1 overflow-hidden"
                 onClick={() => setActivePane(paneIndex)}
               >

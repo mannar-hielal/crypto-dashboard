@@ -2,7 +2,7 @@ import { useState, useId, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { X, ChevronUp, ChevronDown, Info, AlertTriangle } from 'lucide-react';
 import { useStore } from 'zustand';
-import type { MarketCategory, PaperTriggerBy } from '@crypto-dashboard/sdk';
+import { priceTickSize, type MarketCategory, type PaperTriggerBy } from '@crypto-dashboard/sdk';
 import { useLayoutStore } from '@/store/layoutStore';
 import { getLastKnownMarkPrice, paneStores } from '@/store/paneStore';
 import { leverageFor, usePaperStore, type PlaceResult } from '@/store/paperStore';
@@ -11,6 +11,7 @@ import { feeRatesLabel, floorToStep, maxQty, orderPreview } from '@/lib/orderMat
 import { useInstrument } from '@/hooks/useInstruments';
 import { useOrderPrefillStore } from '@/store/orderPrefillStore';
 import { bg, color, fontSize } from '@/lib/tokens';
+import { guide } from '@/lib/guideAnchors';
 import { LeverageChip } from './LeverageChip';
 import { LiquidationNotices } from './LiquidationNotices';
 import {
@@ -40,6 +41,13 @@ const TABS: { id: OrderTab; label: string }[] = [
   { id: 'limit', label: 'Limit' },
   { id: 'stop', label: 'Stop' },
 ];
+
+/** Guide anchor of each order-type tab (F1) */
+const TAB_ANCHORS = {
+  market: 'trade.type.market',
+  limit: 'trade.type.limit',
+  stop: 'trade.type.stop',
+} as const;
 
 /** Spot takes market and limit orders only */
 const SPOT_TABS = TABS.filter((t) => t.id !== 'stop');
@@ -102,10 +110,12 @@ export function TradingPanel({
   const baseAsset = symbol.replace('USDT', '');
   const instrument = useInstrument(category, symbol);
   const qtyStep = instrument?.qtyStep ?? 0;
-  /** Decimals of the price tick (0.1 → 1, 0.00001 → 5); 2 until the rules load */
-  const priceDecimals = instrument?.tickSize
-    ? Math.max(0, Math.ceil(-Math.log10(instrument.tickSize) - 1e-9))
-    : 2;
+  /**
+   * Decimals of the price tick (0.1 → 1, 0.00001 → 5), so prices read like Bybit's: the live rules,
+   * else the SDK's tick snapshot for the market (Spot or USDT Perpetual). A symbol in neither
+   * reads with 5 decimals under 1 (never `0.12` for a 0.12345 coin), else 2.
+   */
+  const priceTick = instrument?.tickSize || priceTickSize(category, symbol);
 
   const activePaneStore = paneStores[activePane];
   // Always subscribe unconditionally so prices/spread/order-info are never
@@ -116,6 +126,19 @@ export function TradingPanel({
 
   const bid = useStore(activePaneStore, (s) => s.bid);
   const ask = useStore(activePaneStore, (s) => s.ask);
+
+  const referencePrice = bid ?? latestPrice ?? 0;
+  const priceDecimals = priceTick
+    ? Math.max(0, Math.ceil(-Math.log10(priceTick) - 1e-9))
+    : referencePrice > 0 && referencePrice < 1
+      ? 5
+      : 2;
+  /** A price at the tick's decimals — Sell / Buy, the spread and the order label */
+  const fmtTickPrice = (v: number) =>
+    v.toLocaleString(undefined, {
+      minimumFractionDigits: priceDecimals,
+      maximumFractionDigits: priceDecimals,
+    });
 
   const spread = bid != null && ask != null ? ask - bid : null;
 
@@ -624,7 +647,7 @@ export function TradingPanel({
   const submitSecondary = (() => {
     const qtyStr = units !== null ? `${units.toFixed(6)} ${baseAsset}` : `— ${baseAsset}`;
     if (tab === 'market') return `${qtyStr} · MARKET`;
-    const p = execPrice ? execPrice.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—';
+    const p = execPrice ? fmtTickPrice(execPrice) : '—';
     return `${qtyStr} @ ${p} ${tab.toUpperCase()}`;
   })();
 
@@ -665,6 +688,7 @@ export function TradingPanel({
           return (
             <button
               key={m.category}
+              {...guide(m.category === 'spot' ? 'trade.market.spot' : 'trade.market.perp')}
               type="button"
               role="tab"
               aria-selected={active}
@@ -692,6 +716,7 @@ export function TradingPanel({
       <div className="relative flex shrink-0 border-b border-white/5">
         {/* Sell */}
         <button
+          {...guide('trade.side.sell')}
           onClick={() => handleSideChange('sell')}
           className="flex flex-1 flex-col items-center py-2 transition-colors"
           style={{
@@ -709,14 +734,13 @@ export function TradingPanel({
             className="tabular-nums font-bold"
             style={{ fontSize: fontSize.xs11, color: !isBuy ? color.white : color.muted }}
           >
-            {(bid ?? latestPrice)
-              ? (bid ?? latestPrice)!.toLocaleString(undefined, { maximumFractionDigits: 2 })
-              : '—'}
+            {(bid ?? latestPrice) ? fmtTickPrice((bid ?? latestPrice)!) : '—'}
           </span>
         </button>
 
         {/* Spread badge */}
         <div
+          {...guide('trade.spread')}
           className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded px-1 text-center tabular-nums"
           style={{
             background: bg.surface,
@@ -726,15 +750,16 @@ export function TradingPanel({
           }}
           title={
             spread != null
-              ? `Bid: ${bid?.toLocaleString(undefined, { maximumFractionDigits: 4 })} · Ask: ${ask?.toLocaleString(undefined, { maximumFractionDigits: 4 })}`
+              ? `Bid: ${fmtTickPrice(bid!)} · Ask: ${fmtTickPrice(ask!)}`
               : 'Spread — awaiting bid/ask feed'
           }
         >
-          {spread != null ? spread.toFixed(spread < 1 ? 4 : 2) : '—'}
+          {spread != null ? spread.toFixed(priceDecimals) : '—'}
         </div>
 
         {/* Buy */}
         <button
+          {...guide('trade.side.buy')}
           onClick={() => handleSideChange('buy')}
           className="flex flex-1 flex-col items-center py-2 transition-colors"
           style={{
@@ -752,9 +777,7 @@ export function TradingPanel({
             className="tabular-nums font-bold"
             style={{ fontSize: fontSize.xs11, color: isBuy ? color.white : color.muted }}
           >
-            {(ask ?? latestPrice)
-              ? (ask ?? latestPrice)!.toLocaleString(undefined, { maximumFractionDigits: 2 })
-              : '—'}
+            {(ask ?? latestPrice) ? fmtTickPrice((ask ?? latestPrice)!) : '—'}
           </span>
         </button>
       </div>
@@ -764,6 +787,7 @@ export function TradingPanel({
         {(isSpot ? SPOT_TABS : TABS).map((t) => (
           <button
             key={t.id}
+            {...guide(TAB_ANCHORS[t.id])}
             role="tab"
             aria-selected={tab === t.id}
             onClick={() => handleTabChange(t.id)}
@@ -806,6 +830,7 @@ export function TradingPanel({
                 id={priceInputId}
                 ariaLabel="Order price"
                 testId="trading-price-input"
+                anchor="trade.price"
                 suffix="USDT"
                 step={0.01}
                 min={0}
@@ -836,6 +861,7 @@ export function TradingPanel({
               ).map(([mode, label]) => (
                 <button
                   key={mode}
+                  {...guide('trade.amount-unit', mode === 'units' ? 'coin' : 'usdt')}
                   type="button"
                   aria-pressed={qtyMode === mode}
                   onClick={() => handleQtyMode(mode)}
@@ -857,6 +883,7 @@ export function TradingPanel({
             name="qty"
             ariaLabel="Order amount"
             testId="trading-qty-input"
+            anchor="trade.amount"
             step={qtyMode === 'usd' ? '0.01' : '0.000001'}
             min={0}
             value={qtyInput}
@@ -1380,6 +1407,7 @@ export function TradingPanel({
         <AnimatePresence>
           {formError && (
             <motion.p
+              {...guide('trade.error')}
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
@@ -1395,6 +1423,7 @@ export function TradingPanel({
       {/* ── Submit button (sticky bottom) ────────────────────────────── */}
       <div className="shrink-0 border-t border-white/5 p-3">
         <motion.button
+          {...guide('trade.submit')}
           onClick={handleExecute}
           animate={executeAnim}
           aria-label={`Execute ${isBuy ? 'buy' : 'sell'} ${tab} order`}
