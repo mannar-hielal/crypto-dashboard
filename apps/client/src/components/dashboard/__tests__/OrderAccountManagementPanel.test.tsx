@@ -1412,6 +1412,13 @@ describe('Section 8 — Account Settings modal', () => {
     await waitFor(() => expect(resetButton().textContent).toBe('Resetting…'));
     expect((resetButton() as HTMLButtonElement).disabled).toBe(true);
     expect(modal()).not.toBeNull();
+    // It can't be dismissed mid-request, or a failure would go unseen (review #172)
+    expect((getByGuide(body(), 'acct-settings.close') as HTMLButtonElement).disabled).toBe(true);
+    expect((getByGuide(body(), 'acct-settings.done') as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(getByGuide(body(), 'acct-settings.close'));
+    fireEvent.click(getByGuide(body(), 'acct-settings.done'));
+    fireEvent.click(getByGuide(body(), 'acct-settings.backdrop'));
+    expect(modal()).not.toBeNull();
 
     await act(async () => {
       finish({

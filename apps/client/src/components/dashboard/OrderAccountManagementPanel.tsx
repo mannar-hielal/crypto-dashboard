@@ -2668,6 +2668,8 @@ export function OrderAccountManagementPanel({
               style={{ background: 'rgba(0,0,0,0.55)' }}
               {...guide('acct-settings.backdrop')}
               onClick={() => {
+                // A reset in flight must finish in view: its failure would otherwise go unseen
+                if (resetting) return;
                 setShowSettings(false);
                 setConfirmingReset(false);
                 if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
@@ -2696,7 +2698,9 @@ export function OrderAccountManagementPanel({
                   <span className="text-sm font-semibold text-white/90">Account Settings</span>
                   <button
                     {...guide('acct-settings.close')}
+                    disabled={resetting}
                     onClick={() => {
+                      if (resetting) return;
                       setShowSettings(false);
                       setConfirmingReset(false);
                       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
@@ -2831,7 +2835,9 @@ export function OrderAccountManagementPanel({
                   {/* Done */}
                   <button
                     {...guide('acct-settings.done')}
+                    disabled={resetting}
                     onClick={() => {
+                      if (resetting) return;
                       setShowSettings(false);
                       setConfirmingReset(false);
                     }}
