@@ -81,21 +81,32 @@ jobs:
           name="parity-${{ github.run_id }}-${{ github.run_attempt }}"
           # 🔐 Testnet only: the script refuses to trade unless BYBIT_TESTNET is true. config.ts's other
           # required variables are unused by the script (no database, Redis or auth) — dummies.
-          flyctl machine run "registry.fly.io/$PARITY_APP:run-${{ github.run_id }}" \
-            node dist/src/tools/bybitParity.js \
-            --app "$PARITY_APP" --name "$name" --region sin --restart no --detach \
-            --vm-memory 512 \
-            --env BYBIT_TESTNET=true \
-            --env DATABASE_URL=postgresql://parity:unused@localhost:5432/unused \
-            --env REDIS_URL=redis://localhost:6379 \
-            --env JWT_SECRET=parity-run-dummy-secret-not-used-000000 \
-            --env ADMIN_EMAIL=parity@example.invalid \
-            --env CLIENT_URL=https://example.invalid
+          # A freshly pushed image can take a few seconds to reach the registry (MANIFEST_UNKNOWN): retry
+          for attempt in 1 2 3 4 5 6; do
+            if flyctl machine run "registry.fly.io/$PARITY_APP:run-${{ github.run_id }}" \
+              --app "$PARITY_APP" --name "$name" --region sin --restart no --detach \
+              --vm-memory 512 \
+              --env BYBIT_TESTNET=true \
+              --env DATABASE_URL=postgresql://parity:unused@localhost:5432/unused \
+              --env REDIS_URL=redis://localhost:6379 \
+              --env JWT_SECRET=parity-run-dummy-secret-not-used-000000 \
+              --env ADMIN_EMAIL=parity@example.invalid \
+              --env CLIENT_URL=https://example.invalid \
+              -- node dist/src/tools/bybitParity.js; then
+              break
+            fi
+            [ "$attempt" = 6 ] && { echo "::error::Could not launch the parity machine"; exit 1; }
+            echo "Launch attempt $attempt failed; retrying in 15 s"
+            sleep 15
+          done
           id=$(flyctl machine list --app "$PARITY_APP" --json | jq -r --arg n "$name" '.[] | select(.name == $n) | .id')
+          [ -n "$id" ] || { echo "::error::Parity machine $name not found"; exit 1; }
           echo "id=$id" >> "$GITHUB_OUTPUT"
           flyctl machine wait "$id" --app "$PARITY_APP" --state stopped --wait-timeout 12m
           sleep 10 # let the last log lines reach the log buffer
           flyctl logs --app "$PARITY_APP" --machine "$id" --no-tail | tee parity.log
+          # Pass = the script exited 0 and every step matched
+          grep -q 'exited normally with code: 0' parity.log
           grep -q 'Parity run: every step matches Bybit' parity.log
 
       - name: Remove the machine
