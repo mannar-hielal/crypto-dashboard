@@ -16,6 +16,7 @@
 import {
   FEE_RATES,
   estimatePositionRisk,
+  linearTickSize,
   feeToCloseEstimate,
   riskTiersFor,
   type MarketCategory,
@@ -87,6 +88,7 @@ export function estimateLiqPrice(p: {
         im: ex.entryUsdtAmount + (p.qty * p.price) / lev,
         closeFeeReserve: ex.closeFeeReserve + feeToCloseEstimate(side, p.qty, p.price, lev),
         extraMargin: ex.extraMargin,
+        tickSize: linearTickSize(p.symbol),
       },
       tiers
     ).liqPrice;
@@ -94,8 +96,16 @@ export function estimateLiqPrice(p: {
   // Opposite side: reduces the position first; only a flip leaves a new one
   const remainder = ex ? p.qty - ex.quantity : p.qty;
   if (remainder <= 1e-12) return undefined;
-  return estimatePositionRisk({ side, qty: remainder, entryPrice: p.price, leverage: lev }, tiers)
-    .liqPrice;
+  return estimatePositionRisk(
+    {
+      side,
+      qty: remainder,
+      entryPrice: p.price,
+      leverage: lev,
+      tickSize: linearTickSize(p.symbol),
+    },
+    tiers
+  ).liqPrice;
 }
 
 export function orderPreview(p: {

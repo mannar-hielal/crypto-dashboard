@@ -28,6 +28,22 @@ import { ALLOWED_SYMBOLS } from '../../constants.js';
 const D = (v: number | string) => new Decimal(v);
 
 describe('bybitSpec', () => {
+  it('the SDK copy of the linear price ticks matches the instrument snapshot', () => {
+    for (const symbol of ALLOWED_SYMBOLS) {
+      expect(sdk.linearTickSize(symbol), symbol).toBe(
+        fallbackRules('linear', symbol).tickSize.toNumber()
+      );
+    }
+  });
+
+  it('the SDK rounds a liquidation price to the tick like the server', () => {
+    expect(sdk.roundLiqToTick(45148.99, 'long', 0.1)).toBe(45149);
+    expect(sdk.roundLiqToTick(54819.097, 'short', 0.1)).toBe(54819);
+    expect(sdk.roundLiqToTick(45149, 'long', 0.1)).toBe(45149); // already on the tick
+    expect(sdk.roundLiqToTick(0.123456, 'long', 0.00001)).toBe(0.12346);
+    expect(sdk.roundLiqToTick(45148.99, 'long', 0)).toBe(45148.99); // unknown symbol
+  });
+
   it('fee rates and account constants match the client copy in the SDK', () => {
     expect(sdk.FEE_RATES).toEqual(FEE_RATES);
     expect(sdk.LEGACY_FEE_RATE).toBe(LEGACY_FEE_RATE);

@@ -10,6 +10,7 @@ import {
   accountFiguresEstimate,
   crossLiqPriceEstimate,
   estimatePositionRisk,
+  linearTickSize,
   feeToCloseEstimate,
   positionCapEstimate,
   riskTiersFor,
@@ -97,6 +98,7 @@ export function adjustMarginPreview(
       im: pos.entryUsdtAmount,
       closeFeeReserve: pos.closeFeeReserve,
       extraMargin,
+      tickSize: linearTickSize(symbol),
     },
     riskTiersFor(symbol)
   );
@@ -125,6 +127,7 @@ export function remarginPreview(
       im,
       closeFeeReserve,
       extraMargin: pos.extraMargin,
+      tickSize: linearTickSize(symbol),
     },
     riskTiersFor(symbol)
   );

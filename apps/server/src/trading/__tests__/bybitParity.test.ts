@@ -133,6 +133,12 @@ describe('diffFields', () => {
     expect(diffFields({ bustPrice: '' }, { bustPrice: '45000' }, ['bustPrice'])).toEqual([]);
   });
 
+  it('still reports a paper field that is missing when Bybit leaves it blank', () => {
+    expect(diffFields({ bustPrice: '' }, {}, ['bustPrice'])).toEqual([
+      { field: 'bustPrice', bybit: '', paper: '(missing)' },
+    ]);
+  });
+
   it('reports a field missing on either side instead of skipping it', () => {
     expect(diffFields({ a: '1' }, {}, ['a'])).toEqual([
       { field: 'a', bybit: '1', paper: '(missing)' },

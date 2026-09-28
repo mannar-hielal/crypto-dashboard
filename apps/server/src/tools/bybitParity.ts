@@ -11,7 +11,8 @@
  * P&L, and the cross account figures.
  *
  * 🔐 Refuses to run unless BYBIT_TESTNET=true — it places real orders. Keys come from config.ts
- * and are never logged. It trades 0.001 BTC and closes everything it opened before it ends.
+ * and are never logged. It opens 0.002 BTC (reduce-only closes 0.001 of it) and closes everything
+ * it opened before it ends.
  *
  * Not scripted (they need wall-clock timing): funding settlement and liquidation — compare those
  * by hand from execution/list (execType Funding / BustTrade).
