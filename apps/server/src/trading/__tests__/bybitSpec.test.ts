@@ -30,8 +30,14 @@ import { ALLOWED_SYMBOLS } from '../../constants.js';
 const D = (v: number | string) => new Decimal(v);
 
 describe('bybitSpec', () => {
-  it('the SDK copy of the linear price ticks matches the instrument snapshot', () => {
+  it('the SDK copy of the spot and linear price ticks matches the instrument snapshot', () => {
     for (const symbol of ALLOWED_SYMBOLS) {
+      expect(sdk.priceTickSize('spot', symbol), `spot ${symbol}`).toBe(
+        fallbackRules('spot', symbol).tickSize.toNumber()
+      );
+      expect(sdk.priceTickSize('linear', symbol), `linear ${symbol}`).toBe(
+        fallbackRules('linear', symbol).tickSize.toNumber()
+      );
       expect(sdk.linearTickSize(symbol), symbol).toBe(
         fallbackRules('linear', symbol).tickSize.toNumber()
       );

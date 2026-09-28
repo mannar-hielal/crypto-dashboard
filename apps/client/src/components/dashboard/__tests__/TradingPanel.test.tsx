@@ -1284,6 +1284,21 @@ describe('Section 9 — spread (T2 · RTL)', () => {
     expect(getByGuide(container, 'trade.side.buy').textContent).toContain('50,001.3');
   });
 
+  it('should show a low-priced Spot coin at its tick before the rules load (NEW-9-2, review #171)', () => {
+    useLayoutStore.setState((st) => ({
+      activePane: 0,
+      panes: st.panes.map((p, idx) =>
+        idx === 0 ? { ...p, symbol: 'DOGEUSDT', category: 'spot' } : p
+      ),
+    }));
+    quote(0.12345, 0.12346);
+    const { container } = renderPanel();
+
+    expect(getByGuide(container, 'trade.side.sell').textContent).toContain('0.12345');
+    expect(getByGuide(container, 'trade.side.buy').textContent).toContain('0.12346');
+    expect(getByGuide(container, 'trade.spread').textContent).toBe('0.00001');
+  });
+
   it('should show a low-priced coin at its own tick, not cut to 2 decimals (NEW-9-2)', () => {
     // DOGEUSDT's tick is 0.00001: before the fix Sell and Buy both read 0.12 and the spread 0.0000
     useLayoutStore.setState((st) => ({

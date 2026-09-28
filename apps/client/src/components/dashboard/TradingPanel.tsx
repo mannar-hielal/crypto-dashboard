@@ -2,7 +2,7 @@ import { useState, useId, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { X, ChevronUp, ChevronDown, Info, AlertTriangle } from 'lucide-react';
 import { useStore } from 'zustand';
-import { linearTickSize, type MarketCategory, type PaperTriggerBy } from '@crypto-dashboard/sdk';
+import { priceTickSize, type MarketCategory, type PaperTriggerBy } from '@crypto-dashboard/sdk';
 import { useLayoutStore } from '@/store/layoutStore';
 import { getLastKnownMarkPrice, paneStores } from '@/store/paneStore';
 import { leverageFor, usePaperStore, type PlaceResult } from '@/store/paperStore';
@@ -111,17 +111,11 @@ export function TradingPanel({
   const instrument = useInstrument(category, symbol);
   const qtyStep = instrument?.qtyStep ?? 0;
   /**
-   * Decimals of the price tick (0.1 → 1, 0.00001 → 5), so prices read like Bybit's. Until the rules
-   * load: the SDK's tick snapshot for USDT Perpetual, else 2.
+   * Decimals of the price tick (0.1 → 1, 0.00001 → 5), so prices read like Bybit's: the live rules,
+   * else the SDK's tick snapshot for the market (Spot or USDT Perpetual). A symbol in neither
+   * reads with 5 decimals under 1 (never `0.12` for a 0.12345 coin), else 2.
    */
-  const priceTick = instrument?.tickSize || (isSpot ? 0 : linearTickSize(symbol));
-  const priceDecimals = priceTick ? Math.max(0, Math.ceil(-Math.log10(priceTick) - 1e-9)) : 2;
-  /** A price at the tick's decimals — Sell / Buy, the spread and the order label */
-  const fmtTickPrice = (v: number) =>
-    v.toLocaleString(undefined, {
-      minimumFractionDigits: priceDecimals,
-      maximumFractionDigits: priceDecimals,
-    });
+  const priceTick = instrument?.tickSize || priceTickSize(category, symbol);
 
   const activePaneStore = paneStores[activePane];
   // Always subscribe unconditionally so prices/spread/order-info are never
@@ -132,6 +126,19 @@ export function TradingPanel({
 
   const bid = useStore(activePaneStore, (s) => s.bid);
   const ask = useStore(activePaneStore, (s) => s.ask);
+
+  const referencePrice = bid ?? latestPrice ?? 0;
+  const priceDecimals = priceTick
+    ? Math.max(0, Math.ceil(-Math.log10(priceTick) - 1e-9))
+    : referencePrice > 0 && referencePrice < 1
+      ? 5
+      : 2;
+  /** A price at the tick's decimals — Sell / Buy, the spread and the order label */
+  const fmtTickPrice = (v: number) =>
+    v.toLocaleString(undefined, {
+      minimumFractionDigits: priceDecimals,
+      maximumFractionDigits: priceDecimals,
+    });
 
   const spread = bid != null && ask != null ? ask - bid : null;
 

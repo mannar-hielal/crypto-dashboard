@@ -49,6 +49,27 @@ export const LINEAR_TICK_SIZES: Record<string, string> = {
   LINKUSDT: '0.001',
 };
 
+/** Spot price ticks (the server's snapshot; a parity test holds them equal). */
+export const SPOT_TICK_SIZES: Record<string, string> = {
+  BTCUSDT: '0.1',
+  ETHUSDT: '0.01',
+  SOLUSDT: '0.01',
+  XRPUSDT: '0.0001',
+  BNBUSDT: '0.1',
+  DOGEUSDT: '0.00001',
+  ADAUSDT: '0.0001',
+  AVAXUSDT: '0.001',
+  LINKUSDT: '0.001',
+};
+
+/** A symbol's price tick in a market (the snapshot), 0 when unknown. */
+export function priceTickSize(category: 'spot' | 'linear', symbol: string): number {
+  const table = category === 'spot' ? SPOT_TICK_SIZES : LINEAR_TICK_SIZES;
+  // symbol only indexes a fixed literal table
+  // eslint-disable-next-line security/detect-object-injection
+  return Number(table[symbol] ?? 0);
+}
+
 /** A symbol's linear price tick, 0 (no rounding) when unknown. */
 export function linearTickSize(symbol: string): number {
   // symbol only indexes a fixed literal table
