@@ -127,6 +127,11 @@ export function guide(anchor: GuideAnchor, key?: string) {
 | Dialogs (`PositionEditPanel`, `PendingOrderEditPanel`, `AdjustMarginDialog`, `SpotExitsModal`)                           | `pos-edit.tp`, `pos-edit.sl`, `pos-edit.warning`, `pos-edit.confirm`; `order-edit.price`, `order-edit.qty`, `order-edit.confirm`; `margin.mode` (key `add` / `reduce`), `margin.amount`, `margin.max`, `margin.preview`, `margin.confirm`; `spot-exits.qty`, `spot-exits.tp`, `spot-exits.sl`, `spot-exits.confirm`                                                                                                                                                                                                                                                                                                                                    |
 | Notices (`CrossMarginNotice`, `LiquidationNotices`)                                                                      | `notice.cross-margin`, `notice.cross-margin.switch`, `notice.liquidation-intro`, `notice.liquidation`, `notice.dismiss`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 
+**Status (2026-09-28):** the registry (165 names — the starter list above), `guide()`, `guideSelector()` and the RTL
+helper `src/test/guide.ts` are in (step 3 of the agreed sequence). The attributes are added as M1 touches each
+component, and the check script (rule 4) switches on once components use the anchors — with no uses yet it would
+flag every entry.
+
 Effort **S**: the registry, the helper, the check script and ~110 attribute additions spread over 20 components;
 no behaviour change (a UI change only in the DOM, so no visual Q&A gate is needed — state that in the PR).
 
@@ -293,6 +298,10 @@ export type Precondition =
       mark?: number;
     };
 ```
+
+**Status (2026-09-28):** `scenario.ts` (with `defineScenario`, which numbers the steps), `steps.ts` and the first
+scenario, `scenarios/spotMarketBuy.ts`, are in, with tests that every anchor is registered and every cited case ID
+exists in `TRADING_TEST_PLAN.md`. The e2e runner (F4) and the tour overlay consume them later.
 
 Step builders (`apps/client/src/guide/steps.ts`) keep scenarios short and identical across uses:
 `openMarket('spot', 'BTCUSDT')`, `chooseSide('buy')`, `chooseType('market')`, `enterAmount('0.1', 'coin')`,
@@ -1487,7 +1496,7 @@ browser test waits on.
 row flips, the rounded worked numbers in `TRADING_TEST_PLAN.md`; (3) anchor registry + scenario types; (4) P1a (#165);
 (5) M1 no-infra tests, then P1b–P1d; then M3 onwards. The list below is the reasoning behind it.
 
-1. **Anchor registry + scenario types** (`guideAnchors.ts`, `guide/scenario.ts`, `guide/steps.ts`) — tiny, and it
+1. ✅ **Anchor registry + scenario types** (`guideAnchors.ts`, `guide/scenario.ts`, `guide/steps.ts`) — tiny, and it
    fixes the contract both tests and the guided tour depend on before 100 attributes get written ad hoc.
 2. **CI Postgres with migration drift + replay** (F6) — closes the largest risk A2 names (persistence only meets a
    real
