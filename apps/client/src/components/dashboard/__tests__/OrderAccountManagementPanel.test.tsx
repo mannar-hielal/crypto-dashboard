@@ -1357,7 +1357,8 @@ describe('Section 8 — Account Settings modal', () => {
     fireEvent.click(resetButton());
     fireEvent.click(resetButton());
 
-    expect(modal()).toBeNull();
+    // The modal closes once the server has reset the account
+    await waitFor(() => expect(modal()).toBeNull());
     await waitFor(() => expect(balanceShown()).toBe('$10,000.00'));
     expect(fakePaperApi.resetAccount).toHaveBeenCalledTimes(1);
     expect(screen.getByText('No open positions')).toBeTruthy();
@@ -1369,7 +1370,7 @@ describe('Section 8 — Account Settings modal', () => {
 
   // ── NEW-8-1 (8.12) Reset fails ────────────────────────────────────────────
 
-  it('[8.12] should keep the account as it was and offer "Reset account" again when the reset request fails', async () => {
+  it('[8.12] should keep the modal open with an inline error and the account unchanged when the reset fails', async () => {
     seedBusyAccount();
     const quiet = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     fakePaperApi.resetAccount.mockImplementationOnce(() =>
@@ -1380,17 +1381,61 @@ describe('Section 8 — Account Settings modal', () => {
     fireEvent.click(resetButton());
     fireEvent.click(resetButton());
     await waitFor(() => expect(fakePaperApi.resetAccount).toHaveBeenCalledTimes(1));
-    await act(async () => {});
 
+    // The modal stays open and says the reset failed; the button offers a retry
+    const error = await waitFor(() => getByGuide(body(), 'acct-settings.error'));
+    expect(error.textContent).toContain('Reset failed — your account is unchanged');
+    expect(modal()).not.toBeNull();
+    expect(resetButton().textContent).toBe('Reset account');
     // Nothing was wiped locally: the server's last state is still shown
     expect(balanceShown()).toBe('$8,000.00');
     expect(usePaperStore.getState().positions).toHaveLength(1);
     expect(usePaperStore.getState().pendingOrders).toHaveLength(1);
     expect(usePaperStore.getState().journal).toHaveLength(1);
-    // The modal is not stuck mid-confirm: reopening offers a fresh reset
-    openSettings();
-    expect(resetButton().textContent).toBe('Reset account');
+    // Starting another reset, or reopening the modal, clears the error
+    fireEvent.click(resetButton());
+    expect(queryByGuide(body(), 'acct-settings.error')).toBeNull();
     quiet.mockRestore();
+  });
+
+  it('[8.13] should show "Resetting…" and keep the modal open while the reset is in flight', async () => {
+    seedBusyAccount();
+    let finish: (v: Awaited<ReturnType<typeof fakePaperApi.resetAccount>>) => void = () => {};
+    fakePaperApi.resetAccount.mockImplementationOnce(
+      () => new Promise((resolve) => (finish = resolve))
+    );
+    renderPanel();
+    openSettings();
+    fireEvent.click(resetButton());
+    fireEvent.click(resetButton());
+
+    await waitFor(() => expect(resetButton().textContent).toBe('Resetting…'));
+    expect((resetButton() as HTMLButtonElement).disabled).toBe(true);
+    expect(modal()).not.toBeNull();
+    // It can't be dismissed mid-request, or a failure would go unseen (review #172)
+    expect((getByGuide(body(), 'acct-settings.close') as HTMLButtonElement).disabled).toBe(true);
+    expect((getByGuide(body(), 'acct-settings.done') as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(getByGuide(body(), 'acct-settings.close'));
+    fireEvent.click(getByGuide(body(), 'acct-settings.done'));
+    fireEvent.click(getByGuide(body(), 'acct-settings.backdrop'));
+    expect(modal()).not.toBeNull();
+
+    await act(async () => {
+      finish({
+        result: true,
+        delta: await fakeDelta({
+          reset: true,
+          account: {
+            balance: '10000',
+            realizedPnl: '0',
+            leverage: 1,
+            symbolLeverage: {},
+            version: 4,
+          },
+        }),
+      });
+    });
+    await waitFor(() => expect(modal()).toBeNull());
   });
 });
 
