@@ -49,6 +49,7 @@ import type { JournalEntry, HistoricalOrder, PendingOrder } from '@/store/paperS
 import type { PanelSize } from '@/pages/DashboardPage';
 import { bg, color, fontSize } from '@/lib/tokens';
 import { fmtMktPrice } from '@/lib/utils';
+import { guide, type GuideAnchor } from '@/lib/guideAnchors';
 import { useLayoutStore } from '@/store/layoutStore';
 import { SoundSettings } from './SoundSettings';
 
@@ -883,16 +884,19 @@ export function OrderAccountManagementPanel({
                 [
                   {
                     label: 'Balance',
+                    anchor: 'account.summary.balance',
                     value: `$${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                     col: undefined,
                   },
                   {
                     label: 'Equity',
+                    anchor: 'account.summary.equity',
                     value: `$${equity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                     col: undefined,
                   },
                   {
                     label: 'Unrealized P&L',
+                    anchor: 'account.summary.upnl',
                     value: `${unrealizedPnl >= 0 ? '+' : ''}$${unrealizedPnl.toFixed(2)}`,
                     col: unrealizedPnl >= 0 ? color.green : color.red,
                   },
@@ -933,8 +937,13 @@ export function OrderAccountManagementPanel({
                         },
                       ]
                     : []),
-                ] as { label: string; value: string; col: string | undefined }[]
-              ).map(({ label, value, col }) => (
+                ] as {
+                  label: string;
+                  anchor?: GuideAnchor;
+                  value: string;
+                  col: string | undefined;
+                }[]
+              ).map(({ label, anchor, value, col }) => (
                 <div key={label} className="flex shrink-0 flex-col gap-px">
                   <span
                     style={{ fontSize: fontSize.xs10, color: color.muted }}
@@ -943,6 +952,7 @@ export function OrderAccountManagementPanel({
                     {label}
                   </span>
                   <span
+                    {...(anchor ? guide(anchor) : {})}
                     className="whitespace-nowrap tabular-nums font-semibold"
                     style={{ fontSize: fontSize.xs11, color: col ?? `${color.white}bf` }}
                   >
@@ -1334,6 +1344,7 @@ export function OrderAccountManagementPanel({
                                 return (
                                   <motion.tr
                                     key={pos.id}
+                                    {...guide('positions.row', `${pos.category}:${pos.symbol}`)}
                                     custom={i}
                                     variants={rowVariants}
                                     initial="hidden"
@@ -1429,7 +1440,10 @@ export function OrderAccountManagementPanel({
                                       </td>
                                     )}
                                     {isVisible('positions', 'mark') && (
-                                      <td className="px-3 py-1.5 text-right tabular-nums text-white/60">
+                                      <td
+                                        {...guide('positions.row.mark')}
+                                        className="px-3 py-1.5 text-right tabular-nums text-white/60"
+                                      >
                                         ${fmtMktPrice(markPrice)}
                                       </td>
                                     )}
@@ -1480,7 +1494,7 @@ export function OrderAccountManagementPanel({
                                         style={{ color: isProfit ? color.green : color.red }}
                                       >
                                         <span className="inline-flex items-center gap-1">
-                                          <span>
+                                          <span {...guide('positions.row.pnl')}>
                                             {isProfit ? '+' : ''}
                                             {pnl.toFixed(2)}
                                           </span>
@@ -1637,6 +1651,7 @@ export function OrderAccountManagementPanel({
                                     {isVisible('positions', 'close') && (
                                       <td className="px-3 py-1.5 text-center">
                                         <motion.button
+                                          {...guide('positions.row.close')}
                                           onClick={() => handleClose(pos.id)}
                                           whileHover={{ scale: 1.2 }}
                                           whileTap={{ scale: 0.9 }}
