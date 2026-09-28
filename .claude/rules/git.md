@@ -55,7 +55,7 @@ checked out.
 
 - `ci.yml` runs on every push to `main`/`develop` and on every PR targeting `main`/`develop`:
   `pnpm audit` → type-check (server) → `format:check` → `lint` → `test:coverage` (the suites plus
-  the coverage floors) → build. This main job mirrors the local pre-commit hook (see
+  the coverage floors) + `test:hooks` → build. This main job mirrors the local pre-commit hook (see
   [`testing.md`](./testing.md#gates--what-passing-means-before-a-commitpr)), so a change that passes
   locally should pass it too. A separate **Integration (Postgres)** job runs `test:int` (migrations
   from empty, schema drift, repository round-trip); it needs a database, so it runs in CI only
