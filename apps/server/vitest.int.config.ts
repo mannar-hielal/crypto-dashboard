@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import { intDatabaseUrl } from './src/__tests__/int/intDatabaseUrl';
 
 /**
  * Integration tests (T2i in docs/TRADING_TEST_PLAN.md): a real Postgres, migrated from empty.
@@ -9,9 +10,7 @@ import { defineConfig } from 'vitest/config';
  * globalSetup migrates it (`prisma migrate deploy`); the tests delete the rows they reach, so 🔐 its
  * name must end in `_int` or `_test` (anything else is refused). Files run one at a time.
  */
-const databaseUrl =
-  process.env.TEST_DATABASE_URL ??
-  'postgresql://postgres:postgres@localhost:5432/crypto_dashboard_int';
+const databaseUrl = intDatabaseUrl();
 
 export default defineConfig({
   test: {

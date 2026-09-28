@@ -5,11 +5,12 @@
  * clears its own rows (db.ts cleanDatabase). migrations.int.test.ts then checks for drift.
  */
 
+import { intDatabaseUrl } from './intDatabaseUrl.js';
 import { assertThrowawayDatabase, prisma } from './prismaCli.js';
 
 export default function setup(): void {
-  const url = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
-  if (!url) throw new Error('TEST_DATABASE_URL is not set');
+  // Main process: test.env (the workers' DATABASE_URL) is not visible here — same source instead
+  const url = intDatabaseUrl();
   assertThrowawayDatabase(url);
 
   const deploy = prisma(['migrate', 'deploy'], url);
