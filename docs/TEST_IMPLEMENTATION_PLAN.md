@@ -109,7 +109,7 @@ export function guide(anchor: GuideAnchor, key?: string) {
 5. Anchors carry no user data (no email, no balance) — they ship to production.
 6. Playwright gets a custom selector engine (`guide=trade.submit`, `guide=positions.row@linear:BTCUSDT`), see F4.
 
-**Starter list for Stages 0–3** (≈110 anchors; components named where they live today)
+**Starter list for Stages 0–3** (165 anchors; components named where they live today)
 
 | Area (component)                                                                                                         | Anchors                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -127,7 +127,12 @@ export function guide(anchor: GuideAnchor, key?: string) {
 | Dialogs (`PositionEditPanel`, `PendingOrderEditPanel`, `AdjustMarginDialog`, `SpotExitsModal`)                           | `pos-edit.tp`, `pos-edit.sl`, `pos-edit.warning`, `pos-edit.confirm`; `order-edit.price`, `order-edit.qty`, `order-edit.confirm`; `margin.mode` (key `add` / `reduce`), `margin.amount`, `margin.max`, `margin.preview`, `margin.confirm`; `spot-exits.qty`, `spot-exits.tp`, `spot-exits.sl`, `spot-exits.confirm`                                                                                                                                                                                                                                                                                                                                    |
 | Notices (`CrossMarginNotice`, `LiquidationNotices`)                                                                      | `notice.cross-margin`, `notice.cross-margin.switch`, `notice.liquidation-intro`, `notice.liquidation`, `notice.dismiss`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 
-Effort **S**: the registry, the helper, the check script and ~110 attribute additions spread over 20 components;
+**Status (2026-09-28):** the registry (165 names — the starter list above), `guide()`, `guideSelector()` and the RTL
+helper `src/test/guide.ts` are in (step 3 of the agreed sequence). The attributes are added as M1 touches each
+component, and the check script (rule 4) switches on once components use the anchors — with no uses yet it would
+flag every entry.
+
+Effort **S**: the registry, the helper, the check script and ~165 attribute additions spread over 20 components;
 no behaviour change (a UI change only in the DOM, so no visual Q&A gate is needed — state that in the PR).
 
 ## F2. Test data and isolation
@@ -294,8 +299,12 @@ export type Precondition =
     };
 ```
 
+**Status (2026-09-28):** `scenario.ts` (with `defineScenario`, which numbers the steps), `steps.ts` and the first
+scenario, `scenarios/spotMarketBuy.ts`, are in, with tests that every anchor is registered and every cited case ID
+exists in `TRADING_TEST_PLAN.md`. The e2e runner (F4) and the tour overlay consume them later.
+
 Step builders (`apps/client/src/guide/steps.ts`) keep scenarios short and identical across uses:
-`openMarket('spot', 'BTCUSDT')`, `chooseSide('buy')`, `chooseType('market')`, `enterAmount('0.1', 'coin')`,
+`openMarket('spot')`, `chooseSide('buy')`, `chooseType('market')`, `enterAmount('0.1', 'coin')`,
 `enableTp('52000')`, `submit()`, `openTab('assets')`, `setIsolated(10)`.
 
 **Worked example — "Spot market buy"** (cases 14.6.1, 14.6.8)
@@ -1487,7 +1496,7 @@ browser test waits on.
 row flips, the rounded worked numbers in `TRADING_TEST_PLAN.md`; (3) anchor registry + scenario types; (4) P1a (#165);
 (5) M1 no-infra tests, then P1b–P1d; then M3 onwards. The list below is the reasoning behind it.
 
-1. **Anchor registry + scenario types** (`guideAnchors.ts`, `guide/scenario.ts`, `guide/steps.ts`) — tiny, and it
+1. ✅ **Anchor registry + scenario types** (`guideAnchors.ts`, `guide/scenario.ts`, `guide/steps.ts`) — tiny, and it
    fixes the contract both tests and the guided tour depend on before 100 attributes get written ad hoc.
 2. **CI Postgres with migration drift + replay** (F6) — closes the largest risk A2 names (persistence only meets a
    real
