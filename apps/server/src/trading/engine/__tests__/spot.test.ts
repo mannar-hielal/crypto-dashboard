@@ -1,5 +1,5 @@
 /**
- * BP-2 spot engine — worked numbers (docs/TRADING_TEST_PLAN.md §10).
+ * BP-2 spot engine — worked numbers (docs/TRADING_TEST_PLAN.md 14.6).
  *
  * One USDT wallet plus coin balances. Bybit spot fee 0.1% in the asset received; market buys at
  * the ask, sells at the bid; no shorting; TP / SL as an OCO pair of conditional sells.
