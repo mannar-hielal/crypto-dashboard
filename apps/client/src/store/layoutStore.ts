@@ -39,7 +39,7 @@ function isChartType(v: unknown): v is ChartType {
   return CHART_TYPES.includes(v as ChartType);
 }
 
-/** Bybit market a pane reads its data from (BYBIT_PARITY_PLAN BP-0). */
+/** Bybit market a pane reads its data from (APP_LOG Bybit Parity BP-0). */
 export const MARKET_CATEGORIES = ['spot', 'linear'] as const satisfies readonly MarketCategory[];
 
 function isMarketCategory(v: unknown): v is MarketCategory {

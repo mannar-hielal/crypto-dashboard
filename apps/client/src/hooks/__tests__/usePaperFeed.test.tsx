@@ -1,5 +1,5 @@
 /**
- * usePaperFeed tests (BYBIT_PARITY_PLAN BP-1) — the private paper-trading WebSocket.
+ * usePaperFeed tests (APP_LOG Bybit Parity BP-1) — the private paper-trading WebSocket.
  * A mock WebSocket stands in for the server.
  */
 

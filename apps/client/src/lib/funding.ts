@@ -1,5 +1,5 @@
 /**
- * Funding display helpers (BYBIT_PARITY_PLAN BP-4) — pure, no React. The server settles funding;
+ * Funding display helpers (APP_LOG Bybit Parity BP-4) — pure, no React. The server settles funding;
  * these only format what the ticker says about the next settlement.
  */
 

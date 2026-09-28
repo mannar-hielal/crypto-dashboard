@@ -1,5 +1,5 @@
 /**
- * Fake paperApi for component tests (BYBIT_PARITY_PLAN BP-1).
+ * Fake paperApi for component tests (APP_LOG Bybit Parity BP-1).
  *
  * Trading runs on the server, so component tests check that the UI sends the right *intent*
  * and shows the server's answer. This fake records every call and answers with a small but

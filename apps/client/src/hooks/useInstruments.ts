@@ -1,6 +1,6 @@
 /**
  * Bybit instrument rules (qty step, tick size, minimums) for one market's symbol — for rounding
- * and hints in the order form (BYBIT_PARITY_PLAN BP-2). The server enforces the same rules.
+ * and hints in the order form (APP_LOG Bybit Parity BP-2). The server enforces the same rules.
  *
  * One request per market per page load, shared by every caller; a failed fetch is retried on the
  * next mount. Null until loaded (the form then shows unrounded estimates).

@@ -1,5 +1,5 @@
 /**
- * Bybit trading rules the paper engine follows (BYBIT_PARITY_PLAN BP-2, BP-3) — the client's copy,
+ * Bybit trading rules the paper engine follows (APP_LOG Bybit Parity BP-2, BP-3) — the client's copy,
  * for estimates shown before an order is sent. The server charges from its own copy
  * (apps/server/src/trading/bybitSpec.ts); a server test keeps the two identical.
  *

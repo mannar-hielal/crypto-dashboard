@@ -1,5 +1,5 @@
 /**
- * Private paper-trading WebSocket — GET /api/paper/ws (BYBIT_PARITY_PLAN BP-1).
+ * Private paper-trading WebSocket — GET /api/paper/ws (APP_LOG Bybit Parity BP-1).
  *
  * Pushes the user's account snapshot on auth, then every committed delta (orders, fills, TP/SL
  * hits, funding later) to all of that user's open tabs — including changes the engine makes

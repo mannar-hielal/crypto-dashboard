@@ -1,5 +1,5 @@
 /**
- * USDT Perpetual order flags under the amount (BYBIT_PARITY_PLAN BP-5 B): Reduce-only, and
+ * USDT Perpetual order flags under the amount (APP_LOG Bybit Parity BP-5 B): Reduce-only, and
  * Close-on-trigger for a stop order. Either one means the order only shrinks the open position,
  * so the order form hides its TP / SL.
  */

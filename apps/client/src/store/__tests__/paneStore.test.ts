@@ -43,7 +43,7 @@ describe('paneStore historyLoaded', () => {
   });
 });
 
-// ─── Ticker (BYBIT_PARITY_PLAN BP-0) ─────────────────────────────────────────
+// ─── Ticker (APP_LOG Bybit Parity BP-0) ─────────────────────────────────────────
 
 const spotTicker = (over: Partial<TickerMessage> = {}): TickerMessage => ({
   category: 'spot',

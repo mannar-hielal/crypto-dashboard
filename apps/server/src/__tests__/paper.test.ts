@@ -1,5 +1,5 @@
 /**
- * Paper-trading API + private WebSocket tests (BYBIT_PARITY_PLAN BP-1).
+ * Paper-trading API + private WebSocket tests (APP_LOG Bybit Parity BP-1).
  *
  * The HTTP layer is tested with the trading service stubbed (vi.spyOn on app.trading /
  * app.paperRepository). Engine maths is covered by trading/engine/__tests__, and the service

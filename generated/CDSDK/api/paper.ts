@@ -53,7 +53,7 @@ const json = (method: string, body: unknown): RequestInit => ({
   body: JSON.stringify(body),
 });
 
-// ─── Paper API (BYBIT_PARITY_PLAN BP-1) ──────────────────────────────────────
+// ─── Paper API (APP_LOG Bybit Parity BP-1) ──────────────────────────────────────
 //
 // The server executes every trade. These calls send intent only (what to do); the server picks
 // prices, computes fees and PnL, and answers with the resulting delta. The same delta is also

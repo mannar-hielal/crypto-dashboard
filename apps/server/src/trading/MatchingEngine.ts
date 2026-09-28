@@ -1,6 +1,6 @@
 /**
  * Matching engine — watches live prices 24/7 and executes TP/SL and pending-order triggers for
- * every account, whether or not the user has a tab open (BYBIT_PARITY_PLAN BP-1, F10).
+ * every account, whether or not the user has a tab open (APP_LOG Bybit Parity BP-1, F10).
  *
  * - Exactly one executor: the engine runs only while it holds the EngineLease row (see
  *   EngineLease). Other machines serve the API and WebSockets but never execute triggers.

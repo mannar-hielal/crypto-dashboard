@@ -1,5 +1,5 @@
 /**
- * Paper Trading Store — read model of the server-side engine (BYBIT_PARITY_PLAN BP-1, BP-2).
+ * Paper Trading Store — read model of the server-side engine (APP_LOG Bybit Parity BP-1, BP-2).
  *
  * BP-2: two markets — Spot (coin balances, `spotBalances`) and USDT Perpetual (positions, per-symbol
  * leverage). Every record names its market (`category`). Fees shown before an order is sent are

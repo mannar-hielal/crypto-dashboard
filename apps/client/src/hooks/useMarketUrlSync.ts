@@ -1,5 +1,5 @@
 /**
- * Keeps the dashboard URL and the active pane's market in step (BYBIT_PARITY_PLAN BP-2).
+ * Keeps the dashboard URL and the active pane's market in step (APP_LOG Bybit Parity BP-2).
  *
  * - URL → store: on load and on back / forward, the market in the URL is applied to the active
  *   pane (the URL wins over the saved layout).

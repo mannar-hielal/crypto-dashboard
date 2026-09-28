@@ -1,5 +1,5 @@
 /**
- * Chart lines for the account's positions and orders on one pane (BYBIT_PARITY_PLAN BP-3) — pure,
+ * Chart lines for the account's positions and orders on one pane (APP_LOG Bybit Parity BP-3) — pure,
  * no React, no chart. hooks/useTradeLines.ts draws them as lightweight-charts price lines.
  *
  * Bybit draws, on the chart of the symbol being traded:

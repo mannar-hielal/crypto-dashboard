@@ -65,7 +65,7 @@ export interface SubscribersResponse {
 
 /**
  * Bybit market a pane reads its data from: `spot` = Spot, `linear` = USDT Perpetual
- * (BYBIT_PARITY_PLAN BP-0). Mirrors ALLOWED_CATEGORIES in apps/server/src/constants.ts.
+ * (APP_LOG Bybit Parity BP-0). Mirrors ALLOWED_CATEGORIES in apps/server/src/constants.ts.
  */
 export type MarketCategory = 'spot' | 'linear';
 
@@ -174,7 +174,7 @@ export interface UpdateUserResponse {
   user: User;
 }
 
-// ─── Paper trading (BYBIT_PARITY_PLAN BP-1: executed on the server) ───────────
+// ─── Paper trading (APP_LOG Bybit Parity BP-1: executed on the server) ───────────
 //
 // Money, prices and quantities are decimal strings (the server keeps them as Decimal); times are
 // Unix ms. The client converts to numbers for display only.

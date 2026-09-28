@@ -1,7 +1,7 @@
 /**
- * Bybit trading rules the paper engine follows (BYBIT_PARITY_PLAN BP-2).
+ * Bybit trading rules the paper engine follows (APP_LOG Bybit Parity BP-2).
  *
- * Fees: Bybit VIP-0 (non-VIP) rates, as recorded in docs/BYBIT_PARITY_PLAN.md §2 (D4):
+ * Fees: Bybit VIP-0 (non-VIP) rates, as recorded in docs/APP_LOG.md "Bybit Parity" reference values (D4):
  *   Spot 0.1% maker / 0.1% taker; USDT Perpetual 0.02% maker / 0.055% taker.
  *
  * The client shows estimates from its own copy in generated/CDSDK/spec/bybit.ts (the server

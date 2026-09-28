@@ -1,5 +1,5 @@
 /**
- * USDT Perpetual position figures for display (BYBIT_PARITY_PLAN BP-3) — pure, no React.
+ * USDT Perpetual position figures for display (APP_LOG Bybit Parity BP-3) — pure, no React.
  *
  * Bybit values a perpetual position at the **mark** price: unrealised PnL and liquidation use it,
  * never the last traded price. The liquidation / bankruptcy prices, IM and MM come from the

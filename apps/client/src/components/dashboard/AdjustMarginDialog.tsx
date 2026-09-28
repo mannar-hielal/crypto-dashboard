@@ -1,5 +1,5 @@
 /**
- * Add / reduce margin on an isolated USDT Perpetual position (BYBIT_PARITY_PLAN BP-5 A) — Bybit's
+ * Add / reduce margin on an isolated USDT Perpetual position (APP_LOG Bybit Parity BP-5 A) — Bybit's
  * add-margin. Opened from the pencil on the Positions row's Margin cell. The leverage stays; the
  * liquidation price moves, previewed before confirming. Only margin added by hand can be reduced;
  * the server decides (balance, liquidation) and its refusal is shown inline.

@@ -1,5 +1,5 @@
 /**
- * USDT Perpetual leverage for one symbol (BYBIT_PARITY_PLAN BP-2, BP-3): a "10x" chip (isolated
+ * USDT Perpetual leverage for one symbol (APP_LOG Bybit Parity BP-2, BP-3): a "10x" chip (isolated
  * margin, named in its label and the modal) that opens a modal with the presets. As on Bybit, the
  * leverage can change while the symbol has an open position or active orders: the server
  * re-margins them (BP-3). The modal previews the position's new margin and liquidation price and

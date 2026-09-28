@@ -1,5 +1,5 @@
 /**
- * BP-4: funding settlement, as Bybit (UTA, isolated margin) — docs/BYBIT_PARITY_PLAN.md BP-4.
+ * BP-4: funding settlement, as Bybit (UTA, isolated margin) — docs/APP_LOG.md Bybit Parity BP-4.
  *
  * fee = size × mark × rate; a long pays a positive rate, a short receives it. Paid from the
  * balance, any shortfall from the position's margin. Booked in realized PnL at settlement; a close

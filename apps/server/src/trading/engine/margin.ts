@@ -1,5 +1,5 @@
 /**
- * Isolated-margin helpers for engine positions (BYBIT_PARITY_PLAN BP-3). The formulas live in
+ * Isolated-margin helpers for engine positions (APP_LOG Bybit Parity BP-3). The formulas live in
  * ../bybitSpec.ts; this adapts an engine Position to them.
  */
 

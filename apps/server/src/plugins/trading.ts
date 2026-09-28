@@ -1,5 +1,5 @@
 /**
- * Trading plugin (BYBIT_PARITY_PLAN BP-1): the server-side paper-trading engine.
+ * Trading plugin (APP_LOG Bybit Parity BP-1): the server-side paper-trading engine.
  *
  * Decorates:
  *   - fastify.trading      TradingService: executes intents from the /api/paper routes

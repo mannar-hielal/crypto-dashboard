@@ -508,7 +508,7 @@
 > visible app must behave exactly as before, **except** that spot bid/ask now arrive (F2).
 > Linear checks go against the API/WS directly (curl / `wscat`) or by setting a pane's category in the
 > store (`useLayoutStore.getState().setPaneCategory(0, 'linear')` in the devtools console).
-> Reference values: `docs/BYBIT_PARITY_PLAN.md` §2.
+> Reference values: `docs/APP_LOG.md` Bybit Parity reference values.
 
 ### 12.1 Spot feed (default)
 
@@ -546,7 +546,7 @@
 ## Section 13 — Server trading engine (Bybit Parity BP-1)
 
 > Trades are executed and watched on the server (`apps/server/src/trading`). The browser sends intent only and mirrors
-> the account over the private WebSocket `/api/paper/ws`. Reference: `docs/BYBIT_PARITY_PLAN.md` BP-1.
+> the account over the private WebSocket `/api/paper/ws`. Reference: `docs/APP_LOG.md` Bybit Parity BP-1.
 
 ### 13.1 Intent only (F11)
 
@@ -583,7 +583,7 @@
 ## Section 14 — Markets, Bybit fees and fill prices (Bybit Parity BP-2)
 
 > Two markets: **Spot** (coin balances, 1×, no shorting) and **USDT Perpetual** (positions, per-symbol leverage).
-> Reference: `docs/BYBIT_PARITY_PLAN.md` BP-2. ✅ in the Tier column means automated; the Notes say where. "Live ✓"
+> Reference: `docs/APP_LOG.md` Bybit Parity BP-2. ✅ in the Tier column means automated; the Notes say where. "Live ✓"
 > rows were run against the dev server + the live Bybit feed on 2026-09-26 (22 checks, throwaway users deleted).
 
 ### 14.1 Market URLs and the Trade menu
@@ -669,7 +669,7 @@
 
 ## Section 15 — Mark price, one-way positions, liquidation, re-margining (Bybit Parity BP-3)
 
-> Reference: `docs/BYBIT_PARITY_PLAN.md` BP-3 and Bybit's UTA isolated-mode formulas in
+> Reference: `docs/APP_LOG.md` Bybit Parity BP-3 and Bybit's UTA isolated-mode formulas in
 > `apps/server/src/trading/bybitSpec.ts`. Worked position used below: **long 0.1 BTC @ 50,000 at 10×** — IM 500,
 > fee to close 2.475, BTCUSDT tier 1 MMR 0.33% → liquidation ≈ **45,148.99**, bankruptcy **45,000**.
 
@@ -740,7 +740,7 @@
 
 ## Section 16 — Funding (Bybit Parity BP-4)
 
-> Reference: `docs/BYBIT_PARITY_PLAN.md` BP-4. fee = size × mark × rate at the funding timestamp; a positive rate: longs
+> Reference: `docs/APP_LOG.md` Bybit Parity BP-4. fee = size × mark × rate at the funding timestamp; a positive rate: longs
 > pay, shorts receive. Worked position: long 0.1 BTC at 10× (IM 500), mark 51,000, rate 0.01% → fee **0.51**.
 
 ### 16.1 Settlement
@@ -777,7 +777,7 @@
 
 ## Section 17 — Cross margin, risk tiers and refinements (Bybit Parity BP-5)
 
-> Reference: `docs/BYBIT_PARITY_PLAN.md` BP-5 (owner decisions O1–O12). Worked position: long 0.1 BTC at 50,000,
+> Reference: `docs/APP_LOG.md` Bybit Parity BP-5 (owner decisions O1–O12). Worked position: long 0.1 BTC at 50,000,
 > 10× (IM 500, fee to close 2.475, liq ≈ 45,148.99 isolated). Live = the 2026-09-27 API + browser run on the dev
 > server (throwaway account, deleted).
 

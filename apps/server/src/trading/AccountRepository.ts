@@ -1,5 +1,5 @@
 /**
- * Paper-account persistence for the server engine (BYBIT_PARITY_PLAN BP-1).
+ * Paper-account persistence for the server engine (APP_LOG Bybit Parity BP-1).
  *
  * Loads an account's engine state and applies an engine Delta in one interactive transaction.
  * Every write bumps Account.version with `updateMany({ where: { id, version } })`, so two

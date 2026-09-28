@@ -1,5 +1,5 @@
 /**
- * Which price a TP / SL triggers on — Bybit's `triggerBy` (BYBIT_PARITY_PLAN BP-5 B): Last (the
+ * Which price a TP / SL triggers on — Bybit's `triggerBy` (APP_LOG Bybit Parity BP-5 B): Last (the
  * default), Mark or Index. A compact `Last ▾` beside the TP / SL label.
  */
 

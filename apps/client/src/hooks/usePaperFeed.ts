@@ -1,5 +1,5 @@
 /**
- * usePaperFeed — the private paper-trading WebSocket (BYBIT_PARITY_PLAN BP-1).
+ * usePaperFeed — the private paper-trading WebSocket (APP_LOG Bybit Parity BP-1).
  *
  * Opens /api/paper/ws for the signed-in user, authenticates with the first message (never a
  * token in the URL), hydrates paperStore from the snapshot and applies every pushed delta:

@@ -291,7 +291,7 @@ describe('layoutStore', () => {
     });
   });
 
-  // ── category (BYBIT_PARITY_PLAN BP-0) ─────────────────────────────────────
+  // ── category (APP_LOG Bybit Parity BP-0) ─────────────────────────────────────
 
   describe('setPaneCategory()', () => {
     it('updates only the target pane when sync.symbol is off', () => {

@@ -1,5 +1,5 @@
 /**
- * Order estimates shown before an order is sent (BYBIT_PARITY_PLAN BP-2, BP-3) — pure, no React.
+ * Order estimates shown before an order is sent (APP_LOG Bybit Parity BP-2, BP-3) — pure, no React.
  *
  * Mirrors the server engine's rules (apps/server/src/trading) with the SDK's copy of Bybit's fee
  * rates and isolated-margin maths. The server re-computes everything and charges the real fee;

@@ -9,7 +9,7 @@ Source of truth: `docs/APP_LOG.md` (sections "Business Logic Rules", "paperStore
 
 ## Files
 
-**Since BP-1 (2026-09-26) the server executes every trade** (`docs/BYBIT_PARITY_PLAN.md` BP-1). Change trading
+**Since BP-1 (2026-09-26) the server executes every trade** (`docs/APP_LOG.md` Bybit Parity BP-1). Change trading
 rules in `apps/server/src/trading/engine/`, never in the client. **Since BP-2 there are two markets** (`category`):
 `'spot'` (coin balances, 1×, no shorting) and `'linear'` = USDT Perpetual (positions, per-symbol leverage). Every
 position, order, trade and trigger names its market. **Since BP-3** a USDT Perpetual symbol has **one** position

@@ -1,5 +1,5 @@
 /**
- * Paper-trading API (BYBIT_PARITY_PLAN BP-1, BP-2): intent-only endpoints.
+ * Paper-trading API (APP_LOG Bybit Parity BP-1, BP-2): intent-only endpoints.
  *
  * The client says *what* to do (market, symbol, side, size, trigger price, TP/SL). The server
  * picks prices from its own live quote, applies Bybit's instrument rules, runs the engine

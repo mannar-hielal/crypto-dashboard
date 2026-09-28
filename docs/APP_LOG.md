@@ -522,10 +522,10 @@ qty − fee`.
 ## 🔁 Bybit Parity (BP-0 … BP-5) — reference
 
 > **Status:** all six phases shipped (BP-0 … BP-5, 2026-09-26 … 2026-09-27; changelog entries below under
-> "feat: Bybit Parity BP-n"). This section replaces `docs/BYBIT_PARITY_PLAN.md`, retired on 2026-09-28. The full
-> plan (per-step checklists, Bybit research notes, the BP-4 integration audit) is in git history: `git show
-8d40f88:docs/BYBIT_PARITY_PLAN.md`. Code comments cite this section as "APP_LOG Bybit Parity BP-n" (the phase that
-> introduced the rule) or by its sub-headings below.
+> "feat: Bybit Parity BP-n"). This section replaces `docs/BYBIT_PARITY_PLAN.md`, retired on 2026-09-28. Code
+> comments cite it as "APP_LOG Bybit Parity BP-n" (the phase that introduced the rule). The full plan (per-step
+> checklists, Bybit research notes, the BP-4 integration audit) is in git history:
+> `git show 8d40f88:docs/BYBIT_PARITY_PLAN.md`.
 
 **Goal:** paper trading behaves like a Bybit **Unified Trading Account (UTA), VIP 0, one-way position mode**, so what
 a user learns here transfers 1:1 to Bybit, and the engine can be tested against Bybit's v5 APIs (standing owner

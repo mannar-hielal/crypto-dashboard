@@ -1,5 +1,5 @@
 /**
- * Market URLs of the trading dashboard (BYBIT_PARITY_PLAN BP-2), Bybit's scheme under /dashboard:
+ * Market URLs of the trading dashboard (APP_LOG Bybit Parity BP-2), Bybit's scheme under /dashboard:
  *
  *   Spot            /dashboard/spot/BTC/USDT   (base / quote, like bybit.com/en/trade/spot/BTC/USDT)
  *   USDT Perpetual  /dashboard/usdt/BTCUSDT    (like bybit.com/en/trade/usdt/BTCUSDT)
