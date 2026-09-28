@@ -14,6 +14,7 @@
 
 import type { ChangeEvent } from 'react';
 import { bg, color, fontSize } from '@/lib/tokens';
+import { guide, type GuideAnchor } from '@/lib/guideAnchors';
 
 interface NumericInputProps {
   value: string | number;
@@ -35,6 +36,8 @@ interface NumericInputProps {
   name?: string;
   ariaLabel?: string;
   testId?: string;
+  /** Guide anchor for the input (docs/TEST_IMPLEMENTATION_PLAN.md F1) */
+  anchor?: GuideAnchor;
 }
 
 export function NumericInput({
@@ -53,6 +56,7 @@ export function NumericInput({
   name,
   ariaLabel,
   testId,
+  anchor,
 }: NumericInputProps) {
   return (
     <div className="relative">
@@ -67,6 +71,7 @@ export function NumericInput({
         onChange={onChange}
         aria-label={ariaLabel}
         data-testid={testId}
+        {...(anchor ? guide(anchor) : {})}
         placeholder={placeholder}
         disabled={disabled}
         className={`w-full rounded-md border border-white/8 px-2.5 py-1.5 ${suffixPadding} text-xs text-white transition-colors focus:outline-none focus:border-brand-purple-dark/50 disabled:opacity-40`}

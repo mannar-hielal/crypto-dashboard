@@ -9,6 +9,7 @@ import { usePaperStore, type ClosedTrade } from '@/store/paperStore';
 import { color, fontSize } from '@/lib/tokens';
 import { fmtMktPrice } from '@/lib/utils';
 import { closedPnlBreakdown, closedPnlOf } from '@/lib/positionMath';
+import { guide } from '@/lib/guideAnchors';
 import styles from './ClosedPnlTable.module.css';
 
 const COLUMNS = [
@@ -68,7 +69,7 @@ function ClosedPnlRow({ trade: t }: { trade: ClosedTrade }) {
   const pnlColor = pnl > 0 ? color.green : pnl < 0 ? color.red : color.muted;
   const isLong = t.side === 'long';
   return (
-    <tr className={styles.row} data-testid="closed-pnl-row">
+    <tr className={styles.row} data-testid="closed-pnl-row" {...guide('closed-pnl.row', t.id)}>
       <td style={{ color: color.white }}>{t.symbol}</td>
       <td style={{ color: isLong ? color.green : color.red }}>{isLong ? '▲ Long' : '▼ Short'}</td>
       <td className={styles.num} style={{ color: color.muted }}>
@@ -85,6 +86,7 @@ function ClosedPnlRow({ trade: t }: { trade: ClosedTrade }) {
         style={{ color: pnlColor }}
         title={closedPnlBreakdown(t)}
         data-testid="closed-pnl-value"
+        {...guide('closed-pnl.value')}
       >
         {pnl > 0 ? '+' : ''}
         {pnl.toFixed(4)} USDT

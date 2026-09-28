@@ -15,8 +15,9 @@ export default defineConfig({
       reporter: ['text', 'html'],
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/main.tsx', 'src/**/__tests__/**'],
-      // Floors just under today's numbers (2026-09-28), raised as tests land — never lowered
-      thresholds: { lines: 48, statements: 47, branches: 51, functions: 45 },
+      // Floors just under today's numbers (2026-09-28, after both M1 PRs), raised as
+      // tests land — never lowered
+      thresholds: { lines: 51, statements: 50, branches: 54, functions: 50 },
     },
   },
   resolve: {

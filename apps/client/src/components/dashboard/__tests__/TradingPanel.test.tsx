@@ -40,6 +40,7 @@ import { paneStores } from '@/store/paneStore';
 import { usePaperStore, type Position } from '@/store/paperStore';
 import { useAuthStore } from '@/store/authStore';
 import { emptyState, fakePaperApi, resetFakePaperApi } from '@/test/fakePaperApi';
+import { getByGuide } from '@/test/guide';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -1250,5 +1251,117 @@ describe('BP-5 E — margin mode in the leverage chip and modal', () => {
       'would be liquidated immediately'
     );
     expect(fakePaperApi.setSymbolLeverage).not.toHaveBeenCalled();
+  });
+});
+
+// ─── Section 9 — Sell / Buy prices and spread ─────────────────────────────────
+
+describe('Section 9 — spread (T2 · RTL)', () => {
+  function quote(bid: number | null, ask: number | null) {
+    paneStores[0].setState({ bid, ask });
+  }
+
+  it('should show a spread under 1 with 4 decimals and the raw quotes on hover (9.5)', () => {
+    quote(49_999.9, 50_000);
+    const { container } = renderPanel();
+
+    const spread = getByGuide(container, 'trade.spread');
+    expect(spread.textContent).toBe('0.1000');
+    expect(spread.getAttribute('title')).toBe('Bid: 49,999.9 · Ask: 50,000');
+    // Sell is the best bid, Buy the best ask — not a mid-price
+    expect(getByGuide(container, 'trade.side.sell').textContent).toContain('49,999.9');
+    expect(getByGuide(container, 'trade.side.buy').textContent).toContain('50,000');
+  });
+
+  it('should show a spread of 1 or more with 2 decimals (9.5)', () => {
+    quote(50_000, 50_001.25);
+    const { container } = renderPanel();
+
+    const spread = getByGuide(container, 'trade.spread');
+    expect(spread.textContent).toBe('1.25');
+    expect(spread.getAttribute('title')).toBe('Bid: 50,000 · Ask: 50,001.25');
+    expect(getByGuide(container, 'trade.side.buy').textContent).toContain('50,001.25');
+  });
+
+  it('should show — and fall back to the last price when there is no two-sided quote', () => {
+    quote(null, null);
+    const { container } = renderPanel();
+
+    const spread = getByGuide(container, 'trade.spread');
+    expect(spread.textContent).toBe('—');
+    expect(spread.getAttribute('title')).toBe('Spread — awaiting bid/ask feed');
+    expect(getByGuide(container, 'trade.side.sell').textContent).toContain('50,000');
+    expect(getByGuide(container, 'trade.side.buy').textContent).toContain('50,000');
+  });
+});
+
+// ─── Section 14.4 — Bybit size rules: the server's refusals in the form ───────
+
+describe('Section 14.4 — Bybit size rules refused by the server (T2 · RTL)', () => {
+  // The rules haven't loaded in this file (no instruments), so the form sends what it is given
+  // and the server answers 422 in Bybit's wording, as paperApi throws it.
+  function refuse(message: string) {
+    fakePaperApi.placeOrder.mockRejectedValueOnce(
+      Object.assign(new Error(message), { status: 422 })
+    );
+  }
+
+  it('should show the minimum-quantity refusal and keep the amount (14.4.1)', async () => {
+    refuse('Order quantity lower than the minimum (0.001)');
+    const { container } = renderPanel();
+    fireEvent.click(getByGuide(container, 'trade.amount-unit', 'coin'));
+    fireEvent.change(getByGuide(container, 'trade.amount'), { target: { value: '0.0001' } });
+    fireEvent.click(getByGuide(container, 'trade.submit'));
+
+    await waitFor(() =>
+      expect(getByGuide(container, 'trade.error').textContent).toBe(
+        'Order quantity lower than the minimum (0.001)'
+      )
+    );
+    expect(fakePaperApi.placeOrder.mock.calls[0][0]).toMatchObject({ qty: '0.0001' });
+    expect((getByGuide(container, 'trade.amount') as HTMLInputElement).value).toBe('0.0001');
+    expect(usePaperStore.getState().positions).toHaveLength(0);
+  });
+
+  it('should show the tick-size refusal and keep the price and amount (14.4.2)', async () => {
+    refuse('Order price decimal too long (tick size 0.1)');
+    const { container } = renderPanel({ initialTab: 'limit' });
+    fireEvent.change(getByGuide(container, 'trade.price'), { target: { value: '10000.05' } });
+    fireEvent.change(getByGuide(container, 'trade.amount'), { target: { value: '100' } });
+    fireEvent.click(getByGuide(container, 'trade.submit'));
+
+    await waitFor(() =>
+      expect(getByGuide(container, 'trade.error').textContent).toBe(
+        'Order price decimal too long (tick size 0.1)'
+      )
+    );
+    expect(fakePaperApi.placeOrder.mock.calls[0][0]).toMatchObject({
+      type: 'limit',
+      triggerPrice: '10000.05',
+    });
+    expect((getByGuide(container, 'trade.price') as HTMLInputElement).value).toBe('10000.05');
+    expect((getByGuide(container, 'trade.amount') as HTMLInputElement).value).toBe('100');
+    expect(usePaperStore.getState().pendingOrders).toHaveLength(0);
+  });
+
+  it('should show the spot minimum-value refusal and keep the amount (14.4.3)', async () => {
+    useLayoutStore.setState((s) => ({
+      panes: s.panes.map((p, i) => (i === 0 ? { ...p, category: 'spot' } : p)),
+    }));
+    refuse('Order value exceeded lower limit (5 USDT)');
+    const { container } = renderPanel();
+    fireEvent.change(getByGuide(container, 'trade.amount'), { target: { value: '4' } });
+    fireEvent.click(getByGuide(container, 'trade.submit'));
+
+    await waitFor(() =>
+      expect(getByGuide(container, 'trade.error').textContent).toBe(
+        'Order value exceeded lower limit (5 USDT)'
+      )
+    );
+    expect(fakePaperApi.placeOrder.mock.calls[0][0]).toMatchObject({
+      category: 'spot',
+      value: '4',
+    });
+    expect((getByGuide(container, 'trade.amount') as HTMLInputElement).value).toBe('4');
   });
 });
