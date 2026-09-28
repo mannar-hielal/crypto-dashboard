@@ -1,38 +1,249 @@
-# Trading Panel — Manual UI Test Plan
+# Trading — Test Strategy & Test Plan
 
-> Status legend: ⬜ Not tested · ✅ Pass · ❌ Fail · ⚠️ Partial
+> **Owner:** Mannar Hielal · **Revised:** 2026-09-28 (after Bybit Parity BP-0 … BP-5) · **Scope:** paper trading
+> (Spot + USDT Perpetual), the server engine behind it, the market-data feed, and the account flows around it.
 >
-> **TV ✓** column = cross-check against TVP Paper Trading (Bybit BTCUSDT Spot · 1m).
-> Present only for numerically comparable tests. Leave blank if not dual-platform; mark ✅/❌ when testing both.
->
-> **Tier legend:**
-
-- `T1 · Vitest` — unit test (store only, jsdom)
-- `T2 · RTL` — component integration test (@testing-library/react)
-- `T3 · Playwright` — e2e test (real browser, live WebSocket)
-
-> **Since BP-1 (2026-09-26) trading runs on the server.**
->
-> - **T1 · Vitest rows** for Sections 1–4 and 7: the engine maths, fills, netting, journal and TP/SL / pending triggers
->   are now tested against the real engine in `apps/server/src/trading/engine/__tests__/` (`actions.test.ts`,
->   `triggers.test.ts`). They used to live in `apps/client/src/store/__tests__/paperStore.test.ts` and the two monitor
->   test files, which are gone.
-> - **T2 · RTL rows:** component tests still render the real panels. They mock `paperApi` (`src/test/fakePaperApi.ts`)
->   and assert the intent sent to the server.
-
-> **Since BP-2 (2026-09-26) there are two markets.** Sections 1–4 and 7–9 describe the leveraged form, which is now
-> **USDT Perpetual** — open `/dashboard/usdt/BTCUSDT` (or pick USDT Perpetual in the header Trade menu). Spot is
-> Section 14. Fees are Bybit's: USDT Perpetual 0.055% taker / 0.02% maker on notional (qty × price), Spot 0.1% in the
-> asset received; BP-1's flat 0.07% only survives on rows placed before BP-2. Numbers in older ✅ notes below were
-> taken at 0.07% and are kept as the record of that run. The engine's fee / fill / spot maths has worked-number
-> tests in `apps/server/src/trading/engine/__tests__/fees.test.ts` and `spot.test.ts`.
-
-**Test environment:** Local dev (`pnpm dev`). Symbol: BTCUSDT (live feed).
-**Reset account between sections** using the ⚙️ gear → Reset? button.
+> **Part A** is the strategy: what we test, how, with which tools, and the roadmap to automate the rest.
+> **Part B** is the case catalogue (Sections 1–19): every case, its status, its tier and where its test lives.
+> The engine's rules are in `docs/APP_LOG.md` → "Bybit Parity (BP-0 … BP-5) — reference".
 
 ---
 
+# Part A — Test strategy
+
+## A1. Quality goals
+
+1. **Bybit parity.** Fees, fills, margin, liquidation, funding and Closed P&L follow Bybit's v5 maths and field
+   names (UTA, VIP 0, one-way). A difference is either a bug or a written "known gap".
+2. **Nothing is lost while the tab is closed.** The server engine runs 24/7; a restart backfills exactly once.
+3. **Money is conserved.** No action creates or destroys USDT except fees, funding and realized PnL.
+4. **No regression reaches production.** Every bug gets a test that failed before its fix.
+5. **Minimal owner involvement.** Tests run on every PR, nightly and after every deploy without anyone watching;
+   the owner acts only on a red report or a one-time setup step (A9).
+
+## A2. Where we stand (measured 2026-09-28)
+
+| Area                   | Today                                                                                                                                                                                                                                      |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Unit / component tests | 1,164 Vitest tests in 63 files (server 713 / 26, client 451 / 37). The pure Decimal engine (`apps/server/src/trading/engine/__tests__`) has worked-number tests per rule; client panels have RTL tests against `src/test/fakePaperApi.ts`. |
+| Service / route tests  | `services.test.ts`, `paper.test.ts`, `auth.test.ts` etc. run Fastify in-memory (`app.inject`, `injectWS`) with **Prisma mocked** — no real Postgres, no migration is ever applied in a test.                                               |
+| Browser end-to-end     | **None.** "T3 · Playwright" was a planned tier; rows marked T3 were checked by hand.                                                                                                                                                       |
+| Bybit parity           | `bybitParity.ts` adapter + `parity:testnet` script exist; **never run** (needs testnet keys).                                                                                                                                              |
+| Manual rows            | 90 ⬜ rows in Part B (before this revision), mostly live-feed, multi-tab, layout and TradingView side-by-side checks.                                                                                                                      |
+| CI (`ci.yml`)          | Audit → type-check → format → lint → unit tests → build, on every PR and push to `develop` / `main`. Coverage is available (`pnpm test:coverage`) but has no threshold and doesn't run in CI.                                              |
+| After deploy           | `deploy.yml` deploys; nothing checks the live site afterwards except Fly's `/health` check.                                                                                                                                                |
+| Review                 | The Claude review bot + the unresolved-thread merge gate.                                                                                                                                                                                  |
+
+**Biggest risks not covered by automation today:** the persistence layer (`AccountRepository`, migrations) only
+meets a real database in production; nobody checks the engine against Bybit itself; and the browser flows (live feed,
+reconnect, two tabs) are only ever checked by hand.
+
+## A3. Test levels (the tier column in Part B)
+
+| Tier    | Level                                                                       | Tool                                     | Runs                              |
+| ------- | --------------------------------------------------------------------------- | ---------------------------------------- | --------------------------------- |
+| **T1**  | Unit — pure engine rules with worked numbers; client pure libs              | Vitest                                   | pre-commit + every PR             |
+| **T1p** | Property-based — invariants over random order sequences                     | Vitest + fast-check                      | every PR                          |
+| **T2**  | Component — a panel rendered with a fake API                                | Vitest + React Testing Library (jsdom)   | pre-commit + every PR             |
+| **T2i** | Integration — routes, WS, repository and migrations against real Postgres   | Vitest + Postgres service container      | every PR                          |
+| **T3**  | End-to-end — the real app in a browser, on a deterministic replayed feed    | Playwright                               | every PR (smoke) + nightly (full) |
+| **T4**  | Bybit parity — the same scenario on Bybit testnet and on our engine, diffed | `parity:testnet` in a scheduled workflow | nightly                           |
+| **T5**  | Production synthetic checks — read-only, after every deploy and hourly      | Playwright (smoke project) + Fly health  | post-deploy + cron                |
+| **M**   | Manual — only look-and-feel that a machine can't judge                      | —                                        | before a UI release               |
+
+Rules of thumb: push every check to the **lowest tier that can catch the bug** (a rule belongs in T1, not in a
+browser test); T3 covers wiring and user journeys, not maths; M is for what's left after that, and shrinks over time.
+
+## A4. Practices and tools per kind of testing
+
+### Engine correctness (T1, T1p)
+
+- **Keep the worked-number tests** — each Bybit rule has a hand-computed example (e.g. long 0.1 BTC at 50,000, 10×:
+  IM 500, fee to close 2.475, liq ≈ 45,148.99). They document the rule as much as they test it.
+- **Add property-based tests with [fast-check](https://fast-check.dev)** (MIT, dev-only, no install script). Generate
+  random sequences of place / cancel / fill / close / add-margin / leverage / funding / tick actions and assert
+  invariants after every step:
+  - wallet conservation: `balance + Σ margin + Σ reserves − fees − funding ± realizedPnl` is constant;
+  - no negative `free` / `locked` spot balance, no negative isolated margin, a cross account ends ≥ 0 after
+    liquidation;
+  - reduce-only never grows or flips a position; a liquidation price moves toward the mark as leverage rises;
+  - replaying the same actions gives the same state (determinism, which backfill relies on).
+    A failure shrinks to the shortest action list that breaks the rule — a ready-made regression test.
+- **Mutation testing with [Stryker](https://stryker-mutator.io)** (`@stryker-mutator/vitest-runner`) on
+  `trading/engine/**` only, weekly: it changes operators and constants and checks a test fails. The mutation score
+  shows where the suite asserts too little. Start by recording the score, then set a floor.
+- **Coverage thresholds** in both `vitest.config.ts` files (`coverage.thresholds`), starting at today's numbers and
+  ratcheting up; `trading/engine/**` held higher (target ≥ 95% lines / 90% branches). Run `test:coverage` in CI.
+
+### Persistence and API (T2i)
+
+- **A Postgres service container in `ci.yml`** (`postgres:16-alpine`, the tag `docker-compose.yml` pins) — cheaper and simpler than
+  Testcontainers on GitHub Actions. A separate Vitest project (`*.int.test.ts`) runs against it:
+  - `prisma migrate deploy` from an empty database, then `prisma migrate diff` against `schema.prisma` must be empty
+    (catches a schema change without a migration);
+  - a **migration replay**: seed a pre-BP-2 fixture, apply every migration, assert the BP-2 fee backfill, the BP-3
+    one-way merge and leverage pin, the BP-5 `ISOLATED_MARGIN` + notice;
+  - `AccountRepository` load / save round-trips every field (today only covered by a mocked Prisma);
+  - route tests for `/paper/**` and `/auth/**` with real transactions, incl. the concurrent-write paths
+    (`Account.version`, `deleteMany` token races).
+- **Contract test SDK ↔ server:** the Fastify route schemas are the contract. Generate the OpenAPI document in a test
+  (`app.swagger()`) and check each SDK function's request / response type against it, so a server shape change can't
+  land without the SDK change (`web.md` rule, today enforced only by review).
+
+### Market data and Bybit parity (T3, T4)
+
+- **Deterministic replay feed for tests.** Record a few minutes of Bybit public WS (spot + linear tickers,
+  `orderbook.1`, klines, mark) and the REST responses the app needs (instruments, risk-limit, kline history, funding
+  history) into fixtures. A small fake Bybit server (a Fastify app in `apps/server/src/test/fakeBybit.ts`) replays
+  them. The Bybit hosts are hard-coded today (`BybitWebSocketManager.ts`, `BybitMarketInfo.ts`), so P2 adds optional
+  `BYBIT_REST_URL` / `BYBIT_WS_URL` overrides, refused in production, with a control endpoint to push a chosen price (to cross a TP, reach a
+  liquidation price or a funding timestamp on demand). Every T3 test then runs on known prices — no waiting for the
+  market, no flakiness.
+- **Nightly Bybit testnet parity (T4).** A scheduled workflow (`parity.yml`, `schedule` + `workflow_dispatch`, never
+  on PRs, `environment: bybit-testnet` so the secrets are scoped) runs `parity:testnet`. It uploads the diff as an
+  artifact and, on a mismatch, opens (or updates) one GitHub issue labelled `parity`. The first green run also closes
+  the open questions in APP_LOG (O5, max-reducible margin, 110090 retCode).
+- **Weekly spec-drift check.** A script compares `bybitSpec.ts` constants with Bybit's public API (fee rates via the
+  help-centre values we store, `instruments-info`, `risk-limit` tiers, `fundingIntervalHour`) and opens an issue when
+  Bybit changes a value — today that is only caught when someone re-reads the docs.
+- **Feed parity replaces the TradingView side-by-side checks (Section 6).** A nightly job samples our own
+  `/api/market` quotes and 1m closes and Bybit's public REST at the same timestamps and asserts the Section 6
+  tolerances. That's what the TV comparison was measuring (both apps show Bybit's feed), without a person watching two
+  screens.
+
+### User journeys (T3)
+
+- **Playwright** (Chromium + WebKit, plus a mobile viewport — the site is used on phones) against the app started by
+  Playwright's `webServer` (server + Vite) on the replay feed and the CI Postgres.
+- Each test signs up its own user through the API (a test-only seed helper, disabled in production) — no shared
+  state, safe to run in parallel.
+- **Smoke set on every PR** (< 3 min): sign up → open USDT Perpetual → market buy → position row → close → Closed
+  P&L row; Spot buy → Assets. **Full set nightly**: the ⬜ rows of Part B (tab closed and reopened, two tabs,
+  refresh, reconnect after `setOffline`, token refresh after 20 min via a fake clock, TP / SL modal, add margin,
+  cross mode switch, liquidation via the price-control endpoint, multi-pane layout and sync).
+- On failure: trace, video and screenshot uploaded as CI artifacts (`trace: 'on-first-retry'`). One retry in CI;
+  a test that needs the retry is reported as flaky and fixed, not ignored.
+- **Visual regression:** `expect(page).toHaveScreenshot()` for the stable panels (order form, account bar, leverage
+  and margin-mode modals, Closed P&L, Section 5 icons) in light and dark themes, on the replay feed. Baselines live
+  in the repo and are updated deliberately (`--update-snapshots`) with the visual Q&A gate.
+- **Accessibility:** `@axe-core/playwright` on the dashboard, auth and settings pages; fail on serious / critical.
+
+### Resilience (T2i, T3)
+
+Fault-injection cases, most already unit-tested at service level (Section 18), re-run end to end: Bybit WS drops and
+reconnects, a stale mark (no liquidation on a stale price), the engine restarted mid-gap and mid-funding, a lease
+handoff, a DB write failure (the account reloads, nothing half-applied). The fake Bybit server gets "drop" and
+"stall" controls for this.
+
+### Performance (on demand)
+
+**[k6](https://k6.io)** scripts: N users each holding a market WS and the private paper WS while placing orders.
+Watch p95 order latency, event-loop lag and memory on the Fly machine. Run before a release that touches the feed or
+the engine, against staging (A5) — never against production.
+
+### Security
+
+- Already in place: `pnpm audit` gate, `eslint-plugin-security`, the security rules and refactor checklist, route
+  schemas with `additionalProperties: false`, auth tests.
+- Add: **OWASP ZAP baseline scan** (`zaproxy/action-baseline`) weekly against staging; **Dependabot** (or Renovate)
+  for grouped weekly dependency PRs, which run through the same CI; a **secret scan** (`gitleaks`) in CI.
+
+### Production (T5)
+
+- **Post-deploy smoke:** `deploy.yml` runs the Playwright `@prod` project after `flyctl deploy` — read-only: `/health`,
+  landing page, `/chart` shows a live price, the sign-in page loads with no console errors, the market WS connects.
+  A failure marks the deploy red and notifies (GitHub notification / email) so a rollback (`fly releases rollback`)
+  is one command away.
+- **Hourly synthetic check** (the same `@prod` project on `schedule`) catches a dead feed or an expired certificate
+  between deploys.
+- **Log alerts:** Fly log shipping to a free tier (e.g. Better Stack / Axiom) with an alert on `level >= 50` (error)
+  and on the `paper-legacy-api` warning until O11 lands.
+
+## A5. Environments and test data
+
+| Environment   | Used for                     | Data                                                                                                                        |
+| ------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Local         | Development, pre-commit hook | Local Postgres (`docker-compose`), Bybit public feed (`BYBIT_TESTNET` picks testnet / mainnet)                              |
+| CI            | T1–T3 on every PR, nightly   | Ephemeral Postgres service container; fake Bybit replay server; users seeded per test                                       |
+| Staging       | k6, ZAP, release rehearsal   | **Proposed:** a second Fly app `crypto-dashboard-api-staging` (smallest machine, auto-stop) deployed from `develop`, own DB |
+| Production    | T5 only                      | Read-only checks; no test accounts created                                                                                  |
+| Bybit testnet | T4 only                      | A dedicated testnet sub-account; keys in GitHub `bybit-testnet` environment secrets                                         |
+
+Test data: every automated test creates its own user and resets its account (`POST /paper/account/reset`); nothing
+depends on another test's leftovers. Fixtures (replay feed, pre-BP-2 DB seed) are versioned in the repo.
+
+## A6. Entry / exit criteria
+
+- **A PR can merge** when CI is green (today's gates + T1p + T2i + T3 smoke as they land), coverage doesn't drop, and
+  no Claude review thread is unresolved (`git.md`).
+- **A release (`develop` → `main`) can merge** when, in addition: the nightly T3 full set and T4 parity run on
+  `develop` are green within the last 24 h, and any open `parity` issue is either fixed or recorded as a known gap.
+- **A release is done** when the post-deploy T5 smoke is green.
+
+## A7. Defects
+
+- Every bug fix ships with a regression test that **fails before the fix** (current practice — keep it), at the
+  lowest tier that reproduces it; the test name says what broke.
+- Severity: **S1** money / data wrong or lost (fix before anything else, may hot-fix `main`) · **S2** a flow blocked
+  · **S3** wrong display with a workaround · **S4** cosmetic.
+- A flaky test is a defect (S3) — quarantined with an issue link, never silently retried.
+
+## A8. Automation roadmap
+
+Each step is its own small PR to `develop`, ordered by value per effort.
+
+| Step   | Delivers                                                                                                                  | Converts / adds                                    | Owner action               |
+| ------ | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | -------------------------- |
+| **P1** | CI Postgres, migration-from-empty + drift check, migration replay, repository round-trip, coverage thresholds in CI       | T2i; 18.7                                          | —                          |
+| **P2** | Fake Bybit replay server, Playwright (smoke on PR, full nightly), seed helper; the missing T1 / T2 tests the ⬜ rows name | Every ⬜ row marked `(P2)` in Sections 7–15 and 19 | —                          |
+| **P3** | Nightly `parity:testnet` workflow + issue on mismatch; weekly spec-drift check; feed parity job                           | 17.6.4, Section 6 → T4                             | Add 2 testnet secrets once |
+| **P4** | fast-check invariants; Stryker weekly on the engine                                                                       | T1p; mutation score                                | —                          |
+| **P5** | Post-deploy + hourly prod smoke, log alerts                                                                               | T5                                                 | Pick / approve a log sink  |
+| **P6** | Staging Fly app; ZAP baseline; k6 scripts; Dependabot; gitleaks                                                           | Security + performance                             | Approve staging cost       |
+
+After P2 the only manual rows left are look-and-feel (drag feel, sounds, animation) — the M tier.
+
+## A9. What the owner has to do
+
+- **Once:** create a Bybit **testnet** API key (read + trade) on an otherwise empty testnet account and add it as
+  `BYBIT_API_KEY` / `BYBIT_API_SECRET` in the repo's `bybit-testnet` environment (P3; the workflow sets
+  `BYBIT_TESTNET=true`, and the script refuses to run otherwise); approve the staging app and a log sink
+  (P5, P6).
+- **Ongoing:** read the red ones — a failed nightly or parity issue arrives as a GitHub notification; a green week
+  needs nothing. Before a UI release, the short M list (Part B rows tiered **M**).
+
+---
+
+# Part B — Case catalogue
+
+**How to read it.** Status: ⬜ not run · ✅ pass · ❌ fail · ⚠️ partial · ⏳ blocked · ➖ superseded. **Tier** is where the case is
+checked today (A3); a ⬜ row's tier is where it goes when automated, with the roadmap step (e.g. `T3 (P2)`). "Live ✓"
+= checked by hand on the dev server; numbers in older ✅ notes are the record of that run and may predate a later
+phase.
+
+**What changed under Sections 1–11** (written before the Bybit parity work; the flows still hold):
+
+- **BP-1 (2026-09-26): trading runs on the server.** T1 rows for Sections 1–4 and 7 now test the real engine in
+  `apps/server/src/trading/engine/__tests__/` (`actions.test.ts`, `triggers.test.ts`); the old client store and
+  monitor tests are gone. T2 rows render the real panels against `fakePaperApi` and assert the intent sent. "Persists
+  in localStorage" (4.6, 4.22) now means "the server hydrates it".
+- **BP-2: two markets and Bybit fees.** Sections 1–4 and 7–9 describe the leveraged form, now **USDT Perpetual**
+  (`/dashboard/usdt/BTCUSDT`); Spot is Section 14. Fees are 0.055% taker / 0.02% maker on notional (Spot 0.1% in the
+  asset received), not the flat 0.07% in the older notes. Leverage is per symbol (the `10x ▾` chip), not in Account
+  Settings (8.3).
+- **BP-3: mark price and one-way mode.** Perpetual PnL uses the mark price; same-side orders merge into one position
+  per symbol (1.7.9's "multiple positions" now nets into one).
+- **BP-5: cross margin is the default for new accounts.** The worked numbers in Sections 1–4 assume **Isolated** — switch
+  with the chip before running them. TP / SL can trigger on Last / Mark / Index (Last is the default the rows assume);
+  the server also refuses a TP / SL on the wrong side of the base price (17.2.6).
+
+**Test environment for manual rows:** local dev (`pnpm dev`), BTCUSDT live feed, a throwaway account reset between
+sections (⚙️ → Reset account).
+
 ## Dual-platform setup (run when doing cross-platform checks)
+
+> **Legacy.** The TradingView side-by-side checks (TV ✓ column, Section 6) are replaced by the automated feed parity
+> job (A4, roadmap P3). Kept for the record of the 2026-05 runs.
 
 1. Open cryptopapertrade.com at `localhost:5173/dashboard/usdt/BTCUSDT` (or `/dashboard/spot/BTC/USDT` for Spot) — reset account
 2. Open TVP → Paper Trading → Bybit BTCUSDT Spot · 1m
@@ -311,23 +522,27 @@
 
 ## Section 6 — Cross-Platform Price Parity _(dual-platform setup required)_
 
+> **To be automated (P3):** these rows compare our feed with Bybit's through TradingView. The feed parity job (A4)
+> compares our quotes and 1m closes with Bybit's public REST directly, nightly, at these tolerances; 6.4–6.8 (fills
+> and PnL) are covered by the engine tests plus T4 parity. 6.9 (tab title) goes to T3.
+
 > Run this section to validate the price feed fix end-to-end. Both apps open side by side.
 > Tolerance for all price comparisons: **<= $1.00** (one SELL/BUY spread for BTC).
 > Lot-size note: cryptopapertrade.com now floors qty to the same step TV uses (BTC: 0.0001, ETH: 0.001, etc.) so Trade value and qty shown on the button should match TV within the spread tolerance.
 > **TVP quote mapping:** `TV SELL` = best **bid**; `TV BUY` = best **ask**.
 > **Parity rule (same timestamp snapshot):** `abs(CD Sell - TV SELL) <= 1.00` and `abs(CD Buy - TV BUY) <= 1.00`.
 
-| #   | Scenario                                                            | Expected                                                                                                     | Status | Tier            | Notes                                                                                                                                   |
-| --- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| 6.1 | Compare TradingPanel Sell/Buy vs TVP SELL/BUY at rest               | **Both** checks pass at the same moment: `abs(CD Sell - TV SELL) <= 1.00` and `abs(CD Buy - TV BUY) <= 1.00` | ⬜     | T3 · Playwright | In TVP UI, `SELL` = bid and `BUY` = ask. All Section 6 tests require a live WebSocket feed and real-time clock — cannot be unit-tested. |
-| 6.2 | Watch both prices for 30 s during normal market activity            | cryptopapertrade.com tracks TVP tick-for-tick; no sustained lag > $1                                         | ⬜     | T3 · Playwright |                                                                                                                                         |
-| 6.3 | Watch both prices during a fast move (news spike or breakout)       | cryptopapertrade.com catches up within 1–2 s; no freeze or stuck price                                       | ⬜     | T3 · Playwright |                                                                                                                                         |
-| 6.4 | Place identical $200 market Buy in both apps within the same second | Entry prices differ by ≤ $1; qty in cryptopapertrade.com ≈ qty in TVP                                        | ⬜     | T3 · Playwright |                                                                                                                                         |
-| 6.5 | Let position run for 2 min, compare Unrealised PnL                  | PnL sign matches (both green or both red); magnitude within $0.50                                            | ⬜     | T3 · Playwright |                                                                                                                                         |
-| 6.6 | Close both positions manually at the same moment                    | Realised PnL matches within $0.50; commission deducted in both                                               | ⬜     | T3 · Playwright |                                                                                                                                         |
-| 6.7 | Place identical Limit Buy at live − 1% in both apps                 | Both fill on the same candle; entry prices within $1                                                         | ⬜     | T3 · Playwright |                                                                                                                                         |
-| 6.8 | Place identical Stop Buy at live + 0.5% in both apps                | Both trigger on the same candle; entry prices within $1                                                      | ⬜     | T3 · Playwright |                                                                                                                                         |
-| 6.9 | Browser tab title during test                                       | Tab shows `▲ BTC/USDT {price} +x.xx%` or `▼ …` updating live; arrow flips on reversal                        | ⬜     | T3 · Playwright |                                                                                                                                         |
+| #   | Scenario                                                            | Expected                                                                                                     | Status | Tier    | Notes                                                                                                                                   |
+| --- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------ | ------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 6.1 | Compare TradingPanel Sell/Buy vs TVP SELL/BUY at rest               | **Both** checks pass at the same moment: `abs(CD Sell - TV SELL) <= 1.00` and `abs(CD Buy - TV BUY) <= 1.00` | ⬜     | T4 (P3) | In TVP UI, `SELL` = bid and `BUY` = ask. All Section 6 tests require a live WebSocket feed and real-time clock — cannot be unit-tested. |
+| 6.2 | Watch both prices for 30 s during normal market activity            | cryptopapertrade.com tracks TVP tick-for-tick; no sustained lag > $1                                         | ⬜     | T4 (P3) |                                                                                                                                         |
+| 6.3 | Watch both prices during a fast move (news spike or breakout)       | cryptopapertrade.com catches up within 1–2 s; no freeze or stuck price                                       | ⬜     | T4 (P3) |                                                                                                                                         |
+| 6.4 | Place identical $200 market Buy in both apps within the same second | Entry prices differ by ≤ $1; qty in cryptopapertrade.com ≈ qty in TVP                                        | ⬜     | T4 (P3) |                                                                                                                                         |
+| 6.5 | Let position run for 2 min, compare Unrealised PnL                  | PnL sign matches (both green or both red); magnitude within $0.50                                            | ⬜     | T4 (P3) |                                                                                                                                         |
+| 6.6 | Close both positions manually at the same moment                    | Realised PnL matches within $0.50; commission deducted in both                                               | ⬜     | T4 (P3) |                                                                                                                                         |
+| 6.7 | Place identical Limit Buy at live − 1% in both apps                 | Both fill on the same candle; entry prices within $1                                                         | ⬜     | T4 (P3) |                                                                                                                                         |
+| 6.8 | Place identical Stop Buy at live + 0.5% in both apps                | Both trigger on the same candle; entry prices within $1                                                      | ⬜     | T4 (P3) |                                                                                                                                         |
+| 6.9 | Browser tab title during test                                       | Tab shows `▲ BTC/USDT {price} +x.xx%` or `▼ …` updating live; arrow flips on reversal                        | ⬜     | T3 (P2) |                                                                                                                                         |
 
 ---
 
@@ -337,48 +552,48 @@
 
 ### 7.1 Market order appears in Order History
 
-| #     | Action                                        | Expected                                                                                                                                                                                                                                                                              | Status | Tier        | Notes                                                                                                                                                                                                                                                                       |
-| ----- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 7.1.1 | Reset account. Place a market Buy $100        | Go to **Order History** tab — 1 row: Type = MARKET / Side = BUY / Status = Filled (green)                                                                                                                                                                                             | ⬜     | T1 · Vitest |                                                                                                                                                                                                                                                                             |
-| 7.1.2 | Check **All** and **Filled** sub-tabs         | Row visible in both; count badge on tab shows 1                                                                                                                                                                                                                                       | ⬜     | T2 · RTL    |                                                                                                                                                                                                                                                                             |
-| 7.1.3 | Check **Cancelled** and **Rejected** sub-tabs | Empty (no rows)                                                                                                                                                                                                                                                                       | ⬜     | T2 · RTL    |                                                                                                                                                                                                                                                                             |
-| 7.1.4 | Check **Orders** tab (all sub-tabs)           | Market order **appears in Orders → Filled** sub-tab while within the 2-min bench TTL; after 2 min the row evicts from Orders and only remains in Order History. Orders top-level badge = 0 (no active rows). Orders → All shows 1 row (while in TTL); → Working / Inactive are empty. | ⬜     | T2 · RTL    | Updated 02.05.2026: bench TTL governs visibility of terminal rows in Orders tab (see 4.21). Verify `All 1` / `Filled 1` counts in Orders immediately post-fill and `Orders` badge = 0 (active-only). After 2 min: `All 0` / `Filled 0` in Orders; Order History unaffected. |
+| #     | Action                                        | Expected                                                                                                                                                                                                                                                                              | Status | Tier             | Notes                                                                                                                                                                                                                                                                       |
+| ----- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 7.1.1 | Reset account. Place a market Buy $100        | Go to **Order History** tab — 1 row: Type = MARKET / Side = BUY / Status = Filled (green)                                                                                                                                                                                             | ⬜     | T1 · Vitest (P2) |                                                                                                                                                                                                                                                                             |
+| 7.1.2 | Check **All** and **Filled** sub-tabs         | Row visible in both; count badge on tab shows 1                                                                                                                                                                                                                                       | ⬜     | T2 · RTL (P2)    |                                                                                                                                                                                                                                                                             |
+| 7.1.3 | Check **Cancelled** and **Rejected** sub-tabs | Empty (no rows)                                                                                                                                                                                                                                                                       | ⬜     | T2 · RTL (P2)    |                                                                                                                                                                                                                                                                             |
+| 7.1.4 | Check **Orders** tab (all sub-tabs)           | Market order **appears in Orders → Filled** sub-tab while within the 2-min bench TTL; after 2 min the row evicts from Orders and only remains in Order History. Orders top-level badge = 0 (no active rows). Orders → All shows 1 row (while in TTL); → Working / Inactive are empty. | ⬜     | T2 · RTL (P2)    | Updated 02.05.2026: bench TTL governs visibility of terminal rows in Orders tab (see 4.21). Verify `All 1` / `Filled 1` counts in Orders immediately post-fill and `Orders` badge = 0 (active-only). After 2 min: `All 0` / `Filled 0` in Orders; Order History unaffected. |
 
 ### 7.2 Limit order fill appears in Order History
 
-| #     | Action                                              | Expected                                                                                                                                                                                     | Status | Tier        | Notes                                                                                                                                                                         |
-| ----- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 7.2.1 | Place limit buy at live − 2%; wait for fill         | Order History → Filled sub-tab: 1 row LIMIT / BUY / Fill Price ≈ trigger price                                                                                                               | ⬜     | T1 · Vitest |                                                                                                                                                                               |
-| 7.2.2 | Verify columns: Limit Price, Fill Price, Commission | Limit Price = your trigger; **Fill Price = trigger** (a resting limit fills at its own price, BP-2 F4); Commission = qty × price × 0.0002 with "0.02% maker" under it                        | ⬜     | T1 · Vitest |                                                                                                                                                                               |
-| 7.2.3 | Orders tab — Filled sub-tab                         | Filled limit row is **also** visible in **Orders → Filled** sub-tab (TV-style), not only in Order History. Orders top-level badge remains at 0 after the limit entry fill (no active order). | ⬜     | T2 · RTL    | Updated 01.05.2026: Orders tab now has a Filled sub-tab (restored). Verify the filled limit row appears in both Orders → Filled and Order History → Filled; Orders badge = 0. |
+| #     | Action                                              | Expected                                                                                                                                                                                     | Status | Tier             | Notes                                                                                                                                                                         |
+| ----- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 7.2.1 | Place limit buy at live − 2%; wait for fill         | Order History → Filled sub-tab: 1 row LIMIT / BUY / Fill Price ≈ trigger price                                                                                                               | ⬜     | T1 · Vitest (P2) |                                                                                                                                                                               |
+| 7.2.2 | Verify columns: Limit Price, Fill Price, Commission | Limit Price = your trigger; **Fill Price = trigger** (a resting limit fills at its own price, BP-2 F4); Commission = qty × price × 0.0002 with "0.02% maker" under it                        | ⬜     | T1 · Vitest (P2) |                                                                                                                                                                               |
+| 7.2.3 | Orders tab — Filled sub-tab                         | Filled limit row is **also** visible in **Orders → Filled** sub-tab (TV-style), not only in Order History. Orders top-level badge remains at 0 after the limit entry fill (no active order). | ⬜     | T2 · RTL (P2)    | Updated 01.05.2026: Orders tab now has a Filled sub-tab (restored). Verify the filled limit row appears in both Orders → Filled and Order History → Filled; Orders badge = 0. |
 
 ### 7.3 Cancelled order appears in Order History
 
-| #     | Action                                                      | Expected                                                             | Status | Tier        | Notes |
-| ----- | ----------------------------------------------------------- | -------------------------------------------------------------------- | ------ | ----------- | ----- |
-| 7.3.1 | Place limit buy far below market; cancel via Orders tab (✕) | Order History → Cancelled sub-tab: 1 row, Status = Cancelled (muted) | ⬜     | T1 · Vitest |       |
-| 7.3.2 | Check All sub-tab count                                     | Count includes this cancelled record                                 | ⬜     | T2 · RTL    |       |
+| #     | Action                                                      | Expected                                                             | Status | Tier             | Notes |
+| ----- | ----------------------------------------------------------- | -------------------------------------------------------------------- | ------ | ---------------- | ----- |
+| 7.3.1 | Place limit buy far below market; cancel via Orders tab (✕) | Order History → Cancelled sub-tab: 1 row, Status = Cancelled (muted) | ⬜     | T1 · Vitest (P2) |       |
+| 7.3.2 | Check All sub-tab count                                     | Count includes this cancelled record                                 | ⬜     | T2 · RTL (P2)    |       |
 
 ### 7.4 Rejected orders (if any) appear in Order History, not History tab
 
-| #     | Action                                                | Expected                                                                            | Status | Tier        | Notes |
-| ----- | ----------------------------------------------------- | ----------------------------------------------------------------------------------- | ------ | ----------- | ----- |
-| 7.4.1 | Simulate rejection (e.g. submit order with 0 balance) | If order reaches rejected state: Order History → Rejected sub-tab shows red ⚠ badge | ⬜     | T1 · Vitest |       |
-| 7.4.2 | Check History tab (closed trades)                     | Rejected orders do **not** appear in the History / Trade History tab                | ⬜     | T2 · RTL    |       |
+| #     | Action                                                | Expected                                                                            | Status | Tier             | Notes |
+| ----- | ----------------------------------------------------- | ----------------------------------------------------------------------------------- | ------ | ---------------- | ----- |
+| 7.4.1 | Simulate rejection (e.g. submit order with 0 balance) | If order reaches rejected state: Order History → Rejected sub-tab shows red ⚠ badge | ⬜     | T1 · Vitest (P2) |       |
+| 7.4.2 | Check History tab (closed trades)                     | Rejected orders do **not** appear in the History / Trade History tab                | ⬜     | T2 · RTL (P2)    |       |
 
 ### 7.5 Placing Time and Closing Time columns
 
-| #     | Action                                           | Expected                                                                    | Status | Tier     | Notes                                                                               |
-| ----- | ------------------------------------------------ | --------------------------------------------------------------------------- | ------ | -------- | ----------------------------------------------------------------------------------- |
-| 7.5.1 | Open column picker (⊟ icon) in Order History tab | Placing Time and Closing Time are on by default; other columns toggleable   | ⬜     | T2 · RTL |                                                                                     |
-| 7.5.2 | Disable Closing Time; re-enable it               | Column disappears then reappears; preference persists after browser refresh | ⬜     | T2 · RTL | jsdom localStorage can simulate the persist/hydrate cycle — no real refresh needed. |
+| #     | Action                                           | Expected                                                                    | Status | Tier          | Notes                                                                               |
+| ----- | ------------------------------------------------ | --------------------------------------------------------------------------- | ------ | ------------- | ----------------------------------------------------------------------------------- |
+| 7.5.1 | Open column picker (⊟ icon) in Order History tab | Placing Time and Closing Time are on by default; other columns toggleable   | ⬜     | T2 · RTL (P2) |                                                                                     |
+| 7.5.2 | Disable Closing Time; re-enable it               | Column disappears then reappears; preference persists after browser refresh | ⬜     | T2 · RTL (P2) | jsdom localStorage can simulate the persist/hydrate cycle — no real refresh needed. |
 
 ### 7.6 Mix of all order types
 
-| #     | Action                                                                  | Expected                                                                            | Status | Tier        | Notes |
-| ----- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ------ | ----------- | ----- |
-| 7.6.1 | Place market buy, limit buy (fill), stop sell (cancel) in sequence      | Order History All sub-tab shows 3 rows: MARKET/Filled, LIMIT/Filled, STOP/Cancelled | ⬜     | T1 · Vitest |       |
-| 7.6.2 | Each status badge uses correct color: Filled = green, Cancelled = muted | Visual check                                                                        | ⬜     | T2 · RTL    |       |
+| #     | Action                                                                  | Expected                                                                            | Status | Tier             | Notes |
+| ----- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ------ | ---------------- | ----- |
+| 7.6.1 | Place market buy, limit buy (fill), stop sell (cancel) in sequence      | Order History All sub-tab shows 3 rows: MARKET/Filled, LIMIT/Filled, STOP/Cancelled | ⬜     | T1 · Vitest (P2) |       |
+| 7.6.2 | Each status badge uses correct color: Filled = green, Cancelled = muted | Visual check                                                                        | ⬜     | T2 · RTL (P2)    |       |
 
 ---
 
@@ -386,34 +601,34 @@
 
 > Open via the **⚙️ gear** button in the **Order & Account Management** panel header.
 
-| #    | Action                                                               | Expected                                                                                                    | Status | Tier     | Notes                                                                   |
-| ---- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------ | -------- | ----------------------------------------------------------------------- |
-| 8.1  | Click ⚙️ gear button                                                 | Modal opens; "Account Settings" title visible                                                               | ⬜     | T2 · RTL |                                                                         |
-| 8.2  | Account name field                                                   | Shows logged-in username; field is **read-only** (cannot type)                                              | ⬜     | T2 · RTL |                                                                         |
-| 8.3  | Leverage                                                             | **No leverage field** (BP-2): leverage is per symbol, set with the `1x ▾` chip in the trading panel (§14.5) | ⬜     | T2 · RTL | Removed with the per-symbol leverage.                                   |
-| 8.4  | Fees field                                                           | Displays `Spot 0.1%` and `Perpetual 0.055% taker · 0.02% maker` — read-only                                 | ⬜     | T2 · RTL |                                                                         |
-| 8.5  | Footer button                                                        | Reads **Done** and just closes the modal (nothing left to save)                                             | ⬜     | T2 · RTL | Was "Save" (it committed the account leverage).                         |
-| 8.6  | Click "Reset account" once                                           | Button changes to a confirm state (e.g. "Confirm reset?"); 3 s auto-cancel timer starts                     | ⬜     | T2 · RTL |                                                                         |
-| 8.7  | Wait 3 s without confirming                                          | Button reverts to default "Reset account" text; no reset occurred                                           | ⬜     | T2 · RTL | Use `vi.useFakeTimers()` to advance the clock 3 s without real waiting. |
-| 8.8  | Click "Reset account" → immediately click confirm within 3 s         | Modal closes; balance resets to $10,000; positions/orders/journal cleared                                   | ⬜     | T1+T2    | T1: `reset()` clears store state. T2: modal close + UI reflects reset.  |
-| 8.9  | Click ✕ (close) button on modal                                      | Modal dismisses; no reset; no changes                                                                       | ⬜     | T2 · RTL |                                                                         |
-| 8.10 | Click backdrop (outside modal)                                       | Modal dismisses; confirm state cleared if it was pending                                                    | ⬜     | T2 · RTL |                                                                         |
-| 8.11 | Open modal while in mid-confirm state; dismiss via backdrop; re-open | Confirm state is cleared on re-open — button shows default "Reset account"                                  | ⬜     | T2 · RTL |                                                                         |
+| #    | Action                                                               | Expected                                                                                                    | Status | Tier          | Notes                                                                   |
+| ---- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------ | ------------- | ----------------------------------------------------------------------- |
+| 8.1  | Click ⚙️ gear button                                                 | Modal opens; "Account Settings" title visible                                                               | ⬜     | T2 · RTL (P2) |                                                                         |
+| 8.2  | Account name field                                                   | Shows logged-in username; field is **read-only** (cannot type)                                              | ⬜     | T2 · RTL (P2) |                                                                         |
+| 8.3  | Leverage                                                             | **No leverage field** (BP-2): leverage is per symbol, set with the `1x ▾` chip in the trading panel (§14.5) | ⬜     | T2 · RTL (P2) | Removed with the per-symbol leverage.                                   |
+| 8.4  | Fees field                                                           | Displays `Spot 0.1%` and `Perpetual 0.055% taker · 0.02% maker` — read-only                                 | ⬜     | T2 · RTL (P2) |                                                                         |
+| 8.5  | Footer button                                                        | Reads **Done** and just closes the modal (nothing left to save)                                             | ⬜     | T2 · RTL (P2) | Was "Save" (it committed the account leverage).                         |
+| 8.6  | Click "Reset account" once                                           | Button changes to a confirm state (e.g. "Confirm reset?"); 3 s auto-cancel timer starts                     | ⬜     | T2 · RTL (P2) |                                                                         |
+| 8.7  | Wait 3 s without confirming                                          | Button reverts to default "Reset account" text; no reset occurred                                           | ⬜     | T2 · RTL (P2) | Use `vi.useFakeTimers()` to advance the clock 3 s without real waiting. |
+| 8.8  | Click "Reset account" → immediately click confirm within 3 s         | Modal closes; balance resets to $10,000; positions/orders/journal cleared                                   | ⬜     | T1 + T2 (P2)  | T1: `reset()` clears store state. T2: modal close + UI reflects reset.  |
+| 8.9  | Click ✕ (close) button on modal                                      | Modal dismisses; no reset; no changes                                                                       | ⬜     | T2 · RTL (P2) |                                                                         |
+| 8.10 | Click backdrop (outside modal)                                       | Modal dismisses; confirm state cleared if it was pending                                                    | ⬜     | T2 · RTL (P2) |                                                                         |
+| 8.11 | Open modal while in mid-confirm state; dismiss via backdrop; re-open | Confirm state is cleared on re-open — button shows default "Reset account"                                  | ⬜     | T2 · RTL (P2) |                                                                         |
 
 ---
 
 ## Section 9 — Sell/Buy Prices & Spread in TradingPanel
 
-| #   | Action                                                                          | Expected                                                                                                     | Status | Tier            | Notes                                                                                                                                                                             |
-| --- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 9.1 | Open TradingPanel with a live symbol (e.g. BTCUSDT)                             | Spread badge between Sell/Buy buttons shows a numeric value (e.g. `0.10`)                                    | ⬜     | T3 · Playwright | Requires live two-sided quote feed from WebSocket. Spot bid/ask come from `orderbook.1` since BP-0 (F2) — before, spot `tickers` had no bid/ask and this badge always showed `—`. |
-| 9.2 | Hover spread badge                                                              | Tooltip shows raw bid and ask values (e.g. `Bid: 75,000.00 · Ask: 75,000.10`)                                | ⬜     | T3 · Playwright |                                                                                                                                                                                   |
-| 9.3 | Sell button price                                                               | Matches the live **SELL** quote shown for the symbol, not a mid-price                                        | ⬜     | T3 · Playwright | Technical mapping: `SELL` corresponds to the best bid.                                                                                                                            |
-| 9.4 | Buy button price                                                                | Matches the live **BUY** quote shown for the symbol, not a mid-price                                         | ⬜     | T3 · Playwright | Technical mapping: `BUY` corresponds to the best ask.                                                                                                                             |
-| 9.5 | Spread value decimal places                                                     | If spread < 1: 4 decimal places (e.g. `0.1000`); if ≥ 1: 2 decimal places (e.g. `1.25`)                      | ⬜     | T2 · RTL        | Spread formatting logic is pure JS — render `TradingPanel` with mocked SELL/BUY quote props and assert the badge text.                                                            |
-| 9.6 | Disconnect WebSocket (network tab block) — wait for SELL/BUY quotes to go stale | Sell/Buy prices fall back to `latestPrice`; spread badge shows `—`                                           | ⬜     | T3 · Playwright | `page.context().setOffline(true)` + await WS stale timeout.                                                                                                                       |
-| 9.7 | Switch active pane symbol (e.g. BTC → ETH in multi-pane mode)                   | Sell/Buy prices update to ETH SELL/BUY quotes immediately; spread re-renders for ETH                         | ⬜     | T3 · Playwright |                                                                                                                                                                                   |
-| 9.8 | Compare Sell/Buy vs TVP SELL/BUY at rest                                        | **Both** checks pass at the same moment: `abs(CD Sell - TV SELL) <= 1.00` and `abs(CD Buy - TV BUY) <= 1.00` | ⬜     | T3 · Playwright | In TVP UI, `SELL` = bid and `BUY` = ask.                                                                                                                                          |
+| #   | Action                                                                          | Expected                                                                                                     | Status | Tier          | Notes                                                                                                                                                                             |
+| --- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------ | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 9.1 | Open TradingPanel with a live symbol (e.g. BTCUSDT)                             | Spread badge between Sell/Buy buttons shows a numeric value (e.g. `0.10`)                                    | ⬜     | T3 (P2)       | Requires live two-sided quote feed from WebSocket. Spot bid/ask come from `orderbook.1` since BP-0 (F2) — before, spot `tickers` had no bid/ask and this badge always showed `—`. |
+| 9.2 | Hover spread badge                                                              | Tooltip shows raw bid and ask values (e.g. `Bid: 75,000.00 · Ask: 75,000.10`)                                | ⬜     | T3 (P2)       |                                                                                                                                                                                   |
+| 9.3 | Sell button price                                                               | Matches the live **SELL** quote shown for the symbol, not a mid-price                                        | ⬜     | T3 (P2)       | Technical mapping: `SELL` corresponds to the best bid.                                                                                                                            |
+| 9.4 | Buy button price                                                                | Matches the live **BUY** quote shown for the symbol, not a mid-price                                         | ⬜     | T3 (P2)       | Technical mapping: `BUY` corresponds to the best ask.                                                                                                                             |
+| 9.5 | Spread value decimal places                                                     | If spread < 1: 4 decimal places (e.g. `0.1000`); if ≥ 1: 2 decimal places (e.g. `1.25`)                      | ⬜     | T2 · RTL (P2) | Spread formatting logic is pure JS — render `TradingPanel` with mocked SELL/BUY quote props and assert the badge text.                                                            |
+| 9.6 | Disconnect WebSocket (network tab block) — wait for SELL/BUY quotes to go stale | Sell/Buy prices fall back to `latestPrice`; spread badge shows `—`                                           | ⬜     | T3 (P2)       | `page.context().setOffline(true)` + await WS stale timeout.                                                                                                                       |
+| 9.7 | Switch active pane symbol (e.g. BTC → ETH in multi-pane mode)                   | Sell/Buy prices update to ETH SELL/BUY quotes immediately; spread re-renders for ETH                         | ⬜     | T3 (P2)       |                                                                                                                                                                                   |
+| 9.8 | Compare Sell/Buy vs TVP SELL/BUY at rest                                        | **Both** checks pass at the same moment: `abs(CD Sell - TV SELL) <= 1.00` and `abs(CD Buy - TV BUY) <= 1.00` | ⬜     | T3 (P2)       | In TVP UI, `SELL` = bid and `BUY` = ask.                                                                                                                                          |
 
 ---
 
@@ -421,61 +636,61 @@
 
 > Run with single-chart `1` layout first, then test each split layout. No TV cross-check column needed.
 
-| #      | Action                                                        | Expected                                                                | Status | Tier        | Notes                                                                                            |
-| ------ | ------------------------------------------------------------- | ----------------------------------------------------------------------- | ------ | ----------- | ------------------------------------------------------------------------------------------------ |
-| 10.1.1 | Open `ChartLayoutPicker` (grid icon in SymbolBar, right side) | Popover shows 5 SVG layout icons: `1 · 2h · 2v · 3h · 4`                | ⬜     | T2 · RTL    |                                                                                                  |
-| 10.1.2 | Select **2h** (2 columns)                                     | Chart area splits into 2 side-by-side panes; PaneHeader visible on each | ⬜     | T2 · RTL    |                                                                                                  |
-| 10.1.3 | Select **2v** (2 rows)                                        | 2 stacked panes                                                         | ⬜     | T2 · RTL    |                                                                                                  |
-| 10.1.4 | Select **3h** (3 columns)                                     | 3 side-by-side panes                                                    | ⬜     | T2 · RTL    |                                                                                                  |
-| 10.1.5 | Select **4** (2×2 grid)                                       | 4 panes in grid                                                         | ⬜     | T2 · RTL    |                                                                                                  |
-| 10.1.6 | Switch back to **1** (single)                                 | Single pane; PaneHeader hidden                                          | ⬜     | T2 · RTL    |                                                                                                  |
-| 10.1.7 | Refresh browser with 2h layout active                         | Layout persists (loaded from `cd-layout` localStorage)                  | ⬜     | T1 · Vitest | Test `layoutStore` hydration from mocked localStorage in jsdom — no real browser refresh needed. |
+| #      | Action                                                        | Expected                                                                | Status | Tier             | Notes                                                                                            |
+| ------ | ------------------------------------------------------------- | ----------------------------------------------------------------------- | ------ | ---------------- | ------------------------------------------------------------------------------------------------ |
+| 10.1.1 | Open `ChartLayoutPicker` (grid icon in SymbolBar, right side) | Popover shows 5 SVG layout icons: `1 · 2h · 2v · 3h · 4`                | ⬜     | T2 · RTL (P2)    |                                                                                                  |
+| 10.1.2 | Select **2h** (2 columns)                                     | Chart area splits into 2 side-by-side panes; PaneHeader visible on each | ⬜     | T2 · RTL (P2)    |                                                                                                  |
+| 10.1.3 | Select **2v** (2 rows)                                        | 2 stacked panes                                                         | ⬜     | T2 · RTL (P2)    |                                                                                                  |
+| 10.1.4 | Select **3h** (3 columns)                                     | 3 side-by-side panes                                                    | ⬜     | T2 · RTL (P2)    |                                                                                                  |
+| 10.1.5 | Select **4** (2×2 grid)                                       | 4 panes in grid                                                         | ⬜     | T2 · RTL (P2)    |                                                                                                  |
+| 10.1.6 | Switch back to **1** (single)                                 | Single pane; PaneHeader hidden                                          | ⬜     | T2 · RTL (P2)    |                                                                                                  |
+| 10.1.7 | Refresh browser with 2h layout active                         | Layout persists (loaded from `cd-layout` localStorage)                  | ⬜     | T1 · Vitest (P2) | Test `layoutStore` hydration from mocked localStorage in jsdom — no real browser refresh needed. |
 
 ---
 
 ## Section 10.2 — Multi-Chart Layout: Active pane selection
 
-| #      | Action                                           | Expected                                                                                        | Status | Tier        | Notes                                                                               |
-| ------ | ------------------------------------------------ | ----------------------------------------------------------------------------------------------- | ------ | ----------- | ----------------------------------------------------------------------------------- |
-| 10.2.1 | In 2h layout: click right pane                   | Right pane gets animated purple border + inner glow; TradingPanel reacts to right pane's symbol | ⬜     | T2 · RTL    |                                                                                     |
-| 10.2.2 | Click left pane                                  | Purple border moves to left pane (animated)                                                     | ⬜     | T2 · RTL    |                                                                                     |
-| 10.2.3 | Switch to 4-pane layout; click pane 3            | Pane 3 becomes active; animated left stripe in PaneHeader moves to pane 3                       | ⬜     | T2 · RTL    |                                                                                     |
-| 10.2.4 | Switch to a smaller layout while active pane = 3 | `activePane` clamps to `paneCount − 1`; no crash                                                | ⬜     | T1 · Vitest | `layoutStore.setLayout()` clamping logic is pure store logic — no rendering needed. |
+| #      | Action                                           | Expected                                                                                        | Status | Tier             | Notes                                                                               |
+| ------ | ------------------------------------------------ | ----------------------------------------------------------------------------------------------- | ------ | ---------------- | ----------------------------------------------------------------------------------- |
+| 10.2.1 | In 2h layout: click right pane                   | Right pane gets animated purple border + inner glow; TradingPanel reacts to right pane's symbol | ⬜     | T2 · RTL (P2)    |                                                                                     |
+| 10.2.2 | Click left pane                                  | Purple border moves to left pane (animated)                                                     | ⬜     | T2 · RTL (P2)    |                                                                                     |
+| 10.2.3 | Switch to 4-pane layout; click pane 3            | Pane 3 becomes active; animated left stripe in PaneHeader moves to pane 3                       | ⬜     | T2 · RTL (P2)    |                                                                                     |
+| 10.2.4 | Switch to a smaller layout while active pane = 3 | `activePane` clamps to `paneCount − 1`; no crash                                                | ⬜     | T1 · Vitest (P2) | `layoutStore.setLayout()` clamping logic is pure store logic — no rendering needed. |
 
 ---
 
 ## Section 10.3 — Multi-Chart Layout: Per-pane symbol + interval
 
-| #      | Action                                                             | Expected                                                              | Status | Tier     | Notes |
-| ------ | ------------------------------------------------------------------ | --------------------------------------------------------------------- | ------ | -------- | ----- |
-| 10.3.1 | In 2h layout: open PaneHeader symbol picker for pane 0; select ETH | Pane 0 switches to ETH; pane 1 stays on BTC; each shows correct price | ⬜     | T2 · RTL |       |
-| 10.3.2 | Use interval buttons in PaneHeader for pane 1: click 5m            | Pane 1 fetches 5m bars; pane 0 stays on its interval                  | ⬜     | T2 · RTL |       |
-| 10.3.3 | Use SymbolBar to change active pane symbol                         | Only the active pane updates                                          | ⬜     | T2 · RTL |       |
+| #      | Action                                                             | Expected                                                              | Status | Tier          | Notes |
+| ------ | ------------------------------------------------------------------ | --------------------------------------------------------------------- | ------ | ------------- | ----- |
+| 10.3.1 | In 2h layout: open PaneHeader symbol picker for pane 0; select ETH | Pane 0 switches to ETH; pane 1 stays on BTC; each shows correct price | ⬜     | T2 · RTL (P2) |       |
+| 10.3.2 | Use interval buttons in PaneHeader for pane 1: click 5m            | Pane 1 fetches 5m bars; pane 0 stays on its interval                  | ⬜     | T2 · RTL (P2) |       |
+| 10.3.3 | Use SymbolBar to change active pane symbol                         | Only the active pane updates                                          | ⬜     | T2 · RTL (P2) |       |
 
 ---
 
 ## Section 10.4 — Multi-Chart Layout: Sync options
 
-| #      | Action                                                          | Expected                                                                                                        | Status | Tier            | Notes                                                                                               |
-| ------ | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------ | --------------- | --------------------------------------------------------------------------------------------------- |
-| 10.4.1 | Enable **Sync Symbol** toggle (in ChartLayoutPicker)            | All panes immediately snap to the active pane's symbol                                                          | ⬜     | T1 · Vitest     | Snap-on-enable logic lives in `layoutStore.toggleSync('symbol')` — pure store, no rendering needed. |
-| 10.4.2 | Disable **Sync Symbol**; change pane 0 symbol                   | Other panes remain on their current symbols                                                                     | ⬜     | T1 · Vitest     |                                                                                                     |
-| 10.4.3 | Enable **Sync Interval** toggle                                 | All panes immediately snap to the active pane's interval                                                        | ⬜     | T1 · Vitest     |                                                                                                     |
-| 10.4.4 | Enable **Sync Crosshair**; hover over pane 0 chart              | Crosshair line appears on all other panes at the same time position; Y position maps to each pane's price scale | ⬜     | T3 · Playwright | Requires real chart canvas + mouse hover events — cannot be tested in jsdom.                        |
-| 10.4.5 | Move cursor off chart (pane 0 loses cursor)                     | Crosshair clears from all follower panes                                                                        | ⬜     | T3 · Playwright |                                                                                                     |
-| 10.4.6 | Enable **Sync Time Range**; pan or zoom pane 0                  | All other panes adjust visible range to match                                                                   | ⬜     | T3 · Playwright |                                                                                                     |
-| 10.4.7 | Enable Sync Time Range while panes are at different zoom levels | All panes snap to active pane's visible range immediately on toggle-on                                          | ⬜     | T3 · Playwright |                                                                                                     |
-| 10.4.8 | Sync options persist after browser refresh                      | Toggle states restored from `cd-layout` localStorage                                                            | ⬜     | T1 · Vitest     | `layoutStore` persist/hydrate via jsdom localStorage.                                               |
+| #      | Action                                                          | Expected                                                                                                        | Status | Tier             | Notes                                                                                               |
+| ------ | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------ | ---------------- | --------------------------------------------------------------------------------------------------- |
+| 10.4.1 | Enable **Sync Symbol** toggle (in ChartLayoutPicker)            | All panes immediately snap to the active pane's symbol                                                          | ⬜     | T1 · Vitest (P2) | Snap-on-enable logic lives in `layoutStore.toggleSync('symbol')` — pure store, no rendering needed. |
+| 10.4.2 | Disable **Sync Symbol**; change pane 0 symbol                   | Other panes remain on their current symbols                                                                     | ⬜     | T1 · Vitest (P2) |                                                                                                     |
+| 10.4.3 | Enable **Sync Interval** toggle                                 | All panes immediately snap to the active pane's interval                                                        | ⬜     | T1 · Vitest (P2) |                                                                                                     |
+| 10.4.4 | Enable **Sync Crosshair**; hover over pane 0 chart              | Crosshair line appears on all other panes at the same time position; Y position maps to each pane's price scale | ⬜     | T3 (P2)          | Requires real chart canvas + mouse hover events — cannot be tested in jsdom.                        |
+| 10.4.5 | Move cursor off chart (pane 0 loses cursor)                     | Crosshair clears from all follower panes                                                                        | ⬜     | T3 (P2)          |                                                                                                     |
+| 10.4.6 | Enable **Sync Time Range**; pan or zoom pane 0                  | All other panes adjust visible range to match                                                                   | ⬜     | T3 (P2)          |                                                                                                     |
+| 10.4.7 | Enable Sync Time Range while panes are at different zoom levels | All panes snap to active pane's visible range immediately on toggle-on                                          | ⬜     | T3 (P2)          |                                                                                                     |
+| 10.4.8 | Sync options persist after browser refresh                      | Toggle states restored from `cd-layout` localStorage                                                            | ⬜     | T1 · Vitest (P2) | `layoutStore` persist/hydrate via jsdom localStorage.                                               |
 
 ---
 
 ## Section 10.5 — Multi-Chart Layout: PaneHeader visual elements
 
-| #      | Action                                 | Expected                                                                                  | Status | Tier            | Notes                                                                       |
-| ------ | -------------------------------------- | ----------------------------------------------------------------------------------------- | ------ | --------------- | --------------------------------------------------------------------------- |
-| 10.5.1 | Multi-pane mode: each PaneHeader shows | Symbol name, interval buttons (1m/5m/15m/1h/4h/1d), live price, ±% change badge, 5 px dot | ⬜     | T3 · Playwright | Live price + change badge require WS feed. Structure-only assertable at T2. |
-| 10.5.2 | Connection dot state                   | Green pulse when connected; grey/off when disconnected                                    | ⬜     | T3 · Playwright | WS connected/disconnected state requires real network.                      |
-| 10.5.3 | Single-pane mode (`1` layout)          | PaneHeader is **hidden** (not rendered)                                                   | ⬜     | T2 · RTL        | Asserting PaneHeader absent from DOM when `layout === '1'`.                 |
+| #      | Action                                 | Expected                                                                                  | Status | Tier          | Notes                                                                       |
+| ------ | -------------------------------------- | ----------------------------------------------------------------------------------------- | ------ | ------------- | --------------------------------------------------------------------------- |
+| 10.5.1 | Multi-pane mode: each PaneHeader shows | Symbol name, interval buttons (1m/5m/15m/1h/4h/1d), live price, ±% change badge, 5 px dot | ⬜     | T3 (P2)       | Live price + change badge require WS feed. Structure-only assertable at T2. |
+| 10.5.2 | Connection dot state                   | Green pulse when connected; grey/off when disconnected                                    | ⬜     | T3 (P2)       | WS connected/disconnected state requires real network.                      |
+| 10.5.3 | Single-pane mode (`1` layout)          | PaneHeader is **hidden** (not rendered)                                                   | ⬜     | T2 · RTL (P2) | Asserting PaneHeader absent from DOM when `layout === '1'`.                 |
 
 ---
 
@@ -488,16 +703,16 @@
 > `setLastKnownPrice` / `getLastKnownPrice` in `paneStore.ts`. Positions have no category until BP-2,
 > so readers default to spot — seed `spot:` keys in these tests.
 
-| #    | Action                                                                     | Expected                                                                                            | Status | Tier        | Notes                                                                                        |
-| ---- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ------ | ----------- | -------------------------------------------------------------------------------------------- |
-| 11.1 | In 2h layout: set pane 0 = BTCUSDT, pane 1 = ETHUSDT. Set pane 0 as active | TradingPanel shows BTCUSDT                                                                          | ⬜     | T1 · Vitest |                                                                                              |
-| 11.2 | Place a market Buy $100 on BTCUSDT (active pane)                           | BTCUSDT position appears in Positions tab                                                           | ⬜     | T1 · Vitest |                                                                                              |
-| 11.3 | Switch active pane to pane 1 (ETHUSDT). Place a market Buy $100 on ETHUSDT | ETHUSDT position appears; Positions tab now shows 2 rows                                            | ⬜     | T1 · Vitest |                                                                                              |
-| 11.4 | Switch active pane back to pane 0 (BTCUSDT)                                | Both positions still visible; ETHUSDT row shows a valid mark price (not $0 or stale)                | ⬜     | T1 · Vitest | Seed `lastKnownPrices` map in paneStore and assert PnL helper uses it for non-active symbol. |
-| 11.5 | Watch ETHUSDT PnL while BTCUSDT is the active pane                         | ETHUSDT PnL updates live (from `lastKnownPrices`, not the active pane price)                        | ⬜     | T1 · Vitest |                                                                                              |
-| 11.6 | Switch to single-pane layout (`1`) showing only BTCUSDT                    | ETHUSDT position mark price still updates (pane WS closes but `lastKnownPrices` retains last value) | ⬜     | T1 · Vitest |                                                                                              |
-| 11.7 | Account Summary Bar — Unrealized P&L                                       | Reflects the **combined** PnL of BTC + ETH positions, not just the active pane's position           | ⬜     | T1 · Vitest |                                                                                              |
-| 11.8 | Close ETHUSDT position manually while BTCUSDT is active                    | ETHUSDT position closes; History tab shows the correct exit price and PnL                           | ⬜     | T1 · Vitest |                                                                                              |
+| #    | Action                                                                     | Expected                                                                                            | Status | Tier             | Notes                                                                                        |
+| ---- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ------ | ---------------- | -------------------------------------------------------------------------------------------- |
+| 11.1 | In 2h layout: set pane 0 = BTCUSDT, pane 1 = ETHUSDT. Set pane 0 as active | TradingPanel shows BTCUSDT                                                                          | ⬜     | T1 · Vitest (P2) |                                                                                              |
+| 11.2 | Place a market Buy $100 on BTCUSDT (active pane)                           | BTCUSDT position appears in Positions tab                                                           | ⬜     | T1 · Vitest (P2) |                                                                                              |
+| 11.3 | Switch active pane to pane 1 (ETHUSDT). Place a market Buy $100 on ETHUSDT | ETHUSDT position appears; Positions tab now shows 2 rows                                            | ⬜     | T1 · Vitest (P2) |                                                                                              |
+| 11.4 | Switch active pane back to pane 0 (BTCUSDT)                                | Both positions still visible; ETHUSDT row shows a valid mark price (not $0 or stale)                | ⬜     | T1 · Vitest (P2) | Seed `lastKnownPrices` map in paneStore and assert PnL helper uses it for non-active symbol. |
+| 11.5 | Watch ETHUSDT PnL while BTCUSDT is the active pane                         | ETHUSDT PnL updates live (from `lastKnownPrices`, not the active pane price)                        | ⬜     | T1 · Vitest (P2) |                                                                                              |
+| 11.6 | Switch to single-pane layout (`1`) showing only BTCUSDT                    | ETHUSDT position mark price still updates (pane WS closes but `lastKnownPrices` retains last value) | ⬜     | T1 · Vitest (P2) |                                                                                              |
+| 11.7 | Account Summary Bar — Unrealized P&L                                       | Reflects the **combined** PnL of BTC + ETH positions, not just the active pane's position           | ⬜     | T1 · Vitest (P2) |                                                                                              |
+| 11.8 | Close ETHUSDT position manually while BTCUSDT is active                    | ETHUSDT position closes; History tab shows the correct exit price and PnL                           | ⬜     | T1 · Vitest (P2) |                                                                                              |
 
 ---
 
@@ -508,38 +723,39 @@
 > visible app must behave exactly as before, **except** that spot bid/ask now arrive (F2).
 > Linear checks go against the API/WS directly (curl / `wscat`) or by setting a pane's category in the
 > store (`useLayoutStore.getState().setPaneCategory(0, 'linear')` in the devtools console).
-> Reference values: `docs/APP_LOG.md` Bybit Parity reference values.
+> Reference values: `docs/APP_LOG.md` Bybit Parity reference values. **Since BP-2** the market switch exists, so the
+> devtools route in 12.2.5 is superseded.
 
 ### 12.1 Spot feed (default)
 
-| #      | Action                                                                   | Expected                                                                                                    | Status | Tier            | Notes                                                                                                                                              |
-| ------ | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- | ------ | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 12.1.1 | Open dashboard, BTCUSDT 1m                                               | Spread badge shows a number, not `—`; Sell = best bid, Buy = best ask (differ by one tick most of the time) | ⬜     | T3 · Playwright | Feed verified 2026-09-26 on the WS (badge not yet checked in a browser): spot tickers carry `bid`/`ask` from `orderbook.1` (e.g. 83969.9 / 83970). |
-| 12.1.2 | Compare last 1m candle close with Bybit **Spot** BTCUSDT chart           | Closes match exactly; no step where history meets live bars                                                 | ⬜     | T3 · Playwright | History is spot-only now — no linear fallback (F1).                                                                                                |
-| 12.1.3 | Reload in a quiet market (no price change for a few seconds)             | Bid/ask appear immediately after connect, not only after the next price change                              | ⬜     | T3 · Playwright | Server sends its cached quote on connect; cache is cleared when the Bybit stream disconnects.                                                      |
-| 12.1.4 | Returning user: load the app with a `cd-layout` v3 entry in localStorage | Layout, symbols, intervals, chart types unchanged; every pane has `category: 'spot'`                        | ✅     | T1 · Vitest     | `layoutStore.test.ts` "v3 → v4 migration". The D7 move of existing layouts to linear ships with BP-2.                                              |
-| 12.1.5 | Tamper `cd-layout` → set a pane's `category` to `"inverse"`, reload      | App loads; that pane falls back to `spot`                                                                   | ✅     | T1 · Vitest     | `merge` validation — category ends up in a server request.                                                                                         |
+| #      | Action                                                                   | Expected                                                                                                    | Status | Tier        | Notes                                                                                                                                              |
+| ------ | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- | ------ | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 12.1.1 | Open dashboard, BTCUSDT 1m                                               | Spread badge shows a number, not `—`; Sell = best bid, Buy = best ask (differ by one tick most of the time) | ⬜     | T3 (P2)     | Feed verified 2026-09-26 on the WS (badge not yet checked in a browser): spot tickers carry `bid`/`ask` from `orderbook.1` (e.g. 83969.9 / 83970). |
+| 12.1.2 | Compare last 1m candle close with Bybit **Spot** BTCUSDT chart           | Closes match exactly; no step where history meets live bars                                                 | ⬜     | T3 (P2)     | History is spot-only now — no linear fallback (F1).                                                                                                |
+| 12.1.3 | Reload in a quiet market (no price change for a few seconds)             | Bid/ask appear immediately after connect, not only after the next price change                              | ⬜     | T3 (P2)     | Server sends its cached quote on connect; cache is cleared when the Bybit stream disconnects.                                                      |
+| 12.1.4 | Returning user: load the app with a `cd-layout` v3 entry in localStorage | Layout, symbols, intervals, chart types unchanged; every pane has `category: 'spot'`                        | ✅     | T1 · Vitest | `layoutStore.test.ts` "v3 → v4 migration". The D7 move of existing layouts to linear ships with BP-2.                                              |
+| 12.1.5 | Tamper `cd-layout` → set a pane's `category` to `"inverse"`, reload      | App loads; that pane falls back to `spot`                                                                   | ✅     | T1 · Vitest | `merge` validation — category ends up in a server request.                                                                                         |
 
 ### 12.2 USDT Perpetual feed (API / store level)
 
-| #      | Action                                                               | Expected                                                                                                                                                | Status | Tier            | Notes                                                                                            |
-| ------ | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | --------------- | ------------------------------------------------------------------------------------------------ |
-| 12.2.1 | `GET /api/market/candles?category=linear&symbol=BTCUSDT&interval=1m` | 200, `category: "linear"`; closes match Bybit's **Perpetual** BTCUSDT chart (a few $ to tens of $ off spot)                                             | ✅     | T1 · Vitest     | Verified live 2026-09-26: linear 83929.4 vs spot 83970 on the same minute.                       |
-| 12.2.2 | `GET /api/market/candles?category=inverse`                           | 400 `{ error }`, no upstream call                                                                                                                       | ✅     | T1 · Vitest     |                                                                                                  |
-| 12.2.3 | WS `/api/market/ws?category=linear&symbol=BTCUSDT&interval=1m`       | Snapshot bars tagged `linear`; `ticker` messages carry `bid`, `ask`, `markPrice`, `indexPrice`, `fundingRate`, `nextFundingTime`, `fundingIntervalHour` | ✅     | T3 · Playwright | Verified live with a WS probe 2026-09-26.                                                        |
-| 12.2.4 | WS with `category=inverse`                                           | Socket closed with code 1008                                                                                                                            | ✅     | T1 · Vitest     |                                                                                                  |
-| 12.2.5 | Set pane 0 to linear in devtools (`setPaneCategory(0, 'linear')`)    | Chart reloads with perp candles; spread badge shows perp bid/ask; paneStore `markPrice`/`fundingRate` populated                                         | ⬜     | T3 · Playwright | Store-only until BP-2 adds the switch. With symbol sync on, every pane switches market together. |
-| 12.2.6 | Positions tab while pane 0 is linear                                 | ⚠️ Known BP-0 gap: open positions still price from spot `lastKnownPrices`, but the live pane price is perp                                              | ⬜     | —               | Positions get a category in BP-2; not reachable without devtools in BP-0.                        |
+| #      | Action                                                               | Expected                                                                                                                                                | Status | Tier            | Notes                                                                                                          |
+| ------ | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | --------------- | -------------------------------------------------------------------------------------------------------------- |
+| 12.2.1 | `GET /api/market/candles?category=linear&symbol=BTCUSDT&interval=1m` | 200, `category: "linear"`; closes match Bybit's **Perpetual** BTCUSDT chart (a few $ to tens of $ off spot)                                             | ✅     | T1 · Vitest     | Verified live 2026-09-26: linear 83929.4 vs spot 83970 on the same minute.                                     |
+| 12.2.2 | `GET /api/market/candles?category=inverse`                           | 400 `{ error }`, no upstream call                                                                                                                       | ✅     | T1 · Vitest     |                                                                                                                |
+| 12.2.3 | WS `/api/market/ws?category=linear&symbol=BTCUSDT&interval=1m`       | Snapshot bars tagged `linear`; `ticker` messages carry `bid`, `ask`, `markPrice`, `indexPrice`, `fundingRate`, `nextFundingTime`, `fundingIntervalHour` | ✅     | T3 · Playwright | Verified live with a WS probe 2026-09-26.                                                                      |
+| 12.2.4 | WS with `category=inverse`                                           | Socket closed with code 1008                                                                                                                            | ✅     | T1 · Vitest     |                                                                                                                |
+| 12.2.5 | Set pane 0 to linear in devtools (`setPaneCategory(0, 'linear')`)    | Chart reloads with perp candles; spread badge shows perp bid/ask; paneStore `markPrice`/`fundingRate` populated                                         | ➖     | —               | Superseded by the BP-2 market switch (Section 14.1); positions price by `category:symbol`, at mark since BP-3. |
+| 12.2.6 | Positions tab while pane 0 is linear                                 | ⚠️ Known BP-0 gap: open positions still price from spot `lastKnownPrices`, but the live pane price is perp                                              | ➖     | —               | Superseded by the BP-2 market switch (Section 14.1); positions price by `category:symbol`, at mark since BP-3. |
 
 ### 12.3 Instrument rules & risk limits
 
-| #      | Action                                                   | Expected                                                                                                                   | Status | Tier        | Notes                                                                                    |
-| ------ | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------ | ----------- | ---------------------------------------------------------------------------------------- |
-| 12.3.1 | `GET /api/market/instruments?category=spot`              | 9 instruments; BTCUSDT `tickSize 0.1`, `qtyStep 0.000001`, `minOrderQty 0.000001`, `minNotional 5`, `maxLeverage null`     | ✅     | T1 · Vitest | Values checked live 2026-09-26. Cached 6 h server-side.                                  |
-| 12.3.2 | `GET /api/market/instruments?category=linear`            | BTCUSDT `tickSize 0.1`, `qtyStep 0.001`, `minOrderQty 0.001`, `minNotional 5`, `maxLeverage 150`, `fundingIntervalMin 480` | ✅     | T1 · Vitest | Not yet used by the order form (lot/tick rounding moves to these in BP-2, F9).           |
-| 12.3.3 | `GET /api/market/risk-limit?symbol=BTCUSDT`              | Tiers lowest first; tier 1 `maintenanceMarginRate 0.0033`, `mmDeduction 0`                                                 | ✅     | T1 · Vitest | Live tier-1 MMR is 0.33%, not the 0.5% the parity plan §2 quoted — re-check before BP-3. |
-| 12.3.4 | `GET /api/market/risk-limit?symbol=PEPEUSDT` / no symbol | 400, no upstream call                                                                                                      | ✅     | T1 · Vitest |                                                                                          |
-| 12.3.5 | Bybit returns an error / rate limit                      | 502 `{ error: 'Failed to fetch market data' }` — no upstream text; a stale cached value is served if one exists            | ✅     | T1 · Vitest | Stale-on-error path is covered by code review, not a dedicated test.                     |
+| #      | Action                                                   | Expected                                                                                                                   | Status | Tier        | Notes                                                                           |
+| ------ | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------ | ----------- | ------------------------------------------------------------------------------- |
+| 12.3.1 | `GET /api/market/instruments?category=spot`              | 9 instruments; BTCUSDT `tickSize 0.1`, `qtyStep 0.000001`, `minOrderQty 0.000001`, `minNotional 5`, `maxLeverage null`     | ✅     | T1 · Vitest | Values checked live 2026-09-26. Cached 6 h server-side.                         |
+| 12.3.2 | `GET /api/market/instruments?category=linear`            | BTCUSDT `tickSize 0.1`, `qtyStep 0.001`, `minOrderQty 0.001`, `minNotional 5`, `maxLeverage 150`, `fundingIntervalMin 480` | ✅     | T1 · Vitest | Not yet used by the order form (lot/tick rounding moves to these in BP-2, F9).  |
+| 12.3.3 | `GET /api/market/risk-limit?symbol=BTCUSDT`              | Tiers lowest first; tier 1 `maintenanceMarginRate 0.0033`, `mmDeduction 0`                                                 | ✅     | T1 · Vitest | Live tier-1 MMR is 0.33% (the plan had quoted 0.5%); `bybitSpec.ts` uses 0.33%. |
+| 12.3.4 | `GET /api/market/risk-limit?symbol=PEPEUSDT` / no symbol | 400, no upstream call                                                                                                      | ✅     | T1 · Vitest |                                                                                 |
+| 12.3.5 | Bybit returns an error / rate limit                      | 502 `{ error: 'Failed to fetch market data' }` — no upstream text; a stale cached value is served if one exists            | ✅     | T1 · Vitest | Stale-on-error path is covered by code review, not a dedicated test.            |
 
 ---
 
@@ -559,24 +775,24 @@
 
 ### 13.2 24/7 execution (F10)
 
-| #      | Action                                                                             | Expected                                                                                            | Status | Tier            | Notes                                                              |
-| ------ | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ------ | --------------- | ------------------------------------------------------------------ |
-| 13.2.1 | Place a limit a few $ past the price, **close the tab**, wait for the fill, reopen | Position open; journal has "Limit order filled — …"; Order History has the filled limit row         | ⬜     | T3 · Playwright | Needs live feed + a running server.                                |
-| 13.2.2 | Open a position with a TP near the price, close the tab, wait, reopen              | Position closed; "Auto-closed … Take-Profit hit at $X" in the journal; balance updated              | ⬜     | T3 · Playwright |                                                                    |
-| 13.2.3 | TP/SL on a symbol **no pane is showing**                                           | Still triggers (the browser only watched symbols open in a pane)                                    | ✅     | T1 · Vitest     | `triggers.test` symbol isolation / `services.test` MatchingEngine. |
-| 13.2.4 | Restart the server with open orders; price crosses during the downtime             | On restart a "Backfilling price gap" log line; the crossed order fills at its trigger, exactly once | ⬜     | T3              | Engine unit: `services.test` "backfills downtime".                 |
+| #      | Action                                                                             | Expected                                                                                            | Status | Tier        | Notes                                                              |
+| ------ | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ------ | ----------- | ------------------------------------------------------------------ |
+| 13.2.1 | Place a limit a few $ past the price, **close the tab**, wait for the fill, reopen | Position open; journal has "Limit order filled — …"; Order History has the filled limit row         | ⬜     | T3 (P2)     | Needs live feed + a running server.                                |
+| 13.2.2 | Open a position with a TP near the price, close the tab, wait, reopen              | Position closed; "Auto-closed … Take-Profit hit at $X" in the journal; balance updated              | ⬜     | T3 (P2)     |                                                                    |
+| 13.2.3 | TP/SL on a symbol **no pane is showing**                                           | Still triggers (the browser only watched symbols open in a pane)                                    | ✅     | T1 · Vitest | `triggers.test` symbol isolation / `services.test` MatchingEngine. |
+| 13.2.4 | Restart the server with open orders; price crosses during the downtime             | On restart a "Backfilling price gap" log line; the crossed order fills at its trigger, exactly once | ⬜     | T3 (P2)     | Engine unit: `services.test` "backfills downtime".                 |
 
 ### 13.3 Sync, sessions, safety fixes
 
-| #      | Action                                                                  | Expected                                                                              | Status | Tier            | Notes                                                                        |
-| ------ | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------ | --------------- | ---------------------------------------------------------------------------- |
-| 13.3.1 | Two tabs open; place / cancel / close in one                            | The other tab updates within ~1 s; each sound plays once per tab                      | ⬜     | T3 · Playwright | WS fan-out unit-tested in `paper.test`.                                      |
-| 13.3.2 | Log out, log in as another user on the same browser                     | Nothing of the first account is shown; `cd-paper-trading` is gone from localStorage   | ✅     | T1 · Vitest     | `usePaperFeed.test` sign-out + `paperStore.test` clear(). Logout leak fixed. |
-| 13.3.3 | Keep the dashboard open for 20+ minutes, then trade                     | Orders still work (access token refreshed ~60 s before expiry; WS re-authenticates)   | ⬜     | T3              | `usePaperFeed.test` re-auth / 4401 refresh.                                  |
-| 13.3.4 | S1 — a triggered order that can't fill                                  | Recorded as rejected ("Order could not be filled."), never silently dropped           | ✅     | T1 · Vitest     | `actions.test` "S1".                                                         |
-| 13.3.5 | S2 — place a limit at 1×, change leverage to 10×, let it fill           | Position size uses 1× (the order's own leverage)                                      | ✅     | T1 · Vitest     | `actions.test` "S2".                                                         |
-| 13.3.6 | S3 — a limit placed mid-candle after the candle already dipped below it | Does not fill until a tick after placement crosses it                                 | ✅     | T1 · Vitest     | `triggers.test` "S3".                                                        |
-| 13.3.7 | Filled limit / stop in Order History                                    | Row keeps its own type (LIMIT / STOP) — changed from the browser's temporary "MARKET" | ✅     | T1 · Vitest     | `actions.test` 3.1.3.                                                        |
+| #      | Action                                                                  | Expected                                                                              | Status | Tier        | Notes                                                                        |
+| ------ | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------ | ----------- | ---------------------------------------------------------------------------- |
+| 13.3.1 | Two tabs open; place / cancel / close in one                            | The other tab updates within ~1 s; each sound plays once per tab                      | ⬜     | T3 (P2)     | WS fan-out unit-tested in `paper.test`.                                      |
+| 13.3.2 | Log out, log in as another user on the same browser                     | Nothing of the first account is shown; `cd-paper-trading` is gone from localStorage   | ✅     | T1 · Vitest | `usePaperFeed.test` sign-out + `paperStore.test` clear(). Logout leak fixed. |
+| 13.3.3 | Keep the dashboard open for 20+ minutes, then trade                     | Orders still work (access token refreshed ~60 s before expiry; WS re-authenticates)   | ⬜     | T3 (P2)     | `usePaperFeed.test` re-auth / 4401 refresh.                                  |
+| 13.3.4 | S1 — a triggered order that can't fill                                  | Recorded as rejected ("Order could not be filled."), never silently dropped           | ✅     | T1 · Vitest | `actions.test` "S1".                                                         |
+| 13.3.5 | S2 — place a limit at 1×, change leverage to 10×, let it fill           | Position size uses 1× (the order's own leverage)                                      | ✅     | T1 · Vitest | `actions.test` "S2".                                                         |
+| 13.3.6 | S3 — a limit placed mid-candle after the candle already dipped below it | Does not fill until a tick after placement crosses it                                 | ✅     | T1 · Vitest | `triggers.test` "S3".                                                        |
+| 13.3.7 | Filled limit / stop in Order History                                    | Row keeps its own type (LIMIT / STOP) — changed from the browser's temporary "MARKET" | ✅     | T1 · Vitest | `actions.test` 3.1.3.                                                        |
 
 ---
 
@@ -599,7 +815,7 @@
 | 14.1.7  | Switch symbol or market                                      | The page does not reload: charts, feeds and the form stay mounted                                               | ✅     | T1       | `marketRoutes.test` routeKey.                 |
 | 14.1.8  | Logged out, open `/dashboard/usdt/ETHUSDT` → sign in         | Lands on `/dashboard/usdt/ETHUSDT`; a foreign `from` (`//evil.example`, `/admin/…`) lands on `/dashboard`       | ✅     | T2 · RTL | `LoginPage.returnTo.test` 🔐.                 |
 | 14.1.9  | In-panel **Spot \| USDT Perpetual** tabs                     | Same effect as the header menu; the SymbolBar and pane headers show "Spot" / "Perpetual" under / after the pair | ✅     | T2 · RTL | `TradingPanel.test` "market tabs".            |
-| 14.1.10 | Public `/chart`                                              | Trade menu works but the URL stays `/chart`                                                                     | ⬜     | Manual   |                                               |
+| 14.1.10 | Public `/chart`                                              | Trade menu works but the URL stays `/chart`                                                                     | ⬜     | T3 (P2)  |                                               |
 
 ### 14.2 USDT Perpetual fees (VIP-0 taker 0.055% / maker 0.02%)
 
@@ -650,7 +866,7 @@
 | 14.6.4  | Spot tabs                                         | Market and Limit only; no leverage chip; a sell has no TP / SL                                       | ✅     | T2 · RTL    | `TradingPanel.test`.                    |
 | 14.6.5  | Limit buy 0.1 @ 49,000 / limit sell 0.05 @ 52,000 | Buy reserves 4,900 USDT; sell locks 0.05 BTC, fills +2,597.40                                        | ✅     | T1 · Vitest | `spot.test`.                            |
 | 14.6.6  | Buy with TP + SL                                  | Two conditional sells (one OCO pair) lock what the buy received; the first to fire cancels the other | ✅     | T1 · Vitest | `spot.test`. Live ✓ (legs placed).      |
-| 14.6.7  | Assets tab → TP/SL on a coin held                 | Locks the chosen quantity behind the pair                                                            | ✅     | T1 + T2     | `spot.test`; modal manual ⬜.           |
+| 14.6.7  | Assets tab → TP/SL on a coin held                 | Locks the chosen quantity behind the pair                                                            | ✅     | T1 + T2     | `spot.test`; modal → T2 (P2).           |
 | 14.6.8  | Assets tab                                        | USDT row + each coin: balance / available / locked / avg cost / last / value / uPnL with +/−         | ✅     | T2 · RTL    | `OrderAccountManagementPanel.test`.     |
 | 14.6.9  | Assets → Sell                                     | Pane switches to that coin on Spot; the form is prefilled with the free quantity as a sell           | ✅     | T2 · RTL    |                                         |
 | 14.6.10 | On Spot, the bottom tabs                          | Assets replaces Positions; Orders / Order History show Spot rows only                                | ✅     | T2 · RTL    |                                         |
@@ -662,7 +878,7 @@
 | 14.7.1 | Migrate a DB with pre-BP-2 rows                                          | Positions / orders / trades become `linear`; position leverage = qty × entry / margin; entry fee 0.07% of margin; PENDING reserved = margin × 1.0007; FILLED rows carry feeRate 0.0007 | ✅     | Manual      | Run on a scratch DB, 2026-09-26. |
 | 14.7.2 | Pre-BP-2 user (saved layout) opens `/dashboard` with perpetual positions | Lands once on USDT Perpetual at the newest position's symbol; never again                                                                                                              | ✅     | T2 · RTL    | `useMarketUrlSync.test`.         |
 | 14.7.3 | New user                                                                 | Starts on Spot                                                                                                                                                                         | ✅     | T1 · Vitest | `layoutStore.test`.              |
-| 14.7.4 | Old client (sends `usdtAmount`, no market)                               | Still trades USDT Perpetual (margin at the symbol's leverage)                                                                                                                          | ✅     | T1 · Vitest | `paper.test`. Live ✓.            |
+| 14.7.4 | Old client (sends `usdtAmount`, no market)                               | Still trades USDT Perpetual (margin at the symbol's leverage)                                                                                                                          | ✅     | T1 · Vitest | `paper.test`; goes with O11.     |
 | 14.7.5 | Private WS                                                               | Pushes live prices (≤ 1/s, changed only) of the markets the account holds                                                                                                              | ✅     | T1 · Vitest | `paper.test`. Live ✓.            |
 
 ---
@@ -703,17 +919,17 @@
 
 ### 15.4 Liquidation in the engine
 
-| #      | Action                                                    | Expected                                                                                                                                             | Status | Tier        | Notes                                |
-| ------ | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ----------- | ------------------------------------ |
-| 15.4.1 | Mark reaches the liquidation price                        | Whole position closes at the bankruptcy price; balance unchanged (margin lost); realized −(IM + fee to close) − open fee                             | ✅     | T1 · Vitest | `liquidation.test`.                  |
-| 15.4.2 | Records                                                   | Trade `execType BustTrade`; close order `createType CreateByLiq` ("Liquidation" in Order History); TP / SL cancelled; journal + Balance History line | ✅     | T1 + T2     |                                      |
-| 15.4.3 | Active orders on the symbol                               | Cancelled and refunded first; other symbols untouched                                                                                                | ✅     | T1 · Vitest | `liquidation.test`.                  |
-| 15.4.4 | Position with no TP / SL                                  | Still watched by the engine (indexed) and liquidated on the mark tick                                                                                | ✅     | T1 · Vitest | `services.test` MatchingEngine.      |
-| 15.4.5 | Stale mark (> 10 s) or mark moved back                    | Never liquidates                                                                                                                                     | ✅     | T1 · Vitest | `services.test` runTrigger.          |
-| 15.4.6 | Server gap                                                | Backfill replays mark-price klines; within one minute a stop-loss wins over liquidation                                                              | ✅     | T1 · Vitest | `liquidation.test`, `services.test`. |
-| 15.4.7 | Liquidation sound                                         | Distinct from the loss sound; listed in Sound Settings                                                                                               | ✅     | T2 · RTL    | `usePaperFeed.test`.                 |
-| 15.4.8 | Notices                                                   | One-time "Positions can now be liquidated" banner (+ "How liquidation works"); a liquidation notice until dismissed                                  | ✅     | T2 · RTL    | `TradingPanel.test` BP-3.            |
-| 15.4.9 | Deploy with a position already past its liquidation price | Liquidated on the first mark tick (no grace period, as on Bybit)                                                                                     | ⬜     | Manual      | Watch on the first deploy.           |
+| #      | Action                                                    | Expected                                                                                                                                             | Status | Tier        | Notes                                                        |
+| ------ | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ----------- | ------------------------------------------------------------ |
+| 15.4.1 | Mark reaches the liquidation price                        | Whole position closes at the bankruptcy price; balance unchanged (margin lost); realized −(IM + fee to close) − open fee                             | ✅     | T1 · Vitest | `liquidation.test`.                                          |
+| 15.4.2 | Records                                                   | Trade `execType BustTrade`; close order `createType CreateByLiq` ("Liquidation" in Order History); TP / SL cancelled; journal + Balance History line | ✅     | T1 + T2     |                                                              |
+| 15.4.3 | Active orders on the symbol                               | Cancelled and refunded first; other symbols untouched                                                                                                | ✅     | T1 · Vitest | `liquidation.test`.                                          |
+| 15.4.4 | Position with no TP / SL                                  | Still watched by the engine (indexed) and liquidated on the mark tick                                                                                | ✅     | T1 · Vitest | `services.test` MatchingEngine.                              |
+| 15.4.5 | Stale mark (> 10 s) or mark moved back                    | Never liquidates                                                                                                                                     | ✅     | T1 · Vitest | `services.test` runTrigger.                                  |
+| 15.4.6 | Server gap                                                | Backfill replays mark-price klines; within one minute a stop-loss wins over liquidation                                                              | ✅     | T1 · Vitest | `liquidation.test`, `services.test`.                         |
+| 15.4.7 | Liquidation sound                                         | Distinct from the loss sound; listed in Sound Settings                                                                                               | ✅     | T2 · RTL    | `usePaperFeed.test`.                                         |
+| 15.4.8 | Notices                                                   | One-time "Positions can now be liquidated" banner (+ "How liquidation works"); a liquidation notice until dismissed                                  | ✅     | T2 · RTL    | `TradingPanel.test` BP-3.                                    |
+| 15.4.9 | Deploy with a position already past its liquidation price | Liquidated on the first mark tick (no grace period, as on Bybit)                                                                                     | ✅     | M           | Checked at the BP-3 deploy, 2026-09-27 (APP_LOG BP-3 entry). |
 
 ### 15.5 Re-margining (leverage change with a position open)
 
@@ -727,14 +943,14 @@
 
 ### 15.6 Chart lines
 
-| #      | Action                                      | Expected                                                                                               | Status | Tier        | Notes                                    |
-| ------ | ------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------ | ----------- | ---------------------------------------- |
-| 15.6.1 | Perp pane with a position and a limit order | Entry (side, qty, live PnL), TP / SL (dashed), Liq. (amber dashed), order + its TP / SL (dotted), Mark | ✅     | T1 · Vitest | `tradeLines.test`, `useTradeLines.test`. |
-| 15.6.2 | Chart type menu → "Mark price line"         | Toggles the mark line (perps only, persisted, default on)                                              | ⬜     | Manual      |                                          |
-| 15.6.3 | Drag a TP line, then Confirm                | Price rounded to the tick; amend sent only after Confirm; Cancel restores the line                     | ✅     | T2 · RTL    | `useTradeLines.test`.                    |
-| 15.6.4 | With a drawing tool active                  | Lines don't take the pointer                                                                           | ✅     | T2 · RTL    |                                          |
-| 15.6.5 | Spot TP / SL leg                            | Drawn but not draggable (placed or cancelled, never edited)                                            | ✅     | T1 · Vitest |                                          |
-| 15.6.6 | Real chart: drag feel, labels, cursor       | ns-resize cursor on hover; chart doesn't pan while dragging a line                                     | ⬜     | Manual      | Screenshot for the PR.                   |
+| #      | Action                                      | Expected                                                                                               | Status | Tier        | Notes                                                         |
+| ------ | ------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------ | ----------- | ------------------------------------------------------------- |
+| 15.6.1 | Perp pane with a position and a limit order | Entry (side, qty, live PnL), TP / SL (dashed), Liq. (amber dashed), order + its TP / SL (dotted), Mark | ✅     | T1 · Vitest | `tradeLines.test`, `useTradeLines.test`.                      |
+| 15.6.2 | Chart type menu → "Mark price line"         | Toggles the mark line (perps only, persisted, default on)                                              | ⬜     | T3 (P2)     |                                                               |
+| 15.6.3 | Drag a TP line, then Confirm                | Price rounded to the tick; amend sent only after Confirm; Cancel restores the line                     | ✅     | T2 · RTL    | `useTradeLines.test`.                                         |
+| 15.6.4 | With a drawing tool active                  | Lines don't take the pointer                                                                           | ✅     | T2 · RTL    |                                                               |
+| 15.6.5 | Spot TP / SL leg                            | Drawn but not draggable (placed or cancelled, never edited)                                            | ✅     | T1 · Vitest |                                                               |
+| 15.6.6 | Real chart: drag feel, labels, cursor       | ns-resize cursor on hover; chart doesn't pan while dragging a line                                     | ✅     | M           | Checked by hand at BP-3 (APP_LOG BP-3 entry); stays M (feel). |
 
 ---
 
@@ -837,4 +1053,42 @@
 | 17.6.1 | Stalled feed at a funding timestamp         | Settled at the mark candle, not a minutes-old mark    | ✅     | T1 · Vitest | `services.test`.                |
 | 17.6.2 | Closed before its funding settled           | The fee lands on that close's Trade row               | ✅     | T1 · Vitest | repository + engine tests.      |
 | 17.6.3 | Opened and closed while the engine was down | Charged by the backfill (from the closing Trade rows) | ✅     | T1 · Vitest | `services.test`.                |
-| 17.6.4 | Bybit testnet parity run                    | Every compared v5 field matches within 0.01           | ⏳     | Manual      | Needs the owner's testnet keys. |
+| 17.6.4 | Bybit testnet parity run                    | Every compared v5 field matches within 0.01           | ⏳     | T4 (P3)     | Needs the owner's testnet keys. |
+
+---
+
+## Section 18 — Cross-phase regression suite (Bybit Parity integration audit)
+
+> The bugs found when BP-0 … BP-4 were read together (2026-09-27), plus the BP-5 review fixes that crossed phases.
+> Each is pinned by the named test, which failed before its fix. Keep them green; a change here needs a reason.
+
+| #    | Interaction                                                   | Scenario → expected                                                                                                                        | Status | Tier     | Test                                                                                                                                                                     |
+| ---- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 18.1 | Backfill × TP / SL, liquidation, funding (BP-1 × BP-3 / BP-4) | A fill made by the backfill is stamped at its candle, so the gap's later candles still check its TP / SL, liquidation and funding          | ✅     | T1       | `services.test` "should stamp a backfilled fill at its candle…"                                                                                                          |
+| 18.2 | Lease handoff × funding (BP-4)                                | A restart just after a funding timestamp settles it, even if Bybit hadn't listed it at takeover; a timestamp Bybit never lists is skipped  | ✅     | T1       | `services.test` "should settle a timestamp missed across a restart…", "should skip an inferred takeover timestamp…"                                                      |
+| 18.3 | Account deletion × funding (BP-4)                             | A deleted account's settlement is dropped, not retried forever (the lease's progress isn't held back)                                      | ✅     | T1       | `services.test` "should drop a deleted account's settlement…"                                                                                                            |
+| 18.4 | SL beyond liquidation × backfill (BP-3)                       | A minute crossing both a stop-loss set past the liquidation price and the liquidation price liquidates; it never stops out past bankruptcy | ✅     | T1       | `liquidation.test` "should liquidate, not stop out…"                                                                                                                     |
+| 18.5 | Reset × funding (BP-4)                                        | A reset between a timestamp and its settlement: the fresh account is not charged; a reset before it still settles                          | ✅     | T1       | `funding.test` "should not charge a fresh account…", "should still settle when the last reset was before…"; `services.test` "should load the account's last reset time…" |
+| 18.6 | Late funding × closes (BP-4 × BP-5 D / F)                     | A fee settled after closes is split over every close after the timestamp, by quantity                                                      | ✅     | T1       | `services.test` "splits a late funding fee over every close after the timestamp…"                                                                                        |
+| 18.7 | All of the above, on a real database                          | Same scenarios through `AccountRepository` and a migrated Postgres                                                                         | ⬜     | T2i (P1) | —                                                                                                                                                                        |
+
+---
+
+## Section 19 — Account flows (auth and settings)
+
+> Verified end to end in a real browser and in production on 2026-09-27 (releases #148, #150, #155). The first
+> candidates for the T3 smoke set (P2). A wrong password on sign-in, change email / password or delete account logs
+> one 401 in the browser console — deliberate (a failed login is never answered with a 2xx).
+
+| #     | Flow                                     | Expected                                                                                                  | Status | Tier         | Test / notes                                                             |
+| ----- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------ | ------------ | ------------------------------------------------------------------------ |
+| 19.1  | Register with an invalid username (`ab`) | Inline field error; no uncaught ZodError; button doesn't stick on "Creating account…"                     | ✅     | T2 + T3 (P2) | `authFormValidation.test`; live ✓.                                       |
+| 19.2  | Register, then verify the email          | Link works once; a second click / tab gets 400, not 500                                                   | ✅     | T1 + T3 (P2) | `auth.test` verify-email; live ✓.                                        |
+| 19.3  | Signed-out page load                     | `/api/auth/refresh` answers 204, no console error                                                         | ✅     | T1 + T5 (P5) | `auth.test` refresh; prod ✓.                                             |
+| 19.4  | Sign in / sign out / reload              | Session restored on reload; sign-out works even with the network down                                     | ✅     | T1 + T3 (P2) | `auth.test` login / logout; `LoginPage.returnTo.test`.                   |
+| 19.5  | Forgot / reset password                  | Same answer whether or not the email exists; reset revokes every session and clears this browser's cookie | ✅     | T1 + T3 (P2) | `auth.test` forgot-password / reset-password.                            |
+| 19.6  | Settings → change email                  | One verification link, used atomically; one security-alert email                                          | ✅     | T1 + T2      | `auth.test` lifecycle; `VerifyEmailChangePage.test`.                     |
+| 19.7  | Settings → change username / password    | Saved; a password change ends the other sessions                                                          | ✅     | T1 + T3 (P2) | `auth.test` lifecycle.                                                   |
+| 19.8  | Settings → export / delete account       | JSON export downloads; cancel works; "Delete Account Now" removes the user and its paper account          | ✅     | T1 + T3 (P2) | `auth.test` deletion; live ✓.                                            |
+| 19.9  | Rate limits per visitor                  | Limits key on the visitor's IP (`Fly-Client-IP` from Fly's proxy only), not Fly's proxy address           | ✅     | T1           | `clientIp.test`; prod ✓ (real IPs in `fly logs`, forged header ignored). |
+| 19.10 | WebSocket connection logs                | Connect / close lines carry `reqId`, `clientIp`, `userId` (private WS), close code, reason and duration   | ✅     | T1           | `wsLogging.test`; prod ✓.                                                |
