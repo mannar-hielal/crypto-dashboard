@@ -2426,6 +2426,7 @@ export function OrderAccountManagementPanel({
                                 return (
                                   <motion.tr
                                     key={entry.id}
+                                    {...guide('balance-history.row', entry.id)}
                                     custom={i}
                                     variants={rowVariants}
                                     initial="hidden"

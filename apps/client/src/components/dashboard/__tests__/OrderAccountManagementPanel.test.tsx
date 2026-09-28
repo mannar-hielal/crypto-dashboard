@@ -1393,3 +1393,282 @@ describe('Section 8 — Account Settings modal', () => {
     quiet.mockRestore();
   });
 });
+
+// ─── Section 7 — Order History tab (SC-7-2 … SC-7-5) ─────────────────────────
+// The records themselves (what the engine writes for each outcome, SC-7-1) are tested in
+// apps/server/src/trading/engine/__tests__/actions.test.ts "Section 7 — Order History records".
+
+describe('Section 7 — Order History tab', () => {
+  const body = () => document.body;
+  const tab = (key: string) => getByGuide(body(), 'account.tab', key);
+  const badge = (key: string) => queryByGuide(body(), 'account.tab.badge', key);
+  const subtab = (key: string) => getByGuide(body(), 'orders.subtab', key);
+  const count = (key: string) => queryByGuide(body(), 'orders.subtab.count', key)?.textContent;
+  const historyRows = () => body().querySelectorAll('[data-guide="order-history.row"]');
+  const orderRows = () => body().querySelectorAll('[data-guide="orders.row"]');
+
+  const marketFill = (at = FIXTURE_NOW): HistoricalOrder => ({
+    id: 'mkt-1',
+    category: 'linear',
+    symbol: 'BTCUSDT',
+    side: 'buy',
+    type: 'market',
+    qty: 0.002,
+    fillPrice: 50_000,
+    status: 'filled',
+    commission: 0.055,
+    feeRate: 0.00055,
+    feeAsset: 'USDT',
+    isMaker: false,
+    placingTime: at,
+    closingTime: at,
+  });
+  const limitFill: HistoricalOrder = {
+    id: 'lmt-1',
+    category: 'linear',
+    symbol: 'BTCUSDT',
+    side: 'buy',
+    type: 'limit',
+    qty: 0.1,
+    limitPrice: 49_000,
+    fillPrice: 49_000,
+    status: 'filled',
+    commission: 0.98,
+    feeRate: 0.0002,
+    feeAsset: 'USDT',
+    isMaker: true,
+    placingTime: FIXTURE_NOW,
+    closingTime: FIXTURE_NOW,
+  };
+  const stopCancel: HistoricalOrder = {
+    id: 'stp-1',
+    category: 'linear',
+    symbol: 'BTCUSDT',
+    side: 'sell',
+    type: 'stop',
+    qty: 0.002,
+    stopPrice: 40_000,
+    status: 'cancelled',
+    commission: 0,
+    placingTime: FIXTURE_NOW,
+    closingTime: FIXTURE_NOW,
+  };
+  const rejected: HistoricalOrder = {
+    id: 'rej-1',
+    category: 'linear',
+    symbol: 'BTCUSDT',
+    side: 'buy',
+    type: 'market',
+    qty: 0.4,
+    status: 'rejected',
+    commission: 0,
+    rejectionReason: 'Not enough funds to complete the order.',
+    placingTime: FIXTURE_NOW,
+    closingTime: FIXTURE_NOW,
+  };
+
+  /** A colour token as the browser reports an inline colour */
+  const rgb = (hex: string) =>
+    `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ')})`;
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // ── SC-7-2 Sub-tabs and counts ────────────────────────────────────────────
+
+  it('[7.1.2][7.1.3] should count one market fill in All and Filled and leave Cancelled and Rejected empty', () => {
+    seedState({ orders: [marketFill()] });
+    renderPanel();
+    expect(badge('orderhistory')?.textContent).toBe('1');
+    fireEvent.click(tab('orderhistory'));
+    expect(count('all')).toBe('1');
+    expect(count('filled')).toBe('1');
+    expect(count('cancelled')).toBeUndefined();
+    expect(count('rejected')).toBeUndefined();
+    expect(historyRows()).toHaveLength(1);
+    expect(getByGuide(body(), 'order-history.row.type', 'mkt-1').textContent).toBe('Market');
+    expect(getByGuide(body(), 'order-history.row.status', 'mkt-1').textContent).toBe('filled');
+
+    fireEvent.click(subtab('filled'));
+    expect(historyRows()).toHaveLength(1);
+    fireEvent.click(subtab('cancelled'));
+    expect(historyRows()).toHaveLength(0);
+    expect(screen.getByText('No order history')).toBeTruthy();
+    fireEvent.click(subtab('rejected'));
+    expect(historyRows()).toHaveLength(0);
+  });
+
+  it('[7.1.4] should show a market fill on the Orders bench without an Orders badge when it has just filled', () => {
+    seedState({ orders: [marketFill()] });
+    renderPanel();
+    // The top badge counts working orders only
+    expect(badge('orders')).toBeNull();
+    fireEvent.click(tab('orders'));
+    expect(count('all')).toBe('1');
+    expect(count('filled')).toBe('1');
+    expect(count('working')).toBeUndefined();
+    expect(count('inactive')).toBeUndefined();
+    expect(getByGuide(body(), 'orders.row.status', 'mkt-1').textContent).toBe('Filled');
+    fireEvent.click(subtab('working'));
+    expect(orderRows()).toHaveLength(0);
+    fireEvent.click(subtab('inactive'));
+    expect(orderRows()).toHaveLength(0);
+  });
+
+  it('[7.1.4] should drop the row from Orders but keep it in Order History when the 2-minute bench time has passed', () => {
+    vi.useFakeTimers();
+    seedState({ orders: [marketFill(Date.now())] });
+    renderPanel();
+    fireEvent.click(tab('orders'));
+    expect(orderRows()).toHaveLength(1);
+
+    // BENCH_TTL_MS = 120,000; the bench clock ticks every 30 s
+    act(() => vi.advanceTimersByTime(150_000));
+    expect(orderRows()).toHaveLength(0);
+    expect(count('all')).toBeUndefined();
+    expect(count('filled')).toBeUndefined();
+
+    fireEvent.click(tab('orderhistory'));
+    expect(historyRows()).toHaveLength(1);
+    expect(count('filled')).toBe('1');
+  });
+
+  it('[7.2.3] should show a filled limit in both Orders → Filled and Order History → Filled with no Orders badge', () => {
+    seedState({ orders: [limitFill] });
+    renderPanel();
+    expect(badge('orders')).toBeNull();
+    fireEvent.click(tab('orders'));
+    fireEvent.click(subtab('filled'));
+    expect(getByGuide(body(), 'orders.row', 'lmt-1')).toBeTruthy();
+
+    fireEvent.click(tab('orderhistory'));
+    fireEvent.click(subtab('filled'));
+    expect(getByGuide(body(), 'order-history.row.type', 'lmt-1').textContent).toBe('Limit');
+    expect(getByGuide(body(), 'order-history.row.fill-price', 'lmt-1').textContent).toBe('$49,000');
+    expect(getByGuide(body(), 'order-history.row.commission', 'lmt-1').textContent).toBe(
+      '0.9800 USDT0.02% maker'
+    );
+  });
+
+  it('[7.3.2] should raise All to 2 and Cancelled to 1 when a cancelled order joins a fill', () => {
+    seedState({ orders: [marketFill()] });
+    renderPanel();
+    fireEvent.click(tab('orderhistory'));
+    expect(count('all')).toBe('1');
+    act(() => {
+      usePaperStore.setState((s) => ({ orders: [stopCancel, ...s.orders] }));
+    });
+    expect(count('all')).toBe('2');
+    expect(count('cancelled')).toBe('1');
+    expect(badge('orderhistory')?.textContent).toBe('2');
+    fireEvent.click(subtab('cancelled'));
+    expect(historyRows()).toHaveLength(1);
+    expect(getByGuide(body(), 'order-history.row.status', 'stp-1').textContent).toBe('cancelled');
+  });
+
+  // ── SC-7-3 Rejections stay out of trade history ───────────────────────────
+
+  it('[7.4.1][7.4.2] should list a rejection under Rejected with a ⚠ but keep it out of Balance History and Closed P&L', () => {
+    seedState({ orders: [rejected, marketFill()] });
+    usePaperStore.setState({
+      balanceLog: [
+        {
+          id: 'be-open',
+          time: FIXTURE_NOW,
+          balanceBefore: 10_000,
+          balanceAfter: 9_899.945,
+          pnl: 0,
+          action: 'Opened LONG BTCUSDT @ $50,000.00',
+        },
+      ],
+    });
+    renderPanel();
+    fireEvent.click(tab('orderhistory'));
+    expect(count('rejected')).toBe('1');
+    fireEvent.click(subtab('rejected'));
+    expect(historyRows()).toHaveLength(1);
+    const status = getByGuide(body(), 'order-history.row.status', 'rej-1');
+    expect(status.textContent).toBe('Rejected');
+    expect(status.getAttribute('title')).toBe('Not enough funds to complete the order.');
+    expect(status.querySelector('svg')).not.toBeNull(); // the ⚠ icon
+    expect(status.style.color).toBe(rgb(color.red));
+
+    fireEvent.click(tab('balancehistory'));
+    const bh = body().querySelectorAll('[data-guide="balance-history.row"]');
+    expect(bh).toHaveLength(1);
+    expect(bh[0].textContent).toContain('Opened LONG BTCUSDT');
+    expect(screen.queryByText(/reject/i)).toBeNull();
+
+    fireEvent.click(tab('closedpnl'));
+    expect(screen.queryAllByTestId('closed-pnl-row')).toHaveLength(0);
+    expect(screen.getByText('No closed positions yet')).toBeTruthy();
+  });
+
+  // ── SC-7-4 Placing / Closing Time columns ─────────────────────────────────
+
+  it('[7.5.1] should show Placing Time and Closing Time by default and let other columns be turned on', () => {
+    seedState({ orders: [marketFill()] });
+    renderPanel();
+    fireEvent.click(tab('orderhistory'));
+    const headers = () => screen.getAllByRole('columnheader').map((th) => th.textContent);
+    expect(headers()).toEqual(expect.arrayContaining(['Placing Time', 'Closing Time']));
+    expect(headers()).not.toContain('Order ID');
+
+    fireEvent.click(getByGuide(body(), 'account.columns'));
+    fireEvent.click(screen.getByRole('button', { name: 'Order ID' }));
+    expect(headers()).toContain('Order ID');
+  });
+
+  it('[7.5.2] should hide Closing Time, keep it hidden after a reload and bring it back when toggled again', () => {
+    seedState({ orders: [marketFill()] });
+    const { unmount } = renderPanel();
+    fireEvent.click(tab('orderhistory'));
+    const headers = () => screen.getAllByRole('columnheader').map((th) => th.textContent);
+
+    fireEvent.click(getByGuide(body(), 'account.columns'));
+    fireEvent.click(screen.getByRole('button', { name: 'Closing Time' }));
+    expect(headers()).not.toContain('Closing Time');
+    expect(headers()).toContain('Placing Time');
+    const saved = JSON.parse(localStorage.getItem('cd-paper-col-prefs') ?? '{}') as Record<
+      string,
+      string[]
+    >;
+    expect(saved.orderhistory).not.toContain('closingTime');
+
+    // A reload: a fresh mount reads the same localStorage
+    unmount();
+    renderPanel();
+    fireEvent.click(tab('orderhistory'));
+    expect(headers()).not.toContain('Closing Time');
+
+    fireEvent.click(getByGuide(body(), 'account.columns'));
+    fireEvent.click(screen.getByRole('button', { name: 'Closing Time' }));
+    expect(headers()).toContain('Closing Time');
+    // Back in its own place, after Placing Time
+    expect(headers().indexOf('Closing Time')).toBe(headers().indexOf('Placing Time') + 1);
+  });
+
+  // ── SC-7-5 Status colours ─────────────────────────────────────────────────
+
+  it('[7.6.1][7.6.2] should colour Filled green and Cancelled muted when the three kinds of order are listed', () => {
+    seedState({ orders: [stopCancel, limitFill, marketFill()] });
+    renderPanel();
+    fireEvent.click(tab('orderhistory'));
+    expect(
+      [...historyRows()].map((r) => [
+        within(r as HTMLElement).getByText(/^(Market|Limit|Stop)$/).textContent,
+        r.querySelector('[data-guide="order-history.row.status"]')?.textContent,
+      ])
+    ).toEqual([
+      ['Stop', 'cancelled'],
+      ['Limit', 'filled'],
+      ['Market', 'filled'],
+    ]);
+    const colourOf = (id: string) =>
+      getComputedStyle(getByGuide(body(), 'order-history.row.status', id)).color;
+    expect(colourOf('mkt-1')).toBe(rgb(color.green));
+    expect(colourOf('lmt-1')).toBe(rgb(color.green));
+    expect(colourOf('stp-1')).toBe(rgb(color.muted));
+  });
+});
