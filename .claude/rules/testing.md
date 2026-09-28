@@ -22,7 +22,12 @@ correct without depending on real infrastructure, and the suite stays fast and d
   of React. Hooks are expensive to set up in isolation; a pure helper (e.g. `checkTPSL`) needs no
   React/store scaffolding to test. See [`react.md`](./react.md#hooks--effects).
 - Tests never depend on a real database, a real external API, or a real network call. Prisma and
-  any outbound service (e.g. `EmailService`) are always mocked.
+  any outbound service (e.g. `EmailService`) are always mocked. **One exception:** integration
+  tests named `*.int.test.ts` (server, `src/__tests__/int/`) run on a real Postgres through
+  `pnpm --filter @crypto-dashboard/server test:int` (`vitest.int.config.ts`, CI job
+  "Integration (Postgres)"). `pnpm test` and the pre-commit hook exclude them, so they still need
+  no database. They use a throwaway database whose name ends in `_int` / `_test`, migrated with
+  `prisma migrate deploy` (never a reset), and each file clears its own rows.
 - New tests import from `src/`, never from `dist/` or `generated/`.
 - `pnpm test` must pass for the whole suite (server + client), with no skipped tests, before a
   change is considered mergeable.

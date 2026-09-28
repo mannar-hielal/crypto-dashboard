@@ -2867,3 +2867,27 @@ against real Bybit testnet data and reported what differs.
   - Each position check logs Bybit's mark and average price, to settle whether `positionValue` is mark-based.
 - **Still open:** `positionValue`'s basis, O5, the max-reducible formula, the 110090 retCode — see Bybit Parity →
   Open items. The test plan's worked numbers (45,148.99) are updated after the learning-path reorder (#161) lands.
+
+### test: P1a — integration tests on a real Postgres, coverage thresholds in CI (2026-09-28) ✅
+
+**Context:** test plan roadmap P1, first slice. Every server test mocked Prisma, so no migration or repository write
+had ever run against a database outside production.
+
+- **`test:int`** (`apps/server/vitest.int.config.ts`, files `src/__tests__/int/*.int.test.ts`, excluded from
+  `pnpm test`):
+  - global setup runs `prisma migrate deploy` on a throwaway database (🔐 its name must end in `_int` / `_test`;
+    never a destructive reset);
+  - `migrations.int.test.ts`: status up to date, **no drift** (`prisma migrate diff --from-config-datasource
+--to-schema --exit-code`), a table for every model;
+  - `accountRepository.int.test.ts`: every action type (leverage, isolated / cross switch, market with TP on mark /
+    SL on index, limit, reduce-only close-on-trigger stop, add margin, SL edit, funding, spot buy, note, close)
+    through `repo.mutate`; after each, `repo.load` must equal `applyDelta(before, delta)`; the Closed P&L row
+    carries open fee 2.75, close fee 2.805, funding 0.5, closed P&L 93.945.
+  - Proven to fail on purpose: an unmigrated schema column (`[+] Added column`), and a mapper that drops
+    `slTriggerBy`.
+- **CI:** a new job, "Integration (Postgres)", with a `postgres:16-alpine` service. The test step now runs
+  `test:coverage` with thresholds just under today's numbers (server 82% lines, engine 97% lines / 85% branches,
+  client 46% lines) — raised as tests land, never lowered.
+- `.claude/rules/testing.md` carves out `*.int.test.ts` from "tests never depend on a real database".
+- **Next slices:** P1b migration replay from a pre-BP-2 fixture (14.7.1, 15.2.3, 17.5.1); P1c the 18.x regression
+  suite and concurrency races on the real database; P1d the SDK ↔ server contract test.

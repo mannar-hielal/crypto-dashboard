@@ -178,8 +178,11 @@ docker compose down -v     # Stop + wipe data volumes
 
 The test strategy, tools and the case catalogue live in [`docs/TRADING_TEST_PLAN.md`](./docs/TRADING_TEST_PLAN.md).
 
-- **Every PR** (`ci.yml`): audit, type-check, format, lint, unit and component tests, build — the same gates as the
-  pre-commit hook.
+- **Every PR** (`ci.yml`): audit, type-check, format, lint, unit and component tests with coverage thresholds,
+  build — the same gates as the pre-commit hook — plus an **integration job on a real Postgres 16**: migrations
+  from empty, schema drift, and the account repository round-trip. Run it locally against a throwaway database:
+  `TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/crypto_dashboard_int pnpm --filter @crypto-dashboard/server test:int`
+  (the name must end in `_int` or `_test`).
 - **Nightly** (`parity.yml`): the Bybit testnet parity run replays a fixed scenario on Bybit testnet and on the paper
   engine and compares the v5 fields. It runs on a one-off Fly Machine in Singapore (Bybit blocks GitHub's US
   runners) with secrets from the `bybit-testnet` environment, which only `main` can use; a failure opens a `parity`
