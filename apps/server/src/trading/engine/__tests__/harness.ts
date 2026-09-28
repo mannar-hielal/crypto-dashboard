@@ -30,7 +30,6 @@ import {
   placeMarket,
   placePending,
   resetAccount,
-  setLeverage,
   updatePositionExits,
   type AccountState,
   type ActionResult,
@@ -445,8 +444,9 @@ export class PaperHarness {
     this.apply(editNote(this.state, entryId, text));
   }
 
-  setLeverage(value: number): void {
-    this.apply(setLeverage(this.state, value));
+  /** Test fixture: the account's default leverage for symbols without their own setting. */
+  setDefaultLeverage(value: number): void {
+    this.state = { ...this.state, leverage: value };
   }
 
   reset(): void {

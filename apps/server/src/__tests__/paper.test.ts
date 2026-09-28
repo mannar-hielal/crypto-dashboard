@@ -88,7 +88,6 @@ describe('Paper Trading API (BP-1)', () => {
     ['PATCH', '/api/paper/positions/p1/tpsl'],
     ['DELETE', '/api/paper/positions/p1/exits/stop-loss'],
     ['POST', '/api/paper/positions/p1/close'],
-    ['PATCH', '/api/paper/account/leverage'],
     ['PATCH', '/api/paper/symbols/BTCUSDT/leverage'],
     ['POST', '/api/paper/positions/p1/margin'],
     ['POST', '/api/paper/account/margin-mode'],
@@ -114,6 +113,16 @@ describe('Paper Trading API (BP-1)', () => {
     expect(res.statusCode).toBe(404);
   });
 
+  it('the pre-BP-2 account leverage route is gone → 404 (O11)', async () => {
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/api/paper/account/leverage',
+      headers: auth,
+      payload: { leverage: 5 },
+    });
+    expect(res.statusCode).toBe(404);
+  });
+
   // ── GET /state ───────────────────────────────────────────────────────────────
 
   it('GET /state returns the account snapshot of the token user', async () => {
@@ -136,16 +145,16 @@ describe('Paper Trading API (BP-1)', () => {
         symbol: 'BTCUSDT',
         side: 'buy',
         type: 'market',
-        usdtAmount: '100.5',
+        value: '100.5',
         takeProfit: '55000',
       });
       expect(res.statusCode).toBe(200);
       expect(res.json()).toMatchObject({ result: 'pos-1', sound: 'placed' });
       const [calledUser, intent] = place.mock.calls[0];
       expect(calledUser).toBe(userId);
-      // A pre-BP-2 client (no category, usdtAmount = margin): today's leveraged trading
+      // No category: USDT Perpetual
       expect(intent.category).toBe('linear');
-      expect(intent.size).toEqual({ margin: new Decimal('100.5') });
+      expect(intent.size).toEqual({ value: new Decimal('100.5') });
       expect(intent.takeProfit).toEqual(new Decimal('55000'));
       expect(intent).not.toHaveProperty('triggerPrice');
     });
@@ -169,7 +178,7 @@ describe('Paper Trading API (BP-1)', () => {
     it.each([
       [{}, 'no size'],
       [{ qty: '1', value: '100' }, 'two sizes'],
-      [{ qty: '1', usdtAmount: '100' }, 'qty and usdtAmount'],
+      [{ usdtAmount: '100' }, 'pre-BP-2 usdtAmount only (removed, O11)'],
     ])('400 for %o (%s)', async (size) => {
       const res = await post({ symbol: 'BTCUSDT', side: 'buy', type: 'market', ...size });
       expect(res.statusCode).toBe(400);
@@ -258,7 +267,7 @@ describe('Paper Trading API (BP-1)', () => {
         symbol: 'BTCUSDT',
         side: 'buy',
         type: 'market',
-        usdtAmount: '100',
+        value: '100',
         price: '1',
         balance: '1000000',
       });
@@ -272,28 +281,28 @@ describe('Paper Trading API (BP-1)', () => {
       [{ symbol: 'PEPEUSDT' }, 'symbol outside the allowlist'],
       [{ side: 'long' }, 'bad side'],
       [{ type: 'trailing' }, 'bad type'],
-      [{ usdtAmount: '1e5' }, 'exponent notation'],
-      [{ usdtAmount: '-5' }, 'negative amount'],
-      [{ usdtAmount: '1.123456789' }, 'more than 8 decimals'],
-      [{ usdtAmount: 'abc' }, 'not a number'],
+      [{ value: '1e5' }, 'exponent notation'],
+      [{ value: '-5' }, 'negative amount'],
+      [{ value: '1.123456789' }, 'more than 8 decimals'],
+      [{ value: 'abc' }, 'not a number'],
     ])('400 for %o (%s)', async (override) => {
       const res = await post({
         symbol: 'BTCUSDT',
         side: 'buy',
         type: 'market',
-        usdtAmount: '100',
+        value: '100',
         ...override,
       });
       expect(res.statusCode).toBe(400);
     });
 
     it('409 for a zero amount', async () => {
-      const res = await post({ symbol: 'BTCUSDT', side: 'buy', type: 'market', usdtAmount: '0' });
+      const res = await post({ symbol: 'BTCUSDT', side: 'buy', type: 'market', value: '0' });
       expect(res.statusCode).toBe(409);
     });
 
     it('400 for a limit order without triggerPrice', async () => {
-      const res = await post({ symbol: 'BTCUSDT', side: 'buy', type: 'limit', usdtAmount: '100' });
+      const res = await post({ symbol: 'BTCUSDT', side: 'buy', type: 'limit', value: '100' });
       expect(res.statusCode).toBe(400);
     });
 
@@ -303,7 +312,7 @@ describe('Paper Trading API (BP-1)', () => {
         symbol: 'ETHUSDT',
         side: 'sell',
         type: 'limit',
-        usdtAmount: '100',
+        value: '100',
         triggerPrice: '3100.25',
       });
       expect(res.statusCode).toBe(200);
@@ -314,14 +323,14 @@ describe('Paper Trading API (BP-1)', () => {
       vi.spyOn(app.trading, 'placeOrder').mockRejectedValue(
         new TradingError(409, WAITING_FOR_PRICE)
       );
-      const res = await post({ symbol: 'BTCUSDT', side: 'buy', type: 'market', usdtAmount: '100' });
+      const res = await post({ symbol: 'BTCUSDT', side: 'buy', type: 'market', value: '100' });
       expect(res.statusCode).toBe(409);
       expect(res.json()).toEqual({ error: WAITING_FOR_PRICE });
     });
 
     it('🔐 an unexpected error becomes a generic 500 (no internals leak)', async () => {
       vi.spyOn(app.trading, 'placeOrder').mockRejectedValue(new Error('db password is hunter2'));
-      const res = await post({ symbol: 'BTCUSDT', side: 'buy', type: 'market', usdtAmount: '100' });
+      const res = await post({ symbol: 'BTCUSDT', side: 'buy', type: 'market', value: '100' });
       expect(res.statusCode).toBe(500);
       expect(res.json().error).toBe('Internal Server Error');
       expect(res.body).not.toContain('hunter2');
@@ -329,7 +338,7 @@ describe('Paper Trading API (BP-1)', () => {
 
     it('without a live price the real service answers "Waiting for live price…"', async () => {
       // No stub: the test-mode Bybit feed has no tickers
-      const res = await post({ symbol: 'BTCUSDT', side: 'buy', type: 'market', usdtAmount: '100' });
+      const res = await post({ symbol: 'BTCUSDT', side: 'buy', type: 'market', value: '100' });
       expect(res.statusCode).toBe(409);
       expect(res.json()).toEqual({ error: WAITING_FOR_PRICE });
     });
@@ -368,14 +377,14 @@ describe('Paper Trading API (BP-1)', () => {
       method: 'PATCH',
       url: '/api/paper/orders/o-1',
       headers: auth,
-      payload: { triggerPrice: '50000', usdtAmount: '200', takeProfit: null, stopLoss: '48000' },
+      payload: { triggerPrice: '50000', qty: '0.004', takeProfit: null, stopLoss: '48000' },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json().result).toBe('rejected');
     const [, , change] = edit.mock.calls[0];
     expect(change).toEqual({
       triggerPrice: new Decimal('50000'),
-      size: { margin: new Decimal('200') },
+      size: { qty: new Decimal('0.004') },
       takeProfit: null,
       stopLoss: new Decimal('48000'),
     });
@@ -400,7 +409,7 @@ describe('Paper Trading API (BP-1)', () => {
     expect(bad.statusCode).toBe(400);
   });
 
-  it('PATCH /orders/:id accepts a qty size and rejects two sizes', async () => {
+  it('PATCH /orders/:id accepts a qty size; pre-BP-2 usdtAmount is no size (400, O11)', async () => {
     const edit = vi.spyOn(app.trading, 'editOrder').mockResolvedValue(executed('ok' as const));
     const payload = { triggerPrice: '50000', qty: '0.02', takeProfit: null, stopLoss: null };
     const ok = await app.inject({
@@ -411,13 +420,13 @@ describe('Paper Trading API (BP-1)', () => {
     });
     expect(ok.statusCode).toBe(200);
     expect(edit.mock.calls[0][2].size).toEqual({ qty: new Decimal('0.02') });
-    const both = await app.inject({
+    const legacy = await app.inject({
       method: 'PATCH',
       url: '/api/paper/orders/o-1',
       headers: auth,
-      payload: { ...payload, usdtAmount: '100' },
+      payload: { triggerPrice: '50000', usdtAmount: '100', takeProfit: null, stopLoss: null },
     });
-    expect(both.statusCode).toBe(400);
+    expect(legacy.statusCode).toBe(400);
   });
 
   it('DELETE /orders/:id/exits/:leg only accepts take-profit / stop-loss', async () => {
@@ -448,16 +457,6 @@ describe('Paper Trading API (BP-1)', () => {
       headers: auth,
     });
     expect(res.statusCode).toBe(404);
-  });
-
-  it('PATCH /account/leverage validates 1..10', async () => {
-    const res = await app.inject({
-      method: 'PATCH',
-      url: '/api/paper/account/leverage',
-      headers: auth,
-      payload: { leverage: 11 },
-    });
-    expect(res.statusCode).toBe(400);
   });
 
   it("POST /account/margin-mode passes Bybit's mode and answers a refusal as 422 (BP-5 E)", async () => {
