@@ -1672,3 +1672,64 @@ describe('Section 7 — Order History tab', () => {
     expect(colourOf('stp-1')).toBe(rgb(color.muted));
   });
 });
+
+// ─── NEW-4-1 (4.23) — a journal note is plain text (web.md stored-XSS rule) ──
+
+describe('Section 4 — journal notes render as plain text', () => {
+  const PAYLOAD = '<img src=x onerror=alert(1)>';
+  const SCRIPT = '<script>window.__pwned = true</script>';
+
+  beforeEach(() => {
+    useAuthStore.setState({ accessToken: 'test-token' });
+  });
+
+  afterEach(() => {
+    useAuthStore.setState({ accessToken: null });
+  });
+
+  it('[4.23] should show a stored note with HTML in it as literal text when the Journal tab opens', () => {
+    usePaperStore.setState({
+      journal: [
+        { id: 'j-xss', time: FIXTURE_NOW, text: PAYLOAD, isUserNote: true },
+        { id: 'j-script', time: FIXTURE_NOW - 1, text: SCRIPT, isUserNote: true },
+      ] satisfies JournalEntry[],
+    });
+    renderPanel();
+    fireEvent.click(getByGuide(document.body, 'account.tab', 'journal'));
+
+    const entry = getByGuide(document.body, 'journal.entry', 'j-xss');
+    expect(within(entry).getByText(PAYLOAD)).toBeTruthy();
+    expect(within(getByGuide(document.body, 'journal.entry', 'j-script')).getByText(SCRIPT));
+    // No element was created from the note: no <img>, no <script>, nothing ran
+    expect(document.body.querySelector('img')).toBeNull();
+    expect(document.body.querySelector('script')).toBeNull();
+    expect((window as unknown as { __pwned?: boolean }).__pwned).toBeUndefined();
+  });
+
+  it('[4.23] should send a typed note verbatim and show the saved note as literal text when it contains HTML', async () => {
+    usePaperStore.setState({ version: 1 });
+    fakePaperApi.addNote.mockImplementationOnce(async () => ({
+      result: 'j-new',
+      delta: await fakeDelta({
+        journal: [{ id: 'j-new', time: Date.now(), text: PAYLOAD, isUserNote: true }],
+      }),
+    }));
+    renderPanel();
+    fireEvent.click(getByGuide(document.body, 'account.tab', 'journal'));
+    fireEvent.click(getByGuide(document.body, 'journal.add-note'));
+    // Re-query after each event: the framer-motion stub remounts motion.* children on render
+    const noteInput = () => getByGuide(document.body, 'journal.note-input');
+    fireEvent.change(noteInput(), { target: { value: PAYLOAD } });
+    expect((noteInput() as HTMLInputElement).value).toBe(PAYLOAD);
+    fireEvent.keyDown(noteInput(), { key: 'Enter' });
+
+    await waitFor(() =>
+      expect(queryByGuide(document.body, 'journal.entry', 'j-new')).not.toBeNull()
+    );
+    expect(fakePaperApi.addNote).toHaveBeenCalledWith({ text: PAYLOAD }, 'test-token');
+    const entry = getByGuide(document.body, 'journal.entry', 'j-new');
+    expect(within(entry).getByText(PAYLOAD)).toBeTruthy();
+    expect(entry.querySelector('img')).toBeNull();
+    expect(document.body.querySelector('img')).toBeNull();
+  });
+});

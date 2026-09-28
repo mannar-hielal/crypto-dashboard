@@ -555,7 +555,7 @@ Preconditions: signed out; on local dev without `RESEND_API_KEY` the verify link
 
 **Guided trade:** partly — steps 2–4 make a "Create your account" tour; the rest are settings, not trading.
 
-### 8 — Account Settings modal (8.1–8.11)
+### 8 — Account Settings modal (8.1–8.12)
 
 **Scenarios**
 
@@ -754,7 +754,7 @@ Live prices: Sell < Buy, usually one tick apart (BTC tick 0.1); the tooltip valu
 
 ## Stage 2 — Reading your account
 
-### 4 — Panels, persistence, journal, sounds, Orders bench (4.1–4.16, 4.21–4.22)
+### 4 — Panels, persistence, journal, sounds, Orders bench (4.1–4.16, 4.21–4.23)
 
 **Scenarios**
 
@@ -767,7 +767,7 @@ Live prices: Sell < Buy, usually one tick apart (BTC tick 0.1); the tooltip valu
 | SC-4-5 Maximize and restore                           | 4.12, 4.13                | T3            | Checked by hand (tiered T3, never automated)                                                                                                                                                                                                                              | `e2e/panels/maximize.spec.ts` @full: `account.maximize` → the chart area's bounding box height is 0, the panel fills the column, `trade.submit` still visible, button title "Restore panel"; again → heights restored ±2 px                                                             | P2   |
 | SC-4-6 Sounds                                         | 4.14, 4.15, 4.16          | T2 + M        | `usePaperFeed.test` (liquidation sound, 15.4.7)                                                                                                                                                                                                                           | T2 in `apps/client/src/hooks/__tests__/useTradingSound.test.tsx`: spy the play function; an order placed → "Market order placed" / "Pending order queued"; a TP close → "Closed with profit"; muted in `SoundSettings` → no call. Re-tier the rows to **M** for audibility, as A10 says | P2   |
 | SC-4-7 Orders bench TTL                               | 4.21, 4.22                | T2 ✅         | `OrderAccountManagementPanel.test` "OrderAccountManagementPanel Orders filled sub-tab" (`BENCH_TTL_MS`, `SESSION_START`)                                                                                                                                                  | No action                                                                                                                                                                                                                                                                               | —    |
-| NEW-4-1 Journal note is plain text                    | —                         | T2 + T3       | —                                                                                                                                                                                                                                                                         | A note `<img src=x onerror=alert(1)>` renders as that literal text; no `img` element, no dialog (`page.on('dialog')`) — the `web.md` stored-XSS rule                                                                                                                                    | P2   |
+| 4.23 Journal note is plain text (was NEW-4-1)         | 4.23                      | T2 + T3       | ✅ T2 `OrderAccountManagementPanel.test` "Section 4 — journal notes render as plain text" [4.23] (T3 still to add)                                                                                                                                                        | A note `<img src=x onerror=alert(1)>` renders as that literal text; no `img` element, no dialog (`page.on('dialog')`) — the `web.md` stored-XSS rule                                                                                                                                    | P2   |
 | NEW-4-2 Journal note length                           | —                         | T1 + T2       | route schema `maxLength: 500`                                                                                                                                                                                                                                             | 500 characters accepted, 501 refused with a message in the note editor (not a silent drop)                                                                                                                                                                                              | P2   |
 
 **Not automatable.** Whether the sounds are audible and distinct (4.14–4.16): M. Checklist per UI release touching
