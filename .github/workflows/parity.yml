@@ -106,9 +106,12 @@ jobs:
           id=$(machine_id)
           [ -n "$id" ] || { echo "::error::Parity machine $name not found"; exit 1; }
           echo "id=$id" >> "$GITHUB_OUTPUT"
-          flyctl machine wait "$id" --app "$PARITY_APP" --state stopped --wait-timeout 12m
+          # A wait timeout must still fetch the logs: they matter most for a machine that didn't stop
+          wait_ok=1
+          flyctl machine wait "$id" --app "$PARITY_APP" --state stopped --wait-timeout 12m || wait_ok=0
           sleep 10 # let the last log lines reach the log buffer
-          flyctl logs --app "$PARITY_APP" --machine "$id" --no-tail | tee parity.log
+          flyctl logs --app "$PARITY_APP" --machine "$id" --no-tail | tee parity.log || true
+          [ "$wait_ok" = 1 ] || { echo "::error::Parity machine $id did not stop within 12 minutes"; exit 1; }
           # Pass = the script exited 0 and every step matched
           grep -q 'exited normally with code: 0' parity.log
           grep -q 'Parity run: every step matches Bybit' parity.log

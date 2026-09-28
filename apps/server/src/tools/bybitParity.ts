@@ -46,10 +46,11 @@ const QTY = '0.001';
 const LEVERAGE = 10;
 /**
  * 🔐 Unattended runs (parity.yml) must never leave a position open. Past DEADLINE_MS the scenario
- * is aborted: its next Bybit response throws, so it stops placing orders and its own `finally`
- * cleans up. If it is stuck instead, the deadline cleans up itself after ABORT_GRACE_MS; if the
- * cleanup stalls too, the process exits HARD_EXIT_MS later. Every Bybit call times out after
- * REQUEST_TIMEOUT_MS, so none of these waits can hang.
+ * is aborted: every later response throws, so it stops placing orders and its own `finally` cleans
+ * up. If it is stuck instead, the deadline cleans up itself after ABORT_GRACE_MS. Either way the
+ * process exits no later than ABORT_GRACE_MS + HARD_EXIT_MS after the deadline, even if the cleanup
+ * hangs. Every Bybit call times out after REQUEST_TIMEOUT_MS, and a cleanup that can't confirm the
+ * position is flat fails the run.
  */
 const DEADLINE_MS = 8 * 60_000;
 const ABORT_GRACE_MS = 30_000;
@@ -87,11 +88,20 @@ const WALLET_FIELDS = [
 
 type Row = Record<string, unknown>;
 
-/** Unwrap a Bybit response; a non-zero retCode stops the run (the message, never the request). */
-function ok<T>(step: string, res: { retCode: number; retMsg: string; result: T }): T {
-  if (phase === 'aborted') throw new Error(`${step}: aborted — the parity run passed its deadline`);
+/** Unwrap a Bybit response; a non-zero retCode throws (the message, never the request). */
+function unwrap<T>(step: string, res: { retCode: number; retMsg: string; result: T }): T {
   if (res.retCode !== 0) throw new Error(`${step}: Bybit ${res.retCode} ${res.retMsg}`);
   return res.result;
+}
+
+/**
+ * The scenario's unwrap: once the deadline has fired (phase is no longer 'run') every later
+ * response throws, so a late request can never lead the scenario on to its next order — not even
+ * while the cleanup is running. The cleanup itself uses `unwrap`.
+ */
+function ok<T>(step: string, res: { retCode: number; retMsg: string; result: T }): T {
+  if (phase !== 'run') throw new Error(`${step}: aborted — the parity run passed its deadline`);
+  return unwrap(step, res);
 }
 
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -148,37 +158,57 @@ async function main(): Promise<number> {
     ok('position/list', await client.getPositionInfo({ category: 'linear', symbol: SYMBOL }))
       .list[0] as unknown as Row;
 
-  // Close whatever is still open (either side), and leave the account isolated as found
+  // Close whatever is still open (either side), and leave the account isolated as found. A cleanup
+  // that can't confirm the position is flat fails the run, whatever the diffs said.
   let cleaned = false;
+  let cleanupFailed = false;
+  const openPosition = async () =>
+    unwrap('position/list', await client.getPositionInfo({ category: 'linear', symbol: SYMBOL }))
+      .list[0] as unknown as Row | undefined;
   const cleanup = async () => {
     if (cleaned) return;
     cleaned = true;
-    phase = 'cleanup';
-    const pos = await bybitPosition().catch(() => ({ size: '0', side: '' }) as Row);
-    const size = String(pos.size ?? '0');
-    if (new Decimal(size || '0').gt(0)) {
-      await client
-        .submitOrder({
-          category: 'linear',
-          symbol: SYMBOL,
-          side: pos.side === 'Sell' ? 'Buy' : 'Sell',
-          orderType: 'Market',
-          qty: size,
-          reduceOnly: true,
-        })
-        .catch((err: unknown) => log.error({ err }, 'Cleanup close failed — close it by hand'));
+    if (phase === 'run') phase = 'cleanup';
+    try {
+      const pos = await openPosition();
+      const size = String(pos?.size ?? '0');
+      if (new Decimal(size || '0').gt(0)) {
+        unwrap(
+          'cleanup close',
+          await client.submitOrder({
+            category: 'linear',
+            symbol: SYMBOL,
+            side: pos?.side === 'Sell' ? 'Buy' : 'Sell',
+            orderType: 'Market',
+            qty: size,
+            reduceOnly: true,
+          })
+        );
+        await pause(1_000);
+        const left = String((await openPosition())?.size ?? '0');
+        if (new Decimal(left || '0').gt(0))
+          throw new Error(`cleanup: ${left} ${SYMBOL} still open`);
+      }
+    } catch (err) {
+      cleanupFailed = true;
+      log.error({ err }, 'Cleanup failed — a testnet position may be open; close it by hand');
     }
     await client.setMarginMode('ISOLATED_MARGIN').catch(() => undefined);
   };
   const deadline = setTimeout(() => {
     log.error({ deadlineMs: DEADLINE_MS }, 'Parity run passed its deadline — aborting');
     phase = 'aborted';
+    // Hard stop, armed whichever path ends up cleaning up (the scenario's `finally` or the grace
+    // timer below), so a cleanup that hangs can't keep the machine running
+    setTimeout(() => {
+      log.error('Parity run did not finish after its deadline — exiting');
+      process.exit(1);
+    }, ABORT_GRACE_MS + HARD_EXIT_MS).unref();
     // The scenario normally reaches its own `finally` within one request timeout; only a stuck
     // run gets cleaned up from here, so the two never place closing orders at the same time
     setTimeout(() => {
       if (cleaned) return;
       log.error('Parity run is stuck — cleaning up from the deadline');
-      setTimeout(() => process.exit(1), HARD_EXIT_MS).unref();
       void cleanup().finally(() => process.exit(1));
     }, ABORT_GRACE_MS).unref();
   }, DEADLINE_MS);
@@ -336,6 +366,7 @@ async function main(): Promise<number> {
     await cleanup();
   }
 
+  if (cleanupFailed) return 1;
   const failed = report.filter((r) => r.diffs.length > 0);
   log.info(
     { steps: report.length, mismatched: failed.map((r) => r.step) },
