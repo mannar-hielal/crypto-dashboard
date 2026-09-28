@@ -23,16 +23,16 @@
 
 ## A2. Where we stand (measured 2026-09-28)
 
-| Area                   | Today                                                                                                                                                                                                                                      |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Unit / component tests | 1,164 Vitest tests in 63 files (server 713 / 26, client 451 / 37). The pure Decimal engine (`apps/server/src/trading/engine/__tests__`) has worked-number tests per rule; client panels have RTL tests against `src/test/fakePaperApi.ts`. |
-| Service / route tests  | `services.test.ts`, `paper.test.ts`, `auth.test.ts` etc. run Fastify in-memory (`app.inject`, `injectWS`) with **Prisma mocked** — no real Postgres, no migration is ever applied in a test.                                               |
-| Browser end-to-end     | **None.** "T3 · Playwright" was a planned tier; rows marked T3 were checked by hand.                                                                                                                                                       |
-| Bybit parity           | `bybitParity.ts` adapter + `parity:testnet` script; wired as a nightly job on 2026-09-28 (`parity.yml`, A4) — first green run pending (it stopped at the testnet account setup).                                                           |
-| Manual rows            | 90 rows with a ⬜ status in Part B before this revision (plus 2 ⬜ TradingView cross-check cells, 1.2.3 and 2.4.5), mostly live-feed, multi-tab, layout and TradingView side-by-side checks.                                               |
-| CI (`ci.yml`)          | Audit → type-check → format → lint → unit tests → build, on every PR and push to `develop` / `main`. Coverage is available (`pnpm test:coverage`) but has no threshold and doesn't run in CI.                                              |
-| After deploy           | `deploy.yml` deploys; nothing checks the live site afterwards except Fly's `/health` check.                                                                                                                                                |
-| Review                 | The Claude review bot + the unresolved-thread merge gate.                                                                                                                                                                                  |
+| Area                   | Today                                                                                                                                                                                                                                                    |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit / component tests | 1,164 Vitest tests in 63 files (server 713 / 26, client 451 / 37). The pure Decimal engine (`apps/server/src/trading/engine/__tests__`) has worked-number tests per rule; client panels have RTL tests against `src/test/fakePaperApi.ts`.               |
+| Service / route tests  | `services.test.ts`, `paper.test.ts`, `auth.test.ts` etc. run Fastify in-memory (`app.inject`, `injectWS`) with **Prisma mocked** — no real Postgres, no migration is ever applied in a test.                                                             |
+| Browser end-to-end     | **None.** "T3 · Playwright" was a planned tier; rows marked T3 were checked by hand.                                                                                                                                                                     |
+| Bybit parity           | `bybitParity.ts` adapter + `parity:testnet` script, wired as a nightly job on 2026-09-28 (`parity.yml`, A4). The testnet setup is done — key (Read-Write, Contract Orders + Positions), `bybit-testnet` environment, test USDT; first green run pending. |
+| Manual rows            | 90 rows with a ⬜ status in Part B before this revision (plus 2 ⬜ TradingView cross-check cells, 1.2.3 and 2.4.5), mostly live-feed, multi-tab, layout and TradingView side-by-side checks.                                                             |
+| CI (`ci.yml`)          | Audit → type-check → format → lint → unit tests → build, on every PR and push to `develop` / `main`. Coverage is available (`pnpm test:coverage`) but has no threshold and doesn't run in CI.                                                            |
+| After deploy           | `deploy.yml` deploys; nothing checks the live site afterwards except Fly's `/health` check.                                                                                                                                                              |
+| Review                 | The Claude review bot + the unresolved-thread merge gate.                                                                                                                                                                                                |
 
 **Biggest risks not covered by automation today:** the persistence layer (`AccountRepository`, migrations) only
 meets a real database in production; nobody checks the engine against Bybit itself; and the browser flows (live feed,
@@ -197,23 +197,30 @@ depends on another test's leftovers. Fixtures (replay feed, pre-BP-2 DB seed) ar
 
 Each step is its own small PR to `develop`, ordered by value per effort.
 
-| Step   | Delivers                                                                                                                  | Converts / adds                                    | Owner action               |
-| ------ | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | -------------------------- |
-| **P1** | CI Postgres, migration-from-empty + drift check, migration replay, repository round-trip, coverage thresholds in CI       | T2i; 18.7                                          | —                          |
-| **P2** | Fake Bybit replay server, Playwright (smoke on PR, full nightly), seed helper; the missing T1 / T2 tests the ⬜ rows name | Every ⬜ row marked `(P2)` in Sections 7–15 and 19 | —                          |
-| **P3** | Nightly `parity:testnet` workflow + issue on mismatch; weekly spec-drift check; feed parity job                           | 17.6.4, Section 6 → T4                             | Add 2 testnet secrets once |
-| **P4** | fast-check invariants; Stryker weekly on the engine                                                                       | T1p; mutation score                                | —                          |
-| **P5** | Post-deploy + hourly prod smoke, log alerts                                                                               | T5                                                 | Pick / approve a log sink  |
-| **P6** | Staging Fly app; ZAP baseline; k6 scripts; Dependabot; gitleaks                                                           | Security + performance                             | Approve staging cost       |
+| Step   | Delivers                                                                                                                  | Converts / adds                                    | Owner action                                         |
+| ------ | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------- |
+| **P1** | CI Postgres, migration-from-empty + drift check, migration replay, repository round-trip, coverage thresholds in CI       | T2i; 18.7                                          | —                                                    |
+| **P2** | Fake Bybit replay server, Playwright (smoke on PR, full nightly), seed helper; the missing T1 / T2 tests the ⬜ rows name | Every ⬜ row marked `(P2)` in Sections 7–15 and 19 | —                                                    |
+| **P3** | ✅ Nightly `parity:testnet` workflow + issue on mismatch (2026-09-28) · ⬜ weekly spec-drift check · ⬜ feed parity job   | 17.6.4, Section 6 → T4                             | ✅ Testnet key, environment, funds (done 2026-09-28) |
+| **P4** | fast-check invariants; Stryker weekly on the engine                                                                       | T1p; mutation score                                | —                                                    |
+| **P5** | Post-deploy + hourly prod smoke, log alerts                                                                               | T5                                                 | Pick / approve a log sink                            |
+| **P6** | Staging Fly app; ZAP baseline; k6 scripts; Dependabot; gitleaks                                                           | Security + performance                             | Approve staging cost                                 |
 
 After P2 the only manual rows left are look-and-feel (drag feel, sounds, animation) — the M tier.
 
 ## A9. What the owner has to do
 
-- **Once:** create a Bybit **testnet** API key (read + trade) on an otherwise empty testnet account and add it as
-  `BYBIT_API_KEY` / `BYBIT_API_SECRET` in the repo's `bybit-testnet` environment (P3; the workflow sets
-  `BYBIT_TESTNET=true`, and the script refuses to run otherwise); approve the staging app and a log sink
-  (P5, P6).
+- **Done (2026-09-28):** the Bybit testnet setup for P3.
+  - An API key on testnet.bybit.com: **Read-Write**, Unified Trading → Contract **Orders** + **Positions**, no
+    withdrawal, no IP restriction (GitHub's runner IPs change).
+  - `BYBIT_TESTNET_KEY` / `BYBIT_TESTNET_SECRET` in the repo's `bybit-testnet` environment (only `main` may use it),
+    next to `FLY_PARITY_API_TOKEN`.
+  - Test USDT requested (testnet.bybit.com → Assets → Assets Overview → Request Test Coins: 10,000 USDT + 1 BTC, once
+    per 24 h). The account stays Isolated; the script switches modes itself.
+- **Every ~3 months:** a testnet key without an IP allow-list expires. A run failing with `33004` opens a `parity`
+  issue: create a new key with the same permissions and replace the two environment secrets. `10005` means the key
+  lost its Read-Write / Contract permissions; `110007` means the account ran out of test USDT (request more).
+- **Still to decide:** approve the staging app and a log sink (P5, P6).
 - **Ongoing:** read the red ones — a failed nightly or parity issue arrives as a GitHub notification; a green week
   needs nothing. Before a UI release, the short M list (Part B rows tiered **M**).
 
@@ -1053,12 +1060,12 @@ sections (⚙️ → Reset account).
 
 ### 17.6 Refinements (F) and parity (G)
 
-| #      | Action                                      | Expected                                              | Status | Tier        | Notes                      |
-| ------ | ------------------------------------------- | ----------------------------------------------------- | ------ | ----------- | -------------------------- |
-| 17.6.1 | Stalled feed at a funding timestamp         | Settled at the mark candle, not a minutes-old mark    | ✅     | T1 · Vitest | `services.test`.           |
-| 17.6.2 | Closed before its funding settled           | The fee lands on that close's Trade row               | ✅     | T1 · Vitest | repository + engine tests. |
-| 17.6.3 | Opened and closed while the engine was down | Charged by the backfill (from the closing Trade rows) | ✅     | T1 · Vitest | `services.test`.           |
-| 17.6.4 | Bybit testnet parity run                    | Every compared v5 field matches within 0.01           | ⏳     | T4 (P3)     | `parity.yml` nightly.      |
+| #      | Action                                      | Expected                                              | Status | Tier        | Notes                                                                 |
+| ------ | ------------------------------------------- | ----------------------------------------------------- | ------ | ----------- | --------------------------------------------------------------------- |
+| 17.6.1 | Stalled feed at a funding timestamp         | Settled at the mark candle, not a minutes-old mark    | ✅     | T1 · Vitest | `services.test`.                                                      |
+| 17.6.2 | Closed before its funding settled           | The fee lands on that close's Trade row               | ✅     | T1 · Vitest | repository + engine tests.                                            |
+| 17.6.3 | Opened and closed while the engine was down | Charged by the backfill (from the closing Trade rows) | ✅     | T1 · Vitest | `services.test`.                                                      |
+| 17.6.4 | Bybit testnet parity run                    | Every compared v5 field matches within 0.01           | ⏳     | T4 (P3)     | `parity.yml` nightly; setup done 2026-09-28, first run after release. |
 
 ---
 
