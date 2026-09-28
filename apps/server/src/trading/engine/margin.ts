@@ -7,7 +7,7 @@ import type { Decimal } from '@prisma/client/runtime/client';
 import {
   accountFigures,
   fallbackRiskTiers,
-  fallbackRules,
+  linearTickSize,
   positionRisk,
   type AccountFigures,
   type PositionRisk,
@@ -44,9 +44,9 @@ export function riskOf(
       im: pos.entryUsdtAmount,
       closeFeeReserve: pos.closeFeeReserve,
       extraMargin: pos.extraMargin ?? ZERO,
-      // Bybit rounds the liquidation price to the tick; tick sizes are the dated snapshot (they
-      // almost never change)
-      tickSize: fallbackRules('linear', pos.symbol).tickSize,
+      // Bybit rounds the liquidation price to the tick: the live instruments-info tick when the
+      // plugin has it, else the dated snapshot
+      tickSize: linearTickSize(pos.symbol),
     },
     tiers
   );

@@ -57,6 +57,12 @@ export function floorToStep(qty: Decimal, step: Decimal): Decimal {
   return qty.div(step).floor().times(step);
 }
 
+/** `value` rounded up to a multiple of `step` (unchanged when step ≤ 0). */
+export function ceilToStep(value: Decimal, step: Decimal): Decimal {
+  if (step.lte(0)) return value;
+  return value.div(step).ceil().times(step);
+}
+
 /** True when `price` is a whole number of ticks. */
 export function isOnTick(price: Decimal, tick: Decimal): boolean {
   if (tick.lte(0)) return true;
@@ -115,6 +121,23 @@ function toRules(row: RuleRow): InstrumentRules {
     minOrderQty: new Decimal(row.minOrderQty),
     minNotional: new Decimal(row.minNotional),
   };
+}
+
+/**
+ * Where USDT Perpetual price ticks come from: the trading plugin points this at its live
+ * instruments-info cache (the same one order validation uses); unset — tests, the parity tool —
+ * it is the dated snapshot below. Process-wide, like that cache; the engine only reads it.
+ */
+let linearTickSource: ((symbol: string) => Decimal | undefined) | undefined;
+
+export function setLinearTickSource(source: ((symbol: string) => Decimal | undefined) | undefined) {
+  linearTickSource = source;
+}
+
+/** A symbol's USDT Perpetual price tick: live when known, else the snapshot (0 when unknown). */
+export function linearTickSize(symbol: string): Decimal {
+  const live = linearTickSource?.(symbol);
+  return live && live.gt(0) ? live : fallbackRules('linear', symbol).tickSize;
 }
 
 /** Fallback rules for a symbol; permissive (no rounding, no minimum) for an unknown symbol. */
@@ -342,10 +365,9 @@ export function positionRisk(p: MarginInput, tiers: RiskTier[]): PositionRisk {
       .div(p.quantity.times(one.plus(tier.mmr)));
     bustPrice = p.entryPrice.plus(p.im.plus(p.extraMargin).div(p.quantity));
   }
-  const tick = p.tickSize;
-  if (tick && tick.gt(0)) {
-    const ticks = liqPrice.div(tick);
-    liqPrice = (p.side === 'long' ? ticks.ceil() : ticks.floor()).times(tick);
+  if (p.tickSize) {
+    liqPrice =
+      p.side === 'long' ? ceilToStep(liqPrice, p.tickSize) : floorToStep(liqPrice, p.tickSize);
   }
   return {
     positionValue: value,

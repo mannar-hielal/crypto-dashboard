@@ -13,6 +13,7 @@ import {
   checkOrderSize,
   fallbackRiskTiers,
   fallbackRules,
+  setLinearTickSource,
   feeToClose,
   floorToStep,
   isOnTick,
@@ -23,6 +24,7 @@ import {
   accountFigures,
 } from '../bybitSpec.js';
 import { MAX_LEVERAGE, STARTING_BALANCE } from '../engine/index.js';
+import { riskOf } from '../engine/margin.js';
 import { ALLOWED_SYMBOLS } from '../../constants.js';
 
 const D = (v: number | string) => new Decimal(v);
@@ -33,6 +35,25 @@ describe('bybitSpec', () => {
       expect(sdk.linearTickSize(symbol), symbol).toBe(
         fallbackRules('linear', symbol).tickSize.toNumber()
       );
+    }
+  });
+
+  it('rounds to the live tick when the plugin supplies one, else the snapshot', () => {
+    const pos = {
+      symbol: 'BTCUSDT',
+      side: 'long' as const,
+      quantity: D('0.1'),
+      entryPrice: D(50_000),
+      entryUsdtAmount: D(500),
+      closeFeeReserve: D('2.475'),
+      extraMargin: D(0),
+    };
+    expect(riskOf(pos, fallbackRiskTiers('BTCUSDT')).liqPrice.toString()).toBe('45149');
+    setLinearTickSource((s) => (s === 'BTCUSDT' ? D(2) : undefined));
+    try {
+      expect(riskOf(pos, fallbackRiskTiers('BTCUSDT')).liqPrice.toString()).toBe('45150'); // 45,148.99… up to a tick of 2
+    } finally {
+      setLinearTickSource(undefined);
     }
   });
 
@@ -135,13 +156,22 @@ describe('isolated margin — Bybit’s worked example (BP-3)', () => {
           im: D(c.qty).times(c.entry).div(c.lev),
           closeFeeReserve: feeToClose(c.side, D(c.qty), D(c.entry), c.lev),
           extraMargin: D(0),
+          tickSize: fallbackRules('linear', c.symbol).tickSize,
         },
         fallbackRiskTiers(c.symbol)
       );
       const client = sdk.estimatePositionRisk(
-        { side: c.side, qty: c.qty, entryPrice: c.entry, leverage: c.lev },
+        {
+          side: c.side,
+          qty: c.qty,
+          entryPrice: c.entry,
+          leverage: c.lev,
+          tickSize: sdk.linearTickSize(c.symbol),
+        },
         sdk.riskTiersFor(c.symbol)
       );
+      // Both round to the same tick the same way: equal, not just close
+      expect(client.liqPrice).toBe(server.liqPrice.toNumber());
       expect(client.liqPrice).toBeCloseTo(server.liqPrice.toNumber(), 6);
       expect(client.bustPrice).toBeCloseTo(server.bustPrice.toNumber(), 6);
       expect(client.positionMM).toBeCloseTo(server.positionMM.toNumber(), 6);

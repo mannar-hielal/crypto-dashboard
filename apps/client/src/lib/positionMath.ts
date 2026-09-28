@@ -86,7 +86,9 @@ export function adjustMarginPreview(
     | 'extraMargin'
   >,
   amount: number,
-  symbol: string
+  symbol: string,
+  /** The live instrument tick; the SDK snapshot when absent */
+  tickSize?: number
 ): { liqPrice: number; extraMargin: number } {
   const extraMargin = Math.max(0, pos.extraMargin + amount);
   const risk = estimatePositionRisk(
@@ -98,7 +100,7 @@ export function adjustMarginPreview(
       im: pos.entryUsdtAmount,
       closeFeeReserve: pos.closeFeeReserve,
       extraMargin,
-      tickSize: linearTickSize(symbol),
+      tickSize: tickSize && tickSize > 0 ? tickSize : linearTickSize(symbol),
     },
     riskTiersFor(symbol)
   );
@@ -113,7 +115,9 @@ export function adjustMarginPreview(
 export function remarginPreview(
   pos: Pick<Position, 'side' | 'quantity' | 'entryPrice' | 'extraMargin'>,
   leverage: number,
-  symbol: string
+  symbol: string,
+  /** The live instrument tick; the SDK snapshot when absent */
+  tickSize?: number
 ): { margin: number; liqPrice: number } {
   const lev = Math.max(1, leverage);
   const im = (pos.quantity * pos.entryPrice) / lev;
@@ -127,7 +131,7 @@ export function remarginPreview(
       im,
       closeFeeReserve,
       extraMargin: pos.extraMargin,
-      tickSize: linearTickSize(symbol),
+      tickSize: tickSize && tickSize > 0 ? tickSize : linearTickSize(symbol),
     },
     riskTiersFor(symbol)
   );
