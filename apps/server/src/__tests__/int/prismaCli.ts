@@ -22,7 +22,9 @@ export function prisma(args: string[], databaseUrl: string): CliResult {
     env: { ...process.env, DATABASE_URL: databaseUrl },
     encoding: 'utf8',
   });
-  return { status: res.status, output: `${res.stdout ?? ''}${res.stderr ?? ''}` };
+  // res.error: the CLI never started (pnpm not on PATH, wrong cwd) — say so instead of an empty output
+  const spawnError = res.error ? `${res.error.message}\n` : '';
+  return { status: res.status, output: `${spawnError}${res.stdout ?? ''}${res.stderr ?? ''}` };
 }
 
 /** 🔐 The tests delete every row they can reach, so only a database named *_int or *_test is used. */
