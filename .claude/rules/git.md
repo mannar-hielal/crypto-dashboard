@@ -54,11 +54,15 @@ checked out.
 ## CI/CD pipeline — what a branch/PR actually triggers
 
 - `ci.yml` runs on every push to `main`/`develop` and on every PR targeting `main`/`develop`:
-  `pnpm audit` → type-check (server) → `format:check` → `lint` → `test` → build (server). All
-  gates must be green before merge — this mirrors the local pre-commit hook
-  (see [`testing.md`](./testing.md#gates--what-passing-means-before-a-commitpr)), so a change that
-  passes locally should pass CI too. In practice this means every feature/fix PR (targeting
-  `develop`) and the later `develop → main` release merge both go through the identical gate.
+  `pnpm audit` → type-check (server) → `format:check` → `lint` → `test:coverage` (the suites plus
+  the coverage floors) → build. This main job mirrors the local pre-commit hook (see
+  [`testing.md`](./testing.md#gates--what-passing-means-before-a-commitpr)), so a change that passes
+  locally should pass it too. A separate **Integration (Postgres)** job runs `test:int` (migrations
+  from empty, schema drift, repository round-trip); it needs a database, so it runs in CI only
+  (locally: `test:int` against a throwaway Postgres). All jobs must be green before merge — every
+  feature/fix PR (targeting `develop`) and the later `develop → main` release merge go through the
+  identical gate, and the deploy waits for the whole workflow, so a failing integration job blocks
+  a release.
 - `deploy.yml` triggers only after CI **succeeds on `main`** (`workflow_run` on the CI workflow,
   filtered to `branches: [main]`) and deploys the exact commit SHA CI validated
   (`ref: ${{ github.event.workflow_run.head_sha }}`) — never a newer, unvalidated commit that may
