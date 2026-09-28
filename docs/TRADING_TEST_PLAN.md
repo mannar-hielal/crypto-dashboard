@@ -7,6 +7,7 @@
 > **Part B** is the case catalogue (Sections 1–19, ordered as a beginner's learning path in Stages 0–6 — see its
 > "Learning path index"): every case, its status, its tier and where its test lives. A10 turns what is still open
 > into a to-do list.
+> **How** each case gets implemented, and how to reproduce it by hand in the app, is in `docs/TEST_IMPLEMENTATION_PLAN.md`.
 > The engine's rules are in `docs/APP_LOG.md` → "Bybit Parity (BP-0 … BP-5) — reference".
 
 ---
