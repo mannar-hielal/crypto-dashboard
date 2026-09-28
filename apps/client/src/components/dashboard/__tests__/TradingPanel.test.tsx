@@ -1261,26 +1261,58 @@ describe('Section 9 — spread (T2 · RTL)', () => {
     paneStores[0].setState({ bid, ask });
   }
 
-  it('should show a spread under 1 with 4 decimals and the raw quotes on hover (9.5)', () => {
+  it('should show the spread and the quotes at the price tick, like Bybit (9.5)', () => {
+    // BTCUSDT's tick is 0.1: every price reads with 1 decimal
     quote(49_999.9, 50_000);
     const { container } = renderPanel();
 
     const spread = getByGuide(container, 'trade.spread');
-    expect(spread.textContent).toBe('0.1000');
-    expect(spread.getAttribute('title')).toBe('Bid: 49,999.9 · Ask: 50,000');
+    expect(spread.textContent).toBe('0.1');
+    expect(spread.getAttribute('title')).toBe('Bid: 49,999.9 · Ask: 50,000.0');
     // Sell is the best bid, Buy the best ask — not a mid-price
     expect(getByGuide(container, 'trade.side.sell').textContent).toContain('49,999.9');
-    expect(getByGuide(container, 'trade.side.buy').textContent).toContain('50,000');
+    expect(getByGuide(container, 'trade.side.buy').textContent).toContain('50,000.0');
   });
 
-  it('should show a spread of 1 or more with 2 decimals (9.5)', () => {
-    quote(50_000, 50_001.25);
+  it('should show a wider spread at the tick too (9.5)', () => {
+    quote(50_000, 50_001.3);
     const { container } = renderPanel();
 
     const spread = getByGuide(container, 'trade.spread');
-    expect(spread.textContent).toBe('1.25');
-    expect(spread.getAttribute('title')).toBe('Bid: 50,000 · Ask: 50,001.25');
-    expect(getByGuide(container, 'trade.side.buy').textContent).toContain('50,001.25');
+    expect(spread.textContent).toBe('1.3');
+    expect(spread.getAttribute('title')).toBe('Bid: 50,000.0 · Ask: 50,001.3');
+    expect(getByGuide(container, 'trade.side.buy').textContent).toContain('50,001.3');
+  });
+
+  it('should show a low-priced Spot coin at its tick before the rules load (NEW-9-2, review #171)', () => {
+    useLayoutStore.setState((st) => ({
+      activePane: 0,
+      panes: st.panes.map((p, idx) =>
+        idx === 0 ? { ...p, symbol: 'DOGEUSDT', category: 'spot' } : p
+      ),
+    }));
+    quote(0.12345, 0.12346);
+    const { container } = renderPanel();
+
+    expect(getByGuide(container, 'trade.side.sell').textContent).toContain('0.12345');
+    expect(getByGuide(container, 'trade.side.buy').textContent).toContain('0.12346');
+    expect(getByGuide(container, 'trade.spread').textContent).toBe('0.00001');
+  });
+
+  it('should show a low-priced coin at its own tick, not cut to 2 decimals (NEW-9-2)', () => {
+    // DOGEUSDT's tick is 0.00001: before the fix Sell and Buy both read 0.12 and the spread 0.0000
+    useLayoutStore.setState((st) => ({
+      activePane: 0,
+      panes: st.panes.map((p, idx) =>
+        idx === 0 ? { ...p, symbol: 'DOGEUSDT', category: 'linear' } : p
+      ),
+    }));
+    quote(0.12345, 0.12346);
+    const { container } = renderPanel();
+
+    expect(getByGuide(container, 'trade.side.sell').textContent).toContain('0.12345');
+    expect(getByGuide(container, 'trade.side.buy').textContent).toContain('0.12346');
+    expect(getByGuide(container, 'trade.spread').textContent).toBe('0.00001');
   });
 
   it('should show — and fall back to the last price when there is no two-sided quote', () => {

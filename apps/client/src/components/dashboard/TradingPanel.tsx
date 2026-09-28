@@ -2,7 +2,7 @@ import { useState, useId, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { X, ChevronUp, ChevronDown, Info, AlertTriangle } from 'lucide-react';
 import { useStore } from 'zustand';
-import type { MarketCategory, PaperTriggerBy } from '@crypto-dashboard/sdk';
+import { priceTickSize, type MarketCategory, type PaperTriggerBy } from '@crypto-dashboard/sdk';
 import { useLayoutStore } from '@/store/layoutStore';
 import { getLastKnownMarkPrice, paneStores } from '@/store/paneStore';
 import { leverageFor, usePaperStore, type PlaceResult } from '@/store/paperStore';
@@ -110,10 +110,12 @@ export function TradingPanel({
   const baseAsset = symbol.replace('USDT', '');
   const instrument = useInstrument(category, symbol);
   const qtyStep = instrument?.qtyStep ?? 0;
-  /** Decimals of the price tick (0.1 → 1, 0.00001 → 5); 2 until the rules load */
-  const priceDecimals = instrument?.tickSize
-    ? Math.max(0, Math.ceil(-Math.log10(instrument.tickSize) - 1e-9))
-    : 2;
+  /**
+   * Decimals of the price tick (0.1 → 1, 0.00001 → 5), so prices read like Bybit's: the live rules,
+   * else the SDK's tick snapshot for the market (Spot or USDT Perpetual). A symbol in neither
+   * reads with 5 decimals under 1 (never `0.12` for a 0.12345 coin), else 2.
+   */
+  const priceTick = instrument?.tickSize || priceTickSize(category, symbol);
 
   const activePaneStore = paneStores[activePane];
   // Always subscribe unconditionally so prices/spread/order-info are never
@@ -124,6 +126,19 @@ export function TradingPanel({
 
   const bid = useStore(activePaneStore, (s) => s.bid);
   const ask = useStore(activePaneStore, (s) => s.ask);
+
+  const referencePrice = bid ?? latestPrice ?? 0;
+  const priceDecimals = priceTick
+    ? Math.max(0, Math.ceil(-Math.log10(priceTick) - 1e-9))
+    : referencePrice > 0 && referencePrice < 1
+      ? 5
+      : 2;
+  /** A price at the tick's decimals — Sell / Buy, the spread and the order label */
+  const fmtTickPrice = (v: number) =>
+    v.toLocaleString(undefined, {
+      minimumFractionDigits: priceDecimals,
+      maximumFractionDigits: priceDecimals,
+    });
 
   const spread = bid != null && ask != null ? ask - bid : null;
 
@@ -632,7 +647,7 @@ export function TradingPanel({
   const submitSecondary = (() => {
     const qtyStr = units !== null ? `${units.toFixed(6)} ${baseAsset}` : `— ${baseAsset}`;
     if (tab === 'market') return `${qtyStr} · MARKET`;
-    const p = execPrice ? execPrice.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—';
+    const p = execPrice ? fmtTickPrice(execPrice) : '—';
     return `${qtyStr} @ ${p} ${tab.toUpperCase()}`;
   })();
 
@@ -719,9 +734,7 @@ export function TradingPanel({
             className="tabular-nums font-bold"
             style={{ fontSize: fontSize.xs11, color: !isBuy ? color.white : color.muted }}
           >
-            {(bid ?? latestPrice)
-              ? (bid ?? latestPrice)!.toLocaleString(undefined, { maximumFractionDigits: 2 })
-              : '—'}
+            {(bid ?? latestPrice) ? fmtTickPrice((bid ?? latestPrice)!) : '—'}
           </span>
         </button>
 
@@ -737,11 +750,11 @@ export function TradingPanel({
           }}
           title={
             spread != null
-              ? `Bid: ${bid?.toLocaleString(undefined, { maximumFractionDigits: 4 })} · Ask: ${ask?.toLocaleString(undefined, { maximumFractionDigits: 4 })}`
+              ? `Bid: ${fmtTickPrice(bid!)} · Ask: ${fmtTickPrice(ask!)}`
               : 'Spread — awaiting bid/ask feed'
           }
         >
-          {spread != null ? spread.toFixed(spread < 1 ? 4 : 2) : '—'}
+          {spread != null ? spread.toFixed(priceDecimals) : '—'}
         </div>
 
         {/* Buy */}
@@ -764,9 +777,7 @@ export function TradingPanel({
             className="tabular-nums font-bold"
             style={{ fontSize: fontSize.xs11, color: isBuy ? color.white : color.muted }}
           >
-            {(ask ?? latestPrice)
-              ? (ask ?? latestPrice)!.toLocaleString(undefined, { maximumFractionDigits: 2 })
-              : '—'}
+            {(ask ?? latestPrice) ? fmtTickPrice((ask ?? latestPrice)!) : '—'}
           </span>
         </button>
       </div>
