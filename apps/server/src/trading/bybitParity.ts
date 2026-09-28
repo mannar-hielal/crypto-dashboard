@@ -157,6 +157,9 @@ export interface FieldDiff {
  * `tolerance` (absolute) — Bybit rounds to its own precision — other values exactly. Fields
  * missing on either side are reported, never silently skipped.
  */
+/** Fields Bybit reports blank under a Unified Trading Account, so they aren't compared. */
+const BYBIT_BLANK_UNDER_UTA = new Set(['bustPrice']);
+
 /** True for a decimal string Bybit or the engine would send (never NaN / Infinity / ""). */
 function isNumeric(v: string): boolean {
   if (v.trim() === '') return false;
@@ -186,6 +189,10 @@ export function diffFields(
       diffs.push({ field, bybit: b ?? '(missing)', paper: p ?? '(missing)' });
       continue;
     }
+    // Bybit leaves these blank for a UTA account (testnet parity run, 2026-09-28): nothing to
+    // compare. Only these — a blank anywhere else is still a mismatch; and checked after the
+    // missing test, so a paper field that vanished is still reported
+    if (b === '' && BYBIT_BLANK_UNDER_UTA.has(field)) continue;
     const same = isNumeric(b) && isNumeric(p) ? new Decimal(b).minus(p).abs().lte(tol) : b === p;
     if (!same) diffs.push({ field, bybit: b, paper: p });
   }

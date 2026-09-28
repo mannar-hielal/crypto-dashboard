@@ -246,7 +246,7 @@ export interface PaperPositionDTO {
   liqPrice?: string;
   /** Price the position closes at when liquidated (its whole margin is lost there) */
   bustPrice?: string;
-  /** Bybit positionIM: initial margin + fee to close */
+  /** Bybit positionIM: initial margin + fee to close + margin added by hand */
   positionIM?: string;
   /** Bybit positionMM: position value × MMR − deduction + fee to close */
   positionMM?: string;

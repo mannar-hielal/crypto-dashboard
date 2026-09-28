@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { riskTierInfo, riskTierLabel } from '@/lib/positionMath';
+import { positionMmrRate, riskTierInfo, riskTierLabel } from '@/lib/positionMath';
 
 describe('riskTierInfo / riskTierLabel', () => {
   it('BTCUSDT: a small position is in tier 1, and the cap at 10× is 100,000,000 USDT', () => {
@@ -85,5 +85,31 @@ describe('crossOrderLiqEstimate (BP-5 E)', () => {
         openFee: 1,
       })
     ).toBeNull();
+  });
+});
+
+describe('positionMmrRate', () => {
+  // Long 0.1 BTC at 50,000, 10x: IM 500, fee to close 2.475, MM 18.975, 1,000 added by hand
+  const base = {
+    side: 'long' as const,
+    entryPrice: 50_000,
+    quantity: 0.1,
+    entryUsdtAmount: 500,
+    closeFeeReserve: 2.475,
+    positionMM: 18.975,
+    extraMargin: 1_000,
+  };
+
+  it('uses IM + fee to close + added margin + PnL as the equity', () => {
+    // At the entry price: 18.975 / 1,502.475
+    expect(positionMmrRate(base, 50_000)).toBeCloseTo(18.975 / 1_502.475, 10);
+  });
+
+  it('counts the added margin once, whether or not positionIM includes it (old / new server)', () => {
+    const old = positionMmrRate({ ...base, positionIM: 502.475 } as typeof base, 49_000);
+    const now = positionMmrRate({ ...base, positionIM: 1_502.475 } as typeof base, 49_000);
+    expect(now).toBe(old);
+    // PnL at 49,000: −100 → equity 1,402.475
+    expect(now).toBeCloseTo(18.975 / 1_402.475, 10);
   });
 });

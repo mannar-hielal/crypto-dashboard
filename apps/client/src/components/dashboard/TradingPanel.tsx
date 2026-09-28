@@ -326,6 +326,7 @@ export function TradingPanel({
           baseAsset,
           symbol,
           existing: openPosition,
+          tickSize: instrument?.tickSize,
         })
       : null;
   /** What this order can use: USDT, or — for a spot sell — the free coins */

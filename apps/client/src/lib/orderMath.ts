@@ -16,6 +16,7 @@
 import {
   FEE_RATES,
   estimatePositionRisk,
+  linearTickSize,
   feeToCloseEstimate,
   riskTiersFor,
   type MarketCategory,
@@ -68,7 +69,10 @@ export function estimateLiqPrice(p: {
   price: number;
   leverage: number;
   existing?: OpenPositionForPreview;
+  /** The live instrument tick; the SDK snapshot when absent */
+  tickSize?: number;
 }): number | undefined {
+  const tickSize = p.tickSize && p.tickSize > 0 ? p.tickSize : linearTickSize(p.symbol);
   if (!(p.qty > 0) || !(p.price > 0)) return undefined;
   const lev = Math.max(1, p.leverage);
   const side = p.side === 'buy' ? 'long' : 'short';
@@ -87,6 +91,7 @@ export function estimateLiqPrice(p: {
         im: ex.entryUsdtAmount + (p.qty * p.price) / lev,
         closeFeeReserve: ex.closeFeeReserve + feeToCloseEstimate(side, p.qty, p.price, lev),
         extraMargin: ex.extraMargin,
+        tickSize,
       },
       tiers
     ).liqPrice;
@@ -94,8 +99,16 @@ export function estimateLiqPrice(p: {
   // Opposite side: reduces the position first; only a flip leaves a new one
   const remainder = ex ? p.qty - ex.quantity : p.qty;
   if (remainder <= 1e-12) return undefined;
-  return estimatePositionRisk({ side, qty: remainder, entryPrice: p.price, leverage: lev }, tiers)
-    .liqPrice;
+  return estimatePositionRisk(
+    {
+      side,
+      qty: remainder,
+      entryPrice: p.price,
+      leverage: lev,
+      tickSize,
+    },
+    tiers
+  ).liqPrice;
 }
 
 export function orderPreview(p: {
@@ -108,6 +121,8 @@ export function orderPreview(p: {
   /** USDT Perpetual: the symbol (for its risk-limit tiers) and its open position, if any */
   symbol?: string;
   existing?: OpenPositionForPreview;
+  /** The symbol's live price tick (instruments-info), for the liquidation price */
+  tickSize?: number;
 }): OrderPreview {
   const value = p.qty * p.price;
   if (p.category === 'linear') {
@@ -123,6 +138,7 @@ export function orderPreview(p: {
           price: p.price,
           leverage: lev,
           existing: p.existing,
+          tickSize: p.tickSize,
         })
       : undefined;
     return {

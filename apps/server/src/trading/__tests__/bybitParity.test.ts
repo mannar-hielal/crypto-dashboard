@@ -129,6 +129,22 @@ describe('diffFields', () => {
     ]);
   });
 
+  it('skips a field Bybit leaves blank (not reported for this account, e.g. bustPrice under UTA)', () => {
+    expect(diffFields({ bustPrice: '' }, { bustPrice: '45000' }, ['bustPrice'])).toEqual([]);
+  });
+
+  it('reports any other field Bybit leaves blank', () => {
+    expect(diffFields({ positionIM: '' }, { positionIM: '8.43' }, ['positionIM'])).toEqual([
+      { field: 'positionIM', bybit: '', paper: '8.43' },
+    ]);
+  });
+
+  it('still reports a paper field that is missing when Bybit leaves it blank', () => {
+    expect(diffFields({ bustPrice: '' }, {}, ['bustPrice'])).toEqual([
+      { field: 'bustPrice', bybit: '', paper: '(missing)' },
+    ]);
+  });
+
   it('reports a field missing on either side instead of skipping it', () => {
     expect(diffFields({ a: '1' }, {}, ['a'])).toEqual([
       { field: 'a', bybit: '1', paper: '(missing)' },

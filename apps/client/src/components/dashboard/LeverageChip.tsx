@@ -28,6 +28,7 @@ import {
 } from '@/lib/positionMath';
 import type { PaperMarginMode } from '@crypto-dashboard/sdk';
 import { fmtMktPrice } from '@/lib/utils';
+import { useInstrument } from '@/hooks/useInstruments';
 import { color, fontSize, zIndex } from '@/lib/tokens';
 import styles from './TradeDialog.module.css';
 
@@ -74,7 +75,8 @@ interface RemarginPreviewProps {
 
 /** "Margin: $500.00 → $1,000.00 · Liq. price: $45,148.99 → $40,xxx" for the chosen leverage. */
 function RemarginPreview({ position, leverage, symbol }: RemarginPreviewProps) {
-  const next = remarginPreview(position, leverage, symbol);
+  const instrument = useInstrument('linear', symbol);
+  const next = remarginPreview(position, leverage, symbol, instrument?.tickSize);
   const margin = position.entryUsdtAmount + position.closeFeeReserve;
   const fmtLiq = (v: number | null) => (v !== null && v > 0 ? `$${fmtMktPrice(v)}` : '—');
   return (

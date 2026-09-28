@@ -34,8 +34,8 @@ describe('orderPreview()', () => {
       symbol: 'BTCUSDT',
     };
     // Same numbers as the server engine's liquidation.test.ts
-    expect(orderPreview({ ...base, side: 'buy' }).liqPrice).toBeCloseTo(45_148.99, 2);
-    expect(orderPreview({ ...base, side: 'sell' }).liqPrice).toBeCloseTo(54_819.1, 1);
+    expect(orderPreview({ ...base, side: 'buy' }).liqPrice).toBe(45_149); // up to the 0.1 tick
+    expect(orderPreview({ ...base, side: 'sell' }).liqPrice).toBe(54_819); // down to the tick
     // Adding to a long at the same price and leverage leaves the same liquidation price
     const existing = {
       side: 'long' as const,
@@ -45,7 +45,7 @@ describe('orderPreview()', () => {
       closeFeeReserve: 2.475,
       extraMargin: 0,
     };
-    expect(orderPreview({ ...base, side: 'buy', existing }).liqPrice).toBeCloseTo(45_148.99, 2);
+    expect(orderPreview({ ...base, side: 'buy', existing }).liqPrice).toBe(45_149);
     // Selling part of the long only reduces it: no new position to estimate
     expect(orderPreview({ ...base, side: 'sell', qty: 0.05, existing }).liqPrice).toBeUndefined();
     // A 1× long can't be liquidated

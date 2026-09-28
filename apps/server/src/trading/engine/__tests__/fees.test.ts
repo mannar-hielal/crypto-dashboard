@@ -1,5 +1,5 @@
 /**
- * BP-2 USDT Perpetual fees and fill prices — worked numbers (docs/TRADING_TEST_PLAN.md §11–12).
+ * BP-2 USDT Perpetual fees and fill prices — worked numbers (docs/TRADING_TEST_PLAN.md 14.2–14.4).
  *
  * Bybit VIP-0: taker 0.055%, maker 0.02%, on notional (qty × price). Opening costs initial margin
  * + open fee + Bybit's estimated fee to close (taker, priced at the bankruptcy price
