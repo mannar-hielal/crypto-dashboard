@@ -1,6 +1,6 @@
 # cryptopapertrade.com
 
-A professional paper trading dashboard for cryptocurrency. Real-time charting, simulated long/short trading, and a full order management system — without risking real money.
+A professional paper trading dashboard for cryptocurrency. Real-time charting and simulated trading that behaves like a Bybit Unified Trading Account — Spot and USDT Perpetual, Bybit's fees, margin, liquidation and funding — without risking real money.
 
 > ⚠️ **Paper Trading Only** — No real money. For educational and practice purposes only.
 
@@ -13,17 +13,13 @@ A professional paper trading dashboard for cryptocurrency. Real-time charting, s
 - **Live Candlestick Charts** — 9 built-in indicators (EMA, SMA, Average Price, Median Price, Weighted Close, VWAP, Momentum, Percent Change, MACD), each a draggable, customizable widget, via TVP Lightweight Charts
 - **Drawing Toolkit** — Trend lines, Fibonacci retracements, shapes, text, and freehand drawing
 - **Multi-Chart Layout** — 1, 2 (horizontal/vertical), 3, or 4 synchronized chart panes; crosshair and time-range sync across all active panes
-- **Paper Trading** — Simulated long/short market, limit, and stop orders with $10,000 virtual balance and full P&L accounting
-- **Account Summary Bar** — Live stats strip showing Balance, Equity, Unrealized P&L, Realized P&L, Available, Reserved, and Win Rate
-- **TP/SL Auto-Monitor** — Positions close automatically when Take-Profit or Stop-Loss levels are hit
-- **Pending Order Monitor** — Limit/stop orders execute automatically when the trigger price is reached
-- **Order Status Badges** — Colored "Working" / "Filled" pills on orders and history tables
-- **Placing & Closing Time Columns** — Timestamp columns on Orders and History tabs, on by default
-- **Orders Sub-Tabs** — Filter pending orders by All / Limit / Stop with live count badges
-- **Sound Alerts** — Web Audio API synthesised tones for order placed, TP/SL hit, limit/stop filled, and cancelled events
-- **Order & Balance History** — Full audit trail of every order, balance change, and commission
-- **Rejected Order Icon** — ⚠️ inline error icon in the History tab when an order is rejected (e.g. insufficient funds), with a tooltip explaining the rejection reason
-- **Crypto Leverage Settings** — Bybit-style leverage selector (1×–125×) in the Account Settings dialog; affects position size across all order types; persisted across sessions
+- **Two markets, like Bybit** — **Spot** (buy with USDT, sell what you hold) and **USDT Perpetual** (long / short with leverage), one shared 10,000 USDT paper wallet
+- **Server trading engine** — orders, TP/SL and liquidations are executed on the server 24/7, even with the browser closed; the browser sends orders and shows the account live
+- **Bybit's rules** — VIP-0 fees (Spot 0.1%, Perpetual 0.055% taker / 0.02% maker), fills at the best bid/ask, Bybit's lot and tick sizes
+- **Margin & risk** — per-symbol leverage (1×–10×), Cross or Isolated margin, add / reduce margin, mark-price PnL, liquidation at Bybit's formula, risk-limit tiers with partial liquidation, funding every settlement
+- **Orders** — market, limit and stop; TP/SL triggered by Last, Mark or Index price; reduce-only and close-on-trigger; drag TP/SL lines on the chart
+- **Account views** — Positions, Orders (All / Working / Inactive / Filled / Cancelled / Rejected), Order History, **Closed P&L**, Assets (Spot) and Balance History, plus an account summary bar (margin balance, available, IM / MM rates)
+- **Sound Alerts** — Web Audio API tones for order placed, TP/SL hit, fills, cancels and liquidations
 - **Symbol Pair Icons** — stacked base/quote coin icons (TVP style) in every Symbol cell of the Positions, Orders, and History tables, and in the SymbolBar symbol picker trigger and dropdown rows
 - **Trading Journal** — Auto-generated trade events + personal editable notes
 - **Multi-Timeframe** — 1m / 5m / 15m / 1h / 4h / 1d intervals with live aggregation
@@ -35,15 +31,16 @@ A professional paper trading dashboard for cryptocurrency. Real-time charting, s
 
 ## 🗺️ Roadmap
 
-| Phase        | Status         | Scope                                                                                                                                                                                                                                                                                         |
-| ------------ | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Phase 1**  | ✅ Complete    | Auth, live chart, paper trading v1 (market orders), TP/SL monitor, journal, PWA                                                                                                                                                                                                               |
-| **Phase 2**  | 🔄 In Progress | Limit/Stop orders, TradingPanel redesign, pending order monitor ✅, sound alerts ✅, maximize panel ✅, bid/ask feed ✅, account summary bar ✅, order status badges ✅, placing/closing time cols ✅, orders sub-tabs ✅, rejected order icon ✅, leverage settings ✅, symbol pair icons ✅ |
-| **Phase 3**  | 🔄 In Progress | Sync trades to DB ✅, user profile & account settings ✅                                                                                                                                                                                                                                      |
-| **Phase 4**  | 📋 Planned     | Advanced indicators, multi-symbol watchlist, price alerts                                                                                                                                                                                                                                     |
-| **Phase 5**  | 📋 Planned     | Live broker integration — Bybit real-money trading                                                                                                                                                                                                                                            |
-| **Phase 6**  | 📋 Planned     | AI trading bot — Scanner + Analyst + Executor roles, paper mode only                                                                                                                                                                                                                          |
-| **Phase 6b** | 📋 Planned     | AI bot connected to Bybit live trading — requires Phase 5 + Phase 6 proven                                                                                                                                                                                                                    |
+| Phase            | Status         | Scope                                                                                                                                                                                                                                                                                         |
+| ---------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Phase 1**      | ✅ Complete    | Auth, live chart, paper trading v1 (market orders), TP/SL monitor, journal, PWA                                                                                                                                                                                                               |
+| **Phase 2**      | 🔄 In Progress | Limit/Stop orders, TradingPanel redesign, pending order monitor ✅, sound alerts ✅, maximize panel ✅, bid/ask feed ✅, account summary bar ✅, order status badges ✅, placing/closing time cols ✅, orders sub-tabs ✅, rejected order icon ✅, leverage settings ✅, symbol pair icons ✅ |
+| **Phase 3**      | 🔄 In Progress | Sync trades to DB ✅, user profile & account settings ✅                                                                                                                                                                                                                                      |
+| **Bybit parity** | ✅ Complete    | BP-0 … BP-5: per-market data, server engine, Spot + USDT Perpetual with Bybit fees and fills, mark price and liquidation, funding, cross margin and risk tiers — see `docs/APP_LOG.md` → Bybit Parity                                                                                         |
+| **Phase 4**      | 📋 Planned     | Advanced indicators, multi-symbol watchlist, price alerts                                                                                                                                                                                                                                     |
+| **Phase 5**      | 📋 Planned     | Live broker integration — Bybit real-money trading                                                                                                                                                                                                                                            |
+| **Phase 6**      | 📋 Planned     | AI trading bot — Scanner + Analyst + Executor roles, paper mode only                                                                                                                                                                                                                          |
+| **Phase 6b**     | 📋 Planned     | AI bot connected to Bybit live trading — requires Phase 5 + Phase 6 proven                                                                                                                                                                                                                    |
 
 ---
 
@@ -69,14 +66,16 @@ cryptopapertrade.com/
 │   ├── client/          # React 19 frontend (PWA)
 │   │   └── src/
 │   │       ├── components/dashboard/   # Chart, panels, toolbar
-│   │       ├── hooks/                  # usePriceFeed, useTPSLMonitor
+│   │       ├── hooks/                  # usePaneFeeds (market data), usePaperFeed (account WS)
 │   │       ├── pages/                  # Dashboard, auth pages
 │   │       └── store/                  # Zustand stores (auth, market, paper)
 │   └── server/          # Fastify backend
 │       └── src/
 │           ├── plugins/                # Prisma, JWT auth, Bybit WS
-│           ├── routes/                 # auth/, market/
-│           └── services/              # BybitWebSocketManager, CandleAggregator, IndicatorCalculator
+│           ├── routes/                 # auth/, market/, paper/, newsletter/
+│           ├── services/               # BybitWebSocketManager, BybitMarketInfo, CandleAggregator, IndicatorCalculator
+│           ├── trading/                # Server trading engine: pure engine/, MatchingEngine, TradingService, bybitSpec
+│           └── tools/                  # bybitParity.ts — Bybit testnet parity run
 ├── generated/
 │   └── CDSDK/           # Shared SDK — '@crypto-dashboard/sdk'
 ├── docs/                # Project documentation
@@ -157,8 +156,11 @@ cryptopapertrade.com/
 pnpm lint             # ESLint
 pnpm format           # Prettier
 pnpm type-check       # TypeScript strict check
-pnpm test             # Run all tests (198 total)
+pnpm test             # Run all tests (~1,160: server + client Vitest)
 pnpm test:coverage    # Tests with coverage report
+
+# Bybit testnet parity (places real testnet orders; needs a testnet key in .env, BYBIT_TESTNET=true)
+pnpm --filter @crypto-dashboard/server parity:testnet
 
 # Database
 cd apps/server
@@ -169,6 +171,19 @@ pnpm prisma studio         # Visual DB browser → localhost:5555
 docker compose up -d       # Start PostgreSQL + Redis
 docker compose down -v     # Stop + wipe data volumes
 ```
+
+---
+
+## 🧪 Testing
+
+The test strategy, tools and the case catalogue live in [`docs/TRADING_TEST_PLAN.md`](./docs/TRADING_TEST_PLAN.md).
+
+- **Every PR** (`ci.yml`): audit, type-check, format, lint, unit and component tests, build — the same gates as the
+  pre-commit hook.
+- **Nightly** (`parity.yml`): the Bybit testnet parity run replays a fixed scenario on Bybit testnet and on the paper
+  engine and compares the v5 fields. It runs on a one-off Fly Machine in Singapore (Bybit blocks GitHub's US
+  runners) with secrets from the `bybit-testnet` environment, which only `main` can use; a failure opens a `parity`
+  issue. Start it by hand from Actions → Bybit testnet parity → Run workflow.
 
 ---
 
@@ -185,7 +200,8 @@ Swagger UI is available in development at `http://localhost:3001/docs` (disabled
 | **API** | Fly.io           | https://crypto-dashboard-api.fly.dev   |
 | **App** | Cloudflare Pages | https://crypto-dashboard-7yy.pages.dev |
 
-Deployments trigger automatically on push to `main` when CI passes.
+Deployments trigger automatically on push to `main` when CI passes. A separate Fly app, `crypto-dashboard-parity`,
+only hosts the short-lived machines of the nightly parity run.
 
 ---
 
@@ -196,4 +212,4 @@ Deployments trigger automatically on push to `main` when CI passes.
 ---
 
 **Live:** [API Health](https://crypto-dashboard-api.fly.dev/health) · [App](https://crypto-dashboard-7yy.pages.dev)  
-**Last updated:** September 24, 2026
+**Last updated:** September 28, 2026

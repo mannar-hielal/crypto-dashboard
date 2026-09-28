@@ -31,13 +31,6 @@ import {
   type OrderSize,
 } from '../../trading/engine/index.js';
 import { privatePaperWs } from './ws.js';
-import { logger } from '../../logger.js';
-
-/**
- * The pre-BP-2 API (account-wide leverage, margin sizing by usdtAmount) is logged, not yet removed
- * (BP-5, owner decision O11): it goes one release after nothing has been logged.
- */
-const legacyLog = logger.child({ route: 'paper-legacy-api' });
 
 // ─── Shared schemas ───────────────────────────────────────────────────────────
 
@@ -115,19 +108,16 @@ function userIdOf(request: { user: unknown }): string {
 }
 
 /**
- * The order size from a body that gives exactly one of qty / value / usdtAmount (the last from a
- * pre-BP-2 client, as initial margin). Null when zero or several are given.
+ * The order size from a body that gives exactly one of qty / value. Null when neither or both are
+ * given. (Pre-BP-2 margin sizing by `usdtAmount` was removed with O11; the schemas reject it.)
  */
-function sizeOf(b: { qty?: string; value?: string; usdtAmount?: string }): OrderSize | null {
-  const given = [b.qty, b.value, b.usdtAmount].filter((v) => v !== undefined);
-  if (given.length !== 1) return null;
+function sizeOf(b: { qty?: string; value?: string }): OrderSize | null {
+  if ((b.qty === undefined) === (b.value === undefined)) return null;
   if (b.qty !== undefined) return { qty: positive(b.qty, 'qty') };
-  if (b.value !== undefined) return { value: positive(b.value, 'value') };
-  legacyLog.warn({ field: 'usdtAmount' }, 'Pre-BP-2 order sizing used');
-  return { margin: positive(b.usdtAmount as string, 'usdtAmount') };
+  return { value: positive(b.value as string, 'value') };
 }
 
-const SIZE_REQUIRED = 'Give the order size as exactly one of qty, value or usdtAmount';
+const SIZE_REQUIRED = 'Give the order size as exactly one of qty or value';
 
 /** A required positive, bounded decimal (the schema already checked the format). */
 function positive(value: string, field: string): Decimal {
@@ -219,7 +209,6 @@ export async function paperRoutes(app: FastifyInstance) {
             type: { type: 'string', enum: ['market', 'limit', 'stop'] },
             qty: decimalString,
             value: decimalString,
-            usdtAmount: decimalString,
             triggerPrice: decimalString,
             takeProfit: decimalString,
             stopLoss: decimalString,
@@ -370,7 +359,6 @@ export async function paperRoutes(app: FastifyInstance) {
           properties: {
             triggerPrice: decimalString,
             qty: decimalString,
-            usdtAmount: decimalString,
             takeProfit: nullableDecimal,
             stopLoss: nullableDecimal,
             triggerBy: triggerByEnum,
@@ -685,41 +673,6 @@ export async function paperRoutes(app: FastifyInstance) {
       guarded(reply, async () =>
         send(reply, await app.trading.setMarginMode(userIdOf(request), request.body.marginMode))
       )
-  );
-
-  // ── PATCH /account/leverage — default leverage (pre-BP-2 clients; remove in BP-3) ──
-  app.patch<{ Body: { leverage: number } }>(
-    '/account/leverage',
-    {
-      onRequest: [app.authenticate],
-      config: mutationRateLimit,
-      schema: {
-        tags: ['Paper Trading'],
-        summary: 'Set the default leverage for symbols without their own (1–10)',
-        ...secured,
-        body: {
-          type: 'object',
-          required: ['leverage'],
-          additionalProperties: false,
-          properties: { leverage: { type: 'integer', minimum: 1, maximum: 10 } },
-        },
-        response: {
-          200: actionResponse({ type: 'integer' }),
-          400: errorResponse,
-          401: errorResponse,
-          409: errorResponse,
-          422: errorResponse,
-          429: errorResponse,
-          500: errorResponse,
-        },
-      },
-    },
-    async (request, reply) => {
-      legacyLog.warn({ route: 'PATCH /account/leverage' }, 'Pre-BP-2 account leverage route used');
-      return guarded(reply, async () =>
-        send(reply, await app.trading.setLeverage(userIdOf(request), request.body.leverage))
-      );
-    }
   );
 
   // ── POST /account/reset ──────────────────────────────────────────────────────
