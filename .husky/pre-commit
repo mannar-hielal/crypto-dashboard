@@ -19,8 +19,9 @@ pnpm run audit
 pnpm --filter @crypto-dashboard/server type-check
 pnpm --filter @crypto-dashboard/client type-check
 
-# Run tests (Mirroring the 'Tests pass' checklist item)
-pnpm test
+# Run tests with the coverage floors, exactly as CI does (vitest.config.ts coverage.thresholds)
+pnpm test:coverage
+pnpm test:hooks
 
 # Auto-fix + format staged files
 pnpm lint-staged

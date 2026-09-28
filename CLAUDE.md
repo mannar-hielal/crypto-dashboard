@@ -37,5 +37,6 @@ file.
 ## Gates before any commit
 
 `.husky/pre-commit` runs, in order: `pnpm run audit` → `pnpm type-check` (server + client) →
-`pnpm test` → `lint-staged` → `pnpm lint`. All must pass locally — don't rely on CI to catch what
+`pnpm test:coverage` + `pnpm test:hooks` (the suites plus the coverage floors) → `lint-staged` →
+`pnpm lint`. All must pass locally — don't rely on CI to catch what
 these would have caught first.

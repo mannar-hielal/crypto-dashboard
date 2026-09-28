@@ -66,7 +66,9 @@ correct without depending on real infrastructure, and the suite stays fast and d
 - Exercise routes by injecting into the built app, not by starting a real HTTP listener:
   `app.inject({ method: 'GET', url: '...' })`.
 - Coverage: `pnpm test:coverage` uses the v8 provider, includes `src/**/*.ts`, excludes
-  `src/index.ts` and `src/**/__tests__/**`.
+  `src/index.ts` and `src/**/__tests__/**`, and fails below the `coverage.thresholds` floors in each
+  package's `vitest.config.ts` (raised as tests land, never lowered). The pre-commit hook and CI both
+  run it.
 
 ## Client tests (`apps/client`, Vitest, `environment: 'jsdom'`)
 
@@ -85,18 +87,19 @@ correct without depending on real infrastructure, and the suite stays fast and d
 ## Gates — what "passing" means before a commit/PR
 
 Pre-commit hook (`.husky/pre-commit`), in order: `audit` → `type-check` (server + client) →
-`test` → `lint-staged` → `lint`. CI (`ci.yml`) additionally runs `format:check` and `build`.
+`test:coverage` + `test:hooks` → `lint-staged` → `lint`. CI (`ci.yml`) additionally runs
+`format:check`, `build` and the Postgres integration job (`test:int`, CI only — it needs a database).
 A change is not ready to push until all of these are green locally — don't rely on CI to catch a
 gate that `pnpm test`/`pnpm lint`/`pnpm type-check` would have caught first.
 
-| Command                                             | What it verifies                                      |
-| --------------------------------------------------- | ----------------------------------------------------- |
-| `pnpm run audit`                                    | No high/critical CVEs in dependencies                 |
-| `pnpm --filter @crypto-dashboard/server type-check` | Server TS compiles clean                              |
-| `pnpm --filter @crypto-dashboard/client type-check` | Client TS compiles clean (`tsconfig.app.json`)        |
-| `pnpm test`                                         | Server + client Vitest suites, no skips               |
-| `pnpm format:check`                                 | Prettier formatting is consistent                     |
-| `pnpm lint`                                         | ESLint (flat config), zero errors across all packages |
+| Command                                             | What it verifies                                       |
+| --------------------------------------------------- | ------------------------------------------------------ |
+| `pnpm run audit`                                    | No high/critical CVEs in dependencies                  |
+| `pnpm --filter @crypto-dashboard/server type-check` | Server TS compiles clean                               |
+| `pnpm --filter @crypto-dashboard/client type-check` | Client TS compiles clean (`tsconfig.app.json`)         |
+| `pnpm test:coverage`                                | The Vitest suites, no skips, above the coverage floors |
+| `pnpm format:check`                                 | Prettier formatting is consistent                      |
+| `pnpm lint`                                         | ESLint (flat config), zero errors across all packages  |
 
 ## Cross-references
 
