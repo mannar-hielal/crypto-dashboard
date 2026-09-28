@@ -45,10 +45,19 @@ const SYMBOL = 'BTCUSDT';
 const QTY = '0.001';
 const LEVERAGE = 10;
 /**
- * 🔐 Unattended runs (parity.yml) must never leave a position open: past this the run closes
- * everything it opened and exits, even if a Bybit call hangs.
+ * 🔐 Unattended runs (parity.yml) must never leave a position open. Past DEADLINE_MS the scenario
+ * is aborted: its next Bybit response throws, so it stops placing orders and its own `finally`
+ * cleans up. If it is stuck instead, the deadline cleans up itself after ABORT_GRACE_MS; if the
+ * cleanup stalls too, the process exits HARD_EXIT_MS later. Every Bybit call times out after
+ * REQUEST_TIMEOUT_MS, so none of these waits can hang.
  */
 const DEADLINE_MS = 8 * 60_000;
+const ABORT_GRACE_MS = 30_000;
+const HARD_EXIT_MS = 60_000;
+const REQUEST_TIMEOUT_MS = 10_000;
+
+/** 'aborted' once the deadline passes (the scenario must stop); 'cleanup' while closing out. */
+let phase: 'run' | 'aborted' | 'cleanup' = 'run';
 
 const POSITION_FIELDS = [
   'size',
@@ -80,6 +89,7 @@ type Row = Record<string, unknown>;
 
 /** Unwrap a Bybit response; a non-zero retCode stops the run (the message, never the request). */
 function ok<T>(step: string, res: { retCode: number; retMsg: string; result: T }): T {
+  if (phase === 'aborted') throw new Error(`${step}: aborted — the parity run passed its deadline`);
   if (res.retCode !== 0) throw new Error(`${step}: Bybit ${res.retCode} ${res.retMsg}`);
   return res.result;
 }
@@ -92,11 +102,14 @@ async function main(): Promise<number> {
     log.error('BYBIT_TESTNET is not true — the parity run only trades on testnet');
     return 2;
   }
-  const client = new RestClientV5({
-    key: config.bybitApiKey,
-    secret: config.bybitApiSecret,
-    testnet: true,
-  });
+  const client = new RestClientV5(
+    {
+      key: config.bybitApiKey,
+      secret: config.bybitApiSecret,
+      testnet: true,
+    },
+    { timeout: REQUEST_TIMEOUT_MS } // the library's default is 5 minutes
+  );
   const tiers = riskTiersFromBybit(await getRiskLimit(SYMBOL));
   let seq = 0;
   const ctx = (): EngineContext => ({
@@ -140,6 +153,7 @@ async function main(): Promise<number> {
   const cleanup = async () => {
     if (cleaned) return;
     cleaned = true;
+    phase = 'cleanup';
     const pos = await bybitPosition().catch(() => ({ size: '0', side: '' }) as Row);
     const size = String(pos.size ?? '0');
     if (new Decimal(size || '0').gt(0)) {
@@ -157,8 +171,16 @@ async function main(): Promise<number> {
     await client.setMarginMode('ISOLATED_MARGIN').catch(() => undefined);
   };
   const deadline = setTimeout(() => {
-    log.error({ deadlineMs: DEADLINE_MS }, 'Parity run passed its deadline — cleaning up');
-    void cleanup().finally(() => process.exit(1));
+    log.error({ deadlineMs: DEADLINE_MS }, 'Parity run passed its deadline — aborting');
+    phase = 'aborted';
+    // The scenario normally reaches its own `finally` within one request timeout; only a stuck
+    // run gets cleaned up from here, so the two never place closing orders at the same time
+    setTimeout(() => {
+      if (cleaned) return;
+      log.error('Parity run is stuck — cleaning up from the deadline');
+      setTimeout(() => process.exit(1), HARD_EXIT_MS).unref();
+      void cleanup().finally(() => process.exit(1));
+    }, ABORT_GRACE_MS).unref();
   }, DEADLINE_MS);
 
   let state: AccountState = {

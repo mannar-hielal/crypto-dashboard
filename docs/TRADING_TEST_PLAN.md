@@ -100,13 +100,14 @@ browser test); T3 covers wiring and user journeys, not maths; M is for what's le
   liquidation price or a funding timestamp on demand). Every T3 test then runs on known prices — no waiting for the
   market, no flakiness.
 - **Nightly Bybit testnet parity (T4) — in place since 2026-09-28.** `.github/workflows/parity.yml` runs
-  `parity:testnet` nightly (03:17 UTC), on demand (`workflow_dispatch`), and on same-repo PRs to `develop` that change
-  the parity code (never for forks, which get no secrets); one run at a time, since they share the testnet account.
-  The script runs on a one-off Fly Machine in `sin` (app `crypto-dashboard-parity`), not on the GitHub runner, which
-  Bybit geo-blocks; it has its own 8-minute deadline that closes what it opened. Keys: repo secrets
-  `BYBIT_TESTNET_KEY` / `BYBIT_TESTNET_SECRET`, plus `FLY_PARITY_API_TOKEN`. It uploads the log as an artifact and, when a
-  scheduled or manual run fails, opens (or comments on) one GitHub issue labelled `parity`. The first green run also closes
-  the open questions in APP_LOG (O5, max-reducible margin, 110090 retCode).
+  `parity:testnet` nightly (03:17 UTC) and on demand (`workflow_dispatch`), never on pull requests; one run at a time,
+  since they share the testnet account. The script runs on a one-off Fly Machine in `sin` (app
+  `crypto-dashboard-parity`), not on the GitHub runner, which Bybit geo-blocks; it aborts at 8 minutes and closes what
+  it opened, and every Bybit call times out after 10 s. 🔐 Its secrets (`BYBIT_TESTNET_KEY`, `BYBIT_TESTNET_SECRET`,
+  `FLY_PARITY_API_TOKEN`) live in the `bybit-testnet` environment, which only `main` may use, so a branch can't run a
+  changed script with the keys before review. It uploads the log as an artifact and, when a run fails, opens (or
+  comments on) one GitHub issue labelled `parity`. The first green run also closes the open questions in APP_LOG (O5,
+  max-reducible margin, 110090 retCode).
 - **Weekly spec-drift check.** A script compares `bybitSpec.ts` constants with Bybit's public API (fee rates via the
   help-centre values we store, `instruments-info`, `risk-limit` tiers, `fundingIntervalHour`) and opens an issue when
   Bybit changes a value — today that is only caught when someone re-reads the docs.

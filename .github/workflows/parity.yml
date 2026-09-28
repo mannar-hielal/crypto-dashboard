@@ -2,8 +2,9 @@ name: Bybit testnet parity
 
 # T4 in docs/TRADING_TEST_PLAN.md (roadmap P3): replays a fixed BTCUSDT scenario on Bybit testnet and
 # on the paper engine and diffs the v5 fields (apps/server/src/tools/bybitParity.ts). It places real
-# testnet orders, so it runs nightly, on demand, and on same-repo PRs that change the parity code —
-# never for fork PRs, which get no secrets.
+# testnet orders, so it runs nightly and on demand only — never on pull requests. 🔐 Its secrets live in
+# the `bybit-testnet` environment, which only the `main` branch may use: a branch can't change this
+# script or workflow and run it with the keys before review.
 #
 # Where it runs: a one-off Fly Machine in sin, in its own app (crypto-dashboard-parity), not on the
 # GitHub runner — Bybit geo-blocks GitHub's US runners (HTTP 403). The runner builds this commit's
@@ -15,12 +16,6 @@ on:
   schedule:
     - cron: '17 3 * * *' # 03:17 UTC daily
   workflow_dispatch:
-  pull_request:
-    branches: [develop]
-    paths:
-      - '.github/workflows/parity.yml'
-      - 'apps/server/src/tools/bybitParity.ts'
-      - 'apps/server/src/trading/bybitParity.ts'
 
 permissions:
   contents: read
@@ -37,8 +32,8 @@ env:
 jobs:
   parity:
     name: Bybit testnet parity
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    environment: bybit-testnet
     timeout-minutes: 30
 
     steps:
@@ -57,7 +52,7 @@ jobs:
         shell: bash
         run: |
           if [ -z "$KEY" ] || [ -z "$SECRET" ] || [ -z "$FLY_API_TOKEN" ]; then
-            echo "::error::BYBIT_TESTNET_KEY / BYBIT_TESTNET_SECRET / FLY_PARITY_API_TOKEN repo secrets must be set"
+            echo "::error::BYBIT_TESTNET_KEY / BYBIT_TESTNET_SECRET / FLY_PARITY_API_TOKEN must be set in the bybit-testnet environment"
             exit 1
           fi
           flyctl secrets set --app "$PARITY_APP" --stage \
@@ -133,7 +128,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Open or update the parity issue
-        if: failure() && github.event_name != 'pull_request'
+        if: failure()
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

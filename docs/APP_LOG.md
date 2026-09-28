@@ -666,12 +666,14 @@ partial fills, ADL, insurance fund · VIP tiers, fee coupons, USDC / inverse con
 - **Bybit testnet parity run (BP-5 G).** `pnpm --filter @crypto-dashboard/server parity:testnet` replays a fixed
   scenario on Bybit testnet and on the paper engine and diffs `position/list`, `execution/list`,
   `position/closed-pnl` and `account/wallet-balance` (maths given the same fills; tolerance 0.01). Testnet only, keys
-  never logged. **Runs in CI since 2026-09-28** (`.github/workflows/parity.yml`: nightly, on demand, and on PRs
-  that change the parity code). The runner builds the commit's server image and runs the script on a one-off Fly
-  Machine in `sin` in its own app, `crypto-dashboard-parity` (Bybit geo-blocks GitHub's US runners with 403), then
-  removes it. Secrets: `BYBIT_TESTNET_KEY` / `BYBIT_TESTNET_SECRET` (a testnet key without an IP allow-list expires
-  after ~3 months — renew both when a run fails with `33004`) and `FLY_PARITY_API_TOKEN` (a deploy token scoped to
-  the parity app, expires 2027-09-28). A scheduled or manual failure opens a `parity` issue. Still open until it runs green: the points the help centre leaves open — O5 (cross unrealised
+  never logged. **Runs in CI since 2026-09-28** (`.github/workflows/parity.yml`: nightly and on demand, never on
+  PRs). The runner builds the commit's server image and runs the script on a one-off Fly Machine in `sin` in its own
+  app, `crypto-dashboard-parity` (Bybit geo-blocks GitHub's US runners with 403), then removes it. Secrets, in the
+  `bybit-testnet` environment (usable from `main` only): `BYBIT_TESTNET_KEY` / `BYBIT_TESTNET_SECRET` (a Read-Write
+  testnet key with Unified Trading → Contract Orders + Positions; without an IP allow-list it expires after ~3 months —
+  renew when a run fails with `33004`) and `FLY_PARITY_API_TOKEN` (a deploy token scoped to the parity app, expires
+  2027-09-28). The testnet account needs USDT in its Unified Trading account (`110007` otherwise). A failure opens a
+  `parity` issue. Still open until it runs green: the points the help centre leaves open — O5 (cross unrealised
   profit funds orders), the max-reducible margin formula, whether `positionIM` includes extra margin, and the retCode
   of a risk-limit refusal.
 - **Manual browser checks** still ⬜ in `TRADING_TEST_PLAN.md` (live feed, tab closed, two tabs, refresh) — to be
