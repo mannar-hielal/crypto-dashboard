@@ -182,6 +182,9 @@ export function diffFields(
   for (const field of fields) {
     const b = valueOf(bybit, field);
     const p = valueOf(paper, field);
+    // Bybit leaves a field blank when it doesn't report it for this account (e.g. bustPrice under
+    // UTA): nothing to compare
+    if (b === '') continue;
     if (b === undefined || p === undefined) {
       diffs.push({ field, bybit: b ?? '(missing)', paper: p ?? '(missing)' });
       continue;

@@ -129,6 +129,10 @@ describe('diffFields', () => {
     ]);
   });
 
+  it('skips a field Bybit leaves blank (not reported for this account, e.g. bustPrice under UTA)', () => {
+    expect(diffFields({ bustPrice: '' }, { bustPrice: '45000' }, ['bustPrice'])).toEqual([]);
+  });
+
   it('reports a field missing on either side instead of skipping it', () => {
     expect(diffFields({ a: '1' }, {}, ['a'])).toEqual([
       { field: 'a', bybit: '1', paper: '(missing)' },

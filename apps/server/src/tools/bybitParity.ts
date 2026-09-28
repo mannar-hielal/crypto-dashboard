@@ -42,7 +42,8 @@ import {
 
 const log = logger.child({ service: 'BybitParity' });
 const SYMBOL = 'BTCUSDT';
-const QTY = '0.001';
+// 0.002 so step 4 can close half: Bybit's minimum BTCUSDT order is 0.001 (a 0.0005 close was refused)
+const QTY = '0.002';
 const LEVERAGE = 10;
 /**
  * 🔐 Unattended runs (parity.yml) must never leave a position open. Past DEADLINE_MS the scenario
@@ -145,11 +146,20 @@ async function main(): Promise<number> {
     riskTiers: () => tiers,
   });
   const report: { step: string; diffs: FieldDiff[] }[] = [];
-  const check = (step: string, bybit: Row, paper: Row, fields: readonly string[]) => {
+  const check = (
+    step: string,
+    bybit: Row,
+    paper: Row,
+    fields: readonly string[],
+    context: Record<string, unknown> = {}
+  ) => {
     const diffs = diffFields(bybit, paper, fields);
     report.push({ step, diffs });
-    log.info({ step, diffs: diffs.length ? diffs : 'match' }, 'Parity step');
+    log.info({ step, diffs: diffs.length ? diffs : 'match', ...context }, 'Parity step');
   };
+  // Bybit's mark at the moment of a position check: its positionValue looked mark-based on the
+  // first run (83.8569 vs 0.001 × entry 83,881.1), logged to settle that
+  const markOf = (row: Row) => ({ bybitMarkPrice: row.markPrice, bybitAvgPrice: row.avgPrice });
   const rules = {
     tickSize: new Decimal(0),
     qtyStep: new Decimal(0),
@@ -286,11 +296,13 @@ async function main(): Promise<number> {
     );
     state = applyDelta(state, opened.delta);
     const paperPos = () => toBybitPosition(positionDTO(state.positions[0], tiers));
+    const opened1 = await bybitPosition();
     check(
       'open (isolated 10×)',
-      await bybitPosition(),
+      opened1,
       paperPos() as unknown as Row,
-      POSITION_FIELDS
+      POSITION_FIELDS,
+      markOf(opened1)
     );
 
     // ── 2. Add margin ─────────────────────────────────────────────────────────
@@ -308,7 +320,8 @@ async function main(): Promise<number> {
         new Decimal(buyFill.execPrice)
       ).delta
     );
-    check('add margin +10', await bybitPosition(), paperPos() as unknown as Row, POSITION_FIELDS);
+    const added = await bybitPosition();
+    check('add margin +10', added, paperPos() as unknown as Row, POSITION_FIELDS, markOf(added));
 
     // ── 3. Stop-loss on the mark price ────────────────────────────────────────
     const sl = new Decimal(buyFill.execPrice).times('0.95').toDecimalPlaces(1).toString();
@@ -329,10 +342,20 @@ async function main(): Promise<number> {
         slTriggerBy: 'MarkPrice',
       }).delta
     );
-    check('stop-loss by mark', await bybitPosition(), paperPos() as unknown as Row, [
-      'stopLoss',
-      'slTriggerBy',
-    ]);
+    // position/list has no slTriggerBy: the trigger source is on the StopLoss order Bybit creates
+    const slOrder = ok(
+      'order/realtime',
+      await live.getActiveOrders({ category: 'linear', symbol: SYMBOL })
+    ).list.find((o) => o.stopOrderType === 'StopLoss');
+    check(
+      'stop-loss by mark',
+      {
+        stopLoss: (await bybitPosition()).stopLoss,
+        slTriggerBy: slOrder?.triggerBy ?? '(no StopLoss order)',
+      },
+      paperPos() as unknown as Row,
+      ['stopLoss', 'slTriggerBy']
+    );
 
     // ── 4. Reduce-only partial close → Closed P&L ────────────────────────────
     const half = new Decimal(QTY).div(2).toString();
