@@ -2681,7 +2681,8 @@ visual gate answered (all recommended). Bybit's rules checked in the help centre
 - **F — refinements:** funding at a mark within 10 s of the timestamp (else the candle); a late fee lands on the
   closed trade; isolated realized PnL books only what was lost; the backfill charges positions closed during a gap.
 - **G — parity:** `trading/bybitParity.ts` adapter + diff; `tools/bybitParity.ts` manual testnet run
-  (`parity:testnet`, testnet only, keys never logged) — **not run yet** (needs the owner's testnet keys).
+  (`parity:testnet`, testnet only, keys never logged) — not run at BP-5; runs nightly in CI since 2026-09-28 (see
+  Bybit Parity → Open items).
 - **Step 0:** risk tiers carry IMR / max leverage; the pre-BP-2 API logs every call (removal next release, O11).
 - Migrations: `bp5_trigger_by_reduce_only`, `bp5_trade_open_fee`, `bp5_cross_margin` (additive; the last sets
   existing accounts to isolated).

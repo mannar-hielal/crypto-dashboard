@@ -77,6 +77,9 @@ jobs:
           # 🔐 Testnet only: the script refuses to trade unless BYBIT_TESTNET is true. config.ts's other
           # required variables are unused by the script (no database, Redis or auth) — dummies.
           # A freshly pushed image can take a few seconds to reach the registry (MANIFEST_UNKNOWN): retry
+          machine_id() {
+            flyctl machine list --app "$PARITY_APP" --json | jq -r --arg n "$name" '.[] | select(.name == $n) | .id'
+          }
           for attempt in 1 2 3 4 5 6; do
             if flyctl machine run "registry.fly.io/$PARITY_APP:run-${{ github.run_id }}" \
               --app "$PARITY_APP" --name "$name" --region sin --restart no --detach \
@@ -90,11 +93,17 @@ jobs:
               -- node dist/src/tools/bybitParity.js; then
               break
             fi
+            # The create may have succeeded even though the CLI call failed (a dropped connection):
+            # a retry would then only collide on the name, so adopt the machine instead
+            if [ -n "$(machine_id)" ]; then
+              echo "Launch reported an error, but machine $name exists; continuing with it"
+              break
+            fi
             [ "$attempt" = 6 ] && { echo "::error::Could not launch the parity machine"; exit 1; }
             echo "Launch attempt $attempt failed; retrying in 15 s"
             sleep 15
           done
-          id=$(flyctl machine list --app "$PARITY_APP" --json | jq -r --arg n "$name" '.[] | select(.name == $n) | .id')
+          id=$(machine_id)
           [ -n "$id" ] || { echo "::error::Parity machine $name not found"; exit 1; }
           echo "id=$id" >> "$GITHUB_OUTPUT"
           flyctl machine wait "$id" --app "$PARITY_APP" --state stopped --wait-timeout 12m
