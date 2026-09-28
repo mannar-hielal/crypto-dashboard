@@ -9,6 +9,7 @@ import { createPortal } from 'react-dom';
 import { usePaperStore, type SpotBalance } from '@/store/paperStore';
 import { NumericInput } from '@/components/ui/NumericInput';
 import { fontSize, zIndex } from '@/lib/tokens';
+import { guide } from '@/lib/guideAnchors';
 import styles from './TradeDialog.module.css';
 
 interface SpotExitsModalProps {
@@ -128,6 +129,7 @@ export function SpotExitsModal({ holding, onClose }: SpotExitsModalProps) {
           </button>
           <button
             type="button"
+            {...guide('spot-exits.confirm')}
             className={`${styles.action} ${styles.confirm}`}
             style={{ fontSize: fontSize.xs11 }}
             disabled={saving}

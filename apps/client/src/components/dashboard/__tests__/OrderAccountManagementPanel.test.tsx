@@ -1,8 +1,9 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { OrderAccountManagementPanel } from '../OrderAccountManagementPanel';
 import { migrateColPrefs } from '@/lib/columnPrefs';
+import { color } from '@/lib/tokens';
 import {
   usePaperStore,
   type BalanceEvent,
@@ -13,12 +14,22 @@ import {
 } from '@/store/paperStore';
 import { paneStores } from '@/store/paneStore';
 import { useLayoutStore } from '@/store/layoutStore';
+import { useAuthStore } from '@/store/authStore';
+import { fakeDelta, fakePaperApi, resetFakePaperApi } from '@/test/fakePaperApi';
+import { getByGuide, queryByGuide } from '@/test/guide';
 
 // Bench-compatible fixture timestamp — evaluated once at module load, which
 // happens after SESSION_START is evaluated in OrderAccountManagementPanel.tsx.
 // Any closingTime >= SESSION_START satisfies isBenchHistoricalOrder; using a
 // static value here keeps tests deterministic within a single run.
 const FIXTURE_NOW = Date.now();
+
+// Trading runs on the server (BP-1): store actions call paperApi. The fake records the intent and
+// answers with a delta, so no test in this file reaches the network.
+vi.mock('@crypto-dashboard/sdk', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@crypto-dashboard/sdk')>()),
+  paperApi: (await import('@/test/fakePaperApi')).fakePaperApi,
+}));
 
 vi.mock('framer-motion', () => ({
   motion: new Proxy(
@@ -79,6 +90,7 @@ function seedState({
 
 beforeEach(() => {
   localStorage.clear();
+  resetFakePaperApi();
   usePaperStore.getState().clear();
   paneStores[0].setState({
     latestPrice: 77_350,
@@ -1144,5 +1156,240 @@ describe('BP-5 D — Closed P&L tab', () => {
     expect(eth.textContent).toBe('-300.5000 USDT');
     expect(eth.getAttribute('title')).toBe('Open fee — · Close fee — · Funding $0.5000');
     expect(rows[1].textContent).toContain('Liquidation');
+  });
+});
+
+// ─── Section 8 — Account Settings modal (SC-8-1, SC-8-2, SC-8-3; NEW-8-1 = 8.12) ─
+
+describe('Section 8 — Account Settings modal', () => {
+  const body = () => document.body;
+  const modal = () => queryByGuide(body(), 'acct-settings.modal');
+  const resetButton = () => getByGuide(body(), 'acct-settings.reset');
+  const balanceShown = () => screen.getByText('Balance').nextElementSibling?.textContent;
+
+  function openSettings() {
+    fireEvent.click(getByGuide(body(), 'account.settings'));
+    return getByGuide(body(), 'acct-settings.modal');
+  }
+
+  /** An account with something in every list, so a reset has something to clear */
+  function seedBusyAccount() {
+    usePaperStore.setState({
+      version: 3,
+      balance: 8_000,
+      positions: [
+        {
+          id: 'pos-reset',
+          symbol: 'BTCUSDT',
+          side: 'long',
+          quantity: 0.02,
+          entryPrice: 50_000,
+          entryUsdtAmount: 1_000,
+          category: 'linear',
+          leverage: 1,
+          entryFee: 0.55,
+          closeFeeReserve: 0,
+          extraMargin: 0,
+          liqPrice: 0,
+          bustPrice: 0,
+          positionIM: 1_000,
+          positionMM: 5,
+          cumFunding: 0,
+          openedAt: FIXTURE_NOW,
+        },
+      ],
+      pendingOrders: [
+        {
+          id: 'limit-reset',
+          category: 'linear',
+          symbol: 'BTCUSDT',
+          side: 'buy',
+          type: 'limit',
+          usdtAmount: 490,
+          reserved: 491,
+          triggerPrice: 49_000,
+          qty: 0.01,
+          leverage: 1,
+          placedAt: FIXTURE_NOW,
+        },
+      ],
+      journal: [{ id: 'j-reset', time: FIXTURE_NOW, text: 'Why I bought', isUserNote: true }],
+    });
+  }
+
+  beforeEach(() => {
+    useAuthStore.setState({
+      accessToken: 'test-token',
+      user: { id: 'u1', email: 'trader@test.local', username: 'trader42' },
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    useAuthStore.setState({ accessToken: null, user: null });
+  });
+
+  // ── SC-8-1 Open, read, close ──────────────────────────────────────────────
+
+  it('[8.1] should open the modal titled "Account Settings" when the gear is clicked', () => {
+    renderPanel();
+    expect(modal()).toBeNull();
+    const dialog = openSettings();
+    expect(within(dialog).getByText('Account Settings')).toBeTruthy();
+  });
+
+  it('[8.2] should show the signed-in username as read-only text when the modal is open', () => {
+    renderPanel();
+    openSettings();
+    const name = getByGuide(body(), 'acct-settings.name');
+    expect(name.textContent).toBe('trader42');
+    // Plain text, not a field: nothing inside it can take typing
+    expect(name.tagName).not.toBe('INPUT');
+    expect(name.querySelector('input, textarea, [contenteditable="true"]')).toBeNull();
+    expect(name.getAttribute('contenteditable')).toBeNull();
+  });
+
+  it('[8.3] should have no leverage field when the modal is open (leverage is per symbol)', () => {
+    renderPanel();
+    const dialog = openSettings();
+    expect(within(dialog).queryByText(/leverage/i)).toBeNull();
+    expect(dialog.querySelectorAll('input, select, textarea')).toHaveLength(0);
+  });
+
+  it('[8.4] should show the Bybit VIP-0 fees as read-only text when the modal is open', () => {
+    renderPanel();
+    openSettings();
+    const fees = getByGuide(body(), 'acct-settings.fees');
+    expect(fees.textContent).toContain('Spot 0.1%');
+    expect(fees.textContent).toContain('Perpetual 0.055% taker · 0.02% maker');
+    expect(fees.querySelector('input')).toBeNull();
+  });
+
+  it('[8.5] should close without resetting when Done is clicked', () => {
+    renderPanel();
+    openSettings();
+    const done = getByGuide(body(), 'acct-settings.done');
+    expect(done.textContent).toBe('Done');
+    fireEvent.click(done);
+    expect(modal()).toBeNull();
+    expect(fakePaperApi.resetAccount).not.toHaveBeenCalled();
+  });
+
+  it('[8.9] should close without resetting when ✕ is clicked', () => {
+    renderPanel();
+    openSettings();
+    fireEvent.click(getByGuide(body(), 'acct-settings.close'));
+    expect(modal()).toBeNull();
+    expect(fakePaperApi.resetAccount).not.toHaveBeenCalled();
+  });
+
+  it('[8.10] should close on a backdrop click but stay open on a click inside the modal', () => {
+    renderPanel();
+    const dialog = openSettings();
+    fireEvent.click(dialog);
+    expect(modal()).not.toBeNull();
+    fireEvent.click(getByGuide(body(), 'acct-settings.backdrop'));
+    expect(modal()).toBeNull();
+    expect(fakePaperApi.resetAccount).not.toHaveBeenCalled();
+  });
+
+  // ── SC-8-2 Two-step reset timer ───────────────────────────────────────────
+
+  it('[8.6] should ask "Confirm reset?" without resetting when Reset account is clicked once', () => {
+    vi.useFakeTimers();
+    renderPanel();
+    openSettings();
+    expect(resetButton().textContent).toBe('Reset account');
+    fireEvent.click(resetButton());
+    expect(resetButton().textContent).toBe('Confirm reset?');
+    expect(fakePaperApi.resetAccount).not.toHaveBeenCalled();
+  });
+
+  it('[8.7] should go back to "Reset account" with nothing reset when 3 s pass unconfirmed', () => {
+    vi.useFakeTimers();
+    renderPanel();
+    openSettings();
+    fireEvent.click(resetButton());
+    act(() => vi.advanceTimersByTime(2_999));
+    expect(resetButton().textContent).toBe('Confirm reset?');
+    act(() => vi.advanceTimersByTime(1));
+    expect(resetButton().textContent).toBe('Reset account');
+    expect(fakePaperApi.resetAccount).not.toHaveBeenCalled();
+    expect(modal()).not.toBeNull();
+  });
+
+  it('[8.10][8.11] should clear a pending confirm when the backdrop closes the modal and it is reopened', () => {
+    vi.useFakeTimers();
+    renderPanel();
+    openSettings();
+    fireEvent.click(resetButton());
+    expect(resetButton().textContent).toBe('Confirm reset?');
+    fireEvent.click(getByGuide(body(), 'acct-settings.backdrop'));
+    expect(modal()).toBeNull();
+    openSettings();
+    expect(resetButton().textContent).toBe('Reset account');
+    // The old timer is gone too: nothing flips the fresh button later
+    act(() => vi.advanceTimersByTime(5_000));
+    expect(resetButton().textContent).toBe('Reset account');
+    expect(fakePaperApi.resetAccount).not.toHaveBeenCalled();
+  });
+
+  // ── SC-8-3 Reset clears everything ────────────────────────────────────────
+
+  it('[8.8] should reset once, close the modal and show a fresh $10,000 account when confirmed within 3 s', async () => {
+    seedBusyAccount();
+    fakePaperApi.resetAccount.mockImplementationOnce(async () => ({
+      result: true,
+      delta: await fakeDelta({
+        reset: true,
+        account: {
+          balance: '10000',
+          realizedPnl: '0',
+          leverage: 1,
+          symbolLeverage: {},
+          version: 4,
+        },
+      }),
+    }));
+    renderPanel();
+    expect(balanceShown()).toBe('$8,000.00');
+    openSettings();
+    fireEvent.click(resetButton());
+    fireEvent.click(resetButton());
+
+    expect(modal()).toBeNull();
+    await waitFor(() => expect(balanceShown()).toBe('$10,000.00'));
+    expect(fakePaperApi.resetAccount).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('No open positions')).toBeTruthy();
+    fireEvent.click(getByGuide(body(), 'account.tab', 'orders'));
+    expect(screen.getByText('No orders')).toBeTruthy();
+    fireEvent.click(getByGuide(body(), 'account.tab', 'journal'));
+    expect(screen.getByText(/No journal entries yet/)).toBeTruthy();
+  });
+
+  // ── NEW-8-1 (8.12) Reset fails ────────────────────────────────────────────
+
+  it('[8.12] should keep the account as it was and offer "Reset account" again when the reset request fails', async () => {
+    seedBusyAccount();
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    fakePaperApi.resetAccount.mockImplementationOnce(() =>
+      Promise.reject(new Error('Service unavailable'))
+    );
+    renderPanel();
+    openSettings();
+    fireEvent.click(resetButton());
+    fireEvent.click(resetButton());
+    await waitFor(() => expect(fakePaperApi.resetAccount).toHaveBeenCalledTimes(1));
+    await act(async () => {});
+
+    // Nothing was wiped locally: the server's last state is still shown
+    expect(balanceShown()).toBe('$8,000.00');
+    expect(usePaperStore.getState().positions).toHaveLength(1);
+    expect(usePaperStore.getState().pendingOrders).toHaveLength(1);
+    expect(usePaperStore.getState().journal).toHaveLength(1);
+    // The modal is not stuck mid-confirm: reopening offers a fresh reset
+    openSettings();
+    expect(resetButton().textContent).toBe('Reset account');
+    quiet.mockRestore();
   });
 });

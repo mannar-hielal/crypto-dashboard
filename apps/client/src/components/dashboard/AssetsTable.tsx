@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import type { SpotBalance } from '@/store/paperStore';
 import { bg, color, fontSize } from '@/lib/tokens';
+import { guide } from '@/lib/guideAnchors';
 import { SpotExitsModal } from './SpotExitsModal';
 
 export interface AssetRow {
@@ -131,21 +132,42 @@ function AssetRowView({ holding, price, onSell, onExits }: AssetRowViewProps) {
   const pnlColor = pnl === null ? color.muted : pnl >= 0 ? color.green : color.red;
 
   return (
-    <tr className="border-b border-white/3 transition-colors hover:bg-white/2">
+    <tr
+      {...guide('assets.row', holding.coin)}
+      className="border-b border-white/3 transition-colors hover:bg-white/2"
+    >
       <td className="px-3 py-1.5 font-bold text-white">{holding.coin}</td>
       <td className="px-3 py-1.5 text-right tabular-nums text-white/80">{coin(total)}</td>
-      <td className="px-3 py-1.5 text-right tabular-nums text-white/80">{coin(holding.free)}</td>
-      <td className="px-3 py-1.5 text-right tabular-nums" style={{ color: color.muted }}>
+      <td
+        {...guide('assets.row.free', holding.coin)}
+        className="px-3 py-1.5 text-right tabular-nums text-white/80"
+      >
+        {coin(holding.free)}
+      </td>
+      <td
+        {...guide('assets.row.locked', holding.coin)}
+        className="px-3 py-1.5 text-right tabular-nums"
+        style={{ color: color.muted }}
+      >
         {coin(holding.locked)}
       </td>
-      <td className="px-3 py-1.5 text-right tabular-nums text-white/80">{usd(holding.avgCost)}</td>
+      <td
+        {...guide('assets.row.avg-cost', holding.coin)}
+        className="px-3 py-1.5 text-right tabular-nums text-white/80"
+      >
+        {usd(holding.avgCost)}
+      </td>
       <td className="px-3 py-1.5 text-right tabular-nums text-white/80">
         {price !== null ? usd(price) : '—'}
       </td>
       <td className="px-3 py-1.5 text-right tabular-nums text-white/80">
         {value !== null ? usd(value) : '—'}
       </td>
-      <td className="px-3 py-1.5 text-right tabular-nums" style={{ color: pnlColor }}>
+      <td
+        {...guide('assets.row.upnl', holding.coin)}
+        className="px-3 py-1.5 text-right tabular-nums"
+        style={{ color: pnlColor }}
+      >
         {/* +/− with the colour, never colour alone (design.md accessibility) */}
         {pnl !== null
           ? `${sign(pnl)}${usd(Math.abs(pnl))}${pnlPct !== null ? ` (${sign(pnlPct)}${Math.abs(pnlPct).toFixed(2)}%)` : ''}`
@@ -155,6 +177,7 @@ function AssetRowView({ holding, price, onSell, onExits }: AssetRowViewProps) {
         <div className="flex justify-end gap-1">
           <button
             type="button"
+            {...guide('assets.row.sell', holding.coin)}
             onClick={() => onSell(`${holding.coin}USDT`, holding.free)}
             disabled={holding.free <= 0}
             className="rounded px-2 py-0.5 font-semibold transition-colors disabled:opacity-40"
@@ -168,6 +191,7 @@ function AssetRowView({ holding, price, onSell, onExits }: AssetRowViewProps) {
           </button>
           <button
             type="button"
+            {...guide('assets.row.tpsl', holding.coin)}
             onClick={() => onExits(holding)}
             disabled={holding.free <= 0}
             className="rounded px-2 py-0.5 font-semibold transition-colors disabled:opacity-40"
