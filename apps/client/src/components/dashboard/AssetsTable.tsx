@@ -1,5 +1,5 @@
 /**
- * Spot "Assets" tab (BYBIT_PARITY_PLAN BP-2): the USDT wallet and every coin held, with average
+ * Spot "Assets" tab (APP_LOG Bybit Parity BP-2): the USDT wallet and every coin held, with average
  * cost, live value and unrealized PnL. Replaces Positions while the active market is Spot.
  * Row actions: Sell (prefills the Spot form) and TP / SL (protects the free coins).
  */

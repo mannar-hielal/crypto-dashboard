@@ -1,5 +1,5 @@
 /**
- * One-time notice for accounts that were isolated before cross margin existed (BYBIT_PARITY_PLAN
+ * One-time notice for accounts that were isolated before cross margin existed (APP_LOG Bybit Parity
  * BP-5 E, O2): cross is Bybit's default and what new accounts start in; this account stays
  * isolated until its owner switches. "How it works" explains the difference; "Switch to Cross"
  * calls the server (which applies Bybit's checks). Dismissed per browser.

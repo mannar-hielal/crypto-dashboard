@@ -1,6 +1,6 @@
 /**
  * Draws the account's positions and orders on one chart pane and lets TP / SL / order lines be
- * dragged to amend them (BYBIT_PARITY_PLAN BP-3). Line specs come from lib/tradeLines.ts.
+ * dragged to amend them (APP_LOG Bybit Parity BP-3). Line specs come from lib/tradeLines.ts.
  *
  * Lines are lightweight-charts price lines on the pane's candle series, kept in sync by direct
  * store subscriptions — a mark-price tick moves a line without a React render. React state is

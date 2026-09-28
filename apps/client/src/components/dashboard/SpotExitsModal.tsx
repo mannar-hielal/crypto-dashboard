@@ -1,5 +1,5 @@
 /**
- * Spot TP / SL on coins already held (BYBIT_PARITY_PLAN BP-2): locks a quantity of the free
+ * Spot TP / SL on coins already held (APP_LOG Bybit Parity BP-2): locks a quantity of the free
  * balance behind a take-profit and / or stop-loss sell (an OCO pair — the first to fire cancels
  * the other). The server checks the prices against the live market and Bybit's rules.
  */

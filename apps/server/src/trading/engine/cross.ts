@@ -1,5 +1,5 @@
 /**
- * Cross margin (BYBIT_PARITY_PLAN BP-5 E): account liquidation and the margin-mode switch.
+ * Cross margin (APP_LOG Bybit Parity BP-5 E): account liquidation and the margin-mode switch.
  *
  * The account figures (bybitSpec.accountFigures) value every USDT Perpetual position at its mark
  * price. The context's `markPrice` supplies the marks; a symbol with no mark is valued at its entry

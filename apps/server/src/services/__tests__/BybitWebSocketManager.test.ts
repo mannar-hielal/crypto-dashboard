@@ -365,7 +365,7 @@ describe('BybitWebSocketManager', () => {
     expect(manager.isConnected()).toBe(false);
   });
 
-  // ── Categories (BYBIT_PARITY_PLAN BP-0) ──────────────────────────────────────
+  // ── Categories (APP_LOG Bybit Parity BP-0) ──────────────────────────────────────
 
   describe('category', () => {
     /** Connect a manager and return its (mock) socket. */

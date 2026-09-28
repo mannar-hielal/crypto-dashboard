@@ -1,5 +1,5 @@
 /**
- * Shared engine building blocks (BYBIT_PARITY_PLAN BP-2): the Draft working copy every action
+ * Shared engine building blocks (APP_LOG Bybit Parity BP-2): the Draft working copy every action
  * mutates, order sizing, book prices and the record builders both markets use. USDT Perpetual
  * actions live in actions.ts, spot actions in spot.ts.
  */

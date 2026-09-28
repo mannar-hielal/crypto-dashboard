@@ -1,5 +1,5 @@
 /**
- * Paper-trading actions (BYBIT_PARITY_PLAN BP-1 port, BP-2 Bybit fees and fill prices, BP-3
+ * Paper-trading actions (APP_LOG Bybit Parity BP-1 port, BP-2 Bybit fees and fill prices, BP-3
  * one-way positions, liquidation and re-margining).
  *
  * USDT Perpetual maths (BP-2):

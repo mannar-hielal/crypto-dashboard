@@ -1,5 +1,5 @@
 /**
- * In-process fan-out of committed paper-account changes (BYBIT_PARITY_PLAN BP-1).
+ * In-process fan-out of committed paper-account changes (APP_LOG Bybit Parity BP-1).
  *
  * Every committed engine delta is published here. Each user's open private WebSockets subscribe
  * to that user, and the matching engine subscribes to everything to keep its trigger index fresh.

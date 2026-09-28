@@ -1,5 +1,5 @@
 /**
- * TradeMenu — the header's market menu ("Trade ▾"), like Bybit's (BYBIT_PARITY_PLAN BP-2).
+ * TradeMenu — the header's market menu ("Trade ▾"), like Bybit's (APP_LOG Bybit Parity BP-2).
  *
  * Switches the active pane between Spot and USDT Perpetual, keeping its symbol. On the dashboard
  * that also moves the URL (useMarketUrlSync); on the public /chart page it only switches the pane.

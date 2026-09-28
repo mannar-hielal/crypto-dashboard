@@ -1,5 +1,5 @@
 /**
- * Executes paper-trading intents for a user (BYBIT_PARITY_PLAN BP-1, BP-2, BP-3).
+ * Executes paper-trading intents for a user (APP_LOG Bybit Parity BP-1, BP-2, BP-3).
  *
  * The browser sends intent only (market, symbol, side, size, trigger price, TP/SL). The server
  * picks the fill price from its own live quote (ask / bid of that market), applies Bybit's

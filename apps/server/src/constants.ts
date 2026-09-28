@@ -22,8 +22,9 @@ export const ALLOWED_SYMBOLS = [
 export type AllowedSymbol = (typeof ALLOWED_SYMBOLS)[number];
 
 /**
- * Bybit market categories we read data from (BYBIT_PARITY_PLAN BP-0): `spot` for the Spot market,
- * `linear` for USDT Perpetual. Each has its own public WS stream and REST `category=` value.
+ * Bybit market categories we read data from (APP_LOG Bybit Parity BP-0): `spot` for the Spot
+ * market, `linear` for USDT Perpetual. Each has its own public WS stream and REST `category=`
+ * value.
  */
 export const ALLOWED_CATEGORIES = ['spot', 'linear'] as const;
 

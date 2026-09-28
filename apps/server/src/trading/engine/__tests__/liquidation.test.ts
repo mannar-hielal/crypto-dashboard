@@ -1,6 +1,6 @@
 /**
  * BP-3: isolated-margin liquidation on the mark price, settled at the bankruptcy price
- * (docs/BYBIT_PARITY_PLAN.md §4 BP-3, Bybit's UTA isolated-mode formulas in bybitSpec.ts).
+ * (docs/APP_LOG.md Bybit Parity BP-3, Bybit's UTA isolated-mode formulas in bybitSpec.ts).
  *
  * Reference position: long 0.1 BTC @ 50,000 at 10× — IM 500, fee to close 2.475,
  * BTCUSDT tier 1 (MMR 0.33%): liquidation (5,000 − 500) / (0.1 × 0.9967) ≈ 45,148.99,

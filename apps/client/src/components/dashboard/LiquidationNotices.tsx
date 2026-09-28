@@ -39,7 +39,7 @@ function unseenLiquidation(trades: ClosedTrade[], seenAt: number): ClosedTrade |
 }
 
 /**
- * USDT Perpetual notices above the order form (BYBIT_PARITY_PLAN BP-3):
+ * USDT Perpetual notices above the order form (APP_LOG Bybit Parity BP-3):
  * - a one-time banner that positions can now be liquidated, as on Bybit, with the explainer;
  * - a dismissible notice when a position was liquidated (found in the trade history, so it also
  *   shows when the liquidation happened while the user was away).

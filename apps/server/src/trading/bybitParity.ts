@@ -1,5 +1,5 @@
 /**
- * API parity with Bybit v5 (BYBIT_PARITY_PLAN BP-5 G): the engine's wire shapes mapped onto
+ * API parity with Bybit v5 (APP_LOG Bybit Parity BP-5 G): the engine's wire shapes mapped onto
  * Bybit's field names, and a field-by-field comparison. Used by the manual testnet parity run
  * (src/tools/bybitParity.ts) — pure, no I/O, so it is unit-tested like the rest of the engine.
  *

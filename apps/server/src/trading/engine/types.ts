@@ -1,5 +1,5 @@
 /**
- * Paper-trading engine types (BYBIT_PARITY_PLAN BP-1, BP-2, BP-3, BP-4).
+ * Paper-trading engine types (APP_LOG Bybit Parity BP-1, BP-2, BP-3, BP-4).
  *
  * Money and quantities are Decimal; times are Unix ms. Everything in engine/ is pure: no
  * Prisma client, no I/O, no clock, no randomness. The caller supplies `now`, `newId`, the live

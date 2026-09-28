@@ -71,7 +71,7 @@ const errorResponse = {
   },
 } as const;
 
-// Each market reads history from its own Bybit category (BYBIT_PARITY_PLAN F1) — there is no
+// Each market reads history from its own Bybit category (APP_LOG Bybit Parity F1) — there is no
 // cross-category fallback, so a spot chart can never be filled with perp candles. Defaults to
 // spot so a client that predates the category param keeps working.
 const categoryParam = {
