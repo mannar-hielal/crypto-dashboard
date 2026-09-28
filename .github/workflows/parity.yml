@@ -4,6 +4,12 @@ name: Bybit testnet parity
 # on the paper engine and diffs the v5 fields (apps/server/src/tools/bybitParity.ts). It places real
 # testnet orders, so it runs nightly, on demand, and on same-repo PRs that change the parity code —
 # never for fork PRs, which get no secrets.
+#
+# Where it runs: a one-off Fly Machine in sin, in its own app (crypto-dashboard-parity), not on the
+# GitHub runner — Bybit geo-blocks GitHub's US runners (HTTP 403). The runner builds this commit's
+# server image, starts the machine, waits for it to stop, reads its logs and removes it. The trade
+# runs on Fly, so a cancelled or timed-out job never kills it mid-trade; the script's own 8-minute
+# deadline closes what it opened.
 
 on:
   schedule:
@@ -18,68 +24,99 @@ on:
 
 permissions:
   contents: read
-  issues: write # open / update the "parity" issue on a scheduled failure
+  issues: write # open / update the "parity" issue on a scheduled or manual failure
 
 # 🔐 One run at a time: every run trades on the same testnet account
 concurrency:
   group: bybit-testnet-parity
   cancel-in-progress: false
 
+env:
+  PARITY_APP: crypto-dashboard-parity
+
 jobs:
   parity:
     name: Bybit testnet parity
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4.1.0
-        with:
-          version: 10.33.0
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@1.5
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4.4.0
-        with:
-          node-version-file: '.node-version'
-          cache: 'pnpm'
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
+      - name: Stage the testnet keys as Fly secrets
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres # dummy — prisma generate only
-        run: pnpm install --frozen-lockfile
+          # 🔐 App-scoped deploy token: it can only touch crypto-dashboard-parity, never production
+          FLY_API_TOKEN: ${{ secrets.FLY_PARITY_API_TOKEN }}
+          KEY: ${{ secrets.BYBIT_TESTNET_KEY }}
+          SECRET: ${{ secrets.BYBIT_TESTNET_SECRET }}
+        shell: bash
+        run: |
+          if [ -z "$KEY" ] || [ -z "$SECRET" ] || [ -z "$FLY_API_TOKEN" ]; then
+            echo "::error::BYBIT_TESTNET_KEY / BYBIT_TESTNET_SECRET / FLY_PARITY_API_TOKEN repo secrets must be set"
+            exit 1
+          fi
+          flyctl secrets set --app "$PARITY_APP" --stage \
+            BYBIT_API_KEY="$KEY" BYBIT_API_SECRET="$SECRET" >/dev/null
 
-      - name: Run the parity scenario on Bybit testnet
+      - name: Build this commit's server image
         env:
-          # 🔐 Testnet only: the script refuses to trade unless BYBIT_TESTNET is true
-          BYBIT_TESTNET: 'true'
-          BYBIT_API_KEY: ${{ secrets.BYBIT_TESTNET_KEY }}
-          BYBIT_API_SECRET: ${{ secrets.BYBIT_TESTNET_SECRET }}
-          # Required by config.ts but unused by the script (no database, Redis or auth) — dummies
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
-          REDIS_URL: redis://localhost:6379
-          JWT_SECRET: parity-run-dummy-secret-not-used-000000
-          ADMIN_EMAIL: parity@example.invalid
-          NODE_ENV: development
-          LOG_LEVEL: info
+          FLY_API_TOKEN: ${{ secrets.FLY_PARITY_API_TOKEN }}
+        run: |
+          flyctl deploy --build-only --push --remote-only \
+            --app "$PARITY_APP" --config fly.toml --image-label "run-${{ github.run_id }}"
+
+      - name: Run the parity scenario on a Fly Machine (sin)
+        id: run
+        timeout-minutes: 15
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_PARITY_API_TOKEN }}
         shell: bash
         run: |
           set -o pipefail
-          if [ -z "$BYBIT_API_KEY" ] || [ -z "$BYBIT_API_SECRET" ]; then
-            echo "::error::BYBIT_TESTNET_KEY / BYBIT_TESTNET_SECRET repo secrets are not set"
-            exit 1
+          name="parity-${{ github.run_id }}-${{ github.run_attempt }}"
+          # 🔐 Testnet only: the script refuses to trade unless BYBIT_TESTNET is true. config.ts's other
+          # required variables are unused by the script (no database, Redis or auth) — dummies.
+          flyctl machine run "registry.fly.io/$PARITY_APP:run-${{ github.run_id }}" \
+            node dist/src/tools/bybitParity.js \
+            --app "$PARITY_APP" --name "$name" --region sin --restart no --detach \
+            --vm-memory 512 \
+            --env BYBIT_TESTNET=true \
+            --env DATABASE_URL=postgresql://parity:unused@localhost:5432/unused \
+            --env REDIS_URL=redis://localhost:6379 \
+            --env JWT_SECRET=parity-run-dummy-secret-not-used-000000 \
+            --env ADMIN_EMAIL=parity@example.invalid \
+            --env CLIENT_URL=https://example.invalid
+          id=$(flyctl machine list --app "$PARITY_APP" --json | jq -r --arg n "$name" '.[] | select(.name == $n) | .id')
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+          flyctl machine wait "$id" --app "$PARITY_APP" --state stopped --wait-timeout 12m
+          sleep 10 # let the last log lines reach the log buffer
+          flyctl logs --app "$PARITY_APP" --machine "$id" --no-tail | tee parity.log
+          grep -q 'Parity run: every step matches Bybit' parity.log
+
+      - name: Remove the machine
+        if: always() && steps.run.outputs.id != ''
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_PARITY_API_TOKEN }}
+        shell: bash
+        run: |
+          state=$(flyctl machine list --app "$PARITY_APP" --json | jq -r --arg id "${{ steps.run.outputs.id }}" '.[] | select(.id == $id) | .state')
+          if [ "$state" = "started" ]; then
+            # Still trading: leave it — its deadline closes the position and it stops by itself
+            echo "::warning::Parity machine still running; left to finish (it stops within 8 minutes)"
+          else
+            flyctl machine destroy "${{ steps.run.outputs.id }}" --app "$PARITY_APP" --force
           fi
-          pnpm --filter @crypto-dashboard/server parity:testnet 2>&1 | tee parity.log
 
       - name: Upload the parity log
         if: always()
         uses: actions/upload-artifact@v4.6.2
         with:
-          name: parity-log-${{ github.run_id }}
+          name: parity-log-${{ github.run_id }}-${{ github.run_attempt }}
           path: parity.log
           retention-days: 30
           if-no-files-found: ignore
@@ -95,8 +132,10 @@ jobs:
           body="The Bybit testnet parity run failed on $(date -u +%Y-%m-%d): $RUN_URL
 
           Download the \`parity-log\` artifact for the step-by-step diff. Either fix the engine, or record
-          the difference as a known gap in docs/APP_LOG.md → Bybit Parity."
-          existing=$(gh issue list --label parity --state open --json number -q '.[0].number')
+          the difference as a known gap in docs/APP_LOG.md → Bybit Parity. A \`33004 api key has expired\`
+          error means the testnet key needs renewing (BYBIT_TESTNET_KEY / BYBIT_TESTNET_SECRET)."
+          # `// empty`: no open issue gives an empty string, not the text "null"
+          existing=$(gh issue list --label parity --state open --json number -q '.[0].number // empty')
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --body "$body"
           else

@@ -44,6 +44,11 @@ const log = logger.child({ service: 'BybitParity' });
 const SYMBOL = 'BTCUSDT';
 const QTY = '0.001';
 const LEVERAGE = 10;
+/**
+ * 🔐 Unattended runs (parity.yml) must never leave a position open: past this the run closes
+ * everything it opened and exits, even if a Bybit call hangs.
+ */
+const DEADLINE_MS = 8 * 60_000;
 
 const POSITION_FIELDS = [
   'size',
@@ -129,6 +134,32 @@ async function main(): Promise<number> {
   const bybitPosition = async () =>
     ok('position/list', await client.getPositionInfo({ category: 'linear', symbol: SYMBOL }))
       .list[0] as unknown as Row;
+
+  // Close whatever is still open (either side), and leave the account isolated as found
+  let cleaned = false;
+  const cleanup = async () => {
+    if (cleaned) return;
+    cleaned = true;
+    const pos = await bybitPosition().catch(() => ({ size: '0', side: '' }) as Row);
+    const size = String(pos.size ?? '0');
+    if (new Decimal(size || '0').gt(0)) {
+      await client
+        .submitOrder({
+          category: 'linear',
+          symbol: SYMBOL,
+          side: pos.side === 'Sell' ? 'Buy' : 'Sell',
+          orderType: 'Market',
+          qty: size,
+          reduceOnly: true,
+        })
+        .catch((err: unknown) => log.error({ err }, 'Cleanup close failed — close it by hand'));
+    }
+    await client.setMarginMode('ISOLATED_MARGIN').catch(() => undefined);
+  };
+  const deadline = setTimeout(() => {
+    log.error({ deadlineMs: DEADLINE_MS }, 'Parity run passed its deadline — cleaning up');
+    void cleanup().finally(() => process.exit(1));
+  }, DEADLINE_MS);
 
   let state: AccountState = {
     balance: new Decimal(100_000),
@@ -279,21 +310,8 @@ async function main(): Promise<number> {
     // an otherwise empty testnet account
     check('cross account figures', wallet, toBybitWallet(figures) as unknown as Row, WALLET_FIELDS);
   } finally {
-    // Close whatever is still open, and leave the account isolated as found
-    const size = String((await bybitPosition().catch(() => ({ size: '0' }))).size ?? '0');
-    if (new Decimal(size || '0').gt(0)) {
-      await client
-        .submitOrder({
-          category: 'linear',
-          symbol: SYMBOL,
-          side: 'Sell',
-          orderType: 'Market',
-          qty: size,
-          reduceOnly: true,
-        })
-        .catch((err: unknown) => log.error({ err }, 'Cleanup close failed — close it by hand'));
-    }
-    await client.setMarginMode('ISOLATED_MARGIN').catch(() => undefined);
+    clearTimeout(deadline);
+    await cleanup();
   }
 
   const failed = report.filter((r) => r.diffs.length > 0);

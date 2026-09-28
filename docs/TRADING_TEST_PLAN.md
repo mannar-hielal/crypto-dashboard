@@ -102,7 +102,9 @@ browser test); T3 covers wiring and user journeys, not maths; M is for what's le
 - **Nightly Bybit testnet parity (T4) — in place since 2026-09-28.** `.github/workflows/parity.yml` runs
   `parity:testnet` nightly (03:17 UTC), on demand (`workflow_dispatch`), and on same-repo PRs to `develop` that change
   the parity code (never for forks, which get no secrets); one run at a time, since they share the testnet account.
-  Keys: repo secrets `BYBIT_TESTNET_KEY` / `BYBIT_TESTNET_SECRET`. It uploads the log as an artifact and, when a
+  The script runs on a one-off Fly Machine in `sin` (app `crypto-dashboard-parity`), not on the GitHub runner, which
+  Bybit geo-blocks; it has its own 8-minute deadline that closes what it opened. Keys: repo secrets
+  `BYBIT_TESTNET_KEY` / `BYBIT_TESTNET_SECRET`, plus `FLY_PARITY_API_TOKEN`. It uploads the log as an artifact and, when a
   scheduled or manual run fails, opens (or comments on) one GitHub issue labelled `parity`. The first green run also closes
   the open questions in APP_LOG (O5, max-reducible margin, 110090 retCode).
 - **Weekly spec-drift check.** A script compares `bybitSpec.ts` constants with Bybit's public API (fee rates via the
