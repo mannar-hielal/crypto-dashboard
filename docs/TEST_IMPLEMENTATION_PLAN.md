@@ -437,7 +437,7 @@ Effort **M** (types, builders, `runScenario`, 3 scenarios for the smoke set; the
 (its name must end in `_int` or `_test`), migrated once with `prisma migrate deploy` — never `prisma migrate reset`:
 Prisma refuses it when an AI agent runs it, and it isn't needed, because CI starts empty and each test file clears its
 own rows. Test files run one at a time (`fileParallelism: false`), not one schema per worker. Setup: `migrate deploy`
-from empty, then `prisma migrate diff --from-migrations --to-schema-datamodel` must print nothing (drift). Files: `apps/server/src/__tests__/int/migrations.int.test.ts`
+from empty, then `prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code` must find no difference (drift; Prisma 7 flag names). Files: `apps/server/src/__tests__/int/migrations.int.test.ts`
 (from-empty, drift, replay from `fixtures/db/pre-bp2.sql`), `accountRepository.int.test.ts` (round-trip every
 field), `regression.int.test.ts` (18.1–18.6 through the real repository), `paperRoutes.int.test.ts` and
 `authRoutes.int.test.ts` (real transactions, `Account.version` conflicts, `deleteMany` races with
