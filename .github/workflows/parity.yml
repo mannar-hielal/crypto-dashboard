@@ -124,11 +124,13 @@ jobs:
         run: |
           state=$(flyctl machine list --app "$PARITY_APP" --json | jq -r --arg id "${{ steps.run.outputs.id }}" '.[] | select(.id == $id) | .state')
           if [ "$state" = "started" ]; then
-            # Still trading: leave it — its deadline closes the position and it stops by itself
-            echo "::warning::Parity machine still running; left to finish (it stops within 8 minutes)"
-          else
-            flyctl machine destroy "${{ steps.run.outputs.id }}" --app "$PARITY_APP" --force
+            # The script ends itself within ~9.5 minutes (8 min deadline + 30 s grace + 60 s hard exit),
+            # and this only runs after a 12-minute wait: its safety net has failed. Stop it anyway; a
+            # position it left open is found by the next run's "account is flat" check, which fails
+            # that run loudly and closes it in its cleanup.
+            echo "::error::Parity machine still running past its deadline; destroying it"
           fi
+          flyctl machine destroy "${{ steps.run.outputs.id }}" --app "$PARITY_APP" --force
 
       - name: Upload the parity log
         if: always()

@@ -242,6 +242,16 @@ async function main(): Promise<number> {
   };
 
   try {
+    // ── 0. The account must start flat ────────────────────────────────────────
+    // A position left by an earlier run would add to step 1's buy and skew every diff. Fail
+    // loudly instead; the `finally` below still closes the leftover, so the next run starts clean.
+    const leftover = await bybitPosition();
+    if (new Decimal(String(leftover?.size ?? '0') || '0').gt(0)) {
+      throw new Error(
+        `account not flat: ${String(leftover?.size)} ${SYMBOL} already open (closing it in cleanup)`
+      );
+    }
+
     // ── 1. Isolated, 10×, market buy ──────────────────────────────────────────
     // Usually already isolated (the cleanup leaves it so); a refusal is logged, not fatal
     const isolated = await live.setMarginMode('ISOLATED_MARGIN');
