@@ -26,16 +26,16 @@
 
 ## A2. Where we stand (measured 2026-09-28)
 
-| Area                   | Today                                                                                                                                                                                                                                                    |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Unit / component tests | 1,164 Vitest tests in 63 files (server 713 / 26, client 451 / 37). The pure Decimal engine (`apps/server/src/trading/engine/__tests__`) has worked-number tests per rule; client panels have RTL tests against `src/test/fakePaperApi.ts`.               |
-| Service / route tests  | `services.test.ts`, `paper.test.ts`, `auth.test.ts` etc. run Fastify in-memory (`app.inject`, `injectWS`) with **Prisma mocked** — no real Postgres, no migration is ever applied in a test.                                                             |
-| Browser end-to-end     | **None.** "T3 · Playwright" was a planned tier; rows marked T3 were checked by hand.                                                                                                                                                                     |
-| Bybit parity           | `bybitParity.ts` adapter + `parity:testnet` script, wired as a nightly job on 2026-09-28 (`parity.yml`, A4). The testnet setup is done — key (Read-Write, Contract Orders + Positions), `bybit-testnet` environment, test USDT; first green run pending. |
-| Manual rows            | 90 rows with a ⬜ status in Part B before this revision (plus 2 ⬜ TradingView cross-check cells, 1.2.3 and 2.4.5), mostly live-feed, multi-tab, layout and TradingView side-by-side checks.                                                             |
-| CI (`ci.yml`)          | Audit → type-check → format → lint → unit tests → build, on every PR and push to `develop` / `main`. Coverage is available (`pnpm test:coverage`) but has no threshold and doesn't run in CI.                                                            |
-| After deploy           | `deploy.yml` deploys; nothing checks the live site afterwards except Fly's `/health` check.                                                                                                                                                              |
-| Review                 | The Claude review bot + the unresolved-thread merge gate.                                                                                                                                                                                                |
+| Area                   | Today                                                                                                                                                                                                                                                                                                                |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit / component tests | 1,164 Vitest tests in 63 files (server 713 / 26, client 451 / 37). The pure Decimal engine (`apps/server/src/trading/engine/__tests__`) has worked-number tests per rule; client panels have RTL tests against `src/test/fakePaperApi.ts`.                                                                           |
+| Service / route tests  | `services.test.ts`, `paper.test.ts`, `auth.test.ts` etc. run Fastify in-memory (`app.inject`, `injectWS`) with Prisma mocked. **Since 2026-09-28 (P1a)** a separate `test:int` suite runs on a real Postgres 16 in CI: migrations from empty, drift against `schema.prisma`, and the `AccountRepository` round-trip. |
+| Browser end-to-end     | **None.** "T3 · Playwright" was a planned tier; rows marked T3 were checked by hand.                                                                                                                                                                                                                                 |
+| Bybit parity           | `bybitParity.ts` adapter + `parity:testnet`, nightly in CI (`parity.yml`, A4) since 2026-09-28. **First green run 2026-09-28** (run 36427289995): every compared v5 field matches after the first-run fixes (#163).                                                                                                  |
+| Manual rows            | 90 rows with a ⬜ status in Part B before this revision (plus 2 ⬜ TradingView cross-check cells, 1.2.3 and 2.4.5), mostly live-feed, multi-tab, layout and TradingView side-by-side checks.                                                                                                                         |
+| CI (`ci.yml`)          | Audit → type-check → format → lint → unit tests **with coverage thresholds** → build, plus an **integration job on Postgres**, on every PR and push to `develop` / `main` (thresholds and the job since 2026-09-28, P1a).                                                                                            |
+| After deploy           | `deploy.yml` deploys; nothing checks the live site afterwards except Fly's `/health` check.                                                                                                                                                                                                                          |
+| Review                 | The Claude review bot + the unresolved-thread merge gate.                                                                                                                                                                                                                                                            |
 
 **Biggest risks not covered by automation today:** the persistence layer (`AccountRepository`, migrations) only
 meets a real database in production; nobody checks the engine against Bybit itself; and the browser flows (live feed,
@@ -315,14 +315,16 @@ drops the `(Pn)` tag. Format: `what — rows — target tier (roadmap step)`.
 
 _P1 — persistence (6)_
 
-- [ ] Postgres service container in `ci.yml` and a separate Vitest project for `*.int.test.ts` — T2i (P1)
-- [ ] `prisma migrate deploy` from an empty database + `prisma migrate diff` against `schema.prisma` must be empty
-      — T2i (P1)
-- [ ] `AccountRepository` load / save round-trip of every field — T2i (P1)
+- [x] Postgres service container in `ci.yml` and a separate Vitest project for `*.int.test.ts` — T2i (P1a,
+      2026-09-28)
+- [x] `prisma migrate deploy` from an empty database + `prisma migrate diff` against `schema.prisma` must be empty
+      — T2i (P1a)
+- [x] `AccountRepository` load / save round-trip of every field — T2i (P1a; every action type, plus the Closed P&L
+      trade row)
 - [ ] `/paper/**` and `/auth/**` route tests with real transactions, incl. `Account.version` and `deleteMany` races
       — T2i (P1)
-- [ ] Coverage thresholds in both `vitest.config.ts` (engine ≥ 95% lines / 90% branches) and `test:coverage` in CI
-      — (P1)
+- [x] Coverage thresholds in both `vitest.config.ts` and `test:coverage` in CI — (P1a). Floors at today's numbers:
+      server 82% lines, engine 97% lines / 85% branches, client 46% lines; raised as tests land
 - [ ] SDK ↔ server contract test against the generated OpenAPI document (A4; A8 names no step) — T2i
 
 _P2 — replay feed and browser tests (7)_

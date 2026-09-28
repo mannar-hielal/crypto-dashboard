@@ -7,6 +7,7 @@ export default [
     ignores: [
       '**/node_modules/**',
       '**/dist/**', // compiled build output — never lint generated JS/d.ts
+      '**/coverage/**', // test:coverage HTML report — generated
       '**/.next/**',
       '**/build/**',
       '**/.turbo/**',

@@ -52,8 +52,10 @@ jobs:
       - name: Lint
         run: pnpm lint # root flat config already covers apps/client/** — no separate client lint step needed
 
-      - name: Test
-        run: pnpm test
+      - name: Test (with coverage thresholds)
+        # test:coverage runs the same suites as `pnpm test` and fails below the floors in each
+        # package's vitest.config.ts; the hook tests run separately
+        run: pnpm test:coverage && pnpm test:hooks
 
       - name: Build (server)
         run: pnpm build
@@ -62,3 +64,49 @@ jobs:
       - name: Build (client)
         run: pnpm build
         working-directory: apps/client
+
+  integration:
+    name: Integration (Postgres)
+    runs-on: ubuntu-latest
+    # A real Postgres, migrated from empty: migration drift and the AccountRepository round-trip
+    # (T2i, docs/TRADING_TEST_PLAN.md roadmap P1). The credentials are the throwaway service's own.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: crypto_dashboard_int
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4.1.0
+        with:
+          version: 10.33.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4.4.0
+        with:
+          node-version-file: '.node-version'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres # dummy — prisma generate only
+        run: pnpm install --frozen-lockfile
+
+      - name: Integration tests
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/crypto_dashboard_int
+        run: pnpm --filter @crypto-dashboard/server test:int
