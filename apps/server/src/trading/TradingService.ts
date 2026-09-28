@@ -45,7 +45,6 @@ import {
   placeSpotLimit,
   placeSpotMarket,
   resetAccount,
-  setLeverage,
   setSymbolLeverage,
   settleFunding,
   switchMarginMode,
@@ -407,11 +406,6 @@ export class TradingService {
    */
   setMarginMode(userId: string, mode: MarginMode): Promise<Executed<MarginMode>> {
     return this.act(userId, (state, ctx) => switchMarginMode(state, mode, ctx));
-  }
-
-  /** Default leverage (pre-BP-2 clients' account-wide leverage). */
-  setLeverage(userId: string, leverage: number): Promise<Executed<number>> {
-    return this.act(userId, (state) => setLeverage(state, leverage));
   }
 
   reset(userId: string): Promise<Executed<boolean>> {

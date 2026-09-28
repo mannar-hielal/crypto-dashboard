@@ -479,8 +479,8 @@ export interface WsPaperAuthMessage {
 // ─── Paper trading requests (intent only — the server picks prices) ──────────
 
 /**
- * Size is exactly one of `qty` (base coin), `value` (USDT notional, converted at the fill /
- * trigger price) or — from a pre-BP-2 client — `usdtAmount` (initial margin).
+ * Size is exactly one of `qty` (base coin) or `value` (USDT notional, converted at the fill /
+ * trigger price).
  */
 export interface PlaceOrderRequest {
   /** Defaults to 'linear' */
@@ -491,7 +491,6 @@ export interface PlaceOrderRequest {
   type: 'market' | 'limit' | 'stop';
   qty?: string;
   value?: string;
-  usdtAmount?: string;
   /** Required for limit / stop */
   triggerPrice?: string;
   takeProfit?: string;
@@ -517,9 +516,8 @@ export interface PlaceSpotExitsRequest {
 
 export interface EditPendingOrderRequest {
   triggerPrice: string;
-  /** Size: exactly one of qty (base coin) or usdtAmount (initial margin, pre-BP-2 clients) */
+  /** Size in the base coin (required; the server answers 400 without it) */
   qty?: string;
-  usdtAmount?: string;
   takeProfit: string | null;
   stopLoss: string | null;
   /** BP-5 B: new trigger sources; absent = keep the order's */

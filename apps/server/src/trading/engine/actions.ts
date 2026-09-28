@@ -1886,29 +1886,6 @@ export function setSymbolLeverage(
   return { delta: d.toDelta(), result: next };
 }
 
-/**
- * Default leverage for symbols with no setting of their own (BP-1's account-wide leverage, kept
- * for pre-BP-2 clients). A symbol with open trades keeps the leverage it has: its current value is
- * pinned as its own setting first, so changing the default never re-margins anything — only
- * setSymbolLeverage does.
- */
-export function setLeverage(state: AccountState, value: number): ActionResult<number> {
-  const d = new Draft(state);
-  const busy = new Set([
-    ...state.positions.map((p) => p.symbol),
-    ...state.pendingOrders.filter((o) => o.category === 'linear').map((o) => o.symbol),
-  ]);
-  const pinned = { ...d.symbolLeverage };
-  for (const symbol of busy) {
-    // symbol comes from the account's own positions / orders (allow-listed) — safe, controlled access
-    // eslint-disable-next-line security/detect-object-injection
-    if (!(symbol in pinned)) pinned[symbol] = leverageFor(state, symbol);
-  }
-  d.symbolLeverage = pinned;
-  d.leverage = clampLeverage(value);
-  return { delta: d.toDelta(), result: d.leverage };
-}
-
 export function addNote(
   state: AccountState,
   text: string,

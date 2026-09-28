@@ -261,7 +261,9 @@ describe('TradingService', () => {
 
   it('gives up after 3 conflicting attempts with a 409', async () => {
     repo.conflictsLeft = 3;
-    await expect(trading.setLeverage('u1', 5)).rejects.toMatchObject({ statusCode: 409 });
+    await expect(trading.setSymbolLeverage('u1', 'BTCUSDT', 5)).rejects.toMatchObject({
+      statusCode: 409,
+    });
     expect(published).toHaveLength(0);
   });
 
@@ -496,7 +498,7 @@ describe('TradingService', () => {
       return originalMutate(userId, decide);
     }) as never;
 
-    const blocker = trading.setLeverage('u1', 2); // occupies the user's queue
+    const blocker = trading.setSymbolLeverage('u1', 'BTCUSDT', 2); // occupies the user's queue
     const order = trading.placeOrder('u1', market$(1_000));
     await blockerRunning;
     price = D(51_000); // the market moves while the order waits

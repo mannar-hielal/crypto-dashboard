@@ -161,14 +161,6 @@ export const paperApi = {
       json('POST', { marginMode })
     ),
 
-  /** Default leverage for symbols with no setting of their own (pre-BP-2 account leverage). */
-  setLeverage: (leverage: number, accessToken: string) =>
-    request<PaperActionResponse<number>>(
-      '/api/paper/account/leverage',
-      accessToken,
-      json('PATCH', { leverage })
-    ),
-
   resetAccount: (accessToken: string) =>
     request<PaperActionResponse<boolean>>('/api/paper/account/reset', accessToken, {
       method: 'POST',
