@@ -5,7 +5,7 @@ description: Use for any work involving paperStore, paper trading, order placeme
 
 # Paper Trading — Business Rules (cryptopapertrade.com)
 
-Source of truth: `docs/APP_LOG.md` (sections "Business Logic Rules", "paperStore", "Right TradingPanel", "Bottom Panel"). Cross-reference: `docs/TRADING_TEST_PLAN.md` (478-line manual + vitest matrix).
+Source of truth: `docs/APP_LOG.md` (sections "Business Logic Rules", "paperStore", "Right TradingPanel", "Bottom Panel"). Cross-reference: `docs/TRADING_TEST_PLAN.md` (Part A test strategy + Part B case catalogue, ordered by learning stage).
 
 ## Files
 
@@ -185,7 +185,7 @@ version            server account version — applyDelta ignores anything not ne
 - Tests use Vitest (`environment: 'jsdom'` for client). Mock Prisma via `Symbol.for('skip-override')`.
 - Pure helpers (`checkTPSL`) are extracted and unit-tested directly.
 - `beforeEach` resets stores via `reset()` — never partial `setState` (`bug-sweep` P6-85: partial resets silently leave new fields at previous values).
-- Reference matrix: `docs/TRADING_TEST_PLAN.md` — sections 1 (market), 2 (limit + bracket), 3 (stop), 4 (TP/SL auto), 5+ (close/edit), 7 (Order History), 8 (Balance History), 9 (Journal). Each row carries a Status (`⬜ ✅ ❌ ⚠️`) and a Tier (`T1 · Vitest`, `T2 · RTL`).
+- Reference matrix: `docs/TRADING_TEST_PLAN.md` Part B, ordered by learning stage (its "Where did Section N go?" table maps each section) — sections 1 (market), 2 (limit + bracket), 3 (stop), 4 (cross-cutting: panels, journal, TP/SL edits), 7 (Order History), 8 (Account Settings), 14.6 (Spot), 14.2–14.5 (perp fees, fills, size, leverage), 15 (mark, liquidation), 16 (funding), 17 (cross margin, risk tiers, Closed P&L). Each row carries a Status (`⬜ ✅ ❌ ⚠️ ⏳ ➖`) and a Tier (`T1 · Vitest`, `T2 · RTL`, …); open rows are collected in A10.
 
 ## When extending paperStore
 
