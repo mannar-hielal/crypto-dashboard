@@ -1,5 +1,5 @@
 /**
- * Closed P&L tab (BYBIT_PARITY_PLAN BP-5 D) — Bybit's closed-position list for USDT Perpetual:
+ * Closed P&L tab (APP_LOG Bybit Parity BP-5 D) — Bybit's closed-position list for USDT Perpetual:
  * one row per close (a partial close, a flip's closing part or a liquidation step), newest first.
  * Closed P&L is Bybit's `closedPnl` = PnL − open fee − close fee − funding; hovering it shows the
  * three deductions.

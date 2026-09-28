@@ -519,6 +519,191 @@ qty − fee`.
 
 ---
 
+## 🔁 Bybit Parity (BP-0 … BP-5) — reference
+
+> **Status:** all six phases shipped (BP-0 … BP-5, 2026-09-26 … 2026-09-27; changelog entries below under
+> "feat: Bybit Parity BP-n"). This section replaces `docs/BYBIT_PARITY_PLAN.md`, retired on 2026-09-28. Code
+> comments cite it as "APP_LOG Bybit Parity BP-n" (the phase that introduced the rule). The full plan (per-step
+> checklists, Bybit research notes, the BP-4 integration audit) is in git history:
+> `git show 8d40f88:docs/BYBIT_PARITY_PLAN.md`.
+
+**Goal:** paper trading behaves like a Bybit **Unified Trading Account (UTA), VIP 0, one-way position mode**, so what
+a user learns here transfers 1:1 to Bybit, and the engine can be tested against Bybit's v5 APIs (standing owner
+direction: mimic Bybit's behaviour and v5 field names). Phases are numbered BP-n so they don't collide with the
+roadmap's Phase 5 (live Bybit) and Phase 6 (AI bot).
+
+**Naming:** Bybit's product names, not its brand — **Spot** | **USDT Perpetual** (header **Trade ▾** menu + tabs on
+the trading panel), URLs `/dashboard/spot/BTC/USDT` and `/dashboard/usdt/BTCUSDT`, `BTCUSDT` + a small **Perpetual**
+tag. Keep the "market data: Bybit" attribution; never "Bybit Perps" or Bybit's logo (Legal & Compliance only covers
+use of the public API).
+
+### Phases
+
+| Phase | What shipped                                                                                                                                                                                                                              | Findings closed |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| BP-0  | Per-market data feed: spot + linear WS, `orderbook.1` bid/ask, `category` on history / WS / instruments / risk-limit endpoints                                                                                                            | F1, F2, F9      |
+| BP-1  | Server trading engine (24/7, D9): the browser sends intents, the server fills, triggers and persists                                                                                                                                      | F10, F11        |
+| BP-2  | Spot and USDT Perpetual markets, Bybit VIP-0 fees, Bybit fill prices, size rules, per-symbol leverage, D7 migration                                                                                                                       | F3–F6, F8, F9   |
+| BP-3  | Mark price, one-way positions (merge), isolated liquidation at bankruptcy, re-margining, chart lines                                                                                                                                      | F6, F7          |
+| BP-4  | Funding at Bybit's settled rate, backfill, Balance History / journal rows                                                                                                                                                                 | F7 (funding)    |
+| BP-5  | Add / reduce margin (A), trigger-by + reduce-only + close-on-trigger + TP / SL side check (B), risk-limit cap + partial liquidation (C), Closed P&L (D), cross margin (E), engine refinements (F), v5 adapter + testnet parity script (G) | —               |
+
+**Findings (the gaps that started the work, all closed):** F1 chart history and live feed came from different
+markets · F2 spot bid/ask never arrived · F3 market orders filled at last, not best bid/ask · F4 resting limits
+filled better than their limit · F5 one flat 0.07% fee · F6 account-wide leverage · F7 no liquidation / mark /
+funding · F8 shorting on spot · F9 hard-coded lot / tick sizes · F10 nothing monitored with the tab closed · F11 the
+browser decided fills and PnL.
+
+### Decisions
+
+| #   | Decision (agreed 2026-09-25)                                                                                       |
+| --- | ------------------------------------------------------------------------------------------------------------------ |
+| D1  | Two markets: **Spot** (1×) and **USDT Perpetual** (leverage, long + short)                                         |
+| D2  | Spot is a normal spot market: buy with USDT, sell only what you hold, no shorting                                  |
+| D3  | The old leveraged behaviour becomes USDT Perpetual, with Bybit's naming                                            |
+| D4  | Bybit's real fees (VIP 0); the flat 0.07% is dropped                                                               |
+| D5  | Order: data → server engine → markets + fees + fills → mark + isolated liquidation → funding → cross + refinements |
+| D6  | Follow Bybit as closely as possible; every deliberate difference is written down (Known gaps)                      |
+| D7  | New users start on Spot; existing positions migrated to USDT Perpetual                                             |
+| D8  | One shared USDT wallet for Spot and Perpetual (UTA)                                                                |
+| D9  | The server executes and checks all trades 24/7; the browser sends requests and shows server state                  |
+
+| #   | BP-5 owner decision (answered 2026-09-27)                                                                       |
+| --- | --------------------------------------------------------------------------------------------------------------- |
+| O1  | Offer cross margin                                                                                              |
+| O2  | New accounts start in **Cross**; accounts from before BP-5 stay Isolated with a one-time notice                 |
+| O3  | Bybit's mode-switch rules (allowed with open positions when the checks pass; else `3400045` with reasons)       |
+| O4  | One BP-5 release (not split)                                                                                    |
+| O5  | Cross unrealised profit counts towards the available balance (Bybit's API formula) — **to confirm on testnet**  |
+| O6  | Tier info in the leverage modal, plus the tier on hover in the Positions row                                    |
+| O7  | Partial liquidation of higher-tier positions                                                                    |
+| O8  | TP / SL / stops trigger on Last / Mark / Index                                                                  |
+| O9  | Bybit's TP / SL validation (side vs the base price); a stop-loss past liquidation is accepted with a UI warning |
+| O10 | No auto-add margin                                                                                              |
+| O11 | Remove the pre-BP-2 API after one release that logs any call — **open, see below**                              |
+| O12 | Full TP / SL only (Partial mode left out)                                                                       |
+
+Also settled for BP-3: mimic Bybit as closely as possible — merge same-side fills, re-margin on a leverage change,
+draw every chart line Bybit draws, no grace period at deploy.
+
+### Bybit reference values
+
+The single source is `apps/server/src/trading/bybitSpec.ts` (each constant carries `// source: <Bybit URL>, checked
+<date>`); the client gets display copies through the SDK (`generated/CDSDK/spec/bybit.ts`), kept equal by a parity
+test. **Re-verify against Bybit before changing any of them — Bybit changes these.**
+
+| Item                   | Spot                               | USDT Perpetual (linear)                                                             |
+| ---------------------- | ---------------------------------- | ----------------------------------------------------------------------------------- |
+| Fee taker / maker      | 0.1% / 0.1%, in the asset received | 0.055% / 0.02%, in USDT, on qty × fill price                                        |
+| Leverage               | 1×                                 | Per symbol, one-way; **capped at 10×** (`MAX_LEVERAGE`; Bybit allows ≥ 25×)         |
+| Short selling          | No                                 | Yes                                                                                 |
+| TP / SL / stop trigger | Last price                         | Last (default), Mark or Index                                                       |
+| Unrealised PnL         | Last vs average cost               | Mark price                                                                          |
+| Liquidation            | —                                  | Mark reaches the liquidation price → settled at the bankruptcy price                |
+| Funding                | —                                  | Every `fundingIntervalHour`: `qty × mark × fundingRate`                             |
+| Precision / minimums   | `instruments-info?category=spot`   | `instruments-info?category=linear`                                                  |
+| Maintenance margin     | —                                  | Risk-limit tier from `/v5/market/risk-limit` (BTCUSDT tier 1 MMR 0.33%, 2026-09-26) |
+
+Isolated liquidation price (Bybit UTA):
+
+```
+IM  = qty × entry / leverage
+MM  = qty × entry × MMR − mmDeduction + estFeeToClose
+Long  LP = entry − (IM − MM) / qty − extraMargin / qty
+Short LP = entry + (IM − MM) / qty + extraMargin / qty
+```
+
+Cross (UTA, `accountFigures`): margin balance = wallet + perpetual unrealised PnL; total IM covers positions **and
+active orders**, at mark; IM / MM rate = total IM / MM ÷ margin balance; available = margin balance − total IM; the
+account is liquidated when the MM rate reaches 100% (orders cancelled, then positions stepped down tier by tier in
+contract order, BTCUSDT first). Closed P&L = position P&L − open fee − close fee − funding, prorated on a partial
+close. Refusals copy Bybit's retCodes: `110014` / `110078` / `110011` / `110033` (margin), `110017` (reduce-only),
+`110090` (risk-limit cap), `3400045` (mode switch).
+
+### Data model added by the parity work
+
+- `Position`: `category`, `leverage`, `marginMode`, `entryFee`, `closeFeeReserve` (BP-2), `extraMargin` (BP-3),
+  `cumFunding` (BP-4), `tpTriggerBy` / `slTriggerBy` (BP-5). Liquidation / bankruptcy prices are derived, not stored.
+- `Order`: `category`, `reserved`, `feeRate`, `feeAsset`, `isMaker`, `ocoGroup` (BP-2), `createType` (BP-3),
+  `triggerBy` / `tpTriggerBy` / `slTriggerBy`, `reduceOnly`, `closeOnTrigger` (BP-5).
+- `Trade`: `category` (BP-2; the fee is `commission`, always USDT on linear), `execType` (`Trade` | `BustTrade` |
+  `Funding`, BP-3 / BP-4), `feeRate`, `funding` (BP-4), `openFee` (BP-5).
+- `Account`: `version` (optimistic concurrency, BP-1), `marginMode` (`REGULAR_MARGIN` = cross | `ISOLATED_MARGIN`)
+  and `marginModeNotice` (BP-5).
+- New tables: `SymbolSetting` (per-symbol leverage, `leveragePinned`, funding marker `lastFundingAt`), `SpotBalance`
+  (`free`, `locked`, `avgCost`, non-negative CHECK), `JournalEntry`, `EngineLease`.
+- Client `paperStore` (`cd-paper-trading`) is only a cache since BP-1: a version bump drops the old shape and the
+  server hydrates. Legacy rows keep the fee they were charged (`LEGACY_FEE_RATE`).
+
+### Out of scope (deliberately not copying Bybit)
+
+Hedge mode (one-way only) · spot margin, borrowing and interest · order-book depth, slippage beyond best bid/ask,
+partial fills, ADL, insurance fund · VIP tiers, fee coupons, USDC / inverse contracts, options · auto-add margin
+(O10) · Partial-mode TP / SL (O12) · portfolio margin.
+
+### Known deliberate gaps vs Bybit
+
+| Gap                                                                                                               | Why                                                                          |
+| ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Leverage capped at 10× (Bybit allows far more)                                                                    | Safety cap for a learning app                                                |
+| Fills at top of book only, no depth                                                                               | Simplicity; fine for small orders                                            |
+| Liquidation settles instantly at the bankruptcy price                                                             | No liquidation engine / insurance fund                                       |
+| Limits trigger on the last price, not the book                                                                    | No order-book simulation                                                     |
+| A backfilled trigger (server was down) fills at the level it crossed, with the taker fee                          | There is no quote for the past                                               |
+| Spot TP / SL are placed or cancelled, not edited                                                                  | Cancel and place again                                                       |
+| A TP / SL pair attached to a spot buy uses the exact coins received (net of the fee), not floored to the qty step | Engine triggers have no instrument rules; the pair still sells correctly     |
+| Cross liquidation closes each step at an estimated bankruptcy price (the account's equity share)                  | No liquidation engine / order book; Bybit takes positions over at bankruptcy |
+| A cross account's backfill uses the other symbols' last live marks, not their mark candles for that minute        | One market's gap replays that market only                                    |
+| A late funding fee for a closed position reaches its Closed P&L row after the next snapshot, not live             | The closed row isn't re-sent in a delta                                      |
+
+### Open items
+
+- **O11 — remove the pre-BP-2 API.** Due now: BP-5 (release #148, 2026-09-27) logs every call as
+  `paper-legacy-api`. First check `fly logs -a crypto-dashboard-api | grep paper-legacy-api` shows no calls, then
+  remove `PATCH /paper/account/leverage`, SDK `setLeverage`, `TradingService.setLeverage`, `actions.setLeverage`,
+  `usdtAmount` sizing and their tests (`test/fakePaperApi.ts` too). `Account.leverage` stays as the default for
+  unpinned symbols. Run the `security.md` refactor checklist. Own small PR.
+- **Bybit testnet parity run (BP-5 G).** `pnpm --filter @crypto-dashboard/server parity:testnet` replays a fixed
+  scenario on Bybit testnet and on the paper engine and diffs `position/list`, `execution/list`,
+  `position/closed-pnl` and `account/wallet-balance` (maths given the same fills; tolerance 0.01). Testnet only, keys
+  from `config.ts`, never logged. **Never run yet** — needs the owner's testnet keys. It settles the points the help
+  centre leaves open: O5 (cross unrealised profit funds orders), the max-reducible margin formula, whether
+  `positionIM` includes extra margin, and the retCode of a risk-limit refusal. Planned as a nightly CI job
+  (`TRADING_TEST_PLAN.md` Part A, roadmap P3).
+- **Manual browser checks** still ⬜ in `TRADING_TEST_PLAN.md` (live feed, tab closed, two tabs, refresh) — to be
+  converted to Playwright (roadmap P2).
+- Low: editable spot TP / SL (Known gaps) — only if users ask.
+
+### Sources
+
+- Fees: [Trading Fee Structure](https://www.bybit.com/en/help-center/article/Trading-Fee-Structure) ·
+  [Spot fees](https://www.bybit.com/en/help-center/article/Bybit-Spot-Fees-Explained) ·
+  [Futures fees](https://www.bybit.com/en/help-center/article/Perpetual-Futures-Contract-Fees-Explained)
+- Margin and liquidation:
+  [Liquidation price, isolated (UTA)](https://www.bybit.com/en/help-center/article/Liquidation-Price-Calculation-under-Isolated-Mode-Unified-Trading-Account) ·
+  [Maintenance margin](https://www.bybit.com/en/help-center/article/Maintenance-Margin-USDT-Contract) ·
+  [Bankruptcy price](https://www.bybit.com/en/help-center/article/Bankruptcy-Price-Perpetual-and-Expiry-Contracts) ·
+  [Margin modes (UTA)](https://www.bybit.com/en/help-center/article/Differences-Between-the-Margin-Modes-Under-the-Unified-Trading-Account) ·
+  [Margin calculations](https://www.bybit.com/en/help-center/article/Margin-Calculations-Under-Different-Margin-Modes) ·
+  [UTA liquidation process](https://www.bybit.com/en/help-center/article/UTA-Trading-Rules) ·
+  [Risk limit](https://www.bybit.com/en/help-center/article/Risk-Limit-Perpetual-and-Futures)
+- Orders and P&L: [TP / SL](https://www.bybit.com/en/help-center/article/Introduction-to-Take-Profit-Stop-Loss-Perpetual-Futures-Contracts) ·
+  [Reduce-only](https://www.bybit.com/en/help-center/article/Reduce-Only-Order) ·
+  [Close-on-trigger](https://www.bybit.com/en/help-center/article/Close-On-Trigger-Order) ·
+  [P&L (USDT contract)](https://www.bybit.com/en/help-center/article/Profit-Loss-calculations-USDT-Contract) ·
+  [Funding rate](https://www.bybit.com/en/help-center/article/Introduction-to-Funding-Rate)
+- API v5: [ticker stream](https://bybit-exchange.github.io/docs/v5/websocket/public/ticker) ·
+  [funding history](https://bybit-exchange.github.io/docs/v5/market/history-fund-rate) ·
+  [set margin mode](https://bybit-exchange.github.io/docs/v5/account/set-margin-mode) ·
+  [wallet balance](https://bybit-exchange.github.io/docs/v5/account/wallet-balance) ·
+  [add / reduce margin](https://bybit-exchange.github.io/docs/v5/position/manual-add-margin) ·
+  [risk limit](https://bybit-exchange.github.io/docs/v5/market/risk-limit) ·
+  [create order](https://bybit-exchange.github.io/docs/v5/order/create-order) ·
+  [closed P&L](https://bybit-exchange.github.io/docs/v5/position/close-pnl) ·
+  [error codes](https://bybit-exchange.github.io/docs/v5/error)
+
+---
+
 ## 📁 Key Files
 
 | File                                                                   | Purpose                                                                                                                                        |
@@ -652,12 +837,18 @@ qty − fee`.
 - **SymbolBar**: "Indicators" button before ChartLayoutPicker.
 - **ChartPanel**: removed ema9Ref/ema20Ref/ema200Ref/vwapRef/macdHistRef/macdLineRef/signalRef refs + series creation + data push; added primitive lifecycle effect (attach/detach/update via Map); renders `IndicatorWidgets`.
 
+### ✅ Completed (added 2026-09-27 — Bybit Parity BP-0 … BP-5)
+
+- **Bybit parity — Spot + USDT Perpetual**: two markets with one shared USDT wallet, a 24/7 server trading engine (the
+  browser is a view), Bybit VIP-0 fees and fill prices, mark price, isolated and cross margin, liquidation, funding,
+  risk tiers, Closed P&L. Decisions, reference values, known gaps and open items →
+  [Bybit Parity (BP-0 … BP-5) — reference](#-bybit-parity-bp-0--bp-5--reference).
+
 ### 📋 Planned (Next)
 
 - **Phase 2 — Pane view layer**: Extract point→pixel conversion from `DrawingPrimitive` into per-shape `PaneView` classes, decoupling chart-coordinate conversion from canvas rendering. Phase 1 (renderer classes) is complete; Phase 2 would also wire in-progress preview through per-shape renderers and add `SelectionRenderer`.
 - **Phase 3–4**: Tool descriptor system + tool variants via property overrides.
 - **Additional drawing tools**: Wire remaining placement (polyline, freehand) — Phase 1 refactoring laid per-shape renderer foundation, but polyline and freehand still need placement state machine support.
-- **Bybit parity — Spot + USDT Perpetual** (agreed 2026-09-25): split trading into Spot (1×, buy/sell what you hold) and USDT Perpetual (leverage), one shared USDT wallet, new users start on Spot. **Trade execution moves to a 24/7 server engine** (the client becomes a view; supersedes "client is source of truth" from Paper Trading Phase 3 Sync). Then Bybit VIP 0 fees instead of the flat 0.07%, Bybit fill prices, mark price + isolated liquidation, funding, cross margin. Full plan, findings (incl. the spot/linear feed mismatch and missing spot bid/ask) and open questions → [`docs/BYBIT_PARITY_PLAN.md`](./BYBIT_PARITY_PLAN.md)
 - **Phase 4**: Advanced indicators, alerts, multi-symbol watchlist
 - **Phase 5**: Live broker integration — Bybit real-money trading (see full spec below)
 - **Phase 6**: AI trading bot — 3-role system: Scanner + Analyst + Executor, paper mode only (see full spec below)
@@ -2061,7 +2252,7 @@ looked cleaner and more solid, with longer wicks and no gaps. Analysis found thr
    40%). CPT only drew raw candles.
 2. **History came from the perpetual market.** `BYBIT_KLINE_CATEGORY_ORDER` was
    `['linear', 'spot']`, while the live WebSocket is spot. CPT history equalled Bybit linear
-   exactly and was about $39 per candle off Bybit **Spot** (BYBIT_PARITY_PLAN F1).
+   exactly and was about $39 per candle off Bybit **Spot** (Bybit Parity finding F1).
 3. **Thin candles.** 1m and 5m used 3px bar spacing (about 2px bodies) against about 8px on
    Bybit. Raw 1m data has no real gaps (open = previous close for 199/199 bars); the "gaps" were
    horizontal spacing.
@@ -2111,7 +2302,7 @@ looked cleaner and more solid, with longer wicks and no gaps. Analysis found thr
 
 ### feat: Bybit Parity BP-0 — per-market data feed (Spot + USDT Perpetual) (2026-09-26) ✅
 
-**Context:** phase 1 of `docs/BYBIT_PARITY_PLAN.md`. Each market now reads history, live candles and
+**Context:** phase 1 of the Bybit parity work ([reference](#-bybit-parity-bp-0--bp-5--reference)). Each market now reads history, live candles and
 quotes from its own Bybit category (`spot` / `linear`). The BP-1 server engine needs this feed. No
 market switch yet (BP-2), so every pane is `spot` and trading is unchanged.
 
@@ -2183,7 +2374,7 @@ audit ✅ (11 moderate, none high)
 
 ### feat: Bybit Parity BP-1 — server trading engine (2026-09-26) ✅
 
-**Context:** phase 2 of `docs/BYBIT_PARITY_PLAN.md` (D9, F10, F11). Before this, every trade ran in the browser
+**Context:** phase 2 of the Bybit parity work (D9, F10, F11). Before this, every trade ran in the browser
 (`paperStore.ts` + `useTPSLMonitor` / `usePendingOrderMonitor`) and the server stored whatever the browser sent,
 including balances, fill prices and PnL. As a result:
 
@@ -2192,7 +2383,7 @@ including balances, fill prices and PnL. As a result:
 - persisted local state leaked into the next user's account after logout.
 
 **Agreed:** port the engine plus four safety fixes (S1–S4), one PR with no fallback flag, and start fresh (the
-browser-only journal, balance history and leverage are not imported). Details → parity plan, BP-1.
+browser-only journal, balance history and leverage are not imported). Details → the retired parity plan in git history (`8d40f88:docs/BYBIT_PARITY_PLAN.md`), BP-1.
 
 **Server** (`apps/server/src/trading/`):
 
@@ -2285,10 +2476,10 @@ checks pass:
 
 ### feat: Bybit Parity BP-2 — Spot and USDT Perpetual, Bybit fees and fill prices (2026-09-26) ✅
 
-**Context:** phase 3 of `docs/BYBIT_PARITY_PLAN.md` (D1–D8, F3–F9). All leveraged trading was one flat-fee market
+**Context:** phase 3 of the Bybit parity work (D1–D8, F3–F9). All leveraged trading was one flat-fee market
 filled at the last price, with account-wide leverage and shorting on everything. Planned with a subagent, then the
 owner answered 15 planning questions and a 10-question visual gate (plan and answers in
-`~/.claude/plans/bp2-market-split.md`; decisions recorded in the parity plan, BP-2). One PR.
+`~/.claude/plans/bp2-market-split.md`; decisions in the Bybit Parity reference section). One PR.
 
 **Two markets:**
 
@@ -2362,7 +2553,7 @@ off-tick rejections; spot buy at the ask with the fee in BTC; no spot shorting; 
 spot sell fee in USDT; snapshot carries spot and leverage; WS prices for held markets only; a pre-BP-2 intent still
 trades USDT Perpetual.
 
-**Not in BP-2 (see parity plan §8):** same-side positions stay separate; leverage changes wait for BP-3's re-margining;
+**Not in BP-2 (see Bybit Parity known gaps):** same-side positions stay separate; leverage changes wait for BP-3's re-margining;
 the ticker bar's static placeholder prices are unchanged.
 
 **Gates:** type-check ✅ (server + client), lint ✅, format ✅, test ✅ (508 server + 370 client), server + client
@@ -2370,7 +2561,7 @@ build ✅, audit ✅ (11 moderate, none high)
 
 ### feat: Bybit Parity BP-3 — mark price, one-way positions, isolated liquidation, re-margining, chart lines (2026-09-27) ✅
 
-**Context:** phase 4 of `docs/BYBIT_PARITY_PLAN.md` (F6, F7). Leveraged positions had no mark price, no liquidation
+**Context:** phase 4 of the Bybit parity work (F6, F7). Leveraged positions had no mark price, no liquidation
 and no re-margining, same-side fills stayed separate, and the chart drew no trade lines. Owner direction: **mimic
 Bybit as closely as possible** (the app will later be tested against Bybit's APIs) — merge same-side fills, re-margin
 on leverage change, draw every line Bybit draws (draggable), no grace period at deploy. Visual gate: 8 questions.
@@ -2413,7 +2604,7 @@ screenshots of the Positions columns, MMR meter, notice banner, Est. liq. price,
 the TP line → confirm → server TP 84,600 → 84,635.3. Fixed from the screenshots: the confirm popover clipped at the
 chart's top edge; 1 px dashed lines looked dotted (now large dashes).
 
-**Not in BP-3 (parity plan §8 / follow-ups):** a stop-loss past the liquidation price is accepted (Bybit refuses it);
+**Not in BP-3 (Bybit Parity known gaps / follow-ups):** a stop-loss past the liquidation price is accepted (Bybit refuses it);
 higher-tier positions liquidate in full; the pre-BP-2 account-leverage route is still served; the API-parity test
 against Bybit testnet.
 
@@ -2426,7 +2617,7 @@ build ✅, audit ✅ (11 moderate, none high)
 
 ### feat: Bybit Parity BP-4 — funding (2026-09-27) ✅
 
-**Context:** phase 5 of `docs/BYBIT_PARITY_PLAN.md` (F7's last part). Perpetual positions never paid or received
+**Context:** phase 5 of the Bybit parity work (F7's last part). Perpetual positions never paid or received
 funding. Bybit's rules checked (help centre, API v5, live endpoints) and copied — owner direction "mimic Bybit".
 Visual gate: 4 questions.
 
@@ -2464,7 +2655,7 @@ Section 16.
 
 ### feat: Bybit Parity BP-5 — cross margin, risk tiers, refinements (2026-09-27) ✅
 
-**Context:** phase 6 of `docs/BYBIT_PARITY_PLAN.md`, one release (O4). Owner decisions O1–O12 answered 2026-09-27;
+**Context:** phase 6 of the Bybit parity work, one release (O4). Owner decisions O1–O12 answered 2026-09-27;
 visual gate answered (all recommended). Bybit's rules checked in the help centre, API v5 and live endpoints.
 
 **Server (engine):**

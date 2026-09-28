@@ -1,4 +1,4 @@
-// Public surface of the pure paper-trading engine (BYBIT_PARITY_PLAN BP-1).
+// Public surface of the pure paper-trading engine (APP_LOG Bybit Parity BP-1).
 export * from './types.js';
 export * from './actions.js';
 export {

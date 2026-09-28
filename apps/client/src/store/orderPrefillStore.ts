@@ -1,5 +1,5 @@
 /**
- * A one-shot request to prefill the order form (BYBIT_PARITY_PLAN BP-2): the Assets tab's "Sell"
+ * A one-shot request to prefill the order form (APP_LOG Bybit Parity BP-2): the Assets tab's "Sell"
  * puts a coin balance into the Spot form. TradingPanel takes the request when it matches its
  * market and symbol, then clears it. Not persisted.
  */

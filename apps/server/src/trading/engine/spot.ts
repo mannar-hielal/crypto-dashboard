@@ -1,5 +1,5 @@
 /**
- * Spot trading (BYBIT_PARITY_PLAN BP-2) — pure, like actions.ts.
+ * Spot trading (APP_LOG Bybit Parity BP-2) — pure, like actions.ts.
  *
  * One USDT wallet (`AccountState.balance`, D8) plus a coin balance per asset (`spot`). Spot is 1×
  * and long-only: a sell needs the coin (no shorting, F8).

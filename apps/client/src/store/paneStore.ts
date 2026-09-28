@@ -21,7 +21,7 @@ const MAX_BARS = 1000;
 
 /**
  * Global map of the last known price per market + symbol, keyed `category:symbol` — spot and
- * perp prices differ, so they're kept apart (BYBIT_PARITY_PLAN BP-0).
+ * perp prices differ, so they're kept apart (APP_LOG Bybit Parity BP-0).
  * Updated by every pane feed, never cleared on pane reset.
  * Used as a fallback so positions retain their mark price
  * after switching away from a symbol. Bounded: 2 categories × 9 symbols.

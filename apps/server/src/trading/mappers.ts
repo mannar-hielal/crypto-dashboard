@@ -1,5 +1,5 @@
 /**
- * Mapping between database rows, engine types and the SDK wire DTOs (BYBIT_PARITY_PLAN BP-1).
+ * Mapping between database rows, engine types and the SDK wire DTOs (APP_LOG Bybit Parity BP-1).
  *
  * Rows written by the pre-BP-1 browser engine carry the browser's id in `refId`. The engine
  * addresses them by that id, so `refId ?? id` is the public id everywhere.

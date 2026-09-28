@@ -1,6 +1,6 @@
 /**
  * Infrastructure adapters for the matching engine: the EngineLease store (Prisma) and the Bybit
- * 1m-candle sources used for backfill (BYBIT_PARITY_PLAN BP-1; mark-price candles BP-3), and the
+ * 1m-candle sources used for backfill (APP_LOG Bybit Parity BP-1; mark-price candles BP-3), and the
  * settled funding rates (BP-4).
  */
 

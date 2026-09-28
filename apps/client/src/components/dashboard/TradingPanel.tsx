@@ -565,7 +565,7 @@ export function TradingPanel({
   }
 
   /**
-   * Send the order to the server (BYBIT_PARITY_PLAN BP-1, BP-2). A market order fills at the
+   * Send the order to the server (APP_LOG Bybit Parity BP-1, BP-2). A market order fills at the
    * server's live ask / bid — execPrice is only this panel's preview. The size goes as a coin
    * quantity or, in USDT mode, as a value the server converts at the fill price. The server plays
    * the placed / queued sound through the paper feed, so there is none here.

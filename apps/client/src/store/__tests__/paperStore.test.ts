@@ -1,5 +1,5 @@
 /**
- * paperStore tests — the read model of the server engine (BYBIT_PARITY_PLAN BP-1, BP-2).
+ * paperStore tests — the read model of the server engine (APP_LOG Bybit Parity BP-1, BP-2).
  *
  * The trading maths (fills, fees, PnL, netting, journal wording) moved to the server and is
  * tested against the real engine there: apps/server/src/trading/engine/__tests__. These tests

@@ -1,5 +1,5 @@
 /**
- * Bybit testnet API-parity run (BYBIT_PARITY_PLAN BP-5 G) — manual, never in CI.
+ * Bybit testnet API-parity run (APP_LOG Bybit Parity BP-5 G) — manual, never in CI.
  *
  *   pnpm --filter @crypto-dashboard/server parity:testnet
  *

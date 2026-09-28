@@ -1,5 +1,5 @@
 /**
- * Bybit order rules added in BYBIT_PARITY_PLAN BP-5 B: reduce-only / close-on-trigger orders and
+ * Bybit order rules added in APP_LOG Bybit Parity BP-5 B: reduce-only / close-on-trigger orders and
  * the TP / SL side check.
  *
  * Reduce-only: the order may only shrink the opposite USDT Perpetual position. It needs one to be

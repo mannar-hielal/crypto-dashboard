@@ -1,6 +1,6 @@
 /**
  * Outbound HTTP with a timeout, bounded retries and a circuit breaker (api-best-practices,
- * BYBIT_PARITY_PLAN BP-0 follow-up / BP-3 step 0).
+ * APP_LOG Bybit Parity BP-0 follow-up / BP-3 step 0).
  *
  * - Every attempt carries `AbortSignal.timeout` (🔐 an unbounded upstream call is a
  *   resource-exhaustion risk).

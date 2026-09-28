@@ -1,5 +1,5 @@
 /**
- * Bybit market info — instrument rules and risk-limit tiers (BYBIT_PARITY_PLAN BP-0).
+ * Bybit market info — instrument rules and risk-limit tiers (APP_LOG Bybit Parity BP-0).
  *
  * Instrument rules (tick size, qty step, min order size, max leverage) and risk-limit tiers
  * change rarely, so they are fetched from Bybit's public REST API on demand and cached for

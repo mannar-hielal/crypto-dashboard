@@ -193,7 +193,7 @@ export function DashboardInner() {
   const setPaneInterval = useLayoutStore((s) => s.setPaneInterval);
   const setBottomPanelHeight = useLayoutStore((s) => s.setBottomPanelHeight);
 
-  // Paper trading runs on the server (BYBIT_PARITY_PLAN BP-1): the private WebSocket keeps
+  // Paper trading runs on the server (APP_LOG Bybit Parity BP-1): the private WebSocket keeps
   // paperStore in sync and plays fill / TP-SL sounds; the session refresh keeps the token valid.
   useSessionRefresh();
   usePaperFeed();
