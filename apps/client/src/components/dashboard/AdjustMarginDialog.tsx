@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { usePaperStore, type Position } from '@/store/paperStore';
 import { adjustMarginPreview } from '@/lib/positionMath';
+import { useInstrument } from '@/hooks/useInstruments';
 import { fmtMktPrice } from '@/lib/utils';
 import { color, fontSize, zIndex } from '@/lib/tokens';
 import styles from './TradeDialog.module.css';
@@ -42,7 +43,10 @@ export function AdjustMarginDialog({ position, onClose }: AdjustMarginDialogProp
   const amount = Number(input.replace(/,/g, ''));
   const valid = Number.isFinite(amount) && amount > 0 && amount <= max + 1e-9;
   const signed = mode === 'add' ? amount : -amount;
-  const preview = valid ? adjustMarginPreview(position, signed, position.symbol) : null;
+  const instrument = useInstrument('linear', position.symbol);
+  const preview = valid
+    ? adjustMarginPreview(position, signed, position.symbol, instrument?.tickSize)
+    : null;
   const fmtLiq = (v: number | null) => (v !== null && v > 0 ? `$${fmtMktPrice(v)}` : '—');
 
   async function confirm() {

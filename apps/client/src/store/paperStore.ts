@@ -87,7 +87,7 @@ export interface Position {
   liqPrice: number | null;
   /** Price it closes at when liquidated — the whole position margin is lost there; null = unknown */
   bustPrice: number | null;
-  /** Bybit positionIM: initial margin + fee to close */
+  /** Bybit positionIM: initial margin + fee to close + margin added by hand */
   positionIM: number;
   /** Bybit positionMM: maintenance margin (liquidation when equity falls to it); null = unknown */
   positionMM: number | null;
@@ -293,11 +293,12 @@ function positionFrom(p: PaperPositionDTO): Position {
     // "0", which would read as "can't be liquidated" / "no maintenance margin" — falsely safe
     liqPrice: optRisk(p.liqPrice),
     bustPrice: optRisk(p.bustPrice),
-    // positionIM = IM + fee to close (server formula), so it can be rebuilt from the stored parts
+    // positionIM = IM + fee to close + added margin (server formula), so it can be rebuilt from
+    // the stored parts
     positionIM:
       p.positionIM !== undefined
         ? toNum(p.positionIM)
-        : toNum(p.entryUsdtAmount) + toNum(p.closeFeeReserve),
+        : toNum(p.entryUsdtAmount) + toNum(p.closeFeeReserve) + toNum(p.extraMargin ?? '0'),
     positionMM: optRisk(p.positionMM),
     cumFunding: toNum(p.cumFunding ?? '0'),
     openedAt: p.openedAt,

@@ -57,6 +57,12 @@ export function floorToStep(qty: Decimal, step: Decimal): Decimal {
   return qty.div(step).floor().times(step);
 }
 
+/** `value` rounded up to a multiple of `step` (unchanged when step ≤ 0). */
+export function ceilToStep(value: Decimal, step: Decimal): Decimal {
+  if (step.lte(0)) return value;
+  return value.div(step).ceil().times(step);
+}
+
 /** True when `price` is a whole number of ticks. */
 export function isOnTick(price: Decimal, tick: Decimal): boolean {
   if (tick.lte(0)) return true;
@@ -115,6 +121,23 @@ function toRules(row: RuleRow): InstrumentRules {
     minOrderQty: new Decimal(row.minOrderQty),
     minNotional: new Decimal(row.minNotional),
   };
+}
+
+/**
+ * Where USDT Perpetual price ticks come from: the trading plugin points this at its live
+ * instruments-info cache (the same one order validation uses); unset — tests, the parity tool —
+ * it is the dated snapshot below. Process-wide, like that cache; the engine only reads it.
+ */
+let linearTickSource: ((symbol: string) => Decimal | undefined) | undefined;
+
+export function setLinearTickSource(source: ((symbol: string) => Decimal | undefined) | undefined) {
+  linearTickSource = source;
+}
+
+/** A symbol's USDT Perpetual price tick: live when known, else the snapshot (0 when unknown). */
+export function linearTickSize(symbol: string): Decimal {
+  const live = linearTickSource?.(symbol);
+  return live && live.gt(0) ? live : fallbackRules('linear', symbol).tickSize;
 }
 
 /** Fallback rules for a symbol; permissive (no rounding, no minimum) for an unknown symbol. */
@@ -284,12 +307,21 @@ export interface MarginInput {
   closeFeeReserve: Decimal;
   /** Margin added by hand (BP-5; 0 until then) */
   extraMargin: Decimal;
+  /**
+   * The symbol's price tick. When given, the liquidation price is rounded to it on the safe side
+   * (a long's up, a short's down), as Bybit reports it (testnet parity run, 2026-09-28: long liq
+   * 75,742.94 shown as 75,743). Omitted or 0 = unrounded.
+   */
+  tickSize?: Decimal;
 }
 
 export interface PositionRisk {
   positionValue: Decimal;
   mmr: Decimal;
-  /** Bybit positionIM: initial margin + fee to close */
+  /**
+   * Bybit positionIM: initial margin + fee to close + margin added by hand (testnet parity run,
+   * 2026-09-28: IM 8.43 + 10 added = positionIM 18.43)
+   */
   positionIM: Decimal;
   /** Bybit positionMM: value × MMR − deduction + fee to close */
   positionMM: Decimal;
@@ -303,7 +335,7 @@ export function positionRisk(p: MarginInput, tiers: RiskTier[]): PositionRisk {
   const value = p.quantity.times(p.entryPrice);
   const tier = tierFor(tiers, value);
   const zero = new Decimal(0);
-  const positionIM = p.im.plus(p.closeFeeReserve);
+  const positionIM = p.im.plus(p.closeFeeReserve).plus(p.extraMargin);
   const positionMM = value.times(tier.mmr).minus(tier.mmDeduction).plus(p.closeFeeReserve);
   if (p.quantity.lte(0)) {
     return {
@@ -332,6 +364,10 @@ export function positionRisk(p: MarginInput, tiers: RiskTier[]): PositionRisk {
       .plus(tier.mmDeduction)
       .div(p.quantity.times(one.plus(tier.mmr)));
     bustPrice = p.entryPrice.plus(p.im.plus(p.extraMargin).div(p.quantity));
+  }
+  if (p.tickSize) {
+    liqPrice =
+      p.side === 'long' ? ceilToStep(liqPrice, p.tickSize) : floorToStep(liqPrice, p.tickSize);
   }
   return {
     positionValue: value,

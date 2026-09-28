@@ -59,19 +59,20 @@ function openAt10x(side: 'buy' | 'sell', extra: { takeProfit?: Decimal; stopLoss
 }
 
 describe('liquidation and bankruptcy prices', () => {
-  it('long 10×: liquidation ≈ 45,148.99, bankruptcy 45,000', () => {
+  it('long 10×: liquidation 45,148.99… rounded up to the tick = 45,149.0, bankruptcy 45,000', () => {
     const risk = riskOf(openAt10x('buy').positions[0], TIERS);
-    expect(risk.liqPrice.toFixed(2)).toBe('45148.99');
+    // Bybit rounds a long's liquidation price up to the tick (0.1 for BTCUSDT): the safe side
+    expect(risk.liqPrice.toFixed(2)).toBe('45149.00');
     expect(risk.bustPrice.toString()).toBe('45000');
     expect(risk.positionIM.toString()).toBe('502.475');
     // 5,000 × 0.33% + 2.475
     expect(risk.positionMM.toString()).toBe('18.975');
   });
 
-  it('short 10×: liquidation ≈ 54,819.10, bankruptcy 55,000', () => {
+  it('short 10×: liquidation 54,819.09… rounded down to the tick = 54,819.0, bankruptcy 55,000', () => {
     const risk = riskOf(openAt10x('sell').positions[0], TIERS);
-    // (5,000 + 500) / (0.1 × 1.0033)
-    expect(risk.liqPrice.toFixed(2)).toBe('54819.10');
+    // (5,000 + 500) / (0.1 × 1.0033) = 54,819.0970…; a short's is rounded down (the safe side)
+    expect(risk.liqPrice.toFixed(2)).toBe('54819.00');
     expect(risk.bustPrice.toString()).toBe('55000');
   });
 
@@ -215,7 +216,7 @@ describe('liquidatePosition — the whole position margin is lost', () => {
     ]);
     expect(res.sound).toBe('liquidation');
     expect(res.delta.journal[0].text).toBe(
-      'Liquidated LONG BTCUSDT — mark price $45140.00 reached the liquidation price $45148.99; ' +
+      'Liquidated LONG BTCUSDT — mark price $45140.00 reached the liquidation price $45149.00; ' +
         'closed at the bankruptcy price $45000.00'
     );
     expect(res.delta.balanceEvents[0].action).toBe(

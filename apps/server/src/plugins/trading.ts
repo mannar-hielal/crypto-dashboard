@@ -26,6 +26,7 @@ import {
   fallbackRules,
   riskTiersFromBybit,
   rulesFromInstrument,
+  setLinearTickSource,
   type RiskTier,
 } from '../trading/bybitSpec.js';
 import type { Category, InstrumentRules } from '../trading/engine/index.js';
@@ -88,6 +89,9 @@ async function tradingPlugin(fastify: FastifyInstance): Promise<void> {
         }
       })
     );
+
+  // Liquidation prices round to the live tick, like order validation uses the live rules
+  setLinearTickSource((symbol) => rules.get(`linear:${symbol}`)?.tickSize);
 
   const market: MarketSource = {
     quote: (category, symbol) => {

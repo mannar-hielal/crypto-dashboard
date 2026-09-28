@@ -13,6 +13,7 @@ import {
   checkOrderSize,
   fallbackRiskTiers,
   fallbackRules,
+  setLinearTickSource,
   feeToClose,
   floorToStep,
   isOnTick,
@@ -23,11 +24,47 @@ import {
   accountFigures,
 } from '../bybitSpec.js';
 import { MAX_LEVERAGE, STARTING_BALANCE } from '../engine/index.js';
+import { riskOf } from '../engine/margin.js';
 import { ALLOWED_SYMBOLS } from '../../constants.js';
 
 const D = (v: number | string) => new Decimal(v);
 
 describe('bybitSpec', () => {
+  it('the SDK copy of the linear price ticks matches the instrument snapshot', () => {
+    for (const symbol of ALLOWED_SYMBOLS) {
+      expect(sdk.linearTickSize(symbol), symbol).toBe(
+        fallbackRules('linear', symbol).tickSize.toNumber()
+      );
+    }
+  });
+
+  it('rounds to the live tick when the plugin supplies one, else the snapshot', () => {
+    const pos = {
+      symbol: 'BTCUSDT',
+      side: 'long' as const,
+      quantity: D('0.1'),
+      entryPrice: D(50_000),
+      entryUsdtAmount: D(500),
+      closeFeeReserve: D('2.475'),
+      extraMargin: D(0),
+    };
+    expect(riskOf(pos, fallbackRiskTiers('BTCUSDT')).liqPrice.toString()).toBe('45149');
+    setLinearTickSource((s) => (s === 'BTCUSDT' ? D(2) : undefined));
+    try {
+      expect(riskOf(pos, fallbackRiskTiers('BTCUSDT')).liqPrice.toString()).toBe('45150'); // 45,148.99… up to a tick of 2
+    } finally {
+      setLinearTickSource(undefined);
+    }
+  });
+
+  it('the SDK rounds a liquidation price to the tick like the server', () => {
+    expect(sdk.roundLiqToTick(45148.99, 'long', 0.1)).toBe(45149);
+    expect(sdk.roundLiqToTick(54819.097, 'short', 0.1)).toBe(54819);
+    expect(sdk.roundLiqToTick(45149, 'long', 0.1)).toBe(45149); // already on the tick
+    expect(sdk.roundLiqToTick(0.123456, 'long', 0.00001)).toBe(0.12346);
+    expect(sdk.roundLiqToTick(45148.99, 'long', 0)).toBe(45148.99); // unknown symbol
+  });
+
   it('fee rates and account constants match the client copy in the SDK', () => {
     expect(sdk.FEE_RATES).toEqual(FEE_RATES);
     expect(sdk.LEGACY_FEE_RATE).toBe(LEGACY_FEE_RATE);
@@ -89,7 +126,10 @@ describe('isolated margin — Bybit’s worked example (BP-3)', () => {
 
   it('IM 821.56, MM 221.56, liquidation price 36,380.25', () => {
     const risk = positionRisk(input, tiers);
-    expect(risk.positionIM.toString()).toBe('821.56');
+    // The help centre's "IM" is the formula's IM + fee to close (821.56); the API's positionIM also
+    // counts the 3,000 added by hand (testnet parity run, 2026-09-28)
+    expect(risk.positionIM.minus(input.extraMargin).toString()).toBe('821.56');
+    expect(risk.positionIM.toString()).toBe('3821.56');
     expect(risk.positionMM.toString()).toBe('221.56');
     expect(risk.liqPrice.toFixed(2)).toBe('36380.25');
   });
@@ -116,13 +156,22 @@ describe('isolated margin — Bybit’s worked example (BP-3)', () => {
           im: D(c.qty).times(c.entry).div(c.lev),
           closeFeeReserve: feeToClose(c.side, D(c.qty), D(c.entry), c.lev),
           extraMargin: D(0),
+          tickSize: fallbackRules('linear', c.symbol).tickSize,
         },
         fallbackRiskTiers(c.symbol)
       );
       const client = sdk.estimatePositionRisk(
-        { side: c.side, qty: c.qty, entryPrice: c.entry, leverage: c.lev },
+        {
+          side: c.side,
+          qty: c.qty,
+          entryPrice: c.entry,
+          leverage: c.lev,
+          tickSize: sdk.linearTickSize(c.symbol),
+        },
         sdk.riskTiersFor(c.symbol)
       );
+      // Both round to the same tick the same way: equal, not just close
+      expect(client.liqPrice).toBe(server.liqPrice.toNumber());
       expect(client.liqPrice).toBeCloseTo(server.liqPrice.toNumber(), 6);
       expect(client.bustPrice).toBeCloseTo(server.bustPrice.toNumber(), 6);
       expect(client.positionMM).toBeCloseTo(server.positionMM.toNumber(), 6);

@@ -79,6 +79,12 @@ describe('adjustMargin() — add', () => {
     expect(updated.entryUsdtAmount.toString()).toBe('500');
   });
 
+  it("counts the added margin in the position's positionIM, as Bybit does", () => {
+    // Testnet parity run 2026-09-28: IM 8.43 + 10 added → Bybit positionIM 18.43
+    expect(riskOf(pos, TIERS).positionIM.toString()).toBe('502.475');
+    expect(riskOf(res.delta.positionsUpsert[0], TIERS).positionIM.toString()).toBe('1502.475');
+  });
+
   it('moves the liquidation price away from the mark', () => {
     const before = riskOf(pos, TIERS).liqPrice;
     const after = riskOf(res.delta.positionsUpsert[0], TIERS).liqPrice;
@@ -90,7 +96,7 @@ describe('adjustMargin() — add', () => {
   it('writes a Balance History row and a journal line', () => {
     expect(res.delta.balanceEvents[0].action).toBe('Add margin for BTCUSDT: +$1000.00');
     expect(res.delta.journal[0].text).toMatch(
-      /^Margin added to LONG BTCUSDT: \+\$1000\.00 \(liq\. price \$45148\.99 → \$351/
+      /^Margin added to LONG BTCUSDT: \+\$1000\.00 \(liq\. price \$45149\.00 → \$35110\.40\)/
     );
   });
 

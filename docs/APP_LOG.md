@@ -613,6 +613,10 @@ Long  LP = entry − (IM − MM) / qty − extraMargin / qty
 Short LP = entry + (IM − MM) / qty + extraMargin / qty
 ```
 
+The liquidation price is then rounded to the symbol's price tick on the safe side — a long's up, a short's down — as
+Bybit reports it; `positionIM` = IM + fee to close + extra margin (both confirmed by the testnet parity run,
+2026-09-28).
+
 Cross (UTA, `accountFigures`): margin balance = wallet + perpetual unrealised PnL; total IM covers positions **and
 active orders**, at mark; IM / MM rate = total IM / MM ÷ margin balance; available = margin balance − total IM; the
 account is liquidated when the MM rate reaches 100% (orders cancelled, then positions stepped down tier by tier in
@@ -669,9 +673,16 @@ partial fills, ADL, insurance fund · VIP tiers, fee coupons, USDC / inverse con
   testnet key with Unified Trading → Contract Orders + Positions; without an IP allow-list it expires after ~3 months —
   renew when a run fails with `33004`) and `FLY_PARITY_API_TOKEN` (a deploy token scoped to the parity app, expires
   2027-09-28). The testnet account needs USDT in its Unified Trading account (`110007` otherwise). A failure opens a
-  `parity` issue. Still open until it runs green: the points the help centre leaves open — O5 (cross unrealised
-  profit funds orders), the max-reducible margin formula, whether `positionIM` includes extra margin, and the retCode
-  of a risk-limit refusal.
+  `parity` issue.
+  - **First runs (2026-09-28, runs 36417777245 and after):** they settled that Bybit's `positionIM` **includes the
+    margin added by hand** (8.43 + 10 = 18.43), that Bybit **rounds the liquidation price to the tick** on the safe
+    side (75,742.94 → 75,743), and that under UTA `bustPrice` is reported blank and `slTriggerBy` is not on
+    `position/list` (it's on the StopLoss order). The engine and the adapter follow since
+    `fix/bybit-parity-first-run`.
+  - **Still open until a run is green:** O5 (cross unrealised profit funds orders), the max-reducible margin formula,
+    the retCode of a risk-limit refusal, and whether Bybit's `positionValue` is size × mark (the first run's 83.8569
+    vs 0.001 × entry 83,881.1 suggests so; the runs now log Bybit's mark with each position check). The tier is
+    chosen by value, so a mark-based value would change tiers near a boundary.
 - **Manual browser checks** still ⬜ in `TRADING_TEST_PLAN.md` (live feed, tab closed, two tabs, refresh) — to be
   converted to Playwright (roadmap P2).
 - Low: editable spot TP / SL (Known gaps) — only if users ask.
@@ -2836,3 +2847,23 @@ BP-2.
   - `README.md` brought up to the Bybit-parity app.
   - This log's Key Files table updated: the server engine files added; the drawing files removed with the
     2026-07-21 library switch and the old browser-side trading hooks dropped.
+
+### fix: first testnet parity run — positionIM with added margin, liquidation price on the tick (2026-09-28) ✅
+
+**Context:** the first nightly parity runs on `main` (after release #160) got through three steps of the scenario
+against real Bybit testnet data and reported what differs.
+
+- **Engine** (`bybitSpec.positionRisk`, `engine/margin.riskOf`, the SDK estimate):
+  - `positionIM` now counts the margin added by hand, as Bybit's does (18.43 = 8.43 + 10).
+  - The liquidation price is rounded to the symbol's tick on the safe side (long up, short down), in the DTO and in
+    every liquidation check. The tick comes from the dated instrument snapshot. The worked long 0.1 BTC @ 50,000 10×
+    is now liq **45,149.0** (was 45,148.99), the short **54,819.0**. The bankruptcy price is unchanged.
+  - The client's MM-rate equity is built from its parts, so it counts added margin once from an old or new server.
+- **Parity adapter / scenario** (`trading/bybitParity.ts`, `tools/bybitParity.ts`):
+  - A field Bybit leaves blank (`bustPrice` under UTA) is not compared.
+  - The stop-loss trigger source is read from Bybit's StopLoss order (`position/list` has no `slTriggerBy`).
+  - The scenario trades 0.002 BTC, so the reduce-only half close (0.001) meets Bybit's minimum. The 0.0005 close was
+    refused with `10001`.
+  - Each position check logs Bybit's mark and average price, to settle whether `positionValue` is mark-based.
+- **Still open:** `positionValue`'s basis, O5, the max-reducible formula, the 110090 retCode — see Bybit Parity →
+  Open items. The test plan's worked numbers (45,148.99) are updated after the learning-path reorder (#161) lands.

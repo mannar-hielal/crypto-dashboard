@@ -10,6 +10,7 @@ import {
   accountFiguresEstimate,
   crossLiqPriceEstimate,
   estimatePositionRisk,
+  linearTickSize,
   feeToCloseEstimate,
   positionCapEstimate,
   riskTiersFor,
@@ -36,13 +37,22 @@ export function positionPnl(
 export function positionMmrRate(
   pos: Pick<
     Position,
-    'side' | 'entryPrice' | 'quantity' | 'positionIM' | 'positionMM' | 'extraMargin'
+    | 'side'
+    | 'entryPrice'
+    | 'quantity'
+    | 'entryUsdtAmount'
+    | 'closeFeeReserve'
+    | 'positionMM'
+    | 'extraMargin'
   >,
   mark: number
 ): number | null {
   // Unknown (a pre-BP-3 server sent no MM): no rate rather than a falsely safe 0%
   if (pos.positionMM === null) return null;
-  const equity = pos.positionIM + pos.extraMargin + positionPnl(pos, mark);
+  // From the parts, not positionIM: that includes the added margin since 2026-09-28 (an older
+  // server's doesn't), so this reads the same from either
+  const equity =
+    pos.entryUsdtAmount + pos.closeFeeReserve + pos.extraMargin + positionPnl(pos, mark);
   if (equity <= 0) return 1;
   return Math.max(0, pos.positionMM / equity);
 }
@@ -76,7 +86,9 @@ export function adjustMarginPreview(
     | 'extraMargin'
   >,
   amount: number,
-  symbol: string
+  symbol: string,
+  /** The live instrument tick; the SDK snapshot when absent */
+  tickSize?: number
 ): { liqPrice: number; extraMargin: number } {
   const extraMargin = Math.max(0, pos.extraMargin + amount);
   const risk = estimatePositionRisk(
@@ -88,6 +100,7 @@ export function adjustMarginPreview(
       im: pos.entryUsdtAmount,
       closeFeeReserve: pos.closeFeeReserve,
       extraMargin,
+      tickSize: tickSize && tickSize > 0 ? tickSize : linearTickSize(symbol),
     },
     riskTiersFor(symbol)
   );
@@ -102,7 +115,9 @@ export function adjustMarginPreview(
 export function remarginPreview(
   pos: Pick<Position, 'side' | 'quantity' | 'entryPrice' | 'extraMargin'>,
   leverage: number,
-  symbol: string
+  symbol: string,
+  /** The live instrument tick; the SDK snapshot when absent */
+  tickSize?: number
 ): { margin: number; liqPrice: number } {
   const lev = Math.max(1, leverage);
   const im = (pos.quantity * pos.entryPrice) / lev;
@@ -116,6 +131,7 @@ export function remarginPreview(
       im,
       closeFeeReserve,
       extraMargin: pos.extraMargin,
+      tickSize: tickSize && tickSize > 0 ? tickSize : linearTickSize(symbol),
     },
     riskTiersFor(symbol)
   );

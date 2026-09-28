@@ -921,7 +921,7 @@ describe('BP-2 — market tabs and leverage', () => {
     // 5×: IM 1,000 + fee to close 5,000 × 0.8 × 0.055% = 2.20; liq (5,000 − 1,000) / 0.09967
     const preview = within(dialog).getByTestId('remargin-preview');
     expect(preview.textContent).toContain('Position margin: $5000.00 → $1002.20');
-    expect(preview.textContent).toContain('Liq. price: — → $40,132.44');
+    expect(preview.textContent).toContain('Liq. price: — → $40,132.5'); // 40,132.44… up to the 0.1 tick
     fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
     await waitFor(() =>
       expect(fakePaperApi.setSymbolLeverage).toHaveBeenCalledWith('BTCUSDT', 5, 'test-token')
@@ -1015,9 +1015,10 @@ describe('BP-3 — liquidation in the USDT Perpetual form', () => {
     renderPanel();
     fireEvent.click(unitBtn('BTC'));
     fireEvent.change(getQtyInput(), { target: { value: '0.1' } });
-    // Long 0.1 at the ask 50,010, 10×: (5,001 − 500.1) / (0.1 × (1 − 0.33%)) ≈ 45,158.02
+    // Long 0.1 at the ask 50,010, 10×: (5,001 − 500.1) / (0.1 × (1 − 0.33%)) ≈ 45,158.02, rounded
+    // up to the 0.1 tick as Bybit does
     expect(screen.getByText('Est. liq. price')).toBeTruthy();
-    expect(screen.getByTestId('order-est-liq-price').textContent).toBe('$45,158.02');
+    expect(screen.getByTestId('order-est-liq-price').textContent).toBe('$45,158.1');
   });
 
   it('a 1× long can not be liquidated: the estimate shows —', () => {
