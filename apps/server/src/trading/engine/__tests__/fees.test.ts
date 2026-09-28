@@ -19,7 +19,6 @@ import {
   executeTrigger,
   placeMarket,
   placePending,
-  setLeverage,
   setSymbolLeverage,
   type AccountState,
   type InstrumentRules,
@@ -455,53 +454,6 @@ describe('leverage change with an open position — re-margining (BP-3)', () => 
   });
 });
 
-describe('the default leverage can not get around the per-symbol lock', () => {
-  it('changing the default pins the current leverage of symbols with open trades', () => {
-    const open = placeMarket(
-      account({ leverage: 3, symbolLeverage: {} }),
-      { symbol: 'ETHUSDT', side: 'buy', size: { qty: D(1) } },
-      quote(100, 100),
-      OPEN_RULES,
-      ctx
-    );
-    const state = account({
-      leverage: 3,
-      symbolLeverage: {},
-      positions: open.delta.positionsUpsert,
-    });
-    const res = setLeverage(state, 10);
-    expect(res.delta.account.leverage).toBe(10);
-    expect(res.delta.account.symbolLeverage).toEqual({ ETHUSDT: 3 }); // still 3× while it's open
-  });
-
-  it('an edit keeps the leverage the order was placed with', () => {
-    const placed = placePending(
-      account({ leverage: 3, symbolLeverage: {} }),
-      { symbol: 'ETHUSDT', side: 'buy', type: 'limit', triggerPrice: D(90), size: { qty: D(1) } },
-      quote(100, 100),
-      OPEN_RULES,
-      ctx
-    );
-    const order = placed.delta.pendingUpsert[0];
-    const state = account({
-      balance: placed.delta.account.balance,
-      leverage: 10, // e.g. changed by an old client
-      symbolLeverage: {},
-      pendingOrders: [order],
-    });
-    const res = editPending(
-      state,
-      order.id,
-      { triggerPrice: D(80), size: { qty: D(1) }, takeProfit: null, stopLoss: null },
-      quote(100, 100),
-      OPEN_RULES,
-      ctx
-    );
-    expect(res.delta.pendingUpsert[0].leverage).toBe(3);
-    expectDec(res.delta.pendingUpsert[0].usdtAmount, D(80).div(3).toString());
-  });
-});
-
 describe('PR #136 review — editing a limit across the book is priced at the book', () => {
   it('a buy edited far above the ask fills at the ask even when a reserve at the new limit would not fit', () => {
     // 10×: 1 BTC at a 49,000 limit reserves ~4,954. Balance leaves no room for a reserve at
@@ -531,5 +483,34 @@ describe('PR #136 review — editing a limit across the book is priced at the bo
     expect(res.result).toBe('ok');
     expectDec(res.delta.positionsUpsert[0].entryPrice, '50000');
     expect(res.delta.orders.some((o) => o.status === 'rejected')).toBe(false);
+  });
+});
+
+describe('a pending order keeps its own leverage', () => {
+  it('an edit keeps the leverage the order was placed with', () => {
+    const placed = placePending(
+      account({ leverage: 3, symbolLeverage: {} }),
+      { symbol: 'ETHUSDT', side: 'buy', type: 'limit', triggerPrice: D(90), size: { qty: D(1) } },
+      quote(100, 100),
+      OPEN_RULES,
+      ctx
+    );
+    const order = placed.delta.pendingUpsert[0];
+    const state = account({
+      balance: placed.delta.account.balance,
+      leverage: 10, // e.g. changed by an old client
+      symbolLeverage: {},
+      pendingOrders: [order],
+    });
+    const res = editPending(
+      state,
+      order.id,
+      { triggerPrice: D(80), size: { qty: D(1) }, takeProfit: null, stopLoss: null },
+      quote(100, 100),
+      OPEN_RULES,
+      ctx
+    );
+    expect(res.delta.pendingUpsert[0].leverage).toBe(3);
+    expectDec(res.delta.pendingUpsert[0].usdtAmount, D(80).div(3).toString());
   });
 });

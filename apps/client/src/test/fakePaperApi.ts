@@ -84,9 +84,8 @@ export const fakePaperApi = {
     const price = paneStores[0].getState().latestPrice ?? 1;
     const trigger = Number(body.triggerPrice ?? price);
     const at = body.type === 'market' ? price : trigger;
-    // Size as the real server takes it: qty, a USDT value, or (pre-BP-2) margin at 1×
-    const qty =
-      body.qty !== undefined ? Number(body.qty) : Number(body.value ?? body.usdtAmount ?? '0') / at;
+    // Size as the real server takes it: qty or a USDT value
+    const qty = body.qty !== undefined ? Number(body.qty) : Number(body.value ?? '0') / at;
     const margin = String(qty * at);
     if (body.type === 'market') {
       return ok(
@@ -152,7 +151,6 @@ export const fakePaperApi = {
   adjustPositionMargin: vi.fn(() => ok('0' as string | null)),
   cancelPositionExit: vi.fn(() => ok(true)),
   closePosition: vi.fn(() => ok('0')),
-  setLeverage: vi.fn((leverage: number) => ok(leverage)),
   setSymbolLeverage: vi.fn((_symbol: string, leverage: number) => ok(leverage)),
   setMarginMode: vi.fn((mode: 'ISOLATED_MARGIN' | 'REGULAR_MARGIN') => ok(mode)),
   placeSpotExits: vi.fn(() => ok('oco-1' as string | null)),

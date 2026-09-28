@@ -163,7 +163,7 @@ the engine, against staging (A5) — never against production.
 - **Hourly synthetic check** (the same `@prod` project on `schedule`) catches a dead feed or an expired certificate
   between deploys.
 - **Log alerts:** Fly log shipping to a free tier (e.g. Better Stack / Axiom) with an alert on `level >= 50` (error)
-  and on the `paper-legacy-api` warning until O11 lands.
+  (the `paper-legacy-api` watch is no longer needed: O11 removed that API on 2026-09-28).
 
 ## A5. Environments and test data
 
@@ -761,12 +761,12 @@ of the 2026-05 runs; no new TradingView checks are made. The side-by-side proced
 
 ### 13.1 Intent only (F11)
 
-| #      | Action                                                                                           | Expected                                                                                | Status | Tier        | Notes                                                                  |
-| ------ | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- | ------ | ----------- | ---------------------------------------------------------------------- |
-| 13.1.1 | Market Buy $100                                                                                  | Request body has symbol / side / type / usdtAmount only; fill price = server live price | ✅     | T2 · RTL    | `TradingPanel.test` "sends intent only"; `services.test` server price. |
-| 13.1.2 | `curl -X POST /api/paper/orders` with an extra `price` / `balance` field                         | The fields are stripped and never reach the engine; the order fills at the server price | ✅     | T1 · Vitest | `paper.test` "a client-supplied price never reaches the engine".       |
-| 13.1.3 | Old endpoints: `PATCH /api/paper/account`, `POST /api/paper/trades`, `POST /api/paper/positions` | 404                                                                                     | ✅     | T1 · Vitest | Removed in BP-1.                                                       |
-| 13.1.4 | Market order while the server has no live price (feed down)                                      | 409 "Waiting for live price…", shown in the order form; form keeps its values           | ✅     | T1 + T2     | `paper.test` + `TradingPanel.test` "server rejection".                 |
+| #      | Action                                                                                           | Expected                                                                                  | Status | Tier        | Notes                                                                  |
+| ------ | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- | ------ | ----------- | ---------------------------------------------------------------------- |
+| 13.1.1 | Market Buy $100                                                                                  | Request body has symbol / side / type / qty or value only; fill price = server live price | ✅     | T2 · RTL    | `TradingPanel.test` "sends intent only"; `services.test` server price. |
+| 13.1.2 | `curl -X POST /api/paper/orders` with an extra `price` / `balance` field                         | The fields are stripped and never reach the engine; the order fills at the server price   | ✅     | T1 · Vitest | `paper.test` "a client-supplied price never reaches the engine".       |
+| 13.1.3 | Old endpoints: `PATCH /api/paper/account`, `POST /api/paper/trades`, `POST /api/paper/positions` | 404                                                                                       | ✅     | T1 · Vitest | Removed in BP-1.                                                       |
+| 13.1.4 | Market order while the server has no live price (feed down)                                      | 409 "Waiting for live price…", shown in the order form; form keeps its values             | ✅     | T1 + T2     | `paper.test` + `TradingPanel.test` "server rejection".                 |
 
 ### 13.2 24/7 execution (F10)
 
@@ -868,13 +868,13 @@ of the 2026-05 runs; no new TradingView checks are made. The side-by-side proced
 
 ### 14.7 Migration (D7) and deploy safety
 
-| #      | Action                                                                   | Expected                                                                                                                                                                               | Status | Tier        | Notes                            |
-| ------ | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ----------- | -------------------------------- |
-| 14.7.1 | Migrate a DB with pre-BP-2 rows                                          | Positions / orders / trades become `linear`; position leverage = qty × entry / margin; entry fee 0.07% of margin; PENDING reserved = margin × 1.0007; FILLED rows carry feeRate 0.0007 | ✅     | Manual      | Run on a scratch DB, 2026-09-26. |
-| 14.7.2 | Pre-BP-2 user (saved layout) opens `/dashboard` with perpetual positions | Lands once on USDT Perpetual at the newest position's symbol; never again                                                                                                              | ✅     | T2 · RTL    | `useMarketUrlSync.test`.         |
-| 14.7.3 | New user                                                                 | Starts on Spot                                                                                                                                                                         | ✅     | T1 · Vitest | `layoutStore.test`.              |
-| 14.7.4 | Old client (sends `usdtAmount`, no market)                               | Still trades USDT Perpetual (margin at the symbol's leverage)                                                                                                                          | ✅     | T1 · Vitest | `paper.test`; goes with O11.     |
-| 14.7.5 | Private WS                                                               | Pushes live prices (≤ 1/s, changed only) of the markets the account holds                                                                                                              | ✅     | T1 · Vitest | `paper.test`. Live ✓.            |
+| #      | Action                                                                   | Expected                                                                                                                                                                               | Status | Tier        | Notes                                    |
+| ------ | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ----------- | ---------------------------------------- |
+| 14.7.1 | Migrate a DB with pre-BP-2 rows                                          | Positions / orders / trades become `linear`; position leverage = qty × entry / margin; entry fee 0.07% of margin; PENDING reserved = margin × 1.0007; FILLED rows carry feeRate 0.0007 | ✅     | Manual      | Run on a scratch DB, 2026-09-26.         |
+| 14.7.2 | Pre-BP-2 user (saved layout) opens `/dashboard` with perpetual positions | Lands once on USDT Perpetual at the newest position's symbol; never again                                                                                                              | ✅     | T2 · RTL    | `useMarketUrlSync.test`.                 |
+| 14.7.3 | New user                                                                 | Starts on Spot                                                                                                                                                                         | ✅     | T1 · Vitest | `layoutStore.test`.                      |
+| 14.7.4 | Old client (sends `usdtAmount`, no market)                               | ~~Still trades USDT Perpetual~~ — removed with O11 (2026-09-28): 400, no size                                                                                                          | ➖     | T1 · Vitest | `paper.test` "pre-BP-2 usdtAmount only". |
+| 14.7.5 | Private WS                                                               | Pushes live prices (≤ 1/s, changed only) of the markets the account holds                                                                                                              | ✅     | T1 · Vitest | `paper.test`. Live ✓.                    |
 
 ---
 

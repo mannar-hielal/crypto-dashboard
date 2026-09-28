@@ -580,7 +580,7 @@ browser decided fills and PnL.
 | O8  | TP / SL / stops trigger on Last / Mark / Index                                                                  |
 | O9  | Bybit's TP / SL validation (side vs the base price); a stop-loss past liquidation is accepted with a UI warning |
 | O10 | No auto-add margin                                                                                              |
-| O11 | Remove the pre-BP-2 API after one release that logs any call — **open, see below**                              |
+| O11 | Remove the pre-BP-2 API after one release that logs any call — **done 2026-09-28**                              |
 | O12 | Full TP / SL only (Partial mode left out)                                                                       |
 
 Also settled for BP-3: mimic Bybit as closely as possible — merge same-side fills, re-margin on a leverage change,
@@ -658,11 +658,7 @@ partial fills, ADL, insurance fund · VIP tiers, fee coupons, USDC / inverse con
 
 ### Open items
 
-- **O11 — remove the pre-BP-2 API.** Due now: BP-5 (release #148, 2026-09-27) logs every call as
-  `paper-legacy-api`. First check `fly logs -a crypto-dashboard-api | grep paper-legacy-api` shows no calls, then
-  remove `PATCH /paper/account/leverage`, SDK `setLeverage`, `TradingService.setLeverage`, `actions.setLeverage`,
-  `usdtAmount` sizing and their tests (`test/fakePaperApi.ts` too). `Account.leverage` stays as the default for
-  unpinned symbols. Run the `security.md` refactor checklist. Own small PR.
+- ~~O11 — remove the pre-BP-2 API~~ — **done 2026-09-28** (changelog "fix: remove the pre-BP-2 paper API").
 - **Bybit testnet parity run (BP-5 G).** `pnpm --filter @crypto-dashboard/server parity:testnet` replays a fixed
   scenario on Bybit testnet and on the paper engine and diffs `position/list`, `execution/list`,
   `position/closed-pnl` and `account/wallet-balance` (maths given the same fills; tolerance 0.01). Testnet only, keys
@@ -2701,3 +2697,23 @@ summary bar, Closed P&L tab screenshotted; the only console line was the signed-
 **Tests:** server 679, client 439. `TRADING_TEST_PLAN.md` Section 17.
 
 **Gates:** type-check ✅, lint ✅, format ✅, test ✅ (679 server + 439 client)
+
+### fix: remove the pre-BP-2 paper API (O11) (2026-09-28) ✅
+
+**Context:** owner decision O11 — remove the pre-BP-2 surface one release after it was logged. BP-5 (release #148)
+logged every call as `paper-legacy-api`; `fly logs` showed none on 2026-09-28, and the client hasn't called it since
+BP-2.
+
+- **Removed:** `PATCH /api/paper/account/leverage` (now 404), SDK `paperApi.setLeverage`,
+  `TradingService.setLeverage`, the engine action `setLeverage`, and `usdtAmount` as an order / edit size — the route
+  schemas no longer list it, so it is stripped and an order sized only by it answers 400. Sizes are `qty` or `value`
+  (orders), `qty` (edits). The `paper-legacy-api` logger is gone.
+- **Kept:** `Account.leverage` as the default for symbols without their own setting (only reset changes it now); the
+  engine's internal `{ margin }` order size, which the engine tests' worked numbers are written in (185 harness calls)
+  — it is no longer reachable from the API. The `usdtAmount` field on a pending order's DTO (its initial margin) is
+  unrelated and stays.
+- **Tests:** the removed route answers 404; `usdtAmount`-only bodies answer 400; route tests size by `value` / `qty`;
+  the tests of the removed action's pinning logic are dropped; S2 (a pending order keeps its own leverage) now sets
+  the default through a test fixture. Server 710, client 451.
+- **Refactor checklist:** no route lost its `app.authenticate`; `sizeOf` still validates before the engine; error
+  mapping unchanged; no new logging or dependency.

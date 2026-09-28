@@ -333,7 +333,7 @@ describe('paperStore', () => {
     });
 
     it('resets leverage back to 1', () => {
-      store.setLeverage(10);
+      store.setDefaultLeverage(10);
       store.reset();
       expect(store.leverage).toBe(1);
     });
@@ -1252,23 +1252,11 @@ describe('BP-1 safety fixes', () => {
   });
 
   it('S2: a pending order fills with the leverage it was placed with, not the current one', () => {
-    store.setLeverage(1);
+    store.setDefaultLeverage(1);
     const orderId = store.placeLimitOrder(SYMBOL, 'buy', 50_000, 1_000)!;
-    store.setLeverage(10);
+    store.setDefaultLeverage(10);
     store.fillPending(orderId, 50_000);
     // qty = 1000 × 1 / 50000 = 0.02 (the browser would have used 10× → 0.2)
-    expect(store.positions[0].quantity).toBeCloseTo(0.02);
-  });
-
-  it('S2 + BP-2: an edit keeps the order leverage; a default change leaves a symbol with an order pinned', () => {
-    const orderId = store.placeLimitOrder(SYMBOL, 'buy', 50_000, 1_000)!;
-    // BP-2: leverage is per symbol and locked while the symbol has an order — changing the
-    // default pins BTCUSDT at its 1×, so the edit (and the fill) stay at 1×
-    store.setLeverage(5);
-    expect(store.raw.symbolLeverage).toEqual({ [SYMBOL]: 1 });
-    store.editPendingOrder(orderId, 50_000, 1_000, null, null);
-    expect(store.pendingOrders[0]).toMatchObject({ leverage: 1, qty: 0.02 });
-    store.fillPending(orderId, 50_000);
     expect(store.positions[0].quantity).toBeCloseTo(0.02);
   });
 
