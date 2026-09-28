@@ -23,16 +23,16 @@
 
 ## A2. Where we stand (measured 2026-09-28)
 
-| Area                   | Today                                                                                                                                                                                                                                      |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Unit / component tests | 1,164 Vitest tests in 63 files (server 713 / 26, client 451 / 37). The pure Decimal engine (`apps/server/src/trading/engine/__tests__`) has worked-number tests per rule; client panels have RTL tests against `src/test/fakePaperApi.ts`. |
-| Service / route tests  | `services.test.ts`, `paper.test.ts`, `auth.test.ts` etc. run Fastify in-memory (`app.inject`, `injectWS`) with **Prisma mocked** — no real Postgres, no migration is ever applied in a test.                                               |
-| Browser end-to-end     | **None.** "T3 · Playwright" was a planned tier; rows marked T3 were checked by hand.                                                                                                                                                       |
-| Bybit parity           | `bybitParity.ts` adapter + `parity:testnet` script exist; **never run** (needs testnet keys).                                                                                                                                              |
-| Manual rows            | 90 rows with a ⬜ status in Part B before this revision (plus 2 ⬜ TradingView cross-check cells, 1.2.3 and 2.4.5), mostly live-feed, multi-tab, layout and TradingView side-by-side checks.                                               |
-| CI (`ci.yml`)          | Audit → type-check → format → lint → unit tests → build, on every PR and push to `develop` / `main`. Coverage is available (`pnpm test:coverage`) but has no threshold and doesn't run in CI.                                              |
-| After deploy           | `deploy.yml` deploys; nothing checks the live site afterwards except Fly's `/health` check.                                                                                                                                                |
-| Review                 | The Claude review bot + the unresolved-thread merge gate.                                                                                                                                                                                  |
+| Area                   | Today                                                                                                                                                                                                                                                    |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit / component tests | 1,164 Vitest tests in 63 files (server 713 / 26, client 451 / 37). The pure Decimal engine (`apps/server/src/trading/engine/__tests__`) has worked-number tests per rule; client panels have RTL tests against `src/test/fakePaperApi.ts`.               |
+| Service / route tests  | `services.test.ts`, `paper.test.ts`, `auth.test.ts` etc. run Fastify in-memory (`app.inject`, `injectWS`) with **Prisma mocked** — no real Postgres, no migration is ever applied in a test.                                                             |
+| Browser end-to-end     | **None.** "T3 · Playwright" was a planned tier; rows marked T3 were checked by hand.                                                                                                                                                                     |
+| Bybit parity           | `bybitParity.ts` adapter + `parity:testnet` script, wired as a nightly job on 2026-09-28 (`parity.yml`, A4). The testnet setup is done — key (Read-Write, Contract Orders + Positions), `bybit-testnet` environment, test USDT; first green run pending. |
+| Manual rows            | 90 rows with a ⬜ status in Part B before this revision (plus 2 ⬜ TradingView cross-check cells, 1.2.3 and 2.4.5), mostly live-feed, multi-tab, layout and TradingView side-by-side checks.                                                             |
+| CI (`ci.yml`)          | Audit → type-check → format → lint → unit tests → build, on every PR and push to `develop` / `main`. Coverage is available (`pnpm test:coverage`) but has no threshold and doesn't run in CI.                                                            |
+| After deploy           | `deploy.yml` deploys; nothing checks the live site afterwards except Fly's `/health` check.                                                                                                                                                              |
+| Review                 | The Claude review bot + the unresolved-thread merge gate.                                                                                                                                                                                                |
 
 **Biggest risks not covered by automation today:** the persistence layer (`AccountRepository`, migrations) only
 meets a real database in production; nobody checks the engine against Bybit itself; and the browser flows (live feed,
@@ -99,17 +99,23 @@ browser test); T3 covers wiring and user journeys, not maths; M is for what's le
   `BYBIT_REST_URL` / `BYBIT_WS_URL` overrides, refused in production, with a control endpoint to push a chosen price (to cross a TP, reach a
   liquidation price or a funding timestamp on demand). Every T3 test then runs on known prices — no waiting for the
   market, no flakiness.
-- **Nightly Bybit testnet parity (T4).** A scheduled workflow (`parity.yml`, `schedule` + `workflow_dispatch`, never
-  on PRs, `environment: bybit-testnet` so the secrets are scoped) runs `parity:testnet`. It uploads the diff as an
-  artifact and, on a mismatch, opens (or updates) one GitHub issue labelled `parity`. The first green run also closes
-  the open questions in APP_LOG (O5, max-reducible margin, 110090 retCode).
+- **Nightly Bybit testnet parity (T4) — in place since 2026-09-28.** `.github/workflows/parity.yml` runs
+  `parity:testnet` nightly (03:17 UTC) and on demand (`workflow_dispatch`), never on pull requests; one run at a time,
+  since they share the testnet account. The script runs on a one-off Fly Machine in `sin` (app
+  `crypto-dashboard-parity`), not on the GitHub runner, which Bybit geo-blocks; it aborts at 8 minutes and closes what
+  it opened, and every Bybit call times out after 10 s. 🔐 Its secrets (`BYBIT_TESTNET_KEY`, `BYBIT_TESTNET_SECRET`,
+  `FLY_PARITY_API_TOKEN`) live in the `bybit-testnet` environment, which only `main` may use, so a branch can't run a
+  changed script with the keys before review. It uploads the log as an artifact and, when a run fails, opens (or
+  comments on) one GitHub issue labelled `parity`. The first green run also closes the open questions in APP_LOG (O5,
+  max-reducible margin, 110090 retCode).
 - **Weekly spec-drift check.** A script compares `bybitSpec.ts` constants with Bybit's public API (fee rates via the
   help-centre values we store, `instruments-info`, `risk-limit` tiers, `fundingIntervalHour`) and opens an issue when
   Bybit changes a value — today that is only caught when someone re-reads the docs.
 - **Feed parity replaces the TradingView side-by-side checks (Section 6).** A nightly job samples our own
-  `/api/market` quotes and 1m closes and Bybit's public REST at the same timestamps and asserts the Section 6
-  tolerances. That's what the TV comparison was measuring (both apps show Bybit's feed), without a person watching two
-  screens.
+  `/api/market` quotes, 1m candles and mark / funding and Bybit's public v5 REST at the same timestamps and asserts the
+  Section 6 tolerances. The TradingView checks are retired (Part B, "TradingView cross-checks — retired"):
+  TradingView's paper trading follows its own fees, fills and (no) perpetual rules, so it stopped being a valid
+  reference once the app copied Bybit.
 
 ### User journeys (T3)
 
@@ -192,23 +198,30 @@ depends on another test's leftovers. Fixtures (replay feed, pre-BP-2 DB seed) ar
 
 Each step is its own small PR to `develop`, ordered by value per effort.
 
-| Step   | Delivers                                                                                                                  | Converts / adds                                    | Owner action               |
-| ------ | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | -------------------------- |
-| **P1** | CI Postgres, migration-from-empty + drift check, migration replay, repository round-trip, coverage thresholds in CI       | T2i; 18.7                                          | —                          |
-| **P2** | Fake Bybit replay server, Playwright (smoke on PR, full nightly), seed helper; the missing T1 / T2 tests the ⬜ rows name | Every ⬜ row marked `(P2)` in Sections 7–15 and 19 | —                          |
-| **P3** | Nightly `parity:testnet` workflow + issue on mismatch; weekly spec-drift check; feed parity job                           | 17.6.4, Section 6 → T4                             | Add 2 testnet secrets once |
-| **P4** | fast-check invariants; Stryker weekly on the engine                                                                       | T1p; mutation score                                | —                          |
-| **P5** | Post-deploy + hourly prod smoke, log alerts                                                                               | T5                                                 | Pick / approve a log sink  |
-| **P6** | Staging Fly app; ZAP baseline; k6 scripts; Dependabot; gitleaks                                                           | Security + performance                             | Approve staging cost       |
+| Step   | Delivers                                                                                                                  | Converts / adds                                    | Owner action                                         |
+| ------ | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------- |
+| **P1** | CI Postgres, migration-from-empty + drift check, migration replay, repository round-trip, coverage thresholds in CI       | T2i; 18.7                                          | —                                                    |
+| **P2** | Fake Bybit replay server, Playwright (smoke on PR, full nightly), seed helper; the missing T1 / T2 tests the ⬜ rows name | Every ⬜ row marked `(P2)` in Sections 7–15 and 19 | —                                                    |
+| **P3** | ✅ Nightly `parity:testnet` workflow + issue on mismatch (2026-09-28) · ⬜ weekly spec-drift check · ⬜ feed parity job   | 17.6.4, Section 6 → T4                             | ✅ Testnet key, environment, funds (done 2026-09-28) |
+| **P4** | fast-check invariants; Stryker weekly on the engine                                                                       | T1p; mutation score                                | —                                                    |
+| **P5** | Post-deploy + hourly prod smoke, log alerts                                                                               | T5                                                 | Pick / approve a log sink                            |
+| **P6** | Staging Fly app; ZAP baseline; k6 scripts; Dependabot; gitleaks                                                           | Security + performance                             | Approve staging cost                                 |
 
 After P2 the only manual rows left are look-and-feel (drag feel, sounds, animation) — the M tier.
 
 ## A9. What the owner has to do
 
-- **Once:** create a Bybit **testnet** API key (read + trade) on an otherwise empty testnet account and add it as
-  `BYBIT_API_KEY` / `BYBIT_API_SECRET` in the repo's `bybit-testnet` environment (P3; the workflow sets
-  `BYBIT_TESTNET=true`, and the script refuses to run otherwise); approve the staging app and a log sink
-  (P5, P6).
+- **Done (2026-09-28):** the Bybit testnet setup for P3.
+  - An API key on testnet.bybit.com: **Read-Write**, Unified Trading → Contract **Orders** + **Positions**, no
+    withdrawal, no IP restriction (GitHub's runner IPs change).
+  - `BYBIT_TESTNET_KEY` / `BYBIT_TESTNET_SECRET` in the repo's `bybit-testnet` environment (only `main` may use it),
+    next to `FLY_PARITY_API_TOKEN`.
+  - Test USDT requested (testnet.bybit.com → Assets → Assets Overview → Request Test Coins: 10,000 USDT + 1 BTC, once
+    per 24 h). The account stays Isolated; the script switches modes itself.
+- **Every ~3 months:** a testnet key without an IP allow-list expires. A run failing with `33004` opens a `parity`
+  issue: create a new key with the same permissions and replace the two environment secrets. `10005` means the key
+  lost its Read-Write / Contract permissions; `110007` means the account ran out of test USDT (request more).
+- **Still to decide:** approve the staging app and a log sink (P5, P6).
 - **Ongoing:** read the red ones — a failed nightly or parity issue arrives as a GitHub notification; a green week
   needs nothing. Before a UI release, the short M list (Part B rows tiered **M**).
 
@@ -216,7 +229,7 @@ After P2 the only manual rows left are look-and-feel (drag feel, sounds, animati
 
 # Part B — Case catalogue
 
-**How to read it.** Status: ⬜ not run · ✅ pass · ❌ fail · ⚠️ partial · ⏳ blocked · ➖ superseded. **Tier** is where the case is
+**How to read it.** Status: ⬜ not run · ✅ pass · ❌ fail · ⚠️ partial · ⏳ blocked · ➖ superseded / retired. **TV ✓** is a historical TradingView cross-check (retired 2026-09-28, see below). **Tier** is where the case is
 checked today (A3); a ⬜ row's tier is where it goes when automated, with the roadmap step (e.g. `T3 (P2)`). "Live ✓"
 = checked by hand on the dev server; numbers in older ✅ notes are the record of that run and may predate a later
 phase.
@@ -240,25 +253,26 @@ phase.
 **Test environment for manual rows:** local dev (`pnpm dev`), BTCUSDT live feed, a throwaway account reset between
 sections (⚙️ → Reset account).
 
-## Dual-platform setup (run when doing cross-platform checks)
+## TradingView cross-checks — retired (2026-09-28)
 
-> **Legacy.** The TradingView side-by-side checks (TV ✓ column, Section 6) are replaced by the automated feed parity
-> job (A4, roadmap P3). Kept for the record of the 2026-05 runs.
+Until BP-2 the manual runs were checked side by side against TradingView's paper trading on Bybit BTCUSDT Spot (the
+**TV ✓** column and the "TV cross-check" notes). That stopped being a valid reference once the app copied Bybit:
 
-1. Open cryptopapertrade.com at `localhost:5173/dashboard/usdt/BTCUSDT` (or `/dashboard/spot/BTC/USDT` for Spot) — reset account
-2. Open TVP → Paper Trading → Bybit BTCUSDT Spot · 1m
-3. Reset TVP account
-4. Place identical orders in both apps within the same second
-5. Tolerance: entry prices within $1 (one SELL/BUY spread for BTC)
-6. PnL formula (USDT Perpetual, BP-2): `(exit − entry) × qty − entry × qty × fee₁ − exit × qty × 0.00055`, with
-   fee₁ = 0.00055 (market / stop / crossing limit) or 0.0002 (resting limit). Spot: `(exit − avgCost) × qty − exit × qty × 0.001`.
+- TradingView's paper trading has its own fees and fill model, not Bybit's VIP-0 maker / taker fees at the best bid /
+  ask;
+- it has no USDT Perpetual mark price, liquidation, funding, cross margin or risk tiers;
+- so a mismatch no longer says which side is wrong, and a match proves little.
+
+Bybit itself is the reference now: the **testnet parity run** (T4, nightly) for fills, fees, margin and Closed P&L,
+and the **feed parity job** (Section 6, roadmap P3) for prices. The TV ✓ values and notes below stay as the record
+of the 2026-05 runs; no new TradingView checks are made. The side-by-side procedure is in git history
+(`git show 8d40f88:docs/TRADING_TEST_PLAN.md`).
 
 ---
 
 ## Setup checklist (run before every section)
 
 - [ ] Dev server running; price updating in TradingPanel header and browser tab
-- [ ] TradingPanel Sell/Buy parity vs TVP at same moment: `abs(CD Sell - TV SELL) <= 1.00` and `abs(CD Buy - TV BUY) <= 1.00`
 - [ ] Order & Account Management panel open; balance = $10,000.00
 - [ ] Account reset
 - [ ] Journal empty
@@ -282,18 +296,13 @@ sections (⚙️ → Reset account).
 | 1.1.7 | Check **Orders** tab → **All** sub-tab                            | Same row visible (within TTL); count badge = 1                                                                                                          | ✅     |      | T2 · RTL    | Badge drops to 0 after 2 min (only active rows).                                    |
 | 1.1.8 | Check **Orders** tab → **Working** sub-tab                        | Empty — market orders instantly filled, never Working                                                                                                   | ✅     |      | T1 · Vitest | Working only counts pending; market orders are historical.                          |
 
-> **TV cross-check 1.1.3:** Entry price in cryptopapertrade.com vs TVP should differ by ≤ $1 (one SELL/BUY spread).
-> **TV cross-check 1.1.4:** Available balance after commission deduction should match within $0.10.
-
 ### 1.2 Basic Sell (USD mode)
 
 | #     | Action                                                                  | Expected                                                            | Status | TV ✓ | Tier        | Notes |
 | ----- | ----------------------------------------------------------------------- | ------------------------------------------------------------------- | ------ | ---- | ----------- | ----- |
 | 1.2.1 | Reset account. Select **Sell**, tab = **Market**, USD mode, enter `200` | Order info updates for Sell side                                    | ✅     |      | T2 · RTL    |       |
 | 1.2.2 | Click **Sell** button                                                   | Position opens                                                      | ✅     |      | T1 · Vitest |       |
-| 1.2.3 | Positions tab                                                           | 1 SHORT row. PnL updates live (green if price dropped, red if rose) | ✅     | ⬜   | T1 · Vitest |       |
-
-> **TV cross-check 1.2.3:** Unrealised PnL sign and approximate magnitude should match TVP's SHORT position PnL.
+| 1.2.3 | Positions tab                                                           | 1 SHORT row. PnL updates live (green if price dropped, red if rose) | ✅     | ➖   | T1 · Vitest |       |
 
 ### 1.3 Units mode
 
@@ -313,8 +322,6 @@ sections (⚙️ → Reset account).
 | 1.4.3 | _(wait or set TP very close)_ When live price crosses TP                             | Position closes; appears in History with profit; Orders → Filled shows entry + exit | ✅     | ✅   | T1 · Vitest | ✅ TP triggered correctly. Known: exit Type = `MARKET` not `Take Profit` (cosmetic).              |
 | 1.4.4 | Journal tab                                                                          | Entry + Auto-close entries with green PnL badge `+$X.XX`                            | ✅     | ✅   | T1 · Vitest | Clean 2-line audit trail. PnL sign matches. TV shows verbose system log (intentional divergence). |
 
-> **TV cross-check 1.4.3:** TP should trigger at the same price level in both apps (same candle).
-> **TV cross-check 1.4.4:** Net PnL in Journal badge should match TVP's realised PnL within $0.10.
 > **Known cosmetic gap (non-blocking):** Exit order Type in Order History shows `MARKET` in cryptopapertrade.com vs `Take Profit` in TVP. Fix labelling in a future pass.
 
 ### 1.5 Sell with Stop-Loss only
@@ -325,7 +332,6 @@ sections (⚙️ → Reset account).
 | 1.5.2 | Submit                                                                                          | SHORT position with SL = price; **Orders → Working shows 1 synthetic SL BUY order** | ✅     |      | T1 · Vitest | Synthetic exit order renders correctly. Matches TV parity.               |
 | 1.5.3 | When price rises to SL                                                                          | Auto-closed; Journal red PnL badge `−$X.XX`; Working order disappears               | ✅     | ✅   | T1 · Vitest | Position closed. SL order evicts from Working. Journal shows loss badge. |
 
-> **TV cross-check 1.5.3:** Loss magnitude should match TVP's realised PnL within $0.10.
 > **TV parity note (1.5.2):** TV shows TP/SL as separate child "Working" orders in the Orders tab (Type = "Take Profit" or "Stop Loss"). cryptopapertrade.com now does the same — synthetic exit orders are derived from open positions and shown in Working sub-tab with correct Type label, Side (opposite of position), and price in Limit/Stop Price column. They disappear automatically when the position closes.
 
 ### 1.6 Buy with both TP and SL
@@ -335,8 +341,6 @@ sections (⚙️ → Reset account).
 | 1.6.1 | Reset. Buy $300, TP = live+3%, SL = live−2% | Both inputs active                                                                     | ✅     |      | T2 · RTL    | Both TP and SL active with correct borders.                                             |
 | 1.6.2 | Submit                                      | Position shows both TP and SL                                                          | ✅     |      | T1 · Vitest | LONG opened @ $75,429.10. Order History shows 1 BUY Filled.                             |
 | 1.6.3 | Manual close via **✕** in Positions tab     | Position removed; History row appears; PnL correct; Journal shows close with PnL badge | ✅     | ✅   | T1 · Vitest | Manual ✕ close executed. TP auto-cancelled. Journal: `Closed LONG ... @ $X` with badge. |
-
-> **TV cross-check 1.6.3:** Manually close the mirrored TVP position at the same moment; PnL values should match within $0.10.
 
 ### 1.7 Edge cases
 
@@ -372,8 +376,6 @@ sections (⚙️ → Reset account).
 | 2.1.5 | When price drops to trigger                                     | Order moves to **Filled**; Journal entry added                                                    | ✅     | ✅   | T1 · Vitest | Filled @ $77,673.8. TV: ~$77,677.4. Within $5. |
 | 2.1.6 | Check **All** sub-tab after fill                                | Badge count unchanged (1); row status = Filled                                                    | ✅     |      | T2 · RTL    | All still shows 1; status pill: amber → green. |
 
-> **TV cross-check 2.1.5:** Both apps should fill on the same candle; entry prices should be within $5.
-
 ### 2.2 Limit Buy cancel
 
 | #     | Action                                        | Expected                                                                                                  | Status | Tier        | Notes                                                 |
@@ -403,7 +405,7 @@ sections (⚙️ → Reset account).
 
 | #      | Action                                                            | Expected                                                                                                                                    | Status | TV ✓ | Tier        | Notes                                                                                                              |
 | ------ | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ---- | ----------- | ------------------------------------------------------------------------------------------------------------------ |
-| 2.4.5  | Wait for limit to trigger (price reaches limit price)             | Parent → Filled. TP + SL children: Inactive → Working. Position in Positions with TP/SL shown. 3 Journal entries (fill + TP/SL activation). | ✅     | ⬜   | T1 · Vitest | All entries emitted in correct order. Fill price = latestPrice.                                                    |
+| 2.4.5  | Wait for limit to trigger (price reaches limit price)             | Parent → Filled. TP + SL children: Inactive → Working. Position in Positions with TP/SL shown. 3 Journal entries (fill + TP/SL activation). | ✅     | ➖   | T1 · Vitest | All entries emitted in correct order. Fill price = latestPrice.                                                    |
 | 2.4.6  | Cancel the **Working TP** exit leg (✕ on TP row) after fill       | TP gone from Working. **Order History → Cancelled** gains 1 row (Take Profit). **Journal**: cancel entry. Position stays with SL only.      | ✅     |      | T1 · Vitest | TP moved to Cancelled. SL remains Working.                                                                         |
 | 2.4.7  | Cancel the **Working SL** exit leg (✕ on SL row) after fill       | SL gone from Working. **Order History → Cancelled** gains 1 row (Stop Loss). **Journal**: cancel entry. Position stays with TP only.        | ✅     |      | T1 · Vitest | SL moved to Cancelled. TP remains Working.                                                                         |
 | 2.4.8  | After limit fills, check Orders tab immediately                   | Filled parent row in **Orders → Filled** and **Order History → Filled**; active TP/SL in Working                                            | ✅     | ✅   | T1 · Vitest | Parent visible in Orders → Filled. Top badge counts active only.                                                   |
@@ -520,29 +522,22 @@ sections (⚙️ → Reset account).
 
 ---
 
-## Section 6 — Cross-Platform Price Parity _(dual-platform setup required)_
+## Section 6 — Price parity against Bybit
 
-> **To be automated (P3):** these rows compare our feed with Bybit's through TradingView. The feed parity job (A4)
-> compares our quotes and 1m closes with Bybit's public REST directly, nightly, at these tolerances; 6.4–6.8 (fills
-> and PnL) are covered by the engine tests plus T4 parity. 6.9 (tab title) goes to T3.
+> **Changed 2026-09-28: the TradingView side-by-side checks are retired** (see "TradingView cross-checks — retired"
+> above). This section now compares us with **Bybit itself**. Prices go through the feed parity job (A4, roadmap
+> P3), which samples our `/api/market` quotes and 1m candles and Bybit's public v5 REST at the same timestamps.
+> Fills and PnL go through the engine tests and the nightly testnet parity run (T4). The old TradingView rows
+> 6.1–6.9 are in git history (`git show 8d40f88:docs/TRADING_TEST_PLAN.md`); none of them had been run.
 
-> Run this section to validate the price feed fix end-to-end. Both apps open side by side.
-> Tolerance for all price comparisons: **<= $1.00** (one SELL/BUY spread for BTC).
-> Lot-size note: cryptopapertrade.com now floors qty to the same step TV uses (BTC: 0.0001, ETH: 0.001, etc.) so Trade value and qty shown on the button should match TV within the spread tolerance.
-> **TVP quote mapping:** `TV SELL` = best **bid**; `TV BUY` = best **ask**.
-> **Parity rule (same timestamp snapshot):** `abs(CD Sell - TV SELL) <= 1.00` and `abs(CD Buy - TV BUY) <= 1.00`.
-
-| #   | Scenario                                                            | Expected                                                                                                     | Status | Tier    | Notes                                                                                                                                   |
-| --- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------ | ------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| 6.1 | Compare TradingPanel Sell/Buy vs TVP SELL/BUY at rest               | **Both** checks pass at the same moment: `abs(CD Sell - TV SELL) <= 1.00` and `abs(CD Buy - TV BUY) <= 1.00` | ⬜     | T4 (P3) | In TVP UI, `SELL` = bid and `BUY` = ask. All Section 6 tests require a live WebSocket feed and real-time clock — cannot be unit-tested. |
-| 6.2 | Watch both prices for 30 s during normal market activity            | cryptopapertrade.com tracks TVP tick-for-tick; no sustained lag > $1                                         | ⬜     | T4 (P3) |                                                                                                                                         |
-| 6.3 | Watch both prices during a fast move (news spike or breakout)       | cryptopapertrade.com catches up within 1–2 s; no freeze or stuck price                                       | ⬜     | T4 (P3) |                                                                                                                                         |
-| 6.4 | Place identical $200 market Buy in both apps within the same second | Entry prices differ by ≤ $1; qty in cryptopapertrade.com ≈ qty in TVP                                        | ⬜     | T4 (P3) |                                                                                                                                         |
-| 6.5 | Let position run for 2 min, compare Unrealised PnL                  | PnL sign matches (both green or both red); magnitude within $0.50                                            | ⬜     | T4 (P3) |                                                                                                                                         |
-| 6.6 | Close both positions manually at the same moment                    | Realised PnL matches within $0.50; commission deducted in both                                               | ⬜     | T4 (P3) |                                                                                                                                         |
-| 6.7 | Place identical Limit Buy at live − 1% in both apps                 | Both fill on the same candle; entry prices within $1                                                         | ⬜     | T4 (P3) |                                                                                                                                         |
-| 6.8 | Place identical Stop Buy at live + 0.5% in both apps                | Both trigger on the same candle; entry prices within $1                                                      | ⬜     | T4 (P3) |                                                                                                                                         |
-| 6.9 | Browser tab title during test                                       | Tab shows `▲ BTC/USDT {price} +x.xx%` or `▼ …` updating live; arrow flips on reversal                        | ⬜     | T3 (P2) |                                                                                                                                         |
+| #   | Scenario                                                 | Expected                                                                                                | Status | Tier    | Notes                                                             |
+| --- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------ | ------- | ----------------------------------------------------------------- |
+| 6.1 | Our Sell / Buy vs Bybit's best bid / ask, same moment    | Spot and linear, each symbol: equal, or at most one tick apart (the stream may be one update ahead)     | ⬜     | T4 (P3) | Bybit `/v5/market/tickers` (linear) / `orderbook?limit=1` (spot). |
+| 6.2 | Our last closed 1m candle vs Bybit's kline               | OHLC equal for spot and linear; no step where history meets the live bars (F1)                          | ⬜     | T4 (P3) | `/v5/market/kline`.                                               |
+| 6.3 | Our mark / index / funding rate vs Bybit's linear ticker | Equal within one tick; next funding time identical                                                      | ⬜     | T4 (P3) | Mark drives PnL and liquidation.                                  |
+| 6.4 | Feed freshness over the sample window                    | No quote older than 10 s while Bybit's is moving; the server reconnects within its backoff after a drop | ⬜     | T4 (P3) | Same 10 s rule as the engine's "Waiting for live price…".         |
+| 6.5 | Fills, fees, PnL, margin vs Bybit                        | Same maths given the same fills (the testnet parity run)                                                | ⏳     | T4 (P3) | Was TradingView rows 6.4–6.8. See 17.6.4.                         |
+| 6.6 | Browser tab title                                        | `▲ BTC/USDT {price} +x.xx%` or `▼ …`, updating live; the arrow flips on a reversal                      | ⬜     | T3 (P2) | Was 6.9.                                                          |
 
 ---
 
@@ -619,16 +614,16 @@ sections (⚙️ → Reset account).
 
 ## Section 9 — Sell/Buy Prices & Spread in TradingPanel
 
-| #   | Action                                                                          | Expected                                                                                                     | Status | Tier          | Notes                                                                                                                                                                             |
-| --- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------ | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 9.1 | Open TradingPanel with a live symbol (e.g. BTCUSDT)                             | Spread badge between Sell/Buy buttons shows a numeric value (e.g. `0.10`)                                    | ⬜     | T3 (P2)       | Requires live two-sided quote feed from WebSocket. Spot bid/ask come from `orderbook.1` since BP-0 (F2) — before, spot `tickers` had no bid/ask and this badge always showed `—`. |
-| 9.2 | Hover spread badge                                                              | Tooltip shows raw bid and ask values (e.g. `Bid: 75,000.00 · Ask: 75,000.10`)                                | ⬜     | T3 (P2)       |                                                                                                                                                                                   |
-| 9.3 | Sell button price                                                               | Matches the live **SELL** quote shown for the symbol, not a mid-price                                        | ⬜     | T3 (P2)       | Technical mapping: `SELL` corresponds to the best bid.                                                                                                                            |
-| 9.4 | Buy button price                                                                | Matches the live **BUY** quote shown for the symbol, not a mid-price                                         | ⬜     | T3 (P2)       | Technical mapping: `BUY` corresponds to the best ask.                                                                                                                             |
-| 9.5 | Spread value decimal places                                                     | If spread < 1: 4 decimal places (e.g. `0.1000`); if ≥ 1: 2 decimal places (e.g. `1.25`)                      | ⬜     | T2 · RTL (P2) | Spread formatting logic is pure JS — render `TradingPanel` with mocked SELL/BUY quote props and assert the badge text.                                                            |
-| 9.6 | Disconnect WebSocket (network tab block) — wait for SELL/BUY quotes to go stale | Sell/Buy prices fall back to `latestPrice`; spread badge shows `—`                                           | ⬜     | T3 (P2)       | `page.context().setOffline(true)` + await WS stale timeout.                                                                                                                       |
-| 9.7 | Switch active pane symbol (e.g. BTC → ETH in multi-pane mode)                   | Sell/Buy prices update to ETH SELL/BUY quotes immediately; spread re-renders for ETH                         | ⬜     | T3 (P2)       |                                                                                                                                                                                   |
-| 9.8 | Compare Sell/Buy vs TVP SELL/BUY at rest                                        | **Both** checks pass at the same moment: `abs(CD Sell - TV SELL) <= 1.00` and `abs(CD Buy - TV BUY) <= 1.00` | ⬜     | T3 (P2)       | In TVP UI, `SELL` = bid and `BUY` = ask.                                                                                                                                          |
+| #   | Action                                                                          | Expected                                                                                | Status | Tier          | Notes                                                                                                                                                                             |
+| --- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------ | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 9.1 | Open TradingPanel with a live symbol (e.g. BTCUSDT)                             | Spread badge between Sell/Buy buttons shows a numeric value (e.g. `0.10`)               | ⬜     | T3 (P2)       | Requires live two-sided quote feed from WebSocket. Spot bid/ask come from `orderbook.1` since BP-0 (F2) — before, spot `tickers` had no bid/ask and this badge always showed `—`. |
+| 9.2 | Hover spread badge                                                              | Tooltip shows raw bid and ask values (e.g. `Bid: 75,000.00 · Ask: 75,000.10`)           | ⬜     | T3 (P2)       |                                                                                                                                                                                   |
+| 9.3 | Sell button price                                                               | Matches the live **SELL** quote shown for the symbol, not a mid-price                   | ⬜     | T3 (P2)       | Technical mapping: `SELL` corresponds to the best bid.                                                                                                                            |
+| 9.4 | Buy button price                                                                | Matches the live **BUY** quote shown for the symbol, not a mid-price                    | ⬜     | T3 (P2)       | Technical mapping: `BUY` corresponds to the best ask.                                                                                                                             |
+| 9.5 | Spread value decimal places                                                     | If spread < 1: 4 decimal places (e.g. `0.1000`); if ≥ 1: 2 decimal places (e.g. `1.25`) | ⬜     | T2 · RTL (P2) | Spread formatting logic is pure JS — render `TradingPanel` with mocked SELL/BUY quote props and assert the badge text.                                                            |
+| 9.6 | Disconnect WebSocket (network tab block) — wait for SELL/BUY quotes to go stale | Sell/Buy prices fall back to `latestPrice`; spread badge shows `—`                      | ⬜     | T3 (P2)       | `page.context().setOffline(true)` + await WS stale timeout.                                                                                                                       |
+| 9.7 | Switch active pane symbol (e.g. BTC → ETH in multi-pane mode)                   | Sell/Buy prices update to ETH SELL/BUY quotes immediately; spread re-renders for ETH    | ⬜     | T3 (P2)       |                                                                                                                                                                                   |
+| 9.8 | ~~Compare Sell/Buy vs TVP SELL/BUY at rest~~                                    | Retired with the TradingView checks — now 6.1 (vs Bybit's own bid / ask)                | ➖     | —             | See Section 6.                                                                                                                                                                    |
 
 ---
 
@@ -1048,12 +1043,12 @@ sections (⚙️ → Reset account).
 
 ### 17.6 Refinements (F) and parity (G)
 
-| #      | Action                                      | Expected                                              | Status | Tier        | Notes                           |
-| ------ | ------------------------------------------- | ----------------------------------------------------- | ------ | ----------- | ------------------------------- |
-| 17.6.1 | Stalled feed at a funding timestamp         | Settled at the mark candle, not a minutes-old mark    | ✅     | T1 · Vitest | `services.test`.                |
-| 17.6.2 | Closed before its funding settled           | The fee lands on that close's Trade row               | ✅     | T1 · Vitest | repository + engine tests.      |
-| 17.6.3 | Opened and closed while the engine was down | Charged by the backfill (from the closing Trade rows) | ✅     | T1 · Vitest | `services.test`.                |
-| 17.6.4 | Bybit testnet parity run                    | Every compared v5 field matches within 0.01           | ⏳     | T4 (P3)     | Needs the owner's testnet keys. |
+| #      | Action                                      | Expected                                              | Status | Tier        | Notes                                                                 |
+| ------ | ------------------------------------------- | ----------------------------------------------------- | ------ | ----------- | --------------------------------------------------------------------- |
+| 17.6.1 | Stalled feed at a funding timestamp         | Settled at the mark candle, not a minutes-old mark    | ✅     | T1 · Vitest | `services.test`.                                                      |
+| 17.6.2 | Closed before its funding settled           | The fee lands on that close's Trade row               | ✅     | T1 · Vitest | repository + engine tests.                                            |
+| 17.6.3 | Opened and closed while the engine was down | Charged by the backfill (from the closing Trade rows) | ✅     | T1 · Vitest | `services.test`.                                                      |
+| 17.6.4 | Bybit testnet parity run                    | Every compared v5 field matches within 0.01           | ⏳     | T4 (P3)     | `parity.yml` nightly; setup done 2026-09-28, first run after release. |
 
 ---
 
