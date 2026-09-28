@@ -85,10 +85,10 @@
 
 ### Phase 3+ — Future
 
-| Item                                                                   | Notes                                                 |
-| ---------------------------------------------------------------------- | ----------------------------------------------------- |
-| Authenticated WebSocket JWT via `Authorization` header (not `?token=`) | Apply when WS auth is added                           |
-| WAF/CDN layer for distributed brute-force protection                   | IP rate limits alone are insufficient against botnets |
+| Item                                                                       | Notes                                                                                               |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| ~~Authenticated WebSocket JWT via `Authorization` header (not `?token=`)~~ | ✅ BP-1: `/api/paper/ws` authenticates with a first `auth` message (and re-auth), never a URL token |
+| WAF/CDN layer for distributed brute-force protection                       | IP rate limits alone are insufficient against botnets                                               |
 
 ### Key Decision: Token-Theft Full-Revocation (Option A chosen)
 
@@ -708,54 +708,50 @@ partial fills, ADL, insurance fund · VIP tiers, fee coupons, USDC / inverse con
 
 ## 📁 Key Files
 
-| File                                                                   | Purpose                                                                                                                                        |
-| ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/client/src/lib/indicators/types.ts`                              | User-selectable indicator types (`IndicatorMeta`, `IndicatorInstance`, `IndicatorPrimitive`)                                                   |
-| `apps/client/src/lib/indicators/catalog.ts`                            | Catalog of 9 indicators with param defs + inline factory functions                                                                             |
-| `apps/client/src/lib/indicators/primitives/`                           | Custom `ISeriesPrimitive` implementations (ema, vwap, macd) + 6 LH calculation files                                                           |
-| `apps/client/src/components/indicators/IndicatorDropdown.tsx`          | Portal dropdown in SymbolBar — add indicators grouped by category                                                                              |
-| `apps/client/src/components/indicators/IndicatorWidget.tsx`            | Floating draggable indicator widget (Framer Motion)                                                                                            |
-| `apps/client/src/components/indicators/IndicatorWidgets.tsx`           | Container + settings state for indicator widgets                                                                                               |
-| `apps/client/src/components/indicators/IndicatorSettings.tsx`          | Portal popover for params/style editing                                                                                                        |
-| `apps/client/src/lib/tokens.ts`                                        | **Design tokens** — single source of truth for all colors, fonts, sizes (JS/TS side)                                                           |
-| `apps/client/src/index.css`                                            | Tailwind v4 theme — `@theme inline` generates brand color utilities from tokens                                                                |
-| `apps/client/src/store/paperStore.ts`                                  | All paper trading state + actions                                                                                                              |
-| `apps/client/src/store/marketStore.ts`                                 | Live price feed state                                                                                                                          |
-| `apps/client/src/store/authStore.ts`                                   | Auth token + user (in-memory, no persist)                                                                                                      |
-| `apps/client/src/hooks/useTPSLMonitor.ts`                              | Auto-close hook + exported `checkTPSL()`                                                                                                       |
-| `apps/client/src/hooks/usePriceFeed.ts`                                | WebSocket price feed lifecycle                                                                                                                 |
-| `apps/client/src/components/dashboard/OrderAccountManagementPanel.tsx` | **"Order & Account Management"** bottom panel — Positions · Orders · Order History · Balance History · Trading Journal; Account Settings modal |
-| `apps/client/src/components/dashboard/TradingPanel.tsx`                | Right sidebar order entry                                                                                                                      |
-| `apps/server/src/routes/auth/index.ts`                                 | All auth routes (register/login/logout/refresh/me/reset-password),                                                                             |
-| `apps/server/src/routes/market/index.ts`                               | REST + WebSocket market data routes                                                                                                            |
-| `apps/server/src/services/BybitWebSocketManager.ts`                    | Bybit WS connection singleton                                                                                                                  |
-| `apps/server/src/constants.ts`                                         | `ALLOWED_SYMBOLS` — source of truth for WS subscriptions + routes                                                                              |
-| `generated/CDSDK/types/index.ts`                                       | Shared types (User, Account, CandleBar, WsMessage, etc.)                                                                                       |
-| `generated/CDSDK/api/auth.ts`                                          | Client-side auth API calls                                                                                                                     |
-| `generated/CDSDK/api/market.ts`                                        | Client-side market API + WS URL                                                                                                                |
-| `apps/client/src/lib/markets.ts`                                       | Shared `SYMBOLS` (9 coins), `INTERVALS` (6), `INTERVAL_LABELS`, `SymbolEntry` type — imported by SymbolBar, PaneHeader, layoutStore defaults   |
-| `apps/client/src/store/layoutStore.ts`                                 | Layout config — layout ID, activePane, per-pane symbol/interval, sync options                                                                  |
-| `apps/client/src/store/paneStore.ts`                                   | 4 independent vanilla Zustand stores (bars/price/connection per pane)                                                                          |
-| `apps/client/src/hooks/usePaneFeeds.ts`                                | Manages 4 WS+REST connections (one per active pane) — replaces `usePriceFeed`                                                                  |
-| `apps/client/src/components/dashboard/ChartLayoutPicker.tsx`           | Layout picker popover (5 SVG icons) + sync option toggles                                                                                      |
-| `apps/client/src/components/dashboard/PaneHeader.tsx`                  | Per-pane mini header (symbol picker, interval buttons, live price, connection dot)                                                             |
-| `apps/client/src/components/dashboard/MultiChartArea.tsx`              | CSS grid renderer for all layouts; wires crosshair + time-range sync                                                                           |
-| `apps/client/src/lib/tokens.ts`                                        | Visual source of truth — spacing, colors, sizes, layout (fallback: Figma via `.claude/skills/figma-theme-source`)                              |
-| `docs/DRAWING_TOOLS.md`                                                | Drawing tools architecture, status, roadmap                                                                                                    |
-| `apps/client/src/lib/drawing/types.ts`                                 | Drawing type definitions (`Drawing`, `DrawingPoint`, `LineStyle`, etc.)                                                                        |
-| `apps/client/src/lib/drawing/DrawingPrimitive.ts`                      | `ISeriesPrimitive` — canvas rendering via `CompositeRenderer` + per-shape renderers (Phase 1 refactored, ~550 lines)                           |
-| `apps/client/src/lib/drawing/HitTarget.ts`                             | `HitTarget` enum (None/Body/Handle) + `HitTestResult` interface — matches TV's module 763                                                      |
-| `apps/client/src/lib/drawing/interactionTolerance.ts`                  | Centralized `BODY_HIT_TOLERANCE_PX=8` / `HANDLE_HIT_TOLERANCE_PX=12` — matches TV's module 604214                                              |
-| `apps/client/src/lib/drawing/renderers/`                               | 6 per-shape renderers + CompositeRenderer + shared utilities (Phase 1)                                                                         |
-| `apps/client/src/lib/lineTools.tsx`                                    | SVG icons + `LINE_TOOLS` array (6 line drawing tool definitions)                                                                               |
-| `apps/client/src/store/drawingStore.ts`                                | Zustand store w/ `persist` for drawings (localStorage `cd-drawings`)                                                                           |
-| `apps/client/src/hooks/useDrawingInteraction.ts`                       | State machine for drawing placement and drag interactions                                                                                      |
-| `apps/client/src/components/drawing/DrawingPropertiesMenu.tsx`         | Floating toolbar for selected drawing (color, width, style, label, lock, delete)                                                               |
-| `apps/client/src/components/drawing/KebabMenu.tsx`                     | Submenu: Clone, Visual Order, Delete                                                                                                           |
-| `apps/client/src/components/drawing/ColorPicker.tsx`                   | TV-style color swatch grid (10 grays + 6×10 color matrix)                                                                                      |
-| `apps/client/src/lib/cursors.tsx`                                      | Cursor variant icons + data-URI CSS map for chart cursor overrides                                                                             |
-| `.claude/skills/bug-sweep/SKILL.md`                                    | Pre-commit / proactive-audit checklist (138 items, priorities P1–P12) — single source of truth. Was `docs/REVIEW_CHECKLIST.md` — consolidated. |
-| `docs/APP_LOG.md`                                                      | This file — full project context, attach at start of every session                                                                             |
+| File                                                                                       | Purpose                                                                                                                                         |
+| ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/client/src/lib/indicators/types.ts`                                                  | User-selectable indicator types (`IndicatorMeta`, `IndicatorInstance`, `IndicatorPrimitive`)                                                    |
+| `apps/client/src/lib/indicators/catalog.ts`                                                | Catalog of 9 indicators with param defs + inline factory functions                                                                              |
+| `apps/client/src/lib/indicators/primitives/`                                               | Custom `ISeriesPrimitive` implementations (ema, vwap, macd) + 6 LH calculation files                                                            |
+| `apps/client/src/components/indicators/IndicatorDropdown.tsx`                              | Portal dropdown in SymbolBar — add indicators grouped by category                                                                               |
+| `apps/client/src/components/indicators/IndicatorWidget.tsx`                                | Floating draggable indicator widget (Framer Motion)                                                                                             |
+| `apps/client/src/components/indicators/IndicatorWidgets.tsx`                               | Container + settings state for indicator widgets                                                                                                |
+| `apps/client/src/components/indicators/IndicatorSettings.tsx`                              | Portal popover for params/style editing                                                                                                         |
+| `apps/client/src/lib/tokens.ts`                                                            | **Design tokens** — single source of truth for all colors, fonts, sizes (JS/TS side)                                                            |
+| `apps/client/src/index.css`                                                                | Tailwind v4 theme — `@theme inline` generates brand color utilities from tokens                                                                 |
+| `apps/client/src/store/paperStore.ts`                                                      | Read model of the server engine: hydrated by snapshot, updated by deltas over the private WS; order actions call the SDK                        |
+| `apps/client/src/store/authStore.ts`                                                       | Auth token + user (in-memory, no persist)                                                                                                       |
+| `apps/client/src/components/dashboard/OrderAccountManagementPanel.tsx`                     | **"Order & Account Management"** bottom panel — Positions · Orders · Order History · Balance History · Trading Journal; Account Settings modal  |
+| `apps/client/src/components/dashboard/TradingPanel.tsx`                                    | Right sidebar order entry                                                                                                                       |
+| `apps/server/src/routes/auth/index.ts`                                                     | All auth routes (register/login/logout/refresh/me/reset-password),                                                                              |
+| `apps/server/src/routes/paper/index.ts` · `ws.ts`                                          | Paper trading API (intent only) and the private account WebSocket `/api/paper/ws`                                                               |
+| `apps/server/src/trading/engine/`                                                          | Pure Decimal trading engine (Draft / Delta): actions, triggers, spot, cross, margin, order rules                                                |
+| `apps/server/src/trading/MatchingEngine.ts` · `TradingService.ts` · `AccountRepository.ts` | 24/7 trigger / liquidation / funding loop with an engine lease; per-user action queue; Prisma persistence                                       |
+| `apps/server/src/trading/bybitSpec.ts`                                                     | Every Bybit constant and formula (fees, tiers, liquidation, account figures), each with its source; SDK copy in `generated/CDSDK/spec/bybit.ts` |
+| `apps/server/src/trading/bybitParity.ts` · `tools/bybitParity.ts`                          | v5 field adapter and the Bybit testnet parity run (`parity:testnet`)                                                                            |
+| `.github/workflows/parity.yml`                                                             | Nightly testnet parity run on a one-off Fly Machine (`crypto-dashboard-parity`), secrets in the `bybit-testnet` environment                     |
+| `apps/server/src/lib/clientIp.ts`                                                          | The visitor's IP (`Fly-Client-IP` from Fly's proxy link only) for rate limits, WS caps and stored IPs                                           |
+| `apps/client/src/hooks/usePaperFeed.ts`                                                    | Private paper WebSocket: auth message, snapshot + deltas, re-auth on token refresh                                                              |
+| `docs/TRADING_TEST_PLAN.md`                                                                | Test strategy (Part A) and case catalogue (Part B)                                                                                              |
+| `apps/server/src/routes/market/index.ts`                                                   | REST + WebSocket market data routes                                                                                                             |
+| `apps/server/src/services/BybitWebSocketManager.ts`                                        | Bybit WS connection singleton                                                                                                                   |
+| `apps/server/src/constants.ts`                                                             | `ALLOWED_SYMBOLS` — source of truth for WS subscriptions + routes                                                                               |
+| `generated/CDSDK/types/index.ts`                                                           | Shared types (User, Account, CandleBar, WsMessage, etc.)                                                                                        |
+| `generated/CDSDK/api/auth.ts`                                                              | Client-side auth API calls                                                                                                                      |
+| `generated/CDSDK/api/market.ts`                                                            | Client-side market API + WS URL                                                                                                                 |
+| `apps/client/src/lib/markets.ts`                                                           | Shared `SYMBOLS` (9 coins), `INTERVALS` (6), `INTERVAL_LABELS`, `SymbolEntry` type — imported by SymbolBar, PaneHeader, layoutStore defaults    |
+| `apps/client/src/store/layoutStore.ts`                                                     | Layout config — layout ID, activePane, per-pane symbol/interval, sync options                                                                   |
+| `apps/client/src/store/paneStore.ts`                                                       | 4 independent vanilla Zustand stores (bars/price/connection per pane)                                                                           |
+| `apps/client/src/hooks/usePaneFeeds.ts`                                                    | Manages 4 WS+REST connections (one per active pane) — replaces `usePriceFeed`                                                                   |
+| `apps/client/src/components/dashboard/ChartLayoutPicker.tsx`                               | Layout picker popover (5 SVG icons) + sync option toggles                                                                                       |
+| `apps/client/src/components/dashboard/PaneHeader.tsx`                                      | Per-pane mini header (symbol picker, interval buttons, live price, connection dot)                                                              |
+| `apps/client/src/components/dashboard/MultiChartArea.tsx`                                  | CSS grid renderer for all layouts; wires crosshair + time-range sync                                                                            |
+| `apps/client/src/lib/tokens.ts`                                                            | Visual source of truth — spacing, colors, sizes, layout (fallback: Figma via `.claude/skills/figma-theme-source`)                               |
+| `apps/client/src/lib/drawing/types.ts`                                                     | Drawing type definitions (`Drawing`, `DrawingPoint`, `LineStyle`, etc.)                                                                         |
+| `apps/client/src/lib/drawingManager.ts`                                                    | Drawing tools on the `lightweight-charts-drawing` library (replaced the custom drawing system, 2026-07-21)                                      |
+| `apps/client/src/lib/cursors.tsx`                                                          | Cursor variant icons + data-URI CSS map for chart cursor overrides                                                                              |
+| `.claude/skills/bug-sweep/SKILL.md`                                                        | Pre-commit / proactive-audit checklist (138 items, priorities P1–P12) — single source of truth. Was `docs/REVIEW_CHECKLIST.md` — consolidated.  |
+| `docs/APP_LOG.md`                                                                          | This file — full project context, attach at start of every session                                                                              |
 
 ---
 
@@ -851,6 +847,13 @@ partial fills, ADL, insurance fund · VIP tiers, fee coupons, USDC / inverse con
 - **Phase 2 — Pane view layer**: Extract point→pixel conversion from `DrawingPrimitive` into per-shape `PaneView` classes, decoupling chart-coordinate conversion from canvas rendering. Phase 1 (renderer classes) is complete; Phase 2 would also wire in-progress preview through per-shape renderers and add `SelectionRenderer`.
 - **Phase 3–4**: Tool descriptor system + tool variants via property overrides.
 - **Additional drawing tools**: Wire remaining placement (polyline, freehand) — Phase 1 refactoring laid per-shape renderer foundation, but polyline and freehand still need placement state machine support.
+- **Test automation** (`docs/TRADING_TEST_PLAN.md` A8), one small PR per step:
+  - P1: CI Postgres, migration and repository tests, coverage thresholds.
+  - P2: Playwright on a replayed Bybit feed.
+  - P3: nightly testnet parity ✅ (2026-09-28); still to do: spec-drift and feed parity jobs.
+  - P4: fast-check and Stryker.
+  - P5: prod smoke and log alerts.
+  - P6: staging, ZAP, k6.
 - **Phase 4**: Advanced indicators, alerts, multi-symbol watchlist
 - **Phase 5**: Live broker integration — Bybit real-money trading (see full spec below)
 - **Phase 6**: AI trading bot — 3-role system: Scanner + Analyst + Executor, paper mode only (see full spec below)
@@ -2698,6 +2701,66 @@ summary bar, Closed P&L tab screenshotted; the only console line was the signed-
 
 **Gates:** type-check ✅, lint ✅, format ✅, test ✅ (679 server + 439 client)
 
+### fix: zero console errors across register, sign-in, reset and settings flows (2026-09-27) ✅
+
+**Context:** PR #147, released with BP-5 (#148). Every account flow was driven end to end in a browser, with
+DevTools open, and each console error was fixed at its source.
+
+- **Register:** `@hookform/resolvers` v5 (zod 4). Before, a validation error was thrown uncaught and the button stuck
+  on "Creating account…"; now the field errors show on the form.
+- **Signed-out page load:** `/api/auth/refresh` without a cookie answers **204** instead of 401, and these probes get
+  their own rate-limit bucket.
+- **Email verification and email change:** the tokens are consumed atomically, so a double click or a second tab gets
+  400, not 500. The email-change link is posted once under React StrictMode, and only one security-alert email is
+  sent.
+- **Reset password:** revokes every session and clears this browser's dead refresh cookie, so the next load has no 401.
+- **Sign-out on the unverified page:** a network failure no longer escapes as an uncaught error.
+- **Kept on purpose:** a wrong password (sign-in, change email / password, delete account) still logs one 401.
+  Answering a failed login with a 2xx would hide brute-force signals.
+
+### security: per-visitor IP from `Fly-Client-IP` for rate limits and stored IPs (2026-09-27) ✅
+
+**Context:** PRs #147 and #149–#153 (released in #148 and #150). `fly logs` showed every request coming from a Fly
+proxy address. That meant one shared rate-limit bucket for all visitors, and `termsAcceptedIp` stored Fly's address.
+
+- `apps/server/src/lib/clientIp.ts` — `clientIp(request)` reads Fly's `Fly-Client-IP` header only when all of these
+  hold:
+  - in production;
+  - on a Fly Machine (`FLY_APP_NAME` set, `config.onFly`);
+  - from a socket on Fly's proxy link (172.16.0.0/12, **not** the org-wide 6PN `fdaa::/16`, which the organisation's
+    other apps, e.g. `crypto-dashboard-db`, can use);
+  - when the header holds exactly one valid IP.
+
+  Otherwise it falls back to the socket address, with a throttled warning. Used by:
+  - the global and per-route rate limits;
+  - the market and paper WebSocket caps;
+  - `termsAcceptedIp`, the newsletter;
+  - the request log serializer.
+
+- Fastify `trustProxy` is **not** set: the hop count varies by Fly edge. A first `trustProxy: 1` attempt (#147) still
+  logged edge IPs. Consequence, documented in `.claude/rules/web.md`: in production `request.protocol` is always
+  `'http'` and `request.host` is the `Host` header, so absolute URLs come from `config.clientUrl`.
+- Verified in production: laptop (IPv6 + IPv4) and phone show their real IPs; a forged `Fly-Client-IP` from outside
+  the proxy link is ignored. Signups before this stored the proxy address, which can't be corrected.
+- Tests: `clientIp.test.ts` (21).
+
+### fix: tie WebSocket connect / close log lines to their request and visitor (2026-09-27) ✅
+
+**Context:** PR #154, released in #155. The WS log lines couldn't be matched to a visitor or a request.
+
+- **Market feed:** "Client connected to live feed" carries:
+  - `reqId`, `clientIp`, `category`, `symbol`, `interval`;
+
+  The disconnect adds `code` and `durationMs`; an error logs the same context.
+
+- **Private paper WS:**
+  - "Paper WS connected" names the `userId`.
+  - Every socket logs one "Paper WS closed" line, from the close event, with `authenticated`, `userId`, `code`,
+    `reason` and `durationMs`.
+  - Server-initiated closes (unauthorized, too many tabs, 1008 / 1009 / 1011) go through `closeWith`, so their real
+    code and reason are logged. A tab-cap refusal names the refused user.
+- Tests: `wsLogging.test.ts` (6).
+
 ### fix: remove the pre-BP-2 paper API (O11) (2026-09-28) ✅
 
 **Context:** owner decision O11 — remove the pre-BP-2 surface one release after it was logged. BP-5 (release #148)
@@ -2717,3 +2780,59 @@ BP-2.
   the default through a test fixture. Server 710, client 451.
 - **Refactor checklist:** no route lost its `app.authenticate`; `sizeOf` still validates before the engine; error
   mapping unchanged; no new logging or dependency.
+
+### docs: retire the Bybit parity plan; TRADING_TEST_PLAN becomes a test strategy (2026-09-28) ✅
+
+**Context:** PR #156, released in #157. BP-0 … BP-5 had shipped.
+
+- **APP_LOG gains "Bybit Parity (BP-0 … BP-5) — reference"**, with:
+  - decisions, Bybit values and formulas, the data model;
+  - out of scope, known gaps, open items, sources.
+- **`docs/BYBIT_PARITY_PLAN.md` is deleted.** It's in git history at `8d40f88`, and about 70 code comments now cite
+  "APP_LOG Bybit Parity BP-n".
+- **`docs/TRADING_TEST_PLAN.md` gains Part A, a strategy**, covering:
+  - quality goals, the measured state and test levels T1–T5 plus M;
+  - tools per kind of testing;
+  - environments, entry / exit criteria and defect severity;
+  - the automation roadmap P1–P6 and the owner's one-time actions.
+
+  Part B (the case catalogue) gains Section 18 (cross-phase regression suite) and Section 19 (account flows).
+
+### feat: nightly Bybit testnet parity run in CI (test plan P3) (2026-09-28) ✅
+
+**Context:** PR #159. The BP-5 G parity script (`parity:testnet`) had never run.
+
+- **`.github/workflows/parity.yml`** runs nightly at 03:17 UTC and on demand, never on pull requests. One run at a
+  time, since every run trades on the same testnet account.
+  1. The runner builds the commit's server image (the production Dockerfile) into a separate Fly app,
+     `crypto-dashboard-parity`.
+  2. It starts a one-off machine in `sin`, retrying while the new image propagates; a half-launched machine is
+     adopted by name.
+  3. It waits for the machine to stop, reads its logs, then removes it.
+  - **Why Fly:** Bybit geo-blocks GitHub's US runners (HTTP 403).
+  - **Pass** = the machine exited 0 and logged that every step matches Bybit.
+  - **Failure:** the log is an artifact, and one `parity` issue is opened or commented on.
+- 🔐 **Secrets** (`BYBIT_TESTNET_KEY`, `BYBIT_TESTNET_SECRET`, `FLY_PARITY_API_TOKEN`) live in the `bybit-testnet`
+  GitHub environment, which only `main` may use. So a branch can't run a changed script with the keys. The Fly token
+  is a deploy token scoped to the parity app (it expires 2027-09-28), so it can't touch production.
+- **Script safety** (`tools/bybitParity.ts`):
+  - every Bybit call times out after 10 s;
+  - at 8 minutes the scenario aborts, and its `finally` closes what it opened (either side) and restores isolated
+    mode;
+  - a stuck run is cleaned up from the deadline after a 30 s grace, with a hard exit 60 s later.
+- **Testnet account setup**, done by the owner:
+  - a Read-Write key with Unified Trading → Contract Orders + Positions, no IP restriction, so it expires after about
+    3 months;
+  - the account left Isolated;
+  - test USDT from Assets → Assets Overview → Request Test Coins.
+- **Errors met while setting it up, now documented in TRADING_TEST_PLAN A9:**
+  - `33004`: expired key;
+  - `10005`: read-only key;
+  - `110007`: no test USDT.
+- **Also in this PR:**
+  - The **TradingView cross-checks are retired.** TradingView's paper trading has its own fees and fills and no
+    perpetual mark, liquidation or funding, so Bybit itself is now the reference. Test plan Section 6 now compares
+    our quotes, candles, mark / funding and feed freshness with Bybit's public API.
+  - `README.md` brought up to the Bybit-parity app.
+  - This log's Key Files table updated: the server engine files added; the drawing files removed with the
+    2026-07-21 library switch and the old browser-side trading hooks dropped.
