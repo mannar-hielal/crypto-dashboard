@@ -137,13 +137,13 @@ describe('BP-5 C — partial liquidation steps down the tiers (O7)', () => {
   it('reduces a tier-3 position to the tier-2 limit and stops when the mark no longer reaches the new liquidation price', () => {
     const s = open('0.7');
     const before = riskOf(s.positions[0], TIERS);
-    expect(before.liqPrice.toFixed(2)).toBe('46315.79');
+    expect(before.liqPrice.toFixed(2)).toBe('46315.80'); // rounded up to the tick
     const res = liquidatePosition(s, s.positions[0].id, D(46_300), ctx());
     const after = applyDelta(s, res.delta);
     // 0.3 closed at the bankruptcy price: 0.4 × 50,000 = 20,000 is the tier-2 limit
     expect(after.positions[0].quantity.toString()).toBe('0.4');
     expect(after.positions[0].entryUsdtAmount.toString()).toBe('2000');
-    expect(riskOf(after.positions[0], TIERS).liqPrice.toFixed(2)).toBe('45663.27');
+    expect(riskOf(after.positions[0], TIERS).liqPrice.toFixed(2)).toBe('45663.30'); // rounded up to the tick;
     expect(res.delta.trades).toHaveLength(1);
     expect(res.delta.trades[0]).toMatchObject({ execType: 'BustTrade' });
     expect(res.delta.trades[0].quantity.toString()).toBe('0.3');

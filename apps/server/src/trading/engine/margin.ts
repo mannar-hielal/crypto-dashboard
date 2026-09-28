@@ -7,6 +7,7 @@ import type { Decimal } from '@prisma/client/runtime/client';
 import {
   accountFigures,
   fallbackRiskTiers,
+  fallbackRules,
   positionRisk,
   type AccountFigures,
   type PositionRisk,
@@ -25,7 +26,13 @@ export function tiersFor(ctx: Pick<EngineContext, 'riskTiers'>, symbol: string):
 export function riskOf(
   pos: Pick<
     Position,
-    'side' | 'quantity' | 'entryPrice' | 'entryUsdtAmount' | 'closeFeeReserve' | 'extraMargin'
+    | 'symbol'
+    | 'side'
+    | 'quantity'
+    | 'entryPrice'
+    | 'entryUsdtAmount'
+    | 'closeFeeReserve'
+    | 'extraMargin'
   >,
   tiers: RiskTier[]
 ): PositionRisk {
@@ -37,6 +44,9 @@ export function riskOf(
       im: pos.entryUsdtAmount,
       closeFeeReserve: pos.closeFeeReserve,
       extraMargin: pos.extraMargin ?? ZERO,
+      // Bybit rounds the liquidation price to the tick; tick sizes are the dated snapshot (they
+      // almost never change)
+      tickSize: fallbackRules('linear', pos.symbol).tickSize,
     },
     tiers
   );

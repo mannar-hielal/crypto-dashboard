@@ -89,7 +89,10 @@ describe('isolated margin — Bybit’s worked example (BP-3)', () => {
 
   it('IM 821.56, MM 221.56, liquidation price 36,380.25', () => {
     const risk = positionRisk(input, tiers);
-    expect(risk.positionIM.toString()).toBe('821.56');
+    // The help centre's "IM" is the formula's IM + fee to close (821.56); the API's positionIM also
+    // counts the 3,000 added by hand (testnet parity run, 2026-09-28)
+    expect(risk.positionIM.minus(input.extraMargin).toString()).toBe('821.56');
+    expect(risk.positionIM.toString()).toBe('3821.56');
     expect(risk.positionMM.toString()).toBe('221.56');
     expect(risk.liqPrice.toFixed(2)).toBe('36380.25');
   });

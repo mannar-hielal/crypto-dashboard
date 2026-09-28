@@ -284,12 +284,21 @@ export interface MarginInput {
   closeFeeReserve: Decimal;
   /** Margin added by hand (BP-5; 0 until then) */
   extraMargin: Decimal;
+  /**
+   * The symbol's price tick. When given, the liquidation price is rounded to it on the safe side
+   * (a long's up, a short's down), as Bybit reports it (testnet parity run, 2026-09-28: long liq
+   * 75,742.94 shown as 75,743). Omitted or 0 = unrounded.
+   */
+  tickSize?: Decimal;
 }
 
 export interface PositionRisk {
   positionValue: Decimal;
   mmr: Decimal;
-  /** Bybit positionIM: initial margin + fee to close */
+  /**
+   * Bybit positionIM: initial margin + fee to close + margin added by hand (testnet parity run,
+   * 2026-09-28: IM 8.43 + 10 added = positionIM 18.43)
+   */
   positionIM: Decimal;
   /** Bybit positionMM: value × MMR − deduction + fee to close */
   positionMM: Decimal;
@@ -303,7 +312,7 @@ export function positionRisk(p: MarginInput, tiers: RiskTier[]): PositionRisk {
   const value = p.quantity.times(p.entryPrice);
   const tier = tierFor(tiers, value);
   const zero = new Decimal(0);
-  const positionIM = p.im.plus(p.closeFeeReserve);
+  const positionIM = p.im.plus(p.closeFeeReserve).plus(p.extraMargin);
   const positionMM = value.times(tier.mmr).minus(tier.mmDeduction).plus(p.closeFeeReserve);
   if (p.quantity.lte(0)) {
     return {
@@ -332,6 +341,11 @@ export function positionRisk(p: MarginInput, tiers: RiskTier[]): PositionRisk {
       .plus(tier.mmDeduction)
       .div(p.quantity.times(one.plus(tier.mmr)));
     bustPrice = p.entryPrice.plus(p.im.plus(p.extraMargin).div(p.quantity));
+  }
+  const tick = p.tickSize;
+  if (tick && tick.gt(0)) {
+    const ticks = liqPrice.div(tick);
+    liqPrice = (p.side === 'long' ? ticks.ceil() : ticks.floor()).times(tick);
   }
   return {
     positionValue: value,

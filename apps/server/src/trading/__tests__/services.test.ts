@@ -475,7 +475,7 @@ describe('TradingService', () => {
     await trading.setSymbolLeverage('u1', 'BTCUSDT', 10);
     const out = await trading.placeOrder('u1', market$(500));
     expect(out.delta.positionsUpsert[0]).toMatchObject({
-      liqPrice: expect.stringMatching(/^45148\.9/),
+      liqPrice: '45149', // 45,148.99… rounded up to the 0.1 tick
       bustPrice: '45000',
       positionIM: '502.475',
       mmr: '0.0033',

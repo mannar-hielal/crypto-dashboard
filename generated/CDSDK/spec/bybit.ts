@@ -133,7 +133,8 @@ export function estimatePositionRisk(
   const reserve = p.closeFeeReserve ?? feeToCloseEstimate(p.side, p.qty, p.entryPrice, p.leverage);
   const extra = p.extraMargin ?? 0;
   const taker = Number(FEE_RATES.linear.taker);
-  const positionIM = im + reserve;
+  // Bybit's positionIM includes margin added by hand (testnet parity run, 2026-09-28)
+  const positionIM = im + reserve + extra;
   const positionMM = value * tier.mmr - tier.mmDeduction + reserve;
   if (p.qty <= 0) {
     return {
