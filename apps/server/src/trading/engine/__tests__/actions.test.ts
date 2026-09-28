@@ -19,7 +19,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { OPEN_RULES, PaperHarness, TAKER, flatQuote } from './harness.js';
+import { MAKER, OPEN_RULES, PaperHarness, TAKER, flatQuote } from './harness.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -1363,5 +1363,100 @@ describe('leverage is re-clamped where a fill is sized (defense in depth)', () =
     // 1000 × 10 / 50000 — not × 50
     expect(res.delta.positionsUpsert[0].quantity.toNumber()).toBeCloseTo(0.2);
     expect(res.delta.account.leverage).toBe(10);
+  });
+});
+
+// ─── Section 7 — Order History records (SC-7-1) ─────────────────────────────
+// What the Order History tab lists: one HistoricalOrder per order, whatever happened to it.
+// The tab's rendering (sub-tabs, counts, colours) is tested in OrderAccountManagementPanel.test.
+
+describe('Section 7 — Order History records', () => {
+  beforeEach(() => {
+    store = new PaperHarness();
+  });
+
+  it('[7.1.1] should record a MARKET / BUY / Filled row when a market buy fills', () => {
+    store.placeOrder(SYMBOL, 'buy', 50_000, 100);
+    expect(store.orders).toHaveLength(1);
+    expect(store.orders[0]).toMatchObject({
+      symbol: SYMBOL,
+      type: 'market',
+      side: 'buy',
+      status: 'filled',
+      fillPrice: 50_000,
+      isMaker: false,
+    });
+    // 0.002 BTC × 50,000 × 0.055% taker
+    expect(store.orders[0].qty).toBeCloseTo(0.002);
+    expect(store.orders[0].commission).toBeCloseTo(0.055);
+    expect(store.orders[0].feeRate).toBeCloseTo(TAKER);
+  });
+
+  it('[7.2.1][7.2.2] should record a LIMIT fill at its own price with the 0.02% maker fee when a resting limit fills', () => {
+    store.setDefaultLeverage(10);
+    const id = store.placeLimitOrder(SYMBOL, 'buy', 49_000, 490)!; // 0.1 BTC at 10×
+    // Nothing is recorded while the order rests — Order History holds finished orders only
+    expect(store.orders).toHaveLength(0);
+    store.fillPending(id, 49_000);
+    expect(store.orders).toHaveLength(1);
+    expect(store.orders[0]).toMatchObject({
+      type: 'limit',
+      side: 'buy',
+      status: 'filled',
+      limitPrice: 49_000,
+      fillPrice: 49_000,
+      isMaker: true,
+    });
+    expect(store.orders[0].qty).toBeCloseTo(0.1);
+    // 0.1 × 49,000 × 0.02% = 0.98
+    expect(store.orders[0].commission).toBeCloseTo(0.98);
+    expect(store.orders[0].feeRate).toBeCloseTo(MAKER);
+  });
+
+  it('[7.3.1] should record a Cancelled row with no commission when a resting limit is cancelled', () => {
+    const id = store.placeLimitOrder(SYMBOL, 'buy', 30_000, 300)!;
+    store.cancelPendingOrder(id);
+    expect(store.orders).toHaveLength(1);
+    expect(store.orders[0]).toMatchObject({
+      type: 'limit',
+      side: 'buy',
+      status: 'cancelled',
+      limitPrice: 30_000,
+      commission: 0,
+    });
+    expect(store.orders[0].fillPrice).toBeUndefined();
+  });
+
+  it('[7.4.1] should record a Rejected row with its reason when a triggered order cannot fill', () => {
+    const id = store.placeStopOrder(SYMBOL, 'buy', 52_000, 1_000)!;
+    store.fillPending(id, 0); // invalid fill price → cannot fill
+    expect(store.orders[0]).toMatchObject({
+      type: 'stop',
+      status: 'rejected',
+      rejectionReason: 'Order could not be filled.',
+      commission: 0,
+    });
+    // A rejection is not a trade: no closed trade and no balance event from it
+    expect(store.history).toHaveLength(0);
+    expect(store.balanceLog.some((b) => /reject/i.test(b.action))).toBe(false);
+  });
+
+  it('[7.6.1] should list MARKET / Filled, LIMIT / Filled and STOP / Cancelled (newest first) when all three happen in turn', () => {
+    store.placeOrder(SYMBOL, 'buy', 50_000, 100);
+    const limit = store.placeLimitOrder(SYMBOL, 'buy', 49_000, 100)!;
+    store.fillPending(limit, 49_000);
+    const stop = store.placeStopOrder(SYMBOL, 'sell', 40_000, 100)!;
+    store.cancelPendingOrder(stop);
+
+    expect(store.orders.map((o) => [o.type, o.status])).toEqual([
+      ['stop', 'cancelled'],
+      ['limit', 'filled'],
+      ['market', 'filled'],
+    ]);
+    // Each row is its own order, closed in the order the user acted
+    const ids = new Set(store.orders.map((o) => o.id));
+    expect(ids.size).toBe(3);
+    const closing = store.orders.map((o) => o.closingTime);
+    expect(closing).toEqual([...closing].sort((a, b) => b - a));
   });
 });
