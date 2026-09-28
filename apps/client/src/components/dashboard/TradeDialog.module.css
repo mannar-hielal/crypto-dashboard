@@ -1,5 +1,6 @@
-/* Trading dialogs — leverage chip + modal, spot TP / SL (APP_LOG Bybit Parity BP-2). Colours from tokens.ts via the
-   @theme mirror in index.css; bg.modal / shadow.modal / border.card values noted inline. */
+/* Trading dialogs — leverage chip + modal, spot TP / SL (APP_LOG Bybit Parity BP-2). Colours from
+   tokens.ts via the @theme mirror in index.css; bg.modal / shadow.modal / border.card values noted
+   inline. */
 
 .chip {
   display: flex;
