@@ -417,6 +417,18 @@ describe('paperStore', () => {
         expect(store.history[0].pnl).toBeCloseTo(100);
       });
 
+      it('1.4.3: the TP close is recorded as a filled Take Profit order, not MARKET', () => {
+        const id = store.placeOrder(SYMBOL, 'buy', 50_000, 1_000, 55_000)!;
+        store.closePosition(id, 55_000, 'Take-Profit hit', 'take-profit');
+        expect(store.orders[0]).toMatchObject({ type: 'take-profit', status: 'filled' });
+      });
+
+      it('1.5.3: an SL close is recorded as a filled Stop Loss order', () => {
+        const id = store.placeOrder(SYMBOL, 'buy', 50_000, 1_000, undefined, 48_000)!;
+        store.closePosition(id, 48_000, 'Stop-Loss hit', 'stop-loss');
+        expect(store.orders[0]).toMatchObject({ type: 'stop-loss', status: 'filled' });
+      });
+
       it('1.4.4: auto-close journal entry has TP text and a positive PnL badge', () => {
         const id = store.placeOrder(SYMBOL, 'buy', 50_000, 1_000, 55_000)!;
         store.closePosition(
