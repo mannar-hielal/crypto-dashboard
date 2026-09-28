@@ -21,6 +21,7 @@ import { paneStores } from '@/store/paneStore';
 import { usePaperStore } from '@/store/paperStore';
 import { SYMBOLS } from '@/lib/markets';
 import { bg, color, fontSize } from '@/lib/tokens';
+import { guide } from '@/lib/guideAnchors';
 import { fmtMktPrice } from '@/lib/utils';
 import { FUNDING_EXPLAINER, formatFundingCountdown, formatFundingRate } from '@/lib/funding';
 import { getIndicatorMeta } from '@/lib/indicators/catalog';
@@ -285,6 +286,7 @@ export function SymbolBar({
       <div className="relative shrink-0">
         <motion.button
           ref={symbolTriggerRef}
+          {...guide('symbolbar.symbol-picker')}
           onClick={() => {
             setSymbolOpen((p) => !p);
             setSymbolSearch('');
@@ -358,6 +360,7 @@ export function SymbolBar({
                       return (
                         <motion.button
                           key={entry.symbol}
+                          {...guide('symbolbar.symbol-option', entry.symbol)}
                           onClick={() => handleSymbolSelect(entry.symbol)}
                           whileHover={{ background: bg.surface }}
                           className="flex w-full items-center justify-between px-3 py-1.5 text-left transition-colors"

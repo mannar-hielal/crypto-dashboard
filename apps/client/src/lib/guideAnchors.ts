@@ -67,6 +67,8 @@ export const GUIDE_ANCHORS = [
   // pane
   'pane',
   'pane.header.symbol',
+  'pane.header.symbol-option',
+  'pane.header.interval-picker',
   'pane.header.interval',
   'pane.header.price',
   'pane.header.change',

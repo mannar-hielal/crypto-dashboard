@@ -3,15 +3,26 @@ import { createPortal } from 'react-dom';
 import { ChevronDown } from 'lucide-react';
 import { INTERVALS, INTERVAL_LABELS, type Interval } from '@/lib/markets';
 import { color, fontSize, bg } from '@/lib/tokens';
+import { guide, type GuideAnchor } from '@/lib/guideAnchors';
 import styles from './IntervalDropdown.module.css';
 
 interface IntervalDropdownProps {
   value: Interval;
   onChange: (interval: Interval) => void;
   compact?: boolean;
+  /** Guide anchor for the trigger button (F1) */
+  triggerAnchor?: GuideAnchor;
+  /** Guide anchor for each interval option, keyed by the interval (F1) */
+  optionAnchor?: GuideAnchor;
 }
 
-export function IntervalDropdown({ value, onChange, compact }: IntervalDropdownProps) {
+export function IntervalDropdown({
+  value,
+  onChange,
+  compact,
+  triggerAnchor,
+  optionAnchor,
+}: IntervalDropdownProps) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
@@ -51,6 +62,7 @@ export function IntervalDropdown({ value, onChange, compact }: IntervalDropdownP
     <>
       <button
         ref={triggerRef}
+        {...(triggerAnchor ? guide(triggerAnchor) : {})}
         onClick={handleToggle}
         className={styles.trigger}
         style={{
@@ -75,6 +87,7 @@ export function IntervalDropdown({ value, onChange, compact }: IntervalDropdownP
               {INTERVALS.map((tf) => (
                 <button
                   key={tf}
+                  {...(optionAnchor ? guide(optionAnchor, tf) : {})}
                   className={styles.item}
                   style={{
                     color: tf === value ? color.purple : color.muted,

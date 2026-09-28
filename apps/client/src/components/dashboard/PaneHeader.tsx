@@ -16,6 +16,7 @@ import { SYMBOLS } from '@/lib/markets';
 import { IntervalDropdown } from '@/components/dashboard/IntervalDropdown';
 import { CryptoIcon } from '@/components/ui/CryptoIcon';
 import { bg, color, fontSize } from '@/lib/tokens';
+import { guide } from '@/lib/guideAnchors';
 
 interface PaneHeaderProps {
   paneIndex: 0 | 1 | 2 | 3;
@@ -78,6 +79,7 @@ export function PaneHeader({ paneIndex, isActive, onActivate }: PaneHeaderProps)
       {/* Symbol picker trigger */}
       <div className="relative shrink-0">
         <button
+          {...guide('pane.header.symbol')}
           onClick={(e) => {
             e.stopPropagation();
             onActivate();
@@ -135,6 +137,7 @@ export function PaneHeader({ paneIndex, isActive, onActivate }: PaneHeaderProps)
                     return (
                       <button
                         key={entry.symbol}
+                        {...guide('pane.header.symbol-option', entry.symbol)}
                         onClick={() => handleSymbolSelect(entry.symbol)}
                         className="flex w-full items-center gap-2 px-2.5 py-1.5 transition-colors hover:bg-white/5"
                       >
@@ -171,6 +174,8 @@ export function PaneHeader({ paneIndex, isActive, onActivate }: PaneHeaderProps)
             setPaneInterval(paneIndex, tf);
           }}
           compact
+          triggerAnchor="pane.header.interval-picker"
+          optionAnchor="pane.header.interval"
         />
       </div>
 
@@ -180,6 +185,7 @@ export function PaneHeader({ paneIndex, isActive, onActivate }: PaneHeaderProps)
       {/* Live price */}
       {latestPrice !== null && (
         <span
+          {...guide('pane.header.price')}
           className="shrink-0 tabular-nums font-semibold"
           style={{
             fontSize: fontSize.xs10,
@@ -192,7 +198,7 @@ export function PaneHeader({ paneIndex, isActive, onActivate }: PaneHeaderProps)
             maximumFractionDigits: 2,
           })}
           {changePercent !== null && (
-            <span className="ml-1" style={{ fontSize: '9px' }}>
+            <span {...guide('pane.header.change')} className="ml-1" style={{ fontSize: '9px' }}>
               {isPositive ? '+' : ''}
               {changePercent.toFixed(2)}%
             </span>
@@ -202,6 +208,7 @@ export function PaneHeader({ paneIndex, isActive, onActivate }: PaneHeaderProps)
 
       {/* Connection dot */}
       <span
+        {...guide('pane.header.dot')}
         className={isConnected ? 'pulse-live-dot shrink-0' : 'shrink-0'}
         style={{
           display: 'inline-block',
