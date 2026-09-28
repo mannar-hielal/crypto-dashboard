@@ -666,10 +666,11 @@ partial fills, ADL, insurance fund · VIP tiers, fee coupons, USDC / inverse con
 - **Bybit testnet parity run (BP-5 G).** `pnpm --filter @crypto-dashboard/server parity:testnet` replays a fixed
   scenario on Bybit testnet and on the paper engine and diffs `position/list`, `execution/list`,
   `position/closed-pnl` and `account/wallet-balance` (maths given the same fills; tolerance 0.01). Testnet only, keys
-  from `config.ts`, never logged. **Never run yet** — needs the owner's testnet keys. It settles the points the help
-  centre leaves open: O5 (cross unrealised profit funds orders), the max-reducible margin formula, whether
-  `positionIM` includes extra margin, and the retCode of a risk-limit refusal. Planned as a nightly CI job
-  (`TRADING_TEST_PLAN.md` Part A, roadmap P3).
+  never logged. **Runs in CI since 2026-09-28** (`.github/workflows/parity.yml`: nightly, on demand, and on PRs
+  that change the parity code; repo secrets `BYBIT_TESTNET_KEY` / `BYBIT_TESTNET_SECRET`; a failure opens a
+  `parity` issue). Still open until it runs green: the points the help centre leaves open — O5 (cross unrealised
+  profit funds orders), the max-reducible margin formula, whether `positionIM` includes extra margin, and the retCode
+  of a risk-limit refusal.
 - **Manual browser checks** still ⬜ in `TRADING_TEST_PLAN.md` (live feed, tab closed, two tabs, refresh) — to be
   converted to Playwright (roadmap P2).
 - Low: editable spot TP / SL (Known gaps) — only if users ask.

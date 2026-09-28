@@ -1,5 +1,5 @@
 /**
- * Bybit testnet API-parity run (APP_LOG Bybit Parity BP-5 G) — manual, never in CI.
+ * Bybit testnet API-parity run (APP_LOG Bybit Parity BP-5 G) — nightly in CI (parity.yml) or by hand.
  *
  *   pnpm --filter @crypto-dashboard/server parity:testnet
  *

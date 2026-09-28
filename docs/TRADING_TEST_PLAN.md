@@ -99,9 +99,11 @@ browser test); T3 covers wiring and user journeys, not maths; M is for what's le
   `BYBIT_REST_URL` / `BYBIT_WS_URL` overrides, refused in production, with a control endpoint to push a chosen price (to cross a TP, reach a
   liquidation price or a funding timestamp on demand). Every T3 test then runs on known prices — no waiting for the
   market, no flakiness.
-- **Nightly Bybit testnet parity (T4).** A scheduled workflow (`parity.yml`, `schedule` + `workflow_dispatch`, never
-  on PRs, `environment: bybit-testnet` so the secrets are scoped) runs `parity:testnet`. It uploads the diff as an
-  artifact and, on a mismatch, opens (or updates) one GitHub issue labelled `parity`. The first green run also closes
+- **Nightly Bybit testnet parity (T4) — in place since 2026-09-28.** `.github/workflows/parity.yml` runs
+  `parity:testnet` nightly (03:17 UTC), on demand (`workflow_dispatch`), and on same-repo PRs to `develop` that change
+  the parity code (never for forks, which get no secrets); one run at a time, since they share the testnet account.
+  Keys: repo secrets `BYBIT_TESTNET_KEY` / `BYBIT_TESTNET_SECRET`. It uploads the log as an artifact and, when a
+  scheduled or manual run fails, opens (or comments on) one GitHub issue labelled `parity`. The first green run also closes
   the open questions in APP_LOG (O5, max-reducible margin, 110090 retCode).
 - **Weekly spec-drift check.** A script compares `bybitSpec.ts` constants with Bybit's public API (fee rates via the
   help-centre values we store, `instruments-info`, `risk-limit` tiers, `fundingIntervalHour`) and opens an issue when
@@ -1048,12 +1050,12 @@ sections (⚙️ → Reset account).
 
 ### 17.6 Refinements (F) and parity (G)
 
-| #      | Action                                      | Expected                                              | Status | Tier        | Notes                           |
-| ------ | ------------------------------------------- | ----------------------------------------------------- | ------ | ----------- | ------------------------------- |
-| 17.6.1 | Stalled feed at a funding timestamp         | Settled at the mark candle, not a minutes-old mark    | ✅     | T1 · Vitest | `services.test`.                |
-| 17.6.2 | Closed before its funding settled           | The fee lands on that close's Trade row               | ✅     | T1 · Vitest | repository + engine tests.      |
-| 17.6.3 | Opened and closed while the engine was down | Charged by the backfill (from the closing Trade rows) | ✅     | T1 · Vitest | `services.test`.                |
-| 17.6.4 | Bybit testnet parity run                    | Every compared v5 field matches within 0.01           | ⏳     | T4 (P3)     | Needs the owner's testnet keys. |
+| #      | Action                                      | Expected                                              | Status | Tier        | Notes                      |
+| ------ | ------------------------------------------- | ----------------------------------------------------- | ------ | ----------- | -------------------------- |
+| 17.6.1 | Stalled feed at a funding timestamp         | Settled at the mark candle, not a minutes-old mark    | ✅     | T1 · Vitest | `services.test`.           |
+| 17.6.2 | Closed before its funding settled           | The fee lands on that close's Trade row               | ✅     | T1 · Vitest | repository + engine tests. |
+| 17.6.3 | Opened and closed while the engine was down | Charged by the backfill (from the closing Trade rows) | ✅     | T1 · Vitest | `services.test`.           |
+| 17.6.4 | Bybit testnet parity run                    | Every compared v5 field matches within 0.01           | ⏳     | T4 (P3)     | `parity.yml` nightly.      |
 
 ---
 
