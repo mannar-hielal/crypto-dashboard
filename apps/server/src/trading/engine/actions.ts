@@ -1865,16 +1865,18 @@ export function setSymbolLeverage(
     : change.lt(0)
       ? `margin released: $${moved}`
       : 'no margin change';
+  // 🔐 Ids are primary keys shared by every account: never built from the symbol and time alone
+  const id = ctx.newId();
   d.prependJournal(
     systemEntry(
-      `j-leverage-${symbol}-${now}`,
+      `j-leverage-${symbol}-${id}`,
       now,
       `Leverage for ${symbol} changed ${current}x → ${next}x (${note})`
     )
   );
   if (!change.eq(0)) {
     d.prependBalanceEvent({
-      id: `bl-leverage-${symbol}-${now}`,
+      id: `bl-leverage-${symbol}-${id}`,
       time: now,
       balanceBefore: d.balance,
       balanceAfter: d.balance.minus(change),

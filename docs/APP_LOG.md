@@ -2978,3 +2978,31 @@ hand on a scratch or dev database.
   drift check caught that. Production has one schema, so this doesn't affect it; the applied migration can't be
   edited (its checksum is recorded).
 - Rows 14.7.1, 15.2.3 and 17.5.1 are now T2i, and the A10 item is ticked.
+
+### test: P1c — the Section 18 regression suite on Postgres (18.7); fix ids colliding across accounts (18.8) (2026-09-29) ✅
+
+**Context:** test plan roadmap P1, third slice. 18.1–18.6 were pinned only with in-memory fakes.
+
+- **`regression.int.test.ts`** (`test:int`, 8 tests): 18.1–18.6 through the production objects (TradingService →
+  AccountRepository → Postgres, the MatchingEngine on the Prisma `EngineLease` row), with only the market faked
+  (quotes, 1m and mark candles, Bybit's funding history). `Date` is faked so fills and funding land on exact minutes;
+  timers stay real.
+  - 18.1: a backfilled limit fill is stamped in its minute, and the next minute's TP closes it (`LIMIT` then
+    `TAKE_PROFIT` both `FILLED`).
+  - 18.2: a takeover from an expired lease 3 s after a funding timestamp settles it once (0.1 × 49,990 × 0.01% =
+    0.4999), even though Bybit's history listed it late; a timestamp the history never lists is given up, not
+    retried forever.
+  - 18.3: an account deleted between the timestamp and its settlement is dropped, the other account is settled, and
+    the lease's `lastTickAt` moves past the timestamp.
+  - 18.4: a minute that crosses both a stop-loss set past the liquidation price and the liquidation price leaves one
+    `BustTrade` at the bankruptcy price (45,000), with no stop-loss fill.
+  - 18.5: a reset between the timestamp and its settlement is not charged (`lastReset` round-trips); a reset before
+    it still is.
+  - 18.6: a position closed in two parts while the engine was down is charged 0.5 on takeover, split 0.125 / 0.375
+    over the two close rows.
+- **Fix (18.8):** the leverage-change and margin-mode journal / balance ids were built from the symbol and the time
+  alone (`j-leverage-BTCUSDT-<ms>`, `j-mode-<ms>`). Ids are primary keys shared by every account, so two users doing
+  the same in the same millisecond collided, and the second request failed with a unique-constraint error (a 500). They
+  now take `ctx.newId()`. Two `cross.test` cases fail on the old code.
+- Rows 18.7 and 18.8 ✅, and the A10 item is ticked. Still in P1: the route races (NEW-1-2, NEW-13-2, NEW-18-2,
+  NEW-18-3) and the SDK ↔ server contract test (P1d).

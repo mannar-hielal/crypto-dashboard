@@ -21,6 +21,7 @@ import {
   liquidateAccount,
   placeMarket,
   placePending,
+  setSymbolLeverage,
   settleFunding,
   switchMarginMode,
   type AccountState,
@@ -272,6 +273,28 @@ describe('BP-5 E — margin-mode switch (Bybit set-margin-mode, O3)', () => {
       REJECT_MARGIN_MODE([MODE_REASON_BALANCE, MODE_REASON_LIQUIDATION('BTCUSDT')])
     );
     expect(res.result).toBe('REGULAR_MARGIN');
+  });
+
+  it('should give two accounts switching in the same millisecond different journal and balance ids (P1c)', () => {
+    // Ids are primary keys shared by every account: `j-mode-${now}` made the second write fail
+    const ctx = ctxAt({ BTCUSDT: 50_000 });
+    const ids = [1, 2].map(() => {
+      let s = buy(account('ISOLATED_MARGIN'), 'BTCUSDT', '0.1', 50_000).state;
+      s = applyDelta(s, adjustMargin(s, s.positions[0].id, D(300), ctxAt()).delta);
+      const { delta } = switchMarginMode(s, 'REGULAR_MARGIN', ctx);
+      return [delta.journal[0].id, delta.balanceEvents[0].id];
+    });
+    expect(new Set(ids.flat()).size).toBe(4);
+  });
+
+  it('should give two accounts changing a symbol’s leverage in the same millisecond different ids (P1c)', () => {
+    const ctx = ctxAt({ BTCUSDT: 50_000 });
+    const ids = [1, 2].map(() => {
+      const s = buy(account('ISOLATED_MARGIN'), 'BTCUSDT', '0.1', 50_000).state;
+      const { delta } = setSymbolLeverage(s, 'BTCUSDT', 5, ctx, D(50_000));
+      return [delta.journal[0].id, delta.balanceEvents[0].id];
+    });
+    expect(new Set(ids.flat()).size).toBe(4);
   });
 
   it('the same mode is a no-op', () => {

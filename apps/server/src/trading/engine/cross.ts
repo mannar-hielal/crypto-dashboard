@@ -303,6 +303,8 @@ export function switchMarginMode(
   const from = d.marginMode;
   if (mode === from) return { delta: d.toDelta(), result: from };
   const now = ctx.now;
+  // 🔐 Ids are primary keys shared by every account: never built from the time alone
+  const id = ctx.newId();
   const reasons: string[] = [];
 
   if (mode === 'REGULAR_MARGIN') {
@@ -317,7 +319,7 @@ export function switchMarginMode(
     }
     if (released.gt(0)) {
       d.prependBalanceEvent({
-        id: `bl-mode-${now}`,
+        id: `bl-mode-${id}`,
         time: now,
         balanceBefore: d.balance,
         balanceAfter: d.balance.plus(released),
@@ -346,7 +348,7 @@ export function switchMarginMode(
   d.marginMode = mode;
   d.prependJournal(
     systemEntry(
-      `j-mode-${now}`,
+      `j-mode-${id}`,
       now,
       `Margin mode changed: ${modeLabel(from)} → ${modeLabel(mode)} (applies to the whole account)`
     )
