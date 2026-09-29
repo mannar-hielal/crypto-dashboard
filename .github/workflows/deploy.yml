@@ -40,16 +40,19 @@ jobs:
           REPO: ${{ github.repository }}
           SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          head=$(gh api "repos/$REPO/commits/$SHA/pulls" \
+          # per_page=100: the release PR can't fall off the first page
+          head=$(gh api "repos/$REPO/commits/$SHA/pulls?per_page=100" \
             -q '[.[] | select(.base.ref == "main" and .head.ref == "develop" and .merged_at != null)][0].head.sha // empty')
           if [ -z "$head" ]; then
             echo "::error::No merged develop → main PR for $SHA — deploys only follow a release PR"
             exit 1
           fi
-          green=$(gh api "repos/$REPO/commits/$head/check-runs?check_name=E2E%20full%20set%20(Playwright)" \
-            -q '[.check_runs[] | select(.conclusion == "success")] | length')
-          if [ "${green:-0}" -eq 0 ]; then
-            echo "::error::E2E full set (Playwright) is not green on the release PR head $head"
+          # The newest run from GitHub Actions only (another app can't publish a look-alike check),
+          # and it must be green: an older success followed by a failure or a cancel doesn't count
+          latest=$(gh api "repos/$REPO/commits/$head/check-runs?check_name=E2E%20full%20set%20(Playwright)&filter=all&per_page=100" \
+            -q '[.check_runs[] | select(.app.slug == "github-actions")] | sort_by(.started_at) | last | .conclusion // empty')
+          if [ "$latest" != "success" ]; then
+            echo "::error::The latest E2E full set (Playwright) on the release PR head $head is '${latest:-missing}', not success"
             exit 1
           fi
           echo "Release PR head $head: E2E full set green"
