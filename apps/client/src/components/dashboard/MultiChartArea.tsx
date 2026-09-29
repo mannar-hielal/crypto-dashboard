@@ -197,7 +197,11 @@ export function MultiChartArea({
       exposeChartForE2e(paneIndex, chart, series); // e2e builds only (VITE_E2E)
 
       chart.subscribeCrosshairMove((param) => {
-        if (!syncRef.current.crosshair) return;
+        // Sync off: no lead either — a leave swallowed here must not leave a stale lead behind
+        if (!syncRef.current.crosshair) {
+          leadPane.current = null;
+          return;
+        }
         // The pane the mouse is in leads. An event with no sourceEvent is either the lead pane's
         // crosshair leaving (the mouse left it: the followers must clear too, 10.4.5) or a
         // follower echoing the programmatic set (no time when it has no candle there, e.g. another
@@ -270,6 +274,8 @@ export function MultiChartArea({
   const handleChartDestroy = useCallback((paneIndex: number) => {
     chartRefs.current[paneIndex] = null;
     seriesRefs.current[paneIndex] = null;
+    // A destroyed pane can't lead (its index may map to another chart later)
+    if (leadPane.current === paneIndex) leadPane.current = null;
     exposeChartForE2e(paneIndex, null, null);
   }, []);
 

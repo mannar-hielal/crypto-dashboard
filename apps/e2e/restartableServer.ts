@@ -62,9 +62,17 @@ export function restartableServer(port: number, databaseUrl: string): Restartabl
     },
     async crash() {
       if (!proc?.pid) return;
-      const exited = new Promise((r) => proc?.once('exit', r));
-      process.kill(-proc.pid, 'SIGKILL');
-      await exited;
+      // Called from a spec's `finally`: never throw over the real error, never wait on an exit
+      // that already happened
+      if (proc.exitCode === null && proc.signalCode === null) {
+        const exited = new Promise((r) => proc?.once('exit', r));
+        try {
+          process.kill(-proc.pid, 'SIGKILL');
+          await exited;
+        } catch (err) {
+          if ((err as NodeJS.ErrnoException).code !== 'ESRCH') throw err; // the group is gone already
+        }
+      }
       while (await healthy()) await new Promise((r) => setTimeout(r, 200));
       proc = null;
     },
