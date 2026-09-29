@@ -1485,6 +1485,7 @@ export function OrderAccountManagementPanel({
                                         className="px-3 py-1.5 text-right tabular-nums"
                                         style={{ color: color.amber }}
                                         data-testid="position-liq-price"
+                                        {...guide('positions.row.liq')}
                                       >
                                         {(() => {
                                           // Cross: Bybit's estimate from the whole account
@@ -1551,6 +1552,7 @@ export function OrderAccountManagementPanel({
                                       <td
                                         className="px-3 py-1.5 text-right tabular-nums"
                                         data-testid="position-funding"
+                                        {...guide('positions.row.funding')}
                                         style={{
                                           // cumFunding + = paid (money out), − = received
                                           color:
@@ -1613,6 +1615,7 @@ export function OrderAccountManagementPanel({
                                             <button
                                               type="button"
                                               onClick={() => setMarginDialogFor(pos.id)}
+                                              {...guide('positions.row.adjust-margin')}
                                               title="Add / reduce margin"
                                               aria-label={`Adjust margin for ${pos.symbol}`}
                                               className="opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 hover:text-white"

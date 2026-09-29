@@ -10,6 +10,7 @@ import { X } from 'lucide-react';
 import { usePaperStore } from '@/store/paperStore';
 import { CROSS_EXPLAINER, ISOLATED_EXPLAINER } from '@/lib/positionMath';
 import { bg, color, fontSize } from '@/lib/tokens';
+import { guide } from '@/lib/guideAnchors';
 import styles from './CrossMarginNotice.module.css';
 
 const DISMISSED_KEY = 'cd-cross-margin-notice-dismissed';
@@ -54,6 +55,7 @@ export function CrossMarginNotice() {
       className={styles.notice}
       role="status"
       data-testid="cross-margin-notice"
+      {...guide('notice.cross-margin')}
       style={{
         background: bg.banner,
         borderColor: `${color.purpleDark}60`,
@@ -71,6 +73,7 @@ export function CrossMarginNotice() {
           type="button"
           className={styles.dismiss}
           aria-label="Dismiss the cross margin notice"
+          {...guide('notice.dismiss', 'cross-margin')}
           onClick={dismiss}
           style={{ color: color.muted }}
         >
@@ -98,6 +101,7 @@ export function CrossMarginNotice() {
           className={`${styles.link} ${styles.switch}`}
           style={{ color: color.purple }}
           disabled={saving}
+          {...guide('notice.cross-margin.switch')}
           onClick={() => void switchToCross()}
         >
           {saving ? 'Switching…' : 'Switch to Cross'}
