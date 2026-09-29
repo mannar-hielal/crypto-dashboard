@@ -56,7 +56,7 @@ export function TopBar({ marketing = false }: TopBarProps) {
           style={{
             fontSize: fontSize.xxs,
             background: `${color.purpleDark}20`,
-            color: color.purple,
+            color: color.purpleLight, // 5.5:1 on the badge (WCAG AA; purple is ~3:1)
             border: `1px solid ${color.purpleDark}30`,
           }}
         >

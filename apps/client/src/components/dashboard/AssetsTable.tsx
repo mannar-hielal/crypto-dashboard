@@ -9,6 +9,7 @@ import type { SpotBalance } from '@/store/paperStore';
 import { bg, color, fontSize } from '@/lib/tokens';
 import { guide } from '@/lib/guideAnchors';
 import { SpotExitsModal } from './SpotExitsModal';
+import { fmtSigned, fmtSignedPct } from '@/lib/format';
 
 export interface AssetRow {
   holding: SpotBalance;
@@ -45,7 +46,12 @@ export function AssetsTable({ usdtBalance, usdtReserved, rows, onSell }: AssetsT
   const held = rows.filter((r) => r.holding.free + r.holding.locked > 0);
 
   return (
-    <div className="flex-1 overflow-auto">
+    <div
+      className="scroll-region flex-1 overflow-auto"
+      tabIndex={0}
+      role="region"
+      aria-label="Assets"
+    >
       <table className="w-full text-xs">
         <thead>
           <tr
@@ -135,7 +141,6 @@ function AssetRowView({ holding, price, onSell, onExits }: AssetRowViewProps) {
   const pnl = price !== null ? (price - holding.avgCost) * total : null;
   const pnlPct =
     pnl !== null && holding.avgCost > 0 ? (pnl / (holding.avgCost * total)) * 100 : null;
-  const sign = (v: number) => (v >= 0 ? '+' : '−');
   const pnlColor = pnl === null ? color.muted : pnl >= 0 ? color.green : color.red;
 
   return (
@@ -177,7 +182,7 @@ function AssetRowView({ holding, price, onSell, onExits }: AssetRowViewProps) {
       >
         {/* +/− with the colour, never colour alone (design.md accessibility) */}
         {pnl !== null
-          ? `${sign(pnl)}${usd(Math.abs(pnl))}${pnlPct !== null ? ` (${sign(pnlPct)}${Math.abs(pnlPct).toFixed(2)}%)` : ''}`
+          ? `${fmtSigned(pnl)}${pnlPct !== null ? ` (${fmtSignedPct(pnlPct)})` : ''}`
           : '—'}
       </td>
       <td className="px-3 py-1.5 text-right">

@@ -14,6 +14,7 @@ import { fmtMktPrice } from '@/lib/utils';
 import { color, fontSize, zIndex } from '@/lib/tokens';
 import { guide } from '@/lib/guideAnchors';
 import styles from './TradeDialog.module.css';
+import { fmtUsd } from '@/lib/format';
 
 type Mode = 'add' | 'reduce';
 
@@ -118,8 +119,8 @@ export function AdjustMarginDialog({ position, onClose }: AdjustMarginDialogProp
           />
         </label>
         <p className={styles.note} style={{ fontSize: fontSize.xs10 }}>
-          {mode === 'add' ? 'Available' : 'Max reducible (margin you added)'}: $
-          {Math.max(0, max).toFixed(2)}{' '}
+          {mode === 'add' ? 'Available' : 'Max reducible (margin you added)'}:{' '}
+          {fmtUsd(Math.max(0, max))}{' '}
           <button
             type="button"
             className={styles.linkButton}

@@ -52,6 +52,7 @@ import { fmtMktPrice } from '@/lib/utils';
 import { guide, type GuideAnchor } from '@/lib/guideAnchors';
 import { useLayoutStore } from '@/store/layoutStore';
 import { SoundSettings } from './SoundSettings';
+import { fmtSigned, fmtSignedPct, fmtSignedUsd, fmtUsd } from '@/lib/format';
 
 /** Format a crypto quantity the same way TVP does — trim trailing zeros, max 6 dp */
 const fmtQty = (n: number) => parseFloat(n.toFixed(6)).toString();
@@ -323,7 +324,7 @@ function JournalRow({
                   background: entry.pnl >= 0 ? `${color.green}18` : `${color.red}18`,
                 }}
               >
-                {entry.pnl >= 0 ? '+' : ''}${entry.pnl.toFixed(2)}
+                {fmtSignedUsd(entry.pnl)}
               </span>
             )}
           </span>
@@ -910,12 +911,12 @@ export function OrderAccountManagementPanel({
                   {
                     label: 'Unrealized P&L',
                     anchor: 'account.summary.upnl',
-                    value: `${unrealizedPnl >= 0 ? '+' : ''}$${unrealizedPnl.toFixed(2)}`,
+                    value: fmtSignedUsd(unrealizedPnl),
                     col: unrealizedPnl >= 0 ? color.green : color.red,
                   },
                   {
                     label: 'Realized P&L',
-                    value: `${realizedPnl >= 0 ? '+' : ''}$${realizedPnl.toFixed(2)}`,
+                    value: fmtSignedUsd(realizedPnl),
                     col: realizedPnl >= 0 ? color.green : color.red,
                   },
                   {
@@ -925,7 +926,7 @@ export function OrderAccountManagementPanel({
                   },
                   {
                     label: 'Reserved',
-                    value: reserved > 0 ? `$${reserved.toFixed(2)}` : '—',
+                    value: reserved > 0 ? fmtUsd(reserved) : '—',
                     col: undefined,
                   },
                   {
@@ -1011,7 +1012,7 @@ export function OrderAccountManagementPanel({
                     setColPickerOpen(false);
                   }}
                   className="relative flex items-center gap-1.5 px-4 py-2 text-xs font-semibold capitalize transition-colors"
-                  style={{ color: infoTab === tab ? color.purple : color.muted }}
+                  style={{ color: infoTab === tab ? color.purpleLight : color.muted }}
                 >
                   {infoTab === tab && (
                     <motion.span
@@ -1187,7 +1188,7 @@ export function OrderAccountManagementPanel({
                       style={{
                         fontSize: fontSize.xs11,
                         fontWeight: orderSubTab === sub ? 600 : 400,
-                        color: orderSubTab === sub ? color.purple : color.muted,
+                        color: orderSubTab === sub ? color.purpleLight : color.muted,
                       }}
                     >
                       {orderSubTab === sub && (
@@ -1210,7 +1211,7 @@ export function OrderAccountManagementPanel({
                               orderSubTab === sub
                                 ? `${color.purpleDark}40`
                                 : `color-mix(in srgb, ${color.white} 7%, transparent)`,
-                            color: orderSubTab === sub ? color.purple : color.muted,
+                            color: orderSubTab === sub ? color.purpleLight : color.muted,
                           }}
                         >
                           {count}
@@ -1242,7 +1243,7 @@ export function OrderAccountManagementPanel({
                       style={{
                         fontSize: fontSize.xs11,
                         fontWeight: orderHistorySubTab === sub ? 600 : 400,
-                        color: orderHistorySubTab === sub ? color.purple : color.muted,
+                        color: orderHistorySubTab === sub ? color.purpleLight : color.muted,
                       }}
                     >
                       {orderHistorySubTab === sub && (
@@ -1265,7 +1266,7 @@ export function OrderAccountManagementPanel({
                               orderHistorySubTab === sub
                                 ? `${color.purpleDark}40`
                                 : `color-mix(in srgb, ${color.white} 7%, transparent)`,
-                            color: orderHistorySubTab === sub ? color.purple : color.muted,
+                            color: orderHistorySubTab === sub ? color.purpleLight : color.muted,
                           }}
                         >
                           {count}
@@ -1309,7 +1310,12 @@ export function OrderAccountManagementPanel({
                         No open positions
                       </motion.div>
                     ) : (
-                      <div className="flex-1 overflow-auto">
+                      <div
+                        className="scroll-region flex-1 overflow-auto"
+                        tabIndex={0}
+                        role="region"
+                        aria-label="Positions"
+                      >
                         <table className="w-full text-xs">
                           <thead>
                             <tr
@@ -1525,8 +1531,7 @@ export function OrderAccountManagementPanel({
                                       >
                                         <span className="inline-flex items-center gap-1">
                                           <span {...guide('positions.row.pnl')}>
-                                            {isProfit ? '+' : ''}
-                                            {pnl.toFixed(2)}
+                                            {fmtSigned(pnl)}
                                           </span>
                                           <span
                                             style={{
@@ -1545,8 +1550,7 @@ export function OrderAccountManagementPanel({
                                         className="px-3 py-1.5 text-right tabular-nums font-semibold"
                                         style={{ color: isProfit ? color.green : color.red }}
                                       >
-                                        {isProfit ? '+' : ''}
-                                        {pnlPct.toFixed(2)}%
+                                        {fmtSignedPct(pnlPct)}
                                       </td>
                                     )}
                                     {isVisible('positions', 'funding') && (
@@ -1565,9 +1569,8 @@ export function OrderAccountManagementPanel({
                                         }}
                                         title="Funding settled on this position so far (paid −, received +)"
                                       >
-                                        {pos.cumFunding === 0
-                                          ? '0.00'
-                                          : `${pos.cumFunding > 0 ? '−' : '+'}${Math.abs(pos.cumFunding).toFixed(2)}`}
+                                        {/* cumFunding + is paid: shown as money out (-) */}
+                                        {fmtSigned(-pos.cumFunding)}
                                       </td>
                                     )}
                                     {isVisible('positions', 'tradeValue') && (
@@ -1717,7 +1720,12 @@ export function OrderAccountManagementPanel({
                         No orders
                       </motion.div>
                     ) : (
-                      <div className="flex-1 overflow-auto">
+                      <div
+                        className="scroll-region flex-1 overflow-auto"
+                        tabIndex={0}
+                        role="region"
+                        aria-label="Orders"
+                      >
                         <table className="w-full text-xs">
                           <thead>
                             <tr
@@ -2110,12 +2118,12 @@ export function OrderAccountManagementPanel({
                                       >
                                         {isPending
                                           ? p!.usdtAmount != null
-                                            ? `$${p!.usdtAmount.toFixed(2)}`
+                                            ? fmtUsd(p!.usdtAmount)
                                             : '—'
                                           : isExitOrder
                                             ? '—'
                                             : h!.margin != null
-                                              ? `$${h!.margin.toFixed(2)}`
+                                              ? fmtUsd(h!.margin)
                                               : '—'}
                                       </td>
                                     )}
@@ -2200,7 +2208,12 @@ export function OrderAccountManagementPanel({
                         No order history
                       </motion.div>
                     ) : (
-                      <div className="flex-1 overflow-auto">
+                      <div
+                        className="scroll-region flex-1 overflow-auto"
+                        tabIndex={0}
+                        role="region"
+                        aria-label="Order history"
+                      >
                         <table className="w-full text-xs">
                           <thead>
                             <tr
@@ -2397,7 +2410,7 @@ export function OrderAccountManagementPanel({
                                         className="px-3 py-1.5 text-right tabular-nums"
                                         style={{ fontSize: fontSize.xs10, color: color.muted }}
                                       >
-                                        {o.margin != null ? `$${o.margin.toFixed(2)}` : '—'}
+                                        {o.margin != null ? fmtUsd(o.margin) : '—'}
                                       </td>
                                     )}
                                   </motion.tr>
@@ -2422,7 +2435,12 @@ export function OrderAccountManagementPanel({
                         No balance history yet
                       </motion.div>
                     ) : (
-                      <div className="flex-1 overflow-auto">
+                      <div
+                        className="scroll-region flex-1 overflow-auto"
+                        tabIndex={0}
+                        role="region"
+                        aria-label="Balance history"
+                      >
                         <table className="w-full text-xs">
                           <thead>
                             <tr
@@ -2496,10 +2514,7 @@ export function OrderAccountManagementPanel({
                                         style={{ color: pnlColor }}
                                       >
                                         <span className="inline-flex items-center gap-1">
-                                          <span>
-                                            {entry.pnl > 0 ? '+' : ''}
-                                            {entry.pnl.toFixed(2)}
-                                          </span>
+                                          <span>{fmtSigned(entry.pnl)}</span>
                                           <span
                                             style={{
                                               fontSize: fontSize.xs10,
@@ -2604,7 +2619,12 @@ export function OrderAccountManagementPanel({
                           </button>
                         </motion.div>
                       ) : (
-                        <div className="flex-1 overflow-auto">
+                        <div
+                          className="scroll-region flex-1 overflow-auto"
+                          tabIndex={0}
+                          role="region"
+                          aria-label="Journal"
+                        >
                           <table className="w-full">
                             <thead>
                               <tr

@@ -135,8 +135,9 @@ minutes stay in reserve.
   - the nightly e2e set only if `develop` changed since its last green run;
   - both parity jobs weekly.
 - **At 90 %:** one more PR and one release at most, until the minutes reset.
-- **Uptime between smokes:** an external free monitor (UptimeRobot) on `/api/health` every 5 minutes,
-  outside GitHub.
+- **Uptime between smokes:** UptimeRobot (free) checks `https://api.cryptopapertrade.com/health` every
+  5 minutes, outside GitHub. The owner set it up on 2026-09-29, with email alerts.
+- **The Actions budget is $0 (hard stop):** the owner's choice, 2026-09-29. Stay within the 2,000 minutes.
 - `deploy.yml` triggers only after CI **succeeds on `main`** (`workflow_run` on the CI workflow,
   filtered to `branches: [main]`) and deploys the exact commit SHA CI validated
   (`ref: ${{ github.event.workflow_run.head_sha }}`) — never a newer, unvalidated commit that may

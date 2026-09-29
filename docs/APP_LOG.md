@@ -3466,3 +3466,34 @@ in Part B.
     run it (`CI` drops the project).
   - Masked: the username, the close time, and the order form where it overlaps wide rows. The viewport is 1440 × 1400,
     so the order form needs no scrolling.
+
+### fix: the visual gate, second round — no stale quote offline, numbers like Bybit, WCAG AA contrast, toolbar and table keyboard access (2026-09-29) ✅
+
+**Context:** the owner approved the M5d / M5e findings in the visual Q&A gate: 9.6 → `—` while disconnected; a lighter
+red and purple (as in 19.16); the toolbar's nested buttons made siblings; keyboard focus on the scrolling tables;
+number formats "just like Bybit".
+
+- **9.6:** while the feed is disconnected (or offline), Sell, Buy and the spread show `—` rather than the last quote;
+  Market submit stays disabled as before. `TradingPanel.test` and `feedUi.spec` [9.6].
+- **Numbers** (`lib/format.ts`, `format.test`):
+  - the sign comes first as a plain hyphen, and zero is unsigned: `-$10.12` (was `$-10.12`), `$0.00` / `0.00` (was
+    `+0.00`), `+$47.22`;
+  - thousands are grouped everywhere: `$5,000.00`, `$1,002.20`, `+2,842.78%`;
+  - funding paid now reads `-0.51` (was `−0.51`).
+  - Applied to the journal badge, the summary bar, the Positions P&L / % / funding, Closed P&L, the Assets P&L, the
+    order form (TP / SL previews, cost, order info), the leverage and adjust-margin previews, the liquidation notice,
+    chart trade lines and the tab title.
+- **Contrast (WCAG AA 4.5:1):**
+  - `red` token #d5455c → #ff6b7c (≥4.7:1 on every panel);
+  - `purpleLight` for text on dark: the Beta badge, the active account tab and the Orders / Order History sub-tabs;
+  - brighter range buttons (white 45 % → 55 %), footer disclaimer (muted 50 % → 100 %) and footer links (≈40 % → 70 %);
+  - settings "Forgotten password?" (white 30 % → 60 %) and the danger heading (red-400 60 % → 100 %).
+- **Toolbar:** each submenu caret is now its button's sibling in a `.toolbar-slot`, colored by CSS (`.toolbar-btn.active +
+.toolbar-caret`). The toolbar screenshot is byte-identical before and after.
+- **Tables:** the account tables' scroll regions are `tabIndex=0` regions with a name, and show an outline on keyboard
+  focus only (`.scroll-region:focus-visible`).
+- **Tests:**
+  - `a11y/dashboard.spec` now blocks on every serious / critical axe rule;
+  - the visual baselines were regenerated and made exact (no pixel tolerance): a 1 % tolerance had let the new number
+    formats pass unseen;
+  - UptimeRobot (the owner's, every 5 min) and the $0 Actions budget are noted in `git.md`.

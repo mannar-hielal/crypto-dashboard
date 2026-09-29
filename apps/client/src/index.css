@@ -63,7 +63,7 @@
 
   /* Brand / UI colors */
   --color-brand-green: #2ccd78;
-  --color-brand-red: #d5455c;
+  --color-brand-red: #ff6b7c; /* = color.red: ≥4.7:1 on every panel (WCAG AA) */
   --color-brand-purple: #a555e2;
   --color-brand-purple-dark: #695bec;
   --color-brand-purple-deep: #4e3287;
@@ -148,7 +148,7 @@
   --primary-foreground: oklch(1 0 0);
 
   /* Danger / Sell — EXGEN red */
-  --destructive: oklch(0.56 0.195 18); /* #d5455c */
+  --destructive: oklch(0.72 0.18 16); /* #ff6b7c = color.red */
 
   /* Borders & inputs */
   --border: oklch(1 0 0 / 7%);
@@ -157,7 +157,7 @@
 
   /* Chart palette */
   --chart-1: oklch(0.73 0.18 155); /* #2ccd78 — green */
-  --chart-2: oklch(0.56 0.195 18); /* #d5455c — red   */
+  --chart-2: oklch(0.72 0.18 16); /* #ff6b7c — red (= color.red) */
   --chart-3: oklch(0.535 0.262 298); /* #a555e2 purple  */
   --chart-4: oklch(0.75 0.17 75); /* #e7ab33 amber   */
   --chart-5: oklch(0.59 0.18 200); /* teal            */
@@ -176,7 +176,7 @@
 
   /* Custom brand tokens (hex — not consumed by Tailwind opacity modifier) */
   --exgen-green: #2ccd78;
-  --exgen-red: #d5455c;
+  --exgen-red: #ff6b7c; /* = color.red */
   --exgen-purple: #a555e2;
   --exgen-purple-dark: #695bec;
   --exgen-purple-deep: #4e3287;
@@ -410,6 +410,36 @@
 
 .toolbar-btn:focus-visible::after {
   display: block;
+}
+
+/* A scrolling table the keyboard can reach (axe scrollable-region-focusable, visual gate
+   2026-09-29): tabbable, with an outline for keyboard focus only — a click shows none */
+.scroll-region:focus {
+  outline: none;
+}
+
+.scroll-region:focus-visible {
+  outline: 1px solid var(--exgen-purple-dark);
+  outline-offset: -1px;
+}
+
+/* A tool and its submenu caret: siblings, so no button sits inside a button (axe nested-interactive).
+   The caret follows the button's colour as it did as its child */
+.toolbar-slot {
+  position: relative;
+  display: flex;
+}
+
+.toolbar-caret {
+  color: var(--exgen-muted);
+}
+
+.toolbar-slot:hover .toolbar-caret {
+  color: var(--exgen-white);
+}
+
+.toolbar-btn.active + .toolbar-caret {
+  color: var(--exgen-purple);
 }
 
 /* ── Toolbar divider ───────────────────────────────────────────────────── */

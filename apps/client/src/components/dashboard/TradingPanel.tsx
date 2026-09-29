@@ -26,6 +26,7 @@ import { FieldLabel } from '@/components/ui/FieldLabel';
 import { TriggerBySelect } from '@/components/ui/TriggerBySelect';
 import { OrderFlags } from './OrderFlags';
 import { computeSLTPWarnings } from '@/lib/sltpSanity';
+import { fmtSignedPct, fmtSignedUsd, fmtUsd } from '@/lib/format';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -55,7 +56,8 @@ const SPOT_TABS = TABS.filter((t) => t.id !== 'stop');
 /** Quick-fill buttons: share of the maximum the account can trade */
 const SIZE_STEPS = [0, 25, 50, 75, 100] as const;
 
-const fmtUsd = (v: number) =>
+/** A grouped amount with no currency sign ("10,000.00"), for "Available … USDT" */
+const fmtAmount = (v: number) =>
   v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 // ─── useOnlineStatus ──────────────────────────────────────────────────────────
@@ -140,7 +142,10 @@ export function TradingPanel({
       maximumFractionDigits: priceDecimals,
     });
 
-  const spread = bid != null && ask != null ? ask - bid : null;
+  // Disconnected (9.6, visual gate 2026-09-29): no quote is shown rather than a stale one — Sell,
+  // Buy and the spread read `—` until the feed is back
+  const quoteLive = isConnected && isOnline;
+  const spread = quoteLive && bid != null && ask != null ? ask - bid : null;
 
   const freeBalance = usePaperStore((s) => s.balance);
   const marginMode = usePaperStore((s) => s.marginMode);
@@ -333,7 +338,7 @@ export function TradingPanel({
   /** Equivalent display (opposite of qtyMode) */
   const equivalent: string | null = (() => {
     if (qtyMode === 'usd' && units !== null) return `${units.toFixed(6)} ${baseAsset}`;
-    if (qtyMode === 'units' && actualUsdAmount !== null) return `$${actualUsdAmount.toFixed(2)}`;
+    if (qtyMode === 'units' && actualUsdAmount !== null) return fmtUsd(actualUsdAmount);
     return null;
   })();
 
@@ -395,9 +400,8 @@ export function TradingPanel({
 
   /** Format a P&L number as "+$X.XX · +X.XX%" */
   function formatPnl(pnl: number): string {
-    const sign = pnl >= 0 ? '+' : '';
     const pct = usdtAmount ? (pnl / usdtAmount) * 100 : 0;
-    return `${sign}$${pnl.toFixed(2)} · ${sign}${pct.toFixed(2)}%`;
+    return `${fmtSignedUsd(pnl)} · ${fmtSignedPct(pct)}`;
   }
 
   // ── SL/TP sanity warnings ────────────────────────────────────────────────
@@ -734,7 +738,7 @@ export function TradingPanel({
             className="tabular-nums font-bold"
             style={{ fontSize: fontSize.xs11, color: !isBuy ? color.white : color.muted }}
           >
-            {(bid ?? latestPrice) ? fmtTickPrice((bid ?? latestPrice)!) : '—'}
+            {quoteLive && (bid ?? latestPrice) ? fmtTickPrice((bid ?? latestPrice)!) : '—'}
           </span>
         </button>
 
@@ -777,7 +781,7 @@ export function TradingPanel({
             className="tabular-nums font-bold"
             style={{ fontSize: fontSize.xs11, color: isBuy ? color.white : color.muted }}
           >
-            {(ask ?? latestPrice) ? fmtTickPrice((ask ?? latestPrice)!) : '—'}
+            {quoteLive && (ask ?? latestPrice) ? fmtTickPrice((ask ?? latestPrice)!) : '—'}
           </span>
         </button>
       </div>
@@ -927,7 +931,7 @@ export function TradingPanel({
           <p className="mt-1" style={{ fontSize: fontSize.xs10, color: color.muted }}>
             Available{' '}
             <span className="text-white/60">
-              {spotSell ? `${coinFree.toFixed(6)} ${baseAsset}` : `${fmtUsd(balance)} USDT`}
+              {spotSell ? `${coinFree.toFixed(6)} ${baseAsset}` : `${fmtAmount(balance)} USDT`}
             </span>
           </p>
 
@@ -1146,9 +1150,9 @@ export function TradingPanel({
               >
                 {spotSell
                   ? `${units !== null ? units.toFixed(6) : '—'} / `
-                  : `${cost !== null ? `$${cost.toFixed(2)}` : '—'} / `}
+                  : `${cost !== null ? fmtUsd(cost) : '—'} / `}
                 <span style={{ color: color.white }}>
-                  {spotSell ? `${coinFree.toFixed(6)} ${baseAsset}` : `$${balance.toFixed(2)}`}
+                  {spotSell ? `${coinFree.toFixed(6)} ${baseAsset}` : fmtUsd(balance)}
                 </span>
               </span>
             </div>
@@ -1171,7 +1175,7 @@ export function TradingPanel({
             ? [
                 {
                   label: 'Order value',
-                  value: preview ? `$${preview.value.toFixed(2)}` : '—',
+                  value: preview ? fmtUsd(preview.value) : '—',
                 },
                 {
                   label: 'Est. fee',
@@ -1186,11 +1190,11 @@ export function TradingPanel({
                 { label: 'Leverage', value: `${leverage}x` },
                 {
                   label: 'Order value',
-                  value: preview ? `$${preview.value.toFixed(2)}` : '—',
+                  value: preview ? fmtUsd(preview.value) : '—',
                 },
                 {
                   label: 'Margin',
-                  value: preview?.margin !== undefined ? `$${preview.margin.toFixed(2)}` : '—',
+                  value: preview?.margin !== undefined ? fmtUsd(preview.margin) : '—',
                 },
                 {
                   label: 'Est. liq. price',
@@ -1220,12 +1224,12 @@ export function TradingPanel({
                 {
                   label: 'Est. open fee',
                   anchor: guide('trade.preview.fees', 'open'),
-                  value: preview?.openFee !== undefined ? `$${preview.openFee.toFixed(4)}` : '—',
+                  value: preview?.openFee !== undefined ? fmtUsd(preview.openFee, 4) : '—',
                 },
                 {
                   label: 'Est. close fee',
                   anchor: guide('trade.preview.fees', 'close'),
-                  value: preview?.closeFee !== undefined ? `$${preview.closeFee.toFixed(4)}` : '—',
+                  value: preview?.closeFee !== undefined ? fmtUsd(preview.closeFee, 4) : '—',
                 },
               ]
           ).map(
