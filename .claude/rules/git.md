@@ -45,6 +45,13 @@ Two long-lived branches: `main` (production — every merge to it deploys, see C
    `develop` instead, so that in-flight work isn't invisible to the new branch. Check
    `git log main..develop` (or the GitHub compare view) first if it's unclear whether the two are
    in sync.
+4. **Batch the work into few, larger PRs** (owner decision, 2026-09-29 — GitHub Actions minutes):
+   - One PR per chunk of work, e.g. the end of a working day or a finished milestone, not one per
+     small change.
+   - Inside it, commits stay one testable unit each (see above), so the history stays readable.
+   - Release `develop → main` when a meaningful set has landed, not after every PR. Every CI run is
+     billed per run, and each release costs another CI run plus the deploy.
+   - A security fix is the exception: it gets its own PR and release at once.
 
 Branch names follow `<type>/<short-kebab-description>`, mirroring the commit prefixes —
 `feat/drawing-tools`, `feat/landing-page`, `feat/seo-work`, `feat/prepare-for-launch`,
@@ -55,14 +62,21 @@ checked out.
 
 - `ci.yml` runs on every push to `main`/`develop` and on every PR targeting `main`/`develop`:
   `pnpm audit` → type-check (server) → `format:check` → `lint` → `test:coverage` (the suites plus
-  the coverage floors) + `test:hooks` → build. This main job mirrors the local pre-commit hook (see
+  the coverage floors) + `test:hooks` → `test:int` on Postgres → build → the Playwright smoke. It is
+  **one job** ("CI (checks, integration, e2e smoke)"), so it pays for one checkout, one install and one
+  Postgres per run. Every step after the first failure still runs (`!cancelled()`), so a run reports
+  all its failures at once. The checks mirror the local pre-commit hook (see
   [`testing.md`](./testing.md#gates--what-passing-means-before-a-commitpr)), so a change that passes
-  locally should pass it too. A separate **Integration (Postgres)** job runs `test:int` (migrations
-  from empty, schema drift, repository round-trip); it needs a database, so it runs in CI only
-  (locally: `test:int` against a throwaway Postgres). All jobs must be green before merge — every
+  locally should pass them too. `test:int` (migrations from empty, schema drift, repository
+  round-trip) needs a database, so it runs in CI only (locally: `test:int` against a throwaway
+  Postgres). **Docs-only changes** (`docs/**`, `**/*.md`) don't run CI (`paths-ignore`), so a
+  docs-only release doesn't deploy; `.claude/hooks/**` is code and always runs. The job must be green before merge — every
   feature/fix PR (targeting `develop`) and the later `develop → main` release merge go through the
-  identical gate, and the deploy waits for the whole workflow, so a failing integration job blocks
+  identical gate, and the deploy waits for the whole workflow, so a failing integration step blocks
   a release.
+- `e2e-nightly.yml` ("E2E full set") runs every Playwright project weekly (Mondays 02:30 UTC) and on
+  every `develop → main` release PR when it is opened: that is the pre-release run. `prod-smoke.yml`
+  runs every second day. `deploy.yml` also runs the prod smoke after every deploy.
 - `deploy.yml` triggers only after CI **succeeds on `main`** (`workflow_run` on the CI workflow,
   filtered to `branches: [main]`) and deploys the exact commit SHA CI validated
   (`ref: ${{ github.event.workflow_run.head_sha }}`) — never a newer, unvalidated commit that may

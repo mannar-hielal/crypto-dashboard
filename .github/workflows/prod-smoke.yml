@@ -1,12 +1,12 @@
 name: Production smoke
 
 # T5 in docs/TRADING_TEST_PLAN.md (TEST_IMPLEMENTATION_PLAN M8): the same read-only checks deploy.yml
-# runs after every deploy (apps/e2e/tests-prod), every hour — so an outage between deploys opens an
+# runs after every deploy (apps/e2e/tests-prod), every second day — so an outage between deploys opens an
 # issue. Read-only: no sign-in, no writes, no secrets.
 
 on:
   schedule:
-    - cron: '23 * * * *' # hourly, at :23
+    - cron: '23 6 */2 * *' # every second day, 06:23 UTC (was hourly; Actions minutes, APP_LOG 2026-09-29)
   workflow_dispatch:
 
 permissions:
@@ -72,7 +72,7 @@ jobs:
         shell: bash
         run: |
           gh label create prod-smoke --color B60205 --description "Production smoke check failed" 2>/dev/null || true
-          body="The hourly production smoke failed at $(date -u +%Y-%m-%dT%H:%MZ): $RUN_URL
+          body="The scheduled production smoke failed at $(date -u +%Y-%m-%dT%H:%MZ): $RUN_URL
 
           It checks API health, a clean signed-out page load (/api/auth/refresh → 204, no console errors),
           the login page, and a live market feed. Download the report artifact for the failing check."

@@ -3,8 +3,16 @@ name: CI
 on:
   push:
     branches: [main, develop] # avoids duplicate runs — PRs already trigger the pull_request event
+    # Docs-only changes don't run CI (a docs-only release to main then doesn't deploy either — nothing
+    # to ship). .claude/hooks/** is code (test:hooks), so it is never skipped.
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   pull_request:
     branches: [main, develop]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   workflow_call:
 
 concurrency:
@@ -13,63 +21,14 @@ concurrency:
 
 jobs:
   ci:
-    name: Type-check · Lint · Build
+    # One job, not three: one checkout, install and Postgres per run, and one per-job minute rounding
+    # (Actions minutes, APP_LOG 2026-09-29). Every test step after the first failure still runs
+    # (`!cancelled()`), so a run reports all its failures at once.
+    name: CI (checks, integration, e2e smoke)
     runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4.2.2
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4.1.0
-        with:
-          version: 10.33.0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4.4.0
-        with:
-          node-version-file: '.node-version'
-          cache: 'pnpm'
-          cache-dependency-path: pnpm-lock.yaml # single root lockfile — workspace covers all packages
-
-      - name: Install dependencies
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres # dummy value — satisfies prisma generate postinstall; no DB is started in this job
-        run: pnpm install --frozen-lockfile # installs root + all workspace packages (server, future client)
-
-      - name: Audit dependencies
-        # 🔐 Fails on high/critical CVEs — low/moderate advisories are warnings only.
-        # Run `pnpm audit --fix` locally to auto-resolve where possible.
-        run: pnpm run audit
-
-      - name: Type-check (server)
-        run: pnpm type-check
-        working-directory: apps/server
-
-      - name: Format check
-        run: pnpm format:check
-
-      - name: Lint
-        run: pnpm lint # root flat config already covers apps/client/** — no separate client lint step needed
-
-      - name: Test (with coverage thresholds)
-        # test:coverage runs the same suites as `pnpm test` and fails below the floors in each
-        # package's vitest.config.ts; the hook tests run separately
-        run: pnpm test:coverage && pnpm test:hooks
-
-      - name: Build (server)
-        run: pnpm build
-        working-directory: apps/server
-
-      - name: Build (client)
-        run: pnpm build
-        working-directory: apps/client
-
-  integration:
-    name: Integration (Postgres)
-    runs-on: ubuntu-latest
-    # A real Postgres, migrated from empty: migration drift and the AccountRepository round-trip
-    # (T2i, docs/TRADING_TEST_PLAN.md roadmap P1). The credentials are the throwaway service's own.
+    timeout-minutes: 30
+    # The throwaway service's own credentials: the integration tests use crypto_dashboard_int, and the
+    # e2e server creates crypto_dashboard_e2e_test itself
     services:
       postgres:
         image: postgres:16-alpine
@@ -99,68 +58,65 @@ jobs:
         with:
           node-version-file: '.node-version'
           cache: 'pnpm'
-          cache-dependency-path: pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml # single root lockfile — workspace covers all packages
 
       - name: Install dependencies
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres # dummy — prisma generate only
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres # dummy value — prisma generate only
         run: pnpm install --frozen-lockfile
 
-      - name: Integration tests
+      - name: Audit dependencies
+        # 🔐 Fails on high/critical CVEs — low/moderate advisories are warnings only.
+        # Run `pnpm audit --fix` locally to auto-resolve where possible.
+        run: pnpm run audit
+
+      - name: Type-check (server)
+        run: pnpm type-check
+        working-directory: apps/server
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint # root flat config already covers apps/client/** — no separate client lint step needed
+
+      - name: Test (with coverage thresholds)
+        # test:coverage runs the same suites as `pnpm test` and fails below the floors in each
+        # package's vitest.config.ts; the hook tests run separately
+        run: pnpm test:coverage && pnpm test:hooks
+
+      - name: Integration tests (Postgres)
+        # A real Postgres, migrated from empty: migration drift and the AccountRepository round-trip
+        # (T2i, docs/TRADING_TEST_PLAN.md roadmap P1)
+        if: ${{ !cancelled() }}
         env:
           TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/crypto_dashboard_int
         run: pnpm --filter @crypto-dashboard/server test:int
 
-  e2e-smoke:
-    name: E2E smoke (Playwright)
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    # Playwright on the app with the fake Bybit feed and the test hooks (T3, TEST_IMPLEMENTATION_PLAN
-    # M4): sign-up + verify, a Spot market buy, a perp long opened and closed. The database is the
-    # throwaway service's own; the hooks' secret is generated per run.
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
+      - name: Build (server)
+        if: ${{ !cancelled() }}
+        run: pnpm build
+        working-directory: apps/server
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4.2.2
+      - name: Build (client)
+        if: ${{ !cancelled() }}
+        run: pnpm build
+        working-directory: apps/client
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4.1.0
-        with:
-          version: 10.33.0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4.4.0
-        with:
-          node-version-file: '.node-version'
-          cache: 'pnpm'
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres # dummy — prisma generate only
-        run: pnpm install --frozen-lockfile
-
+      # Playwright on the app with the fake Bybit feed and the test hooks (T3, TEST_IMPLEMENTATION_PLAN
+      # M4): sign-up + verify, a Spot market buy, a perp long opened and closed. The hooks' secret is
+      # generated per run.
       - name: Type-check the e2e package
+        if: ${{ !cancelled() }}
         run: pnpm --filter @crypto-dashboard/e2e type-check
 
       - name: Install Chromium
+        if: ${{ !cancelled() }}
         run: pnpm --filter @crypto-dashboard/e2e exec playwright install --with-deps chromium
 
-      - name: Smoke tests
+      - name: E2E smoke tests (Playwright)
+        if: ${{ !cancelled() }}
+        timeout-minutes: 15
         env:
           CI: 'true'
           E2E_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/crypto_dashboard_e2e_test
