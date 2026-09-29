@@ -3282,47 +3282,30 @@ repositories and the included 2,000 were used up.
 - **Owner settings to confirm:** Settings → Actions → General → "Require approval for all external contributors" for
   fork PR workflows; secret scanning / push protection (free on public repos).
 
-### chore: fewer GitHub Actions minutes — one CI job, docs skip CI, weekly full e2e, prod smoke every 2nd day (2026-09-29) ✅
+### chore: the GitHub Actions budget — 2,000 minutes a month, one CI job, docs skip CI (2026-09-29) ✅
 
 **Context:** the 2,000 included minutes were used up in 6 days (Sep 24–29, 80 PRs). Measured split: Claude review 940,
-CI 789, `claude.yml` 157, Deploy 80. Once released, the scheduled jobs (hourly prod smoke, nightly e2e and parity)
-would add about 2,000 min/month on their own. The owner chose options 3, 4, 5 and 7 of the minutes plan.
+CI 789, `claude.yml` 157, Deploy 80. Without changes, a normal month with the new scheduled jobs would cost about
+4,100 minutes. The owner first chose to cut minutes (options 3, 4, 5 and 7), then asked for a plan that uses the
+2,000 well. The agreed plan is in `.claude/rules/git.md` "Actions budget".
 
 - **CI:**
   - It is one job: checks → `test:int` on Postgres → build → Playwright smoke. That is one checkout, install and
     Postgres per run instead of three.
   - Later steps run after a failure (`!cancelled()`), so every failure is still reported.
   - A 30-minute timeout replaces the 360-minute default.
-  - Docs-only changes (`docs/**`, `**/*.md`) skip CI.
-- **E2E full set** (`e2e-nightly.yml`): weekly (Mondays 02:30 UTC), plus on every release PR to `main` when it is
-  opened (the pre-release run), instead of nightly.
-- **Prod smoke:** every second day instead of hourly. The full prod smoke still runs after every deploy.
+  - Docs-only changes (`docs/**`, `**/*.md`) skip CI, so a docs-only release doesn't deploy.
+- **E2E full set** (`e2e-nightly.yml`):
+  - nightly on `develop`, plus every push to the `develop → main` release PR (the pre-release run; review #192);
+  - a release merges only with it green.
+- **Prod smoke:** every 6 hours (was hourly), and after every deploy. Between runs, a free external monitor
+  (UptimeRobot, set up by the owner) checks `/api/health` every 5 minutes.
+- **Parity:** feed parity nightly and testnet parity daily (unchanged).
+- **`claude.yml` deleted:** it ran `/code-review` on every push into the job log only, repeating claude-review.
 - **Bigger PRs** (`git.md` Branching step 4):
   - One PR per chunk of work, e.g. the end of a day or a milestone. Commits stay one unit each.
   - Release when a meaningful set has landed.
   - A security fix still goes out alone and at once.
-- **Estimate** for a normal month, assuming 40 changes batched into ~20 PRs and ~8 releases:
-
-  | Workflow      | Before (min/month) | After (min/month) |
-  | ------------- | ------------------ | ----------------- |
-  | CI            | 1,155              | ~350              |
-  | Claude review | 660                | ~290              |
-  | `claude.yml`  | 220                | ~100              |
-  | Prod smoke    | 1,440              | ~30               |
-  | E2E full set  | 360                | ~155              |
-  | Parity (both) | 210                | 210               |
-  | Deploy        | 75                 | ~40               |
-  | **Total**     | **≈4,100**         | **≈1,150**        |
-
-  About 70 % less. Most of the saving comes from the prod smoke and from fewer, bigger PRs.
-
-- **Trade-offs:**
-  - An outage between deploys can go unnoticed for up to two days. A free external uptime monitor (UptimeRobot /
-    Better Stack on `/api/health`) would close that at no Actions cost.
-  - Browser regressions surface within a week, or at the latest on the release PR.
-  - A docs-only release doesn't deploy.
-- **Not changed (options the owner didn't pick):**
-  - `claude.yml` (~100);
-  - Claude review only on demand;
-  - weekly parity (~180);
-  - reusing a PR's CI result on push.
+- **Budget:** about 1,780 minutes planned plus about 220 in reserve, for about 25 PRs and 8 releases a month.
+  - Brake at GitHub's 75 % email: prod smoke every 12 h, nightly e2e only if `develop` changed, parity weekly.
+  - At 90 %: one PR and one release at most.

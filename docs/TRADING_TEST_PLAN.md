@@ -43,16 +43,16 @@ reconnect, two tabs) are only ever checked by hand.
 
 ## A3. Test levels (the tier column in Part B)
 
-| Tier    | Level                                                                         | Tool                                     | Runs                              |
-| ------- | ----------------------------------------------------------------------------- | ---------------------------------------- | --------------------------------- |
-| **T1**  | Unit — pure engine rules with worked numbers; client pure libs                | Vitest                                   | pre-commit + every PR             |
-| **T1p** | Property-based — invariants over random order sequences                       | Vitest + fast-check                      | every PR                          |
-| **T2**  | Component — a panel rendered with a fake API                                  | Vitest + React Testing Library (jsdom)   | pre-commit + every PR             |
-| **T2i** | Integration — routes, WS, repository and migrations against real Postgres     | Vitest + Postgres service container      | every PR                          |
-| **T3**  | End-to-end — the real app in a browser, on a deterministic replayed feed      | Playwright                               | every PR (smoke) + nightly (full) |
-| **T4**  | Bybit parity — the same scenario on Bybit testnet and on our engine, diffed   | `parity:testnet` in a scheduled workflow | nightly                           |
-| **T5**  | Production synthetic checks — read-only, after every deploy and every 2nd day | Playwright (smoke project) + Fly health  | post-deploy + cron                |
-| **M**   | Manual — only look-and-feel that a machine can't judge                        | —                                        | before a UI release               |
+| Tier    | Level                                                                       | Tool                                     | Runs                              |
+| ------- | --------------------------------------------------------------------------- | ---------------------------------------- | --------------------------------- |
+| **T1**  | Unit — pure engine rules with worked numbers; client pure libs              | Vitest                                   | pre-commit + every PR             |
+| **T1p** | Property-based — invariants over random order sequences                     | Vitest + fast-check                      | every PR                          |
+| **T2**  | Component — a panel rendered with a fake API                                | Vitest + React Testing Library (jsdom)   | pre-commit + every PR             |
+| **T2i** | Integration — routes, WS, repository and migrations against real Postgres   | Vitest + Postgres service container      | every PR                          |
+| **T3**  | End-to-end — the real app in a browser, on a deterministic replayed feed    | Playwright                               | every PR (smoke) + nightly (full) |
+| **T4**  | Bybit parity — the same scenario on Bybit testnet and on our engine, diffed | `parity:testnet` in a scheduled workflow | nightly                           |
+| **T5**  | Production synthetic checks — read-only, after every deploy and every 6 h   | Playwright (smoke project) + Fly health  | post-deploy + cron                |
+| **M**   | Manual — only look-and-feel that a machine can't judge                      | —                                        | before a UI release               |
 
 Rules of thumb: push every check to the **lowest tier that can catch the bug** (a rule belongs in T1, not in a
 browser test); T3 covers wiring and user journeys, not maths; M is for what's left after that, and shrinks over time.
@@ -346,7 +346,7 @@ _P2 — replay feed and browser tests (7)_
 - [ ] Playwright setup: Chromium + WebKit + a mobile viewport, `webServer`, trace / video on retry, one CI retry —
       T3 (P2; M4 ✅ Chromium, `webServer` ×3, traces / video, one CI retry — WebKit and mobile come with the nightly set, M5)
 - [ ] Smoke set on every PR (< 3 min) and the full ⬜ set nightly — T3 (P2; M4 ✅ the smoke set: 3 tests, ~9 s, the smoke
-      steps of the single CI job; the full set is M5, weekly and on release PRs since 2026-09-29)
+      steps of the single CI job; the full set is M5, nightly and on release PRs)
 - [ ] Visual regression baselines, light and dark: order form, account bar, leverage and margin-mode modals, Closed
       P&L, Section 5 icons — T3 (P2)
 - [ ] `@axe-core/playwright` on the dashboard, auth and settings pages; fail on serious / critical — T3 (P2)
@@ -368,7 +368,7 @@ _P5 — production checks (3)_
 
 - [x] Playwright `@prod` project after `flyctl deploy`, failing the deploy and notifying — T5 (P5; M8:
       `apps/e2e/tests-prod`, last step of `deploy.yml`)
-- [x] The same project on `schedule`, every second day since 2026-09-29 (was hourly) — T5 (P5; M8: `prod-smoke.yml`, opens / comments a `prod-smoke` issue)
+- [x] The same project on `schedule`, every 6 h since 2026-09-29 (was hourly; the Actions budget in `git.md`) — T5 (P5; M8: `prod-smoke.yml`, opens / comments a `prod-smoke` issue)
 - [ ] Fly log shipping with an alert on `level >= 50` — (P5, needs the owner's sink)
 
 _P6 — staging, security, performance (5)_

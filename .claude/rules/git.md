@@ -74,10 +74,41 @@ checked out.
   feature/fix PR (targeting `develop`) and the later `develop → main` release merge go through the
   identical gate, and the deploy waits for the whole workflow, so a failing integration step blocks
   a release.
-- `e2e-nightly.yml` ("E2E full set") runs every Playwright project weekly (Mondays 02:30 UTC) and on
-  every push to the `develop → main` release PR: that is the pre-release run. A release PR merges
+- `e2e-nightly.yml` ("E2E full set") runs every Playwright project nightly (02:30 UTC, on `develop`)
+  and on every push to the `develop → main` release PR: that is the pre-release run. A release PR merges
   only with it green (the merge waits for every check on the PR's head, not just CI). `prod-smoke.yml`
-  runs every second day. `deploy.yml` also runs the prod smoke after every deploy.
+  runs every 6 hours. `deploy.yml` also runs the prod smoke after every deploy.
+
+## Actions budget — 2,000 minutes a month
+
+The plan the owner agreed on 2026-09-29, for a private repository on the Free plan (2,000 included
+minutes). A public repository is not billed, but the plan holds either way. Once the minutes run out,
+nothing runs until the next month: no CI, no merge, no deploy, not even a security fix. So about 220
+minutes stay in reserve.
+
+| Workflow                                             | Schedule                                | Min / month |
+| ---------------------------------------------------- | --------------------------------------- | ----------- |
+| Prod smoke (`prod-smoke.yml`)                        | every 6 h, and after every deploy       | ~240        |
+| E2E full set (`e2e-nightly.yml`)                     | nightly, and every push to a release PR | ~455        |
+| Feed parity + spec drift (`feed-parity.yml`)         | nightly (drift on Sundays)              | ~120        |
+| Testnet parity (`parity.yml`)                        | daily                                   | ~90         |
+| Dependabot                                           | monthly                                 | ~20         |
+| CI (`ci.yml`, one job; docs-only changes skip it)    | ~25 PRs + 8 releases                    | ~455        |
+| Claude review (`claude-code-review.yml`)             | every PR push                           | ~350        |
+| Deploy                                               | 8 releases                              | ~40         |
+| **Planned**                                          |                                         | **≈1,780**  |
+| **Reserve** (re-runs, a busy week, an emergency fix) |                                         | **≈220**    |
+
+- **Volume is the lever:** about 25 PRs and 8 releases a month (step 4 of the branching flow above).
+  An extra PR costs about 27 minutes, an extra release about 33.
+- **The brake at 75 %** (GitHub emails at 75 % and 90 % of the included minutes), for the rest of the
+  month:
+  - prod smoke every 12 h;
+  - the nightly e2e set only if `develop` changed since its last green run;
+  - both parity jobs weekly.
+- **At 90 %:** one more PR and one release at most, until the minutes reset.
+- **Uptime between smokes:** an external free monitor (UptimeRobot) on `/api/health` every 5 minutes,
+  outside GitHub.
 - `deploy.yml` triggers only after CI **succeeds on `main`** (`workflow_run` on the CI workflow,
   filtered to `branches: [main]`) and deploys the exact commit SHA CI validated
   (`ref: ${{ github.event.workflow_run.head_sha }}`) — never a newer, unvalidated commit that may
