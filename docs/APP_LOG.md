@@ -3548,3 +3548,14 @@ nightly e2e open GitHub issues. What was missing: server errors while the site i
 - **Tests:** `errorAlerts.test` (counting and the levels, no objects kept, the EmailService exclusion, windows, the
   50-kind cap, the daily cap and the next day, a failed send) and `EmailService.test` (the digest escaped, the subject
   count).
+
+### chore: quieter logs — no info lines for health checks; the last F10 baselines; R3 closed (2026-09-29) ✅
+
+- **`/health` logs at `warn` and above only** (Fastify `logLevel` on the route). Fly checks it every 30 s and UptimeRobot
+  every 5 minutes: that was about 2,900 info lines an hour, burying the real events in `fly logs`. A failing health
+  request still logs. Checked on a local server: 3 health calls → 0 lines; another route still logs.
+- **F10:** the liquidation notice after a real liquidation (LINKUSDT, the visual project runs alone), and both pane
+  headers in a 2h layout with the active pane's stripe (the left 220 px; the live price on the right moves by a pixel
+  from run to run). The cross-margin notice stays out: it only shows for accounts migrated from before cross margin.
+- **R3 (M0) closed:** "History tab" wording → Balance History / Closed P&L, and `TradingPanel.test`'s Stop Sell tests
+  now cite row 3.5.4, the Stop Sell mirror (they said 3.5.2). The rest of R3 was already done.

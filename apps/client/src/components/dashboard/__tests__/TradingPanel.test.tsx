@@ -673,7 +673,7 @@ describe('Section 3 — Stop Orders (T2 · RTL)', () => {
       expect(screen.getByText(/Use a Limit Buy/)).toBeTruthy();
     });
 
-    it('3.5.2: Stop Sell above market price shows immediate-fill warning with "will fill immediately" and "Use a Limit Sell"', () => {
+    it('3.5.4: Stop Sell above market price shows immediate-fill warning with "will fill immediately" and "Use a Limit Sell"', () => {
       renderPanel();
       switchToStopTab();
       switchToSell();
@@ -696,7 +696,7 @@ describe('Section 3 — Stop Orders (T2 · RTL)', () => {
       expect(screen.queryByText(/will fill immediately/)).toBeNull();
     });
 
-    it('3.5.2 no-warning: Stop Sell below market does NOT show the warning banner', () => {
+    it('3.5.4 no-warning: Stop Sell below market does NOT show the warning banner', () => {
       renderPanel();
       switchToStopTab();
       switchToSell();
