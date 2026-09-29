@@ -74,17 +74,31 @@ test('[F11] axe: contrast, nested controls and scroll focus on the dashboard and
   page,
   seededUser,
 }) => {
+  /** Which of the pending rules fire now (serious / critical only) */
+  const firing = async (): Promise<string[]> => {
+    await page.waitForTimeout(1_500);
+    const { violations } = await new AxeBuilder({ page })
+      .exclude('canvas')
+      .withRules(PENDING_VISUAL_GATE)
+      .analyze();
+    return violations
+      .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+      .map((v) => v.id);
+  };
   await signInAs(page, seededUser.email, seededUser.password);
+  const fired = new Set<string>();
   await page.goto('/dashboard/usdt/BTCUSDT');
-  const found = await blocking(page, PENDING_VISUAL_GATE);
+  for (const id of await firing()) fired.add(id);
+  await page.goto('/dashboard/spot/BTC/USDT');
+  await at(page, 'account.tab', 'assets').click();
+  for (const id of await firing()) fired.add(id);
   await at(page, 'nav.user-menu').click();
   await at(page, 'nav.settings').click();
-  found.push(...(await blocking(page, PENDING_VISUAL_GATE)));
-  // The findings waiting for the visual Q&A gate (top of this file) are still there. Asserted this
-  // way rather than with test.fail, so a broken setup fails the test instead of passing it
-  // (review #196). Once they are fixed this goes red: drop PENDING_VISUAL_GATE and this test
-  expect(
-    found.length,
-    'the pending axe findings are gone: remove PENDING_VISUAL_GATE'
-  ).toBeGreaterThan(0);
+  for (const id of await firing()) fired.add(id);
+  // Each finding waiting for the visual Q&A gate (top of this file) still fires. Per rule, so the
+  // test goes red as soon as any one is fixed — then drop that rule from PENDING_VISUAL_GATE, which
+  // puts it back into the blocking tests above (review #196). A broken setup fails the test too.
+  for (const rule of PENDING_VISUAL_GATE) {
+    expect(fired, `${rule} no longer fires: remove it from PENDING_VISUAL_GATE`).toContain(rule);
+  }
 });
