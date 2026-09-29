@@ -23,6 +23,8 @@ pnpm --filter @crypto-dashboard/e2e type-check
 # Run tests with the coverage floors, exactly as CI does (vitest.config.ts coverage.thresholds)
 pnpm test:coverage
 pnpm test:hooks
+pnpm test:scripts
+pnpm case-coverage --strict
 
 # Auto-fix + format staged files
 pnpm lint-staged

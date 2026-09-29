@@ -21,6 +21,8 @@
     "type-check": "pnpm --filter @crypto-dashboard/server type-check && pnpm --filter @crypto-dashboard/client type-check && pnpm --filter @crypto-dashboard/e2e type-check",
     "test": "pnpm --filter @crypto-dashboard/server test && pnpm --filter @crypto-dashboard/client test && pnpm test:hooks",
     "test:hooks": "python3 .claude/hooks/tests/test_check_claude_review_threads.py",
+    "test:scripts": "node --test scripts/*.test.mjs",
+    "case-coverage": "node scripts/caseCoverage.mjs",
     "test:coverage": "pnpm --filter @crypto-dashboard/server test:coverage && pnpm --filter @crypto-dashboard/client test:coverage"
   },
   "keywords": [
