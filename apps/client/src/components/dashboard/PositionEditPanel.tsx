@@ -11,6 +11,7 @@
  * amber warning: the position would be liquidated before it triggers.
  */
 
+import { guide } from '@/lib/guideAnchors';
 import { useState } from 'react';
 import type { PaperTriggerBy } from '@crypto-dashboard/sdk';
 import { X, TrendingUp, TrendingDown } from 'lucide-react';
@@ -282,7 +283,12 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
           {/* ── Take Profit row ─────────────────────────────────────────── */}
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              <Toggle checked={tpEnabled} onChange={setTpEnabled} label="Enable take profit" />
+              <Toggle
+                checked={tpEnabled}
+                onChange={setTpEnabled}
+                label="Enable take profit"
+                anchor="position-exits.tp.enable"
+              />
               <span style={{ fontSize: fontSize.xs, color: tpEnabled ? color.white : color.muted }}>
                 Take profit, price
               </span>
@@ -299,6 +305,7 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
             {tpEnabled && (
               <NumericInput
                 suffix="TP"
+                anchor="position-exits.tp.price"
                 suffixColor={`${color.green}b3`}
                 borderColor={tpWarning ? color.red : `${color.green}60`}
                 suffixPadding="pr-12"
@@ -314,7 +321,12 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
           {/* ── Stop Loss row ────────────────────────────────────────────── */}
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              <Toggle checked={slEnabled} onChange={setSlEnabled} label="Enable stop loss" />
+              <Toggle
+                checked={slEnabled}
+                onChange={setSlEnabled}
+                label="Enable stop loss"
+                anchor="position-exits.sl.enable"
+              />
               <span style={{ fontSize: fontSize.xs, color: slEnabled ? color.white : color.muted }}>
                 Stop loss, price
               </span>
@@ -331,6 +343,7 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
             {slEnabled && (
               <NumericInput
                 suffix="SL"
+                anchor="position-exits.sl.price"
                 suffixColor={`${color.red}b3`}
                 borderColor={slWarning ? color.red : `${color.red}60`}
                 suffixPadding="pr-12"
@@ -409,6 +422,7 @@ export function PositionEditPanel({ positionId, onClose }: PositionEditPanelProp
       >
         <motion.button
           onClick={() => void handleConfirm()}
+          {...guide('position-exits.confirm')}
           disabled={confirmDisabled}
           whileTap={!confirmDisabled ? { scale: 0.97 } : {}}
           className="w-full rounded py-2 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"

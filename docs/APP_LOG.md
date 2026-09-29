@@ -3326,3 +3326,36 @@ holds the real `RESEND_API_KEY`, so every local Playwright run mailed its made-u
   - If production uses the same Resend team, its verification and reset emails were refused until the daily quota
     reset.
   - The bounced `@test.local` sends may show in Resend's suppression list and deliverability stats.
+
+### test: M5b — Spot and USDT Perpetual trading in the browser (2026-09-29) ✅
+
+**Context:** test plan milestone M5, second batch (Stages 1–3).
+
+- **Specs:**
+  - `trade/quotes` [9.1][9.5];
+  - `spot/spotRoundTrip` [14.6.2] and `spot/spotTpSl` [14.6.6];
+  - `account/reset` [8.8];
+  - `perp/perpShort` [1.2.x];
+  - `perp/perpTpSl` [1.4.3][1.5.3];
+  - `perp/limitBracket` [2.4.1][2.4.5][2.4.9];
+  - `perp/editOrders` [4.17][4.18];
+  - `perp/offline` [1.7.8].
+
+  The expected numbers were computed by hand from the fee rules first, and the app matched them. `placeOrder()`
+  drives the order form through its anchors.
+
+- **Isolation:**
+  - The fake feed's prices are global per market, so each spec owns its markets (a map in `apps/e2e/helpers.ts`).
+  - The Playwright projects run one after another (`dependencies`), so two browsers never move a market at once.
+  - `startServer.mjs` clears a stale engine lease left by a killed earlier run. Otherwise the new engine waits 30 s
+    and misses the first price moves; this showed up as a stop-loss that "didn't fire".
+- **Anchors (attributes only):**
+  - position TP / SL cells and their edit buttons;
+  - the order row's edit and cancel;
+  - the pending-order and position-exits edit panels (price, qty, TP / SL toggles and prices, confirm);
+  - the Spot / Perp order form's TP / SL enable.
+- **Found:**
+  - P&L with a negative value is written `$-10.12` (journal badge, account bar), while a gain is `+$10.12`. Row
+    1.5.3 expects `−$10.12`. This is a format change for the visual gate.
+  - Row 1.7.8's wording is aligned with the app, which disables the market button offline.
+- 53 tests pass over every project, twice in a row; one WebKit load flake is covered by the CI retry.
