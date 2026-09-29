@@ -110,3 +110,69 @@ jobs:
         env:
           TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/crypto_dashboard_int
         run: pnpm --filter @crypto-dashboard/server test:int
+
+  e2e-smoke:
+    name: E2E smoke (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Playwright on the app with the fake Bybit feed and the test hooks (T3, TEST_IMPLEMENTATION_PLAN
+    # M4): sign-up + verify, a Spot market buy, a perp long opened and closed. The database is the
+    # throwaway service's own; the hooks' secret is generated per run.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4.1.0
+        with:
+          version: 10.33.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4.4.0
+        with:
+          node-version-file: '.node-version'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres # dummy — prisma generate only
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check the e2e package
+        run: pnpm --filter @crypto-dashboard/e2e type-check
+
+      - name: Install Chromium
+        run: pnpm --filter @crypto-dashboard/e2e exec playwright install --with-deps chromium
+
+      - name: Smoke tests
+        env:
+          CI: 'true'
+          E2E_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/crypto_dashboard_e2e_test
+        run: pnpm --filter @crypto-dashboard/e2e test:smoke
+
+      - name: Upload the report and traces
+        if: failure()
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: e2e-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            apps/e2e/playwright-report
+            apps/e2e/test-results
+          retention-days: 14
+          if-no-files-found: ignore

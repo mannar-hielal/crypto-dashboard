@@ -1,3 +1,4 @@
+import { guide } from '@/lib/guideAnchors';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useForm } from 'react-hook-form';
@@ -159,6 +160,7 @@ export function RegisterPage() {
                             type="email"
                             placeholder="you@example.com"
                             autoComplete="email"
+                            {...guide('auth.register.email')}
                             className="border-white/8 text-white focus-visible:ring-0 focus-visible:border-brand-purple-dark/50"
                             style={{ background: bg.surface }}
                             {...field}
@@ -186,6 +188,7 @@ export function RegisterPage() {
                           <Input
                             placeholder="satoshi_nakamoto"
                             autoComplete="username"
+                            {...guide('auth.register.username')}
                             className="border-white/8 text-white focus-visible:ring-0 focus-visible:border-brand-purple-dark/50"
                             style={{ background: bg.surface }}
                             {...field}
@@ -214,6 +217,7 @@ export function RegisterPage() {
                             type="password"
                             placeholder="••••••••"
                             autoComplete="new-password"
+                            {...guide('auth.register.password')}
                             className="border-white/8 text-white focus-visible:ring-0 focus-visible:border-brand-purple-dark/50"
                             style={{ background: bg.surface }}
                             {...field}
@@ -232,7 +236,11 @@ export function RegisterPage() {
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-start space-x-2 space-y-0 p-1">
                         <FormControl>
-                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            {...guide('auth.register.terms')}
+                          />
                         </FormControl>
                         <div className="grid gap-1.5 leading-none">
                           <FormLabel
@@ -270,6 +278,7 @@ export function RegisterPage() {
                 >
                   <button
                     type="submit"
+                    {...guide('auth.register.submit')}
                     disabled={form.formState.isSubmitting}
                     className="w-full h-8 flex items-center justify-center font-bold tracking-wide text-white transition-all"
                     style={{

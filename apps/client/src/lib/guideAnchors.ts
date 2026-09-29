@@ -16,6 +16,7 @@ export const GUIDE_ANCHORS = [
   'auth.register.username',
   'auth.register.email',
   'auth.register.password',
+  'auth.register.terms',
   'auth.register.submit',
   'auth.register.field-error',
   'auth.login.email',
