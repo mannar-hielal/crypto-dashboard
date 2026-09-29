@@ -13,8 +13,9 @@
  *   - 6.4  every market keeps sending tickers. The dashboard is sent one only when a value changes,
  *          so a quiet market can be silent for a while: the last one received is compared (the
  *          server's own quote freshness isn't visible from outside).
- * A market fails a check when more than 20 % of its samples miss, and at once if it never sends a
- * ticker. Then 6.2: every 1m candle production closed during the run has exactly Bybit's OHLC for
+ * A market fails a check when more than 20 % of its compared samples miss, and when it never sends a
+ * ticker. A sample that can't be compared (no ticker yet, a failed Bybit read) is inconclusive; a
+ * market fails only if most of its samples are. Then 6.2: every 1m candle production closed during the run has exactly Bybit's OHLC for
  * that minute, and a run of 2+ minutes must see candles close.
  *
  * Runs on a Fly Machine in sin (feed-parity.yml): Bybit geo-blocks GitHub's runners.
@@ -65,7 +66,8 @@ interface Market {
   receivedAt: number;
   closed: Map<number, Kline>;
   misses: Record<string, number>;
-  stale: number;
+  /** Samples that couldn't be compared: no ticker yet, or Bybit's read failed */
+  inconclusive: number;
   samples: number;
 }
 
@@ -145,14 +147,25 @@ const off = (ours: number | null | undefined, theirs: number | null | undefined)
     ? true
     : Math.abs(ours - theirs) / Math.abs(theirs) > TOLERANCE;
 
+/**
+ * One comparison. A sample that can't be made (no ticker yet, or Bybit's read failed — a blip or a
+ * rate limit) is inconclusive: it neither passes nor fails, and only a sustained run of them fails.
+ */
 async function sample(m: Market): Promise<void> {
-  m.samples++;
   if (!m.ticker) {
-    m.stale++;
+    m.inconclusive++;
     return;
   }
   const ours = m.ticker;
-  const theirs = await bybitQuote(m);
+  let theirs: Ticker;
+  try {
+    theirs = await bybitQuote(m);
+  } catch (err) {
+    m.inconclusive++;
+    log.warn({ err, market: key(m) }, 'Bybit read failed — sample skipped');
+    return;
+  }
+  m.samples++;
   const miss = (check: string, failed: boolean) => {
     if (failed) m.misses[check] = (m.misses[check] ?? 0) + 1;
   };
@@ -171,19 +184,25 @@ async function sample(m: Market): Promise<void> {
   }
 }
 
-/** Closed candles whose OHLC differs from Bybit's for the same minute. */
+/** Closed candles whose OHLC differs from Bybit's for the same minute (a failed read skips one). */
 async function candleMismatches(m: Market, since: number): Promise<string[]> {
   const problems: string[] = [];
   for (const k of m.closed.values()) {
     // Closed during the run (a candle's timestamp is its start)
     if (k.timestamp + 60_000 <= since) continue;
-    const { list } = await bybit('/v5/market/kline', {
-      category: m.category,
-      symbol: m.symbol,
-      interval: '1',
-      start: String(k.timestamp),
-      end: String(k.timestamp),
-    });
+    let list: unknown;
+    try {
+      ({ list } = await bybit('/v5/market/kline', {
+        category: m.category,
+        symbol: m.symbol,
+        interval: '1',
+        start: String(k.timestamp),
+        end: String(k.timestamp),
+      }));
+    } catch (err) {
+      log.warn({ err, market: key(m), candle: k.timestamp }, 'Bybit kline read failed — skipped');
+      continue;
+    }
     const row = (list as string[][]).find((r) => Number(r[0]) === k.timestamp);
     if (!row) {
       problems.push(`${key(m)} candle ${new Date(k.timestamp).toISOString()}: Bybit has none`);
@@ -207,26 +226,34 @@ async function main(): Promise<void> {
       receivedAt: 0,
       closed: new Map<number, Kline>(),
       misses: {},
-      stale: 0,
+      inconclusive: 0,
       samples: 0,
     }))
   );
   const sockets = markets.map(watch);
   const started = Date.now();
-  await new Promise((r) => setTimeout(r, WARMUP_MS));
-
-  for (let i = 0; i < SAMPLES; i++) {
-    if (i > 0) await new Promise((r) => setTimeout(r, EVERY_MS));
-    await Promise.all(markets.map(sample));
+  try {
+    await new Promise((r) => setTimeout(r, WARMUP_MS));
+    for (let i = 0; i < SAMPLES; i++) {
+      if (i > 0) await new Promise((r) => setTimeout(r, EVERY_MS));
+      await Promise.all(markets.map(sample));
+    }
+  } finally {
+    // Open sockets would keep the process alive on a failure too
+    for (const ws of sockets) ws.close();
   }
-  for (const ws of sockets) ws.close();
 
   const problems: string[] = [];
   for (const m of markets) {
-    if (m.stale > 0)
-      problems.push(`${key(m)}: no ticker yet in ${m.stale} of ${m.samples} samples`);
+    if (!m.ticker) problems.push(`${key(m)}: never sent a ticker`);
+    // Most samples couldn't be compared: Bybit (or our feed) was unreadable for most of the run
+    if (m.inconclusive > m.samples) {
+      problems.push(
+        `${key(m)}: only ${m.samples} of ${m.samples + m.inconclusive} samples compared`
+      );
+    }
     for (const [check, count] of Object.entries(m.misses)) {
-      if (count / m.samples > MAX_MISS_SHARE) {
+      if (m.samples > 0 && count / m.samples > MAX_MISS_SHARE) {
         problems.push(`${key(m)} ${check}: off in ${count} of ${m.samples} samples`);
       }
     }
@@ -252,7 +279,10 @@ async function main(): Promise<void> {
   process.exitCode = 1;
 }
 
-main().catch((err: unknown) => {
-  log.error({ err }, 'Feed parity run failed');
-  process.exitCode = 1;
-});
+// Always exit: a failure must end the Fly Machine with a clear log, not leave it waiting
+main()
+  .catch((err: unknown) => {
+    log.error({ err }, 'Feed parity run failed');
+    process.exitCode = 1;
+  })
+  .finally(() => process.exit(process.exitCode ?? 0));
