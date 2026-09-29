@@ -72,6 +72,7 @@ export const GUIDE_ANCHORS = [
   'chart.mark-line',
   // pane
   'pane',
+  'pane.header',
   'pane.header.symbol',
   'pane.header.symbol-option',
   'pane.header.interval-picker',
