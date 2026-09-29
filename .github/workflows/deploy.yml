@@ -58,19 +58,19 @@ jobs:
           echo "Release PR head $head: E2E full set green"
 
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v7
         with:
           # Pin to the exact commit CI validated — prevents deploying a different
           # commit if new pushes land on main between CI finishing and deploy starting
           ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4.1.0
+        uses: pnpm/action-setup@v6.1.0
         with:
           version: 10.33.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4.4.0
+        uses: actions/setup-node@v7.0.0
         with:
           node-version-file: '.node-version'
           cache: 'pnpm'
@@ -83,7 +83,7 @@ jobs:
 
       # ── Server ────────────────────────────────────────────────────────────────
       - name: Setup Fly CLI
-        uses: superfly/flyctl-actions/setup-flyctl@1.5
+        uses: superfly/flyctl-actions/setup-flyctl@1.6
 
       - name: Deploy server to Fly.io
         # --ha=false — Phase 1 is single-machine; no need for a second HA machine.

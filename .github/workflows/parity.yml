@@ -38,10 +38,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v7
 
       - name: Setup flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@1.5
+        uses: superfly/flyctl-actions/setup-flyctl@1.6
 
       - name: Stage the testnet keys as Fly secrets
         env:
@@ -134,7 +134,7 @@ jobs:
 
       - name: Upload the parity log
         if: always()
-        uses: actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: parity-log-${{ github.run_id }}-${{ github.run_attempt }}
           path: parity.log
