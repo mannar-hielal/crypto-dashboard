@@ -9,7 +9,7 @@ import { guideSelector } from '@/lib/guideAnchors';
 const at = (anchor: Parameters<typeof guideSelector>[0], key?: string) =>
   guideSelector(anchor, key);
 
-test('[19.2][19.4] register, verify the email once, then sign out and back in @smoke', async ({
+test('[19.2][19.4] register, verify the email once, then sign out and back in @smoke @mobile', async ({
   page,
   hooks,
 }) => {
@@ -57,4 +57,23 @@ test('[19.2][19.4] register, verify the email once, then sign out and back in @s
   await expect(page).not.toHaveURL(/\/dashboard/);
 
   expect(serverErrors).toEqual([]);
+});
+
+test('[19.1] a too-short username shows its field error and the form stays usable @full', async ({
+  page,
+}) => {
+  const pageErrors: string[] = [];
+  page.on('pageerror', (e) => pageErrors.push(e.message));
+  await page.goto('/register');
+  await page.locator(at('auth.register.email')).fill(`e2e-short-${Date.now()}@test.local`);
+  await page.locator(at('auth.register.username')).fill('ab');
+  await page.locator(at('auth.register.password')).fill('Short!name1');
+  await page.locator(at('auth.register.terms')).click();
+  await page.locator(at('auth.register.submit')).click();
+
+  await expect(page.getByText('At least 3 characters')).toBeVisible();
+  // Not stuck on "Creating account…", and no uncaught ZodError
+  await expect(page.locator(at('auth.register.submit'))).toBeEnabled();
+  await expect(page).toHaveURL(/\/register/);
+  expect(pageErrors.filter((e) => /ZodError/.test(e))).toEqual([]);
 });

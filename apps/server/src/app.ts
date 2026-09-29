@@ -132,8 +132,10 @@ export async function buildApp() {
       preload: true, // eligible for browser preload lists
     },
   });
-  // Skip rate limiting in test — prevents flaky tests caused by per-IP counters
-  if (config.nodeEnv !== 'test') {
+  // Skip rate limiting in test — prevents flaky tests caused by per-IP counters — and with the
+  // e2e test hooks on, where one browser run makes every request from one IP. 🔐 config.ts refuses
+  // ENABLE_TEST_HOOKS in production, so production always rate-limits.
+  if (config.nodeEnv !== 'test' && !config.testHooks) {
     await app.register(rateLimit, {
       max: 100,
       timeWindow: '1 minute',

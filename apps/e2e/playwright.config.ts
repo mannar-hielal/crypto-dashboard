@@ -24,11 +24,19 @@ export default defineConfig({
     video: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
+  // PRs run `chromium` with @smoke; the nightly runs every project (e2e-nightly.yml)
   projects: [
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
     },
+    {
+      name: 'webkit',
+      grep: /@smoke|@full/,
+      use: { ...devices['Desktop Safari'], viewport: { width: 1440, height: 900 } },
+    },
+    { name: 'mobile-safari', grep: /@mobile/, use: { ...devices['iPhone 14'] } },
+    { name: 'mobile-chrome', grep: /@mobile/, use: { ...devices['Pixel 7'] } },
   ],
   webServer: [
     {

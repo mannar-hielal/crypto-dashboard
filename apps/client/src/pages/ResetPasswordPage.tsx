@@ -1,3 +1,4 @@
+import { guide } from '@/lib/guideAnchors';
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useForm } from 'react-hook-form';
@@ -206,6 +207,7 @@ export function ResetPasswordPage() {
                                 type="password"
                                 placeholder="••••••••"
                                 autoComplete="new-password"
+                                {...guide('auth.reset.password', 'new')}
                                 className="border-white/8 text-white focus-visible:ring-0 focus-visible:border-brand-purple-dark/50"
                                 style={{ background: bg.surface }}
                                 {...field}
@@ -234,6 +236,7 @@ export function ResetPasswordPage() {
                                 type="password"
                                 placeholder="••••••••"
                                 autoComplete="new-password"
+                                {...guide('auth.reset.password', 'confirm')}
                                 className="border-white/8 text-white focus-visible:ring-0 focus-visible:border-brand-purple-dark/50"
                                 style={{ background: bg.surface }}
                                 {...field}
@@ -248,6 +251,7 @@ export function ResetPasswordPage() {
                     <motion.div variants={formFieldVariants}>
                       <Button
                         type="submit"
+                        {...guide('auth.reset.submit')}
                         className="w-full font-bold tracking-wide text-white"
                         style={{
                           background: form.formState.isSubmitting

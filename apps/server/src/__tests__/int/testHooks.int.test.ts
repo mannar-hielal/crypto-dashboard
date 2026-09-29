@@ -124,6 +124,25 @@ describe('test hooks on Postgres', () => {
     expect(await db.symbolSetting.count({ where: { accountId: account.id } })).toBe(0);
   });
 
+  it('records a pending deletion and signs the user out, as production does', async () => {
+    const user = await seed();
+    const login = await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { email: user.email, password: user.password },
+    });
+    expect(login.statusCode).toBe(200);
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/test/users/${user.userId}/request-deletion`,
+      headers,
+    });
+    expect(res.statusCode).toBe(200);
+    const row = await db.user.findUniqueOrThrow({ where: { id: user.userId } });
+    expect(row.deletionRequestedAt).not.toBeNull();
+    expect(await db.refreshToken.count({ where: { userId: user.userId } })).toBe(0);
+  });
+
   it('resets a user’s account without a session', async () => {
     const user = await seed({ leverage: { BTCUSDT: 5 } });
     const before = await db.account.findUniqueOrThrow({ where: { userId: user.userId } });
