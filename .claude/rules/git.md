@@ -78,9 +78,11 @@ checked out.
   a release.
 - `e2e-nightly.yml` ("E2E full set") runs every Playwright project nightly (02:30 UTC, on `develop`)
   and on every push to the `develop → main` release PR: that is the pre-release run. A release PR merges
-  only with it green. GitHub doesn't enforce this, because there is no branch protection or
-  ruleset. The merge process does: every check on the PR's head must be green, not just CI (the
-  merge watcher, `pr-review-comments`). `prod-smoke.yml`
+  only with it green, and `deploy.yml` enforces it. Its first step finds the merged release
+  PR for the commit, and refuses to deploy unless "E2E full set (Playwright)" is green on that PR's
+  head. It fails closed: to recover, re-run the check on the PR, then re-run the deploy. There is no
+  branch protection, so the merge itself waits on the merge process instead: every check on the
+  PR's head must be green, not just CI. `prod-smoke.yml`
   runs every 6 hours. `deploy.yml` also runs the prod smoke after every deploy.
 
 ## Actions budget — 2,000 minutes a month

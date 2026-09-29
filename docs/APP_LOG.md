@@ -3297,7 +3297,8 @@ CI 789, `claude.yml` 157, Deploy 80. Without changes, a normal month with the ne
   - Docs-only changes (`docs/**`, `**/*.md`) skip CI, so a docs-only release doesn't deploy.
 - **E2E full set** (`e2e-nightly.yml`):
   - nightly on `develop`, plus every push to the `develop → main` release PR (the pre-release run; review #192);
-  - a release merges only with it green.
+  - a release merges only with it green, and `deploy.yml`'s first step refuses to deploy unless that check is
+    green on the merged release PR's head (fails closed; review #192).
 - **Prod smoke:** every 6 hours (was hourly), and after every deploy. Between runs, a free external monitor
   (UptimeRobot, set up by the owner) checks `/api/health` every 5 minutes.
 - **Parity:** feed parity nightly and testnet parity daily (unchanged).

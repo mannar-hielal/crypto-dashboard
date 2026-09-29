@@ -117,5 +117,5 @@ jobs:
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --body "$body"
           else
-            gh issue create --title "E2E nightly failing" --label e2e --body "$body"
+            gh issue create --title "E2E full set failing" --label e2e --body "$body"
           fi
