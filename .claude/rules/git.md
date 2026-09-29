@@ -64,19 +64,23 @@ checked out.
   `pnpm audit` → type-check (server) → `format:check` → `lint` → `test:coverage` (the suites plus
   the coverage floors) + `test:hooks` → `test:int` on Postgres → build → the Playwright smoke. It is
   **one job** ("CI (checks, integration, e2e smoke)"), so it pays for one checkout, one install and one
-  Postgres per run. Every step after the first failure still runs (`!cancelled()`), so a run reports
-  all its failures at once. The checks mirror the local pre-commit hook (see
+  Postgres per run. Every check runs even after another one failed (`!cancelled()`; only a
+  failed install stops the rest), so a run reports all its failures at once. The checks mirror the local pre-commit hook (see
   [`testing.md`](./testing.md#gates--what-passing-means-before-a-commitpr)), so a change that passes
   locally should pass them too. `test:int` (migrations from empty, schema drift, repository
   round-trip) needs a database, so it runs in CI only (locally: `test:int` against a throwaway
-  Postgres). **Docs-only changes** (`docs/**`, `**/*.md`) don't run CI (`paths-ignore`), so a
-  docs-only release doesn't deploy; `.claude/hooks/**` is code and always runs. The job must be green before merge — every
+  Postgres). **Docs-only changes** (`docs/**`, `**/*.md`) don't run CI, so a docs-only release
+  doesn't deploy. Two exceptions always run: `docs/TRADING_TEST_PLAN.md`, which a test reads (the
+  guide scenarios' case IDs), and `.claude/hooks/**`, which is code. A docs file that a test starts
+  reading must be added to the `paths` exceptions in `ci.yml`. The job must be green before merge — every
   feature/fix PR (targeting `develop`) and the later `develop → main` release merge go through the
   identical gate, and the deploy waits for the whole workflow, so a failing integration step blocks
   a release.
 - `e2e-nightly.yml` ("E2E full set") runs every Playwright project nightly (02:30 UTC, on `develop`)
   and on every push to the `develop → main` release PR: that is the pre-release run. A release PR merges
-  only with it green (the merge waits for every check on the PR's head, not just CI). `prod-smoke.yml`
+  only with it green. GitHub doesn't enforce this, because there is no branch protection or
+  ruleset. The merge process does: every check on the PR's head must be green, not just CI (the
+  merge watcher, `pr-review-comments`). `prod-smoke.yml`
   runs every 6 hours. `deploy.yml` also runs the prod smoke after every deploy.
 
 ## Actions budget — 2,000 minutes a month

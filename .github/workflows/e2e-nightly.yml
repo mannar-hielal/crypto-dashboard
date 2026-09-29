@@ -27,8 +27,12 @@ concurrency:
 jobs:
   e2e:
     name: E2E full set (Playwright)
-    # On a PR: only the develop → main release, not any other PR to main
-    if: ${{ github.event_name != 'pull_request' || github.head_ref == 'develop' }}
+    # On a PR: only the develop → main release from this repository — not any other PR to main, and
+    # not a fork's branch that happens to be called `develop` (it would spend ~45 minutes a push)
+    if: >-
+      ${{ github.event_name != 'pull_request' ||
+          (github.head_ref == 'develop' &&
+           github.event.pull_request.head.repo.full_name == github.repository) }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     services:

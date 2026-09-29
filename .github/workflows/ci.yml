@@ -1,18 +1,24 @@
 name: CI
 
 on:
+  # Docs-only changes don't run CI (a docs-only release to main then doesn't deploy either — nothing
+  # to ship). Exceptions: docs/TRADING_TEST_PLAN.md is read by a test (the guide scenarios' case IDs),
+  # and .claude/hooks/** is code (test:hooks) — both always run. `paths` with `!` rather than
+  # `paths-ignore`, which can't re-include a file; the last matching pattern wins.
   push:
     branches: [main, develop] # avoids duplicate runs — PRs already trigger the pull_request event
-    # Docs-only changes don't run CI (a docs-only release to main then doesn't deploy either — nothing
-    # to ship). .claude/hooks/** is code (test:hooks), so it is never skipped.
-    paths-ignore:
-      - 'docs/**'
-      - '**/*.md'
+    paths:
+      - '**'
+      - '!docs/**'
+      - '!**/*.md'
+      - 'docs/TRADING_TEST_PLAN.md'
   pull_request:
     branches: [main, develop]
-    paths-ignore:
-      - 'docs/**'
-      - '**/*.md'
+    paths:
+      - '**'
+      - '!docs/**'
+      - '!**/*.md'
+      - 'docs/TRADING_TEST_PLAN.md'
   workflow_call:
 
 concurrency:
@@ -22,8 +28,8 @@ concurrency:
 jobs:
   ci:
     # One job, not three: one checkout, install and Postgres per run, and one per-job minute rounding
-    # (Actions minutes, APP_LOG 2026-09-29). Every test step after the first failure still runs
-    # (`!cancelled()`), so a run reports all its failures at once.
+    # (Actions budget, git.md). Every check runs even after another one failed (only a failed
+    # install stops the rest), so a run reports all its failures at once.
     name: CI (checks, integration, e2e smoke)
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -61,26 +67,32 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml # single root lockfile — workspace covers all packages
 
       - name: Install dependencies
+        id: install
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres # dummy value — prisma generate only
         run: pnpm install --frozen-lockfile
 
       - name: Audit dependencies
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         # 🔐 Fails on high/critical CVEs — low/moderate advisories are warnings only.
         # Run `pnpm audit --fix` locally to auto-resolve where possible.
         run: pnpm run audit
 
       - name: Type-check (server)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm type-check
         working-directory: apps/server
 
       - name: Format check
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm format:check
 
       - name: Lint
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm lint # root flat config already covers apps/client/** — no separate client lint step needed
 
       - name: Test (with coverage thresholds)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         # test:coverage runs the same suites as `pnpm test` and fails below the floors in each
         # package's vitest.config.ts; the hook tests run separately
         run: pnpm test:coverage && pnpm test:hooks
@@ -88,18 +100,18 @@ jobs:
       - name: Integration tests (Postgres)
         # A real Postgres, migrated from empty: migration drift and the AccountRepository round-trip
         # (T2i, docs/TRADING_TEST_PLAN.md roadmap P1)
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         env:
           TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/crypto_dashboard_int
         run: pnpm --filter @crypto-dashboard/server test:int
 
       - name: Build (server)
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm build
         working-directory: apps/server
 
       - name: Build (client)
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm build
         working-directory: apps/client
 
@@ -107,15 +119,15 @@ jobs:
       # M4): sign-up + verify, a Spot market buy, a perp long opened and closed. The hooks' secret is
       # generated per run.
       - name: Type-check the e2e package
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm --filter @crypto-dashboard/e2e type-check
 
       - name: Install Chromium
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm --filter @crypto-dashboard/e2e exec playwright install --with-deps chromium
 
       - name: E2E smoke tests (Playwright)
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         timeout-minutes: 15
         env:
           CI: 'true'
