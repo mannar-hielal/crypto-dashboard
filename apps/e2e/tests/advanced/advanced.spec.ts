@@ -112,3 +112,27 @@ test('[11.1][11.2][11.8] two symbols, two positions; closing ADA from the BTC pa
   await expect(at(page, 'closed-pnl.row')).toHaveCount(1);
   await expect(at(page, 'closed-pnl.row').first()).toContainText('ADAUSDT');
 });
+
+test('[17.4.1] a reduce-only half close books its own Closed P&L row: 50 − 1.375 − 1.4025 = +47.2225 @full', async ({
+  page,
+  seededUser,
+  feed,
+}) => {
+  await openWorkedLong(page, feed, seededUser.email, seededUser.password);
+  await feed.quote('linear', SYMBOL, { bid: 0.51, ask: 0.5101, last: 0.51, mark: 0.51 });
+  await expect(at(page, 'trade.side.sell')).toContainText('0.51');
+
+  // Sell 5,000 of the 10,000, reduce-only, at the bid 0.51
+  await at(page, 'trade.side.sell').click();
+  await at(page, 'trade.type.market').click();
+  await at(page, 'trade.amount-unit', 'coin').click();
+  await at(page, 'trade.amount').fill('5000');
+  await at(page, 'trade.reduce-only').check();
+  await at(page, 'trade.submit').click();
+  await expect(at(page, 'trade.amount')).toHaveValue('');
+
+  await expect(at(page, 'positions.row', ROW)).toContainText('5000');
+  await at(page, 'account.tab', 'closedpnl').click();
+  await expect(at(page, 'closed-pnl.row')).toHaveCount(1);
+  await expect(at(page, 'closed-pnl.value').first()).toHaveText('+47.2225 USDT');
+});

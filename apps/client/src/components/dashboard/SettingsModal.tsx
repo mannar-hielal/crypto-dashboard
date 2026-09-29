@@ -332,6 +332,8 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                 </p>
               </div>
               <button
+                type="button"
+                aria-label="Close settings"
                 onClick={onClose}
                 {...guide('settings.close')}
                 className="rounded-full p-2 text-white/40 hover:bg-white/5 hover:text-white transition-all"

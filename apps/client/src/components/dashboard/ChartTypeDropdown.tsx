@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { CandlestickChart, ChevronDown } from 'lucide-react';
 import { CHART_TYPES, useLayoutStore, type ChartType } from '@/store/layoutStore';
 import { color, fontSize, bg } from '@/lib/tokens';
+import { guide } from '@/lib/guideAnchors';
 // Same trigger/menu styling as the interval dropdown it sits next to.
 import styles from './IntervalDropdown.module.css';
 
@@ -58,6 +59,7 @@ export function ChartTypeDropdown({ value, onChange }: ChartTypeDropdownProps) {
       <button
         ref={triggerRef}
         type="button"
+        {...guide('chart.type-menu')}
         onClick={handleToggle}
         className={styles.trigger}
         aria-label={`Chart type: ${CHART_TYPE_LABELS[value]}`}
@@ -112,6 +114,7 @@ export function ChartTypeDropdown({ value, onChange }: ChartTypeDropdownProps) {
                     type="button"
                     role="menuitemcheckbox"
                     aria-checked={showMark}
+                    {...guide('chart.mark-line')}
                     className={styles.item}
                     style={{
                       color: showMark ? color.purple : color.muted,

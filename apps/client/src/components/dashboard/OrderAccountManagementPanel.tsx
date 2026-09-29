@@ -861,6 +861,7 @@ export function OrderAccountManagementPanel({
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             title={isMaximized ? 'Restore panel' : 'Maximize panel'}
+            {...guide('account.maximize')}
             className="flex h-6 w-6 items-center justify-center rounded hover:text-white"
             style={{ color: color.muted }}
           >

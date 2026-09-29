@@ -96,7 +96,11 @@ jobs:
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         # test:coverage runs the same suites as `pnpm test` and fails below the floors in each
         # package's vitest.config.ts; the hook tests run separately
-        run: pnpm test:coverage && pnpm test:hooks
+        run: pnpm test:coverage && pnpm test:hooks && pnpm test:scripts
+
+      - name: Case-ID coverage (tags cite real rows; no ⬜ row that has a test)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm case-coverage --strict
 
       - name: Integration tests (Postgres)
         # A real Postgres, migrated from empty: migration drift and the AccountRepository round-trip

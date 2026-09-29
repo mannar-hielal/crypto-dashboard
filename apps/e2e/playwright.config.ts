@@ -5,7 +5,7 @@
  */
 
 import { defineConfig, devices } from '@playwright/test';
-import { API_PORT, API_URL, DATABASE_URL, FEED_PORT, HOOKS_SECRET, WEB_PORT, WEB_URL } from './env';
+import { API_PORT, API_URL, DATABASE_URL, FEED_PORT, WEB_PORT, WEB_URL, apiEnv } from './env';
 
 const CI = !!process.env.CI;
 
@@ -28,6 +28,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
+      grepInvert: /@resilience|@visual/,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
     },
     // One project at a time: the fake feed's prices are global per market, and each spec owns its
@@ -50,6 +51,27 @@ export default defineConfig({
       grep: /@mobile/,
       use: { ...devices['Pixel 7'] },
     },
+    // A second API server of its own, crashed and restarted (restartableServer.ts): last, alone
+    {
+      name: 'resilience',
+      dependencies: ['mobile-chrome'],
+      grep: /@resilience/,
+    },
+    // Visual baselines (F10), local only: screenshots differ between macOS and CI's Linux (fonts,
+    // anti-aliasing), and a baseline changes only through the visual Q&A gate — a human compares
+    // them. `pnpm --filter @crypto-dashboard/e2e test:visual`. Last and alone: it sets fixed prices
+    ...(CI
+      ? []
+      : [
+          {
+            name: 'visual',
+            dependencies: ['resilience'],
+            grep: /@visual/,
+            // Tall enough that the order form needs no scrolling (an element shot scrolls it into
+            // view and catches the fixed top bar)
+            use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 1400 } },
+          },
+        ]),
   ],
   webServer: [
     {
@@ -66,27 +88,7 @@ export default defineConfig({
       url: `${API_URL}/health`,
       reuseExistingServer: !CI,
       timeout: 180_000,
-      env: {
-        NODE_ENV: 'development',
-        PORT: String(API_PORT),
-        DATABASE_URL,
-        REDIS_URL: 'redis://localhost:6379',
-        BYBIT_API_KEY: 'e2e-unused',
-        BYBIT_API_SECRET: 'e2e-unused',
-        BYBIT_TESTNET: 'false',
-        JWT_SECRET: 'e2e-only-jwt-secret-of-at-least-32-bytes',
-        ADMIN_EMAIL: 'admin@test.local',
-        CLIENT_URL: WEB_URL,
-        CORS_ORIGIN: WEB_URL,
-        LOG_LEVEL: 'warn',
-        BYBIT_REST_URL: `http://127.0.0.1:${FEED_PORT}`,
-        BYBIT_WS_URL: `ws://127.0.0.1:${FEED_PORT}`,
-        // 🔐 Set (empty) so dotenv can't load a developer's real key from apps/server/.env; the
-        // server also refuses to mail anyone with the test hooks on (EmailService)
-        RESEND_API_KEY: '',
-        ENABLE_TEST_HOOKS: '1',
-        TEST_HOOKS_SECRET: HOOKS_SECRET,
-      },
+      env: apiEnv(API_PORT, DATABASE_URL),
     },
     {
       name: 'web',
@@ -94,7 +96,8 @@ export default defineConfig({
       url: WEB_URL,
       reuseExistingServer: !CI,
       timeout: 120_000,
-      env: { VITE_API_URL: API_URL },
+      // VITE_E2E: the read-only chart probe (apps/client/src/lib/e2eProbe.ts)
+      env: { VITE_API_URL: API_URL, VITE_E2E: '1' },
     },
   ],
 });

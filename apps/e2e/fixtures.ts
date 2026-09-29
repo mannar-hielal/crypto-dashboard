@@ -54,9 +54,13 @@ const hooksFetch = (path: string, init: RequestInit = {}) =>
 const COOKIE_NOTICE_KEY = 'cd-cookie-notice-dismissed';
 
 export const test = base.extend<{ seededUser: SeededUser; feed: Feed; hooks: Hooks }>({
-  page: async ({ page }, use) => {
-    await page.addInitScript((key) => window.localStorage.setItem(key, 'true'), COOKIE_NOTICE_KEY);
-    await use(page);
+  // On the context, so every page of it — `page` and any `context.newPage()` — starts without it
+  context: async ({ context }, use) => {
+    await context.addInitScript(
+      (key) => window.localStorage.setItem(key, 'true'),
+      COOKIE_NOTICE_KEY
+    );
+    await use(context);
   },
   seededUser: async ({}, use) => {
     const res = await hooksFetch('/users', { method: 'POST', body: '{}' });
