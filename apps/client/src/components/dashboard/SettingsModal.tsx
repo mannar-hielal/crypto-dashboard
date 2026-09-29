@@ -730,7 +730,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                         onChange={(e) => setDeletePassword(e.target.value)}
                         {...guide('settings.delete.password')}
                         className="h-10 border-red-500/20 text-white focus-visible:ring-0 focus-visible:border-red-500/50"
-                        style={{ background: 'rgba(213, 69, 92, 0.05)' }}
+                        style={{ background: 'rgba(255, 107, 124, 0.05)' }}
                         placeholder="Current password"
                       />
                       {deleteError && (

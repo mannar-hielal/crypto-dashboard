@@ -96,19 +96,19 @@
 }
 
 .destructive {
-  background: rgba(213, 69, 92, 0.1);
+  background: rgba(255, 107, 124, 0.1);
   color: var(--color-brand-red);
 }
 .destructive:hover {
-  background: rgba(213, 69, 92, 0.2);
+  background: rgba(255, 107, 124, 0.2);
 }
 
 .danger {
-  background: rgba(213, 69, 92, 0.1);
+  background: rgba(255, 107, 124, 0.1);
   color: var(--color-brand-red);
 }
 .danger:hover {
-  background: rgba(213, 69, 92, 0.2);
+  background: rgba(255, 107, 124, 0.2);
 }
 
 .link {

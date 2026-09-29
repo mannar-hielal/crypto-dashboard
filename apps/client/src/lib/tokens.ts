@@ -64,7 +64,7 @@ export const chart = {
 
   // Candlestick series
   candleUp: '#2ccd78', // bullish / green candle
-  candleDown: '#d5455c', // bearish / red   candle
+  candleDown: '#d5455c', // bearish / red candle — a graphic, 4.7:1 on the chart (the 3:1 rule), kept
 
   // Canvas text colour for axis labels / crosshair values
   textColor: '#d1d4dc',
