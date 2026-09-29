@@ -1,0 +1,8 @@
+{
+  // The SDK ↔ server contract test's fixtures are typed as the SDK types (F9): type-check them
+  // too. The main tsconfig leaves test files out.
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noEmit": true },
+  "include": ["src/__tests__/contract/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

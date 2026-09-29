@@ -93,14 +93,14 @@ Pre-commit hook (`.husky/pre-commit`), in order: `audit` → `type-check` (serve
 A change is not ready to push until all of these are green locally — don't rely on CI to catch a
 gate that `pnpm test`/`pnpm lint`/`pnpm type-check` would have caught first.
 
-| Command                                             | What it verifies                                       |
-| --------------------------------------------------- | ------------------------------------------------------ |
-| `pnpm run audit`                                    | No high/critical CVEs in dependencies                  |
-| `pnpm --filter @crypto-dashboard/server type-check` | Server TS compiles clean                               |
-| `pnpm --filter @crypto-dashboard/client type-check` | Client TS compiles clean (`tsconfig.app.json`)         |
-| `pnpm test:coverage`                                | The Vitest suites, no skips, above the coverage floors |
-| `pnpm format:check`                                 | Prettier formatting is consistent                      |
-| `pnpm lint`                                         | ESLint (flat config), zero errors across all packages  |
+| Command                                             | What it verifies                                               |
+| --------------------------------------------------- | -------------------------------------------------------------- |
+| `pnpm run audit`                                    | No high/critical CVEs in dependencies                          |
+| `pnpm --filter @crypto-dashboard/server type-check` | Server TS compiles clean, plus the SDK-typed contract fixtures |
+| `pnpm --filter @crypto-dashboard/client type-check` | Client TS compiles clean (`tsconfig.app.json`)                 |
+| `pnpm test:coverage`                                | The Vitest suites, no skips, above the coverage floors         |
+| `pnpm format:check`                                 | Prettier formatting is consistent                              |
+| `pnpm lint`                                         | ESLint (flat config), zero errors across all packages          |
 
 ## Cross-references
 

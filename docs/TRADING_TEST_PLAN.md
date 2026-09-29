@@ -90,9 +90,10 @@ browser test); T3 covers wiring and user journeys, not maths; M is for what's le
   - `AccountRepository` load / save round-trips every field (today only covered by a mocked Prisma);
   - route tests for `/paper/**` and `/auth/**` with real transactions, incl. the concurrent-write paths
     (`Account.version`, `deleteMany` token races).
-- **Contract test SDK ↔ server:** the Fastify route schemas are the contract. Generate the OpenAPI document in a test
-  (`app.swagger()`) and check each SDK function's request / response type against it, so a server shape change can't
-  land without the SDK change (`web.md` rule, today enforced only by review).
+- **Contract test SDK ↔ server** ✅ (`src/__tests__/contract/sdkContract.test.ts`, P1d): the Fastify route schemas
+  are the contract. The test calls every SDK function with `fetch` stubbed and checks the request (method, path, query,
+  body) and the SDK-typed response fixture against the OpenAPI document (`app.swagger()`), so a server shape change
+  can't land without the SDK change (`web.md` rule). The fixtures are type-checked (`tsconfig.contract.json`).
 
 ### Market data and Bybit parity (T3, T4)
 
@@ -329,7 +330,8 @@ _P1 — persistence (6)_
 - [x] Coverage thresholds in both `vitest.config.ts` and `test:coverage` in CI — (P1a). Floors at today's numbers:
       server 82% lines, engine 97% lines / 85% branches, client 46% lines; raised as tests land (client 48% lines
       after the M1 account-panel tests)
-- [ ] SDK ↔ server contract test against the generated OpenAPI document (A4; A8 names no step) — T2i
+- [x] SDK ↔ server contract test against the generated OpenAPI document (A4; A8 names no step) — T1 (P1d:
+      `sdkContract.test`, 43 cases; it found 19.13, 19.14 and the SDK register type)
 
 _P2 — replay feed and browser tests (7)_
 
@@ -392,15 +394,15 @@ checks that only testers need. The sections keep their original numbers, and eve
 `14.6.1`, `17.6.4` …), because test names, code comments and `docs/APP_LOG.md` cite them. A section that mixed levels
 is split across stages. Its heading repeats with a _(part: …)_ note, and its intro is repeated with each part.
 
-| Stage                            | Sections / subsections, in order                           | Purpose                                                                          |
-| -------------------------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| **0 — Getting in**               | 19 (19.1–19.8) · 8 · 14.1 · 10.1, 10.2, 10.3, 10.5 · 5 · 9 | Sign up and in, settings, pick a market, arrange charts, read Sell / Buy, spread |
-| **1 — Spot basics**              | 14.6                                                       | First trades: Spot market, limit and TP / SL orders, fees in the coin, Assets    |
-| **2 — Reading your account**     | 4 (4.1–4.16, 4.21–4.23) · 7                                | Orders / Order History / History tabs, journal, panel controls, sounds           |
-| **3 — USDT Perpetual basics**    | 1 · 2 · 3 · 4 (4.17–4.18) · 14.5, 14.2, 14.3, 14.4 · 15.2  | Long / short, market, limit and stop orders, TP / SL, leverage, fees, fills      |
-| **4 — Risk management**          | 15.1, 15.3, 15.4, 15.5, 15.6 · 17.1, 17.2, 17.3, 17.4      | Mark price, liquidation, margin, risk tiers, trigger source, reduce-only, P&L    |
-| **5 — Advanced**                 | 16 · 17.5 · 11 · 10.4 · 4 (4.19–4.20)                      | Funding, cross margin, several symbols and synced panes                          |
-| **6 — Under the hood (testers)** | 12 · 13 · 14.7 · 6 · 17.6 · 18 · 19 (19.9–19.12)           | Feed per category, 24/7 engine, migrations, Bybit parity, regression suite       |
+| Stage                            | Sections / subsections, in order                                         | Purpose                                                                          |
+| -------------------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| **0 — Getting in**               | 19 (19.1–19.8, 19.13, 19.14) · 8 · 14.1 · 10.1, 10.2, 10.3, 10.5 · 5 · 9 | Sign up and in, settings, pick a market, arrange charts, read Sell / Buy, spread |
+| **1 — Spot basics**              | 14.6                                                                     | First trades: Spot market, limit and TP / SL orders, fees in the coin, Assets    |
+| **2 — Reading your account**     | 4 (4.1–4.16, 4.21–4.23) · 7                                              | Orders / Order History / History tabs, journal, panel controls, sounds           |
+| **3 — USDT Perpetual basics**    | 1 · 2 · 3 · 4 (4.17–4.18) · 14.5, 14.2, 14.3, 14.4 · 15.2                | Long / short, market, limit and stop orders, TP / SL, leverage, fees, fills      |
+| **4 — Risk management**          | 15.1, 15.3, 15.4, 15.5, 15.6 · 17.1, 17.2, 17.3, 17.4                    | Mark price, liquidation, margin, risk tiers, trigger source, reduce-only, P&L    |
+| **5 — Advanced**                 | 16 · 17.5 · 11 · 10.4 · 4 (4.19–4.20)                                    | Funding, cross margin, several symbols and synced panes                          |
+| **6 — Under the hood (testers)** | 12 · 13 · 14.7 · 6 · 17.6 · 18 · 19 (19.9–19.12)                         | Feed per category, 24/7 engine, migrations, Bybit parity, regression suite       |
 
 **Where did Section N go?**
 
@@ -424,7 +426,7 @@ is split across stages. Its heading repeats with a _(part: …)_ note, and its i
 | 16 — Funding (BP-4)                               | Stage 5                                                                   |
 | 17 — Cross margin, risk tiers, refinements (BP-5) | Stage 4 (17.1–17.4) · Stage 5 (17.5) · Stage 6 (17.6)                     |
 | 18 — Cross-phase regression suite                 | Stage 6                                                                   |
-| 19 — Account flows                                | Stage 0 (19.1–19.8) · Stage 6 (19.9–19.12)                                |
+| 19 — Account flows                                | Stage 0 (19.1–19.8, 19.13, 19.14) · Stage 6 (19.9–19.12)                  |
 
 ---
 
@@ -484,22 +486,24 @@ Create an account, find your way around the dashboard and read a live price befo
 After this stage the learner can sign up, verify and sign in, change their settings, pick a market and a
 symbol, arrange the charts, and tell the Sell (best bid) and Buy (best ask) prices and the spread apart.
 
-### Section 19 — Account flows (auth and settings) _(rows 19.1–19.8; 19.9–19.12 are in Stage 6)_
+### Section 19 — Account flows (auth and settings) _(rows 19.1–19.8, 19.13, 19.14; 19.9–19.12 are in Stage 6)_
 
 > Verified end to end in a real browser and in production on 2026-09-27 (releases #148, #150, #155). The first
 > candidates for the T3 smoke set (P2). A wrong password on sign-in, change email / password or delete account logs
 > one 401 in the browser console — deliberate (a failed login is never answered with a 2xx).
 
-| #    | Flow                                     | Expected                                                                                                  | Status | Tier         | Test / notes                                           |
-| ---- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------ | ------------ | ------------------------------------------------------ |
-| 19.1 | Register with an invalid username (`ab`) | Inline field error; no uncaught ZodError; button doesn't stick on "Creating account…"                     | ✅     | T2 + T3 (P2) | `authFormValidation.test`; live ✓.                     |
-| 19.2 | Register, then verify the email          | Link works once; a second click / tab gets 400, not 500                                                   | ✅     | T1 + T3 (P2) | `auth.test` verify-email; live ✓.                      |
-| 19.3 | Signed-out page load                     | `/api/auth/refresh` answers 204, no console error                                                         | ✅     | T1 + T5 (P5) | `auth.test` refresh; prod ✓.                           |
-| 19.4 | Sign in / sign out / reload              | Session restored on reload; sign-out works even with the network down                                     | ✅     | T1 + T3 (P2) | `auth.test` login / logout; `LoginPage.returnTo.test`. |
-| 19.5 | Forgot / reset password                  | Same answer whether or not the email exists; reset revokes every session and clears this browser's cookie | ✅     | T1 + T3 (P2) | `auth.test` forgot-password / reset-password.          |
-| 19.6 | Settings → change email                  | One verification link, used atomically; one security-alert email                                          | ✅     | T1 + T2      | `auth.test` lifecycle; `VerifyEmailChangePage.test`.   |
-| 19.7 | Settings → change username / password    | Saved; a password change ends the other sessions                                                          | ✅     | T1 + T3 (P2) | `auth.test` lifecycle.                                 |
-| 19.8 | Settings → export / delete account       | JSON export downloads; cancel works; "Delete Account Now" removes the user and its paper account          | ✅     | T1 + T3 (P2) | `auth.test` deletion; live ✓.                          |
+| #     | Flow                                                | Expected                                                                                                                                                                      | Status | Tier         | Test / notes                                                                                                            |
+| ----- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| 19.1  | Register with an invalid username (`ab`)            | Inline field error; no uncaught ZodError; button doesn't stick on "Creating account…"                                                                                         | ✅     | T2 + T3 (P2) | `authFormValidation.test`; live ✓.                                                                                      |
+| 19.2  | Register, then verify the email                     | Link works once; a second click / tab gets 400, not 500                                                                                                                       | ✅     | T1 + T3 (P2) | `auth.test` verify-email; live ✓.                                                                                       |
+| 19.3  | Signed-out page load                                | `/api/auth/refresh` answers 204, no console error                                                                                                                             | ✅     | T1 + T5 (P5) | `auth.test` refresh; prod ✓.                                                                                            |
+| 19.4  | Sign in / sign out / reload                         | Session restored on reload; sign-out works even with the network down                                                                                                         | ✅     | T1 + T3 (P2) | `auth.test` login / logout; `LoginPage.returnTo.test`.                                                                  |
+| 19.5  | Forgot / reset password                             | Same answer whether or not the email exists; reset revokes every session and clears this browser's cookie                                                                     | ✅     | T1 + T3 (P2) | `auth.test` forgot-password / reset-password.                                                                           |
+| 19.6  | Settings → change email                             | One verification link, used atomically; one security-alert email                                                                                                              | ✅     | T1 + T2      | `auth.test` lifecycle; `VerifyEmailChangePage.test`.                                                                    |
+| 19.7  | Settings → change username / password               | Saved; a password change ends the other sessions                                                                                                                              | ✅     | T1 + T3 (P2) | `auth.test` lifecycle.                                                                                                  |
+| 19.8  | Settings → export / delete account                  | JSON export downloads; cancel works; "Delete Account Now" removes the user and its paper account                                                                              | ✅     | T1 + T3 (P2) | `auth.test` deletion; live ✓.                                                                                           |
+| 19.13 | Sign back in with a deletion pending (P1d)          | The "scheduled for deletion" banner with its Cancel shows (the API sends `deletionRequestedAt`; no auth response did, so the banner never appeared)                           | ✅     | T1 + T3 (P2) | `auth.test` "should send deletionRequestedAt so a pending deletion shows its banner after sign-in"; `sdkContract.test`. |
+| 19.14 | Settings → change username / email: the reply (P1d) | Username: the reply carries the user and the modal shows success (the swapped schema sent `{}`, so a successful rename showed an error). Email: the reply carries its message | ✅     | T1 + T3 (P2) | `auth.test` "updates the username", "updates the email and sends a verification link"; `sdkContract.test`.              |
 
 ### Section 8 — Account Settings Modal
 
@@ -1359,7 +1363,7 @@ cross-phase regression suite and the server-side account safeguards.
 | 18.9  | DB write failure mid-transaction (was NEW-18-2)               | A close whose last write fails rolls back every write (position, trade, order, balance, version); the client gets only `{ error: 'Internal Server Error' }`; the retry succeeds                   | ✅     | T2i      | `paperRoutes.int.test` "[18.9] rolls every write back, answers a bare 500, and the retry works".                                                                                                                                                                    |
 | 18.10 | Lease handoff (was NEW-18-3)                                  | Two engines on one DB: only the holder listens and acts; the other can't take an unexpired lease, then takes it and replays the gap without a second fill or funding charge                       | ✅     | T2i      | `regression.int.test` "[18.10] two engines on one database…".                                                                                                                                                                                                       |
 
-### Section 19 — Account flows (auth and settings) _(rows 19.9–19.12; 19.1–19.8 are in Stage 0)_
+### Section 19 — Account flows (auth and settings) _(rows 19.9–19.12; 19.1–19.8, 19.13, 19.14 are in Stage 0)_
 
 > Verified end to end in a real browser and in production on 2026-09-27 (releases #148, #150, #155). The first
 > candidates for the T3 smoke set (P2). A wrong password on sign-in, change email / password or delete account logs
