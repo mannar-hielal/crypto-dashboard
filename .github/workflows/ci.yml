@@ -4,7 +4,8 @@ on:
   # Docs-only changes don't run CI (a docs-only release to main then doesn't deploy either — nothing
   # to ship). Exceptions: docs/TRADING_TEST_PLAN.md is read by a test (the guide scenarios' case IDs),
   # and .claude/hooks/** is code (test:hooks) — both always run. `paths` with `!` rather than
-  # `paths-ignore`, which can't re-include a file; the last matching pattern wins.
+  # `paths-ignore`, which can't re-include a file; the last matching pattern wins. e2e-nightly.yml's
+  # release-PR trigger uses the same list (deploy.yml's gate needs its run whenever CI runs).
   push:
     branches: [main, develop] # avoids duplicate runs — PRs already trigger the pull_request event
     paths:
