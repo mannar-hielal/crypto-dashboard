@@ -3439,3 +3439,30 @@ isolated liquidation price, T1 `margin.test`).
   and the Reduce-only / Close-on-trigger boxes.
 - **Fixture:** the cookie-notice flag is set on the browser context, so pages opened with `context.newPage()` start
   without the notice too.
+
+### test: M5e — visual baselines, dashboard accessibility, the case-ID coverage gate, 10.4.7; fix: two axe violations (2026-09-29) ✅
+
+**Context:** TEST_IMPLEMENTATION_PLAN F10, F11 and F12, plus the last ⬜ row of the test plan (10.4.7). No ⬜ row is left
+in Part B.
+
+- **F12, case-ID coverage:** `scripts/caseCoverage.mjs` (`pnpm case-coverage`), with `node:test` tests
+  (`pnpm test:scripts`).
+  - It reads `[x.y.z]` tags from every test title, plus older `(x.y.z)` IDs when they are real rows.
+  - It is a gate (`--strict`) in CI and the pre-commit hook: a tag citing no row, or a ⬜ row with a test, fails. Its
+    first catch was 10.4.7, flipped in the same commit.
+- **10.4.7** (`chart/chartSyncToggle.spec`): with time sync off, zoom only the active pane; switching sync on snaps
+  the other pane to its range. A pane the user zoomed by hand is left alone by design.
+- **F11** (`a11y/dashboard.spec`): axe on Spot and USDT Perpetual with every bottom tab, and on the settings modal.
+  - **Fixed:** the Market `tablist` held the leverage chip (it now wraps only its tabs, `display: contents`; the
+    screenshot of the row is byte-identical before and after), and the settings close button has a name.
+  - **Waiting for the visual Q&A gate** (a separate `test.fail` spec):
+    - contrast of the Beta badge, red % changes and two muted settings labels;
+    - the drawing toolbar's nested buttons;
+    - a scroll region without keyboard access.
+- **F10** (`visual/visual.spec`, project `visual`, local only):
+  - It captures the order forms, the leverage modal, adjust margin, the summary bar, the BTC / ETH Positions rows
+    and a Closed P&L row.
+  - macOS and CI Linux render fonts differently, and a baseline changes only through the visual gate, so CI doesn't
+    run it (`CI` drops the project).
+  - Masked: the username, the close time, and the order form where it overlaps wide rows. The viewport is 1440 × 1400,
+    so the order form needs no scrolling.
