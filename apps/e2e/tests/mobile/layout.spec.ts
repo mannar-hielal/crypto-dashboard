@@ -5,7 +5,7 @@
  */
 
 import { expect, test } from '../../fixtures';
-import { at, signInAs } from '../../helpers';
+import { at, placeOrder, signInAs } from '../../helpers';
 
 test('[20.1][20.2] phone: no sideways scroll, the logo without the wordmark, Sell opens a full-width form @mobile', async ({
   page,
@@ -51,4 +51,31 @@ test.describe('tablet', () => {
     expect(chart.width).toBeGreaterThan(400);
     await expect(page.getByText('cryptopapertrade.com', { exact: true })).toBeVisible();
   });
+});
+
+test('[20.2] phone: editing an order covers the screen and hides the Buy / Sell bar until it is done @mobile', async ({
+  page,
+  seededUser,
+  feed,
+}) => {
+  test.skip((page.viewportSize()?.width ?? 0) >= 640, 'phones only');
+  // Linear LINKUSDT: risk.spec owns it, but that runs in the desktop project, before the phones
+  await feed.quote('linear', 'LINKUSDT', { bid: 19.999, ask: 20, last: 20, mark: 20 });
+  await signInAs(page, seededUser.email, seededUser.password);
+  await page.goto('/dashboard/usdt/LINKUSDT');
+  await at(page, 'trade.mobile.buy').click();
+  await placeOrder(page, { side: 'buy', type: 'limit', price: '15', amount: '10', unit: 'coin' });
+  // The form closed and the account panel opened on the result
+  await expect(at(page, 'trade.mobile.buy')).toBeVisible();
+
+  await at(page, 'account.tab', 'orders').click();
+  await at(page, 'orders.row.edit').click();
+  const width = page.viewportSize()!.width;
+  await expect(at(page, 'order-edit.price')).toBeInViewport();
+  expect((await at(page, 'order-edit.price').boundingBox())!.width).toBeGreaterThan(width * 0.6);
+  await expect(at(page, 'trade.mobile.buy')).toHaveCount(0);
+
+  await at(page, 'order-edit.price').fill('15.5');
+  await at(page, 'order-edit.confirm').click();
+  await expect(at(page, 'trade.mobile.buy')).toBeVisible({ timeout: 5_000 });
 });

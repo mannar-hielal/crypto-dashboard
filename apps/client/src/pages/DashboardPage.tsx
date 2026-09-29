@@ -531,11 +531,13 @@ export function DashboardInner() {
           {editTarget?.kind === 'position' && (
             <motion.div
               key={`edit-pos-${editTarget.positionId}`}
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 256, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
+              // Below lg an overlay like the order form (full screen / a 320 px sheet), so the
+              // chart isn't squeezed to ~120 px on a phone (review #200)
+              initial={isMobile ? { x: '100%', opacity: 0 } : { width: 0, opacity: 0 }}
+              animate={isMobile ? { x: 0, opacity: 1 } : { width: 256, opacity: 1 }}
+              exit={isMobile ? { x: '100%', opacity: 0 } : { width: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: 'easeInOut' }}
-              className="shrink-0 overflow-hidden"
+              className={`shrink-0 overflow-hidden${isMobile ? ' absolute inset-y-0 right-0 z-30 w-full md:w-80' : ''}`}
             >
               <PositionEditPanel
                 positionId={editTarget.positionId}
@@ -546,11 +548,13 @@ export function DashboardInner() {
           {editTarget?.kind === 'pending' && (
             <motion.div
               key={`edit-pending-${editTarget.orderId}`}
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 256, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
+              // Below lg an overlay like the order form (full screen / a 320 px sheet), so the
+              // chart isn't squeezed to ~120 px on a phone (review #200)
+              initial={isMobile ? { x: '100%', opacity: 0 } : { width: 0, opacity: 0 }}
+              animate={isMobile ? { x: 0, opacity: 1 } : { width: 256, opacity: 1 }}
+              exit={isMobile ? { x: '100%', opacity: 0 } : { width: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: 'easeInOut' }}
-              className="shrink-0 overflow-hidden"
+              className={`shrink-0 overflow-hidden${isMobile ? ' absolute inset-y-0 right-0 z-30 w-full md:w-80' : ''}`}
             >
               <PendingOrderEditPanel
                 orderId={editTarget.orderId}
@@ -598,7 +602,8 @@ export function DashboardInner() {
       </div>
 
       {/* Phones and tablets: Buy / Sell open the order form (it isn't docked below lg) */}
-      {isMobile && !isTradingPanelVisible && (
+      {/* Not while an edit panel is open: it covers the screen, and Buy / Sell couldn't show the form */}
+      {isMobile && !isTradingPanelVisible && !editTarget && (
         <MobileTradeBar
           onTrade={(side) => {
             setTradingSide(side);
