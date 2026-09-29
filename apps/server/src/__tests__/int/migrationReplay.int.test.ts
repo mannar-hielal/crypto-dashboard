@@ -45,6 +45,10 @@ const replayDb = new URL(replayUrl).pathname.slice(1);
 
 let db: PrismaClient;
 let deployOutput = '';
+/** 🔐 Set only once this file created the replay database: afterAll never drops anything else */
+let created = false;
+/** The whole setup ran: only then does a failed drop get reported (else setup's error is the one) */
+let ready = false;
 
 /** `prisma <args>` on the replay database; throws with the CLI output when it fails. */
 function run(args: string[], input?: string, url = replayUrl): string {
@@ -60,6 +64,7 @@ beforeAll(() => {
   // One statement per call: CREATE / DROP DATABASE can't run inside a multi-statement batch
   run(['db', 'execute', '--stdin'], `DROP DATABASE IF EXISTS "${replayDb}" WITH (FORCE);`, baseUrl);
   run(['db', 'execute', '--stdin'], `CREATE DATABASE "${replayDb}";`, baseUrl);
+  created = true;
 
   // A fixed path inside the repo (no input reaches it)
   // eslint-disable-next-line security/detect-non-literal-fs-filename
@@ -82,11 +87,19 @@ beforeAll(() => {
   db = new PrismaClient({
     adapter: new PrismaPg({ connectionString: replayUrl }),
   });
+  ready = true;
 }, 180_000);
 
+// Vitest runs afterAll even when beforeAll threw — including when the guard refused the database
 afterAll(async () => {
   await db?.$disconnect();
-  run(['db', 'execute', '--stdin'], `DROP DATABASE IF EXISTS "${replayDb}" WITH (FORCE);`, baseUrl);
+  if (!created) return;
+  const drop = prisma(
+    ['db', 'execute', '--stdin'],
+    baseUrl,
+    `DROP DATABASE IF EXISTS "${replayDb}" WITH (FORCE);`
+  );
+  if (ready) expect(drop.status, drop.output).toBe(0);
 });
 
 const str = (v: { toString(): string } | null | undefined) =>
