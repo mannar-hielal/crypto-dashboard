@@ -28,7 +28,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      grepInvert: /@resilience/,
+      grepInvert: /@resilience|@visual/,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
     },
     // One project at a time: the fake feed's prices are global per market, and each spec owns its
@@ -57,6 +57,21 @@ export default defineConfig({
       dependencies: ['mobile-chrome'],
       grep: /@resilience/,
     },
+    // Visual baselines (F10), local only: screenshots differ between macOS and CI's Linux (fonts,
+    // anti-aliasing), and a baseline changes only through the visual Q&A gate — a human compares
+    // them. `pnpm --filter @crypto-dashboard/e2e test:visual`. Last and alone: it sets fixed prices
+    ...(CI
+      ? []
+      : [
+          {
+            name: 'visual',
+            dependencies: ['resilience'],
+            grep: /@visual/,
+            // Tall enough that the order form needs no scrolling (an element shot scrolls it into
+            // view and catches the fixed top bar)
+            use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 1400 } },
+          },
+        ]),
   ],
   webServer: [
     {
