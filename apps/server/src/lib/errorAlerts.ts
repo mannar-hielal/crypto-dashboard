@@ -62,7 +62,8 @@ export function recordError(bindings: Record<string, unknown>, args: unknown[]):
 }
 
 function add(source: string, message: string, count: number): void {
-  let key = `${source}\u0000${message}`;
+  // The overflow bucket keeps one key, also when its count is put back after a failed send (review #201)
+  let key = message === OTHER ? OTHER : `${source}\u0000${message}`;
   if (!counts.has(key) && counts.size >= MAX_KEYS) key = OTHER;
   const entry = counts.get(key) ?? {
     source: key === OTHER ? 'app' : source,
@@ -107,7 +108,11 @@ export async function flushDigest(
     await send(entries);
   } catch (err) {
     // Not sent (Resend down): the counts go back into the window and the cap isn't used
-    for (const e of entries) add(e.source, e.message, e.count);
+    // The overflow bucket last, so the kinds get their slots back as before
+    const restore = [...entries].sort(
+      (a, b) => Number(a.message === OTHER) - Number(b.message === OTHER)
+    );
+    for (const e of restore) add(e.source, e.message, e.count);
     throw err;
   }
   sentToday += 1;

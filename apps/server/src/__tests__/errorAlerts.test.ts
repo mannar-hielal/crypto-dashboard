@@ -90,6 +90,17 @@ describe('owner error digest (M8)', () => {
     expect(got).toEqual([{ source: 'X', message: 'x', count: 2 }]);
   });
 
+  it('should keep one "other errors" bucket when an overflowing window is put back after a failed send', async () => {
+    for (let i = 0; i < MAX_KEYS + 2; i++)
+      recordError({ service: 'X' }, [`error ${'k'.repeat(i + 1)}`]);
+    await expect(flushDigest(vi.fn().mockRejectedValue(new Error('down')))).rejects.toThrow('down');
+    recordError({ service: 'Y' }, ['a new kind']); // overflows again
+    const { got } = await flushed();
+    const other = got.filter((e) => e.message.startsWith('other errors'));
+    expect(other).toEqual([{ source: 'app', message: other[0]!.message, count: 3 }]);
+    expect(got).toHaveLength(MAX_KEYS + 1);
+  });
+
   it("should never send an error's own message text, and mask numbers, ids and emails", () => {
     const prisma = Object.assign(new Error('Unique constraint failed on email a@b.co'), {
       name: 'PrismaClientKnownRequestError',
