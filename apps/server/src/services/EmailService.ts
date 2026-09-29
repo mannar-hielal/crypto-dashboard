@@ -355,31 +355,30 @@ export const EmailService = {
 
   /** The production error digest (lib/errorAlerts.ts): which errors, from where, how often. */
   async sendErrorDigest(to: string, entries: DigestEntry[], windowMinutes: number): Promise<void> {
+    // Throws when not sent (no client, or Resend answered with an error): the digest then keeps its
+    // counts and its daily cap (lib/errorAlerts.ts). Not logged here — the timer swallows it, and
+    // EmailService's own lines aren't counted anyway (review #201)
     const client = getResend();
-    if (!client) return;
+    if (!client) throw new Error('Error digest not sent: no Resend client');
     const total = entries.reduce((n, e) => n + e.count, 0);
-    // 🔐 Log messages are ours, but escaped anyway: an error message can quote user input
+    // 🔐 Escaped anyway: a sanitised message can still quote a fragment of input
     const rows = entries
       .map(
         (e) =>
           `<tr><td>${escapeHtml(e.source)}</td><td>${escapeHtml(e.message)}</td><td align="right">${e.count}</td></tr>`
       )
       .join('');
-    await sendEmail(
-      client,
-      {
-        from: config.resendFromEmail,
-        to,
-        subject: `cryptopapertrade.com: ${total} server error${total === 1 ? '' : 's'} in the last ${windowMinutes} minutes`,
-        html: `
+    const { error } = await client.emails.send({
+      from: config.resendFromEmail,
+      to,
+      subject: `cryptopapertrade.com: ${total} server error${total === 1 ? '' : 's'} in the last ${windowMinutes} minutes`,
+      html: `
         <p>Errors logged by the production server in the last ${windowMinutes} minutes:</p>
         <table cellpadding="4"><tr><th align="left">Where</th><th align="left">Error</th><th>Count</th></tr>${rows}</table>
         <p>Details are in the Fly logs (<code>fly logs -a crypto-dashboard-api</code>). At most 10 of these a day.</p>
       `,
-      },
-      'Failed to send the error digest',
-      {}
-    );
+    });
+    if (error) throw new Error(`Error digest not sent: ${error.name ?? 'Resend error'}`);
   },
 
   // ─── NEWSLETTER ─────────────────────────────────────────────────────────
