@@ -224,6 +224,9 @@ export async function buildApp() {
   app.get(
     '/health',
     {
+      // Fly checks every 30 s and UptimeRobot every 5 min: at info that's ~2,900 lines an hour
+      // burying real events. A health request logs only at warn and above (a failure still shows)
+      logLevel: 'warn',
       schema: {
         tags: ['Health'],
         summary: 'Health check',
