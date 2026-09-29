@@ -185,6 +185,11 @@ The test strategy, tools and the case catalogue live in [`docs/TRADING_TEST_PLAN
   `…_replay_int` database next to it), and the account repository round-trip. Run it locally against a throwaway database:
   `TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/crypto_dashboard_int pnpm --filter @crypto-dashboard/server test:int`
   (the name must end in `_int` or `_test`).
+- **Local fake feed**: `pnpm dev:e2e` runs the app against a fake Bybit (recorded instruments, risk tiers and
+  prices; `apps/server/src/tools/fakeBybit/`) instead of the live feed, and `pnpm feed quote linear BTCUSDT last=50000`
+  (or `path`, `funding`, `klines`, `drop`, `stall`, `reset`) moves its prices, so a worked example gives exact numbers.
+  Set `TEST_HOOKS_SECRET` (16+ characters) in your shell to also get `/api/test/*` (seeded users, email outbox).
+  Re-record the fixtures with `pnpm --filter @crypto-dashboard/server record:bybit`.
 - **Nightly** (`parity.yml`): the Bybit testnet parity run replays a fixed scenario on Bybit testnet and on the paper
   engine and compares the v5 fields. It runs on a one-off Fly Machine in Singapore (Bybit blocks GitHub's US
   runners) with secrets from the `bybit-testnet` environment, which only `main` can use; a failure opens a `parity`

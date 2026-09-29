@@ -679,7 +679,8 @@ partial fills, ADL, insurance fund · VIP tiers, fee coupons, USDC / inverse con
     side (75,742.94 → 75,743), and that under UTA `bustPrice` is reported blank and `slTriggerBy` is not on
     `position/list` (it's on the StopLoss order). The engine and the adapter follow since
     `fix/bybit-parity-first-run`.
-  - **Still open until a run is green:** O5 (cross unrealised profit funds orders), the max-reducible margin formula,
+  - **Still open (green runs since 2026-09-28 don't reach them):** O5 (cross unrealised profit funds orders), the
+    max-reducible margin formula,
     the retCode of a risk-limit refusal, and whether Bybit's `positionValue` is size × mark (the first run's 83.8569
     vs 0.001 × entry 83,881.1 suggests so; the runs now log Bybit's mark with each position check). The tier is
     chosen by value, so a mark-based value would change tiers near a boundary.
@@ -3084,3 +3085,33 @@ deterministic market feed.
   - `testHooks.int.test` (7, real Postgres).
 - `.env.example` lists the four variables, commented out and marked test-only.
 - Next: M3b, the fake Bybit server and its price controls.
+
+### feat: M3b — the fake Bybit feed, its price controls and `pnpm dev:e2e` (2026-09-29) ✅
+
+**Context:** test plan milestone M3 (F3). Browser tests and hand reproductions need prices that move only when told
+to.
+
+- **`apps/server/src/tools/fakeBybit/`:** Bybit v5's public REST (`kline`, `mark-price-kline`,
+  `index-price-kline`, `instruments-info`, `risk-limit`, `funding/history`) and WebSocket (`/v5/public/{spot,linear}`:
+  subscribe, ping, a snapshot on subscribe, pushes every second), in Bybit's shapes. It listens on 127.0.0.1 only.
+- **Controls** (`/__control/*`, `pnpm feed …`):
+  - `quote` sets bid, ask, last, mark and index;
+  - `path` walks the price;
+  - `funding` sets the next funding timestamp and rate, and its history row appears once it passes;
+  - `klines` puts chosen candles in the history;
+  - `drop` closes the sockets;
+  - `stall` stops the pushes;
+  - `reset` goes back to the recorded prices.
+- **Fixtures:** `pnpm --filter @crypto-dashboard/server record:bybit` records instruments, risk tiers, tickers, the best
+  level, funding rows, one page of each kline source and one WS message per topic from Bybit mainnet
+  (`fixtures/bybit/recorded.json`). The fake warns when they are over 180 days old. Kline history is generated
+  deterministically around the current price, so there are no megabytes of candles.
+- **`pnpm dev:e2e`:** starts the fake feed, the server pointed at it (with the test hooks when `TEST_HOOKS_SECRET` is
+  set) and Vite. Smoke-tested: the server connects on both markets (27 and 18 topics), the engine starts, and
+  `pnpm feed quote linear BTCUSDT last=50000` shows up as the latest candle's close.
+- **Tests:** `fakeBybit.test.ts` (9) runs the app's own clients against it: the WebSocket manager (linear tickers,
+  Spot bid / ask from the order book, stall, drop and reconnect), instruments and risk tiers, the engine's candle and
+  funding-history reads, and `/api/market/candles`. It also compares the pushes with the recorded Bybit messages.
+- **Parity:** the first scheduled nightly (2026-09-29, run 36517770455) matched every step, so rows 6.5 and 17.6.4 are
+  ✅. It doesn't settle the open questions (O5, max-reducible margin, 110090, `positionValue`'s basis): at open, mark and
+  entry differ by $0.68 on 0.002 BTC, well inside the 0.01 tolerance.

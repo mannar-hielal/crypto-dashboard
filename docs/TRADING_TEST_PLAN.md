@@ -295,8 +295,9 @@ drops the `(Pn)` tag. Format: `what — rows — target tier (roadmap step)`.
 
 **Stage 6 — Under the hood (10)**
 
-- [ ] ⏳ First green nightly testnet parity run (already wired and set up); it also closes APP_LOG's open questions
-      (O5, max-reducible margin, 110090 retCode) — rows 17.6.4, 6.5 — T4 (P3)
+- [x] First green nightly testnet parity run — rows 17.6.4, 6.5 — T4 (P3; scheduled run 36517770455, 2026-09-29). It
+      does **not** settle APP_LOG's open questions: the scenario never reaches a max-reducible margin or a 110090
+      refusal, and its unrealised P&L is too small to prove O5 or `positionValue`'s basis — still open there
 - [ ] Feed parity job: Sell / Buy vs best bid / ask, last 1m candle, mark / index / funding, freshness — rows
       6.1–6.4 — T4 (P3)
 - [ ] Browser tab title — row 6.6 — T3 (P2)
@@ -335,9 +336,10 @@ _P1 — persistence (6)_
 
 _P2 — replay feed and browser tests (7)_
 
-- [ ] Record Bybit WS / REST fixtures and replay them from `apps/server/src/test/fakeBybit.ts` — (P2)
-- [ ] `BYBIT_REST_URL` / `BYBIT_WS_URL` overrides, refused in production, plus the price-control and drop / stall
-      endpoints — (P2; the overrides and their production guard are in (M3a); the controls come with the fake feed)
+- [x] Record Bybit WS / REST fixtures and serve them from a fake Bybit — (P2; M3b: `pnpm record:bybit` →
+      `fixtures/bybit/recorded.json`, served by `apps/server/src/tools/fakeBybit/`)
+- [x] `BYBIT_REST_URL` / `BYBIT_WS_URL` overrides, refused in production, plus the price-control and drop / stall
+      endpoints — (P2; overrides M3a, controls M3b: `/__control/*` and `pnpm feed`)
 - [x] Test-only user seed helper, disabled in production — (P2; M3a: `/api/test/users`, the email outbox and an
       account reset behind `ENABLE_TEST_HOOKS` + `TEST_HOOKS_SECRET`, refused at boot in production)
 - [ ] Playwright setup: Chromium + WebKit + a mobile viewport, `webServer`, trace / video on retry, one CI retry —
@@ -1322,14 +1324,14 @@ cross-phase regression suite and the server-side account safeguards.
 > Fills and PnL go through the engine tests and the nightly testnet parity run (T4). The old TradingView rows
 > 6.1–6.9 are in git history (`git show 8d40f88:docs/TRADING_TEST_PLAN.md`); none of them had been run.
 
-| #   | Scenario                                                 | Expected                                                                                                | Status | Tier    | Notes                                                             |
-| --- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------ | ------- | ----------------------------------------------------------------- |
-| 6.1 | Our Sell / Buy vs Bybit's best bid / ask, same moment    | Spot and linear, each symbol: equal, or at most one tick apart (the stream may be one update ahead)     | ⬜     | T4 (P3) | Bybit `/v5/market/tickers` (linear) / `orderbook?limit=1` (spot). |
-| 6.2 | Our last closed 1m candle vs Bybit's kline               | OHLC equal for spot and linear; no step where history meets the live bars (F1)                          | ⬜     | T4 (P3) | `/v5/market/kline`.                                               |
-| 6.3 | Our mark / index / funding rate vs Bybit's linear ticker | Equal within one tick; next funding time identical                                                      | ⬜     | T4 (P3) | Mark drives PnL and liquidation.                                  |
-| 6.4 | Feed freshness over the sample window                    | No quote older than 10 s while Bybit's is moving; the server reconnects within its backoff after a drop | ⬜     | T4 (P3) | Same 10 s rule as the engine's "Waiting for live price…".         |
-| 6.5 | Fills, fees, PnL, margin vs Bybit                        | Same maths given the same fills (the testnet parity run)                                                | ⏳     | T4 (P3) | Was TradingView rows 6.4–6.8. See 17.6.4.                         |
-| 6.6 | Browser tab title                                        | `▲ BTC/USDT {price} +x.xx%` or `▼ …`, updating live; the arrow flips on a reversal                      | ⬜     | T3 (P2) | Was 6.9.                                                          |
+| #   | Scenario                                                 | Expected                                                                                                | Status | Tier    | Notes                                                                                                 |
+| --- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------ | ------- | ----------------------------------------------------------------------------------------------------- |
+| 6.1 | Our Sell / Buy vs Bybit's best bid / ask, same moment    | Spot and linear, each symbol: equal, or at most one tick apart (the stream may be one update ahead)     | ⬜     | T4 (P3) | Bybit `/v5/market/tickers` (linear) / `orderbook?limit=1` (spot).                                     |
+| 6.2 | Our last closed 1m candle vs Bybit's kline               | OHLC equal for spot and linear; no step where history meets the live bars (F1)                          | ⬜     | T4 (P3) | `/v5/market/kline`.                                                                                   |
+| 6.3 | Our mark / index / funding rate vs Bybit's linear ticker | Equal within one tick; next funding time identical                                                      | ⬜     | T4 (P3) | Mark drives PnL and liquidation.                                                                      |
+| 6.4 | Feed freshness over the sample window                    | No quote older than 10 s while Bybit's is moving; the server reconnects within its backoff after a drop | ⬜     | T4 (P3) | Same 10 s rule as the engine's "Waiting for live price…".                                             |
+| 6.5 | Fills, fees, PnL, margin vs Bybit                        | Same maths given the same fills (the testnet parity run)                                                | ✅     | T4      | Was TradingView rows 6.4–6.8. First scheduled nightly green 2026-09-29 (run 36517770455); see 17.6.4. |
+| 6.6 | Browser tab title                                        | `▲ BTC/USDT {price} +x.xx%` or `▼ …`, updating live; the arrow flips on a reversal                      | ⬜     | T3 (P2) | Was 6.9.                                                                                              |
 
 ### Section 17 — Cross margin, risk tiers and refinements (Bybit Parity BP-5) _(part: 17.6 — the rest of Section 17 is in Stages 4 and 5)_
 
@@ -1339,12 +1341,12 @@ cross-phase regression suite and the server-side account safeguards.
 
 #### 17.6 Refinements (F) and parity (G)
 
-| #      | Action                                      | Expected                                              | Status | Tier        | Notes                                                                 |
-| ------ | ------------------------------------------- | ----------------------------------------------------- | ------ | ----------- | --------------------------------------------------------------------- |
-| 17.6.1 | Stalled feed at a funding timestamp         | Settled at the mark candle, not a minutes-old mark    | ✅     | T1 · Vitest | `services.test`.                                                      |
-| 17.6.2 | Closed before its funding settled           | The fee lands on that close's Trade row               | ✅     | T1 · Vitest | repository + engine tests.                                            |
-| 17.6.3 | Opened and closed while the engine was down | Charged by the backfill (from the closing Trade rows) | ✅     | T1 · Vitest | `services.test`.                                                      |
-| 17.6.4 | Bybit testnet parity run                    | Every compared v5 field matches within 0.01           | ⏳     | T4 (P3)     | `parity.yml` nightly; setup done 2026-09-28, first run after release. |
+| #      | Action                                      | Expected                                              | Status | Tier        | Notes                                                                                                                                           |
+| ------ | ------------------------------------------- | ----------------------------------------------------- | ------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| 17.6.1 | Stalled feed at a funding timestamp         | Settled at the mark candle, not a minutes-old mark    | ✅     | T1 · Vitest | `services.test`.                                                                                                                                |
+| 17.6.2 | Closed before its funding settled           | The fee lands on that close's Trade row               | ✅     | T1 · Vitest | repository + engine tests.                                                                                                                      |
+| 17.6.3 | Opened and closed while the engine was down | Charged by the backfill (from the closing Trade rows) | ✅     | T1 · Vitest | `services.test`.                                                                                                                                |
+| 17.6.4 | Bybit testnet parity run                    | Every compared v5 field matches within 0.01           | ✅     | T4          | `parity.yml` nightly: first green by hand 2026-09-28 (run 36427289995), first scheduled green 2026-09-29 (run 36517770455), every step matches. |
 
 ### Section 18 — Cross-phase regression suite (Bybit Parity integration audit)
 
