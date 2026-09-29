@@ -3030,3 +3030,32 @@ what Prisma returns.
 - Rows 1.7.13, 13.3.8, 18.9, 18.10, 19.11 and 19.12 are added (they were NEW-1-2, NEW-13-2, NEW-18-2 and NEW-18-3 in the
   implementation plan), and the A10 route-test item is ticked. What's left in P1 is the SDK ↔ server contract test
   (P1d).
+
+### test: P1d — SDK ↔ server contract test; fix three auth responses the serializer emptied (2026-09-29) ✅
+
+**Context:** test plan roadmap P1, last slice (F9). The rule in `web.md` that "an SDK change is never backend-only"
+was enforced only by review.
+
+- **`apps/server/src/__tests__/contract/sdkContract.test.ts`** (43 cases, in `pnpm test`): every SDK function in
+  `authApi`, `marketApi`, `newsletterApi` and `paperApi` is called for real with `fetch` stubbed. Its request is matched
+  to the OpenAPI document the app generates (`app.swagger()`):
+  - the route exists for the method;
+  - the query and body send only declared fields, and every field the route requires is required by the SDK type;
+  - the success status is declared, and every field of the SDK-typed response fixture is in the response schema, with
+    a matching JSON type (fast-json-stringify silently drops the rest).
+
+  A "covers every SDK function" case fails on an SDK function with no call. The fixtures (`fixtures.ts`) are typed as
+  the SDK types and type-checked by `apps/server/tsconfig.contract.json`, now part of the server's `type-check`.
+
+- **Found and fixed:**
+  - PATCH `/api/auth/username` and PATCH `/api/auth/email` had each other's response schema, so both answered `{}`. The
+    Settings modal reads `res.user.username`, so a successful rename showed an error (row 19.14).
+  - No auth response declared `deletionRequestedAt`, and `/login` and `/me` never set it. A user who asked for deletion
+    and signed back in never saw the "scheduled for deletion" banner or its Cancel (row 19.13).
+  - One `publicUser()` now builds the user for register, login, `/me` and `/username`, from explicit fields (the
+    password is never selected).
+  - The SDK's `authApi.register` body type lacked `acceptedTerms`, which the server requires. The Register page sent
+    it anyway (it passes the whole form).
+- The paper state and delta schemas are open (`additionalProperties: true`). `trading/mappers.ts` builds them from the
+  SDK types, so `tsc` holds that half.
+- With this, roadmap P1 and milestone M2 are complete.

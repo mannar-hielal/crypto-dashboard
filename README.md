@@ -178,7 +178,8 @@ docker compose down -v     # Stop + wipe data volumes
 
 The test strategy, tools and the case catalogue live in [`docs/TRADING_TEST_PLAN.md`](./docs/TRADING_TEST_PLAN.md).
 
-- **Every PR** (`ci.yml`): audit, type-check, format, lint, unit and component tests with coverage thresholds,
+- **Every PR** (`ci.yml`): audit, type-check, format, lint, unit and component tests with coverage thresholds (they
+  include an SDK ↔ server contract test: every SDK call checked against the route schemas),
   build — the same gates as the pre-commit hook, which also runs the coverage floors — plus an **integration job on a real Postgres 16**: migrations
   from empty, schema drift, a replay of every migration over a pre-BP-1 database (it creates and drops a second
   `…_replay_int` database next to it), and the account repository round-trip. Run it locally against a throwaway database:
