@@ -1,0 +1,84 @@
+name: Production smoke
+
+# T5 in docs/TRADING_TEST_PLAN.md (TEST_IMPLEMENTATION_PLAN M8): the same read-only checks deploy.yml
+# runs after every deploy (apps/e2e/tests-prod), every hour — so an outage between deploys opens an
+# issue. Read-only: no sign-in, no writes, no secrets.
+
+on:
+  schedule:
+    - cron: '23 * * * *' # hourly, at :23
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write # open / update the "prod-smoke" issue on a failure
+
+concurrency:
+  group: prod-smoke
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Production smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4.1.0
+        with:
+          version: 10.33.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4.4.0
+        with:
+          node-version-file: '.node-version'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install the e2e package
+        # --ignore-scripts: the root preinstall runs `pnpm audit`, and a new advisory must not read as
+        # a production outage. This job needs Playwright only; the audit gate runs on every PR / push.
+        run: pnpm install --frozen-lockfile --filter @crypto-dashboard/e2e --ignore-scripts
+
+      - name: Install Chromium
+        run: pnpm --filter @crypto-dashboard/e2e exec playwright install --with-deps chromium
+
+      - name: Production smoke
+        id: smoke
+        env:
+          CI: 'true'
+        run: pnpm --filter @crypto-dashboard/e2e test:prod
+
+      - name: Upload the report
+        if: failure()
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: prod-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            apps/e2e/playwright-report
+            apps/e2e/test-results
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Open or update the prod-smoke issue
+        # Only when the checks themselves failed — a setup failure (install, browser) isn't an outage
+        if: failure() && steps.smoke.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          gh label create prod-smoke --color B60205 --description "Production smoke check failed" 2>/dev/null || true
+          body="The hourly production smoke failed at $(date -u +%Y-%m-%dT%H:%MZ): $RUN_URL
+
+          It checks API health, a clean signed-out page load (/api/auth/refresh → 204, no console errors),
+          the login page, and a live market feed. Download the report artifact for the failing check."
+          existing=$(gh issue list --label prod-smoke --state open --json number -q '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "Production smoke failing" --label prod-smoke --body "$body"
+          fi

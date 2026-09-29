@@ -3189,3 +3189,19 @@ catch a Bybit change to the rules the engine snapshots.
     `$45,149`. The scenarios follow the app. A formatting change would go through the visual gate.
   - The `setIsolated` builder typed into a leverage input, but the modal has preset buttons.
 - **Next (M5):** the nightly set, with WebKit, mobile, visual baselines and axe.
+
+### test: M8 — production smoke after every deploy and hourly (2026-09-29) ✅
+
+**Context:** test plan milestone M8 (T5). Nothing checked the live site after a deploy, or between deploys.
+
+- **`apps/e2e/tests-prod/prod.spec.ts`** (`playwright.prod.config.ts`, no web servers, read-only):
+  - API `/health` is 200 in production;
+  - [19.3] a signed-out visit loads cleanly: `/api/auth/refresh` returns 204, with no console errors;
+  - the dashboard sends a signed-out visitor to the login page, which renders its form;
+  - the market feed is live: the newest 1m candle is under 3 minutes old, and a ticker arrives on the market
+    WebSocket within 15 s.
+  - First run against production: 4 passed in 3.3 s.
+- **`deploy.yml`:** after the server and client deploys, installs Chromium and runs the smoke. A failure marks the
+  deploy red.
+- **`prod-smoke.yml`:** hourly at :23, and on demand. A failure opens or comments an issue labelled `prod-smoke`.
+- **Still open (owner):** the log-based alert on `error` lines needs a log sink the owner chooses.
