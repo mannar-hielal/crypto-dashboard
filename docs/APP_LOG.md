@@ -3006,3 +3006,27 @@ hand on a scratch or dev database.
   now take `ctx.newId()`. Two `cross.test` cases fail on the old code.
 - Rows 18.7 and 18.8 ✅, and the A10 item is ticked. Still in P1: the route races (NEW-1-2, NEW-13-2, NEW-18-2,
   NEW-18-3) and the SDK ↔ server contract test (P1d).
+
+### test: P1c (second part) — races and a failed write on a real Postgres (2026-09-29) ✅
+
+**Context:** test plan roadmap P1. Concurrency and atomicity only show up with real transactions: the unit tests mock
+what Prisma returns.
+
+- **`paperRoutes.int.test.ts`**: two app instances on one database stand in for two Fly machines (their per-user
+  queues are separate, so only `Account.version` keeps them apart).
+  - [13.3.8] Two orders at once both apply, a version each. A burst of six loses no update: each accepted order
+    applies once, and one refused after its retries (409 "Account changed — please retry") leaves nothing.
+  - [1.7.13] A manual close on one machine and the TP firing on the other: closed once, one Closed P&L row, realised
+    P&L counted once; the loser gets a 404 or no trigger.
+  - [18.9] The close's last write (the journal line) throws inside the transaction: every write rolls back
+    (position, trade, order, balance, version), the client gets only `{ error: 'Internal Server Error' }`, and the
+    retry succeeds.
+- **`regression.int.test.ts`** [18.10]: two engines on one lease row. Only the holder listens to the feed; the other
+  can't take an unexpired lease, then takes it and replays the gap over the same fill and funding minutes without a
+  second fill or charge.
+- **`authRoutes.int.test.ts`**: [19.11] two tabs refreshing the same token at once give one rotation (200 plus 401), one
+  live token row, and the new session keeps working with nothing revoked; [19.12] two logouts at once are both 204,
+  with no P2025.
+- Rows 1.7.13, 13.3.8, 18.9, 18.10, 19.11 and 19.12 are added (they were NEW-1-2, NEW-13-2, NEW-18-2 and NEW-18-3 in the
+  implementation plan), and the A10 route-test item is ticked. What's left in P1 is the SDK ↔ server contract test
+  (P1d).

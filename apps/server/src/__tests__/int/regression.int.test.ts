@@ -12,7 +12,11 @@
 import { Decimal } from '@prisma/client/runtime/client';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AccountRepository } from '../../trading/AccountRepository.js';
-import { MatchingEngine, type TickUpdate } from '../../trading/MatchingEngine.js';
+import {
+  MatchingEngine,
+  type MatchingEngineDeps,
+  type TickUpdate,
+} from '../../trading/MatchingEngine.js';
 import { PaperEventBus } from '../../trading/PaperEventBus.js';
 import {
   TradingService,
@@ -71,7 +75,7 @@ function setPrice(price: number): void {
 const inRange = (candles: Candle[], from: number, to: number) =>
   candles.filter((c) => c.start >= from && c.start < to);
 
-function engine(holder: string): MatchingEngine {
+function engine(holder: string, overrides: Partial<MatchingEngineDeps> = {}): MatchingEngine {
   const e = new MatchingEngine({
     trading,
     events,
@@ -95,6 +99,7 @@ function engine(holder: string): MatchingEngine {
     resyncEveryMs: 1_000_000_000,
     fundingCheckMs: 1_000_000_000,
     fundingRetryMs: 0,
+    ...overrides,
   });
   engines.push(e);
   return e;
@@ -427,5 +432,73 @@ describe('Section 18 regression suite on Postgres [18.7]', () => {
       ['0.025', '0.125'],
       ['0.075', '0.375'],
     ]);
+  });
+
+  it('[18.10] two engines on one database: only the lease holder acts; the takeover replays nothing twice', async () => {
+    vi.setSystemTime(TS - 20 * MIN);
+    const user = await createUser(db);
+    await trading.setMarginMode(user, 'ISOLATED_MARGIN');
+    await trading.setSymbolLeverage(user, 'BTCUSDT', 10);
+    setPrice(50_000);
+    await trading.placeOrder(user, {
+      category: 'linear',
+      symbol: 'BTCUSDT',
+      side: 'buy',
+      type: 'limit',
+      size: { qty: D('0.1') },
+      triggerPrice: D(49_000),
+    });
+    feed.funding = async () => [{ ts: TS, rate: D('0.0001') }];
+
+    vi.setSystemTime(TS - 10 * MIN);
+    const a = engine('a');
+    const b = engine('b');
+    await a.start();
+    await b.start();
+    expect([a.isActive(), b.isActive()]).toEqual([true, false]);
+    expect(listeners.size).toBe(1); // only the holder listens to the feed
+
+    // A fills the limit and settles the funding timestamp
+    vi.setSystemTime(TS - 5 * MIN);
+    tick({ lastPrice: 48_990, markPrice: 48_990 });
+    await vi.waitFor(async () =>
+      expect(await db.position.count({ where: { userId: user } })).toBe(1)
+    );
+    vi.setSystemTime(TS - 1_000);
+    tick({ lastPrice: 50_000, markPrice: 50_000, fundingRate: 0.0001, nextFundingTime: TS });
+    vi.setSystemTime(TS + 1_000);
+    tick({ lastPrice: 50_000, markPrice: 50_000, nextFundingTime: TS + FUNDING_EVERY });
+    await vi.waitFor(async () =>
+      expect(await db.trade.count({ where: { userId: user, execType: 'Funding' } })).toBe(1)
+    );
+
+    // A dies before its next renewal: the lease still says it last renewed before the fill
+    await db.engineLease.update({
+      where: { id: 'matching-engine' },
+      data: { expiresAt: new Date(TS + 5_000), lastTickAt: new Date(TS - 10 * MIN) },
+    });
+    // B can't take it before it expires…
+    vi.setSystemTime(TS + 2_000);
+    await (b as unknown as { heartbeat(): Promise<void> }).heartbeat();
+    expect(b.isActive()).toBe(false);
+
+    // …then does, and replays the gap over the same fill and funding minutes
+    feed.last = [{ start: TS - 5 * MIN, low: D(48_900), high: D(49_100) }];
+    feed.mark = [{ start: TS, open: D(50_000), high: D(50_000), low: D(50_000) }];
+    vi.setSystemTime(TS + 10_000);
+    const backfill = vi.spyOn(b, 'backfill');
+    await (b as unknown as { heartbeat(): Promise<void> }).heartbeat();
+    expect(b.isActive()).toBe(true);
+    await vi.waitFor(() => expect(backfill).toHaveBeenCalled());
+    await Promise.all(backfill.mock.results.map((r) => r.value));
+
+    expect(
+      await db.order.count({ where: { userId: user, orderType: 'LIMIT', status: 'FILLED' } })
+    ).toBe(1);
+    const positions = await db.position.findMany({ where: { userId: user } });
+    expect(positions.map((p) => p.quantity.toString())).toEqual(['0.1']);
+    expect(await db.trade.count({ where: { userId: user, execType: 'Funding' } })).toBe(1);
+    const lease = await db.engineLease.findUniqueOrThrow({ where: { id: 'matching-engine' } });
+    expect(lease.holder).toBe('b');
   });
 });
