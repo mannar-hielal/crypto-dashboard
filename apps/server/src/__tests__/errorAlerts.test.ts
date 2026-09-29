@@ -8,6 +8,7 @@ import {
   flushDigest,
   recordError,
   resetErrorAlerts,
+  safeMessage,
   type DigestEntry,
 } from '../lib/errorAlerts.js';
 
@@ -56,13 +57,15 @@ describe('owner error digest (M8)', () => {
   });
 
   it(`should keep at most ${MAX_KEYS} kinds per window and count the rest together`, async () => {
-    for (let i = 0; i < MAX_KEYS + 5; i++) recordError({ service: 'X' }, [`error ${i}`]);
+    // Distinct kinds without digits (digits are masked, which would fold them into one)
+    for (let i = 0; i < MAX_KEYS + 5; i++)
+      recordError({ service: 'X' }, [`error ${'k'.repeat(i + 1)}`]);
     const { got } = await flushed();
     expect(got).toHaveLength(MAX_KEYS + 1);
     expect(got.find((e) => e.message.startsWith('other errors'))?.count).toBe(5);
   });
 
-  it(`should send at most ${DAILY_CAP} digests a day, and again the next day`, async () => {
+  it(`should send at most ${DAILY_CAP} digests a day, keep counting when capped, and send it all the next day`, async () => {
     const day = new Date('2026-09-29T08:00:00Z');
     let sent = 0;
     for (let i = 0; i < DAILY_CAP + 3; i++) {
@@ -70,13 +73,48 @@ describe('owner error digest (M8)', () => {
       if ((await flushed(day)).sent) sent++;
     }
     expect(sent).toBe(DAILY_CAP);
+    // The 3 windows after the cap weren't dropped: they arrive with the next day's first digest
     recordError({ service: 'X' }, ['again']);
-    expect((await flushed(new Date('2026-09-30T08:00:00Z'))).sent).toBe(true);
+    const next = await flushed(new Date('2026-09-30T08:00:00Z'));
+    expect(next.sent).toBe(true);
+    expect(next.got).toEqual([{ source: 'X', message: 'again', count: 4 }]);
   });
 
-  it('should pass a failed send on to the caller (the timer catches it)', async () => {
+  it("should keep a window's counts, and not use the cap, when the send fails", async () => {
     recordError({ service: 'X' }, ['x']);
     const failing = vi.fn().mockRejectedValue(new Error('resend down'));
     await expect(flushDigest(failing)).rejects.toThrow('resend down');
+    recordError({ service: 'X' }, ['x']);
+    const { sent, got } = await flushed();
+    expect(sent).toBe(true);
+    expect(got).toEqual([{ source: 'X', message: 'x', count: 2 }]);
+  });
+
+  it("should never send an error's own message text, and mask numbers, ids and emails", () => {
+    const prisma = Object.assign(new Error('Unique constraint failed on email a@b.co'), {
+      name: 'PrismaClientKnownRequestError',
+      code: 'P2002',
+    });
+    // Fastify's own 5xx line: log.error({ res, err }, err.message)
+    expect(safeMessage([{ err: prisma }, prisma.message])).toBe(
+      'PrismaClientKnownRequestError P2002'
+    );
+    expect(safeMessage([prisma])).toBe('PrismaClientKnownRequestError P2002');
+    // Our own lines keep their message, masked
+    expect(safeMessage([{ err: prisma }, 'Order write failed'])).toBe('Order write failed');
+    expect(safeMessage(['Failed for user 12345 (me@example.com)'])).toBe(
+      'Failed for user # <email>'
+    );
+    expect(safeMessage(['account 3f2c9a1e-7b1d-4c2e-9f00-1a2b3c4d5e6f not found'])).toBe(
+      'account <id> not found'
+    );
+  });
+
+  it('should count one kind for a message that only differs by numbers', async () => {
+    recordError({ service: 'X' }, ['Failed for user 1']);
+    recordError({ service: 'X' }, ['Failed for user 2']);
+    expect((await flushed()).got).toEqual([
+      { source: 'X', message: 'Failed for user #', count: 2 },
+    ]);
   });
 });

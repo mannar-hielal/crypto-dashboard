@@ -3538,8 +3538,11 @@ nightly e2e open GitHub issues. What was missing: server errors while the site i
   - at most 50 kinds per window (the rest counted together);
   - at most 10 digests a day, since the Resend quota of 100 a day is shared with the users' emails;
   - EmailService's own errors aren't counted, so a failing send can't alert about itself.
-- 🔐 **Privacy:** only the source, the message and a count are kept, never the line's objects (a request, a token,
-  the error's details).
+- 🔐 **Privacy:** only the source, a sanitised message and a count are kept, never the line's objects (a request,
+  a token, the error's details). A line whose message is its error's own `err.message` (Fastify's, a driver's) is
+  reported by the error's name and code; numbers, ids and emails are masked (review #201).
+- **Nothing dropped silently:** the counts clear only after a successful send; at the daily cap they keep counting
+  into the next day's first digest; a failed send keeps them and doesn't use the cap (review #201).
 - **When it runs:** only in production, with `ALERT_EMAIL` set and the test hooks off. `ALERT_EMAIL` is optional and
   kept out of the repository (it is public): it is a Fly secret, and `.env.example` documents it.
 - **Tests:** `errorAlerts.test` (counting and the levels, no objects kept, the EmailService exclusion, windows, the
