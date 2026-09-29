@@ -169,6 +169,18 @@ no behaviour change (a UI change only in the DOM, so no visual Q&A gate is neede
 
 Effort **M** (plugin, outbox sink, config guard + its unit test, `.env.example` entries commented as test-only).
 
+**Status.** ✅ M3a:
+
+- **Routes.** `apps/server/src/routes/test/index.ts` (the three routes; users are created through the real
+  `/register` and `/verify-email` handlers via `app.inject`).
+- **Outbox.** `services/emailOutbox.ts` (ring of 100, a no-op unless the hooks are on).
+- **Guards.** The four guards; `configGuards.test` covers the production refusal of every test-only variable.
+- **Tests.** `testHooksOff.test` (404 when off); `testHooks.int.test` (seeded user signs in, unverified user's link in
+  the outbox, margin mode and leverage applied, reset, 401 without the secret).
+- **Deviation.** An unknown symbol in `leverage` is dropped, not refused: Fastify strips undeclared properties
+  (`removeAdditional`), as on every route.
+- **Not built yet.** `test:e2e:clean` comes with Playwright (M4).
+
 ## F3. Deterministic market feed — the fake Bybit server
 
 - **Where.** `apps/server/src/test/fakeBybit.ts` (a Fastify app with `@fastify/websocket`, already dependencies),
@@ -201,6 +213,7 @@ Effort **M** (plugin, outbox sink, config guard + its unit test, `.env.example` 
   `BYBIT_WS_URL` (used in `BybitWebSocketManager.ts:60–61` in place of the hard-coded `wss://stream…bybit.com`
   hosts). 🔐 Both are validated with `new URL(...)`, and `config.ts` exits if either is set while
   `nodeEnv === 'production'`. They are not `criticalVars`; `.env.example` lists them commented, marked test-only.
+  **Status:** ✅ the seam and its guards (M3a); the fake server itself is M3b.
 - **Local reproduction.** `pnpm dev:e2e` (root script) starts the fake feed, the server with the overrides and
   `ENABLE_TEST_HOOKS`, and Vite — the "local dev (fake feed)" environment every UI step below refers to.
 

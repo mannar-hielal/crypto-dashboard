@@ -68,6 +68,8 @@ const PARTIAL_TTL_MS = 5 * 60_000;
 const FETCH_TIMEOUT_MS = 8_000;
 
 export function bybitRestBaseUrl(): string {
+  // A local fake feed in tests (BYBIT_REST_URL; config.ts refuses it in production)
+  if (config.bybitRestUrl) return config.bybitRestUrl.replace(/\/+$/, '');
   return config.bybitTestnet ? 'https://api-testnet.bybit.com' : 'https://api.bybit.com';
 }
 

@@ -337,8 +337,9 @@ _P2 — replay feed and browser tests (7)_
 
 - [ ] Record Bybit WS / REST fixtures and replay them from `apps/server/src/test/fakeBybit.ts` — (P2)
 - [ ] `BYBIT_REST_URL` / `BYBIT_WS_URL` overrides, refused in production, plus the price-control and drop / stall
-      endpoints — (P2)
-- [ ] Test-only user seed helper, disabled in production — (P2)
+      endpoints — (P2; the overrides and their production guard are in (M3a); the controls come with the fake feed)
+- [x] Test-only user seed helper, disabled in production — (P2; M3a: `/api/test/users`, the email outbox and an
+      account reset behind `ENABLE_TEST_HOOKS` + `TEST_HOOKS_SECRET`, refused at boot in production)
 - [ ] Playwright setup: Chromium + WebKit + a mobile viewport, `webServer`, trace / video on retry, one CI retry —
       T3 (P2)
 - [ ] Smoke set on every PR (< 3 min) and the full ⬜ set nightly — T3 (P2)

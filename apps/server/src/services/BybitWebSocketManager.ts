@@ -7,6 +7,7 @@
 import { EventEmitter } from 'events';
 import { Kline, OrderBook, Trade, TickerData, StreamData } from '../types/index.js';
 import type { BybitCategory } from '../constants.js';
+import { config } from '../config.js';
 import { logger } from '../logger.js';
 
 const log = logger.child({ service: 'BybitWebSocketManager' });
@@ -56,9 +57,13 @@ export class BybitWebSocketManager extends EventEmitter {
   constructor(useTestnet: boolean = true, category: BybitCategory = 'spot') {
     super();
     this.category = category;
-    this.url = useTestnet
-      ? `wss://stream-testnet.bybit.com/v5/public/${category}`
-      : `wss://stream.bybit.com/v5/public/${category}`;
+    // A local fake feed in tests (BYBIT_WS_URL; config.ts refuses it in production)
+    const base = config.bybitWsUrl
+      ? config.bybitWsUrl.replace(/\/+$/, '')
+      : useTestnet
+        ? 'wss://stream-testnet.bybit.com'
+        : 'wss://stream.bybit.com';
+    this.url = `${base}/v5/public/${category}`;
   }
 
   /**
