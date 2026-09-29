@@ -148,7 +148,9 @@ export function TradingPanel({
   // Disconnected (9.6, visual gate 2026-09-29): no quote is shown rather than a stale one — Sell,
   // Buy and the spread read `—` until the feed is back
   const quoteLive = isConnected && isOnline;
-  const spread = quoteLive && bid != null && ask != null ? ask - bid : null;
+  // A crossed or locked book (bid ≥ ask, a momentary glitch) has no meaningful spread: `—` until
+  // the quote is valid again (owner, Q4 2026-09-29)
+  const spread = quoteLive && bid != null && ask != null && ask > bid ? ask - bid : null;
 
   const freeBalance = usePaperStore((s) => s.balance);
   const marginMode = usePaperStore((s) => s.marginMode);
