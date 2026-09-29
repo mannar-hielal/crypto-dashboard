@@ -3497,3 +3497,29 @@ number formats "just like Bybit".
   - the visual baselines were regenerated and made exact (no pixel tolerance): a 1 % tolerance had let the new number
     formats pass unseen;
   - UptimeRobot (the owner's, every 5 min) and the $0 Actions budget are noted in `git.md`.
+
+### feat: phone trading — responsive phones and tablets, a Buy / Sell bar, the order form full screen or as a sheet (2026-09-29) ✅
+
+**Context:** owner, 2026-09-29: "phone trading is go ahead, also make sure UI is responsive in small phones and tablets
+… keep logo CP but hide the cryptopapertrade.com wording … be smart in the layout". The layout was delegated. The
+rules are in `design.md` "Responsive layout".
+
+- **Phones (below 640 px):**
+  - the top bar keeps the CPT logo and the avatar (the wordmark and the username show from `sm`);
+  - the layout picker and sync status are hidden (one pane fits);
+  - no ticker tape;
+  - the account panel is titled "Orders & Account";
+  - the footer is compact, keeping the disclaimer and the legal links.
+- **Phones and tablets (below 1024 px):**
+  - `MobileTradeBar` (Buy / Long, Sell / Short, dark text on the fills) opens the order form on that side;
+  - the form is full screen on phones and a 320 px right-hand sheet on tablets (from 768 px);
+  - once an order is in, the form closes and the account panel opens on the result;
+  - the order form follows a side chosen from outside (`initialSide`), and reports a placed order (`onPlaced`);
+  - the Trade toggle in the symbol bar shows from `lg` only.
+- **Tests:** Section 20 of the test plan (rows 20.1–20.4).
+  - `e2e/tests/mobile/layout.spec`: phones have no sideways scroll, the logo without the wordmark, and Sell opens a
+    full-width form; tablets get the sheet beside the chart.
+  - The Spot buy and perp long smoke scenarios now also run on both phones (`@mobile`); `runScenario` opens the form
+    from the bar.
+  - The e2e fixtures pre-dismiss the PWA install banner, which covers the bar on phones.
+  - The dialog baselines clip inside the dialog's rounded corners, which show whatever changes behind them.

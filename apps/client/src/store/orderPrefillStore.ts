@@ -17,12 +17,20 @@ export interface OrderPrefill {
 
 interface OrderPrefillState {
   request: OrderPrefill | null;
+  /**
+   * Counts the requests and is never cleared, with the side of the last one: the mobile layout
+   * opens the (undocked) form on each new request, which TradingPanel may already have taken
+   */
+  seq: number;
+  lastSide: 'buy' | 'sell';
   prefill: (request: OrderPrefill) => void;
   clear: () => void;
 }
 
 export const useOrderPrefillStore = create<OrderPrefillState>()((set) => ({
   request: null,
-  prefill: (request) => set({ request }),
+  seq: 0,
+  lastSide: 'buy',
+  prefill: (request) => set((s) => ({ request, seq: s.seq + 1, lastSide: request.side })),
   clear: () => set({ request: null }),
 }));

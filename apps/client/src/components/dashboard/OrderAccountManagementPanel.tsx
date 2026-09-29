@@ -807,8 +807,10 @@ export function OrderAccountManagementPanel({
         style={{ background: bg.panel }}
       >
         {/* Left: panel label */}
-        <span className="text-xs font-bold text-white/80 tracking-wide">
-          Order &amp; Account Management
+        <span className="truncate text-xs font-bold text-white/80 tracking-wide">
+          {/* One line on phones */}
+          <span className="sm:hidden">Orders &amp; Account</span>
+          <span className="hidden sm:inline">Order &amp; Account Management</span>
         </span>
 
         {/* Right: sound + settings + collapse/expand + maximize/restore */}
