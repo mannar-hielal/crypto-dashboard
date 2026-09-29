@@ -6,17 +6,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '../../fixtures';
 
-/**
- * Known defect (row 19.16): links in the brand purple (#695bec on #25234e, ~3:1) and the 10 px
- * disclaimer at 60 % opacity fail WCAG AA contrast, and the Terms / Privacy links differ from the
- * text by colour only. The fix is a visual change (visual Q&A gate); remove a page from this list
- * when it passes.
- */
-const KNOWN_CONTRAST_DEFECT = new Set(['/login', '/register', '/forgot-password']);
-
 for (const path of ['/login', '/register', '/forgot-password', '/reset-password?token=e2e-axe']) {
   test(`[NEW-19-3] axe: ${path} has no serious or critical violation @a11y`, async ({ page }) => {
-    test.fail(KNOWN_CONTRAST_DEFECT.has(path), 'row 19.16: link and disclaimer contrast');
     await page.goto(path);
     await page.waitForLoadState('networkidle');
     // Let the entrance animations finish: a half-faded element reads as low contrast

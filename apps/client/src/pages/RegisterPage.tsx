@@ -250,16 +250,16 @@ export function RegisterPage() {
                             I have read and agree to the{' '}
                             <Link
                               to="/terms"
-                              className="transition-colors hover:text-brand-purple"
-                              style={{ color: color.purpleDark }}
+                              className="underline underline-offset-2 transition-colors hover:text-brand-purple"
+                              style={{ color: color.purpleLight }}
                             >
                               Terms of Service
                             </Link>{' '}
                             and{' '}
                             <Link
                               to="/privacy"
-                              className="transition-colors hover:text-brand-purple"
-                              style={{ color: color.purpleDark }}
+                              className="underline underline-offset-2 transition-colors hover:text-brand-purple"
+                              style={{ color: color.purpleLight }}
                             >
                               Privacy Policy
                             </Link>
@@ -296,8 +296,8 @@ export function RegisterPage() {
 
                 <motion.p
                   variants={formFieldVariants}
-                  className="text-center text-[10px] leading-tight"
-                  style={{ color: `${color.muted}99` }}
+                  className="text-center text-[11px] leading-tight"
+                  style={{ color: color.muted }}
                 >
                   ⚠️ <strong>No Financial Advice:</strong> This is a paper trading simulator for
                   educational purposes only. No real funds are involved. Simulated results do not
@@ -312,8 +312,8 @@ export function RegisterPage() {
                   Already have an account?{' '}
                   <Link
                     to="/login"
-                    className="font-semibold transition-colors hover:text-brand-purple"
-                    style={{ color: color.purpleDark }}
+                    className="font-semibold underline underline-offset-2 transition-colors hover:text-brand-purple"
+                    style={{ color: color.purpleLight }}
                   >
                     Sign in
                   </Link>

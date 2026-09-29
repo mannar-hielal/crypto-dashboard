@@ -194,8 +194,8 @@ export function LoginPage() {
                           <Link
                             to="/forgot-password"
                             {...guide('auth.login.forgot-link')}
-                            className="transition-colors hover:text-brand-purple"
-                            style={{ fontSize: fontSize.xs11, color: color.purpleDark }}
+                            className="underline underline-offset-2 transition-colors hover:text-brand-purple"
+                            style={{ fontSize: fontSize.xs11, color: color.purpleLight }}
                           >
                             Forgot password?
                           </Link>
@@ -248,8 +248,8 @@ export function LoginPage() {
                   Don&apos;t have an account?{' '}
                   <Link
                     to="/register"
-                    className="font-semibold transition-colors hover:text-brand-purple"
-                    style={{ color: color.purpleDark }}
+                    className="font-semibold underline underline-offset-2 transition-colors hover:text-brand-purple"
+                    style={{ color: color.purpleLight }}
                   >
                     Create one
                   </Link>

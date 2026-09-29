@@ -17,11 +17,13 @@ export function OfflineBanner() {
   if (!isOffline) return null;
 
   return (
+    // A bottom-centre toast (visual gate 2026-09-29): a bar across the top covered the top bar and its
+    // Sign out (row 19.15)
     <div
       role="alert"
-      className="fixed top-0 left-0 right-0 z-50 bg-amber-600 px-4 py-2 text-center text-sm font-medium text-white"
+      className="fixed bottom-12 left-1/2 z-50 -translate-x-1/2 rounded-full bg-amber-600 px-4 py-1.5 text-center text-sm font-medium text-white shadow-lg"
     >
-      No internet connection — data may not update until you're back online.
+      ⚠ Offline — data paused until you're back online
     </div>
   );
 }

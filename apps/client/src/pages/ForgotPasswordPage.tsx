@@ -176,8 +176,8 @@ export function ForgotPasswordPage() {
               >
                 <Link
                   to="/login"
-                  className="font-semibold transition-colors hover:text-brand-purple"
-                  style={{ color: color.purpleDark }}
+                  className="font-semibold underline underline-offset-2 transition-colors hover:text-brand-purple"
+                  style={{ color: color.purpleLight }}
                 >
                   Back to sign in
                 </Link>

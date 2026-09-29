@@ -24,12 +24,13 @@ test('[19.15] signing out works with the network down @full', async ({
   context,
   seededUser,
 }) => {
-  // Known defect (row 19.15): OfflineBanner is `fixed top-0 z-50`, so while offline it covers the
-  // top bar and its user menu — Sign out can't be reached. Remove this line with the fix.
-  test.fail(true, 'row 19.15: the offline banner covers the top bar and its Sign out');
+  // Row 19.15: the offline notice used to cover the top bar; it is a bottom toast since the fix
   test.setTimeout(20_000);
   await signInAs(page, seededUser.email, seededUser.password);
+  // The dashboard is loaded (its code arrives lazily) before the network goes
+  await expect(at(page, 'nav.user-menu')).toBeVisible();
   await context.setOffline(true);
+  await expect(page.getByRole('alert').filter({ hasText: 'Offline' })).toBeVisible();
   await at(page, 'nav.user-menu').click({ timeout: 5_000 });
   await at(page, 'nav.sign-out').click({ timeout: 5_000 });
   await expect(page).not.toHaveURL(/\/dashboard/);
