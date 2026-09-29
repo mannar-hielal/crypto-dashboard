@@ -24,6 +24,10 @@ export async function signInAs(page: Page, email: string, password: string): Pro
  *   spot XRPUSDT   spotTpSl              linear XRPUSDT   perpTpSl (long TP)
  *   linear ETHUSDT accountReset          linear DOGEUSDT  perpTpSl (short SL)
  *   linear BNBUSDT limitBracket          linear AVAXUSDT  editOrders
+ *   linear LINKUSDT risk (serial file)   linear ADAUSDT   advanced (serial file)
+ *
+ * A file that owns a market and has several tests runs them serially
+ * (`test.describe.configure({ mode: 'serial' })`), so they never move it under each other.
  */
 
 export interface OrderInput {
@@ -57,4 +61,24 @@ export async function placeOrder(page: Page, o: OrderInput): Promise<void> {
   }
   await at(page, 'trade.submit').click();
   await expect(at(page, 'trade.amount')).toHaveValue('');
+}
+
+/** Set the margin mode and leverage through the chip's modal (the steps of the `setIsolated` guide step). */
+export async function setMarginMode(
+  page: Page,
+  mode: 'isolated' | 'cross',
+  leverage: 1 | 2 | 3 | 5 | 10
+): Promise<void> {
+  await at(page, 'trade.leverage-chip').click();
+  await at(page, 'leverage.mode', mode).click();
+  await at(page, 'leverage.input', String(leverage)).click();
+  await at(page, 'leverage.confirm').click();
+  await expect(at(page, 'trade.leverage-chip')).toHaveText(
+    `${mode === 'isolated' ? 'Isolated' : 'Cross'} ${leverage}x`
+  );
+}
+
+/** A number shown on screen ("$18,134.5", "−0.51", "1,000.00 USD") as a JS number. */
+export function num(text: string | null): number {
+  return Number((text ?? '').replace(/[−–]/g, '-').replace(/[^0-9.-]/g, ''));
 }

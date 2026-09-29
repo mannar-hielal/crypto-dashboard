@@ -86,6 +86,7 @@ function RemarginPreview({ position, leverage, symbol }: RemarginPreviewProps) {
       className={`${styles.note} ${styles.preview}`}
       style={{ fontSize: fontSize.xs10 }}
       data-testid="remargin-preview"
+      {...guide('leverage.preview')}
     >
       <div>
         <dt>Position margin: </dt>

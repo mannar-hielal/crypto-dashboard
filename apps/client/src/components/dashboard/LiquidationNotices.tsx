@@ -4,6 +4,7 @@ import { usePaperStore, type ClosedTrade } from '@/store/paperStore';
 import { LIQUIDATION_EXPLAINER } from '@/lib/positionMath';
 import { bg, color, fontSize } from '@/lib/tokens';
 import { fmtMktPrice } from '@/lib/utils';
+import { guide } from '@/lib/guideAnchors';
 import styles from './LiquidationNotices.module.css';
 
 /** Set once the user dismisses the "liquidation is live" banner (BP-3 deploy notice). */
@@ -58,6 +59,7 @@ export function LiquidationNotices() {
           className={styles.notice}
           role="alert"
           style={{ background: bg.banner, borderColor: `${color.red}66` }}
+          {...guide('notice.liquidation')}
         >
           <div className={styles.row}>
             <p style={{ fontSize: fontSize.xs10, color: color.white }}>
@@ -72,6 +74,7 @@ export function LiquidationNotices() {
               className={styles.dismiss}
               aria-label="Dismiss liquidation notice"
               style={{ color: color.muted }}
+              {...guide('notice.dismiss', 'liquidation')}
               onClick={() => {
                 writeStorage(LIQ_SEEN_KEY, String(liquidated.closedAt));
                 setSeenAt(liquidated.closedAt);
@@ -86,6 +89,7 @@ export function LiquidationNotices() {
         <div
           className={styles.notice}
           style={{ background: bg.banner, borderColor: `${color.amber}55` }}
+          {...guide('notice.liquidation-intro')}
         >
           <div className={styles.row}>
             <p style={{ fontSize: fontSize.xs10, color: color.white }}>
@@ -98,6 +102,7 @@ export function LiquidationNotices() {
               className={styles.dismiss}
               aria-label="Dismiss liquidation notice"
               style={{ color: color.muted }}
+              {...guide('notice.dismiss', 'liquidation-intro')}
               onClick={() => {
                 writeStorage(INTRO_DISMISSED_KEY, '1');
                 setIntroDismissed(true);

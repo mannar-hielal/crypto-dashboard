@@ -3359,3 +3359,36 @@ holds the real `RESEND_API_KEY`, so every local Playwright run mailed its made-u
     1.5.3 expects `−$10.12`. This is a format change for the visual gate.
   - Row 1.7.8's wording is aligned with the app, which disables the market button offline.
 - 53 tests pass over every project, twice in a row; one WebKit load flake is covered by the CI retry.
+
+### test: M5c — risk in the browser: mark price, liquidation, re-margin, add margin, funding, margin mode, two symbols (2026-09-29) ✅
+
+**Context:** TEST_IMPLEMENTATION_PLAN M5, third batch (SC-15.1-1, SC-15.4-1, SC-15.5-2, SC-17.1-1, SC-17.1-3,
+SC-16-1, SC-17.5-2, SC-11-1, SC-11-3). The expected numbers were hand-checked where they are simple (P&L on the mark,
+funding, margin + close-fee reserve), and pinned from the engine where it is the Bybit-checked source (the
+isolated liquidation price, T1 `margin.test`).
+
+- **Specs:**
+  - `e2e/tests/risk/risk.spec` on linear LINKUSDT: P&L on the mark and TP on the last price; liquidation at `$18.122`,
+    with the notice, Closed P&L and Order History; 10× → 5× preview and confirm; add 1,000 margin.
+  - `e2e/tests/advanced/advanced.spec` on linear ADAUSDT:
+    - funding `−0.51`, and the same timestamp again changes nothing;
+    - isolated → cross releases the added margin, and back to isolated is refused with the reason when the long
+      would be liquidated;
+    - ADA and BTC positions: closing ADA from the BTC page closes only ADA.
+  - Each file owns one market and runs serially.
+- **Fake feed:** it announces no funding timestamp until a test sets one. The recorded `nextFundingTime` was long
+  past, and the engine held it as due for its 60 s grace, so a timestamp set by a test wasn't settled. Bybit always
+  announces a future timestamp, so this was a fake-only artefact. `fakeBybit.test` covers it.
+- **Anchors (attributes only):**
+  - the positions liq, funding and adjust-margin cells;
+  - the Closed P&L exit type;
+  - the liquidation and cross-margin notices and their dismiss buttons;
+  - the leverage preview;
+  - every control of the Adjust margin dialog.
+- **Findings for the visual gate (cosmetic):**
+  - a zero P&L shows `+0.00` (Bybit shows no sign);
+  - the leverage preview shows `$1002.20` without the thousands separator;
+  - a negative P&L shows as `$-10.12` (from M5b).
+- **Calibrated:** cross → isolated is allowed for a healthy position, as on Bybit, and refused only with a reason.
+  Row 17.5.6 already said so; the SC text read as if it were always refused.
+- **Results:** 67 tests pass on every project locally.

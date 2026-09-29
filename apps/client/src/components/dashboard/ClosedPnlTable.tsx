@@ -91,7 +91,10 @@ function ClosedPnlRow({ trade: t }: { trade: ClosedTrade }) {
         {pnl > 0 ? '+' : ''}
         {pnl.toFixed(4)} USDT
       </td>
-      <td style={{ color: t.liquidated ? color.amber : color.muted }}>
+      <td
+        style={{ color: t.liquidated ? color.amber : color.muted }}
+        {...guide('closed-pnl.exit-type')}
+      >
         {t.liquidated ? 'Liquidation' : 'Trade'}
       </td>
       <td className={styles.num} style={{ fontSize: fontSize.xs10, color: color.muted }}>
