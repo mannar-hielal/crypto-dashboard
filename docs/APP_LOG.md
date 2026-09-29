@@ -3310,3 +3310,19 @@ CI 789, `claude.yml` 157, Deploy 80. Without changes, a normal month with the ne
 - **Budget:** about 1,780 minutes planned plus about 220 in reserve, for about 25 PRs and 8 releases a month.
   - Brake at GitHub's 75 % email: prod smoke every 12 h, nightly e2e only if `develop` changed, parity weekly.
   - At 90 %: one PR and one release at most.
+
+### security: e2e runs never send real email (2026-09-29) ✅
+
+**Context:** Resend reported the team's daily quota (100 emails) exceeded 200 % on 2026-09-29. Cause: the e2e
+server (`apps/e2e/scripts/startServer.mjs`) loads `apps/server/.env` through dotenv. On a developer machine that file
+holds the real `RESEND_API_KEY`, so every local Playwright run mailed its made-up `e2e-…@test.local` addresses
+(register, verify, resend, reset, deletion). CI was never affected, because it has no key.
+
+- **Server:** `EmailService` sends nothing through Resend while `ENABLE_TEST_HOOKS=1`. Emails go only to the test
+  outbox, whatever key is in the environment (🔐 comment). `services/__tests__/EmailService.test.ts` fails without the
+  guard.
+- **e2e config:** `RESEND_API_KEY: ''` in the api web server's env, so dotenv can't fill it in.
+- **Owner note:**
+  - If production uses the same Resend team, its verification and reset emails were refused until the daily quota
+    reset.
+  - The bounced `@test.local` sends may show in Resend's suppression list and deliverability stats.

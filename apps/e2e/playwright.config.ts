@@ -68,6 +68,9 @@ export default defineConfig({
         LOG_LEVEL: 'warn',
         BYBIT_REST_URL: `http://127.0.0.1:${FEED_PORT}`,
         BYBIT_WS_URL: `ws://127.0.0.1:${FEED_PORT}`,
+        // 🔐 Set (empty) so dotenv can't load a developer's real key from apps/server/.env; the
+        // server also refuses to mail anyone with the test hooks on (EmailService)
+        RESEND_API_KEY: '',
         ENABLE_TEST_HOOKS: '1',
         TEST_HOOKS_SECRET: HOOKS_SECRET,
       },
