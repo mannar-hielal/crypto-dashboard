@@ -49,6 +49,43 @@ export function refreshAccessToken(): Promise<string | null> {
   return inflight;
 }
 
+// ─── Sign-out that survives being offline ───────────────────────────────────────
+
+/** Set when a sign-out couldn't reach the server: the refresh cookie is still valid there */
+const PENDING_SIGN_OUT_KEY = 'cd-pending-sign-out';
+
+function setPendingSignOut(pending: boolean): void {
+  try {
+    if (pending) localStorage.setItem(PENDING_SIGN_OUT_KEY, '1');
+    else localStorage.removeItem(PENDING_SIGN_OUT_KEY);
+  } catch {
+    // Storage unavailable (private mode): the local sign-out still happened
+  }
+}
+
+function hasPendingSignOut(): boolean {
+  try {
+    return localStorage.getItem(PENDING_SIGN_OUT_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * End the session on the server (revokes the refresh cookie). 🔐 If the server can't be reached
+ * (offline, 5xx), remember it: restoreSession finishes the sign-out before it would otherwise
+ * trade the still-valid cookie for a new session (row 19.15). The caller clears the local
+ * session either way. The flag can only ever cause a sign-out, so a tampered value is harmless.
+ */
+export async function signOutOnServer(): Promise<void> {
+  try {
+    await authApi.logout();
+    setPendingSignOut(false);
+  } catch {
+    setPendingSignOut(true);
+  }
+}
+
 /**
  * Boot-time session restore: trade the httpOnly refresh cookie for an access token, then load
  * the user. A signed-out visitor (no cookie) gets `null` from refresh — no 401, no /me call.
@@ -56,6 +93,12 @@ export function refreshAccessToken(): Promise<string | null> {
  */
 export async function restoreSession(): Promise<void> {
   const { setAuth, setLoading } = useAuthStore.getState();
+  // A sign-out made while offline: finish it, and stay signed out (still offline: try next time)
+  if (hasPendingSignOut()) {
+    await signOutOnServer();
+    setLoading(false);
+    return;
+  }
   try {
     const res = await authApi.refresh();
     if (!res) {

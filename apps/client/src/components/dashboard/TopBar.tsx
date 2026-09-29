@@ -1,10 +1,10 @@
+import { signOutOnServer } from '@/lib/session';
 import { guide } from '@/lib/guideAnchors';
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { LogOut, ChevronDown, Settings, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
-import { authApi } from '@crypto-dashboard/sdk';
 import { usePaperStore } from '@/store/paperStore';
 import { bg, color, fontSize, gradient, radius } from '@/lib/tokens';
 import { SettingsModal } from './SettingsModal';
@@ -163,11 +163,12 @@ export function TopBar({ marketing = false }: TopBarProps) {
                         setMenuOpen(false);
                         void (async () => {
                           try {
-                            await authApi.logout();
-                          } catch {
+                            // 🔐 Never throws; an unreachable server is remembered and
+                            // finished on the next load (row 19.15)
+                            await signOutOnServer();
+                          } finally {
                             // 🔐 Local session must clear even if the server call
                             // fails — otherwise the user appears signed-in forever.
-                          } finally {
                             useAuthStore.getState().clearAuth();
                             // 🔐 Never leave the account on screen for the next user
                             usePaperStore.getState().clear();
