@@ -3263,3 +3263,21 @@ Q&A gate on 2026-09-29: a bottom toast, and lighter purple with underlined links
   - The Register disclaimer is 11 px at full muted colour (it was 10 px at 60 %).
 - **Tests:** three `session.test` cases for the pending sign-out. The e2e `test.fail` markers are removed:
   `session.spec` [19.15] and `a11y/auth.spec` now pass outright on Chromium and WebKit.
+
+### security: deploy only a push to main in this repository (public repo) (2026-09-29) ✅
+
+**Context:** the owner made the repository public on 2026-09-29, because Actions minutes are free for public
+repositories and the included 2,000 were used up.
+
+- **Risk:** `deploy.yml` runs on `workflow_run` of CI with `branches: [main]` and checked only
+  `conclusion == 'success'`. The branch filter matches the head branch _name_. A fork's PR from a branch called
+  `main` (to `develop`) would pass CI and fire Deploy, which checks out `workflow_run.head_sha`, the fork's commit.
+  That would ship it to production with the Fly and Cloudflare secrets. An environment branch policy doesn't help,
+  because `workflow_run` runs in the default branch's context.
+- **Fix:** the deploy job also requires:
+  - `workflow_run.event == 'push'`;
+  - `head_branch == 'main'`;
+  - `head_repository.full_name == github.repository`.
+- **Rule:** added to `.claude/rules/security.md` ("Public repository — workflow triggers").
+- **Owner settings to confirm:** Settings → Actions → General → "Require approval for all external contributors" for
+  fork PR workflows; secret scanning / push protection (free on public repos).
