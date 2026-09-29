@@ -11,6 +11,8 @@
     "preinstall": "pnpm audit --audit-level=high",
     "dev:server": "pnpm --filter @crypto-dashboard/server dev",
     "dev": "pnpm dev:server",
+    "dev:e2e": "node scripts/devE2e.mjs",
+    "feed": "pnpm --silent --filter @crypto-dashboard/server feed",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
