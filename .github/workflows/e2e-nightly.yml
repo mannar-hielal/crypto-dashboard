@@ -92,7 +92,8 @@ jobs:
           gh label create e2e --color B60205 --description "Nightly Playwright failure" 2>/dev/null || true
           body="The nightly Playwright run failed on $(date -u +%Y-%m-%d): $RUN_URL
 
-          Download the \`e2e-nightly\` artifact for the HTML report and the traces of the failing tests."
+          Download the \`e2e-nightly-${{ github.run_id }}-${{ github.run_attempt }}\` artifact from that run for the
+          HTML report and the traces of the failing tests."
           existing=$(gh issue list --label e2e --state open --json number -q '.[0].number // empty')
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --body "$body"
