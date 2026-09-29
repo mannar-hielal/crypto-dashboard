@@ -51,7 +51,8 @@ Two long-lived branches: `main` (production — every merge to it deploys, see C
    - Inside it, commits stay one testable unit each (see above), so the history stays readable.
    - Release `develop → main` when a meaningful set has landed, not after every PR. Every CI run is
      billed per run, and each release costs another CI run plus the deploy.
-   - A security fix is the exception: it gets its own PR and release at once.
+   - A security fix is the exception: it gets its own PR and release at once, still through a
+     `develop → main` release PR (see [Emergencies](#emergencies--broken-production) below).
 
 Branch names follow `<type>/<short-kebab-description>`, mirroring the commit prefixes —
 `feat/drawing-tools`, `feat/landing-page`, `feat/seo-work`, `feat/prepare-for-launch`,
@@ -84,6 +85,27 @@ checked out.
   branch protection, so the merge itself waits on the merge process instead: every check on the
   PR's head must be green, not just CI. `prod-smoke.yml`
   runs every 6 hours. `deploy.yml` also runs the prod smoke after every deploy.
+
+## Emergencies — broken production
+
+`deploy.yml` deploys only a CI-green `main` commit whose `develop → main` release PR had a green
+"E2E full set". There is no hotfix-to-`main` path and no switch that skips the gate: a way around
+it would also be a way around it for a mistake. The break-glass options work without it:
+
+1. **Production is broken now → roll back first.** Neither needs a CI run or Actions minutes.
+   - API: redeploy the previous image. `fly releases --image -a <app>` lists them; then run
+     `fly deploy --image <previous image ref> -a <app>`.
+   - Web: Cloudflare Pages → Deployments → the previous one → "Rollback to this deployment".
+2. **The deploy itself failed** (a flaky prod smoke, a Fly hiccup) → re-run that Deploy run
+   (`gh run rerun <run id> --failed`). The gate checks the same release PR again. If the release PR's
+   full set was red or flaky, re-run that check on the PR first.
+3. **The fix itself:**
+   - Open a fix PR to `develop` and merge it once it's green.
+   - Then open a release PR `develop → main` at once.
+   - Unreleased work already on `develop` ships with it, so revert anything on `develop` that
+     mustn't go out (a revert PR) before opening the release.
+   - The release PR's full set takes about 15 minutes, so the fix reaches production in under an
+     hour, with the rollback holding production meanwhile.
 
 ## Actions budget — 2,000 minutes a month
 
