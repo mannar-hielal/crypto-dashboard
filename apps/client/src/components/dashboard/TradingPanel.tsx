@@ -768,7 +768,10 @@ export function TradingPanel({
           title={
             spread != null
               ? `Bid: ${fmtTickPrice(bid!)} · Ask: ${fmtTickPrice(ask!)}`
-              : 'Spread — awaiting bid/ask feed'
+              : quoteLive && bid != null && ask != null
+                ? // Live but crossed / locked: say so, and keep the values visible (review #204)
+                  `Crossed book — Bid: ${fmtTickPrice(bid)} · Ask: ${fmtTickPrice(ask)}`
+                : 'Spread — awaiting bid/ask feed'
           }
         >
           {spread != null ? spread.toFixed(priceDecimals) : '—'}
