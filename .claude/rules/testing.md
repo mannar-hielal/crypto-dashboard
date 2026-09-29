@@ -67,7 +67,8 @@ correct without depending on real infrastructure, and the suite stays fast and d
 - Exercise routes by injecting into the built app, not by starting a real HTTP listener:
   `app.inject({ method: 'GET', url: '...' })`.
 - Coverage: `pnpm test:coverage` uses the v8 provider, includes `src/**/*.ts`, excludes
-  `src/index.ts` and `src/**/__tests__/**`, and fails below the `coverage.thresholds` floors in each
+  `src/index.ts`, `src/**/__tests__/**` and the command-line tools' entry points (`src/tools/*.ts`,
+  `src/tools/fakeBybit/main.ts`; the fake feed's logic stays counted), and fails below the `coverage.thresholds` floors in each
   package's `vitest.config.ts` (raised as tests land, never lowered). The pre-commit hook and CI both
   run it.
 

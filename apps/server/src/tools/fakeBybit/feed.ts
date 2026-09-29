@@ -63,8 +63,32 @@ export const INTERVAL_MS: Record<string, number> = {
   '720': 720 * MIN,
   D: 1_440 * MIN,
   W: 10_080 * MIN,
-  M: 43_200 * MIN,
+  M: 43_200 * MIN, // only a membership marker: W and M use calendar boundaries (bucketStart)
 };
+
+const DAY = 1_440 * MIN;
+/** 1970-01-05, a Monday: Bybit's weekly candles start on Monday 00:00 UTC (the epoch was a Thursday) */
+const FIRST_MONDAY = 4 * DAY;
+
+/** The start of the candle holding `t`, on Bybit's boundaries (W: Monday, M: the 1st of the month). */
+export function bucketStart(interval: string, t: number): number {
+  if (interval === 'W') return Math.floor((t - FIRST_MONDAY) / (7 * DAY)) * 7 * DAY + FIRST_MONDAY;
+  if (interval === 'M') {
+    const d = new Date(t);
+    return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1);
+  }
+  const step = INTERVAL_MS[interval] ?? MIN;
+  return Math.floor(t / step) * step;
+}
+
+/** The start of the candle before the one starting at `start`. */
+export function previousStart(interval: string, start: number): number {
+  if (interval === 'M') {
+    const d = new Date(start);
+    return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 1);
+  }
+  return bucketStart(interval, start - 1);
+}
 
 const key = (category: Category, symbol: string) => `${category}:${symbol}`;
 
@@ -339,17 +363,16 @@ export class FakeFeed {
     opts: { start?: number; end?: number; limit?: number }
   ): string[][] {
     const m = this.market(category, symbol);
-    const step = INTERVAL_MS[interval];
-    if (!m || !step) return [];
+    if (!m || !Object.hasOwn(INTERVAL_MS, interval)) return [];
     const price =
       source === 'mark' ? (m.mark ?? m.last) : source === 'index' ? (m.index ?? m.last) : m.last;
     const limit = Math.min(Math.max(opts.limit ?? 200, 1), 1_000);
-    const newest = Math.floor(Math.min(opts.end ?? this.now(), this.now()) / step) * step;
+    const first = opts.start === undefined ? undefined : bucketStart(interval, opts.start);
     const rows: string[][] = [];
-    for (let i = 0; i < limit; i++) {
-      const start = newest - i * step;
-      if (opts.start !== undefined && start < Math.floor(opts.start / step) * step) break;
-      const c = this.candle(m, source, interval, start, price, step);
+    let start = bucketStart(interval, Math.min(opts.end ?? this.now(), this.now()));
+    for (let i = 0; i < limit; i++, start = previousStart(interval, start)) {
+      if (first !== undefined && start < first) break;
+      const c = this.candle(m, source, interval, start, price);
       const row = [
         String(start),
         this.fmt(m, c.open),
@@ -368,18 +391,17 @@ export class FakeFeed {
     source: KlineSource,
     interval: string,
     start: number,
-    price: number,
-    step: number
+    price: number
   ): Candle {
     const override =
       interval === '1'
         ? this.overrides.get(`${m.category}:${m.symbol}:${source}:${start}`)
         : undefined;
     if (override) return override;
-    const newest = Math.floor(this.now() / step) * step;
+    const newest = bucketStart(interval, this.now());
     const at = (t: number) =>
       t >= newest ? price : price * (1 + 0.002 * noise(`${m.symbol}:${source}:${interval}:${t}`));
-    const open = at(start - step);
+    const open = at(previousStart(interval, start));
     const close = at(start);
     const wick = Math.abs(noise(`${m.symbol}:${interval}:${start}:wick`)) * 0.0005;
     return {

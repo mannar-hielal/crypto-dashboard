@@ -119,6 +119,35 @@ describe('fake Bybit — shapes (against the recorded Bybit answers)', () => {
     }
   });
 
+  it('starts weekly candles on Monday and monthly ones on the 1st, like Bybit (review #181)', async () => {
+    const starts = async (interval: string) => {
+      const res = await fetch(
+        `http://127.0.0.1:${PORT}/v5/market/kline?category=spot&symbol=BTCUSDT&interval=${interval}&limit=14`,
+        { signal: AbortSignal.timeout(5_000) }
+      );
+      const body = (await res.json()) as { result: { list: string[][] } };
+      return body.result.list.map((row) => new Date(Number(row[0])));
+    };
+    const weeks = await starts('W');
+    expect(weeks).toHaveLength(14);
+    for (const d of weeks) {
+      expect([d.getUTCDay(), d.getUTCHours(), d.getUTCMinutes()], d.toISOString()).toEqual([
+        1, 0, 0,
+      ]);
+    }
+    const months = await starts('M');
+    for (const [i, d] of months.entries()) {
+      expect([d.getUTCDate(), d.getUTCHours()], d.toISOString()).toEqual([1, 0]);
+      // Consecutive calendar months, newest first
+      if (i > 0) {
+        const prev = months[i - 1]!;
+        const gap =
+          (prev.getUTCFullYear() - d.getUTCFullYear()) * 12 + prev.getUTCMonth() - d.getUTCMonth();
+        expect(gap).toBe(1);
+      }
+    }
+  });
+
   it('pushes WebSocket messages with the fields of the recorded ones', () => {
     const fields = (v: unknown) => Object.keys((Array.isArray(v) ? v[0] : v) as object).sort();
     for (const [category, topic, kind] of [
