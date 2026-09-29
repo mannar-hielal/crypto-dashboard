@@ -3,8 +3,8 @@ import { createPortal } from 'react-dom';
 import { CandlestickChart, ChevronDown } from 'lucide-react';
 import { CHART_TYPES, useLayoutStore, type ChartType } from '@/store/layoutStore';
 import { color, fontSize, bg } from '@/lib/tokens';
-// Same trigger/menu styling as the interval dropdown it sits next to.
 import { guide } from '@/lib/guideAnchors';
+// Same trigger/menu styling as the interval dropdown it sits next to.
 import styles from './IntervalDropdown.module.css';
 
 const CHART_TYPE_LABELS: Record<ChartType, string> = {
