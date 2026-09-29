@@ -42,6 +42,7 @@ import { ChartPanel } from '@/components/dashboard/ChartPanel';
 import { PaneHeader } from '@/components/dashboard/PaneHeader';
 import { color } from '@/lib/tokens';
 import { guide } from '@/lib/guideAnchors';
+import { exposeChartForE2e } from '@/lib/e2eProbe';
 
 /** Inputs for canDriveTimeSync — read at event time, never a stale closure. */
 function paneHistory(paneIndex: number) {
@@ -142,6 +143,8 @@ export function MultiChartArea({
   const rowSplitterRefs = useRef<(HTMLDivElement | null)[]>([null]);
 
   const isSyncingTimeRange = useRef(false);
+  /** The pane the mouse is over (the last to send a crosshair move with a sourceEvent) */
+  const leadPane = useRef<number | null>(null);
   const syncRef = useRef(syncOptions);
   const paneCountRef = useRef(paneCount);
   const prevTimeRangeSyncRef = useRef(syncOptions.timeRange);
@@ -191,10 +194,21 @@ export function MultiChartArea({
       chartRefs.current[paneIndex] = chart;
       seriesRefs.current[paneIndex] = series;
       onChartRefReady?.(paneIndex, chart);
+      exposeChartForE2e(paneIndex, chart, series); // e2e builds only (VITE_E2E)
 
       chart.subscribeCrosshairMove((param) => {
-        if (!syncRef.current.crosshair) return;
-        if (!param.sourceEvent) return;
+        // Sync off: no lead either — a leave swallowed here must not leave a stale lead behind
+        if (!syncRef.current.crosshair) {
+          leadPane.current = null;
+          return;
+        }
+        // The pane the mouse is in leads. An event with no sourceEvent is either the lead pane's
+        // crosshair leaving (the mouse left it: the followers must clear too, 10.4.5) or a
+        // follower echoing the programmatic set (no time when it has no candle there, e.g. another
+        // interval) — which must never clear the pane under the mouse (review #195)
+        if (param.sourceEvent) leadPane.current = paneIndex;
+        else if (paneIndex !== leadPane.current || param.point) return;
+        else leadPane.current = null;
         for (let i = 0; i < paneCountRef.current; i++) {
           if (i === paneIndex) continue;
           const other = chartRefs.current[i];
@@ -260,6 +274,9 @@ export function MultiChartArea({
   const handleChartDestroy = useCallback((paneIndex: number) => {
     chartRefs.current[paneIndex] = null;
     seriesRefs.current[paneIndex] = null;
+    // A destroyed pane can't lead (its index may map to another chart later)
+    if (leadPane.current === paneIndex) leadPane.current = null;
+    exposeChartForE2e(paneIndex, null, null);
   }, []);
 
   // ── Splitter drag helpers ───────────────────────────────────────────────

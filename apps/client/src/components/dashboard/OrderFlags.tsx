@@ -6,6 +6,7 @@
 
 import { Info } from 'lucide-react';
 import { color, fontSize } from '@/lib/tokens';
+import { guide, type GuideAnchor } from '@/lib/guideAnchors';
 import styles from './OrderFlags.module.css';
 
 const REDUCE_ONLY_HELP =
@@ -35,6 +36,7 @@ export function OrderFlags({
     <div className={styles.flags} style={{ fontSize: fontSize.xs10, color: color.muted }}>
       <FlagBox
         label="Reduce-only"
+        anchor="trade.reduce-only"
         help={REDUCE_ONLY_HELP}
         checked={reduceOnly}
         onChange={onReduceOnly}
@@ -42,6 +44,7 @@ export function OrderFlags({
       {showCloseOnTrigger && (
         <FlagBox
           label="Close on trigger"
+          anchor="trade.close-on-trigger"
           help={CLOSE_ON_TRIGGER_HELP}
           checked={closeOnTrigger}
           onChange={onCloseOnTrigger}
@@ -53,18 +56,21 @@ export function OrderFlags({
 
 interface FlagBoxProps {
   label: string;
+  /** Guide anchor for the checkbox (docs/TEST_IMPLEMENTATION_PLAN.md F1) */
+  anchor: GuideAnchor;
   help: string;
   checked: boolean;
   onChange: (v: boolean) => void;
 }
 
-function FlagBox({ label, help, checked, onChange }: FlagBoxProps) {
+function FlagBox({ label, anchor, help, checked, onChange }: FlagBoxProps) {
   return (
     <span className={styles.flag}>
       <label className={styles.flag}>
         <input
           type="checkbox"
           className={styles.checkbox}
+          {...guide(anchor)}
           checked={checked}
           onChange={(e) => onChange(e.target.checked)}
         />

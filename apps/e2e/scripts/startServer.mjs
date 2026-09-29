@@ -43,8 +43,12 @@ if (migrated.status !== 0) {
 }
 
 // A server killed by an earlier run leaves its matching-engine lease behind; the new engine would
-// wait for it to expire (30 s) and miss the price moves of the first tests
-const lease = prisma(['db', 'execute', '--stdin'], {}, 'DELETE FROM "EngineLease";');
+// wait for it to expire (30 s) and miss the price moves of the first tests. A restart test keeps it
+// (E2E_KEEP_ENGINE_LEASE=1): its last tick is where the downtime backfill starts
+const keepLease = process.env.E2E_KEEP_ENGINE_LEASE === '1';
+const lease = keepLease
+  ? { status: 0 }
+  : prisma(['db', 'execute', '--stdin'], {}, 'DELETE FROM "EngineLease";');
 if (lease.status !== 0) {
   process.stderr.write(`Could not clear the engine lease:\n${lease.stdout}${lease.stderr}`);
   process.exit(1);

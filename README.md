@@ -191,6 +191,9 @@ The test strategy, tools and the case catalogue live in [`docs/TRADING_TEST_PLAN
 - **Full browser set** (`e2e-nightly.yml`): the whole Playwright set on Chromium, WebKit and two phones,
   including accessibility (axe), nightly and on every push to the `develop → main` release PR. A scheduled failure opens an
   `e2e` issue.
+- **Crash and restart** (`apps/e2e/tests/resilience`, project `resilience`, part of the full set): a second API server
+  of its own (`restartableServer.ts`, port 3002, database `…_restart_test`) is killed and started again, and the
+  prices in the gap are backfilled.
 - **Docs-only changes** (`docs/**`, `**/*.md`) skip CI. CI is one job: checks, Postgres integration tests, build and
   the browser smoke.
 - **Browser smoke tests** (`apps/e2e`, Playwright, on every PR): sign-up and verification, a Spot market buy and a
