@@ -16,6 +16,7 @@ export default [
       'generated/**', // 🔐 never lint workspace-root generated/ (CDSDK)
       'tv-website-full/**', // TVP captured bundles — reference only
       '**/*.har', // HTTP archive files — reference only, not source code
+      '.claude/worktrees/**', // agents' git worktrees: whole repo copies, linted in their own checkout
     ],
   },
   js.configs.recommended,

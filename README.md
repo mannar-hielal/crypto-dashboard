@@ -194,6 +194,10 @@ The test strategy, tools and the case catalogue live in [`docs/TRADING_TEST_PLAN
   engine and compares the v5 fields. It runs on a one-off Fly Machine in Singapore (Bybit blocks GitHub's US
   runners) with secrets from the `bybit-testnet` environment, which only `main` can use; a failure opens a `parity`
   issue. Start it by hand from Actions → Bybit testnet parity → Run workflow.
+- **Nightly** (`feed-parity.yml`): the feed parity check compares production's market feed (quotes, mark / index /
+  funding, closed 1m candles) with Bybit at the same moments. On Sundays the spec-drift check also compares
+  `bybitSpec.ts`'s instrument rules and risk tiers with Bybit's live API. Both run on the same Fly Machine setup and open a
+  `feed-parity` / `spec-drift` issue on a failure.
 
 ---
 
