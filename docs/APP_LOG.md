@@ -3242,3 +3242,24 @@ catch a Bybit change to the rules the engine snapshots.
   minutes (anti-spam, by design).
 - **Anchors added (attributes only):** forgot / reset / unverified pages, the settings modal (username, password with
   toggle and success, export, delete), and the pending-deletion banner.
+
+### fix: offline sign-out actually signs out; the offline notice no longer hides the top bar; auth-page contrast (2026-09-29) ✅
+
+**Context:** defects 19.15 and 19.16, found by the M5a Playwright set. The visual design was approved in the visual
+Q&A gate on 2026-09-29: a bottom toast, and lighter purple with underlined links.
+
+- **19.15, offline**
+  - `OfflineBanner` was `fixed top-0 z-50` across the top bar, which hid the user menu and Sign out. It is now a
+    bottom-centre amber toast ("⚠ Offline — data paused until you're back online").
+  - Signing out offline only cleared the local session. The server never received the logout, so the next page
+    load traded the still-valid refresh cookie for a new session, and the user was signed back in. That matters on a
+    shared computer.
+  - The fix is `signOutOnServer()` (`lib/session.ts`, used by the top bar and the /unverified page). It remembers a
+    sign-out the server didn't get (`cd-pending-sign-out`), and `restoreSession()` finishes it before anything else
+    and stays signed out. The flag can only cause a sign-out.
+- **19.16, contrast (WCAG AA)**
+  - The links on /login, /register and /forgot-password use a new `purpleLight` token (#a99cff, 6.2:1 on the auth
+    card; `purpleDark` was ~3:1), and are underlined, so they don't rely on colour.
+  - The Register disclaimer is 11 px at full muted colour (it was 10 px at 60 %).
+- **Tests:** three `session.test` cases for the pending sign-out. The e2e `test.fail` markers are removed:
+  `session.spec` [19.15] and `a11y/auth.spec` now pass outright on Chromium and WebKit.

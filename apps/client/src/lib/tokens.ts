@@ -31,6 +31,7 @@ export const color = {
   red: '#d5455c', // loss / sell / negative / destructive  (alt dark: #c0414d, alt vivid: #ed0127)
   purple: '#a555e2', // primary accent — vibrant  (sampled from header.png)
   purpleDark: '#695bec', // primary accent — dark/muted, hover states, borders  (sampled from header.png)
+  purpleLight: '#a99cff', // links on dark panels — 6.2:1 on the auth card (WCAG AA; purpleDark is ~3:1)
   purpleDeep: '#4e3287', // deepest purple — overlays, borders, badge backgrounds  (sampled from header.png)
   glow: '#6662a9', // ambient glow / blur blobs  (Exgen glow: #6662A9)
   amber: '#e7ab33', // warning / margin alert (golden-amber)

@@ -1,3 +1,4 @@
+import { startedNewSession } from '@/lib/session';
 import { guide } from '@/lib/guideAnchors';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -61,6 +62,7 @@ export function LoginPage() {
         email: data.email,
         password: data.password,
       });
+      startedNewSession();
       setAuth(accessToken, user);
       // Back to the market link that sent them here — 🔐 only an allow-listed market URL
       void navigate(returnTo ?? '/dashboard', { replace: true });
@@ -194,8 +196,8 @@ export function LoginPage() {
                           <Link
                             to="/forgot-password"
                             {...guide('auth.login.forgot-link')}
-                            className="transition-colors hover:text-brand-purple"
-                            style={{ fontSize: fontSize.xs11, color: color.purpleDark }}
+                            className="underline underline-offset-2 transition-colors hover:text-brand-purple"
+                            style={{ fontSize: fontSize.xs11, color: color.purpleLight }}
                           >
                             Forgot password?
                           </Link>
@@ -248,8 +250,8 @@ export function LoginPage() {
                   Don&apos;t have an account?{' '}
                   <Link
                     to="/register"
-                    className="font-semibold transition-colors hover:text-brand-purple"
-                    style={{ color: color.purpleDark }}
+                    className="font-semibold underline underline-offset-2 transition-colors hover:text-brand-purple"
+                    style={{ color: color.purpleLight }}
                   >
                     Create one
                   </Link>

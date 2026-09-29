@@ -1,3 +1,4 @@
+import { signOutOnServer } from '@/lib/session';
 import { guide } from '@/lib/guideAnchors';
 import { useState } from 'react';
 import { Mail, Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react';
@@ -29,15 +30,10 @@ export function UnverifiedPage() {
   };
 
   const handleSignOut = async () => {
-    try {
-      await authApi.logout();
-    } catch {
-      // 🔐 The local session must clear even if the server call fails (offline, 5xx) —
-      // and a failure must not escape the click handler as an uncaught rejection.
-    } finally {
-      clearAuth();
-      void navigate('/login');
-    }
+    // 🔐 Never throws; an unreachable server is remembered and finished on the next load
+    await signOutOnServer();
+    clearAuth();
+    void navigate('/login');
   };
 
   return (
