@@ -1293,12 +1293,15 @@ describe('Section 9 — spread (T2 · RTL)', () => {
     quote(50_000.1, 50_000); // bid above ask: a momentary crossed book
     const { container } = renderPanel();
     expect(getByGuide(container, 'trade.spread').textContent).toBe('—');
-    // The title says why, and keeps the crossed values visible (review #204)
+    // The title says why, and keeps the crossed values visible
     expect(getByGuide(container, 'trade.spread').getAttribute('title')).toBe(
       'Crossed book — Bid: 50,000.1 · Ask: 50,000.0'
     );
     act(() => quote(50_000, 50_000)); // locked
     expect(getByGuide(container, 'trade.spread').textContent).toBe('—');
+    expect(getByGuide(container, 'trade.spread').getAttribute('title')).toBe(
+      'Locked book — Bid: 50,000.0 · Ask: 50,000.0'
+    );
     act(() => quote(49_999.9, 50_000));
     expect(getByGuide(container, 'trade.spread').textContent).toBe('0.1');
   });

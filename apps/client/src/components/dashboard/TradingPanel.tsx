@@ -769,8 +769,8 @@ export function TradingPanel({
             spread != null
               ? `Bid: ${fmtTickPrice(bid!)} · Ask: ${fmtTickPrice(ask!)}`
               : quoteLive && bid != null && ask != null
-                ? // Live but crossed / locked: say so, and keep the values visible (review #204)
-                  `Crossed book — Bid: ${fmtTickPrice(bid)} · Ask: ${fmtTickPrice(ask)}`
+                ? // Live but crossed (bid > ask) or locked (bid = ask): say which, and keep the values
+                  `${bid > ask ? 'Crossed' : 'Locked'} book — Bid: ${fmtTickPrice(bid)} · Ask: ${fmtTickPrice(ask)}`
                 : 'Spread — awaiting bid/ask feed'
           }
         >

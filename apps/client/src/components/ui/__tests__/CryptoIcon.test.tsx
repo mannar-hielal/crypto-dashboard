@@ -53,6 +53,15 @@ describe('CryptoIcon', () => {
       expect(screen.queryByRole('img')).toBeNull();
       expect(screen.getByText('BT')).toBeTruthy();
     });
+
+    it('should try the image again when the symbol changes, also back to one that failed', () => {
+      const { rerender } = render(<CryptoIcon symbol="BTC" size={20} />);
+      fireEvent.error(screen.getByRole('img'));
+      rerender(<CryptoIcon symbol="ETH" size={20} />);
+      expect(screen.getByRole('img').getAttribute('src')).toBe('/icons/eth.svg');
+      rerender(<CryptoIcon symbol="BTC" size={20} />);
+      expect(screen.getByRole('img').getAttribute('src')).toBe('/icons/btc.svg');
+    });
   });
 
   afterEach(cleanup);

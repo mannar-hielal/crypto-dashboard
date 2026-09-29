@@ -35,10 +35,16 @@ export function CryptoIcon({ symbol, size = 20, className = '' }: CryptoIconProp
   // Cast to Record<string, string> at lookup — CRYPTO_ICON_URLS is narrowed to
   // exact literal keys by `satisfies`, so a plain string index requires this cast.
   const url = (CRYPTO_ICON_URLS as Record<string, string | undefined>)[symbol.toUpperCase()];
-  // The image that failed to load (a new symbol gets its own try)
-  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  // Whether this symbol's image failed to load. Reset whenever the image changes (adjusted while
+  // rendering), so each symbol — also one shown again later — gets a fresh try
+  const [failed, setFailed] = useState(false);
+  const [failedFor, setFailedFor] = useState(url);
+  if (url !== failedFor) {
+    setFailedFor(url);
+    setFailed(false);
+  }
 
-  if (!url || failedUrl === url) {
+  if (!url || failed) {
     return (
       <motion.span
         {...popIn}
@@ -65,7 +71,7 @@ export function CryptoIcon({ symbol, size = 20, className = '' }: CryptoIconProp
       width={size}
       height={size}
       draggable={false}
-      onError={() => setFailedUrl(url)}
+      onError={() => setFailed(true)}
       className={`shrink-0 rounded-full ${className}`}
       style={{ display: 'inline-block', minWidth: size }}
     />
