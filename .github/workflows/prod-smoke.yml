@@ -39,12 +39,15 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install the e2e package
-        run: pnpm install --frozen-lockfile --filter @crypto-dashboard/e2e
+        # --ignore-scripts: the root preinstall runs `pnpm audit`, and a new advisory must not read as
+        # a production outage. This job needs Playwright only; the audit gate runs on every PR / push.
+        run: pnpm install --frozen-lockfile --filter @crypto-dashboard/e2e --ignore-scripts
 
       - name: Install Chromium
         run: pnpm --filter @crypto-dashboard/e2e exec playwright install --with-deps chromium
 
       - name: Production smoke
+        id: smoke
         env:
           CI: 'true'
         run: pnpm --filter @crypto-dashboard/e2e test:prod
@@ -61,7 +64,8 @@ jobs:
           if-no-files-found: ignore
 
       - name: Open or update the prod-smoke issue
-        if: failure()
+        # Only when the checks themselves failed — a setup failure (install, browser) isn't an outage
+        if: failure() && steps.smoke.outcome == 'failure'
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
