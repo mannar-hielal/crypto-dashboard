@@ -14,6 +14,7 @@ import type { MarketCategory } from '@crypto-dashboard/sdk';
 import { useLayoutStore } from '@/store/layoutStore';
 import { fontSize, zIndex } from '@/lib/tokens';
 import { MARKETS } from '@/lib/marketRoutes';
+import { guide } from '@/lib/guideAnchors';
 import styles from './TradeMenu.module.css';
 
 export function TradeMenu() {
@@ -75,6 +76,7 @@ export function TradeMenu() {
         style={{ fontSize: fontSize.xs }}
         aria-expanded={open}
         aria-controls={panelId}
+        {...guide('nav.trade-menu')}
         onClick={() => setOpen((v) => !v)}
         onKeyDown={onTriggerKeyDown}
       >
@@ -108,6 +110,7 @@ export function TradeMenu() {
                     type="button"
                     className={styles.item}
                     aria-current={current ? 'true' : undefined}
+                    {...guide('nav.trade-menu.option', m.category)}
                     onClick={() => choose(m.category)}
                   >
                     <span className={styles.text}>
