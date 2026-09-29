@@ -88,7 +88,7 @@ test('[12.1.2] the history and the live candles meet with no gap and no duplicat
     .poll(() => probe<number[]>(page, 0, 'times').then((t) => t?.length ?? 0))
     .toBeGreaterThan(10);
   const times = await probe<number[]>(page, 0, 'times');
-  const steps = times.slice(1).map((t, i) => t - times[i]!);
+  const steps = times.slice(1).map((t, i) => t - (times.at(i) ?? t));
   // 1m candles: every step exactly one minute, the live one included
   expect(steps.filter((s) => s !== 60)).toEqual([]);
 });

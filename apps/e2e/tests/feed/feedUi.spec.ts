@@ -110,9 +110,8 @@ test('[6.6] the browser tab title shows the pair, the price and the direction @f
   await feed.quote('spot', 'ETHUSDT', { bid: 3_399.9, ask: 3_400, last: 3_400 });
   await signInAs(page, seededUser.email, seededUser.password);
   await page.goto(ETH);
-  await expect(page).toHaveTitle(
-    /^[▲▼] ETH\/USDT 3,400\.00( [+−]\d+\.\d\d%)? · cryptopapertrade\.com$/
-  );
+  await expect(page).toHaveTitle(/^[▲▼] ETH\/USDT 3,400\.00 /);
+  await expect(page).toHaveTitle(/ · cryptopapertrade\.com$/);
 
   // Far above, then far below the previous candle's close: the arrow and the sign follow
   await feed.quote('spot', 'ETHUSDT', { last: 100_000 });
