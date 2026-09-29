@@ -58,3 +58,31 @@ describe('GET /health', () => {
     expect(body.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/); // valid ISO date
   });
 });
+
+describe('GET /health — logging (review #203)', () => {
+  it('should log a warning when the health check answers with a non-2xx status, and nothing when it is fine', async () => {
+    const app = await buildApp();
+    // Stands in for a rate limiter or a proxy answering before the handler
+    let fail = false;
+    app.addHook('onRequest', async (request, reply) => {
+      if (fail && request.url === '/health') await reply.code(503).send({ error: 'unavailable' });
+    });
+    await app.ready();
+    // In tests the logger is the no-op one, and a request's logger is that same object
+    const warn = vi.spyOn(app.log, 'warn');
+    try {
+      await app.inject({ method: 'GET', url: '/health' });
+      expect(warn).not.toHaveBeenCalled();
+
+      fail = true;
+      const res = await app.inject({ method: 'GET', url: '/health' });
+      expect(res.statusCode).toBe(503);
+      expect(warn).toHaveBeenCalledWith(
+        expect.objectContaining({ statusCode: 503 }),
+        'Health check answered with a non-2xx status'
+      );
+    } finally {
+      await app.close();
+    }
+  });
+});

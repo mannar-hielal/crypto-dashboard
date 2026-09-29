@@ -3548,3 +3548,25 @@ nightly e2e open GitHub issues. What was missing: server errors while the site i
 - **Tests:** `errorAlerts.test` (counting and the levels, no objects kept, the EmailService exclusion, windows, the
   50-kind cap, the daily cap and the next day, a failed send) and `EmailService.test` (the digest escaped, the subject
   count).
+
+### chore: quieter logs — no info lines for health checks; the last F10 baselines; R3 closed (2026-09-29) ✅
+
+- **`/health` logs at `warn` and above only** (Fastify `logLevel` on the route). Fly checks it every 30 s and UptimeRobot
+  every 5 minutes: that was about 2,900 info lines an hour, burying the real events in `fly logs`. Any non-2xx
+  answer (a 429 from the rate limiter, a degraded reply, a throw) is logged as a warning by the route's `onResponse`
+  hook (review #203). Trade-off: a successful check leaves no line, so Fly's checks reaching the app no longer show in
+  the log; Fly's machine status and UptimeRobot show that. Checked on a local server: 3 health calls → 0 lines; another route still logs.
+- **F10:** the liquidation notice after a real liquidation (LINKUSDT, the visual project runs alone), and both pane
+  headers in a 2h layout with the active pane's stripe (the left 220 px; the live price on the right moves by a pixel
+  from run to run). The cross-margin notice stays out: it only shows for accounts migrated from before cross margin.
+- **R3 (M0) closed:** "History tab" wording → Balance History / Closed P&L, and `TradingPanel.test`'s Stop Sell tests
+  now cite row 3.5.4, the Stop Sell mirror (they said 3.5.2). The rest of R3 was already done.
+
+### fix: Q4 — no spread for a crossed book, a letter circle for an icon that fails to load (2026-09-30) ✅
+
+**Context:** the owner answered Q4 on 2026-09-29: "1 — `—`", "2 — letter circle".
+
+- **Crossed or locked book** (bid ≥ ask for a moment): the spread shows `—` until the quote is valid again (row 9.10,
+  `TradingPanel.test`).
+- **An icon that fails to load:** `CryptoIcon` falls back to the same letter circle it already uses for a coin it has
+  no icon for, instead of a broken image (row 5.8, `CryptoIcon.test`). A new symbol gets its own try.

@@ -673,7 +673,7 @@ describe('Section 3 — Stop Orders (T2 · RTL)', () => {
       expect(screen.getByText(/Use a Limit Buy/)).toBeTruthy();
     });
 
-    it('3.5.2: Stop Sell above market price shows immediate-fill warning with "will fill immediately" and "Use a Limit Sell"', () => {
+    it('3.5.4: Stop Sell above market price shows immediate-fill warning with "will fill immediately" and "Use a Limit Sell"', () => {
       renderPanel();
       switchToStopTab();
       switchToSell();
@@ -696,7 +696,7 @@ describe('Section 3 — Stop Orders (T2 · RTL)', () => {
       expect(screen.queryByText(/will fill immediately/)).toBeNull();
     });
 
-    it('3.5.2 no-warning: Stop Sell below market does NOT show the warning banner', () => {
+    it('3.5.4 no-warning: Stop Sell below market does NOT show the warning banner', () => {
       renderPanel();
       switchToStopTab();
       switchToSell();
@@ -1287,6 +1287,23 @@ describe('Section 9 — spread (T2 · RTL)', () => {
     act(() => paneStores[0].setState({ isConnected: true }));
     expect(getByGuide(container, 'trade.spread').textContent).toBe('0.1');
     expect(getByGuide(container, 'trade.side.sell').textContent).toContain('49,999.9');
+  });
+
+  it('[9.10] should show — for the spread of a crossed or locked book, and the spread again once valid (Q4)', () => {
+    quote(50_000.1, 50_000); // bid above ask: a momentary crossed book
+    const { container } = renderPanel();
+    expect(getByGuide(container, 'trade.spread').textContent).toBe('—');
+    // The title says why, and keeps the crossed values visible
+    expect(getByGuide(container, 'trade.spread').getAttribute('title')).toBe(
+      'Crossed book — Bid: 50,000.1 · Ask: 50,000.0'
+    );
+    act(() => quote(50_000, 50_000)); // locked
+    expect(getByGuide(container, 'trade.spread').textContent).toBe('—');
+    expect(getByGuide(container, 'trade.spread').getAttribute('title')).toBe(
+      'Locked book — Bid: 50,000.0 · Ask: 50,000.0'
+    );
+    act(() => quote(49_999.9, 50_000));
+    expect(getByGuide(container, 'trade.spread').textContent).toBe('0.1');
   });
 
   it('should show a wider spread at the tick too (9.5)', () => {

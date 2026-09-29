@@ -64,6 +64,7 @@ export function PaneHeader({ paneIndex, isActive, onActivate }: PaneHeaderProps)
     <div
       className="relative flex h-7 shrink-0 cursor-pointer items-center gap-2 border-b border-white/5 px-2"
       style={{ background: isActive ? `${color.purpleDark}15` : bg.page }}
+      {...guide('pane.header', String(paneIndex))}
       onClick={onActivate}
     >
       {/* Active indicator stripe */}
