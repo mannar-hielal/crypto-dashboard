@@ -11,7 +11,7 @@ import { feeRatesLabel, floorToStep, maxQty, orderPreview } from '@/lib/orderMat
 import { useInstrument } from '@/hooks/useInstruments';
 import { useOrderPrefillStore } from '@/store/orderPrefillStore';
 import { bg, color, fontSize } from '@/lib/tokens';
-import { guide } from '@/lib/guideAnchors';
+import { guide, type GuideProps } from '@/lib/guideAnchors';
 import { LeverageChip } from './LeverageChip';
 import { LiquidationNotices } from './LiquidationNotices';
 import {
@@ -981,6 +981,7 @@ export function TradingPanel({
                         <Toggle
                           checked={tpEnabled}
                           label="Enable take profit"
+                          anchor="trade.tp.enable"
                           onChange={(v) => {
                             setTpEnabled(v);
                             if (!v) setTpInput('');
@@ -1008,6 +1009,7 @@ export function TradingPanel({
                           ariaLabel="Take profit price"
                           testId="trading-tp-input"
                           suffix="TP"
+                          anchor="trade.tp.price"
                           suffixColor={`${color.green}b3`}
                           borderColor={`${color.green}60`}
                           suffixPadding="pr-12"
@@ -1046,6 +1048,7 @@ export function TradingPanel({
                         <Toggle
                           checked={slEnabled}
                           label="Enable stop loss"
+                          anchor="trade.sl.enable"
                           onChange={(v) => {
                             setSlEnabled(v);
                             if (!v) setSlInput('');
@@ -1073,6 +1076,7 @@ export function TradingPanel({
                           ariaLabel="Stop loss price"
                           testId="trading-sl-input"
                           suffix="SL"
+                          anchor="trade.sl.price"
                           suffixColor={`${color.red}b3`}
                           borderColor={`${color.red}60`}
                           suffixPadding="pr-12"
@@ -1138,6 +1142,7 @@ export function TradingPanel({
               <span
                 className="tabular-nums"
                 style={{ fontSize: fontSize.xs10, color: costExceeds ? color.red : color.muted }}
+                {...guide('trade.preview.cost')}
               >
                 {spotSell
                   ? `${units !== null ? units.toFixed(6) : '—'} / `
@@ -1170,6 +1175,7 @@ export function TradingPanel({
                 },
                 {
                   label: 'Est. fee',
+                  anchor: guide('trade.preview.fees', 'spot'),
                   value:
                     preview?.fee !== undefined
                       ? `${preview.fee.toFixed(preview.feeAsset === 'USDT' ? 4 : 8)} ${preview.feeAsset}`
@@ -1209,38 +1215,50 @@ export function TradingPanel({
                   })(),
                   tone: color.amber,
                   info: LIQUIDATION_EXPLAINER,
+                  anchor: guide('trade.preview.liq'),
                 },
                 {
                   label: 'Est. open fee',
+                  anchor: guide('trade.preview.fees', 'open'),
                   value: preview?.openFee !== undefined ? `$${preview.openFee.toFixed(4)}` : '—',
                 },
                 {
                   label: 'Est. close fee',
+                  anchor: guide('trade.preview.fees', 'close'),
                   value: preview?.closeFee !== undefined ? `$${preview.closeFee.toFixed(4)}` : '—',
                 },
               ]
-          ).map((row: { label: string; value: string; tone?: string; info?: string }) => (
-            <div key={row.label} className="flex items-center justify-between py-0.5">
-              <span
-                className="flex items-center gap-1"
-                style={{ fontSize: fontSize.xs10, color: color.muted }}
-              >
-                {row.label}
-                {row.info && (
-                  <span title={row.info}>
-                    <Info className="h-3 w-3 opacity-60" />
-                  </span>
-                )}
-              </span>
-              <span
-                className="tabular-nums"
-                style={{ fontSize: fontSize.xs10, color: row.tone ?? color.white }}
-                data-testid={row.info ? 'order-est-liq-price' : undefined}
-              >
-                {row.value}
-              </span>
-            </div>
-          ))}
+          ).map(
+            (row: {
+              label: string;
+              value: string;
+              tone?: string;
+              info?: string;
+              anchor?: GuideProps;
+            }) => (
+              <div key={row.label} className="flex items-center justify-between py-0.5">
+                <span
+                  className="flex items-center gap-1"
+                  style={{ fontSize: fontSize.xs10, color: color.muted }}
+                >
+                  {row.label}
+                  {row.info && (
+                    <span title={row.info}>
+                      <Info className="h-3 w-3 opacity-60" />
+                    </span>
+                  )}
+                </span>
+                <span
+                  className="tabular-nums"
+                  style={{ fontSize: fontSize.xs10, color: row.tone ?? color.white }}
+                  data-testid={row.info ? 'order-est-liq-price' : undefined}
+                  {...row.anchor}
+                >
+                  {row.value}
+                </span>
+              </div>
+            )
+          )}
           <p className="mt-1" style={{ fontSize: fontSize.xxs, color: color.muted }}>
             {feeRatesLabel(category)}
           </p>

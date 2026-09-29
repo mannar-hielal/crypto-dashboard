@@ -1,3 +1,4 @@
+import { guide } from '@/lib/guideAnchors';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -132,6 +133,7 @@ export function LoginPage() {
                       animate="visible"
                       exit={{ opacity: 0, y: -6, transition: { duration: 0.15 } }}
                       role="alert"
+                      {...guide('auth.login.error')}
                       aria-live="polite"
                       aria-atomic="true"
                       className="rounded-lg border px-3 py-2.5 text-xs font-medium"
@@ -163,6 +165,7 @@ export function LoginPage() {
                             type="email"
                             placeholder="you@example.com"
                             autoComplete="email"
+                            {...guide('auth.login.email')}
                             aria-invalid={!!form.formState.errors.email}
                             className="border-white/8 text-white focus-visible:ring-0 focus-visible:border-brand-purple-dark/50"
                             style={{ background: bg.surface }}
@@ -190,6 +193,7 @@ export function LoginPage() {
                           </FormLabel>
                           <Link
                             to="/forgot-password"
+                            {...guide('auth.login.forgot-link')}
                             className="transition-colors hover:text-brand-purple"
                             style={{ fontSize: fontSize.xs11, color: color.purpleDark }}
                           >
@@ -201,6 +205,7 @@ export function LoginPage() {
                             type="password"
                             placeholder="••••••••"
                             autoComplete="current-password"
+                            {...guide('auth.login.password')}
                             aria-invalid={!!form.formState.errors.password}
                             className="border-white/8 text-white focus-visible:ring-0 focus-visible:border-brand-purple-dark/50"
                             style={{ background: bg.surface }}
@@ -220,6 +225,7 @@ export function LoginPage() {
                 >
                   <Button
                     type="submit"
+                    {...guide('auth.login.submit')}
                     className="w-full font-bold tracking-wide text-white"
                     style={{
                       background: form.formState.isSubmitting

@@ -6,21 +6,25 @@
  */
 
 import { color } from '@/lib/tokens';
+import { guide, type GuideAnchor } from '@/lib/guideAnchors';
 
 interface ToggleProps {
   checked: boolean;
   onChange: (v: boolean) => void;
   /** Optional accessible label (aria-label). */
   label?: string;
+  /** Guide anchor for the switch (docs/TEST_IMPLEMENTATION_PLAN.md F1) */
+  anchor?: GuideAnchor;
 }
 
-export function Toggle({ checked, onChange, label }: ToggleProps) {
+export function Toggle({ checked, onChange, label, anchor }: ToggleProps) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
       aria-label={label}
+      {...(anchor ? guide(anchor) : {})}
       onClick={() => onChange(!checked)}
       className="relative h-4 w-7 shrink-0 rounded-full transition-colors"
       style={{ background: checked ? color.green : `${color.muted}40` }}

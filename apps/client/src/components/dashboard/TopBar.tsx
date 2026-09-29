@@ -1,3 +1,4 @@
+import { guide } from '@/lib/guideAnchors';
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { LogOut, ChevronDown, Settings, ShieldCheck } from 'lucide-react';
@@ -89,6 +90,7 @@ export function TopBar({ marketing = false }: TopBarProps) {
               whileTap={{ scale: 0.97 }}
               className="flex items-center gap-1.5 rounded-md px-2 py-1 transition-colors"
               style={{ background: menuOpen ? bg.surface : 'transparent' }}
+              {...guide('nav.user-menu')}
             >
               <div
                 className="flex h-6 w-6 items-center justify-center rounded-full font-black text-white"
@@ -128,6 +130,7 @@ export function TopBar({ marketing = false }: TopBarProps) {
                         setMenuOpen(false);
                         setSettingsOpen(true);
                       }}
+                      {...guide('nav.settings')}
                       whileHover={{ background: bg.surface }}
                       className="flex w-full items-center gap-2 px-3 py-2.5 text-xs transition-colors hover:text-white"
                       style={{
@@ -174,6 +177,7 @@ export function TopBar({ marketing = false }: TopBarProps) {
                       whileHover={{ background: bg.surface }}
                       className="flex w-full items-center gap-2 px-3 py-2.5 text-xs transition-colors hover:text-white"
                       style={{ color: color.muted }}
+                      {...guide('nav.sign-out')}
                     >
                       <LogOut className="h-3.5 w-3.5" />
                       Sign out

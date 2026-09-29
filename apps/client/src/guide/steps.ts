@@ -164,9 +164,9 @@ export function setIsolated(leverage: number, e: Extra = {}): StepDraft[] {
       explain: 'Isolated: only this position’s margin is at risk.',
     },
     {
-      action: 'type',
+      action: 'click',
       anchor: 'leverage.input',
-      value: String(leverage),
+      key: String(leverage),
       explain: `Use ${leverage}× leverage: the margin is the position value ÷ ${leverage}.`,
     },
     {
