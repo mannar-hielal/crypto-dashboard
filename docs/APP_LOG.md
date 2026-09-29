@@ -3059,3 +3059,28 @@ was enforced only by review.
 - The paper state and delta schemas are open (`additionalProperties: true`). `trading/mappers.ts` builds them from the
   SDK types, so `tsc` holds that half.
 - With this, roadmap P1 and milestone M2 are complete.
+
+### feat: M3a — test hooks and the fake-feed URL seam, both refused in production (2026-09-29) ✅
+
+**Context:** test plan milestone M3 (F2, F3). Browser tests need seeded users, the links in "sent" emails, and a
+deterministic market feed.
+
+- **Seam.** `BYBIT_REST_URL` / `BYBIT_WS_URL` redirect the only two places the server reaches Bybit's public API
+  (`bybitRestBaseUrl()`, `BybitWebSocketManager`) to a local fake feed.
+- **Test hooks.** `ENABLE_TEST_HOOKS=1` + `TEST_HOOKS_SECRET` register `/api/test/*`:
+  - `POST /users` creates a user through the real `/register` and `/verify-email` handlers, optionally unverified,
+    with a margin mode and per-symbol leverage, and returns its generated password;
+  - `GET /outbox?to=` lists the emails "sent" to an address, newest first (`services/emailOutbox.ts`, ring of 100);
+  - `POST /users/:id/reset` resets an account without a session.
+- 🔐 **Guards:**
+  - `config.ts` exits at boot if any of the four variables is set in production (checked by name, so an empty value
+    counts);
+  - the URLs must be http(s) / ws(s);
+  - the hooks need a 16+ character secret, sent as `x-test-hooks-secret` and compared in constant time;
+  - with the hooks off, the routes aren't registered (404), and the outbox keeps nothing.
+- **Tests:**
+  - `configGuards.test` (13), including production starting normally without the variables;
+  - `testHooksOff.test` (5);
+  - `testHooks.int.test` (7, real Postgres).
+- `.env.example` lists the four variables, commented out and marked test-only.
+- Next: M3b, the fake Bybit server and its price controls.
