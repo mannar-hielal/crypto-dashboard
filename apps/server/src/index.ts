@@ -2,6 +2,7 @@ import { buildApp } from './app.js';
 import { config } from './config.js';
 import { logger } from './logger.js';
 import { EmailService } from './services/EmailService.js';
+import { DIGEST_WINDOW_MS, startErrorDigest } from './lib/errorAlerts.js';
 
 type AppInstance = Awaited<ReturnType<typeof buildApp>>;
 
@@ -69,6 +70,14 @@ try {
   const app = await buildApp();
   await app.listen({ port: config.port, host: '0.0.0.0' });
   app.log.info(`🚀 Server running on http://localhost:${config.port}`);
+
+  // The owner's error digest (M8): production only, never with the test hooks
+  if (config.nodeEnv === 'production' && config.alertEmail && !config.testHooks) {
+    startErrorDigest((entries) =>
+      EmailService.sendErrorDigest(config.alertEmail, entries, DIGEST_WINDOW_MS / 60_000)
+    );
+    app.log.info('Error digest on (every 30 minutes, at most 10 a day)');
+  }
 
   // Run the purge job only on a designated worker/instance.
   if (process.env.RUN_PURGE_JOB === 'true') {

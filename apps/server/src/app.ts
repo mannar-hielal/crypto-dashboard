@@ -19,6 +19,7 @@ import { authRoutes } from './routes/auth/index.js';
 import { paperRoutes } from './routes/paper/index.js';
 import { newsletterRoutes } from './routes/newsletter/index.js';
 import { testHooksRoutes } from './routes/test/index.js';
+import { errorAlertHook } from './lib/errorAlerts.js';
 
 const CSP_DIRECTIVES = {
   defaultSrc: ["'self'"],
@@ -46,6 +47,8 @@ export async function buildApp() {
         ? false
         : {
             level: config.logLevel,
+            // Counts error lines (the 5xx handler's too) for the owner's digest (M8)
+            hooks: { logMethod: errorAlertHook },
             // The visitor's IP, not Fly's proxy (see lib/clientIp.ts)
             serializers: {
               req: requestLogSerializerFor({ nodeEnv: config.nodeEnv, onFly: config.onFly }),

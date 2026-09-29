@@ -39,6 +39,8 @@ interface Config {
   resendFromEmail: string;
   clientUrl: string;
   adminEmail: string;
+  /** Where the production error digest goes (lib/errorAlerts.ts); empty = no alerts. Optional. */
+  alertEmail: string;
   /**
    * True when the process runs on a Fly Machine (Fly sets FLY_APP_NAME on every Machine). Gates
    * trusting Fly's `Fly-Client-IP` header (lib/clientIp.ts) — the same image run elsewhere must not.
@@ -83,6 +85,7 @@ function loadConfig(): Config {
     resendFromEmail: getEnv('RESEND_FROM_EMAIL', 'onboarding@resend.dev'),
     clientUrl: getEnv('CLIENT_URL', 'http://localhost:5173'),
     adminEmail: getEnv('ADMIN_EMAIL'),
+    alertEmail: getEnv('ALERT_EMAIL', ''),
     ...(getEnv('BYBIT_REST_URL') ? { bybitRestUrl: getEnv('BYBIT_REST_URL') } : {}),
     ...(getEnv('BYBIT_WS_URL') ? { bybitWsUrl: getEnv('BYBIT_WS_URL') } : {}),
     testHooks: getEnv('ENABLE_TEST_HOOKS') === '1',

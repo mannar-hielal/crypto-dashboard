@@ -194,6 +194,9 @@ The test strategy, tools and the case catalogue live in [`docs/TRADING_TEST_PLAN
 - **Crash and restart** (`apps/e2e/tests/resilience`, project `resilience`, part of the full set): a second API server
   of its own (`restartableServer.ts`, port 3002, database `…_restart_test`) is killed and started again, and the
   prices in the gap are backfilled.
+- **Error alerts** (production): the server emails a digest of its error lines to `ALERT_EMAIL`, at most every 30
+  minutes and 10 a day (`apps/server/src/lib/errorAlerts.ts`). Set with `fly secrets set ALERT_EMAIL=… -a
+crypto-dashboard-api`; empty means off. UptimeRobot checks `/health` every 5 minutes.
 - **Visual baselines** (`apps/e2e/tests/visual`, local only): `pnpm --filter @crypto-dashboard/e2e test:visual`. A
   baseline changes only after the owner approved the new look (`--update-snapshots`).
 - **Case-ID coverage** (`pnpm case-coverage`): which rows of `docs/TRADING_TEST_PLAN.md` no test cites. With `--strict`
