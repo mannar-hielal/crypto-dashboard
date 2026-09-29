@@ -412,6 +412,36 @@
   display: block;
 }
 
+/* A scrolling table the keyboard can reach (axe scrollable-region-focusable, visual gate
+   2026-09-29): tabbable, with an outline for keyboard focus only — a click shows none */
+.scroll-region:focus {
+  outline: none;
+}
+
+.scroll-region:focus-visible {
+  outline: 1px solid var(--exgen-purple-dark);
+  outline-offset: -1px;
+}
+
+/* A tool and its submenu caret: siblings, so no button sits inside a button (axe nested-interactive).
+   The caret follows the button's colour as it did as its child */
+.toolbar-slot {
+  position: relative;
+  display: flex;
+}
+
+.toolbar-caret {
+  color: var(--exgen-muted);
+}
+
+.toolbar-slot:hover .toolbar-caret {
+  color: var(--exgen-white);
+}
+
+.toolbar-btn.active + .toolbar-caret {
+  color: var(--exgen-purple);
+}
+
 /* ── Toolbar divider ───────────────────────────────────────────────────── */
 
 .toolbar-divider {

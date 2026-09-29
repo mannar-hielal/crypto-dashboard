@@ -18,6 +18,7 @@ import {
 } from '@crypto-dashboard/sdk';
 import type { AccountFiguresEstimate } from '@crypto-dashboard/sdk';
 import type { ClosedTrade, PendingOrder, Position } from '@/store/paperStore';
+import { fmtUsd } from './format';
 
 /** Unrealised PnL of a position at `price` (the mark price for Bybit parity). */
 export function positionPnl(
@@ -177,7 +178,7 @@ export function riskTierLabel(info: RiskTierInfo): string {
 
 // ─── Closed P&L (BP-5 D) ───────────────────────────────────────────────────────
 
-const fmtUsd4 = (n: number) => `${n < 0 ? '-' : ''}$${Math.abs(n).toFixed(4)}`;
+const fmtUsd4 = (n: number) => fmtUsd(n, 4);
 
 /** Closed P&L as the server computed it; a pre-BP-5 server sent only the gross PnL and funding */
 export function closedPnlOf(t: ClosedTrade): number {

@@ -6,6 +6,7 @@ import { bg, color, fontSize } from '@/lib/tokens';
 import { fmtMktPrice } from '@/lib/utils';
 import { guide } from '@/lib/guideAnchors';
 import styles from './LiquidationNotices.module.css';
+import { fmtUsd } from '@/lib/format';
 
 /** Set once the user dismisses the "liquidation is live" banner (BP-3 deploy notice). */
 const INTRO_DISMISSED_KEY = 'cd-bp3-liquidation-intro-dismissed';
@@ -66,8 +67,8 @@ export function LiquidationNotices() {
               <strong style={{ color: color.red }}>
                 {liquidated.symbol} {liquidated.side === 'long' ? 'Long' : 'Short'} was liquidated
               </strong>{' '}
-              at ${fmtMktPrice(liquidated.exitPrice)} (bankruptcy price). Position margin lost: $
-              {Math.abs(liquidated.pnl).toFixed(2)}.
+              at ${fmtMktPrice(liquidated.exitPrice)} (bankruptcy price). Position margin lost:{' '}
+              {fmtUsd(Math.abs(liquidated.pnl))}.
             </p>
             <button
               type="button"

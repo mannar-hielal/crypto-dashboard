@@ -571,7 +571,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                         <button
                           onClick={handleRequestPasswordReset}
                           disabled={showPasswordConfirm !== 'none'}
-                          className="text-[10px] font-bold text-white/30 hover:text-white/60 disabled:opacity-50 transition-colors uppercase tracking-widest"
+                          className="text-[10px] font-bold text-white/60 hover:text-white/80 disabled:opacity-50 transition-colors uppercase tracking-widest"
                         >
                           {showPasswordConfirm === 'sending'
                             ? 'Sending...'
@@ -690,7 +690,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
 
               {/* Danger Zone */}
               <motion.section variants={itemVariants} className="space-y-4">
-                <h3 className="text-xs font-semibold uppercase tracking-widest text-red-400/60 flex items-center gap-2">
+                <h3 className="text-xs font-semibold uppercase tracking-widest text-red-400 flex items-center gap-2">
                   <Trash2 className="w-3.5 h-3.5" /> Danger Zone
                 </h3>
                 <div className="p-5 rounded-xl border border-red-500/10 bg-red-500/5 space-y-4">

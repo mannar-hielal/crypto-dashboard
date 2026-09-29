@@ -39,7 +39,7 @@ test('[16.1.1] a long pays funding at the timestamp: 10,000 × 0.51 × 0.01% = 0
   await feed.control('funding', { symbol: SYMBOL, rate: 0.0001, inSeconds: 3 });
 
   // Paid: shown with a minus (money out)
-  await expect(funding).toHaveText('−0.51', { timeout: 30_000 });
+  await expect(funding).toHaveText('-0.51', { timeout: 30_000 });
   await expect(at(page, 'account.summary.balance')).not.toHaveText(balanceBefore ?? '');
   await at(page, 'account.tab', 'balancehistory').click();
   await expect(at(page, 'balance-history.row').first()).toContainText(/funding/i);
@@ -48,7 +48,7 @@ test('[16.1.1] a long pays funding at the timestamp: 10,000 × 0.51 × 0.01% = 0
   // The same timestamp again (a later ticker still naming it) changes nothing
   await at(page, 'account.tab', 'positions').click();
   await page.waitForTimeout(3_000);
-  await expect(funding).toHaveText('−0.51');
+  await expect(funding).toHaveText('-0.51');
 });
 
 test('[17.5.6][17.1.4] isolated → cross releases the added margin; back to isolated is refused when the long would be liquidated @full', async ({

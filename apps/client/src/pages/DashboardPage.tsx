@@ -592,12 +592,12 @@ export function DashboardInner() {
         className="flex h-auto w-full shrink-0 flex-col items-center border-t border-white/5 px-4 py-2 sm:h-7 sm:flex-row sm:items-center sm:justify-between sm:py-0"
         style={{ background: bg.footer }}
       >
-        <span style={{ fontSize: fontSize.xs10, color: `${color.muted}80` }}>
+        <span style={{ fontSize: fontSize.xs10, color: color.muted }}>
           ⚠️ Paper trading only — no real funds. For educational purposes.
         </span>
         <nav
           className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 sm:flex-nowrap sm:gap-4"
-          style={{ fontSize: fontSize.xs10, color: `${color.muted}60` }}
+          style={{ fontSize: fontSize.xs10, color: `${color.muted}b3` }}
         >
           <Link to="/terms" className="transition-colors hover:text-white/50">
             Terms of Service

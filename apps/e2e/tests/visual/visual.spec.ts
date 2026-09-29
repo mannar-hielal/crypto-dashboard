@@ -13,7 +13,9 @@ import type { Locator, Page } from '@playwright/test';
 
 test.describe.configure({ mode: 'serial' });
 
-const shot = { animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.01 } as const;
+// Exact (no pixel tolerance): the baselines are local, one machine, and a changed character is a
+// few pixels — a 1 % tolerance let "$5000.00" → "$5,000.00" pass unseen
+const shot = { animations: 'disabled', caret: 'hide' } as const;
 /** The seeded username changes every run; the order form overlaps the right end of wide rows */
 const masks = (page: Page) => [at(page, 'nav.user-menu'), orderForm(page)];
 function orderForm(page: Page): Locator {
