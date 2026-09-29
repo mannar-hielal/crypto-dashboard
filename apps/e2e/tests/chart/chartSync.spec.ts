@@ -12,13 +12,18 @@ import type { Page } from '@playwright/test';
 declare global {
   interface Window {
     __cdCharts?: (
-      | { range: () => unknown; crosshairTime: () => unknown; times: () => unknown }
+      | {
+          range: () => unknown;
+          crosshairTime: () => unknown;
+          times: () => unknown;
+          clears: () => unknown;
+        }
       | undefined
     )[];
   }
 }
 
-type Probe = 'range' | 'crosshairTime' | 'times';
+type Probe = 'range' | 'crosshairTime' | 'times' | 'clears';
 const probe = <T>(page: Page, pane: number, what: Probe) =>
   page.evaluate(
     ([p, w]) => {
@@ -91,4 +96,31 @@ test('[12.1.2] the history and the live candles meet with no gap and no duplicat
   const steps = times.slice(1).map((t, i) => t - (times.at(i) ?? t));
   // 1m candles: every step exactly one minute, the live one included
   expect(steps.filter((s) => s !== 60)).toEqual([]);
+});
+
+test('[10.4.4] with panes on different intervals, the pane under the mouse keeps its crosshair @full', async ({
+  page,
+  seededUser,
+}) => {
+  await signInAs(page, seededUser.email, seededUser.password);
+  await twoPanes(page);
+  // Pane 1 on 15m: most of pane 0's 1m times have no candle there, so the follower's crosshair
+  // lands off its data — its echo must not clear the pane the mouse is over (review #195)
+  await at(page, 'pane.header.interval-picker').nth(1).click();
+  await at(page, 'pane.header.interval', '15m').first().click();
+  await expect
+    .poll(() => probe<number[]>(page, 1, 'times').then((t) => t?.length ?? 0))
+    .toBeGreaterThan(5);
+
+  const box = (await at(page, 'pane.chart', '0').boundingBox())!;
+  // Into pane 0 first: leaving pane 1 (where the interval picker was) rightly clears the others once
+  await page.mouse.move(box.x + box.width / 14, box.y + box.height * 0.5);
+  const before = await probe<number>(page, 0, 'clears');
+  for (let i = 1; i <= 12; i++) {
+    await page.mouse.move(box.x + (box.width * i) / 14, box.y + box.height * 0.5);
+  }
+  // The sync never cleared the pane under the mouse
+  expect(await probe<number>(page, 0, 'clears')).toBe(before);
+  // …and pane 1 followed the whole time
+  expect(await probe<number | null>(page, 1, 'crosshairTime')).not.toBeNull();
 });

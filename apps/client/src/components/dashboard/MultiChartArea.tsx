@@ -143,6 +143,8 @@ export function MultiChartArea({
   const rowSplitterRefs = useRef<(HTMLDivElement | null)[]>([null]);
 
   const isSyncingTimeRange = useRef(false);
+  /** The pane the mouse is over (the last to send a crosshair move with a sourceEvent) */
+  const leadPane = useRef<number | null>(null);
   const syncRef = useRef(syncOptions);
   const paneCountRef = useRef(paneCount);
   const prevTimeRangeSyncRef = useRef(syncOptions.timeRange);
@@ -196,11 +198,13 @@ export function MultiChartArea({
 
       chart.subscribeCrosshairMove((param) => {
         if (!syncRef.current.crosshair) return;
-        // A crosshair leaving this pane (the mouse left it) comes with no sourceEvent, yet the
-        // followers must clear too (10.4.5). It can't echo: the programmatic
-        // clearCrosshairPosition() fires no event
-        const left = !param.point || !param.time;
-        if (!param.sourceEvent && !left) return;
+        // The pane the mouse is in leads. An event with no sourceEvent is either the lead pane's
+        // crosshair leaving (the mouse left it: the followers must clear too, 10.4.5) or a
+        // follower echoing the programmatic set (no time when it has no candle there, e.g. another
+        // interval) — which must never clear the pane under the mouse (review #195)
+        if (param.sourceEvent) leadPane.current = paneIndex;
+        else if (paneIndex !== leadPane.current || param.point) return;
+        else leadPane.current = null;
         for (let i = 0; i < paneCountRef.current; i++) {
           if (i === paneIndex) continue;
           const other = chartRefs.current[i];

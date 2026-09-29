@@ -16,6 +16,8 @@ export interface ChartProbe {
   crosshairTime: () => number | null;
   /** Every candle's time (s), oldest first */
   times: () => number[];
+  /** How many times the sync cleared this pane's crosshair (clearCrosshairPosition) */
+  clears: () => number;
 }
 
 declare global {
@@ -36,6 +38,7 @@ export function exposeChartForE2e(
     return;
   }
   let crosshair: number | null = null;
+  let clears = 0;
   chart.subscribeCrosshairMove((param) => {
     crosshair = param.time === undefined ? null : Number(param.time as Time);
   });
@@ -48,6 +51,7 @@ export function exposeChartForE2e(
   };
   chart.clearCrosshairPosition = () => {
     crosshair = null;
+    clears += 1;
     clear();
   };
   charts[pane] = {
@@ -57,5 +61,6 @@ export function exposeChartForE2e(
     },
     crosshairTime: () => crosshair,
     times: () => series.data().map((d) => Number(d.time)),
+    clears: () => clears,
   };
 }
