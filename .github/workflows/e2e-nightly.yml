@@ -14,6 +14,12 @@ on:
     branches: [main] # the release PR (develop → main)
     # Every push to the release PR is re-tested; the concurrency group cancels a superseded run
     types: [opened, synchronize, reopened, ready_for_review]
+    # A docs-only release ships nothing (ci.yml skips it and nothing deploys), so it isn't re-tested.
+    # No test-plan exception: the Playwright specs read no docs (ci.yml keeps it for a unit test)
+    paths:
+      - '**'
+      - '!docs/**'
+      - '!**/*.md'
   workflow_dispatch:
 
 permissions:
