@@ -1640,7 +1640,7 @@ Four issues surfaced in a Copilot PR review and are now resolved.
 
 ### feat: admin menu item in TopBar (2026-06-28) ✅
 
-- ShieldCheck icon + "Admin" label in user dropdown, visible only when `user.email === 'adminwithu@gmail.com'`
+- ShieldCheck icon + "Admin" label in user dropdown, visible only when `user.email === VITE_ADMIN_EMAIL` (the owner's address)
 - Navigates to `/admin/newsletter` on click
 
 ### fix: duplicate verification email — root cause found and fixed (2026-06-28) ✅
@@ -1659,7 +1659,7 @@ Four issues surfaced in a Copilot PR review and are now resolved.
 
 - Removed `useRef` + `useCallback` double-submit guard — protection is now fully server-side (simpler, more reliable)
 
-**Server logs confirm single request, single email per registration.** 1 email received in final test (`adminwithu+test6`).
+**Server logs confirm single request, single email per registration.** 1 email received in final test (a `+test` alias of the owner's mailbox).
 
 ---
 
@@ -3523,3 +3523,28 @@ rules are in `design.md` "Responsive layout".
     from the bar.
   - The e2e fixtures pre-dismiss the PWA install banner, which covers the bar on phones.
   - The dialog baselines clip inside the dialog's rounded corners, which show whatever changes behind them.
+
+### feat: M8 — the owner's error digest by email (2026-09-29) ✅
+
+**Context:** the owner asked where M8's alerts go: email the owner's mailbox for now. These alerts are for
+the owner, not the users. Outages are covered by UptimeRobot (the owner's, `/health` every 5 min); the prod smoke and
+nightly e2e open GitHub issues. What was missing: server errors while the site is up.
+
+- **`lib/errorAlerts.ts`:** a Pino `logMethod` hook on both loggers (the shared one and Fastify's, so the 5xx handler's
+  line counts). It counts error and fatal lines by source (`service` / `route`) and message.
+- **Delivery:** every 30 minutes, if anything was counted, one digest goes to `ALERT_EMAIL` through Resend
+  (`EmailService.sendErrorDigest`, every value HTML-escaped).
+- **Bounds:**
+  - at most 50 kinds per window (the rest counted together);
+  - at most 10 digests a day, since the Resend quota of 100 a day is shared with the users' emails;
+  - EmailService's own errors aren't counted, so a failing send can't alert about itself.
+- 🔐 **Privacy:** only the source, a sanitised message and a count are kept, never the line's objects (a request,
+  a token, the error's details). A line whose message is its error's own `err.message` (Fastify's, a driver's) is
+  reported by the error's name and code; numbers, ids and emails are masked (review #201).
+- **Nothing dropped silently:** the counts clear only after a successful send; at the daily cap they keep counting
+  into the next day's first digest; a failed send keeps them and doesn't use the cap (review #201).
+- **When it runs:** only in production, with `ALERT_EMAIL` set and the test hooks off. `ALERT_EMAIL` is optional and
+  kept out of the repository (it is public): it is a Fly secret, and `.env.example` documents it.
+- **Tests:** `errorAlerts.test` (counting and the levels, no objects kept, the EmailService exclusion, windows, the
+  50-kind cap, the daily cap and the next day, a failed send) and `EmailService.test` (the digest escaped, the subject
+  count).
