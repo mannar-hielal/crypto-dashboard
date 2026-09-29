@@ -16,7 +16,13 @@ import { Decimal } from '@prisma/client/runtime/client';
 import { config } from '../config.js';
 import { ALLOWED_CATEGORIES, ALLOWED_SYMBOLS } from '../constants.js';
 import { logger } from '../logger.js';
-import { getInstruments, getRiskLimit } from '../services/BybitMarketInfo.js';
+import type { BybitCategory } from '../constants.js';
+import {
+  bybitRestBaseUrl,
+  getRiskLimit,
+  parseInstrument,
+  type Instrument,
+} from '../services/BybitMarketInfo.js';
 import {
   fallbackRiskTiers,
   fallbackRules,
@@ -28,15 +34,40 @@ const log = logger.child({ service: 'SpecDrift' });
 /** The app's leverage cap (the risk-tier snapshot is kept up to it) */
 const MAX_LEVERAGE = 10;
 
+/** Bybit's instrument, or null if Bybit answered without it; throws if it can't be read (3 tries). */
+async function instrumentOf(category: BybitCategory, symbol: string): Promise<Instrument | null> {
+  const url = `${bybitRestBaseUrl()}/v5/market/instruments-info?${new URLSearchParams({ category, symbol }).toString()}`;
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(8_000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const body = (await res.json()) as {
+        retCode: number;
+        retMsg: string;
+        result?: { list?: unknown[] };
+      };
+      if (body.retCode !== 0 || !Array.isArray(body.result?.list)) throw new Error(body.retMsg);
+      const row = body.result.list.find((r) => (r as { symbol?: unknown }).symbol === symbol);
+      return row ? parseInstrument(category, row) : null;
+    } catch (err) {
+      lastError = err;
+      await new Promise((r) => setTimeout(r, attempt * 2_000));
+    }
+  }
+  throw new Error(`instruments-info ${category} ${symbol} unreadable: ${String(lastError)}`);
+}
+
 /** Every difference between the snapshot and Bybit, as readable lines. */
 export async function specDrift(): Promise<string[]> {
   const drift: string[] = [];
   const eq = (a: Decimal, b: Decimal) => a.eq(b);
 
   for (const category of ALLOWED_CATEGORIES) {
-    const live = new Map((await getInstruments(category)).map((i) => [i.symbol, i]));
     for (const symbol of ALLOWED_SYMBOLS) {
-      const instrument = live.get(symbol);
+      // One symbol per read, retried: a failed read throws (the run fails as "check failed"), so
+      // only a symbol Bybit answered for without listing it is reported as drift
+      const instrument = await instrumentOf(category, symbol);
       if (!instrument) {
         drift.push(`${category} ${symbol}: not listed by Bybit`);
         continue;

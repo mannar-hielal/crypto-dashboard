@@ -149,6 +149,7 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           FEED_FAILED: ${{ steps.run.outputs.feed_failed }}
           DRIFT_FAILED: ${{ steps.run.outputs.drift_failed }}
+          FEED_PLANNED: ${{ steps.plan.outputs.feed }}
         shell: bash
         run: |
           report() {
@@ -161,11 +162,16 @@ jobs:
               gh issue create --title "$title" --label "$label" --body "$body"
             fi
           }
-          if [ "$FEED_FAILED" = 1 ] || { [ -z "$FEED_FAILED" ] && [ -z "$DRIFT_FAILED" ]; }; then
+          if [ "$FEED_FAILED" = 1 ]; then
             report feed-parity "Feed parity mismatch" "The feed parity check failed on $(date -u +%Y-%m-%d): $RUN_URL
 
           Download the \`feed-parity-logs\` artifact (feed.log) for each mismatch: a quote, mark / index /
           funding field or closed 1m candle where cryptopapertrade.com differs from Bybit (rows 6.1–6.4)."
+          fi
+          # The job failed before any check finished (build, launch, setup): say so, under the check's label
+          if [ -z "$FEED_FAILED" ] && [ -z "$DRIFT_FAILED" ]; then
+            if [ "$FEED_PLANNED" = true ]; then label=feed-parity; title="Feed parity mismatch"; else label=spec-drift; title="Bybit spec drift"; fi
+            report "$label" "$title" "The feed-parity / spec-drift job failed on $(date -u +%Y-%m-%d) before a check finished (image build, machine launch or setup), so nothing was compared: $RUN_URL"
           fi
           if [ "$DRIFT_FAILED" = 1 ]; then
             report spec-drift "Bybit spec drift" "The weekly spec-drift check found a change on $(date -u +%Y-%m-%d): $RUN_URL

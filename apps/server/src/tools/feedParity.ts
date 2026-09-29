@@ -37,6 +37,8 @@ const EVERY_MS = Number(process.env.FEED_PARITY_EVERY_MS ?? 30_000);
 const WARMUP_MS = 15_000;
 const TOLERANCE = 0.001;
 const MAX_MISS_SHARE = 0.2;
+/** Frames above this (the on-connect history snapshot) are skipped unparsed */
+const MAX_FRAME = 64 * 1024;
 
 const log = pino({ name: 'feedParity' });
 
@@ -68,6 +70,8 @@ interface Market {
   misses: Record<string, number>;
   /** Samples that couldn't be compared: no ticker yet, or Bybit's read failed */
   inconclusive: number;
+  /** Frames from production that weren't JSON */
+  badFrames: number;
   samples: number;
 }
 
@@ -121,11 +125,18 @@ function watch(m: Market): WebSocket {
     `${WS_API}/api/market/ws?category=${m.category}&symbol=${m.symbol}&interval=1m`
   );
   ws.onmessage = (event) => {
-    const msg = JSON.parse(String(event.data)) as {
-      type: string;
-      bar?: { kline: Kline };
-      bars?: { kline: Kline }[];
-    } & Partial<Ticker>;
+    const raw = String(event.data);
+    // 🔐 Size guard before parsing (web.md). The tickers and bars compared here are small; only the
+    // on-connect history snapshot is larger, and it isn't needed
+    if (raw.length > MAX_FRAME) return;
+    let msg: { type: string; bar?: { kline: Kline } } & Partial<Ticker>;
+    try {
+      msg = JSON.parse(raw) as typeof msg;
+    } catch {
+      // Our own server sent something that isn't JSON (a proxy error page?): a finding, not a crash
+      m.badFrames++;
+      return;
+    }
     if (msg.type === 'ticker' && typeof msg.lastPrice === 'number') {
       m.ticker = msg as Ticker;
       m.receivedAt = Date.now();
@@ -227,6 +238,7 @@ async function main(): Promise<void> {
       closed: new Map<number, Kline>(),
       misses: {},
       inconclusive: 0,
+      badFrames: 0,
       samples: 0,
     }))
   );
@@ -246,6 +258,7 @@ async function main(): Promise<void> {
   const problems: string[] = [];
   for (const m of markets) {
     if (!m.ticker) problems.push(`${key(m)}: never sent a ticker`);
+    if (m.badFrames > 0) problems.push(`${key(m)}: ${m.badFrames} WebSocket frames were not JSON`);
     // Most samples couldn't be compared: Bybit (or our feed) was unreadable for most of the run
     if (m.inconclusive > m.samples) {
       problems.push(
