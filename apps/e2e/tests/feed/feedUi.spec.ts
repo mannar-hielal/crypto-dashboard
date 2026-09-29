@@ -154,20 +154,24 @@ test('[9.6] with the feed gone, a market order cannot be sent @full', async ({
   await expect(at(page, 'trade.submit')).toBeDisabled({ timeout: 5_000 });
 });
 
-test('[9.6] with the feed gone, Sell / Buy fall back to the last price and the spread shows — @full', async ({
+test('[9.6] finding: with the feed gone, the spread still shows its last number (not —) @full', async ({
   page,
   seededUser,
   feed,
 }) => {
   // Finding (M5d): on a disconnect only `isConnected` goes false; the last bid / ask and the spread
-  // stay on screen. Changing that is a UI change, so it waits for the visual Q&A gate. Remove
-  // test.fail once it is fixed.
-  test.fail();
+  // stay on screen. Changing that is a UI change, so it waits for the visual Q&A gate. The finding is
+  // asserted (not test.fail, which would also pass on a broken setup — review #196); once it is
+  // fixed this goes red: then expect `—` here instead
   const cut = await cutFeed(page);
   await feed.quote('spot', 'ETHUSDT', { bid: 3_499.9, ask: 3_500, last: 3_500 });
   await signInAs(page, seededUser.email, seededUser.password);
   await page.goto(ETH);
   await expect(at(page, 'trade.spread')).not.toHaveText('—');
+  await at(page, 'trade.type.market').click();
+  await at(page, 'trade.amount').fill('0.01');
+  await expect(at(page, 'trade.submit')).toBeEnabled();
   await cut();
-  await expect(at(page, 'trade.spread')).toHaveText('—', { timeout: 5_000 });
+  await expect(at(page, 'trade.submit')).toBeDisabled({ timeout: 5_000 }); // the page saw the cut
+  await expect(at(page, 'trade.spread')).not.toHaveText('—');
 });

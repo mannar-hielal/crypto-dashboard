@@ -678,34 +678,34 @@ export function TradingPanel({
       </div>
 
       {/* ── Market tabs (Figma 93:5515 / 93:7352) + leverage on USDT Perpetual ── */}
-      <div
-        className="flex shrink-0 items-center gap-3 border-b border-white/5 px-3"
-        role="tablist"
-        aria-label="Market"
-      >
-        {MARKETS.map((m) => {
-          const active = m.category === category;
-          return (
-            <button
-              key={m.category}
-              {...guide(m.category === 'spot' ? 'trade.market.spot' : 'trade.market.perp')}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => handleMarketChange(m.category)}
-              className="relative whitespace-nowrap py-2 font-semibold transition-colors"
-              style={{ fontSize: fontSize.xs11, color: active ? color.white : color.muted }}
-            >
-              {m.title}
-              {active && (
-                <span
-                  className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
-                  style={{ background: color.purple }}
-                />
-              )}
-            </button>
-          );
-        })}
+      <div className="flex shrink-0 items-center gap-3 border-b border-white/5 px-3">
+        {/* The tablist holds the tabs only (the leverage chip isn't a tab: axe aria-required-children);
+            `contents` keeps them laid out in the row as before */}
+        <div role="tablist" aria-label="Market" className="contents">
+          {MARKETS.map((m) => {
+            const active = m.category === category;
+            return (
+              <button
+                key={m.category}
+                {...guide(m.category === 'spot' ? 'trade.market.spot' : 'trade.market.perp')}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => handleMarketChange(m.category)}
+                className="relative whitespace-nowrap py-2 font-semibold transition-colors"
+                style={{ fontSize: fontSize.xs11, color: active ? color.white : color.muted }}
+              >
+                {m.title}
+                {active && (
+                  <span
+                    className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
+                    style={{ background: color.purple }}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
         {!isSpot && <LeverageChip symbol={symbol} />}
       </div>
 

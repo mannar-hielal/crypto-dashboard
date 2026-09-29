@@ -194,6 +194,10 @@ The test strategy, tools and the case catalogue live in [`docs/TRADING_TEST_PLAN
 - **Crash and restart** (`apps/e2e/tests/resilience`, project `resilience`, part of the full set): a second API server
   of its own (`restartableServer.ts`, port 3002, database `…_restart_test`) is killed and started again, and the
   prices in the gap are backfilled.
+- **Visual baselines** (`apps/e2e/tests/visual`, local only): `pnpm --filter @crypto-dashboard/e2e test:visual`. A
+  baseline changes only after the owner approved the new look (`--update-snapshots`).
+- **Case-ID coverage** (`pnpm case-coverage`): which rows of `docs/TRADING_TEST_PLAN.md` no test cites. With `--strict`
+  (CI and pre-commit) it fails on a tag citing no row, or a ⬜ row that has a test.
 - **Docs-only changes** (`docs/**`, `**/*.md`) skip CI. CI is one job: checks, Postgres integration tests, build and
   the browser smoke.
 - **Browser smoke tests** (`apps/e2e`, Playwright, on every PR): sign-up and verification, a Spot market buy and a

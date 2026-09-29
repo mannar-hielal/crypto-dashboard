@@ -88,8 +88,10 @@ correct without depending on real infrastructure, and the suite stays fast and d
 
 ## Gates — what "passing" means before a commit/PR
 
-Pre-commit hook (`.husky/pre-commit`), in order: `audit` → `type-check` (server + client) →
-`test:coverage` + `test:hooks` → `lint-staged` → `lint`. CI (`ci.yml`) additionally runs
+Pre-commit hook (`.husky/pre-commit`), in order: `audit` → `type-check` (server + client + e2e) →
+`test:coverage` + `test:hooks` + `test:scripts` → `case-coverage --strict` → `lint-staged` → `lint`.
+`case-coverage --strict` (`scripts/caseCoverage.mjs`, F12) fails when a test title's `[x.y.z]` cites no
+row of `docs/TRADING_TEST_PLAN.md`, or a ⬜ row has a test: flip the row in the same commit. CI (`ci.yml`) additionally runs
 `format:check`, `build` and the Postgres integration job (`test:int`, CI only — it needs a database).
 A change is not ready to push until all of these are green locally — don't rely on CI to catch a
 gate that `pnpm test`/`pnpm lint`/`pnpm type-check` would have caught first.
