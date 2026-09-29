@@ -111,6 +111,10 @@ describe('owner error digest (M8)', () => {
       'PrismaClientKnownRequestError P2002'
     );
     expect(safeMessage([prisma])).toBe('PrismaClientKnownRequestError P2002');
+    // A message that quotes the error's text is dropped too
+    expect(safeMessage([{ err: prisma }, `Order write failed: ${prisma.message}`])).toBe(
+      'PrismaClientKnownRequestError P2002'
+    );
     // Our own lines keep their message, masked
     expect(safeMessage([{ err: prisma }, 'Order write failed'])).toBe('Order write failed');
     expect(safeMessage(['Failed for user 12345 (me@example.com)'])).toBe(

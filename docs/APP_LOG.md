@@ -1640,7 +1640,7 @@ Four issues surfaced in a Copilot PR review and are now resolved.
 
 ### feat: admin menu item in TopBar (2026-06-28) ✅
 
-- ShieldCheck icon + "Admin" label in user dropdown, visible only when `user.email === 'adminwithu@gmail.com'`
+- ShieldCheck icon + "Admin" label in user dropdown, visible only when `user.email === VITE_ADMIN_EMAIL` (the owner's address)
 - Navigates to `/admin/newsletter` on click
 
 ### fix: duplicate verification email — root cause found and fixed (2026-06-28) ✅
@@ -1659,7 +1659,7 @@ Four issues surfaced in a Copilot PR review and are now resolved.
 
 - Removed `useRef` + `useCallback` double-submit guard — protection is now fully server-side (simpler, more reliable)
 
-**Server logs confirm single request, single email per registration.** 1 email received in final test (`adminwithu+test6`).
+**Server logs confirm single request, single email per registration.** 1 email received in final test (a `+test` alias of the owner's mailbox).
 
 ---
 
@@ -3526,7 +3526,7 @@ rules are in `design.md` "Responsive layout".
 
 ### feat: M8 — the owner's error digest by email (2026-09-29) ✅
 
-**Context:** the owner asked where M8's alerts go: "email me at adminwithu at gmail.com for now". These alerts are for
+**Context:** the owner asked where M8's alerts go: email the owner's mailbox for now. These alerts are for
 the owner, not the users. Outages are covered by UptimeRobot (the owner's, `/health` every 5 min); the prod smoke and
 nightly e2e open GitHub issues. What was missing: server errors while the site is up.
 

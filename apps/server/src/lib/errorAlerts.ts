@@ -41,7 +41,8 @@ export function safeMessage(args: unknown[]): string {
     | Error
     | undefined;
   const err = obj instanceof Error ? obj : obj?.err instanceof Error ? obj.err : undefined;
-  if (err && (typeof text !== 'string' || text === err.message)) {
+  // …also when the message only quotes it (`Order write failed: ${err.message}`, review #201)
+  if (err && (typeof text !== 'string' || (err.message !== '' && text.includes(err.message)))) {
     const code = (err as { code?: unknown }).code;
     return `${err.name}${typeof code === 'string' ? ` ${code}` : ''}`;
   }
