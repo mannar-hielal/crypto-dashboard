@@ -175,6 +175,40 @@ export async function testHooksRoutes(app: FastifyInstance) {
     async (request) => ({ emails: outboxFor(request.query.to) })
   );
 
+  // ── POST /users/:id/request-deletion — a pending deletion, as production records one ──
+  // Outside production, the real /api/auth/account deletes at once (a dev convenience), so the
+  // "scheduled for deletion" banner and its Cancel can't be reached there without this.
+  app.post<{ Params: { id: string } }>(
+    '/users/:id/request-deletion',
+    {
+      schema: {
+        tags: ['Test'],
+        summary:
+          'Test only: mark a user as having requested deletion (as production does), signed out',
+        params: {
+          type: 'object',
+          required: ['id'],
+          additionalProperties: false,
+          properties: { id: { type: 'string', minLength: 1, maxLength: 64 } },
+        },
+        response: {
+          200: { type: 'object', required: ['ok'], properties: { ok: { type: 'boolean' } } },
+          401: errorResponse,
+        },
+      },
+    },
+    async (request) => {
+      const userId = request.params.id;
+      await app.prisma.user.updateMany({
+        where: { id: userId },
+        data: { deletionRequestedAt: new Date() },
+      });
+      // Production signs the user out with the request
+      await app.prisma.refreshToken.deleteMany({ where: { userId } });
+      return { ok: true };
+    }
+  );
+
   // ── POST /users/:id/reset — the account back to 10,000 USDT, no session needed ──
   app.post<{ Params: { id: string } }>(
     '/users/:id/reset',

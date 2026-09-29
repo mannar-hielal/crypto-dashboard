@@ -188,6 +188,8 @@ The test strategy, tools and the case catalogue live in [`docs/TRADING_TEST_PLAN
 - **Production smoke** (`apps/e2e/tests-prod`): read-only checks of the live site (API health, a clean signed-out
   load, the login page, a live market feed). They run as the last step of every deploy, failing it, and hourly in
   `prod-smoke.yml`, which opens a `prod-smoke` issue. Run by hand: `pnpm --filter @crypto-dashboard/e2e test:prod`.
+- **Nightly browser tests** (`e2e-nightly.yml`): the whole Playwright set on Chromium, WebKit and two phones,
+  including accessibility (axe). A failure opens an `e2e` issue.
 - **Browser smoke tests** (`apps/e2e`, Playwright, on every PR): sign-up and verification, a Spot market buy and a
   perp long opened and closed, against the fake feed. Locally, with a Postgres running:
   `E2E_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/crypto_dashboard_e2e_test pnpm test:e2e` (the name

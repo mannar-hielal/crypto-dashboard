@@ -3205,3 +3205,40 @@ catch a Bybit change to the rules the engine snapshots.
   deploy red.
 - **`prod-smoke.yml`:** hourly at :23, and on demand. A failure opens or comments an issue labelled `prod-smoke`.
 - **Still open (owner):** the log-based alert on `error` lines needs a log sink the owner chooses.
+
+### test: M5a — nightly Playwright set (auth, settings, axe, WebKit, phones) (2026-09-29) ✅
+
+**Context:** test plan milestone M5, first batch (Stage 0: account flows).
+
+- **Nightly** (`e2e-nightly.yml`, 02:30 UTC on develop): every Playwright project:
+  - Chromium runs `@smoke`, `@full` and `@a11y`;
+  - WebKit desktop runs `@smoke` and `@full`;
+  - iPhone 14 and Pixel 7 run `@mobile`.
+
+  A failure opens or comments an `e2e` issue. PRs still run the Chromium smoke.
+
+- **New specs:**
+  - `auth/session` ([19.4], `@smoke @mobile`);
+  - `auth/passwordReset` ([19.5]): the same answer for any email; the outbox link resets the password and ends the
+    other session;
+  - `auth/settings`: [19.7] rename and password change; [19.8] export (no password field), then cancel and
+    delete; [19.13] the pending-deletion banner and its Cancel, through the new `request-deletion` test hook,
+    because the dev server deletes at once;
+  - `auth/unverified` ([19.18]);
+  - [19.1] the short-username case in `auth/register`;
+  - `a11y/auth`: axe, and keyboard-only sign-in.
+- **Server:**
+  - `loginRateLimit.test` ([19.17]; `LOGIN_RATE_LIMIT` is exported);
+  - the global rate limit is skipped when the test hooks are on (one browser run is one IP). Production
+    rate-limits, because it refuses the hooks.
+- **Found, and left for the visual gate:**
+  - **19.15**: `OfflineBanner` (`fixed top-0 z-50`) covers the top bar while offline, so Sign out can't be reached.
+  - **19.16**: brand-purple links (#695bec on #25234e, ~3:1), the 10 px disclaimer at 60 % opacity, and Terms /
+    Privacy links told apart by colour only fail WCAG AA on /login, /register and /forgot-password.
+  - Both are `test.fail` in the suite, so they flip red when fixed.
+  - Phones (Q3): at 412 px the top bar overflows (the username is clipped), and the order form is off-screen behind
+    the Trade toggle.
+- **Calibrated:** an immediate "Resend verification email" is confirmed on screen, but held back server-side for 5
+  minutes (anti-spam, by design).
+- **Anchors added (attributes only):** forgot / reset / unverified pages, the settings modal (username, password with
+  toggle and success, export, delete), and the pending-deletion banner.

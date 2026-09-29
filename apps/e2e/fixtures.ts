@@ -30,7 +30,11 @@ export interface Feed {
 }
 
 export interface Hooks {
+  /** Another user, e.g. `{ verified: false }` */
+  seedUser(opts?: { verified?: boolean }): Promise<SeededUser>;
   resetAccount(userId: string): Promise<void>;
+  /** A pending deletion, as production records it (the dev server deletes at once otherwise) */
+  requestDeletion(userId: string): Promise<void>;
   outbox(to: string): Promise<{ kind: string; url?: string }[]>;
 }
 
@@ -81,6 +85,17 @@ export const test = base.extend<{ seededUser: SeededUser; feed: Feed; hooks: Hoo
   },
   hooks: async ({}, use) => {
     await use({
+      seedUser: async (opts = {}) =>
+        (await json(
+          await hooksFetch('/users', { method: 'POST', body: JSON.stringify(opts) }),
+          'seed user'
+        )) as SeededUser,
+      requestDeletion: async (userId) => {
+        await json(
+          await hooksFetch(`/users/${userId}/request-deletion`, { method: 'POST', body: '{}' }),
+          'request deletion'
+        );
+      },
       resetAccount: async (userId) => {
         await json(
           await hooksFetch(`/users/${userId}/reset`, { method: 'POST', body: '{}' }),
