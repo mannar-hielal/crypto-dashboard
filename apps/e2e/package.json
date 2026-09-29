@@ -1,0 +1,18 @@
+{
+  "name": "@crypto-dashboard/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Playwright end-to-end tests (docs/TEST_IMPLEMENTATION_PLAN.md F4): the app on the fake Bybit feed",
+  "scripts": {
+    "test": "playwright test",
+    "test:smoke": "playwright test --project=chromium --grep @smoke --grep-invert @quarantine",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^20.19.43",
+    "typescript": "^5.9.3"
+  }
+}

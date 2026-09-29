@@ -18,6 +18,7 @@ pnpm run audit
 # Type-check catches errors ESLint misses
 pnpm --filter @crypto-dashboard/server type-check
 pnpm --filter @crypto-dashboard/client type-check
+pnpm --filter @crypto-dashboard/e2e type-check
 
 # Run tests with the coverage floors, exactly as CI does (vitest.config.ts coverage.thresholds)
 pnpm test:coverage

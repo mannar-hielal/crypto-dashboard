@@ -13,11 +13,12 @@
     "dev": "pnpm dev:server",
     "dev:e2e": "node scripts/devE2e.mjs",
     "feed": "pnpm --silent --filter @crypto-dashboard/server feed",
+    "test:e2e": "pnpm --filter @crypto-dashboard/e2e test:smoke",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "audit": "pnpm audit --audit-level=high",
-    "type-check": "pnpm --filter @crypto-dashboard/server type-check && pnpm --filter @crypto-dashboard/client type-check",
+    "type-check": "pnpm --filter @crypto-dashboard/server type-check && pnpm --filter @crypto-dashboard/client type-check && pnpm --filter @crypto-dashboard/e2e type-check",
     "test": "pnpm --filter @crypto-dashboard/server test && pnpm --filter @crypto-dashboard/client test && pnpm test:hooks",
     "test:hooks": "python3 .claude/hooks/tests/test_check_claude_review_threads.py",
     "test:coverage": "pnpm --filter @crypto-dashboard/server test:coverage && pnpm --filter @crypto-dashboard/client test:coverage"

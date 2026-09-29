@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { CheckCircle2, AlertCircle, Loader2, ArrowLeft } from 'lucide-react';
 import { authApi } from '@crypto-dashboard/sdk';
 import { bg, color } from '@/lib/tokens';
+import { guide } from '@/lib/guideAnchors';
 
 export function VerifyEmailPage() {
   const [searchParams] = useSearchParams();
@@ -57,7 +58,12 @@ export function VerifyEmailPage() {
           {status === 'loading' && (
             <div className="flex flex-col items-center gap-4 py-8">
               <Loader2 className="w-12 h-12 animate-spin" style={{ color: color.purple }} />
-              <h1 className="text-xl font-bold text-white">Verifying your email...</h1>
+              <h1
+                className="text-xl font-bold text-white"
+                {...guide('auth.verify.status', 'loading')}
+              >
+                Verifying your email...
+              </h1>
               <p className="text-sm" style={{ color: color.muted }}>
                 One moment while we confirm your account.
               </p>
@@ -67,7 +73,12 @@ export function VerifyEmailPage() {
           {status === 'success' && (
             <div className="flex flex-col items-center gap-4 py-8">
               <CheckCircle2 className="w-16 h-16" style={{ color: color.green }} />
-              <h1 className="text-2xl font-bold text-white">Email Verified!</h1>
+              <h1
+                className="text-2xl font-bold text-white"
+                {...guide('auth.verify.status', 'success')}
+              >
+                Email Verified!
+              </h1>
               <p className="text-sm" style={{ color: color.muted }}>
                 {message}
               </p>
@@ -80,7 +91,12 @@ export function VerifyEmailPage() {
           {status === 'error' && (
             <div className="flex flex-col items-center gap-4 py-8">
               <AlertCircle className="w-16 h-16" style={{ color: color.red }} />
-              <h1 className="text-2xl font-bold text-white">Verification Failed</h1>
+              <h1
+                className="text-2xl font-bold text-white"
+                {...guide('auth.verify.status', 'error')}
+              >
+                Verification Failed
+              </h1>
               <p className="text-sm font-medium" style={{ color: color.red }}>
                 {message}
               </p>

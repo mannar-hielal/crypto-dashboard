@@ -32,7 +32,7 @@ export const spotMarketBuy = defineScenario({
     chooseType('market'),
     enterAmount('0.1', 'coin', {
       explain: 'Buy 0.1 BTC. The form shows what it costs before you commit.',
-      expect: [{ anchor: 'trade.preview.cost', text: /5,000\.00/ }],
+      expect: [{ anchor: 'trade.preview.cost', text: /^\$5000\.00 \/ \$10000\.00$/ }],
       liveNote: 'Cost ≈ 0.1 × the Buy price.',
     }),
     submit({ expect: [{ anchor: 'trade.amount', value: '' }] }),

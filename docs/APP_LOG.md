@@ -3158,3 +3158,34 @@ catch a Bybit change to the rules the engine snapshots.
   which made `authFormValidation.test` fail locally only. Fixed with `pnpm install --frozen-lockfile`.
 - **ESLint.** It now ignores `.claude/worktrees/**`: 10 agent git worktrees, whole repo copies, 13 GB, ran `pnpm lint`
   out of memory. They are on merged branches and can be removed with `git worktree remove` when no longer needed.
+
+### test: M4 — Playwright smoke on the fake feed, on every PR (2026-09-29) ✅
+
+**Context:** test plan milestone M4 (F4, F5). The owner approved `@playwright/test` and `@axe-core/playwright` (Q5,
+2026-09-29), but not `fast-check` or Stryker, so M7 is deferred. Staging (M9) is deferred too.
+
+- **`apps/e2e`** (new workspace package, dev dependencies only, no install scripts):
+  - `playwright.config.ts` starts three web servers: the fake feed; the API through `scripts/startServer.mjs`, which
+    creates and migrates the throwaway `…_test` database and runs with the test hooks; and Vite.
+  - Fixtures: `seededUser` (a verified user per test through `/api/test/users`), `feed` (the fake feed's controls),
+    `hooks` (account reset, email outbox), and a `page` with the cookie notice already dismissed.
+  - `steps/runScenario.ts` runs a guide scenario (`apps/client/src/guide`): quotes, account reset and sign-in
+    through the login form, then each step and its expectations on the `data-guide` anchors.
+- **The smoke set** (3 tests, ~9 s locally, stable over repeated runs):
+  - `spot-market-buy`: USDT 5,000.00, BTC 0.0999, avg cost 50,050.05;
+  - `perp-market-long`: isolated 10× through the leverage modal, long 0.1 at 50,000, liq $45,149, closed at 51,000,
+    Closed P&L 94.44;
+  - register → verify from the outbox → a second use of the link shows the error page, never a 5xx → sign in, reload,
+    sign out.
+- **CI:** a new job, "E2E smoke (Playwright)", on every PR. It runs Postgres 16 and Chromium, and uploads the
+  report and traces on failure. `pnpm type-check` and the pre-commit hook include the e2e package.
+- **Anchors added (attributes only):**
+  - the order form's TP / SL toggles and prices, and the cost / fee / liquidation preview;
+  - the leverage chip and modal (each preset keyed by its value);
+  - the login and register forms (new `auth.register.terms`), and the verify page's status keyed by state;
+  - the user menu, and the Assets USDT row.
+- **Found while calibrating:**
+  - The scenario text in the plan expected `5,000.00` and `45,149.0`; the app shows `$5000.00 / $10000.00` and
+    `$45,149`. The scenarios follow the app. A formatting change would go through the visual gate.
+  - The `setIsolated` builder typed into a leverage input, but the modal has preset buttons.
+- **Next (M5):** the nightly set, with WebKit, mobile, visual baselines and axe.
