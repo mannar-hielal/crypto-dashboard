@@ -7,6 +7,7 @@
   "scripts": {
     "test": "playwright test",
     "test:smoke": "playwright test --project=chromium --grep @smoke --grep-invert @quarantine",
+    "test:prod": "playwright test -c playwright.prod.config.ts",
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {

@@ -71,3 +71,16 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      # ── Production smoke (T5) ─────────────────────────────────────────────────
+      # Read-only checks against the live site (apps/e2e/tests-prod): API health, a clean signed-out
+      # page load, the login page, a live market feed. A failure marks this deploy red.
+      - name: Install Chromium for the production smoke
+        run: pnpm --filter @crypto-dashboard/e2e exec playwright install --with-deps chromium
+
+      - name: Production smoke
+        env:
+          CI: 'true'
+        run: |
+          sleep 20 # let the new Pages build and the Fly machine settle
+          pnpm --filter @crypto-dashboard/e2e test:prod
