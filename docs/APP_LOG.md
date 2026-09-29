@@ -3552,8 +3552,10 @@ nightly e2e open GitHub issues. What was missing: server errors while the site i
 ### chore: quieter logs — no info lines for health checks; the last F10 baselines; R3 closed (2026-09-29) ✅
 
 - **`/health` logs at `warn` and above only** (Fastify `logLevel` on the route). Fly checks it every 30 s and UptimeRobot
-  every 5 minutes: that was about 2,900 info lines an hour, burying the real events in `fly logs`. A failing health
-  request still logs. Checked on a local server: 3 health calls → 0 lines; another route still logs.
+  every 5 minutes: that was about 2,900 info lines an hour, burying the real events in `fly logs`. Any non-2xx
+  answer (a 429 from the rate limiter, a degraded reply, a throw) is logged as a warning by the route's `onResponse`
+  hook (review #203). Trade-off: a successful check leaves no line, so Fly's checks reaching the app no longer show in
+  the log; Fly's machine status and UptimeRobot show that. Checked on a local server: 3 health calls → 0 lines; another route still logs.
 - **F10:** the liquidation notice after a real liquidation (LINKUSDT, the visual project runs alone), and both pane
   headers in a 2h layout with the active pane's stripe (the left 220 px; the live price on the right moves by a pixel
   from run to run). The cross-margin notice stays out: it only shows for accounts migrated from before cross margin.
