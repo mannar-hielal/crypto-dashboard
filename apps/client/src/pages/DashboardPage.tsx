@@ -27,6 +27,7 @@ import { OrderAccountManagementPanel } from '@/components/dashboard/OrderAccount
 import { TickerBar } from '@/components/dashboard/TickerBar';
 import { SymbolBar } from '@/components/dashboard/SymbolBar';
 import { TradingPanel } from '@/components/dashboard/TradingPanel';
+import { MobileTradeBar } from '@/components/dashboard/MobileTradeBar';
 import type { OrderTab } from '@/components/dashboard/TradingPanel';
 import { PositionEditPanel } from '@/components/dashboard/PositionEditPanel';
 import { PendingOrderEditPanel } from '@/components/dashboard/PendingOrderEditPanel';
@@ -569,7 +570,8 @@ export function DashboardInner() {
               : { width: isTradingPanelVisible ? 256 : 0, opacity: isTradingPanelVisible ? 1 : 0 }
           }
           transition={{ duration: 0.2, ease: 'easeInOut' }}
-          className={`shrink-0 overflow-hidden${isMobile ? ' absolute inset-0 z-30 w-full' : ''}`}
+          // Below lg: full screen on phones, a right-hand sheet on tablets (md+)
+          className={`shrink-0 overflow-hidden${isMobile ? ' absolute inset-y-0 right-0 z-30 w-full md:w-80' : ''}`}
           aria-hidden={!isTradingPanelVisible}
           inert={!isTradingPanelVisible ? true : undefined}
           style={{ pointerEvents: isTradingPanelVisible ? 'auto' : 'none' }}
@@ -581,22 +583,46 @@ export function DashboardInner() {
             onTabChange={setTradingTab}
             initialSide={tradingSide}
             onSideChange={setTradingSide}
+            // Mobile: the form covers the screen — once the order is in, close it and open the
+            // account panel, so the new position or order is what the user sees
+            onPlaced={
+              isMobile
+                ? () => {
+                    setTradingPanelOpen(false);
+                    setPanelSize('open');
+                  }
+                : undefined
+            }
           />
         </motion.div>
       </div>
 
-      <TickerBar />
+      {/* Phones and tablets: Buy / Sell open the order form (it isn't docked below lg) */}
+      {isMobile && !isTradingPanelVisible && (
+        <MobileTradeBar
+          onTrade={(side) => {
+            setTradingSide(side);
+            setTradingPanelOpen(true);
+          }}
+        />
+      )}
+
+      {/* The ticker tape is marketing: phones give its height to the chart */}
+      <div className="hidden sm:block">
+        <TickerBar />
+      </div>
 
       {/* ── Dashboard footer ─────────────────────────────────────────────── */}
       <div
-        className="flex h-auto w-full shrink-0 flex-col items-center border-t border-white/5 px-4 py-2 sm:h-7 sm:flex-row sm:items-center sm:justify-between sm:py-0"
+        className="flex h-auto w-full shrink-0 flex-col items-center gap-0.5 border-t border-white/5 px-4 py-1.5 sm:h-7 sm:flex-row sm:items-center sm:justify-between sm:gap-0 sm:py-0"
         style={{ background: bg.footer }}
       >
         <span style={{ fontSize: fontSize.xs10, color: color.muted }}>
-          ⚠️ Paper trading only — no real funds. For educational purposes.
+          ⚠️ Paper trading only — no real funds.
+          <span className="hidden sm:inline"> For educational purposes.</span>
         </span>
         <nav
-          className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 sm:flex-nowrap sm:gap-4"
+          className="flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 sm:flex-nowrap sm:gap-4"
           style={{ fontSize: fontSize.xs10, color: `${color.muted}b3` }}
         >
           <Link to="/terms" className="transition-colors hover:text-white/50">
@@ -611,7 +637,7 @@ export function DashboardInner() {
           <Link to="/aup" className="transition-colors hover:text-white/50">
             Acceptable Use Policy
           </Link>
-          <span className="font-medium sm:ml-2">
+          <span className="hidden font-medium sm:ml-2 sm:inline">
             © {new Date().getFullYear()} cryptopapertrade.com
           </span>
         </nav>

@@ -50,16 +50,18 @@ const hooksFetch = (path: string, init: RequestInit = {}) =>
     signal: AbortSignal.timeout(15_000),
   });
 
-/** The cookie notice's "dismissed" flag (CookieBanner.tsx): its overlay would cover the order form */
-const COOKIE_NOTICE_KEY = 'cd-cookie-notice-dismissed';
+/**
+ * Flags that dismiss the bottom overlays — the cookie notice (CookieBanner.tsx) and, on phones, the
+ * install prompt (PWAInstallBanner.tsx) — which would cover the order form and the Buy / Sell bar
+ */
+const DISMISSED_KEYS = ['cd-cookie-notice-dismissed', 'pwa-install-banner-dismissed'];
 
 export const test = base.extend<{ seededUser: SeededUser; feed: Feed; hooks: Hooks }>({
   // On the context, so every page of it — `page` and any `context.newPage()` — starts without it
   context: async ({ context }, use) => {
-    await context.addInitScript(
-      (key) => window.localStorage.setItem(key, 'true'),
-      COOKIE_NOTICE_KEY
-    );
+    await context.addInitScript((keys) => {
+      for (const key of keys) window.localStorage.setItem(key, 'true');
+    }, DISMISSED_KEYS);
     await use(context);
   },
   seededUser: async ({}, use) => {

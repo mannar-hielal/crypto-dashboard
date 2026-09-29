@@ -21,6 +21,12 @@ const masks = (page: Page) => [at(page, 'nav.user-menu'), orderForm(page)];
 function orderForm(page: Page): Locator {
   return page.locator('aside').filter({ has: at(page, 'trade.submit') });
 }
+/** A dialog 3 px inside its box: its rounded corners show whatever is behind, which changes */
+async function dialogShot(page: Page, name: string) {
+  const box = (await page.getByRole('dialog').boundingBox())!;
+  const clip = { x: box.x + 3, y: box.y + 3, width: box.width - 6, height: box.height - 6 };
+  await expect(page).toHaveScreenshot(name, { ...shot, clip });
+}
 const summaryBar = (page: Page): Locator =>
   at(page, 'account.summary.balance').locator(
     'xpath=ancestor::div[contains(@class, "overflow-x-auto")][1]'
@@ -63,7 +69,7 @@ test('[F10] leverage and margin-mode modal @visual', async ({ page, seededUser }
   await signInAs(page, seededUser.email, seededUser.password);
   await page.goto('/dashboard/usdt/BTCUSDT');
   await at(page, 'trade.leverage-chip').click();
-  await expect(page.getByRole('dialog')).toHaveScreenshot('leverage-modal.png', shot);
+  await dialogShot(page, 'leverage-modal.png');
 });
 
 test('[F10] positions with pair icons, the summary bar, adjust margin, a Closed P&L row @visual', async ({
@@ -96,7 +102,7 @@ test('[F10] positions with pair icons, the summary bar, adjust margin, a Closed 
     .locator('[data-guide="positions.row.adjust-margin"]')
     .click();
   await at(page, 'margin.amount').fill('500');
-  await expect(page.getByRole('dialog')).toHaveScreenshot('adjust-margin.png', shot);
+  await dialogShot(page, 'adjust-margin.png');
   await page.keyboard.press('Escape');
   if ((await page.getByRole('dialog').count()) > 0)
     await page.getByRole('button', { name: 'Cancel' }).click();

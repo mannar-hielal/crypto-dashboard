@@ -91,6 +91,8 @@ interface TradingPanelProps {
   initialSide?: OrderSide;
   /** Called whenever the user switches side so the parent can persist the selection */
   onSideChange?: (side: OrderSide) => void;
+  /** Called after an order was placed (the mobile layout closes the full-screen form) */
+  onPlaced?: () => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -101,6 +103,7 @@ export function TradingPanel({
   onTabChange,
   initialSide = 'buy',
   onSideChange,
+  onPlaced,
 }: TradingPanelProps) {
   const priceInputId = useId();
 
@@ -183,6 +186,13 @@ export function TradingPanel({
     return r && r.category === category && r.symbol === symbol ? r : null;
   });
   const [side, setSide] = useState<OrderSide>(initialPrefill?.side ?? initialSide);
+  // The panel stays mounted: a side chosen from outside (the mobile Buy / Sell bar) applies here too.
+  // Adjusted while rendering when the prop changes (React's pattern; no effect)
+  const [sideFromProps, setSideFromProps] = useState(initialSide);
+  if (initialSide !== sideFromProps) {
+    setSideFromProps(initialSide);
+    setSide(initialSide);
+  }
   // Spot has no stop orders: a remembered Stop tab opens as Market there
   const [tab, setTab] = useState<OrderTab>(
     category === 'spot' && initialTab === 'stop' ? 'market' : initialTab
@@ -645,6 +655,7 @@ export function TradingPanel({
     setSltpConfirmPending(false);
     setSltpConfirmBypassed(false);
     void executeAnim.start({ scale: [1, 1.04, 1], transition: { duration: 0.3, ease: 'easeOut' } });
+    onPlaced?.();
   }
 
   // ── Submit label ──────────────────────────────────────────────────────────
@@ -660,7 +671,7 @@ export function TradingPanel({
 
   return (
     <aside
-      className="flex w-64 shrink-0 flex-col border-l border-white/6 overflow-hidden"
+      className="flex h-full w-full shrink-0 flex-col border-l border-white/6 overflow-hidden lg:h-auto lg:w-64"
       style={{ background: bg.panel }}
     >
       {/* ── Header ──────────────────────────────────────────────────────── */}

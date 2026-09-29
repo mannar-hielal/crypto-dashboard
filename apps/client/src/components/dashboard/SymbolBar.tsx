@@ -490,30 +490,32 @@ export function SymbolBar({
         onAdd={handleAddIndicator}
       />
 
-      {/* ── Layout picker ────────────────────────────────────────────────── */}
-      <ChartLayoutPicker />
+      {/* ── Layout picker + sync status: not on phones (one pane fits) ───── */}
+      <div className="hidden shrink-0 items-center gap-3 sm:flex">
+        <ChartLayoutPicker />
 
-      {/* Divider */}
-      <span className="h-4 w-px shrink-0 bg-white/8" />
+        {/* Divider */}
+        <span className="h-4 w-px shrink-0 bg-white/8" />
 
-      {/* ── Sync status ───────────────────────────────────────────────────── */}
-      <div className="flex shrink-0 items-center gap-1.5 pr-2">
-        {isSyncing ? (
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          >
-            <RefreshCw className="h-3 w-3" style={{ color: color.purple }} />
-          </motion.div>
-        ) : lastSyncAt ? (
-          <span title={`Last synced: ${new Date(lastSyncAt).toLocaleTimeString()}`}>
-            <Cloud className="h-3 w-3" style={{ color: color.green, opacity: 0.7 }} />
-          </span>
-        ) : (
-          <span title="Not synced">
-            <CloudOff className="h-3 w-3" style={{ color: color.red, opacity: 0.7 }} />
-          </span>
-        )}
+        {/* ── Sync status ───────────────────────────────────────────────────── */}
+        <div className="flex shrink-0 items-center gap-1.5 pr-2">
+          {isSyncing ? (
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            >
+              <RefreshCw className="h-3 w-3" style={{ color: color.purple }} />
+            </motion.div>
+          ) : lastSyncAt ? (
+            <span title={`Last synced: ${new Date(lastSyncAt).toLocaleTimeString()}`}>
+              <Cloud className="h-3 w-3" style={{ color: color.green, opacity: 0.7 }} />
+            </span>
+          ) : (
+            <span title="Not synced">
+              <CloudOff className="h-3 w-3" style={{ color: color.red, opacity: 0.7 }} />
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Divider */}
@@ -531,10 +533,9 @@ export function SymbolBar({
         }}
       />
 
-      {/* Divider */}
-      <span className="h-4 w-px shrink-0 bg-white/8" />
-
-      {/* ── Trade panel toggle ────────────────────────────────────────────── */}
+      {/* ── Trade panel toggle — docked layouts only (lg+); smaller screens have the Buy / Sell
+          bar at the bottom (MobileTradeBar) ─────────────────────────────── */}
+      <span className="hidden h-4 w-px shrink-0 bg-white/8 lg:block" />
       <motion.button
         type="button"
         onClick={onToggleTrading}
@@ -543,7 +544,7 @@ export function SymbolBar({
         whileHover={tradingPanelOpen ? undefined : { scale: 1.04 }}
         whileTap={tradingPanelOpen ? undefined : { scale: 0.96 }}
         title={tradingPanelOpen ? 'Trade panel already open' : 'Open trade panel'}
-        className="relative flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 font-bold text-white transition-all disabled:cursor-not-allowed disabled:opacity-70"
+        className="relative hidden shrink-0 items-center gap-1.5 rounded-full px-3 py-1 font-bold text-white transition-all disabled:cursor-not-allowed disabled:opacity-70 lg:flex"
         style={{
           fontSize: fontSize.xs11,
           background: tradingPanelOpen
