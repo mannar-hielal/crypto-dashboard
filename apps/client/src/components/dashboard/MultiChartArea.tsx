@@ -42,6 +42,7 @@ import { ChartPanel } from '@/components/dashboard/ChartPanel';
 import { PaneHeader } from '@/components/dashboard/PaneHeader';
 import { color } from '@/lib/tokens';
 import { guide } from '@/lib/guideAnchors';
+import { exposeChartForE2e } from '@/lib/e2eProbe';
 
 /** Inputs for canDriveTimeSync — read at event time, never a stale closure. */
 function paneHistory(paneIndex: number) {
@@ -191,10 +192,15 @@ export function MultiChartArea({
       chartRefs.current[paneIndex] = chart;
       seriesRefs.current[paneIndex] = series;
       onChartRefReady?.(paneIndex, chart);
+      exposeChartForE2e(paneIndex, chart, series); // e2e builds only (VITE_E2E)
 
       chart.subscribeCrosshairMove((param) => {
         if (!syncRef.current.crosshair) return;
-        if (!param.sourceEvent) return;
+        // A crosshair leaving this pane (the mouse left it) comes with no sourceEvent, yet the
+        // followers must clear too (10.4.5). It can't echo: the programmatic
+        // clearCrosshairPosition() fires no event
+        const left = !param.point || !param.time;
+        if (!param.sourceEvent && !left) return;
         for (let i = 0; i < paneCountRef.current; i++) {
           if (i === paneIndex) continue;
           const other = chartRefs.current[i];
@@ -260,6 +266,7 @@ export function MultiChartArea({
   const handleChartDestroy = useCallback((paneIndex: number) => {
     chartRefs.current[paneIndex] = null;
     seriesRefs.current[paneIndex] = null;
+    exposeChartForE2e(paneIndex, null, null);
   }, []);
 
   // ── Splitter drag helpers ───────────────────────────────────────────────
