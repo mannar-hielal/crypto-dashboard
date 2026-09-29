@@ -100,6 +100,8 @@ const userResponse = {
     email: { type: 'string' },
     username: { type: 'string' },
     emailVerifiedAt: { type: ['string', 'null'] },
+    // A pending deletion: the dashboard's banner (with its Cancel) reads it after sign-in
+    deletionRequestedAt: { type: ['string', 'null'] },
     termsAcceptedAt: { type: ['string', 'null'] },
     termsAcceptedIp: { type: ['string', 'null'] },
   },
@@ -113,6 +115,31 @@ const tokenResponse = {
     user: userResponse,
   },
 } as const;
+
+/** The user columns the API shows (userResponse) — 🔐 never the password hash */
+type PublicUserRow = Pick<
+  Prisma.UserGetPayload<object>,
+  | 'id'
+  | 'email'
+  | 'username'
+  | 'emailVerifiedAt'
+  | 'deletionRequestedAt'
+  | 'termsAcceptedAt'
+  | 'termsAcceptedIp'
+>;
+
+/** A user as every auth response sends it (the SDK's `User`): dates as ISO strings. */
+function publicUser(user: PublicUserRow) {
+  return {
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
+    deletionRequestedAt: user.deletionRequestedAt?.toISOString() ?? null,
+    termsAcceptedAt: user.termsAcceptedAt?.toISOString() ?? null,
+    termsAcceptedIp: user.termsAcceptedIp,
+  };
+}
 
 const errorResponse = {
   type: 'object',
@@ -232,12 +259,7 @@ const meSchema = {
           type: 'object',
           required: ['id', 'email', 'username'],
           properties: {
-            id: { type: 'string' },
-            email: { type: 'string' },
-            username: { type: 'string' },
-            emailVerifiedAt: { type: ['string', 'null'] },
-            termsAcceptedAt: { type: ['string', 'null'] },
-            termsAcceptedIp: { type: ['string', 'null'] },
+            ...userResponse.properties,
             account: {
               type: ['object', 'null'],
               properties: {
@@ -421,9 +443,11 @@ const updateUsernameSchema = {
     },
   },
   response: {
+    // The handler answers with the updated user (the Settings modal shows the new name)
     200: {
       type: 'object',
-      properties: { message: { type: 'string' } },
+      required: ['user'],
+      properties: { user: userResponse },
     },
     400: errorResponse,
     401: errorResponse,
@@ -445,9 +469,11 @@ const updateEmailSchema = {
     },
   },
   response: {
+    // Nothing changes until the link in the new inbox is used: the handler answers with a message
     200: {
       type: 'object',
-      properties: { user: userResponse },
+      required: ['message'],
+      properties: { message: { type: 'string' } },
     },
     400: errorResponse,
     401: errorResponse,
@@ -674,14 +700,7 @@ export async function authRoutes(app: FastifyInstance) {
 
         return reply.status(201).send({
           accessToken,
-          user: {
-            id: user.id,
-            email: user.email,
-            username: user.username,
-            emailVerifiedAt: null,
-            termsAcceptedAt: user.termsAcceptedAt?.toISOString() ?? null,
-            termsAcceptedIp: user.termsAcceptedIp,
-          },
+          user: publicUser(user),
         });
       } catch (err) {
         // Handle race conditions where two requests for the same user pass the findFirst check
@@ -834,14 +853,7 @@ export async function authRoutes(app: FastifyInstance) {
 
       return reply.send({
         accessToken,
-        user: {
-          id: user.id,
-          email: user.email,
-          username: user.username,
-          emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
-          termsAcceptedAt: user.termsAcceptedAt?.toISOString() ?? null,
-          termsAcceptedIp: user.termsAcceptedIp,
-        },
+        user: publicUser(user),
       });
     }
   );
@@ -1089,12 +1101,7 @@ export async function authRoutes(app: FastifyInstance) {
 
       return reply.send({
         user: {
-          id: user.id,
-          email: user.email,
-          username: user.username,
-          emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
-          termsAcceptedAt: user.termsAcceptedAt?.toISOString() ?? null,
-          termsAcceptedIp: user.termsAcceptedIp,
+          ...publicUser(user),
           account: user.account
             ? {
                 ...user.account,
@@ -1178,7 +1185,7 @@ export async function authRoutes(app: FastifyInstance) {
         omit: { password: true },
       });
 
-      return reply.send({ user });
+      return reply.send({ user: publicUser(user) });
     }
   );
 

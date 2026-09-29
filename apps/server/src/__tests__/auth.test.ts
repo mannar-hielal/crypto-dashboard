@@ -329,6 +329,29 @@ describe('GET /api/auth/me', () => {
     expect(res.json<{ user: { email: string } }>().user.email).toBe(validUser.email);
   });
 
+  it('should send deletionRequestedAt so a pending deletion shows its banner after sign-in (P1d contract)', async () => {
+    const token = app.jwt.sign({ userId: 'user-1', email: validUser.email });
+    const requested = new Date('2026-09-20T10:00:00.000Z');
+    (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'user-1',
+      email: validUser.email,
+      username: validUser.username,
+      deletionRequestedAt: requested,
+      account: null,
+    });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/auth/me',
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json<{ user: { deletionRequestedAt: string } }>().user.deletionRequestedAt).toBe(
+      requested.toISOString()
+    );
+  });
+
   it('returns 401 with no token', async () => {
     const res = await app.inject({ method: 'GET', url: '/api/auth/me' });
     expect(res.statusCode).toBe(401);
@@ -833,6 +856,8 @@ describe('Protected auth lifecycle routes', () => {
         data: { username: 'new_name' },
       })
     );
+    // The Settings modal reads res.user.username (P1d contract: the schema used to drop it)
+    expect(res.json<{ user: { username: string } }>().user.username).toBe('new_name');
   });
 
   it('updates the email and sends a verification link', async () => {
@@ -852,6 +877,10 @@ describe('Protected auth lifecycle routes', () => {
     });
 
     expect(res.statusCode).toBe(200);
+    // P1d contract: the schema used to drop the message
+    expect(res.json<{ message: string }>().message).toBe(
+      'Verification link sent to your new email address.'
+    );
     expect(app.prisma.emailChangeToken.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
