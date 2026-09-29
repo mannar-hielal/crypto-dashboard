@@ -63,15 +63,22 @@ export function AssetsTable({ usdtBalance, usdtReserved, rows, onSell }: AssetsT
           </tr>
         </thead>
         <tbody>
-          <tr className="border-b border-white/3">
+          <tr className="border-b border-white/3" {...guide('assets.row', 'USDT')}>
             <td className="px-3 py-1.5 font-bold text-white">USDT</td>
             <td className="px-3 py-1.5 text-right tabular-nums text-white/80">
               {usd(usdtBalance + usdtReserved)}
             </td>
-            <td className="px-3 py-1.5 text-right tabular-nums text-white/80">
+            <td
+              className="px-3 py-1.5 text-right tabular-nums text-white/80"
+              {...guide('assets.row.free', 'USDT')}
+            >
               {usd(usdtBalance)}
             </td>
-            <td className="px-3 py-1.5 text-right tabular-nums" style={{ color: color.muted }}>
+            <td
+              className="px-3 py-1.5 text-right tabular-nums"
+              style={{ color: color.muted }}
+              {...guide('assets.row.locked', 'USDT')}
+            >
               {usd(usdtReserved)}
             </td>
             <td className="px-3 py-1.5 text-right" style={{ color: color.muted }}>

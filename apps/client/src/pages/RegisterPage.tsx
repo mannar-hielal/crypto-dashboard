@@ -1,3 +1,5 @@
+import { startedNewSession } from '@/lib/session';
+import { guide } from '@/lib/guideAnchors';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useForm } from 'react-hook-form';
@@ -68,6 +70,7 @@ export function RegisterPage() {
     setServerError(null);
     try {
       const { accessToken, user } = await authApi.register(data);
+      startedNewSession();
       setAuth(accessToken, user);
       void navigate('/dashboard');
     } catch (err) {
@@ -159,6 +162,7 @@ export function RegisterPage() {
                             type="email"
                             placeholder="you@example.com"
                             autoComplete="email"
+                            {...guide('auth.register.email')}
                             className="border-white/8 text-white focus-visible:ring-0 focus-visible:border-brand-purple-dark/50"
                             style={{ background: bg.surface }}
                             {...field}
@@ -186,6 +190,7 @@ export function RegisterPage() {
                           <Input
                             placeholder="satoshi_nakamoto"
                             autoComplete="username"
+                            {...guide('auth.register.username')}
                             className="border-white/8 text-white focus-visible:ring-0 focus-visible:border-brand-purple-dark/50"
                             style={{ background: bg.surface }}
                             {...field}
@@ -214,6 +219,7 @@ export function RegisterPage() {
                             type="password"
                             placeholder="••••••••"
                             autoComplete="new-password"
+                            {...guide('auth.register.password')}
                             className="border-white/8 text-white focus-visible:ring-0 focus-visible:border-brand-purple-dark/50"
                             style={{ background: bg.surface }}
                             {...field}
@@ -232,7 +238,11 @@ export function RegisterPage() {
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-start space-x-2 space-y-0 p-1">
                         <FormControl>
-                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            {...guide('auth.register.terms')}
+                          />
                         </FormControl>
                         <div className="grid gap-1.5 leading-none">
                           <FormLabel
@@ -242,16 +252,16 @@ export function RegisterPage() {
                             I have read and agree to the{' '}
                             <Link
                               to="/terms"
-                              className="transition-colors hover:text-brand-purple"
-                              style={{ color: color.purpleDark }}
+                              className="underline underline-offset-2 transition-colors hover:text-brand-purple"
+                              style={{ color: color.purpleLight }}
                             >
                               Terms of Service
                             </Link>{' '}
                             and{' '}
                             <Link
                               to="/privacy"
-                              className="transition-colors hover:text-brand-purple"
-                              style={{ color: color.purpleDark }}
+                              className="underline underline-offset-2 transition-colors hover:text-brand-purple"
+                              style={{ color: color.purpleLight }}
                             >
                               Privacy Policy
                             </Link>
@@ -270,6 +280,7 @@ export function RegisterPage() {
                 >
                   <button
                     type="submit"
+                    {...guide('auth.register.submit')}
                     disabled={form.formState.isSubmitting}
                     className="w-full h-8 flex items-center justify-center font-bold tracking-wide text-white transition-all"
                     style={{
@@ -287,8 +298,8 @@ export function RegisterPage() {
 
                 <motion.p
                   variants={formFieldVariants}
-                  className="text-center text-[10px] leading-tight"
-                  style={{ color: `${color.muted}99` }}
+                  className="text-center text-[11px] leading-tight"
+                  style={{ color: color.muted }}
                 >
                   ⚠️ <strong>No Financial Advice:</strong> This is a paper trading simulator for
                   educational purposes only. No real funds are involved. Simulated results do not
@@ -303,8 +314,8 @@ export function RegisterPage() {
                   Already have an account?{' '}
                   <Link
                     to="/login"
-                    className="font-semibold transition-colors hover:text-brand-purple"
-                    style={{ color: color.purpleDark }}
+                    className="font-semibold underline underline-offset-2 transition-colors hover:text-brand-purple"
+                    style={{ color: color.purpleLight }}
                   >
                     Sign in
                   </Link>

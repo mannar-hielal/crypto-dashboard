@@ -72,6 +72,9 @@ function hasRefreshCookie(request: FastifyRequest): boolean {
   return Boolean(request.cookies?.[REFRESH_TOKEN_COOKIE]);
 }
 
+/** 🔐 Login attempts per visitor: brute-force / credential-stuffing cap (exported for its test) */
+export const LOGIN_RATE_LIMIT = { max: 10, timeWindow: '15 minutes' };
+
 export const REFRESH_RATE_LIMIT = {
   timeWindow: '15 minutes',
   max: (request: FastifyRequest) => (hasRefreshCookie(request) ? 20 : 100),
@@ -819,15 +822,7 @@ export async function authRoutes(app: FastifyInstance) {
   // ─── LOGIN ───────────────────────────────────────────────────────────────────
   app.post(
     '/login',
-    {
-      schema: loginSchema,
-      config: {
-        rateLimit: {
-          max: 10,
-          timeWindow: '15 minutes',
-        },
-      },
-    },
+    { schema: loginSchema, config: { rateLimit: LOGIN_RATE_LIMIT } },
     async (request, reply) => {
       const { email, password } = request.body as {
         email: string;

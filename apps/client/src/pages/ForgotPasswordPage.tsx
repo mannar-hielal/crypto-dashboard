@@ -1,3 +1,4 @@
+import { guide } from '@/lib/guideAnchors';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { useForm } from 'react-hook-form';
@@ -97,6 +98,7 @@ export function ForgotPasswordPage() {
                     background: `${color.purpleDark}1a`,
                     color: color.muted,
                   }}
+                  {...guide('auth.forgot.message')}
                 >
                   If that email exists, a reset link has been sent. Check your inbox.
                 </motion.div>
@@ -127,6 +129,7 @@ export function ForgotPasswordPage() {
                                 type="email"
                                 placeholder="you@example.com"
                                 autoComplete="email"
+                                {...guide('auth.forgot.email')}
                                 className="border-white/8 text-white focus-visible:ring-0 focus-visible:border-brand-purple-dark/50"
                                 style={{ background: bg.surface }}
                                 {...field}
@@ -145,6 +148,7 @@ export function ForgotPasswordPage() {
                     >
                       <button
                         type="submit"
+                        {...guide('auth.forgot.submit')}
                         className="w-full h-8 flex items-center justify-center font-bold tracking-wide text-white transition-all"
                         style={{
                           background: form.formState.isSubmitting
@@ -172,8 +176,8 @@ export function ForgotPasswordPage() {
               >
                 <Link
                   to="/login"
-                  className="font-semibold transition-colors hover:text-brand-purple"
-                  style={{ color: color.purpleDark }}
+                  className="font-semibold underline underline-offset-2 transition-colors hover:text-brand-purple"
+                  style={{ color: color.purpleLight }}
                 >
                   Back to sign in
                 </Link>

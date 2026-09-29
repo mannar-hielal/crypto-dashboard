@@ -1,0 +1,4441 @@
+{
+  "recordedAt": "2026-09-29T03:36:42.964Z",
+  "source": "https://api.bybit.com",
+  "instruments": {
+    "spot": [
+      {
+        "symbolId": 9,
+        "symbol": "BTCUSDT",
+        "baseCoin": "BTC",
+        "quoteCoin": "USDT",
+        "innovation": "0",
+        "status": "Trading",
+        "marginTrading": "utaOnly",
+        "stTag": "0",
+        "lotSizeFilter": {
+          "basePrecision": "0.000001",
+          "quotePrecision": "0.0000001",
+          "minOrderQty": "0.000001",
+          "maxOrderQty": "230",
+          "minOrderAmt": "5",
+          "maxOrderAmt": "8000000",
+          "maxLimitOrderQty": "230",
+          "maxMarketOrderQty": "120",
+          "postOnlyMaxLimitOrderSize": "1150"
+        },
+        "priceFilter": {
+          "tickSize": "0.1"
+        },
+        "riskParameters": {
+          "priceLimitRatioX": "0.005",
+          "priceLimitRatioY": "0.01"
+        },
+        "symbolType": "",
+        "xstockMultiplier": "1"
+      },
+      {
+        "symbolId": 10,
+        "symbol": "ETHUSDT",
+        "baseCoin": "ETH",
+        "quoteCoin": "USDT",
+        "innovation": "0",
+        "status": "Trading",
+        "marginTrading": "utaOnly",
+        "stTag": "0",
+        "lotSizeFilter": {
+          "basePrecision": "0.00001",
+          "quotePrecision": "0.0000001",
+          "minOrderQty": "0.00001",
+          "maxOrderQty": "8118",
+          "minOrderAmt": "5",
+          "maxOrderAmt": "7000000",
+          "maxLimitOrderQty": "8118",
+          "maxMarketOrderQty": "2706",
+          "postOnlyMaxLimitOrderSize": "40590"
+        },
+        "priceFilter": {
+          "tickSize": "0.01"
+        },
+        "riskParameters": {
+          "priceLimitRatioX": "0.005",
+          "priceLimitRatioY": "0.01"
+        },
+        "symbolType": "",
+        "xstockMultiplier": "1"
+      },
+      {
+        "symbolId": 42,
+        "symbol": "SOLUSDT",
+        "baseCoin": "SOL",
+        "quoteCoin": "USDT",
+        "innovation": "0",
+        "status": "Trading",
+        "marginTrading": "utaOnly",
+        "stTag": "0",
+        "lotSizeFilter": {
+          "basePrecision": "0.0001",
+          "quotePrecision": "0.000001",
+          "minOrderQty": "0.0001",
+          "maxOrderQty": "26000",
+          "minOrderAmt": "5",
+          "maxOrderAmt": "5000000",
+          "maxLimitOrderQty": "26000",
+          "maxMarketOrderQty": "13000",
+          "postOnlyMaxLimitOrderSize": "130000"
+        },
+        "priceFilter": {
+          "tickSize": "0.01"
+        },
+        "riskParameters": {
+          "priceLimitRatioX": "0.005",
+          "priceLimitRatioY": "0.01"
+        },
+        "symbolType": "",
+        "xstockMultiplier": "1"
+      },
+      {
+        "symbolId": 200,
+        "symbol": "BNBUSDT",
+        "baseCoin": "BNB",
+        "quoteCoin": "USDT",
+        "innovation": "0",
+        "status": "Trading",
+        "marginTrading": "utaOnly",
+        "stTag": "0",
+        "lotSizeFilter": {
+          "basePrecision": "0.0001",
+          "quotePrecision": "0.00001",
+          "minOrderQty": "0.0001",
+          "maxOrderQty": "2200",
+          "minOrderAmt": "5",
+          "maxOrderAmt": "4000000",
+          "maxLimitOrderQty": "2200",
+          "maxMarketOrderQty": "1100",
+          "postOnlyMaxLimitOrderSize": "11000"
+        },
+        "priceFilter": {
+          "tickSize": "0.1"
+        },
+        "riskParameters": {
+          "priceLimitRatioX": "0.005",
+          "priceLimitRatioY": "0.01"
+        },
+        "symbolType": "",
+        "xstockMultiplier": "1"
+      },
+      {
+        "symbolId": 11,
+        "symbol": "XRPUSDT",
+        "baseCoin": "XRP",
+        "quoteCoin": "USDT",
+        "innovation": "0",
+        "status": "Trading",
+        "marginTrading": "utaOnly",
+        "stTag": "0",
+        "lotSizeFilter": {
+          "basePrecision": "0.01",
+          "quotePrecision": "0.000001",
+          "minOrderQty": "0.01",
+          "maxOrderQty": "1200000",
+          "minOrderAmt": "5",
+          "maxOrderAmt": "4000000",
+          "maxLimitOrderQty": "1200000",
+          "maxMarketOrderQty": "620000",
+          "postOnlyMaxLimitOrderSize": "6000000"
+        },
+        "priceFilter": {
+          "tickSize": "0.0001"
+        },
+        "riskParameters": {
+          "priceLimitRatioX": "0.005",
+          "priceLimitRatioY": "0.01"
+        },
+        "symbolType": "",
+        "xstockMultiplier": "1"
+      },
+      {
+        "symbolId": 18,
+        "symbol": "DOGEUSDT",
+        "baseCoin": "DOGE",
+        "quoteCoin": "USDT",
+        "innovation": "0",
+        "status": "Trading",
+        "marginTrading": "utaOnly",
+        "stTag": "0",
+        "lotSizeFilter": {
+          "basePrecision": "0.1",
+          "quotePrecision": "0.000001",
+          "minOrderQty": "0.1",
+          "maxOrderQty": "14000000",
+          "minOrderAmt": "5",
+          "maxOrderAmt": "4000000",
+          "maxLimitOrderQty": "14000000",
+          "maxMarketOrderQty": "6800000",
+          "postOnlyMaxLimitOrderSize": "70000000"
+        },
+        "priceFilter": {
+          "tickSize": "0.00001"
+        },
+        "riskParameters": {
+          "priceLimitRatioX": "0.005",
+          "priceLimitRatioY": "0.01"
+        },
+        "symbolType": "",
+        "xstockMultiplier": "1"
+      },
+      {
+        "symbolId": 33,
+        "symbol": "ADAUSDT",
+        "baseCoin": "ADA",
+        "quoteCoin": "USDT",
+        "innovation": "0",
+        "status": "Trading",
+        "marginTrading": "utaOnly",
+        "stTag": "0",
+        "lotSizeFilter": {
+          "basePrecision": "0.01",
+          "quotePrecision": "0.000001",
+          "minOrderQty": "0.01",
+          "maxOrderQty": "7600000",
+          "minOrderAmt": "5",
+          "maxOrderAmt": "4000000",
+          "maxLimitOrderQty": "7600000",
+          "maxMarketOrderQty": "1500000",
+          "postOnlyMaxLimitOrderSize": "38000000"
+        },
+        "priceFilter": {
+          "tickSize": "0.0001"
+        },
+        "riskParameters": {
+          "priceLimitRatioX": "0.015",
+          "priceLimitRatioY": "0.03"
+        },
+        "symbolType": "",
+        "xstockMultiplier": "1"
+      },
+      {
+        "symbolId": 65,
+        "symbol": "AVAXUSDT",
+        "baseCoin": "AVAX",
+        "quoteCoin": "USDT",
+        "innovation": "0",
+        "status": "Trading",
+        "marginTrading": "utaOnly",
+        "stTag": "0",
+        "lotSizeFilter": {
+          "basePrecision": "0.001",
+          "quotePrecision": "0.000001",
+          "minOrderQty": "0.001",
+          "maxOrderQty": "140000",
+          "minOrderAmt": "5",
+          "maxOrderAmt": "3000000",
+          "maxLimitOrderQty": "140000",
+          "maxMarketOrderQty": "27000",
+          "postOnlyMaxLimitOrderSize": "700000"
+        },
+        "priceFilter": {
+          "tickSize": "0.001"
+        },
+        "riskParameters": {
+          "priceLimitRatioX": "0.015",
+          "priceLimitRatioY": "0.03"
+        },
+        "symbolType": "",
+        "xstockMultiplier": "1"
+      },
+      {
+        "symbolId": 28,
+        "symbol": "LINKUSDT",
+        "baseCoin": "LINK",
+        "quoteCoin": "USDT",
+        "innovation": "0",
+        "status": "Trading",
+        "marginTrading": "utaOnly",
+        "stTag": "0",
+        "lotSizeFilter": {
+          "basePrecision": "0.001",
+          "quotePrecision": "0.000001",
+          "minOrderQty": "0.001",
+          "maxOrderQty": "240000",
+          "minOrderAmt": "5",
+          "maxOrderAmt": "2500000",
+          "maxLimitOrderQty": "240000",
+          "maxMarketOrderQty": "48000",
+          "postOnlyMaxLimitOrderSize": "1200000"
+        },
+        "priceFilter": {
+          "tickSize": "0.001"
+        },
+        "riskParameters": {
+          "priceLimitRatioX": "0.015",
+          "priceLimitRatioY": "0.03"
+        },
+        "symbolType": "",
+        "xstockMultiplier": "1"
+      }
+    ],
+    "linear": [
+      {
+        "symbol": "BTCUSDT",
+        "contractType": "LinearPerpetual",
+        "status": "Trading",
+        "baseCoin": "BTC",
+        "quoteCoin": "USDT",
+        "launchTime": "1584230400000",
+        "deliveryTime": "0",
+        "deliveryFeeRate": "",
+        "priceScale": "2",
+        "leverageFilter": {
+          "minLeverage": "1",
+          "maxLeverage": "150.00",
+          "leverageStep": "0.01"
+        },
+        "priceFilter": {
+          "minPrice": "0.10",
+          "maxPrice": "1999999.80",
+          "tickSize": "0.10"
+        },
+        "lotSizeFilter": {
+          "maxOrderQty": "1500.000",
+          "minOrderQty": "0.001",
+          "qtyStep": "0.001",
+          "postOnlyMaxOrderQty": "1500.000",
+          "maxMktOrderQty": "150.000",
+          "minNotionalValue": "5"
+        },
+        "unifiedMarginTrade": true,
+        "fundingInterval": 480,
+        "settleCoin": "USDT",
+        "copyTrading": "both",
+        "upperFundingRate": "0.00333",
+        "lowerFundingRate": "-0.00333",
+        "isPreListing": false,
+        "preListingInfo": null,
+        "riskParameters": {
+          "priceLimitRatioX": "0.01",
+          "priceLimitRatioY": "0.02"
+        },
+        "displayName": "BTCUSDT",
+        "symbolType": "",
+        "forbidUplWithdrawal": false,
+        "symbolId": 5,
+        "fullName": "Bitcoin",
+        "marketRegion": "",
+        "underlyingTicker": "",
+        "tags": []
+      },
+      {
+        "symbol": "ETHUSDT",
+        "contractType": "LinearPerpetual",
+        "status": "Trading",
+        "baseCoin": "ETH",
+        "quoteCoin": "USDT",
+        "launchTime": "1615766400000",
+        "deliveryTime": "0",
+        "deliveryFeeRate": "",
+        "priceScale": "2",
+        "leverageFilter": {
+          "minLeverage": "1",
+          "maxLeverage": "150.00",
+          "leverageStep": "0.01"
+        },
+        "priceFilter": {
+          "minPrice": "0.01",
+          "maxPrice": "199999.98",
+          "tickSize": "0.01"
+        },
+        "lotSizeFilter": {
+          "maxOrderQty": "10000.00",
+          "minOrderQty": "0.01",
+          "qtyStep": "0.01",
+          "postOnlyMaxOrderQty": "10000.00",
+          "maxMktOrderQty": "2000.00",
+          "minNotionalValue": "5"
+        },
+        "unifiedMarginTrade": true,
+        "fundingInterval": 480,
+        "settleCoin": "USDT",
+        "copyTrading": "both",
+        "upperFundingRate": "0.00333",
+        "lowerFundingRate": "-0.00333",
+        "isPreListing": false,
+        "preListingInfo": null,
+        "riskParameters": {
+          "priceLimitRatioX": "0.02",
+          "priceLimitRatioY": "0.04"
+        },
+        "displayName": "ETHUSDT",
+        "symbolType": "",
+        "forbidUplWithdrawal": false,
+        "symbolId": 6,
+        "fullName": "Ethereum",
+        "marketRegion": "",
+        "underlyingTicker": "",
+        "tags": []
+      },
+      {
+        "symbol": "SOLUSDT",
+        "contractType": "LinearPerpetual",
+        "status": "Trading",
+        "baseCoin": "SOL",
+        "quoteCoin": "USDT",
+        "launchTime": "1634256000000",
+        "deliveryTime": "0",
+        "deliveryFeeRate": "",
+        "priceScale": "3",
+        "leverageFilter": {
+          "minLeverage": "1",
+          "maxLeverage": "100.00",
+          "leverageStep": "0.01"
+        },
+        "priceFilter": {
+          "minPrice": "0.010",
+          "maxPrice": "199999.980",
+          "tickSize": "0.010"
+        },
+        "lotSizeFilter": {
+          "maxOrderQty": "96000.0",
+          "minOrderQty": "0.1",
+          "qtyStep": "0.1",
+          "postOnlyMaxOrderQty": "96000.0",
+          "maxMktOrderQty": "12000.0",
+          "minNotionalValue": "5"
+        },
+        "unifiedMarginTrade": true,
+        "fundingInterval": 480,
+        "settleCoin": "USDT",
+        "copyTrading": "both",
+        "upperFundingRate": "0.005",
+        "lowerFundingRate": "-0.005",
+        "isPreListing": false,
+        "preListingInfo": null,
+        "riskParameters": {
+          "priceLimitRatioX": "0.05",
+          "priceLimitRatioY": "0.1"
+        },
+        "displayName": "SOLUSDT",
+        "symbolType": "",
+        "forbidUplWithdrawal": false,
+        "symbolId": 38,
+        "fullName": "Solana",
+        "marketRegion": "",
+        "underlyingTicker": "",
+        "tags": []
+      },
+      {
+        "symbol": "BNBUSDT",
+        "contractType": "LinearPerpetual",
+        "status": "Trading",
+        "baseCoin": "BNB",
+        "quoteCoin": "USDT",
+        "launchTime": "1624951080000",
+        "deliveryTime": "0",
+        "deliveryFeeRate": "",
+        "priceScale": "2",
+        "leverageFilter": {
+          "minLeverage": "1",
+          "maxLeverage": "75.00",
+          "leverageStep": "0.01"
+        },
+        "priceFilter": {
+          "minPrice": "0.10",
+          "maxPrice": "1999999.80",
+          "tickSize": "0.10"
+        },
+        "lotSizeFilter": {
+          "maxOrderQty": "940.00",
+          "minOrderQty": "0.01",
+          "qtyStep": "0.01",
+          "postOnlyMaxOrderQty": "940.00",
+          "maxMktOrderQty": "370.00",
+          "minNotionalValue": "5"
+        },
+        "unifiedMarginTrade": true,
+        "fundingInterval": 480,
+        "settleCoin": "USDT",
+        "copyTrading": "both",
+        "upperFundingRate": "0.0066",
+        "lowerFundingRate": "-0.0066",
+        "isPreListing": false,
+        "preListingInfo": null,
+        "riskParameters": {
+          "priceLimitRatioX": "0.05",
+          "priceLimitRatioY": "0.1"
+        },
+        "displayName": "BNBUSDT",
+        "symbolType": "",
+        "forbidUplWithdrawal": false,
+        "symbolId": 36,
+        "fullName": "Binance Coin",
+        "marketRegion": "",
+        "underlyingTicker": "",
+        "tags": []
+      },
+      {
+        "symbol": "XRPUSDT",
+        "contractType": "LinearPerpetual",
+        "status": "Trading",
+        "baseCoin": "XRP",
+        "quoteCoin": "USDT",
+        "launchTime": "1620898440000",
+        "deliveryTime": "0",
+        "deliveryFeeRate": "",
+        "priceScale": "4",
+        "leverageFilter": {
+          "minLeverage": "1",
+          "maxLeverage": "100.00",
+          "leverageStep": "0.01"
+        },
+        "priceFilter": {
+          "minPrice": "0.0001",
+          "maxPrice": "1999.9998",
+          "tickSize": "0.0001"
+        },
+        "lotSizeFilter": {
+          "maxOrderQty": "7500000.0",
+          "minOrderQty": "0.1",
+          "qtyStep": "0.1",
+          "postOnlyMaxOrderQty": "7500000.0",
+          "maxMktOrderQty": "1500000.0",
+          "minNotionalValue": "5"
+        },
+        "unifiedMarginTrade": true,
+        "fundingInterval": 480,
+        "settleCoin": "USDT",
+        "copyTrading": "both",
+        "upperFundingRate": "0.005",
+        "lowerFundingRate": "-0.005",
+        "isPreListing": false,
+        "preListingInfo": null,
+        "riskParameters": {
+          "priceLimitRatioX": "0.05",
+          "priceLimitRatioY": "0.1"
+        },
+        "displayName": "XRPUSDT",
+        "symbolType": "",
+        "forbidUplWithdrawal": false,
+        "symbolId": 8,
+        "fullName": "XRP",
+        "marketRegion": "",
+        "underlyingTicker": "",
+        "tags": []
+      },
+      {
+        "symbol": "DOGEUSDT",
+        "contractType": "LinearPerpetual",
+        "status": "Trading",
+        "baseCoin": "DOGE",
+        "quoteCoin": "USDT",
+        "launchTime": "1622630640000",
+        "deliveryTime": "0",
+        "deliveryFeeRate": "",
+        "priceScale": "5",
+        "leverageFilter": {
+          "minLeverage": "1",
+          "maxLeverage": "75.00",
+          "leverageStep": "0.01"
+        },
+        "priceFilter": {
+          "minPrice": "0.00001",
+          "maxPrice": "199.99998",
+          "tickSize": "0.00001"
+        },
+        "lotSizeFilter": {
+          "maxOrderQty": "43678900",
+          "minOrderQty": "1",
+          "qtyStep": "1",
+          "postOnlyMaxOrderQty": "43678900",
+          "maxMktOrderQty": "5991100",
+          "minNotionalValue": "5"
+        },
+        "unifiedMarginTrade": true,
+        "fundingInterval": 480,
+        "settleCoin": "USDT",
+        "copyTrading": "both",
+        "upperFundingRate": "0.0058",
+        "lowerFundingRate": "-0.0058",
+        "isPreListing": false,
+        "preListingInfo": null,
+        "riskParameters": {
+          "priceLimitRatioX": "0.05",
+          "priceLimitRatioY": "0.1"
+        },
+        "displayName": "DOGEUSDT",
+        "symbolType": "",
+        "forbidUplWithdrawal": false,
+        "symbolId": 33,
+        "fullName": "Dogecoin",
+        "marketRegion": "",
+        "underlyingTicker": "",
+        "tags": []
+      },
+      {
+        "symbol": "ADAUSDT",
+        "contractType": "LinearPerpetual",
+        "status": "Trading",
+        "baseCoin": "ADA",
+        "quoteCoin": "USDT",
+        "launchTime": "1610668800000",
+        "deliveryTime": "0",
+        "deliveryFeeRate": "",
+        "priceScale": "4",
+        "leverageFilter": {
+          "minLeverage": "1",
+          "maxLeverage": "75.00",
+          "leverageStep": "0.01"
+        },
+        "priceFilter": {
+          "minPrice": "0.0001",
+          "maxPrice": "1999.9998",
+          "tickSize": "0.0001"
+        },
+        "lotSizeFilter": {
+          "maxOrderQty": "1500000",
+          "minOrderQty": "1",
+          "qtyStep": "1",
+          "postOnlyMaxOrderQty": "1500000",
+          "maxMktOrderQty": "590000",
+          "minNotionalValue": "5"
+        },
+        "unifiedMarginTrade": true,
+        "fundingInterval": 480,
+        "settleCoin": "USDT",
+        "copyTrading": "both",
+        "upperFundingRate": "0.0058",
+        "lowerFundingRate": "-0.0058",
+        "isPreListing": false,
+        "preListingInfo": null,
+        "riskParameters": {
+          "priceLimitRatioX": "0.05",
+          "priceLimitRatioY": "0.1"
+        },
+        "displayName": "ADAUSDT",
+        "symbolType": "",
+        "forbidUplWithdrawal": false,
+        "symbolId": 27,
+        "fullName": "Cardano",
+        "marketRegion": "",
+        "underlyingTicker": "",
+        "tags": []
+      },
+      {
+        "symbol": "AVAXUSDT",
+        "contractType": "LinearPerpetual",
+        "status": "Trading",
+        "baseCoin": "AVAX",
+        "quoteCoin": "USDT",
+        "launchTime": "1631664000000",
+        "deliveryTime": "0",
+        "deliveryFeeRate": "",
+        "priceScale": "3",
+        "leverageFilter": {
+          "minLeverage": "1",
+          "maxLeverage": "75.00",
+          "leverageStep": "0.01"
+        },
+        "priceFilter": {
+          "minPrice": "0.001",
+          "maxPrice": "19999.998",
+          "tickSize": "0.001"
+        },
+        "lotSizeFilter": {
+          "maxOrderQty": "110000.0",
+          "minOrderQty": "0.1",
+          "qtyStep": "0.1",
+          "postOnlyMaxOrderQty": "110000.0",
+          "maxMktOrderQty": "22000.0",
+          "minNotionalValue": "5"
+        },
+        "unifiedMarginTrade": true,
+        "fundingInterval": 480,
+        "settleCoin": "USDT",
+        "copyTrading": "both",
+        "upperFundingRate": "0.0066",
+        "lowerFundingRate": "-0.0066",
+        "isPreListing": false,
+        "preListingInfo": null,
+        "riskParameters": {
+          "priceLimitRatioX": "0.02",
+          "priceLimitRatioY": "0.1"
+        },
+        "displayName": "AVAXUSDT",
+        "symbolType": "",
+        "forbidUplWithdrawal": false,
+        "symbolId": 52,
+        "fullName": "Avalanche",
+        "marketRegion": "",
+        "underlyingTicker": "",
+        "tags": []
+      },
+      {
+        "symbol": "LINKUSDT",
+        "contractType": "LinearPerpetual",
+        "status": "Trading",
+        "baseCoin": "LINK",
+        "quoteCoin": "USDT",
+        "launchTime": "1514764800000",
+        "deliveryTime": "0",
+        "deliveryFeeRate": "",
+        "priceScale": "3",
+        "leverageFilter": {
+          "minLeverage": "1",
+          "maxLeverage": "75.00",
+          "leverageStep": "0.01"
+        },
+        "priceFilter": {
+          "minPrice": "0.001",
+          "maxPrice": "19999.998",
+          "tickSize": "0.001"
+        },
+        "lotSizeFilter": {
+          "maxOrderQty": "41000.0",
+          "minOrderQty": "0.1",
+          "qtyStep": "0.1",
+          "postOnlyMaxOrderQty": "41000.0",
+          "maxMktOrderQty": "15000.0",
+          "minNotionalValue": "5"
+        },
+        "unifiedMarginTrade": true,
+        "fundingInterval": 480,
+        "settleCoin": "USDT",
+        "copyTrading": "both",
+        "upperFundingRate": "0.0066",
+        "lowerFundingRate": "-0.0066",
+        "isPreListing": false,
+        "preListingInfo": null,
+        "riskParameters": {
+          "priceLimitRatioX": "0.05",
+          "priceLimitRatioY": "0.1"
+        },
+        "displayName": "LINKUSDT",
+        "symbolType": "",
+        "forbidUplWithdrawal": false,
+        "symbolId": 26,
+        "fullName": "Chainlink",
+        "marketRegion": "",
+        "underlyingTicker": "",
+        "tags": []
+      }
+    ]
+  },
+  "riskLimit": {
+    "BTCUSDT": [
+      {
+        "id": 1,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "300000",
+        "maintenanceMargin": "0.0033",
+        "initialMargin": "0.0066",
+        "isLowestRisk": 1,
+        "maxLeverage": "150.00",
+        "mmDeduction": ""
+      },
+      {
+        "id": 2,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "2000000",
+        "maintenanceMargin": "0.005",
+        "initialMargin": "0.01",
+        "isLowestRisk": 0,
+        "maxLeverage": "100.00",
+        "mmDeduction": "510"
+      },
+      {
+        "id": 3,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "2600000",
+        "maintenanceMargin": "0.0056",
+        "initialMargin": "0.0111",
+        "isLowestRisk": 0,
+        "maxLeverage": "90.00",
+        "mmDeduction": "1710"
+      },
+      {
+        "id": 4,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "3200000",
+        "maintenanceMargin": "0.0063",
+        "initialMargin": "0.0125",
+        "isLowestRisk": 0,
+        "maxLeverage": "80.00",
+        "mmDeduction": "3530"
+      },
+      {
+        "id": 5,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "3800000",
+        "maintenanceMargin": "0.0067",
+        "initialMargin": "0.0133",
+        "isLowestRisk": 0,
+        "maxLeverage": "75.00",
+        "mmDeduction": "4810"
+      },
+      {
+        "id": 6,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "4400000",
+        "maintenanceMargin": "0.0071",
+        "initialMargin": "0.0143",
+        "isLowestRisk": 0,
+        "maxLeverage": "70.00",
+        "mmDeduction": "6330"
+      },
+      {
+        "id": 7,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "5000000",
+        "maintenanceMargin": "0.0077",
+        "initialMargin": "0.0154",
+        "isLowestRisk": 0,
+        "maxLeverage": "65.00",
+        "mmDeduction": "8970"
+      },
+      {
+        "id": 8,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "5600000",
+        "maintenanceMargin": "0.0091",
+        "initialMargin": "0.0182",
+        "isLowestRisk": 0,
+        "maxLeverage": "55.00",
+        "mmDeduction": "15970"
+      },
+      {
+        "id": 9,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "8500000",
+        "maintenanceMargin": "0.01",
+        "initialMargin": "0.02",
+        "isLowestRisk": 0,
+        "maxLeverage": "50.00",
+        "mmDeduction": "21010"
+      },
+      {
+        "id": 10,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "10000000",
+        "maintenanceMargin": "0.013",
+        "initialMargin": "0.0222",
+        "isLowestRisk": 0,
+        "maxLeverage": "45.00",
+        "mmDeduction": "46510"
+      },
+      {
+        "id": 11,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "14000000",
+        "maintenanceMargin": "0.015",
+        "initialMargin": "0.025",
+        "isLowestRisk": 0,
+        "maxLeverage": "40.00",
+        "mmDeduction": "66510"
+      },
+      {
+        "id": 12,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "20000000",
+        "maintenanceMargin": "0.016",
+        "initialMargin": "0.0286",
+        "isLowestRisk": 0,
+        "maxLeverage": "35.00",
+        "mmDeduction": "80510"
+      },
+      {
+        "id": 13,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "28000000",
+        "maintenanceMargin": "0.02",
+        "initialMargin": "0.0333",
+        "isLowestRisk": 0,
+        "maxLeverage": "30.00",
+        "mmDeduction": "160510"
+      },
+      {
+        "id": 14,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "38000000",
+        "maintenanceMargin": "0.025",
+        "initialMargin": "0.04",
+        "isLowestRisk": 0,
+        "maxLeverage": "25.00",
+        "mmDeduction": "300510"
+      },
+      {
+        "id": 15,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "50000000",
+        "maintenanceMargin": "0.029",
+        "initialMargin": "0.05",
+        "isLowestRisk": 0,
+        "maxLeverage": "20.00",
+        "mmDeduction": "452510"
+      },
+      {
+        "id": 16,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "55000000",
+        "maintenanceMargin": "0.03",
+        "initialMargin": "0.0526",
+        "isLowestRisk": 0,
+        "maxLeverage": "19.00",
+        "mmDeduction": "502510"
+      },
+      {
+        "id": 17,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "60000000",
+        "maintenanceMargin": "0.035",
+        "initialMargin": "0.0556",
+        "isLowestRisk": 0,
+        "maxLeverage": "18.00",
+        "mmDeduction": "777510"
+      },
+      {
+        "id": 18,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "65000000",
+        "maintenanceMargin": "0.036",
+        "initialMargin": "0.0588",
+        "isLowestRisk": 0,
+        "maxLeverage": "17.00",
+        "mmDeduction": "837510"
+      },
+      {
+        "id": 19,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "70000000",
+        "maintenanceMargin": "0.038",
+        "initialMargin": "0.0625",
+        "isLowestRisk": 0,
+        "maxLeverage": "16.00",
+        "mmDeduction": "967510"
+      },
+      {
+        "id": 20,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "75000000",
+        "maintenanceMargin": "0.04",
+        "initialMargin": "0.0667",
+        "isLowestRisk": 0,
+        "maxLeverage": "15.00",
+        "mmDeduction": "1107510"
+      },
+      {
+        "id": 21,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "80000000",
+        "maintenanceMargin": "0.045",
+        "initialMargin": "0.0714",
+        "isLowestRisk": 0,
+        "maxLeverage": "14.00",
+        "mmDeduction": "1482510"
+      },
+      {
+        "id": 22,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "85000000",
+        "maintenanceMargin": "0.05",
+        "initialMargin": "0.0769",
+        "isLowestRisk": 0,
+        "maxLeverage": "13.00",
+        "mmDeduction": "1882510"
+      },
+      {
+        "id": 23,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "90000000",
+        "maintenanceMargin": "0.055",
+        "initialMargin": "0.0833",
+        "isLowestRisk": 0,
+        "maxLeverage": "12.00",
+        "mmDeduction": "2307510"
+      },
+      {
+        "id": 24,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "95000000",
+        "maintenanceMargin": "0.06",
+        "initialMargin": "0.0909",
+        "isLowestRisk": 0,
+        "maxLeverage": "11.00",
+        "mmDeduction": "2757510"
+      },
+      {
+        "id": 25,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "100000000",
+        "maintenanceMargin": "0.065",
+        "initialMargin": "0.1",
+        "isLowestRisk": 0,
+        "maxLeverage": "10.00",
+        "mmDeduction": "3232510"
+      },
+      {
+        "id": 26,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "105000000",
+        "maintenanceMargin": "0.07",
+        "initialMargin": "0.1111",
+        "isLowestRisk": 0,
+        "maxLeverage": "9.00",
+        "mmDeduction": "3732510"
+      },
+      {
+        "id": 27,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "110000000",
+        "maintenanceMargin": "0.085",
+        "initialMargin": "0.125",
+        "isLowestRisk": 0,
+        "maxLeverage": "8.00",
+        "mmDeduction": "5307510"
+      },
+      {
+        "id": 28,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "115000000",
+        "maintenanceMargin": "0.095",
+        "initialMargin": "0.1429",
+        "isLowestRisk": 0,
+        "maxLeverage": "7.00",
+        "mmDeduction": "6407510"
+      },
+      {
+        "id": 29,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "120000000",
+        "maintenanceMargin": "0.1",
+        "initialMargin": "0.1667",
+        "isLowestRisk": 0,
+        "maxLeverage": "6.00",
+        "mmDeduction": "6982510"
+      },
+      {
+        "id": 30,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "150000000",
+        "maintenanceMargin": "0.12",
+        "initialMargin": "0.2",
+        "isLowestRisk": 0,
+        "maxLeverage": "5.00",
+        "mmDeduction": "9382510"
+      },
+      {
+        "id": 31,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "200000000",
+        "maintenanceMargin": "0.14",
+        "initialMargin": "0.25",
+        "isLowestRisk": 0,
+        "maxLeverage": "4.00",
+        "mmDeduction": "12382510"
+      },
+      {
+        "id": 32,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "250000000",
+        "maintenanceMargin": "0.18",
+        "initialMargin": "0.3333",
+        "isLowestRisk": 0,
+        "maxLeverage": "3.00",
+        "mmDeduction": "20382510"
+      },
+      {
+        "id": 33,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "400000000",
+        "maintenanceMargin": "0.3",
+        "initialMargin": "0.5",
+        "isLowestRisk": 0,
+        "maxLeverage": "2.00",
+        "mmDeduction": "50382510"
+      },
+      {
+        "id": 34,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "800000000",
+        "maintenanceMargin": "0.42",
+        "initialMargin": "0.6993",
+        "isLowestRisk": 0,
+        "maxLeverage": "1.43",
+        "mmDeduction": "98382510"
+      },
+      {
+        "id": 35,
+        "symbol": "BTCUSDT",
+        "riskLimitValue": "1200000000",
+        "maintenanceMargin": "0.6",
+        "initialMargin": "1",
+        "isLowestRisk": 0,
+        "maxLeverage": "1.00",
+        "mmDeduction": "242382510"
+      }
+    ],
+    "ETHUSDT": [
+      {
+        "id": 11,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "300000",
+        "maintenanceMargin": "0.0033",
+        "initialMargin": "0.0066",
+        "isLowestRisk": 1,
+        "maxLeverage": "150.00",
+        "mmDeduction": ""
+      },
+      {
+        "id": 12,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "900000",
+        "maintenanceMargin": "0.005",
+        "initialMargin": "0.01",
+        "isLowestRisk": 0,
+        "maxLeverage": "100.00",
+        "mmDeduction": "510"
+      },
+      {
+        "id": 13,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "1200000",
+        "maintenanceMargin": "0.0056",
+        "initialMargin": "0.0111",
+        "isLowestRisk": 0,
+        "maxLeverage": "90.00",
+        "mmDeduction": "1050"
+      },
+      {
+        "id": 14,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "1500000",
+        "maintenanceMargin": "0.0063",
+        "initialMargin": "0.0125",
+        "isLowestRisk": 0,
+        "maxLeverage": "80.00",
+        "mmDeduction": "1890"
+      },
+      {
+        "id": 15,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "1800000",
+        "maintenanceMargin": "0.0067",
+        "initialMargin": "0.0133",
+        "isLowestRisk": 0,
+        "maxLeverage": "75.00",
+        "mmDeduction": "2490"
+      },
+      {
+        "id": 16,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "2400000",
+        "maintenanceMargin": "0.0071",
+        "initialMargin": "0.0143",
+        "isLowestRisk": 0,
+        "maxLeverage": "70.00",
+        "mmDeduction": "3210"
+      },
+      {
+        "id": 17,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "3200000",
+        "maintenanceMargin": "0.0077",
+        "initialMargin": "0.0154",
+        "isLowestRisk": 0,
+        "maxLeverage": "65.00",
+        "mmDeduction": "4650"
+      },
+      {
+        "id": 18,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "4000000",
+        "maintenanceMargin": "0.0091",
+        "initialMargin": "0.0182",
+        "isLowestRisk": 0,
+        "maxLeverage": "55.00",
+        "mmDeduction": "9130"
+      },
+      {
+        "id": 19,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "5000000",
+        "maintenanceMargin": "0.01",
+        "initialMargin": "0.02",
+        "isLowestRisk": 0,
+        "maxLeverage": "50.00",
+        "mmDeduction": "12730"
+      },
+      {
+        "id": 20,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "8000000",
+        "maintenanceMargin": "0.012",
+        "initialMargin": "0.0222",
+        "isLowestRisk": 0,
+        "maxLeverage": "45.00",
+        "mmDeduction": "22730"
+      },
+      {
+        "id": 21,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "12000000",
+        "maintenanceMargin": "0.013",
+        "initialMargin": "0.025",
+        "isLowestRisk": 0,
+        "maxLeverage": "40.00",
+        "mmDeduction": "30730"
+      },
+      {
+        "id": 22,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "16000000",
+        "maintenanceMargin": "0.014",
+        "initialMargin": "0.0286",
+        "isLowestRisk": 0,
+        "maxLeverage": "35.00",
+        "mmDeduction": "42730"
+      },
+      {
+        "id": 23,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "22000000",
+        "maintenanceMargin": "0.015",
+        "initialMargin": "0.0333",
+        "isLowestRisk": 0,
+        "maxLeverage": "30.00",
+        "mmDeduction": "58730"
+      },
+      {
+        "id": 24,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "28000000",
+        "maintenanceMargin": "0.02",
+        "initialMargin": "0.04",
+        "isLowestRisk": 0,
+        "maxLeverage": "25.00",
+        "mmDeduction": "168730"
+      },
+      {
+        "id": 25,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "32000000",
+        "maintenanceMargin": "0.025",
+        "initialMargin": "0.05",
+        "isLowestRisk": 0,
+        "maxLeverage": "20.00",
+        "mmDeduction": "308730"
+      },
+      {
+        "id": 26,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "34000000",
+        "maintenanceMargin": "0.03",
+        "initialMargin": "0.0526",
+        "isLowestRisk": 0,
+        "maxLeverage": "19.00",
+        "mmDeduction": "468730"
+      },
+      {
+        "id": 27,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "36000000",
+        "maintenanceMargin": "0.033",
+        "initialMargin": "0.0556",
+        "isLowestRisk": 0,
+        "maxLeverage": "18.00",
+        "mmDeduction": "570730"
+      },
+      {
+        "id": 28,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "38000000",
+        "maintenanceMargin": "0.035",
+        "initialMargin": "0.0588",
+        "isLowestRisk": 0,
+        "maxLeverage": "17.00",
+        "mmDeduction": "642730"
+      },
+      {
+        "id": 29,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "40000000",
+        "maintenanceMargin": "0.038",
+        "initialMargin": "0.0625",
+        "isLowestRisk": 0,
+        "maxLeverage": "16.00",
+        "mmDeduction": "756730"
+      },
+      {
+        "id": 30,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "42000000",
+        "maintenanceMargin": "0.039",
+        "initialMargin": "0.0667",
+        "isLowestRisk": 0,
+        "maxLeverage": "15.00",
+        "mmDeduction": "796730"
+      },
+      {
+        "id": 31,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "44000000",
+        "maintenanceMargin": "0.042",
+        "initialMargin": "0.0714",
+        "isLowestRisk": 0,
+        "maxLeverage": "14.00",
+        "mmDeduction": "922730"
+      },
+      {
+        "id": 32,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "46000000",
+        "maintenanceMargin": "0.045",
+        "initialMargin": "0.0769",
+        "isLowestRisk": 0,
+        "maxLeverage": "13.00",
+        "mmDeduction": "1054730"
+      },
+      {
+        "id": 33,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "48000000",
+        "maintenanceMargin": "0.05",
+        "initialMargin": "0.0833",
+        "isLowestRisk": 0,
+        "maxLeverage": "12.00",
+        "mmDeduction": "1284730"
+      },
+      {
+        "id": 34,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "50000000",
+        "maintenanceMargin": "0.055",
+        "initialMargin": "0.0909",
+        "isLowestRisk": 0,
+        "maxLeverage": "11.00",
+        "mmDeduction": "1524730"
+      },
+      {
+        "id": 35,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "52000000",
+        "maintenanceMargin": "0.06",
+        "initialMargin": "0.1",
+        "isLowestRisk": 0,
+        "maxLeverage": "10.00",
+        "mmDeduction": "1774730"
+      },
+      {
+        "id": 36,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "54000000",
+        "maintenanceMargin": "0.068",
+        "initialMargin": "0.1111",
+        "isLowestRisk": 0,
+        "maxLeverage": "9.00",
+        "mmDeduction": "2190730"
+      },
+      {
+        "id": 37,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "58000000",
+        "maintenanceMargin": "0.075",
+        "initialMargin": "0.125",
+        "isLowestRisk": 0,
+        "maxLeverage": "8.00",
+        "mmDeduction": "2568730"
+      },
+      {
+        "id": 38,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "62000000",
+        "maintenanceMargin": "0.09",
+        "initialMargin": "0.1429",
+        "isLowestRisk": 0,
+        "maxLeverage": "7.00",
+        "mmDeduction": "3438730"
+      },
+      {
+        "id": 39,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "66000000",
+        "maintenanceMargin": "0.1",
+        "initialMargin": "0.1667",
+        "isLowestRisk": 0,
+        "maxLeverage": "6.00",
+        "mmDeduction": "4058730"
+      },
+      {
+        "id": 40,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "72000000",
+        "maintenanceMargin": "0.12",
+        "initialMargin": "0.2",
+        "isLowestRisk": 0,
+        "maxLeverage": "5.00",
+        "mmDeduction": "5378730"
+      },
+      {
+        "id": 41,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "80000000",
+        "maintenanceMargin": "0.14",
+        "initialMargin": "0.25",
+        "isLowestRisk": 0,
+        "maxLeverage": "4.00",
+        "mmDeduction": "6818730"
+      },
+      {
+        "id": 42,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "100000000",
+        "maintenanceMargin": "0.18",
+        "initialMargin": "0.3333",
+        "isLowestRisk": 0,
+        "maxLeverage": "3.00",
+        "mmDeduction": "10018730"
+      },
+      {
+        "id": 43,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "200000000",
+        "maintenanceMargin": "0.3",
+        "initialMargin": "0.5",
+        "isLowestRisk": 0,
+        "maxLeverage": "2.00",
+        "mmDeduction": "22018730"
+      },
+      {
+        "id": 44,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "600000000",
+        "maintenanceMargin": "0.42",
+        "initialMargin": "0.6993",
+        "isLowestRisk": 0,
+        "maxLeverage": "1.43",
+        "mmDeduction": "46018730"
+      },
+      {
+        "id": 45,
+        "symbol": "ETHUSDT",
+        "riskLimitValue": "1000000000",
+        "maintenanceMargin": "0.6",
+        "initialMargin": "1",
+        "isLowestRisk": 0,
+        "maxLeverage": "1.00",
+        "mmDeduction": "154018730"
+      }
+    ],
+    "SOLUSDT": [
+      {
+        "id": 281,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "50000",
+        "maintenanceMargin": "0.005",
+        "initialMargin": "0.01",
+        "isLowestRisk": 1,
+        "maxLeverage": "100.00",
+        "mmDeduction": ""
+      },
+      {
+        "id": 282,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "100000",
+        "maintenanceMargin": "0.0056",
+        "initialMargin": "0.0111",
+        "isLowestRisk": 0,
+        "maxLeverage": "90.00",
+        "mmDeduction": "30"
+      },
+      {
+        "id": 283,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "250000",
+        "maintenanceMargin": "0.0063",
+        "initialMargin": "0.0125",
+        "isLowestRisk": 0,
+        "maxLeverage": "80.00",
+        "mmDeduction": "100"
+      },
+      {
+        "id": 284,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "400000",
+        "maintenanceMargin": "0.0067",
+        "initialMargin": "0.0133",
+        "isLowestRisk": 0,
+        "maxLeverage": "75.00",
+        "mmDeduction": "200"
+      },
+      {
+        "id": 285,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "550000",
+        "maintenanceMargin": "0.0071",
+        "initialMargin": "0.0143",
+        "isLowestRisk": 0,
+        "maxLeverage": "70.00",
+        "mmDeduction": "360"
+      },
+      {
+        "id": 286,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "700000",
+        "maintenanceMargin": "0.0077",
+        "initialMargin": "0.0154",
+        "isLowestRisk": 0,
+        "maxLeverage": "65.00",
+        "mmDeduction": "690"
+      },
+      {
+        "id": 287,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "850000",
+        "maintenanceMargin": "0.0091",
+        "initialMargin": "0.0182",
+        "isLowestRisk": 0,
+        "maxLeverage": "55.00",
+        "mmDeduction": "1670"
+      },
+      {
+        "id": 288,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "1000000",
+        "maintenanceMargin": "0.01",
+        "initialMargin": "0.02",
+        "isLowestRisk": 0,
+        "maxLeverage": "50.00",
+        "mmDeduction": "2435"
+      },
+      {
+        "id": 289,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "2000000",
+        "maintenanceMargin": "0.0111",
+        "initialMargin": "0.0222",
+        "isLowestRisk": 0,
+        "maxLeverage": "45.00",
+        "mmDeduction": "3535"
+      },
+      {
+        "id": 290,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "3000000",
+        "maintenanceMargin": "0.0125",
+        "initialMargin": "0.025",
+        "isLowestRisk": 0,
+        "maxLeverage": "40.00",
+        "mmDeduction": "6335"
+      },
+      {
+        "id": 291,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "4000000",
+        "maintenanceMargin": "0.0143",
+        "initialMargin": "0.0286",
+        "isLowestRisk": 0,
+        "maxLeverage": "35.00",
+        "mmDeduction": "11735"
+      },
+      {
+        "id": 292,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "6000000",
+        "maintenanceMargin": "0.0167",
+        "initialMargin": "0.0333",
+        "isLowestRisk": 0,
+        "maxLeverage": "30.00",
+        "mmDeduction": "21335"
+      },
+      {
+        "id": 293,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "8000000",
+        "maintenanceMargin": "0.02",
+        "initialMargin": "0.04",
+        "isLowestRisk": 0,
+        "maxLeverage": "25.00",
+        "mmDeduction": "41135"
+      },
+      {
+        "id": 294,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "10000000",
+        "maintenanceMargin": "0.025",
+        "initialMargin": "0.05",
+        "isLowestRisk": 0,
+        "maxLeverage": "20.00",
+        "mmDeduction": "81135"
+      },
+      {
+        "id": 295,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "12000000",
+        "maintenanceMargin": "0.0263",
+        "initialMargin": "0.0526",
+        "isLowestRisk": 0,
+        "maxLeverage": "19.00",
+        "mmDeduction": "94135"
+      },
+      {
+        "id": 296,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "14000000",
+        "maintenanceMargin": "0.0278",
+        "initialMargin": "0.0556",
+        "isLowestRisk": 0,
+        "maxLeverage": "18.00",
+        "mmDeduction": "112135"
+      },
+      {
+        "id": 297,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "16000000",
+        "maintenanceMargin": "0.0294",
+        "initialMargin": "0.0588",
+        "isLowestRisk": 0,
+        "maxLeverage": "17.00",
+        "mmDeduction": "134535"
+      },
+      {
+        "id": 298,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "18000000",
+        "maintenanceMargin": "0.0313",
+        "initialMargin": "0.0625",
+        "isLowestRisk": 0,
+        "maxLeverage": "16.00",
+        "mmDeduction": "164935"
+      },
+      {
+        "id": 299,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "20000000",
+        "maintenanceMargin": "0.0333",
+        "initialMargin": "0.0667",
+        "isLowestRisk": 0,
+        "maxLeverage": "15.00",
+        "mmDeduction": "200935"
+      },
+      {
+        "id": 300,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "22000000",
+        "maintenanceMargin": "0.0357",
+        "initialMargin": "0.0714",
+        "isLowestRisk": 0,
+        "maxLeverage": "14.00",
+        "mmDeduction": "248935"
+      },
+      {
+        "id": 301,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "24000000",
+        "maintenanceMargin": "0.0385",
+        "initialMargin": "0.0769",
+        "isLowestRisk": 0,
+        "maxLeverage": "13.00",
+        "mmDeduction": "310535"
+      },
+      {
+        "id": 302,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "26000000",
+        "maintenanceMargin": "0.0417",
+        "initialMargin": "0.0833",
+        "isLowestRisk": 0,
+        "maxLeverage": "12.00",
+        "mmDeduction": "387335"
+      },
+      {
+        "id": 303,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "28000000",
+        "maintenanceMargin": "0.0455",
+        "initialMargin": "0.0909",
+        "isLowestRisk": 0,
+        "maxLeverage": "11.00",
+        "mmDeduction": "486135"
+      },
+      {
+        "id": 304,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "30000000",
+        "maintenanceMargin": "0.05",
+        "initialMargin": "0.1",
+        "isLowestRisk": 0,
+        "maxLeverage": "10.00",
+        "mmDeduction": "612135"
+      },
+      {
+        "id": 305,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "35000000",
+        "maintenanceMargin": "0.0556",
+        "initialMargin": "0.1111",
+        "isLowestRisk": 0,
+        "maxLeverage": "9.00",
+        "mmDeduction": "780135"
+      },
+      {
+        "id": 306,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "40000000",
+        "maintenanceMargin": "0.0625",
+        "initialMargin": "0.125",
+        "isLowestRisk": 0,
+        "maxLeverage": "8.00",
+        "mmDeduction": "1021635"
+      },
+      {
+        "id": 307,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "45000000",
+        "maintenanceMargin": "0.0714",
+        "initialMargin": "0.1429",
+        "isLowestRisk": 0,
+        "maxLeverage": "7.00",
+        "mmDeduction": "1377635"
+      },
+      {
+        "id": 308,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "50000000",
+        "maintenanceMargin": "0.0833",
+        "initialMargin": "0.1667",
+        "isLowestRisk": 0,
+        "maxLeverage": "6.00",
+        "mmDeduction": "1913135"
+      },
+      {
+        "id": 309,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "60000000",
+        "maintenanceMargin": "0.1",
+        "initialMargin": "0.2",
+        "isLowestRisk": 0,
+        "maxLeverage": "5.00",
+        "mmDeduction": "2748135"
+      },
+      {
+        "id": 310,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "80000000",
+        "maintenanceMargin": "0.125",
+        "initialMargin": "0.25",
+        "isLowestRisk": 0,
+        "maxLeverage": "4.00",
+        "mmDeduction": "4248135"
+      },
+      {
+        "id": 311,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "100000000",
+        "maintenanceMargin": "0.1667",
+        "initialMargin": "0.3333",
+        "isLowestRisk": 0,
+        "maxLeverage": "3.00",
+        "mmDeduction": "7584135"
+      },
+      {
+        "id": 312,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "150000000",
+        "maintenanceMargin": "0.25",
+        "initialMargin": "0.5",
+        "isLowestRisk": 0,
+        "maxLeverage": "2.00",
+        "mmDeduction": "15914135"
+      },
+      {
+        "id": 313,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "200000000",
+        "maintenanceMargin": "0.3497",
+        "initialMargin": "0.6993",
+        "isLowestRisk": 0,
+        "maxLeverage": "1.43",
+        "mmDeduction": "30869135"
+      },
+      {
+        "id": 314,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "250000000",
+        "maintenanceMargin": "0.3906",
+        "initialMargin": "0.7813",
+        "isLowestRisk": 0,
+        "maxLeverage": "1.28",
+        "mmDeduction": "39049135"
+      },
+      {
+        "id": 315,
+        "symbol": "SOLUSDT",
+        "riskLimitValue": "300000000",
+        "maintenanceMargin": "0.5",
+        "initialMargin": "1",
+        "isLowestRisk": 0,
+        "maxLeverage": "1.00",
+        "mmDeduction": "66399135"
+      }
+    ],
+    "BNBUSDT": [
+      {
+        "id": 251,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "10000",
+        "maintenanceMargin": "0.0067",
+        "initialMargin": "0.0133",
+        "isLowestRisk": 1,
+        "maxLeverage": "75.00",
+        "mmDeduction": ""
+      },
+      {
+        "id": 252,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "50000",
+        "maintenanceMargin": "0.0071",
+        "initialMargin": "0.0143",
+        "isLowestRisk": 0,
+        "maxLeverage": "70.00",
+        "mmDeduction": "4"
+      },
+      {
+        "id": 253,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "100000",
+        "maintenanceMargin": "0.0077",
+        "initialMargin": "0.0154",
+        "isLowestRisk": 0,
+        "maxLeverage": "65.00",
+        "mmDeduction": "34"
+      },
+      {
+        "id": 254,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "150000",
+        "maintenanceMargin": "0.0091",
+        "initialMargin": "0.0182",
+        "isLowestRisk": 0,
+        "maxLeverage": "55.00",
+        "mmDeduction": "174"
+      },
+      {
+        "id": 255,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "200000",
+        "maintenanceMargin": "0.01",
+        "initialMargin": "0.02",
+        "isLowestRisk": 0,
+        "maxLeverage": "50.00",
+        "mmDeduction": "309"
+      },
+      {
+        "id": 256,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "300000",
+        "maintenanceMargin": "0.0111",
+        "initialMargin": "0.0222",
+        "isLowestRisk": 0,
+        "maxLeverage": "45.00",
+        "mmDeduction": "529"
+      },
+      {
+        "id": 257,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "400000",
+        "maintenanceMargin": "0.0125",
+        "initialMargin": "0.025",
+        "isLowestRisk": 0,
+        "maxLeverage": "40.00",
+        "mmDeduction": "949"
+      },
+      {
+        "id": 258,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "500000",
+        "maintenanceMargin": "0.0143",
+        "initialMargin": "0.0286",
+        "isLowestRisk": 0,
+        "maxLeverage": "35.00",
+        "mmDeduction": "1669"
+      },
+      {
+        "id": 259,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "600000",
+        "maintenanceMargin": "0.0167",
+        "initialMargin": "0.0333",
+        "isLowestRisk": 0,
+        "maxLeverage": "30.00",
+        "mmDeduction": "2869"
+      },
+      {
+        "id": 260,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "700000",
+        "maintenanceMargin": "0.02",
+        "initialMargin": "0.04",
+        "isLowestRisk": 0,
+        "maxLeverage": "25.00",
+        "mmDeduction": "4849"
+      },
+      {
+        "id": 261,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "900000",
+        "maintenanceMargin": "0.025",
+        "initialMargin": "0.05",
+        "isLowestRisk": 0,
+        "maxLeverage": "20.00",
+        "mmDeduction": "8349"
+      },
+      {
+        "id": 262,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "1100000",
+        "maintenanceMargin": "0.0263",
+        "initialMargin": "0.0526",
+        "isLowestRisk": 0,
+        "maxLeverage": "19.00",
+        "mmDeduction": "9519"
+      },
+      {
+        "id": 263,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "1300000",
+        "maintenanceMargin": "0.0278",
+        "initialMargin": "0.0556",
+        "isLowestRisk": 0,
+        "maxLeverage": "18.00",
+        "mmDeduction": "11169"
+      },
+      {
+        "id": 264,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "1500000",
+        "maintenanceMargin": "0.0294",
+        "initialMargin": "0.0588",
+        "isLowestRisk": 0,
+        "maxLeverage": "17.00",
+        "mmDeduction": "13249"
+      },
+      {
+        "id": 265,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "1700000",
+        "maintenanceMargin": "0.0313",
+        "initialMargin": "0.0625",
+        "isLowestRisk": 0,
+        "maxLeverage": "16.00",
+        "mmDeduction": "16099"
+      },
+      {
+        "id": 266,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "1900000",
+        "maintenanceMargin": "0.0333",
+        "initialMargin": "0.0667",
+        "isLowestRisk": 0,
+        "maxLeverage": "15.00",
+        "mmDeduction": "19499"
+      },
+      {
+        "id": 267,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "2100000",
+        "maintenanceMargin": "0.0357",
+        "initialMargin": "0.0714",
+        "isLowestRisk": 0,
+        "maxLeverage": "14.00",
+        "mmDeduction": "24059"
+      },
+      {
+        "id": 268,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "2800000",
+        "maintenanceMargin": "0.0385",
+        "initialMargin": "0.0769",
+        "isLowestRisk": 0,
+        "maxLeverage": "13.00",
+        "mmDeduction": "29939"
+      },
+      {
+        "id": 269,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "3000000",
+        "maintenanceMargin": "0.0417",
+        "initialMargin": "0.0833",
+        "isLowestRisk": 0,
+        "maxLeverage": "12.00",
+        "mmDeduction": "38899"
+      },
+      {
+        "id": 270,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "3200000",
+        "maintenanceMargin": "0.0455",
+        "initialMargin": "0.0909",
+        "isLowestRisk": 0,
+        "maxLeverage": "11.00",
+        "mmDeduction": "50299"
+      },
+      {
+        "id": 271,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "4000000",
+        "maintenanceMargin": "0.05",
+        "initialMargin": "0.1",
+        "isLowestRisk": 0,
+        "maxLeverage": "10.00",
+        "mmDeduction": "64699"
+      },
+      {
+        "id": 272,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "4500000",
+        "maintenanceMargin": "0.0556",
+        "initialMargin": "0.1111",
+        "isLowestRisk": 0,
+        "maxLeverage": "9.00",
+        "mmDeduction": "87099"
+      },
+      {
+        "id": 273,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "5000000",
+        "maintenanceMargin": "0.0625",
+        "initialMargin": "0.125",
+        "isLowestRisk": 0,
+        "maxLeverage": "8.00",
+        "mmDeduction": "118149"
+      },
+      {
+        "id": 274,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "6500000",
+        "maintenanceMargin": "0.0714",
+        "initialMargin": "0.1429",
+        "isLowestRisk": 0,
+        "maxLeverage": "7.00",
+        "mmDeduction": "162649"
+      },
+      {
+        "id": 275,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "7500000",
+        "maintenanceMargin": "0.0833",
+        "initialMargin": "0.1667",
+        "isLowestRisk": 0,
+        "maxLeverage": "6.00",
+        "mmDeduction": "239999"
+      },
+      {
+        "id": 276,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "9000000",
+        "maintenanceMargin": "0.1",
+        "initialMargin": "0.2",
+        "isLowestRisk": 0,
+        "maxLeverage": "5.00",
+        "mmDeduction": "365249"
+      },
+      {
+        "id": 277,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "10000000",
+        "maintenanceMargin": "0.125",
+        "initialMargin": "0.25",
+        "isLowestRisk": 0,
+        "maxLeverage": "4.00",
+        "mmDeduction": "590249"
+      },
+      {
+        "id": 278,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "11000000",
+        "maintenanceMargin": "0.1998",
+        "initialMargin": "0.3333",
+        "isLowestRisk": 0,
+        "maxLeverage": "3.00",
+        "mmDeduction": "1338249"
+      },
+      {
+        "id": 279,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "12500000",
+        "maintenanceMargin": "0.3",
+        "initialMargin": "0.5",
+        "isLowestRisk": 0,
+        "maxLeverage": "2.00",
+        "mmDeduction": "2440449"
+      },
+      {
+        "id": 280,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "15000000",
+        "maintenanceMargin": "0.4002",
+        "initialMargin": "0.6667",
+        "isLowestRisk": 0,
+        "maxLeverage": "1.50",
+        "mmDeduction": "3692949"
+      },
+      {
+        "id": 281,
+        "symbol": "BNBUSDT",
+        "riskLimitValue": "17000000",
+        "maintenanceMargin": "0.5",
+        "initialMargin": "1",
+        "isLowestRisk": 0,
+        "maxLeverage": "1.00",
+        "mmDeduction": "5189949"
+      }
+    ],
+    "XRPUSDT": [
+      {
+        "id": 41,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "50000",
+        "maintenanceMargin": "0.005",
+        "initialMargin": "0.01",
+        "isLowestRisk": 1,
+        "maxLeverage": "100.00",
+        "mmDeduction": ""
+      },
+      {
+        "id": 42,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "100000",
+        "maintenanceMargin": "0.0056",
+        "initialMargin": "0.0111",
+        "isLowestRisk": 0,
+        "maxLeverage": "90.00",
+        "mmDeduction": "30"
+      },
+      {
+        "id": 43,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "250000",
+        "maintenanceMargin": "0.0063",
+        "initialMargin": "0.0125",
+        "isLowestRisk": 0,
+        "maxLeverage": "80.00",
+        "mmDeduction": "100"
+      },
+      {
+        "id": 44,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "400000",
+        "maintenanceMargin": "0.0067",
+        "initialMargin": "0.0133",
+        "isLowestRisk": 0,
+        "maxLeverage": "75.00",
+        "mmDeduction": "200"
+      },
+      {
+        "id": 45,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "550000",
+        "maintenanceMargin": "0.0071",
+        "initialMargin": "0.0143",
+        "isLowestRisk": 0,
+        "maxLeverage": "70.00",
+        "mmDeduction": "360"
+      },
+      {
+        "id": 46,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "700000",
+        "maintenanceMargin": "0.0077",
+        "initialMargin": "0.0154",
+        "isLowestRisk": 0,
+        "maxLeverage": "65.00",
+        "mmDeduction": "690"
+      },
+      {
+        "id": 47,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "850000",
+        "maintenanceMargin": "0.0091",
+        "initialMargin": "0.0182",
+        "isLowestRisk": 0,
+        "maxLeverage": "55.00",
+        "mmDeduction": "1670"
+      },
+      {
+        "id": 48,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "1000000",
+        "maintenanceMargin": "0.01",
+        "initialMargin": "0.02",
+        "isLowestRisk": 0,
+        "maxLeverage": "50.00",
+        "mmDeduction": "2435"
+      },
+      {
+        "id": 49,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "2000000",
+        "maintenanceMargin": "0.0111",
+        "initialMargin": "0.0222",
+        "isLowestRisk": 0,
+        "maxLeverage": "45.00",
+        "mmDeduction": "3535"
+      },
+      {
+        "id": 50,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "3000000",
+        "maintenanceMargin": "0.0125",
+        "initialMargin": "0.025",
+        "isLowestRisk": 0,
+        "maxLeverage": "40.00",
+        "mmDeduction": "6335"
+      },
+      {
+        "id": 51,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "4000000",
+        "maintenanceMargin": "0.0143",
+        "initialMargin": "0.0286",
+        "isLowestRisk": 0,
+        "maxLeverage": "35.00",
+        "mmDeduction": "11735"
+      },
+      {
+        "id": 52,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "6000000",
+        "maintenanceMargin": "0.0167",
+        "initialMargin": "0.0333",
+        "isLowestRisk": 0,
+        "maxLeverage": "30.00",
+        "mmDeduction": "21335"
+      },
+      {
+        "id": 53,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "8000000",
+        "maintenanceMargin": "0.02",
+        "initialMargin": "0.04",
+        "isLowestRisk": 0,
+        "maxLeverage": "25.00",
+        "mmDeduction": "41135"
+      },
+      {
+        "id": 54,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "10000000",
+        "maintenanceMargin": "0.025",
+        "initialMargin": "0.05",
+        "isLowestRisk": 0,
+        "maxLeverage": "20.00",
+        "mmDeduction": "81135"
+      },
+      {
+        "id": 55,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "12000000",
+        "maintenanceMargin": "0.0263",
+        "initialMargin": "0.0526",
+        "isLowestRisk": 0,
+        "maxLeverage": "19.00",
+        "mmDeduction": "94135"
+      },
+      {
+        "id": 56,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "14000000",
+        "maintenanceMargin": "0.0278",
+        "initialMargin": "0.0556",
+        "isLowestRisk": 0,
+        "maxLeverage": "18.00",
+        "mmDeduction": "112135"
+      },
+      {
+        "id": 57,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "16000000",
+        "maintenanceMargin": "0.0294",
+        "initialMargin": "0.0588",
+        "isLowestRisk": 0,
+        "maxLeverage": "17.00",
+        "mmDeduction": "134535"
+      },
+      {
+        "id": 58,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "18000000",
+        "maintenanceMargin": "0.0313",
+        "initialMargin": "0.0625",
+        "isLowestRisk": 0,
+        "maxLeverage": "16.00",
+        "mmDeduction": "164935"
+      },
+      {
+        "id": 59,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "20000000",
+        "maintenanceMargin": "0.0333",
+        "initialMargin": "0.0667",
+        "isLowestRisk": 0,
+        "maxLeverage": "15.00",
+        "mmDeduction": "200935"
+      },
+      {
+        "id": 60,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "22000000",
+        "maintenanceMargin": "0.0357",
+        "initialMargin": "0.0714",
+        "isLowestRisk": 0,
+        "maxLeverage": "14.00",
+        "mmDeduction": "248935"
+      },
+      {
+        "id": 61,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "24000000",
+        "maintenanceMargin": "0.0385",
+        "initialMargin": "0.0769",
+        "isLowestRisk": 0,
+        "maxLeverage": "13.00",
+        "mmDeduction": "310535"
+      },
+      {
+        "id": 62,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "26000000",
+        "maintenanceMargin": "0.0417",
+        "initialMargin": "0.0833",
+        "isLowestRisk": 0,
+        "maxLeverage": "12.00",
+        "mmDeduction": "387335"
+      },
+      {
+        "id": 63,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "28000000",
+        "maintenanceMargin": "0.0455",
+        "initialMargin": "0.0909",
+        "isLowestRisk": 0,
+        "maxLeverage": "11.00",
+        "mmDeduction": "486135"
+      },
+      {
+        "id": 64,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "30000000",
+        "maintenanceMargin": "0.05",
+        "initialMargin": "0.1",
+        "isLowestRisk": 0,
+        "maxLeverage": "10.00",
+        "mmDeduction": "612135"
+      },
+      {
+        "id": 65,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "35000000",
+        "maintenanceMargin": "0.0556",
+        "initialMargin": "0.1111",
+        "isLowestRisk": 0,
+        "maxLeverage": "9.00",
+        "mmDeduction": "780135"
+      },
+      {
+        "id": 66,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "40000000",
+        "maintenanceMargin": "0.0625",
+        "initialMargin": "0.125",
+        "isLowestRisk": 0,
+        "maxLeverage": "8.00",
+        "mmDeduction": "1021635"
+      },
+      {
+        "id": 67,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "45000000",
+        "maintenanceMargin": "0.0714",
+        "initialMargin": "0.1429",
+        "isLowestRisk": 0,
+        "maxLeverage": "7.00",
+        "mmDeduction": "1377635"
+      },
+      {
+        "id": 68,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "50000000",
+        "maintenanceMargin": "0.0833",
+        "initialMargin": "0.1667",
+        "isLowestRisk": 0,
+        "maxLeverage": "6.00",
+        "mmDeduction": "1913135"
+      },
+      {
+        "id": 69,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "60000000",
+        "maintenanceMargin": "0.1",
+        "initialMargin": "0.2",
+        "isLowestRisk": 0,
+        "maxLeverage": "5.00",
+        "mmDeduction": "2748135"
+      },
+      {
+        "id": 70,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "80000000",
+        "maintenanceMargin": "0.125",
+        "initialMargin": "0.25",
+        "isLowestRisk": 0,
+        "maxLeverage": "4.00",
+        "mmDeduction": "4248135"
+      },
+      {
+        "id": 71,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "100000000",
+        "maintenanceMargin": "0.1667",
+        "initialMargin": "0.3333",
+        "isLowestRisk": 0,
+        "maxLeverage": "3.00",
+        "mmDeduction": "7584135"
+      },
+      {
+        "id": 72,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "150000000",
+        "maintenanceMargin": "0.25",
+        "initialMargin": "0.5",
+        "isLowestRisk": 0,
+        "maxLeverage": "2.00",
+        "mmDeduction": "15914135"
+      },
+      {
+        "id": 73,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "200000000",
+        "maintenanceMargin": "0.3497",
+        "initialMargin": "0.6993",
+        "isLowestRisk": 0,
+        "maxLeverage": "1.43",
+        "mmDeduction": "30869135"
+      },
+      {
+        "id": 74,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "250000000",
+        "maintenanceMargin": "0.3906",
+        "initialMargin": "0.7813",
+        "isLowestRisk": 0,
+        "maxLeverage": "1.28",
+        "mmDeduction": "39049135"
+      },
+      {
+        "id": 75,
+        "symbol": "XRPUSDT",
+        "riskLimitValue": "300000000",
+        "maintenanceMargin": "0.5",
+        "initialMargin": "1",
+        "isLowestRisk": 0,
+        "maxLeverage": "1.00",
+        "mmDeduction": "66399135"
+      }
+    ],
+    "DOGEUSDT": [
+      {
+        "id": 206,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "250000",
+        "maintenanceMargin": "0.0075",
+        "initialMargin": "0.0133",
+        "isLowestRisk": 1,
+        "maxLeverage": "75.00",
+        "mmDeduction": ""
+      },
+      {
+        "id": 207,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "500000",
+        "maintenanceMargin": "0.01",
+        "initialMargin": "0.02",
+        "isLowestRisk": 0,
+        "maxLeverage": "50.00",
+        "mmDeduction": "625"
+      },
+      {
+        "id": 208,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "750000",
+        "maintenanceMargin": "0.015",
+        "initialMargin": "0.03",
+        "isLowestRisk": 0,
+        "maxLeverage": "33.33",
+        "mmDeduction": "3125"
+      },
+      {
+        "id": 209,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "1500000",
+        "maintenanceMargin": "0.02",
+        "initialMargin": "0.04",
+        "isLowestRisk": 0,
+        "maxLeverage": "25.00",
+        "mmDeduction": "6875"
+      },
+      {
+        "id": 210,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "3000000",
+        "maintenanceMargin": "0.025",
+        "initialMargin": "0.05",
+        "isLowestRisk": 0,
+        "maxLeverage": "20.00",
+        "mmDeduction": "14375"
+      },
+      {
+        "id": 211,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "5000000",
+        "maintenanceMargin": "0.03",
+        "initialMargin": "0.06",
+        "isLowestRisk": 0,
+        "maxLeverage": "16.67",
+        "mmDeduction": "29375"
+      },
+      {
+        "id": 212,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "7000000",
+        "maintenanceMargin": "0.035",
+        "initialMargin": "0.07",
+        "isLowestRisk": 0,
+        "maxLeverage": "14.29",
+        "mmDeduction": "54375"
+      },
+      {
+        "id": 213,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "10000000",
+        "maintenanceMargin": "0.04",
+        "initialMargin": "0.08",
+        "isLowestRisk": 0,
+        "maxLeverage": "12.50",
+        "mmDeduction": "89375"
+      },
+      {
+        "id": 214,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "12000000",
+        "maintenanceMargin": "0.045",
+        "initialMargin": "0.09",
+        "isLowestRisk": 0,
+        "maxLeverage": "11.11",
+        "mmDeduction": "139375"
+      },
+      {
+        "id": 215,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "15000000",
+        "maintenanceMargin": "0.05",
+        "initialMargin": "0.1",
+        "isLowestRisk": 0,
+        "maxLeverage": "10.00",
+        "mmDeduction": "199375"
+      },
+      {
+        "id": 216,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "16000000",
+        "maintenanceMargin": "0.055",
+        "initialMargin": "0.11",
+        "isLowestRisk": 0,
+        "maxLeverage": "9.09",
+        "mmDeduction": "274375"
+      },
+      {
+        "id": 217,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "18000000",
+        "maintenanceMargin": "0.06",
+        "initialMargin": "0.12",
+        "isLowestRisk": 0,
+        "maxLeverage": "8.33",
+        "mmDeduction": "354375"
+      },
+      {
+        "id": 218,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "19000000",
+        "maintenanceMargin": "0.065",
+        "initialMargin": "0.13",
+        "isLowestRisk": 0,
+        "maxLeverage": "7.69",
+        "mmDeduction": "444375"
+      },
+      {
+        "id": 219,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "21000000",
+        "maintenanceMargin": "0.07",
+        "initialMargin": "0.14",
+        "isLowestRisk": 0,
+        "maxLeverage": "7.14",
+        "mmDeduction": "539375"
+      },
+      {
+        "id": 220,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "22000000",
+        "maintenanceMargin": "0.075",
+        "initialMargin": "0.15",
+        "isLowestRisk": 0,
+        "maxLeverage": "6.67",
+        "mmDeduction": "644375"
+      },
+      {
+        "id": 221,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "24000000",
+        "maintenanceMargin": "0.08",
+        "initialMargin": "0.16",
+        "isLowestRisk": 0,
+        "maxLeverage": "6.25",
+        "mmDeduction": "754375"
+      },
+      {
+        "id": 222,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "25000000",
+        "maintenanceMargin": "0.085",
+        "initialMargin": "0.17",
+        "isLowestRisk": 0,
+        "maxLeverage": "5.88",
+        "mmDeduction": "874375"
+      },
+      {
+        "id": 223,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "27000000",
+        "maintenanceMargin": "0.09",
+        "initialMargin": "0.18",
+        "isLowestRisk": 0,
+        "maxLeverage": "5.56",
+        "mmDeduction": "999375"
+      },
+      {
+        "id": 224,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "28000000",
+        "maintenanceMargin": "0.095",
+        "initialMargin": "0.19",
+        "isLowestRisk": 0,
+        "maxLeverage": "5.26",
+        "mmDeduction": "1134375"
+      },
+      {
+        "id": 225,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "30000000",
+        "maintenanceMargin": "0.1",
+        "initialMargin": "0.2",
+        "isLowestRisk": 0,
+        "maxLeverage": "5.00",
+        "mmDeduction": "1274375"
+      },
+      {
+        "id": 226,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "35000000",
+        "maintenanceMargin": "0.105",
+        "initialMargin": "0.21",
+        "isLowestRisk": 0,
+        "maxLeverage": "4.76",
+        "mmDeduction": "1424375"
+      },
+      {
+        "id": 227,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "40000000",
+        "maintenanceMargin": "0.11",
+        "initialMargin": "0.22",
+        "isLowestRisk": 0,
+        "maxLeverage": "4.55",
+        "mmDeduction": "1599375"
+      },
+      {
+        "id": 228,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "45000000",
+        "maintenanceMargin": "0.115",
+        "initialMargin": "0.23",
+        "isLowestRisk": 0,
+        "maxLeverage": "4.35",
+        "mmDeduction": "1799375"
+      },
+      {
+        "id": 229,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "50000000",
+        "maintenanceMargin": "0.12",
+        "initialMargin": "0.24",
+        "isLowestRisk": 0,
+        "maxLeverage": "4.17",
+        "mmDeduction": "2024375"
+      },
+      {
+        "id": 230,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "55000000",
+        "maintenanceMargin": "0.125",
+        "initialMargin": "0.25",
+        "isLowestRisk": 0,
+        "maxLeverage": "4.00",
+        "mmDeduction": "2274375"
+      },
+      {
+        "id": 231,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "60000000",
+        "maintenanceMargin": "0.13",
+        "initialMargin": "0.26",
+        "isLowestRisk": 0,
+        "maxLeverage": "3.85",
+        "mmDeduction": "2549375"
+      },
+      {
+        "id": 232,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "65000000",
+        "maintenanceMargin": "0.135",
+        "initialMargin": "0.27",
+        "isLowestRisk": 0,
+        "maxLeverage": "3.70",
+        "mmDeduction": "2849375"
+      },
+      {
+        "id": 233,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "70000000",
+        "maintenanceMargin": "0.2",
+        "initialMargin": "0.4",
+        "isLowestRisk": 0,
+        "maxLeverage": "2.50",
+        "mmDeduction": "7074375"
+      },
+      {
+        "id": 234,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "75000000",
+        "maintenanceMargin": "0.4",
+        "initialMargin": "0.7",
+        "isLowestRisk": 0,
+        "maxLeverage": "1.43",
+        "mmDeduction": "21074375"
+      },
+      {
+        "id": 235,
+        "symbol": "DOGEUSDT",
+        "riskLimitValue": "80000000",
+        "maintenanceMargin": "0.6",
+        "initialMargin": "1",
+        "isLowestRisk": 0,
+        "maxLeverage": "1.00",
+        "mmDeduction": "36074375"
+      }
+    ],
+    "ADAUSDT": [
+      {
+        "id": 116,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "200000",
+        "maintenanceMargin": "0.0075",
+        "initialMargin": "0.0133",
+        "isLowestRisk": 1,
+        "maxLeverage": "75.00",
+        "mmDeduction": ""
+      },
+      {
+        "id": 117,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "300000",
+        "maintenanceMargin": "0.01",
+        "initialMargin": "0.02",
+        "isLowestRisk": 0,
+        "maxLeverage": "50.00",
+        "mmDeduction": "500"
+      },
+      {
+        "id": 118,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "500000",
+        "maintenanceMargin": "0.015",
+        "initialMargin": "0.03",
+        "isLowestRisk": 0,
+        "maxLeverage": "33.33",
+        "mmDeduction": "2000"
+      },
+      {
+        "id": 119,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "900000",
+        "maintenanceMargin": "0.02",
+        "initialMargin": "0.04",
+        "isLowestRisk": 0,
+        "maxLeverage": "25.00",
+        "mmDeduction": "4500"
+      },
+      {
+        "id": 120,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "1300000",
+        "maintenanceMargin": "0.025",
+        "initialMargin": "0.05",
+        "isLowestRisk": 0,
+        "maxLeverage": "20.00",
+        "mmDeduction": "9000"
+      },
+      {
+        "id": 121,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "1700000",
+        "maintenanceMargin": "0.03",
+        "initialMargin": "0.06",
+        "isLowestRisk": 0,
+        "maxLeverage": "16.67",
+        "mmDeduction": "15500"
+      },
+      {
+        "id": 122,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "2100000",
+        "maintenanceMargin": "0.035",
+        "initialMargin": "0.07",
+        "isLowestRisk": 0,
+        "maxLeverage": "14.29",
+        "mmDeduction": "24000"
+      },
+      {
+        "id": 123,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "2500000",
+        "maintenanceMargin": "0.04",
+        "initialMargin": "0.08",
+        "isLowestRisk": 0,
+        "maxLeverage": "12.50",
+        "mmDeduction": "34500"
+      },
+      {
+        "id": 124,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "2900000",
+        "maintenanceMargin": "0.045",
+        "initialMargin": "0.09",
+        "isLowestRisk": 0,
+        "maxLeverage": "11.11",
+        "mmDeduction": "47000"
+      },
+      {
+        "id": 125,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "3300000",
+        "maintenanceMargin": "0.05",
+        "initialMargin": "0.1",
+        "isLowestRisk": 0,
+        "maxLeverage": "10.00",
+        "mmDeduction": "61500"
+      },
+      {
+        "id": 126,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "3700000",
+        "maintenanceMargin": "0.055",
+        "initialMargin": "0.11",
+        "isLowestRisk": 0,
+        "maxLeverage": "9.09",
+        "mmDeduction": "78000"
+      },
+      {
+        "id": 127,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "4100000",
+        "maintenanceMargin": "0.06",
+        "initialMargin": "0.12",
+        "isLowestRisk": 0,
+        "maxLeverage": "8.33",
+        "mmDeduction": "96500"
+      },
+      {
+        "id": 128,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "4500000",
+        "maintenanceMargin": "0.065",
+        "initialMargin": "0.13",
+        "isLowestRisk": 0,
+        "maxLeverage": "7.69",
+        "mmDeduction": "117000"
+      },
+      {
+        "id": 129,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "4900000",
+        "maintenanceMargin": "0.07",
+        "initialMargin": "0.14",
+        "isLowestRisk": 0,
+        "maxLeverage": "7.14",
+        "mmDeduction": "139500"
+      },
+      {
+        "id": 130,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "5000000",
+        "maintenanceMargin": "0.075",
+        "initialMargin": "0.15",
+        "isLowestRisk": 0,
+        "maxLeverage": "6.67",
+        "mmDeduction": "164000"
+      },
+      {
+        "id": 131,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "7000000",
+        "maintenanceMargin": "0.08",
+        "initialMargin": "0.16",
+        "isLowestRisk": 0,
+        "maxLeverage": "6.25",
+        "mmDeduction": "189000"
+      },
+      {
+        "id": 132,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "9000000",
+        "maintenanceMargin": "0.085",
+        "initialMargin": "0.17",
+        "isLowestRisk": 0,
+        "maxLeverage": "5.88",
+        "mmDeduction": "224000"
+      },
+      {
+        "id": 133,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "11000000",
+        "maintenanceMargin": "0.09",
+        "initialMargin": "0.18",
+        "isLowestRisk": 0,
+        "maxLeverage": "5.56",
+        "mmDeduction": "269000"
+      },
+      {
+        "id": 134,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "13000000",
+        "maintenanceMargin": "0.095",
+        "initialMargin": "0.19",
+        "isLowestRisk": 0,
+        "maxLeverage": "5.26",
+        "mmDeduction": "324000"
+      },
+      {
+        "id": 135,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "15000000",
+        "maintenanceMargin": "0.1",
+        "initialMargin": "0.2",
+        "isLowestRisk": 0,
+        "maxLeverage": "5.00",
+        "mmDeduction": "389000"
+      },
+      {
+        "id": 136,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "17000000",
+        "maintenanceMargin": "0.105",
+        "initialMargin": "0.21",
+        "isLowestRisk": 0,
+        "maxLeverage": "4.76",
+        "mmDeduction": "464000"
+      },
+      {
+        "id": 137,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "19000000",
+        "maintenanceMargin": "0.11",
+        "initialMargin": "0.22",
+        "isLowestRisk": 0,
+        "maxLeverage": "4.55",
+        "mmDeduction": "549000"
+      },
+      {
+        "id": 138,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "21000000",
+        "maintenanceMargin": "0.115",
+        "initialMargin": "0.23",
+        "isLowestRisk": 0,
+        "maxLeverage": "4.35",
+        "mmDeduction": "644000"
+      },
+      {
+        "id": 139,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "23000000",
+        "maintenanceMargin": "0.12",
+        "initialMargin": "0.24",
+        "isLowestRisk": 0,
+        "maxLeverage": "4.17",
+        "mmDeduction": "749000"
+      },
+      {
+        "id": 140,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "25000000",
+        "maintenanceMargin": "0.125",
+        "initialMargin": "0.25",
+        "isLowestRisk": 0,
+        "maxLeverage": "4.00",
+        "mmDeduction": "864000"
+      },
+      {
+        "id": 141,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "27000000",
+        "maintenanceMargin": "0.13",
+        "initialMargin": "0.26",
+        "isLowestRisk": 0,
+        "maxLeverage": "3.85",
+        "mmDeduction": "989000"
+      },
+      {
+        "id": 142,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "29000000",
+        "maintenanceMargin": "0.135",
+        "initialMargin": "0.27",
+        "isLowestRisk": 0,
+        "maxLeverage": "3.70",
+        "mmDeduction": "1124000"
+      },
+      {
+        "id": 143,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "31000000",
+        "maintenanceMargin": "0.2",
+        "initialMargin": "0.4",
+        "isLowestRisk": 0,
+        "maxLeverage": "2.50",
+        "mmDeduction": "3009000"
+      },
+      {
+        "id": 144,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "33000000",
+        "maintenanceMargin": "0.4",
+        "initialMargin": "0.7",
+        "isLowestRisk": 0,
+        "maxLeverage": "1.43",
+        "mmDeduction": "9209000"
+      },
+      {
+        "id": 145,
+        "symbol": "ADAUSDT",
+        "riskLimitValue": "35000000",
+        "maintenanceMargin": "0.6",
+        "initialMargin": "1",
+        "isLowestRisk": 0,
+        "maxLeverage": "1.00",
+        "mmDeduction": "15809000"
+      }
+    ],
+    "AVAXUSDT": [
+      {
+        "id": 446,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "10000",
+        "maintenanceMargin": "0.0067",
+        "initialMargin": "0.0133",
+        "isLowestRisk": 1,
+        "maxLeverage": "75.00",
+        "mmDeduction": ""
+      },
+      {
+        "id": 447,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "15000",
+        "maintenanceMargin": "0.0071",
+        "initialMargin": "0.0143",
+        "isLowestRisk": 0,
+        "maxLeverage": "70.00",
+        "mmDeduction": "4"
+      },
+      {
+        "id": 448,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "20000",
+        "maintenanceMargin": "0.0077",
+        "initialMargin": "0.0154",
+        "isLowestRisk": 0,
+        "maxLeverage": "65.00",
+        "mmDeduction": "13"
+      },
+      {
+        "id": 449,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "30000",
+        "maintenanceMargin": "0.0091",
+        "initialMargin": "0.0182",
+        "isLowestRisk": 0,
+        "maxLeverage": "55.00",
+        "mmDeduction": "41"
+      },
+      {
+        "id": 450,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "50000",
+        "maintenanceMargin": "0.01",
+        "initialMargin": "0.02",
+        "isLowestRisk": 0,
+        "maxLeverage": "50.00",
+        "mmDeduction": "68"
+      },
+      {
+        "id": 451,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "100000",
+        "maintenanceMargin": "0.0111",
+        "initialMargin": "0.0222",
+        "isLowestRisk": 0,
+        "maxLeverage": "45.00",
+        "mmDeduction": "123"
+      },
+      {
+        "id": 452,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "200000",
+        "maintenanceMargin": "0.0125",
+        "initialMargin": "0.025",
+        "isLowestRisk": 0,
+        "maxLeverage": "40.00",
+        "mmDeduction": "263"
+      },
+      {
+        "id": 453,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "300000",
+        "maintenanceMargin": "0.0143",
+        "initialMargin": "0.0286",
+        "isLowestRisk": 0,
+        "maxLeverage": "35.00",
+        "mmDeduction": "623"
+      },
+      {
+        "id": 454,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "400000",
+        "maintenanceMargin": "0.0167",
+        "initialMargin": "0.0333",
+        "isLowestRisk": 0,
+        "maxLeverage": "30.00",
+        "mmDeduction": "1343"
+      },
+      {
+        "id": 455,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "500000",
+        "maintenanceMargin": "0.02",
+        "initialMargin": "0.04",
+        "isLowestRisk": 0,
+        "maxLeverage": "25.00",
+        "mmDeduction": "2663"
+      },
+      {
+        "id": 456,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "1000000",
+        "maintenanceMargin": "0.025",
+        "initialMargin": "0.05",
+        "isLowestRisk": 0,
+        "maxLeverage": "20.00",
+        "mmDeduction": "5163"
+      },
+      {
+        "id": 457,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "1100000",
+        "maintenanceMargin": "0.0263",
+        "initialMargin": "0.0526",
+        "isLowestRisk": 0,
+        "maxLeverage": "19.00",
+        "mmDeduction": "6463"
+      },
+      {
+        "id": 458,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "1200000",
+        "maintenanceMargin": "0.0278",
+        "initialMargin": "0.0556",
+        "isLowestRisk": 0,
+        "maxLeverage": "18.00",
+        "mmDeduction": "8113"
+      },
+      {
+        "id": 459,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "1300000",
+        "maintenanceMargin": "0.0294",
+        "initialMargin": "0.0588",
+        "isLowestRisk": 0,
+        "maxLeverage": "17.00",
+        "mmDeduction": "10033"
+      },
+      {
+        "id": 460,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "1400000",
+        "maintenanceMargin": "0.0313",
+        "initialMargin": "0.0625",
+        "isLowestRisk": 0,
+        "maxLeverage": "16.00",
+        "mmDeduction": "12503"
+      },
+      {
+        "id": 461,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "1500000",
+        "maintenanceMargin": "0.0333",
+        "initialMargin": "0.0667",
+        "isLowestRisk": 0,
+        "maxLeverage": "15.00",
+        "mmDeduction": "15303"
+      },
+      {
+        "id": 462,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "2000000",
+        "maintenanceMargin": "0.0357",
+        "initialMargin": "0.0714",
+        "isLowestRisk": 0,
+        "maxLeverage": "14.00",
+        "mmDeduction": "18903"
+      },
+      {
+        "id": 463,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "2500000",
+        "maintenanceMargin": "0.0385",
+        "initialMargin": "0.0769",
+        "isLowestRisk": 0,
+        "maxLeverage": "13.00",
+        "mmDeduction": "24503"
+      },
+      {
+        "id": 464,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "3000000",
+        "maintenanceMargin": "0.0417",
+        "initialMargin": "0.0833",
+        "isLowestRisk": 0,
+        "maxLeverage": "12.00",
+        "mmDeduction": "32503"
+      },
+      {
+        "id": 465,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "4000000",
+        "maintenanceMargin": "0.0455",
+        "initialMargin": "0.0909",
+        "isLowestRisk": 0,
+        "maxLeverage": "11.00",
+        "mmDeduction": "43903"
+      },
+      {
+        "id": 466,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "5000000",
+        "maintenanceMargin": "0.05",
+        "initialMargin": "0.1",
+        "isLowestRisk": 0,
+        "maxLeverage": "10.00",
+        "mmDeduction": "61903"
+      },
+      {
+        "id": 467,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "6500000",
+        "maintenanceMargin": "0.0556",
+        "initialMargin": "0.1111",
+        "isLowestRisk": 0,
+        "maxLeverage": "9.00",
+        "mmDeduction": "89903"
+      },
+      {
+        "id": 468,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "7500000",
+        "maintenanceMargin": "0.0625",
+        "initialMargin": "0.125",
+        "isLowestRisk": 0,
+        "maxLeverage": "8.00",
+        "mmDeduction": "134753"
+      },
+      {
+        "id": 469,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "9000000",
+        "maintenanceMargin": "0.0714",
+        "initialMargin": "0.1429",
+        "isLowestRisk": 0,
+        "maxLeverage": "7.00",
+        "mmDeduction": "201503"
+      },
+      {
+        "id": 470,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "10000000",
+        "maintenanceMargin": "0.0833",
+        "initialMargin": "0.1667",
+        "isLowestRisk": 0,
+        "maxLeverage": "6.00",
+        "mmDeduction": "308603"
+      },
+      {
+        "id": 471,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "11000000",
+        "maintenanceMargin": "0.1",
+        "initialMargin": "0.2",
+        "isLowestRisk": 0,
+        "maxLeverage": "5.00",
+        "mmDeduction": "475603"
+      },
+      {
+        "id": 472,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "12000000",
+        "maintenanceMargin": "0.125",
+        "initialMargin": "0.25",
+        "isLowestRisk": 0,
+        "maxLeverage": "4.00",
+        "mmDeduction": "750603"
+      },
+      {
+        "id": 473,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "13500000",
+        "maintenanceMargin": "0.1667",
+        "initialMargin": "0.3333",
+        "isLowestRisk": 0,
+        "maxLeverage": "3.00",
+        "mmDeduction": "1251003"
+      },
+      {
+        "id": 474,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "14000000",
+        "maintenanceMargin": "0.25",
+        "initialMargin": "0.5",
+        "isLowestRisk": 0,
+        "maxLeverage": "2.00",
+        "mmDeduction": "2375553"
+      },
+      {
+        "id": 475,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "15000000",
+        "maintenanceMargin": "0.3333",
+        "initialMargin": "0.6667",
+        "isLowestRisk": 0,
+        "maxLeverage": "1.50",
+        "mmDeduction": "3541753"
+      },
+      {
+        "id": 476,
+        "symbol": "AVAXUSDT",
+        "riskLimitValue": "17000000",
+        "maintenanceMargin": "0.5",
+        "initialMargin": "1",
+        "isLowestRisk": 0,
+        "maxLeverage": "1.00",
+        "mmDeduction": "6042253"
+      }
+    ],
+    "LINKUSDT": [
+      {
+        "id": 101,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "10000",
+        "maintenanceMargin": "0.0067",
+        "initialMargin": "0.0133",
+        "isLowestRisk": 1,
+        "maxLeverage": "75.00",
+        "mmDeduction": ""
+      },
+      {
+        "id": 102,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "50000",
+        "maintenanceMargin": "0.0071",
+        "initialMargin": "0.0143",
+        "isLowestRisk": 0,
+        "maxLeverage": "70.00",
+        "mmDeduction": "4"
+      },
+      {
+        "id": 103,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "100000",
+        "maintenanceMargin": "0.0077",
+        "initialMargin": "0.0154",
+        "isLowestRisk": 0,
+        "maxLeverage": "65.00",
+        "mmDeduction": "34"
+      },
+      {
+        "id": 104,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "150000",
+        "maintenanceMargin": "0.0091",
+        "initialMargin": "0.0182",
+        "isLowestRisk": 0,
+        "maxLeverage": "55.00",
+        "mmDeduction": "174"
+      },
+      {
+        "id": 105,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "200000",
+        "maintenanceMargin": "0.01",
+        "initialMargin": "0.02",
+        "isLowestRisk": 0,
+        "maxLeverage": "50.00",
+        "mmDeduction": "309"
+      },
+      {
+        "id": 106,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "300000",
+        "maintenanceMargin": "0.0111",
+        "initialMargin": "0.0222",
+        "isLowestRisk": 0,
+        "maxLeverage": "45.00",
+        "mmDeduction": "529"
+      },
+      {
+        "id": 107,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "400000",
+        "maintenanceMargin": "0.0125",
+        "initialMargin": "0.025",
+        "isLowestRisk": 0,
+        "maxLeverage": "40.00",
+        "mmDeduction": "949"
+      },
+      {
+        "id": 108,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "500000",
+        "maintenanceMargin": "0.0143",
+        "initialMargin": "0.0286",
+        "isLowestRisk": 0,
+        "maxLeverage": "35.00",
+        "mmDeduction": "1669"
+      },
+      {
+        "id": 109,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "600000",
+        "maintenanceMargin": "0.0167",
+        "initialMargin": "0.0333",
+        "isLowestRisk": 0,
+        "maxLeverage": "30.00",
+        "mmDeduction": "2869"
+      },
+      {
+        "id": 110,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "700000",
+        "maintenanceMargin": "0.02",
+        "initialMargin": "0.04",
+        "isLowestRisk": 0,
+        "maxLeverage": "25.00",
+        "mmDeduction": "4849"
+      },
+      {
+        "id": 111,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "900000",
+        "maintenanceMargin": "0.025",
+        "initialMargin": "0.05",
+        "isLowestRisk": 0,
+        "maxLeverage": "20.00",
+        "mmDeduction": "8349"
+      },
+      {
+        "id": 112,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "1100000",
+        "maintenanceMargin": "0.0263",
+        "initialMargin": "0.0526",
+        "isLowestRisk": 0,
+        "maxLeverage": "19.00",
+        "mmDeduction": "9519"
+      },
+      {
+        "id": 113,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "1300000",
+        "maintenanceMargin": "0.0278",
+        "initialMargin": "0.0556",
+        "isLowestRisk": 0,
+        "maxLeverage": "18.00",
+        "mmDeduction": "11169"
+      },
+      {
+        "id": 114,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "1500000",
+        "maintenanceMargin": "0.0294",
+        "initialMargin": "0.0588",
+        "isLowestRisk": 0,
+        "maxLeverage": "17.00",
+        "mmDeduction": "13249"
+      },
+      {
+        "id": 115,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "1700000",
+        "maintenanceMargin": "0.0313",
+        "initialMargin": "0.0625",
+        "isLowestRisk": 0,
+        "maxLeverage": "16.00",
+        "mmDeduction": "16099"
+      },
+      {
+        "id": 116,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "1900000",
+        "maintenanceMargin": "0.0333",
+        "initialMargin": "0.0667",
+        "isLowestRisk": 0,
+        "maxLeverage": "15.00",
+        "mmDeduction": "19499"
+      },
+      {
+        "id": 117,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "2100000",
+        "maintenanceMargin": "0.0357",
+        "initialMargin": "0.0714",
+        "isLowestRisk": 0,
+        "maxLeverage": "14.00",
+        "mmDeduction": "24059"
+      },
+      {
+        "id": 118,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "2800000",
+        "maintenanceMargin": "0.0385",
+        "initialMargin": "0.0769",
+        "isLowestRisk": 0,
+        "maxLeverage": "13.00",
+        "mmDeduction": "29939"
+      },
+      {
+        "id": 119,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "3000000",
+        "maintenanceMargin": "0.0417",
+        "initialMargin": "0.0833",
+        "isLowestRisk": 0,
+        "maxLeverage": "12.00",
+        "mmDeduction": "38899"
+      },
+      {
+        "id": 120,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "3200000",
+        "maintenanceMargin": "0.0455",
+        "initialMargin": "0.0909",
+        "isLowestRisk": 0,
+        "maxLeverage": "11.00",
+        "mmDeduction": "50299"
+      },
+      {
+        "id": 121,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "4000000",
+        "maintenanceMargin": "0.05",
+        "initialMargin": "0.1",
+        "isLowestRisk": 0,
+        "maxLeverage": "10.00",
+        "mmDeduction": "64699"
+      },
+      {
+        "id": 122,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "4500000",
+        "maintenanceMargin": "0.0556",
+        "initialMargin": "0.1111",
+        "isLowestRisk": 0,
+        "maxLeverage": "9.00",
+        "mmDeduction": "87099"
+      },
+      {
+        "id": 123,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "5000000",
+        "maintenanceMargin": "0.0625",
+        "initialMargin": "0.125",
+        "isLowestRisk": 0,
+        "maxLeverage": "8.00",
+        "mmDeduction": "118149"
+      },
+      {
+        "id": 124,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "6500000",
+        "maintenanceMargin": "0.0714",
+        "initialMargin": "0.1429",
+        "isLowestRisk": 0,
+        "maxLeverage": "7.00",
+        "mmDeduction": "162649"
+      },
+      {
+        "id": 125,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "7500000",
+        "maintenanceMargin": "0.0833",
+        "initialMargin": "0.1667",
+        "isLowestRisk": 0,
+        "maxLeverage": "6.00",
+        "mmDeduction": "239999"
+      },
+      {
+        "id": 126,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "9000000",
+        "maintenanceMargin": "0.1",
+        "initialMargin": "0.2",
+        "isLowestRisk": 0,
+        "maxLeverage": "5.00",
+        "mmDeduction": "365249"
+      },
+      {
+        "id": 127,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "10000000",
+        "maintenanceMargin": "0.125",
+        "initialMargin": "0.25",
+        "isLowestRisk": 0,
+        "maxLeverage": "4.00",
+        "mmDeduction": "590249"
+      },
+      {
+        "id": 128,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "11000000",
+        "maintenanceMargin": "0.1998",
+        "initialMargin": "0.3333",
+        "isLowestRisk": 0,
+        "maxLeverage": "3.00",
+        "mmDeduction": "1338249"
+      },
+      {
+        "id": 129,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "12500000",
+        "maintenanceMargin": "0.3",
+        "initialMargin": "0.5",
+        "isLowestRisk": 0,
+        "maxLeverage": "2.00",
+        "mmDeduction": "2440449"
+      },
+      {
+        "id": 130,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "15000000",
+        "maintenanceMargin": "0.4002",
+        "initialMargin": "0.6667",
+        "isLowestRisk": 0,
+        "maxLeverage": "1.50",
+        "mmDeduction": "3692949"
+      },
+      {
+        "id": 131,
+        "symbol": "LINKUSDT",
+        "riskLimitValue": "17000000",
+        "maintenanceMargin": "0.5",
+        "initialMargin": "1",
+        "isLowestRisk": 0,
+        "maxLeverage": "1.00",
+        "mmDeduction": "5189949"
+      }
+    ]
+  },
+  "tickers": {
+    "spot": {
+      "BTCUSDT": {
+        "symbol": "BTCUSDT",
+        "bid1Price": "83188.7",
+        "bid1Size": "0.265574",
+        "ask1Price": "83188.8",
+        "ask1Size": "0.197016",
+        "lastPrice": "83188.8",
+        "prevPrice24h": "83316.9",
+        "price24hPcnt": "-0.0015",
+        "highPrice24h": "84383.5",
+        "lowPrice24h": "82539.1",
+        "turnover24h": "637809118.4725365",
+        "volume24h": "7658.691412",
+        "usdIndexPrice": "83145.255969"
+      },
+      "ETHUSDT": {
+        "symbol": "ETHUSDT",
+        "bid1Price": "2668.82",
+        "bid1Size": "3.21742",
+        "ask1Price": "2668.83",
+        "ask1Size": "4.85415",
+        "lastPrice": "2668.83",
+        "prevPrice24h": "2648.57",
+        "price24hPcnt": "0.0076",
+        "highPrice24h": "2721.2",
+        "lowPrice24h": "2635.54",
+        "turnover24h": "209427881.0954785",
+        "volume24h": "78391.85013",
+        "usdIndexPrice": "2667.488885"
+      },
+      "SOLUSDT": {
+        "symbol": "SOLUSDT",
+        "bid1Price": "117.99",
+        "bid1Size": "25.757",
+        "ask1Price": "118",
+        "ask1Size": "3.7672",
+        "lastPrice": "117.96",
+        "prevPrice24h": "119.82",
+        "price24hPcnt": "-0.0155",
+        "highPrice24h": "120.76",
+        "lowPrice24h": "116.35",
+        "turnover24h": "59039790.072322",
+        "volume24h": "497277.9877",
+        "usdIndexPrice": "117.903905"
+      },
+      "BNBUSDT": {
+        "symbol": "BNBUSDT",
+        "bid1Price": "759.5",
+        "bid1Size": "1.1227",
+        "ask1Price": "759.6",
+        "ask1Size": "3.4839",
+        "lastPrice": "759.5",
+        "prevPrice24h": "768.8",
+        "price24hPcnt": "-0.0121",
+        "highPrice24h": "773.3",
+        "lowPrice24h": "753.5",
+        "turnover24h": "8332300.8297274",
+        "volume24h": "10935.27436",
+        "usdIndexPrice": "759.269101"
+      },
+      "XRPUSDT": {
+        "symbol": "XRPUSDT",
+        "bid1Price": "1.4918",
+        "bid1Size": "2251.68",
+        "ask1Price": "1.4919",
+        "ask1Size": "541.68",
+        "lastPrice": "1.4916",
+        "prevPrice24h": "1.4891",
+        "price24hPcnt": "0.0017",
+        "highPrice24h": "1.5325",
+        "lowPrice24h": "1.4658",
+        "turnover24h": "57079100.109046",
+        "volume24h": "38145388.33",
+        "usdIndexPrice": "1.491075"
+      },
+      "DOGEUSDT": {
+        "symbol": "DOGEUSDT",
+        "bid1Price": "0.09336",
+        "bid1Size": "13724.1",
+        "ask1Price": "0.09337",
+        "ask1Size": "480.8",
+        "lastPrice": "0.09334",
+        "prevPrice24h": "0.09394",
+        "price24hPcnt": "-0.0064",
+        "highPrice24h": "0.09545",
+        "lowPrice24h": "0.09152",
+        "turnover24h": "15192733.339602",
+        "volume24h": "162763946.1",
+        "usdIndexPrice": "0.0933019"
+      },
+      "ADAUSDT": {
+        "symbol": "ADAUSDT",
+        "bid1Price": "0.2437",
+        "bid1Size": "4657.45",
+        "ask1Price": "0.2438",
+        "ask1Size": "3490.24",
+        "lastPrice": "0.2437",
+        "prevPrice24h": "0.25",
+        "price24hPcnt": "-0.0252",
+        "highPrice24h": "0.2537",
+        "lowPrice24h": "0.239",
+        "turnover24h": "5980857.384742",
+        "volume24h": "24327614.25",
+        "usdIndexPrice": "0.243603"
+      },
+      "AVAXUSDT": {
+        "symbol": "AVAXUSDT",
+        "bid1Price": "10.479",
+        "bid1Size": "4.907",
+        "ask1Price": "10.48",
+        "ask1Size": "6.218",
+        "lastPrice": "10.476",
+        "prevPrice24h": "10.677",
+        "price24hPcnt": "-0.0188",
+        "highPrice24h": "10.895",
+        "lowPrice24h": "10.149",
+        "turnover24h": "8189380.734778",
+        "volume24h": "780504.659",
+        "usdIndexPrice": "10.471935"
+      },
+      "LINKUSDT": {
+        "symbol": "LINKUSDT",
+        "bid1Price": "14.947",
+        "bid1Size": "9.618",
+        "ask1Price": "14.949",
+        "ask1Size": "12.989",
+        "lastPrice": "14.959",
+        "prevPrice24h": "13.962",
+        "price24hPcnt": "0.0714",
+        "highPrice24h": "15.773",
+        "lowPrice24h": "13.528",
+        "turnover24h": "22495495.6623325",
+        "volume24h": "1522817.387",
+        "usdIndexPrice": "14.94801"
+      }
+    },
+    "linear": {
+      "BTCUSDT": {
+        "symbol": "BTCUSDT",
+        "lastPrice": "83151.40",
+        "indexPrice": "83188.52",
+        "markPrice": "83154.80",
+        "prevPrice24h": "83336.00",
+        "price24hPcnt": "-0.002215",
+        "highPrice24h": "84352.90",
+        "lowPrice24h": "82468.00",
+        "prevPrice1h": "82904.00",
+        "openInterest": "55512.562",
+        "openInterestValue": "4616135990.60",
+        "singleOpenInterest": "27756.281",
+        "singleOpenInterestValue": "2308067995.30",
+        "turnover24h": "4756517412.5623",
+        "volume24h": "57141.8980",
+        "fundingRate": "0.00000786",
+        "nextFundingTime": "1790668800000",
+        "predictedDeliveryPrice": "",
+        "basisRate": "",
+        "deliveryFeeRate": "",
+        "deliveryTime": "0",
+        "ask1Size": "1.324",
+        "bid1Price": "83151.30",
+        "ask1Price": "83151.40",
+        "bid1Size": "2.390",
+        "basis": "",
+        "preOpenPrice": "",
+        "preQty": "",
+        "curPreListingPhase": "",
+        "fundingIntervalHour": "8",
+        "basisRateYear": "",
+        "fundingCap": "0.00333"
+      },
+      "ETHUSDT": {
+        "symbol": "ETHUSDT",
+        "lastPrice": "2667.68",
+        "indexPrice": "2668.88",
+        "markPrice": "2667.72",
+        "prevPrice24h": "2649.27",
+        "price24hPcnt": "0.006949",
+        "highPrice24h": "2720.40",
+        "lowPrice24h": "2633.50",
+        "prevPrice1h": "2652.89",
+        "openInterest": "768450.66",
+        "openInterestValue": "2050011194.70",
+        "singleOpenInterest": "384225.33",
+        "singleOpenInterestValue": "1025005597.35",
+        "turnover24h": "2887930545.3262",
+        "volume24h": "1081177.8800",
+        "fundingRate": "-0.0000169",
+        "nextFundingTime": "1790668800000",
+        "predictedDeliveryPrice": "",
+        "basisRate": "",
+        "deliveryFeeRate": "",
+        "deliveryTime": "0",
+        "ask1Size": "27.12",
+        "bid1Price": "2667.68",
+        "ask1Price": "2667.69",
+        "bid1Size": "27.19",
+        "basis": "",
+        "preOpenPrice": "",
+        "preQty": "",
+        "curPreListingPhase": "",
+        "fundingIntervalHour": "8",
+        "basisRateYear": "",
+        "fundingCap": "0.00333"
+      },
+      "SOLUSDT": {
+        "symbol": "SOLUSDT",
+        "lastPrice": "117.930",
+        "indexPrice": "117.966",
+        "markPrice": "117.910",
+        "prevPrice24h": "119.870",
+        "price24hPcnt": "-0.016184",
+        "highPrice24h": "120.730",
+        "lowPrice24h": "116.250",
+        "prevPrice1h": "116.520",
+        "openInterest": "6792457.9",
+        "openInterestValue": "800898710.99",
+        "singleOpenInterest": "3396229",
+        "singleOpenInterestValue": "400449361.39",
+        "turnover24h": "905707775.0660",
+        "volume24h": "7635847.2000",
+        "fundingRate": "0.00003427",
+        "nextFundingTime": "1790668800000",
+        "predictedDeliveryPrice": "",
+        "basisRate": "",
+        "deliveryFeeRate": "",
+        "deliveryTime": "0",
+        "ask1Size": "114.8",
+        "bid1Price": "117.930",
+        "ask1Price": "117.940",
+        "bid1Size": "505.0",
+        "basis": "",
+        "preOpenPrice": "",
+        "preQty": "",
+        "curPreListingPhase": "",
+        "fundingIntervalHour": "8",
+        "basisRateYear": "",
+        "fundingCap": "0.005"
+      },
+      "BNBUSDT": {
+        "symbol": "BNBUSDT",
+        "lastPrice": "759.20",
+        "indexPrice": "759.68",
+        "markPrice": "759.20",
+        "prevPrice24h": "769.00",
+        "price24hPcnt": "-0.012743",
+        "highPrice24h": "773.00",
+        "lowPrice24h": "753.20",
+        "prevPrice1h": "753.70",
+        "openInterest": "155100.63",
+        "openInterestValue": "117752398.30",
+        "singleOpenInterest": "77550.32",
+        "singleOpenInterestValue": "58876202.94",
+        "turnover24h": "34671079.4520",
+        "volume24h": "45449.3600",
+        "fundingRate": "-0.00010692",
+        "nextFundingTime": "1790668800000",
+        "predictedDeliveryPrice": "",
+        "basisRate": "",
+        "deliveryFeeRate": "",
+        "deliveryTime": "0",
+        "ask1Size": "0.02",
+        "bid1Price": "759.10",
+        "ask1Price": "759.20",
+        "bid1Size": "20.02",
+        "basis": "",
+        "preOpenPrice": "",
+        "preQty": "",
+        "curPreListingPhase": "",
+        "fundingIntervalHour": "8",
+        "basisRateYear": "",
+        "fundingCap": "0.0066"
+      },
+      "XRPUSDT": {
+        "symbol": "XRPUSDT",
+        "lastPrice": "1.4911",
+        "indexPrice": "1.4919",
+        "markPrice": "1.4911",
+        "prevPrice24h": "1.4909",
+        "price24hPcnt": "0.000134",
+        "highPrice24h": "1.5321",
+        "lowPrice24h": "1.4647",
+        "prevPrice1h": "1.4688",
+        "openInterest": "209176463.5",
+        "openInterestValue": "311903024.72",
+        "singleOpenInterest": "104588231.8",
+        "singleOpenInterestValue": "155951512.44",
+        "turnover24h": "644951927.8519",
+        "volume24h": "432078348.5000",
+        "fundingRate": "-0.00001915",
+        "nextFundingTime": "1790668800000",
+        "predictedDeliveryPrice": "",
+        "basisRate": "",
+        "deliveryFeeRate": "",
+        "deliveryTime": "0",
+        "ask1Size": "91.6",
+        "bid1Price": "1.4911",
+        "ask1Price": "1.4912",
+        "bid1Size": "43045.6",
+        "basis": "",
+        "preOpenPrice": "",
+        "preQty": "",
+        "curPreListingPhase": "",
+        "fundingIntervalHour": "8",
+        "basisRateYear": "",
+        "fundingCap": "0.005"
+      },
+      "DOGEUSDT": {
+        "symbol": "DOGEUSDT",
+        "lastPrice": "0.09330",
+        "indexPrice": "0.09336",
+        "markPrice": "0.09330",
+        "prevPrice24h": "0.09401",
+        "price24hPcnt": "-0.007552",
+        "highPrice24h": "0.09540",
+        "lowPrice24h": "0.09142",
+        "prevPrice1h": "0.09187",
+        "openInterest": "1493670887",
+        "openInterestValue": "139359493.76",
+        "singleOpenInterest": "746835444",
+        "singleOpenInterestValue": "69679746.93",
+        "turnover24h": "133267269.7107",
+        "volume24h": "1428772631.0000",
+        "fundingRate": "-0.00001754",
+        "nextFundingTime": "1790668800000",
+        "predictedDeliveryPrice": "",
+        "basisRate": "",
+        "deliveryFeeRate": "",
+        "deliveryTime": "0",
+        "ask1Size": "17171",
+        "bid1Price": "0.09330",
+        "ask1Price": "0.09331",
+        "bid1Size": "125600",
+        "basis": "",
+        "preOpenPrice": "",
+        "preQty": "",
+        "curPreListingPhase": "",
+        "fundingIntervalHour": "8",
+        "basisRateYear": "",
+        "fundingCap": "0.0058"
+      },
+      "ADAUSDT": {
+        "symbol": "ADAUSDT",
+        "lastPrice": "0.2436",
+        "indexPrice": "0.2438",
+        "markPrice": "0.2436",
+        "prevPrice24h": "0.2505",
+        "price24hPcnt": "-0.027544",
+        "highPrice24h": "0.2535",
+        "lowPrice24h": "0.2388",
+        "prevPrice1h": "0.2392",
+        "openInterest": "276993064",
+        "openInterestValue": "67475510.39",
+        "singleOpenInterest": "138496532",
+        "singleOpenInterestValue": "33737755.20",
+        "turnover24h": "91425263.1738",
+        "volume24h": "372085404.0000",
+        "fundingRate": "-0.00015896",
+        "nextFundingTime": "1790668800000",
+        "predictedDeliveryPrice": "",
+        "basisRate": "",
+        "deliveryFeeRate": "",
+        "deliveryTime": "0",
+        "ask1Size": "136492",
+        "bid1Price": "0.2435",
+        "ask1Price": "0.2436",
+        "bid1Size": "78102",
+        "basis": "",
+        "preOpenPrice": "",
+        "preQty": "",
+        "curPreListingPhase": "",
+        "fundingIntervalHour": "8",
+        "basisRateYear": "",
+        "fundingCap": "0.0058"
+      },
+      "AVAXUSDT": {
+        "symbol": "AVAXUSDT",
+        "lastPrice": "10.469",
+        "indexPrice": "10.478",
+        "markPrice": "10.466",
+        "prevPrice24h": "10.700",
+        "price24hPcnt": "-0.021588",
+        "highPrice24h": "10.890",
+        "lowPrice24h": "10.130",
+        "prevPrice1h": "10.374",
+        "openInterest": "6804582",
+        "openInterestValue": "71216755.21",
+        "singleOpenInterest": "3402291",
+        "singleOpenInterestValue": "35608377.61",
+        "turnover24h": "64249440.4104",
+        "volume24h": "6124444.4000",
+        "fundingRate": "-0.00003752",
+        "nextFundingTime": "1790668800000",
+        "predictedDeliveryPrice": "",
+        "basisRate": "",
+        "deliveryFeeRate": "",
+        "deliveryTime": "0",
+        "ask1Size": "8.3",
+        "bid1Price": "10.468",
+        "ask1Price": "10.469",
+        "bid1Size": "29.7",
+        "basis": "",
+        "preOpenPrice": "",
+        "preQty": "",
+        "curPreListingPhase": "",
+        "fundingIntervalHour": "8",
+        "basisRateYear": "",
+        "fundingCap": "0.0066"
+      },
+      "LINKUSDT": {
+        "symbol": "LINKUSDT",
+        "lastPrice": "14.935",
+        "indexPrice": "14.952",
+        "markPrice": "14.940",
+        "prevPrice24h": "13.953",
+        "price24hPcnt": "0.070379",
+        "highPrice24h": "15.777",
+        "lowPrice24h": "13.523",
+        "prevPrice1h": "15.002",
+        "openInterest": "7153580.1",
+        "openInterestValue": "106874486.69",
+        "singleOpenInterest": "3576790.1",
+        "singleOpenInterestValue": "53437244.09",
+        "turnover24h": "196889578.6146",
+        "volume24h": "13357669.1000",
+        "fundingRate": "0.00002021",
+        "nextFundingTime": "1790668800000",
+        "predictedDeliveryPrice": "",
+        "basisRate": "",
+        "deliveryFeeRate": "",
+        "deliveryTime": "0",
+        "ask1Size": "161.2",
+        "bid1Price": "14.934",
+        "ask1Price": "14.935",
+        "bid1Size": "46.2",
+        "basis": "",
+        "preOpenPrice": "",
+        "preQty": "",
+        "curPreListingPhase": "",
+        "fundingIntervalHour": "8",
+        "basisRateYear": "",
+        "fundingCap": "0.0066"
+      }
+    }
+  },
+  "orderbook": {
+    "spot": {
+      "BTCUSDT": {
+        "a": [["83188.8", "0.220146"]],
+        "b": [["83188.7", "0.243074"]]
+      },
+      "ETHUSDT": {
+        "a": [["2668.83", "4.83854"]],
+        "b": [["2668.82", "3.21742"]]
+      },
+      "SOLUSDT": {
+        "a": [["118", "3.7672"]],
+        "b": [["117.99", "25.757"]]
+      },
+      "BNBUSDT": {
+        "a": [["759.6", "3.4839"]],
+        "b": [["759.5", "1.1227"]]
+      },
+      "XRPUSDT": {
+        "a": [["1.4919", "541.68"]],
+        "b": [["1.4918", "2051.68"]]
+      },
+      "DOGEUSDT": {
+        "a": [["0.09337", "480.8"]],
+        "b": [["0.09336", "13724.1"]]
+      },
+      "ADAUSDT": {
+        "a": [["0.2438", "3490.24"]],
+        "b": [["0.2437", "4657.45"]]
+      },
+      "AVAXUSDT": {
+        "a": [["10.48", "6.218"]],
+        "b": [["10.479", "37.319"]]
+      },
+      "LINKUSDT": {
+        "a": [["14.949", "12.989"]],
+        "b": [["14.947", "9.618"]]
+      }
+    }
+  },
+  "fundingHistory": {
+    "BTCUSDT": [
+      {
+        "symbol": "BTCUSDT",
+        "fundingRate": "0.0000297",
+        "fundingRateTimestamp": "1790640000000"
+      },
+      {
+        "symbol": "BTCUSDT",
+        "fundingRate": "0.00004941",
+        "fundingRateTimestamp": "1790611200000"
+      },
+      {
+        "symbol": "BTCUSDT",
+        "fundingRate": "-0.00002442",
+        "fundingRateTimestamp": "1790582400000"
+      }
+    ],
+    "ETHUSDT": [
+      {
+        "symbol": "ETHUSDT",
+        "fundingRate": "0.00005247",
+        "fundingRateTimestamp": "1790640000000"
+      },
+      {
+        "symbol": "ETHUSDT",
+        "fundingRate": "0.0000661",
+        "fundingRateTimestamp": "1790611200000"
+      },
+      {
+        "symbol": "ETHUSDT",
+        "fundingRate": "-0.00004295",
+        "fundingRateTimestamp": "1790582400000"
+      }
+    ],
+    "SOLUSDT": [
+      {
+        "symbol": "SOLUSDT",
+        "fundingRate": "0.00003886",
+        "fundingRateTimestamp": "1790640000000"
+      },
+      {
+        "symbol": "SOLUSDT",
+        "fundingRate": "0.00007114",
+        "fundingRateTimestamp": "1790611200000"
+      },
+      {
+        "symbol": "SOLUSDT",
+        "fundingRate": "0.00008247",
+        "fundingRateTimestamp": "1790582400000"
+      }
+    ],
+    "BNBUSDT": [
+      {
+        "symbol": "BNBUSDT",
+        "fundingRate": "-0.00005389",
+        "fundingRateTimestamp": "1790640000000"
+      },
+      {
+        "symbol": "BNBUSDT",
+        "fundingRate": "-0.0001129",
+        "fundingRateTimestamp": "1790611200000"
+      },
+      {
+        "symbol": "BNBUSDT",
+        "fundingRate": "-0.00007686",
+        "fundingRateTimestamp": "1790582400000"
+      }
+    ],
+    "XRPUSDT": [
+      {
+        "symbol": "XRPUSDT",
+        "fundingRate": "0.00005446",
+        "fundingRateTimestamp": "1790640000000"
+      },
+      {
+        "symbol": "XRPUSDT",
+        "fundingRate": "0.00002559",
+        "fundingRateTimestamp": "1790611200000"
+      },
+      {
+        "symbol": "XRPUSDT",
+        "fundingRate": "0.00006234",
+        "fundingRateTimestamp": "1790582400000"
+      }
+    ],
+    "DOGEUSDT": [
+      {
+        "symbol": "DOGEUSDT",
+        "fundingRate": "-0.00001665",
+        "fundingRateTimestamp": "1790640000000"
+      },
+      {
+        "symbol": "DOGEUSDT",
+        "fundingRate": "-0.00004234",
+        "fundingRateTimestamp": "1790611200000"
+      },
+      {
+        "symbol": "DOGEUSDT",
+        "fundingRate": "0.00004125",
+        "fundingRateTimestamp": "1790582400000"
+      }
+    ],
+    "ADAUSDT": [
+      {
+        "symbol": "ADAUSDT",
+        "fundingRate": "0.00006634",
+        "fundingRateTimestamp": "1790640000000"
+      },
+      {
+        "symbol": "ADAUSDT",
+        "fundingRate": "-0.0000014",
+        "fundingRateTimestamp": "1790611200000"
+      },
+      {
+        "symbol": "ADAUSDT",
+        "fundingRate": "0.00007048",
+        "fundingRateTimestamp": "1790582400000"
+      }
+    ],
+    "AVAXUSDT": [
+      {
+        "symbol": "AVAXUSDT",
+        "fundingRate": "0.00004068",
+        "fundingRateTimestamp": "1790640000000"
+      },
+      {
+        "symbol": "AVAXUSDT",
+        "fundingRate": "0.00005948",
+        "fundingRateTimestamp": "1790611200000"
+      },
+      {
+        "symbol": "AVAXUSDT",
+        "fundingRate": "0.00008396",
+        "fundingRateTimestamp": "1790582400000"
+      }
+    ],
+    "LINKUSDT": [
+      {
+        "symbol": "LINKUSDT",
+        "fundingRate": "0.0001",
+        "fundingRateTimestamp": "1790640000000"
+      },
+      {
+        "symbol": "LINKUSDT",
+        "fundingRate": "0.0001",
+        "fundingRateTimestamp": "1790611200000"
+      },
+      {
+        "symbol": "LINKUSDT",
+        "fundingRate": "0.0001",
+        "fundingRateTimestamp": "1790582400000"
+      }
+    ]
+  },
+  "kline": {
+    "last": [
+      ["1790652960000", "83146.6", "83167.8", "83146.6", "83157.5", "7.62", "633658.0872"],
+      ["1790652900000", "83159.6", "83181.5", "83130.7", "83146.6", "11.379", "946176.2359"],
+      ["1790652840000", "83156.2", "83186.9", "83156.1", "83159.6", "13.885", "1154883.8761"]
+    ],
+    "mark": [
+      ["1790652960000", "83146.6", "83166.1", "83146.6", "83157.5"],
+      ["1790652900000", "83165.31", "83180.9", "83137.53", "83146.6"],
+      ["1790652840000", "83156.2", "83181.4", "83156.1", "83165.31"]
+    ],
+    "index": [
+      ["1790652960000", "83179.25", "83196.33", "83178.51", "83190.9"],
+      ["1790652900000", "83198.36", "83207.12", "83170.56", "83179.25"],
+      ["1790652840000", "83188.94", "83206.51", "83188.91", "83198.36"]
+    ]
+  },
+  "ws": {
+    "spot": {
+      "kline.1": {
+        "type": "snapshot",
+        "topic": "kline.1.BTCUSDT",
+        "data": [
+          {
+            "start": 1790652960000,
+            "end": 1790653019999,
+            "interval": "1",
+            "open": "83185.1",
+            "close": "83193.6",
+            "high": "83198.8",
+            "low": "83185.1",
+            "volume": "1.235729",
+            "turnover": "102804.6136177",
+            "confirm": false,
+            "timestamp": 1790653008563
+          }
+        ],
+        "ts": 1790653008563
+      },
+      "tickers": {
+        "topic": "tickers.BTCUSDT",
+        "ts": 1790653014127,
+        "type": "snapshot",
+        "cs": 114709832567,
+        "data": {
+          "symbol": "BTCUSDT",
+          "lastPrice": "83193.6",
+          "highPrice24h": "84383.5",
+          "lowPrice24h": "82539.1",
+          "prevPrice24h": "83316.9",
+          "volume24h": "7658.855532",
+          "turnover24h": "637822771.5509506",
+          "price24hPcnt": "-0.0015",
+          "usdIndexPrice": "83147.883995"
+        }
+      },
+      "orderbook.1": {
+        "topic": "orderbook.1.BTCUSDT",
+        "ts": 1790653012319,
+        "type": "snapshot",
+        "data": {
+          "s": "BTCUSDT",
+          "b": [["83194.8", "0.241202"]],
+          "a": [["83194.9", "0.137685"]],
+          "u": 109899844,
+          "seq": 114709833530
+        },
+        "cts": 1790653012312
+      }
+    },
+    "linear": {
+      "kline.1": {
+        "topic": "kline.1.BTCUSDT",
+        "data": [
+          {
+            "start": 1790652960000,
+            "end": 1790653019999,
+            "interval": "1",
+            "open": "83146.6",
+            "close": "83157.5",
+            "high": "83167.8",
+            "low": "83146.6",
+            "volume": "7.62",
+            "turnover": "633658.0872",
+            "confirm": false,
+            "timestamp": 1790653011440
+          }
+        ],
+        "ts": 1790653011440,
+        "type": "snapshot"
+      },
+      "tickers": {
+        "topic": "tickers.BTCUSDT",
+        "type": "snapshot",
+        "data": {
+          "symbol": "BTCUSDT",
+          "tickDirection": "ZeroPlusTick",
+          "price24hPcnt": "-0.002141",
+          "lastPrice": "83157.50",
+          "prevPrice24h": "83336.00",
+          "highPrice24h": "84352.90",
+          "lowPrice24h": "82468.00",
+          "prevPrice1h": "82904.00",
+          "markPrice": "83157.50",
+          "indexPrice": "83190.90",
+          "openInterest": "55512.562",
+          "openInterestValue": "4616285874.52",
+          "turnover24h": "4756529137.0071",
+          "volume24h": "57142.0390",
+          "fundingIntervalHour": "8",
+          "fundingCap": "0.00333",
+          "singleOpenInterest": "27756.281",
+          "singleOpenInterestValue": "2308142937.26",
+          "nextFundingTime": "1790668800000",
+          "fundingRate": "0.00000786",
+          "bid1Price": "83157.40",
+          "bid1Size": "6.917",
+          "ask1Price": "83157.50",
+          "ask1Size": "0.502",
+          "preOpenPrice": "",
+          "preQty": "",
+          "curPreListingPhase": ""
+        },
+        "cs": 817561482033,
+        "ts": 1790653014283
+      }
+    }
+  }
+}

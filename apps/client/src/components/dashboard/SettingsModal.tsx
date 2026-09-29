@@ -1,3 +1,4 @@
+import { guide } from '@/lib/guideAnchors';
 import { useState, useEffect, useRef } from 'react';
 import {
   X,
@@ -332,6 +333,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
               </div>
               <button
                 onClick={onClose}
+                {...guide('settings.close')}
                 className="rounded-full p-2 text-white/40 hover:bg-white/5 hover:text-white transition-all"
               >
                 <X className="w-5 h-5" />
@@ -364,11 +366,13 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         placeholder="Choose a username"
+                        {...guide('settings.username.input')}
                         className="h-10 border-white/8 text-white focus-visible:ring-0 focus-visible:border-brand-purple-dark/50"
                         style={{ background: bg.surface }}
                       />
                       <Button
                         onClick={handleUpdateUsername}
+                        {...guide('settings.username.save')}
                         disabled={isUpdatingUsername || username === user.username || !username}
                         variant="default"
                         className="h-10 px-6 font-bold tracking-wide text-white"
@@ -397,7 +401,11 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                       </Button>
                     </div>
                     {usernameError && (
-                      <p className="text-xs font-medium mt-1" style={{ color: color.red }}>
+                      <p
+                        className="text-xs font-medium mt-1"
+                        style={{ color: color.red }}
+                        {...guide('settings.username.error')}
+                      >
                         {usernameError}
                       </p>
                     )}
@@ -533,7 +541,10 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                         <div className="flex items-center gap-2">
                           <p className="text-base font-medium text-white">••••••••••••</p>
                           {passwordSuccess && (
-                            <span className="flex items-center gap-1 text-[10px] font-bold text-green-400 uppercase tracking-widest">
+                            <span
+                              className="flex items-center gap-1 text-[10px] font-bold text-green-400 uppercase tracking-widest"
+                              {...guide('settings.password.success')}
+                            >
                               <Check className="w-3 h-3" /> Updated
                             </span>
                           )}
@@ -545,6 +556,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                           variant="ghost"
                           size="sm"
                           onClick={() => setShowPasswordPanel(!showPasswordPanel)}
+                          {...guide('settings.password.toggle')}
                           className={
                             showPasswordPanel
                               ? 'text-white'
@@ -587,6 +599,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                                 value={currentPasswordForNewPass}
                                 onChange={(e) => setCurrentPasswordForNewPass(e.target.value)}
                                 placeholder="Confirm your current password"
+                                {...guide('settings.password.current')}
                                 className="h-10 border-white/8 text-white focus-visible:ring-0 focus-visible:border-brand-purple-dark/50"
                                 style={{ background: bg.surface }}
                               />
@@ -601,6 +614,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
                                 placeholder="At least 8 characters"
+                                {...guide('settings.password.new')}
                                 className="h-10 border-white/8 text-white focus-visible:ring-0 focus-visible:border-brand-purple-dark/50"
                                 style={{ background: bg.surface }}
                               />
@@ -614,6 +628,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
 
                             <Button
                               onClick={handleUpdatePassword}
+                              {...guide('settings.password.save')}
                               disabled={
                                 isUpdatingPassword || !newPassword || !currentPasswordForNewPass
                               }
@@ -661,6 +676,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                       variant="outline"
                       size="sm"
                       onClick={handleExportData}
+                      {...guide('settings.export')}
                       className="border-white/10 text-white/60 hover:text-white hover:border-white/20 whitespace-nowrap"
                     >
                       <Download className="w-3.5 h-3.5 mr-2" />
@@ -691,6 +707,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                     <Button
                       variant="destructive"
                       onClick={() => setShowDeleteConfirm(true)}
+                      {...guide('settings.delete')}
                       className="w-full h-10 font-bold tracking-wide rounded-full text-white"
                       style={{ background: color.red }}
                     >
@@ -709,6 +726,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                         type="password"
                         value={deletePassword}
                         onChange={(e) => setDeletePassword(e.target.value)}
+                        {...guide('settings.delete.password')}
                         className="h-10 border-red-500/20 text-white focus-visible:ring-0 focus-visible:border-red-500/50"
                         style={{ background: 'rgba(213, 69, 92, 0.05)' }}
                         placeholder="Current password"
@@ -722,6 +740,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                         <Button
                           variant="destructive"
                           onClick={handleRequestDeletion}
+                          {...guide('settings.delete.confirm')}
                           disabled={isDeleting || !deletePassword}
                           className="flex-1 h-10 font-bold text-white disabled:opacity-40"
                           style={{ background: color.red }}
@@ -730,6 +749,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                         </Button>
                         <Button
                           variant="ghost"
+                          {...guide('settings.delete.cancel')}
                           onClick={() => {
                             setShowDeleteConfirm(false);
                             setDeletePassword('');

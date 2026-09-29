@@ -184,7 +184,7 @@ function requestProblems(
   if (closed) {
     for (const key of Object.keys(sent)) {
       if (!declared.includes(key))
-        problems.push(`${what}.${key}: sent by the SDK, refused by the route`);
+        problems.push(`${what}.${key}: sent by the SDK, dropped by the route (removeAdditional)`);
     }
   }
   for (const key of required) {

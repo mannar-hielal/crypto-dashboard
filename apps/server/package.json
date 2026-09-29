@@ -14,7 +14,10 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:int": "vitest run --config vitest.int.config.ts",
-    "parity:testnet": "tsx src/tools/bybitParity.ts"
+    "parity:testnet": "tsx src/tools/bybitParity.ts",
+    "record:bybit": "tsx src/tools/recordBybitFixtures.ts",
+    "fake-bybit": "tsx src/tools/fakeBybit/main.ts",
+    "feed": "tsx src/tools/feedCtl.ts"
   },
   "dependencies": {
     "@crypto-dashboard/sdk": "workspace:*",

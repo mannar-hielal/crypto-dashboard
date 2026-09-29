@@ -10,6 +10,7 @@
  * the server applies Bybit's switch checks and its refusal lists every reason.
  */
 
+import { guide } from '@/lib/guideAnchors';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown } from 'lucide-react';
@@ -50,6 +51,7 @@ export function LeverageChip({ symbol }: LeverageChipProps) {
         style={{ fontSize: fontSize.xs11 }}
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
+        {...guide('trade.leverage-chip')}
         aria-label={`Leverage ${leverage}x, ${cross ? 'cross' : 'isolated'} margin`}
       >
         {cross ? 'Cross' : 'Isolated'} {leverage}x
@@ -195,6 +197,7 @@ function LeverageModal({ symbol, current, currentMode, onClose }: LeverageModalP
               style={{ fontSize: fontSize.xs11 }}
               aria-selected={mode === m}
               aria-pressed={mode === m}
+              {...guide('leverage.mode', m === 'ISOLATED_MARGIN' ? 'isolated' : 'cross')}
               onClick={() => {
                 setMode(m);
                 setError(null);
@@ -220,6 +223,7 @@ function LeverageModal({ symbol, current, currentMode, onClose }: LeverageModalP
               className={styles.preset}
               style={{ fontSize: fontSize.xs11 }}
               aria-pressed={choice === lev}
+              {...guide('leverage.input', String(lev))}
               onClick={() => {
                 setChoice(lev);
                 setError(null);
@@ -244,7 +248,12 @@ function LeverageModal({ symbol, current, currentMode, onClose }: LeverageModalP
           positionValue={position ? position.quantity * position.entryPrice : 0}
         />
         {error && (
-          <p className={styles.error} role="alert" style={{ fontSize: fontSize.xs10 }}>
+          <p
+            className={styles.error}
+            role="alert"
+            style={{ fontSize: fontSize.xs10 }}
+            {...guide('leverage.error')}
+          >
             {error}
           </p>
         )}
@@ -263,6 +272,7 @@ function LeverageModal({ symbol, current, currentMode, onClose }: LeverageModalP
             style={{ fontSize: fontSize.xs11 }}
             disabled={saving}
             onClick={() => void confirm()}
+            {...guide('leverage.confirm')}
           >
             {saving ? 'Saving…' : 'Confirm'}
           </button>

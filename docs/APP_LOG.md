@@ -679,7 +679,8 @@ partial fills, ADL, insurance fund · VIP tiers, fee coupons, USDC / inverse con
     side (75,742.94 → 75,743), and that under UTA `bustPrice` is reported blank and `slTriggerBy` is not on
     `position/list` (it's on the StopLoss order). The engine and the adapter follow since
     `fix/bybit-parity-first-run`.
-  - **Still open until a run is green:** O5 (cross unrealised profit funds orders), the max-reducible margin formula,
+  - **Still open (green runs since 2026-09-28 don't reach them):** O5 (cross unrealised profit funds orders), the
+    max-reducible margin formula,
     the retCode of a risk-limit refusal, and whether Bybit's `positionValue` is size × mark (the first run's 83.8569
     vs 0.001 × entry 83,881.1 suggests so; the runs now log Bybit's mark with each position check). The tier is
     chosen by value, so a mark-based value would change tiers near a boundary.
@@ -3059,3 +3060,224 @@ was enforced only by review.
 - The paper state and delta schemas are open (`additionalProperties: true`). `trading/mappers.ts` builds them from the
   SDK types, so `tsc` holds that half.
 - With this, roadmap P1 and milestone M2 are complete.
+
+### feat: M3a — test hooks and the fake-feed URL seam, both refused in production (2026-09-29) ✅
+
+**Context:** test plan milestone M3 (F2, F3). Browser tests need seeded users, the links in "sent" emails, and a
+deterministic market feed.
+
+- **Seam.** `BYBIT_REST_URL` / `BYBIT_WS_URL` redirect the only two places the server reaches Bybit's public API
+  (`bybitRestBaseUrl()`, `BybitWebSocketManager`) to a local fake feed.
+- **Test hooks.** `ENABLE_TEST_HOOKS=1` + `TEST_HOOKS_SECRET` register `/api/test/*`:
+  - `POST /users` creates a user through the real `/register` and `/verify-email` handlers, optionally unverified,
+    with a margin mode and per-symbol leverage, and returns its generated password;
+  - `GET /outbox?to=` lists the emails "sent" to an address, newest first (`services/emailOutbox.ts`, ring of 100);
+  - `POST /users/:id/reset` resets an account without a session.
+- 🔐 **Guards:**
+  - `config.ts` exits at boot if any of the four variables is set in production (checked by name, so an empty value
+    counts);
+  - the URLs must be http(s) / ws(s);
+  - the hooks need a 16+ character secret, sent as `x-test-hooks-secret` and compared in constant time;
+  - with the hooks off, the routes aren't registered (404), and the outbox keeps nothing.
+- **Tests:**
+  - `configGuards.test` (13), including production starting normally without the variables;
+  - `testHooksOff.test` (5);
+  - `testHooks.int.test` (7, real Postgres).
+- `.env.example` lists the four variables, commented out and marked test-only.
+- Next: M3b, the fake Bybit server and its price controls.
+
+### feat: M3b — the fake Bybit feed, its price controls and `pnpm dev:e2e` (2026-09-29) ✅
+
+**Context:** test plan milestone M3 (F3). Browser tests and hand reproductions need prices that move only when told
+to.
+
+- **`apps/server/src/tools/fakeBybit/`:** Bybit v5's public REST (`kline`, `mark-price-kline`,
+  `index-price-kline`, `instruments-info`, `risk-limit`, `funding/history`) and WebSocket (`/v5/public/{spot,linear}`:
+  subscribe, ping, a snapshot on subscribe, pushes every second), in Bybit's shapes. It listens on 127.0.0.1 only.
+- **Controls** (`/__control/*`, `pnpm feed …`):
+  - `quote` sets bid, ask, last, mark and index;
+  - `path` walks the price;
+  - `funding` sets the next funding timestamp and rate, and its history row appears once it passes;
+  - `klines` puts chosen candles in the history;
+  - `drop` closes the sockets;
+  - `stall` stops the pushes;
+  - `reset` goes back to the recorded prices.
+- **Fixtures:** `pnpm --filter @crypto-dashboard/server record:bybit` records instruments, risk tiers, tickers, the best
+  level, funding rows, one page of each kline source and one WS message per topic from Bybit mainnet
+  (`fixtures/bybit/recorded.json`). The fake warns when they are over 180 days old. Kline history is generated
+  deterministically around the current price, so there are no megabytes of candles.
+- **`pnpm dev:e2e`:** starts the fake feed, the server pointed at it (with the test hooks when `TEST_HOOKS_SECRET` is
+  set) and Vite. Smoke-tested: the server connects on both markets (27 and 18 topics), the engine starts, and
+  `pnpm feed quote linear BTCUSDT last=50000` shows up as the latest candle's close.
+- **Tests:** `fakeBybit.test.ts` (9) runs the app's own clients against it: the WebSocket manager (linear tickers,
+  Spot bid / ask from the order book, stall, drop and reconnect), instruments and risk tiers, the engine's candle and
+  funding-history reads, and `/api/market/candles`. It also compares the pushes with the recorded Bybit messages.
+- **Parity:** the first scheduled nightly (2026-09-29, run 36517770455) matched every step, so rows 6.5 and 17.6.4 are
+  ✅. It doesn't settle the open questions (O5, max-reducible margin, 110090, `positionValue`'s basis): at open, mark and
+  entry differ by $0.68 on 0.002 BTC, well inside the 0.01 tolerance.
+
+### feat: M6 — nightly feed parity against Bybit, weekly spec-drift check (2026-09-29) ✅
+
+**Context:** test plan milestone M6 (roadmap P3). These replace the TradingView side-by-side checks (Section 6) and
+catch a Bybit change to the rules the engine snapshots.
+
+- **`tools/feedParity.ts`** (rows 6.1–6.4) opens production's market WebSocket, the one the dashboard uses, for all
+  18 markets, and samples Bybit mainnet's public REST at the same moments.
+  - Checks:
+    - last, bid and ask within 0.1 %, and bid ≤ ask;
+    - mark and index within 0.1 %;
+    - funding rate and next funding time equal;
+    - every 1m candle production closes during the run has exactly Bybit's OHLC.
+  - A market fails a check when more than 20 % of its samples miss, and at once if it never sends a ticker.
+  - The first version also failed a market that sent no ticker for over 10 s, which gave false alarms. The server only
+    forwards a ticker when a value changes, so a quiet Spot market stays silent.
+  - First run (2026-09-29, from a Mac against production): 18 markets × 5 samples and 36 closed candles, all
+    matching.
+- **`tools/specDrift.ts`** compares `bybitSpec.ts`'s dated snapshots (instrument rules for both markets, and the
+  risk tiers up to the first below our 10× cap, which is all the snapshot keeps) with Bybit's live public API. First
+  run: no drift. Fee rates aren't compared, because Bybit serves them only to a signed-in account.
+- **`.github/workflows/feed-parity.yml`:**
+  - feed parity nightly at 04:47 UTC, spec drift on Sundays, both on demand;
+  - both run on a one-off Fly Machine in `sin` in the parity app (Bybit geo-blocks GitHub's runners), with only the
+    app-scoped Fly token, main only;
+  - it opens or comments an issue labelled `feed-parity` or `spec-drift` on a failure.
+- **Owner question (Q7):** the job reads production's public market API from the parity machine. It makes 18
+  WebSocket connections for about 5 minutes a night, under the 20-per-IP cap.
+
+### chore: local pre-commit hook found disabled since 2026-04-02; ESLint skips `.claude/worktrees` (2026-09-29) ✅
+
+- **Hook.** On the main development machine, `.husky/_/pre-commit` (the per-machine shim git runs, git-ignored and
+  generated by husky) held only `chmod +x .husky/pre-commit` from 2026-04-02. So the pre-commit gates (audit,
+  type-check, tests with coverage floors, lint) had not run locally since. CI's identical job caught what mattered;
+  for example #181's coverage drop, which the "local gates" had seemingly passed.
+  - Restored to husky's standard shim.
+  - Check on any machine: `cat .husky/_/pre-commit` must be the two-line `. "$(dirname "$0")/h"` shim.
+  - Don't run `husky --version`: husky v9 reads it as a directory, installs hooks into `./--version/_` and repoints
+    `core.hooksPath`.
+- **Dependencies.** The same machine's `node_modules` had `@hookform/resolvers` 3.10.0 against the lockfile's 5.9.1,
+  which made `authFormValidation.test` fail locally only. Fixed with `pnpm install --frozen-lockfile`.
+- **ESLint.** It now ignores `.claude/worktrees/**`: 10 agent git worktrees, whole repo copies, 13 GB, ran `pnpm lint`
+  out of memory. They are on merged branches and can be removed with `git worktree remove` when no longer needed.
+
+### test: M4 — Playwright smoke on the fake feed, on every PR (2026-09-29) ✅
+
+**Context:** test plan milestone M4 (F4, F5). The owner approved `@playwright/test` and `@axe-core/playwright` (Q5,
+2026-09-29), but not `fast-check` or Stryker, so M7 is deferred. Staging (M9) is deferred too.
+
+- **`apps/e2e`** (new workspace package, dev dependencies only, no install scripts):
+  - `playwright.config.ts` starts three web servers: the fake feed; the API through `scripts/startServer.mjs`, which
+    creates and migrates the throwaway `…_test` database and runs with the test hooks; and Vite.
+  - Fixtures: `seededUser` (a verified user per test through `/api/test/users`), `feed` (the fake feed's controls),
+    `hooks` (account reset, email outbox), and a `page` with the cookie notice already dismissed.
+  - `steps/runScenario.ts` runs a guide scenario (`apps/client/src/guide`): quotes, account reset and sign-in
+    through the login form, then each step and its expectations on the `data-guide` anchors.
+- **The smoke set** (3 tests, ~9 s locally, stable over repeated runs):
+  - `spot-market-buy`: USDT 5,000.00, BTC 0.0999, avg cost 50,050.05;
+  - `perp-market-long`: isolated 10× through the leverage modal, long 0.1 at 50,000, liq $45,149, closed at 51,000,
+    Closed P&L 94.44;
+  - register → verify from the outbox → a second use of the link shows the error page, never a 5xx → sign in, reload,
+    sign out.
+- **CI:** a new job, "E2E smoke (Playwright)", on every PR. It runs Postgres 16 and Chromium, and uploads the
+  report and traces on failure. `pnpm type-check` and the pre-commit hook include the e2e package.
+- **Anchors added (attributes only):**
+  - the order form's TP / SL toggles and prices, and the cost / fee / liquidation preview;
+  - the leverage chip and modal (each preset keyed by its value);
+  - the login and register forms (new `auth.register.terms`), and the verify page's status keyed by state;
+  - the user menu, and the Assets USDT row.
+- **Found while calibrating:**
+  - The scenario text in the plan expected `5,000.00` and `45,149.0`; the app shows `$5000.00 / $10000.00` and
+    `$45,149`. The scenarios follow the app. A formatting change would go through the visual gate.
+  - The `setIsolated` builder typed into a leverage input, but the modal has preset buttons.
+- **Next (M5):** the nightly set, with WebKit, mobile, visual baselines and axe.
+
+### test: M8 — production smoke after every deploy and hourly (2026-09-29) ✅
+
+**Context:** test plan milestone M8 (T5). Nothing checked the live site after a deploy, or between deploys.
+
+- **`apps/e2e/tests-prod/prod.spec.ts`** (`playwright.prod.config.ts`, no web servers, read-only):
+  - API `/health` is 200 in production;
+  - [19.3] a signed-out visit loads cleanly: `/api/auth/refresh` returns 204, with no console errors;
+  - the dashboard sends a signed-out visitor to the login page, which renders its form;
+  - the market feed is live: the newest 1m candle is under 3 minutes old, and a ticker arrives on the market
+    WebSocket within 15 s.
+  - First run against production: 4 passed in 3.3 s.
+- **`deploy.yml`:** after the server and client deploys, installs Chromium and runs the smoke. A failure marks the
+  deploy red.
+- **`prod-smoke.yml`:** hourly at :23, and on demand. A failure opens or comments an issue labelled `prod-smoke`.
+- **Still open (owner):** the log-based alert on `error` lines needs a log sink the owner chooses.
+
+### test: M5a — nightly Playwright set (auth, settings, axe, WebKit, phones) (2026-09-29) ✅
+
+**Context:** test plan milestone M5, first batch (Stage 0: account flows).
+
+- **Nightly** (`e2e-nightly.yml`, 02:30 UTC on develop): every Playwright project:
+  - Chromium runs `@smoke`, `@full` and `@a11y`;
+  - WebKit desktop runs `@smoke` and `@full`;
+  - iPhone 14 and Pixel 7 run `@mobile`.
+
+  A failure opens or comments an `e2e` issue. PRs still run the Chromium smoke.
+
+- **New specs:**
+  - `auth/session` ([19.4], `@smoke @mobile`);
+  - `auth/passwordReset` ([19.5]): the same answer for any email; the outbox link resets the password and ends the
+    other session;
+  - `auth/settings`: [19.7] rename and password change; [19.8] export (no password field), then cancel and
+    delete; [19.13] the pending-deletion banner and its Cancel, through the new `request-deletion` test hook,
+    because the dev server deletes at once;
+  - `auth/unverified` ([19.18]);
+  - [19.1] the short-username case in `auth/register`;
+  - `a11y/auth`: axe, and keyboard-only sign-in.
+- **Server:**
+  - `loginRateLimit.test` ([19.17]; `LOGIN_RATE_LIMIT` is exported);
+  - the global rate limit is skipped when the test hooks are on (one browser run is one IP). Production
+    rate-limits, because it refuses the hooks.
+- **Found, and left for the visual gate:**
+  - **19.15**: `OfflineBanner` (`fixed top-0 z-50`) covers the top bar while offline, so Sign out can't be reached.
+  - **19.16**: brand-purple links (#695bec on #25234e, ~3:1), the 10 px disclaimer at 60 % opacity, and Terms /
+    Privacy links told apart by colour only fail WCAG AA on /login, /register and /forgot-password.
+  - Both are `test.fail` in the suite, so they flip red when fixed.
+  - Phones (Q3): at 412 px the top bar overflows (the username is clipped), and the order form is off-screen behind
+    the Trade toggle.
+- **Calibrated:** an immediate "Resend verification email" is confirmed on screen, but held back server-side for 5
+  minutes (anti-spam, by design).
+- **Anchors added (attributes only):** forgot / reset / unverified pages, the settings modal (username, password with
+  toggle and success, export, delete), and the pending-deletion banner.
+
+### fix: offline sign-out actually signs out; the offline notice no longer hides the top bar; auth-page contrast (2026-09-29) ✅
+
+**Context:** defects 19.15 and 19.16, found by the M5a Playwright set. The visual design was approved in the visual
+Q&A gate on 2026-09-29: a bottom toast, and lighter purple with underlined links.
+
+- **19.15, offline**
+  - `OfflineBanner` was `fixed top-0 z-50` across the top bar, which hid the user menu and Sign out. It is now a
+    bottom-centre amber toast ("⚠ Offline — data paused until you're back online").
+  - Signing out offline only cleared the local session. The server never received the logout, so the next page
+    load traded the still-valid refresh cookie for a new session, and the user was signed back in. That matters on a
+    shared computer.
+  - The fix is `signOutOnServer()` (`lib/session.ts`, used by the top bar and the /unverified page). It remembers a
+    sign-out the server didn't get (`cd-pending-sign-out`), and `restoreSession()` finishes it before anything else
+    and stays signed out. The flag can only cause a sign-out.
+- **19.16, contrast (WCAG AA)**
+  - The links on /login, /register and /forgot-password use a new `purpleLight` token (#a99cff, 6.2:1 on the auth
+    card; `purpleDark` was ~3:1), and are underlined, so they don't rely on colour.
+  - The Register disclaimer is 11 px at full muted colour (it was 10 px at 60 %).
+- **Tests:** three `session.test` cases for the pending sign-out. The e2e `test.fail` markers are removed:
+  `session.spec` [19.15] and `a11y/auth.spec` now pass outright on Chromium and WebKit.
+
+### security: deploy only a push to main in this repository (public repo) (2026-09-29) ✅
+
+**Context:** the owner made the repository public on 2026-09-29, because Actions minutes are free for public
+repositories and the included 2,000 were used up.
+
+- **Risk:** `deploy.yml` runs on `workflow_run` of CI with `branches: [main]` and checked only
+  `conclusion == 'success'`. The branch filter matches the head branch _name_. A fork's PR from a branch called
+  `main` (to `develop`) would pass CI and fire Deploy, which checks out `workflow_run.head_sha`, the fork's commit.
+  That would ship it to production with the Fly and Cloudflare secrets. An environment branch policy doesn't help,
+  because `workflow_run` runs in the default branch's context.
+- **Fix:** the deploy job also requires:
+  - `workflow_run.event == 'push'`;
+  - `head_branch == 'main'`;
+  - `head_repository.full_name == github.repository`.
+- **Rule:** added to `.claude/rules/security.md` ("Public repository — workflow triggers").
+- **Owner settings to confirm:** Settings → Actions → General → "Require approval for all external contributors" for
+  fork PR workflows; secret scanning / push protection (free on public repos).

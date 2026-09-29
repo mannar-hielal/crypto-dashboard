@@ -18,6 +18,7 @@ import { authPlugin } from './plugins/auth.js';
 import { authRoutes } from './routes/auth/index.js';
 import { paperRoutes } from './routes/paper/index.js';
 import { newsletterRoutes } from './routes/newsletter/index.js';
+import { testHooksRoutes } from './routes/test/index.js';
 
 const CSP_DIRECTIVES = {
   defaultSrc: ["'self'"],
@@ -131,8 +132,10 @@ export async function buildApp() {
       preload: true, // eligible for browser preload lists
     },
   });
-  // Skip rate limiting in test — prevents flaky tests caused by per-IP counters
-  if (config.nodeEnv !== 'test') {
+  // Skip rate limiting in test — prevents flaky tests caused by per-IP counters — and with the
+  // e2e test hooks on, where one browser run makes every request from one IP. 🔐 config.ts refuses
+  // ENABLE_TEST_HOOKS in production, so production always rate-limits.
+  if (config.nodeEnv !== 'test' && !config.testHooks) {
     await app.register(rateLimit, {
       max: 100,
       timeWindow: '1 minute',
@@ -207,6 +210,12 @@ export async function buildApp() {
   await app.register(marketRoutes, { prefix: '/api/market' });
   await app.register(paperRoutes, { prefix: '/api/paper' });
   await app.register(newsletterRoutes, { prefix: '/api/newsletter' });
+  // 🔐 Test-only (F2): not registered at all unless ENABLE_TEST_HOOKS=1, which config.ts refuses in
+  //    production — the routes then don't exist (404), rather than exist and refuse
+  if (config.testHooks) {
+    app.log.warn('Test hooks enabled: /api/test/* is registered (never in production)');
+    await app.register(testHooksRoutes, { prefix: '/api/test' });
+  }
 
   // ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
   app.get(

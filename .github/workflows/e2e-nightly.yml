@@ -1,0 +1,102 @@
+name: E2E nightly
+
+# The full Playwright set (T3, TEST_IMPLEMENTATION_PLAN M5) on develop: every project — Chromium
+# (@smoke, @full, @a11y), WebKit desktop (@smoke, @full), and phones (@mobile on iPhone 14 and
+# Pixel 7) — against the fake Bybit feed with the test hooks. PRs run the Chromium @smoke subset
+# (ci.yml). A failure opens or comments one issue labelled `e2e`.
+
+on:
+  schedule:
+    - cron: '30 2 * * *' # 02:30 UTC daily
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: e2e-nightly
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: E2E nightly (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+        with:
+          ref: develop
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4.1.0
+        with:
+          version: 10.33.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4.4.0
+        with:
+          node-version-file: '.node-version'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres # dummy — prisma generate only
+        run: pnpm install --frozen-lockfile
+
+      - name: Install browsers
+        run: pnpm --filter @crypto-dashboard/e2e exec playwright install --with-deps chromium webkit
+
+      - name: Full set
+        id: e2e
+        env:
+          CI: 'true'
+          E2E_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/crypto_dashboard_e2e_test
+        run: pnpm --filter @crypto-dashboard/e2e test
+
+      - name: Upload the report and traces
+        if: failure()
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: e2e-nightly-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            apps/e2e/playwright-report
+            apps/e2e/test-results
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Open or update the e2e issue
+        if: failure() && steps.e2e.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          gh label create e2e --color B60205 --description "Nightly Playwright failure" 2>/dev/null || true
+          body="The nightly Playwright run failed on $(date -u +%Y-%m-%d): $RUN_URL
+
+          Download the \`e2e-nightly-${{ github.run_id }}-${{ github.run_attempt }}\` artifact from that run for the
+          HTML report and the traces of the failing tests."
+          existing=$(gh issue list --label e2e --state open --json number -q '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "E2E nightly failing" --label e2e --body "$body"
+          fi

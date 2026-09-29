@@ -76,6 +76,20 @@ exists, and the controls that sit outside any single route handler.
   a lockfile drift between what's committed and what's installed is treated as a build failure,
   not silently resolved.
 
+## Public repository — workflow triggers
+
+The repository is public since 2026-09-29, so anyone can open a PR from a fork.
+
+- A workflow that holds secrets never runs a fork's code. Don't use `pull_request_target` with a checkout of the PR head.
+- A `workflow_run` consumer (`deploy.yml`) checks all of these:
+  - `workflow_run.event == 'push'`;
+  - `head_branch`;
+  - `head_repository.full_name == github.repository`.
+
+  Its `branches:` filter matches the _head_ branch name, which a fork controls.
+
+- `pull_request` runs from forks get no secrets. A job that needs them (claude-review) fails there, and that's expected.
+
 ## Secrets management
 
 - No secret is ever hardcoded — every credential comes from an environment variable validated in

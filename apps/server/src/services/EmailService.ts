@@ -9,6 +9,7 @@
 import { Resend } from 'resend';
 import { config } from '../config.js';
 import { logger } from '../logger.js';
+import { recordOutboxEmail } from './emailOutbox.js';
 
 // Lazy-initialise — avoids crashing on startup if key is missing in dev
 let resend: Resend | null = null;
@@ -73,6 +74,7 @@ const NEWSLETTER_FOOTER = (unsubscribeUrl: string) => `
 
 export const EmailService = {
   async sendPasswordResetEmail(to: string, resetUrl: string): Promise<void> {
+    recordOutboxEmail({ kind: 'password-reset', to, url: resetUrl });
     const client = getResend();
 
     // 🔧 Dev fallback: log to stdout so you can test the flow without a real key.
@@ -113,6 +115,7 @@ export const EmailService = {
   },
 
   async sendVerificationEmail(to: string, verificationUrl: string): Promise<void> {
+    recordOutboxEmail({ kind: 'verify-email', to, url: verificationUrl });
     const client = getResend();
 
     if (!client) {
@@ -145,6 +148,7 @@ export const EmailService = {
   },
 
   async sendEmailChangeVerification(to: string, verificationUrl: string): Promise<void> {
+    recordOutboxEmail({ kind: 'verify-email-change', to, url: verificationUrl });
     const client = getResend();
 
     if (!client) {
@@ -182,6 +186,7 @@ export const EmailService = {
     oldEmail: string,
     newEmail: string
   ): Promise<void> {
+    recordOutboxEmail({ kind: 'email-changed-alert', to });
     const client = getResend();
 
     if (!client) {
@@ -213,6 +218,7 @@ export const EmailService = {
     username: string,
     deletionDate: Date
   ): Promise<void> {
+    recordOutboxEmail({ kind: 'deletion-requested', to });
     const client = getResend();
     const dateStr = deletionDate.toLocaleDateString('en-GB', {
       day: 'numeric',
@@ -251,6 +257,7 @@ export const EmailService = {
   },
 
   async sendDeletionCancelledEmail(to: string, username: string): Promise<void> {
+    recordOutboxEmail({ kind: 'deletion-cancelled', to });
     const client = getResend();
 
     if (!client) {
@@ -275,6 +282,7 @@ export const EmailService = {
   },
 
   async sendDeletionWarningEmail(to: string, username: string, deletionDate: Date): Promise<void> {
+    recordOutboxEmail({ kind: 'deletion-warning', to });
     const client = getResend();
     const dateStr = deletionDate.toLocaleDateString('en-GB', {
       day: 'numeric',
@@ -305,6 +313,7 @@ export const EmailService = {
   },
 
   async sendDeletionCompletedEmail(to: string, username: string): Promise<void> {
+    recordOutboxEmail({ kind: 'deletion-completed', to });
     const client = getResend();
 
     if (!client) {
@@ -336,6 +345,7 @@ export const EmailService = {
     verifyUrl: string,
     unsubscribeUrl: string
   ): Promise<void> {
+    recordOutboxEmail({ kind: 'newsletter-confirmation', to, url: verifyUrl });
     const client = getResend();
 
     if (!client) {

@@ -1,3 +1,5 @@
+import { signOutOnServer } from '@/lib/session';
+import { guide } from '@/lib/guideAnchors';
 import { useState } from 'react';
 import { Mail, Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -28,15 +30,10 @@ export function UnverifiedPage() {
   };
 
   const handleSignOut = async () => {
-    try {
-      await authApi.logout();
-    } catch {
-      // 🔐 The local session must clear even if the server call fails (offline, 5xx) —
-      // and a failure must not escape the click handler as an uncaught rejection.
-    } finally {
-      clearAuth();
-      void navigate('/login');
-    }
+    // 🔐 Never throws; an unreachable server is remembered and finished on the next load
+    await signOutOnServer();
+    clearAuth();
+    void navigate('/login');
   };
 
   return (
@@ -91,7 +88,11 @@ export function UnverifiedPage() {
               }}
             >
               <CheckCircle2 className="w-5 h-5 shrink-0" style={{ color: color.green }} />
-              <p className="text-sm" style={{ color: color.green }}>
+              <p
+                className="text-sm"
+                style={{ color: color.green }}
+                {...guide('auth.unverified.message')}
+              >
                 {message}
               </p>
             </motion.div>
@@ -99,6 +100,7 @@ export function UnverifiedPage() {
             <button
               onClick={handleResend}
               disabled={status === 'loading'}
+              {...guide('auth.unverified.resend')}
               className="w-full h-11 flex items-center justify-center gap-2 rounded-lg text-sm font-bold text-white transition-all shadow-lg"
               style={{
                 background: gradient.brand,
@@ -139,6 +141,7 @@ export function UnverifiedPage() {
             <div className="flex items-center justify-center gap-2 text-sm">
               <button
                 onClick={handleSignOut}
+                {...guide('auth.unverified.sign-out')}
                 className="flex items-center gap-2 transition-colors"
                 style={{ color: color.purple }}
               >

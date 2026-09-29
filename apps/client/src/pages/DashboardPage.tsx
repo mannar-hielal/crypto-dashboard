@@ -1,3 +1,4 @@
+import { guide } from '@/lib/guideAnchors';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
@@ -383,6 +384,7 @@ export function DashboardInner() {
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             className="flex items-center justify-center gap-3 bg-amber-500/10 border-b border-amber-500/20 py-2 px-4 shadow-lg"
+            {...guide('notice.deletion-pending')}
           >
             <AlertTriangle className="w-4 h-4 text-amber-500" />
             <p className="text-xs font-medium text-amber-200/90">
@@ -396,6 +398,7 @@ export function DashboardInner() {
             </p>
             <button
               onClick={handleCancelDeletion}
+              {...guide('notice.deletion-pending.cancel')}
               className="ml-2 px-3 py-1 rounded bg-amber-500 text-[11px] font-bold text-black hover:bg-amber-400 transition-colors"
             >
               Cancel deletion

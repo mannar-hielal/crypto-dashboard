@@ -16,6 +16,7 @@ export const GUIDE_ANCHORS = [
   'auth.register.username',
   'auth.register.email',
   'auth.register.password',
+  'auth.register.terms',
   'auth.register.submit',
   'auth.register.field-error',
   'auth.login.email',
@@ -30,6 +31,7 @@ export const GUIDE_ANCHORS = [
   'auth.reset.submit',
   'auth.verify.status',
   'auth.unverified.resend',
+  'auth.unverified.message',
   'auth.unverified.sign-out',
   // nav
   'nav.user-menu',
@@ -40,13 +42,17 @@ export const GUIDE_ANCHORS = [
   // settings
   'settings.username.input',
   'settings.username.save',
+  'settings.username.error',
   'settings.email.input',
   'settings.email.save',
   'settings.password.current',
   'settings.password.new',
   'settings.password.save',
+  'settings.password.toggle',
+  'settings.password.success',
   'settings.export',
   'settings.delete',
+  'settings.delete.password',
   'settings.delete.confirm',
   'settings.delete.cancel',
   'settings.close',
@@ -203,6 +209,8 @@ export const GUIDE_ANCHORS = [
   'notice.liquidation-intro',
   'notice.liquidation',
   'notice.dismiss',
+  'notice.deletion-pending',
+  'notice.deletion-pending.cancel',
 ] as const;
 
 export type GuideAnchor = (typeof GUIDE_ANCHORS)[number];

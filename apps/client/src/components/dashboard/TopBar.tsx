@@ -1,9 +1,10 @@
+import { signOutOnServer } from '@/lib/session';
+import { guide } from '@/lib/guideAnchors';
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { LogOut, ChevronDown, Settings, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
-import { authApi } from '@crypto-dashboard/sdk';
 import { usePaperStore } from '@/store/paperStore';
 import { bg, color, fontSize, gradient, radius } from '@/lib/tokens';
 import { SettingsModal } from './SettingsModal';
@@ -89,6 +90,7 @@ export function TopBar({ marketing = false }: TopBarProps) {
               whileTap={{ scale: 0.97 }}
               className="flex items-center gap-1.5 rounded-md px-2 py-1 transition-colors"
               style={{ background: menuOpen ? bg.surface : 'transparent' }}
+              {...guide('nav.user-menu')}
             >
               <div
                 className="flex h-6 w-6 items-center justify-center rounded-full font-black text-white"
@@ -128,6 +130,7 @@ export function TopBar({ marketing = false }: TopBarProps) {
                         setMenuOpen(false);
                         setSettingsOpen(true);
                       }}
+                      {...guide('nav.settings')}
                       whileHover={{ background: bg.surface }}
                       className="flex w-full items-center gap-2 px-3 py-2.5 text-xs transition-colors hover:text-white"
                       style={{
@@ -160,11 +163,12 @@ export function TopBar({ marketing = false }: TopBarProps) {
                         setMenuOpen(false);
                         void (async () => {
                           try {
-                            await authApi.logout();
-                          } catch {
+                            // 🔐 Never throws; an unreachable server is remembered and
+                            // finished on the next load (row 19.15)
+                            await signOutOnServer();
+                          } finally {
                             // 🔐 Local session must clear even if the server call
                             // fails — otherwise the user appears signed-in forever.
-                          } finally {
                             useAuthStore.getState().clearAuth();
                             // 🔐 Never leave the account on screen for the next user
                             usePaperStore.getState().clear();
@@ -174,6 +178,7 @@ export function TopBar({ marketing = false }: TopBarProps) {
                       whileHover={{ background: bg.surface }}
                       className="flex w-full items-center gap-2 px-3 py-2.5 text-xs transition-colors hover:text-white"
                       style={{ color: color.muted }}
+                      {...guide('nav.sign-out')}
                     >
                       <LogOut className="h-3.5 w-3.5" />
                       Sign out

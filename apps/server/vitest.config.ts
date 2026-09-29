@@ -20,14 +20,21 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html'],
       include: ['src/**/*.ts'],
-      exclude: ['src/index.ts', 'src/**/__tests__/**'],
+      // Entry points aren't unit-tested: the server's (index.ts) and the command-line tools' (the
+      // fake feed's logic in tools/fakeBybit/{feed,server}.ts is, and stays counted)
+      exclude: [
+        'src/index.ts',
+        'src/**/__tests__/**',
+        'src/tools/*.ts',
+        'src/tools/fakeBybit/main.ts',
+      ],
       // Floors just under today's numbers (2026-09-28), raised as tests land — never lowered to
       // make a change pass. The engine is held higher: it is where the money maths lives.
       thresholds: {
-        lines: 82,
-        statements: 80,
-        branches: 75,
-        functions: 76,
+        lines: 85,
+        statements: 83,
+        branches: 76,
+        functions: 80,
         'src/trading/engine/**/*.ts': { lines: 97, statements: 94, branches: 85, functions: 96 },
       },
     },
