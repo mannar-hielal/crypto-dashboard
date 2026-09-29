@@ -1,3 +1,4 @@
+import { startedNewSession } from '@/lib/session';
 import { guide } from '@/lib/guideAnchors';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
@@ -69,6 +70,7 @@ export function RegisterPage() {
     setServerError(null);
     try {
       const { accessToken, user } = await authApi.register(data);
+      startedNewSession();
       setAuth(accessToken, user);
       void navigate('/dashboard');
     } catch (err) {

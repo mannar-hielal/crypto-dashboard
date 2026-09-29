@@ -4,7 +4,13 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { authApi } from '@crypto-dashboard/sdk';
-import { msUntilExpiry, refreshAccessToken, restoreSession, signOutOnServer } from '../session';
+import {
+  msUntilExpiry,
+  refreshAccessToken,
+  restoreSession,
+  signOutOnServer,
+  startedNewSession,
+} from '../session';
 import { useAuthStore } from '@/store/authStore';
 
 vi.mock('@crypto-dashboard/sdk', async (importOriginal) => {
@@ -146,5 +152,17 @@ describe('signOutOnServer() — a sign-out made offline (row 19.15)', () => {
     refresh.mockResolvedValueOnce(null);
     await restoreSession();
     expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('should not sign out a session started after a failed sign-out (review #186)', async () => {
+    logout.mockRejectedValueOnce(new Error('Bad Gateway'));
+    await signOutOnServer();
+    // Signed in again without a reload (the login page calls this on success)
+    startedNewSession();
+    refresh.mockResolvedValueOnce({ accessToken: 'fresh' } as never);
+    me.mockResolvedValueOnce({ user: { id: 'u2' } } as never);
+    await restoreSession();
+    expect(logout).toHaveBeenCalledTimes(1);
+    expect(useAuthStore.getState().accessToken).toBe('fresh');
   });
 });

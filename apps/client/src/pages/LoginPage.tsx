@@ -1,3 +1,4 @@
+import { startedNewSession } from '@/lib/session';
 import { guide } from '@/lib/guideAnchors';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -61,6 +62,7 @@ export function LoginPage() {
         email: data.email,
         password: data.password,
       });
+      startedNewSession();
       setAuth(accessToken, user);
       // Back to the market link that sent them here — 🔐 only an allow-listed market URL
       void navigate(returnTo ?? '/dashboard', { replace: true });

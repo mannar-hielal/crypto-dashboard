@@ -75,7 +75,7 @@ function hasPendingSignOut(): boolean {
  * End the session on the server (revokes the refresh cookie). 🔐 If the server can't be reached
  * (offline, 5xx), remember it: restoreSession finishes the sign-out before it would otherwise
  * trade the still-valid cookie for a new session (row 19.15). The caller clears the local
- * session either way. The flag can only ever cause a sign-out, so a tampered value is harmless.
+ * session either way. A new sign-in clears the flag (startedNewSession).
  */
 export async function signOutOnServer(): Promise<void> {
   try {
@@ -84,6 +84,15 @@ export async function signOutOnServer(): Promise<void> {
   } catch {
     setPendingSignOut(true);
   }
+}
+
+/**
+ * A sign-in or sign-up succeeded: the browser now holds the new session's refresh cookie (the old
+ * one is replaced), so an earlier sign-out still pending must not be finished — it would revoke
+ * this new session on the next load (review #186).
+ */
+export function startedNewSession(): void {
+  setPendingSignOut(false);
 }
 
 /**
