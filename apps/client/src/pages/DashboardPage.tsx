@@ -28,6 +28,7 @@ import { TickerBar } from '@/components/dashboard/TickerBar';
 import { SymbolBar } from '@/components/dashboard/SymbolBar';
 import { TradingPanel } from '@/components/dashboard/TradingPanel';
 import { MobileTradeBar } from '@/components/dashboard/MobileTradeBar';
+import { useOrderPrefillStore } from '@/store/orderPrefillStore';
 import type { OrderTab } from '@/components/dashboard/TradingPanel';
 import { PositionEditPanel } from '@/components/dashboard/PositionEditPanel';
 import { PendingOrderEditPanel } from '@/components/dashboard/PendingOrderEditPanel';
@@ -231,6 +232,21 @@ export function DashboardInner() {
   /** When set, an edit panel replaces the TradingPanel in the right column */
   const [editTarget, setEditTarget] = useState<EditTarget>(null);
   const isTradingPanelVisible = !editTarget && tradingPanelOpen;
+
+  // Below lg the form isn't docked: a prefill (Assets → Sell) must also open it, on its side, or the
+  // tap looks dead (review #200). Adjusted while rendering when a new request arrives (no effect)
+  // The form may take (and clear) the request first, so follow the request counter, not the request
+  const prefillSeq = useOrderPrefillStore((s) => s.seq);
+  const prefillSide = useOrderPrefillStore((s) => s.lastSide);
+  const [openedForSeq, setOpenedForSeq] = useState(prefillSeq);
+  if (prefillSeq !== openedForSeq) {
+    setOpenedForSeq(prefillSeq);
+    if (isMobile) {
+      setEditTarget(null);
+      setTradingSide(prefillSide);
+      setTradingPanelOpen(true);
+    }
+  }
 
   // ── Chart cursor variant + drag-to-grab ─────────────────────────────────
 

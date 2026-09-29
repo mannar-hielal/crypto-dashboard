@@ -79,3 +79,24 @@ test('[20.2] phone: editing an order covers the screen and hides the Buy / Sell 
   await at(page, 'order-edit.confirm').click();
   await expect(at(page, 'trade.mobile.buy')).toBeVisible({ timeout: 5_000 });
 });
+
+test('[20.4] phone: Assets → Sell opens the order form on Sell with the coins prefilled @mobile', async ({
+  page,
+  seededUser,
+  feed,
+}) => {
+  test.skip((page.viewportSize()?.width ?? 0) >= 640, 'phones only');
+  // Spot DOGEUSDT: tokenRefresh.spec reads it in the desktop project, before the phones
+  await feed.quote('spot', 'DOGEUSDT', { bid: 0.19999, ask: 0.2, last: 0.2 });
+  await signInAs(page, seededUser.email, seededUser.password);
+  await page.goto('/dashboard/spot/DOGE/USDT');
+  await at(page, 'trade.mobile.buy').click();
+  await placeOrder(page, { side: 'buy', type: 'market', amount: '100', unit: 'coin' });
+
+  await at(page, 'account.tab', 'assets').click();
+  await at(page, 'assets.row.sell', 'DOGE').click();
+  // The tap opens the form (it isn't docked on a phone), on Sell, with the coins held
+  await expect(at(page, 'trade.submit')).toBeInViewport();
+  await expect(at(page, 'trade.submit')).toContainText('Sell');
+  await expect(at(page, 'trade.amount')).toHaveValue(/^99\.9/);
+});
