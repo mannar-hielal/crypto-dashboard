@@ -75,7 +75,8 @@ checked out.
   identical gate, and the deploy waits for the whole workflow, so a failing integration step blocks
   a release.
 - `e2e-nightly.yml` ("E2E full set") runs every Playwright project weekly (Mondays 02:30 UTC) and on
-  every `develop → main` release PR when it is opened: that is the pre-release run. `prod-smoke.yml`
+  every push to the `develop → main` release PR: that is the pre-release run. A release PR merges
+  only with it green (the merge waits for every check on the PR's head, not just CI). `prod-smoke.yml`
   runs every second day. `deploy.yml` also runs the prod smoke after every deploy.
 - `deploy.yml` triggers only after CI **succeeds on `main`** (`workflow_run` on the CI workflow,
   filtered to `branches: [main]`) and deploys the exact commit SHA CI validated

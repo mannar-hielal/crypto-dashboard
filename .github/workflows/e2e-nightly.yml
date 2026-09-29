@@ -12,7 +12,8 @@ on:
     - cron: '30 2 * * 1' # Mondays, 02:30 UTC
   pull_request:
     branches: [main] # the release PR (develop → main)
-    types: [opened, reopened, ready_for_review]
+    # Every push to the release PR is re-tested; the concurrency group cancels a superseded run
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 permissions:
@@ -26,6 +27,8 @@ concurrency:
 jobs:
   e2e:
     name: E2E full set (Playwright)
+    # On a PR: only the develop → main release, not any other PR to main
+    if: ${{ github.event_name != 'pull_request' || github.head_ref == 'develop' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     services:
