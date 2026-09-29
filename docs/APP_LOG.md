@@ -2911,5 +2911,70 @@ had ever run against a database outside production.
   `test:coverage` with thresholds just under today's numbers (server 82% lines, engine 97% lines / 85% branches,
   client 46% lines) — raised as tests land, never lowered.
 - `.claude/rules/testing.md` carves out `*.int.test.ts` from "tests never depend on a real database".
-- **Next slices:** P1b migration replay from a pre-BP-2 fixture (14.7.1, 15.2.3, 17.5.1); P1c the 18.x regression
-  suite and concurrency races on the real database; P1d the SDK ↔ server contract test.
+- **Next slices:** P1b migration replay from a pre-BP-2 fixture (14.7.1, 15.2.3, 17.5.1) — done, see below; P1c the
+  18.x regression suite and concurrency races on the real database; P1d the SDK ↔ server contract test.
+
+### test: M1 — account panel tests and guide anchors (#169, 2026-09-28) ✅
+
+**Context:** test plan milestone M1 ("no-infra tests"), first half.
+
+- **Section 8** (`OrderAccountManagementPanel.test`, 12 tests): the Account Settings modal, including the 3 s
+  two-step reset on fake timers.
+- **Section 7:** T1 `actions.test` "Section 7 — Order History records" (5 tests) and T2 "Section 7 — Order History tab"
+  (9 tests).
+- **14.6.7:** `SpotExitsModal.test` (6 tests). **4.23:** journal notes with `<img onerror>` / `<script>` render as
+  literal text.
+- `data-guide` anchors (registry names only) on the panel, Assets rows and the Spot exits modal; no visible change.
+- Client coverage floors raised to 48 / 47 / 51 / 45 (lines / statements / branches / functions).
+- Found a silent failed reset (S3), fixed in #172.
+
+### test: M1 — layouts, multi-symbol PnL, spread, stale market info, size rules (#170, 2026-09-28) ✅
+
+- Tests for multi-chart layouts (10.1–10.5, 10.4.8), multi-symbol PnL (Section 11), the Sell / Buy spread (9.5), Bybit
+  size rules in the order form (14.4) and the stale-on-error market-info cache (12.3.5).
+- The `data-guide` anchors they use: attributes only, no behaviour or visible change.
+
+### fix: order-form prices at the instrument's tick (NEW-9-2); TP / SL exit label pinned (SC-1-6) (#171, 2026-09-28) ✅
+
+- `TradingPanel.tsx`: Sell, Buy, the spread badge and tooltip, and the submit label's price use the tick's decimals
+  (`fmtTickPrice`). DOGEUSDT read `0.12`; it now reads `0.12345` / `0.12346`, spread `0.00001`. BTC stays one decimal.
+- Before the instrument rules load, the SDK's tick snapshot for the pane's market is used (`priceTickSize(category,
+symbol)` in `generated/CDSDK/spec/bybit.ts`, Spot and USDT Perpetual). With no tick at all: 5 decimals under 1, else 2.
+- `bybitSpec.test` holds the SDK tick tables equal to the server's instrument snapshot.
+- Visual Q&A gate passed 2026-09-28. Verified live after release #174 (BTC perp `83,577.5 / 83,577.6`, DOGE Spot
+  `0.09402 / 0.09403`).
+
+### fix: a failed account reset keeps the modal open and says so (NEW-8-1) (#172, 2026-09-28) ✅
+
+- "Confirm reset?" now awaits the server: **Resetting…** (disabled) while in flight, the modal closes on success.
+- On failure it stays open with **⚠ Reset failed — your account is unchanged. Try again.** (`role="alert"`, anchor
+  `acct-settings.error`), and "Reset account" is offered again.
+- Tests [8.8], [8.12] (fails on the old code), [8.13]. Verified live after release #174 with the reset request blocked.
+
+### test: P1b — migration replay from a pre-BP-1 database (2026-09-29) ✅
+
+**Context:** test plan roadmap P1, second slice. The data migrations (BP-1 … BP-5 backfills) had only been checked by
+hand on a scratch or dev database.
+
+- **`migrationReplay.int.test.ts`** (`test:int`):
+  - creates a second throwaway database next to the integration one (`crypto_dashboard_replay_int`; 🔐 both names
+    must end in `_int` / `_test`) and drops it afterwards;
+  - applies the migrations before BP-1 as SQL and records them applied (`prisma migrate resolve`);
+  - loads `src/__tests__/int/fixtures/pre-bp1.sql`: three same-side BTC longs, an ETH short, a pending limit and a
+    pending stop, a filled and a cancelled order, a closed trade, and an account that never traded;
+  - runs `prisma migrate deploy` for the rest.
+- **What it asserts:**
+  - no drift after the replay;
+  - D7: every row is `linear`;
+  - BP-1: pending leverage recovered from qty × price / margin;
+  - BP-2: pending reserve = margin × 1.0007, filled rows taker at 0.07% USDT, entry fee 0.07% of margin;
+  - BP-3: the three longs merged into the oldest (qty 0.4, entry 50,750, margin 2,550, leverage 8, newest TP and SL,
+    one journal line, `SymbolSetting` pinned at the position's leverage);
+  - BP-5: existing accounts `ISOLATED_MARGIN` with the notice, and a new account after the migration is cross;
+  - the migrated account then loads, cancels a pending order (full reserve back) and closes the merged position
+    through `AccountRepository`.
+- **Why its own database, not a Postgres schema:** the BP-2 migration's foreign-key guard reads `pg_constraint`
+  across the whole database. In a second schema it saw `public`'s constraint and skipped its own, and the replay's
+  drift check caught that. Production has one schema, so this doesn't affect it; the applied migration can't be
+  edited (its checksum is recorded).
+- Rows 14.7.1, 15.2.3 and 17.5.1 are now T2i, and the A10 item is ticked.

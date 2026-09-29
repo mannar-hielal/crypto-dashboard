@@ -27,7 +27,8 @@ correct without depending on real infrastructure, and the suite stays fast and d
   `pnpm --filter @crypto-dashboard/server test:int` (`vitest.int.config.ts`, CI job
   "Integration (Postgres)"). `pnpm test` and the pre-commit hook exclude them, so they still need
   no database. They use a throwaway database whose name ends in `_int` / `_test`, migrated with
-  `prisma migrate deploy` (never a reset), and each file clears its own rows.
+  `prisma migrate deploy` (never a reset), and each file clears its own rows. The migration replay
+  creates and drops a second throwaway database beside it (`…_replay_int`), never any other.
 - New tests import from `src/`, never from `dist/` or `generated/`.
 - `pnpm test` must pass for the whole suite (server + client), with no skipped tests, before a
   change is considered mergeable.

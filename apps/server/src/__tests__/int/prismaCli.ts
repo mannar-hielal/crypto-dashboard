@@ -15,12 +15,16 @@ export interface CliResult {
   output: string;
 }
 
-/** `prisma <args>` with a fixed argument list (no shell), the database URL from the environment. */
-export function prisma(args: string[], databaseUrl: string): CliResult {
+/**
+ * `prisma <args>` with a fixed argument list (no shell), the database URL from the environment.
+ * `input` is written to stdin (`db execute --stdin`).
+ */
+export function prisma(args: string[], databaseUrl: string, input?: string): CliResult {
   const res = spawnSync('pnpm', ['exec', 'prisma', ...args], {
     cwd: SERVER_DIR,
     env: { ...process.env, DATABASE_URL: databaseUrl },
     encoding: 'utf8',
+    input,
   });
   // res.error: the CLI never started (pnpm not on PATH, wrong cwd) — say so instead of an empty output
   const spawnError = res.error ? `${res.error.message}\n` : '';
