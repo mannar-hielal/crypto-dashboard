@@ -45,6 +45,14 @@ Two long-lived branches: `main` (production — every merge to it deploys, see C
    `develop` instead, so that in-flight work isn't invisible to the new branch. Check
    `git log main..develop` (or the GitHub compare view) first if it's unclear whether the two are
    in sync.
+4. **Batch the work into few, larger PRs** (owner decision, 2026-09-29 — GitHub Actions minutes):
+   - One PR per chunk of work, e.g. the end of a working day or a finished milestone, not one per
+     small change.
+   - Inside it, commits stay one testable unit each (see above), so the history stays readable.
+   - Release `develop → main` when a meaningful set has landed, not after every PR. Every CI run is
+     billed per run, and each release costs another CI run plus the deploy.
+   - A security fix is the exception: it gets its own PR and release at once, still through a
+     `develop → main` release PR (see [Emergencies](#emergencies--broken-production) below).
 
 Branch names follow `<type>/<short-kebab-description>`, mirroring the commit prefixes —
 `feat/drawing-tools`, `feat/landing-page`, `feat/seo-work`, `feat/prepare-for-launch`,
@@ -55,14 +63,80 @@ checked out.
 
 - `ci.yml` runs on every push to `main`/`develop` and on every PR targeting `main`/`develop`:
   `pnpm audit` → type-check (server) → `format:check` → `lint` → `test:coverage` (the suites plus
-  the coverage floors) + `test:hooks` → build. This main job mirrors the local pre-commit hook (see
+  the coverage floors) + `test:hooks` → `test:int` on Postgres → build → the Playwright smoke. It is
+  **one job** ("CI (checks, integration, e2e smoke)"), so it pays for one checkout, one install and one
+  Postgres per run. Every check runs even after another one failed (`!cancelled()`; only a
+  failed install stops the rest), so a run reports all its failures at once. The checks mirror the local pre-commit hook (see
   [`testing.md`](./testing.md#gates--what-passing-means-before-a-commitpr)), so a change that passes
-  locally should pass it too. A separate **Integration (Postgres)** job runs `test:int` (migrations
-  from empty, schema drift, repository round-trip); it needs a database, so it runs in CI only
-  (locally: `test:int` against a throwaway Postgres). All jobs must be green before merge — every
+  locally should pass them too. `test:int` (migrations from empty, schema drift, repository
+  round-trip) needs a database, so it runs in CI only (locally: `test:int` against a throwaway
+  Postgres). **Docs-only changes** (`docs/**`, `**/*.md`) don't run CI, so a docs-only release
+  doesn't deploy. Two exceptions always run: `docs/TRADING_TEST_PLAN.md`, which a test reads (the
+  guide scenarios' case IDs), and `.claude/hooks/**`, which is code. A docs file that a test starts
+  reading must be added to the `paths` exceptions in `ci.yml`. The job must be green before merge — every
   feature/fix PR (targeting `develop`) and the later `develop → main` release merge go through the
-  identical gate, and the deploy waits for the whole workflow, so a failing integration job blocks
+  identical gate, and the deploy waits for the whole workflow, so a failing integration step blocks
   a release.
+- `e2e-nightly.yml` ("E2E full set") runs every Playwright project nightly (02:30 UTC, on `develop`)
+  and on every push to the `develop → main` release PR: that is the pre-release run. A release PR merges
+  only with it green, and `deploy.yml` enforces it. Its first step finds the merged release
+  PR for the commit, and refuses to deploy unless "E2E full set (Playwright)" is green on that PR's
+  head. It fails closed: to recover, re-run the check on the PR, then re-run the deploy. There is no
+  branch protection, so the merge itself waits on the merge process instead: every check on the
+  PR's head must be green, not just CI. `prod-smoke.yml`
+  runs every 6 hours. `deploy.yml` also runs the prod smoke after every deploy.
+
+## Emergencies — broken production
+
+`deploy.yml` deploys only a CI-green `main` commit whose `develop → main` release PR had a green
+"E2E full set". There is no hotfix-to-`main` path and no switch that skips the gate: a way around
+it would also be a way around it for a mistake. The break-glass options work without it:
+
+1. **Production is broken now → roll back first.** Neither needs a CI run or Actions minutes.
+   - API: redeploy the previous image. `fly releases --image -a <app>` lists them; then run
+     `fly deploy --image <previous image ref> -a <app>`.
+   - Web: Cloudflare Pages → Deployments → the previous one → "Rollback to this deployment".
+2. **The deploy itself failed** (a flaky prod smoke, a Fly hiccup) → re-run that Deploy run
+   (`gh run rerun <run id> --failed`). The gate checks the same release PR again. If the release PR's
+   full set was red or flaky, re-run that check on the PR first.
+3. **The fix itself:**
+   - Open a fix PR to `develop` and merge it once it's green.
+   - Then open a release PR `develop → main` at once.
+   - Unreleased work already on `develop` ships with it, so revert anything on `develop` that
+     mustn't go out (a revert PR) before opening the release.
+   - The release PR's full set takes about 15 minutes, so the fix reaches production in under an
+     hour, with the rollback holding production meanwhile.
+
+## Actions budget — 2,000 minutes a month
+
+The plan the owner agreed on 2026-09-29, for a private repository on the Free plan (2,000 included
+minutes). A public repository is not billed, but the plan holds either way. Once the minutes run out,
+nothing runs until the next month: no CI, no merge, no deploy, not even a security fix. So about 220
+minutes stay in reserve.
+
+| Workflow                                             | Schedule                                | Min / month |
+| ---------------------------------------------------- | --------------------------------------- | ----------- |
+| Prod smoke (`prod-smoke.yml`)                        | every 6 h, and after every deploy       | ~240        |
+| E2E full set (`e2e-nightly.yml`)                     | nightly, and every push to a release PR | ~455        |
+| Feed parity + spec drift (`feed-parity.yml`)         | nightly (drift on Sundays)              | ~120        |
+| Testnet parity (`parity.yml`)                        | daily                                   | ~90         |
+| Dependabot                                           | monthly                                 | ~20         |
+| CI (`ci.yml`, one job; docs-only changes skip it)    | ~25 PRs + 8 releases                    | ~455        |
+| Claude review (`claude-code-review.yml`)             | every PR push                           | ~350        |
+| Deploy                                               | 8 releases                              | ~40         |
+| **Planned**                                          |                                         | **≈1,780**  |
+| **Reserve** (re-runs, a busy week, an emergency fix) |                                         | **≈220**    |
+
+- **Volume is the lever:** about 25 PRs and 8 releases a month (step 4 of the branching flow above).
+  An extra PR costs about 27 minutes, an extra release about 33.
+- **The brake at 75 %** (GitHub emails at 75 % and 90 % of the included minutes), for the rest of the
+  month:
+  - prod smoke every 12 h;
+  - the nightly e2e set only if `develop` changed since its last green run;
+  - both parity jobs weekly.
+- **At 90 %:** one more PR and one release at most, until the minutes reset.
+- **Uptime between smokes:** an external free monitor (UptimeRobot) on `/api/health` every 5 minutes,
+  outside GitHub.
 - `deploy.yml` triggers only after CI **succeeds on `main`** (`workflow_run` on the CI workflow,
   filtered to `branches: [main]`) and deploys the exact commit SHA CI validated
   (`ref: ${{ github.event.workflow_run.head_sha }}`) — never a newer, unvalidated commit that may

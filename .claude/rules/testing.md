@@ -24,8 +24,8 @@ correct without depending on real infrastructure, and the suite stays fast and d
 - Tests never depend on a real database, a real external API, or a real network call. Prisma and
   any outbound service (e.g. `EmailService`) are always mocked. **One exception:** integration
   tests named `*.int.test.ts` (server, `src/__tests__/int/`) run on a real Postgres through
-  `pnpm --filter @crypto-dashboard/server test:int` (`vitest.int.config.ts`, CI job
-  "Integration (Postgres)"). `pnpm test` and the pre-commit hook exclude them, so they still need
+  `pnpm --filter @crypto-dashboard/server test:int` (`vitest.int.config.ts`, the "Integration
+  tests (Postgres)" step of the single CI job). `pnpm test` and the pre-commit hook exclude them, so they still need
   no database. They use a throwaway database whose name ends in `_int` / `_test`, migrated with
   `prisma migrate deploy` (never a reset), and each file clears its own rows. The migration replay
   creates and drops a second throwaway database beside it (`…_replay_int`), never any other.

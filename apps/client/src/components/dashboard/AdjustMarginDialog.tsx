@@ -12,6 +12,7 @@ import { adjustMarginPreview } from '@/lib/positionMath';
 import { useInstrument } from '@/hooks/useInstruments';
 import { fmtMktPrice } from '@/lib/utils';
 import { color, fontSize, zIndex } from '@/lib/tokens';
+import { guide } from '@/lib/guideAnchors';
 import styles from './TradeDialog.module.css';
 
 type Mode = 'add' | 'reduce';
@@ -89,6 +90,7 @@ export function AdjustMarginDialog({ position, onClose }: AdjustMarginDialogProp
               style={{ fontSize: fontSize.xs11 }}
               aria-selected={mode === m}
               aria-pressed={mode === m}
+              {...guide('margin.mode', m)}
               onClick={() => {
                 setMode(m);
                 setInput('');
@@ -105,6 +107,7 @@ export function AdjustMarginDialog({ position, onClose }: AdjustMarginDialogProp
             type="text"
             inputMode="decimal"
             aria-label="Margin amount"
+            {...guide('margin.amount')}
             className={styles.amountInput}
             style={{ fontSize: fontSize.xs11, color: color.white }}
             value={input}
@@ -121,6 +124,7 @@ export function AdjustMarginDialog({ position, onClose }: AdjustMarginDialogProp
             type="button"
             className={styles.linkButton}
             style={{ color: color.purple }}
+            {...guide('margin.max')}
             onClick={() => setInput(Math.max(0, Math.floor(max * 100) / 100).toString())}
           >
             Max
@@ -130,6 +134,7 @@ export function AdjustMarginDialog({ position, onClose }: AdjustMarginDialogProp
           className={`${styles.note} ${styles.preview}`}
           style={{ fontSize: fontSize.xs10 }}
           data-testid="adjust-margin-preview"
+          {...guide('margin.preview')}
         >
           <div>
             <dt>Liq. price: </dt>
@@ -157,6 +162,7 @@ export function AdjustMarginDialog({ position, onClose }: AdjustMarginDialogProp
             className={`${styles.action} ${styles.confirm}`}
             style={{ fontSize: fontSize.xs11 }}
             disabled={!valid || saving}
+            {...guide('margin.confirm')}
             onClick={() => void confirm()}
           >
             {saving ? 'Saving…' : 'Confirm'}

@@ -147,7 +147,9 @@ export class FakeFeed {
           m.mark = Number(t.markPrice ?? last);
           m.index = Number(t.indexPrice ?? last);
           m.fundingRate = Number(t.fundingRate ?? 0);
-          m.nextFundingTime = Number(t.nextFundingTime ?? 0);
+          // No funding timestamp until a test announces one (`/__control/funding`): the recorded one
+          // is long past, and the engine would hold it as due — and ignore an earlier one set later
+          m.nextFundingTime = 0;
           m.fundingIntervalHour = Number(t.fundingIntervalHour ?? 8);
         }
         this.markets.set(key(category, symbol), m);

@@ -8,6 +8,7 @@
  * icon on a pending order row in OrderAccountManagementPanel.
  */
 
+import { guide } from '@/lib/guideAnchors';
 import { useId, useState } from 'react';
 import { X, TrendingUp, TrendingDown, ArrowLeftRight, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -298,6 +299,7 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
           <NumericInput
             id={priceInputId}
             ariaLabel="Order price"
+            anchor="order-edit.price"
             suffix="USDT"
             step={0.01}
             min={0}
@@ -326,6 +328,7 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
           {qtyMode === 'units' ? (
             <NumericInput
               suffix={baseAsset}
+              anchor="order-edit.qty"
               step="0.000001"
               min={0}
               value={qtyInput}
@@ -364,7 +367,12 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
           {/* Take Profit */}
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              <Toggle checked={tpEnabled} onChange={setTpEnabled} label="Enable take profit" />
+              <Toggle
+                checked={tpEnabled}
+                onChange={setTpEnabled}
+                label="Enable take profit"
+                anchor="order-edit.tp.enable"
+              />
               <span style={{ fontSize: fontSize.xs, color: tpEnabled ? color.white : color.muted }}>
                 Take profit, price
               </span>
@@ -372,6 +380,7 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
             {tpEnabled && (
               <NumericInput
                 suffix="TP"
+                anchor="order-edit.tp.price"
                 suffixColor={`${color.green}b3`}
                 borderColor={tpWarning ? color.red : `${color.green}60`}
                 suffixPadding="pr-12"
@@ -387,7 +396,12 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
           {/* Stop Loss */}
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              <Toggle checked={slEnabled} onChange={setSlEnabled} label="Enable stop loss" />
+              <Toggle
+                checked={slEnabled}
+                onChange={setSlEnabled}
+                label="Enable stop loss"
+                anchor="order-edit.sl.enable"
+              />
               <span style={{ fontSize: fontSize.xs, color: slEnabled ? color.white : color.muted }}>
                 Stop loss, price
               </span>
@@ -395,6 +409,7 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
             {slEnabled && (
               <NumericInput
                 suffix="SL"
+                anchor="order-edit.sl.price"
                 suffixColor={`${color.red}b3`}
                 borderColor={slWarning ? color.red : `${color.red}60`}
                 suffixPadding="pr-12"
@@ -451,6 +466,7 @@ export function PendingOrderEditPanel({ orderId, onClose }: PendingOrderEditPane
       >
         <motion.button
           onClick={handleConfirm}
+          {...guide('order-edit.confirm')}
           disabled={confirmDisabled}
           whileTap={!confirmDisabled ? { scale: 0.97 } : {}}
           className="w-full rounded py-2 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"

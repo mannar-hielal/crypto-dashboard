@@ -1424,12 +1424,14 @@ export function OrderAccountManagementPanel({
                                           fontSize: fontSize.xs10,
                                           color: pos.takeProfit ? color.green : color.muted,
                                         }}
+                                        {...guide('positions.row.tp')}
                                       >
                                         <span className="inline-flex items-center justify-end gap-1">
                                           {onEditPosition && (
                                             <button
                                               onClick={() => onEditPosition(pos.id)}
                                               title="Edit exits"
+                                              {...guide('positions.row.edit-exits', 'tp')}
                                               className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
                                               style={{ color: color.muted }}
                                             >
@@ -1447,12 +1449,14 @@ export function OrderAccountManagementPanel({
                                           fontSize: fontSize.xs10,
                                           color: pos.stopLoss ? color.red : color.muted,
                                         }}
+                                        {...guide('positions.row.sl')}
                                       >
                                         <span className="inline-flex items-center justify-end gap-1">
                                           {onEditPosition && (
                                             <button
                                               onClick={() => onEditPosition(pos.id)}
                                               title="Edit exits"
+                                              {...guide('positions.row.edit-exits', 'sl')}
                                               className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
                                               style={{ color: color.muted }}
                                             >
@@ -1481,6 +1485,7 @@ export function OrderAccountManagementPanel({
                                         className="px-3 py-1.5 text-right tabular-nums"
                                         style={{ color: color.amber }}
                                         data-testid="position-liq-price"
+                                        {...guide('positions.row.liq')}
                                       >
                                         {(() => {
                                           // Cross: Bybit's estimate from the whole account
@@ -1547,6 +1552,7 @@ export function OrderAccountManagementPanel({
                                       <td
                                         className="px-3 py-1.5 text-right tabular-nums"
                                         data-testid="position-funding"
+                                        {...guide('positions.row.funding')}
                                         style={{
                                           // cumFunding + = paid (money out), − = received
                                           color:
@@ -1609,6 +1615,7 @@ export function OrderAccountManagementPanel({
                                             <button
                                               type="button"
                                               onClick={() => setMarginDialogFor(pos.id)}
+                                              {...guide('positions.row.adjust-margin')}
                                               title="Add / reduce margin"
                                               aria-label={`Adjust margin for ${pos.symbol}`}
                                               className="opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 hover:text-white"
@@ -1889,6 +1896,7 @@ export function OrderAccountManagementPanel({
                                             <button
                                               onClick={() => onEditPendingOrder(rowId)}
                                               title="Edit order"
+                                              {...guide('orders.row.edit')}
                                               className="opacity-0 transition-opacity group-hover:opacity-100 hover:text-white"
                                               style={{ color: color.muted }}
                                             >
@@ -2118,6 +2126,7 @@ export function OrderAccountManagementPanel({
                                             whileHover={{ scale: 1.2 }}
                                             whileTap={{ scale: 0.9 }}
                                             title="Cancel pending order (balance refunded)"
+                                            {...guide('orders.row.cancel')}
                                             className="mx-auto flex h-5 w-5 items-center justify-center rounded transition-colors hover:text-brand-red"
                                             style={{ color: color.muted }}
                                           >

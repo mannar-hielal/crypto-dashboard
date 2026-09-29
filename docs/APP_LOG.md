@@ -3281,3 +3281,114 @@ repositories and the included 2,000 were used up.
 - **Rule:** added to `.claude/rules/security.md` ("Public repository — workflow triggers").
 - **Owner settings to confirm:** Settings → Actions → General → "Require approval for all external contributors" for
   fork PR workflows; secret scanning / push protection (free on public repos).
+
+### chore: the GitHub Actions budget — 2,000 minutes a month, one CI job, docs skip CI (2026-09-29) ✅
+
+**Context:** the 2,000 included minutes were used up in 6 days (Sep 24–29, 80 PRs). Measured split: Claude review 940,
+CI 789, `claude.yml` 157, Deploy 80. Without changes, a normal month with the new scheduled jobs would cost about
+4,100 minutes. The owner first chose to cut minutes (options 3, 4, 5 and 7), then asked for a plan that uses the
+2,000 well. The agreed plan is in `.claude/rules/git.md` "Actions budget".
+
+- **CI:**
+  - It is one job: checks → `test:int` on Postgres → build → Playwright smoke. That is one checkout, install and
+    Postgres per run instead of three.
+  - Later steps run after a failure (`!cancelled()`), so every failure is still reported.
+  - A 30-minute timeout replaces the 360-minute default.
+  - Docs-only changes (`docs/**`, `**/*.md`) skip CI, so a docs-only release doesn't deploy.
+- **E2E full set** (`e2e-nightly.yml`):
+  - nightly on `develop`, plus every push to the `develop → main` release PR (the pre-release run; review #192);
+  - a release merges only with it green, and `deploy.yml`'s first step refuses to deploy unless that check is
+    green on the merged release PR's head (fails closed; review #192).
+- **Prod smoke:** every 6 hours (was hourly), and after every deploy. Between runs, a free external monitor
+  (UptimeRobot, set up by the owner) checks `/api/health` every 5 minutes.
+- **Parity:** feed parity nightly and testnet parity daily (unchanged).
+- **`claude.yml` deleted:** it ran `/code-review` on every push into the job log only, repeating claude-review.
+- **Bigger PRs** (`git.md` Branching step 4):
+  - One PR per chunk of work, e.g. the end of a day or a milestone. Commits stay one unit each.
+  - Release when a meaningful set has landed.
+  - A security fix still goes out alone and at once.
+- **Budget:** about 1,780 minutes planned plus about 220 in reserve, for about 25 PRs and 8 releases a month.
+  - Brake at GitHub's 75 % email: prod smoke every 12 h, nightly e2e only if `develop` changed, parity weekly.
+  - At 90 %: one PR and one release at most.
+
+### security: e2e runs never send real email (2026-09-29) ✅
+
+**Context:** Resend reported the team's daily quota (100 emails) exceeded 200 % on 2026-09-29. Cause: the e2e
+server (`apps/e2e/scripts/startServer.mjs`) loads `apps/server/.env` through dotenv. On a developer machine that file
+holds the real `RESEND_API_KEY`, so every local Playwright run mailed its made-up `e2e-…@test.local` addresses
+(register, verify, resend, reset, deletion). CI was never affected, because it has no key.
+
+- **Server:** `EmailService` sends nothing through Resend while `ENABLE_TEST_HOOKS=1`. Emails go only to the test
+  outbox, whatever key is in the environment (🔐 comment). `services/__tests__/EmailService.test.ts` fails without the
+  guard.
+- **e2e config:** `RESEND_API_KEY: ''` in the api web server's env, so dotenv can't fill it in.
+- **Owner note:**
+  - If production uses the same Resend team, its verification and reset emails were refused until the daily quota
+    reset.
+  - The bounced `@test.local` sends may show in Resend's suppression list and deliverability stats.
+
+### test: M5b — Spot and USDT Perpetual trading in the browser (2026-09-29) ✅
+
+**Context:** test plan milestone M5, second batch (Stages 1–3).
+
+- **Specs:**
+  - `trade/quotes` [9.1][9.5];
+  - `spot/spotRoundTrip` [14.6.2] and `spot/spotTpSl` [14.6.6];
+  - `account/reset` [8.8];
+  - `perp/perpShort` [1.2.x];
+  - `perp/perpTpSl` [1.4.3][1.5.3];
+  - `perp/limitBracket` [2.4.1][2.4.5][2.4.9];
+  - `perp/editOrders` [4.17][4.18];
+  - `perp/offline` [1.7.8].
+
+  The expected numbers were computed by hand from the fee rules first, and the app matched them. `placeOrder()`
+  drives the order form through its anchors.
+
+- **Isolation:**
+  - The fake feed's prices are global per market, so each spec owns its markets (a map in `apps/e2e/helpers.ts`).
+  - The Playwright projects run one after another (`dependencies`), so two browsers never move a market at once.
+  - `startServer.mjs` clears a stale engine lease left by a killed earlier run. Otherwise the new engine waits 30 s
+    and misses the first price moves; this showed up as a stop-loss that "didn't fire".
+- **Anchors (attributes only):**
+  - position TP / SL cells and their edit buttons;
+  - the order row's edit and cancel;
+  - the pending-order and position-exits edit panels (price, qty, TP / SL toggles and prices, confirm);
+  - the Spot / Perp order form's TP / SL enable.
+- **Found:**
+  - P&L with a negative value is written `$-10.12` (journal badge, account bar), while a gain is `+$10.12`. Row
+    1.5.3 expects `−$10.12`. This is a format change for the visual gate.
+  - Row 1.7.8's wording is aligned with the app, which disables the market button offline.
+- 53 tests pass over every project, twice in a row; one WebKit load flake is covered by the CI retry.
+
+### test: M5c — risk in the browser: mark price, liquidation, re-margin, add margin, funding, margin mode, two symbols (2026-09-29) ✅
+
+**Context:** TEST_IMPLEMENTATION_PLAN M5, third batch (SC-15.1-1, SC-15.4-1, SC-15.5-2, SC-17.1-1, SC-17.1-3,
+SC-16-1, SC-17.5-2, SC-11-1, SC-11-3). The expected numbers were hand-checked where they are simple (P&L on the mark,
+funding, margin + close-fee reserve), and pinned from the engine where it is the Bybit-checked source (the
+isolated liquidation price, T1 `margin.test`).
+
+- **Specs:**
+  - `e2e/tests/risk/risk.spec` on linear LINKUSDT: P&L on the mark and TP on the last price; liquidation at `$18.122`,
+    with the notice, Closed P&L and Order History; 10× → 5× preview and confirm; add 1,000 margin.
+  - `e2e/tests/advanced/advanced.spec` on linear ADAUSDT:
+    - funding `−0.51`, and the same timestamp again changes nothing;
+    - isolated → cross releases the added margin, and back to isolated is refused with the reason when the long
+      would be liquidated;
+    - ADA and BTC positions: closing ADA from the BTC page closes only ADA.
+  - Each file owns one market and runs serially.
+- **Fake feed:** it announces no funding timestamp until a test sets one. The recorded `nextFundingTime` was long
+  past, and the engine held it as due for its 60 s grace, so a timestamp set by a test wasn't settled. Bybit always
+  announces a future timestamp, so this was a fake-only artefact. `fakeBybit.test` covers it.
+- **Anchors (attributes only):**
+  - the positions liq, funding and adjust-margin cells;
+  - the Closed P&L exit type;
+  - the liquidation and cross-margin notices and their dismiss buttons;
+  - the leverage preview;
+  - every control of the Adjust margin dialog.
+- **Findings for the visual gate (cosmetic):**
+  - a zero P&L shows `+0.00` (Bybit shows no sign);
+  - the leverage preview shows `$1002.20` without the thousands separator;
+  - a negative P&L shows as `$-10.12` (from M5b).
+- **Calibrated:** cross → isolated is allowed for a healthy position, as on Bybit, and refused only with a reason.
+  Row 17.5.6 already said so; the SC text read as if it were always refused.
+- **Results:** 67 tests pass on every project locally.

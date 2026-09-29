@@ -30,13 +30,26 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
     },
+    // One project at a time: the fake feed's prices are global per market, and each spec owns its
+    // markets (helpers.ts) — two browsers running the same spec at once would move them under each other
     {
       name: 'webkit',
+      dependencies: ['chromium'],
       grep: /@smoke|@full/,
       use: { ...devices['Desktop Safari'], viewport: { width: 1440, height: 900 } },
     },
-    { name: 'mobile-safari', grep: /@mobile/, use: { ...devices['iPhone 14'] } },
-    { name: 'mobile-chrome', grep: /@mobile/, use: { ...devices['Pixel 7'] } },
+    {
+      name: 'mobile-safari',
+      dependencies: ['webkit'],
+      grep: /@mobile/,
+      use: { ...devices['iPhone 14'] },
+    },
+    {
+      name: 'mobile-chrome',
+      dependencies: ['mobile-safari'],
+      grep: /@mobile/,
+      use: { ...devices['Pixel 7'] },
+    },
   ],
   webServer: [
     {
@@ -68,6 +81,9 @@ export default defineConfig({
         LOG_LEVEL: 'warn',
         BYBIT_REST_URL: `http://127.0.0.1:${FEED_PORT}`,
         BYBIT_WS_URL: `ws://127.0.0.1:${FEED_PORT}`,
+        // 🔐 Set (empty) so dotenv can't load a developer's real key from apps/server/.env; the
+        // server also refuses to mail anyone with the test hooks on (EmailService)
+        RESEND_API_KEY: '',
         ENABLE_TEST_HOOKS: '1',
         TEST_HOOKS_SECRET: HOOKS_SECRET,
       },

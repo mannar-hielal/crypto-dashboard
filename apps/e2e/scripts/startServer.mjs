@@ -1,7 +1,8 @@
 /**
  * Starts the API server for the e2e run (docs/TEST_IMPLEMENTATION_PLAN.md F4): creates the throwaway
  * database if it doesn't exist, migrates it (`prisma migrate deploy`, never a reset), then runs the
- * server on the fake Bybit feed with the test hooks on. Playwright's webServer runs it.
+ * server on the fake Bybit feed with the test hooks on (clearing a stale engine lease first).
+ * Playwright's webServer runs it.
  */
 
 import { spawn, spawnSync } from 'node:child_process';
@@ -38,6 +39,14 @@ if (created.status !== 0 && !/already exists/.test(`${created.stdout}${created.s
 const migrated = prisma(['migrate', 'deploy']);
 if (migrated.status !== 0) {
   process.stderr.write(`prisma migrate deploy failed:\n${migrated.stdout}${migrated.stderr}`);
+  process.exit(1);
+}
+
+// A server killed by an earlier run leaves its matching-engine lease behind; the new engine would
+// wait for it to expire (30 s) and miss the price moves of the first tests
+const lease = prisma(['db', 'execute', '--stdin'], {}, 'DELETE FROM "EngineLease";');
+if (lease.status !== 0) {
+  process.stderr.write(`Could not clear the engine lease:\n${lease.stdout}${lease.stderr}`);
   process.exit(1);
 }
 

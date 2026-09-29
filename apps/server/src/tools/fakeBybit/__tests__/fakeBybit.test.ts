@@ -165,6 +165,18 @@ describe('fake Bybit — shapes (against the recorded Bybit answers)', () => {
         expect(fields(theirs), `${category} ${topic}.${f}`).toContain(f);
     }
   });
+
+  it('announces no funding timestamp until a test sets one (the recorded one is long past)', () => {
+    feed.reset();
+    const next = () =>
+      (feed.message('linear', 'tickers.ADAUSDT')?.data as { nextFundingTime: string })
+        .nextFundingTime;
+    expect(next()).toBe('0');
+    const ts = feed.setFunding('ADAUSDT', 0.0001, 3);
+    expect(next()).toBe(String(ts));
+    feed.reset();
+    expect(next()).toBe('0');
+  });
 });
 
 describe('fake Bybit — read by the app’s own clients', () => {

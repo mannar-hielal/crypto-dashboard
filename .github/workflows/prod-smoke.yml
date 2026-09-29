@@ -1,12 +1,12 @@
 name: Production smoke
 
 # T5 in docs/TRADING_TEST_PLAN.md (TEST_IMPLEMENTATION_PLAN M8): the same read-only checks deploy.yml
-# runs after every deploy (apps/e2e/tests-prod), every hour — so an outage between deploys opens an
+# runs after every deploy (apps/e2e/tests-prod), every 6 hours — so an outage between deploys opens an
 # issue. Read-only: no sign-in, no writes, no secrets.
 
 on:
   schedule:
-    - cron: '23 * * * *' # hourly, at :23
+    - cron: '23 */6 * * *' # every 6 hours at :23 (was hourly; the Actions budget, git.md)
   workflow_dispatch:
 
 permissions:
@@ -24,15 +24,15 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v7
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4.1.0
+        uses: pnpm/action-setup@v6.1.0
         with:
           version: 10.33.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4.4.0
+        uses: actions/setup-node@v7.0.0
         with:
           node-version-file: '.node-version'
           cache: 'pnpm'
@@ -54,7 +54,7 @@ jobs:
 
       - name: Upload the report
         if: failure()
-        uses: actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: prod-smoke-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
@@ -72,7 +72,7 @@ jobs:
         shell: bash
         run: |
           gh label create prod-smoke --color B60205 --description "Production smoke check failed" 2>/dev/null || true
-          body="The hourly production smoke failed at $(date -u +%Y-%m-%dT%H:%MZ): $RUN_URL
+          body="The scheduled production smoke failed at $(date -u +%Y-%m-%dT%H:%MZ): $RUN_URL
 
           It checks API health, a clean signed-out page load (/api/auth/refresh → 204, no console errors),
           the login page, and a live market feed. Download the report artifact for the failing check."
