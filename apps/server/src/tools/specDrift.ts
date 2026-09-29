@@ -65,8 +65,8 @@ export async function specDrift(): Promise<string[]> {
       const old = snap[i]!;
       for (const k of ['riskLimitValue', 'mmr', 'mmDeduction', 'imr', 'maxLeverage'] as const) {
         // eslint-disable-next-line security/detect-object-injection -- fixed keys
-        if (!eq(tier[k], old[k]))
-          drift.push(`risk tier ${symbol} #${i + 1} ${k}: ${old[k]} → ${tier[k]}`);
+        const [was, is] = [old[k], tier[k]];
+        if (!eq(is, was)) drift.push(`risk tier ${symbol} #${i + 1} ${k}: ${was} → ${is}`);
       }
     });
   }

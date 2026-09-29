@@ -138,7 +138,10 @@ function watch(m: Market): WebSocket {
 }
 
 const off = (ours: number | null | undefined, theirs: number | null | undefined) =>
-  ours == null || theirs == null || !Number.isFinite(ours) || !Number.isFinite(theirs)
+  typeof ours !== 'number' ||
+  typeof theirs !== 'number' ||
+  !Number.isFinite(ours) ||
+  !Number.isFinite(theirs)
     ? true
     : Math.abs(ours - theirs) / Math.abs(theirs) > TOLERANCE;
 
@@ -156,7 +159,10 @@ async function sample(m: Market): Promise<void> {
   miss('last', off(ours.lastPrice, theirs.lastPrice));
   miss('bid', off(ours.bid, theirs.bid));
   miss('ask', off(ours.ask, theirs.ask));
-  miss('bid ≤ ask', ours.bid == null || ours.ask == null || ours.bid > ours.ask);
+  miss(
+    'bid ≤ ask',
+    typeof ours.bid !== 'number' || typeof ours.ask !== 'number' || ours.bid > ours.ask
+  );
   if (m.category === 'linear') {
     miss('mark', off(ours.markPrice, theirs.markPrice));
     miss('index', off(ours.indexPrice, theirs.indexPrice));
