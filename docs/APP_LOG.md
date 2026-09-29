@@ -3431,8 +3431,8 @@ isolated liquidation price, T1 `margin.test`).
   followers when the crosshair leaves; a programmatic clear fires no event, so nothing echoes. The e2e test failed
   before the fix. Screenshots before and after confirmed it.
 - **Findings, not changed:** row 9.6. With the feed gone, Market submit is disabled, but Sell / Buy keep the last
-  bid / ask and the spread its number. That is a UI change, so it waits for the visual Q&A gate; the spec is
-  `test.fail` until then.
+  bid / ask and the spread its number. That is a UI change, so it waits for the visual Q&A gate; a spec asserts the
+  finding is still there, so it goes red once fixed (review #196).
 - **Re-tiered:** row 15.4.5, stale mark, stays T1. The server stamps each quote on arrival, so a mark is stale only
   when no ticker arrives, and then nothing triggers a check.
 - **Anchors (attributes only):** the trade menu and its options, the chart-type menu and the mark-line item, maximize,
@@ -3455,7 +3455,7 @@ in Part B.
 - **F11** (`a11y/dashboard.spec`): axe on Spot and USDT Perpetual with every bottom tab, and on the settings modal.
   - **Fixed:** the Market `tablist` held the leverage chip (it now wraps only its tabs, `display: contents`; the
     screenshot of the row is byte-identical before and after), and the settings close button has a name.
-  - **Waiting for the visual Q&A gate** (a separate `test.fail` spec):
+  - **Waiting for the visual Q&A gate** (a separate spec asserts they are still there, so it goes red once fixed; review #196):
     - contrast of the Beta badge, red % changes and two muted settings labels;
     - the drawing toolbar's nested buttons;
     - a scroll region without keyboard access.

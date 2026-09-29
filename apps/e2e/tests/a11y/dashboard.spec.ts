@@ -6,8 +6,8 @@
  * Three rules are findings waiting for the visual Q&A gate (M5e), because fixing them changes how
  * things look: `color-contrast` (the Beta badge, red % changes, small muted labels in settings),
  * `nested-interactive` (the drawing toolbar's buttons hold a second button) and
- * `scrollable-region-focusable` (a focus ring on the scrolling table). They are checked apart, as
- * `test.fail`, so they turn red once fixed.
+ * `scrollable-region-focusable` (a focus ring on the scrolling table). A separate test asserts they
+ * are still there, so it turns red once they are fixed.
  */
 
 import AxeBuilder from '@axe-core/playwright';
@@ -74,13 +74,17 @@ test('[F11] axe: contrast, nested controls and scroll focus on the dashboard and
   page,
   seededUser,
 }) => {
-  // Findings waiting for the visual Q&A gate (see the top of this file). Remove test.fail once fixed
-  test.fail();
   await signInAs(page, seededUser.email, seededUser.password);
   await page.goto('/dashboard/usdt/BTCUSDT');
   const found = await blocking(page, PENDING_VISUAL_GATE);
   await at(page, 'nav.user-menu').click();
   await at(page, 'nav.settings').click();
   found.push(...(await blocking(page, PENDING_VISUAL_GATE)));
-  expect(found).toEqual([]);
+  // The findings waiting for the visual Q&A gate (top of this file) are still there. Asserted this
+  // way rather than with test.fail, so a broken setup fails the test instead of passing it
+  // (review #196). Once they are fixed this goes red: drop PENDING_VISUAL_GATE and this test
+  expect(
+    found.length,
+    'the pending axe findings are gone: remove PENDING_VISUAL_GATE'
+  ).toBeGreaterThan(0);
 });
