@@ -118,3 +118,46 @@ test('[F10] positions with pair icons, the summary bar, adjust margin, a Closed 
     mask: [row.locator('td').last()],
   });
 });
+
+test('[F10] the liquidation notice after a liquidated long @visual', async ({
+  page,
+  seededUser,
+  feed,
+}) => {
+  // Runs alone (the visual project is last): moving LINKUSDT can't disturb another spec
+  await feed.quote('linear', 'LINKUSDT', { bid: 19.999, ask: 20, last: 20, mark: 20 });
+  await signInAs(page, seededUser.email, seededUser.password);
+  await page.goto('/dashboard/usdt/LINKUSDT');
+  await setMarginMode(page, 'isolated', 10);
+  await placeOrder(page, { side: 'buy', type: 'market', amount: '250', unit: 'coin' });
+  await feed.quote('linear', 'LINKUSDT', { bid: 17.9, ask: 17.91, last: 17.9, mark: 17.9 });
+  await expect(at(page, 'notice.liquidation')).toBeVisible({ timeout: 20_000 });
+  await expect(at(page, 'notice.liquidation')).toHaveScreenshot('notice-liquidation.png', shot);
+  // Back to the usual price for the next runs
+  await feed.quote('linear', 'LINKUSDT', { bid: 19.999, ask: 20, last: 20, mark: 20 });
+});
+
+test('[F10] two panes: the active pane header carries the stripe @visual', async ({
+  page,
+  seededUser,
+}) => {
+  await signInAs(page, seededUser.email, seededUser.password);
+  await page.goto('/dashboard/spot/BTC/USDT');
+  await at(page, 'layout.picker').click();
+  await at(page, 'layout.option', '2h').click();
+  await page.mouse.click(2, 450); // closes the picker (its overlay)
+  await at(page, 'pane.chart', '1').click();
+  const headers = page.locator('[data-guide="pane.header.symbol"]');
+  await expect(headers).toHaveCount(2);
+  // The header row of each pane (the chart canvas below is live, so only the headers)
+  for (const i of [0, 1]) {
+    // PaneHeader's root: the symbol button sits in its picker wrapper, inside the header row. The
+    // left 220 px only: the stripe, the symbol and the interval (the live price and change on the
+    // right move the layout by a pixel from run to run)
+    const box = (await headers.nth(i).locator('xpath=ancestor::div[2]').boundingBox())!;
+    await expect(page).toHaveScreenshot(`pane-header-${i}.png`, {
+      ...shot,
+      clip: { x: box.x, y: box.y, width: 220, height: box.height },
+    });
+  }
+});

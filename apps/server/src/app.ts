@@ -224,6 +224,20 @@ export async function buildApp() {
   app.get(
     '/health',
     {
+      // Fly checks every 30 s and UptimeRobot every 5 min: at info that's ~2,900 lines an hour
+      // burying real events. The route logs at warn and above; a successful check leaves no line
+      // (so Fly's checks reaching the app no longer show in the log — Fly's own status does)
+      logLevel: 'warn',
+      // …and any response other than 2xx is logged as a warning, thrown or not (a 429 from the
+      // rate limiter, a degraded reply), since the automatic request lines are info (review #203)
+      onResponse: async (request, reply) => {
+        if (reply.statusCode >= 300) {
+          request.log.warn(
+            { statusCode: reply.statusCode, responseTime: reply.elapsedTime },
+            'Health check answered with a non-2xx status'
+          );
+        }
+      },
       schema: {
         tags: ['Health'],
         summary: 'Health check',
