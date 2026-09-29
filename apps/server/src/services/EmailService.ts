@@ -16,6 +16,9 @@ let resend: Resend | null = null;
 
 function getResend(): Resend | null {
   if (!config.resendApiKey) return null;
+  // 🔐 With the test hooks on, emails only go to the outbox: an e2e run's server can still pick up a
+  // developer's real RESEND_API_KEY from apps/server/.env, and would mail every made-up address
+  if (config.testHooks) return null;
   if (!resend) resend = new Resend(config.resendApiKey);
   return resend;
 }
