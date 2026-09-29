@@ -3281,3 +3281,32 @@ repositories and the included 2,000 were used up.
 - **Rule:** added to `.claude/rules/security.md` ("Public repository — workflow triggers").
 - **Owner settings to confirm:** Settings → Actions → General → "Require approval for all external contributors" for
   fork PR workflows; secret scanning / push protection (free on public repos).
+
+### chore: the GitHub Actions budget — 2,000 minutes a month, one CI job, docs skip CI (2026-09-29) ✅
+
+**Context:** the 2,000 included minutes were used up in 6 days (Sep 24–29, 80 PRs). Measured split: Claude review 940,
+CI 789, `claude.yml` 157, Deploy 80. Without changes, a normal month with the new scheduled jobs would cost about
+4,100 minutes. The owner first chose to cut minutes (options 3, 4, 5 and 7), then asked for a plan that uses the
+2,000 well. The agreed plan is in `.claude/rules/git.md` "Actions budget".
+
+- **CI:**
+  - It is one job: checks → `test:int` on Postgres → build → Playwright smoke. That is one checkout, install and
+    Postgres per run instead of three.
+  - Later steps run after a failure (`!cancelled()`), so every failure is still reported.
+  - A 30-minute timeout replaces the 360-minute default.
+  - Docs-only changes (`docs/**`, `**/*.md`) skip CI, so a docs-only release doesn't deploy.
+- **E2E full set** (`e2e-nightly.yml`):
+  - nightly on `develop`, plus every push to the `develop → main` release PR (the pre-release run; review #192);
+  - a release merges only with it green, and `deploy.yml`'s first step refuses to deploy unless that check is
+    green on the merged release PR's head (fails closed; review #192).
+- **Prod smoke:** every 6 hours (was hourly), and after every deploy. Between runs, a free external monitor
+  (UptimeRobot, set up by the owner) checks `/api/health` every 5 minutes.
+- **Parity:** feed parity nightly and testnet parity daily (unchanged).
+- **`claude.yml` deleted:** it ran `/code-review` on every push into the job log only, repeating claude-review.
+- **Bigger PRs** (`git.md` Branching step 4):
+  - One PR per chunk of work, e.g. the end of a day or a milestone. Commits stay one unit each.
+  - Release when a meaningful set has landed.
+  - A security fix still goes out alone and at once.
+- **Budget:** about 1,780 minutes planned plus about 220 in reserve, for about 25 PRs and 8 releases a month.
+  - Brake at GitHub's 75 % email: prod smoke every 12 h, nightly e2e only if `develop` changed, parity weekly.
+  - At 90 %: one PR and one release at most.

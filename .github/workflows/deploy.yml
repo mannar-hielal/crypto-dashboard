@@ -2,9 +2,10 @@ name: Deploy
 
 on:
   # Triggers AFTER the CI workflow finishes on main — no duplicate runs
-  # CI already handles type-check/lint/tests (with coverage floors)/build and the Postgres integration
-  # job (migrations, drift, repository); deploy only needs to know the whole workflow passed — a
-  # migration that drifts from schema.prisma must block a deploy
+  # CI (one job) already handles type-check/lint/tests (with coverage floors), the Postgres integration
+  # tests (migrations, drift, repository), the build and the browser smoke; deploy only needs to know
+  # the whole workflow passed — a migration that drifts from schema.prisma must block a deploy. The
+  # release PR's full e2e set is checked in the first step below.
   workflow_run:
     workflows: ['CI']
     branches: [main]
@@ -24,7 +25,38 @@ jobs:
           github.event.workflow_run.head_branch == 'main' &&
           github.event.workflow_run.head_repository.full_name == github.repository }}
     environment: production
+    # 🔐 Read-only token: the release gate below only reads the PR and its check runs
+    permissions:
+      contents: read
+      pull-requests: read
+      checks: read
     steps:
+      # The release gate (git.md): the develop → main PR this commit came from must have a green
+      # "E2E full set (Playwright)" on its head. Fails closed: no merged release PR, or no green run,
+      # means no deploy (re-run that check on the PR, then re-run this deploy).
+      - name: Require the release PR's full e2e set
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          # per_page=100: the release PR can't fall off the first page
+          head=$(gh api "repos/$REPO/commits/$SHA/pulls?per_page=100" \
+            -q '[.[] | select(.base.ref == "main" and .head.ref == "develop" and .merged_at != null)][0].head.sha // empty')
+          if [ -z "$head" ]; then
+            echo "::error::No merged develop → main PR for $SHA — deploys only follow a release PR"
+            exit 1
+          fi
+          # The newest run from GitHub Actions only (another app can't publish a look-alike check),
+          # and it must be green: an older success followed by a failure or a cancel doesn't count
+          latest=$(gh api "repos/$REPO/commits/$head/check-runs?check_name=E2E%20full%20set%20(Playwright)&filter=all&per_page=100" \
+            -q '[.check_runs[] | select(.app.slug == "github-actions")] | sort_by(.started_at) | last | .conclusion // empty')
+          if [ "$latest" != "success" ]; then
+            echo "::error::The latest E2E full set (Playwright) on the release PR head $head is '${latest:-missing}', not success"
+            exit 1
+          fi
+          echo "Release PR head $head: E2E full set green"
+
       - name: Checkout
         uses: actions/checkout@v4.2.2
         with:

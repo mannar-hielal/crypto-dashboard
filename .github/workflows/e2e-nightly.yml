@@ -1,13 +1,27 @@
-name: E2E nightly
+name: E2E full set
 
 # The full Playwright set (T3, TEST_IMPLEMENTATION_PLAN M5) on develop: every project — Chromium
 # (@smoke, @full, @a11y), WebKit desktop (@smoke, @full), and phones (@mobile on iPhone 14 and
 # Pixel 7) — against the fake Bybit feed with the test hooks. PRs run the Chromium @smoke subset
-# (ci.yml). A failure opens or comments one issue labelled `e2e`.
+# (ci.yml). Nightly, and on every push to the develop → main release PR (the pre-release run); the
+# Actions budget is in git.md. A scheduled failure opens or comments one
+# issue labelled `e2e`; a release PR's failure shows on the PR itself.
 
 on:
   schedule:
     - cron: '30 2 * * *' # 02:30 UTC daily
+  pull_request:
+    branches: [main] # the release PR (develop → main)
+    # Every push to the release PR is re-tested; the concurrency group cancels a superseded run
+    types: [opened, synchronize, reopened, ready_for_review]
+    # A docs-only release ships nothing (ci.yml skips it and nothing deploys), so it isn't re-tested.
+    # Exactly ci.yml's list, test-plan re-include included: whatever runs CI on the release must also
+    # run this, or deploy.yml's gate would find no full-set run and fail the deploy
+    paths:
+      - '**'
+      - '!docs/**'
+      - '!**/*.md'
+      - 'docs/TRADING_TEST_PLAN.md'
   workflow_dispatch:
 
 permissions:
@@ -15,12 +29,18 @@ permissions:
   issues: write
 
 concurrency:
-  group: e2e-nightly
+  group: e2e-nightly-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   e2e:
-    name: E2E nightly (Playwright)
+    name: E2E full set (Playwright)
+    # On a PR: only the develop → main release from this repository — not any other PR to main, and
+    # not a fork's branch that happens to be called `develop` (it would spend ~45 minutes a push)
+    if: >-
+      ${{ github.event_name != 'pull_request' ||
+          (github.head_ref == 'develop' &&
+           github.event.pull_request.head.repo.full_name == github.repository) }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     services:
@@ -42,7 +62,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.2.2
         with:
-          ref: develop
+          # A release PR is tested at its own head; the schedule tests develop
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'develop' }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4.1.0
@@ -83,7 +104,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Open or update the e2e issue
-        if: failure() && steps.e2e.outcome == 'failure'
+        if: failure() && steps.e2e.outcome == 'failure' && github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -98,5 +119,5 @@ jobs:
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --body "$body"
           else
-            gh issue create --title "E2E nightly failing" --label e2e --body "$body"
+            gh issue create --title "E2E full set failing" --label e2e --body "$body"
           fi
