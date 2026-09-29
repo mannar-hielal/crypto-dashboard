@@ -9,6 +9,8 @@ import {
   recordError,
   resetErrorAlerts,
   safeMessage,
+  startErrorDigest,
+  DIGEST_WINDOW_MS,
   type DigestEntry,
 } from '../lib/errorAlerts.js';
 
@@ -131,5 +133,20 @@ describe('owner error digest (M8)', () => {
     expect((await flushed()).got).toEqual([
       { source: 'X', message: 'Failed for user #', count: 2 },
     ]);
+  });
+
+  it('should report a failed send from the timer through onFailure, and keep the counts (review #201)', async () => {
+    vi.useFakeTimers();
+    try {
+      recordError({ service: 'X' }, ['x']);
+      const onFailure = vi.fn();
+      const stop = startErrorDigest(vi.fn().mockRejectedValue(new Error('resend down')), onFailure);
+      await vi.advanceTimersByTimeAsync(DIGEST_WINDOW_MS);
+      stop();
+      expect(onFailure).toHaveBeenCalledWith(expect.objectContaining({ message: 'resend down' }));
+      expect((await flushed()).got).toEqual([{ source: 'X', message: 'x', count: 1 }]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -120,11 +120,17 @@ export async function flushDigest(
   return true;
 }
 
-/** Start the 30-minute digest; returns a stop function. Never keeps the process alive. */
-export function startErrorDigest(send: (entries: DigestEntry[]) => Promise<void>): () => void {
+/**
+ * Start the 30-minute digest; returns a stop function. Never keeps the process alive. A send that
+ * fails is reported through `onFailure` (index.ts logs it as a warning on the EmailService logger,
+ * which this module never counts) — never thrown from the timer, never silent (review #201).
+ */
+export function startErrorDigest(
+  send: (entries: DigestEntry[]) => Promise<void>,
+  onFailure: (err: unknown) => void
+): () => void {
   const timer = setInterval(() => {
-    // A failed send is logged by EmailService (which is not counted) — never thrown from a timer
-    void flushDigest(send).catch(() => undefined);
+    void flushDigest(send).catch(onFailure);
   }, DIGEST_WINDOW_MS);
   timer.unref();
   return () => clearInterval(timer);

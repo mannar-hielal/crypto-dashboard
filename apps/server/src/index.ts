@@ -73,10 +73,20 @@ try {
 
   // The owner's error digest (M8): production only, never with the test hooks
   if (config.nodeEnv === 'production' && config.alertEmail && !config.testHooks) {
-    startErrorDigest((entries) =>
-      EmailService.sendErrorDigest(config.alertEmail, entries, DIGEST_WINDOW_MS / 60_000)
+    // Warnings on the EmailService logger: not counted by the digest, so they can't feed it
+    const emailLog = logger.child({ service: 'EmailService' });
+    startErrorDigest(
+      (entries) =>
+        EmailService.sendErrorDigest(config.alertEmail, entries, DIGEST_WINDOW_MS / 60_000),
+      (err) =>
+        emailLog.warn({ err }, 'Error digest not sent — its counts are kept for the next try')
     );
     app.log.info('Error digest on (every 30 minutes, at most 10 a day)');
+    if (config.resendFromEmail === 'onboarding@resend.dev') {
+      emailLog.warn(
+        "RESEND_FROM_EMAIL is Resend's default sender, which only delivers to the Resend account owner: the error digest may not arrive"
+      );
+    }
   }
 
   // Run the purge job only on a designated worker/instance.
