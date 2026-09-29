@@ -203,14 +203,14 @@ depends on another test's leftovers. Fixtures (replay feed, pre-BP-2 DB seed) ar
 
 Each step is its own small PR to `develop`, ordered by value per effort.
 
-| Step   | Delivers                                                                                                                  | Converts / adds                                    | Owner action                                         |
-| ------ | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------- |
-| **P1** | CI Postgres, migration-from-empty + drift check, migration replay, repository round-trip, coverage thresholds in CI       | T2i; 18.7                                          | —                                                    |
-| **P2** | Fake Bybit replay server, Playwright (smoke on PR, full nightly), seed helper; the missing T1 / T2 tests the ⬜ rows name | Every ⬜ row marked `(P2)` in Sections 7–15 and 19 | —                                                    |
-| **P3** | ✅ Nightly `parity:testnet` workflow + issue on mismatch (2026-09-28) · ⬜ weekly spec-drift check · ⬜ feed parity job   | 17.6.4, Section 6 → T4                             | ✅ Testnet key, environment, funds (done 2026-09-28) |
-| **P4** | fast-check invariants; Stryker weekly on the engine                                                                       | T1p; mutation score                                | —                                                    |
-| **P5** | Post-deploy + hourly prod smoke, log alerts                                                                               | T5                                                 | Pick / approve a log sink                            |
-| **P6** | Staging Fly app; ZAP baseline; k6 scripts; Dependabot; gitleaks                                                           | Security + performance                             | Approve staging cost                                 |
+| Step   | Delivers                                                                                                                                 | Converts / adds                                    | Owner action                                         |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------- |
+| **P1** | CI Postgres, migration-from-empty + drift check, migration replay, repository round-trip, coverage thresholds in CI                      | T2i; 18.7                                          | —                                                    |
+| **P2** | Fake Bybit replay server, Playwright (smoke on PR, full nightly), seed helper; the missing T1 / T2 tests the ⬜ rows name                | Every ⬜ row marked `(P2)` in Sections 7–15 and 19 | —                                                    |
+| **P3** | ✅ Nightly `parity:testnet` workflow + issue on mismatch (2026-09-28) · ✅ weekly spec-drift check · ✅ feed parity job (M6, 2026-09-29) | 17.6.4, Section 6 → T4                             | ✅ Testnet key, environment, funds (done 2026-09-28) |
+| **P4** | fast-check invariants; Stryker weekly on the engine                                                                                      | T1p; mutation score                                | —                                                    |
+| **P5** | Post-deploy + hourly prod smoke, log alerts                                                                                              | T5                                                 | Pick / approve a log sink                            |
+| **P6** | Staging Fly app; ZAP baseline; k6 scripts; Dependabot; gitleaks                                                                          | Security + performance                             | Approve staging cost                                 |
 
 After P2 the only manual rows left are look-and-feel (drag feel, sounds, animation) — the M tier.
 
@@ -298,8 +298,8 @@ drops the `(Pn)` tag. Format: `what — rows — target tier (roadmap step)`.
 - [x] First green nightly testnet parity run — rows 17.6.4, 6.5 — T4 (P3; scheduled run 36517770455, 2026-09-29). It
       does **not** settle APP_LOG's open questions: the scenario never reaches a max-reducible margin or a 110090
       refusal, and its unrealised P&L is too small to prove O5 or `positionValue`'s basis — still open there
-- [ ] Feed parity job: Sell / Buy vs best bid / ask, last 1m candle, mark / index / funding, freshness — rows
-      6.1–6.4 — T4 (P3)
+- [x] Feed parity job: Sell / Buy vs best bid / ask, last 1m candle, mark / index / funding, freshness — rows
+      6.1–6.4 — T4 (P3; M6: `tools/feedParity.ts`, nightly in `feed-parity.yml`)
 - [ ] Browser tab title — row 6.6 — T3 (P2)
 - [ ] Spot feed in the browser: spread badge, last candle vs Bybit Spot, cached quote on reload — rows
       12.1.1–12.1.3 — T3 on the replay feed (P2)
@@ -351,7 +351,9 @@ _P2 — replay feed and browser tests (7)_
 
 _P3 — Bybit parity (1, plus the two Stage 6 T4 items)_
 
-- [ ] Weekly spec-drift check of `bybitSpec.ts` against Bybit's public API, opening an issue on a change — (P3)
+- [x] Weekly spec-drift check of `bybitSpec.ts` against Bybit's public API, opening an issue on a change — (P3;
+      M6: `tools/specDrift.ts`, Sundays in `feed-parity.yml`; instrument rules and risk tiers — fee rates need a
+      signed-in account, so they stay a manual check)
 
 _P4 — invariants and mutation testing (2)_
 
@@ -1324,14 +1326,14 @@ cross-phase regression suite and the server-side account safeguards.
 > Fills and PnL go through the engine tests and the nightly testnet parity run (T4). The old TradingView rows
 > 6.1–6.9 are in git history (`git show 8d40f88:docs/TRADING_TEST_PLAN.md`); none of them had been run.
 
-| #   | Scenario                                                 | Expected                                                                                                | Status | Tier    | Notes                                                                                                 |
-| --- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------ | ------- | ----------------------------------------------------------------------------------------------------- |
-| 6.1 | Our Sell / Buy vs Bybit's best bid / ask, same moment    | Spot and linear, each symbol: equal, or at most one tick apart (the stream may be one update ahead)     | ⬜     | T4 (P3) | Bybit `/v5/market/tickers` (linear) / `orderbook?limit=1` (spot).                                     |
-| 6.2 | Our last closed 1m candle vs Bybit's kline               | OHLC equal for spot and linear; no step where history meets the live bars (F1)                          | ⬜     | T4 (P3) | `/v5/market/kline`.                                                                                   |
-| 6.3 | Our mark / index / funding rate vs Bybit's linear ticker | Equal within one tick; next funding time identical                                                      | ⬜     | T4 (P3) | Mark drives PnL and liquidation.                                                                      |
-| 6.4 | Feed freshness over the sample window                    | No quote older than 10 s while Bybit's is moving; the server reconnects within its backoff after a drop | ⬜     | T4 (P3) | Same 10 s rule as the engine's "Waiting for live price…".                                             |
-| 6.5 | Fills, fees, PnL, margin vs Bybit                        | Same maths given the same fills (the testnet parity run)                                                | ✅     | T4      | Was TradingView rows 6.4–6.8. First scheduled nightly green 2026-09-29 (run 36517770455); see 17.6.4. |
-| 6.6 | Browser tab title                                        | `▲ BTC/USDT {price} +x.xx%` or `▼ …`, updating live; the arrow flips on a reversal                      | ⬜     | T3 (P2) | Was 6.9.                                                                                              |
+| #   | Scenario                                                 | Expected                                                                                                | Status | Tier    | Notes                                                                                                                                                                                                                                                                                                       |
+| --- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 6.1 | Our Sell / Buy vs Bybit's best bid / ask, same moment    | Spot and linear, each symbol: equal, or at most one tick apart (the stream may be one update ahead)     | ✅     | T4      | `feedParity.ts` nightly (`feed-parity.yml`); within 0.1 % (the reads are up to a second apart, so one tick is too tight for a moving book), bid ≤ ask; first run 2026-09-29 against production: 18 markets × 5 samples and 36 closed candles, all matching.                                                 |
+| 6.2 | Our last closed 1m candle vs Bybit's kline               | OHLC equal for spot and linear; no step where history meets the live bars (F1)                          | ✅     | T4      | `feedParity.ts`: every 1m candle production closes during the run has exactly Bybit's OHLC; first run 2026-09-29 against production: 18 markets × 5 samples and 36 closed candles, all matching.                                                                                                            |
+| 6.3 | Our mark / index / funding rate vs Bybit's linear ticker | Equal within one tick; next funding time identical                                                      | ✅     | T4      | `feedParity.ts`: mark / index within 0.1 %, funding rate and next funding time equal; first run 2026-09-29 against production: 18 markets × 5 samples and 36 closed candles, all matching.                                                                                                                  |
+| 6.4 | Feed freshness over the sample window                    | No quote older than 10 s while Bybit's is moving; the server reconnects within its backoff after a drop | ✅     | T4 + T1 | `feedParity.ts`: every market keeps sending tickers whose values match Bybit (the server's own quote age isn't visible from outside — the engine's 10 s rule is `services.test`); reconnect after a drop: `fakeBybit.test` "a stall stops the pushes; a drop closes the socket and the manager reconnects". |
+| 6.5 | Fills, fees, PnL, margin vs Bybit                        | Same maths given the same fills (the testnet parity run)                                                | ✅     | T4      | Was TradingView rows 6.4–6.8. First scheduled nightly green 2026-09-29 (run 36517770455); see 17.6.4.                                                                                                                                                                                                       |
+| 6.6 | Browser tab title                                        | `▲ BTC/USDT {price} +x.xx%` or `▼ …`, updating live; the arrow flips on a reversal                      | ⬜     | T3 (P2) | Was 6.9.                                                                                                                                                                                                                                                                                                    |
 
 ### Section 17 — Cross margin, risk tiers and refinements (Bybit Parity BP-5) _(part: 17.6 — the rest of Section 17 is in Stages 4 and 5)_
 

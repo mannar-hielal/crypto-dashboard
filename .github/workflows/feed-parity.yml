@@ -1,0 +1,176 @@
+name: Feed parity and spec drift
+
+# T4 in docs/TRADING_TEST_PLAN.md (roadmap P3; TEST_IMPLEMENTATION_PLAN M6):
+#   - nightly, feed parity (apps/server/src/tools/feedParity.ts): production's market feed against
+#     Bybit mainnet at the same moments — quotes, mark / index / funding, closed 1m candles (rows 6.1–6.4);
+#   - weekly (Sunday), spec drift (apps/server/src/tools/specDrift.ts): bybitSpec.ts's dated instrument
+#     rules and risk tiers against Bybit's live public API.
+# Both read public data only (production's public market API and Bybit's public REST): no keys, no
+# writes. They run on a one-off Fly Machine in sin, in the parity app (crypto-dashboard-parity),
+# because Bybit geo-blocks GitHub's US runners — like parity.yml.
+
+on:
+  schedule:
+    - cron: '47 4 * * *' # 04:47 UTC daily: feed parity (and spec drift on Sundays)
+  workflow_dispatch:
+    inputs:
+      check:
+        description: 'What to run'
+        type: choice
+        options: [both, feed, drift]
+        default: both
+
+permissions:
+  contents: read
+  issues: write # open / update the "feed-parity" or "spec-drift" issue on a failure
+
+concurrency:
+  group: bybit-feed-parity
+  cancel-in-progress: false
+
+env:
+  PARITY_APP: crypto-dashboard-parity
+
+jobs:
+  checks:
+    name: Feed parity / spec drift
+    runs-on: ubuntu-latest
+    # 🔐 Only for the app-scoped Fly token (FLY_PARITY_API_TOKEN), which this environment holds; main only
+    environment: bybit-testnet
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@1.5
+
+      - name: Choose the checks
+        id: plan
+        shell: bash
+        run: |
+          check="${{ github.event.inputs.check || 'scheduled' }}"
+          feed=false; drift=false
+          case "$check" in
+            both) feed=true; drift=true ;;
+            feed) feed=true ;;
+            drift) drift=true ;;
+            scheduled) feed=true; [ "$(date -u +%u)" = 7 ] && drift=true ;;
+          esac
+          echo "feed=$feed" >> "$GITHUB_OUTPUT"
+          echo "drift=$drift" >> "$GITHUB_OUTPUT"
+
+      - name: Build this commit's server image
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_PARITY_API_TOKEN }}
+        run: |
+          flyctl deploy --build-only --push --remote-only \
+            --app "$PARITY_APP" --config fly.toml --image-label "feed-${{ github.run_id }}"
+
+      - name: Run the checks on a Fly Machine (sin)
+        id: run
+        timeout-minutes: 20
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_PARITY_API_TOKEN }}
+          FEED: ${{ steps.plan.outputs.feed }}
+          DRIFT: ${{ steps.plan.outputs.drift }}
+        shell: bash
+        run: |
+          set -o pipefail
+          image="registry.fly.io/$PARITY_APP:feed-${{ github.run_id }}"
+          failed=0
+          # $1 = machine name suffix, $2 = the log line that means "passed", rest = the command
+          run_check() {
+            local suffix=$1 pass=$2; shift 2
+            local name="feed-${{ github.run_id }}-${{ github.run_attempt }}-$suffix"
+            local id=""
+            for attempt in 1 2 3 4 5 6; do
+              # config.ts's required variables are unused by these tools (no database, Redis or
+              # auth) — dummies. BYBIT_TESTNET=false: the spec snapshot is mainnet's
+              if flyctl machine run "$image" --app "$PARITY_APP" --name "$name" --region sin \
+                --restart no --detach --vm-memory 512 \
+                --env BYBIT_TESTNET=false \
+                --env DATABASE_URL=postgresql://parity:unused@localhost:5432/unused \
+                --env REDIS_URL=redis://localhost:6379 \
+                --env JWT_SECRET=parity-run-dummy-secret-not-used-000000 \
+                --env ADMIN_EMAIL=parity@example.invalid \
+                --env CLIENT_URL=https://example.invalid \
+                -- "$@"; then
+                break
+              fi
+              id=$(flyctl machine list --app "$PARITY_APP" --json | jq -r --arg n "$name" '.[] | select(.name == $n) | .id')
+              [ -n "$id" ] && break
+              [ "$attempt" = 6 ] && { echo "::error::Could not launch $name"; return 1; }
+              sleep 15
+            done
+            id=$(flyctl machine list --app "$PARITY_APP" --json | jq -r --arg n "$name" '.[] | select(.name == $n) | .id')
+            [ -n "$id" ] || { echo "::error::Machine $name not found"; return 1; }
+            echo "$id" >> machines.txt
+            flyctl machine wait "$id" --app "$PARITY_APP" --state stopped --wait-timeout 15m || true
+            sleep 10 # let the last log lines reach the log buffer
+            flyctl logs --app "$PARITY_APP" --machine "$id" --no-tail | tee "$suffix.log" || true
+            grep -q 'exited normally with code: 0' "$suffix.log" && grep -q "$pass" "$suffix.log"
+          }
+          if [ "$FEED" = true ]; then
+            run_check feed 'Feed parity: every market matches Bybit' node dist/src/tools/feedParity.js \
+              || { failed=1; echo "feed_failed=1" >> "$GITHUB_OUTPUT"; }
+          fi
+          if [ "$DRIFT" = true ]; then
+            run_check drift 'Spec drift: none' node dist/src/tools/specDrift.js \
+              || { failed=1; echo "drift_failed=1" >> "$GITHUB_OUTPUT"; }
+          fi
+          exit "$failed"
+
+      - name: Remove the machines
+        if: always()
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_PARITY_API_TOKEN }}
+        shell: bash
+        run: |
+          [ -f machines.txt ] || exit 0
+          while read -r id; do
+            flyctl machine destroy "$id" --app "$PARITY_APP" --force || true
+          done < machines.txt
+
+      - name: Upload the logs
+        if: always()
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: feed-parity-logs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: '*.log'
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Open or update the issues
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          FEED_FAILED: ${{ steps.run.outputs.feed_failed }}
+          DRIFT_FAILED: ${{ steps.run.outputs.drift_failed }}
+        shell: bash
+        run: |
+          report() {
+            local label=$1 title=$2 body=$3
+            gh label create "$label" --color B60205 --description "$title" 2>/dev/null || true
+            existing=$(gh issue list --label "$label" --state open --json number -q '.[0].number // empty')
+            if [ -n "$existing" ]; then
+              gh issue comment "$existing" --body "$body"
+            else
+              gh issue create --title "$title" --label "$label" --body "$body"
+            fi
+          }
+          if [ "$FEED_FAILED" = 1 ] || { [ -z "$FEED_FAILED" ] && [ -z "$DRIFT_FAILED" ]; }; then
+            report feed-parity "Feed parity mismatch" "The feed parity check failed on $(date -u +%Y-%m-%d): $RUN_URL
+
+          Download the \`feed-parity-logs\` artifact (feed.log) for each mismatch: a quote, mark / index /
+          funding field or closed 1m candle where cryptopapertrade.com differs from Bybit (rows 6.1–6.4)."
+          fi
+          if [ "$DRIFT_FAILED" = 1 ]; then
+            report spec-drift "Bybit spec drift" "The weekly spec-drift check found a change on $(date -u +%Y-%m-%d): $RUN_URL
+
+          drift.log lists each value. Update the dated snapshots in apps/server/src/trading/bybitSpec.ts (and the
+          SDK's price-tick table, held equal by bybitSpec.test), then re-record the fake feed's fixtures
+          (\`pnpm --filter @crypto-dashboard/server record:bybit\`)."
+          fi

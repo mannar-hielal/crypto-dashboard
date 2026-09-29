@@ -3115,3 +3115,31 @@ to.
 - **Parity:** the first scheduled nightly (2026-09-29, run 36517770455) matched every step, so rows 6.5 and 17.6.4 are
   ✅. It doesn't settle the open questions (O5, max-reducible margin, 110090, `positionValue`'s basis): at open, mark and
   entry differ by $0.68 on 0.002 BTC, well inside the 0.01 tolerance.
+
+### feat: M6 — nightly feed parity against Bybit, weekly spec-drift check (2026-09-29) ✅
+
+**Context:** test plan milestone M6 (roadmap P3). These replace the TradingView side-by-side checks (Section 6) and
+catch a Bybit change to the rules the engine snapshots.
+
+- **`tools/feedParity.ts`** (rows 6.1–6.4) opens production's market WebSocket, the one the dashboard uses, for all
+  18 markets, and samples Bybit mainnet's public REST at the same moments.
+  - Checks:
+    - last, bid and ask within 0.1 %, and bid ≤ ask;
+    - mark and index within 0.1 %;
+    - funding rate and next funding time equal;
+    - every 1m candle production closes during the run has exactly Bybit's OHLC.
+  - A market fails a check when more than 20 % of its samples miss, and at once if it never sends a ticker.
+  - The first version also failed a market that sent no ticker for over 10 s, which gave false alarms. The server only
+    forwards a ticker when a value changes, so a quiet Spot market stays silent.
+  - First run (2026-09-29, from a Mac against production): 18 markets × 5 samples and 36 closed candles, all
+    matching.
+- **`tools/specDrift.ts`** compares `bybitSpec.ts`'s dated snapshots (instrument rules for both markets, and the
+  risk tiers up to the first below our 10× cap, which is all the snapshot keeps) with Bybit's live public API. First
+  run: no drift. Fee rates aren't compared, because Bybit serves them only to a signed-in account.
+- **`.github/workflows/feed-parity.yml`:**
+  - feed parity nightly at 04:47 UTC, spec drift on Sundays, both on demand;
+  - both run on a one-off Fly Machine in `sin` in the parity app (Bybit geo-blocks GitHub's runners), with only the
+    app-scoped Fly token, main only;
+  - it opens or comments an issue labelled `feed-parity` or `spec-drift` on a failure.
+- **Owner question (Q7):** the job reads production's public market API from the parity machine. It makes 18
+  WebSocket connections for about 5 minutes a night, under the 20-per-IP cap.
