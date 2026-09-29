@@ -30,13 +30,26 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
     },
+    // One project at a time: the fake feed's prices are global per market, and each spec owns its
+    // markets (helpers.ts) — two browsers running the same spec at once would move them under each other
     {
       name: 'webkit',
+      dependencies: ['chromium'],
       grep: /@smoke|@full/,
       use: { ...devices['Desktop Safari'], viewport: { width: 1440, height: 900 } },
     },
-    { name: 'mobile-safari', grep: /@mobile/, use: { ...devices['iPhone 14'] } },
-    { name: 'mobile-chrome', grep: /@mobile/, use: { ...devices['Pixel 7'] } },
+    {
+      name: 'mobile-safari',
+      dependencies: ['webkit'],
+      grep: /@mobile/,
+      use: { ...devices['iPhone 14'] },
+    },
+    {
+      name: 'mobile-chrome',
+      dependencies: ['mobile-safari'],
+      grep: /@mobile/,
+      use: { ...devices['Pixel 7'] },
+    },
   ],
   webServer: [
     {
