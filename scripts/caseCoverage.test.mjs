@@ -2,6 +2,12 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync, symlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import process from 'node:process';
+import { URL, fileURLToPath } from 'node:url';
 import { coverage, planRows, titleTags } from './caseCoverage.mjs';
 
 const plan = `
@@ -45,4 +51,18 @@ test('coverage lists untested rows (not ➖), unknown tags and ⬜ rows that hav
   assert.deepEqual(r.untested, ['14.6.1', '9.9']);
   assert.deepEqual(r.unknown, [{ id: '4.4.4', files: ['a.spec.ts'] }]);
   assert.deepEqual(r.flippable, ['14.6.2']);
+});
+
+test('the report runs when started through a path with a space, via a symlink (review #196)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'case coverage '));
+  const link = join(dir, 'caseCoverage.mjs');
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- a temp dir of this test's own
+  symlinkSync(fileURLToPath(new URL('./caseCoverage.mjs', import.meta.url)), link);
+  try {
+    const run = spawnSync(process.execPath, [link], { encoding: 'utf8' });
+    assert.equal(run.status, 0, run.stderr);
+    assert.match(run.stdout, /^Case-ID coverage: \d+ IDs cited by tests/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

@@ -8,7 +8,7 @@
  * ⬜ rows with a test fail it.
  */
 
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -79,7 +79,9 @@ function testFiles(dir, out = []) {
   return out;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Run as a script (not imported by the tests)? Compare real paths, not a URL with a raw path: a
+// space, a non-ASCII character or a symlink would otherwise skip the report and exit 0 (review #196)
+if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {
   const root = join(fileURLToPath(import.meta.url), '..', '..');
   const rows = planRows(readFileSync(join(root, 'docs/TRADING_TEST_PLAN.md'), 'utf8'));
   const tagsByFile = new Map(
