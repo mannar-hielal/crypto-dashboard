@@ -27,7 +27,8 @@ correct without depending on real infrastructure, and the suite stays fast and d
   `pnpm --filter @crypto-dashboard/server test:int` (`vitest.int.config.ts`, CI job
   "Integration (Postgres)"). `pnpm test` and the pre-commit hook exclude them, so they still need
   no database. They use a throwaway database whose name ends in `_int` / `_test`, migrated with
-  `prisma migrate deploy` (never a reset), and each file clears its own rows.
+  `prisma migrate deploy` (never a reset), and each file clears its own rows. The migration replay
+  creates and drops a second throwaway database beside it (`…_replay_int`), never any other.
 - New tests import from `src/`, never from `dist/` or `generated/`.
 - `pnpm test` must pass for the whole suite (server + client), with no skipped tests, before a
   change is considered mergeable.
@@ -92,14 +93,14 @@ Pre-commit hook (`.husky/pre-commit`), in order: `audit` → `type-check` (serve
 A change is not ready to push until all of these are green locally — don't rely on CI to catch a
 gate that `pnpm test`/`pnpm lint`/`pnpm type-check` would have caught first.
 
-| Command                                             | What it verifies                                       |
-| --------------------------------------------------- | ------------------------------------------------------ |
-| `pnpm run audit`                                    | No high/critical CVEs in dependencies                  |
-| `pnpm --filter @crypto-dashboard/server type-check` | Server TS compiles clean                               |
-| `pnpm --filter @crypto-dashboard/client type-check` | Client TS compiles clean (`tsconfig.app.json`)         |
-| `pnpm test:coverage`                                | The Vitest suites, no skips, above the coverage floors |
-| `pnpm format:check`                                 | Prettier formatting is consistent                      |
-| `pnpm lint`                                         | ESLint (flat config), zero errors across all packages  |
+| Command                                             | What it verifies                                               |
+| --------------------------------------------------- | -------------------------------------------------------------- |
+| `pnpm run audit`                                    | No high/critical CVEs in dependencies                          |
+| `pnpm --filter @crypto-dashboard/server type-check` | Server TS compiles clean, plus the SDK-typed contract fixtures |
+| `pnpm --filter @crypto-dashboard/client type-check` | Client TS compiles clean (`tsconfig.app.json`)                 |
+| `pnpm test:coverage`                                | The Vitest suites, no skips, above the coverage floors         |
+| `pnpm format:check`                                 | Prettier formatting is consistent                              |
+| `pnpm lint`                                         | ESLint (flat config), zero errors across all packages          |
 
 ## Cross-references
 

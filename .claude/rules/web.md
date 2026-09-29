@@ -10,7 +10,9 @@ server, a shared typed SDK between server and client.
   duplicate type definitions inside `apps/client/src`. Client code imports it as
   `@crypto-dashboard/sdk`, never via a relative path into `generated/`.
 - If a server response shape changes, the matching SDK type **and** every consumer are updated in
-  the same commit — an SDK change is never "backend-only."
+  the same commit — an SDK change is never "backend-only." Enforced by
+  `apps/server/src/__tests__/contract/sdkContract.test.ts` (every SDK call against the route schemas); a new SDK
+  function or a new field in an SDK type gets its fixture there.
 - New public-facing interfaces are added to `generated/CDSDK/types/index.ts`, not scattered across
   route or component files.
 - `wsUrl()` in `generated/CDSDK/api/market.ts` must stay in sync with the server's WS route prefix

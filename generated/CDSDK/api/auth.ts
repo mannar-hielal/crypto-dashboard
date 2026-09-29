@@ -48,7 +48,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 // ─── Auth API ────────────────────────────────────────────────────────────────
 
 export const authApi = {
-  register: (body: { email: string; username: string; password: string }) =>
+  /** `acceptedTerms` must be true: the server refuses a registration without it (400). */
+  register: (body: { email: string; username: string; password: string; acceptedTerms: boolean }) =>
     request<AuthResponse>('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify(body),

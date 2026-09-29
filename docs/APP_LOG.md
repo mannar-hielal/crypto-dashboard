@@ -2911,5 +2911,151 @@ had ever run against a database outside production.
   `test:coverage` with thresholds just under today's numbers (server 82% lines, engine 97% lines / 85% branches,
   client 46% lines) — raised as tests land, never lowered.
 - `.claude/rules/testing.md` carves out `*.int.test.ts` from "tests never depend on a real database".
-- **Next slices:** P1b migration replay from a pre-BP-2 fixture (14.7.1, 15.2.3, 17.5.1); P1c the 18.x regression
-  suite and concurrency races on the real database; P1d the SDK ↔ server contract test.
+- **Next slices:** P1b migration replay from a pre-BP-2 fixture (14.7.1, 15.2.3, 17.5.1) — done, see below; P1c the
+  18.x regression suite and concurrency races on the real database; P1d the SDK ↔ server contract test.
+
+### test: M1 — account panel tests and guide anchors (#169, 2026-09-28) ✅
+
+**Context:** test plan milestone M1 ("no-infra tests"), first half.
+
+- **Section 8** (`OrderAccountManagementPanel.test`, 12 tests): the Account Settings modal, including the 3 s
+  two-step reset on fake timers.
+- **Section 7:** T1 `actions.test` "Section 7 — Order History records" (5 tests) and T2 "Section 7 — Order History tab"
+  (9 tests).
+- **14.6.7:** `SpotExitsModal.test` (6 tests). **4.23:** journal notes with `<img onerror>` / `<script>` render as
+  literal text.
+- `data-guide` anchors (registry names only) on the panel, Assets rows and the Spot exits modal; no visible change.
+- Client coverage floors raised to 48 / 47 / 51 / 45 (lines / statements / branches / functions).
+- Found a silent failed reset (S3), fixed in #172.
+
+### test: M1 — layouts, multi-symbol PnL, spread, stale market info, size rules (#170, 2026-09-28) ✅
+
+- Tests for multi-chart layouts (10.1–10.5, 10.4.8), multi-symbol PnL (Section 11), the Sell / Buy spread (9.5), Bybit
+  size rules in the order form (14.4) and the stale-on-error market-info cache (12.3.5).
+- The `data-guide` anchors they use: attributes only, no behaviour or visible change.
+
+### fix: order-form prices at the instrument's tick (NEW-9-2); TP / SL exit label pinned (SC-1-6) (#171, 2026-09-28) ✅
+
+- `TradingPanel.tsx`: Sell, Buy, the spread badge and tooltip, and the submit label's price use the tick's decimals
+  (`fmtTickPrice`). DOGEUSDT read `0.12`; it now reads `0.12345` / `0.12346`, spread `0.00001`. BTC stays one decimal.
+- Before the instrument rules load, the SDK's tick snapshot for the pane's market is used (`priceTickSize(category,
+symbol)` in `generated/CDSDK/spec/bybit.ts`, Spot and USDT Perpetual). With no tick at all: 5 decimals under 1, else 2.
+- `bybitSpec.test` holds the SDK tick tables equal to the server's instrument snapshot.
+- Visual Q&A gate passed 2026-09-28. Verified live after release #174 (BTC perp `83,577.5 / 83,577.6`, DOGE Spot
+  `0.09402 / 0.09403`).
+
+### fix: a failed account reset keeps the modal open and says so (NEW-8-1) (#172, 2026-09-28) ✅
+
+- "Confirm reset?" now awaits the server: **Resetting…** (disabled) while in flight, the modal closes on success.
+- On failure it stays open with **⚠ Reset failed — your account is unchanged. Try again.** (`role="alert"`, anchor
+  `acct-settings.error`), and "Reset account" is offered again.
+- Tests [8.8], [8.12] (fails on the old code), [8.13]. Verified live after release #174 with the reset request blocked.
+
+### test: P1b — migration replay from a pre-BP-1 database (2026-09-29) ✅
+
+**Context:** test plan roadmap P1, second slice. The data migrations (BP-1 … BP-5 backfills) had only been checked by
+hand on a scratch or dev database.
+
+- **`migrationReplay.int.test.ts`** (`test:int`):
+  - creates a second throwaway database next to the integration one (`crypto_dashboard_replay_int`; 🔐 both names
+    must end in `_int` / `_test`) and drops it afterwards;
+  - applies the migrations before BP-1 as SQL and records them applied (`prisma migrate resolve`);
+  - loads `src/__tests__/int/fixtures/pre-bp1.sql`: three same-side BTC longs, an ETH short, a pending limit and a
+    pending stop, a filled and a cancelled order, a closed trade, and an account that never traded;
+  - runs `prisma migrate deploy` for the rest.
+- **What it asserts:**
+  - no drift after the replay;
+  - D7: every row is `linear`;
+  - BP-1: pending leverage recovered from qty × price / margin;
+  - BP-2: pending reserve = margin × 1.0007, filled rows taker at 0.07% USDT, entry fee 0.07% of margin;
+  - BP-3: the three longs merged into the oldest (qty 0.4, entry 50,750, margin 2,550, leverage 8, newest TP and SL,
+    one journal line, `SymbolSetting` pinned at the position's leverage);
+  - BP-5: existing accounts `ISOLATED_MARGIN` with the notice, and a new account after the migration is cross;
+  - the migrated account then loads, cancels a pending order (full reserve back) and closes the merged position
+    through `AccountRepository`.
+- **Why its own database, not a Postgres schema:** the BP-2 migration's foreign-key guard reads `pg_constraint`
+  across the whole database. In a second schema it saw `public`'s constraint and skipped its own, and the replay's
+  drift check caught that. Production has one schema, so this doesn't affect it; the applied migration can't be
+  edited (its checksum is recorded).
+- Rows 14.7.1, 15.2.3 and 17.5.1 are now T2i, and the A10 item is ticked.
+
+### test: P1c — the Section 18 regression suite on Postgres (18.7); fix ids colliding across accounts (18.8) (2026-09-29) ✅
+
+**Context:** test plan roadmap P1, third slice. 18.1–18.6 were pinned only with in-memory fakes.
+
+- **`regression.int.test.ts`** (`test:int`, 8 tests): 18.1–18.6 through the production objects (TradingService →
+  AccountRepository → Postgres, the MatchingEngine on the Prisma `EngineLease` row), with only the market faked
+  (quotes, 1m and mark candles, Bybit's funding history). `Date` is faked so fills and funding land on exact minutes;
+  timers stay real.
+  - 18.1: a backfilled limit fill is stamped in its minute, and the next minute's TP closes it (`LIMIT` then
+    `TAKE_PROFIT` both `FILLED`).
+  - 18.2: a takeover from an expired lease 3 s after a funding timestamp settles it once (0.1 × 49,990 × 0.01% =
+    0.4999), even though Bybit's history listed it late; a timestamp the history never lists is given up, not
+    retried forever.
+  - 18.3: an account deleted between the timestamp and its settlement is dropped, the other account is settled, and
+    the lease's `lastTickAt` moves past the timestamp.
+  - 18.4: a minute that crosses both a stop-loss set past the liquidation price and the liquidation price leaves one
+    `BustTrade` at the bankruptcy price (45,000), with no stop-loss fill.
+  - 18.5: a reset between the timestamp and its settlement is not charged (`lastReset` round-trips); a reset before
+    it still is.
+  - 18.6: a position closed in two parts while the engine was down is charged 0.5 on takeover, split 0.125 / 0.375
+    over the two close rows.
+- **Fix (18.8):** the leverage-change and margin-mode journal / balance ids were built from the symbol and the time
+  alone (`j-leverage-BTCUSDT-<ms>`, `j-mode-<ms>`). Ids are primary keys shared by every account, so two users doing
+  the same in the same millisecond collided, and the second request failed with a unique-constraint error (a 500). They
+  now take `ctx.newId()`. Two `cross.test` cases fail on the old code.
+- Rows 18.7 and 18.8 ✅, and the A10 item is ticked. Still in P1: the route races (NEW-1-2, NEW-13-2, NEW-18-2,
+  NEW-18-3) and the SDK ↔ server contract test (P1d).
+
+### test: P1c (second part) — races and a failed write on a real Postgres (2026-09-29) ✅
+
+**Context:** test plan roadmap P1. Concurrency and atomicity only show up with real transactions: the unit tests mock
+what Prisma returns.
+
+- **`paperRoutes.int.test.ts`**: two app instances on one database stand in for two Fly machines (their per-user
+  queues are separate, so only `Account.version` keeps them apart).
+  - [13.3.8] Two orders at once both apply, a version each. A burst of six loses no update: each accepted order
+    applies once, and one refused after its retries (409 "Account changed — please retry") leaves nothing.
+  - [1.7.13] A manual close on one machine and the TP firing on the other: closed once, one Closed P&L row, realised
+    P&L counted once; the loser gets a 404 or no trigger.
+  - [18.9] The close's last write (the journal line) throws inside the transaction: every write rolls back
+    (position, trade, order, balance, version), the client gets only `{ error: 'Internal Server Error' }`, and the
+    retry succeeds.
+- **`regression.int.test.ts`** [18.10]: two engines on one lease row. Only the holder listens to the feed; the other
+  can't take an unexpired lease, then takes it and replays the gap over the same fill and funding minutes without a
+  second fill or charge.
+- **`authRoutes.int.test.ts`**: [19.11] two tabs refreshing the same token at once give one rotation (200 plus 401), one
+  live token row, and the new session keeps working with nothing revoked; [19.12] two logouts at once are both 204,
+  with no P2025.
+- Rows 1.7.13, 13.3.8, 18.9, 18.10, 19.11 and 19.12 are added (they were NEW-1-2, NEW-13-2, NEW-18-2 and NEW-18-3 in the
+  implementation plan), and the A10 route-test item is ticked. What's left in P1 is the SDK ↔ server contract test
+  (P1d).
+
+### test: P1d — SDK ↔ server contract test; fix three auth responses the serializer emptied (2026-09-29) ✅
+
+**Context:** test plan roadmap P1, last slice (F9). The rule in `web.md` that "an SDK change is never backend-only"
+was enforced only by review.
+
+- **`apps/server/src/__tests__/contract/sdkContract.test.ts`** (43 cases, in `pnpm test`): every SDK function in
+  `authApi`, `marketApi`, `newsletterApi` and `paperApi` is called for real with `fetch` stubbed. Its request is matched
+  to the OpenAPI document the app generates (`app.swagger()`):
+  - the route exists for the method;
+  - the query and body send only declared fields, and every field the route requires is required by the SDK type;
+  - the success status is declared, and every field of the SDK-typed response fixture is in the response schema, with
+    a matching JSON type (fast-json-stringify silently drops the rest).
+
+  A "covers every SDK function" case fails on an SDK function with no call. The fixtures (`fixtures.ts`) are typed as
+  the SDK types and type-checked by `apps/server/tsconfig.contract.json`, now part of the server's `type-check`.
+
+- **Found and fixed:**
+  - PATCH `/api/auth/username` and PATCH `/api/auth/email` had each other's response schema, so both answered `{}`. The
+    Settings modal reads `res.user.username`, so a successful rename showed an error (row 19.14).
+  - No auth response declared `deletionRequestedAt`, and `/login` and `/me` never set it. A user who asked for deletion
+    and signed back in never saw the "scheduled for deletion" banner or its Cancel (row 19.13).
+  - One `publicUser()` now builds the user for register, login, `/me` and `/username`, from explicit fields (the
+    password is never selected).
+  - The SDK's `authApi.register` body type lacked `acceptedTerms`, which the server requires. The Register page sent
+    it anyway (it passes the whole form).
+- The paper state and delta schemas are open (`additionalProperties: true`). `trading/mappers.ts` builds them from the
+  SDK types, so `tsc` holds that half.
+- With this, roadmap P1 and milestone M2 are complete.
