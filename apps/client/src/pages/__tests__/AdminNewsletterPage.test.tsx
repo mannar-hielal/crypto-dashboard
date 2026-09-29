@@ -12,7 +12,7 @@ vi.mock('@crypto-dashboard/sdk', () => ({
 
 vi.mock('@/store/authStore', () => ({
   useAuthStore: (selector?: (s: { accessToken: string; user: { email: string } }) => unknown) => {
-    const state = { accessToken: 'test-token', user: { email: 'adminwithu@gmail.com' } };
+    const state = { accessToken: 'test-token', user: { email: 'admin@example.com' } };
     return selector ? selector(state) : state;
   },
 }));

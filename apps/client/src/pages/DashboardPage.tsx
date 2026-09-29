@@ -27,6 +27,8 @@ import { OrderAccountManagementPanel } from '@/components/dashboard/OrderAccount
 import { TickerBar } from '@/components/dashboard/TickerBar';
 import { SymbolBar } from '@/components/dashboard/SymbolBar';
 import { TradingPanel } from '@/components/dashboard/TradingPanel';
+import { MobileTradeBar } from '@/components/dashboard/MobileTradeBar';
+import { useOrderPrefillStore } from '@/store/orderPrefillStore';
 import type { OrderTab } from '@/components/dashboard/TradingPanel';
 import { PositionEditPanel } from '@/components/dashboard/PositionEditPanel';
 import { PendingOrderEditPanel } from '@/components/dashboard/PendingOrderEditPanel';
@@ -230,6 +232,21 @@ export function DashboardInner() {
   /** When set, an edit panel replaces the TradingPanel in the right column */
   const [editTarget, setEditTarget] = useState<EditTarget>(null);
   const isTradingPanelVisible = !editTarget && tradingPanelOpen;
+
+  // Below lg the form isn't docked: a prefill (Assets → Sell) must also open it, on its side, or the
+  // tap looks dead (review #200). Adjusted while rendering when a new request arrives (no effect)
+  // The form may take (and clear) the request first, so follow the request counter, not the request
+  const prefillSeq = useOrderPrefillStore((s) => s.seq);
+  const prefillSide = useOrderPrefillStore((s) => s.lastSide);
+  const [openedForSeq, setOpenedForSeq] = useState(prefillSeq);
+  if (prefillSeq !== openedForSeq) {
+    setOpenedForSeq(prefillSeq);
+    if (isMobile) {
+      setEditTarget(null);
+      setTradingSide(prefillSide);
+      setTradingPanelOpen(true);
+    }
+  }
 
   // ── Chart cursor variant + drag-to-grab ─────────────────────────────────
 
@@ -530,11 +547,13 @@ export function DashboardInner() {
           {editTarget?.kind === 'position' && (
             <motion.div
               key={`edit-pos-${editTarget.positionId}`}
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 256, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
+              // Below lg an overlay like the order form (full screen / a 320 px sheet), so the
+              // chart isn't squeezed to ~120 px on a phone (review #200)
+              initial={isMobile ? { x: '100%', opacity: 0 } : { width: 0, opacity: 0 }}
+              animate={isMobile ? { x: 0, opacity: 1 } : { width: 256, opacity: 1 }}
+              exit={isMobile ? { x: '100%', opacity: 0 } : { width: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: 'easeInOut' }}
-              className="shrink-0 overflow-hidden"
+              className={`shrink-0 overflow-hidden${isMobile ? ' absolute inset-y-0 right-0 z-30 w-full md:w-80' : ''}`}
             >
               <PositionEditPanel
                 positionId={editTarget.positionId}
@@ -545,11 +564,13 @@ export function DashboardInner() {
           {editTarget?.kind === 'pending' && (
             <motion.div
               key={`edit-pending-${editTarget.orderId}`}
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 256, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
+              // Below lg an overlay like the order form (full screen / a 320 px sheet), so the
+              // chart isn't squeezed to ~120 px on a phone (review #200)
+              initial={isMobile ? { x: '100%', opacity: 0 } : { width: 0, opacity: 0 }}
+              animate={isMobile ? { x: 0, opacity: 1 } : { width: 256, opacity: 1 }}
+              exit={isMobile ? { x: '100%', opacity: 0 } : { width: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: 'easeInOut' }}
-              className="shrink-0 overflow-hidden"
+              className={`shrink-0 overflow-hidden${isMobile ? ' absolute inset-y-0 right-0 z-30 w-full md:w-80' : ''}`}
             >
               <PendingOrderEditPanel
                 orderId={editTarget.orderId}
@@ -569,7 +590,8 @@ export function DashboardInner() {
               : { width: isTradingPanelVisible ? 256 : 0, opacity: isTradingPanelVisible ? 1 : 0 }
           }
           transition={{ duration: 0.2, ease: 'easeInOut' }}
-          className={`shrink-0 overflow-hidden${isMobile ? ' absolute inset-0 z-30 w-full' : ''}`}
+          // Below lg: full screen on phones, a right-hand sheet on tablets (md+)
+          className={`shrink-0 overflow-hidden${isMobile ? ' absolute inset-y-0 right-0 z-30 w-full md:w-80' : ''}`}
           aria-hidden={!isTradingPanelVisible}
           inert={!isTradingPanelVisible ? true : undefined}
           style={{ pointerEvents: isTradingPanelVisible ? 'auto' : 'none' }}
@@ -581,23 +603,48 @@ export function DashboardInner() {
             onTabChange={setTradingTab}
             initialSide={tradingSide}
             onSideChange={setTradingSide}
+            // Mobile: the form covers the screen — once the order is in, close it and open the
+            // account panel, so the new position or order is what the user sees
+            onPlaced={
+              isMobile
+                ? () => {
+                    setTradingPanelOpen(false);
+                    setPanelSize('open');
+                  }
+                : undefined
+            }
           />
         </motion.div>
       </div>
 
-      <TickerBar />
+      {/* Phones and tablets: Buy / Sell open the order form (it isn't docked below lg) */}
+      {/* Not while an edit panel is open: it covers the screen, and Buy / Sell couldn't show the form */}
+      {isMobile && !isTradingPanelVisible && !editTarget && (
+        <MobileTradeBar
+          onTrade={(side) => {
+            setTradingSide(side);
+            setTradingPanelOpen(true);
+          }}
+        />
+      )}
+
+      {/* The ticker tape is marketing: phones give its height to the chart */}
+      <div className="hidden sm:block">
+        <TickerBar />
+      </div>
 
       {/* ── Dashboard footer ─────────────────────────────────────────────── */}
       <div
-        className="flex h-auto w-full shrink-0 flex-col items-center border-t border-white/5 px-4 py-2 sm:h-7 sm:flex-row sm:items-center sm:justify-between sm:py-0"
+        className="flex h-auto w-full shrink-0 flex-col items-center gap-0.5 border-t border-white/5 px-4 py-1.5 sm:h-7 sm:flex-row sm:items-center sm:justify-between sm:gap-0 sm:py-0"
         style={{ background: bg.footer }}
       >
-        <span style={{ fontSize: fontSize.xs10, color: `${color.muted}80` }}>
-          ⚠️ Paper trading only — no real funds. For educational purposes.
+        <span style={{ fontSize: fontSize.xs10, color: color.muted }}>
+          ⚠️ Paper trading only — no real funds.
+          <span className="hidden sm:inline"> For educational purposes.</span>
         </span>
         <nav
-          className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 sm:flex-nowrap sm:gap-4"
-          style={{ fontSize: fontSize.xs10, color: `${color.muted}60` }}
+          className="flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 sm:flex-nowrap sm:gap-4"
+          style={{ fontSize: fontSize.xs10, color: `${color.muted}b3` }}
         >
           <Link to="/terms" className="transition-colors hover:text-white/50">
             Terms of Service
@@ -611,7 +658,7 @@ export function DashboardInner() {
           <Link to="/aup" className="transition-colors hover:text-white/50">
             Acceptable Use Policy
           </Link>
-          <span className="font-medium sm:ml-2">
+          <span className="hidden font-medium sm:ml-2 sm:inline">
             © {new Date().getFullYear()} cryptopapertrade.com
           </span>
         </nav>

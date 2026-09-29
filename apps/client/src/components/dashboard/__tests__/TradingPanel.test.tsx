@@ -33,7 +33,7 @@
 
 import React from 'react';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup, within, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, cleanup, within, waitFor } from '@testing-library/react';
 import { TradingPanel } from '../TradingPanel';
 import { useLayoutStore } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
@@ -303,7 +303,7 @@ describe('Section 1 — Market Orders (T2 · RTL)', () => {
   // ── 1.5 Sell with Stop-Loss only ────────────────────────────────────────────
 
   describe('1.5 Sell with Stop-Loss only', () => {
-    it('1.5.1: enabling SL toggle reveals an input with red border (borderColor contains #d5455c)', () => {
+    it('1.5.1: enabling SL toggle reveals an input with red border (the loss red, color.red)', () => {
       renderPanel();
       // SL toggle is the second switch
       const [, slToggle] = screen.getAllByRole('switch');
@@ -312,8 +312,8 @@ describe('Section 1 — Market Orders (T2 · RTL)', () => {
       // SL input should now be in the DOM with red border
       const slInput = getSlInput();
       const style = (slInput as HTMLInputElement).style;
-      // #d5455c + alpha "60" hex → jsdom converts to rgba(213, 69, 92, …)
-      expect(style.borderColor).toMatch(/213,\s*69,\s*92/);
+      // color.red (#ff6b7c since the contrast fix) + alpha "60" hex → jsdom: rgba(255, 107, 124, …)
+      expect(style.borderColor).toMatch(/255,\s*107,\s*124/);
     });
   });
 
@@ -921,7 +921,7 @@ describe('BP-2 — market tabs and leverage', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: '5×' }));
     // 5×: IM 1,000 + fee to close 5,000 × 0.8 × 0.055% = 2.20; liq (5,000 − 1,000) / 0.09967
     const preview = within(dialog).getByTestId('remargin-preview');
-    expect(preview.textContent).toContain('Position margin: $5000.00 → $1002.20');
+    expect(preview.textContent).toContain('Position margin: $5,000.00 → $1,002.20');
     expect(preview.textContent).toContain('Liq. price: — → $40,132.5'); // 40,132.44… up to the 0.1 tick
     fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
     await waitFor(() =>
@@ -1272,6 +1272,21 @@ describe('Section 9 — spread (T2 · RTL)', () => {
     // Sell is the best bid, Buy the best ask — not a mid-price
     expect(getByGuide(container, 'trade.side.sell').textContent).toContain('49,999.9');
     expect(getByGuide(container, 'trade.side.buy').textContent).toContain('50,000.0');
+  });
+
+  it('should show — for Sell, Buy and the spread while disconnected, and the quotes again once back (9.6)', () => {
+    quote(49_999.9, 50_000);
+    paneStores[0].setState({ isConnected: false });
+    const { container } = renderPanel();
+
+    expect(getByGuide(container, 'trade.spread').textContent).toBe('—');
+    expect(getByGuide(container, 'trade.side.sell').textContent).toContain('—');
+    expect(getByGuide(container, 'trade.side.sell').textContent).not.toContain('49,999.9');
+    expect(getByGuide(container, 'trade.side.buy').textContent).toContain('—');
+
+    act(() => paneStores[0].setState({ isConnected: true }));
+    expect(getByGuide(container, 'trade.spread').textContent).toBe('0.1');
+    expect(getByGuide(container, 'trade.side.sell').textContent).toContain('49,999.9');
   });
 
   it('should show a wider spread at the tick too (9.5)', () => {

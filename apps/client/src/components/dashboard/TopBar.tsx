@@ -40,23 +40,26 @@ export function TopBar({ marketing = false }: TopBarProps) {
 
   return (
     <header
-      className={`flex h-12 w-full shrink-0 items-center justify-between border-b border-white/6 px-4${marketing ? ' sticky top-0' : ''}`}
+      className={`flex h-12 w-full shrink-0 items-center justify-between border-b border-white/6 px-3 sm:px-4${marketing ? ' sticky top-0' : ''}`}
       style={{ background: bg.panel, zIndex: marketing ? 50 : 20 }}
     >
       {/* ── Left: Logo + name + badge ──────────────────────────────────── */}
-      <div className="flex items-center gap-2.5">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
         <motion.div whileHover={{ scale: 1.08 }} className="h-7 w-7 overflow-hidden rounded-md">
           <img src="/logo.svg" alt="CPT" className="h-full w-full" />
         </motion.div>
 
-        <span className="text-sm font-bold tracking-tight text-white">cryptopapertrade.com</span>
+        {/* The wordmark needs ~170 px: phones keep the CPT logo only (owner, 2026-09-29) */}
+        <span className="hidden text-sm font-bold tracking-tight text-white sm:inline">
+          cryptopapertrade.com
+        </span>
 
         <span
           className="rounded px-1.5 py-0.5 font-bold uppercase tracking-widest"
           style={{
             fontSize: fontSize.xxs,
             background: `${color.purpleDark}20`,
-            color: color.purple,
+            color: color.purpleLight, // 5.5:1 on the badge (WCAG AA; purple is ~3:1)
             border: `1px solid ${color.purpleDark}30`,
           }}
         >
@@ -101,7 +104,11 @@ export function TopBar({ marketing = false }: TopBarProps) {
               >
                 {user?.username?.charAt(0).toUpperCase() ?? '?'}
               </div>
-              <span style={{ fontSize: fontSize.xs11 }} className="font-medium text-white/70">
+              {/* Phones: the avatar only (the name is in the menu and the button's text) */}
+              <span
+                style={{ fontSize: fontSize.xs11 }}
+                className="hidden max-w-[10rem] truncate font-medium text-white/70 sm:inline"
+              >
                 {user?.username}
               </span>
               <ChevronDown

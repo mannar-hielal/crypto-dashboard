@@ -638,7 +638,7 @@ describe('Section 4.8–4.11 — Journal tab', () => {
     expect(screen.getByText('+$98.50')).toBeTruthy();
   });
 
-  it('4.10: losing close entry shows a "$-X.XX" PnL badge', () => {
+  it('4.10: losing close entry shows a "-$X.XX" PnL badge', () => {
     usePaperStore.setState({
       journal: [
         {
@@ -652,11 +652,11 @@ describe('Section 4.8–4.11 — Journal tab', () => {
     });
     renderPanel();
     switchToJournal();
-    // Component renders: {'' + '$' + pnl.toFixed(2)} → "$-48.00" (sign from toFixed)
-    expect(screen.getByText('$-48.00')).toBeTruthy();
+    // Like Bybit (visual gate 2026-09-29): the sign before the $
+    expect(screen.getByText('-$48.00')).toBeTruthy();
   });
 
-  it('4.10: zero-PnL close entry shows "+$0.00" badge (breakeven)', () => {
+  it('4.10: zero-PnL close entry shows "$0.00" (no sign) badge (breakeven)', () => {
     usePaperStore.setState({
       journal: [
         {
@@ -670,8 +670,8 @@ describe('Section 4.8–4.11 — Journal tab', () => {
     });
     renderPanel();
     switchToJournal();
-    // Summary bar also shows +$0.00 for Unrealized/Realized P&L — use getAllByText
-    expect(screen.getAllByText('+$0.00').length).toBeGreaterThanOrEqual(1);
+    // Zero carries no sign, like Bybit; the summary bar shows $0.00 too — use getAllByText
+    expect(screen.getAllByText('$0.00').length).toBeGreaterThanOrEqual(1);
   });
 
   it('4.11: user note with no pnl field has no PnL badge', () => {
@@ -1022,7 +1022,7 @@ describe('BP-4 — funding in the Positions tab', () => {
     usePaperStore.setState({ positions: [base] });
     const { unmount } = renderPanel();
     expect(screen.getByText('Funding')).toBeTruthy();
-    expect(screen.getByTestId('position-funding').textContent).toBe('−0.51');
+    expect(screen.getByTestId('position-funding').textContent).toBe('-0.51');
     unmount();
     usePaperStore.setState({ positions: [{ ...base, cumFunding: -0.2 }] });
     renderPanel();

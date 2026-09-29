@@ -289,35 +289,38 @@ export function LeftToolbar({
           );
           const CursorIcon = cursorVariantDef?.icon ?? Icon;
 
+          // The caret is the button's sibling, not its child: a button inside a button is invalid and
+          // unreachable by keyboard (axe nested-interactive, visual gate 2026-09-29)
           return (
-            <motion.button
-              key={tool.id}
-              ref={cursorBtnRef}
-              data-tooltip={cursorVariantDef?.label ?? 'Cursor'}
-              aria-label={cursorVariantDef?.label ?? 'Cursor'}
-              onClick={() => {
-                setLocalToolType(null);
-                onToolChange?.(null);
-              }}
-              onContextMenu={handleCursorContextMenu}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              className={`toolbar-btn focus-ring${toolActive ? ' active' : ''}`}
-            >
-              {toolActive && (
-                <motion.span
-                  layoutId="toolbar-active"
-                  className="absolute inset-0 rounded"
-                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                />
-              )}
-              <CursorIcon size={24} />
+            <div key={tool.id} className="toolbar-slot">
+              <motion.button
+                ref={cursorBtnRef}
+                data-tooltip={cursorVariantDef?.label ?? 'Cursor'}
+                aria-label={cursorVariantDef?.label ?? 'Cursor'}
+                onClick={() => {
+                  setLocalToolType(null);
+                  onToolChange?.(null);
+                }}
+                onContextMenu={handleCursorContextMenu}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className={`toolbar-btn focus-ring${toolActive ? ' active' : ''}`}
+              >
+                {toolActive && (
+                  <motion.span
+                    layoutId="toolbar-active"
+                    className="absolute inset-0 rounded"
+                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                  />
+                )}
+                <CursorIcon size={24} />
+              </motion.button>
               <span
                 onClick={(e) => {
                   e.stopPropagation();
                   handleCursorContextMenu(e);
                 }}
-                className="absolute bottom-0.5 right-0.5 z-10 cursor-pointer"
+                className="toolbar-caret absolute bottom-0.5 right-0.5 z-10 cursor-pointer"
                 aria-label="Change cursor style"
                 role="button"
                 tabIndex={0}
@@ -335,7 +338,7 @@ export function LeftToolbar({
                   padding: 0,
                 }}
               />
-            </motion.button>
+            </div>
           );
         }
 
@@ -356,30 +359,31 @@ export function LeftToolbar({
         const showToolIcon = SelectedIcon != null;
 
         return (
-          <motion.button
-            key={tool.id}
-            data-tooltip={toolLabel}
-            aria-label={toolLabel}
-            onClick={() => handleMainClick(tool.id)}
-            onContextMenu={(e) => hasSubmenu && handleContextMenu(e, tool.id)}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            className={`toolbar-btn focus-ring${toolActive ? ' active' : ''}`}
-          >
-            {toolActive && (
-              <motion.span
-                layoutId="toolbar-active"
-                className="absolute inset-0 rounded"
-                transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-              />
-            )}
-            {showToolIcon ? (
-              <span className="relative z-10 flex items-center justify-center w-full">
-                <SelectedIcon size={22} />
-              </span>
-            ) : (
-              <Icon className="relative z-10 h-6 w-6" strokeWidth={1} />
-            )}
+          <div key={tool.id} className="toolbar-slot">
+            <motion.button
+              data-tooltip={toolLabel}
+              aria-label={toolLabel}
+              onClick={() => handleMainClick(tool.id)}
+              onContextMenu={(e) => hasSubmenu && handleContextMenu(e, tool.id)}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className={`toolbar-btn focus-ring${toolActive ? ' active' : ''}`}
+            >
+              {toolActive && (
+                <motion.span
+                  layoutId="toolbar-active"
+                  className="absolute inset-0 rounded"
+                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                />
+              )}
+              {showToolIcon ? (
+                <span className="relative z-10 flex items-center justify-center w-full">
+                  <SelectedIcon size={22} />
+                </span>
+              ) : (
+                <Icon className="relative z-10 h-6 w-6" strokeWidth={1} />
+              )}
+            </motion.button>
             {hasSubmenu && (
               <span
                 onClick={(e) => {
@@ -390,7 +394,7 @@ export function LeftToolbar({
                     setPopupMenu({ groupId: tool.id, left: rect.right + 6, top: rect.top });
                   }
                 }}
-                className="absolute bottom-0.5 right-0.5 z-10 cursor-pointer"
+                className="toolbar-caret absolute bottom-0.5 right-0.5 z-10 cursor-pointer"
                 aria-label={`${toolLabel} tools`}
                 role="button"
                 tabIndex={0}
@@ -415,7 +419,7 @@ export function LeftToolbar({
                 }}
               />
             )}
-          </motion.button>
+          </div>
         );
       })}
 

@@ -13,11 +13,19 @@ import type { Locator, Page } from '@playwright/test';
 
 test.describe.configure({ mode: 'serial' });
 
-const shot = { animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.01 } as const;
+// Exact (no pixel tolerance): the baselines are local, one machine, and a changed character is a
+// few pixels — a 1 % tolerance let "$5000.00" → "$5,000.00" pass unseen
+const shot = { animations: 'disabled', caret: 'hide' } as const;
 /** The seeded username changes every run; the order form overlaps the right end of wide rows */
 const masks = (page: Page) => [at(page, 'nav.user-menu'), orderForm(page)];
 function orderForm(page: Page): Locator {
   return page.locator('aside').filter({ has: at(page, 'trade.submit') });
+}
+/** A dialog 3 px inside its box: its rounded corners show whatever is behind, which changes */
+async function dialogShot(page: Page, name: string) {
+  const box = (await page.getByRole('dialog').boundingBox())!;
+  const clip = { x: box.x + 3, y: box.y + 3, width: box.width - 6, height: box.height - 6 };
+  await expect(page).toHaveScreenshot(name, { ...shot, clip });
 }
 const summaryBar = (page: Page): Locator =>
   at(page, 'account.summary.balance').locator(
@@ -61,7 +69,7 @@ test('[F10] leverage and margin-mode modal @visual', async ({ page, seededUser }
   await signInAs(page, seededUser.email, seededUser.password);
   await page.goto('/dashboard/usdt/BTCUSDT');
   await at(page, 'trade.leverage-chip').click();
-  await expect(page.getByRole('dialog')).toHaveScreenshot('leverage-modal.png', shot);
+  await dialogShot(page, 'leverage-modal.png');
 });
 
 test('[F10] positions with pair icons, the summary bar, adjust margin, a Closed P&L row @visual', async ({
@@ -94,7 +102,7 @@ test('[F10] positions with pair icons, the summary bar, adjust margin, a Closed 
     .locator('[data-guide="positions.row.adjust-margin"]')
     .click();
   await at(page, 'margin.amount').fill('500');
-  await expect(page.getByRole('dialog')).toHaveScreenshot('adjust-margin.png', shot);
+  await dialogShot(page, 'adjust-margin.png');
   await page.keyboard.press('Escape');
   if ((await page.getByRole('dialog').count()) > 0)
     await page.getByRole('button', { name: 'Cancel' }).click();

@@ -10,6 +10,7 @@ import { Resend } from 'resend';
 import { config } from '../config.js';
 import { logger } from '../logger.js';
 import { recordOutboxEmail } from './emailOutbox.js';
+import type { DigestEntry } from '../lib/errorAlerts.js';
 
 // Lazy-initialise — avoids crashing on startup if key is missing in dev
 let resend: Resend | null = null;
@@ -22,6 +23,15 @@ function getResend(): Resend | null {
   if (!resend) resend = new Resend(config.resendApiKey);
   return resend;
 }
+
+const HTML_ESCAPES = new Map([
+  ['&', '&amp;'],
+  ['<', '&lt;'],
+  ['>', '&gt;'],
+  ['"', '&quot;'],
+  ["'", '&#39;'],
+]);
+const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => HTML_ESCAPES.get(c) ?? c);
 
 type EmailPayload = {
   from: string;
@@ -339,6 +349,36 @@ export const EmailService = {
       'Failed to send deletion completed email',
       { to, username }
     );
+  },
+
+  // ─── OWNER ALERTS (M8) ──────────────────────────────────────────────────
+
+  /** The production error digest (lib/errorAlerts.ts): which errors, from where, how often. */
+  async sendErrorDigest(to: string, entries: DigestEntry[], windowMinutes: number): Promise<void> {
+    // Throws when not sent (no client, or Resend answered with an error): the digest then keeps its
+    // counts and its daily cap (lib/errorAlerts.ts). Not logged here — the timer swallows it, and
+    // EmailService's own lines aren't counted anyway (review #201)
+    const client = getResend();
+    if (!client) throw new Error('Error digest not sent: no Resend client');
+    const total = entries.reduce((n, e) => n + e.count, 0);
+    // 🔐 Escaped anyway: a sanitised message can still quote a fragment of input
+    const rows = entries
+      .map(
+        (e) =>
+          `<tr><td>${escapeHtml(e.source)}</td><td>${escapeHtml(e.message)}</td><td align="right">${e.count}</td></tr>`
+      )
+      .join('');
+    const { error } = await client.emails.send({
+      from: config.resendFromEmail,
+      to,
+      subject: `cryptopapertrade.com: ${total} server error${total === 1 ? '' : 's'} in the last ${windowMinutes} minutes`,
+      html: `
+        <p>Errors logged by the production server in the last ${windowMinutes} minutes:</p>
+        <table cellpadding="4"><tr><th align="left">Where</th><th align="left">Error</th><th>Count</th></tr>${rows}</table>
+        <p>Details are in the Fly logs (<code>fly logs -a crypto-dashboard-api</code>). At most 10 of these a day.</p>
+      `,
+    });
+    if (error) throw new Error(`Error digest not sent: ${error.name ?? 'Resend error'}`);
   },
 
   // ─── NEWSLETTER ─────────────────────────────────────────────────────────

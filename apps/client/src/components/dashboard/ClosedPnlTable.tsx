@@ -11,6 +11,7 @@ import { fmtMktPrice } from '@/lib/utils';
 import { closedPnlBreakdown, closedPnlOf } from '@/lib/positionMath';
 import { guide } from '@/lib/guideAnchors';
 import styles from './ClosedPnlTable.module.css';
+import { fmtSigned } from '@/lib/format';
 
 const COLUMNS = [
   { id: 'symbol', label: 'Symbol', num: false },
@@ -88,8 +89,7 @@ function ClosedPnlRow({ trade: t }: { trade: ClosedTrade }) {
         data-testid="closed-pnl-value"
         {...guide('closed-pnl.value')}
       >
-        {pnl > 0 ? '+' : ''}
-        {pnl.toFixed(4)} USDT
+        {fmtSigned(pnl, 4)} USDT
       </td>
       <td
         style={{ color: t.liquidated ? color.amber : color.muted }}

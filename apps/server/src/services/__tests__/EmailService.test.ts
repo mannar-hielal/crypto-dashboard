@@ -47,4 +47,44 @@ describe('EmailService — the test hooks never send real email', () => {
       'password-reset',
     ]);
   });
+
+  it('should send the error digest with every value escaped, and a count in the subject (M8)', async () => {
+    config.testHooks = false;
+    await EmailService.sendErrorDigest(
+      'owner@example.com',
+      [{ source: 'auth', message: '<script>x</script> failed', count: 3 }],
+      30
+    );
+    expect(send).toHaveBeenCalledTimes(1);
+    const payload = send.mock.calls[0]![0] as { subject: string; html: string };
+    expect(payload.subject).toBe('cryptopapertrade.com: 3 server errors in the last 30 minutes');
+    expect(payload.html).toContain('&lt;script&gt;x&lt;/script&gt; failed');
+    expect(payload.html).not.toContain('<script>');
+  });
+
+  it('should throw when Resend answers the digest with an error, so the counts are kept (review #201)', async () => {
+    config.testHooks = false;
+    send.mockResolvedValueOnce({
+      data: null,
+      error: { name: 'rate_limit_exceeded', message: 'x' },
+    });
+    await expect(
+      EmailService.sendErrorDigest(
+        'owner@example.com',
+        [{ source: 'a', message: 'b', count: 1 }],
+        30
+      )
+    ).rejects.toThrow('Error digest not sent: rate_limit_exceeded');
+  });
+
+  it('should throw when there is no Resend client (test hooks on), rather than pretend it sent', async () => {
+    config.testHooks = true;
+    await expect(
+      EmailService.sendErrorDigest(
+        'owner@example.com',
+        [{ source: 'a', message: 'b', count: 1 }],
+        30
+      )
+    ).rejects.toThrow('no Resend client');
+  });
 });

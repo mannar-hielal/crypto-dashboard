@@ -109,6 +109,8 @@ export const GUIDE_ANCHORS = [
   'trade.warning',
   'trade.error',
   'trade.submit',
+  'trade.mobile.buy',
+  'trade.mobile.sell',
   'trade.sl-confirm',
   'trade.sl-confirm.anyway',
   'trade.close-panel',

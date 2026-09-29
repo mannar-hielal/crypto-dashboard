@@ -3,7 +3,7 @@
  *
  * Keeps document.title in sync with the active pane's live price.
  * Format: "▲ BTC/USDT 75,249.90 +1.96% · cryptopapertrade.com"
- *         "▼ BTC/USDT 75,249.90 −0.03% · cryptopapertrade.com"
+ *         "▼ BTC/USDT 75,249.90 -0.03% · cryptopapertrade.com"
  *
  * Uses the same 4-unconditional-useStore pattern as SymbolBar so hook
  * call count never changes regardless of activePane value.
@@ -13,6 +13,7 @@ import { useEffect } from 'react';
 import { useStore } from 'zustand';
 import { useLayoutStore } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
+import { fmtSignedPct } from '@/lib/format';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -79,9 +80,7 @@ export function useDocumentTitle() {
     if (priceChange !== null) {
       const prevClose = latestPrice - priceChange;
       if (prevClose !== 0) {
-        const pct = (priceChange / prevClose) * 100;
-        const sign = pct >= 0 ? '+' : '−';
-        pctStr = ` ${sign}${Math.abs(pct).toFixed(2)}%`;
+        pctStr = ` ${fmtSignedPct((priceChange / prevClose) * 100)}`;
       }
     }
 

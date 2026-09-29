@@ -139,6 +139,25 @@ interaction tables are intentionally left out of this snapshot; read `tokens.ts`
 - Respect existing `size.*` control heights for interactive elements (buttons, inputs) — shrinking
   a tap target below the `sm`/`md` scale hurts touch usability on the trading panels.
 
+## Responsive layout (phones and tablets)
+
+Agreed with the owner on 2026-09-29 ("support phone trading"). The dashboard's breakpoints:
+
+- **Below `sm` (640 px, phones):**
+  - the top bar shows the CPT logo without the wordmark, and the avatar without the username;
+  - no ticker tape, no multi-pane layout picker or sync status;
+  - the account panel is titled "Orders & Account";
+  - the footer keeps the paper-trading disclaimer and the legal links.
+- **Below `lg` (1024 px, phones and tablets):**
+  - the order form isn't docked beside the chart: `MobileTradeBar` (Buy / Long, Sell / Short) opens it, full screen
+    below `md` and as a 320 px right-hand sheet from `md` (768 px);
+  - a placed order closes it and opens the account panel;
+  - the symbol bar's Trade toggle shows from `lg` only.
+- **No sideways page scroll at any width.** Rows that scroll (the symbol bar, the tables) scroll inside their own
+  container.
+- **Buttons with a colored fill** (green / red) use dark text (`bg.page`): white on `color.green` is ~2:1.
+- Check a layout change at 375, 412, 820 and 1440 px (`e2e/tests/mobile/layout.spec`, the `@mobile` projects).
+
 ## Process gate — do this before any visual change
 
 Per `.claude/skills/session-bootstrap`'s non-negotiable #2: **before** touching spacing, color,

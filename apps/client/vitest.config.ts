@@ -3,7 +3,7 @@ import { resolve } from 'path';
 
 export default defineConfig({
   define: {
-    'import.meta.env.VITE_ADMIN_EMAIL': '"adminwithu@gmail.com"',
+    'import.meta.env.VITE_ADMIN_EMAIL': '"admin@example.com"',
   },
   test: {
     // jsdom provides localStorage, sessionStorage and other browser globals

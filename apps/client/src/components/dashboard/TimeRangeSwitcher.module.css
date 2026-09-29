@@ -17,7 +17,7 @@
   cursor: pointer;
   border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.55); /* ≥4.5:1 on the chart (WCAG AA; 0.45 was 4.4:1) */
   font-family: inherit;
 }
 

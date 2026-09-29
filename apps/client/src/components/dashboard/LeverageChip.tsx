@@ -32,6 +32,7 @@ import { fmtMktPrice } from '@/lib/utils';
 import { useInstrument } from '@/hooks/useInstruments';
 import { color, fontSize, zIndex } from '@/lib/tokens';
 import styles from './TradeDialog.module.css';
+import { fmtUsd } from '@/lib/format';
 
 interface LeverageChipProps {
   symbol: string;
@@ -91,7 +92,7 @@ function RemarginPreview({ position, leverage, symbol }: RemarginPreviewProps) {
       <div>
         <dt>Position margin: </dt>
         <dd style={{ color: color.white }}>
-          ${margin.toFixed(2)} → ${next.margin.toFixed(2)}
+          {fmtUsd(margin)} → {fmtUsd(next.margin)}
         </dd>
       </div>
       <div>

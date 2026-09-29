@@ -1640,7 +1640,7 @@ Four issues surfaced in a Copilot PR review and are now resolved.
 
 ### feat: admin menu item in TopBar (2026-06-28) ✅
 
-- ShieldCheck icon + "Admin" label in user dropdown, visible only when `user.email === 'adminwithu@gmail.com'`
+- ShieldCheck icon + "Admin" label in user dropdown, visible only when `user.email === VITE_ADMIN_EMAIL` (the owner's address)
 - Navigates to `/admin/newsletter` on click
 
 ### fix: duplicate verification email — root cause found and fixed (2026-06-28) ✅
@@ -1659,7 +1659,7 @@ Four issues surfaced in a Copilot PR review and are now resolved.
 
 - Removed `useRef` + `useCallback` double-submit guard — protection is now fully server-side (simpler, more reliable)
 
-**Server logs confirm single request, single email per registration.** 1 email received in final test (`adminwithu+test6`).
+**Server logs confirm single request, single email per registration.** 1 email received in final test (a `+test` alias of the owner's mailbox).
 
 ---
 
@@ -3466,3 +3466,85 @@ in Part B.
     run it (`CI` drops the project).
   - Masked: the username, the close time, and the order form where it overlaps wide rows. The viewport is 1440 × 1400,
     so the order form needs no scrolling.
+
+### fix: the visual gate, second round — no stale quote offline, numbers like Bybit, WCAG AA contrast, toolbar and table keyboard access (2026-09-29) ✅
+
+**Context:** the owner approved the M5d / M5e findings in the visual Q&A gate: 9.6 → `—` while disconnected; a lighter
+red and purple (as in 19.16); the toolbar's nested buttons made siblings; keyboard focus on the scrolling tables;
+number formats "just like Bybit".
+
+- **9.6:** while the feed is disconnected (or offline), Sell, Buy and the spread show `—` rather than the last quote;
+  Market submit stays disabled as before. `TradingPanel.test` and `feedUi.spec` [9.6].
+- **Numbers** (`lib/format.ts`, `format.test`):
+  - the sign comes first as a plain hyphen, and zero is unsigned: `-$10.12` (was `$-10.12`), `$0.00` / `0.00` (was
+    `+0.00`), `+$47.22`;
+  - thousands are grouped everywhere: `$5,000.00`, `$1,002.20`, `+2,842.78%`;
+  - funding paid now reads `-0.51` (was `−0.51`).
+  - Applied to the journal badge, the summary bar, the Positions P&L / % / funding, Closed P&L, the Assets P&L, the
+    order form (TP / SL previews, cost, order info), the leverage and adjust-margin previews, the liquidation notice,
+    chart trade lines and the tab title.
+- **Contrast (WCAG AA 4.5:1):**
+  - `red` token #d5455c → #ff6b7c (≥4.7:1 on every panel);
+  - `purpleLight` for text on dark: the Beta badge, the active account tab and the Orders / Order History sub-tabs;
+  - brighter range buttons (white 45 % → 55 %), footer disclaimer (muted 50 % → 100 %) and footer links (≈40 % → 70 %);
+  - settings "Forgotten password?" (white 30 % → 60 %) and the danger heading (red-400 60 % → 100 %).
+- **Toolbar:** each submenu caret is now its button's sibling in a `.toolbar-slot`, colored by CSS (`.toolbar-btn.active +
+.toolbar-caret`). The toolbar screenshot is byte-identical before and after.
+- **Tables:** the account tables' scroll regions are `tabIndex=0` regions with a name, and show an outline on keyboard
+  focus only (`.scroll-region:focus-visible`).
+- **Tests:**
+  - `a11y/dashboard.spec` now blocks on every serious / critical axe rule;
+  - the visual baselines were regenerated and made exact (no pixel tolerance): a 1 % tolerance had let the new number
+    formats pass unseen;
+  - UptimeRobot (the owner's, every 5 min) and the $0 Actions budget are noted in `git.md`.
+
+### feat: phone trading — responsive phones and tablets, a Buy / Sell bar, the order form full screen or as a sheet (2026-09-29) ✅
+
+**Context:** owner, 2026-09-29: "phone trading is go ahead, also make sure UI is responsive in small phones and tablets
+… keep logo CP but hide the cryptopapertrade.com wording … be smart in the layout". The layout was delegated. The
+rules are in `design.md` "Responsive layout".
+
+- **Phones (below 640 px):**
+  - the top bar keeps the CPT logo and the avatar (the wordmark and the username show from `sm`);
+  - the layout picker and sync status are hidden (one pane fits);
+  - no ticker tape;
+  - the account panel is titled "Orders & Account";
+  - the footer is compact, keeping the disclaimer and the legal links.
+- **Phones and tablets (below 1024 px):**
+  - `MobileTradeBar` (Buy / Long, Sell / Short, dark text on the fills) opens the order form on that side;
+  - the form is full screen on phones and a 320 px right-hand sheet on tablets (from 768 px);
+  - once an order is in, the form closes and the account panel opens on the result;
+  - the order form follows a side chosen from outside (`initialSide`), and reports a placed order (`onPlaced`);
+  - the Trade toggle in the symbol bar shows from `lg` only.
+- **Tests:** Section 20 of the test plan (rows 20.1–20.4).
+  - `e2e/tests/mobile/layout.spec`: phones have no sideways scroll, the logo without the wordmark, and Sell opens a
+    full-width form; tablets get the sheet beside the chart.
+  - The Spot buy and perp long smoke scenarios now also run on both phones (`@mobile`); `runScenario` opens the form
+    from the bar.
+  - The e2e fixtures pre-dismiss the PWA install banner, which covers the bar on phones.
+  - The dialog baselines clip inside the dialog's rounded corners, which show whatever changes behind them.
+
+### feat: M8 — the owner's error digest by email (2026-09-29) ✅
+
+**Context:** the owner asked where M8's alerts go: email the owner's mailbox for now. These alerts are for
+the owner, not the users. Outages are covered by UptimeRobot (the owner's, `/health` every 5 min); the prod smoke and
+nightly e2e open GitHub issues. What was missing: server errors while the site is up.
+
+- **`lib/errorAlerts.ts`:** a Pino `logMethod` hook on both loggers (the shared one and Fastify's, so the 5xx handler's
+  line counts). It counts error and fatal lines by source (`service` / `route`) and message.
+- **Delivery:** every 30 minutes, if anything was counted, one digest goes to `ALERT_EMAIL` through Resend
+  (`EmailService.sendErrorDigest`, every value HTML-escaped).
+- **Bounds:**
+  - at most 50 kinds per window (the rest counted together);
+  - at most 10 digests a day, since the Resend quota of 100 a day is shared with the users' emails;
+  - EmailService's own errors aren't counted, so a failing send can't alert about itself.
+- 🔐 **Privacy:** only the source, a sanitised message and a count are kept, never the line's objects (a request,
+  a token, the error's details). A line whose message is its error's own `err.message` (Fastify's, a driver's) is
+  reported by the error's name and code; numbers, ids and emails are masked (review #201).
+- **Nothing dropped silently:** the counts clear only after a successful send; at the daily cap they keep counting
+  into the next day's first digest; a failed send keeps them and doesn't use the cap (review #201).
+- **When it runs:** only in production, with `ALERT_EMAIL` set and the test hooks off. `ALERT_EMAIL` is optional and
+  kept out of the repository (it is public): it is a Fly secret, and `.env.example` documents it.
+- **Tests:** `errorAlerts.test` (counting and the levels, no objects kept, the EmailService exclusion, windows, the
+  50-kind cap, the daily cap and the next day, a failed send) and `EmailService.test` (the digest escaped, the subject
+  count).

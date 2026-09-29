@@ -14,6 +14,7 @@ import type { MarketCategory } from '@crypto-dashboard/sdk';
 import type { PendingOrder, Position } from '@/store/paperStore';
 import { color } from '@/lib/tokens';
 import { positionPnl } from '@/lib/positionMath';
+import { fmtSignedUsd } from '@/lib/format';
 
 export type TradeLineStyle = 'solid' | 'dashed' | 'dotted';
 
@@ -44,7 +45,6 @@ export interface TradeLinesInput {
 }
 
 const fmtQty = (q: number) => Number(q.toFixed(6)).toString();
-const fmtUsd = (v: number) => `${v >= 0 ? '+' : '−'}$${Math.abs(v).toFixed(2)}`;
 
 const ORDER_LABEL: Record<PendingOrder['type'], string> = {
   limit: 'Limit',
@@ -67,7 +67,7 @@ export function buildTradeLines(input: TradeLinesInput): TradeLineSpec[] {
         price: pos.entryPrice,
         color: long ? color.green : color.red,
         style: 'solid',
-        title: `${long ? 'Long' : 'Short'} ${fmtQty(pos.quantity)}${pnl !== null ? `  ${fmtUsd(pnl)}` : ''}`,
+        title: `${long ? 'Long' : 'Short'} ${fmtQty(pos.quantity)}${pnl !== null ? `  ${fmtSignedUsd(pnl)}` : ''}`,
       });
       if (pos.takeProfit) {
         lines.push({

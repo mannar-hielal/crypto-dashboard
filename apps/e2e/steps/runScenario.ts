@@ -123,9 +123,22 @@ export async function runScenario(
   }
   if (scenario.preconditions.some((p) => p.kind === 'signedIn')) await signIn(page, ctx.user);
   await page.goto(scenario.startUrl);
+  await openOrderFormOnMobile(page);
 
   for (const step of scenario.steps) {
     await act(page, step, ctx);
     for (const e of step.expect ?? []) await check(page, e, `${step.id} (${step.explain})`);
   }
+}
+
+/**
+ * Phones and tablets (below lg) don't dock the order form: the Buy / Sell bar opens it. A scenario's
+ * steps are written for the form, so open it first when the bar is there. After a placed order the
+ * mobile layout closes the form and opens the account panel, as a user would see it.
+ */
+export async function openOrderFormOnMobile(page: Page): Promise<void> {
+  const buy = page.locator('[data-guide="trade.mobile.buy"]');
+  // The form is always mounted: once it is, the bar is there too if the layout has one
+  await page.locator('[data-guide="trade.submit"]').waitFor({ state: 'attached' });
+  if (await buy.isVisible()) await buy.click();
 }

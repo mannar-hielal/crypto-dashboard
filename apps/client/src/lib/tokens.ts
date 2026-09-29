@@ -28,7 +28,7 @@ export const bg = {
 
 export const color = {
   green: '#2ccd78', // profit / buy / positive / live  (alt bright: #03e673, alt dark: #28a06b/#29a56c)
-  red: '#d5455c', // loss / sell / negative / destructive  (alt dark: #c0414d, alt vivid: #ed0127)
+  red: '#ff6b7c', // loss / sell / negative / destructive — ≥4.7:1 on every panel (WCAG AA; was #d5455c, ~3:1)
   purple: '#a555e2', // primary accent — vibrant  (sampled from header.png)
   purpleDark: '#695bec', // primary accent — dark/muted, hover states, borders  (sampled from header.png)
   purpleLight: '#a99cff', // links on dark panels — 6.2:1 on the auth card (WCAG AA; purpleDark is ~3:1)
@@ -64,7 +64,7 @@ export const chart = {
 
   // Candlestick series
   candleUp: '#2ccd78', // bullish / green candle
-  candleDown: '#d5455c', // bearish / red   candle
+  candleDown: '#d5455c', // bearish / red candle — a graphic, 4.7:1 on the chart (the 3:1 rule), kept
 
   // Canvas text colour for axis labels / crosshair values
   textColor: '#d1d4dc',
