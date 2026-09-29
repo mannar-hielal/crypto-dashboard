@@ -3561,3 +3561,12 @@ nightly e2e open GitHub issues. What was missing: server errors while the site i
   from run to run). The cross-margin notice stays out: it only shows for accounts migrated from before cross margin.
 - **R3 (M0) closed:** "History tab" wording → Balance History / Closed P&L, and `TradingPanel.test`'s Stop Sell tests
   now cite row 3.5.4, the Stop Sell mirror (they said 3.5.2). The rest of R3 was already done.
+
+### fix: Q4 — no spread for a crossed book, a letter circle for an icon that fails to load (2026-09-30) ✅
+
+**Context:** the owner answered Q4 on 2026-09-29: "1 — `—`", "2 — letter circle".
+
+- **Crossed or locked book** (bid ≥ ask for a moment): the spread shows `—` until the quote is valid again (row 9.10,
+  `TradingPanel.test`).
+- **An icon that fails to load:** `CryptoIcon` falls back to the same letter circle it already uses for a coin it has
+  no icon for, instead of a broken image (row 5.8, `CryptoIcon.test`). A new symbol gets its own try.

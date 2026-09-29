@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { CRYPTO_ICON_URLS } from '@/lib/cryptoIcons';
 import { bg } from '@/lib/tokens';
@@ -24,7 +25,8 @@ interface CryptoIconProps {
  * CryptoIcon
  *
  * Renders the branded circular SVG icon for a crypto base symbol.
- * Falls back to a 2-letter text badge when the symbol is not in the map.
+ * Falls back to a 2-letter text badge when the symbol is not in the map, or when its image fails
+ * to load (owner, Q4 2026-09-29: a letter circle, like Bybit — never a broken image).
  *
  * Icons are Vite-bundled static assets (cryptocurrency-icons pkg, ?url import)
  * — offline-ready for PWA, zero runtime dependencies.
@@ -33,8 +35,16 @@ export function CryptoIcon({ symbol, size = 20, className = '' }: CryptoIconProp
   // Cast to Record<string, string> at lookup — CRYPTO_ICON_URLS is narrowed to
   // exact literal keys by `satisfies`, so a plain string index requires this cast.
   const url = (CRYPTO_ICON_URLS as Record<string, string | undefined>)[symbol.toUpperCase()];
+  // Whether this symbol's image failed to load. Reset whenever the image changes (adjusted while
+  // rendering), so each symbol — also one shown again later — gets a fresh try
+  const [failed, setFailed] = useState(false);
+  const [failedFor, setFailedFor] = useState(url);
+  if (url !== failedFor) {
+    setFailedFor(url);
+    setFailed(false);
+  }
 
-  if (!url) {
+  if (!url || failed) {
     return (
       <motion.span
         {...popIn}
@@ -61,6 +71,7 @@ export function CryptoIcon({ symbol, size = 20, className = '' }: CryptoIconProp
       width={size}
       height={size}
       draggable={false}
+      onError={() => setFailed(true)}
       className={`shrink-0 rounded-full ${className}`}
       style={{ display: 'inline-block', minWidth: size }}
     />

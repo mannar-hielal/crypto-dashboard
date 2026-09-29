@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import React from 'react';
 
 // ─── Mock ?url SVG imports ────────────────────────────────────────────────────
@@ -46,6 +46,24 @@ import { CryptoIcon, SymbolPair } from '../CryptoIcon';
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('CryptoIcon', () => {
+  describe('[5.8] an icon that fails to load (Q4, owner 2026-09-29)', () => {
+    it('should show the letter circle instead of a broken image', () => {
+      render(<CryptoIcon symbol="BTC" size={20} />);
+      fireEvent.error(screen.getByRole('img'));
+      expect(screen.queryByRole('img')).toBeNull();
+      expect(screen.getByText('BT')).toBeTruthy();
+    });
+
+    it('should try the image again when the symbol changes, also back to one that failed', () => {
+      const { rerender } = render(<CryptoIcon symbol="BTC" size={20} />);
+      fireEvent.error(screen.getByRole('img'));
+      rerender(<CryptoIcon symbol="ETH" size={20} />);
+      expect(screen.getByRole('img').getAttribute('src')).toBe('/icons/eth.svg');
+      rerender(<CryptoIcon symbol="BTC" size={20} />);
+      expect(screen.getByRole('img').getAttribute('src')).toBe('/icons/btc.svg');
+    });
+  });
+
   afterEach(cleanup);
   describe('known symbol', () => {
     it('should render an <img> element', () => {
