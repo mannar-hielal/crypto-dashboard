@@ -1,6 +1,6 @@
 /**
  * `pnpm feed …` — move the fake Bybit feed's prices by hand, with the same controls the tests use
- * (TEST_IMPLEMENTATION_PLAN F3). Talks to the fake on 127.0.0.1 (FAKE_BYBIT_PORT, default 4010).
+ * (docs/TRADING_TEST_PLAN.md A5, "The fake Bybit feed"). Talks to the fake on 127.0.0.1 (FAKE_BYBIT_PORT, default 4010).
  *
  *   pnpm feed quote spot BTCUSDT bid=49999.9 ask=50000        # last defaults to the ask
  *   pnpm feed quote linear BTCUSDT last=50000 mark=50010

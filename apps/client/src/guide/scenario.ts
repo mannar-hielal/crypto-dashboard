@@ -1,7 +1,7 @@
 /**
- * Scenario steps — one definition used three ways (docs/TEST_IMPLEMENTATION_PLAN.md F5):
- * Playwright drives them (apps/e2e, planned), the plan prints them as the manual UI reproduction,
- * and the guided tour shows `explain` as a bubble on the step's anchor.
+ * Scenario steps — one definition used three ways (.claude/rules/testing.md): Playwright drives
+ * them (apps/e2e), docs/UI_REPRODUCTIONS.md writes them out as the manual reproduction, and the
+ * guided tour shows `explain` as a bubble on the step's anchor.
  *
  * Pure types and data: no React, no Playwright, so both the client (lazy-loaded tour) and the e2e
  * package can import scenarios.

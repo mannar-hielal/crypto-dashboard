@@ -1,5 +1,5 @@
 /**
- * 🔐 The test hooks (TEST_IMPLEMENTATION_PLAN F2) off — the default in every environment: the
+ * 🔐 The test hooks (docs/TRADING_TEST_PLAN.md A5) off — the default in every environment: the
  * /api/test routes don't exist, and the email outbox keeps nothing.
  */
 

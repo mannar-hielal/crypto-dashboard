@@ -1,6 +1,6 @@
 /**
- * A second API server that a test can crash and start again (TEST_IMPLEMENTATION_PLAN A4
- * Resilience; SC-13.2-3, SC-18-1). It has its own port and its own throwaway database, so its
+ * A second API server that a test can crash and start again (docs/TRADING_TEST_PLAN.md A4
+ * Resilience; rows 13.2.4, 18.1). It has its own port and its own throwaway database, so its
  * matching engine never competes with the main e2e server's for the engine lease, and killing it
  * leaves every other spec untouched. It reads the same fake feed. Stopping is a kill -9 of its whole
  * process tree, like a crash: the lease isn't released, so the next start waits for it to expire.

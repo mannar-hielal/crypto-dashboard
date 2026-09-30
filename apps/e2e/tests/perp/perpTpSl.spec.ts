@@ -58,6 +58,6 @@ test('[1.5.3] a short with a stop-loss shows it working, and it closes the short
   await at(page, 'account.tab', 'positions').click();
   await expect(at(page, 'positions.row', 'linear:DOGEUSDT')).toHaveCount(0);
   await at(page, 'account.tab', 'journal').click();
-  // Shown as "$-10.12" (gains as "+$…") — the sign placement is a pending visual-gate question
+  // A loss reads "-$10.12", sign first like Bybit (lib/format.ts, since 2026-09-29; row 1.5.3)
   await expect(at(page, 'journal.entry.pnl').first()).toHaveText(/-/);
 });

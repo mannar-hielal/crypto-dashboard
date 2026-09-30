@@ -1,5 +1,5 @@
 /**
- * config.ts guards for the test-only switches (TEST_IMPLEMENTATION_PLAN F2 / F3): the fake-feed URL
+ * config.ts guards for the test-only switches (docs/TRADING_TEST_PLAN.md A5): the fake-feed URL
  * overrides and the test hooks must never start in production, and are validated elsewhere.
  * Each case re-imports config.ts with its own environment; process.exit throws instead of exiting.
  */

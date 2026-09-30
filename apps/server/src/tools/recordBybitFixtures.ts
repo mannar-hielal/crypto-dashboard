@@ -1,5 +1,5 @@
 /**
- * Records the Bybit fixtures the fake feed serves (TEST_IMPLEMENTATION_PLAN F3) from Bybit's public
+ * Records the Bybit fixtures the fake feed serves (docs/TRADING_TEST_PLAN.md A5) from Bybit's public
  * mainnet API — no key needed:
  *
  *   pnpm --filter @crypto-dashboard/server record:bybit

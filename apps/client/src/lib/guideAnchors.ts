@@ -1,6 +1,6 @@
 /**
  * Guide anchors — one stable name per user-facing control, set on the element as
- * `data-guide="<area>.<control>[.<variant>]"` (docs/TEST_IMPLEMENTATION_PLAN.md F1).
+ * `data-guide="<area>.<control>[.<variant>]"` (.claude/rules/testing.md).
  *
  * One vocabulary for three readers: Playwright (e2e), RTL tests and the guided tour. Names describe
  * what the control means to the user, never how it looks. Row-level controls keep a static name and

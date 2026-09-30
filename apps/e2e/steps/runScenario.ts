@@ -1,7 +1,7 @@
 /**
- * Runs a guide scenario (apps/client/src/guide, docs/TEST_IMPLEMENTATION_PLAN.md F5) in the browser:
- * the preconditions, then every step and its expectations. The same scenario is the manual UI
- * reproduction in the plan and, later, a guided tour — so a green run means the tour's steps work.
+ * Runs a guide scenario (apps/client/src/guide, .claude/rules/testing.md) in the browser: the
+ * preconditions, then every step and its expectations. The same scenario is the manual reproduction
+ * in docs/UI_REPRODUCTIONS.md and, later, a guided tour — so a green run means the tour's steps work.
  */
 
 import { expect, type Page } from '@playwright/test';

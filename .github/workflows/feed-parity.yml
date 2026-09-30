@@ -1,6 +1,6 @@
 name: Feed parity and spec drift
 
-# T4 in docs/TRADING_TEST_PLAN.md (roadmap P3; TEST_IMPLEMENTATION_PLAN M6):
+# T4 in docs/TRADING_TEST_PLAN.md (roadmap P3, M6):
 #   - nightly, feed parity (apps/server/src/tools/feedParity.ts): production's market feed against
 #     Bybit mainnet at the same moments — quotes, mark / index / funding, closed 1m candles (rows 6.1–6.4);
 #   - weekly (Sunday), spec drift (apps/server/src/tools/specDrift.ts): bybitSpec.ts's dated instrument

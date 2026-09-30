@@ -1,5 +1,5 @@
 /**
- * Visual baselines (docs/TEST_IMPLEMENTATION_PLAN.md F10): element screenshots of the order forms,
+ * Visual baselines (docs/TRADING_TEST_PLAN.md A4, "Visual regression"): element screenshots of the order forms,
  * the leverage and adjust-margin dialogs, the account summary bar, the Positions rows with their
  * pair icons (Section 5) and a Closed P&L row. The `visual` project runs them locally only, alone
  * and last, on fixed prices (the fake feed only pushes on a control call) — see playwright.config.ts

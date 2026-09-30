@@ -1,6 +1,6 @@
 name: Engine properties and mutation
 
-# Depth checks on the trading engine (TEST_IMPLEMENTATION_PLAN M7, roadmap P4; owner approval
+# Depth checks on the trading engine (docs/TRADING_TEST_PLAN.md roadmap P4, M7; owner approval
 # 2026-09-30), on develop, weekly (Sunday) — weekly rather than nightly for the Actions budget in
 # git.md (~15 minutes a run):
 #   - the fast-check invariants (T1p, F7) at 5,000 random action sequences with a fresh seed — PRs

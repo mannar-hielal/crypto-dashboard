@@ -1,7 +1,7 @@
 /**
  * Trading after the access token expires (SC-13.3-2, row 13.3.3), on Spot DOGEUSDT: 20 minutes on
  * the page's clock → the app refreshes its session on its own, and a market order still goes
- * through. The page's clock is faked (owner Q6: client-side expiry; the server's token lifetime
+ * through. The page's clock is faked (owner decision: client-side expiry; the server's token lifetime
  * isn't shortened for e2e).
  */
 

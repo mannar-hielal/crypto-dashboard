@@ -1,5 +1,5 @@
 /**
- * Test-only email outbox (TEST_IMPLEMENTATION_PLAN F2): with the test hooks on, every email the app
+ * Test-only email outbox (docs/TRADING_TEST_PLAN.md A5): with the test hooks on, every email the app
  * "sends" is also kept here, so an end-to-end test can read the link a user would click
  * (`GET /api/test/outbox?to=…`). Off (a no-op) in every other mode — production refuses the test
  * hooks at boot (config.ts).
