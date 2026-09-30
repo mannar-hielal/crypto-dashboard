@@ -63,11 +63,13 @@ not forced — when a release touches `src/trading/**`, auth, the WebSocket rout
 **How it blocks:** there is no branch protection, so a red check alone only reports. Step 2 therefore extends
 `deploy.yml`'s gate, which already refuses to deploy unless the release PR's "E2E full set" is green on the merged
 head. The label only decides whether a heavy run **starts**; the gate never reads it. For the release PR's merged
-head SHA, the gate looks for "Heavy release" runs: if one exists and isn't green, nothing deploys (it fails closed,
-like the E2E gate). Removing the label after a run started changes nothing, and the workflow re-runs on every push
-to a labelled release PR (as the E2E full set does), so a later push gets its own run on its new head SHA; an
-earlier green run never counts for it. The merge process in `git.md` (every check on the head green) covers the
-merge itself. A release that never had the label deploys as today (see Q2).
+head SHA, the gate looks for "Heavy release" runs: if one exists, anything but a `success` conclusion blocks the
+deploy — queued, in progress, cancelled, skipped or red alike (it fails closed, like the E2E gate; re-run the
+deploy once the heavy run is green). Only a head with no heavy run at all deploys without one. Removing the label
+after a run started changes nothing, and the workflow re-runs on every push to a labelled release PR (as the E2E
+full set does), so a later push gets its own run on its new head SHA; an earlier green run never counts for it. The
+merge process in `git.md` (every check on the head green) covers the merge itself. A release that never had the
+label deploys as today (see Q2).
 
 | #   | Check                                                                                                                                                                                                                                                                                                                        | Target          | Blocks the release when                         |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | ----------------------------------------------- |
