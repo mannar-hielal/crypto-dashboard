@@ -172,13 +172,13 @@ release's baseline; a throwaway Fly machine for absolute capacity; never against
 
 ## A5. Environments and test data
 
-| Environment   | Used for                     | Data                                                                                           |
-| ------------- | ---------------------------- | ---------------------------------------------------------------------------------------------- |
-| Local         | Development, pre-commit hook | Local Postgres (`docker-compose`), Bybit public feed (`BYBIT_TESTNET` picks testnet / mainnet) |
-| CI            | T1–T3 on every PR, nightly   | Ephemeral Postgres service container; fake Bybit replay server; users seeded per test          |
-| Staging       | —                            | **None** (owner, 2026-09-30): scans and load run on the CI stack — `docs/HARDENING_PLAN.md` §2 |
-| Production    | T5 only                      | Read-only checks; no test accounts created                                                     |
-| Bybit testnet | T4 only                      | A dedicated testnet sub-account; keys in GitHub `bybit-testnet` environment secrets            |
+| Environment   | Used for                     | Data                                                                                                                            |
+| ------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Local         | Development, pre-commit hook | Local Postgres (`docker-compose`), Bybit public feed (`BYBIT_TESTNET` picks testnet / mainnet)                                  |
+| CI            | T1–T3 on every PR, nightly   | Ephemeral Postgres service container; fake Bybit replay server; users seeded per test                                           |
+| Staging       | —                            | **None** (owner, 2026-09-30): scans and load run on the CI stack — `docs/HARDENING_PLAN.md` §2                                  |
+| Production    | T5 only                      | Signed-out checks; after each deploy one sign-in of the pre-existing QA account (`HARDENING_PLAN.md` H11); no test data created |
+| Bybit testnet | T4 only                      | A dedicated testnet sub-account; keys in GitHub `bybit-testnet` environment secrets                                             |
 
 Test data: every automated test creates its own user and resets its account (`POST /paper/account/reset`); nothing
 depends on another test's leftovers. Fixtures (replay feed, pre-BP-2 DB seed) are versioned in the repo.
