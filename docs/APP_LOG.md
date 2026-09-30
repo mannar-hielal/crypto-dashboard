@@ -3620,3 +3620,18 @@ code, the tests and the catalogue first: every Part B row is ✅ / ➖ / M, mile
 - **Catalogue:** the A10 items whose rows are ✅ ticked; 4.14–4.16 re-tiered M (checked by ear, no automated test).
 - Every reference to the old file (workflows, `dependabot.yml`, scripts, source and test comments, docs) points at
   the new home of what it cited.
+
+### security: the web app sends HSTS and refuses to be framed (2026-09-30) ✅
+
+**Context:** found while writing `docs/HARDENING_PLAN.md` (H0); the owner approved the fix on 2026-09-30.
+
+- **The gap:** `cryptopapertrade.com` (Cloudflare Pages) sent no HSTS and no framing protection. Helmet's headers
+  only reach API responses, the page's CSP is a `<meta>` tag (which can't carry `frame-ancestors`), and a comment in
+  `index.html` said the opposite. Another site could frame the dashboard (clickjacking); a first visit wasn't forced
+  onto HTTPS.
+- **The fix:** `apps/client/public/_headers` sends, for every path, `Strict-Transport-Security: max-age=63072000;
+includeSubDomains; preload` (all three hosts serve HTTPS and redirect HTTP), `X-Frame-Options: DENY` and
+  `Content-Security-Policy: frame-ancestors 'none'` (a header policy with only that directive; the `<meta>` policy
+  still sets the rest). Not submitted to the HSTS preload list — that stays a separate decision.
+- **Kept true by:** `scripts/securityHeaders.test.mjs` (`pnpm test:scripts`, every PR) and a `@prod` smoke test
+  after every deploy and every 6 h.

@@ -35,11 +35,14 @@
 The CI stack's load numbers compare releases with each other ("orders got 40% slower"); a GitHub runner is not Fly's
 hardware, so they are not capacity figures.
 
-**Found while writing this plan (2026-09-30):** the web app (`https://cryptopapertrade.com`) sends no
-`Strict-Transport-Security` and no framing protection — only `nosniff` and a referrer policy; its CSP is a `<meta>` tag,
-which can't set `frame-ancestors`. So another site can frame the dashboard (clickjacking), and a first visit isn't
-forced onto HTTPS by the browser. The API sends all three. Fix (H0, before step 1): `_headers` gets `/*` with HSTS,
-`X-Frame-Options: DENY` and `Content-Security-Policy: frame-ancestors 'none'`; H11 then keeps it true.
+**Found while writing this plan (2026-09-30), fixed the same day (H0):** the web app (`https://cryptopapertrade.com`)
+sent no `Strict-Transport-Security` and no framing protection — only `nosniff` and a referrer policy; its CSP is a
+`<meta>` tag, which can't set `frame-ancestors`, and an `index.html` comment wrongly said Helmet covered it. So another
+site could frame the dashboard (clickjacking), and a first visit wasn't forced onto HTTPS. Now `_headers` sends, for
+`/*`, HSTS (`max-age=63072000; includeSubDomains; preload`, like the API's — every subdomain serves HTTPS),
+`X-Frame-Options: DENY` and `Content-Security-Policy: frame-ancestors 'none'`. Kept true by
+`scripts/securityHeaders.test.mjs` on every PR and the `@prod` smoke after every deploy. The `preload` directive only
+makes the domain eligible: joining the browsers' preload list is a separate submission (hstspreload.org), not done.
 
 ## 3. On every PR — cheap checks
 
@@ -108,13 +111,13 @@ it runs only for a release that fixes a vulnerability; from 90%, not at all.
 
 ## 6. Order of work
 
-| Step | Contents                                                                    | Needs                                                 | Status |
-| ---- | --------------------------------------------------------------------------- | ----------------------------------------------------- | ------ |
-| 0    | H0 the web app's missing HSTS and framing headers (found 2026-09-30)        | the owner's go-ahead (HSTS `preload` is hard to undo) | ⬜     |
-| 1    | H1 gitleaks, H2 Dependabot alerts, H3 CodeQL, H11 production posture        | —                                                     | ⬜     |
-| 2    | The heavy-release workflow with H4–H6, and its check in `deploy.yml`'s gate | —                                                     | ⬜     |
-| 3    | H7 k6, H8 benchmarks, H9 Lighthouse                                         | the thresholds (§7 Q1)                                | ⬜     |
-| 4    | H10 capacity run                                                            | when capacity matters                                 | ⬜     |
+| Step | Contents                                                                    | Needs                     | Status |
+| ---- | --------------------------------------------------------------------------- | ------------------------- | ------ |
+| 0    | H0 the web app's missing HSTS and framing headers (found 2026-09-30)        | owner go-ahead 2026-09-30 | ✅     |
+| 1    | H1 gitleaks, H2 Dependabot alerts, H3 CodeQL, H11 production posture        | —                         | ⬜     |
+| 2    | The heavy-release workflow with H4–H6, and its check in `deploy.yml`'s gate | —                         | ⬜     |
+| 3    | H7 k6, H8 benchmarks, H9 Lighthouse                                         | the thresholds (§7 Q1)    | ⬜     |
+| 4    | H10 capacity run                                                            | when capacity matters     | ⬜     |
 
 ## 7. Open questions for the owner
 
