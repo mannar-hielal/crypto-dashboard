@@ -120,8 +120,8 @@ jobs:
         run: pnpm build
         working-directory: apps/client
 
-      # Playwright on the app with the fake Bybit feed and the test hooks (T3, TEST_IMPLEMENTATION_PLAN
-      # M4): sign-up + verify, a Spot market buy, a perp long opened and closed. The hooks' secret is
+      # Playwright on the app with the fake Bybit feed and the test hooks (T3, docs/TRADING_TEST_PLAN.md
+      # roadmap P2, M4): sign-up + verify, a Spot market buy, a perp long opened and closed. The hooks' secret is
       # generated per run.
       - name: Type-check the e2e package
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}

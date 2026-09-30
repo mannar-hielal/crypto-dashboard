@@ -1,5 +1,5 @@
 /**
- * Weekly Bybit spec-drift check (TEST_IMPLEMENTATION_PLAN M6, test plan roadmap P3): the engine's
+ * Weekly Bybit spec-drift check (docs/TRADING_TEST_PLAN.md roadmap P3, M6): the engine's
  * dated Bybit snapshots in trading/bybitSpec.ts against Bybit mainnet's public API — instrument rules
  * (tick, qty step, minimum qty and value) for Spot and USDT Perpetual, and every symbol's risk-limit
  * tiers. The live values are what the server uses while its cache is warm; the snapshot is its

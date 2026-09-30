@@ -1,5 +1,5 @@
 /**
- * Test hooks — `/api/test/*` (TEST_IMPLEMENTATION_PLAN F2). Seeded users, the email outbox and an
+ * Test hooks — `/api/test/*` (docs/TRADING_TEST_PLAN.md A5). Seeded users, the email outbox and an
  * account reset for end-to-end tests and local reproduction on the fake feed.
  *
  * 🔐 Four guards, all required:

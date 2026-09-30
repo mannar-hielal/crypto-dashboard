@@ -1,6 +1,6 @@
 /**
  * Sign up through the form, verify with the link from the email, and use that link a second time
- * (test plan rows 19.2, 19.4; SC-19-2 / SC-19-4 in docs/TEST_IMPLEMENTATION_PLAN.md).
+ * (test plan rows 19.2, 19.4).
  */
 
 import { expect, test } from '../../fixtures';

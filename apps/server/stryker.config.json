@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
-  "_comment": "Weekly mutation testing of the trading engine (TEST_IMPLEMENTATION_PLAN F8 / M7). Run: pnpm --filter @crypto-dashboard/server test:mutation. break = the floor: 2 points under the first score (69.12%, 2026-09-30), raised quarterly, never lowered.",
+  "_comment": "Weekly mutation testing of the trading engine (docs/TRADING_TEST_PLAN.md roadmap P4, M7; .claude/rules/testing.md). Run: pnpm --filter @crypto-dashboard/server test:mutation. break = the floor: 2 points under the first score (69.12%, 2026-09-30), raised quarterly, never lowered.",
   "testRunner": "vitest",
   "plugins": ["@stryker-mutator/vitest-runner"],
   "vitest": { "configFile": "vitest.config.ts", "related": true },

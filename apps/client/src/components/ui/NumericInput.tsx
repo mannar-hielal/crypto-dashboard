@@ -36,7 +36,7 @@ interface NumericInputProps {
   name?: string;
   ariaLabel?: string;
   testId?: string;
-  /** Guide anchor for the input (docs/TEST_IMPLEMENTATION_PLAN.md F1) */
+  /** Guide anchor for the input (lib/guideAnchors.ts) */
   anchor?: GuideAnchor;
 }
 

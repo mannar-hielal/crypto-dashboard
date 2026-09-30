@@ -1,5 +1,5 @@
 /**
- * Production smoke (T5, docs/TEST_IMPLEMENTATION_PLAN.md M8): read-only checks against the live site —
+ * Production smoke (T5, docs/TRADING_TEST_PLAN.md roadmap P5): read-only checks against the live site —
  * after every deploy (deploy.yml) and hourly (prod-smoke.yml). No web servers, no sign-in, no writes.
  *
  *   pnpm --filter @crypto-dashboard/e2e test:prod

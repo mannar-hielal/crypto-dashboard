@@ -1,5 +1,5 @@
 /**
- * Starts the fake Bybit feed (TEST_IMPLEMENTATION_PLAN F3) on 127.0.0.1 — never on a public interface.
+ * Starts the fake Bybit feed (docs/TRADING_TEST_PLAN.md A5) on 127.0.0.1 — never on a public interface.
  *
  *   pnpm --filter @crypto-dashboard/server fake-bybit          # port 4010 (FAKE_BYBIT_PORT to change)
  *

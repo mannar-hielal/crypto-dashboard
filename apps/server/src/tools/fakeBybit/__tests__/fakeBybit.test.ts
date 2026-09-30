@@ -1,5 +1,5 @@
 /**
- * The fake Bybit feed (TEST_IMPLEMENTATION_PLAN F3) read by the app's own Bybit clients, through the
+ * The fake Bybit feed (docs/TRADING_TEST_PLAN.md A5) read by the app's own Bybit clients, through the
  * BYBIT_REST_URL / BYBIT_WS_URL seam: if the app can't parse what the fake serves, T3 would be green
  * against a feed production never sees. Also checks the controls tests rely on.
  */

@@ -684,8 +684,14 @@ partial fills, ADL, insurance fund · VIP tiers, fee coupons, USDC / inverse con
     the retCode of a risk-limit refusal, and whether Bybit's `positionValue` is size × mark (the first run's 83.8569
     vs 0.001 × entry 83,881.1 suggests so; the runs now log Bybit's mark with each position check). The tier is
     chosen by value, so a mark-based value would change tiers near a boundary.
-- **Manual browser checks** still ⬜ in `TRADING_TEST_PLAN.md` (live feed, tab closed, two tabs, refresh) — to be
-  converted to Playwright (roadmap P2).
+  - **Also open (M7 finding, 2026-09-30):** a liquidation after an Add Margin charges the close-fee reserve set
+    aside at open (Bybit's fee to close at entry × (1 ∓ 1/leverage)) but records the bankruptcy price as its fill
+    price, so its fee is added margin × 0.055% below qty × fill price × taker. The money is conserved; only the split
+    between the Closed P&L row's fee and its PnL differs. Which one is Bybit's `execFee` on a liquidation after an
+    Add Margin? A testnet check settles it: open at 10×, add margin, let it liquidate, read `execution/list`. Until
+    then `invariants.prop.test` skips the fee identity for liquidation fills.
+- ~~**Manual browser checks** still ⬜ in `TRADING_TEST_PLAN.md`~~ — converted to Playwright (roadmap P2, M5,
+  2026-09-29); no ⬜ row is left.
 - Low: editable spot TP / SL (Known gaps) — only if users ask.
 
 ### Sources
@@ -745,7 +751,7 @@ partial fills, ADL, insurance fund · VIP tiers, fee coupons, USDC / inverse con
 | `apps/server/src/lib/clientIp.ts`                                                          | The visitor's IP (`Fly-Client-IP` from Fly's proxy link only) for rate limits, WS caps and stored IPs                                                                  |
 | `apps/client/src/hooks/usePaperFeed.ts`                                                    | Private paper WebSocket: auth message, snapshot + deltas, re-auth on token refresh                                                                                     |
 | `docs/TRADING_TEST_PLAN.md`                                                                | Test strategy (Part A) and case catalogue (Part B)                                                                                                                     |
-| `docs/TEST_IMPLEMENTATION_PLAN.md`                                                         | How each Part B case gets automated (foundations, per-stage scenarios, rollout) and its step-by-step UI reproduction                                                   |
+| `docs/UI_REPRODUCTIONS.md`                                                                 | Step-by-step manual reproduction of each Part B section (the source of the guided tours); the manual (M) checks                                                        |
 | `docs/GUIDED_TRADE_MVP.md`                                                                 | Guided-trade overlay plan: MVP scope (two tours), overlay design, the tour catalogue per section, open questions                                                       |
 | `docs/HARDENING_PLAN.md`                                                                   | Security scans, load and performance: every-PR checks, the heavy run before a major release, no staging (was M9 / P6)                                                  |
 | `apps/client/src/lib/guideAnchors.ts` · `src/guide/`                                       | `data-guide` anchor registry + `guide()`; shared scenario steps (`defineScenario`, builders, scenarios) for Playwright, the manual UI reproduction and the guided tour |
@@ -2875,7 +2881,8 @@ against real Bybit testnet data and reported what differs.
 
 ### feat: guide anchor registry and scenario-step types (2026-09-28) ✅
 
-**Context:** step 3 of the agreed test-automation sequence (`docs/TEST_IMPLEMENTATION_PLAN.md` F1, F5, R2 #1).
+**Context:** step 3 of the agreed test-automation sequence (the test implementation plan's F1, F5, R2 #1; retired
+2026-09-30).
 
 - `apps/client/src/lib/guideAnchors.ts`:
   - a typed registry of 165 `data-guide` names (`<area>.<control>[.<variant>]`, the plan's starter list for Stages
@@ -3364,7 +3371,7 @@ holds the real `RESEND_API_KEY`, so every local Playwright run mailed its made-u
 
 ### test: M5c — risk in the browser: mark price, liquidation, re-margin, add margin, funding, margin mode, two symbols (2026-09-29) ✅
 
-**Context:** TEST_IMPLEMENTATION_PLAN M5, third batch (SC-15.1-1, SC-15.4-1, SC-15.5-2, SC-17.1-1, SC-17.1-3,
+**Context:** the test implementation plan's M5, third batch (SC-15.1-1, SC-15.4-1, SC-15.5-2, SC-17.1-1, SC-17.1-3,
 SC-16-1, SC-17.5-2, SC-11-1, SC-11-3). The expected numbers were hand-checked where they are simple (P&L on the mark,
 funding, margin + close-fee reserve), and pinned from the engine where it is the Bybit-checked source (the
 isolated liquidation price, T1 `margin.test`).
@@ -3397,7 +3404,7 @@ isolated liquidation price, T1 `margin.test`).
 
 ### test: M5d — the feed, charts, engine and a crash restart in the browser; fix: the crosshair clears on every pane (2026-09-29) ✅
 
-**Context:** TEST_IMPLEMENTATION_PLAN M5, fourth batch. 106 tests pass on every project locally.
+**Context:** the test implementation plan's M5, fourth batch. 106 tests pass on every project locally.
 
 - **Feed and UI** (`feed/feedUi.spec`, Spot ETHUSDT, serial):
   - Spot Sell / Buy from `orderbook.1`;
@@ -3444,8 +3451,8 @@ isolated liquidation price, T1 `margin.test`).
 
 ### test: M5e — visual baselines, dashboard accessibility, the case-ID coverage gate, 10.4.7; fix: two axe violations (2026-09-29) ✅
 
-**Context:** TEST_IMPLEMENTATION_PLAN F10, F11 and F12, plus the last ⬜ row of the test plan (10.4.7). No ⬜ row is left
-in Part B.
+**Context:** the test implementation plan's F10, F11 and F12, plus the last ⬜ row of the test plan (10.4.7). No ⬜
+row is left in Part B.
 
 - **F12, case-ID coverage:** `scripts/caseCoverage.mjs` (`pnpm case-coverage`), with `node:test` tests
   (`pnpm test:scripts`).
@@ -3593,4 +3600,23 @@ dev dependencies of `apps/server` with no install scripts (MIT, Apache-2.0). Str
   nightly for the Actions budget (`git.md`: ~60 minutes a month, reserve now ≈ 160).
 - **Finding (Q8):** a liquidation after an Add Margin charges the close-fee reserve but records the bankruptcy price
   as its fill price, so the fee is added margin × 0.055% below qty × price × rate. The money is right; which of the
-  two Bybit's `execFee` is needs a testnet check.
+  two Bybit's `execFee` is needs a testnet check (was Q8; now under Bybit Parity → Open items).
+
+### docs: the test implementation plan retired — every item done; UI reproductions in their own file (2026-09-30) ✅
+
+**Context:** owner, 2026-09-30: "clean up the test implementation plan (remove if all is done)". Audited against the
+code, the tests and the catalogue first: every Part B row is ✅ / ➖ / M, milestones M0–M8 are done and M9 is
+`docs/HARDENING_PLAN.md`.
+
+- **`docs/UI_REPRODUCTIONS.md`** (new): the per-section manual reproductions, in Part B's stage order, with the
+  manual (M) checks; the `pnpm feed` commands corrected to the CLI's syntax (`in=`, `ms=`). The guided tours point
+  there.
+- **Living conventions** → `.claude/rules/testing.md` ("End-to-end tests and the catalogue": anchors, scenario steps,
+  case IDs, keeping the statuses true) and `TRADING_TEST_PLAN.md` A4 / A5 (the `apps/e2e` layout, the test hooks, the
+  fake Bybit feed); A8 keeps what the milestones M0–M9 were.
+- **Open items moved:** Q8 (the liquidation fee after an Add Margin) → Bybit Parity → Open items above; Q6 was
+  answered (client-side expiry, row 13.3.3). The 13 "NEW-…" scenarios never built are A10 "Proposed, not built";
+  six more are dropped as already covered.
+- **Catalogue:** the A10 items whose rows are ✅ ticked; 4.14–4.16 re-tiered M (checked by ear, no automated test).
+- Every reference to the old file (workflows, `dependabot.yml`, scripts, source and test comments, docs) points at
+  the new home of what it cited.

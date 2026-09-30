@@ -1,5 +1,5 @@
 /**
- * Starts the API server for the e2e run (docs/TEST_IMPLEMENTATION_PLAN.md F4): creates the throwaway
+ * Starts the API server for the e2e run (docs/TRADING_TEST_PLAN.md A4): creates the throwaway
  * database if it doesn't exist, migrates it (`prisma migrate deploy`, never a reset), then runs the
  * server on the fake Bybit feed with the test hooks on (clearing a stale engine lease first).
  * Playwright's webServer runs it.

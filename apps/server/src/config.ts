@@ -47,8 +47,8 @@ interface Config {
    */
   onFly: boolean;
   /**
-   * Test-only overrides of Bybit's public endpoints, for the local fake feed (TEST_IMPLEMENTATION_PLAN
-   * F3). 🔐 Refused in production. REST: a base URL (`http://localhost:4010`); WS: a base URL the
+   * Test-only overrides of Bybit's public endpoints, for the local fake feed (docs/TRADING_TEST_PLAN.md
+   * A5). 🔐 Refused in production. REST: a base URL (`http://localhost:4010`); WS: a base URL the
    * category path is appended to (`ws://localhost:4010` → `ws://localhost:4010/v5/public/spot`).
    */
   bybitRestUrl?: string;

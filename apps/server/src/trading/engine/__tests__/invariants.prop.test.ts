@@ -1,5 +1,5 @@
 /**
- * Engine invariants over random action sequences (T1p, TEST_IMPLEMENTATION_PLAN F7 / M7).
+ * Engine invariants over random action sequences (T1p, docs/TRADING_TEST_PLAN.md roadmap P4, M7).
  *
  * One generator of engine actions — market / limit / stop orders, cancels, amends, closes, margin
  * changes, leverage, margin mode, funding, spot orders and TP / SL, resets — over two symbols and
@@ -717,7 +717,8 @@ class Sim {
       // A liquidation charges the close-fee reserve set aside at open (Bybit's fee to close, priced
       // at entry × (1 ∓ 1/leverage)); with margin added by hand its fill price, the bankruptcy
       // price, sits further out, so qty × price × rate overstates it by added margin × rate.
-      // Open question for the owner (M7 finding, 2026-09-30): which of the two Bybit's execFee is.
+      // Open (M7 finding, 2026-09-30; docs/APP_LOG.md Bybit Parity → Open items): which of the two
+      // Bybit's execFee is.
       if (o.feeAsset !== 'USDT' || o.createType === 'CreateByLiq') continue;
       const expected = o.qty.times(o.fillPrice).times(o.feeRate);
       expect(

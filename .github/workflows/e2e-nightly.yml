@@ -1,6 +1,6 @@
 name: E2E full set
 
-# The full Playwright set (T3, TEST_IMPLEMENTATION_PLAN M5) on develop: every project — Chromium
+# The full Playwright set (T3, docs/TRADING_TEST_PLAN.md roadmap P2, M5) on develop: every project — Chromium
 # (@smoke, @full, @a11y), WebKit desktop (@smoke, @full), and phones (@mobile on iPhone 14 and
 # Pixel 7) — against the fake Bybit feed with the test hooks. PRs run the Chromium @smoke subset
 # (ci.yml). Nightly, and on every push to the develop → main release PR (the pre-release run); the

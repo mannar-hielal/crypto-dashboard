@@ -1,5 +1,5 @@
 /**
- * The fake Bybit feed's state and message builders (TEST_IMPLEMENTATION_PLAN F3). Pure: no sockets,
+ * The fake Bybit feed's state and message builders (docs/TRADING_TEST_PLAN.md A5). Pure: no sockets,
  * no timers — server.ts drives it. Prices start from the recorded fixture (fixtures/bybit/recorded.json)
  * and move only when a test (or a person, through `pnpm feed`) says so.
  *

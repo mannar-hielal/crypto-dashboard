@@ -3,9 +3,8 @@
 > **Owner:** Mannar Hielal · **Written:** 2026-09-30 · **Status:** agreed in principle, not started — the
 > thresholds (§5) need the owner before the heavy run (§4) can gate anything.
 >
-> Replaces milestone M9 of `docs/TEST_IMPLEMENTATION_PLAN.md` and roadmap step P6 of `docs/TRADING_TEST_PLAN.md`
-> (A4 "Performance" / "Security", A5 "Staging"), so that plan can be retired once its own items are done. This file
-> carries on after it.
+> Replaces milestone M9 of the test implementation plan (retired 2026-09-30) and roadmap step P6 of
+> `docs/TRADING_TEST_PLAN.md` (A4 "Performance" / "Security", A5 "Staging"). This file carries on after it.
 
 ## 1. Decisions so far
 

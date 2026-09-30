@@ -13,7 +13,7 @@ interface ToggleProps {
   onChange: (v: boolean) => void;
   /** Optional accessible label (aria-label). */
   label?: string;
-  /** Guide anchor for the switch (docs/TEST_IMPLEMENTATION_PLAN.md F1) */
+  /** Guide anchor for the switch (lib/guideAnchors.ts) */
   anchor?: GuideAnchor;
 }
 

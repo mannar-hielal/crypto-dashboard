@@ -1,7 +1,7 @@
 /**
  * "Your first long" — open a USDT Perpetual long at isolated 10×, watch it, close it at a profit
- * (test plan cases 1.1.2–1.1.4; SC-1-1 in docs/TEST_IMPLEMENTATION_PLAN.md). Numbers at the fake
- * feed's 50,000 / 51,000; the worked example of Stage 3.
+ * (test plan cases 1.1.2–1.1.4; docs/UI_REPRODUCTIONS.md Section 1, steps 1–5). Numbers at the
+ * fake feed's 50,000 / 51,000; the worked example of Stage 3.
  */
 
 import { defineScenario } from '../scenario';
