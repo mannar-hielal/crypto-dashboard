@@ -54,7 +54,7 @@ reconnect, two tabs) are only ever checked by hand.
 | **T2i** | Integration — routes, WS, repository and migrations against real Postgres   | Vitest + Postgres service container      | every PR                          |
 | **T3**  | End-to-end — the real app in a browser, on a deterministic replayed feed    | Playwright                               | every PR (smoke) + nightly (full) |
 | **T4**  | Bybit parity — the same scenario on Bybit testnet and on our engine, diffed | `parity:testnet` in a scheduled workflow | nightly                           |
-| **T5**  | Production synthetic checks — read-only, after every deploy and every 6 h   | Playwright (smoke project) + Fly health  | post-deploy + cron                |
+| **T5**  | Production synthetic checks — read-only, after every deploy and every 8 h   | Playwright (smoke project) + Fly health  | post-deploy + cron                |
 | **M**   | Manual — only look-and-feel that a machine can't judge                      | —                                        | before a UI release               |
 
 Rules of thumb: push every check to the **lowest tier that can catch the bug** (a rule belongs in T1, not in a
@@ -175,10 +175,10 @@ release's baseline; a throwaway Fly machine for absolute capacity; never against
   landing page, `/chart` shows a live price, the sign-in page loads with no console errors, the market WS connects.
   A failure marks the deploy red and notifies (GitHub notification / email) so a rollback (`fly releases rollback`)
   is one command away.
-- **Hourly synthetic check** (the same `@prod` project on `schedule`) catches a dead feed or an expired certificate
-  between deploys.
-- **Log alerts:** Fly log shipping to a free tier (e.g. Better Stack / Axiom) with an alert on `level >= 50` (error)
-  (the `paper-legacy-api` watch is no longer needed: O11 removed that API on 2026-09-28).
+- **Scheduled synthetic check** (the same `@prod` project on `schedule`, every 8 h) catches a dead feed or an expired
+  certificate between deploys; UptimeRobot checks `/health` every 5 minutes.
+- **Error alerts:** the M8 error digest by email (every 30 min, at most 10 a day). A log sink (Fly log shipping with
+  an alert on errors) was dropped by the owner on 2026-09-30: the digest covers it; logs stay in `fly logs`.
 
 ## A5. Environments and test data
 
@@ -238,7 +238,7 @@ Each step is its own small PR to `develop`, ordered by value per effort.
 | **P2** | ✅ Fake Bybit replay server, Playwright (smoke on PR, full nightly), seed helper; the missing T1 / T2 tests the ⬜ rows name (M1, M3–M5) | Every ⬜ row marked `(P2)` in Sections 7–15 and 19 | —                                                    |
 | **P3** | ✅ Nightly `parity:testnet` workflow + issue on mismatch (2026-09-28) · ✅ weekly spec-drift check · ✅ feed parity job (M6, 2026-09-29) | 17.6.4, Section 6 → T4                             | ✅ Testnet key, environment, funds (done 2026-09-28) |
 | **P4** | ✅ fast-check invariants; ✅ Stryker weekly on the engine (M7, 2026-09-30)                                                               | T1p; mutation score                                | —                                                    |
-| **P5** | ✅ Post-deploy + scheduled prod smoke, error digest by email (M8); a log sink is open (`HARDENING_PLAN.md` Q3)                           | T5                                                 | Pick / approve a log sink                            |
+| **P5** | ✅ Post-deploy + scheduled prod smoke, error digest by email (M8); no log sink (owner, 2026-09-30)                                       | T5                                                 | —                                                    |
 | **P6** | ➖ Moved to `docs/HARDENING_PLAN.md` (no staging app, 2026-09-30)                                                                        | Security + performance                             | —                                                    |
 
 After P2 the only manual rows left are look-and-feel (drag feel, sounds, animation) — the M tier.
@@ -270,7 +270,7 @@ on the commit that deleted it).
 - **Every ~3 months:** a testnet key without an IP allow-list expires. A run failing with `33004` opens a `parity`
   issue: create a new key with the same permissions and replace the two environment secrets. `10005` means the key
   lost its Read-Write / Contract permissions; `110007` means the account ran out of test USDT (request more).
-- **Still to decide:** a log sink (P5; `docs/HARDENING_PLAN.md` Q3). No staging app (2026-09-30).
+- **Decided 2026-09-30:** no staging app, no log sink (the error digest covers it). Nothing is waiting on the owner here.
 - **Ongoing:** read the red ones — a failed nightly or parity issue arrives as a GitHub notification; a green week
   needs nothing. Before a UI release, the short M list (Part B rows tiered **M**).
 
@@ -418,8 +418,8 @@ _P5 — production checks (3)_
 
 - [x] Playwright `@prod` project after `flyctl deploy`, failing the deploy and notifying — T5 (P5; M8:
       `apps/e2e/tests-prod`, last step of `deploy.yml`)
-- [x] The same project on `schedule`, every 6 h since 2026-09-29 (was hourly; the Actions budget in `git.md`) — T5 (P5; M8: `prod-smoke.yml`, opens / comments a `prod-smoke` issue)
-- [ ] Fly log shipping with an alert on `level >= 50` — (P5, needs the owner's sink)
+- [x] The same project on `schedule`, every 8 h since 2026-09-30 (hourly, then every 6 h; the Actions budget in `git.md`) — T5 (P5; M8: `prod-smoke.yml`, opens / comments a `prod-smoke` issue)
+- ➖ Fly log shipping with an alert on `level >= 50` — dropped (owner, 2026-09-30): the M8 error digest covers it
 
 _P6 — staging, security, performance: moved to `docs/HARDENING_PLAN.md` (2026-09-30)_
 
@@ -429,7 +429,7 @@ _P6 — staging, security, performance: moved to `docs/HARDENING_PLAN.md` (2026-
 
 **Owner decisions (A9) (2)**
 
-- [ ] Pick / approve a log sink — (P5)
+- ➖ Pick / approve a log sink — not needed (owner, 2026-09-30)
 - ➖ Approve the staging app's cost — not needed: no staging app (2026-09-30)
 
 **Proposed, not built (14)** — the "NEW-…" scenarios of the retired test implementation plan that never became a
