@@ -32,6 +32,14 @@ correct without depending on real infrastructure, and the suite stays fast and d
 - New tests import from `src/`, never from `dist/` or `generated/`.
 - `pnpm test` must pass for the whole suite (server + client), with no skipped tests, before a
   change is considered mergeable.
+- **Property tests (T1p)** — `apps/server/src/trading/engine/__tests__/invariants.prop.test.ts`, fast-check. They run
+  in `pnpm test` with 200 runs and a fixed seed, so a PR's result never depends on luck; `engine-depth.yml` runs
+  5,000 with a fresh seed weekly. A failure prints its seed and the shrunk action list: reproduce with
+  `FC_SEED=<seed> FC_NUM_RUNS=5000 pnpm --filter @crypto-dashboard/server test:props`, then pin it as a named T1
+  test. A new engine action gets its generator in the same change.
+- **Mutation testing** — `pnpm --filter @crypto-dashboard/server test:mutation` (Stryker, `src/trading/engine`,
+  ~8 minutes locally). The floor is `thresholds.break` in `apps/server/stryker.config.json`: raised as the score
+  rises, never lowered.
 
 ## Naming & structure
 

@@ -745,7 +745,8 @@ partial fills, ADL, insurance fund · VIP tiers, fee coupons, USDC / inverse con
 | `apps/server/src/lib/clientIp.ts`                                                          | The visitor's IP (`Fly-Client-IP` from Fly's proxy link only) for rate limits, WS caps and stored IPs                                                                  |
 | `apps/client/src/hooks/usePaperFeed.ts`                                                    | Private paper WebSocket: auth message, snapshot + deltas, re-auth on token refresh                                                                                     |
 | `docs/TRADING_TEST_PLAN.md`                                                                | Test strategy (Part A) and case catalogue (Part B)                                                                                                                     |
-| `docs/TEST_IMPLEMENTATION_PLAN.md`                                                         | How each Part B case gets automated (foundations, per-stage scenarios, rollout) and its step-by-step UI reproduction (base for guided trade)                           |
+| `docs/TEST_IMPLEMENTATION_PLAN.md`                                                         | How each Part B case gets automated (foundations, per-stage scenarios, rollout) and its step-by-step UI reproduction                                                   |
+| `docs/GUIDED_TRADE_MVP.md`                                                                 | Guided-trade overlay plan: MVP scope (two tours), overlay design, the tour catalogue per section, open questions                                                       |
 | `apps/client/src/lib/guideAnchors.ts` · `src/guide/`                                       | `data-guide` anchor registry + `guide()`; shared scenario steps (`defineScenario`, builders, scenarios) for Playwright, the manual UI reproduction and the guided tour |
 | `apps/server/src/routes/market/index.ts`                                                   | REST + WebSocket market data routes                                                                                                                                    |
 | `apps/server/src/services/BybitWebSocketManager.ts`                                        | Bybit WS connection singleton                                                                                                                                          |
@@ -865,7 +866,7 @@ partial fills, ADL, insurance fund · VIP tiers, fee coupons, USDC / inverse con
   - P1: CI Postgres, migration and repository tests, coverage thresholds.
   - P2: Playwright on a replayed Bybit feed.
   - P3: nightly testnet parity ✅ (2026-09-28); still to do: spec-drift and feed parity jobs.
-  - P4: fast-check and Stryker.
+  - P4: fast-check and Stryker ✅ (M7, 2026-09-30).
   - P5: prod smoke and log alerts.
   - P6: staging, ZAP, k6.
 - **Phase 4**: Advanced indicators, alerts, multi-symbol watchlist
@@ -3570,3 +3571,25 @@ nightly e2e open GitHub issues. What was missing: server errors while the site i
   `TradingPanel.test`).
 - **An icon that fails to load:** `CryptoIcon` falls back to the same letter circle it already uses for a coin it has
   no icon for, instead of a broken image (row 5.8, `CryptoIcon.test`). A new symbol gets its own try.
+
+### test: M7 — engine invariants over random action sequences (fast-check) and weekly mutation testing (Stryker) (2026-09-30) ✅
+
+**Context:** the owner approved `fast-check` and Stryker on 2026-09-30 (Q5 had deferred them on 2026-09-29). Both are
+dev dependencies of `apps/server` with no install scripts (MIT, Apache-2.0). Stryker's `typed-rest-client` pulled in a
+`qs` with three moderate advisories: `pnpm.overrides` pins `qs@<6.16.0` to `^6.16.0`.
+
+- **Properties** (`invariants.prop.test.ts`, rows 18.11–18.13 and 14.2.7): random sequences of engine actions over
+  two symbols and both markets, the triggers run on every price move as `TradingService` does. After every engine
+  result: what the account holds changes by exactly its records (trade PnL − fees − funding), every fee is its
+  maker / taker rate, a refused action changes nothing, nothing goes negative, reduce-only never opens, grows or
+  flips a position, a cross account ends ≥ 0; plus liquidation price vs leverage and replay determinism. 200 runs
+  with a fixed seed on every PR, 5,000 with a fresh seed weekly. Checked by planting five engine bugs: each is
+  caught.
+- **Mutation testing** (`stryker.config.json`, `pnpm --filter @crypto-dashboard/server test:mutation`) on
+  `src/trading/engine`: first score 69.12%, floor 67%. `cross.ts` (55%), `margin.ts` (57%) and `spot.ts` (59%)
+  assert the least.
+- **`engine-depth.yml`**, Sundays: both, on `develop`; a failure opens an `engine-depth` issue. Weekly rather than
+  nightly for the Actions budget (`git.md`: ~60 minutes a month, reserve now ≈ 160).
+- **Finding (Q8):** a liquidation after an Add Margin charges the close-fee reserve but records the bankruptcy price
+  as its fill price, so the fee is added margin × 0.055% below qty × price × rate. The money is right; which of the
+  two Bybit's `execFee` is needs a testnet check.

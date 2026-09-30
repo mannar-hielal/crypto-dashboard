@@ -4,7 +4,8 @@ export default defineConfig({
   test: {
     environment: 'node',
     // Integration tests need Postgres: they run with `pnpm test:int` (vitest.int.config.ts), not here
-    exclude: [...configDefaults.exclude, 'src/**/*.int.test.ts'],
+    // Stryker's sandbox (.stryker-tmp) is a copy of src — its tests must not run a second time
+    exclude: [...configDefaults.exclude, 'src/**/*.int.test.ts', '.stryker-tmp/**'],
     // These env vars are injected BEFORE any test module loads,
     // so config.ts won't call process.exit(1) for missing vars
     env: {
