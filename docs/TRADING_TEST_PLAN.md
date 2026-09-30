@@ -156,8 +156,8 @@ release's baseline; a throwaway Fly machine for absolute capacity; never against
 
 - Already in place: `pnpm audit` gate, `eslint-plugin-security`, the security rules and refactor checklist, route
   schemas with `additionalProperties: false`, auth tests.
-- Add: moved to `docs/HARDENING_PLAN.md` (2026-09-30) — gitleaks, Dependabot security alerts and CodeQL on every
-  PR / weekly; ZAP, Trivy and load checks before a major release.
+- Add: moved to `docs/HARDENING_PLAN.md` (2026-09-30) — gitleaks on every PR, Dependabot security alerts, CodeQL
+  on the release PR; ZAP, Trivy and load checks before a major release.
 
 ### Production (T5)
 

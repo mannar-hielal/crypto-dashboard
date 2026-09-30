@@ -54,6 +54,12 @@ review.
 **Trigger:** a `heavy-release` label on the `develop → main` release PR (or `workflow_dispatch`). It is recommended —
 not forced — when a release touches `src/trading/**`, auth, the WebSocket routes or `prisma/schema.prisma`.
 
+**How it blocks:** there is no branch protection, so a red check alone only reports. Step 2 therefore extends
+`deploy.yml`'s gate, which already refuses to deploy unless the release PR's "E2E full set" is green: when the release
+PR carries the `heavy-release` label, the "Heavy release" check must be green on its head too, or nothing deploys (it
+fails closed, like the E2E gate). The merge process in `git.md` (every check on the head green) covers the merge
+itself. Without the label, nothing changes.
+
 | #   | Check                                                                                                                                                                                                                                                                                                                        | Target          | Blocks the release when                         |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | ----------------------------------------------- |
 | H4  | **OWASP ZAP API scan**, signed in as a seeded test user, every route from the OpenAPI spec (`/docs/json`, which exists only outside production). Scope: the **code** — injection, validation, auth and access control, error leaks — which is the same in both modes; not production's configuration (H11)                   | CI stack        | a high finding                                  |
@@ -92,19 +98,20 @@ it runs only for a release that fixes a vulnerability; from 90%, not at all.
 
 ## 6. Order of work
 
-| Step | Contents                                                             | Needs                  | Status |
-| ---- | -------------------------------------------------------------------- | ---------------------- | ------ |
-| 1    | H1 gitleaks, H2 Dependabot alerts, H3 CodeQL, H11 production posture | —                      | ⬜     |
-| 2    | The heavy-release workflow with H4–H6                                | —                      | ⬜     |
-| 3    | H7 k6, H8 benchmarks, H9 Lighthouse                                  | the thresholds (§7 Q1) | ⬜     |
-| 4    | H10 capacity run                                                     | when capacity matters  | ⬜     |
+| Step | Contents                                                                    | Needs                  | Status |
+| ---- | --------------------------------------------------------------------------- | ---------------------- | ------ |
+| 1    | H1 gitleaks, H2 Dependabot alerts, H3 CodeQL, H11 production posture        | —                      | ⬜     |
+| 2    | The heavy-release workflow with H4–H6, and its check in `deploy.yml`'s gate | —                      | ⬜     |
+| 3    | H7 k6, H8 benchmarks, H9 Lighthouse                                         | the thresholds (§7 Q1) | ⬜     |
+| 4    | H10 capacity run                                                            | when capacity matters  | ⬜     |
 
 ## 7. Open questions for the owner
 
 - **Q1.** The thresholds: the p95 for placing an order (and for the market WebSocket fan-out), the error rate, and
   the Lighthouse budgets. A first measured run can propose numbers to agree on.
-- **Q2.** Should the heavy run be required (blocking the release merge) for every release that touches the engine,
-  auth, WebSockets or the schema — or stay the release owner's call through the label?
+- **Q2.** Should the label be required for every release that touches the engine, auth, WebSockets or the schema
+  (a check that fails the release PR when such a release lacks it) — or stay the release owner's call? Either way,
+  a labelled release can't deploy with a red heavy run (§4, "How it blocks").
 - **Q3.** Is the log sink (TRADING_TEST_PLAN P5, "Fly log shipping with an alert on `level >= 50`") still wanted, or
   does M8's error digest by email cover it?
 - **Q4.** The budget (§4): the new checks would leave a reserve of about 45–65 minutes. Offset it — for example the
