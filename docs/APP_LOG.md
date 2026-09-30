@@ -3635,3 +3635,13 @@ includeSubDomains; preload` (all three hosts serve HTTPS and redirect HTTP), `X-
   still sets the rest). Not submitted to the HSTS preload list — that stays a separate decision.
 - **Kept true by:** `scripts/securityHeaders.test.mjs` (`pnpm test:scripts`, every PR) and a `@prod` smoke test
   after every deploy and every 6 h.
+
+### chore: the owner's hardening decisions — prod smoke every 8 h, no log sink, thresholds measured first (2026-09-30) ✅
+
+- **Q1 thresholds:** the load / page-load checks (H7–H9) start report-only; numbers are proposed from the first
+  measured run and confirmed by the owner before they gate.
+- **Q2:** the `heavy-release` label stays the owner's call per release (suggested, never forced).
+- **Q3:** no log sink — the M8 error digest covers it; the P5 log-shipping items are closed as not needed.
+- **Q4:** `prod-smoke.yml` runs every 8 h instead of 6 h (≈ 60 Actions minutes a month back; UptimeRobot still checks
+  `/health` every 5 minutes). `git.md`: planned ≈ 1,780, reserve ≈ 220 until the hardening checks add their rows.
+- **Guided trade:** deferred again (owner, 2026-09-30); its questions wait in `docs/GUIDED_TRADE_MVP.md`.

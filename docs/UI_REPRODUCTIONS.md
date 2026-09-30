@@ -486,7 +486,7 @@ procedures.
 ### 13 — Server trading engine (24/7)
 
 **Monitoring, not a test.** (Long real-time soak — the engine running days with live prices — is a monitoring
-concern: the T5 scheduled check (every 6 h) plus the log alert.)
+concern: the T5 scheduled check (every 8 h) plus the error digest by email.)
 
 **Tester reproduction.** 1. Place a limit a few $ past the price, close the tab, wait for the price, reopen → Expect
 the fill. 2. Local: stop the server (`Ctrl-C`), let the price cross, start it → Expect "Backfilling price gap" in the
