@@ -747,6 +747,7 @@ partial fills, ADL, insurance fund · VIP tiers, fee coupons, USDC / inverse con
 | `docs/TRADING_TEST_PLAN.md`                                                                | Test strategy (Part A) and case catalogue (Part B)                                                                                                                     |
 | `docs/TEST_IMPLEMENTATION_PLAN.md`                                                         | How each Part B case gets automated (foundations, per-stage scenarios, rollout) and its step-by-step UI reproduction                                                   |
 | `docs/GUIDED_TRADE_MVP.md`                                                                 | Guided-trade overlay plan: MVP scope (two tours), overlay design, the tour catalogue per section, open questions                                                       |
+| `docs/HARDENING_PLAN.md`                                                                   | Security scans, load and performance: every-PR checks, the heavy run before a major release, no staging (was M9 / P6)                                                  |
 | `apps/client/src/lib/guideAnchors.ts` · `src/guide/`                                       | `data-guide` anchor registry + `guide()`; shared scenario steps (`defineScenario`, builders, scenarios) for Playwright, the manual UI reproduction and the guided tour |
 | `apps/server/src/routes/market/index.ts`                                                   | REST + WebSocket market data routes                                                                                                                                    |
 | `apps/server/src/services/BybitWebSocketManager.ts`                                        | Bybit WS connection singleton                                                                                                                                          |
@@ -868,7 +869,7 @@ partial fills, ADL, insurance fund · VIP tiers, fee coupons, USDC / inverse con
   - P3: nightly testnet parity ✅ (2026-09-28); still to do: spec-drift and feed parity jobs.
   - P4: fast-check and Stryker ✅ (M7, 2026-09-30).
   - P5: prod smoke and log alerts.
-  - P6: staging, ZAP, k6.
+  - P6: moved to `docs/HARDENING_PLAN.md` (no staging app, 2026-09-30).
 - **Phase 4**: Advanced indicators, alerts, multi-symbol watchlist
 - **Phase 5**: Live broker integration — Bybit real-money trading (see full spec below)
 - **Phase 6**: AI trading bot — 3-role system: Scanner + Analyst + Executor, paper mode only (see full spec below)

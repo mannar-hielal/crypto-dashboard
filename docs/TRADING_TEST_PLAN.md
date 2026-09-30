@@ -149,16 +149,15 @@ handoff, a DB write failure (the account reloads, nothing half-applied). The fak
 
 ### Performance (on demand)
 
-**[k6](https://k6.io)** scripts: N users each holding a market WS and the private paper WS while placing orders.
-Watch p95 order latency, event-loop lag and memory on the Fly machine. Run before a release that touches the feed or
-the engine, against staging (A5) — never against production.
+Moved to `docs/HARDENING_PLAN.md` (2026-09-30): k6 on the CI stack before a major release, compared with the last
+release's baseline; a throwaway Fly machine for absolute capacity; never against production.
 
 ### Security
 
 - Already in place: `pnpm audit` gate, `eslint-plugin-security`, the security rules and refactor checklist, route
   schemas with `additionalProperties: false`, auth tests.
-- Add: **OWASP ZAP baseline scan** (`zaproxy/action-baseline`) weekly against staging; **Dependabot** (or Renovate)
-  for grouped weekly dependency PRs, which run through the same CI; a **secret scan** (`gitleaks`) in CI.
+- Add: moved to `docs/HARDENING_PLAN.md` (2026-09-30) — gitleaks on every PR, Dependabot security alerts, CodeQL
+  on the release PR; ZAP, Trivy and load checks before a major release.
 
 ### Production (T5)
 
@@ -173,13 +172,13 @@ the engine, against staging (A5) — never against production.
 
 ## A5. Environments and test data
 
-| Environment   | Used for                     | Data                                                                                                                        |
-| ------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Local         | Development, pre-commit hook | Local Postgres (`docker-compose`), Bybit public feed (`BYBIT_TESTNET` picks testnet / mainnet)                              |
-| CI            | T1–T3 on every PR, nightly   | Ephemeral Postgres service container; fake Bybit replay server; users seeded per test                                       |
-| Staging       | k6, ZAP, release rehearsal   | **Proposed:** a second Fly app `crypto-dashboard-api-staging` (smallest machine, auto-stop) deployed from `develop`, own DB |
-| Production    | T5 only                      | Read-only checks; no test accounts created                                                                                  |
-| Bybit testnet | T4 only                      | A dedicated testnet sub-account; keys in GitHub `bybit-testnet` environment secrets                                         |
+| Environment   | Used for                     | Data                                                                                           |
+| ------------- | ---------------------------- | ---------------------------------------------------------------------------------------------- |
+| Local         | Development, pre-commit hook | Local Postgres (`docker-compose`), Bybit public feed (`BYBIT_TESTNET` picks testnet / mainnet) |
+| CI            | T1–T3 on every PR, nightly   | Ephemeral Postgres service container; fake Bybit replay server; users seeded per test          |
+| Staging       | —                            | **None** (owner, 2026-09-30): scans and load run on the CI stack — `docs/HARDENING_PLAN.md` §2 |
+| Production    | T5 only                      | Signed-out checks only (`HARDENING_PLAN.md` H11); no test accounts created                     |
+| Bybit testnet | T4 only                      | A dedicated testnet sub-account; keys in GitHub `bybit-testnet` environment secrets            |
 
 Test data: every automated test creates its own user and resets its account (`POST /paper/account/reset`); nothing
 depends on another test's leftovers. Fixtures (replay feed, pre-BP-2 DB seed) are versioned in the repo.
@@ -211,7 +210,7 @@ Each step is its own small PR to `develop`, ordered by value per effort.
 | **P3** | ✅ Nightly `parity:testnet` workflow + issue on mismatch (2026-09-28) · ✅ weekly spec-drift check · ✅ feed parity job (M6, 2026-09-29) | 17.6.4, Section 6 → T4                             | ✅ Testnet key, environment, funds (done 2026-09-28) |
 | **P4** | ✅ fast-check invariants; ✅ Stryker weekly on the engine (M7, 2026-09-30)                                                               | T1p; mutation score                                | —                                                    |
 | **P5** | Post-deploy + scheduled prod smoke, log alerts                                                                                           | T5                                                 | Pick / approve a log sink                            |
-| **P6** | Staging Fly app; ZAP baseline; k6 scripts; Dependabot; gitleaks                                                                          | Security + performance                             | Approve staging cost                                 |
+| **P6** | ➖ Moved to `docs/HARDENING_PLAN.md` (no staging app, 2026-09-30)                                                                        | Security + performance                             | —                                                    |
 
 After P2 the only manual rows left are look-and-feel (drag feel, sounds, animation) — the M tier.
 
@@ -227,7 +226,7 @@ After P2 the only manual rows left are look-and-feel (drag feel, sounds, animati
 - **Every ~3 months:** a testnet key without an IP allow-list expires. A run failing with `33004` opens a `parity`
   issue: create a new key with the same permissions and replace the two environment secrets. `10005` means the key
   lost its Read-Write / Contract permissions; `110007` means the account ran out of test USDT (request more).
-- **Still to decide:** approve the staging app and a log sink (P5, P6).
+- **Still to decide:** a log sink (P5; `docs/HARDENING_PLAN.md` Q3). No staging app (2026-09-30).
 - **Ongoing:** read the red ones — a failed nightly or parity issue arrives as a GitHub notification; a green week
   needs nothing. Before a UI release, the short M list (Part B rows tiered **M**).
 
@@ -374,19 +373,16 @@ _P5 — production checks (3)_
 - [x] The same project on `schedule`, every 6 h since 2026-09-29 (was hourly; the Actions budget in `git.md`) — T5 (P5; M8: `prod-smoke.yml`, opens / comments a `prod-smoke` issue)
 - [ ] Fly log shipping with an alert on `level >= 50` — (P5, needs the owner's sink)
 
-_P6 — staging, security, performance (5)_
+_P6 — staging, security, performance: moved to `docs/HARDENING_PLAN.md` (2026-09-30)_
 
-- [ ] Staging Fly app `crypto-dashboard-api-staging` deployed from `develop`, own DB — (P6, needs the owner's
-      approval)
-- [ ] OWASP ZAP baseline weekly against staging — (P6)
-- [ ] k6 scripts (market WS + private WS + orders), run before a feed / engine release — (P6)
-- [ ] Dependabot (or Renovate) grouped weekly PRs — (P6)
-- [ ] `gitleaks` secret scan in CI — (P6)
+- ➖ Staging Fly app — not built (owner, 2026-09-30); scans and load run on the CI stack instead
+- ➖ ZAP, k6, gitleaks, dependency alerts — tracked as H1–H10 in `HARDENING_PLAN.md`
+- [x] Dependabot for GitHub Actions (monthly, 2026-09-29); npm version-bump PRs stay off
 
 **Owner decisions (A9) (2)**
 
 - [ ] Pick / approve a log sink — (P5)
-- [ ] Approve the staging app's cost — (P6)
+- ➖ Approve the staging app's cost — not needed: no staging app (2026-09-30)
 
 Recurring, not a to-do: replace the testnet key when a `parity` issue reports `33004` (about every 3 months).
 
