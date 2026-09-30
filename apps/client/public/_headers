@@ -1,3 +1,17 @@
+# Cloudflare Pages response headers. Rules that match the same path merge.
+
+# 🔐 Security headers for every page and asset (HARDENING_PLAN H0, 2026-09-30). The API sends its own
+# through Helmet; these are the web app's — before this file set them, the site sent neither:
+# - HSTS: browsers use HTTPS only, for this domain and its subdomains (every one serves HTTPS),
+#   preload-eligible like the API's;
+# - framing: no other site may embed the app (clickjacking). frame-ancestors only works as a
+#   header — the <meta> CSP in index.html can't carry it — and X-Frame-Options covers old browsers.
+#   This header CSP holds only frame-ancestors; the <meta> policy still sets everything else.
+/*
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'none'
+
 /sw.js
   Cache-Control: no-cache
 /registerSW.js

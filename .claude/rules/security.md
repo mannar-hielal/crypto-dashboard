@@ -22,8 +22,11 @@ exists, and the controls that sit outside any single route handler.
 ## Defense in depth — the layers, outside-in
 
 1. **Network edge**: Fly.io TLS termination + `strictTransportSecurity` (HSTS, `maxAge: 63072000`,
-   `includeSubDomains`, `preload`) forces HTTPS for the domain and its subdomains, with HSTS
-   preload-list eligibility.
+   `includeSubDomains`, `preload`) forces HTTPS for the API and its subdomains. The web app is served
+   by Cloudflare Pages, which never sees Helmet's headers: its HSTS, `X-Frame-Options: DENY` and a
+   `frame-ancestors 'none'` CSP header come from `apps/client/public/_headers` (added 2026-09-30,
+   `HARDENING_PLAN.md` H0 — before that the site could be framed). A header change for the pages
+   goes there, and `scripts/securityHeaders.test.mjs` + the `@prod` smoke keep it true.
 2. **CSP**: production-only Content-Security-Policy (`CSP_DIRECTIVES` in `apps/server/src/app.ts`)
    — `default-src 'self'`, `script-src 'self'` (no inline/eval), `object-src 'none'`,
    `frame-ancestors 'none'`, `base-uri 'none'`. `style-src` allows `'unsafe-inline'` as a
