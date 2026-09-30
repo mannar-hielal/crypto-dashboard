@@ -69,7 +69,7 @@ import { PaperHarness } from './harness.js';
 
 const NUM_RUNS = Number(process.env.FC_NUM_RUNS ?? 200);
 const SEED = Number(process.env.FC_SEED ?? 20260930);
-/** A long nightly run needs more than Vitest's 5 s */
+/** A long weekly run needs more than Vitest's 5 s */
 const TIMEOUT = Math.max(30_000, NUM_RUNS * 100);
 
 const ZERO = new Decimal(0);
