@@ -166,8 +166,8 @@ release's baseline; a throwaway Fly machine for absolute capacity; never against
 
 - Already in place: `pnpm audit` gate, `eslint-plugin-security`, the security rules and refactor checklist, route
   schemas with `additionalProperties: false`, auth tests.
-- Add: moved to `docs/HARDENING_PLAN.md` (2026-09-30) — gitleaks, Dependabot security alerts and CodeQL on every
-  PR / weekly; ZAP, Trivy and load checks before a major release.
+- Add: moved to `docs/HARDENING_PLAN.md` (2026-09-30) — gitleaks on every PR, Dependabot security alerts, CodeQL
+  on the release PR; ZAP, Trivy and load checks before a major release.
 
 ### Production (T5)
 
@@ -187,7 +187,7 @@ release's baseline; a throwaway Fly machine for absolute capacity; never against
 | Local         | Development, pre-commit hook | Local Postgres (`docker-compose`), Bybit public feed (`BYBIT_TESTNET` picks testnet / mainnet) |
 | CI            | T1–T3 on every PR, nightly   | Ephemeral Postgres service container; fake Bybit replay server; users seeded per test          |
 | Staging       | —                            | **None** (owner, 2026-09-30): scans and load run on the CI stack — `docs/HARDENING_PLAN.md` §2 |
-| Production    | T5 only                      | Read-only checks; no test accounts created                                                     |
+| Production    | T5 only                      | Signed-out checks only (`HARDENING_PLAN.md` H11); no test accounts created                     |
 | Bybit testnet | T4 only                      | A dedicated testnet sub-account; keys in GitHub `bybit-testnet` environment secrets            |
 
 Test data: every automated test creates its own user and resets its account (`POST /paper/account/reset`); nothing

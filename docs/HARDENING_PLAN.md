@@ -16,9 +16,11 @@
   hand before a release, not on every merge.
 - **Measure before a major release or a big feature,** and treat security vulnerabilities as part of every change
   (owner, 2026-09-30).
-- **Never attack- or load-test production.** Production keeps its read-only smoke (`prod-smoke.yml`, after every
-  deploy and every 6 h) and UptimeRobot. What only production's configuration shows (CSP, HSTS, cookie flags, CORS,
-  no Swagger) is checked there read-only (H11), because the CI stack runs outside production mode (review #211).
+- **Never attack- or load-test production.** Production keeps its smoke (`prod-smoke.yml`, after every deploy and
+  every 6 h) and UptimeRobot. What only production's configuration shows (CSP, HSTS, cookie flags, CORS, no Swagger)
+  is checked there with plain signed-out requests (H11), because the CI stack runs outside production mode (review
+  #211). Cookie flags need a sign-in, and a production credential in a public repository's secrets isn't wanted, so
+  they are asserted by a server test that builds the app in production mode instead.
 - **Dependabot** already covers GitHub Actions (monthly, since 2026-09-29); npm version-bump PRs stay off (npm is
   covered by the audit gate and `pnpm.overrides`, `.claude/rules/security.md`).
 
@@ -28,10 +30,16 @@
 | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
 | The CI stack (the e2e set's)                           | Attack-style scans and relative load numbers: the API, Postgres, the fake Bybit feed, the built web app and the test hooks for seeding users, all thrown away after the run | Actions minutes only |
 | A throwaway Fly machine, production's size (on demand) | Absolute capacity ("how many users does one machine hold"): created for the run, deleted after, like the parity machine                                                     | cents per run        |
-| Production                                             | Read-only smoke only                                                                                                                                                        | —                    |
+| Production                                             | The smoke: signed-out requests only (H11). No attack or load traffic, no sign-in, no test data                                                                              | —                    |
 
 The CI stack's load numbers compare releases with each other ("orders got 40% slower"); a GitHub runner is not Fly's
 hardware, so they are not capacity figures.
+
+**Found while writing this plan (2026-09-30):** the web app (`https://cryptopapertrade.com`) sends no
+`Strict-Transport-Security` and no framing protection — only `nosniff` and a referrer policy; its CSP is a `<meta>` tag,
+which can't set `frame-ancestors`. So another site can frame the dashboard (clickjacking), and a first visit isn't
+forced onto HTTPS by the browser. The API sends all three. Fix (H0, before step 1): `_headers` gets `/*` with HSTS,
+`X-Frame-Options: DENY` and `Content-Security-Policy: frame-ancestors 'none'`; H11 then keeps it true.
 
 ## 3. On every PR — cheap checks
 
@@ -39,17 +47,28 @@ Already in place: `pnpm audit --audit-level=high` (preinstall, pre-commit, CI), 
 security rules and refactor checklist, route schemas with `additionalProperties: false`, auth tests, the Claude
 review.
 
-| #   | Add                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Runs                                                       | Minutes / month      |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | -------------------- |
-| H1  | **gitleaks** secret scan (the repository is public since 2026-09-29)                                                                                                                                                                                                                                                                                                                                                                                                                   | every PR, inside `ci.yml`'s job                            | ~5                   |
-| H2  | **Dependabot security alerts** for npm — alerts only, no version-bump PRs: a new CVE is known the day it's published, not at the next install                                                                                                                                                                                                                                                                                                                                          | GitHub, no Actions minutes                                 | 0                    |
-| H3  | **CodeQL** code scanning (free on public repositories): injection, unsafe regex and data-flow issues lint rules miss                                                                                                                                                                                                                                                                                                                                                                   | weekly + on the release PR                                 | ~40                  |
-| H11 | **Production security posture, read-only**, in the `@prod` smoke after every deploy (and every 6 h): the API's and the web app's headers — CSP exactly `CSP_DIRECTIVES`, HSTS with `includeSubDomains` + `preload`, `frame-ancestors 'none'`; `/docs` answers 404; a preflight from a foreign origin gets no `Access-Control-Allow-Origin`; the QA account's sign-in sets the refresh cookie `HttpOnly`, `Secure`, `SameSite=None`. Plain requests a browser makes anyway — not a scan | after every deploy, inside `deploy.yml` / `prod-smoke.yml` | ~0 (seconds per run) |
+| #   | Add                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Runs                                         | Minutes / month      |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | -------------------- |
+| H1  | **gitleaks** secret scan (the repository is public since 2026-09-29)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | every PR, inside `ci.yml`'s job              | ~5                   |
+| H2  | **Dependabot security alerts** for npm — alerts only, no version-bump PRs: a new CVE is known the day it's published, not at the next install                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | GitHub, no Actions minutes                   | 0                    |
+| H3  | **CodeQL** code scanning (no licence cost on public repositories; its runs still use Actions minutes): injection, unsafe regex and data-flow issues lint rules miss                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | on the release PR                            | ~30                  |
+| H11 | **Production security posture.** In the `@prod` smoke (every 6 h and after each deploy), plain signed-out requests. **API** (`api.cryptopapertrade.com`, Helmet): CSP equals `CSP_DIRECTIVES` (`app.ts`), HSTS with `includeSubDomains` + `preload`; `/docs` answers 404; a preflight from a foreign origin gets no `Access-Control-Allow-Origin`. **Web app** (Cloudflare Pages): its CSP equals the `<meta>` policy in `apps/client/index.html` (its own `connect-src` / `style-src`, not the API's), and the response headers from `apps/client/public/_headers` are sent — HSTS and framing protection (`X-Frame-Options` / a `frame-ancestors` header: a `<meta>` CSP can't carry `frame-ancestors`). The refresh cookie's flags (`HttpOnly`, `Secure`, `SameSite=None`) need a sign-in, so a server test asserts them on an app built with `NODE_ENV=production` (`app.inject`), with no production account or credential | every smoke, and the server test on every PR | ~0 (seconds per run) |
 
 ## 4. The heavy run — before a major release or a big feature
 
 **Trigger:** a `heavy-release` label on the `develop → main` release PR (or `workflow_dispatch`). It is recommended —
 not forced — when a release touches `src/trading/**`, auth, the WebSocket routes or `prisma/schema.prisma`.
+
+**How it blocks:** there is no branch protection, so a red check alone only reports. Step 2 therefore extends
+`deploy.yml`'s gate, which already refuses to deploy unless the release PR's "E2E full set" is green on the merged
+head. The label only decides whether a heavy run **starts**; the gate never reads it. For the release PR's merged
+head SHA, the gate looks for "Heavy release" runs: if one exists, anything but a `success` conclusion blocks the
+deploy — queued, in progress, cancelled, skipped or red alike (it fails closed, like the E2E gate; re-run the
+deploy once the heavy run is green). Only a head with no heavy run at all deploys without one. Removing the label
+after a run started changes nothing, and the workflow re-runs on every push to a labelled release PR (as the E2E
+full set does), so a later push gets its own run on its new head SHA; an earlier green run never counts for it. The
+merge process in `git.md` (every check on the head green) covers the merge itself. A release that never had the
+label deploys as today (see Q2).
 
 | #   | Check                                                                                                                                                                                                                                                                                                                        | Target          | Blocks the release when                         |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | ----------------------------------------------- |
@@ -61,8 +80,19 @@ not forced — when a release touches `src/trading/**`, auth, the WebSocket rout
 | H9  | **Lighthouse CI**: load budgets for the landing page and the dashboard                                                                                                                                                                                                                                                       | CI stack        | a budget exceeded                               |
 | H10 | **Capacity run** (optional, before launch or a big engine change): k6 against a throwaway Fly machine of production's size                                                                                                                                                                                                   | Fly, on demand  | — (a report, not a gate)                        |
 
-A heavy run is about 30–40 minutes. It fits the Actions reserve (≈ 160 minutes, `.claude/rules/git.md`) at 2–3 major
-releases a month; more than that, and it is the next thing to watch.
+**Budget.** Against the ≈ 160-minute reserve in `.claude/rules/git.md`, which exists for re-runs and emergency fixes:
+
+| Item                                                                                                                    | Minutes / month                         |
+| ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| H1 gitleaks (inside `ci.yml`'s job)                                                                                     | ~5                                      |
+| H3 CodeQL (release PRs only, ~8 a month) — its runs use Actions minutes like any workflow; "free" is the CodeQL licence | ~30                                     |
+| H11 (steps in the existing smoke jobs)                                                                                  | ~0                                      |
+| The heavy run, **capped at 2 a month**                                                                                  | 60–80                                   |
+| **Total**                                                                                                               | **≈ 95–115, leaving a reserve ≈ 45–65** |
+
+That is too thin a reserve to keep by default, so each step adds its rows to the `git.md` budget table when it is built,
+and the owner picks the offset (Q4). The heavy run is **not** exempt from the brake: from 75% of the monthly minutes
+it runs only for a release that fixes a vulnerability; from 90%, not at all.
 
 ## 5. Rules that make it work
 
@@ -78,18 +108,24 @@ releases a month; more than that, and it is the next thing to watch.
 
 ## 6. Order of work
 
-| Step | Contents                                                             | Needs                  | Status |
-| ---- | -------------------------------------------------------------------- | ---------------------- | ------ |
-| 1    | H1 gitleaks, H2 Dependabot alerts, H3 CodeQL, H11 production posture | —                      | ⬜     |
-| 2    | The heavy-release workflow with H4–H6                                | —                      | ⬜     |
-| 3    | H7 k6, H8 benchmarks, H9 Lighthouse                                  | the thresholds (§7 Q1) | ⬜     |
-| 4    | H10 capacity run                                                     | when capacity matters  | ⬜     |
+| Step | Contents                                                                    | Needs                                                 | Status |
+| ---- | --------------------------------------------------------------------------- | ----------------------------------------------------- | ------ |
+| 0    | H0 the web app's missing HSTS and framing headers (found 2026-09-30)        | the owner's go-ahead (HSTS `preload` is hard to undo) | ⬜     |
+| 1    | H1 gitleaks, H2 Dependabot alerts, H3 CodeQL, H11 production posture        | —                                                     | ⬜     |
+| 2    | The heavy-release workflow with H4–H6, and its check in `deploy.yml`'s gate | —                                                     | ⬜     |
+| 3    | H7 k6, H8 benchmarks, H9 Lighthouse                                         | the thresholds (§7 Q1)                                | ⬜     |
+| 4    | H10 capacity run                                                            | when capacity matters                                 | ⬜     |
 
 ## 7. Open questions for the owner
 
 - **Q1.** The thresholds: the p95 for placing an order (and for the market WebSocket fan-out), the error rate, and
   the Lighthouse budgets. A first measured run can propose numbers to agree on.
-- **Q2.** Should the heavy run be required (blocking the release merge) for every release that touches the engine,
-  auth, WebSockets or the schema — or stay the release owner's call through the label?
+- **Q2.** Should the label be required for every release that touches the engine, auth, WebSockets or the schema
+  (a check that fails the release PR when such a release lacks it) — or stay the release owner's call? Either way,
+  a release whose head had a heavy run can't deploy unless that run is green (§4, "How it blocks").
 - **Q3.** Is the log sink (TRADING_TEST_PLAN P5, "Fly log shipping with an alert on `level >= 50`") still wanted, or
   does M8's error digest by email cover it?
+- **Q4.** The budget (§4): the new checks would leave a reserve of about 45–65 minutes. Offset it — for example the
+  prod smoke every 8 h instead of 6 h (≈ 60 minutes back) — or accept the thinner reserve? Every row counts against
+  the 2,000-minute plan: `git.md` keeps it whether or not GitHub bills this public repository, so going private
+  again can't break the budget.
