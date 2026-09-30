@@ -3634,7 +3634,7 @@ includeSubDomains; preload` (all three hosts serve HTTPS and redirect HTTP), `X-
   `Content-Security-Policy: frame-ancestors 'none'` (a header policy with only that directive; the `<meta>` policy
   still sets the rest). Not submitted to the HSTS preload list — that stays a separate decision.
 - **Kept true by:** `scripts/securityHeaders.test.mjs` (`pnpm test:scripts`, every PR) and a `@prod` smoke test
-  after every deploy and every 6 h.
+  after every deploy and every 8 h.
 
 ### chore: the owner's hardening decisions — prod smoke every 8 h, no log sink, thresholds measured first (2026-09-30) ✅
 
@@ -3643,5 +3643,5 @@ includeSubDomains; preload` (all three hosts serve HTTPS and redirect HTTP), `X-
 - **Q2:** the `heavy-release` label stays the owner's call per release (suggested, never forced).
 - **Q3:** no log sink — the M8 error digest covers it; the P5 log-shipping items are closed as not needed.
 - **Q4:** `prod-smoke.yml` runs every 8 h instead of 6 h (≈ 60 Actions minutes a month back; UptimeRobot still checks
-  `/health` every 5 minutes). `git.md`: planned ≈ 1,780, reserve ≈ 220 until the hardening checks add their rows.
+  `/health` every 5 minutes). `git.md`: planned ≈ 1,770 (recomputed from its rows), reserve ≈ 230 until the hardening checks add their rows.
 - **Guided trade:** deferred again (owner, 2026-09-30); its questions wait in `docs/GUIDED_TRADE_MVP.md`.

@@ -83,7 +83,7 @@ label deploys as today (see Q2).
 | H9  | **Lighthouse CI**: load budgets for the landing page and the dashboard                                                                                                                                                                                                                                                       | CI stack        | a budget exceeded                               |
 | H10 | **Capacity run** (optional, before launch or a big engine change): k6 against a throwaway Fly machine of production's size                                                                                                                                                                                                   | Fly, on demand  | — (a report, not a gate)                        |
 
-**Budget.** Against the reserve in `.claude/rules/git.md` (≈ 220 since the prod smoke moved to every 8 h, §7 Q4),
+**Budget.** Against the reserve in `.claude/rules/git.md` (≈ 230 since the prod smoke moved to every 8 h, §7 Q4),
 which exists for re-runs and emergency fixes:
 
 | Item                                                                                                                    | Minutes / month                           |
@@ -92,7 +92,7 @@ which exists for re-runs and emergency fixes:
 | H3 CodeQL (release PRs only, ~8 a month) — its runs use Actions minutes like any workflow; "free" is the CodeQL licence | ~30                                       |
 | H11 (steps in the existing smoke jobs)                                                                                  | ~0                                        |
 | The heavy run, **capped at 2 a month**                                                                                  | 60–80                                     |
-| **Total**                                                                                                               | **≈ 95–115, leaving a reserve ≈ 105–125** |
+| **Total**                                                                                                               | **≈ 95–115, leaving a reserve ≈ 115–135** |
 
 Each step adds its rows to the `git.md` budget table when it is built. Without the offset (the smoke every 8 h) the
 reserve would have been ≈ 45–65 — too thin to keep. The heavy run is **not** exempt from the brake: from 75% of the monthly minutes
@@ -130,6 +130,6 @@ it runs only for a release that fixes a vulnerability; from 90%, not at all.
 - **Q3 — no log sink.** The M8 error digest (email, every 30 min, at most 10 a day) covers it; logs stay in
   `fly logs`. Revisit only if searchable or retained logs are needed.
 - **Q4 — the prod smoke runs every 8 h instead of 6 h** (≈ 60 minutes a month back; UptimeRobot still checks
-  `/health` every 5 minutes). `git.md`'s reserve is ≈ 220 until the checks here are built; each adds its row then.
+  `/health` every 5 minutes). `git.md`'s reserve is ≈ 230 until the checks here are built; each adds its row then.
 
 Nothing in this plan waits on the owner now.

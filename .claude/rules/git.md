@@ -111,7 +111,7 @@ it would also be a way around it for a mistake. The break-glass options work wit
 
 The plan the owner agreed on 2026-09-29, for a private repository on the Free plan (2,000 included
 minutes). A public repository is not billed, but the plan holds either way. Once the minutes run out,
-nothing runs until the next month: no CI, no merge, no deploy, not even a security fix. So about 220
+nothing runs until the next month: no CI, no merge, no deploy, not even a security fix. So about 230
 minutes stay in reserve. The prod smoke moved from every 6 h to every 8 h (owner, 2026-09-30) to pay for the
 weekly engine job (M7) and the `HARDENING_PLAN.md` checks, which add their rows here as each is built.
 
@@ -126,8 +126,8 @@ weekly engine job (M7) and the `HARDENING_PLAN.md` checks, which add their rows 
 | CI (`ci.yml`, one job; docs-only changes skip it)    | ~25 PRs + 8 releases                    | ~455        |
 | Claude review (`claude-code-review.yml`)             | every PR push                           | ~350        |
 | Deploy                                               | 8 releases                              | ~40         |
-| **Planned**                                          |                                         | **≈1,780**  |
-| **Reserve** (re-runs, a busy week, an emergency fix) |                                         | **≈220**    |
+| **Planned**                                          |                                         | **≈1,770**  |
+| **Reserve** (re-runs, a busy week, an emergency fix) |                                         | **≈230**    |
 
 - **Volume is the lever:** about 25 PRs and 8 releases a month (step 4 of the branching flow above).
   An extra PR costs about 27 minutes, an extra release about 33.

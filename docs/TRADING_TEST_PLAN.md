@@ -238,7 +238,7 @@ Each step is its own small PR to `develop`, ordered by value per effort.
 | **P2** | ✅ Fake Bybit replay server, Playwright (smoke on PR, full nightly), seed helper; the missing T1 / T2 tests the ⬜ rows name (M1, M3–M5) | Every ⬜ row marked `(P2)` in Sections 7–15 and 19 | —                                                    |
 | **P3** | ✅ Nightly `parity:testnet` workflow + issue on mismatch (2026-09-28) · ✅ weekly spec-drift check · ✅ feed parity job (M6, 2026-09-29) | 17.6.4, Section 6 → T4                             | ✅ Testnet key, environment, funds (done 2026-09-28) |
 | **P4** | ✅ fast-check invariants; ✅ Stryker weekly on the engine (M7, 2026-09-30)                                                               | T1p; mutation score                                | —                                                    |
-| **P5** | ✅ Post-deploy + scheduled prod smoke, error digest by email (M8); no log sink (owner, 2026-09-30)                                       | T5                                                 | Pick / approve a log sink                            |
+| **P5** | ✅ Post-deploy + scheduled prod smoke, error digest by email (M8); no log sink (owner, 2026-09-30)                                       | T5                                                 | —                                                    |
 | **P6** | ➖ Moved to `docs/HARDENING_PLAN.md` (no staging app, 2026-09-30)                                                                        | Security + performance                             | —                                                    |
 
 After P2 the only manual rows left are look-and-feel (drag feel, sounds, animation) — the M tier.
