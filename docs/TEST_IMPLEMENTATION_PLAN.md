@@ -4,7 +4,8 @@
 >
 > `TRADING_TEST_PLAN.md` says **what** to test and where each case stands (Part A strategy, Part B case catalogue,
 > A10 to-do). This file says **how** each case gets implemented, which scenario it belongs to, and **how to
-> reproduce it by hand in the app** — the same steps that later drive the guided-trade bubbles.
+> reproduce it by hand in the app** — the same steps that later drive the guided-trade bubbles
+> (`docs/GUIDED_TRADE_MVP.md`).
 
 ## How to use this file
 
@@ -13,8 +14,8 @@
   covered by …").
 - Scenarios the catalogue doesn't have yet are proposed as `NEW-<section>-<n>`. Add them to Part B when they are
   built, with the next free case number.
-- Every section ends with a **UI reproduction** in the shared scenario-step shape (Foundations §F5) and a one-line
-  **guided-trade** verdict.
+- Every section ends with a **UI reproduction** in the shared scenario-step shape (Foundations §F5). Which of them
+  become guided tours, and the tour plan itself, live in `docs/GUIDED_TRADE_MVP.md`.
 - Status legend (same as Part B): ⬜ not run · ✅ pass · ❌ fail · ⚠️ partial · ⏳ blocked · ➖ superseded / retired.
   Tiers: T1 Vitest engine / lib · T1p fast-check · T2 RTL · T2i real Postgres · T3 Playwright · T4 Bybit testnet
   parity · T5 prod smoke · M manual. Roadmap steps P1–P6 are A8's.
@@ -466,19 +467,8 @@ F3, sign in, `goto(startUrl)`), then maps each step: `click` → `locator('guide
 `toHaveText` / `toBeVisible` / `toHaveValue` / `toBeEnabled` / `toHaveURL` with Playwright's auto-waiting. Each step
 is wrapped in `test.step(step.id + ' ' + step.explain)`, so the HTML report reads like the manual steps.
 
-**The guided-trade overlay that consumes the same steps** — `apps/client/src/guide/GuideOverlay.tsx` (a later
-feature; the plan only fixes the contract):
-
-- Loads a scenario by id (lazy import), drops `testOnly` steps and preconditions of kind `quote` (the tour runs on
-  live prices).
-- For each step: finds `[data-guide="<anchor>"]` (+ key), scrolls it into view, draws a highlight ring and a bubble
-  with `explain` next to it (position from `getBoundingClientRect` + `ResizeObserver`; no new dependency needed —
-  `@floating-ui/react` is the fallback and would go through the supply-chain check first).
-- Advances on the user's own action: `click` → a click on the anchor; `type` → an input event (the step's `value`
-  is shown as a suggestion, any valid value is accepted); `observe` → a **Next** button. `expect` is not asserted in
-  the tour; the `liveNote` becomes the bubble's "what you should see" line.
-- If an anchor isn't on screen (panel collapsed, mobile layout), the bubble says what to open first; this is why
-  every anchor is a real control, never a wrapper.
+**The guided-trade overlay that consumes the same steps** — `GuideOverlay`, a separate feature, planned in
+`docs/GUIDED_TRADE_MVP.md`. This plan only fixes the contract (the anchors and the scenario shape above).
 
 **Rendering the manual steps.** Until scenarios exist as code, the UI reproductions below are written by hand in
 this shape. Once they do, `pnpm guide:doc` renders every scenario to `docs/generated/UI_REPRODUCTIONS.md`, and this
@@ -590,8 +580,8 @@ have a test. Run in CI as a report (not a gate) until P2 is done, then as a gate
 
 # Part 2 — Stage-by-stage implementation plan
 
-Each section has the same five parts: **Scenarios** (table: scenario → cases → tier · tool → what exists → what to
-add → roadmap step), **Not automatable**, **UI reproduction**, **Guided trade**. File paths are relative to the repo
+Each section has the same four parts: **Scenarios** (table: scenario → cases → tier · tool → what exists → what to
+add → roadmap step), **Not automatable**, **UI reproduction**. File paths are relative to the repo
 root; `…/dashboard/__tests__/` means `apps/client/src/components/dashboard/__tests__/`, `…/engine/__tests__/` means
 `apps/server/src/trading/engine/__tests__/`, `e2e/` means `apps/e2e/tests/`.
 
@@ -645,8 +635,6 @@ Preconditions: signed out; on local dev without `RESEND_API_KEY` the verify link
 8. `/forgot-password` → [auth.forgot.email] an address that has no account → [auth.forgot.submit] → Expect the same
    message as for your real address. _Explain: "We never reveal whether an email has an account."_
 
-**Guided trade:** partly — steps 2–4 make a "Create your account" tour; the rest are settings, not trading.
-
 ### 8 — Account Settings modal (8.1–8.13)
 
 **Scenarios**
@@ -674,8 +662,6 @@ Preconditions: signed out; on local dev without `RESEND_API_KEY` the verify link
    Journal empty. _Explain: "A reset gives you a fresh 10,000 USDT account."_
 5. Reopen, click reset once, click outside the modal, reopen → Expect "Reset account" (confirm cleared).
    [acct-settings.done] → Expect it closes.
-
-**Guided trade:** no — a settings check, not a learning step (a one-bubble hint on the reset is enough).
 
 ### 14.1 — Market URLs and the Trade menu (14.1.1–14.1.10)
 
@@ -705,8 +691,6 @@ Preconditions: signed out; on local dev without `RESEND_API_KEY` the verify link
 5. Sign out, open `/dashboard/usdt/ETHUSDT`, sign in → Expect you land on `/dashboard/usdt/ETHUSDT`.
 6. Open `/chart` signed out → [nav.trade-menu] → USDT Perpetual → Expect the chart switches, the address stays
    `/chart`.
-
-**Guided trade:** yes — "Find your market" (steps 1–3), first tour of Stage 0.
 
 ### 10.1, 10.2, 10.3, 10.5 — Multi-chart layout
 
@@ -742,8 +726,6 @@ static result is in the visual baseline.
 6. [layout.option `4`], click pane 4, then [layout.option `2h`] → Expect pane 2 active, no error. Reload → Expect the
    2h layout is still there. [layout.option `1`] → Expect no pane header.
 
-**Guided trade:** partly — "Watch several charts" (steps 1–4), optional in Stage 0.
-
 ### 5 — Symbol pair icons (5.1–5.7)
 
 **Scenarios**
@@ -761,8 +743,6 @@ static result is in the visual baseline.
    a coin quoted in USDT."_
 2. [account.tab `positions`] → Expect the BTC row shows the BTC icon and the ETH row the ETH icon, whichever pane is
    active.
-
-**Guided trade:** no.
 
 ### 9 — Sell / Buy prices and spread (9.1–9.9)
 
@@ -792,8 +772,6 @@ static result is in the visual baseline.
 5. Two panes, right pane ETHUSDT; click it → Expect Sell / Buy switch to ETH's prices at once.
 
 Live prices: Sell < Buy, usually one tick apart (BTC tick 0.1); the tooltip values must equal the two buttons.
-
-**Guided trade:** yes — "Read Sell, Buy and the spread" (steps 2–3), last tour of Stage 0.
 
 ---
 
@@ -839,9 +817,6 @@ Live prices: Sell < Buy, usually one tick apart (BTC tick 0.1); the tooltip valu
 14. Try [trade.side.sell] `1` BTC → Expect "Balance insufficient (… available)". _Explain: "On Spot you can only sell
     what you own."_
 
-**Guided trade:** yes — three tours: "Your first Spot market order" (F5 steps 1–7), "Sell and see your profit"
-(8–9), "Protect a Spot buy with TP / SL" (12–13).
-
 ---
 
 ## Stage 2 — Reading your account
@@ -880,8 +855,6 @@ Safari with the volume at 50%.
 6. Place and cancel a limit order → [account.tab `orders`] → Expect the Cancelled row at 65% opacity with a clock
    icon; after 2 minutes (or a reload) it's gone from Orders and still in Order History.
 
-**Guided trade:** partly — "Your journal" (step 4) is a good short tour; the rest is panel housekeeping.
-
 ### 7 — Order History tab (7.1.1–7.6.2)
 
 **Scenarios**
@@ -912,9 +885,6 @@ Safari with the volume at 50%.
    limit a few $ under the Buy price and wait; commission = qty × limit × 0.0002.
 5. Place a stop sell far below, then [orders.row.cancel] → Expect STOP / Cancelled (muted).
 6. [account.columns] → turn off Closing Time → Expect the column disappears; reload → Expect it stays off.
-
-**Guided trade:** yes — "Follow an order from placement to history" (steps 1–5, with 4 on live prices as a waiting
-step).
 
 ---
 
@@ -969,9 +939,6 @@ Fake feed for all of them: `feed quote linear BTCUSDT bid=49999.9 ask=50000 mark
 Live prices: entry = the Buy price at the click; PnL uses the **mark** (Positions "Mark Price" column); tolerance =
 one tick × qty.
 
-**Guided trade:** yes — "Your first long" (steps 1–5) and "Going short" (step 6); step 7 is a good "Mistakes the form
-catches" mini-tour.
-
 ### 2 — Limit orders (2.1.1–2.5.4)
 
 **Scenarios**
@@ -1005,8 +972,6 @@ catches" mini-tour.
    commission, a green journal pill.
 6. A limit buy **above** the Buy price → Expect the warning that it fills now at the ask as a taker.
 
-**Guided trade:** yes — "Enter at your price with a limit order" (steps 1–2, 4) and "A full bracket" (2–5).
-
 ### 3 — Stop orders (3.1.1–3.5.3)
 
 **Scenarios**
@@ -1030,8 +995,6 @@ catches" mini-tour.
 3. A stop buy **below** the Buy price → Expect the "will fill immediately — Use a Limit Buy" warning.
 4. Place a stop far away, [orders.row.cancel] → Expect the reserve refunded in full.
 
-**Guided trade:** yes — "Catch a breakout with a stop order" (steps 1–2).
-
 ### 4.17–4.18 — Editing an order or a position's TP / SL
 
 **Scenarios**
@@ -1049,8 +1012,6 @@ catches" mini-tour.
 2. [positions.row.edit-exits] → [pos-edit.tp] a new price → [pos-edit.confirm] → Expect the new TP in the row and two
    journal lines. Turn the SL off → Expect a Cancelled SL row in Order History.
 
-**Guided trade:** yes — "Move your take-profit" (step 2).
-
 ### 14.5 — Per-symbol leverage
 
 **Scenarios**
@@ -1064,8 +1025,6 @@ catches" mini-tour.
 
 1. On ETHUSDT, [trade.leverage-chip] → [leverage.input] `5` → [leverage.confirm] → Expect the chip `… 5x`.
 2. Switch to BTCUSDT → Expect BTC keeps its own leverage. _Explain: "Leverage is set per symbol, like on Bybit."_
-
-**Guided trade:** yes — part of "Set your leverage and margin mode" (with SC-15.5 and SC-17.5).
 
 ### 14.2, 14.3, 14.4 — Fees, fill prices, size rules
 
@@ -1092,8 +1051,6 @@ catches" mini-tour.
    `10000.05` on a limit → Expect "Order price decimal too long (tick size 0.1)".
 4. `feed quote linear BTCUSDT … ` then stall 15 s **(fake feed)** → market buy → Expect "Waiting for live price…".
 
-**Guided trade:** partly — step 1–2 as "What a trade costs"; steps 3–4 are tester checks.
-
 ### 15.2 — One-way mode
 
 **Scenarios**
@@ -1108,8 +1065,6 @@ catches" mini-tour.
 1. Buy 0.01 at 50,000, then `feed quote … ask=60000`, buy 0.005 → Expect **one** LONG row qty `0.015`, entry
    `53,333.33`, journal "Added to LONG …". _Explain: "One position per symbol: a second buy adds to it and averages
    the entry."_
-
-**Guided trade:** yes — "Adding to a position" (one step, after "Your first long").
 
 ---
 
@@ -1137,8 +1092,6 @@ The price-control endpoint is what makes this stage testable end to end: on live
    mark price — a fair price that one big trade can't move — so a spike can't liquidate you."_
 2. [symbolbar.mark] and [symbolbar.index] → Expect MARK 50,000. Live: MARK and the last price differ by a few dollars.
 
-**Guided trade:** yes — "Mark price vs last price" (steps 1–2 on live prices, as an observe-only tour).
-
 ### 15.3 — Liquidation and bankruptcy prices
 
 **Scenarios**
@@ -1159,8 +1112,6 @@ The price-control endpoint is what makes this stage testable end to end: on live
 3. Leverage 1× → Expect liq `—`. Live: liq ≈ entry × (1 − 1/leverage + MMR) for a long, rounded up to the
    tick (the form's number is the reference).
 
-**Guided trade:** yes — part of "What liquidation means" (with 15.4).
-
 ### 15.4 — Liquidation in the engine
 
 **Scenarios**
@@ -1177,7 +1128,7 @@ The price-control endpoint is what makes this stage testable end to end: on live
 **Not automatable.** None.
 
 **UI reproduction** — fake feed, worked long open. On live prices a liquidation can't be produced on demand; the
-fake feed is the intended route (a tour explains the numbers instead, see below).
+fake feed is the intended route (a tour explains the numbers instead — `docs/GUIDED_TRADE_MVP.md`).
 
 1. `feed quote linear BTCUSDT bid=45100 ask=45100.1 mark=45140` **(fake feed)** → Expect the position disappears, the
    liquidation sound, [notice.liquidation]. _Explain: "The mark crossed the liquidation price, so the whole position
@@ -1185,9 +1136,6 @@ fake feed is the intended route (a tour explains the numbers instead, see below)
 2. [account.tab `closedpnl`] → Expect Exit Type "Liquidation", ≈ `−505.23`. _Explain: "You lose the margin (500), the
    fee to close (2.475) and the opening fee (2.75)."_
 3. [account.tab `orderhistory`] → Expect a "Liquidation" row; the TP / SL were cancelled.
-
-**Guided trade:** yes — "What liquidation means" as an observe-only tour on live prices (explain the numbers on the
-form and the row, never force a liquidation).
 
 ### 15.5 — Re-margining on a leverage change
 
@@ -1205,8 +1153,6 @@ form and the row, never force a liquidation).
    liquidation price away."_
 2. [leverage.confirm] → Expect the row updated and the balance down `499.73`.
 3. With too little balance → Expect "Insufficient available balance to change leverage …" inline.
-
-**Guided trade:** yes — "Change leverage on an open position".
 
 ### 15.6 — Chart lines
 
@@ -1230,8 +1176,6 @@ PR is the evidence.
 2. Drag the TP line → Expect a Confirm / Cancel prompt; Confirm → the TP moves by whole ticks.
 3. [chart.type-menu] → [chart.mark-line] → Expect the Mark line hides.
 
-**Guided trade:** partly — "Manage a trade from the chart" (step 2) once drag works on touch; desktop-only today.
-
 ### 17.1 — Add / reduce margin (isolated)
 
 **Scenarios**
@@ -1251,8 +1195,6 @@ PR is the evidence.
 2. [margin.confirm] → Expect the row's Liq. Price updated and the balance −1,000.
 3. [margin.mode `reduce`] → Expect "Max reducible (margin you added)".
 
-**Guided trade:** yes — "Add margin to survive a move".
-
 ### 17.2 — Trigger source, reduce-only, TP / SL side
 
 **Scenarios**
@@ -1271,8 +1213,6 @@ PR is the evidence.
 3. [trade.type.stop] → Expect [trade.close-on-trigger] offered.
 4. [positions.row.edit-exits] → SL below the liq price → Expect the amber warning ([pos-edit.warning]).
 
-**Guided trade:** partly — "Reduce-only closes, never opens" (step 2) is useful; trigger source is advanced.
-
 ### 17.3 — Risk tiers
 
 **Scenarios**
@@ -1287,8 +1227,6 @@ PR is the evidence.
 1. [trade.leverage-chip] → Expect tier, MMR and the max position value at the chosen leverage ([leverage.tier-info]).
    _Explain: "Bigger positions need more maintenance margin, so the maximum leverage falls as size grows."_
 2. Hover the MMR meter in a Positions row → Expect the same tier.
-
-**Guided trade:** no — reference information, not an action.
 
 ### 17.4 — Closed P&L
 
@@ -1306,8 +1244,6 @@ PR is the evidence.
    Expect a row qty `0.05`, `+47.22`; hover → PnL 50.00, open fee −1.375, close fee −1.4025. _Explain: "Closed P&L is
    what a close really made, after both fees and any funding."_ Live: closedPnl = (exit − entry) × qty − open fee ×
    share − qty × exit × 0.00055 − funding.
-
-**Guided trade:** yes — "Take partial profit and read Closed P&L".
 
 ---
 
@@ -1341,9 +1277,6 @@ Worked position: long 0.1 BTC at 10× (IM 500), mark 51,000, rate 0.01% → fee 
    timestamp × rate.
 3. Switch the pane to Spot → Expect no MARK / INDEX / FUNDING stats.
 
-**Guided trade:** yes — "What funding costs you" (observe-only on live prices, steps 1 and 3; step 2 explained, not
-forced).
-
 ### 17.5 — Cross margin
 
 **Scenarios**
@@ -1365,8 +1298,6 @@ forced).
 2. Open the worked long → Expect [account.summary.mm-rate] and an estimated cross liq price; no Add margin pencil.
 3. Switch to [leverage.mode `isolated`] with the position open → Expect the refusal listing the reasons.
 4. Old account: Expect the one-time [notice.cross-margin] with "How it works" / "Switch to Cross".
-
-**Guided trade:** yes — "Cross or Isolated?" (steps 1–2).
 
 ### 11 — Multi-symbol PnL
 
@@ -1391,8 +1322,6 @@ forced).
 4. [layout.option `1`] (BTC only); move ETH again → Expect the ETH row still updates.
 5. [positions.row.close `linear:ETHUSDT`] → Expect a Closed P&L row for ETHUSDT.
 
-**Guided trade:** yes — "Trade two symbols side by side" (steps 1–3).
-
 ### 10.4 — Sync options
 
 **Scenarios**
@@ -1415,8 +1344,6 @@ forced).
 4. [layout.sync `timeRange`] → zoom one pane → Expect all follow.
 5. Reload → Expect the toggles as you left them.
 
-**Guided trade:** partly — "Compare timeframes" (steps 1, 3) for chart-minded learners.
-
 ### 4.19–4.20 — Multi-pane TP / SL incidents
 
 **Scenarios**
@@ -1427,13 +1354,13 @@ forced).
 
 **Not automatable.** None. **UI reproduction:** not reproducible on purpose — the typo SL of 7,800 is now stopped by
 the SL typo guard (1.7.11) and triggers run on the server per symbol. To see the guard: [trade.sl.price] `7800` on a
-BTC order → Expect [trade.sl-confirm]. **Guided trade:** no.
+BTC order → Expect [trade.sl-confirm].
 
 ---
 
 ## Stage 6 — Under the hood (for testers)
 
-These sections are not learning steps, so none of them is a guided tour; their UI reproductions are tester
+These sections are not learning steps; their UI reproductions are tester
 procedures.
 
 ### 12 — Market data per category
@@ -1581,7 +1508,6 @@ browser test waits on.
 | **M7 — Depth** (deferred: the owner did not approve fast-check / Stryker, 2026-09-29)                         | fast-check invariants, Stryker weekly                                                                                                                                                                                                                                                                                                                                                                                                                               | F7, F8                                 | P4                                                                     | M                                          | property suite on PRs; mutation score recorded and floored                                             |
 | **M8 — Production** ✅ smoke + error digest by email (2026-09-29)                                             | `@prod` project post-deploy + every 6 h, log alert                                                                                                                                                                                                                                                                                                                                                                                                                  | F4 `prod` project                      | P5 (needs the owner's log sink)                                        | S                                          | a failed prod smoke marks the deploy red                                                               |
 | **M9 — Staging and security** (deferred 2026-09-29, except Dependabot for GitHub Actions)                     | Staging app, ZAP, k6, Dependabot, gitleaks                                                                                                                                                                                                                                                                                                                                                                                                                          | —                                      | P6 (needs the owner's approval)                                        | M                                          | as A8                                                                                                  |
-| **Guided trade MVP** (separate feature)                                                                       | `GuideOverlay` over the M4 scenarios: "Your first Spot market order", "Your first long"                                                                                                                                                                                                                                                                                                                                                                             | F1, F5                                 | —                                                                      | M                                          | a learner completes both tours on live prices                                                          |
 
 ## R2. The first five things to build
 
@@ -1674,10 +1600,7 @@ animation (10.2), synced-pan feel (10.4).
 
 **Open questions**
 
-- **Q1.** Guided trade: opt-in from a "Learn" menu, or offered once to new accounts? Does progress need saving per
-  user (server) or is the browser enough?
-- **Q2.** Tours run on live prices, so steps with exact numbers become "what you should see" formulas. Is that the
-  experience you want, or should a tour run against a practice feed?
+- **Q1, Q2** (guided trade) moved to `docs/GUIDED_TRADE_MVP.md`.
 - **Q3.** (M5a finding: on a 412 px screen the top bar overflows — the username is clipped — and the order form
   is off-screen until the Trade toggle; the phone tests cover auth only until this is decided.) Phones: is trading on a phone (the full-width order form under 1024 px) a supported flow to test in the PR
   smoke, or nightly only? Which multi-chart layouts should a phone offer (NEW-10-2)?
