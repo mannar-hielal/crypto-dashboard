@@ -1,7 +1,7 @@
 # Hardening Plan — Security Scans, Load and Performance
 
-> **Owner:** Mannar Hielal · **Written:** 2026-09-30 · **Status:** H0 done (2026-09-30); H1–H11 not started. The
-> owner's decisions are in §7.
+> **Owner:** Mannar Hielal · **Written:** 2026-09-30 · **Status:** ⏸ deferred (owner, 2026-09-30). H0 is done
+> and live; H1–H11 are not started and wait until the owner picks the plan up. The owner's decisions are in §7.
 >
 > Replaces milestone M9 of the test implementation plan (retired 2026-09-30) and roadmap step P6 of
 > `docs/TRADING_TEST_PLAN.md` (A4 "Performance" / "Security", A5 "Staging"). This file carries on after it.
