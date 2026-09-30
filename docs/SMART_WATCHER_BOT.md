@@ -206,21 +206,22 @@ Some GitHub release dates displayed a year off; star counts as fetched in Septem
 Checked 2026-09-30. Two changes in 2026 matter most: **CoinDesk Data (ex-CryptoCompare) retired its free API on
 21 May 2026, and CryptoPanic's free API plan appears to be gone.**
 
-| Factor           | Source                                  | Free-tier terms                                                                                                                                                                                                                                 | Use in pilot                                |
-| ---------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| Market           | Bybit v5 public (REST + WS)             | 600 req / 5 s per IP, no key ([docs](https://bybit-exchange.github.io/doc-v3-offline/spot/rate-limit)). Funding, open interest and long/short ratio are perpetual data from global bybit.com — market-wide signals only (Bybit EU has no perps) | ✅ (already wired: `BybitWebSocketManager`) |
-| Exchange notices | Bybit `/v5/announcements/index`         | No auth; `type=new_crypto` for listings ([docs](https://bybit-exchange.github.io/docs/v5/announcement))                                                                                                                                         | ✅                                          |
-| News             | RSS: Cointelegraph, CoinDesk, The Block | Free; automated-reuse terms _unverified_ → store headline + link only, never full text ([list](https://rss.feedspot.com/cryptocurrency_news_rss_feeds))                                                                                         | ✅                                          |
-| World events     | GDELT DOC 2.0                           | Free, anonymous, 15-min updates, ~1 req / 5 s ([GDELT](https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/))                                                                                                                                | ✅                                          |
-| Sentiment        | alternative.me Fear & Greed             | Free, daily, commercial use with attribution ([page](https://alternative.me/crypto/fear-and-greed-index/))                                                                                                                                      | ✅                                          |
-| Sentiment        | CoinMarketCap Fear & Greed              | Free Basic plan, 10k credits/mo ([docs](https://pro.coinmarketcap.com/api/documentation))                                                                                                                                                       | optional                                    |
-| On-chain         | DefiLlama                               | Free, no key, ~300 req/min ([ref](https://eco.com/support/en/articles/14800367-defillama-free-tvl-and-defi-analytics))                                                                                                                          | ✅                                          |
-| On-chain         | mempool.space                           | Free, no auth (~10 req/s, not official) ([docs](https://www.mintlify.com/mempool/mempool/api/introduction))                                                                                                                                     | ✅                                          |
-| On-chain         | Dune                                    | 2,500 credits/mo, API included ([Dune](https://dune.com/blog/new-paid-experience))                                                                                                                                                              | optional                                    |
-| On-chain         | Santiment                               | 1,000 calls/mo, last 30 days cut off on restricted metrics ([plans](https://academy.santiment.net/products-and-plans/sanapi-plans))                                                                                                             | optional (lagged)                           |
-| Macro            | FRED                                    | Free key, 120 req/min                                                                                                                                                                                                                           | ✅                                          |
-| Macro            | FOMC / CPI dates                        | Official Fed / BLS schedules, published a year ahead; a static calendar file                                                                                                                                                                    | ✅                                          |
-| Prices           | CoinGecko Demo                          | 30 calls/min, 10k/mo, attribution ([docs](https://docs.coingecko.com/docs/common-errors-rate-limit))                                                                                                                                            | optional                                    |
+| Factor           | Source                                            | Free-tier terms                                                                                                                                                                                                                                                                                                                                                    | Use in pilot                                |
+| ---------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
+| Market           | Bybit v5 public (REST + WS)                       | 600 req / 5 s per IP, no key ([docs](https://bybit-exchange.github.io/doc-v3-offline/spot/rate-limit)). Funding, open interest and long/short ratio are perpetual data from global bybit.com — market-wide signals only (Bybit EU has no perps)                                                                                                                    | ✅ (already wired: `BybitWebSocketManager`) |
+| Exchange notices | Bybit `/v5/announcements/index`                   | No auth; `type=new_crypto` for listings ([docs](https://bybit-exchange.github.io/docs/v5/announcement))                                                                                                                                                                                                                                                            | ✅                                          |
+| News             | RSS: Cointelegraph, CoinDesk, The Block           | Free; automated-reuse terms _unverified_ → store headline + link only, never full text ([list](https://rss.feedspot.com/cryptocurrency_news_rss_feeds))                                                                                                                                                                                                            | ✅                                          |
+| World events     | GDELT DOC 2.0                                     | Free, anonymous, 15-min updates, ~1 req / 5 s ([GDELT](https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/))                                                                                                                                                                                                                                                   | ✅                                          |
+| Sentiment        | alternative.me Fear & Greed                       | Free, daily, commercial use with attribution ([page](https://alternative.me/crypto/fear-and-greed-index/))                                                                                                                                                                                                                                                         | ✅                                          |
+| Sentiment        | CoinMarketCap Fear & Greed                        | Free Basic plan, 10k credits/mo ([docs](https://pro.coinmarketcap.com/api/documentation))                                                                                                                                                                                                                                                                          | optional                                    |
+| On-chain         | DefiLlama                                         | Free, no key, ~300 req/min ([ref](https://eco.com/support/en/articles/14800367-defillama-free-tvl-and-defi-analytics))                                                                                                                                                                                                                                             | ✅                                          |
+| On-chain         | mempool.space                                     | Free, no auth (~10 req/s, not official) ([docs](https://www.mintlify.com/mempool/mempool/api/introduction))                                                                                                                                                                                                                                                        | ✅                                          |
+| On-chain         | Dune                                              | 2,500 credits/mo, API included ([Dune](https://dune.com/blog/new-paid-experience))                                                                                                                                                                                                                                                                                 | optional                                    |
+| On-chain         | Santiment                                         | 1,000 calls/mo, last 30 days cut off on restricted metrics ([plans](https://academy.santiment.net/products-and-plans/sanapi-plans))                                                                                                                                                                                                                                | optional (lagged)                           |
+| Macro            | FRED                                              | Free key, 120 req/min                                                                                                                                                                                                                                                                                                                                              | ✅                                          |
+| Macro            | FOMC / CPI dates                                  | Official Fed / BLS schedules, published a year ahead; a static calendar file                                                                                                                                                                                                                                                                                       | ✅                                          |
+| Events (odds)    | Polymarket (Gamma / CLOB) + Kalshi public markets | Read-only, free, no key. Polymarket ~4,000 req / 10 s overall ([docs](https://docs.polymarket.com/api-reference/rate-limits)); Kalshi 20 reads/s ([docs](https://docs.kalshi.com/getting_started/rate_limits)). CoinMarketCap's prediction-markets page only displays Polymarket's data and has no API of its own, so the bot reads the sources directly. See §6.1 | ✅ context only                             |
+| Prices           | CoinGecko Demo                                    | 30 calls/min, 10k/mo, attribution ([docs](https://docs.coingecko.com/docs/common-errors-rate-limit))                                                                                                                                                                                                                                                               | optional                                    |
 
 **Not usable free:** CryptoPanic API (free plan discontinued, [plans](https://cryptopanic.com/developers/api/plans));
 CoinDesk Data / CryptoCompare (free tier retired); NewsAPI (development only, 24 h delay; paid from $449/mo,
@@ -232,6 +233,37 @@ favouring speed over accuracy).
 **The AI isn't free.** Classifying ~200 headlines a day with Claude Haiku 4.5 (~$1 / $5 per million input / output
 tokens, third-party figure [here](https://pricepertoken.com/pricing-page/model/anthropic-claude-haiku-4.5)) costs about
 **$0.05/day ≈ $1.50/month**; running hourly stays under ~$5/month. Batching and prompt caching cut it further. See Q1.
+
+### 6.1 Prediction markets (owner's suggestion, 2026-09-30)
+
+**What they are:** markets where people bet on the outcome of an event (a Fed decision, a CPI print, an ETF ruling);
+the price of a "yes" share is the crowd's probability. [CoinMarketCap's page](https://coinmarketcap.com/prediction-markets/)
+shows Polymarket's markets; Kalshi is the US-regulated equivalent. They're the one input in the sweep that looks
+**forward** at scheduled events rather than back at price.
+
+**How reliable:**
+
+- **Good on big, liquid events:** Kalshi's prices the day before each FOMC meeting had a perfect record of predicting
+  the Fed's decision, statistically better than fed-funds futures (Federal Reserve discussion paper 2026-010,
+  [link](https://www.federalreserve.gov/econres/feds/files/2026010pap.pdf)).
+- **Known failures:**
+  - **Resolution attack:** a UMA-token whale forced Polymarket's $7M "Ukraine minerals deal" market to resolve YES
+    early (March 2025, [The Block](https://www.theblock.co/post/348171/polymarket-says-governance-attack-by-uma-whale-to-hijack-a-bets-resolution-is-unprecedented)).
+  - **Fake volume:** a Columbia study estimated ~25% of Polymarket volume is wash trading, peaking near 60% in
+    December 2024 (not peer-reviewed, [Fortune](https://fortune.com/2025/11/07/polymarket-wash-trading-inflated-prediction-markets-columbia-research)).
+  - **Thin markets are easy to move** — a few thousand dollars can swing a small market's odds.
+- **EU:** Polymarket blocks **betting** from France, Germany, Italy and Belgium (Poland reported), but its docs say
+  read-only market data is not restricted ([geoblock](https://docs.polymarket.com/api-reference/geoblock)). The bot
+  only reads; it never bets.
+
+**How the bot uses them — context only, never a trigger:**
+
+- Reads the Kalshi Fed / CPI markets and a short allowlist of liquid Polymarket macro and crypto-regulation markets
+  (minimum liquidity and volume thresholds, set in P1 from what the shadow run sees).
+- A big scheduled event whose odds sit near 50/50 (a real coin flip), or whose odds swung more than 20 points in
+  24 h → shrink or block new entries until it resolves.
+- Skips "BTC above X by date" markets: they mostly mirror the options market and add nothing to our own price data.
+- Every odds reading that blocks or shrinks a trade goes in the decision log with the market's link.
 
 ## 7. EU & legal
 
@@ -282,11 +314,13 @@ buy-and-hold and a plain EMA-crossover baseline.
                            • Context score
                            (AI classifies news /
                            events into JSON; Fear &
-                           Greed, flows, macro dates)
+                           Greed, flows, macro dates,
+                           prediction-market odds)
 ```
 
 - **Trend engine (deterministic):** decides entries and exits. Testable, replayable.
-- **Context score:** can **block or shrink** an entry (e.g. a hack headline, an FOMC day, extreme greed); it can
+- **Context score:** can **block or shrink** an entry (e.g. a hack headline, an FOMC day, extreme greed, a coin-flip event in the prediction
+  markets, §6.1); it can
   never start a trade on its own. News needs ≥ 2 independent sources, a 15–60 min confirmation delay, and the price
   itself confirming ([§9](#9-security)).
 - **The AI** reads untrusted text, so it only outputs schema-validated JSON: `{ symbol (allowlist), direction, score
@@ -360,6 +394,8 @@ For the paper phase most of this is design discipline; for real money (P4) all o
   Kept for the tax ledger too.
 - **Admin-only access:** every bot route behind `app.authenticate` **and** an admin check (Q4); nothing about the bot
   in the public SDK surface users can call.
+- **Prediction markets:** read-only, no account, no key — the bot never places a bet. Only allowlisted markets
+  above a liquidity floor count, so a thin, manipulated market can't move the bot (§6.1).
 - **Exchange custody:** keep only working capital on Bybit (the Feb 2025 hack was at the exchange, not users' keys).
 
 ## 10. Open questions for the owner

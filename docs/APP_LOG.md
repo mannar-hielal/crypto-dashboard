@@ -3660,5 +3660,9 @@ source link. Research only; nothing built.
 - **Sweep result:** no product combines all four factors with Bybit spot execution and a reason per trade; the Python
   frameworks would duplicate our order state; published LLM trading edges vanish after the training cutoff — so the
   AI is a filter, never the trigger, and only live paper results count.
+- **Refined (owner's sources, 2026-09-30):** prediction markets (Polymarket, Kalshi; read-only, free) added as
+  event-risk context in §6.1: a coin-flip or fast-swinging big event shrinks or blocks new entries, never triggers
+  one. TradingView's screener (its terms ban automated use), CoinMarketCap's gainers (small caps outside our 9 coins)
+  and altFINS (unaudited signals, paid) were reviewed and left out.
 - **Next:** the owner refines the document and answers its §10 questions; no implementation until then.
 - **Hardening plan:** deferred by the owner (2026-09-30); H0 is done and live, H1–H11 wait.
