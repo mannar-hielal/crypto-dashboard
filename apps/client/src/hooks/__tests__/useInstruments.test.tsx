@@ -4,7 +4,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import type { Instrument } from '@crypto-dashboard/sdk';
 
 const getInstruments = vi.fn();
@@ -24,6 +24,9 @@ const BTC: Instrument = {
   maxLeverage: 100,
   fundingIntervalMin: 480,
 };
+
+/** Let every pending promise (the fetch, its .then / .catch, the hook's) run to the end */
+const settle = () => act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
 
 // The hook caches per market for the page's lifetime: a fresh module per test
 async function loadHook() {
@@ -45,9 +48,12 @@ describe('useInstrument', () => {
   it('should return null when the symbol is not in the market', async () => {
     getInstruments.mockResolvedValue({ category: 'linear', instruments: [BTC] });
     const useInstrument = await loadHook();
-    const { result } = renderHook(() => useInstrument('linear', 'ETHUSDT'));
-    await waitFor(() => expect(getInstruments).toHaveBeenCalledTimes(1));
-    expect(result.current).toBeNull();
+    const eth = renderHook(() => useInstrument('linear', 'ETHUSDT'));
+    // A BTC hook on the same request loading proves the list arrived before ETH's null is read
+    const btc = renderHook(() => useInstrument('linear', 'BTCUSDT'));
+    await waitFor(() => expect(btc.result.current).toEqual(BTC));
+    await settle();
+    expect(eth.result.current).toBeNull();
   });
 
   it('should share one request per market across callers', async () => {
@@ -64,7 +70,7 @@ describe('useInstrument', () => {
     getInstruments.mockRejectedValueOnce(new Error('offline'));
     const useInstrument = await loadHook();
     const first = renderHook(() => useInstrument('linear', 'BTCUSDT'));
-    await waitFor(() => expect(getInstruments).toHaveBeenCalledTimes(1));
+    await settle();
     expect(first.result.current).toBeNull();
     first.unmount();
 
@@ -74,14 +80,24 @@ describe('useInstrument', () => {
     expect(getInstruments).toHaveBeenCalledTimes(2);
   });
 
-  it('should not update after unmount', async () => {
-    let resolve: (v: unknown) => void = () => {};
-    getInstruments.mockReturnValue(new Promise((r) => (resolve = r)));
+  it('should ignore a slower request for the market it no longer shows', async () => {
+    const SPOT_BTC: Instrument = { ...BTC, category: 'spot', tickSize: 0.01 };
+    let resolveLinear: (v: unknown) => void = () => {};
+    getInstruments.mockImplementation((category: string) =>
+      category === 'linear'
+        ? new Promise((r) => (resolveLinear = r))
+        : Promise.resolve({ category: 'spot', instruments: [SPOT_BTC] })
+    );
     const useInstrument = await loadHook();
-    const { result, unmount } = renderHook(() => useInstrument('linear', 'BTCUSDT'));
-    unmount();
-    resolve({ category: 'linear', instruments: [BTC] });
-    await Promise.resolve();
-    expect(result.current).toBeNull();
+    const { result, rerender } = renderHook(
+      ({ category }: { category: 'linear' | 'spot' }) => useInstrument(category, 'BTCUSDT'),
+      { initialProps: { category: 'linear' as 'linear' | 'spot' } }
+    );
+    rerender({ category: 'spot' });
+    await waitFor(() => expect(result.current).toEqual(SPOT_BTC));
+    // The linear answer arrives late: the hook has moved on, so it must not overwrite spot's
+    resolveLinear({ category: 'linear', instruments: [BTC] });
+    await settle();
+    expect(result.current).toEqual(SPOT_BTC);
   });
 });
