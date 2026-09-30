@@ -55,10 +55,13 @@ review.
 not forced — when a release touches `src/trading/**`, auth, the WebSocket routes or `prisma/schema.prisma`.
 
 **How it blocks:** there is no branch protection, so a red check alone only reports. Step 2 therefore extends
-`deploy.yml`'s gate, which already refuses to deploy unless the release PR's "E2E full set" is green: when the release
-PR carries the `heavy-release` label, the "Heavy release" check must be green on its head too, or nothing deploys (it
-fails closed, like the E2E gate). The merge process in `git.md` (every check on the head green) covers the merge
-itself. Without the label, nothing changes.
+`deploy.yml`'s gate, which already refuses to deploy unless the release PR's "E2E full set" is green on the merged
+head. The label only decides whether a heavy run **starts**; the gate never reads it. For the release PR's merged
+head SHA, the gate looks for "Heavy release" runs: if one exists and isn't green, nothing deploys (it fails closed,
+like the E2E gate). Removing the label after a run started changes nothing, and the workflow re-runs on every push
+to a labelled release PR (as the E2E full set does), so a later push gets its own run on its new head SHA; an
+earlier green run never counts for it. The merge process in `git.md` (every check on the head green) covers the
+merge itself. A release that never had the label deploys as today (see Q2).
 
 | #   | Check                                                                                                                                                                                                                                                                                                                        | Target          | Blocks the release when                         |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | ----------------------------------------------- |
@@ -111,7 +114,7 @@ it runs only for a release that fixes a vulnerability; from 90%, not at all.
   the Lighthouse budgets. A first measured run can propose numbers to agree on.
 - **Q2.** Should the label be required for every release that touches the engine, auth, WebSockets or the schema
   (a check that fails the release PR when such a release lacks it) — or stay the release owner's call? Either way,
-  a labelled release can't deploy with a red heavy run (§4, "How it blocks").
+  a release whose head had a heavy run can't deploy unless that run is green (§4, "How it blocks").
 - **Q3.** Is the log sink (TRADING_TEST_PLAN P5, "Fly log shipping with an alert on `level >= 50`") still wanted, or
   does M8's error digest by email cover it?
 - **Q4.** The budget (§4): the new checks would leave a reserve of about 45–65 minutes. Offset it — for example the
