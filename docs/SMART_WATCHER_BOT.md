@@ -2,7 +2,8 @@
 
 > **Owner:** Mannar Hielal · **Written:** 2026-09-30 · **Status:** 🔎 research done, being refined with the owner.
 > Nothing here is built or scheduled. Implementation starts only when the owner says go, after the open questions in
-> [§10](#10-open-questions-for-the-owner) are answered.
+> [§11](#11-open-questions-for-the-owner) are answered and Gate 0 in [§10](#10-real-money-feasibility--go--no-go) is
+> cleared.
 >
 > **Admin only.** The bot is a private tool for the owner, never a feature offered to the app's users (see
 > [§7](#7-eu--legal) for why that matters legally).
@@ -35,7 +36,7 @@ it moves to the owner's real Bybit EU account, with the owner approving trades.
 | Coins    | The app's 9 (`ALLOWED_SYMBOLS`): BTC, ETH, SOL, BNB, XRP, DOGE, ADA, AVAX, LINK — so the bot's orders show in Orders & Account. More top majors can be added to the app if the research calls for it. |
 | Success  | The combined bar in [§3](#3-success-bar--when-can-it-touch-real-money).                                                                                                                               |
 | Risk     | Two layers: the bot sizes trades and picks exits **inside** hard outer walls the server enforces. We propose the walls ([§8.3](#83-risk-walls-proposed--owner-to-approve)); the owner approves them.  |
-| Region   | EU / EEA → Bybit EU (MiCA).                                                                                                                                                                           |
+| Region   | EU / EEA → Bybit EU (MiCA). **No USDT there:** the real account trades USDC (or EUR) pairs — see §10.                                                                                                 |
 
 ## 3. Success bar — when can it touch real money?
 
@@ -273,7 +274,9 @@ shows Polymarket's markets; Kalshi is the US-regulated equivalent. They're the o
   [AAP](https://prod-ss.aap.com.au/aapreleases/cision20250905ae66528/)). **API trading launched on 7 Sep 2026 and
   explicitly allows automated strategies** ([Trending Topics](https://www.trendingtopics.eu/bybit-trading-api/)). Its
   own host and keys: `api.bybit.eu`, testnet `api-testnet.bybit.eu` ([EU docs](https://bybit-exchange.github.io/eu-docs/v3/intro)).
-  → The paper mirror should model Bybit EU's symbol list and spot fees (~0.10%), not global perpetuals.
+  → The paper mirror should model Bybit EU's symbol list and spot fees (~0.10%), not global perpetuals. **No USDT
+  pairs** (USDC and EUR only), and **a new unified fee structure starts on 5 Oct 2026** (rates not yet published,
+  [fee structure](https://www.bybit.eu/en-EU/help-center/article/Trading-Fee-Structure)) — see §10.
 - **Licence:** trading only for yourself is not a crypto-asset service under MiCA (no client), so **no CASP licence
   is needed** ([Houthoff](https://www.houthoff.com/insights/news/reverse-solicitation-under-mica/)). That changes the
   moment the bot manages anyone else's money, sells or shares signals, or is offered to the app's users — **which is
@@ -351,13 +354,13 @@ in code before every order, and the bot can't change them.
 
 ### 8.4 Phases
 
-| Phase  | What                                                                                                                     | Exit criterion                                       |
-| ------ | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
-| **P0** | This document                                                                                                            | Owner has refined it and answered §10                |
-| **P1** | Collectors, trend engine, context score, decision log; **shadow mode** — signals logged, no orders — for 2–4 weeks       | Signals look sane to the owner; data pipeline stable |
-| **P2** | Automatic paper trading with the walls, the admin kill switch and the journal lines                                      | Runs a week without a wall or pipeline incident      |
-| **P3** | The pilot: ~3 months (extendable, target ≥ ~100 trades) + an evaluation report against buy-and-hold and the EMA baseline | The combined success bar in §3                       |
-| **P4** | Bybit EU real money: owner approval per trade, a separate Fly app holding the key, the hardening in §9                   | Owner's go                                           |
+| Phase  | What                                                                                                                                                                                                                                 | Exit criterion                                       |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| **P0** | This document                                                                                                                                                                                                                        | Owner refined it, answered §11, cleared Gate 0 §10.1 |
+| **P1** | Collectors, trend engine, context score, decision log; **shadow mode** — signals logged, no orders — for 2–4 weeks                                                                                                                   | Signals look sane to the owner; data pipeline stable |
+| **P2** | Automatic paper trading with the walls, the admin kill switch and the journal lines                                                                                                                                                  | Runs a week without a wall or pipeline incident      |
+| **P3** | The pilot: ~3 months (extendable, target ≥ ~100 trades) + an evaluation report against buy-and-hold and the EMA baseline                                                                                                             | The combined success bar in §3                       |
+| **P4** | Bybit EU real money: Gate 0 cleared (§10.1); a venue adapter that reconciles with Bybit (exchange = source of truth); USDC quote; exchange-side stops; owner approval per trade; a separate Fly app holding the key; the rules in §9 | Owner's go                                           |
 
 ### 8.5 Codebase anchors
 
@@ -365,8 +368,8 @@ in code before every order, and the bot can't change them.
 - `apps/server/src/services/BybitWebSocketManager.ts`, `CandleAggregator.ts`, `IndicatorCalculator.ts` — market data
   and indicators that already exist.
 - `apps/server/src/trading/TradingService.ts`, `MatchingEngine.ts` — order placement and matching; `EngineLease` — the
-  single-writer lease a bot loop would share.
-- `apps/server/prisma/schema.prisma` — one `Account` per `User`; `JournalEntry`; **no admin role exists yet** (Q4).
+  single-writer lease pattern; the bot needs its own lease row (the engine's id `matching-engine` is hardcoded).
+- `apps/server/prisma/schema.prisma` — one `Account` per `User`; `JournalEntry`; **no admin role exists yet** — the only admin check is `config.adminEmail` (`routes/newsletter/index.ts`) (Q4).
 
 ## 9. Security
 
@@ -398,7 +401,127 @@ For the paper phase most of this is design discipline; for real money (P4) all o
   above a liquidity floor count, so a thin, manipulated market can't move the bot (§6.1).
 - **Exchange custody:** keep only working capital on Bybit (the Feb 2025 hack was at the exchange, not users' keys).
 
-## 10. Open questions for the owner
+### 9.1 Rules the software must follow (security + compliance, from §10)
+
+1. **Own deployment, own credentials.** The bot runs apart from cryptopapertrade.com; the public build is hard-flagged
+   paper-only, and the bot's live signals and positions never reach it.
+2. **Self-trade guard:** never place an order that could cross the bot's own resting order; use Bybit's self-match
+   prevention if the EU API offers it (_unverified_).
+3. **No layering / spoofing:** a cap on the cancel-to-fill ratio; every order carries a logged reason.
+4. **Public inputs only:** an allowlist of public sources, each input timestamped in the log — nothing leaked or
+   non-public ever enters (MiCA Art. 89).
+5. **Append-only audit + tax ledger**, kept 10 years (§10.3).
+6. **Quote asset configurable** (USDC by default, EUR where listed); USDT orders refused on the EU venue.
+7. **Key:** trade-only, no withdraw / transfer, IP-bound, RSA (our private key never leaves us), one account, rotated.
+8. **Exchange-side stop-loss** on every live position (if the API allows it), so our server crashing can't leave a
+   position unprotected.
+
+## 10. Real-money feasibility — go / no-go
+
+Asked by the owner on 2026-09-30: _"if we don't make sure this feature can make real money with Bybit later, we won't
+build it."_ Checked the same day against Bybit EU's API and terms, EU law and our own code. Several bybit.eu pages
+timed out during the check, so some Bybit EU findings come from indexed extracts — marked below.
+
+**Verdict: conditional GO.** No legal blocker was found for a private, low-frequency spot bot trading the owner's own
+money on Bybit EU. Three facts can only be confirmed on the owner's account (Gate 0, §10.1) and decide go / no-go
+**before any code is written**. Nothing can guarantee profit: this section answers _can it legally and technically
+trade real money_; the P3 pilot answers _does it make money_.
+
+### 10.1 Gate 0 — owner actions, ~1 hour, no code
+
+1. **Can a personal API key be created?** Until at least March 2026 Bybit EU only offered "Connect to Third-Party
+   Applications" (broker) keys and no custom IP whitelist ([Gainium forum](https://community.gainium.io/t/bybit-eu-api-keys-not-valid-for-spot-on-local-version/4740)),
+   and Bybit's v5 guide still says so today ([v5 guide](https://bybit-exchange.github.io/docs/v5/guide)). API trading
+   launched on 7 Sep 2026 ([Trending Topics](https://www.trendingtopics.eu/bybit-launches-trading-api-to-connect-to-chatgpt-claude-and-co/))
+   with an API bot competition (3 Sep – 1 Oct 2026, [cryptoast](https://cryptoast.fr/?p=225085)), so personal keys are
+   probably open now. **Check in API Management:** a key you create yourself, spot trade on, withdraw / transfer off,
+   your own IP whitelist. (Keys are made on the website only, need Google Authenticator 2FA, and may be blocked 48 h on
+   a new account — [help](https://www.bybit.eu/en-EU/help-center/article/How-to-create-your-API-key/?category=ae1012f19fad1c184e).)
+2. **The "bots" clause.** General Terms §9.2.2: users must not _"use any anonymizing proxies, bots, spiders, or any
+   automatic devices, programs, scripts, algorithms… to access, obtain, copy, or monitor any part of the Platform"_
+   ([General Terms](https://www.bybit.eu/en-EU/help-center/article/General-Terms/)). Probably aimed at scraping, and
+   contradicted by Bybit EU's own API launch — but **get written confirmation from Bybit EU support** that personal
+   algorithmic spot trading through the official API is allowed. That email protects the account if it's ever
+   questioned.
+3. **Exchange-side stops through the API.** Spot TP/SL, OCO and trailing stops exist in the EU app
+   ([TP/SL](https://www.bybit.eu/en-EU/help-center/article/Introduction-to-Take-Profit-and-Stop-Loss-Spot-Trading),
+   [OCO](https://www.bybit.eu/en-EU/help-center/article/One-Cancels-the-Other-OCO-Orders),
+   [trailing](https://www.bybit.eu/en-EU/help-center/article/Trailing-Stop-Order-Spot-and-Spot-Margin-Trading/)).
+   Confirm they can be placed via the API on `api.bybit.eu`, so a stop fires even if our server is down; and whether
+   a demo or testnet API works for spot. If not, the first live tests are tiny (~€10) orders.
+
+### 10.2 Facts that change the design
+
+| Topic           | Finding                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Consequence                                                                    |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Quote currency  | **No USDT on Bybit EU** — USDC and EUR pairs only ([ANP](https://persportaal.anp.nl/artikel/CSN-190226058/bybit-eu-expands-access-to-usdc-and-eurc-through-new-stablecoin-campaigns-in-europe), [CoinGecko](https://www.coingecko.com/en/exchanges/bybit-eu)). ESMA told CASPs to stop non-MiCA stablecoins by Q1 2025 ([ESMA](https://www.esma.europa.eu/press-news/esma-news/esma-and-european-commission-publish-guidance-non-mica-compliant-arts-and-emts)); Circle's USDC is EMI-authorised ([Circle](https://www.circle.com/pressroom/circle-is-first-global-stablecoin-issuer-to-comply-with-mica-eus-landmark-crypto-law)) | The bot trades **USDC** pairs (EUR where listed); quote asset configurable. Q7 |
+| Coins           | All 9 listed with USDC pairs; EUR pairs for BTC, ETH, SOL, XRP, LINK only — **BNB, DOGE, ADA, AVAX are USDC-only** ([CoinGecko](https://www.coingecko.com/en/exchanges/bybit-eu))                                                                                                                                                                                                                                                                                                                                                                                                                                                  | USDC is the one quote that covers all 9                                        |
+| Fees            | 0.1% maker / 0.1% taker (non-VIP, [spot fees](https://www.bybit.eu/en-EU/help-center/article/Bybit-Spot-Fees-Explained)); **new unified structure from 5 Oct 2026**, rates unknown                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Re-check the fee filter and `bybitSpec` for the EU before P4                   |
+| Hosts           | `api.bybit.eu` / `api.bytick.eu`, testnet `api-testnet.bybit.eu` ([eu-docs](https://bybit-exchange.github.io/eu-docs/v3/intro)); the official EU docs only document a Tax API. v5-compatible per community evidence ([ccxt #28665](https://github.com/ccxt/ccxt/issues/28665)); CCXT has a separate `bybiteu` class with "narrower coverage"                                                                                                                                                                                                                                                                                       | Individual spot endpoints on the EU host are _unverified_ until tested         |
+| Order types     | Limit, market, spot TP/SL, OCO, trailing, TWAP in the app ([order types](https://www.bybit.eu/en-EU/help-center/article/Types-of-Orders-Available-on-Bybit)); post-only and API support _unverified_; price bands cancel far-off orders                                                                                                                                                                                                                                                                                                                                                                                            | Gate 0 item 3                                                                  |
+| Rate limits     | Global v5: 600 req / 5 s per IP; spot create 20/s per UID; breach → 10-min block ([rate limits](https://bybit-exchange.github.io/docs/v5/rate-limit)). EU figures _unverified_                                                                                                                                                                                                                                                                                                                                                                                                                                                     | A few orders a day is far below any limit                                      |
+| Keys            | HMAC or self-generated RSA ([eu-docs](https://bybit-exchange.github.io/eu-docs/v3/intro)); up to 20 sub-accounts ([FAQ](https://www.bybit.eu/en-EU/help-center/article/FAQ-Standard-Subaccount/)) — API keys on them, scopes and the 90-day expiry _unverified_                                                                                                                                                                                                                                                                                                                                                                    | Prefer RSA; a capped sub-account if it can hold a key                          |
+| Location        | §9.2.2 bans anonymising proxies → no VPN; restricted countries are auto-logged-out ([list](https://www.bybit.eu/en-EU/help-center/article/Service-Restricted-Countries))                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Host the bot in an EEA region with a static IP                                 |
+| Account actions | Bybit EU may suspend accounts, freeze transactions and reverse "manifest error" trades ([General Terms](https://www.bybit.eu/en-EU/help-center/article/General-Terms/))                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Reconcile with the exchange continuously; keep only working capital there      |
+| Demo            | A web demo account (50,000 USDC + 1 BTC + 1 ETH, spot; wiped after 30 days idle, [FAQ](https://www.bybit.eu/en-EU/help-center/article/FAQ-Demo-Trading)); a demo API for the EU _unverified_                                                                                                                                                                                                                                                                                                                                                                                                                                       | A possible free dress rehearsal between P3 and P4                              |
+
+### 10.3 EU law — no hard blocker; the conditions to stay compliant
+
+- **Market abuse (MiCA Art. 86–92) applies to any person**, private bots included
+  ([Art. 86](https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-86-scope-rules-market-abuse)).
+  Maximum fines for individuals are set nationally at no less than €5M, plus disgorgement and trading bans
+  ([Art. 111](https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-111-administrative-penalties-and)).
+  - Trading on **public** news and odds is lawful.
+  - **Never trade on leaked / non-public information** — insider dealing ([Art. 89](https://www.springlex.eu/en/packages/mica/mica-regulation/article-89/)).
+  - **No self-trades, wash trades, spoofing or layering** — "false signals" ([Art. 91](https://www.springlex.eu/en/packages/mica/mica-regulation/article-91/)).
+  - **Never publicly talk up a coin the bot holds** without disclosing it (Art. 91(3)(c)).
+  - Bybit must detect and report suspicious orders ([Art. 92](https://www.springlex.eu/en/packages/mica/mica-regulation/article-92/)),
+    so the bot's order pattern must be plainly honest.
+- **Licence:** none for your own money (a CASP serves "clients",
+  [Art. 3](https://www.springlex.eu/en/packages/mica/mica-regulation/article-3/)). A licence **is** needed once the
+  bot's trades or signals reach others: copy trading / relaying orders, managing family money (a national question —
+  get advice), or hosting it for buyers. Public "performance" is only ever closed, delayed paper trades with a risk
+  warning. MiFID II's algorithmic-trading rules (Art. 17) don't apply to a retail person trading spot crypto.
+- **Tax — get professional advice before P4.** DAC8 (from 1 Jan 2026) has Bybit EU report identity, tax ID and per-asset
+  acquisitions / disposals ([EU Commission](https://taxation-customs.ec.europa.eu/taxation/tax-transparency-cooperation/administrative-co-operation-and-mutual-assistance/directive-administrative-cooperation-dac/dac8_en)).
+  The bot keeps a per-fill ledger — UTC time, exchange order / fill IDs, pair, side, qty, price, fee and fee asset, EUR
+  rate and its source, EUR proceeds and cost basis, the reason — **for 10 years** (Germany §147 AO; Austria 7 years,
+  _unverified_). Frequent automated trading can be classed as a business: Germany judges case by case
+  ([FGS](https://www.fgs.de/en/news-and-insights/blog/detail/bmf-aeussert-sich-zur-ertragsteuerlichen-behandlung-von-krypto-assets));
+  Austria moves to progressive rates when crypto trading is the "Schwerpunkt" of an activity
+  ([BMF](https://www.bmf.gv.at/themen/steuern/sparen-veranlagen/steuerliche-behandlung-von-kryptowaehrungen.html)).
+- **Data:** headlines stored privately as a link plus a very short extract, never republished (CDSM Art. 15). Reading
+  Polymarket odds isn't betting, but national gambling law is _unverified_.
+- **No recourse** for the bot's losses. If the exchange fails, client crypto is segregated
+  ([Art. 75](https://www.springlex.eu/en/packages/mica/mica-regulation/article-75/)) but there is no deposit guarantee.
+
+### 10.4 Integration gaps in our code (P4 sizing)
+
+What stands between today's paper engine and a real Bybit EU connection:
+
+1. **USDT hardcoded** — the wallet is `Account.availableBalance`, `baseCoin()` strips `USDT`, `avgCost` is in USDT,
+   error texts and `ALLOWED_SYMBOLS` are USDT pairs. No USDC / EUR anywhere.
+2. **Global hosts hardcoded** — `BybitMarketInfo.ts` and `BybitWebSocketManager.ts` use `api.bybit.com` /
+   `stream.bybit.com`; host overrides are refused in production (`config.ts`). Instrument rules and the `FALLBACK`
+   snapshot are global mainnet values.
+3. **No venue interface** — `TradingService` calls the pure engine directly, so paper state is the truth. A real
+   adapter sits beside it and **reconciles** with Bybit (order, execution and wallet streams): the exchange becomes the
+   source of truth.
+4. **Optimistic paper fills** — a market order fills fully at the top of the book (no depth, no slippage); a resting
+   limit fills in full at its price the moment the last price touches it (no queue); no partial fills; every spot fill
+   pays the taker fee. **Paper results will overstate real ones** → the pilot models slippage and maker / taker, or
+   its results are discounted.
+5. **Paper-only spot features** — the spot TP/SL is a server-triggered OCO pair; no time-in-force, post-only, trailing
+   stop, `orderLinkId`, amend, or partially-filled / cancelled states.
+6. **Private-API tooling** — `bybit-api` is already a dependency, but the only signed-client code
+   (`tools/bybitParity.ts`) is testnet- and perpetual-only; parity never covers spot.
+7. **Secrets** — one `BYBIT_API_KEY` / `SECRET` pair is required on the public app (`criticalVars`); the trading key
+   must live in a separate Fly app.
+8. **Admin and loop** — admin is only `config.adminEmail`; the engine lease id is hardcoded, so the bot needs its own.
+
+None of these is a blocker; they size P4. Item 4 matters earlier: it decides how much to trust the pilot (Q7).
+
+## 11. Open questions for the owner
 
 1. **AI cost:** accept ~$2–5/month for Claude Haiku to classify news, or run P1 without an AI (rules + Fear & Greed
    only) and add it later if the shadow run shows the news filter would have helped?
@@ -409,3 +532,9 @@ For the paper phase most of this is design discipline; for real money (P4) all o
    column on `User` (a migration, reusable later)?
 5. **Where are you alerted** when a wall trips or the bot halts — email (the existing `EmailService`), or something
    else?
+6. **Gate 0 (§10.1):** will you do the three account checks — create a personal key with your own IP whitelist, get
+   Bybit EU support's written OK for personal API bot trading, and confirm exchange-side spot stops via the API? This
+   is the go / no-go for the whole feature.
+7. **Pilot quote currency:** price the paper pilot off Bybit EU's own USDC pairs (engine work, true parity with the
+   real account), or keep today's USDT data as a proxy (USDC ≈ USDT, no engine work, less parity)? Either way, model
+   slippage and maker / taker fees so the pilot doesn't flatter the bot.

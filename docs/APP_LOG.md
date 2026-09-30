@@ -3664,5 +3664,10 @@ source link. Research only; nothing built.
   event-risk context in §6.1: a coin-flip or fast-swinging big event shrinks or blocks new entries, never triggers
   one. TradingView's screener (its terms ban automated use), CoinMarketCap's gainers (small caps outside our 9 coins)
   and altFINS (unaudited signals, paid) were reviewed and left out.
-- **Next:** the owner refines the document and answers its §10 questions; no implementation until then.
+- **Real-money feasibility (§10, 2026-09-30):** conditional GO — no legal blocker for a private spot bot on Bybit EU.
+  Gate 0 (owner, no code): a personal API key with an own IP whitelist, Bybit EU support's written OK for API bot
+  trading (General Terms §9.2.2 bans "bots… algorithms"), exchange-side spot stops via the API. Bybit EU has no USDT
+  (USDC / EUR pairs) and changes its fees on 5 Oct 2026; MiCA market-abuse rules apply to individuals; paper fills are
+  optimistic; eight software rules added (§9.1).
+- **Next:** the owner refines the document and answers its §11 questions; no implementation until then.
 - **Hardening plan:** deferred by the owner (2026-09-30); H0 is done and live, H1–H11 wait.
