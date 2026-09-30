@@ -754,6 +754,7 @@ partial fills, ADL, insurance fund · VIP tiers, fee coupons, USDC / inverse con
 | `docs/UI_REPRODUCTIONS.md`                                                                 | Step-by-step manual reproduction of each Part B section (the source of the guided tours); the manual (M) checks                                                        |
 | `docs/GUIDED_TRADE_MVP.md`                                                                 | Guided-trade overlay plan: MVP scope (two tours), overlay design, the tour catalogue per section, open questions                                                       |
 | `docs/HARDENING_PLAN.md`                                                                   | Security scans, load and performance: every-PR checks, the heavy run before a major release, no staging (was M9 / P6)                                                  |
+| `docs/SMART_WATCHER_BOT.md`                                                                | Admin-only smart watcher bot: market sweep (competitors, frameworks, free data), owner decisions, proposed design, open questions                                      |
 | `apps/client/src/lib/guideAnchors.ts` · `src/guide/`                                       | `data-guide` anchor registry + `guide()`; shared scenario steps (`defineScenario`, builders, scenarios) for Playwright, the manual UI reproduction and the guided tour |
 | `apps/server/src/routes/market/index.ts`                                                   | REST + WebSocket market data routes                                                                                                                                    |
 | `apps/server/src/services/BybitWebSocketManager.ts`                                        | Bybit WS connection singleton                                                                                                                                          |
@@ -3645,3 +3646,19 @@ includeSubDomains; preload` (all three hosts serve HTTPS and redirect HTTP), `X-
 - **Q4:** `prod-smoke.yml` runs every 8 h instead of 6 h (≈ 60 Actions minutes a month back; UptimeRobot still checks
   `/health` every 5 minutes). `git.md`: planned ≈ 1,770 (recomputed from its rows), reserve ≈ 230 until the hardening checks add their rows.
 - **Guided trade:** deferred again (owner, 2026-09-30); its questions wait in `docs/GUIDED_TRADE_MVP.md`.
+
+### docs: smart watcher bot — market sweep, owner decisions, proposed design (2026-09-30) 🔎
+
+**Context:** owner, 2026-09-30: a private, admin-only bot that watches the app's spot coins, detects swing uptrends
+from news, market data, world events and sentiment / on-chain data, trades on its own and journals a reason with a
+source link. Research only; nothing built.
+
+- **`docs/SMART_WATCHER_BOT.md`** (new): the owner's decisions (auto on paper, owner approval with real money; swing,
+  spot only; the 9 coins; free data for the pilot; EU / Bybit EU), the combined success bar, the market sweep, reuse
+  vs build, the free data stack, EU / legal, the proposed rules-first design, the risk walls, phases P0–P4, security,
+  and the open questions.
+- **Sweep result:** no product combines all four factors with Bybit spot execution and a reason per trade; the Python
+  frameworks would duplicate our order state; published LLM trading edges vanish after the training cutoff — so the
+  AI is a filter, never the trigger, and only live paper results count.
+- **Next:** the owner refines the document and answers its §10 questions; no implementation until then.
+- **Hardening plan:** deferred by the owner (2026-09-30); H0 is done and live, H1–H11 wait.
