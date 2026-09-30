@@ -1,7 +1,7 @@
 /**
- * Test fixtures (docs/TEST_IMPLEMENTATION_PLAN.md F4):
- *   - `seededUser`: a new verified user per test, through the test hooks (F2);
- *   - `feed`: the fake Bybit feed's controls (F3);
+ * Test fixtures (docs/TRADING_TEST_PLAN.md A4, "In the repo"):
+ *   - `seededUser`: a new verified user per test, through the test hooks (A5);
+ *   - `feed`: the fake Bybit feed's controls (A5);
  *   - `hooks`: the rest of the test hooks (account reset, email outbox).
  */
 

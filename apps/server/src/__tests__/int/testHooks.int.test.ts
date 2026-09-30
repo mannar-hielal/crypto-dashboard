@@ -1,5 +1,5 @@
 /**
- * The test hooks (TEST_IMPLEMENTATION_PLAN F2) on a real Postgres: seeded users go through the real
+ * The test hooks (docs/TRADING_TEST_PLAN.md A5) on a real Postgres: seeded users go through the real
  * /register and /verify-email, the outbox carries the links, and every call needs the secret.
  */
 

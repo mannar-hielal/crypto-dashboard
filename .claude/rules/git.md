@@ -111,8 +111,8 @@ it would also be a way around it for a mistake. The break-glass options work wit
 
 The plan the owner agreed on 2026-09-29, for a private repository on the Free plan (2,000 included
 minutes). A public repository is not billed, but the plan holds either way. Once the minutes run out,
-nothing runs until the next month: no CI, no merge, no deploy, not even a security fix. So about 220
-minutes stay in reserve.
+nothing runs until the next month: no CI, no merge, no deploy, not even a security fix. So about 160
+minutes stay in reserve (220 until the weekly engine job, M7, 2026-09-30).
 
 | Workflow                                             | Schedule                                | Min / month |
 | ---------------------------------------------------- | --------------------------------------- | ----------- |
@@ -120,12 +120,13 @@ minutes stay in reserve.
 | E2E full set (`e2e-nightly.yml`)                     | nightly, and every push to a release PR | ~455        |
 | Feed parity + spec drift (`feed-parity.yml`)         | nightly (drift on Sundays)              | ~120        |
 | Testnet parity (`parity.yml`)                        | daily                                   | ~90         |
+| Engine properties + mutation (`engine-depth.yml`)    | weekly (Sunday)                         | ~60         |
 | Dependabot                                           | monthly                                 | ~20         |
 | CI (`ci.yml`, one job; docs-only changes skip it)    | ~25 PRs + 8 releases                    | ~455        |
 | Claude review (`claude-code-review.yml`)             | every PR push                           | ~350        |
 | Deploy                                               | 8 releases                              | ~40         |
-| **Planned**                                          |                                         | **≈1,780**  |
-| **Reserve** (re-runs, a busy week, an emergency fix) |                                         | **≈220**    |
+| **Planned**                                          |                                         | **≈1,840**  |
+| **Reserve** (re-runs, a busy week, an emergency fix) |                                         | **≈160**    |
 
 - **Volume is the lever:** about 25 PRs and 8 releases a month (step 4 of the branching flow above).
   An extra PR costs about 27 minutes, an extra release about 33.

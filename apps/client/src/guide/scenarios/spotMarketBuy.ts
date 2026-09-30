@@ -1,6 +1,6 @@
 /**
- * "Your first Spot market order" — test plan cases 14.6.1 and 14.6.8; the worked example of
- * docs/TEST_IMPLEMENTATION_PLAN.md F5. Numbers at the fake feed's ask 50,000.
+ * "Your first Spot market order" — test plan cases 14.6.1 and 14.6.8; steps 1–6 of Section 14.6 in
+ * docs/UI_REPRODUCTIONS.md. Numbers at the fake feed's ask 50,000.
  */
 
 import { defineScenario } from '../scenario';

@@ -1,5 +1,5 @@
 /**
- * Owner alerts for production errors (TEST_IMPLEMENTATION_PLAN M8; owner, 2026-09-29: "email me").
+ * Owner alerts for production errors (docs/TRADING_TEST_PLAN.md roadmap P5, M8; owner, 2026-09-29: "email me").
  * A Pino `logMethod` hook counts every error-level line by where it came from (the child logger's
  * `service` / `route`) and its message. Every 30 minutes, if anything was counted, one digest email
  * goes to ALERT_EMAIL. Users never see these; they are for the app owner.

@@ -1,5 +1,5 @@
 /**
- * Playwright (docs/TEST_IMPLEMENTATION_PLAN.md F4): the app on the fake Bybit feed with the test
+ * Playwright (docs/TRADING_TEST_PLAN.md A4): the app on the fake Bybit feed with the test
  * hooks, one seeded user per test. `pnpm --filter @crypto-dashboard/e2e test:smoke` locally (needs a
  * Postgres: E2E_DATABASE_URL, default localhost:5432/crypto_dashboard_e2e_test).
  */

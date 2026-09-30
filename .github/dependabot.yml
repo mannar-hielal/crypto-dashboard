@@ -1,4 +1,4 @@
-# GitHub Actions only (TEST_IMPLEMENTATION_PLAN M9, owner decision 2026-09-29): the workflows pin action
+# GitHub Actions only (docs/HARDENING_PLAN.md, was M9; owner decision 2026-09-29): the workflows pin action
 # versions (actions/checkout@v4.2.2 …), which go stale and miss security fixes. npm dependencies are
 # covered by the audit gate and pnpm.overrides (.claude/rules/security.md), so no npm updates here.
 version: 2

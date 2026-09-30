@@ -1,0 +1,122 @@
+name: Engine properties and mutation
+
+# Depth checks on the trading engine (docs/TRADING_TEST_PLAN.md roadmap P4, M7; owner approval
+# 2026-09-30), on develop, weekly (Sunday) — weekly rather than nightly for the Actions budget in
+# git.md (~15 minutes a run):
+#   - the fast-check invariants (T1p, F7) at 5,000 random action sequences with a fresh seed — PRs
+#     run 200 with a fixed seed inside `test:coverage` (ci.yml). The seed is in the test title, so a
+#     failure is reproduced with FC_SEED=<seed> FC_NUM_RUNS=5000 pnpm test:props;
+#   - Stryker mutation testing (F8) on src/trading/engine, incremental (only the mutants whose code
+#     or tests changed are re-run), failing below the floor in stryker.config.json. The HTML
+#     report is uploaded as an artifact.
+# A scheduled failure opens or comments one issue labelled `engine-depth`. Pure unit tests: no
+# database, no network, no secrets.
+
+on:
+  schedule:
+    - cron: '15 3 * * 0' # 03:15 UTC on Sundays
+  workflow_dispatch:
+    inputs:
+      check:
+        description: 'What to run'
+        type: choice
+        options: [both, properties, mutation]
+        default: both
+
+permissions:
+  contents: read
+  issues: write # open / update the "engine-depth" issue on a failure
+
+concurrency:
+  group: engine-depth
+  cancel-in-progress: false
+
+jobs:
+  depth:
+    name: Engine properties / mutation
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      RUN_PROPERTIES: ${{ github.event_name == 'schedule' || inputs.check != 'mutation' }}
+      RUN_MUTATION: ${{ github.event_name == 'schedule' || inputs.check != 'properties' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: develop
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6.1.0
+        with:
+          version: 10.33.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7.0.0
+        with:
+          node-version-file: '.node-version'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres # dummy — prisma generate only
+        run: pnpm install --frozen-lockfile
+
+      - name: Properties (5,000 runs, fresh seed)
+        id: properties
+        if: env.RUN_PROPERTIES == 'true'
+        env:
+          FC_NUM_RUNS: '5000'
+          FC_SEED: ${{ github.run_id }}
+        run: pnpm --filter @crypto-dashboard/server test:props
+
+      - name: Restore the incremental mutation result
+        if: ${{ !cancelled() && env.RUN_MUTATION == 'true' }}
+        uses: actions/cache/restore@v6.1.0
+        with:
+          path: apps/server/reports/mutation/stryker-incremental.json
+          key: stryker-incremental-${{ github.run_id }}
+          restore-keys: stryker-incremental-
+
+      - name: Mutation testing (Stryker)
+        id: mutation
+        if: ${{ !cancelled() && env.RUN_MUTATION == 'true' }}
+        run: pnpm --filter @crypto-dashboard/server test:mutation
+
+      - name: Save the incremental mutation result
+        if: ${{ !cancelled() && steps.mutation.outcome != 'skipped' }}
+        uses: actions/cache/save@v6.1.0
+        with:
+          path: apps/server/reports/mutation/stryker-incremental.json
+          key: stryker-incremental-${{ github.run_id }}
+
+      - name: Upload the mutation report
+        if: ${{ !cancelled() && steps.mutation.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: mutation-report-${{ github.run_id }}
+          path: apps/server/reports/mutation
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Open or update the engine-depth issue
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SEED: ${{ github.run_id }}
+          PROPERTIES: ${{ steps.properties.outcome }}
+          MUTATION: ${{ steps.mutation.outcome }}
+        shell: bash
+        run: |
+          gh label create engine-depth --color B60205 --description "Weekly engine properties / mutation failure" 2>/dev/null || true
+          body="The engine depth run failed on $(date -u +%Y-%m-%d): $RUN_URL
+
+          - properties: $PROPERTIES — reproduce with \`FC_SEED=$SEED FC_NUM_RUNS=5000 pnpm --filter @crypto-dashboard/server test:props\`; the shrunk counterexample is in the log. Turn it into a named T1 regression test.
+          - mutation: $MUTATION — the score fell below the floor in \`apps/server/stryker.config.json\`; the \`mutation-report-${{ github.run_id }}\` artifact lists the surviving mutants."
+          existing=$(gh issue list --label engine-depth --state open --json number -q '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "Engine depth checks failing" --label engine-depth --body "$body"
+          fi

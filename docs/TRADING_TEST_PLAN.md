@@ -7,7 +7,10 @@
 > **Part B** is the case catalogue (Sections 1–19, ordered as a beginner's learning path in Stages 0–6 — see its
 > "Learning path index"): every case, its status, its tier and where its test lives. A10 turns what is still open
 > into a to-do list.
-> **How** each case gets implemented, and how to reproduce it by hand in the app, is in `docs/TEST_IMPLEMENTATION_PLAN.md`.
+> How to reproduce each section by hand in the app is in `docs/UI_REPRODUCTIONS.md`; the conventions every test
+> follows (case IDs in titles, `data-guide` anchors, scenario steps, keeping the statuses true) are in
+> `.claude/rules/testing.md`. The test implementation plan that built the automation (milestones M0–M8) was retired
+> on 2026-09-30 with every item done (A8).
 > The engine's rules are in `docs/APP_LOG.md` → "Bybit Parity (BP-0 … BP-5) — reference".
 
 ---
@@ -66,7 +69,8 @@ browser test); T3 covers wiring and user journeys, not maths; M is for what's le
 - **Add property-based tests with [fast-check](https://fast-check.dev)** (MIT, dev-only, no install script). Generate
   random sequences of place / cancel / fill / close / add-margin / leverage / funding / tick actions and assert
   invariants after every step:
-  - wallet conservation: `balance + Σ margin + Σ reserves − fees − funding ± realizedPnl` is constant;
+  - wallet conservation: what the account holds (`balance + Σ margin + Σ reserves + spot at cost`) changes by
+    exactly its records — trade PnL − fees − funding (built in M7: checking it against `realizedPnl` was circular);
   - no negative `free` / `locked` spot balance, no negative isolated margin, a cross account ends ≥ 0 after
     liquidation;
   - reduce-only never grows or flips a position; a liquidation price moves toward the mark as leverage rises;
@@ -135,9 +139,16 @@ browser test); T3 covers wiring and user journeys, not maths; M is for what's le
 - On failure: trace, video and screenshot uploaded as CI artifacts (`trace: 'on-first-retry'`). One retry in CI;
   a test that needs the retry is reported as flaky and fixed, not ignored.
 - **Visual regression:** `expect(page).toHaveScreenshot()` for the stable panels (order form, account bar, leverage
-  and margin-mode modals, Closed P&L, Section 5 icons) in light and dark themes, on the replay feed. Baselines live
-  in the repo and are updated deliberately (`--update-snapshots`) with the visual Q&A gate.
+  and margin-mode modals, Closed P&L, Section 5 icons) on the fake feed — dark theme only (the app has no light
+  theme). Baselines live in the repo (`apps/e2e/tests/visual/`) and are updated deliberately (`--update-snapshots`)
+  with the visual Q&A gate. The `visual` project runs **locally only**: macOS and CI Linux render fonts differently.
 - **Accessibility:** `@axe-core/playwright` on the dashboard, auth and settings pages; fail on serious / critical.
+- **In the repo:** `apps/e2e` (`@crypto-dashboard/e2e`). `playwright.config.ts` starts three web servers (the fake
+  feed, the server on a throwaway `…_test` database with the test hooks, Vite) and holds the projects: `chromium`,
+  `webkit`, `mobile-safari` / `mobile-chrome` (iPhone 14, Pixel 7), `resilience` (its own restartable server) and
+  `visual`. `fixtures.ts` gives each test a `seededUser`, the `feed` controls and the `hooks`; `steps/runScenario.ts`
+  runs a guide scenario; tags `@smoke` (the PR set), `@full`, `@mobile`, `@a11y`, `@visual`. The production
+  smoke is `playwright.prod.config.ts` + `tests-prod/` (`@prod`, read-only).
 
 ### Resilience (T2i, T3)
 
@@ -148,16 +159,15 @@ handoff, a DB write failure (the account reloads, nothing half-applied). The fak
 
 ### Performance (on demand)
 
-**[k6](https://k6.io)** scripts: N users each holding a market WS and the private paper WS while placing orders.
-Watch p95 order latency, event-loop lag and memory on the Fly machine. Run before a release that touches the feed or
-the engine, against staging (A5) — never against production.
+Moved to `docs/HARDENING_PLAN.md` (2026-09-30): k6 on the CI stack before a major release, compared with the last
+release's baseline; a throwaway Fly machine for absolute capacity; never against production.
 
 ### Security
 
 - Already in place: `pnpm audit` gate, `eslint-plugin-security`, the security rules and refactor checklist, route
   schemas with `additionalProperties: false`, auth tests.
-- Add: **OWASP ZAP baseline scan** (`zaproxy/action-baseline`) weekly against staging; **Dependabot** (or Renovate)
-  for grouped weekly dependency PRs, which run through the same CI; a **secret scan** (`gitleaks`) in CI.
+- Add: moved to `docs/HARDENING_PLAN.md` (2026-09-30) — gitleaks on every PR, Dependabot security alerts, CodeQL
+  on the release PR; ZAP, Trivy and load checks before a major release.
 
 ### Production (T5)
 
@@ -172,16 +182,35 @@ the engine, against staging (A5) — never against production.
 
 ## A5. Environments and test data
 
-| Environment   | Used for                     | Data                                                                                                                        |
-| ------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Local         | Development, pre-commit hook | Local Postgres (`docker-compose`), Bybit public feed (`BYBIT_TESTNET` picks testnet / mainnet)                              |
-| CI            | T1–T3 on every PR, nightly   | Ephemeral Postgres service container; fake Bybit replay server; users seeded per test                                       |
-| Staging       | k6, ZAP, release rehearsal   | **Proposed:** a second Fly app `crypto-dashboard-api-staging` (smallest machine, auto-stop) deployed from `develop`, own DB |
-| Production    | T5 only                      | Read-only checks; no test accounts created                                                                                  |
-| Bybit testnet | T4 only                      | A dedicated testnet sub-account; keys in GitHub `bybit-testnet` environment secrets                                         |
+| Environment   | Used for                     | Data                                                                                           |
+| ------------- | ---------------------------- | ---------------------------------------------------------------------------------------------- |
+| Local         | Development, pre-commit hook | Local Postgres (`docker-compose`), Bybit public feed (`BYBIT_TESTNET` picks testnet / mainnet) |
+| CI            | T1–T3 on every PR, nightly   | Ephemeral Postgres service container; fake Bybit replay server; users seeded per test          |
+| Staging       | —                            | **None** (owner, 2026-09-30): scans and load run on the CI stack — `docs/HARDENING_PLAN.md` §2 |
+| Production    | T5 only                      | Signed-out checks only (`HARDENING_PLAN.md` H11); no test accounts created                     |
+| Bybit testnet | T4 only                      | A dedicated testnet sub-account; keys in GitHub `bybit-testnet` environment secrets            |
 
 Test data: every automated test creates its own user and resets its account (`POST /paper/account/reset`); nothing
 depends on another test's leftovers. Fixtures (replay feed, pre-BP-2 DB seed) are versioned in the repo.
+
+**Test hooks** (`apps/server/src/routes/test/index.ts`, `services/emailOutbox.ts`): `POST /api/test/users` creates a
+verified user through the real `/register` and `/verify-email` handlers (optionally with a margin mode and
+leverage), `GET /api/test/outbox?to=` returns the last emails "sent" to an address (a ring of 100),
+`POST /api/test/users/:id/reset` resets an account without a session and `…/request-deletion` schedules a deletion
+(19.13). 🔐 Four guards, all required: `ENABLE_TEST_HOOKS=1`; `config.ts` exits at boot if it is set in production;
+`app.ts` doesn't register the routes otherwise (404, not "exist and refuse"); every call carries
+`x-test-hooks-secret` = `TEST_HOOKS_SECRET`, compared in constant time. `testHooksOff.test`, `configGuards.test` and
+`testHooks.int.test` hold them.
+
+**The fake Bybit feed** (`apps/server/src/tools/fakeBybit/`): Bybit v5's public REST and WS — the parts the app
+reads — served on 127.0.0.1 from `fixtures/bybit/recorded.json` (`pnpm record:bybit` re-records it from mainnet;
+kline history is generated, a deterministic walk ending at the current price). Prices move only on a
+`/__control/*` call: `quote`, `path`, `funding`, `klines` (a candle in a gap), `drop`, `stall`, `reset` — the same
+controls as `pnpm feed …` (`tools/feedCtl.ts`). The server points at it through `BYBIT_REST_URL` / `BYBIT_WS_URL`,
+🔐 validated with `new URL(...)` and refused in production. `pnpm dev:e2e` runs the fake, the server on it and Vite
+— the "local dev (fake feed)" environment of `docs/UI_REPRODUCTIONS.md`. `fakeBybit.test` checks the fake against
+the app's own Bybit clients and the recorded shapes; the feed parity job (Section 6) checks production against
+Bybit, so a drift in the fake shows up there.
 
 ## A6. Entry / exit criteria
 
@@ -205,14 +234,29 @@ Each step is its own small PR to `develop`, ordered by value per effort.
 
 | Step   | Delivers                                                                                                                                 | Converts / adds                                    | Owner action                                         |
 | ------ | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------- |
-| **P1** | CI Postgres, migration-from-empty + drift check, migration replay, repository round-trip, coverage thresholds in CI                      | T2i; 18.7                                          | —                                                    |
-| **P2** | Fake Bybit replay server, Playwright (smoke on PR, full nightly), seed helper; the missing T1 / T2 tests the ⬜ rows name                | Every ⬜ row marked `(P2)` in Sections 7–15 and 19 | —                                                    |
+| **P1** | ✅ CI Postgres, migration-from-empty + drift check, migration replay, repository round-trip, coverage thresholds in CI (M2)              | T2i; 18.7                                          | —                                                    |
+| **P2** | ✅ Fake Bybit replay server, Playwright (smoke on PR, full nightly), seed helper; the missing T1 / T2 tests the ⬜ rows name (M1, M3–M5) | Every ⬜ row marked `(P2)` in Sections 7–15 and 19 | —                                                    |
 | **P3** | ✅ Nightly `parity:testnet` workflow + issue on mismatch (2026-09-28) · ✅ weekly spec-drift check · ✅ feed parity job (M6, 2026-09-29) | 17.6.4, Section 6 → T4                             | ✅ Testnet key, environment, funds (done 2026-09-28) |
-| **P4** | fast-check invariants; Stryker weekly on the engine                                                                                      | T1p; mutation score                                | —                                                    |
-| **P5** | Post-deploy + scheduled prod smoke, log alerts                                                                                           | T5                                                 | Pick / approve a log sink                            |
-| **P6** | Staging Fly app; ZAP baseline; k6 scripts; Dependabot; gitleaks                                                                          | Security + performance                             | Approve staging cost                                 |
+| **P4** | ✅ fast-check invariants; ✅ Stryker weekly on the engine (M7, 2026-09-30)                                                               | T1p; mutation score                                | —                                                    |
+| **P5** | ✅ Post-deploy + scheduled prod smoke, error digest by email (M8); a log sink is open (`HARDENING_PLAN.md` Q3)                           | T5                                                 | Pick / approve a log sink                            |
+| **P6** | ➖ Moved to `docs/HARDENING_PLAN.md` (no staging app, 2026-09-30)                                                                        | Security + performance                             | —                                                    |
 
 After P2 the only manual rows left are look-and-feel (drag feel, sounds, animation) — the M tier.
+
+**Milestones M0–M9**, cited in Part B's notes, are the delivery batches of the test implementation plan (retired
+2026-09-30, every item done): M0 catalogue hygiene and the first parity run; M1 the T1 / T2 rows that needed no
+infrastructure; M2 = P1; M3 the test hooks and the fake feed (M3a / M3b); M4 Playwright and the PR smoke; M5 the
+nightly set (M5a auth, M5b trading, M5c risk and advanced, M5d feed / chart / engine / resilience, M5e visual,
+axe and the case-coverage gate); M6 = P3's feed parity and spec drift; M7 = P4; M8 = P5; M9 = P6, now
+`docs/HARDENING_PLAN.md`. Its foundations F1–F12 still appear in test titles and comments: F1 the `data-guide`
+anchors, F2 the test hooks and F3 the fake feed (A5), F4 Playwright (A4), F5 the scenario steps, F6 CI Postgres,
+F7 fast-check, F8 Stryker, F9 the SDK contract test, F10 the visual baselines, F11 axe, F12 the case-coverage
+gate. (In `apps/server` code, F2 / F4 / F10 / F11 usually mean the Bybit Parity findings of `APP_LOG.md` instead.)
+Test comments also cite that plan's scenario IDs: `SC-<section>-<n>` is a group of rows
+of that section (`SC-7-1` = rows 7.1.1, 7.2.1, 7.2.2, 7.3.1, …), `NEW-<section>-<n>` a proposed case — the built
+ones are rows now ("was NEW-…"), the rest are A10 "Proposed, not built". The plan itself is in git history
+(`git log --all -- docs/TEST_IMPLEMENTATION_PLAN.md`, then `git show <commit>^:docs/TEST_IMPLEMENTATION_PLAN.md`
+on the commit that deleted it).
 
 ## A9. What the owner has to do
 
@@ -226,7 +270,7 @@ After P2 the only manual rows left are look-and-feel (drag feel, sounds, animati
 - **Every ~3 months:** a testnet key without an IP allow-list expires. A run failing with `33004` opens a `parity`
   issue: create a new key with the same permissions and replace the two environment secrets. `10005` means the key
   lost its Read-Write / Contract permissions; `110007` means the account ran out of test USDT (request more).
-- **Still to decide:** approve the staging app and a log sink (P5, P6).
+- **Still to decide:** a log sink (P5; `docs/HARDENING_PLAN.md` Q3). No staging app (2026-09-30).
 - **Ongoing:** read the red ones — a failed nightly or parity issue arrives as a GitHub notification; a green week
   needs nothing. Before a UI release, the short M list (Part B rows tiered **M**).
 
@@ -243,22 +287,22 @@ drops the `(Pn)` tag. Format: `what — rows — target tier (roadmap step)`.
       3 s timeout (fake timers) and the reset itself — rows 8.1–8.11 — T2 · RTL, 8.8 also T1 (M1); plus the failed
       reset, new row 8.12 (NEW-8-1)
 - [x] Spread badge decimal places — row 9.5 — T2 · RTL (P2)
-- [ ] Sell / Buy on the live quote, spread hover, stale quote after a disconnect, pane switch — rows 9.1–9.4, 9.6,
-      9.7 — T3 (P2)
+- [x] Sell / Buy on the live quote, spread hover, stale quote after a disconnect, pane switch — rows 9.1–9.4, 9.6,
+      9.7 — T3 (P2; M5b `trade/quotes.spec`, M5d `feed/feedUi.spec`)
 - [x] Layout picker, active pane, per-pane symbol / interval, no PaneHeader in the `1` layout — rows 10.1.1–10.1.6,
       10.2.1–10.2.3, 10.3.1–10.3.3, 10.5.3 — T2 · RTL (P2)
 - [x] `layoutStore` hydration — row 10.1.7 — T1 (P2) _(10.2.4 clamping: already tested, flipped to ✅ in M0)_
-- [ ] PaneHeader live price / change badge and connection dot — rows 10.5.1, 10.5.2 — T3 (P2)
-- [ ] Public `/chart` — row 14.1.10 — T3 (P2)
+- [x] PaneHeader live price / change badge and connection dot — rows 10.5.1, 10.5.2 — T3 (P2; M5d `feed/feedUi.spec`)
+- [x] Public `/chart` — row 14.1.10 — T3 (P2; M5d `chart/chart.spec`)
 - [x] Auth flows in the Playwright set, each test signing up its own user — rows 19.1, 19.2, 19.4, 19.5, 19.7, 19.8
       (M4 smoke + M5a nightly; the offline sign-out is row 19.15, a defect)
       — T3 (P2)
-- [ ] Signed-out page load in the post-deploy smoke — row 19.3 — T5 (P5)
+- [x] Signed-out page load in the post-deploy smoke — row 19.3 — T5 (P5; M8 `tests-prod/prod.spec`)
 
 **Stage 1 — Spot basics (2)**
 
 - [x] Assets tab → TP / SL modal on a coin held — row 14.6.7 — T2 · RTL (M1)
-- [ ] Spot buy → Assets in the PR smoke set — rows 14.6.1, 14.6.8 — T3 smoke (P2)
+- [x] Spot buy → Assets in the PR smoke set — rows 14.6.1, 14.6.8 — T3 smoke (P2; M4 `spot/spotMarketBuy.spec`)
 
 **Stage 2 — Reading your account (3)**
 
@@ -267,32 +311,35 @@ drops the `(Pn)` tag. Format: `what — rows — target tier (roadmap step)`.
 - [x] Orders / Order History rendering: sub-tab counts and the 2-min bench, Filled sub-tab, Balance History / Closed P&L without
       rejections, column picker persistence, status colours — rows 7.1.2–7.1.4, 7.2.3, 7.3.2, 7.4.2, 7.5.1, 7.5.2,
       7.6.2 — T2 · RTL (M1)
-- [ ] ✅ rows tiered T3 · Playwright but only checked by hand (A2): automate maximize / restore, and re-tier the
-      sounds to M as A8 says — rows 4.12, 4.13 → T3 (P2); 4.14–4.16 → M
+- [x] ✅ rows tiered T3 · Playwright but only checked by hand (A2): automate maximize / restore, and re-tier the
+      sounds to M as A8 says — rows 4.12, 4.13 → T3 (P2; M5d `chart/chart.spec`); 4.14–4.16 → M (2026-09-30)
 
 **Stage 3 — USDT Perpetual basics (4)**
 
-- [ ] Perpetual smoke on every PR: sign up → open USDT Perpetual → market buy → position row → close → Closed P&L
-      row (the "T3 Playwright pending" notes of Sections 1–2) — rows 1.1.1–1.1.4, 1.6.3, 17.4.1 — T3 smoke (P2)
-- [ ] Offline market order, today checked by hand — row 1.7.8 — T3 with `setOffline` (P2)
-- [ ] Edit a pending bracket and an open position's TP / SL in the nightly full set — rows 4.17, 4.18 — T3 (P2)
+- [x] Perpetual smoke on every PR: sign up → open USDT Perpetual → market buy → position row → close → Closed P&L
+      row (the "T3 Playwright pending" notes of Sections 1–2) — rows 1.1.1–1.1.4, 1.6.3, 17.4.1 — T3 smoke (P2; M4
+      `perp/perpMarketLong.spec`; the partial close 17.4.1 runs nightly in `advanced/advanced.spec`)
+- [x] Offline market order, today checked by hand — row 1.7.8 — T3 with `setOffline` (P2; M5b `perp/offline.spec`)
+- [x] Edit a pending bracket and an open position's TP / SL in the nightly full set — rows 4.17, 4.18 — T3 (P2; M5b
+      `perp/editOrders.spec`)
 - [x] Known cosmetic gap (note under 1.4): the TP / SL exit order showed Type `MARKET` — already fixed by the
       BP-1 server engine (the exit order records `take-profit` / `stop-loss`); pinned by `actions.test` "1.4.3: the TP
       close is recorded as a filled Take Profit order" and "1.5.3: an SL close…" (2026-09-28)
 
 **Stage 4 — Risk management (2)**
 
-- [ ] Chart type menu → "Mark price line" — row 15.6.2 — T3 (P2)
-- [ ] Add margin, and a liquidation driven through the fake feed's price control, in the nightly full set — rows
-      17.1.1, 15.4.1, 15.4.2 — T3 (P2)
+- [x] Chart type menu → "Mark price line" — row 15.6.2 — T3 (P2; M5d `chart/chart.spec`)
+- [x] Add margin, and a liquidation driven through the fake feed's price control, in the nightly full set — rows
+      17.1.1, 15.4.1, 15.4.2 — T3 (P2; M5c `risk/risk.spec`)
 
 **Stage 5 — Advanced (4)**
 
 - [x] Multi-symbol PnL from `lastKnownPrices` (seed the keys the Section 11 intro describes) — rows 11.1–11.8 —
       T1 (P2) _(done at T2 · RTL in `MultiSymbolPnl.test`; the T3 flow waits on the fake feed)_
 - [x] Sync options persistence — row 10.4.8 — T1 (P2) _(10.4.1–10.4.3: already tested, flipped to ✅ in M0)_
-- [ ] Crosshair and time-range sync on the real chart canvas — rows 10.4.4–10.4.7 — T3 (P2)
-- [ ] Cross ↔ isolated mode switch in the nightly full set — row 17.5.6 — T3 (P2)
+- [x] Crosshair and time-range sync on the real chart canvas — rows 10.4.4–10.4.7 — T3 (P2; M5d
+      `chart/chartSync.spec`, `chartSyncToggle.spec`)
+- [x] Cross ↔ isolated mode switch in the nightly full set — row 17.5.6 — T3 (P2; M5c `advanced/advanced.spec`)
 
 **Stage 6 — Under the hood (10)**
 
@@ -301,19 +348,20 @@ drops the `(Pn)` tag. Format: `what — rows — target tier (roadmap step)`.
       refusal, and its unrealised P&L is too small to prove O5 or `positionValue`'s basis — still open there
 - [x] Feed parity job: Sell / Buy vs best bid / ask, last 1m candle, mark / index / funding, freshness — rows
       6.1–6.4 — T4 (P3; M6: `tools/feedParity.ts`, nightly in `feed-parity.yml`)
-- [ ] Browser tab title — row 6.6 — T3 (P2)
-- [ ] Spot feed in the browser: spread badge, last candle vs Bybit Spot, cached quote on reload — rows
-      12.1.1–12.1.3 — T3 on the replay feed (P2)
-- [ ] 24/7 engine: a limit fill and a TP while the tab is closed, a restart with a price cross during the downtime
-      — rows 13.2.1, 13.2.2, 13.2.4 — T3 (P2)
-- [ ] Two tabs in sync, and a trade after 20+ minutes (token refresh on a fake clock) — rows 13.3.1, 13.3.3 — T3
-      (P2)
+- [x] Browser tab title — row 6.6 — T3 (P2; M5d `feed/feedUi.spec`)
+- [x] Spot feed in the browser: spread badge, last candle vs Bybit Spot, cached quote on reload — rows
+      12.1.1–12.1.3 — T3 on the replay feed (P2; M5d `feed/feedUi.spec`, `chart/chartSync.spec`)
+- [x] 24/7 engine: a limit fill and a TP while the tab is closed, a restart with a price cross during the downtime
+      — rows 13.2.1, 13.2.2, 13.2.4 — T3 (P2; M5d `engine/tabClosed.spec`, `resilience/restart.spec`)
+- [x] Two tabs in sync, and a trade after 20+ minutes (token refresh on a fake clock) — rows 13.3.1, 13.3.3 — T3
+      (P2; M5d `engine/twoTabs.spec`, `engine/tokenRefresh.spec`)
 - [x] Cross-phase regression suite on a real database — row 18.7 (covers 18.1–18.6) — T2i (P1); it found 18.8
 - [x] Migration replay from a pre-BP-2 seed, replacing the manual runs: BP-2 fee backfill, BP-3 one-way merge and
       leverage pin, BP-5 `ISOLATED_MARGIN` + notice — rows 14.7.1, 15.2.3, 17.5.1 — T2i (P1)
-- [ ] End-to-end resilience with the fake feed's "drop" / "stall" controls: WS drop and reconnect, stale mark,
+- [x] End-to-end resilience with the fake feed's "drop" / "stall" controls: WS drop and reconnect, stale mark,
       restart mid-gap and mid-funding, lease handoff, DB write failure (A4 Resilience) — rows 15.4.5, 18.1, 18.2 —
-      T2i / T3 (P2)
+      T2i / T3 (P2; M5d: 18.1 in `resilience/restart.spec`, the reconnect in `feed/feedUi.spec`, 18.9 / 18.10 at
+      T2i; 15.4.5 and 18.2 stay T1 — a stale mark can't be produced end to end, see their rows)
 - [x] A dedicated test for the stale-on-error path of instruments / risk-limit (today "covered by code review") —
       row 12.3.5 — T1 (no step)
 
@@ -343,14 +391,14 @@ _P2 — replay feed and browser tests (7)_
       endpoints — (P2; overrides M3a, controls M3b: `/__control/*` and `pnpm feed`)
 - [x] Test-only user seed helper, disabled in production — (P2; M3a: `/api/test/users`, the email outbox and an
       account reset behind `ENABLE_TEST_HOOKS` + `TEST_HOOKS_SECRET`, refused at boot in production)
-- [ ] Playwright setup: Chromium + WebKit + a mobile viewport, `webServer`, trace / video on retry, one CI retry —
-      T3 (P2; M4 ✅ Chromium, `webServer` ×3, traces / video, one CI retry — WebKit and mobile come with the nightly set, M5)
-- [ ] Smoke set on every PR (< 3 min) and the full ⬜ set nightly — T3 (P2; M4 ✅ the smoke set: 3 tests, ~9 s, the smoke
-      steps of the single CI job; the full set is M5, nightly and on release PRs)
-- [ ] Visual regression baselines, light and dark: order form, account bar, leverage and margin-mode modals, Closed
-      P&L, Section 5 icons — T3 (P2)
-- [ ] `@axe-core/playwright` on the dashboard, auth and settings pages; fail on serious / critical — T3 (P2)
-      (M5a: the auth pages — /reset-password clean, three pages with the contrast defect 19.16)
+- [x] Playwright setup: Chromium + WebKit + a mobile viewport, `webServer`, trace / video on retry, one CI retry —
+      T3 (P2; M4 Chromium, `webServer` ×3, traces / video, one CI retry; M5 WebKit, iPhone 14 and Pixel 7)
+- [x] Smoke set on every PR (< 3 min) and the full ⬜ set nightly — T3 (P2; M4 the smoke steps of the single CI
+      job; M5 `e2e-nightly.yml`, nightly and on every push to a release PR)
+- [x] Visual regression baselines: order form, account bar, leverage and margin-mode modals, Closed P&L, Section 5
+      icons — T3 (P2; M5e `visual/visual.spec`, dark only — the app has no light theme — and run locally only)
+- [x] `@axe-core/playwright` on the dashboard, auth and settings pages; fail on serious / critical — T3 (P2; M5a
+      `a11y/auth.spec`, M5e `a11y/dashboard.spec`)
 
 _P3 — Bybit parity (1, plus the two Stage 6 T4 items)_
 
@@ -360,9 +408,11 @@ _P3 — Bybit parity (1, plus the two Stage 6 T4 items)_
 
 _P4 — invariants and mutation testing (2)_
 
-- [ ] fast-check invariants over random action sequences: wallet conservation, no negative balances / margin,
-      reduce-only never grows or flips, replay determinism — T1p (P4)
-- [ ] Stryker weekly on `trading/engine/**`: record the score, then set a floor — (P4)
+- [x] fast-check invariants over random action sequences: wallet conservation, no negative balances / margin,
+      reduce-only never grows or flips, replay determinism — T1p (P4; M7: rows 18.11–18.13, 14.2.7,
+      `invariants.prop.test.ts`, 200 runs on PRs and 5,000 weekly in `engine-depth.yml`)
+- [x] Stryker weekly on `trading/engine/**`: record the score, then set a floor — (P4; M7: first score 69.12%, floor
+      67%, Sundays in `engine-depth.yml`)
 
 _P5 — production checks (3)_
 
@@ -371,19 +421,53 @@ _P5 — production checks (3)_
 - [x] The same project on `schedule`, every 6 h since 2026-09-29 (was hourly; the Actions budget in `git.md`) — T5 (P5; M8: `prod-smoke.yml`, opens / comments a `prod-smoke` issue)
 - [ ] Fly log shipping with an alert on `level >= 50` — (P5, needs the owner's sink)
 
-_P6 — staging, security, performance (5)_
+_P6 — staging, security, performance: moved to `docs/HARDENING_PLAN.md` (2026-09-30)_
 
-- [ ] Staging Fly app `crypto-dashboard-api-staging` deployed from `develop`, own DB — (P6, needs the owner's
-      approval)
-- [ ] OWASP ZAP baseline weekly against staging — (P6)
-- [ ] k6 scripts (market WS + private WS + orders), run before a feed / engine release — (P6)
-- [ ] Dependabot (or Renovate) grouped weekly PRs — (P6)
-- [ ] `gitleaks` secret scan in CI — (P6)
+- ➖ Staging Fly app — not built (owner, 2026-09-30); scans and load run on the CI stack instead
+- ➖ ZAP, k6, gitleaks, dependency alerts — tracked as H1–H10 in `HARDENING_PLAN.md`
+- [x] Dependabot for GitHub Actions (monthly, 2026-09-29); npm version-bump PRs stay off
 
 **Owner decisions (A9) (2)**
 
 - [ ] Pick / approve a log sink — (P5)
-- [ ] Approve the staging app's cost — (P6)
+- ➖ Approve the staging app's cost — not needed: no staging app (2026-09-30)
+
+**Proposed, not built (14)** — the "NEW-…" scenarios of the retired test implementation plan that never became a
+row, plus one of its tools (2026-09-30). None blocks a release; a scenario gets the next free row number in its
+section when it is built.
+
+- [ ] A check that fails on a `data-guide` registry entry no component uses (`GUIDE_ANCHORS` in
+      `apps/client/src/lib/guideAnchors.ts`), so a removed control can't leave a tour pointing at nothing —
+      `pnpm lint` or a T1 test
+- [ ] Panes' market sockets follow the layout: `4` opens four, back to `1` closes three, no socket or timer left
+      behind — Section 10 — T2 (`usePaneFeeds`)
+- [ ] Max (100 %) on a Spot buy gives a quantity the server accepts after step rounding — 14.6 — T2 + T1
+- [ ] Spot minimum value boundary: exactly 5 USDT accepted, 4.99 refused (`spot.test` covers "under 5") — 14.4 /
+      14.6 — T1
+- [ ] Spot fee on a coin with a coarse quantity step (DOGEUSDT): the coins received and the fee follow Bybit's
+      rounding — 14.6 — T1, confirmed by a Spot leg of the testnet parity run (linear only today) — T4
+- [ ] Journal note over 500 characters: the route refuses it (`paper.test` "POST /journal bounds note length"), but
+      the note editor has no limit and doesn't say why — Section 4 — T2
+- [ ] Long Order History: 500 rows render quickly and stay capped at what the snapshot sends — Section 7 — T2
+- [ ] A limit buy at exactly the ask fills now as a taker (Bybit crosses at `price ≥ ask`); one tick under rests as
+      a maker (`fees.test` covers above the ask) — Section 2 — T1
+- [ ] Leverage bounds: 0, 11 and 2.5 refused inline in the modal, and the same values by the route — 14.5 — T2 + T1
+- [ ] A liquidation while the tab is closed: reopening shows the Closed P&L "Liquidation" row and the notice —
+      15.4 — T3
+- [ ] Funding countdown rolls over to the next interval, never negative or stuck at `00:00:00` — 16.3 — T2 (fake
+      timers)
+- [ ] A 4-hour funding interval (`fundingIntervalHour: 4`) settles every 4 hours (`services.test` uses 8) — 16.1 — T1
+- [ ] Cross liquidation in the browser: two cross positions, the MM rate driven to 100 % → orders cancelled, tiers
+      stepped down, the account ends ≥ 0, one notice (`cross.test` holds the engine half) — 17.5 — T3
+- [ ] Server restart mid-session: the paper WS reconnects and resyncs, no journal or Order History row twice —
+      Section 13 — T3 (`restartableServer`)
+
+Dropped, already covered: an unknown perp symbol in the URL (`parseMarketPath` refuses any symbol we don't trade
+on both markets; `marketRoutes.test`), Forward after Back (`useMarketUrlSync.test` "…so Forward still works"),
+selling coins a TP / SL has locked (14.6.3: locked coins aren't free), the reduce-margin boundary (`margin.test`
+"never below the margin added by hand (110078)"), a double-clicked Buy (`TradingPanel.test` "reads "Placing…" and is
+disabled while the order request is in flight"), phones (Section 20). The sounds' triggers (4.14–4.16) stay M: the
+rows are checked by ear, per the manual check in `docs/UI_REPRODUCTIONS.md`.
 
 Recurring, not a to-do: replace the testnet key when a `parity` issue reports `33004` (about every 3 months).
 
@@ -700,9 +784,9 @@ follow an order from placement to close in the bottom panel.
 | 4.11 | Journal PnL badge — user note                                                             | Manually added journal note has no PnL badge regardless of balance state                                                                                                                                                                                                                                                                                                                            | ✅     | T1 · Vitest      | ✅ 01.05.2026 — Vitest confirmed: `addJournalNote pnl is undefined when not provided` passes (211/211). Manually verified: manually added notes render with no PnL pill.                                                                                                                                                                                                                                                            |
 | 4.12 | Maximize Order & Account Management panel (⤢)                                             | Chart area collapses (height → 0); panel fills full center column; Minimize2 icon shown; TradingPanel still visible                                                                                                                                                                                                                                                                                 | ✅     | T3 · Playwright  | ✅ 01.05.2026 — manually verified: maximize (⤢) collapses chart area, panel fills full center column, Minimize2 icon appears, TradingPanel remains visible alongside. `e2e/tests/chart/chart.spec` "[4.12][4.13]…": the chart area's height → 0, `trade.submit` still visible, title "Restore panel".                                                                                                                               |
 | 4.13 | Restore Order & Account Management panel (⤡)                                              | Chart area expands back; panel returns to previous height; Maximize2 icon shown                                                                                                                                                                                                                                                                                                                     | ✅     | T3 · Playwright  | ✅ 01.05.2026 — manually verified: restore (⤡) expands chart area back to previous height, Maximize2 icon reappears in panel header. `e2e/tests/chart/chart.spec`: restored to its height ±2 px, title "Maximize panel".                                                                                                                                                                                                            |
-| 4.14 | Sound — order placed                                                                      | Crisp double-tick plays when a market/limit/stop order is submitted                                                                                                                                                                                                                                                                                                                                 | ✅     | T3 · Playwright  | ✅ 01.05.2026 — manually verified: double-tick sound plays correctly on market, limit, and stop order submission.                                                                                                                                                                                                                                                                                                                   |
-| 4.15 | Sound — TP/SL auto-close                                                                  | Ascending jingle (profit) or descending beep (loss) plays when position auto-closes                                                                                                                                                                                                                                                                                                                 | ✅     | T3 · Playwright  | ✅ 01.05.2026 — manually verified: correct profit/loss sound plays on TP/SL-triggered auto-close.                                                                                                                                                                                                                                                                                                                                   |
-| 4.16 | Sound — mute toggle                                                                       | Clicking mute in SoundSettings silences all subsequent sounds; unmuting restores them                                                                                                                                                                                                                                                                                                               | ✅     | T3 · Playwright  | ✅ 01.05.2026 — manually verified: mute toggle in SoundSettings popover (portal-rendered, visible above panel) silences all sounds; unmuting restores them. Popover fixed to render via React portal so it is no longer clipped by the panel's overflow:hidden container.                                                                                                                                                           |
+| 4.14 | Sound — order placed                                                                      | Crisp double-tick plays when a market/limit/stop order is submitted                                                                                                                                                                                                                                                                                                                                 | ✅     | M                | ✅ 01.05.2026 — manually verified (re-tiered M 2026-09-30: audibility, checked by ear): double-tick sound plays correctly on market, limit, and stop order submission.                                                                                                                                                                                                                                                              |
+| 4.15 | Sound — TP/SL auto-close                                                                  | Ascending jingle (profit) or descending beep (loss) plays when position auto-closes                                                                                                                                                                                                                                                                                                                 | ✅     | M                | ✅ 01.05.2026 — manually verified (re-tiered M 2026-09-30: audibility, checked by ear): correct profit/loss sound plays on TP/SL-triggered auto-close.                                                                                                                                                                                                                                                                              |
+| 4.16 | Sound — mute toggle                                                                       | Clicking mute in SoundSettings silences all subsequent sounds; unmuting restores them                                                                                                                                                                                                                                                                                                               | ✅     | M                | ✅ 01.05.2026 — manually verified (re-tiered M 2026-09-30: audibility, checked by ear): mute toggle in SoundSettings popover (portal-rendered, visible above panel) silences all sounds; unmuting restores them. Popover fixed to render via React portal so it is no longer clipped by the panel's overflow:hidden container.                                                                                                      |
 | 4.21 | TV-style Orders bench TTL — terminal rows auto-evict after 2 minutes                      | Filled / Cancelled / Rejected rows appear in **Orders** tab immediately after the event (rendered at 65% opacity + amber Clock icon). After 2 minutes from `closingTime` they disappear from Orders while remaining permanently in Order History. **All / Filled / Cancelled sub-tab counts drop live as rows expire.** Top Orders badge (working + inactive only) is never inflated by bench rows. | ✅     | T2 · RTL         | ✅ 02.05.2026 — TV-style bench lifecycle implemented in `OrderAccountManagementPanel.tsx`. Module-level `SESSION_START = Date.now()` evaluated once per page load; `BENCH_TTL_MS = 120_000` (2 min, hardcoded). Predicate: `closingTime >= SESSION_START && closingTime + BENCH_TTL_MS > now`. `now` clock state ticks every 30 s via `setInterval`. Automated in `OrderAccountManagementPanel.test.tsx` — 28 tests, 340/340 green. |
 | 4.22 | Orders bench — page refresh clears terminal rows immediately                              | After a hard browser refresh, previously Filled / Cancelled / Rejected rows that were on the Orders bench are **gone immediately** — the 2-min window does not carry over. Only Working / Inactive pending rows (persisted in localStorage) survive the refresh.                                                                                                                                    | ✅     | T1+T2            | ✅ 02.05.2026 — `SESSION_START` is a module-level `const` evaluated fresh on every page load. Any `closingTime < SESSION_START` fails the bench predicate instantly — free page-refresh reset with zero store changes. Validated by test fixtures: using hardcoded May-2024 `closingTime` caused 3 tests to fail (orders evicted immediately), confirming the mechanism; fixed by switching to `FIXTURE_NOW = Date.now()`.          |
 | 4.23 | Add a journal note containing HTML, e.g. `<img src=x onerror=alert(1)>`                   | The note shows as that literal text; no element is created from it and nothing runs (stored-XSS rule, `web.md`)                                                                                                                                                                                                                                                                                     | ✅     | T2 · RTL         | NEW-4-1. `OrderAccountManagementPanel.test` "Section 4 — journal notes render as plain text": "[4.23] should show a stored note with HTML in it as literal text …", "[4.23] should send a typed note verbatim and show the saved note as literal text …". The T3 half (no browser dialog, `page.on('dialog')`) comes with the Playwright set.                                                                                       |
@@ -980,14 +1064,15 @@ set leverage per symbol, and predict the maker / taker fee and the fill price of
 
 #### 14.2 USDT Perpetual fees (VIP-0 taker 0.055% / maker 0.02%)
 
-| #      | Action                                                          | Expected                                                                                                         | Status | Tier        | Notes                                           |
-| ------ | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------ | ----------- | ----------------------------------------------- |
-| 14.2.1 | Market buy 0.1 BTC at 10× with the ask at 50,000                | IM 500, open fee 2.75, fee to close 2.475 (BP-3: at the bankruptcy price) → balance −505.225; row "0.055% taker" | ✅     | T1 · Vitest | `fees.test`. Live ✓ (fee = 0.055% of notional). |
-| 14.2.2 | Close it at bid 51,000                                          | Close fee 2.805; +599.67 back; realized +94.445                                                                  | ✅     | T1 · Vitest | `fees.test`.                                    |
-| 14.2.3 | Resting limit buy 0.1 @ 49,000 at 10×                           | Reserves 495.1205 (IM + taker open fee + fee to close); fills at **49,000** with a 0.98 maker fee; net −493.4055 | ✅     | T1 · Vitest | `fees.test`. Live ✓ reserve.                    |
-| 14.2.4 | Cancel a resting order                                          | Refunds exactly what it reserved                                                                                 | ✅     | T1 · Vitest | Live ✓.                                         |
-| 14.2.5 | Order form estimate                                             | Cost = margin + est. open fee + est. close fee; "Fees: taker 0.055% · maker 0.02%" line                          | ✅     | T2 · RTL    | `TradingPanel.test` 1.1.1, `orderMath.test`.    |
-| 14.2.6 | Pre-BP-2 position (entry fee 0.7 at 0.07%) closed at bid 51,000 | Uses its stored 0.7: realized +96.495 — old fees are never recomputed                                            | ✅     | T1 · Vitest | `fees.test` "never recompute".                  |
+| #      | Action                                                          | Expected                                                                                                                                                                                                                                                                        | Status | Tier        | Notes                                                                                  |
+| ------ | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ----------- | -------------------------------------------------------------------------------------- |
+| 14.2.1 | Market buy 0.1 BTC at 10× with the ask at 50,000                | IM 500, open fee 2.75, fee to close 2.475 (BP-3: at the bankruptcy price) → balance −505.225; row "0.055% taker"                                                                                                                                                                | ✅     | T1 · Vitest | `fees.test`. Live ✓ (fee = 0.055% of notional).                                        |
+| 14.2.2 | Close it at bid 51,000                                          | Close fee 2.805; +599.67 back; realized +94.445                                                                                                                                                                                                                                 | ✅     | T1 · Vitest | `fees.test`.                                                                           |
+| 14.2.3 | Resting limit buy 0.1 @ 49,000 at 10×                           | Reserves 495.1205 (IM + taker open fee + fee to close); fills at **49,000** with a 0.98 maker fee; net −493.4055                                                                                                                                                                | ✅     | T1 · Vitest | `fees.test`. Live ✓ reserve.                                                           |
+| 14.2.4 | Cancel a resting order                                          | Refunds exactly what it reserved                                                                                                                                                                                                                                                | ✅     | T1 · Vitest | Live ✓.                                                                                |
+| 14.2.5 | Order form estimate                                             | Cost = margin + est. open fee + est. close fee; "Fees: taker 0.055% · maker 0.02%" line                                                                                                                                                                                         | ✅     | T2 · RTL    | `TradingPanel.test` 1.1.1, `orderMath.test`.                                           |
+| 14.2.6 | Pre-BP-2 position (entry fee 0.7 at 0.07%) closed at bid 51,000 | Uses its stored 0.7: realized +96.495 — old fees are never recomputed                                                                                                                                                                                                           | ✅     | T1 · Vitest | `fees.test` "never recompute".                                                         |
+| 14.2.7 | Any filled order (M7, was NEW-14.2-1)                           | Its fee is Bybit's maker / taker rate for its liquidity × qty × fill price (a market order is always a taker; a spot buy pays in coins). A liquidation charges the close-fee reserve instead — see the open question in `APP_LOG.md` (Bybit Parity → Open items → "Still open") | ✅     | T1p         | `invariants.prop.test` "[18.11] [14.2.7] …" (checked on every fill of every sequence). |
 
 #### 14.3 Fill prices
 
@@ -1314,16 +1399,16 @@ cross-phase regression suite and the server-side account safeguards.
 
 #### 13.3 Sync, sessions, safety fixes
 
-| #      | Action                                                                  | Expected                                                                                                                                                | Status | Tier            | Notes                                                                                                                                                                                                                                                           |
-| ------ | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 13.3.1 | Two tabs open; place / cancel / close in one                            | The other tab updates within ~1 s; each sound plays once per tab                                                                                        | ✅     | T3 · Playwright | WS fan-out unit-tested in `paper.test`. `e2e/tests/engine/twoTabs.spec` "[13.3.1][4.6]…" on Spot AVAXUSDT: limit placed / cancelled, market buy and a reset in tab A show in tab B within 2 s (NEW-8-2 included). The once-per-tab sound check isn't automated. |
-| 13.3.2 | Log out, log in as another user on the same browser                     | Nothing of the first account is shown; `cd-paper-trading` is gone from localStorage                                                                     | ✅     | T1 · Vitest     | `usePaperFeed.test` sign-out + `paperStore.test` clear(). Logout leak fixed.                                                                                                                                                                                    |
-| 13.3.3 | Keep the dashboard open for 20+ minutes, then trade                     | Orders still work (access token refreshed ~60 s before expiry; WS re-authenticates)                                                                     | ✅     | T3 · Playwright | `usePaperFeed.test` re-auth / 4401 refresh. `e2e/tests/engine/tokenRefresh.spec` "[13.3.3]…": the page clock 20 min ahead → one `/api/auth/refresh`, then a market order goes through (client-side expiry, owner Q6).                                           |
-| 13.3.4 | S1 — a triggered order that can't fill                                  | Recorded as rejected ("Order could not be filled."), never silently dropped                                                                             | ✅     | T1 · Vitest     | `actions.test` "S1".                                                                                                                                                                                                                                            |
-| 13.3.5 | S2 — place a limit at 1×, change leverage to 10×, let it fill           | Position size uses 1× (the order's own leverage)                                                                                                        | ✅     | T1 · Vitest     | `actions.test` "S2".                                                                                                                                                                                                                                            |
-| 13.3.6 | S3 — a limit placed mid-candle after the candle already dipped below it | Does not fill until a tick after placement crosses it                                                                                                   | ✅     | T1 · Vitest     | `triggers.test` "S3".                                                                                                                                                                                                                                           |
-| 13.3.7 | Filled limit / stop in Order History                                    | Row keeps its own type (LIMIT / STOP) — changed from the browser's temporary "MARKET"                                                                   | ✅     | T1 · Vitest     | `actions.test` 3.1.3.                                                                                                                                                                                                                                           |
-| 13.3.8 | Two orders for one account at once on two machines; a burst of six      | Both apply, `Account.version` + 2; in a burst every accepted order applies once and a refused one (409 "Account changed — please retry") leaves nothing | ✅     | T2i             | `paperRoutes.int.test` "[13.3.8] two orders for one account sent at once to two machines both apply…", "[13.3.8] a burst across two machines loses no update…" (was NEW-13-2).                                                                                  |
+| #      | Action                                                                  | Expected                                                                                                                                                | Status | Tier            | Notes                                                                                                                                                                                                                                                                            |
+| ------ | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 13.3.1 | Two tabs open; place / cancel / close in one                            | The other tab updates within ~1 s; each sound plays once per tab                                                                                        | ✅     | T3 · Playwright | WS fan-out unit-tested in `paper.test`. `e2e/tests/engine/twoTabs.spec` "[13.3.1][4.6]…" on Spot AVAXUSDT: limit placed / cancelled, market buy and a reset in tab A show in tab B within 2 s (NEW-8-2 included). The once-per-tab sound check isn't automated.                  |
+| 13.3.2 | Log out, log in as another user on the same browser                     | Nothing of the first account is shown; `cd-paper-trading` is gone from localStorage                                                                     | ✅     | T1 · Vitest     | `usePaperFeed.test` sign-out + `paperStore.test` clear(). Logout leak fixed.                                                                                                                                                                                                     |
+| 13.3.3 | Keep the dashboard open for 20+ minutes, then trade                     | Orders still work (access token refreshed ~60 s before expiry; WS re-authenticates)                                                                     | ✅     | T3 · Playwright | `usePaperFeed.test` re-auth / 4401 refresh. `e2e/tests/engine/tokenRefresh.spec` "[13.3.3]…": the page clock 20 min ahead → one `/api/auth/refresh`, then a market order goes through (client-side expiry; owner decision: the server's token lifetime isn't shortened for e2e). |
+| 13.3.4 | S1 — a triggered order that can't fill                                  | Recorded as rejected ("Order could not be filled."), never silently dropped                                                                             | ✅     | T1 · Vitest     | `actions.test` "S1".                                                                                                                                                                                                                                                             |
+| 13.3.5 | S2 — place a limit at 1×, change leverage to 10×, let it fill           | Position size uses 1× (the order's own leverage)                                                                                                        | ✅     | T1 · Vitest     | `actions.test` "S2".                                                                                                                                                                                                                                                             |
+| 13.3.6 | S3 — a limit placed mid-candle after the candle already dipped below it | Does not fill until a tick after placement crosses it                                                                                                   | ✅     | T1 · Vitest     | `triggers.test` "S3".                                                                                                                                                                                                                                                            |
+| 13.3.7 | Filled limit / stop in Order History                                    | Row keeps its own type (LIMIT / STOP) — changed from the browser's temporary "MARKET"                                                                   | ✅     | T1 · Vitest     | `actions.test` 3.1.3.                                                                                                                                                                                                                                                            |
+| 13.3.8 | Two orders for one account at once on two machines; a burst of six      | Both apply, `Account.version` + 2; in a burst every accepted order applies once and a refused one (409 "Account changed — please retry") leaves nothing | ✅     | T2i             | `paperRoutes.int.test` "[13.3.8] two orders for one account sent at once to two machines both apply…", "[13.3.8] a burst across two machines loses no update…" (was NEW-13-2).                                                                                                   |
 
 ### Section 14 — Markets, Bybit fees and fill prices (Bybit Parity BP-2) _(part: 14.7 — the rest of Section 14 is in Stages 0, 1 and 3)_
 
@@ -1378,18 +1463,21 @@ cross-phase regression suite and the server-side account safeguards.
 > The bugs found when BP-0 … BP-4 were read together (2026-09-27), plus the BP-5 review fixes that crossed phases.
 > Each is pinned by the named test, which failed before its fix. Keep them green; a change here needs a reason.
 
-| #     | Interaction                                                   | Scenario → expected                                                                                                                                                                               | Status | Tier     | Test                                                                                                                                                                                                                                                                |
-| ----- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 18.1  | Backfill × TP / SL, liquidation, funding (BP-1 × BP-3 / BP-4) | A fill made by the backfill is stamped at its candle, so the gap's later candles still check its TP / SL, liquidation and funding                                                                 | ✅     | T1 + T3  | `services.test` "should stamp a backfilled fill at its candle…"                                                                                                                                                                                                     |
-| 18.2  | Lease handoff × funding (BP-4)                                | A restart just after a funding timestamp settles it, even if Bybit hadn't listed it at takeover; a timestamp Bybit never lists is skipped                                                         | ✅     | T1       | `services.test` "should settle a timestamp missed across a restart…", "should skip an inferred takeover timestamp…"                                                                                                                                                 |
-| 18.3  | Account deletion × funding (BP-4)                             | A deleted account's settlement is dropped, not retried forever (the lease's progress isn't held back)                                                                                             | ✅     | T1       | `services.test` "should drop a deleted account's settlement…"                                                                                                                                                                                                       |
-| 18.4  | SL beyond liquidation × backfill (BP-3)                       | A minute crossing both a stop-loss set past the liquidation price and the liquidation price liquidates; it never stops out past bankruptcy                                                        | ✅     | T1       | `liquidation.test` "should liquidate, not stop out…"                                                                                                                                                                                                                |
-| 18.5  | Reset × funding (BP-4)                                        | A reset between a timestamp and its settlement: the fresh account is not charged; a reset before it still settles                                                                                 | ✅     | T1       | `funding.test` "should not charge a fresh account…", "should still settle when the last reset was before…"; `services.test` "should load the account's last reset time…"                                                                                            |
-| 18.6  | Late funding × closes (BP-4 × BP-5 D / F)                     | A fee settled after closes is split over every close after the timestamp, by quantity                                                                                                             | ✅     | T1       | `services.test` "splits a late funding fee over every close after the timestamp…"                                                                                                                                                                                   |
-| 18.7  | All of the above, on a real database                          | Same scenarios through `AccountRepository` and a migrated Postgres                                                                                                                                | ✅     | T2i      | `regression.int.test` "Section 18 regression suite on Postgres [18.7]": [18.1]–[18.6], 8 tests through TradingService → AccountRepository → Postgres and the MatchingEngine on the Prisma lease row; only the market is fake. Found 18.8.                           |
-| 18.8  | Two accounts, the same millisecond (P1c)                      | Two users change BTCUSDT leverage, or switch margin mode, in the same millisecond → both are saved (journal / balance ids unique across accounts; were `j-leverage-<symbol>-<ms>`, `j-mode-<ms>`) | ✅     | T1 + T2i | `cross.test` "should give two accounts switching in the same millisecond different journal and balance ids (P1c)", "…changing a symbol’s leverage in the same millisecond different ids (P1c)"; `regression.int.test` [18.3] opens two accounts in one millisecond. |
-| 18.9  | DB write failure mid-transaction (was NEW-18-2)               | A close whose last write fails rolls back every write (position, trade, order, balance, version); the client gets only `{ error: 'Internal Server Error' }`; the retry succeeds                   | ✅     | T2i      | `paperRoutes.int.test` "[18.9] rolls every write back, answers a bare 500, and the retry works".                                                                                                                                                                    |
-| 18.10 | Lease handoff (was NEW-18-3)                                  | Two engines on one DB: only the holder listens and acts; the other can't take an unexpired lease, then takes it and replays the gap without a second fill or funding charge                       | ✅     | T2i      | `regression.int.test` "[18.10] two engines on one database…".                                                                                                                                                                                                       |
+| #     | Interaction                                                   | Scenario → expected                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Status | Tier     | Test                                                                                                                                                                                                                                                                |
+| ----- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 18.1  | Backfill × TP / SL, liquidation, funding (BP-1 × BP-3 / BP-4) | A fill made by the backfill is stamped at its candle, so the gap's later candles still check its TP / SL, liquidation and funding                                                                                                                                                                                                                                                                                                                                                                                                                 | ✅     | T1 + T3  | `services.test` "should stamp a backfilled fill at its candle…"                                                                                                                                                                                                     |
+| 18.2  | Lease handoff × funding (BP-4)                                | A restart just after a funding timestamp settles it, even if Bybit hadn't listed it at takeover; a timestamp Bybit never lists is skipped                                                                                                                                                                                                                                                                                                                                                                                                         | ✅     | T1       | `services.test` "should settle a timestamp missed across a restart…", "should skip an inferred takeover timestamp…"                                                                                                                                                 |
+| 18.3  | Account deletion × funding (BP-4)                             | A deleted account's settlement is dropped, not retried forever (the lease's progress isn't held back)                                                                                                                                                                                                                                                                                                                                                                                                                                             | ✅     | T1       | `services.test` "should drop a deleted account's settlement…"                                                                                                                                                                                                       |
+| 18.4  | SL beyond liquidation × backfill (BP-3)                       | A minute crossing both a stop-loss set past the liquidation price and the liquidation price liquidates; it never stops out past bankruptcy                                                                                                                                                                                                                                                                                                                                                                                                        | ✅     | T1       | `liquidation.test` "should liquidate, not stop out…"                                                                                                                                                                                                                |
+| 18.5  | Reset × funding (BP-4)                                        | A reset between a timestamp and its settlement: the fresh account is not charged; a reset before it still settles                                                                                                                                                                                                                                                                                                                                                                                                                                 | ✅     | T1       | `funding.test` "should not charge a fresh account…", "should still settle when the last reset was before…"; `services.test` "should load the account's last reset time…"                                                                                            |
+| 18.6  | Late funding × closes (BP-4 × BP-5 D / F)                     | A fee settled after closes is split over every close after the timestamp, by quantity                                                                                                                                                                                                                                                                                                                                                                                                                                                             | ✅     | T1       | `services.test` "splits a late funding fee over every close after the timestamp…"                                                                                                                                                                                   |
+| 18.7  | All of the above, on a real database                          | Same scenarios through `AccountRepository` and a migrated Postgres                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | ✅     | T2i      | `regression.int.test` "Section 18 regression suite on Postgres [18.7]": [18.1]–[18.6], 8 tests through TradingService → AccountRepository → Postgres and the MatchingEngine on the Prisma lease row; only the market is fake. Found 18.8.                           |
+| 18.8  | Two accounts, the same millisecond (P1c)                      | Two users change BTCUSDT leverage, or switch margin mode, in the same millisecond → both are saved (journal / balance ids unique across accounts; were `j-leverage-<symbol>-<ms>`, `j-mode-<ms>`)                                                                                                                                                                                                                                                                                                                                                 | ✅     | T1 + T2i | `cross.test` "should give two accounts switching in the same millisecond different journal and balance ids (P1c)", "…changing a symbol’s leverage in the same millisecond different ids (P1c)"; `regression.int.test` [18.3] opens two accounts in one millisecond. |
+| 18.9  | DB write failure mid-transaction (was NEW-18-2)               | A close whose last write fails rolls back every write (position, trade, order, balance, version); the client gets only `{ error: 'Internal Server Error' }`; the retry succeeds                                                                                                                                                                                                                                                                                                                                                                   | ✅     | T2i      | `paperRoutes.int.test` "[18.9] rolls every write back, answers a bare 500, and the retry works".                                                                                                                                                                    |
+| 18.10 | Lease handoff (was NEW-18-3)                                  | Two engines on one DB: only the holder listens and acts; the other can't take an unexpired lease, then takes it and replays the gap without a second fill or funding charge                                                                                                                                                                                                                                                                                                                                                                       | ✅     | T2i      | `regression.int.test` "[18.10] two engines on one database…".                                                                                                                                                                                                       |
+| 18.11 | Engine invariants over random action sequences (M7)           | 200 random sequences on every PR (5,000 weekly, fresh seed) of orders, cancels, amends, closes, margin, leverage, margin mode, funding, spot orders and TP / SL, resets, price moves with triggers on two symbols: what the account holds changes by exactly its records (trade PnL − fees − funding; only a bankruptcy / cross write-off may spare it a loss); a refused action changes nothing; no negative balance, margin, reserve or spot free / locked; a reduce-only fill never opens, grows or flips a position; a cross account ends ≥ 0 | ✅     | T1p      | `invariants.prop.test` "[18.11] [14.2.7] should conserve the wallet…". Checked by planting five engine bugs (2026-09-30), each caught.                                                                                                                              |
+| 18.12 | Liquidation price vs leverage (M7)                            | For any symbol, side and size, one step more leverage moves the liquidation price toward the mark, and it stays on the losing side of the entry                                                                                                                                                                                                                                                                                                                                                                                                   | ✅     | T1p      | `invariants.prop.test` "[18.12] should move the liquidation price toward the mark…".                                                                                                                                                                                |
+| 18.13 | Determinism (M7)                                              | The same action sequence replays to the same state — what the backfill and the two-engine lease rely on                                                                                                                                                                                                                                                                                                                                                                                                                                           | ✅     | T1p      | `invariants.prop.test` "[18.13] should replay the same action sequence…".                                                                                                                                                                                           |
 
 ### Section 19 — Account flows (auth and settings) _(rows 19.9–19.12; 19.1–19.8, 19.13–19.19 are in Stage 0)_
 

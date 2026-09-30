@@ -1,5 +1,5 @@
 /**
- * Nightly feed parity (TEST_IMPLEMENTATION_PLAN SC-6-1, rows 6.1–6.4): what cryptopapertrade.com
+ * Nightly feed parity (docs/TRADING_TEST_PLAN.md rows 6.1–6.4): what cryptopapertrade.com
  * shows against Bybit at the same moments, for the 9 symbols × Spot / USDT Perpetual. It reads the
  * public API only — production's market WebSocket (the one the dashboard uses) and Bybit mainnet's
  * public REST — and changes nothing anywhere.

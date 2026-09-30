@@ -1,5 +1,5 @@
 /**
- * The e2e environment (docs/TEST_IMPLEMENTATION_PLAN.md F4): ports, the throwaway database and the
+ * The e2e environment (docs/TRADING_TEST_PLAN.md A4): ports, the throwaway database and the
  * test-hooks secret, shared by playwright.config.ts, the global setup and the fixtures.
  */
 

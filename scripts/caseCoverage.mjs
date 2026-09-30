@@ -1,5 +1,5 @@
 /**
- * Case-ID coverage report (docs/TEST_IMPLEMENTATION_PLAN.md F12). Test titles carry the Part B case
+ * Case-ID coverage report (.claude/rules/testing.md, "Gates"). Test titles carry the Part B case
  * IDs of docs/TRADING_TEST_PLAN.md in square brackets (`[14.6.1]`); this lists
  *   - rows with no test citing them,
  *   - tags citing an ID that isn't a row (a typo, or a row renumbered),

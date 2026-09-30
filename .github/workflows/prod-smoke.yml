@@ -1,6 +1,6 @@
 name: Production smoke
 
-# T5 in docs/TRADING_TEST_PLAN.md (TEST_IMPLEMENTATION_PLAN M8): the same read-only checks deploy.yml
+# T5 in docs/TRADING_TEST_PLAN.md (roadmap P5, M8): the same read-only checks deploy.yml
 # runs after every deploy (apps/e2e/tests-prod), every 6 hours — so an outage between deploys opens an
 # issue. Read-only: no sign-in, no writes, no secrets.
 

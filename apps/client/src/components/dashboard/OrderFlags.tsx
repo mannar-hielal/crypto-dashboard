@@ -56,7 +56,7 @@ export function OrderFlags({
 
 interface FlagBoxProps {
   label: string;
-  /** Guide anchor for the checkbox (docs/TEST_IMPLEMENTATION_PLAN.md F1) */
+  /** Guide anchor for the checkbox (lib/guideAnchors.ts) */
   anchor: GuideAnchor;
   help: string;
   checked: boolean;

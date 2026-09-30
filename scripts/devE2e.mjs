@@ -1,6 +1,6 @@
 /**
- * `pnpm dev:e2e` — the app on the fake Bybit feed (TEST_IMPLEMENTATION_PLAN F3): the "local dev (fake
- * feed)" environment every UI reproduction step marked (fake feed) refers to.
+ * `pnpm dev:e2e` — the app on the fake Bybit feed (docs/TRADING_TEST_PLAN.md A5): the "local dev
+ * (fake feed)" environment every step of docs/UI_REPRODUCTIONS.md marked (fake feed) refers to.
  *
  * Starts the fake feed (:4010), the server pointed at it (:3001) and Vite (:5173). Move prices with
  * `pnpm feed …`. The test hooks (/api/test/*) are on only when TEST_HOOKS_SECRET is set in your shell

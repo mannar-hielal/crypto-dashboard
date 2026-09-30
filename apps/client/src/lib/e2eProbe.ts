@@ -1,6 +1,6 @@
 /**
- * A read-only view of the charts for the Playwright tests (docs/TEST_IMPLEMENTATION_PLAN.md
- * SC-10.4-3, SC-12.1-2): the canvas can't be queried, so an e2e build (`VITE_E2E=1`, set only by
+ * A read-only view of the charts for the Playwright tests (docs/TRADING_TEST_PLAN.md
+ * rows 10.4.4–10.4.7, 12.1.2): the canvas can't be queried, so an e2e build (`VITE_E2E=1`, set only by
  * apps/e2e/playwright.config.ts) exposes each pane's visible time range, its last crosshair time and
  * its candle times on `window.__cdCharts`. 🔐 In every other build `import.meta.env.VITE_E2E` is
  * undefined, so the check below is false at build time and the bundler drops the code: nothing

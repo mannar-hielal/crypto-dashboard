@@ -1,5 +1,5 @@
 /**
- * The fake Bybit server (TEST_IMPLEMENTATION_PLAN F3): Bybit v5's public REST and WebSocket, the parts
+ * The fake Bybit server (docs/TRADING_TEST_PLAN.md A5): Bybit v5's public REST and WebSocket, the parts
  * the app reads, served from FakeFeed — plus `/__control/*` for tests to set prices. A test tool: it
  * listens on 127.0.0.1 only and never runs in production (config.ts refuses BYBIT_*_URL there).
  *
