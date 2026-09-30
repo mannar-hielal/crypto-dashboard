@@ -13,6 +13,16 @@ test('@prod the API is healthy', async ({ request }) => {
   expect(await res.json()).toMatchObject({ status: 'ok', environment: 'production' });
 });
 
+// 🔐 HARDENING_PLAN H0 / H11: Cloudflare Pages sends these from apps/client/public/_headers; the API's
+// Helmet headers never reach the pages
+test('@prod the web app sends HSTS and refuses to be framed', async ({ request, baseURL }) => {
+  const res = await request.get(baseURL ?? 'https://cryptopapertrade.com');
+  const headers = res.headers();
+  expect(headers['strict-transport-security']).toMatch(/max-age=\d+;\s*includeSubDomains/);
+  expect(headers['x-frame-options']).toBe('DENY');
+  expect(headers['content-security-policy']).toContain("frame-ancestors 'none'");
+});
+
 test('@prod [19.3] a signed-out visit loads cleanly: refresh answers 204, no console errors', async ({
   page,
 }) => {

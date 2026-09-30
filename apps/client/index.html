@@ -29,8 +29,9 @@
     <!-- __CONNECT_SRC__ is replaced at build time with 'self' + the configured -->
     <!-- VITE_API_URL (http + ws variants) + the Cloudflare Web Analytics report -->
     <!-- endpoint (https://cloudflareinsights.com) — see cspConnectSrcPlugin in vite.config.ts -->
-    <!-- frame-ancestors and report-uri omitted here — they are header-only
-         directives and are already set via server Helmet middleware -->
+    <!-- frame-ancestors and report-uri omitted here — they are header-only directives. The -->
+    <!-- page's frame-ancestors, HSTS and X-Frame-Options come from public/_headers (Cloudflare -->
+    <!-- Pages); the API's Helmet headers cover API responses only -->
     <meta
       http-equiv="Content-Security-Policy"
       content="

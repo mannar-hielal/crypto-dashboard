@@ -1,7 +1,8 @@
 # Guided Trade — MVP Plan
 
-> **Owner:** Mannar Hielal · **Written:** 2026-09-30 · **Status:** not started — deferred until the test plan was
-> done (owner, 2026-09-29); the test plan is now done, so this is next once the open questions below are answered.
+> **Owner:** Mannar Hielal · **Written:** 2026-09-30 · **Status:** ⏸ deferred (owner, 2026-09-30) — not started,
+> with Q1–Q3 below unanswered on purpose. First deferred until the test plan was done (2026-09-29); with that done,
+> the owner deferred it again. Nothing here is scheduled: pick it up only when the owner asks, starting with Q1–Q3.
 >
 > Moved here from the test implementation plan (retired 2026-09-30): its scenario format, the per-section "Guided
 > trade" verdicts, the Rollout milestone and its Q1 / Q2. The UI reproductions in `docs/UI_REPRODUCTIONS.md` are
@@ -92,6 +93,8 @@ reproductions are tester procedures.
   (`liveNote`); see Q2.
 
 ## Open questions for the owner
+
+Deferred with the feature (2026-09-30): answered when the owner picks it up, not before.
 
 - **Q1.** Opt-in from a "Learn" menu, or offered once to new accounts? Does progress need saving per user (server)
   or is the browser enough?
