@@ -30,6 +30,7 @@ import { TradingPanel } from '@/components/dashboard/TradingPanel';
 import { MobileTradeBar } from '@/components/dashboard/MobileTradeBar';
 import { useOrderPrefillStore } from '@/store/orderPrefillStore';
 import type { OrderTab } from '@/components/dashboard/TradingPanel';
+import { SignInLock } from '@/components/dashboard/SignInLock';
 import { PositionEditPanel } from '@/components/dashboard/PositionEditPanel';
 import { PendingOrderEditPanel } from '@/components/dashboard/PendingOrderEditPanel';
 import { bg, color, fontSize, rangeBar } from '@/lib/tokens';
@@ -528,14 +529,17 @@ export function DashboardInner() {
             style={isMaximized ? {} : { height: panelHeightMV }}
             inert={!isMaximized && panelSize === 'hidden' ? true : undefined}
           >
-            <OrderAccountManagementPanel
-              size={panelSize}
-              onSizeChange={setPanelSize}
-              isMaximized={isMaximized}
-              onToggleMaximize={handleToggleMaximize}
-              onEditPosition={(positionId) => setEditTarget({ kind: 'position', positionId })}
-              onEditPendingOrder={(orderId) => setEditTarget({ kind: 'pending', orderId })}
-            />
+            {/* Signed-out visitors (/chart): locked behind "Sign in to trade" */}
+            <SignInLock>
+              <OrderAccountManagementPanel
+                size={panelSize}
+                onSizeChange={setPanelSize}
+                isMaximized={isMaximized}
+                onToggleMaximize={handleToggleMaximize}
+                onEditPosition={(positionId) => setEditTarget({ kind: 'position', positionId })}
+                onEditPendingOrder={(orderId) => setEditTarget({ kind: 'pending', orderId })}
+              />
+            </SignInLock>
           </motion.div>
         </div>
 
@@ -596,36 +600,44 @@ export function DashboardInner() {
           inert={!isTradingPanelVisible ? true : undefined}
           style={{ pointerEvents: isTradingPanelVisible ? 'auto' : 'none' }}
         >
-          <TradingPanel
-            key={`${activePaneIndex}-${category}-${symbol}`}
-            onClose={() => setTradingPanelOpen(false)}
-            initialTab={tradingTab}
-            onTabChange={setTradingTab}
-            initialSide={tradingSide}
-            onSideChange={setTradingSide}
-            // Mobile: the form covers the screen — once the order is in, close it and open the
-            // account panel, so the new position or order is what the user sees
-            onPlaced={
-              isMobile
-                ? () => {
-                    setTradingPanelOpen(false);
-                    setPanelSize('open');
-                  }
-                : undefined
-            }
-          />
+          {/* Signed-out visitors (/chart): locked behind "Sign in to trade". On phones the sheet
+              covers the screen, so the lock carries its own close button */}
+          <SignInLock onClose={isMobile ? () => setTradingPanelOpen(false) : undefined}>
+            <TradingPanel
+              key={`${activePaneIndex}-${category}-${symbol}`}
+              onClose={() => setTradingPanelOpen(false)}
+              initialTab={tradingTab}
+              onTabChange={setTradingTab}
+              initialSide={tradingSide}
+              onSideChange={setTradingSide}
+              // Mobile: the form covers the screen — once the order is in, close it and open the
+              // account panel, so the new position or order is what the user sees
+              onPlaced={
+                isMobile
+                  ? () => {
+                      setTradingPanelOpen(false);
+                      setPanelSize('open');
+                    }
+                  : undefined
+              }
+            />
+          </SignInLock>
         </motion.div>
       </div>
 
       {/* Phones and tablets: Buy / Sell open the order form (it isn't docked below lg) */}
       {/* Not while an edit panel is open: it covers the screen, and Buy / Sell couldn't show the form */}
       {isMobile && !isTradingPanelVisible && !editTarget && (
-        <MobileTradeBar
-          onTrade={(side) => {
-            setTradingSide(side);
-            setTradingPanelOpen(true);
-          }}
-        />
+        // Signed-out visitors: shown dimmed and inert — the account panel's lock right above it
+        // carries "Sign in to trade", so this one has no prompt of its own
+        <SignInLock prompt={false}>
+          <MobileTradeBar
+            onTrade={(side) => {
+              setTradingSide(side);
+              setTradingPanelOpen(true);
+            }}
+          />
+        </SignInLock>
       )}
 
       {/* The ticker tape is marketing: phones give its height to the chart */}

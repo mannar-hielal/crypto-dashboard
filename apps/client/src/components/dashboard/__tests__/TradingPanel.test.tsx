@@ -41,6 +41,7 @@ import { usePaperStore, type Position } from '@/store/paperStore';
 import { useAuthStore } from '@/store/authStore';
 import { emptyState, fakePaperApi, resetFakePaperApi } from '@/test/fakePaperApi';
 import { getByGuide } from '@/test/guide';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -1427,5 +1428,38 @@ describe('Section 14.4 — Bybit size rules refused by the server (T2 · RTL)', 
       value: '4',
     });
     expect((getByGuide(container, 'trade.amount') as HTMLInputElement).value).toBe('4');
+  });
+});
+
+// ─── Signed-out visitor (/chart) ──────────────────────────────────────────────
+
+describe('signed-out submit — 🔐 the sign-in lock was stripped in DevTools', () => {
+  function LoginProbe() {
+    const location = useLocation();
+    return <p>login from {String((location.state as { from?: string } | null)?.from)}</p>;
+  }
+
+  beforeEach(() => {
+    useAuthStore.getState().clearAuth();
+  });
+
+  it('should send nothing and invite the visitor to sign in when there is no session', async () => {
+    render(
+      <MemoryRouter initialEntries={['/chart']}>
+        <Routes>
+          <Route path="/chart" element={<TradingPanel onClose={vi.fn()} />} />
+          <Route path="/login" element={<LoginProbe />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    fireEvent.change(getQtyInput(), { target: { value: '100' } });
+    clickExecuteBtn();
+
+    const signIn = await screen.findByRole('button', { name: 'Sign in to trade' });
+    expect(screen.queryByText('Not signed in')).toBeNull();
+    expect(fakePaperApi.placeOrder).not.toHaveBeenCalled();
+
+    fireEvent.click(signIn);
+    expect(screen.getByText('login from /dashboard/usdt/BTCUSDT')).toBeTruthy();
   });
 });

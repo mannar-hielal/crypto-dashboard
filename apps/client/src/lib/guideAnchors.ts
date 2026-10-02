@@ -63,6 +63,7 @@ export const GUIDE_ANCHORS = [
   'symbolbar.funding',
   'symbolbar.mark',
   'symbolbar.index',
+  'symbolbar.sync',
   // layout
   'layout.picker',
   'layout.option',
@@ -223,6 +224,10 @@ export const GUIDE_ANCHORS = [
   'notice.dismiss',
   'notice.deletion-pending',
   'notice.deletion-pending.cancel',
+  // lock (signed-out visitors on /chart)
+  'lock.overlay',
+  'lock.sign-in',
+  'lock.close',
 ] as const;
 
 export type GuideAnchor = (typeof GUIDE_ANCHORS)[number];

@@ -1,7 +1,8 @@
 import { startedNewSession } from '@/lib/session';
 import { guide } from '@/lib/guideAnchors';
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
+import { safeReturnPath } from '@/lib/marketRoutes';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -58,6 +59,7 @@ type RegisterForm = z.infer<typeof registerSchema>;
 
 export function RegisterPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const setAuth = useAuthStore((s) => s.setAuth);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -66,13 +68,18 @@ export function RegisterPage() {
     defaultValues: { email: '', username: '', password: '', acceptedTerms: false },
   });
 
+  // The market a visitor came from (/chart → "Sign in to trade" → "Create one")
+  const from = (location.state as { from?: unknown } | null)?.from;
+  const returnTo = safeReturnPath(from);
+
   async function onSubmit(data: RegisterForm) {
     setServerError(null);
     try {
       const { accessToken, user } = await authApi.register(data);
       startedNewSession();
       setAuth(accessToken, user);
-      void navigate('/dashboard');
+      // Back to that market — 🔐 only an allow-listed market URL
+      void navigate(returnTo ?? '/dashboard');
     } catch (err) {
       setServerError(err instanceof Error ? err.message : 'Registration failed');
     }
@@ -314,6 +321,7 @@ export function RegisterPage() {
                   Already have an account?{' '}
                   <Link
                     to="/login"
+                    state={returnTo ? { from: returnTo } : undefined}
                     className="font-semibold underline underline-offset-2 transition-colors hover:text-brand-purple"
                     style={{ color: color.purpleLight }}
                   >

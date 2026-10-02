@@ -754,6 +754,7 @@ partial fills, ADL, insurance fund · VIP tiers, fee coupons, USDC / inverse con
 | `docs/UI_REPRODUCTIONS.md`                                                                 | Step-by-step manual reproduction of each Part B section (the source of the guided tours); the manual (M) checks                                                        |
 | `docs/GUIDED_TRADE_MVP.md`                                                                 | Guided-trade overlay plan: MVP scope (two tours), overlay design, the tour catalogue per section, open questions                                                       |
 | `docs/HARDENING_PLAN.md`                                                                   | Security scans, load and performance: every-PR checks, the heavy run before a major release, no staging (was M9 / P6)                                                  |
+| `docs/SMART_WATCHER_BOT.md`                                                                | Admin-only smart watcher bot: market sweep (competitors, frameworks, free data), owner decisions, proposed design, open questions                                      |
 | `apps/client/src/lib/guideAnchors.ts` · `src/guide/`                                       | `data-guide` anchor registry + `guide()`; shared scenario steps (`defineScenario`, builders, scenarios) for Playwright, the manual UI reproduction and the guided tour |
 | `apps/server/src/routes/market/index.ts`                                                   | REST + WebSocket market data routes                                                                                                                                    |
 | `apps/server/src/services/BybitWebSocketManager.ts`                                        | Bybit WS connection singleton                                                                                                                                          |
@@ -3645,3 +3646,71 @@ includeSubDomains; preload` (all three hosts serve HTTPS and redirect HTTP), `X-
 - **Q4:** `prod-smoke.yml` runs every 8 h instead of 6 h (≈ 60 Actions minutes a month back; UptimeRobot still checks
   `/health` every 5 minutes). `git.md`: planned ≈ 1,770 (recomputed from its rows), reserve ≈ 230 until the hardening checks add their rows.
 - **Guided trade:** deferred again (owner, 2026-09-30); its questions wait in `docs/GUIDED_TRADE_MVP.md`.
+
+### docs: smart watcher bot — market sweep, owner decisions, proposed design (2026-09-30) 🔎
+
+**Context:** owner, 2026-09-30: a private, admin-only bot that watches the app's spot coins, detects swing uptrends
+from news, market data, world events and sentiment / on-chain data, trades on its own and journals a reason with a
+source link. Research only; nothing built.
+
+- **`docs/SMART_WATCHER_BOT.md`** (new): the owner's decisions (auto on paper, owner approval with real money; swing,
+  spot only; the 9 coins; free data for the pilot; EU / Bybit EU), the combined success bar, the market sweep, reuse
+  vs build, the free data stack, EU / legal, the proposed rules-first design, the risk walls, phases P0–P4, security,
+  and the open questions.
+- **Sweep result:** no product combines all four factors with Bybit spot execution and a reason per trade; the Python
+  frameworks would duplicate our order state; published LLM trading edges vanish after the training cutoff — so the
+  AI is a filter, never the trigger, and only live paper results count.
+- **Refined (owner's sources, 2026-09-30):** prediction markets (Polymarket, Kalshi; read-only, free) added as
+  event-risk context in §6.1: a coin-flip or fast-swinging big event shrinks or blocks new entries, never triggers
+  one. TradingView's screener (its terms ban automated use), CoinMarketCap's gainers (small caps outside our 9 coins)
+  and altFINS (unaudited signals, paid) were reviewed and left out.
+- **Real-money feasibility (§10, 2026-09-30):** conditional GO — no legal blocker for a private spot bot on Bybit EU.
+  Gate 0 (owner, no code): a personal API key with an own IP whitelist, Bybit EU support's written OK for API bot
+  trading (General Terms §9.2.2 bans "bots… algorithms"), exchange-side spot stops via the API. Bybit EU has no USDT
+  (USDC / EUR pairs) and changes its fees on 5 Oct 2026; MiCA market-abuse rules apply to individuals; paper fills are
+  optimistic; eight software rules added (§9.1).
+- **Revised for Switzerland + KuCoin (2026-09-30):** the owner lives in Switzerland (canton Zurich), so Bybit EU
+  (EEA only) and MiCA don't apply. The real-money venue is the owner's verified **global KuCoin** account: USDT pairs
+  for all 9 coins, a real order book, stop / OCO / trailing orders, trade-only IP-restricted keys, sub-accounts, and no
+  terms clause against bots. Verdict: GO; Gate 0 cleared except **tax** — a bot fails ESTV Circular 36's safe harbour
+  (≥ 6-month holding, ≤ 5× volume), so canton Zurich is asked before P4. Owner answers: a separate bot account, the
+  walls approved, admin by an env allowlist of user ids (`ADMIN_USER_IDS`), email alerts, USDT quote. No Anthropic API
+  key for now (a Claude Max plan doesn't cover a server's calls) — §11.1 lists when to raise it with the owner. Real
+  capital: Stage A 100 USDT, Stage B 1,000 USDT, a hard ceiling of 1,000 CHF, a 10% loss acceptable (§11.2).
+  Proposed, owner to confirm: shorter result-based stages (a 1–3 day plumbing check, then 10 live trades mirrored
+  during the paper pilot) and a halt at −8% so a gap stays within 10%.
+- **Next:** the owner refines the document and answers its §11 questions; no implementation until then.
+- **Hardening plan:** deferred by the owner (2026-09-30); H0 is done and live, H1–H11 wait.
+
+### feat: `/chart` visitors — trading locked behind "Sign in to trade" (2026-10-02) ✅
+
+**Context:** owner, 2026-10-02: a signed-out visitor on `/chart` could fill the whole order form and open the account
+settings, and only learned at the end that trading needs an account ("Not signed in", "Reset failed — your account is
+unchanged. Try again.", or nothing at all for a journal note). Goal: "give user good experience and communicate well
+that they need to be authorized". Visual Q&A answers: an overlay with one line and one **Sign in to trade** button over
+the order form and the Orders & Account panel; after sign-in, the dashboard on the same market; the sync icon hidden
+for visitors, with a tooltip for signed-in users; removing the overlay in DevTools must not be a way around it.
+
+- **`SignInLock`** (`components/dashboard/SignInLock.tsx`) wraps both panels in `DashboardPage`. Signed in, it renders
+  them untouched. Signed out: the panel is `inert` + `aria-hidden` under a dim overlay ("Paper trading needs a free
+  account." + **Sign in to trade**). While the session is restored on boot it dims without a prompt (no flash for a
+  returning user). A collapsed account panel gets a one-row version (container query). On phones the order sheet's own
+  close sits under the lock, so the lock carries a ✕. On phones the Buy / Sell bar is dimmed and inert too, with no
+  prompt of its own (`prompt={false}`): the account panel's one-row "Sign in to trade" sits right above it. The
+  overlay is see-through (`bg.page` at 50 %, 1.5 px blur, owner 2026-10-02) so a visitor sees what an account unlocks.
+- 🔐 **Layers:** the server is the boundary — every paper route has `app.authenticate` and the paper WS needs an auth
+  message; `paperStore.token()` throws before any request. In the browser the panel itself is `inert` (deleting the
+  overlay alone leaves it dead) and a `MutationObserver` remounts the lock if the overlay is removed, hidden or
+  restyled, or `inert` is stripped. If all of that is bypassed, a submit sends nothing and the form shows "Paper
+  trading needs a free account. Sign in to trade" (`NOT_SIGNED_IN` → `SignInToTradeLink`), never a raw error.
+- **Return path:** "Sign in to trade" and the top bar's **Sign in** pass the market on screen as `state.from`;
+  `RegisterPage` now honours it like `LoginPage`, and the Login ⇄ Register links carry it. 🔐 Both accept only an
+  allow-listed market URL (`safeReturnPath`, unchanged).
+- **Sync icon:** hidden for visitors (no account to sync); for signed-in users a `data-tooltip` explains it and its
+  state. The `data-tooltip` mechanism moved from `LeftToolbar` into `hooks/useDataTooltip.tsx` (placement `right` or
+  `bottom-end`), used by both.
+- **Tests:** rows 14.1.11–14.1.15. `SignInLock.test` (guest, user, loading, close, three tampering cases),
+  `RegisterPage.returnTo.test`, `useDataTooltip.test`, `SymbolBar.test` and `TradingPanel.test` additions;
+  `e2e/tests/chart/chart.spec` [14.1.11]–[14.1.13]. Locally the seeded-user e2e cases need ports 3001 / 5173 free (the
+  dev CSP allows only `:3001`).
+- **Not in this change:** the Account Settings "Fees" row that overflows at narrow widths (left for later).

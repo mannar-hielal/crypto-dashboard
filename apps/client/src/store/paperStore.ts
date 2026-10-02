@@ -602,9 +602,12 @@ const EMPTY = {
   lastSyncAt: null as number | null,
 };
 
+/** The error every action returns for a signed-out visitor — no request is sent (the UI shows a sign-in link). */
+export const NOT_SIGNED_IN = 'Not signed in';
+
 function token(): string {
   const accessToken = useAuthStore.getState().accessToken;
-  if (!accessToken) throw new Error('Not signed in');
+  if (!accessToken) throw new Error(NOT_SIGNED_IN);
   return accessToken;
 }
 

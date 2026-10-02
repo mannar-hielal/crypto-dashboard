@@ -5,6 +5,7 @@ import { useNavigate, Link } from 'react-router';
 import { LogOut, ChevronDown, Settings, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
+import { useSignInToTrade } from '@/hooks/useSignIn';
 import { usePaperStore } from '@/store/paperStore';
 import { bg, color, fontSize, gradient, radius } from '@/lib/tokens';
 import { SettingsModal } from './SettingsModal';
@@ -35,6 +36,7 @@ export function TopBar({ marketing = false }: TopBarProps) {
   const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
+  const signIn = useSignInToTrade();
   const [menuOpen, setMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -197,7 +199,8 @@ export function TopBar({ marketing = false }: TopBarProps) {
           </>
         ) : (
           <motion.button
-            onClick={() => navigate('/login')}
+            // Back to this market after signing in
+            onClick={signIn}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors"
