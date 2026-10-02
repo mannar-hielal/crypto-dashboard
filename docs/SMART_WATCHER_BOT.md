@@ -1,12 +1,14 @@
 # Smart Watcher Bot — Research & Proposed Design
 
 > **Owner:** Mannar Hielal · **Written:** 2026-09-30 · **Status:** 🔎 research done, being refined with the owner.
+> **Revised 2026-09-30:** the owner lives in Switzerland → real-money venue is global KuCoin (USDT pairs), not
+> Bybit EU; §7, §9, §10 and §11 rewritten.
 > Nothing here is built or scheduled. Implementation starts only when the owner says go, after the open questions in
 > [§11](#11-open-questions-for-the-owner) are answered and Gate 0 in [§10](#10-real-money-feasibility--go--no-go) is
-> cleared.
+> cleared (only tax is still open).
 >
 > **Admin only.** The bot is a private tool for the owner, never a feature offered to the app's users (see
-> [§7](#7-eu--legal) for why that matters legally).
+> [§7](#7-switzerland--legal) for why that matters legally).
 
 ## 1. What it is
 
@@ -22,7 +24,7 @@ A private bot that watches the app's spot coins and trades swing uptrends on its
 4. **Journals every decision** as a one-line reason with a link to the source that drove it.
 
 It starts on paper money, in this app's paper engine. If the pilot passes the success bar ([§3](#3-success-bar--when-can-it-touch-real-money)),
-it moves to the owner's real Bybit EU account, with the owner approving trades.
+it moves to the owner's real KuCoin account (a capped sub-account), with the owner approving trades.
 
 ## 2. Owner decisions (2026-09-30)
 
@@ -35,8 +37,11 @@ it moves to the owner's real Bybit EU account, with the owner approving trades.
 | Data     | Free sources for the pilot, to measure accuracy. Heavier paid feeds are an option once the feature is fully built.                                                                                    |
 | Coins    | The app's 9 (`ALLOWED_SYMBOLS`): BTC, ETH, SOL, BNB, XRP, DOGE, ADA, AVAX, LINK — so the bot's orders show in Orders & Account. More top majors can be added to the app if the research calls for it. |
 | Success  | The combined bar in [§3](#3-success-bar--when-can-it-touch-real-money).                                                                                                                               |
-| Risk     | Two layers: the bot sizes trades and picks exits **inside** hard outer walls the server enforces. We propose the walls ([§8.3](#83-risk-walls-proposed--owner-to-approve)); the owner approves them.  |
-| Region   | EU / EEA → Bybit EU (MiCA). **No USDT there:** the real account trades USDC (or EUR) pairs — see §10.                                                                                                 |
+| Risk     | Two layers: the bot sizes trades and picks exits **inside** hard outer walls the server enforces. The walls in [§8.3](#83-risk-walls-approved-2026-09-30) were approved by the owner on 2026-09-30.   |
+| Region   | **Switzerland (canton Zurich)** → **global KuCoin**, USDT pairs (revised 2026-09-30; Bybit EU serves EEA residents only) — see §7, §10.                                                               |
+| Account  | A separate bot user / account in the app, so the pilot's numbers aren't mixed with the owner's manual trades.                                                                                         |
+| Admin    | An env allowlist of user ids (`ADMIN_USER_IDS`) — the more secure option (§9).                                                                                                                        |
+| Alerts   | Email (`EmailService`).                                                                                                                                                                               |
 
 ## 3. Success bar — when can it touch real money?
 
@@ -45,7 +50,7 @@ After a pilot of about 3 months, **all three** must hold:
 1. **Beats buy-and-hold, risk-adjusted:** the bot's return ÷ its worst dip from a peak (max drawdown) is better than
    the same number for simply holding BTC over the same period. In plain words: it earned more for every 1% of pain.
 2. **Ends in profit after fees.** A bot that "lost less than the market" is promising but doesn't go live.
-3. **Never hits the drawdown wall** ([§8.3](#83-risk-walls-proposed--owner-to-approve)).
+3. **Never hits the drawdown wall** ([§8.3](#83-risk-walls-approved-2026-09-30)).
 
 Win rate (share of winning trades) is **reported, never judged**: it's the easiest number to inflate (many tiny wins,
 one large loss), which is why bot vendors advertise it.
@@ -137,13 +142,13 @@ confirmed. Check prices before buying anything.
 | **Subscriptions pile up** — a bot plus data feeds is easily $100–300+/mo                                                                                                                   | Free pilot stack; pay only for a feed once the pilot shows it adds accuracy                                                   |
 | **Split stack** — signals in one product, execution in another, no link between them                                                                                                       | One pipeline: sources → score → risk gate → order → journal, each step logged                                                 |
 | **AI agents over-trade** and lose to fees                                                                                                                                                  | The AI never places orders; deterministic rules decide, and a fee filter skips trades whose expected move doesn't cover costs |
-| **EU gaps** — Bybit EU has fewer bots; several vendors' MiCA status is unclear (unlicensed exchanges had to leave the EU after 1 July 2026, [BIT](https://www.bit.com/knowledge-hub/mica)) | Built for Bybit EU's actual product set (spot) from day one                                                                   |
+| **EU gaps** — Bybit EU has fewer bots; several vendors' MiCA status is unclear (unlicensed exchanges had to leave the EU after 1 July 2026, [BIT](https://www.bit.com/knowledge-hub/mica)) | Built for the owner's actual venue (KuCoin spot, Swiss resident) from day one                                                 |
 
 ### 4.6 Could we just use a product instead?
 
-**No product fits the whole brief.** Worth using as parts: Bybit's official API (or Bybit MCP) for execution; later,
-if the pilot shows it helps, a paid data feed (Santiment / Nansen / Glassnode). A no-news fallback exists in Bybit EU's
-Spot Grid / DCA bots. If a product were ever needed, Gunbot (self-hosted) or 3Commas / Bitsgap fed by our own signals
+**No product fits the whole brief.** Worth using as parts: the venue's official API for execution (KuCoin since the 2026-09-30 revision); later,
+if the pilot shows it helps, a paid data feed (Santiment / Nansen / Glassnode). A no-news fallback exists in the exchanges'
+own Spot Grid / DCA bots. If a product were ever needed, Gunbot (self-hosted) or 3Commas / Bitsgap fed by our own signals
 through TradingView webhooks would keep the decision logic with us.
 
 ## 5. Reuse vs build
@@ -183,20 +188,20 @@ Some GitHub release dates displayed a year off; star counts as fetched in Septem
 
 ### 5.3 TypeScript building blocks
 
-| Piece                                                                                                        | Verdict                                                                                                                                              |
-| ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Official **`bybit-api`** SDK ([sieblyio/bybit-api](https://github.com/sieblyio/bybit-api), MIT, full TS, v5) | **Use for real money later**: REST, WS with reconnect, WS order API, testnet and demo trading. Bybit EU uses its own host (`api.bybit.eu`) and keys. |
-| **CCXT** ([repo](https://github.com/ccxt/ccxt), MIT)                                                         | Only if a second exchange is ever needed                                                                                                             |
-| **`trading-signals`** ([repo](https://github.com/bennycode/trading-signals), TS, streaming)                  | Best-fit indicator library — or extend our own `IndicatorCalculator`, which already exists                                                           |
-| `technicalindicators` / `tulind`                                                                             | Slow maintenance / native build pain — avoid                                                                                                         |
-| JS backtesting (`backtest-kit`, `grademark`)                                                                 | Maturity _unverified_. Better: replay Bybit candles through our own `MatchingEngine`, so backtest and paper share one code path                      |
-| Claude API tool use                                                                                          | Give the model **read-only** tools (news search, candles, funding/OI, macro calendar) and a strict JSON output; it never gets an order tool          |
+| Piece                                                                                                        | Verdict                                                                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Official **`bybit-api`** SDK ([sieblyio/bybit-api](https://github.com/sieblyio/bybit-api), MIT, full TS, v5) | Already a dependency (market data, parity tools). Real money now goes to KuCoin → [`kucoin-api`](https://github.com/sieblyio/kucoin-api), same maintainer (§10.2). |
+| **CCXT** ([repo](https://github.com/ccxt/ccxt), MIT)                                                         | Only if a second exchange is ever needed                                                                                                                           |
+| **`trading-signals`** ([repo](https://github.com/bennycode/trading-signals), TS, streaming)                  | Best-fit indicator library — or extend our own `IndicatorCalculator`, which already exists                                                                         |
+| `technicalindicators` / `tulind`                                                                             | Slow maintenance / native build pain — avoid                                                                                                                       |
+| JS backtesting (`backtest-kit`, `grademark`)                                                                 | Maturity _unverified_. Better: replay Bybit candles through our own `MatchingEngine`, so backtest and paper share one code path                                    |
+| Claude API tool use                                                                                          | Give the model **read-only** tools (news search, candles, funding/OI, macro calendar) and a strict JSON output; it never gets an order tool                        |
 
 ### 5.4 The split
 
 | Reuse                                                               | Build ourselves (TypeScript, in this repo)                         |
 | ------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `bybit-api` for real execution (P4)                                 | The signal combiner (trend rules + context score)                  |
+| `kucoin-api` for real execution (P4)                                | The signal combiner (trend rules + context score)                  |
 | `trading-signals` or our `IndicatorCalculator`                      | The risk gate and exit engine (ATR stops, walls, circuit breakers) |
 | TradingAgents / FinRobot design patterns                            | News ingestion that keeps publish times (for honest replay)        |
 | ai-hedge-fund's identity-hiding for replays                         | Candle replay on our `MatchingEngine`                              |
@@ -209,7 +214,7 @@ Checked 2026-09-30. Two changes in 2026 matter most: **CoinDesk Data (ex-CryptoC
 
 | Factor           | Source                                            | Free-tier terms                                                                                                                                                                                                                                                                                                                                                    | Use in pilot                                |
 | ---------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
-| Market           | Bybit v5 public (REST + WS)                       | 600 req / 5 s per IP, no key ([docs](https://bybit-exchange.github.io/doc-v3-offline/spot/rate-limit)). Funding, open interest and long/short ratio are perpetual data from global bybit.com — market-wide signals only (Bybit EU has no perps)                                                                                                                    | ✅ (already wired: `BybitWebSocketManager`) |
+| Market           | Bybit v5 public (REST + WS)                       | 600 req / 5 s per IP, no key ([docs](https://bybit-exchange.github.io/doc-v3-offline/spot/rate-limit)). Funding, open interest and long/short ratio are perpetual data from global bybit.com — market-wide signals only (used as market-wide signals only)                                                                                                         | ✅ (already wired: `BybitWebSocketManager`) |
 | Exchange notices | Bybit `/v5/announcements/index`                   | No auth; `type=new_crypto` for listings ([docs](https://bybit-exchange.github.io/docs/v5/announcement))                                                                                                                                                                                                                                                            | ✅                                          |
 | News             | RSS: Cointelegraph, CoinDesk, The Block           | Free; automated-reuse terms _unverified_ → store headline + link only, never full text ([list](https://rss.feedspot.com/cryptocurrency_news_rss_feeds))                                                                                                                                                                                                            | ✅                                          |
 | World events     | GDELT DOC 2.0                                     | Free, anonymous, 15-min updates, ~1 req / 5 s ([GDELT](https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/))                                                                                                                                                                                                                                                   | ✅                                          |
@@ -266,25 +271,28 @@ shows Polymarket's markets; Kalshi is the US-regulated equivalent. They're the o
 - Skips "BTC above X by date" markets: they mostly mirror the options market and add nothing to our own price data.
 - Every odds reading that blocks or shrinks a trade goes in the decision log with the market's link.
 
-## 7. EU & legal
+## 7. Switzerland & legal
 
-- **Bybit EU** is licensed in Austria under MiCA and passported across the EEA
-  ([Cointelegraph](https://cointelegraph.com/news/bybit-secures-mica-license-establishes-eu-hq-in-vienna)). Products:
-  **spot, plus spot margin up to 10×; no derivatives** (a MiFID II licence for derivatives has been applied for,
-  [AAP](https://prod-ss.aap.com.au/aapreleases/cision20250905ae66528/)). **API trading launched on 7 Sep 2026 and
-  explicitly allows automated strategies** ([Trending Topics](https://www.trendingtopics.eu/bybit-trading-api/)). Its
-  own host and keys: `api.bybit.eu`, testnet `api-testnet.bybit.eu` ([EU docs](https://bybit-exchange.github.io/eu-docs/v3/intro)).
-  → The paper mirror should model Bybit EU's symbol list and spot fees (~0.10%), not global perpetuals. **No USDT
-  pairs** (USDC and EUR only), and **a new unified fee structure starts on 5 Oct 2026** (rates not yet published,
-  [fee structure](https://www.bybit.eu/en-EU/help-center/article/Trading-Fee-Structure)) — see §10.
-- **Licence:** trading only for yourself is not a crypto-asset service under MiCA (no client), so **no CASP licence
-  is needed** ([Houthoff](https://www.houthoff.com/insights/news/reverse-solicitation-under-mica/)). That changes the
-  moment the bot manages anyone else's money, sells or shares signals, or is offered to the app's users — **which is
-  why it stays admin-only.** National rules in the owner's country are _unverified_.
-- **Tax (DAC8, from 1 Jan 2026):** Bybit EU reports every transaction to the tax authority, first filings in 2027
-  ([CoinTracker](https://cointracker.io/blog/dac8-compliance)). A swing bot makes many taxable disposals → keep a
-  per-fill ledger (time, pair, qty, price, fee, EUR value) exportable to Koinly / Blockpit. Country treatment differs
-  (e.g. Germany's one-year holding exemption, Austria's 27.5%) — _unverified_ in detail.
+**Revised 2026-09-30:** the owner lives in **Switzerland (canton Zurich)**. The first draft assumed the EU / EEA and
+Bybit EU; that section is replaced here and in [§10](#10-real-money-feasibility--go--no-go).
+
+- **Bybit EU is not an option.** It serves EEA residents only, and Switzerland is not in the EEA
+  ([Bybit.eu launch](https://tools.prnewswire.com/en-us/live/20823/release/20250701EN22464)).
+- **MiCA doesn't apply** to a Swiss resident trading on a non-EU venue. The EU's USDT restrictions don't either, so
+  the bot trades **USDT pairs** — the same pairs the paper engine already uses.
+- **Venue: global KuCoin** (owner's verified account, confirmed 2026-09-30). Its Terms of Use restrict the US,
+  mainland China, Hong Kong, Singapore, Malaysia, Kazakhstan, Uzbekistan, Ontario, British Columbia, France, the
+  Netherlands and occupied Ukrainian regions — **not Switzerland**. They contain **no clause against bots, scripts or
+  API trading**; the only related rule (Art. 41(8)) bans "interfering with the normal operation of the Platform"
+  ([Terms of Use](https://www.kucoin.com/legal/terms-of-use)). The contract falls under **Turks and Caicos** law
+  (Art. 101): an offshore venue, little recourse — see custody in §9.
+- **KuCoin EU is not the venue** and doesn't need to be: its MiCA licence (Austria, Nov 2025) was followed by an FMA
+  ban on new business (Feb–May 2026), and the start of operations is still prohibited
+  ([FMA](https://www.fma.gv.at/en/fma-lifts-ban-on-new-business-for-kucoin-eu-exchange-gmbh-however-commencement-of-business-operations-remains-prohibited/)).
+  Relevant only if the owner ever moves to the EEA.
+- **Licence:** trading only your own money needs no FINMA licence. That changes the moment the bot manages anyone
+  else's money, sells or shares signals, or is offered to the app's users — **which is why it stays admin-only.**
+- **Tax — the main legal risk, see [§10.3](#103-swiss-law--no-hard-blocker-tax-is-the-open-risk).**
 
 ## 8. Proposed design (not built)
 
@@ -336,7 +344,7 @@ buy-and-hold and a plain EMA-crossover baseline.
   the one-liner). **Decision log:** its own table with the full inputs, model version and gate verdict, for replay,
   audit and the per-fill tax ledger — never pruned by the journal cap.
 
-### 8.3 Risk walls (proposed — owner to approve)
+### 8.3 Risk walls (approved 2026-09-30)
 
 The bot decides size, stop-loss and take-profit per trade, **inside** these. They live in server config, are checked
 in code before every order, and the bot can't change them.
@@ -354,13 +362,13 @@ in code before every order, and the bot can't change them.
 
 ### 8.4 Phases
 
-| Phase  | What                                                                                                                                                                                                                                 | Exit criterion                                       |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
-| **P0** | This document                                                                                                                                                                                                                        | Owner refined it, answered §11, cleared Gate 0 §10.1 |
-| **P1** | Collectors, trend engine, context score, decision log; **shadow mode** — signals logged, no orders — for 2–4 weeks                                                                                                                   | Signals look sane to the owner; data pipeline stable |
-| **P2** | Automatic paper trading with the walls, the admin kill switch and the journal lines                                                                                                                                                  | Runs a week without a wall or pipeline incident      |
-| **P3** | The pilot: ~3 months (extendable, target ≥ ~100 trades) + an evaluation report against buy-and-hold and the EMA baseline                                                                                                             | The combined success bar in §3                       |
-| **P4** | Bybit EU real money: Gate 0 cleared (§10.1); a venue adapter that reconciles with Bybit (exchange = source of truth); USDC quote; exchange-side stops; owner approval per trade; a separate Fly app holding the key; the rules in §9 | Owner's go                                           |
+| Phase  | What                                                                                                                                                                                                                                                       | Exit criterion                                                        |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| **P0** | This document                                                                                                                                                                                                                                              | Owner refined it, answered §11, cleared Gate 0 §10.1 (tax still open) |
+| **P1** | Collectors, trend engine, context score, decision log; **shadow mode** — signals logged, no orders — for 2–4 weeks                                                                                                                                         | Signals look sane to the owner; data pipeline stable                  |
+| **P2** | Automatic paper trading with the walls, the admin kill switch and the journal lines                                                                                                                                                                        | Runs a week without a wall or pipeline incident                       |
+| **P3** | The pilot: ~3 months (extendable, target ≥ ~100 trades) + an evaluation report against buy-and-hold and the EMA baseline                                                                                                                                   | The combined success bar in §3                                        |
+| **P4** | KuCoin real money: tax answer in (§10.3); a venue adapter that reconciles with KuCoin (exchange = source of truth); USDT quote; exchange-side stops; owner approval per trade; a separate Fly app holding the key; staged capital (§11.2); the rules in §9 | Owner's go                                                            |
 
 ### 8.5 Codebase anchors
 
@@ -369,16 +377,18 @@ in code before every order, and the bot can't change them.
   and indicators that already exist.
 - `apps/server/src/trading/TradingService.ts`, `MatchingEngine.ts` — order placement and matching; `EngineLease` — the
   single-writer lease pattern; the bot needs its own lease row (the engine's id `matching-engine` is hardcoded).
-- `apps/server/prisma/schema.prisma` — one `Account` per `User`; `JournalEntry`; **no admin role exists yet** — the only admin check is `config.adminEmail` (`routes/newsletter/index.ts`) (Q4).
+- `apps/server/prisma/schema.prisma` — one `Account` per `User`; `JournalEntry`; **no admin role exists yet** — the only admin check is `config.adminEmail` (`routes/newsletter/index.ts`); the bot uses `ADMIN_USER_IDS` instead (§9).
 
 ## 9. Security
 
 For the paper phase most of this is design discipline; for real money (P4) all of it is required.
 
-- **API key (P4):** read + **spot trade only** — never Withdraw, Account Transfer or Subaccount Transfer. Bound to an
-  IP allowlist (a static egress IP on Fly; unbound Bybit keys expire after ~90 days,
-  [ref](https://support.fireblocks.io/hc/en-us/articles/5138770767004)). A dedicated sub-account funded with a capped
-  amount (sub-accounts on Bybit EU _unverified_). Rotated every 90 days and at once on any suspicion.
+- **API key (P4):** KuCoin permissions **General + Spot Trading only** — never Withdrawal, Margin, Futures, Unified
+  Account or "Allow Flexible Transfers". **"Restrict to Trusted IPs Only"** with the bot's static egress IP on Fly.
+  KuCoin deletes unrestricted keys after 30 days of inactivity; IP-restricted keys don't expire, so rotation is our
+  schedule (every 90 days, and at once on any suspicion). Each key also has a passphrase — stored like the secret.
+  The key lives on a **dedicated sub-account** holding only the bot's capped capital (API Management → Sub-Accounts,
+  seen on the owner's account).
 - **Where the key lives:** Fly secrets (encrypted; the API can't decrypt them; injected at boot,
   [Fly docs](https://docs.fly.io/apps/secrets/)). Anyone with deploy access can read them → deploy access owner-only,
   2FA, never log env vars, and the trading key in a **separate Fly app** from the public API.
@@ -391,150 +401,198 @@ For the paper phase most of this is design discipline; for real money (P4) all o
   Mitigation: ≥ 2 independent sources, a 15–60 min confirmation delay (cheap on a swing horizon), price confirmation,
   ignore single-source "breaking" regulatory headlines, weight sources (exchange API > major RSS > social).
 - **Kill switch:** a global "bot enabled" flag checked before every order; one-click "cancel all + disable" for the
-  admin; automatic halt on the drawdown wall, repeated API errors or stale data; revoking the key on Bybit as the last
-  resort.
+  admin; automatic halt on the drawdown wall, repeated API errors or stale data; deleting the key on KuCoin as the
+  last resort.
+- **Alerts:** email, through the existing `EmailService`, when a wall trips, the bot halts, or a live order waits
+  for approval (owner, 2026-09-30).
 - **Audit log:** append-only: input snapshot → model output → gate verdict → order request / response → approver.
   Kept for the tax ledger too.
-- **Admin-only access:** every bot route behind `app.authenticate` **and** an admin check (Q4); nothing about the bot
-  in the public SDK surface users can call.
+- **Admin-only access:** every bot route behind `app.authenticate` **and** an admin check against an env allowlist of
+  **user ids** (`ADMIN_USER_IDS`), decided 2026-09-30 as the more secure option:
+  - nothing in the database can grant admin, so a DB write or a bug in a user-update route can't escalate;
+  - changing it needs deploy access;
+  - it keys on the immutable id, not the email: users can change their email (`/verify-email-change`), which makes
+    today's `config.adminEmail` check the weaker pattern.
+    Nothing about the bot is in the public SDK surface users can call.
 - **Prediction markets:** read-only, no account, no key — the bot never places a bet. Only allowlisted markets
   above a liquidity floor count, so a thin, manipulated market can't move the bot (§6.1).
-- **Exchange custody:** keep only working capital on Bybit (the Feb 2025 hack was at the exchange, not users' keys).
+- **Exchange custody:** keep only working capital on KuCoin. Its history: a ~$280M hot-wallet hack (Sept 2020) and
+  a guilty plea to US AML charges (Jan 2025, ~$297M). The Feb 2025 Bybit hack (~$1.5B, §4.2) shows the same risk at
+  any exchange.
 
 ### 9.1 Rules the software must follow (security + compliance, from §10)
 
 1. **Own deployment, own credentials.** The bot runs apart from cryptopapertrade.com; the public build is hard-flagged
    paper-only, and the bot's live signals and positions never reach it.
-2. **Self-trade guard:** never place an order that could cross the bot's own resting order; use Bybit's self-match
-   prevention if the EU API offers it (_unverified_).
-3. **No layering / spoofing:** a cap on the cancel-to-fill ratio; every order carries a logged reason.
+2. **Self-trade guard:** never place an order that could cross the bot's own resting order; set KuCoin's `stp` field
+   (self-trade prevention: `CN` / `CO` / `CB` / `DC`) on every order
+   ([Add Order](https://www.kucoin.com/docs-new/rest/spot-trading/orders/add-order)).
+3. **No layering / spoofing:** a cap on the cancel-to-fill ratio; every order carries a logged reason and a
+   `clientOid`.
 4. **Public inputs only:** an allowlist of public sources, each input timestamped in the log — nothing leaked or
-   non-public ever enters (MiCA Art. 89).
+   non-public ever enters.
 5. **Append-only audit + tax ledger**, kept 10 years (§10.3).
-6. **Quote asset configurable** (USDC by default, EUR where listed); USDT orders refused on the EU venue.
-7. **Key:** trade-only, no withdraw / transfer, IP-bound, RSA (our private key never leaves us), one account, rotated.
-8. **Exchange-side stop-loss** on every live position (if the API allows it), so our server crashing can't leave a
-   position unprotected.
+6. **Quote asset configurable** — USDT by default (USDC also listed for all 9 coins).
+7. **Key:** General + Spot Trading only, IP-restricted, on a capped sub-account, rotated.
+8. **Exchange-side stop-loss** on every live position (KuCoin's Stop / OCO order endpoints), so our server crashing
+   can't leave a position unprotected.
 
 ## 10. Real-money feasibility — go / no-go
 
-Asked by the owner on 2026-09-30: _"if we don't make sure this feature can make real money with Bybit later, we won't
-build it."_ Checked the same day against Bybit EU's API and terms, EU law and our own code. Several bybit.eu pages
-timed out during the check, so some Bybit EU findings come from indexed extracts — marked below.
+Asked by the owner on 2026-09-30: _"if we don't make sure this feature can make real money, we won't build it."_ The
+first check (Bybit EU) was redone the same day for the owner's actual situation: **a Swiss resident with a verified,
+working global KuCoin account** (KYC done, bank transfers both ways, trades made).
 
-**Verdict: conditional GO.** No legal blocker was found for a private, low-frequency spot bot trading the owner's own
-money on Bybit EU. Three facts can only be confirmed on the owner's account (Gate 0, §10.1) and decide go / no-go
-**before any code is written**. Nothing can guarantee profit: this section answers _can it legally and technically
-trade real money_; the P3 pilot answers _does it make money_.
+**Verdict: GO, with one open condition — tax.** No legal or technical blocker was found for a private,
+low-frequency spot bot trading the owner's own money on KuCoin. The open question is how canton Zurich would tax it
+(§10.3), which decides whether it's worth running — not whether it's allowed. Nothing can guarantee profit: this
+section answers _can it legally and technically trade real money_; the P3 pilot answers _does it make money_.
 
-### 10.1 Gate 0 — owner actions, ~1 hour, no code
+### 10.1 Gate 0 — status
 
-1. **Can a personal API key be created?** Until at least March 2026 Bybit EU only offered "Connect to Third-Party
-   Applications" (broker) keys and no custom IP whitelist ([Gainium forum](https://community.gainium.io/t/bybit-eu-api-keys-not-valid-for-spot-on-local-version/4740)),
-   and Bybit's v5 guide still says so today ([v5 guide](https://bybit-exchange.github.io/docs/v5/guide)). API trading
-   launched on 7 Sep 2026 ([Trending Topics](https://www.trendingtopics.eu/bybit-launches-trading-api-to-connect-to-chatgpt-claude-and-co/))
-   with an API bot competition (3 Sep – 1 Oct 2026, [cryptoast](https://cryptoast.fr/?p=225085)), so personal keys are
-   probably open now. **Check in API Management:** a key you create yourself, spot trade on, withdraw / transfer off,
-   your own IP whitelist. (Keys are made on the website only, need Google Authenticator 2FA, and may be blocked 48 h on
-   a new account — [help](https://www.bybit.eu/en-EU/help-center/article/How-to-create-your-API-key/?category=ae1012f19fad1c184e).)
-2. **The "bots" clause.** General Terms §9.2.2: users must not _"use any anonymizing proxies, bots, spiders, or any
-   automatic devices, programs, scripts, algorithms… to access, obtain, copy, or monitor any part of the Platform"_
-   ([General Terms](https://www.bybit.eu/en-EU/help-center/article/General-Terms/)). Probably aimed at scraping, and
-   contradicted by Bybit EU's own API launch — but **get written confirmation from Bybit EU support** that personal
-   algorithmic spot trading through the official API is allowed. That email protects the account if it's ever
-   questioned.
-3. **Exchange-side stops through the API.** Spot TP/SL, OCO and trailing stops exist in the EU app
-   ([TP/SL](https://www.bybit.eu/en-EU/help-center/article/Introduction-to-Take-Profit-and-Stop-Loss-Spot-Trading),
-   [OCO](https://www.bybit.eu/en-EU/help-center/article/One-Cancels-the-Other-OCO-Orders),
-   [trailing](https://www.bybit.eu/en-EU/help-center/article/Trailing-Stop-Order-Spot-and-Spot-Margin-Trading/)).
-   Confirm they can be placed via the API on `api.bybit.eu`, so a stop fires even if our server is down; and whether
-   a demo or testnet API works for spot. If not, the first live tests are tiny (~€10) orders.
+| #   | Check                                   | Status (2026-09-30)                                                                                                                                                                                                     |
+| --- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | A working, verified account             | ✅ Owner's KuCoin account: KYC verified, VIP 0, bank transfers both ways                                                                                                                                                |
+| 2   | A personal API key with the right scope | ✅ Seen on the create-key form: General / Spot Trading are separate from Withdrawal and transfers; "Restrict to Trusted IPs Only" (up to 50 IPs); sub-accounts available. No key created yet — not until P4             |
+| 3   | Bots allowed by the venue's terms       | ✅ No clause against bots or API trading ([§7](#7-switzerland--legal)). A written confirmation from KuCoin support is optional                                                                                          |
+| 4   | Exchange-side stops                     | ✅ In the app for spot: Post Only, Stop Limit, Stop Market, OCO, Trailing Stop, TWAP. The API has separate Stop and OCO order endpoints. Trailing stop via the API _unverified_ — a ~1 USDT test order in P4 settles it |
+| 5   | All 9 coins tradable                    | ✅ KuCoin's public symbol list: all 9 have USDT and USDC pairs, trading enabled, minimum order 0.1 USDT                                                                                                                 |
+| 6   | Tax treatment                           | ⏳ **Open** — ask canton Zurich's tax office or a tax adviser before P4 (§10.3)                                                                                                                                         |
 
 ### 10.2 Facts that change the design
 
-| Topic           | Finding                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Consequence                                                                    |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| Quote currency  | **No USDT on Bybit EU** — USDC and EUR pairs only ([ANP](https://persportaal.anp.nl/artikel/CSN-190226058/bybit-eu-expands-access-to-usdc-and-eurc-through-new-stablecoin-campaigns-in-europe), [CoinGecko](https://www.coingecko.com/en/exchanges/bybit-eu)). ESMA told CASPs to stop non-MiCA stablecoins by Q1 2025 ([ESMA](https://www.esma.europa.eu/press-news/esma-news/esma-and-european-commission-publish-guidance-non-mica-compliant-arts-and-emts)); Circle's USDC is EMI-authorised ([Circle](https://www.circle.com/pressroom/circle-is-first-global-stablecoin-issuer-to-comply-with-mica-eus-landmark-crypto-law)) | The bot trades **USDC** pairs (EUR where listed); quote asset configurable. Q7 |
-| Coins           | All 9 listed with USDC pairs; EUR pairs for BTC, ETH, SOL, XRP, LINK only — **BNB, DOGE, ADA, AVAX are USDC-only** ([CoinGecko](https://www.coingecko.com/en/exchanges/bybit-eu))                                                                                                                                                                                                                                                                                                                                                                                                                                                  | USDC is the one quote that covers all 9                                        |
-| Fees            | 0.1% maker / 0.1% taker (non-VIP, [spot fees](https://www.bybit.eu/en-EU/help-center/article/Bybit-Spot-Fees-Explained)); **new unified structure from 5 Oct 2026**, rates unknown                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Re-check the fee filter and `bybitSpec` for the EU before P4                   |
-| Hosts           | `api.bybit.eu` / `api.bytick.eu`, testnet `api-testnet.bybit.eu` ([eu-docs](https://bybit-exchange.github.io/eu-docs/v3/intro)); the official EU docs only document a Tax API. v5-compatible per community evidence ([ccxt #28665](https://github.com/ccxt/ccxt/issues/28665)); CCXT has a separate `bybiteu` class with "narrower coverage"                                                                                                                                                                                                                                                                                       | Individual spot endpoints on the EU host are _unverified_ until tested         |
-| Order types     | Limit, market, spot TP/SL, OCO, trailing, TWAP in the app ([order types](https://www.bybit.eu/en-EU/help-center/article/Types-of-Orders-Available-on-Bybit)); post-only and API support _unverified_; price bands cancel far-off orders                                                                                                                                                                                                                                                                                                                                                                                            | Gate 0 item 3                                                                  |
-| Rate limits     | Global v5: 600 req / 5 s per IP; spot create 20/s per UID; breach → 10-min block ([rate limits](https://bybit-exchange.github.io/docs/v5/rate-limit)). EU figures _unverified_                                                                                                                                                                                                                                                                                                                                                                                                                                                     | A few orders a day is far below any limit                                      |
-| Keys            | HMAC or self-generated RSA ([eu-docs](https://bybit-exchange.github.io/eu-docs/v3/intro)); up to 20 sub-accounts ([FAQ](https://www.bybit.eu/en-EU/help-center/article/FAQ-Standard-Subaccount/)) — API keys on them, scopes and the 90-day expiry _unverified_                                                                                                                                                                                                                                                                                                                                                                    | Prefer RSA; a capped sub-account if it can hold a key                          |
-| Location        | §9.2.2 bans anonymising proxies → no VPN; restricted countries are auto-logged-out ([list](https://www.bybit.eu/en-EU/help-center/article/Service-Restricted-Countries))                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Host the bot in an EEA region with a static IP                                 |
-| Account actions | Bybit EU may suspend accounts, freeze transactions and reverse "manifest error" trades ([General Terms](https://www.bybit.eu/en-EU/help-center/article/General-Terms/))                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Reconcile with the exchange continuously; keep only working capital there      |
-| Demo            | A web demo account (50,000 USDC + 1 BTC + 1 ETH, spot; wiped after 30 days idle, [FAQ](https://www.bybit.eu/en-EU/help-center/article/FAQ-Demo-Trading)); a demo API for the EU _unverified_                                                                                                                                                                                                                                                                                                                                                                                                                                       | A possible free dress rehearsal between P3 and P4                              |
+| Topic           | Finding                                                                                                                                                                                                                                     | Consequence                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Quote currency  | USDT pairs for all 9 coins (and USDC); EUR only for BTC and ETH (public `/api/v2/symbols`, checked 2026-09-30)                                                                                                                              | The bot trades **USDT** — what the paper engine already models. Q7 closed         |
+| Fees            | VIP 0; the default fee coefficient is 1 on all 9 pairs (so the base rate, ~0.1% maker / taker, applies); discounts for VIP levels and KCS holding                                                                                           | The fee filter in §8.3 (~0.2% round trip) stays; confirm the exact rate in P4     |
+| Market          | A real order book (depth, recent trades), not a broker screen                                                                                                                                                                               | Paper fills can be compared with real book depth                                  |
+| Hosts           | `api.kucoin.com`; spot orders on the HF endpoint `POST /api/v1/hf/orders` (weight 1); `timeInForce` GTC / GTT / IOC / FOK, `postOnly`, `clientOid`, `stp` ([Add Order](https://www.kucoin.com/docs-new/rest/spot-trading/orders/add-order)) | A KuCoin venue adapter; the paper engine keeps mirroring Bybit for app users      |
+| Order types     | Limit, market, stop limit, stop market, OCO, trailing stop, TWAP (app); stop and OCO have their own API endpoints                                                                                                                           | Gate 0 item 4                                                                     |
+| Rate limits     | Weight-based per account, higher with VIP level; "a few orders a day" is far below any limit                                                                                                                                                | Not a constraint                                                                  |
+| Keys            | Key + secret + passphrase; up to 20 keys per user; IP-restricted keys don't expire                                                                                                                                                          | Rotation on our schedule                                                          |
+| SDK             | [`kucoin-api`](https://github.com/sieblyio/kucoin-api) (MIT, TS, REST + WS, v2.6.4 of 18 Sep 2026) — same maintainer as our `bybit-api` dependency                                                                                          | Candidate for P4; goes through the supply-chain review like any new dependency    |
+| Market data     | The bot's signals keep using Bybit's public feed (already wired). KuCoin and Bybit prices on the majors differ by a few basis points                                                                                                        | Live orders are priced off KuCoin's own book, never Bybit's                       |
+| Account actions | Offshore (Turks and Caicos) terms: KuCoin can change the restricted list "at its sole and absolute discretion"                                                                                                                              | Reconcile continuously; keep only working capital there; re-check the list yearly |
 
-### 10.3 EU law — no hard blocker; the conditions to stay compliant
+### 10.3 Swiss law — no hard blocker, tax is the open risk
 
-- **Market abuse (MiCA Art. 86–92) applies to any person**, private bots included
-  ([Art. 86](https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-86-scope-rules-market-abuse)).
-  Maximum fines for individuals are set nationally at no less than €5M, plus disgorgement and trading bans
-  ([Art. 111](https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-111-administrative-penalties-and)).
-  - Trading on **public** news and odds is lawful.
-  - **Never trade on leaked / non-public information** — insider dealing ([Art. 89](https://www.springlex.eu/en/packages/mica/mica-regulation/article-89/)).
-  - **No self-trades, wash trades, spoofing or layering** — "false signals" ([Art. 91](https://www.springlex.eu/en/packages/mica/mica-regulation/article-91/)).
-  - **Never publicly talk up a coin the bot holds** without disclosing it (Art. 91(3)(c)).
-  - Bybit must detect and report suspicious orders ([Art. 92](https://www.springlex.eu/en/packages/mica/mica-regulation/article-92/)),
-    so the bot's order pattern must be plainly honest.
-- **Licence:** none for your own money (a CASP serves "clients",
-  [Art. 3](https://www.springlex.eu/en/packages/mica/mica-regulation/article-3/)). A licence **is** needed once the
-  bot's trades or signals reach others: copy trading / relaying orders, managing family money (a national question —
-  get advice), or hosting it for buyers. Public "performance" is only ever closed, delayed paper trades with a risk
-  warning. MiFID II's algorithmic-trading rules (Art. 17) don't apply to a retail person trading spot crypto.
-- **Tax — get professional advice before P4.** DAC8 (from 1 Jan 2026) has Bybit EU report identity, tax ID and per-asset
-  acquisitions / disposals ([EU Commission](https://taxation-customs.ec.europa.eu/taxation/tax-transparency-cooperation/administrative-co-operation-and-mutual-assistance/directive-administrative-cooperation-dac/dac8_en)).
-  The bot keeps a per-fill ledger — UTC time, exchange order / fill IDs, pair, side, qty, price, fee and fee asset, EUR
-  rate and its source, EUR proceeds and cost basis, the reason — **for 10 years** (Germany §147 AO; Austria 7 years,
-  _unverified_). Frequent automated trading can be classed as a business: Germany judges case by case
-  ([FGS](https://www.fgs.de/en/news-and-insights/blog/detail/bmf-aeussert-sich-zur-ertragsteuerlichen-behandlung-von-krypto-assets));
-  Austria moves to progressive rates when crypto trading is the "Schwerpunkt" of an activity
-  ([BMF](https://www.bmf.gv.at/themen/steuern/sparen-veranlagen/steuerliche-behandlung-von-kryptowaehrungen.html)).
-- **Data:** headlines stored privately as a link plus a very short extract, never republished (CDSM Art. 15). Reading
-  Polymarket odds isn't betting, but national gambling law is _unverified_.
-- **No recourse** for the bot's losses. If the exchange fails, client crypto is segregated
-  ([Art. 75](https://www.springlex.eu/en/packages/mica/mica-regulation/article-75/)) but there is no deposit guarantee.
+- **Tax — the key question.** A Swiss private investor's capital gains on crypto are normally **tax-free**; the
+  holdings count towards wealth tax. But the tax office can class the owner as a **professional trader**
+  (_gewerbsmässiger Wertschriftenhandel_). ESTV Circular No. 36 (27 Jul 2012) sets the criteria, and the cantons
+  apply them to crypto too ([Thurgau tax practice](https://steuerpraxis.tg.ch/steuerpraxis/2026-09/stp-20-nr-2-gewerbsmassiger-handel-mit-wertschriften-gold-devisen-oder-kryptowahrungen),
+  [Zug guidance](https://www.zug.ch/dam/jcr:41a38088-f743-4802-ac01-4d90c742f47f/Merkblatt-Kryptow%C3%A4hrungen%20def.%2022.07.2022.pdf)).
+  - **Consequence if classed as professional:** the bot's gains become taxable income and owe AHV social
+    contributions; losses become deductible.
+  - **The safe harbour a swing bot fails:** positions held **≥ 6 months**, and yearly trading volume **≤ 5×** the
+    portfolio at the start of the year. Other indicators — systematic, planned trading (a bot by definition),
+    borrowed money, derivatives beyond hedging — count too.
+  - Failing the safe harbour doesn't automatically make it professional: the canton weighs every case.
+  - **Action before P4:** ask the **Kantonales Steueramt Zürich** or a Swiss tax adviser — ideally for an advance
+    ruling — describing the bot, its holding period and the planned capital.
+- **Ledger:** whatever the ruling, the bot keeps a per-fill ledger — UTC time, exchange order / fill IDs, pair, side,
+  qty, price, fee and fee asset, CHF rate and its source, CHF proceeds and cost basis, the reason — **for 10 years**
+  (the retention period for business records under Swiss law, safe either way). KuCoin's Export History is a
+  second source.
+- **Automatic reporting:** Switzerland is adopting the OECD crypto reporting framework (CARF); whether an offshore
+  KuCoin entity will report Swiss users is _unverified_ — the owner declares the holdings in any case.
+- **Market conduct:** Swiss market-abuse law targets securities on Swiss venues; spot crypto on an offshore exchange
+  is mostly outside it. The bot still never self-trades, spoofs, layers or trades on non-public information (§9.1):
+  KuCoin's terms and any future venue forbid it, and an honest order pattern keeps the account safe.
+- **Data:** headlines stored privately as a link plus a very short extract, never republished. Reading Polymarket
+  odds isn't betting.
+- **No recourse** for the bot's losses, and no deposit guarantee if the exchange fails.
 
 ### 10.4 Integration gaps in our code (P4 sizing)
 
-What stands between today's paper engine and a real Bybit EU connection:
+What stands between today's paper engine and a real KuCoin connection:
 
-1. **USDT hardcoded** — the wallet is `Account.availableBalance`, `baseCoin()` strips `USDT`, `avgCost` is in USDT,
-   error texts and `ALLOWED_SYMBOLS` are USDT pairs. No USDC / EUR anywhere.
-2. **Global hosts hardcoded** — `BybitMarketInfo.ts` and `BybitWebSocketManager.ts` use `api.bybit.com` /
-   `stream.bybit.com`; host overrides are refused in production (`config.ts`). Instrument rules and the `FALLBACK`
-   snapshot are global mainnet values.
-3. **No venue interface** — `TradingService` calls the pure engine directly, so paper state is the truth. A real
-   adapter sits beside it and **reconciles** with Bybit (order, execution and wallet streams): the exchange becomes the
+1. **No venue interface** — `TradingService` calls the pure engine directly, so paper state is the truth. A KuCoin
+   adapter sits beside it and **reconciles** with KuCoin (order, fill and balance streams): the exchange becomes the
    source of truth.
+2. **Instrument rules** — the engine's tick / lot sizes are Bybit's (`BybitMarketInfo.ts`, `bybitSpec`); KuCoin's
+   differ (`priceIncrement`, `baseIncrement`, `minFunds` per symbol). The adapter rounds to KuCoin's.
+3. **Symbol format** — `BTCUSDT` in the app, `BTC-USDT` on KuCoin: a mapping in the adapter.
 4. **Optimistic paper fills** — a market order fills fully at the top of the book (no depth, no slippage); a resting
    limit fills in full at its price the moment the last price touches it (no queue); no partial fills; every spot fill
    pays the taker fee. **Paper results will overstate real ones** → the pilot models slippage and maker / taker, or
    its results are discounted.
 5. **Paper-only spot features** — the spot TP/SL is a server-triggered OCO pair; no time-in-force, post-only, trailing
-   stop, `orderLinkId`, amend, or partially-filled / cancelled states.
-6. **Private-API tooling** — `bybit-api` is already a dependency, but the only signed-client code
-   (`tools/bybitParity.ts`) is testnet- and perpetual-only; parity never covers spot.
-7. **Secrets** — one `BYBIT_API_KEY` / `SECRET` pair is required on the public app (`criticalVars`); the trading key
-   must live in a separate Fly app.
-8. **Admin and loop** — admin is only `config.adminEmail`; the engine lease id is hardcoded, so the bot needs its own.
+   stop, client order id, amend, or partially-filled / cancelled states.
+6. **Private-API tooling** — no KuCoin client yet (`kucoin-api` is a candidate, §10.2); the only signed-client code
+   (`tools/bybitParity.ts`) is Bybit testnet- and perpetual-only.
+7. **Secrets** — the KuCoin key, secret and passphrase live only in the bot's separate Fly app.
+8. **Admin and loop** — admin is only `config.adminEmail` today (→ `ADMIN_USER_IDS`, §9); the engine lease id is
+   hardcoded, so the bot needs its own.
 
-None of these is a blocker; they size P4. Item 4 matters earlier: it decides how much to trust the pilot (Q7).
+None of these is a blocker; they size P4. The USDT gap from the first draft is gone. Item 4 matters earlier: it
+decides how much to trust the pilot.
 
 ## 11. Open questions for the owner
 
-1. **AI cost:** accept ~$2–5/month for Claude Haiku to classify news, or run P1 without an AI (rules + Fear & Greed
-   only) and add it later if the shadow run shows the news filter would have helped?
-2. **Which account does the bot trade in?** A dedicated bot user / account (clean pilot numbers, not mixed with your
-   manual trades; you sign in as it to watch its Orders & Account) — or your own account?
-3. **The walls** in §8.3: approve, or adjust any value?
-4. **How is "admin only" enforced?** An env allowlist of your user id (no schema change), or an `isAdmin` / role
-   column on `User` (a migration, reusable later)?
-5. **Where are you alerted** when a wall trips or the bot halts — email (the existing `EmailService`), or something
-   else?
-6. **Gate 0 (§10.1):** will you do the three account checks — create a personal key with your own IP whitelist, get
-   Bybit EU support's written OK for personal API bot trading, and confirm exchange-side spot stops via the API? This
-   is the go / no-go for the whole feature.
-7. **Pilot quote currency:** price the paper pilot off Bybit EU's own USDC pairs (engine work, true parity with the
-   real account), or keep today's USDT data as a proxy (USDC ≈ USDT, no engine work, less parity)? Either way, model
-   slippage and maker / taker fees so the pilot doesn't flatter the bot.
+Answered on 2026-09-30:
+
+| #   | Question         | Answer                                                                                                                                    |
+| --- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Q1  | AI cost          | **No Anthropic API key for now** — P1 runs on rules + Fear & Greed and stores every headline; see §11.1                                   |
+| Q2  | Which account?   | A **separate bot user / account** — clean pilot numbers; the owner signs in as it to watch                                                |
+| Q3  | The walls (§8.3) | **Approved** as proposed                                                                                                                  |
+| Q4  | Admin check      | The more secure option: an env allowlist of user ids (`ADMIN_USER_IDS`), see §9                                                           |
+| Q5  | Alerts           | **Email** (`EmailService`)                                                                                                                |
+| Q6  | Gate 0           | Redone for KuCoin; cleared except tax ([§10.1](#101-gate-0--status))                                                                      |
+| Q7  | Pilot quote      | **USDT** — the real venue trades USDT pairs                                                                                               |
+| Q8  | Real capital     | Stage A **100 USDT**, Stage B **1,000 USDT**; hard ceiling **1,000 CHF** on KuCoin; a 10% loss is acceptable, more would hurt — see §11.2 |
+| —   | Region / venue   | **Switzerland (canton Zurich) → global KuCoin**, USDT pairs                                                                               |
+
+Still open:
+
+1. **Tax:** the canton Zurich question in §10.3, before Stage B.
+2. **The shortened stages in §11.2** (A1 / A2, and A2 running during the P3 pilot) — proposed, owner to confirm.
+3. **The halt at −8%** (§11.2) — proposed, owner to confirm.
+
+### 11.1 Reminder: the Anthropic API key (owner, 2026-09-30)
+
+**Decision:** start without it. The owner's Claude Max plan covers the owner's own use of Claude; a server calling
+Claude on its own needs a separate, pay-per-use API key (~$2–5/month at this size).
+
+**Until then:** P1 collects every headline with its publish time and source link, so nothing is lost.
+
+**Bring it to the owner's attention (don't add it silently) when any of these happens:**
+
+- **End of the P1 shadow run** — the one-off test: classify the stored headlines in one batch (cents) and check
+  whether the news filter would have blocked the bad signals. This test itself needs a key.
+- **The decision log shows losses clustered around news** (a hack, a listing, a regulatory headline) that the rules
+  couldn't see.
+- **A feature needs a model at runtime** — e.g. reading non-English sources, or event summaries in the journal lines.
+
+When raised: the evidence, the expected monthly cost, and the prompt caching / batching plan; the owner decides.
+
+### 11.2 Real-money capital plan (owner, 2026-09-30)
+
+| Limit               | Value                                                                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Hard ceiling        | **1,000 CHF** on KuCoin (≈ 1,250 USDT) — money the owner could lose entirely (an exchange freeze)                              |
+| Acceptable bot loss | **10%** — more would hurt                                                                                                      |
+| Stage A             | **100 USDT**                                                                                                                   |
+| Stage B             | **1,000 USDT** (≈ 800 CHF)                                                                                                     |
+| Beyond Stage B      | Only after the tax answer (§10.3) and a year of live results                                                                   |
+| Surplus             | If gains lift the balance above the ceiling, the bot emails the owner to withdraw the surplus by hand (its key can't withdraw) |
+
+**Proposed — owner to confirm: shorter stages, ended by results, not by the calendar.**
+
+- **A1 — plumbing check, 1–3 days, ~20 USDT of the 100.** A scripted checklist, not the strategy:
+  - a small market buy, and a limit order placed then cancelled;
+  - an exchange stop-market placed just below the price so it fires quickly, and an OCO;
+  - the server restarted with a position open → the bot re-reads KuCoin and matches it;
+  - the kill switch cancels everything;
+  - an order above a wall refused by the gate;
+  - a call from a non-whitelisted IP refused by KuCoin;
+  - one ledger row per fill.
+- **A2 — live mirror, 100 USDT.** The bot mirrors its paper decisions with real orders (owner approving each), **in
+  parallel with the P3 paper pilot** instead of after it. It ends after **10 closed trades including at least one
+  stop-out** (~2–4 weeks at 2–5 trades a week) with real fills within an agreed tolerance of the paper fills.
+  This departs from "real money only after the pilot passes" — it risks at most ~10 USDT and only tests execution;
+  the go for Stage B still needs P3 to pass.
+- **B — 1,000 USDT**, from the day all three hold: P3 passed the success bar, A2 passed, the tax answer is in. It
+  has no end date: it is the bot's normal live running.
+- **The halt at −8%, not −10%:** a crash can gap past a stop, so a halt set at −8% keeps the real loss within the
+  owner's 10%. At 1,000 USDT: the bot stops at −80 and the worst realistic loss stays under −100.

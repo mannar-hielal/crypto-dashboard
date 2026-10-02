@@ -3669,5 +3669,15 @@ source link. Research only; nothing built.
   trading (General Terms §9.2.2 bans "bots… algorithms"), exchange-side spot stops via the API. Bybit EU has no USDT
   (USDC / EUR pairs) and changes its fees on 5 Oct 2026; MiCA market-abuse rules apply to individuals; paper fills are
   optimistic; eight software rules added (§9.1).
+- **Revised for Switzerland + KuCoin (2026-09-30):** the owner lives in Switzerland (canton Zurich), so Bybit EU
+  (EEA only) and MiCA don't apply. The real-money venue is the owner's verified **global KuCoin** account: USDT pairs
+  for all 9 coins, a real order book, stop / OCO / trailing orders, trade-only IP-restricted keys, sub-accounts, and no
+  terms clause against bots. Verdict: GO; Gate 0 cleared except **tax** — a bot fails ESTV Circular 36's safe harbour
+  (≥ 6-month holding, ≤ 5× volume), so canton Zurich is asked before P4. Owner answers: a separate bot account, the
+  walls approved, admin by an env allowlist of user ids (`ADMIN_USER_IDS`), email alerts, USDT quote. No Anthropic API
+  key for now (a Claude Max plan doesn't cover a server's calls) — §11.1 lists when to raise it with the owner. Real
+  capital: Stage A 100 USDT, Stage B 1,000 USDT, a hard ceiling of 1,000 CHF, a 10% loss acceptable (§11.2).
+  Proposed, owner to confirm: shorter result-based stages (a 1–3 day plumbing check, then 10 live trades mirrored
+  during the paper pilot) and a halt at −8% so a gap stays within 10%.
 - **Next:** the owner refines the document and answers its §11 questions; no implementation until then.
 - **Hardening plan:** deferred by the owner (2026-09-30); H0 is done and live, H1–H11 wait.
