@@ -3681,3 +3681,36 @@ source link. Research only; nothing built.
   during the paper pilot) and a halt at −8% so a gap stays within 10%.
 - **Next:** the owner refines the document and answers its §11 questions; no implementation until then.
 - **Hardening plan:** deferred by the owner (2026-09-30); H0 is done and live, H1–H11 wait.
+
+### feat: `/chart` visitors — trading locked behind "Sign in to trade" (2026-10-02) ✅
+
+**Context:** owner, 2026-10-02: a signed-out visitor on `/chart` could fill the whole order form and open the account
+settings, and only learned at the end that trading needs an account ("Not signed in", "Reset failed — your account is
+unchanged. Try again.", or nothing at all for a journal note). Goal: "give user good experience and communicate well
+that they need to be authorized". Visual Q&A answers: an overlay with one line and one **Sign in to trade** button over
+the order form and the Orders & Account panel; after sign-in, the dashboard on the same market; the sync icon hidden
+for visitors, with a tooltip for signed-in users; removing the overlay in DevTools must not be a way around it.
+
+- **`SignInLock`** (`components/dashboard/SignInLock.tsx`) wraps both panels in `DashboardPage`. Signed in, it renders
+  them untouched. Signed out: the panel is `inert` + `aria-hidden` under a dim overlay ("Paper trading needs a free
+  account." + **Sign in to trade**). While the session is restored on boot it dims without a prompt (no flash for a
+  returning user). A collapsed account panel gets a one-row version (container query). On phones the order sheet's own
+  close sits under the lock, so the lock carries a ✕. On phones the Buy / Sell bar is dimmed and inert too, with no
+  prompt of its own (`prompt={false}`): the account panel's one-row "Sign in to trade" sits right above it. The
+  overlay is see-through (`bg.page` at 50 %, 1.5 px blur, owner 2026-10-02) so a visitor sees what an account unlocks.
+- 🔐 **Layers:** the server is the boundary — every paper route has `app.authenticate` and the paper WS needs an auth
+  message; `paperStore.token()` throws before any request. In the browser the panel itself is `inert` (deleting the
+  overlay alone leaves it dead) and a `MutationObserver` remounts the lock if the overlay is removed, hidden or
+  restyled, or `inert` is stripped. If all of that is bypassed, a submit sends nothing and the form shows "Paper
+  trading needs a free account. Sign in to trade" (`NOT_SIGNED_IN` → `SignInToTradeLink`), never a raw error.
+- **Return path:** "Sign in to trade" and the top bar's **Sign in** pass the market on screen as `state.from`;
+  `RegisterPage` now honours it like `LoginPage`, and the Login ⇄ Register links carry it. 🔐 Both accept only an
+  allow-listed market URL (`safeReturnPath`, unchanged).
+- **Sync icon:** hidden for visitors (no account to sync); for signed-in users a `data-tooltip` explains it and its
+  state. The `data-tooltip` mechanism moved from `LeftToolbar` into `hooks/useDataTooltip.tsx` (placement `right` or
+  `bottom-end`), used by both.
+- **Tests:** rows 14.1.11–14.1.15. `SignInLock.test` (guest, user, loading, close, three tampering cases),
+  `RegisterPage.returnTo.test`, `useDataTooltip.test`, `SymbolBar.test` and `TradingPanel.test` additions;
+  `e2e/tests/chart/chart.spec` [14.1.11]–[14.1.13]. Locally the seeded-user e2e cases need ports 3001 / 5173 free (the
+  dev CSP allows only `:3001`).
+- **Not in this change:** the Account Settings "Fees" row that overflows at narrow widths (left for later).

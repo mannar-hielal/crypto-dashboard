@@ -136,6 +136,22 @@ static result is in the visual baseline.
 
 Live prices: Sell < Buy, usually one tick apart (BTC tick 0.1); the tooltip values must equal the two buttons.
 
+### 14.1.11–14.1.15 — A visitor on `/chart`: trading needs an account
+
+**UI reproduction** — start `http://localhost:5173/chart` (local dev) or `https://cryptopapertrade.com/chart`.
+Preconditions: signed out (a private window).
+
+1. Look at the order form and the Orders & Account panel → Expect both dimmed under "Paper trading needs a free
+   account." and a **Sign in to trade** button; nothing under them reacts to clicks or Tab; no sync icon after the
+   layout picker. _Explain: "Charts are free for everyone; trading needs a free account so your trades are saved."_
+2. DevTools → delete a `[data-guide="lock.overlay"]` node, or remove `inert` from the panel → Expect the lock back at
+   once. Network tab → Expect no `/api/paper` request. _(testers only)_
+3. [nav.trade-menu] → USDT Perpetual → [lock.sign-in] → Expect `/login`. Sign in → Expect
+   `/dashboard/usdt/BTCUSDT`, the panels usable. _Explain: "You come back to the market you were looking at."_
+4. Hover the sync icon (cloud) after the layout picker → Expect a tooltip on the account sync and its state.
+5. Phone width → Expect [trade.mobile.buy] / [trade.mobile.sell] dimmed and not tappable, with the account panel's
+   one-row **Sign in to trade** just above them.
+
 ## Stage 1 — Spot basics
 
 ### 14.6 — Spot (14.6.1–14.6.10)
