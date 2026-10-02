@@ -38,27 +38,40 @@ vi.mock('framer-motion', () => ({
 
 vi.mock('@/assets/cta-illustration.svg', () => ({ default: '/img/cta.svg' }));
 
-import { CtaSection } from '../CtaSection';
-
 describe('CtaSection', () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
   });
 
-  describe('pre-launch state (default)', () => {
-    it('shows the launch announcement heading', () => {
-      render(React.createElement(CtaSection));
+  // Both states stub the flag: a developer's .env.local (VITE_IS_LIVE=true) must not decide them
+  describe('pre-launch state', () => {
+    beforeEach(() => {
+      vi.resetModules();
+      vi.stubEnv('VITE_IS_LIVE', 'false');
+    });
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    const renderPreLaunch = async () => {
+      const { CtaSection: PreLaunchCtaSection } = await import('../CtaSection');
+      render(React.createElement(PreLaunchCtaSection));
+    };
+
+    it('shows the launch announcement heading', async () => {
+      await renderPreLaunch();
       expect(screen.getByText(/launching soon/i)).not.toBeNull();
     });
 
-    it('renders the NewsletterForm component', () => {
-      render(React.createElement(CtaSection));
+    it('renders the NewsletterForm component', async () => {
+      await renderPreLaunch();
       expect(screen.getByTestId('newsletter-form')).not.toBeNull();
     });
 
-    it('does not show the live trading CTA', () => {
-      render(React.createElement(CtaSection));
+    it('does not show the live trading CTA', async () => {
+      await renderPreLaunch();
       expect(screen.queryByText(/start trading/i)).toBeNull();
     });
   });
