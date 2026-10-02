@@ -611,6 +611,8 @@ function SyncStatus() {
       {...guide('symbolbar.sync')}
       data-tooltip={`${SYNC_EXPLAINER} ${state}`}
       data-tooltip-delay="300"
+      // An aria-label needs a role (axe aria-prohibited-attr): the icon is an image of the sync state
+      role="img"
       aria-label={`Account sync: ${state}`}
       className="flex shrink-0 items-center gap-1.5 pr-2"
     >

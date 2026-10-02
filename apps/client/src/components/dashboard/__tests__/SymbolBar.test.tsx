@@ -200,6 +200,13 @@ describe('SymbolBar — account sync status', () => {
     );
   });
 
+  it('should expose the sync icon as a labelled image (an aria-label needs a role)', () => {
+    useAuthStore.getState().setAuth('token', USER);
+    usePaperStore.setState({ isSyncing: true });
+    render(bar());
+    expect(screen.getByRole('img', { name: 'Account sync: Syncing now…' })).toBe(sync());
+  });
+
   it('should say it is syncing while the snapshot loads', () => {
     useAuthStore.getState().setAuth('token', USER);
     usePaperStore.setState({ isSyncing: true });
