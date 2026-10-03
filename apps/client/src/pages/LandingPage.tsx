@@ -143,8 +143,8 @@ const alternatingSections = [
         src={papertradingImg}
         alt=""
         loading="lazy"
-        className="w-full max-w-sm select-none object-contain"
-        style={{ transform: 'translate(40px, -40px)' }}
+        // The 40 px shift right only from md: on phones it pushed the page 24 px past the screen
+        className="w-full max-w-sm -translate-y-10 select-none object-contain md:translate-x-10"
       />
     ),
     reversed: true,
@@ -246,7 +246,9 @@ export function LandingPage() {
 
               <motion.h1
                 variants={itemVariants}
-                className="text-5xl font-black leading-tight sm:text-6xl lg:text-7xl"
+                // Live: "Live crypto charts." must stay on one line in the 480 px desktop column (461 px at
+                // text-5xl, 576 px at text-6xl), so desktop steps down; pre-launch keeps its size
+                className={`text-5xl font-black leading-tight sm:text-6xl ${isLive ? 'lg:text-5xl' : 'lg:text-7xl'}`}
                 style={{ fontFamily: font.sans }}
               >
                 {isLive ? (
@@ -354,18 +356,20 @@ export function LandingPage() {
           </div>
         </div>
 
-        {/* ─── What a free account unlocks ────────────────────────────── */}
-        <div className="mx-auto flex w-full max-w-6xl justify-center px-4 pt-12">
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="w-full"
-          >
-            <AccountUnlocksTerminal />
-          </motion.div>
-        </div>
+        {/* ─── What a free account unlocks (live only: pre-launch has no sign-up) ─ */}
+        {isLive && (
+          <div className="mx-auto flex w-full max-w-6xl justify-center px-4 pt-12">
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="w-full"
+            >
+              <AccountUnlocksTerminal />
+            </motion.div>
+          </div>
+        )}
 
         {/* ─── Stats strip ──────────────────────────────────────────────── */}
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-24 px-4 py-16">

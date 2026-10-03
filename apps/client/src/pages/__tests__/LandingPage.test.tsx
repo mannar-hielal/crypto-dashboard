@@ -120,5 +120,11 @@ describe('LandingPage', () => {
       expect(container.querySelector(guideSelector('landing.hero.chart'))).toBeNull();
       expect(screen.queryByText(/20 seconds/i)).toBeNull();
     });
+
+    it('should hide the account-unlocks band when not live (no sign-up before launch)', async () => {
+      const { container } = await renderLanding();
+      expect(screen.queryByText("The chart's free. So is the trading desk.")).toBeNull();
+      expect(container.querySelector(guideSelector('landing.unlocks.register'))).toBeNull();
+    });
   });
 });

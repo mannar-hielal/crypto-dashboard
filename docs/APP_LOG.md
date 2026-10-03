@@ -3746,3 +3746,8 @@ claims were checked against the code.
 - **Tests:** `AccountUnlocksTerminal.test` (every row, decorative ✓ hidden, `/register` link), `LandingPage.test` (hero
   links in the live state, the band, the removed claims, the pre-launch hero), `FeaturesPage.test` (each fact fix),
   `CtaSection.test` updated for the new copy.
+- **Owner's follow-up decisions (2026-10-03):** the live headline steps down to `lg:text-5xl` so "Live crypto charts."
+  stays on one line in the 480 px desktop column (461 px wide at 48 px, 576 px at 60 px; pre-launch keeps
+  `lg:text-7xl`); the account-unlocks band shows only when live (no sign-up offer beside "Launching soon"); the
+  CtaSection live copy "Ready to trade? Create your free account" approved; the Paper Trading picture's 40 px shift
+  right now starts at `md`, which ends a 24 px sideways scroll on phones (375 px) that predates this change.
