@@ -24,9 +24,9 @@ import { createMacdPrimitive } from './primitives/macd';
 import { calculateMovingAverageIndicatorValues } from './primitives/moving-average-calculation';
 import { calculateAveragePriceIndicatorValues } from './primitives/average-price-calculation';
 import { calculateMedianPriceIndicatorValues } from './primitives/median-price-calculation';
-import { calculateWeightedCloseIndicatorValues } from './primitives/weighted-close-calculation';
+import { calculateTypicalPriceIndicatorValues } from './primitives/typical-price-calculation';
 import { calculateMomentumIndicatorValues } from './primitives/momentum-calculation';
-import { calculatePercentChangeIndicatorValues } from './primitives/percent-change-calculation';
+import { calculateRocIndicatorValues } from './primitives/roc-calculation';
 
 type SupportedData = CandlestickData<UTCTimestamp> | WhitespaceData<UTCTimestamp>;
 
@@ -252,9 +252,11 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
   },
 
   {
-    id: 'weighted-close',
-    label: 'Weighted Close',
-    description: '(Close×2 + High + Low) / 4 for each bar',
+    // Replaced "Weighted Close" (owner, 2026-10-03); a saved weighted-close instance becomes this
+    // one in layoutStore's v7 migration. Keeps that slot's default colour.
+    id: 'typical-price',
+    label: 'Typical Price',
+    description: '(High + Low + Close) / 3 for each bar',
     category: 'overlay',
     defaultParams: {},
     params: [],
@@ -263,13 +265,13 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
     defaultLineStyle: 'solid',
     factory: ({ chart, source, params, style, paneIndex }) =>
       createGenericPrimitive(chart, source, {
-        title: () => 'Weighted Close',
+        title: () => 'Typical Price',
         color: style.color,
         lineWidth: style.lineWidth,
         lineStyle: style.lineStyle,
         params,
         paneIndex,
-        calc: (data) => calculateWeightedCloseIndicatorValues(data, { offset: 0 }),
+        calc: (data) => calculateTypicalPriceIndicatorValues(data),
       }),
   },
 
@@ -356,28 +358,44 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
   },
 
   {
-    id: 'percent-change',
-    label: 'Percent Change',
-    description: 'Percentage price change between consecutive bars',
+    // Replaced "Percent Change" (owner, 2026-10-03) — that was ROC with length 1, which is what a
+    // saved percent-change instance becomes in layoutStore's v7 migration. Keeps that slot's
+    // default colour.
+    id: 'roc',
+    label: 'Rate of Change (ROC)',
+    description: 'Percentage change against the price N bars ago — 100 × (src − src[n]) / src[n]',
     category: 'sub-pane',
-    defaultParams: {},
+    defaultParams: { length: 9, source: 'close' },
     params: [
-      { id: 'offset', label: 'Offset', type: 'number', default: 0, min: -50, max: 50, step: 1 },
+      { id: 'length', label: 'Length', type: 'number', default: 9, min: 1, max: 500, step: 1 },
+      {
+        id: 'source',
+        label: 'Source',
+        type: 'select',
+        default: 'close',
+        options: [
+          { label: 'Close', value: 'close' },
+          { label: 'Open', value: 'open' },
+          { label: 'High', value: 'high' },
+          { label: 'Low', value: 'low' },
+        ],
+      },
     ],
     defaultColor: nextColor(),
     defaultLineWidth: 2,
     defaultLineStyle: 'solid',
     factory: ({ chart, source, params, style, paneIndex }) =>
       createGenericPrimitive(chart, source, {
-        title: () => 'Pct Chg',
+        title: () => 'ROC',
         color: style.color,
         lineWidth: style.lineWidth,
         lineStyle: style.lineStyle,
         params,
         paneIndex,
         calc: (data, p) =>
-          calculatePercentChangeIndicatorValues(data, {
-            offset: Number(p.offset) || 0,
+          calculateRocIndicatorValues(data, {
+            length: Number(p.length) || 9,
+            source: (p.source as string) ?? 'close',
           }),
       }),
   },

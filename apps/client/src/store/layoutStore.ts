@@ -23,6 +23,7 @@ import {
 import type { MarketCategory } from '@crypto-dashboard/sdk';
 import type { IndicatorInstance } from '@/lib/indicators/types';
 import { createDefaultIndicatorInstances } from '@/lib/indicators/catalog';
+import { normalizeIndicatorInstances } from '@/lib/indicators/persistence';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -367,7 +368,7 @@ export const useLayoutStore = create<LayoutState>()(
     }),
     {
       name: 'cd-layout',
-      version: 6,
+      version: 7,
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as Record<string, unknown>;
         // v1 → v2: add indicators to panes
@@ -395,6 +396,24 @@ export const useLayoutStore = create<LayoutState>()(
         if (version < 5) state.marketHandoffDone = false;
         // v5 → v6: the USDT Perpetual mark-price line (BP-3), on by default
         if (version < 6) state.showMarkPriceLine = true;
+        // v6 → v7: "Percent Change" became ROC (length 1 = the same output) and "Weighted Close"
+        // became Typical Price (owner, 2026-10-03). Colour and visibility carry over; an unknown
+        // id or a malformed entry is dropped instead of reaching the chart.
+        if (version < 7) {
+          const panes = state.panes;
+          if (Array.isArray(panes)) {
+            state.panes = panes.map((pane: unknown) =>
+              pane && typeof pane === 'object'
+                ? {
+                    ...pane,
+                    indicators: normalizeIndicatorInstances(
+                      (pane as Record<string, unknown>).indicators
+                    ),
+                  }
+                : pane
+            );
+          }
+        }
         return state as unknown as LayoutState;
       },
       // Clamp activePane on hydration: persisted state could have an activePane
@@ -456,10 +475,15 @@ export const useLayoutStore = create<LayoutState>()(
         if (typeof merged.bottomPanelHeight !== 'number' || merged.bottomPanelHeight < 80) {
           merged.bottomPanelHeight = 208;
         }
-        // Ensure all panes have indicators array (v2+ field)
+        // Ensure all panes have indicators array (v2+ field), each entry checked — a malformed
+        // or tampered payload at the current version must not reach the chart either
         for (let i = 0; i < merged.panes.length; i++) {
           if (!merged.panes[i].indicators) {
             merged.panes[i].indicators = i === 0 ? createDefaultIndicatorInstances() : [];
+          } else {
+            merged.panes[i].indicators = normalizeIndicatorInstances(
+              merged.panes[i].indicators
+            ).slice(0, MAX_INDICATORS_PER_PANE);
           }
         }
         return merged;
