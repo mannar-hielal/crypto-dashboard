@@ -53,6 +53,7 @@ const h = vi.hoisted(() => {
     addedDrawings: [] as unknown[],
     activeTool: null as string | null,
     mainPaneHeight: 300,
+    timeScaleHeight: 0,
   };
 });
 
@@ -102,7 +103,7 @@ vi.mock('lightweight-charts', async (importOriginal) => {
       coordinateToLogical: () => null,
       getVisibleLogicalRange: () => null,
       getVisibleRange: () => null,
-      height: () => 0, // pane area = the container's 500 px (stubbed below)
+      height: () => h.timeScaleHeight, // 0 by default: pane area = the container's 500 px
       applyOptions: () => undefined,
       scrollToPosition: () => undefined,
       setVisibleLogicalRange: () => undefined,
@@ -173,18 +174,21 @@ function seriesByPane(): string[][] {
 }
 
 /** Every ResizeObserver ChartPanel created, and whether it still observes */
-const observers: { live: boolean }[] = [];
+const observers: { live: boolean; callback: () => void }[] = [];
 
 beforeEach(() => {
   h.series.length = 0;
   h.removedPaneIndices.length = 0;
   h.addedDrawings.length = 0;
   h.activeTool = null;
+  h.timeScaleHeight = 0;
   vi.stubGlobal(
     'ResizeObserver',
     class {
       live = false;
-      constructor() {
+      callback: () => void;
+      constructor(cb: () => void) {
+        this.callback = cb;
         observers.push(this);
       }
       observe() {
@@ -356,6 +360,20 @@ describe('ChartPanel rebalance before the chart has a height', () => {
 
     unmount();
     expect(observers.filter((o) => o.live)).toHaveLength(0);
+  });
+
+  it('[10.6.13] should keep waiting, not re-observe every frame, while the chart is shorter than its time axis', () => {
+    // 20 px container, 26 px time axis: no pane area yet, though the container has a height
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(20);
+    h.timeScaleHeight = 26;
+    render(panel([inst('mom1', 'momentum')]));
+    const waiting = observers.filter((o) => o.live);
+    const created = observers.length;
+
+    // The size changes but there's still no room: the same observer keeps waiting
+    for (const o of waiting) o.callback();
+    expect(observers.length).toBe(created);
+    expect(observers.filter((o) => o.live)).toHaveLength(waiting.length);
   });
 });
 

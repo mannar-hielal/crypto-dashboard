@@ -989,7 +989,9 @@ export function ChartPanel({
           // Only the latest change's rebalance matters: a wait already pending is replaced
           rebalanceObserverRef.current?.disconnect();
           const ro = new ResizeObserver(() => {
-            if (el.clientHeight <= 0) return;
+            // The same measure rebalance() uses: a container no taller than the time axis still
+            // has no pane area, so keep waiting rather than re-observe on every frame
+            if (el.clientHeight - (chart.timeScale().height() || 0) <= 0) return;
             ro.disconnect();
             if (rebalanceObserverRef.current === ro) rebalanceObserverRef.current = null;
             rebalance();
