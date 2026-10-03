@@ -266,7 +266,14 @@ export const useLayoutStore = create<LayoutState>()(
       },
 
       setPaneTimeRangePreset: (paneIndex, preset) => {
-        const { panes } = get();
+        const { panes, syncOptions } = get();
+        // A preset carries its own interval (1D → 1m, 5D → 5m…), so it follows interval sync:
+        // a pane that took the synced interval but kept its own (stale) preset would apply the
+        // wrong range for it — or none — and stop matching the other panes.
+        if (syncOptions.interval) {
+          set({ panes: panes.map((p) => ({ ...p, timeRangePreset: preset })) });
+          return;
+        }
         const updated = [...panes];
         updated[paneIndex] = { ...updated[paneIndex], timeRangePreset: preset };
         set({ panes: updated });
@@ -297,10 +304,15 @@ export const useLayoutStore = create<LayoutState>()(
           return;
         }
         if (turningOn && key === 'interval') {
-          const sourceInterval = (panes[activePane] ?? DEFAULT_PANES[0]).interval;
+          const source = panes[activePane] ?? DEFAULT_PANES[0];
           set({
             syncOptions: newSyncOptions,
-            panes: panes.map((p) => ({ ...p, interval: sourceInterval })),
+            // The preset goes with the interval it implies (see setPaneTimeRangePreset)
+            panes: panes.map((p) => ({
+              ...p,
+              interval: source.interval,
+              timeRangePreset: source.timeRangePreset,
+            })),
           });
           return;
         }
