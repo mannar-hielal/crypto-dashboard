@@ -733,7 +733,7 @@ partial fills, ADL, insurance fund · VIP tiers, fee coupons, USDC / inverse con
 | `apps/client/src/lib/indicators/primitives/`                                               | Custom `ISeriesPrimitive` implementations (ema, vwap, macd) + 6 LH calculation files                                                                                   |
 | `apps/client/src/components/indicators/IndicatorDropdown.tsx`                              | Portal dropdown in SymbolBar — add indicators grouped by category                                                                                                      |
 | `apps/client/src/components/indicators/IndicatorLegends.tsx`                               | TradingView-style legend rows: a header per indicator pane, overlay rows under the price legend (replaced the floating widgets, 2026-10-03)                            |
-| `apps/client/src/lib/indicators/paneLayout.ts`                                             | New indicator pane sizing (~20%, 60 px minimum) and pane order                                                                                                         |
+| `apps/client/src/lib/indicators/paneLayout.ts`                                             | Indicator pane sizing (equal panes, price pane ≥ 50%) and order                                                                                                        |
 | `apps/client/src/components/indicators/IndicatorSettings.tsx`                              | Portal popover for params/style editing                                                                                                                                |
 | `apps/client/src/lib/tokens.ts`                                                            | **Design tokens** — single source of truth for all colors, fonts, sizes (JS/TS side)                                                                                   |
 | `apps/client/src/index.css`                                                                | Tailwind v4 theme — `@theme inline` generates brand color utilities from tokens                                                                                        |
@@ -3724,9 +3724,8 @@ full-length series. The owner passed the visual Q&A on 2026-10-03 with decisions
 
 - **Panes (A):** each shown sub-pane instance gets its own lightweight-charts pane (`chart.addPane(true)`), kept as
   `Map<instanceId, IPaneApi>` — never numeric indices, which shift on removal. Remove or hide → series removed, then
-  `chart.removePane(pane.paneIndex())`. Pane order = add order (a re-shown indicator moves back to its slot). A new
-  pane starts at 20% of the chart, 60 px minimum, never more than half (`lib/indicators/paneLayout.ts`). Separators
-  drag (`layout.panes.enableResize`, `border.default` / `border.hover`).
+  `chart.removePane(pane.paneIndex())`. Pane order = add order (a re-shown indicator moves back to its slot). Sizes: see
+  "Pane sizes" below. Separators drag (`layout.panes.enableResize`, `border.default` / `border.hover`).
 - **Zero lines (B):** Momentum, ROC and MACD get a dashed `createPriceLine` at 0 in the new `chart.zeroLine` token
   (the grey the old MACD zero series used). A price line isn't in the autoscale or the crosshair; `zeroSeries` is gone.
 - **MACD (C):** the histogram's "grow" colour needs `hist[1] < hist` (TradingView); equal or first bar → "fall".
@@ -3737,7 +3736,8 @@ full-length series. The owner passed the visual Q&A on 2026-10-03 with decisions
   histogram, MACD, signal. Values follow the crosshair (`param.seriesData`), the last bar's off the chart. Settings ⚙,
   hide 👁 and remove ✕ show on hover or focus (always on touch screens), as labelled buttons with the focus ring. Each
   header sits at its pane's top (`pane.getHTMLElement()` + a ResizeObserver: a separator drag fires no chart event);
-  overlay rows stack under the OHLC legend; a hidden sub-pane indicator's row waits there. The legacy `position`
+  overlay rows stack under the OHLC legend. A hidden sub-pane indicator loses its pane and its row waits there,
+  dimmed, with its eye to bring it back — the owner's decision after review (2026-10-03). The legacy `position`
   field is dropped. Anchors: `indicator.menu`, `.option`, `.pane-legend`, `.legend`, `.toggle`, `.settings`,
   `.remove`, `toolbar.tool`.
 - **Stale settings (I):** shipped first, as `fix:` — every primitive copies its params and reads them at compute time.
@@ -3747,14 +3747,18 @@ full-length series. The owner passed the visual Q&A on 2026-10-03 with decisions
   px into the MACD pane), so crosshair sync from an indicator pane uses the follower's bar close
   (`followerCrosshairPrice`, `lib/chartSync.ts`). `hooks/useDrawingInteraction.ts` no longer exists (drawings moved to
   `lightweight-charts-drawing` in ChartPanel), so the guards live there.
-- **Tests:** rows 10.6.1–10.6.12 (new Section 10.6). Unit: `macd.test`, `legend.test`, `paneLayout.test`,
+- **Tests:** rows 10.6.1–10.6.13 (new Section 10.6). Unit: `macd.test`, `legend.test`, `paneLayout.test`,
   `zeroLines.test`, `IndicatorLegends.test`, `ChartPanel.indicatorPanes.test` (a fake chart with a real pane list),
   `chartSync.test`. E2E: `e2e/tests/chart/indicatorPanes.spec` — 2× Momentum → 3 panes, 2× MACD → 5, remove one → 4
   and its legend gone, reload → 4; no drawing from a sub-pane. Run locally on spare ports (E2E_API_PORT=3101,
   E2E_WEB_PORT=5183, E2E_FEED_PORT=4110) with a throwaway config setting `bypassCSP` (the dev server's header CSP
   hard-codes `:3001`), along with the rest of `tests/chart` and `tests/a11y`: all green.
-- **For the owner's eye:** with many indicator panes the price pane gets small (each new pane takes 20% of what's
-  there, so earlier panes shrink below 60 px — e.g. 5 panes on a 1440×900 screen leave the price pane ~150 px); in the
-  4-chart layout the panes keep their shares, so a MACD pane can be ~30 px. Overlay rows sit over the candles with no
-  background (TradingView-style) and move down while the OHLC legend shows. Equal-height panes, or a per-layout
-  minimum, would be the next step if wanted.
+- **Pane sizes (owner, after review, 2026-10-03):** equal indicator panes; the price pane keeps at least half.
+  `paneHeights` (`lib/indicators/paneLayout.ts`): each indicator pane aims for 20% of the chart (decision A), at least
+  60 px; when that would leave the price pane under half, they shrink and split the other half equally — below 60 px
+  when they must (many panes, a 4-chart cell, a phone), which the owner accepted. ChartPanel re-applies the heights
+  as stretch factors to every pane on each add, remove, hide or show (before the first layout it waits for a height:
+  one-shot ResizeObserver); a separator drag stays until the next one, and a layout switch keeps the ratios.
+  Measured at 1440×900 with 2× Momentum, 2× MACD and ROC: price 240 px, each indicator pane 48 px; in the 4-chart
+  layout (a ~196 px cell) price 98 px, panes ~20 px. Overlay rows sit over the candles with no background
+  (TradingView-style) and move down while the OHLC legend shows.

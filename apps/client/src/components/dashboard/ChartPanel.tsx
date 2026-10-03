@@ -24,7 +24,7 @@ import type { ChartType } from '@/store/layoutStore';
 import { getIndicatorMeta } from '@/lib/indicators/catalog';
 import type { IndicatorInstance, IndicatorPrimitive, IndicatorStyle } from '@/lib/indicators/types';
 import { bg, border, color, chart as chartColors, font, fontSize } from '@/lib/tokens';
-import { subPaneStretchFactor, subPaneTargetIndex } from '@/lib/indicators/paneLayout';
+import { paneHeights, subPaneTargetIndex } from '@/lib/indicators/paneLayout';
 import {
   INTERVAL_BAR_SPACING,
   getPresetSeconds,
@@ -946,11 +946,7 @@ export function ChartPanel({
       // own right price scale — as on TradingView and Bybit.
       let targetPane = 0;
       if (meta.category === 'sub-pane') {
-        const existingSum = chart.panes().reduce((sum, p) => sum + p.getStretchFactor(), 0);
         const pane = chart.addPane(true);
-        pane.setStretchFactor(
-          subPaneStretchFactor(existingSum, containerRef.current?.clientHeight ?? 0)
-        );
         const target = subPaneTargetIndex(subPaneIds, inst.instanceId, (id) => panes.has(id));
         if (pane.paneIndex() !== target) pane.moveTo(target);
         panes.set(inst.instanceId, pane);
@@ -967,7 +963,37 @@ export function ChartPanel({
       changed = true;
     }
 
-    if (changed) setIndicatorLayoutVersion((v) => v + 1);
+    if (changed) {
+      // Rebalance on every add / remove / hide / show (owner, 2026-10-03): the price pane keeps at
+      // least half, the indicator panes share the rest equally (lib/indicators/paneLayout.ts). A
+      // separator drag in between is kept until the next change — this only runs on one.
+      const rebalance = () => {
+        if (chartRef.current !== chart) return; // unmounted in between
+        const allPanes = chart.panes();
+        if (allPanes.length < 2) return;
+        const paneArea =
+          (containerRef.current?.clientHeight ?? 0) - (chart.timeScale().height() || 0);
+        // Not laid out yet (first mount, a fresh 4-chart cell) or hidden (account panel
+        // maximized): split once the chart gets a height, never against none. One-shot observer,
+        // no polling while it stays hidden.
+        if (paneArea <= 0) {
+          const el = containerRef.current;
+          if (!el) return;
+          const ro = new ResizeObserver(() => {
+            if (el.clientHeight <= 0) return;
+            ro.disconnect();
+            rebalance();
+          });
+          ro.observe(el);
+          return;
+        }
+        const { main, sub } = paneHeights(paneArea, allPanes.length - 1);
+        // Heights as stretch factors: only their ratio counts
+        allPanes.forEach((p, i) => p.setStretchFactor(i === 0 ? main : sub));
+      };
+      rebalance();
+      setIndicatorLayoutVersion((v) => v + 1);
+    }
 
     return () => {
       // 🔐 Diff-aware teardown: this cleanup runs BOTH before every dependency

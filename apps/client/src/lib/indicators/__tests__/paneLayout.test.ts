@@ -1,30 +1,47 @@
 import { describe, expect, it } from 'vitest';
-import { subPaneStretchFactor, subPaneTargetIndex } from '../paneLayout';
+import { paneHeights, subPaneTargetIndex } from '../paneLayout';
 
-/** The share of the chart a pane with `factor` gets next to panes summing to `others` */
-const share = (factor: number, others: number) => factor / (factor + others);
-
-describe('subPaneStretchFactor', () => {
-  it('should give a new pane 20% of a tall chart', () => {
-    expect(share(subPaneStretchFactor(1, 800), 1)).toBeCloseTo(0.2, 10);
+describe('[10.6.13] paneHeights — equal indicator panes, price pane ≥ 50%', () => {
+  // A tall chart: 500 px of pane area. Target per indicator pane = 20% = 100 px; room while the
+  // price pane keeps half = 250 px / n.
+  it.each([
+    // n, each indicator pane, price pane
+    [1, 100, 400], // target fits: 20%, price 80%
+    [2, 100, 300], // target fits: price 60%
+    [3, 250 / 3, 250], // target (300 in all) would leave price < 50%: they shrink to 83.3 each
+    [4, 62.5, 250], // still ≥ 60 px
+    [5, 50, 250], // below 60 px: accepted, the price pane never drops under half
+  ])('%i indicator pane(s) on 500 px → %d px each, price %d px', (n, sub, main) => {
+    const h = paneHeights(500, n);
+    expect(h.sub).toBeCloseTo(sub, 10);
+    expect(h.main).toBeCloseTo(main, 10);
+    expect(h.main + h.sub * n).toBeCloseTo(500, 10);
+    expect(h.main / 500).toBeGreaterThanOrEqual(0.5);
   });
 
-  it('should give it 20% next to panes the user already resized', () => {
-    // price pane 2.5 + one indicator pane 0.7 (a separator drag rewrote the factors)
-    expect(share(subPaneStretchFactor(3.2, 800), 3.2)).toBeCloseTo(0.2, 10);
+  it('should give a short chart 60 px panes while the price pane can spare them', () => {
+    // 250 px: 20% = 50 px < 60 → 60; room 125 → 60 fits
+    expect(paneHeights(250, 1)).toEqual({ main: 190, sub: 60 });
+    expect(paneHeights(250, 2)).toEqual({ main: 130, sub: 60 });
   });
 
-  it('should keep it at 60 px on a short chart', () => {
-    // 60 / 200 = 30% > 20%
-    expect(share(subPaneStretchFactor(1, 200), 1) * 200).toBeCloseTo(60, 10);
+  it('should hold the price pane at half on a small 4-chart cell, panes below 60 px', () => {
+    // 200 px, 2 panes: 60 each would leave 80 (40%) → 50 each, price 100
+    expect(paneHeights(200, 2)).toEqual({ main: 100, sub: 50 });
+    // a phone-sized 180 px chart with 3 panes: 30 px each
+    expect(paneHeights(180, 3)).toEqual({ main: 90, sub: 30 });
   });
 
-  it('should never give it more than half, so the price pane stays the larger one', () => {
-    expect(share(subPaneStretchFactor(1, 90), 1)).toBeCloseTo(0.5, 10);
+  it('should keep every indicator pane the same height', () => {
+    for (let n = 1; n <= 5; n++) {
+      const { main, sub } = paneHeights(733, n);
+      expect(main + sub * n).toBeCloseTo(733, 10);
+    }
   });
 
-  it('should fall back to 20% before the chart has a height', () => {
-    expect(share(subPaneStretchFactor(1, 0), 1)).toBeCloseTo(0.2, 10);
+  it('should give the whole chart to the price pane with no indicator panes, and survive 0 px', () => {
+    expect(paneHeights(500, 0)).toEqual({ main: 500, sub: 0 });
+    expect(paneHeights(0, 2)).toEqual({ main: 0, sub: 0 });
   });
 });
 

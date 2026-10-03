@@ -102,6 +102,7 @@ vi.mock('lightweight-charts', async (importOriginal) => {
       coordinateToLogical: () => null,
       getVisibleLogicalRange: () => null,
       getVisibleRange: () => null,
+      height: () => 0, // pane area = the container's 500 px (stubbed below)
       applyOptions: () => undefined,
       scrollToPosition: () => undefined,
       setVisibleLogicalRange: () => undefined,
@@ -184,12 +185,14 @@ beforeEach(() => {
     }
   );
   vi.stubGlobal('requestAnimationFrame', () => 0);
+  vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(500);
   paneStores[0].getState().reset();
 });
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   paneStores[0].getState().reset();
 });
 
@@ -215,11 +218,65 @@ describe('ChartPanel indicator panes', () => {
     expect(panes[4]).toEqual(['MACD', 'Signal', '']);
   });
 
-  it('[10.6.1] should start a new pane at about 20% of the chart and keep the price pane larger', () => {
+  /** Each pane's share of the summed stretch factors, in pane order */
+  const shares = () => {
+    const sum = h.panes.reduce((t, p) => t + p.factor, 0);
+    return h.panes.map((p) => p.factor / sum);
+  };
+
+  it('[10.6.13] should size one indicator pane at 20% of a 500 px chart', () => {
     render(panel([inst('mom1', 'momentum')]));
-    const [main, sub] = h.panes;
-    const share = sub.factor / (main.factor + sub.factor);
-    expect(share).toBeCloseTo(0.2, 5);
+    const [main, sub] = shares();
+    expect(sub).toBeCloseTo(0.2, 10);
+    expect(main).toBeCloseTo(0.8, 10);
+  });
+
+  it('[10.6.13] should give 2× Momentum + 2× MACD equal panes and the price pane half', () => {
+    render(
+      panel([
+        inst('mom1', 'momentum'),
+        inst('mom2', 'momentum'),
+        inst('macd1', 'macd'),
+        inst('macd2', 'macd'),
+      ])
+    );
+    // 4 × 100 px would leave the price pane 100 of 500: they shrink to 62.5 px each
+    const [main, ...subs] = shares();
+    expect(main).toBeCloseTo(0.5, 10);
+    for (const s of subs) expect(s).toBeCloseTo(0.125, 10);
+  });
+
+  it('[10.6.13] should rebalance on add, remove, hide and show, and keep a drag until then', () => {
+    const one = [inst('mom1', 'momentum')];
+    const { rerender } = render(panel(one));
+
+    // The user drags the separator: price 0.6, Momentum 0.4
+    h.panes[0].factor = 0.6;
+    h.panes[1].factor = 0.4;
+    // A settings change is not a rebalance — the drag stays
+    rerender(panel([{ ...one[0], params: { length: 14 } }]));
+    expect(shares()[1]).toBeCloseTo(0.4, 10);
+
+    // Add → rebalanced: 2 × 20%
+    const two = [one[0], inst('macd1', 'macd')];
+    rerender(panel(two));
+    expect(
+      shares()
+        .slice(1)
+        .map((x) => +x.toFixed(10))
+    ).toEqual([0.2, 0.2]);
+
+    // Hide → back to one pane at 20%
+    h.panes[1].factor = 5; // another drag, undone by the hide
+    rerender(panel([one[0], inst('macd1', 'macd', false)]));
+    expect(shares()).toHaveLength(2);
+    expect(shares()[1]).toBeCloseTo(0.2, 10);
+
+    // Show → rebalanced again; remove → rebalanced
+    rerender(panel(two));
+    expect(shares()[2]).toBeCloseTo(0.2, 10);
+    rerender(panel([inst('macd1', 'macd')]));
+    expect(shares()[1]).toBeCloseTo(0.2, 10);
   });
 
   it('[10.6.3] should remove the series and then the pane when an instance is removed', () => {

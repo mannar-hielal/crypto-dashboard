@@ -112,7 +112,7 @@ static result is in the visual baseline.
 6. [layout.option `4`], click pane 4, then [layout.option `2h`] → Expect pane 2 active, no error. Reload → Expect the
    2h layout is still there. [layout.option `1`] → Expect no pane header.
 
-### 10.6 — Indicator panes and legends (10.6.1–10.6.12)
+### 10.6 — Indicator panes and legends (10.6.1–10.6.13)
 
 **Manual check (M).** How the panes share the height on a phone (375 px) and in the 4-chart layout, and whether the
 overlay legend rows stay readable over the candles — M, eyeballed per UI release that touches
@@ -132,7 +132,8 @@ overlay legend rows stay readable over the candles — M, eyeballed per UI relea
 5. [indicator.toggle] on a Momentum header → Expect its pane goes and its row waits, dimmed, under the price legend;
    click the eye there → Expect the pane comes back in the same place.
 6. [indicator.remove] on the first MACD header → Expect its pane and header are gone. Reload → Expect the same panes.
-7. Drag a pane separator → Expect the panes resize and every header stays at its pane's top.
+7. Drag a pane separator → Expect the panes resize and every header stays at its pane's top. Add another indicator
+   → Expect the drag is undone: the price pane at least half, the indicator panes all the same height.
 8. [toolbar.tool `trend-lines`], click twice inside a Momentum pane → Expect nothing is drawn; click twice in the price
    pane → Expect a trend line.
 
