@@ -679,7 +679,7 @@ describe('layoutStore', () => {
       ) as { panes: PaneConfig[] };
       expect(migrated.panes[0].indicators[0]).toMatchObject({
         indicatorId: 'momentum',
-        params: { length: 'x', source: 'close' },
+        params: { length: 10, source: 'close' }, // a non-number length → its default
         lineWidth: 2,
         lineStyle: 'solid',
         enabled: true,

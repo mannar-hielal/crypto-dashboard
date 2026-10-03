@@ -11,6 +11,7 @@ import { Eye, EyeOff, Settings, X } from 'lucide-react';
 import type { IChartApi, IPaneApi, ISeriesApi, MouseEventParams, Time } from 'lightweight-charts';
 import { getIndicatorMeta } from '@/lib/indicators/catalog';
 import { legendTitle, legendValues } from '@/lib/indicators/legend';
+import { sanitizeParams } from '@/lib/indicators/persistence';
 import type { LegendValue, SeriesDataAt } from '@/lib/indicators/legend';
 import type {
   IndicatorInstance,
@@ -247,7 +248,11 @@ export function IndicatorLegends({
     lineWidth: 1 | 2 | 3 | 4,
     lineStyle: IndicatorStyle['lineStyle']
   ) {
-    onUpdate(instanceId, { params, color, lineWidth, lineStyle });
+    const inst = indicators.find((i) => i.instanceId === instanceId);
+    const meta = inst ? getIndicatorMeta(inst.indicatorId) : undefined;
+    // 🔐 The same range check as on load: a typed `length: 100000` would freeze the chart
+    const safe = meta ? sanitizeParams(meta, params) : params;
+    onUpdate(instanceId, { params: safe, color, lineWidth, lineStyle });
   }
 
   const handleCloseSettings = useCallback(() => setSettingsTarget(null), []);

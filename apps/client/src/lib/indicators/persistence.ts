@@ -6,7 +6,13 @@
  */
 
 import { getIndicatorMeta } from './catalog';
-import type { IndicatorInstance, IndicatorStyle, ParamValues } from './types';
+import type {
+  IndicatorInstance,
+  IndicatorMeta,
+  IndicatorStyle,
+  ParamDef,
+  ParamValues,
+} from './types';
 
 // ─── Renamed indicators (layoutStore v7, owner 2026-10-03) ───────────────────
 
@@ -34,12 +40,44 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
-/** Only number / string values survive (what the settings form can produce) */
-function cleanParams(raw: unknown): ParamValues {
-  if (!isRecord(raw)) return {};
+// ─── Params ──────────────────────────────────────────────────────────────────
+
+/**
+ * One param checked against its catalog definition. A number param must be a finite number, a
+ * whole one when its step is whole (lengths), and is clamped to the declared min / max; a select
+ * param must be one of its options. Anything else falls back to the default. 🔐 The range matters:
+ * a tampered `length: 1e9` or a fractional MACD length would reach the moving-average loops on
+ * every load and could freeze the tab.
+ */
+function checkParam(def: ParamDef, value: unknown, fallback: number | string): number | string {
+  if (def.type === 'select') {
+    const option = def.options?.find((o) => String(o.value) === String(value));
+    return option ? option.value : fallback;
+  }
+  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
+  const wholeSteps = def.step === undefined || Number.isInteger(def.step);
+  if (wholeSteps && !Number.isInteger(value)) return fallback;
+  let v = value;
+  if (def.min !== undefined) v = Math.max(def.min, v);
+  if (def.max !== undefined) v = Math.min(def.max, v);
+  return v;
+}
+
+/**
+ * An indicator's params, complete and in range: every declared param from `raw` when it passes
+ * checkParam, else its default; keys the catalog doesn't declare are dropped. Used on load and on
+ * a settings save (the number inputs' min / max don't stop a typed value).
+ */
+export function sanitizeParams(meta: IndicatorMeta, raw: unknown): ParamValues {
+  const saved = isRecord(raw) ? raw : {};
   const out: ParamValues = {};
-  for (const [k, v] of Object.entries(raw)) {
-    if ((typeof v === 'number' && Number.isFinite(v)) || typeof v === 'string') out[k] = v;
+  for (const def of meta.params) {
+    const fallback = Object.hasOwn(meta.defaultParams, def.id)
+      ? meta.defaultParams[def.id]
+      : def.default;
+    out[def.id] = Object.hasOwn(saved, def.id)
+      ? checkParam(def, saved[def.id], fallback)
+      : fallback;
   }
   return out;
 }
@@ -59,7 +97,7 @@ export function normalizeIndicatorInstances(raw: unknown): IndicatorInstance[] {
     let indicatorId: string = savedId;
     if (!instanceId || instanceId.length > MAX_ID_LENGTH || seen.has(instanceId)) continue;
 
-    let params = cleanParams(entry.params);
+    let params: unknown = entry.params;
     const renamed = Object.hasOwn(RENAMED, indicatorId) ? RENAMED[indicatorId] : undefined;
     if (renamed) {
       indicatorId = renamed.id;
@@ -74,7 +112,7 @@ export function normalizeIndicatorInstances(raw: unknown): IndicatorInstance[] {
     out.push({
       instanceId,
       indicatorId,
-      params: { ...meta.defaultParams, ...params },
+      params: sanitizeParams(meta, params),
       color: typeof entry.color === 'string' && entry.color ? entry.color : meta.defaultColor,
       lineWidth:
         lineWidth === 1 || lineWidth === 2 || lineWidth === 3 || lineWidth === 4
