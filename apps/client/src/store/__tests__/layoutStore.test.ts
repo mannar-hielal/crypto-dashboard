@@ -477,7 +477,7 @@ describe('layoutStore', () => {
   });
   // ── Indicator renames (v7, owner 2026-10-03) ─────────────────────────────────
 
-  describe('indicators (v7: Percent Change → ROC, Weighted Close → Typical Price)', () => {
+  describe('[10.6.10] indicators (v7: Percent Change → ROC, Weighted Close → Typical Price)', () => {
     const { migrate, merge } = useLayoutStore.persist.getOptions();
 
     function v6Pane(indicators: unknown): Record<string, unknown> {
@@ -517,7 +517,6 @@ describe('layoutStore', () => {
           lineWidth: 3,
           lineStyle: 'dashed',
           enabled: false,
-          position: { x: 8, y: 40 },
         },
       ]);
     });
@@ -557,9 +556,12 @@ describe('layoutStore', () => {
         lineWidth: 2,
         lineStyle: 'solid',
         enabled: true,
-        position: { x: 8, y: 40 },
       };
-      const migrated = migrate!({ panes: [v6Pane([ema])] }, 6) as { panes: PaneConfig[] };
+      const migrated = migrate!(
+        { panes: [v6Pane([{ ...ema, position: { x: 8, y: 40 } }])] },
+        6
+      ) as { panes: PaneConfig[] };
+      // The legacy floating-pill position is dropped, everything else is kept
       expect(migrated.panes[0].indicators).toEqual([ema]);
     });
 

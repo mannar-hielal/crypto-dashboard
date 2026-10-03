@@ -112,6 +112,30 @@ static result is in the visual baseline.
 6. [layout.option `4`], click pane 4, then [layout.option `2h`] → Expect pane 2 active, no error. Reload → Expect the
    2h layout is still there. [layout.option `1`] → Expect no pane header.
 
+### 10.6 — Indicator panes and legends (10.6.1–10.6.12)
+
+**Manual check (M).** How the panes share the height on a phone (375 px) and in the 4-chart layout, and whether the
+overlay legend rows stay readable over the candles — M, eyeballed per UI release that touches
+`components/indicators/` or `ChartPanel.tsx`.
+
+**UI reproduction** — signed out is fine, `http://localhost:5173/chart`.
+
+1. [indicator.menu] → [indicator.option `momentum`], twice → Expect two panes under the price pane, each with its
+   own price scale and a dashed zero line, and a `Mom 10 close` header at its top-left. _Explain: "Each oscillator
+   gets a pane of its own, so its scale never squashes another one."_
+2. [indicator.menu] → [indicator.option `macd`], twice → Expect two more panes; each header reads
+   `MACD 12 26 close 9 EMA EMA` then three values — histogram, MACD, signal — in their colours.
+3. Move the mouse across the bars → Expect every header's values follow the bar under the crosshair; move it off the
+   chart → Expect the newest bar's values. _Explain: "The legend reads the bar you point at."_
+4. Hover the first MACD header → Expect ⚙, 👁 and ✕ to appear. [indicator.settings] → fast 5, Apply → Expect the line
+   and the header (`MACD 5 26 …`) change at once, no reload.
+5. [indicator.toggle] on a Momentum header → Expect its pane goes and its row waits, dimmed, under the price legend;
+   click the eye there → Expect the pane comes back in the same place.
+6. [indicator.remove] on the first MACD header → Expect its pane and header are gone. Reload → Expect the same panes.
+7. Drag a pane separator → Expect the panes resize and every header stays at its pane's top.
+8. [toolbar.tool `trend-lines`], click twice inside a Momentum pane → Expect nothing is drawn; click twice in the price
+   pane → Expect a trend line.
+
 ### 5 — Symbol pair icons (5.1–5.8)
 
 **UI reproduction** — signed in, `/dashboard/usdt/BTCUSDT`, one BTC and one ETH position open (Stage 3 shows how).

@@ -24,7 +24,7 @@ function valuesOf(data: unknown[]): (number | undefined)[] {
   return data.map((d) => (d as { value?: number }).value);
 }
 
-describe('Momentum', () => {
+describe('[10.6.12] Momentum', () => {
   it('should be src − src[n], blank for the first n bars', () => {
     // closes 10, 12, 15, 11 · n = 2 → 15 − 10 = 5, 11 − 12 = −1
     const out = calculateMomentumIndicatorValues(bars([10, 12, 15, 11]), {
@@ -35,7 +35,7 @@ describe('Momentum', () => {
   });
 });
 
-describe('Rate of Change (ROC)', () => {
+describe('[10.6.12] Rate of Change (ROC)', () => {
   it('should equal the old Percent Change at length 1', () => {
     // 100 × (110 − 100) / 100 = 10 · 100 × (99 − 110) / 110 = −10
     const out = calculateRocIndicatorValues(bars([100, 110, 99]), { length: 1 });
@@ -67,7 +67,7 @@ describe('Rate of Change (ROC)', () => {
   });
 });
 
-describe('Typical Price', () => {
+describe('[10.6.12] Typical Price', () => {
   it('should be (H + L + C) / 3', () => {
     // close 11 → high 13, low 7 → (13 + 7 + 11) / 3 = 31 / 3
     const out = valuesOf(calculateTypicalPriceIndicatorValues(bars([11])));
@@ -80,7 +80,7 @@ describe('Typical Price', () => {
   });
 });
 
-describe('moving averages after warm-up', () => {
+describe('[10.6.12] moving averages after warm-up', () => {
   it('SMA 3 should average the last 3 values', () => {
     // (1+2+3)/3 = 2, (2+3+4)/3 = 3, (3+4+5)/3 = 4
     expect(simpleMovingAverage([1, 2, 3, 4, 5], 3)).toEqual([undefined, undefined, 2, 3, 4]);

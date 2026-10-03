@@ -59,6 +59,10 @@ export function createEmaPrimitive(
       return [series];
     },
 
+    legendSeries() {
+      return [series];
+    },
+
     applyOptions(newParams: ParamValues) {
       current = { ...current, ...newParams };
       series.applyOptions({ title: titleOf(current) });

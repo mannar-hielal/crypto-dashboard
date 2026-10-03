@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { canDriveTimeSync, isPanePushingData, isTimeSyncPeer, runPaneDataPush } from '../chartSync';
+import {
+  canDriveTimeSync,
+  followerCrosshairPrice,
+  isPanePushingData,
+  isTimeSyncPeer,
+  runPaneDataPush,
+} from '../chartSync';
 
 // Regression: time-range sync used to (a) copy a low-interval pane's window
 // onto 4h/1D/1W/1M panes and (b) broadcast the few-minutes-wide range of a pane
@@ -99,5 +105,35 @@ describe('runPaneDataPush', () => {
       })
     ).toThrow('setData failed');
     expect(isPanePushingData(2)).toBe(false);
+  });
+});
+
+describe('[10.6.11] followerCrosshairPrice', () => {
+  const base = { mapY: () => 101, barClose: () => 99, followerLatest: 100 };
+
+  it('should map the mouse y through the follower when the mouse is in the price pane', () => {
+    expect(followerCrosshairPrice({ ...base, sourcePaneIndex: 0 })).toBe(101);
+    expect(followerCrosshairPrice({ ...base, sourcePaneIndex: undefined })).toBe(101);
+  });
+
+  it('should use the bar close when the mouse is in an indicator pane (its y is pane-relative)', () => {
+    let mapped = false;
+    const mapY = () => {
+      mapped = true;
+      return 101;
+    };
+    expect(followerCrosshairPrice({ ...base, mapY, sourcePaneIndex: 2 })).toBe(99);
+    expect(mapped).toBe(false);
+  });
+
+  it('should fall back to the latest price with no bar at that time', () => {
+    expect(followerCrosshairPrice({ ...base, sourcePaneIndex: 1, barClose: () => undefined })).toBe(
+      100
+    );
+  });
+
+  it('should use the bar close when the mapped price is implausible for the follower', () => {
+    expect(followerCrosshairPrice({ ...base, sourcePaneIndex: 0, mapY: () => 500 })).toBe(99);
+    expect(followerCrosshairPrice({ ...base, sourcePaneIndex: 0, mapY: () => null })).toBe(99);
   });
 });

@@ -76,3 +76,27 @@ export function runPaneDataPush(paneIndex: number, push: () => void): void {
 export function isPanePushingData(paneIndex: number): boolean {
   return panesPushingData.has(paneIndex);
 }
+
+/**
+ * The price a follower chart puts its synced crosshair at (10.4.4). Normally the lead's mouse y
+ * mapped through the follower's candle series — but `MouseEventParams.point` is relative to the
+ * pane under the mouse (lightweight-charts 5.2.0), so over an indicator pane (paneIndex > 0) that
+ * y is no candle price at all: the follower's bar close at that time stands in for it. So does
+ * the close when the mapped price is implausible for the follower (another symbol's scale), and
+ * the follower's latest price when it has no bar at that time.
+ */
+export function followerCrosshairPrice(args: {
+  sourcePaneIndex: number | undefined;
+  mapY: () => number | null;
+  barClose: () => number | undefined;
+  followerLatest: number;
+}): number {
+  const { followerLatest } = args;
+  if ((args.sourcePaneIndex ?? 0) === 0) {
+    const mapped = args.mapY();
+    if (mapped !== null && mapped >= followerLatest * 0.5 && mapped <= followerLatest * 2) {
+      return mapped;
+    }
+  }
+  return args.barClose() ?? followerLatest;
+}

@@ -33,7 +33,7 @@ function build(id: string, params: ParamValues) {
 }
 
 describe('indicator settings apply without a remount', () => {
-  it('should recompute EMA from the new length when it changes 20 → 50', () => {
+  it('[10.6.8] should recompute EMA from the new length when it changes 20 → 50', () => {
     const { prim, chart } = build('ema', { length: 20, source: 'close' });
     const series = chart.series[0];
     const before = values(series.data());

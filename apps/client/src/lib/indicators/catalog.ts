@@ -27,6 +27,7 @@ import { calculateMedianPriceIndicatorValues } from './primitives/median-price-c
 import { calculateTypicalPriceIndicatorValues } from './primitives/typical-price-calculation';
 import { calculateMomentumIndicatorValues } from './primitives/momentum-calculation';
 import { calculateRocIndicatorValues } from './primitives/roc-calculation';
+import { addZeroLine } from './primitives/zeroLine';
 
 type SupportedData = CandlestickData<UTCTimestamp> | WhitespaceData<UTCTimestamp>;
 
@@ -53,6 +54,8 @@ function createGenericPrimitive(
     ) => (LineData<UTCTimestamp> | WhitespaceData<UTCTimestamp>)[];
     params: ParamValues;
     paneIndex: number;
+    /** Oscillators (Momentum, ROC) get a dashed zero line */
+    zeroLine?: boolean;
   }
 ): IndicatorPrimitive {
   const series = chart.addSeries(
@@ -68,6 +71,7 @@ function createGenericPrimitive(
     },
     options.paneIndex
   );
+  if (options.zeroLine) addZeroLine(series);
 
   // 🔐 A copy, never the caller's object (the persisted layoutStore instance). `calc` gets these
   //    current params on every run — it must not close over the creation-time ones, or a settings
@@ -76,6 +80,10 @@ function createGenericPrimitive(
 
   const primitive: IndicatorPrimitive = {
     getSeries() {
+      return [series] as IndicatorSeries[];
+    },
+
+    legendSeries() {
       return [series] as IndicatorSeries[];
     },
 
@@ -141,6 +149,7 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
   {
     id: 'ema',
     label: 'EMA',
+    shortTitle: 'EMA',
     description: 'Exponential Moving Average — places more weight on recent prices',
     category: 'overlay',
     defaultParams: { length: 20, source: 'close' },
@@ -169,6 +178,7 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
   {
     id: 'sma',
     label: 'SMA',
+    shortTitle: 'SMA',
     description: 'Simple Moving Average — arithmetic mean over a period',
     category: 'overlay',
     defaultParams: { length: 20, source: 'close' },
@@ -210,6 +220,7 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
   {
     id: 'average-price',
     label: 'Average Price',
+    shortTitle: 'Avg Price',
     description: 'Average of OHLC/4 for each bar',
     category: 'overlay',
     defaultParams: {},
@@ -232,6 +243,7 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
   {
     id: 'median-price',
     label: 'Median Price',
+    shortTitle: 'Median Price',
     description: '(High + Low) / 2 for each bar',
     category: 'overlay',
     defaultParams: {},
@@ -256,6 +268,7 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
     // one in layoutStore's v7 migration. Keeps that slot's default colour.
     id: 'typical-price',
     label: 'Typical Price',
+    shortTitle: 'Typical Price',
     description: '(High + Low + Close) / 3 for each bar',
     category: 'overlay',
     defaultParams: {},
@@ -278,6 +291,7 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
   {
     id: 'vwap',
     label: 'VWAP',
+    shortTitle: 'VWAP',
     description: 'Volume-Weighted Average Price — anchored to a session/period',
     category: 'overlay',
     defaultParams: { source: 'hlc3', anchor: 'session' },
@@ -320,6 +334,7 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
   {
     id: 'momentum',
     label: 'Momentum',
+    shortTitle: 'Mom',
     description: 'Price difference over N periods — current − previous',
     category: 'sub-pane',
     defaultParams: { length: 10, source: 'close' },
@@ -349,6 +364,7 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
         lineStyle: style.lineStyle,
         params,
         paneIndex,
+        zeroLine: true,
         calc: (data, p) =>
           calculateMomentumIndicatorValues(data, {
             length: Number(p.length) || 10,
@@ -363,6 +379,7 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
     // default colour.
     id: 'roc',
     label: 'Rate of Change (ROC)',
+    shortTitle: 'ROC',
     description: 'Percentage change against the price N bars ago — 100 × (src − src[n]) / src[n]',
     category: 'sub-pane',
     defaultParams: { length: 9, source: 'close' },
@@ -392,6 +409,7 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
         lineStyle: style.lineStyle,
         params,
         paneIndex,
+        zeroLine: true,
         calc: (data, p) =>
           calculateRocIndicatorValues(data, {
             length: Number(p.length) || 9,
@@ -403,6 +421,16 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
   {
     id: 'macd',
     label: 'MACD',
+    shortTitle: 'MACD',
+    // TradingView's order: fast, slow, source, signal, oscillator MA, signal MA
+    legendInputs: (p) => [
+      Number(p.fast) || 12,
+      Number(p.slow) || 26,
+      String(p.source ?? 'close'),
+      Number(p.signalLength) || 9,
+      String(p.oscMaType ?? 'ema').toUpperCase(),
+      String(p.signalMaType ?? 'ema').toUpperCase(),
+    ],
     description: 'Moving Average Convergence Divergence — trend-following momentum indicator',
     category: 'sub-pane',
     defaultParams: {
@@ -480,7 +508,6 @@ export function createDefaultIndicatorInstances(): {
   lineWidth: 1 | 2 | 3 | 4;
   lineStyle: 'solid' | 'dotted' | 'dashed' | 'large-dashed' | 'sparse-dotted';
   enabled: boolean;
-  position: { x: number; y: number };
 }[] {
   const defaults: {
     indicatorId: string;
@@ -501,6 +528,5 @@ export function createDefaultIndicatorInstances(): {
     lineWidth: 2 as const,
     lineStyle: 'solid' as const,
     enabled: true,
-    position: { x: 8, y: 40 + i * 60 },
   }));
 }

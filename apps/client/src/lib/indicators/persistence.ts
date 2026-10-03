@@ -70,7 +70,6 @@ export function normalizeIndicatorInstances(raw: unknown): IndicatorInstance[] {
 
     const lineWidth = entry.lineWidth;
     const lineStyle = entry.lineStyle;
-    const position = entry.position;
     seen.add(instanceId);
     out.push({
       instanceId,
@@ -84,11 +83,9 @@ export function normalizeIndicatorInstances(raw: unknown): IndicatorInstance[] {
       lineStyle: LINE_STYLES.includes(lineStyle as IndicatorStyle['lineStyle'])
         ? (lineStyle as IndicatorStyle['lineStyle'])
         : meta.defaultLineStyle,
+      // The old `position` (where a floating legend pill was dragged to) is dropped: the legend
+      // now sits in each pane's header row (owner, 2026-10-03)
       enabled: typeof entry.enabled === 'boolean' ? entry.enabled : true,
-      position:
-        isRecord(position) && typeof position.x === 'number' && typeof position.y === 'number'
-          ? { x: position.x, y: position.y }
-          : { x: 8, y: 40 },
     });
   }
   return out;

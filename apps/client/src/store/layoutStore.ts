@@ -181,11 +181,6 @@ interface LayoutState {
     instanceId: string,
     patch: Partial<IndicatorInstance>
   ) => void;
-  setIndicatorPosition: (
-    paneIndex: number,
-    instanceId: string,
-    position: { x: number; y: number }
-  ) => void;
   toggleSync: (key: keyof SyncOptions) => void;
   setPaneSizes: (layout: LayoutId, sizes: PaneSizes) => void;
   setBottomPanelHeight: (height: number) => void;
@@ -341,18 +336,6 @@ export const useLayoutStore = create<LayoutState>()(
             ...panes[paneIndex],
             indicators: panes[paneIndex].indicators.map((inst) =>
               inst.instanceId === instanceId ? { ...inst, ...patch } : inst
-            ),
-          };
-          return { panes };
-        }),
-
-      setIndicatorPosition: (paneIndex, instanceId, position) =>
-        set((s) => {
-          const panes = [...s.panes];
-          panes[paneIndex] = {
-            ...panes[paneIndex],
-            indicators: panes[paneIndex].indicators.map((inst) =>
-              inst.instanceId === instanceId ? { ...inst, position } : inst
             ),
           };
           return { panes };

@@ -92,6 +92,10 @@ export function createVwapPrimitive(
       return [series];
     },
 
+    legendSeries() {
+      return [series];
+    },
+
     applyOptions(newParams: ParamValues) {
       current = { ...current, ...newParams };
       updateData();

@@ -12,15 +12,9 @@ import type {
 } from 'lightweight-charts';
 import { LineSeries, HistogramSeries, LineStyle } from 'lightweight-charts';
 import type { IndicatorPrimitive, IndicatorStyle, ParamValues, IndicatorSeries } from '../types';
-import { exponentialMovingAverage, simpleMovingAverage } from './moving-average-calculation';
 import { chart as chartTokens } from '@/lib/tokens';
-
-type MaFn = (values: (number | undefined)[], period: number) => (number | undefined)[];
-
-const MA_FNS: Record<string, MaFn> = {
-  ema: exponentialMovingAverage,
-  sma: simpleMovingAverage,
-};
+import { calculateMacd, macdHistogramColor } from './macd-calculation';
+import { addZeroLine } from './zeroLine';
 
 const LINE_STYLE_MAP: Record<IndicatorStyle['lineStyle'], LineStyle> = {
   solid: LineStyle.Solid,
@@ -29,19 +23,6 @@ const LINE_STYLE_MAP: Record<IndicatorStyle['lineStyle'], LineStyle> = {
   'large-dashed': LineStyle.LargeDashed,
   'sparse-dotted': LineStyle.SparseDotted,
 };
-
-function getSourceValue(bar: CandlestickData<UTCTimestamp>, source: string): number {
-  switch (source) {
-    case 'hl2':
-      return (bar.high + bar.low) / 2;
-    case 'hlc3':
-      return (bar.high + bar.low + bar.close) / 3;
-    case 'ohlc4':
-      return (bar.open + bar.high + bar.low + bar.close) / 4;
-    default:
-      return bar.close;
-  }
-}
 
 export function createMacdPrimitive(
   chart: IChartApi,
@@ -54,12 +35,6 @@ export function createMacdPrimitive(
   //    at compute time so a settings change applies without a remount.
   let current: ParamValues = { ...params };
   let currentStyle: IndicatorStyle = { ...style };
-
-  const signalColor = chartTokens.macdSignal;
-  const histBullColor = chartTokens.macdHistBull;
-  const histBullDimColor = chartTokens.macdHistBullDim;
-  const histBearColor = chartTokens.macdHistBear;
-  const histBearDimColor = chartTokens.macdHistBearDim;
 
   const macdSeries = chart.addSeries(
     LineSeries,
@@ -78,7 +53,7 @@ export function createMacdPrimitive(
   const signalSeries = chart.addSeries(
     LineSeries,
     {
-      color: signalColor,
+      color: chartTokens.macdSignal,
       lineWidth: 2,
       title: 'Signal',
       priceLineVisible: false,
@@ -91,31 +66,27 @@ export function createMacdPrimitive(
   const histSeries = chart.addSeries(
     HistogramSeries,
     {
-      color: histBullColor,
+      color: chartTokens.macdHistBull,
       priceLineVisible: false,
       lastValueVisible: false,
     },
     paneIndex
   );
 
-  const zeroSeries = chart.addSeries(
-    LineSeries,
-    {
-      color: 'rgba(120, 123, 134, 0.4)',
-      lineWidth: 1,
-      lineStyle: LineStyle.Dashed,
-      priceLineVisible: false,
-      lastValueVisible: false,
-      crosshairMarkerVisible: false,
-    },
-    paneIndex
-  );
+  // A price line, not a series: it shapes neither the autoscale nor the crosshair (owner,
+  // 2026-10-03 — the old full-length zero LineSeries did both)
+  addZeroLine(macdSeries);
 
-  const allSeries: IndicatorSeries[] = [macdSeries, signalSeries, histSeries, zeroSeries];
+  const allSeries: IndicatorSeries[] = [macdSeries, signalSeries, histSeries];
 
   const api: IndicatorPrimitive = {
     getSeries() {
       return allSeries;
+    },
+
+    legendSeries() {
+      // TradingView's order: histogram, MACD, signal
+      return [histSeries, macdSeries, signalSeries];
     },
 
     applyOptions(newParams: ParamValues) {
@@ -151,79 +122,38 @@ export function createMacdPrimitive(
       macdSeries.setData([]);
       signalSeries.setData([]);
       histSeries.setData([]);
-      zeroSeries.setData([]);
       return;
     }
 
-    const fast = Number(current.fast) || 12;
-    const slow = Number(current.slow) || 26;
-    const signalPeriod = Number(current.signalLength) || 9;
-    const sourceType = (current.source as string) ?? 'close';
-    const oscMaType = (current.oscMaType as string) ?? 'ema';
-    const signalMaType = (current.signalMaType as string) ?? 'ema';
+    const { macd, signal, histogram } = calculateMacd(data, {
+      fast: Number(current.fast) || 12,
+      slow: Number(current.slow) || 26,
+      signalLength: Number(current.signalLength) || 9,
+      source: (current.source as string) ?? 'close',
+      oscMaType: (current.oscMaType as string) ?? 'ema',
+      signalMaType: (current.signalMaType as string) ?? 'ema',
+    });
 
     const times = data.map((d) => d.time as UTCTimestamp);
-    const values = data.map((d) => getSourceValue(d, sourceType));
-
-    const maFastFn = MA_FNS[oscMaType] ?? exponentialMovingAverage;
-    const maSlowFn = MA_FNS[oscMaType] ?? exponentialMovingAverage;
-    const maSignalFn = MA_FNS[signalMaType] ?? exponentialMovingAverage;
-
-    const fastMa = maFastFn(values, fast);
-    const slowMa = maSlowFn(values, slow);
-
-    const macdVals: (number | undefined)[] = fastMa.map((f, i) =>
-      f !== undefined && slowMa[i] !== undefined ? f - slowMa[i]! : undefined
-    );
-
-    const nonNullMacd = macdVals.filter((v): v is number => v !== undefined);
-    const signalRaw = maSignalFn(nonNullMacd, signalPeriod);
-
-    const signalVals: (number | undefined)[] = [];
-    let idx = 0;
-    for (let i = 0; i < macdVals.length; i++) {
-      if (macdVals[i] !== undefined) {
-        signalVals.push(signalRaw[idx++] ?? undefined);
-      } else {
-        signalVals.push(undefined);
-      }
-    }
-
-    const histVals: (number | undefined)[] = macdVals.map((m, i) =>
-      m !== undefined && signalVals[i] !== undefined ? m - signalVals[i]! : undefined
-    );
-
     const toLine = (
       vals: (number | undefined)[]
     ): (LineData<UTCTimestamp> | WhitespaceData<UTCTimestamp>)[] =>
-      times.map((time, i) =>
-        typeof vals[i] === 'number' ? { time, value: vals[i] as number } : { time }
-      );
+      times.map((time, i) => {
+        const v = vals[i];
+        return v === undefined ? { time } : { time, value: v };
+      });
 
     const histData: (HistogramData<UTCTimestamp> | WhitespaceData<UTCTimestamp>)[] = times.map(
       (time, i) => {
-        const val = histVals[i];
-        if (typeof val !== 'number') return { time };
-        const rising = val >= (histVals[i - 1] ?? val);
-        const positive = val >= 0;
-        let barColor: string;
-        if (positive) {
-          barColor = rising ? histBullColor : histBullDimColor;
-        } else {
-          barColor = rising ? histBearDimColor : histBearColor;
-        }
-        return { time, value: val, color: barColor };
+        const val = histogram[i];
+        if (val === undefined) return { time };
+        return { time, value: val, color: macdHistogramColor(histogram[i - 1], val) };
       }
     );
 
-    macdSeries.setData(toLine(macdVals));
-    signalSeries.setData(toLine(signalVals));
+    macdSeries.setData(toLine(macd));
+    signalSeries.setData(toLine(signal));
     histSeries.setData(histData);
-
-    const zeroData: (LineData<UTCTimestamp> | WhitespaceData<UTCTimestamp>)[] = times.map(
-      (time) => ({ time, value: 0 })
-    );
-    zeroSeries.setData(zeroData);
     pulsePaneAutoscale(data.length);
   }
 

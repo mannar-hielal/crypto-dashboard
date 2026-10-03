@@ -6,7 +6,15 @@ import {
   CrosshairMode,
   LineStyle,
 } from 'lightweight-charts';
-import type { IChartApi, IPriceLine, ISeriesApi, UTCTimestamp } from 'lightweight-charts';
+import type {
+  IChartApi,
+  IPaneApi,
+  IPriceLine,
+  ISeriesApi,
+  MouseEventParams,
+  Time,
+  UTCTimestamp,
+} from 'lightweight-charts';
 import { useStore } from 'zustand';
 import { DrawingManager, ToolRegistry } from 'lightweight-charts-drawing';
 import type { Anchor, IDrawing, Point } from 'lightweight-charts-drawing';
@@ -15,7 +23,8 @@ import { useLayoutStore } from '@/store/layoutStore';
 import type { ChartType } from '@/store/layoutStore';
 import { getIndicatorMeta } from '@/lib/indicators/catalog';
 import type { IndicatorInstance, IndicatorPrimitive, IndicatorStyle } from '@/lib/indicators/types';
-import { bg, color, chart as chartColors, font, fontSize } from '@/lib/tokens';
+import { bg, border, color, chart as chartColors, font, fontSize } from '@/lib/tokens';
+import { subPaneStretchFactor, subPaneTargetIndex } from '@/lib/indicators/paneLayout';
 import {
   INTERVAL_BAR_SPACING,
   getPresetSeconds,
@@ -30,7 +39,7 @@ import {
 } from '@/lib/drawingManager';
 import { runPaneDataPush } from '@/lib/chartSync';
 import { toHeikinAshi } from '@/lib/heikinAshi';
-import { IndicatorWidgets } from '@/components/indicators/IndicatorWidgets';
+import { IndicatorLegends } from '@/components/indicators/IndicatorLegends';
 import { useTradeLines } from '@/hooks/useTradeLines';
 import { TradeLineAmend } from './TradeLineAmend';
 
@@ -131,6 +140,15 @@ export function ChartPanel({
   const candleRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const paddingSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const primitiveRefs = useRef<Map<string, IndicatorPrimitive>>(new Map());
+  // One lightweight-charts pane per shown sub-pane indicator instance (owner, 2026-10-03). Kept as
+  // pane APIs, never as numeric indices: an index shifts when a pane above it is removed.
+  const paneRefs = useRef<Map<string, IPaneApi<Time>>>(new Map());
+  // The chart and candle series as state (not only refs) so the legend, a child whose effects run
+  // before this component's, can subscribe once they exist
+  const [chartApi, setChartApi] = useState<IChartApi | null>(null);
+  const [candleApi, setCandleApi] = useState<ISeriesApi<'Candlestick'> | null>(null);
+  // Bumped whenever an indicator's series or pane comes or goes — the legend re-measures
+  const [indicatorLayoutVersion, setIndicatorLayoutVersion] = useState(0);
 
   const bars = useStore(paneStores[paneIndex], (s) => s.bars);
 
@@ -185,6 +203,12 @@ export function ChartPanel({
         fontFamily: font.sans,
         fontSize: 12,
         attributionLogo: false,
+        // Indicator panes resize by dragging the separators (owner, 2026-10-03)
+        panes: {
+          enableResize: true,
+          separatorColor: border.default,
+          separatorHoverColor: border.hover,
+        },
       },
       grid: {
         vertLines: { color: 'rgba(255,255,255,0.04)' },
@@ -238,6 +262,24 @@ export function ChartPanel({
     // ── Drawing manager ────────────────────────────────────────────────────
     const manager = new DrawingManager();
     managerRef.current = manager;
+
+    // ── Drawings live on the price pane only (owner, 2026-10-03) ───────────
+    // Below it are the indicator panes. 🔐 Every handler below clamps to, or ignores anything
+    // that starts outside, the price pane: its candle series can't map a sub-pane's y to a price.
+    const mainPaneHeight = () => chart.paneSize(0).height;
+    const inMainPane = (y: number) => y >= 0 && y <= mainPaneHeight();
+    // The library selects a drawing on a chart click, hit-testing `param.point` — which is
+    // relative to the pane clicked (verified in lightweight-charts 5.2.0: the crosshair point is
+    // pane-local), so a click near a sub-pane's top would select a drawing near the price pane's.
+    // Its handler is private API; it's wrapped before attach() subscribes it.
+    const managerInternals = manager as unknown as {
+      handleClick: (param: MouseEventParams<Time>) => void;
+    };
+    const libraryHandleClick = managerInternals.handleClick;
+    managerInternals.handleClick = (param) => {
+      if ((param.paneIndex ?? 0) !== 0) return;
+      libraryHandleClick(param);
+    };
 
     manager.attach(chart, candleRef.current as never, containerRef.current);
     // 🔐 lightweight-charts-drawing's base drawing implements autoscaleInfo()
@@ -327,7 +369,7 @@ export function ChartPanel({
       }
 
       const time = resolveTime(mouseX);
-      const clampedY = Math.max(0, Math.min(mouseY, paneHeight));
+      const clampedY = Math.max(0, Math.min(mouseY, Math.min(paneHeight, mainPaneHeight())));
       const price = candleRef.current?.coordinateToPrice(clampedY);
       if (time === null || price === null || price === undefined) return;
 
@@ -361,6 +403,13 @@ export function ChartPanel({
 
       const rect = container.getBoundingClientRect();
       const point: Point = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+
+      // A press in an indicator pane never grabs a drawing — and deselecting first stops the
+      // library's own mousedown from starting an anchor drag there (it only drags the selected one)
+      if (!inMainPane(point.y)) {
+        if (m.getSelectedDrawing()) m.deselectAll();
+        return;
+      }
 
       // Anchor drag — let DrawingManager handle via bubbling phase (no stop)
       if (m.hitTestAnchor(point) !== null) return;
@@ -421,8 +470,8 @@ export function ChartPanel({
 
       const startTime = resolveTime(drag.startX - rect.left);
       const currTime = resolveTime(e.clientX - rect.left);
-      const startRY = Math.max(0, Math.min(drag.startY - rect.top, rect.height));
-      const currRY = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
+      const startRY = Math.max(0, Math.min(drag.startY - rect.top, mainPaneHeight()));
+      const currRY = Math.max(0, Math.min(e.clientY - rect.top, mainPaneHeight()));
       const startPrice = cs.coordinateToPrice(startRY);
       const currPrice = cs.coordinateToPrice(currRY);
       if (startTime === null || currTime === null || startPrice === null || currPrice === null)
@@ -463,6 +512,11 @@ export function ChartPanel({
     const handlePointerDown = (e: PointerEvent) => {
       if (e.button !== 0) return;
       if (!manager.getActiveTool()) return;
+      // A click that starts in an indicator pane places no anchor
+      if (!inMainPane(e.clientY - container.getBoundingClientRect().top)) {
+        clickStartRef.current = null;
+        return;
+      }
       clickStartRef.current = { x: e.clientX, y: e.clientY, time: Date.now() };
     };
 
@@ -482,8 +536,8 @@ export function ChartPanel({
       const rect = container.getBoundingClientRect();
       const time = resolveTime(e.clientX - rect.left);
       const mouseY = e.clientY - rect.top;
-      const clampedY = Math.max(0, Math.min(mouseY, rect.height));
-      const price = candleRef.current?.coordinateToPrice(clampedY);
+      if (!inMainPane(mouseY)) return;
+      const price = candleRef.current?.coordinateToPrice(mouseY);
       if (time === null || price === null || price === undefined) return;
 
       const anchor: Anchor = { time, price };
@@ -538,6 +592,7 @@ export function ChartPanel({
         x: e.clientX - rect.left,
         y: e.clientY - rect.top,
       };
+      if (!inMainPane(point.y)) return;
       const hit = manager.hitTest(point);
       if (hit && TEXT_DRAWING_TYPES.has(hit.type)) {
         const text = getDrawingText(hit);
@@ -586,6 +641,8 @@ export function ChartPanel({
     if (candleRef.current) {
       onChartReady?.(chart, candleRef.current);
     }
+    setChartApi(chart);
+    setCandleApi(candleRef.current);
 
     chartReadyRef.current = true;
 
@@ -612,6 +669,8 @@ export function ChartPanel({
       managerRef.current = null;
       chart.remove();
       chartRef.current = null;
+      setChartApi(null);
+      setCandleApi(null);
       // The price line died with the chart — StrictMode re-mounts must not
       // call applyOptions on it.
       realPriceLineRef.current = null;
@@ -808,48 +867,58 @@ export function ChartPanel({
     if (!chart || !source) return;
 
     const primitives = primitiveRefs.current;
-    const prevIds = new Set(primitives.keys());
-    const nextIds = new Set(indicators.map((i) => i.instanceId));
+    const panes = paneRefs.current;
+    let changed = false;
 
-    for (const instanceId of prevIds) {
-      if (!nextIds.has(instanceId)) {
-        const prim = primitives.get(instanceId);
-        if (prim) {
+    /** Series first, then the instance's own pane (owner, 2026-10-03: remove → removePane) */
+    const tearDown = (instanceId: string) => {
+      const prim = primitives.get(instanceId);
+      if (prim) {
+        try {
+          source.detachPrimitive(prim);
+        } catch {
+          /* already detached */
+        }
+        for (const s of prim.getSeries()) {
           try {
-            source.detachPrimitive(prim);
+            chart.removeSeries(s);
           } catch {
-            /* already detached */
-          }
-          for (const s of prim.getSeries()) {
-            try {
-              chart.removeSeries(s);
-            } catch {
-              /* already removed */
-            }
+            /* already removed */
           }
         }
         primitives.delete(instanceId);
+        changed = true;
       }
+      const pane = panes.get(instanceId);
+      if (pane) {
+        // Read the index now: it shifts whenever a pane above this one goes
+        const index = pane.paneIndex();
+        if (index > 0) {
+          try {
+            chart.removePane(index);
+          } catch {
+            /* already removed */
+          }
+        }
+        panes.delete(instanceId);
+        changed = true;
+      }
+    };
+
+    const nextIds = new Set(indicators.map((i) => i.instanceId));
+    for (const instanceId of [...primitives.keys(), ...panes.keys()]) {
+      if (!nextIds.has(instanceId)) tearDown(instanceId);
     }
+
+    // Pane order = the order the indicators were added (the store keeps them in that order)
+    const subPaneIds = indicators
+      .filter((i) => getIndicatorMeta(i.indicatorId)?.category === 'sub-pane')
+      .map((i) => i.instanceId);
 
     for (const inst of indicators) {
       if (!inst.enabled) {
-        const prim = primitives.get(inst.instanceId);
-        if (prim) {
-          try {
-            source.detachPrimitive(prim);
-          } catch {
-            /* already detached */
-          }
-          for (const s of prim.getSeries()) {
-            try {
-              chart.removeSeries(s);
-            } catch {
-              /* already removed */
-            }
-          }
-          primitives.delete(inst.instanceId);
-        }
+        // Hidden: no series, and no empty pane left behind (owner, 2026-10-03)
+        tearDown(inst.instanceId);
         continue;
       }
 
@@ -864,26 +933,41 @@ export function ChartPanel({
           lineWidth: inst.lineWidth,
           lineStyle: inst.lineStyle,
         });
-      } else {
-        const style: IndicatorStyle = {
-          color: inst.color,
-          lineWidth: inst.lineWidth,
-          lineStyle: inst.lineStyle,
-        };
-        // Panes are relative to THIS chart instance (0 = candles, 1 = first
-        // sub-pane), not to the layout grid — the layout's paneIndex is
-        // unrelated to lightweight-charts pane indices.
-        const actualPaneIndex = meta.category === 'sub-pane' ? 1 : 0;
-        const prim = meta.factory({
-          chart,
-          source,
-          params: inst.params,
-          style,
-          paneIndex: actualPaneIndex,
-        });
-        primitives.set(inst.instanceId, prim);
+        continue;
       }
+
+      const style: IndicatorStyle = {
+        color: inst.color,
+        lineWidth: inst.lineWidth,
+        lineStyle: inst.lineStyle,
+      };
+      // Pane indices are this chart's own (0 = candles), unrelated to the layout grid's paneIndex.
+      // A sub-pane indicator gets a pane of its own, so two Momentums are two panes, each with its
+      // own right price scale — as on TradingView and Bybit.
+      let targetPane = 0;
+      if (meta.category === 'sub-pane') {
+        const existingSum = chart.panes().reduce((sum, p) => sum + p.getStretchFactor(), 0);
+        const pane = chart.addPane(true);
+        pane.setStretchFactor(
+          subPaneStretchFactor(existingSum, containerRef.current?.clientHeight ?? 0)
+        );
+        const target = subPaneTargetIndex(subPaneIds, inst.instanceId, (id) => panes.has(id));
+        if (pane.paneIndex() !== target) pane.moveTo(target);
+        panes.set(inst.instanceId, pane);
+        targetPane = pane.paneIndex();
+      }
+      const prim = meta.factory({
+        chart,
+        source,
+        params: inst.params,
+        style,
+        paneIndex: targetPane,
+      });
+      primitives.set(inst.instanceId, prim);
+      changed = true;
     }
+
+    if (changed) setIndicatorLayoutVersion((v) => v + 1);
 
     return () => {
       // 🔐 Diff-aware teardown: this cleanup runs BOTH before every dependency
@@ -894,24 +978,11 @@ export function ChartPanel({
       //    (flicker + rescale). Only do the full teardown on real unmount —
       //    signalled by chartReadyRef.current === false, which the mount-effect
       //    cleanup (declared earlier, so it runs first) sets when the chart is
-      //    being destroyed.
+      //    being destroyed. The chart (and every pane with it) is gone by then,
+      //    so only the maps are cleared.
       if (chartReadyRef.current) return;
-
-      for (const [, prim] of primitives) {
-        try {
-          source.detachPrimitive(prim);
-        } catch {
-          /* already detached */
-        }
-        for (const s of prim.getSeries()) {
-          try {
-            chart.removeSeries(s);
-          } catch {
-            /* already removed */
-          }
-        }
-      }
       primitives.clear();
+      panes.clear();
     };
   }, [indicators, paneIndex]);
 
@@ -1040,6 +1111,53 @@ export function ChartPanel({
     return () => document.removeEventListener('keydown', onKey);
   }, []);
 
+  // The OHLC price legend while hovering; the indicator legends stack under it
+  const priceLegend = hoverData ? (
+    <div
+      className="pointer-events-none rounded-lg border border-white/6 px-3 py-2 backdrop-blur-md"
+      style={{ background: `${bg.page}e6` }}
+    >
+      <p className="mb-1.5" style={{ fontSize: fontSize.xs10, color: color.muted }}>
+        {hoverData.time}
+        {chartType === 'heikinAshi' && ' · Heikin Ashi'}
+      </p>
+      <div className="flex items-center gap-2 font-mono" style={{ fontSize: fontSize.xs11 }}>
+        <span style={{ color: color.muted }}>O</span>
+        <span className="text-slate-200">
+          {hoverData.open.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+        </span>
+        <span style={{ color: color.muted }}>H</span>
+        <span style={{ color: color.green }}>
+          {hoverData.high.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+        </span>
+        <span style={{ color: color.muted }}>L</span>
+        <span style={{ color: color.red }}>
+          {hoverData.low.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+        </span>
+        <span style={{ color: color.muted }}>C</span>
+        <span style={{ color: hoverData.close >= hoverData.open ? color.green : color.red }}>
+          {hoverData.close.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+        </span>
+      </div>
+      <div
+        className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 font-mono"
+        style={{ fontSize: fontSize.xs10 }}
+      ></div>
+    </div>
+  ) : null;
+
   return (
     <div className="relative h-full w-full" style={{ background: CHART_BG }}>
       <div ref={containerRef} className="h-full w-full" />
@@ -1075,52 +1193,6 @@ export function ChartPanel({
             border: '1px solid rgba(139, 92, 246, 0.5)',
           }}
         />
-      )}
-
-      {hoverData && (
-        <div
-          className="pointer-events-none absolute left-3 top-3 z-10 rounded-lg border border-white/6 px-3 py-2 backdrop-blur-md"
-          style={{ background: `${bg.page}e6` }}
-        >
-          <p className="mb-1.5" style={{ fontSize: fontSize.xs10, color: color.muted }}>
-            {hoverData.time}
-            {chartType === 'heikinAshi' && ' · Heikin Ashi'}
-          </p>
-          <div className="flex items-center gap-2 font-mono" style={{ fontSize: fontSize.xs11 }}>
-            <span style={{ color: color.muted }}>O</span>
-            <span className="text-slate-200">
-              {hoverData.open.toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </span>
-            <span style={{ color: color.muted }}>H</span>
-            <span style={{ color: color.green }}>
-              {hoverData.high.toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </span>
-            <span style={{ color: color.muted }}>L</span>
-            <span style={{ color: color.red }}>
-              {hoverData.low.toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </span>
-            <span style={{ color: color.muted }}>C</span>
-            <span style={{ color: hoverData.close >= hoverData.open ? color.green : color.red }}>
-              {hoverData.close.toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </span>
-          </div>
-          <div
-            className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 font-mono"
-            style={{ fontSize: fontSize.xs10 }}
-          ></div>
-        </div>
       )}
 
       {editingTextInfo && (
@@ -1179,16 +1251,18 @@ export function ChartPanel({
         </div>
       )}
 
-      <IndicatorWidgets
+      <IndicatorLegends
+        chart={chartApi}
+        source={candleApi}
         containerRef={containerRef}
         primitiveRefs={primitiveRefs}
+        paneRefs={paneRefs}
+        layoutVersion={indicatorLayoutVersion}
         indicators={indicators}
+        priceLegend={priceLegend}
         onRemove={(instanceId) => useLayoutStore.getState().removeIndicator(paneIndex, instanceId)}
         onUpdate={(instanceId, updates) =>
           useLayoutStore.getState().updateIndicator(paneIndex, instanceId, updates)
-        }
-        onPositionChange={(instanceId, position) =>
-          useLayoutStore.getState().setIndicatorPosition(paneIndex, instanceId, position)
         }
       />
     </div>

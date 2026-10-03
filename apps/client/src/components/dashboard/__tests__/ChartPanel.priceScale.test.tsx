@@ -99,8 +99,8 @@ vi.mock('lightweight-charts-drawing', () => ({
   ToolRegistry: stub(),
 }));
 
-vi.mock('@/components/indicators/IndicatorWidgets', () => ({
-  IndicatorWidgets: () => null,
+vi.mock('@/components/indicators/IndicatorLegends', () => ({
+  IndicatorLegends: () => null,
 }));
 
 import type { CandleBar } from '@crypto-dashboard/sdk';
