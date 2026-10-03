@@ -5,6 +5,7 @@
  *   - setLayout(): activePane clamped to count-1 (not reset to 0) when out of range
  *   - setPaneSymbol(): single-pane update vs. sync.symbol broadcast
  *   - setPaneInterval(): single-pane update vs. sync.interval broadcast
+ *   - range presets (setPaneTimeRangePreset + setPaneInterval): follow sync.interval to every pane
  *   - toggleSync(): toggles individual sync flags + snap-on-enable for symbol/interval
  *   - setPaneChartType() + persisted chartType migration/validation (v3)
  *   - setPaneCategory() + category sync + persisted category migration/validation (v4)
@@ -13,7 +14,8 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useLayoutStore, type PaneConfig } from '../layoutStore';
-import { SYMBOLS, INTERVALS } from '@/lib/markets';
+import { SYMBOLS, INTERVALS, TIME_RANGE_PRESETS, type TimeRangePreset } from '@/lib/markets';
+import type { LayoutId } from '../layoutStore';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -151,6 +153,79 @@ describe('layoutStore', () => {
       useLayoutStore.getState().setPaneInterval(0, '1h');
       const { panes } = useLayoutStore.getState();
       expect(panes.every((p) => p.interval === '1h')).toBe(true);
+    });
+  });
+
+  // ── Range presets (TimeRangeSwitcher) ────────────────────────────────────
+
+  describe('range presets with sync.interval', () => {
+    /** What DashboardPage's TimeRangeSwitcher onPresetChange does for the active pane. */
+    function applyPreset(paneIndex: number, preset: TimeRangePreset) {
+      const { setPaneTimeRangePreset, setPaneInterval } = useLayoutStore.getState();
+      setPaneTimeRangePreset(paneIndex, preset);
+      const p = TIME_RANGE_PRESETS.find((pr) => pr.key === preset);
+      if (p) setPaneInterval(paneIndex, p.interval);
+    }
+
+    function syncedSameSymbol(layout: LayoutId) {
+      useLayoutStore.setState({
+        layout,
+        syncOptions: { symbol: true, interval: true, crosshair: true, timeRange: true },
+      });
+      useLayoutStore.getState().setPaneSymbol(0, SYMBOLS[0].symbol);
+    }
+
+    const cases: Array<[LayoutId, number]> = [
+      ['3h', 3],
+      ['4', 4],
+    ];
+
+    for (const [layout, count] of cases) {
+      for (let active = 0; active < count; active++) {
+        it(`should give every pane the preset and its interval when pane ${active} applies one in layout ${layout}`, () => {
+          syncedSameSymbol(layout);
+          // An earlier preset on another pane (e.g. the top-left one, active by default)
+          const earlier = (active + 1) % count;
+          useLayoutStore.getState().setActivePane(earlier);
+          applyPreset(earlier, '1D');
+          useLayoutStore.getState().setActivePane(active);
+
+          applyPreset(active, '5D');
+
+          const panes = useLayoutStore.getState().panes.slice(0, count);
+          for (const p of panes) {
+            expect(p.interval).toBe('5m');
+            expect(p.timeRangePreset).toBe('5D');
+          }
+        });
+      }
+    }
+
+    it('should clear the preset on every pane when the interval is picked by hand with sync on', () => {
+      syncedSameSymbol('4');
+      applyPreset(0, '1D');
+      // SymbolBar / PaneHeader interval picker: clear the preset, then set the interval
+      useLayoutStore.getState().setPaneTimeRangePreset(2, null);
+      useLayoutStore.getState().setPaneInterval(2, '4h');
+      const { panes } = useLayoutStore.getState();
+      expect(panes.every((p) => p.timeRangePreset === null && p.interval === '4h')).toBe(true);
+    });
+
+    it('should keep the preset on the target pane only when sync.interval is off', () => {
+      applyPreset(1, '5D');
+      const { panes } = useLayoutStore.getState();
+      expect(panes[1].timeRangePreset).toBe('5D');
+      expect(panes[0].timeRangePreset).toBeNull();
+      expect(panes[0].interval).toBe(INTERVALS[0]);
+    });
+
+    it('should snap every pane to the active pane preset when interval sync is turned on', () => {
+      useLayoutStore.setState({ layout: '4', activePane: 0 });
+      applyPreset(0, '5D');
+      applyPreset(3, '1D');
+      useLayoutStore.getState().toggleSync('interval');
+      const { panes } = useLayoutStore.getState();
+      expect(panes.every((p) => p.timeRangePreset === '5D' && p.interval === '5m')).toBe(true);
     });
   });
 

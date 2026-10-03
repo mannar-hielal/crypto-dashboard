@@ -3715,6 +3715,19 @@ for visitors, with a tooltip for signed-in users; removing the overlay in DevToo
   dev CSP allows only `:3001`).
 - **Not in this change:** the Account Settings "Fees" row that overflows at narrow widths (left for later).
 
+### fix: a range preset follows interval sync to every pane (10.4.9) (2026-10-03) ✅
+
+**Context:** owner, 2026-10-03: with interval sync on and the same symbol on 3 (or 4) panes, clicking 1D / 5D updated
+only some panes; the top-left one often stayed different.
+
+- **Cause:** a range preset sets two things — the preset and its interval. `setPaneInterval` already pushed the
+  interval to every pane under interval sync, but `setPaneTimeRangePreset` changed only the active pane. A pane still
+  holding an older preset then drew that range at the new interval. Pane 0 (active by default) was the likeliest.
+- **Fix (`store/layoutStore.ts`):** `setPaneTimeRangePreset` follows `syncOptions.interval` (presets and the clear to
+  null from the interval pickers); turning interval sync on copies the active pane's preset with its interval.
+- **Tests:** row 10.4.9 — `layoutStore.test` "range presets with sync.interval" (7 cases across the 3- and 4-pane
+  layouts plus sync-off and sync-on-toggle cases; 9 failed before the fix).
+
 ### feat: landing page — try the chart first, then the account (2026-10-03) ✅
 
 **Context:** owner, 2026-10-03 (visual Q&A passed): the landing page led with "register" while `/chart` already works
