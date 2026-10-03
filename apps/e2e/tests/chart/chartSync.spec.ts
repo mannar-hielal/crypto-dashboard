@@ -79,8 +79,17 @@ test('[10.4.6] zooming one pane zooms the other to the same time range @full', a
   await expect
     .poll(async () => (await probe<{ from: number; to: number }>(page, 0, 'range'))?.from)
     .not.toBe(before.from);
-  const r0 = await probe<{ from: number; to: number }>(page, 0, 'range');
-  await expect.poll(() => probe<{ from: number; to: number }>(page, 1, 'range')).toEqual(r0);
+  // WebKit applies the wheel zoom over several frames: a snapshot of pane 0 taken mid-zoom never
+  // matched pane 1's settled range (run 37118729135). Compare the two panes once both have settled.
+  await expect
+    .poll(async () => {
+      const [r0, r1] = await Promise.all([
+        probe<{ from: number; to: number }>(page, 0, 'range'),
+        probe<{ from: number; to: number }>(page, 1, 'range'),
+      ]);
+      return r0.from === r1.from && r0.to === r1.to;
+    })
+    .toBe(true);
 });
 
 test('[12.1.2] the history and the live candles meet with no gap and no duplicate @full', async ({
