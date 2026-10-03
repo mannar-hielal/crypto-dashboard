@@ -79,8 +79,18 @@ test('[10.4.6] zooming one pane zooms the other to the same time range @full', a
   await expect
     .poll(async () => (await probe<{ from: number; to: number }>(page, 0, 'range'))?.from)
     .not.toBe(before.from);
-  const r0 = await probe<{ from: number; to: number }>(page, 0, 'range');
-  await expect.poll(() => probe<{ from: number; to: number }>(page, 1, 'range')).toEqual(r0);
+  // Pane 1 applies the synced range on its next frame, so compare the two panes once both have
+  // settled. On CI WebKit pane 1 never followed: a live tick landing before that frame restored its
+  // old range (runs 37118729135, 37120772041; fixed by queueSyncedRange in lib/chartSync.ts).
+  await expect
+    .poll(async () => {
+      const [r0, r1] = await Promise.all([
+        probe<{ from: number; to: number }>(page, 0, 'range'),
+        probe<{ from: number; to: number }>(page, 1, 'range'),
+      ]);
+      return !!r0 && !!r1 && r0.from === r1.from && r0.to === r1.to;
+    })
+    .toBe(true);
 });
 
 test('[12.1.2] the history and the live candles meet with no gap and no duplicate @full', async ({

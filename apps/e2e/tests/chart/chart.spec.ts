@@ -63,3 +63,66 @@ test('[4.12][4.13] maximize fills the column with the account panel; restore bri
     })
     .toBeLessThanOrEqual(2);
 });
+
+// ─── Signed-out visitor: trading is locked behind sign-in ──────────────────
+
+test('[14.1.11] signed out, /chart locks the order form and the account panel; 🔐 removing the lock in DevTools brings it back and sends nothing @full', async ({
+  page,
+}) => {
+  const paperRequests: string[] = [];
+  page.on('request', (req) => {
+    if (new URL(req.url()).pathname.startsWith('/api/paper')) paperRequests.push(req.url());
+  });
+  await page.goto('/chart');
+
+  // One lock over the order form, one over the account panel — the panels underneath are inert
+  await expect(at(page, 'lock.overlay')).toHaveCount(2);
+  await expect(at(page, 'lock.sign-in').first()).toHaveText('Sign in to trade');
+  await expect(page.locator('[inert] [data-guide="trade.submit"]')).toHaveCount(1);
+  // A visitor has no account to sync
+  await expect(at(page, 'symbolbar.sync')).toHaveCount(0);
+
+  // 🔐 Tampering: delete both overlays and strip inert — the lock restores itself
+  await page.evaluate(() => {
+    document.querySelectorAll('[data-guide="lock.overlay"]').forEach((el) => el.remove());
+  });
+  await expect(at(page, 'lock.overlay')).toHaveCount(2);
+  await page.evaluate(() => {
+    document.querySelectorAll('[inert]').forEach((el) => el.removeAttribute('inert'));
+  });
+  await expect(page.locator('[inert] [data-guide="trade.submit"]')).toHaveCount(1);
+
+  expect(paperRequests).toEqual([]);
+});
+
+test('[14.1.12] signed out, "Sign in to trade" → sign in → lands on the dashboard on the same market, unlocked @full', async ({
+  page,
+  seededUser,
+}) => {
+  await page.goto('/chart');
+  await at(page, 'nav.trade-menu').click();
+  await at(page, 'nav.trade-menu.option', 'linear').click();
+  await at(page, 'lock.sign-in').first().click();
+
+  await expect(page).toHaveURL(/\/login$/);
+  await at(page, 'auth.login.email').fill(seededUser.email);
+  await at(page, 'auth.login.password').fill(seededUser.password);
+  await at(page, 'auth.login.submit').click();
+
+  await expect(page).toHaveURL(/\/dashboard\/usdt\/BTCUSDT$/);
+  await expect(at(page, 'trade.submit')).toBeVisible();
+  await expect(at(page, 'lock.overlay')).toHaveCount(0);
+  await expect(at(page, 'symbolbar.sync')).toHaveAttribute('data-tooltip', /saved on the server/);
+});
+
+test('[14.1.13] phone, signed out: the Buy / Sell bar shows dimmed and inert under the account panel\'s "Sign in to trade" @mobile', async ({
+  page,
+}) => {
+  test.skip((page.viewportSize()?.width ?? 0) >= 640, 'phones only');
+  await page.goto('/chart');
+  await expect(at(page, 'trade.mobile.buy')).toBeVisible();
+  await expect(page.locator('[inert] [data-guide="trade.mobile.buy"]')).toHaveCount(1);
+  await expect(page.locator('[inert] [data-guide="trade.mobile.sell"]')).toHaveCount(1);
+  // The account panel's (the order sheet, off screen, has its own)
+  await expect(at(page, 'lock.sign-in').first()).toBeInViewport();
+});

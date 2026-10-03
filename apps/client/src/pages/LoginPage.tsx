@@ -250,6 +250,7 @@ export function LoginPage() {
                   Don&apos;t have an account?{' '}
                   <Link
                     to="/register"
+                    state={returnTo ? { from: returnTo } : undefined}
                     className="font-semibold underline underline-offset-2 transition-colors hover:text-brand-purple"
                     style={{ color: color.purpleLight }}
                   >

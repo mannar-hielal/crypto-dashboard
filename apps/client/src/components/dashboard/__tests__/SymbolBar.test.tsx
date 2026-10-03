@@ -4,6 +4,9 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { SymbolBar } from '../SymbolBar';
 import { useLayoutStore } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
+import { useAuthStore } from '@/store/authStore';
+import { usePaperStore } from '@/store/paperStore';
+import { guideSelector } from '@/lib/guideAnchors';
 
 vi.mock('framer-motion', () => ({
   motion: new Proxy(
@@ -157,5 +160,57 @@ describe('SymbolBar — USDT Perpetual stats (BP-4)', () => {
     render(bar());
     expect(screen.queryByTestId('funding-stat')).toBeNull();
     expect(screen.queryByText('Mark')).toBeNull();
+  });
+});
+
+describe('SymbolBar — account sync status', () => {
+  const USER = { id: 'u1', email: 'a@b.c', username: 'trader', emailVerifiedAt: '2026-01-01' };
+  const bar = () => (
+    <SymbolBar
+      tradingPanelOpen
+      onToggleTrading={vi.fn()}
+      leftToolbarOpen
+      onToggleLeftToolbar={vi.fn()}
+    />
+  );
+  const sync = () => document.querySelector<HTMLElement>(guideSelector('symbolbar.sync'));
+
+  beforeEach(() => {
+    setupStores();
+    useAuthStore.getState().clearAuth();
+  });
+
+  afterEach(() => {
+    cleanup();
+    useAuthStore.getState().clearAuth();
+    usePaperStore.getState().clear();
+  });
+
+  it('should hide the sync icon when the visitor is signed out (no account to sync)', () => {
+    render(bar());
+    expect(sync()).toBeNull();
+  });
+
+  it('should explain the sync icon in a data-tooltip when signed in', () => {
+    useAuthStore.getState().setAuth('token', USER);
+    usePaperStore.setState({ isSyncing: false, lastSyncAt: Date.now() });
+    render(bar());
+    expect(sync()?.getAttribute('data-tooltip')).toMatch(
+      /^Your paper account \(balance, positions, orders, journal\) is saved on the server.* Last synced at /
+    );
+  });
+
+  it('should expose the sync icon as a labelled image (an aria-label needs a role)', () => {
+    useAuthStore.getState().setAuth('token', USER);
+    usePaperStore.setState({ isSyncing: true });
+    render(bar());
+    expect(screen.getByRole('img', { name: 'Account sync: Syncing now…' })).toBe(sync());
+  });
+
+  it('should say it is syncing while the snapshot loads', () => {
+    useAuthStore.getState().setAuth('token', USER);
+    usePaperStore.setState({ isSyncing: true });
+    render(bar());
+    expect(sync()?.getAttribute('data-tooltip')).toMatch(/Syncing now…$/);
   });
 });

@@ -62,7 +62,11 @@ test('[19.7] a password change ends the other sessions @full', async ({
 test('[19.8] export downloads my data without a password; delete can be cancelled, then deletes @full', async ({
   page,
   seededUser,
+  browserName,
 }) => {
+  // Each click in the modal waits seconds for a stable frame on CI's WebKit: 28 s on 2026-09-30,
+  // 46 s on 2026-10-03, past 60 s on a slower run (release #221) — the work, not a hang (3×)
+  test.slow(browserName === 'webkit', 'the settings modal on WebKit on CI needs 30–60 s');
   await signInAs(page, seededUser.email, seededUser.password);
   await openSettings(page);
 

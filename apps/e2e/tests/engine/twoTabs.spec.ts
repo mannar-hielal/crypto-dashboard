@@ -13,7 +13,12 @@ test('[13.3.1][4.6] what tab A does shows in tab B; a reload keeps it @full', as
   context,
   seededUser,
   feed,
+  browserName,
 }) => {
+  // Two live dashboards in one WebKit process: 31 s on CI on 2026-09-30, 51–52 s on 2026-10-03,
+  // past 60 s on a slower run (release #221). The work, not a hang: every step was still
+  // progressing, B was signed in and never locked (3× the timeout)
+  test.slow(browserName === 'webkit', 'two live dashboards: WebKit on CI needs 30–60 s');
   await feed.quote('spot', 'AVAXUSDT', { bid: 19.99, ask: 20, last: 20 });
   const a = await context.newPage();
   await signInAs(a, seededUser.email, seededUser.password);
@@ -41,6 +46,9 @@ test('[13.3.1][4.6] what tab A does shows in tab B; a reload keeps it @full', as
   // A reset in A empties B too (NEW-8-2)
   await at(a, 'account.settings').click();
   await at(a, 'acct-settings.reset').click();
+  // The button swaps with an exit animation (AnimatePresence mode="wait"): click the confirm
+  // step only once it is there, or the click lands on the departing "Reset account"
+  await expect(at(a, 'acct-settings.reset')).toHaveText('Confirm reset?');
   await at(a, 'acct-settings.reset').click();
   await expect(at(b, 'assets.row', 'AVAX')).toHaveCount(0, { timeout: 2_000 });
   await expect(at(b, 'assets.row', 'USDT')).toContainText('10,000.00', { timeout: 2_000 });

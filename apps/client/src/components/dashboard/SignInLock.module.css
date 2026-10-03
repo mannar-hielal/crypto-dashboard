@@ -1,0 +1,118 @@
+/* Sign-in lock over the order form and the account panel for signed-out visitors on /chart.
+   Colours from tokens.ts via the @theme mirror in index.css; bg.page dim and border.card values
+   noted inline. */
+
+.wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  isolation: isolate; /* the panel's own z-indexes can't climb over the overlay */
+  container-type: size; /* the overlay lays out by the panel's height (collapsed = 36 px) */
+}
+
+.wrapper.fit,
+.wrapper.fit .content {
+  height: auto;
+  container-type: normal;
+}
+
+.content {
+  width: 100%;
+  height: 100%;
+  isolation: isolate;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px;
+  /* Light enough that the panel shows through — a visitor sees what an account unlocks */
+  background: rgba(6, 4, 19, 0.5); /* bg.page at 50 % */
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
+  text-align: center;
+}
+
+.message {
+  margin: 0;
+  max-width: 240px;
+  color: var(--color-brand-muted);
+  font-size: 13px; /* fontSize.xs11 */
+  line-height: 1.375; /* lineHeight.snug */
+}
+
+.signIn {
+  flex-shrink: 0;
+  padding: 7px 18px;
+  border: none;
+  border-radius: var(--radius-btn);
+  background: linear-gradient(
+    90deg,
+    var(--color-brand-grad-from) 0%,
+    var(--color-brand-grad-to) 100%
+  ); /* gradient.brand */
+  color: var(--color-brand-white);
+  font-family: inherit;
+  font-size: 14px; /* fontSize.xs */
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.signIn:hover {
+  opacity: 0.9;
+}
+
+.close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.08); /* border.card */
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-brand-muted);
+  cursor: pointer;
+}
+
+.close:hover {
+  color: var(--color-brand-white);
+}
+
+.signIn:focus-visible,
+.close:focus-visible {
+  outline: 2px solid var(--color-brand-purple-dark);
+  outline-offset: 3px;
+}
+
+/* Collapsed account panel (header only): one row */
+@container (max-height: 96px) {
+  .overlay {
+    flex-direction: row;
+    gap: 10px;
+    padding: 4px 12px;
+  }
+
+  .message {
+    min-width: 0;
+    max-width: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .signIn {
+    padding: 4px 14px;
+  }
+}

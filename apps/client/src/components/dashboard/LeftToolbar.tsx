@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { ElementType } from 'react';
-import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MousePointer2,
@@ -13,7 +12,8 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
-import { bg, color, fontSize } from '@/lib/tokens';
+import { bg, color } from '@/lib/tokens';
+import { useDataTooltip } from '@/hooks/useDataTooltip';
 import { CURSOR_VARIANTS, type CursorVariantId } from '@/lib/cursors';
 import { TOOL_GROUPS } from '@/lib/libraryTools';
 import type { ToolDef } from '@/lib/libraryTools';
@@ -203,55 +203,8 @@ export function LeftToolbar({
     onToolChange?.(null);
   }
 
-  // ── Tooltip ─────────────────────────────────────────────────────────────
-  const [tooltip, setTooltip] = useState<{
-    text: string;
-    top: number;
-    left: number;
-  } | null>(null);
-  const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-  useEffect(() => {
-    const aside = asideRef.current;
-    if (!aside) return;
-
-    let lastEl: HTMLElement | null = null;
-
-    const onMouseOver = (e: MouseEvent) => {
-      const el = (e.target as HTMLElement).closest<HTMLElement>('[data-tooltip]');
-      if (!el) {
-        if (lastEl) {
-          lastEl = null;
-          clearTimeout(tooltipTimeoutRef.current);
-          setTooltip(null);
-        }
-        return;
-      }
-      if (el === lastEl) return;
-      lastEl = el;
-      const text = el.getAttribute('data-tooltip') || '';
-      const delay = Number(el.getAttribute('data-tooltip-delay')) || 1500;
-      clearTimeout(tooltipTimeoutRef.current);
-      tooltipTimeoutRef.current = setTimeout(() => {
-        const rect = el.getBoundingClientRect();
-        setTooltip({ text, top: rect.top + rect.height / 2, left: rect.right + 10 });
-      }, delay);
-    };
-
-    const onMouseLeave = () => {
-      lastEl = null;
-      clearTimeout(tooltipTimeoutRef.current);
-      setTooltip(null);
-    };
-
-    aside.addEventListener('mouseover', onMouseOver);
-    aside.addEventListener('mouseleave', onMouseLeave);
-    return () => {
-      aside.removeEventListener('mouseover', onMouseOver);
-      aside.removeEventListener('mouseleave', onMouseLeave);
-      clearTimeout(tooltipTimeoutRef.current);
-    };
-  }, []);
+  // ── Tooltip (data-tooltip on each button) ───────────────────────────────
+  const tooltip = useDataTooltip(asideRef, 'right');
 
   // ── Get the active group for popup menu ─────────────────────────────────
   const activePopupGroup = popupMenu
@@ -621,24 +574,7 @@ export function LeftToolbar({
         )}
       </AnimatePresence>
 
-      {/* ── Portal tooltip ───────────────────────────────────────────── */}
-      {tooltip &&
-        createPortal(
-          <div
-            role="tooltip"
-            className="pointer-events-none fixed z-[1000] whitespace-nowrap rounded-md border border-white/8 px-2 py-1 font-semibold text-white/80 shadow-xl"
-            style={{
-              top: tooltip.top,
-              left: tooltip.left,
-              transform: 'translateY(-50%)',
-              fontSize: fontSize.xs10,
-              background: bg.surface,
-            }}
-          >
-            {tooltip.text}
-          </div>,
-          document.body
-        )}
+      {tooltip}
     </aside>
   );
 }

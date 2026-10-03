@@ -5,7 +5,7 @@ import { useStore } from 'zustand';
 import { priceTickSize, type MarketCategory, type PaperTriggerBy } from '@crypto-dashboard/sdk';
 import { useLayoutStore } from '@/store/layoutStore';
 import { getLastKnownMarkPrice, paneStores } from '@/store/paneStore';
-import { leverageFor, usePaperStore, type PlaceResult } from '@/store/paperStore';
+import { leverageFor, NOT_SIGNED_IN, usePaperStore, type PlaceResult } from '@/store/paperStore';
 import { MARKETS } from '@/lib/marketRoutes';
 import { feeRatesLabel, floorToStep, maxQty, orderPreview } from '@/lib/orderMath';
 import { useInstrument } from '@/hooks/useInstruments';
@@ -13,6 +13,7 @@ import { useOrderPrefillStore } from '@/store/orderPrefillStore';
 import { bg, color, fontSize } from '@/lib/tokens';
 import { guide, type GuideProps } from '@/lib/guideAnchors';
 import { LeverageChip } from './LeverageChip';
+import { SignInToTradeLink } from './SignInToTradeLink';
 import { LiquidationNotices } from './LiquidationNotices';
 import {
   LIQUIDATION_EXPLAINER,
@@ -1452,7 +1453,8 @@ export function TradingPanel({
               className="font-semibold"
               style={{ fontSize: fontSize.xs10, color: color.red }}
             >
-              {formError}
+              {/* A visitor who got past the sign-in lock: invite, never a raw error */}
+              {formError === NOT_SIGNED_IN ? <SignInToTradeLink /> : formError}
             </motion.p>
           )}
         </AnimatePresence>

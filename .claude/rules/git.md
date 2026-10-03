@@ -84,7 +84,7 @@ checked out.
   head. It fails closed: to recover, re-run the check on the PR, then re-run the deploy. There is no
   branch protection, so the merge itself waits on the merge process instead: every check on the
   PR's head must be green, not just CI. `prod-smoke.yml`
-  runs every 6 hours. `deploy.yml` also runs the prod smoke after every deploy.
+  runs every 8 hours. `deploy.yml` also runs the prod smoke after every deploy.
 
 ## Emergencies — broken production
 
@@ -111,12 +111,13 @@ it would also be a way around it for a mistake. The break-glass options work wit
 
 The plan the owner agreed on 2026-09-29, for a private repository on the Free plan (2,000 included
 minutes). A public repository is not billed, but the plan holds either way. Once the minutes run out,
-nothing runs until the next month: no CI, no merge, no deploy, not even a security fix. So about 160
-minutes stay in reserve (220 until the weekly engine job, M7, 2026-09-30).
+nothing runs until the next month: no CI, no merge, no deploy, not even a security fix. So about 230
+minutes stay in reserve. The prod smoke moved from every 6 h to every 8 h (owner, 2026-09-30) to pay for the
+weekly engine job (M7) and the `HARDENING_PLAN.md` checks, which add their rows here as each is built.
 
 | Workflow                                             | Schedule                                | Min / month |
 | ---------------------------------------------------- | --------------------------------------- | ----------- |
-| Prod smoke (`prod-smoke.yml`)                        | every 6 h, and after every deploy       | ~240        |
+| Prod smoke (`prod-smoke.yml`)                        | every 8 h, and after every deploy       | ~180        |
 | E2E full set (`e2e-nightly.yml`)                     | nightly, and every push to a release PR | ~455        |
 | Feed parity + spec drift (`feed-parity.yml`)         | nightly (drift on Sundays)              | ~120        |
 | Testnet parity (`parity.yml`)                        | daily                                   | ~90         |
@@ -125,8 +126,8 @@ minutes stay in reserve (220 until the weekly engine job, M7, 2026-09-30).
 | CI (`ci.yml`, one job; docs-only changes skip it)    | ~25 PRs + 8 releases                    | ~455        |
 | Claude review (`claude-code-review.yml`)             | every PR push                           | ~350        |
 | Deploy                                               | 8 releases                              | ~40         |
-| **Planned**                                          |                                         | **≈1,840**  |
-| **Reserve** (re-runs, a busy week, an emergency fix) |                                         | **≈160**    |
+| **Planned**                                          |                                         | **≈1,770**  |
+| **Reserve** (re-runs, a busy week, an emergency fix) |                                         | **≈230**    |
 
 - **Volume is the lever:** about 25 PRs and 8 releases a month (step 4 of the branching flow above).
   An extra PR costs about 27 minutes, an extra release about 33.

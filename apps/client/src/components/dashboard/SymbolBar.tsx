@@ -22,6 +22,8 @@ import { usePaperStore } from '@/store/paperStore';
 import { SYMBOLS } from '@/lib/markets';
 import { bg, color, fontSize } from '@/lib/tokens';
 import { guide } from '@/lib/guideAnchors';
+import { useAuthStatus } from '@/hooks/useSignIn';
+import { useDataTooltip } from '@/hooks/useDataTooltip';
 import { fmtMktPrice } from '@/lib/utils';
 import { FUNDING_EXPLAINER, formatFundingCountdown, formatFundingRate } from '@/lib/funding';
 import { getIndicatorMeta } from '@/lib/indicators/catalog';
@@ -205,8 +207,7 @@ export function SymbolBar({
   const [symbolMenuPos, setSymbolMenuPos] = useState({ top: 0, left: 0 });
   const symbolTriggerRef = useRef<HTMLButtonElement>(null);
 
-  const isSyncing = usePaperStore((s) => s.isSyncing);
-  const lastSyncAt = usePaperStore((s) => s.lastSyncAt);
+  const authStatus = useAuthStatus();
 
   // ── Derived price stats ──────────────────────────────────────────────────
   const prevClose = latestPrice !== null && priceChange !== null ? latestPrice - priceChange : null;
@@ -494,28 +495,14 @@ export function SymbolBar({
       <div className="hidden shrink-0 items-center gap-3 sm:flex">
         <ChartLayoutPicker />
 
-        {/* Divider */}
-        <span className="h-4 w-px shrink-0 bg-white/8" />
-
-        {/* ── Sync status ───────────────────────────────────────────────────── */}
-        <div className="flex shrink-0 items-center gap-1.5 pr-2">
-          {isSyncing ? (
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-            >
-              <RefreshCw className="h-3 w-3" style={{ color: color.purple }} />
-            </motion.div>
-          ) : lastSyncAt ? (
-            <span title={`Last synced: ${new Date(lastSyncAt).toLocaleTimeString()}`}>
-              <Cloud className="h-3 w-3" style={{ color: color.green, opacity: 0.7 }} />
-            </span>
-          ) : (
-            <span title="Not synced">
-              <CloudOff className="h-3 w-3" style={{ color: color.red, opacity: 0.7 }} />
-            </span>
-          )}
-        </div>
+        {/* Sync status — signed-in only: a visitor has no account to sync */}
+        {authStatus === 'user' && (
+          <>
+            {/* Divider */}
+            <span className="h-4 w-px shrink-0 bg-white/8" />
+            <SyncStatus />
+          </>
+        )}
       </div>
 
       {/* Divider */}
@@ -596,6 +583,52 @@ export function SymbolBar({
           {isConnected ? 'Live' : 'Offline'}
         </span>
       </div>
+    </div>
+  );
+}
+
+// ─── Sync status ─────────────────────────────────────────────────────────────
+
+const SYNC_EXPLAINER =
+  'Your paper account (balance, positions, orders, journal) is saved on the server and kept in sync live.';
+
+/** Cloud icon for the account sync, with a hover explainer (data-tooltip). */
+function SyncStatus() {
+  const isSyncing = usePaperStore((s) => s.isSyncing);
+  const lastSyncAt = usePaperStore((s) => s.lastSyncAt);
+  const ref = useRef<HTMLDivElement>(null);
+  const tooltip = useDataTooltip(ref, 'bottom-end');
+
+  const state = isSyncing
+    ? 'Syncing now…'
+    : lastSyncAt
+      ? `Last synced at ${new Date(lastSyncAt).toLocaleTimeString()}.`
+      : 'Not synced yet.';
+
+  return (
+    <div
+      ref={ref}
+      {...guide('symbolbar.sync')}
+      data-tooltip={`${SYNC_EXPLAINER} ${state}`}
+      data-tooltip-delay="300"
+      // An aria-label needs a role (axe aria-prohibited-attr): the icon is an image of the sync state
+      role="img"
+      aria-label={`Account sync: ${state}`}
+      className="flex shrink-0 items-center gap-1.5 pr-2"
+    >
+      {isSyncing ? (
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+        >
+          <RefreshCw className="h-3 w-3" style={{ color: color.purple }} />
+        </motion.div>
+      ) : lastSyncAt ? (
+        <Cloud className="h-3 w-3" style={{ color: color.green, opacity: 0.7 }} />
+      ) : (
+        <CloudOff className="h-3 w-3" style={{ color: color.red, opacity: 0.7 }} />
+      )}
+      {tooltip}
     </div>
   );
 }
