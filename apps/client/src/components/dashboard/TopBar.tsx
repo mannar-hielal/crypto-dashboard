@@ -199,7 +199,8 @@ export function TopBar({ marketing = false }: TopBarProps) {
           </>
         ) : (
           <motion.button
-            // Back to this market after signing in
+            // Back to this market after signing in. Dashboard / /chart only: the marketing pages
+            // (`marketing`) take the Live Chart link branch above and never render this button
             onClick={signIn}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
