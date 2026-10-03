@@ -224,6 +224,10 @@ export const GUIDE_ANCHORS = [
   'notice.dismiss',
   'notice.deletion-pending',
   'notice.deletion-pending.cancel',
+  // landing (marketing home page)
+  'landing.hero.chart',
+  'landing.hero.register',
+  'landing.unlocks.register',
   // lock (signed-out visitors on /chart)
   'lock.overlay',
   'lock.sign-in',
