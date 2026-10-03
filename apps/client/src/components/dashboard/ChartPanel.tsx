@@ -11,7 +11,6 @@ import type {
   IPaneApi,
   IPriceLine,
   ISeriesApi,
-  MouseEventParams,
   Time,
   UTCTimestamp,
 } from 'lightweight-charts';
@@ -36,6 +35,7 @@ import {
   persistDrawings,
   schedulePersistDrawings,
   getPersistenceKey,
+  guardClicksToPricePane,
 } from '@/lib/drawingManager';
 import { pendingSyncRange, runPaneDataPush } from '@/lib/chartSync';
 import { toHeikinAshi } from '@/lib/heikinAshi';
@@ -271,18 +271,8 @@ export function ChartPanel({
     // that starts outside, the price pane: its candle series can't map a sub-pane's y to a price.
     const mainPaneHeight = () => chart.paneSize(0).height;
     const inMainPane = (y: number) => y >= 0 && y <= mainPaneHeight();
-    // The library selects a drawing on a chart click, hit-testing `param.point` — which is
-    // relative to the pane clicked (verified in lightweight-charts 5.2.0: the crosshair point is
-    // pane-local), so a click near a sub-pane's top would select a drawing near the price pane's.
-    // Its handler is private API; it's wrapped before attach() subscribes it.
-    const managerInternals = manager as unknown as {
-      handleClick: (param: MouseEventParams<Time>) => void;
-    };
-    const libraryHandleClick = managerInternals.handleClick;
-    managerInternals.handleClick = (param) => {
-      if ((param.paneIndex ?? 0) !== 0) return;
-      libraryHandleClick(param);
-    };
+    // Click-to-select ignores clicks in indicator panes (wraps the library's private handler)
+    guardClicksToPricePane(manager);
 
     manager.attach(chart, candleRef.current as never, containerRef.current);
     // 🔐 lightweight-charts-drawing's base drawing implements autoscaleInfo()
