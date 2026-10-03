@@ -18,6 +18,7 @@ import { CURSOR_VARIANTS, type CursorVariantId } from '@/lib/cursors';
 import { TOOL_GROUPS } from '@/lib/libraryTools';
 import type { ToolDef } from '@/lib/libraryTools';
 import { TOOL_ICONS } from '@/lib/toolIcons';
+import { guide } from '@/lib/guideAnchors';
 
 const BIN_TOOLS: ToolDef[] = [
   { id: 'remove-all', label: 'Remove All' },
@@ -314,6 +315,7 @@ export function LeftToolbar({
         return (
           <div key={tool.id} className="toolbar-slot">
             <motion.button
+              {...guide('toolbar.tool', tool.id)}
               data-tooltip={toolLabel}
               aria-label={toolLabel}
               onClick={() => handleMainClick(tool.id)}

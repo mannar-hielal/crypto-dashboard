@@ -255,7 +255,6 @@ export function SymbolBar({
       lineWidth: meta.defaultLineWidth,
       lineStyle: meta.defaultLineStyle,
       enabled: true,
-      position: { x: 8, y: 40 + indicators.length * 60 },
     });
   }
 

@@ -71,6 +71,16 @@ export const GUIDE_ANCHORS = [
   // chart
   'chart.type-menu',
   'chart.mark-line',
+  // toolbar (drawing tools, left of the chart; key = the tool group id)
+  'toolbar.tool',
+  // indicator (key = the catalog id for an option, the instance id for everything else)
+  'indicator.menu',
+  'indicator.option',
+  'indicator.pane-legend',
+  'indicator.legend',
+  'indicator.toggle',
+  'indicator.settings',
+  'indicator.remove',
   // pane
   'pane',
   'pane.header',

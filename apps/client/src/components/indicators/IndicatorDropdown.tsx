@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { INDICATOR_CATALOG } from '@/lib/indicators/catalog';
 import type { IndicatorCategory } from '@/lib/indicators/types';
 import { bg, color, fontSize } from '@/lib/tokens';
+import { guide } from '@/lib/guideAnchors';
 
 interface IndicatorDropdownProps {
   existingIds: string[];
@@ -38,6 +39,7 @@ export function IndicatorDropdown({ existingIds, onAdd }: IndicatorDropdownProps
     <>
       <button
         ref={triggerRef}
+        {...guide('indicator.menu')}
         onClick={handleToggle}
         className="flex shrink-0 items-center gap-1 rounded-md px-2 py-1 font-semibold transition-colors hover:text-white"
         style={{
@@ -90,6 +92,7 @@ export function IndicatorDropdown({ existingIds, onAdd }: IndicatorDropdownProps
                       return (
                         <button
                           key={meta.id}
+                          {...guide('indicator.option', meta.id)}
                           onClick={() => {
                             onAdd(meta.id);
                             setOpen(false);

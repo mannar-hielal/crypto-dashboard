@@ -236,7 +236,7 @@ export function FeaturesPage() {
                     </svg>
                   }
                   title="Indicators"
-                  desc="9 built-in indicators — EMA, SMA, Average Price, Median Price, Weighted Close, VWAP, Momentum, Percent Change, and MACD. Each renders as a draggable widget with live values, an eye toggle, and a settings panel for color, line style, and parameters — independently per chart pane."
+                  desc="9 built-in indicators — EMA, SMA, Average Price, Median Price, Typical Price, VWAP, Momentum, Rate of Change (ROC), and MACD. Oscillators get a pane of their own; every indicator has a legend with live values under the crosshair, an eye toggle, and a settings panel for color, line style, and parameters — independently per chart pane."
                 />
                 <DetailCard
                   icon={

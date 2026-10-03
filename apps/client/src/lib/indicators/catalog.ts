@@ -24,9 +24,10 @@ import { createMacdPrimitive } from './primitives/macd';
 import { calculateMovingAverageIndicatorValues } from './primitives/moving-average-calculation';
 import { calculateAveragePriceIndicatorValues } from './primitives/average-price-calculation';
 import { calculateMedianPriceIndicatorValues } from './primitives/median-price-calculation';
-import { calculateWeightedCloseIndicatorValues } from './primitives/weighted-close-calculation';
+import { calculateTypicalPriceIndicatorValues } from './primitives/typical-price-calculation';
 import { calculateMomentumIndicatorValues } from './primitives/momentum-calculation';
-import { calculatePercentChangeIndicatorValues } from './primitives/percent-change-calculation';
+import { calculateRocIndicatorValues } from './primitives/roc-calculation';
+import { addZeroLine } from './primitives/zeroLine';
 
 type SupportedData = CandlestickData<UTCTimestamp> | WhitespaceData<UTCTimestamp>;
 
@@ -42,7 +43,8 @@ function createGenericPrimitive(
   chart: IChartApi,
   source: ISeriesApi<'Candlestick'>,
   options: {
-    title: string;
+    /** Series title (price-axis label), recomputed on every settings change */
+    title: (params: ParamValues) => string;
     color: string;
     lineWidth: 1 | 2 | 3 | 4;
     lineStyle: IndicatorStyle['lineStyle'];
@@ -52,6 +54,8 @@ function createGenericPrimitive(
     ) => (LineData<UTCTimestamp> | WhitespaceData<UTCTimestamp>)[];
     params: ParamValues;
     paneIndex: number;
+    /** Oscillators (Momentum, ROC) get a dashed zero line */
+    zeroLine?: boolean;
   }
 ): IndicatorPrimitive {
   const series = chart.addSeries(
@@ -60,14 +64,18 @@ function createGenericPrimitive(
       color: options.color,
       lineWidth: options.lineWidth,
       lineStyle: LINE_STYLE_MAP[options.lineStyle],
-      title: options.title,
+      title: options.title(options.params),
       priceLineVisible: false,
       lastValueVisible: true,
       crosshairMarkerVisible: false,
     },
     options.paneIndex
   );
+  if (options.zeroLine) addZeroLine(series);
 
+  // 🔐 A copy, never the caller's object (the persisted layoutStore instance). `calc` gets these
+  //    current params on every run — it must not close over the creation-time ones, or a settings
+  //    change would only apply after a reload.
   let currentParams = { ...options.params };
 
   const primitive: IndicatorPrimitive = {
@@ -75,8 +83,13 @@ function createGenericPrimitive(
       return [series] as IndicatorSeries[];
     },
 
+    legendSeries() {
+      return [series] as IndicatorSeries[];
+    },
+
     applyOptions(newParams: ParamValues) {
       currentParams = { ...currentParams, ...newParams };
+      series.applyOptions({ title: options.title(currentParams) });
       updateData();
     },
 
@@ -136,6 +149,7 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
   {
     id: 'ema',
     label: 'EMA',
+    shortTitle: 'EMA',
     description: 'Exponential Moving Average — places more weight on recent prices',
     category: 'overlay',
     defaultParams: { length: 20, source: 'close' },
@@ -164,6 +178,7 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
   {
     id: 'sma',
     label: 'SMA',
+    shortTitle: 'SMA',
     description: 'Simple Moving Average — arithmetic mean over a period',
     category: 'overlay',
     defaultParams: { length: 20, source: 'close' },
@@ -187,16 +202,16 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
     defaultLineStyle: 'solid',
     factory: ({ chart, source, params, style, paneIndex }) =>
       createGenericPrimitive(chart, source, {
-        title: `SMA ${params.length}`,
+        title: (p) => `SMA ${Number(p.length) || 20}`,
         color: style.color,
         lineWidth: style.lineWidth,
         lineStyle: style.lineStyle,
         params,
         paneIndex,
-        calc: (data) =>
+        calc: (data, p) =>
           calculateMovingAverageIndicatorValues(data, {
-            length: (params.length as number) ?? 20,
-            source: (params.source as string) ?? 'close',
+            length: Number(p.length) || 20,
+            source: (p.source as string) ?? 'close',
             smoothingLine: undefined,
           }),
       }),
@@ -205,6 +220,7 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
   {
     id: 'average-price',
     label: 'Average Price',
+    shortTitle: 'Avg Price',
     description: 'Average of OHLC/4 for each bar',
     category: 'overlay',
     defaultParams: {},
@@ -214,7 +230,7 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
     defaultLineStyle: 'solid',
     factory: ({ chart, source, params, style, paneIndex }) =>
       createGenericPrimitive(chart, source, {
-        title: 'Avg Price',
+        title: () => 'Avg Price',
         color: style.color,
         lineWidth: style.lineWidth,
         lineStyle: style.lineStyle,
@@ -227,6 +243,7 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
   {
     id: 'median-price',
     label: 'Median Price',
+    shortTitle: 'Median Price',
     description: '(High + Low) / 2 for each bar',
     category: 'overlay',
     defaultParams: {},
@@ -236,7 +253,7 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
     defaultLineStyle: 'solid',
     factory: ({ chart, source, params, style, paneIndex }) =>
       createGenericPrimitive(chart, source, {
-        title: 'Median Price',
+        title: () => 'Median Price',
         color: style.color,
         lineWidth: style.lineWidth,
         lineStyle: style.lineStyle,
@@ -247,9 +264,12 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
   },
 
   {
-    id: 'weighted-close',
-    label: 'Weighted Close',
-    description: '(Close×2 + High + Low) / 4 for each bar',
+    // Replaced "Weighted Close" (owner, 2026-10-03); a saved weighted-close instance becomes this
+    // one in layoutStore's v7 migration. Keeps that slot's default colour.
+    id: 'typical-price',
+    label: 'Typical Price',
+    shortTitle: 'Typical Price',
+    description: '(High + Low + Close) / 3 for each bar',
     category: 'overlay',
     defaultParams: {},
     params: [],
@@ -258,19 +278,20 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
     defaultLineStyle: 'solid',
     factory: ({ chart, source, params, style, paneIndex }) =>
       createGenericPrimitive(chart, source, {
-        title: 'Weighted Close',
+        title: () => 'Typical Price',
         color: style.color,
         lineWidth: style.lineWidth,
         lineStyle: style.lineStyle,
         params,
         paneIndex,
-        calc: (data) => calculateWeightedCloseIndicatorValues(data, { offset: 0 }),
+        calc: (data) => calculateTypicalPriceIndicatorValues(data),
       }),
   },
 
   {
     id: 'vwap',
     label: 'VWAP',
+    shortTitle: 'VWAP',
     description: 'Volume-Weighted Average Price — anchored to a session/period',
     category: 'overlay',
     defaultParams: { source: 'hlc3', anchor: 'session' },
@@ -313,6 +334,7 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
   {
     id: 'momentum',
     label: 'Momentum',
+    shortTitle: 'Mom',
     description: 'Price difference over N periods — current − previous',
     category: 'sub-pane',
     defaultParams: { length: 10, source: 'close' },
@@ -336,43 +358,62 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
     defaultLineStyle: 'solid',
     factory: ({ chart, source, params, style, paneIndex }) =>
       createGenericPrimitive(chart, source, {
-        title: 'Momentum',
+        title: () => 'Momentum',
         color: style.color,
         lineWidth: style.lineWidth,
         lineStyle: style.lineStyle,
         params,
         paneIndex,
-        calc: (data) =>
+        zeroLine: true,
+        calc: (data, p) =>
           calculateMomentumIndicatorValues(data, {
-            length: (params.length as number) ?? 10,
-            source: (params.source as string) ?? 'close',
+            length: Number(p.length) || 10,
+            source: (p.source as string) ?? 'close',
           }),
       }),
   },
 
   {
-    id: 'percent-change',
-    label: 'Percent Change',
-    description: 'Percentage price change between consecutive bars',
+    // Replaced "Percent Change" (owner, 2026-10-03) — that was ROC with length 1, which is what a
+    // saved percent-change instance becomes in layoutStore's v7 migration. Keeps that slot's
+    // default colour.
+    id: 'roc',
+    label: 'Rate of Change (ROC)',
+    shortTitle: 'ROC',
+    description: 'Percentage change against the price N bars ago — 100 × (src − src[n]) / src[n]',
     category: 'sub-pane',
-    defaultParams: {},
+    defaultParams: { length: 9, source: 'close' },
     params: [
-      { id: 'offset', label: 'Offset', type: 'number', default: 0, min: -50, max: 50, step: 1 },
+      { id: 'length', label: 'Length', type: 'number', default: 9, min: 1, max: 500, step: 1 },
+      {
+        id: 'source',
+        label: 'Source',
+        type: 'select',
+        default: 'close',
+        options: [
+          { label: 'Close', value: 'close' },
+          { label: 'Open', value: 'open' },
+          { label: 'High', value: 'high' },
+          { label: 'Low', value: 'low' },
+        ],
+      },
     ],
     defaultColor: nextColor(),
     defaultLineWidth: 2,
     defaultLineStyle: 'solid',
     factory: ({ chart, source, params, style, paneIndex }) =>
       createGenericPrimitive(chart, source, {
-        title: 'Pct Chg',
+        title: () => 'ROC',
         color: style.color,
         lineWidth: style.lineWidth,
         lineStyle: style.lineStyle,
         params,
         paneIndex,
-        calc: (data) =>
-          calculatePercentChangeIndicatorValues(data, {
-            offset: (params.offset as number) ?? 0,
+        zeroLine: true,
+        calc: (data, p) =>
+          calculateRocIndicatorValues(data, {
+            length: Number(p.length) || 9,
+            source: (p.source as string) ?? 'close',
           }),
       }),
   },
@@ -380,6 +421,16 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
   {
     id: 'macd',
     label: 'MACD',
+    shortTitle: 'MACD',
+    // TradingView's order: fast, slow, source, signal, oscillator MA, signal MA
+    legendInputs: (p) => [
+      Number(p.fast) || 12,
+      Number(p.slow) || 26,
+      String(p.source ?? 'close'),
+      Number(p.signalLength) || 9,
+      String(p.oscMaType ?? 'ema').toUpperCase(),
+      String(p.signalMaType ?? 'ema').toUpperCase(),
+    ],
     description: 'Moving Average Convergence Divergence — trend-following momentum indicator',
     category: 'sub-pane',
     defaultParams: {
@@ -457,7 +508,6 @@ export function createDefaultIndicatorInstances(): {
   lineWidth: 1 | 2 | 3 | 4;
   lineStyle: 'solid' | 'dotted' | 'dashed' | 'large-dashed' | 'sparse-dotted';
   enabled: boolean;
-  position: { x: number; y: number };
 }[] {
   const defaults: {
     indicatorId: string;
@@ -478,6 +528,5 @@ export function createDefaultIndicatorInstances(): {
     lineWidth: 2 as const,
     lineStyle: 'solid' as const,
     enabled: true,
-    position: { x: 8, y: 40 + i * 60 },
   }));
 }

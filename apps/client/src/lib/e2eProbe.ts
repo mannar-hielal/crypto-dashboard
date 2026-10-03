@@ -1,6 +1,6 @@
 /**
  * A read-only view of the charts for the Playwright tests (docs/TRADING_TEST_PLAN.md
- * rows 10.4.4–10.4.7, 12.1.2): the canvas can't be queried, so an e2e build (`VITE_E2E=1`, set only by
+ * rows 10.4.4–10.4.7, 10.6.1–10.6.5, 12.1.2): the canvas can't be queried, so an e2e build (`VITE_E2E=1`, set only by
  * apps/e2e/playwright.config.ts) exposes each pane's visible time range, its last crosshair time and
  * its candle times on `window.__cdCharts`. 🔐 In every other build `import.meta.env.VITE_E2E` is
  * undefined, so the check below is false at build time and the bundler drops the code: nothing
@@ -18,6 +18,10 @@ export interface ChartProbe {
   times: () => number[];
   /** How many times the sync cleared this pane's crosshair (clearCrosshairPosition) */
   clears: () => number;
+  /** lightweight-charts panes: 1 (candles) + one per shown sub-pane indicator */
+  paneCount: () => number;
+  /** Each pane's top and height in viewport px, for moving the mouse into a given pane */
+  paneBoxes: () => { top: number; height: number }[];
 }
 
 declare global {
@@ -62,5 +66,11 @@ export function exposeChartForE2e(
     crosshairTime: () => crosshair,
     times: () => series.data().map((d) => Number(d.time)),
     clears: () => clears,
+    paneCount: () => chart.panes().length,
+    paneBoxes: () =>
+      chart.panes().map((p) => {
+        const r = p.getHTMLElement()?.getBoundingClientRect();
+        return { top: r?.top ?? 0, height: r?.height ?? 0 };
+      }),
   };
 }

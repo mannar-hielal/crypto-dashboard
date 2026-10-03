@@ -87,3 +87,22 @@ export function schedulePersistDrawings(manager: DrawingManager, symbol: string)
     }, PERSIST_DEBOUNCE_MS)
   );
 }
+
+/**
+ * Drawings live on the price pane only. The library selects a drawing on a chart click by
+ * hit-testing `param.point`, which is relative to the pane clicked (lightweight-charts 5.2.0), so a
+ * click near an indicator pane's top would select a drawing near the price pane's. Its click
+ * handler is private API (`handleClick`, bound in the constructor of lightweight-charts-drawing
+ * 0.1.1, subscribed by `attach()`): replace it before `attach()` with one that ignores sub-pane
+ * clicks. `drawingManager.test` fails if a library upgrade stops subscribing this guard.
+ */
+export function guardClicksToPricePane(manager: DrawingManager): void {
+  const internals = manager as unknown as {
+    handleClick: (param: { paneIndex?: number }) => void;
+  };
+  const libraryHandleClick = internals.handleClick;
+  internals.handleClick = (param) => {
+    if ((param.paneIndex ?? 0) !== 0) return;
+    libraryHandleClick.call(manager, param);
+  };
+}

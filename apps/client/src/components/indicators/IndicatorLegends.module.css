@@ -1,0 +1,113 @@
+/* Indicator legend rows (owner, 2026-10-03: TradingView-style header rows). Sizes reuse the old
+   floating legend pill's (IndicatorWidget: gap-1 px-2 py-1, 12 px icons in p-0.5 buttons) and the
+   price legend's left-3 / top-3 inset; colours are tokens.ts values via their index.css mirrors. */
+
+/* The price pane's column: the OHLC price legend (while hovering), then one row per overlay */
+.mainStack {
+  position: absolute;
+  top: 12px; /* the price legend's top-3 */
+  left: 12px; /* left-3 */
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  max-width: calc(100% - 24px);
+  pointer-events: none;
+}
+
+/* A sub-pane's header: pinned to its pane's top-left, `top` set from the pane's offset */
+.paneHeader {
+  position: absolute;
+  left: 12px;
+  z-index: 10;
+  margin-top: 4px;
+  max-width: calc(100% - 24px);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-size: 11px; /* fontSize.xs10 — chart legend */
+  line-height: 1.2; /* lineHeight.tight — dense chart UI */
+  white-space: nowrap;
+  pointer-events: auto;
+}
+
+.row:hover,
+.row:focus-within {
+  background: rgb(6 4 19 / 0.9); /* bg.page at the old pill's e6 alpha */
+}
+
+.hidden .title,
+.hidden .value {
+  opacity: 0.5;
+}
+
+.title {
+  color: var(--color-brand-muted);
+  font-weight: 600;
+}
+
+.value {
+  font-family: ui-monospace, 'Geist Mono', monospace; /* font.mono */
+  font-variant-numeric: tabular-nums;
+}
+
+/* Settings / hide / remove: shown on hover or keyboard focus (TradingView), always on touch
+   screens, which have no hover. Opacity, not visibility, so they stay in the tab order. */
+.controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.row:hover .controls,
+.row:focus-within .controls {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .controls {
+    opacity: 1;
+  }
+}
+
+.control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 4px;
+  padding: 2px;
+  background: transparent;
+  color: var(--color-brand-muted);
+  cursor: pointer;
+}
+
+.control:hover {
+  color: var(--color-brand-white);
+  background: rgba(255, 255, 255, 0.08); /* toolbar.buttonBgHover */
+}
+
+.remove:hover {
+  color: var(--color-brand-red);
+}
+
+/* focusRing: 2 px color.purpleDark, 3 px offset */
+.control:focus-visible {
+  outline: 2px solid var(--color-brand-purple-dark);
+  outline-offset: 3px;
+}
+
+.icon {
+  width: 12px;
+  height: 12px;
+}

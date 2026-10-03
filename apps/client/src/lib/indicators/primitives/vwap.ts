@@ -69,12 +69,16 @@ export function createVwapPrimitive(
   style: IndicatorStyle,
   paneIndex: number
 ): IndicatorPrimitive {
+  // 🔐 Copies, never the caller's objects (the persisted layoutStore instance).
+  let current: ParamValues = { ...params };
+  let currentStyle: IndicatorStyle = { ...style };
+
   const series = chart.addSeries(
     LineSeries,
     {
-      color: style.color,
-      lineWidth: style.lineWidth,
-      lineStyle: LINE_STYLE_MAP[style.lineStyle],
+      color: currentStyle.color,
+      lineWidth: currentStyle.lineWidth,
+      lineStyle: LINE_STYLE_MAP[currentStyle.lineStyle],
       title: 'VWAP',
       priceLineVisible: false,
       lastValueVisible: true,
@@ -88,17 +92,21 @@ export function createVwapPrimitive(
       return [series];
     },
 
+    legendSeries() {
+      return [series];
+    },
+
     applyOptions(newParams: ParamValues) {
-      Object.assign(params, newParams);
+      current = { ...current, ...newParams };
       updateData();
     },
 
     applyStyle(newStyle: IndicatorStyle) {
-      Object.assign(style, newStyle);
+      currentStyle = { ...newStyle };
       series.applyOptions({
-        color: style.color,
-        lineWidth: style.lineWidth,
-        lineStyle: LINE_STYLE_MAP[style.lineStyle],
+        color: currentStyle.color,
+        lineWidth: currentStyle.lineWidth,
+        lineStyle: LINE_STYLE_MAP[currentStyle.lineStyle],
       });
     },
 
@@ -120,8 +128,8 @@ export function createVwapPrimitive(
       return;
     }
 
-    const vwapSource = (params.source as VwapSource) ?? 'hlc3';
-    const anchor = (params.anchor as AnchorPeriod) ?? 'session';
+    const vwapSource = (current.source as VwapSource) ?? 'hlc3';
+    const anchor = (current.anchor as AnchorPeriod) ?? 'session';
 
     const result: (LineData<UTCTimestamp> | WhitespaceData<UTCTimestamp>)[] = [];
     let cumPV = 0;
