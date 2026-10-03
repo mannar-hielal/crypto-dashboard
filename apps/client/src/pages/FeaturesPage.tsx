@@ -205,7 +205,7 @@ export function FeaturesPage() {
                     </svg>
                   }
                   title="Multi-layout"
-                  desc="5 layout modes — single, dual, triple, quad, and 1+3 grid. Switch instantly."
+                  desc="5 layout modes — single, 2 columns, 2 rows, 3 columns, and a 2×2 grid. Switch instantly."
                 />
                 <DetailCard
                   icon={
@@ -219,8 +219,8 @@ export function FeaturesPage() {
                       <path d="M12 2v20M2 12h20" />
                     </svg>
                   }
-                  title="6 Timeframes"
-                  desc="1m, 5m, 15m, 1h, 4h, 1D — all powered by real Bybit data."
+                  title="10 Timeframes"
+                  desc="1m, 5m, 15m, 30m, 1h, 2h, 4h, 1D, 1W, 1M — all powered by real Bybit data."
                 />
                 <DetailCard
                   icon={
@@ -361,7 +361,7 @@ export function FeaturesPage() {
                     </svg>
                   }
                   title="Leverage 1–10x"
-                  desc="Adjust leverage per trade. See exactly how it affects your P&L."
+                  desc="Set per symbol, USDT Perpetual only, up to 10×. See exactly how it affects your P&L."
                 />
                 <DetailCard
                   icon={
@@ -446,7 +446,7 @@ export function FeaturesPage() {
                     </svg>
                   }
                   title="Order History"
-                  desc="Complete history of all filled, cancelled, and expired orders."
+                  desc="Complete history of all filled, cancelled, and rejected orders."
                 />
                 <DetailCard
                   icon={
@@ -476,7 +476,7 @@ export function FeaturesPage() {
                     </svg>
                   }
                   title="Trading Journal"
-                  desc="Annotate every trade with notes and screenshots. Review and improve."
+                  desc="Annotate every trade with text notes. Review and improve."
                 />
               </div>
             </MacWindow>
@@ -508,7 +508,7 @@ export function FeaturesPage() {
                     </svg>
                   }
                   title="Bybit WebSocket Feed"
-                  desc="Direct WebSocket connection to Bybit. Sub-100ms latency on tick updates."
+                  desc="Live Bybit market data streamed over WebSocket — candles update in real time."
                 />
                 <DetailCard
                   icon={
@@ -524,7 +524,7 @@ export function FeaturesPage() {
                     </svg>
                   }
                   title="9 Crypto Pairs"
-                  desc="BTC, ETH, SOL, XRP, ADA, DOGE, DOT, AVAX, LINK. More pairs coming."
+                  desc="BTC, ETH, SOL, BNB, XRP, DOGE, ADA, AVAX, LINK. More pairs coming."
                 />
                 <DetailCard
                   icon={
@@ -558,38 +558,6 @@ export function FeaturesPage() {
                   }
                   title="Connection Status"
                   desc="Visual indicator showing WebSocket health. Auto-reconnects on drop."
-                />
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-                      <circle cx="12" cy="7" r="4" />
-                    </svg>
-                  }
-                  title="Market Overview"
-                  desc="Top-level dashboard showing all pairs, 24h change, and volume at a glance."
-                />
-                <DetailCard
-                  icon={
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      className="h-5 w-5"
-                    >
-                      <path d="M3 3v18h18" />
-                      <path d="M7 16l4-8 4 4 4-6" />
-                    </svg>
-                  }
-                  title="OHLCV History"
-                  desc="Full historical data for backtesting and analysis. Chart every candle."
                 />
               </div>
             </MacWindow>

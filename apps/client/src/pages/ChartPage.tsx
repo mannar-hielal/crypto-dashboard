@@ -7,7 +7,7 @@ export function ChartPage() {
     <>
       <SeoHead
         title="Live Crypto Chart — Free, No Signup Required"
-        description="Trade BTC, ETH, SOL and more on a live, real-time crypto chart. No account, no signup — try it instantly."
+        description="Live BTC, ETH, SOL and more crypto charts with indicators and drawing tools — free, no signup. Paper trading with a free account."
         path="/chart"
       />
       <TradingSoundProvider>

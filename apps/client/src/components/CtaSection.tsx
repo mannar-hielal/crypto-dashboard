@@ -45,7 +45,7 @@ export function CtaSection() {
         {isLive ? (
           <div className="relative z-10 flex max-w-lg flex-col items-center gap-5">
             <h2 className="text-3xl font-bold text-white sm:text-4xl">
-              Start trading in 20 seconds
+              Ready to trade? Create your free account
             </h2>
             <p className="text-sm leading-relaxed" style={{ color: color.muted }}>
               No credit card. No risk. Just real-time data and a virtual $10K to practice with.
@@ -56,7 +56,7 @@ export function CtaSection() {
               className="h-12 rounded-full px-10 text-base font-semibold text-white shadow-lg"
               style={{ background: gradient.brand }}
             >
-              <Link to="/register">Get Started Free</Link>
+              <Link to="/register">Create Free Account</Link>
             </Button>
           </div>
         ) : (
