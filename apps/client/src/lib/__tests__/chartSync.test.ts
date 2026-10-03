@@ -1,5 +1,13 @@
-import { describe, expect, it } from 'vitest';
-import { canDriveTimeSync, isPanePushingData, isTimeSyncPeer, runPaneDataPush } from '../chartSync';
+import { afterEach, describe, expect, it } from 'vitest';
+import {
+  canDriveTimeSync,
+  clearPendingSyncRange,
+  isPanePushingData,
+  isTimeSyncPeer,
+  pendingSyncRange,
+  queueSyncedRange,
+  runPaneDataPush,
+} from '../chartSync';
 
 // Regression: time-range sync used to (a) copy a low-interval pane's window
 // onto 4h/1D/1W/1M panes and (b) broadcast the few-minutes-wide range of a pane
@@ -99,5 +107,62 @@ describe('runPaneDataPush', () => {
       })
     ).toThrow('setData failed');
     expect(isPanePushingData(2)).toBe(false);
+  });
+});
+
+// Regression (10.4.6, WebKit on CI): setVisibleRange only queues the range for the chart's next frame.
+// A live tick pushed to the follower before that frame restored the range it read back — the old
+// one — so the follower never followed the zoom. The queued range is kept until that frame.
+describe('queueSyncedRange', () => {
+  const frames: (() => void)[] = [];
+  const nextFrame = (cb: () => void) => frames.push(cb);
+  const flushFrames = () => frames.splice(0).forEach((cb) => cb());
+
+  afterEach(() => {
+    frames.length = 0;
+    clearPendingSyncRange(1);
+  });
+
+  it('should apply the range and keep it pending until the next frame', () => {
+    const applied: unknown[] = [];
+    const range = { from: 100, to: 200 };
+    queueSyncedRange(1, range, (r) => applied.push(r), nextFrame);
+    expect(applied).toEqual([range]);
+    expect(pendingSyncRange(1)).toBe(range);
+    flushFrames();
+    expect(pendingSyncRange(1)).toBeUndefined();
+  });
+
+  it("should keep a newer range pending when an older range's frame runs", () => {
+    const older = { from: 100, to: 200 };
+    const newer = { from: 120, to: 180 };
+    queueSyncedRange(1, older, () => {}, nextFrame);
+    const olderFrame = frames.shift()!;
+    queueSyncedRange(1, newer, () => {}, nextFrame);
+    olderFrame();
+    expect(pendingSyncRange(1)).toBe(newer);
+    flushFrames();
+    expect(pendingSyncRange(1)).toBeUndefined();
+  });
+
+  it("should keep each pane's pending range apart", () => {
+    const range = { from: 100, to: 200 };
+    queueSyncedRange(1, range, () => {}, nextFrame);
+    expect(pendingSyncRange(0)).toBeUndefined();
+    expect(pendingSyncRange(1)).toBe(range);
+  });
+
+  it('should not keep a range the chart refused', () => {
+    const refuse = () => {
+      throw new Error('Value is null');
+    };
+    expect(() => queueSyncedRange(1, { from: 100, to: 200 }, refuse, nextFrame)).toThrow();
+    expect(pendingSyncRange(1)).toBeUndefined();
+  });
+
+  it('should drop the pending range when the pane goes away', () => {
+    queueSyncedRange(1, { from: 100, to: 200 }, () => {}, nextFrame);
+    clearPendingSyncRange(1);
+    expect(pendingSyncRange(1)).toBeUndefined();
   });
 });

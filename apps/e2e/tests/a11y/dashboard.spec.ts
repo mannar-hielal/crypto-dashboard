@@ -39,6 +39,9 @@ for (const { path, tabs } of MARKETS) {
     page,
     seededUser,
   }) => {
+    // 5–6 full axe scans, each after a 1.5 s settle: 34–39 s on 2026-09-30, 45–53 s on 2026-10-02,
+    // past 60 s on 2026-10-03 with no violation found — the work, not a hang (3× the timeout)
+    test.slow();
     await signInAs(page, seededUser.email, seededUser.password);
     await page.goto(path);
     const found: string[] = [];
