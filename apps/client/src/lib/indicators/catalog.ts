@@ -42,7 +42,8 @@ function createGenericPrimitive(
   chart: IChartApi,
   source: ISeriesApi<'Candlestick'>,
   options: {
-    title: string;
+    /** Series title (price-axis label), recomputed on every settings change */
+    title: (params: ParamValues) => string;
     color: string;
     lineWidth: 1 | 2 | 3 | 4;
     lineStyle: IndicatorStyle['lineStyle'];
@@ -60,7 +61,7 @@ function createGenericPrimitive(
       color: options.color,
       lineWidth: options.lineWidth,
       lineStyle: LINE_STYLE_MAP[options.lineStyle],
-      title: options.title,
+      title: options.title(options.params),
       priceLineVisible: false,
       lastValueVisible: true,
       crosshairMarkerVisible: false,
@@ -68,6 +69,9 @@ function createGenericPrimitive(
     options.paneIndex
   );
 
+  // 🔐 A copy, never the caller's object (the persisted layoutStore instance). `calc` gets these
+  //    current params on every run — it must not close over the creation-time ones, or a settings
+  //    change would only apply after a reload.
   let currentParams = { ...options.params };
 
   const primitive: IndicatorPrimitive = {
@@ -77,6 +81,7 @@ function createGenericPrimitive(
 
     applyOptions(newParams: ParamValues) {
       currentParams = { ...currentParams, ...newParams };
+      series.applyOptions({ title: options.title(currentParams) });
       updateData();
     },
 
@@ -187,16 +192,16 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
     defaultLineStyle: 'solid',
     factory: ({ chart, source, params, style, paneIndex }) =>
       createGenericPrimitive(chart, source, {
-        title: `SMA ${params.length}`,
+        title: (p) => `SMA ${Number(p.length) || 20}`,
         color: style.color,
         lineWidth: style.lineWidth,
         lineStyle: style.lineStyle,
         params,
         paneIndex,
-        calc: (data) =>
+        calc: (data, p) =>
           calculateMovingAverageIndicatorValues(data, {
-            length: (params.length as number) ?? 20,
-            source: (params.source as string) ?? 'close',
+            length: Number(p.length) || 20,
+            source: (p.source as string) ?? 'close',
             smoothingLine: undefined,
           }),
       }),
@@ -214,7 +219,7 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
     defaultLineStyle: 'solid',
     factory: ({ chart, source, params, style, paneIndex }) =>
       createGenericPrimitive(chart, source, {
-        title: 'Avg Price',
+        title: () => 'Avg Price',
         color: style.color,
         lineWidth: style.lineWidth,
         lineStyle: style.lineStyle,
@@ -236,7 +241,7 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
     defaultLineStyle: 'solid',
     factory: ({ chart, source, params, style, paneIndex }) =>
       createGenericPrimitive(chart, source, {
-        title: 'Median Price',
+        title: () => 'Median Price',
         color: style.color,
         lineWidth: style.lineWidth,
         lineStyle: style.lineStyle,
@@ -258,7 +263,7 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
     defaultLineStyle: 'solid',
     factory: ({ chart, source, params, style, paneIndex }) =>
       createGenericPrimitive(chart, source, {
-        title: 'Weighted Close',
+        title: () => 'Weighted Close',
         color: style.color,
         lineWidth: style.lineWidth,
         lineStyle: style.lineStyle,
@@ -336,16 +341,16 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
     defaultLineStyle: 'solid',
     factory: ({ chart, source, params, style, paneIndex }) =>
       createGenericPrimitive(chart, source, {
-        title: 'Momentum',
+        title: () => 'Momentum',
         color: style.color,
         lineWidth: style.lineWidth,
         lineStyle: style.lineStyle,
         params,
         paneIndex,
-        calc: (data) =>
+        calc: (data, p) =>
           calculateMomentumIndicatorValues(data, {
-            length: (params.length as number) ?? 10,
-            source: (params.source as string) ?? 'close',
+            length: Number(p.length) || 10,
+            source: (p.source as string) ?? 'close',
           }),
       }),
   },
@@ -364,15 +369,15 @@ export const INDICATOR_CATALOG: IndicatorMeta[] = [
     defaultLineStyle: 'solid',
     factory: ({ chart, source, params, style, paneIndex }) =>
       createGenericPrimitive(chart, source, {
-        title: 'Pct Chg',
+        title: () => 'Pct Chg',
         color: style.color,
         lineWidth: style.lineWidth,
         lineStyle: style.lineStyle,
         params,
         paneIndex,
-        calc: (data) =>
+        calc: (data, p) =>
           calculatePercentChangeIndicatorValues(data, {
-            offset: (params.offset as number) ?? 0,
+            offset: Number(p.offset) || 0,
           }),
       }),
   },

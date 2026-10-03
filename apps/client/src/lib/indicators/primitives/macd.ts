@@ -50,12 +50,10 @@ export function createMacdPrimitive(
   style: IndicatorStyle,
   paneIndex: number
 ): IndicatorPrimitive {
-  const fast = (params.fast as number) ?? 12;
-  const slow = (params.slow as number) ?? 26;
-  const signalPeriod = (params.signalLength as number) ?? 9;
-  const sourceType = (params.source as string) ?? 'close';
-  const oscMaType = (params.oscMaType as string) ?? 'ema';
-  const signalMaType = (params.signalMaType as string) ?? 'ema';
+  // 🔐 Copies, never the caller's objects (the persisted layoutStore instance); every input is read
+  //    at compute time so a settings change applies without a remount.
+  let current: ParamValues = { ...params };
+  let currentStyle: IndicatorStyle = { ...style };
 
   const signalColor = chartTokens.macdSignal;
   const histBullColor = chartTokens.macdHistBull;
@@ -66,9 +64,9 @@ export function createMacdPrimitive(
   const macdSeries = chart.addSeries(
     LineSeries,
     {
-      color: style.color,
-      lineWidth: style.lineWidth,
-      lineStyle: LINE_STYLE_MAP[style.lineStyle],
+      color: currentStyle.color,
+      lineWidth: currentStyle.lineWidth,
+      lineStyle: LINE_STYLE_MAP[currentStyle.lineStyle],
       title: 'MACD',
       priceLineVisible: false,
       lastValueVisible: true,
@@ -121,16 +119,16 @@ export function createMacdPrimitive(
     },
 
     applyOptions(newParams: ParamValues) {
-      Object.assign(params, newParams);
+      current = { ...current, ...newParams };
       updateData();
     },
 
     applyStyle(newStyle: IndicatorStyle) {
-      Object.assign(style, newStyle);
+      currentStyle = { ...newStyle };
       macdSeries.applyOptions({
-        color: style.color,
-        lineWidth: style.lineWidth,
-        lineStyle: LINE_STYLE_MAP[style.lineStyle],
+        color: currentStyle.color,
+        lineWidth: currentStyle.lineWidth,
+        lineStyle: LINE_STYLE_MAP[currentStyle.lineStyle],
       });
     },
 
@@ -156,6 +154,13 @@ export function createMacdPrimitive(
       zeroSeries.setData([]);
       return;
     }
+
+    const fast = Number(current.fast) || 12;
+    const slow = Number(current.slow) || 26;
+    const signalPeriod = Number(current.signalLength) || 9;
+    const sourceType = (current.source as string) ?? 'close';
+    const oscMaType = (current.oscMaType as string) ?? 'ema';
+    const signalMaType = (current.signalMaType as string) ?? 'ema';
 
     const times = data.map((d) => d.time as UTCTimestamp);
     const values = data.map((d) => getSourceValue(d, sourceType));
