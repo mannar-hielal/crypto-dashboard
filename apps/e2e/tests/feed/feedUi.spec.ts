@@ -39,7 +39,10 @@ test('[12.1.3] a reload shows the quote at once, from the server cache, before a
   await expect(at(page, 'trade.side.sell')).toContainText('3,099.9');
   // Nothing pushes ETH again from here on
   await page.reload();
-  await expect(at(page, 'trade.side.sell')).toContainText('3,099.9', { timeout: 3_000 });
+  // Only the server cache can supply it: the feed never pushes ETH again, so the wait length doesn't
+  // weaken the check. 3 s from the reload was too tight on CI — the market socket itself opened
+  // ~4.3 s after the reload there (session restore + the dashboard's dev-server chunks; run 37117682456)
+  await expect(at(page, 'trade.side.sell')).toContainText('3,099.9');
   await expect(at(page, 'trade.spread')).not.toHaveText('—');
 });
 

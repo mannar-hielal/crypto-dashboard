@@ -37,7 +37,13 @@ import type { IChartApi, ISeriesApi } from 'lightweight-charts';
 import { DrawingManager } from 'lightweight-charts-drawing';
 import { useLayoutStore, LAYOUT_PANE_COUNT, DEFAULT_PANE_SIZES } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
-import { canDriveTimeSync, isPanePushingData, isTimeSyncPeer } from '@/lib/chartSync';
+import {
+  canDriveTimeSync,
+  clearPendingSyncRange,
+  isPanePushingData,
+  isTimeSyncPeer,
+  queueSyncedRange,
+} from '@/lib/chartSync';
 import { ChartPanel } from '@/components/dashboard/ChartPanel';
 import { PaneHeader } from '@/components/dashboard/PaneHeader';
 import { color } from '@/lib/tokens';
@@ -180,7 +186,13 @@ export function MultiChartArea({
       // Don't override a pane the user has manually zoomed
       if (paneStores[i as 0 | 1 | 2 | 3].getState().userZoomed) continue;
       try {
-        other.timeScale().setVisibleRange(range);
+        // Kept until the chart's next frame applies it, so a live tick can't undo it (chartSync.ts)
+        queueSyncedRange(
+          i,
+          range,
+          (r) => other.timeScale().setVisibleRange(r as typeof range),
+          requestAnimationFrame
+        );
       } catch {
         /* ignore */
       }
@@ -257,7 +269,13 @@ export function MultiChartArea({
           // Don't override a pane the user has manually zoomed
           if (paneStores[i as 0 | 1 | 2 | 3].getState().userZoomed) continue;
           try {
-            other.timeScale().setVisibleRange(range);
+            // Kept until the chart's next frame applies it, so a live tick can't undo it (chartSync.ts)
+            queueSyncedRange(
+              i,
+              range,
+              (r) => other.timeScale().setVisibleRange(r as typeof range),
+              requestAnimationFrame
+            );
           } catch {
             /* ignore */
           }
@@ -276,6 +294,7 @@ export function MultiChartArea({
     seriesRefs.current[paneIndex] = null;
     // A destroyed pane can't lead (its index may map to another chart later)
     if (leadPane.current === paneIndex) leadPane.current = null;
+    clearPendingSyncRange(paneIndex);
     exposeChartForE2e(paneIndex, null, null);
   }, []);
 
