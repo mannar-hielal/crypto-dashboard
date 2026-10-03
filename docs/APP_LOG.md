@@ -3762,3 +3762,16 @@ full-length series. The owner passed the visual Q&A on 2026-10-03 with decisions
   Measured at 1440×900 with 2× Momentum, 2× MACD and ROC: price 240 px, each indicator pane 48 px; in the 4-chart
   layout (a ~196 px cell) price 98 px, panes ~20 px. Overlay rows sit over the candles with no background
   (TradingView-style) and move down while the OHLC legend shows.
+
+### fix: a range preset follows interval sync to every pane (10.4.9) (2026-10-03) ✅
+
+**Context:** owner, 2026-10-03: with interval sync on and the same symbol on 3 (or 4) panes, clicking 1D / 5D updated
+only some panes; the top-left one often stayed different.
+
+- **Cause:** a range preset sets two things — the preset and its interval. `setPaneInterval` already pushed the
+  interval to every pane under interval sync, but `setPaneTimeRangePreset` changed only the active pane. A pane still
+  holding an older preset then drew that range at the new interval. Pane 0 (active by default) was the likeliest.
+- **Fix (`store/layoutStore.ts`):** `setPaneTimeRangePreset` follows `syncOptions.interval` (presets and the clear to
+  null from the interval pickers); turning interval sync on copies the active pane's preset with its interval.
+- **Tests:** row 10.4.9 — `layoutStore.test` "range presets with sync.interval" (7 cases across the 3- and 4-pane
+  layouts plus sync-off and sync-on-toggle cases; 9 failed before the fix).
