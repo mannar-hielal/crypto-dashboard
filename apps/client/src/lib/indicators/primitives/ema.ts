@@ -32,16 +32,21 @@ export function createEmaPrimitive(
   style: IndicatorStyle,
   paneIndex: number
 ): IndicatorPrimitive {
-  const length = (params.length as number) ?? 20;
-  const sourceField = (params.source as string) ?? 'close';
+  // 🔐 Copies, never the caller's objects: those are the persisted layoutStore instance — mutating
+  //    them in place (the old Object.assign) changed the store behind Zustand's back. Every value is
+  //    read at compute time, so a settings change applies without a remount.
+  let current: ParamValues = { ...params };
+  let currentStyle: IndicatorStyle = { ...style };
+  const lengthOf = (p: ParamValues) => Number(p.length) || 20;
+  const titleOf = (p: ParamValues) => `EMA ${lengthOf(p)}`;
 
   const series = chart.addSeries(
     LineSeries,
     {
-      color: style.color,
-      lineWidth: style.lineWidth,
-      lineStyle: LINE_STYLE_MAP[style.lineStyle],
-      title: `EMA ${length}`,
+      color: currentStyle.color,
+      lineWidth: currentStyle.lineWidth,
+      lineStyle: LINE_STYLE_MAP[currentStyle.lineStyle],
+      title: titleOf(current),
       priceLineVisible: false,
       lastValueVisible: true,
       crosshairMarkerVisible: false,
@@ -54,17 +59,22 @@ export function createEmaPrimitive(
       return [series];
     },
 
+    legendSeries() {
+      return [series];
+    },
+
     applyOptions(newParams: ParamValues) {
-      Object.assign(params, newParams);
+      current = { ...current, ...newParams };
+      series.applyOptions({ title: titleOf(current) });
       updateData();
     },
 
     applyStyle(newStyle: IndicatorStyle) {
-      Object.assign(style, newStyle);
+      currentStyle = { ...newStyle };
       series.applyOptions({
-        color: style.color,
-        lineWidth: style.lineWidth,
-        lineStyle: LINE_STYLE_MAP[style.lineStyle],
+        color: currentStyle.color,
+        lineWidth: currentStyle.lineWidth,
+        lineStyle: LINE_STYLE_MAP[currentStyle.lineStyle],
       });
     },
 
@@ -86,6 +96,8 @@ export function createEmaPrimitive(
       return;
     }
 
+    const length = lengthOf(current);
+    const sourceField = (current.source as string) ?? 'close';
     const values: (number | undefined)[] = data.map((d) =>
       typeof (d as CandleWithVolume)[sourceField as keyof CandleWithVolume] === 'number'
         ? ((d as CandleWithVolume)[sourceField as keyof CandleWithVolume] as number)

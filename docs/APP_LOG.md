@@ -732,8 +732,8 @@ partial fills, ADL, insurance fund · VIP tiers, fee coupons, USDC / inverse con
 | `apps/client/src/lib/indicators/catalog.ts`                                                | Catalog of 9 indicators with param defs + inline factory functions                                                                                                     |
 | `apps/client/src/lib/indicators/primitives/`                                               | Custom `ISeriesPrimitive` implementations (ema, vwap, macd) + 6 LH calculation files                                                                                   |
 | `apps/client/src/components/indicators/IndicatorDropdown.tsx`                              | Portal dropdown in SymbolBar — add indicators grouped by category                                                                                                      |
-| `apps/client/src/components/indicators/IndicatorWidget.tsx`                                | Floating draggable indicator widget (Framer Motion)                                                                                                                    |
-| `apps/client/src/components/indicators/IndicatorWidgets.tsx`                               | Container + settings state for indicator widgets                                                                                                                       |
+| `apps/client/src/components/indicators/IndicatorLegends.tsx`                               | TradingView-style legend rows: a header per indicator pane, overlay rows under the price legend (replaced the floating widgets, 2026-10-03)                            |
+| `apps/client/src/lib/indicators/paneLayout.ts`                                             | Indicator pane sizing (equal panes, price pane ≥ 50%) and order                                                                                                        |
 | `apps/client/src/components/indicators/IndicatorSettings.tsx`                              | Portal popover for params/style editing                                                                                                                                |
 | `apps/client/src/lib/tokens.ts`                                                            | **Design tokens** — single source of truth for all colors, fonts, sizes (JS/TS side)                                                                                   |
 | `apps/client/src/index.css`                                                                | Tailwind v4 theme — `@theme inline` generates brand color utilities from tokens                                                                                        |
@@ -3714,3 +3714,101 @@ for visitors, with a tooltip for signed-in users; removing the overlay in DevToo
   `e2e/tests/chart/chart.spec` [14.1.11]–[14.1.13]. Locally the seeded-user e2e cases need ports 3001 / 5173 free (the
   dev CSP allows only `:3001`).
 - **Not in this change:** the Account Settings "Fees" row that overflows at narrow widths (left for later).
+
+### feat: indicator panes and TradingView-style legends (2026-10-03) ✅
+
+**Context:** a read-only audit found every sub-pane indicator (Momentum, Percent Change, MACD) — and every instance of
+each — sharing one pane and one price scale (`ChartPanel`: `meta.category === 'sub-pane' ? 1 : 0`); settings that
+applied only after a reload; legends as floating pills showing one last-bar value; and the MACD zero line drawn as a
+full-length series. The owner passed the visual Q&A on 2026-10-03 with decisions A–J, implemented as given.
+
+- **Panes (A):** each shown sub-pane instance gets its own lightweight-charts pane (`chart.addPane(true)`), kept as
+  `Map<instanceId, IPaneApi>` — never numeric indices, which shift on removal. Remove or hide → series removed, then
+  `chart.removePane(pane.paneIndex())`. Pane order = add order (a re-shown indicator moves back to its slot). Sizes: see
+  "Pane sizes" below. Separators drag (`layout.panes.enableResize`, `border.default` / `border.hover`).
+- **Zero lines (B):** Momentum, ROC and MACD get a dashed `createPriceLine` at 0 in the new `chart.zeroLine` token
+  (the grey the old MACD zero series used). A price line isn't in the autoscale or the crosshair; `zeroSeries` is gone.
+- **MACD (C):** the histogram's "grow" colour needs `hist[1] < hist` (TradingView); equal or first bar → "fall".
+  `macd-calculation.ts` is pure and unit-tested. Colours unchanged (D).
+- **ROC / Typical Price (E–F):** their own `refactor:` commit on this branch, with the `cd-layout` v7 migration (G).
+- **Legends (H):** `IndicatorLegends` (CSS Module) replaces `IndicatorWidget(s)`. A row reads `Mom 10 close`,
+  `ROC 9 close`, `MACD 12 26 close 9 EMA EMA` (`legendTitle`), then the values in their series' colours — MACD:
+  histogram, MACD, signal. Values follow the crosshair (`param.seriesData`), the last bar's off the chart. Settings ⚙,
+  hide 👁 and remove ✕ show on hover or focus (always on touch screens), as labelled buttons with the focus ring. Each
+  header sits at its pane's top (`pane.getHTMLElement()` + a ResizeObserver: a separator drag fires no chart event);
+  overlay rows stack under the OHLC legend. A hidden sub-pane indicator loses its pane and its row waits there,
+  dimmed, with its eye to bring it back — the owner's decision after review (2026-10-03). The legacy `position`
+  field is dropped. Anchors: `indicator.menu`, `.option`, `.pane-legend`, `.legend`, `.toggle`, `.settings`,
+  `.remove`, `toolbar.tool`.
+- **Stale settings (I):** shipped first, as `fix:` — every primitive copies its params and reads them at compute time.
+- **Guards (J):** drawing tools clamp to and only start in the price pane (`chart.paneSize(0).height`): placement,
+  preview, body drag, double-click edit, and the library's own click-to-select (wrapped before `attach`, private API).
+  🔐 `MouseEventParams.point` **is pane-relative** in 5.2.0 — checked at runtime (`point.y` 25 with `paneIndex` 1, 25
+  px into the MACD pane), so crosshair sync from an indicator pane uses the follower's bar close
+  (`followerCrosshairPrice`, `lib/chartSync.ts`). `hooks/useDrawingInteraction.ts` no longer exists (drawings moved to
+  `lightweight-charts-drawing` in ChartPanel), so the guards live there.
+- **Tests:** rows 10.6.1–10.6.13 (new Section 10.6). Unit: `macd.test`, `legend.test`, `paneLayout.test`,
+  `zeroLines.test`, `IndicatorLegends.test`, `ChartPanel.indicatorPanes.test` (a fake chart with a real pane list),
+  `chartSync.test`. E2E: `e2e/tests/chart/indicatorPanes.spec` — 2× Momentum → 3 panes, 2× MACD → 5, remove one → 4
+  and its legend gone, reload → 4; no drawing from a sub-pane. Run locally on spare ports (E2E_API_PORT=3101,
+  E2E_WEB_PORT=5183, E2E_FEED_PORT=4110) with a throwaway config setting `bypassCSP` (the dev server's header CSP
+  hard-codes `:3001`), along with the rest of `tests/chart` and `tests/a11y`: all green.
+- **Pane sizes (owner, after review, 2026-10-03):** equal indicator panes; the price pane keeps at least half.
+  `paneHeights` (`lib/indicators/paneLayout.ts`): each indicator pane aims for 20% of the chart (decision A), at least
+  60 px; when that would leave the price pane under half, they shrink and split the other half equally — below 60 px
+  when they must (many panes, a 4-chart cell, a phone), which the owner accepted. ChartPanel re-applies the heights
+  as stretch factors to every pane on each add, remove, hide or show (before the first layout it waits for a height:
+  one-shot ResizeObserver); a separator drag stays until the next one, and a layout switch keeps the ratios.
+  Measured at 1440×900 with 2× Momentum, 2× MACD and ROC: price 240 px, each indicator pane 48 px; in the 4-chart
+  layout (a ~196 px cell) price 98 px, panes ~20 px. Overlay rows sit over the candles with no background
+  (TradingView-style) and move down while the OHLC legend shows.
+
+### fix: a range preset follows interval sync to every pane (10.4.9) (2026-10-03) ✅
+
+**Context:** owner, 2026-10-03: with interval sync on and the same symbol on 3 (or 4) panes, clicking 1D / 5D updated
+only some panes; the top-left one often stayed different.
+
+- **Cause:** a range preset sets two things — the preset and its interval. `setPaneInterval` already pushed the
+  interval to every pane under interval sync, but `setPaneTimeRangePreset` changed only the active pane. A pane still
+  holding an older preset then drew that range at the new interval. Pane 0 (active by default) was the likeliest.
+- **Fix (`store/layoutStore.ts`):** `setPaneTimeRangePreset` follows `syncOptions.interval` (presets and the clear to
+  null from the interval pickers); turning interval sync on copies the active pane's preset with its interval.
+- **Tests:** row 10.4.9 — `layoutStore.test` "range presets with sync.interval" (7 cases across the 3- and 4-pane
+  layouts plus sync-off and sync-on-toggle cases; 9 failed before the fix).
+
+### feat: landing page — try the chart first, then the account (2026-10-03) ✅
+
+**Context:** owner, 2026-10-03 (visual Q&A passed): the landing page led with "register" while `/chart` already works
+without an account. The page now leads with the live chart and shows what a free account adds, and its feature
+claims were checked against the code.
+
+- **Hero (live state):** badge "Live charts · No signup", headline "Live crypto charts." (gradient) / "No signup."
+  (white), subline "Open it. Draw on it. Decide later.", primary **Open the Live Chart** → `/chart`, secondary
+  **Create Free Account** → `/register`. The pre-launch hero is unchanged except its body loses "register in 20
+  seconds".
+- **Band under the hero:** `components/landing/AccountUnlocksTerminal` (CSS Module, `font.mono`) replaces the "See it
+  before you sign up" banner: "The chart's free. So is the trading desk." over a terminal card listing what an account
+  unlocks (orders, exits, perps, spot, history, journal, engine) as a `<dl>`, with **Create free account →** →
+  `/register` and "$10,000 virtual balance". Below 640 px each value wraps under its key and the button is full width.
+- **Fact fixes (landing):** "6 timeframes" → 10 (`lib/markets.ts` `INTERVALS`); the ticker and preview graphics say
+  USDT pairs with round, illustrative numbers; the preview's "Try It Now" → `/register` and its "log in to see live
+  charts" caption are gone; `CtaSection` (live) is now "Ready to trade? Create your free account" / **Create Free
+  Account** instead of "Start trading in 20 seconds".
+- **Fact fixes (`/features`):** 10 timeframes; the five real layouts (`ChartLayoutPicker` `LAYOUT_ORDER`: single, 2
+  columns, 2 rows, 3 columns, 2×2 — no "1+3"); pairs DOT → BNB (`ALLOWED_SYMBOLS`); leverage set per symbol, USDT
+  Perpetual only, up to 10× (`leverageFor` in `paperStore`, `MAX_LEVERAGE`); journal = text notes; order history =
+  filled, cancelled, rejected (`PaperOrderStatus`). Removed as unverified: "Sub-100ms latency", "Market Overview",
+  "OHLCV History … backtesting". Kept: "Offline Support" — the Workbox service worker precaches the app's assets
+  (`vite.config.ts` `VitePWA` `workbox.globPatterns` / `navigateFallback`).
+- **SEO:** landing title "Free Live Crypto Charts & Paper Trading" (Bybit only as "live market data from Bybit" in the
+  description); `/chart` description: live charts, indicators and drawing tools with no signup, trading with a free
+  account.
+- **Anchors:** `landing.hero.chart`, `landing.hero.register`, `landing.unlocks.register`.
+- **Tests:** `AccountUnlocksTerminal.test` (every row, decorative ✓ hidden, `/register` link), `LandingPage.test` (hero
+  links in the live state, the band, the removed claims, the pre-launch hero), `FeaturesPage.test` (each fact fix),
+  `CtaSection.test` updated for the new copy.
+- **Owner's follow-up decisions (2026-10-03):** the live headline steps down to `lg:text-5xl` so "Live crypto charts."
+  stays on one line in the 480 px desktop column (461 px wide at 48 px, 576 px at 60 px; pre-launch keeps
+  `lg:text-7xl`); the account-unlocks band shows only when live (no sign-up offer beside "Launching soon"); the
+  CtaSection live copy "Ready to trade? Create your free account" approved; the Paper Trading picture's 40 px shift
+  right now starts at `md`, which ends a 24 px sideways scroll on phones (375 px) that predates this change.

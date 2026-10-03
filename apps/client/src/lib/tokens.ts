@@ -62,6 +62,10 @@ export const chart = {
   macdHistBearDim: '#ffcdd2', // light red — rising negative (TVP Color 2)
   macdHistBear: '#ff5252', // red — falling negative histogram bar (TVP Color 3)
 
+  // Dashed zero line in the MACD / Momentum / ROC panes — the muted grey the MACD pane's old
+  // full-length zero series used (macd.ts), now one token for every oscillator pane
+  zeroLine: 'rgba(120, 123, 134, 0.4)',
+
   // Candlestick series
   candleUp: '#2ccd78', // bullish / green candle
   candleDown: '#d5455c', // bearish / red candle — a graphic, 4.7:1 on the chart (the 3:1 rule), kept

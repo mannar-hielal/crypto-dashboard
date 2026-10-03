@@ -40,6 +40,7 @@ import { paneStores } from '@/store/paneStore';
 import {
   canDriveTimeSync,
   clearPendingSyncRange,
+  followerCrosshairPrice,
   isPanePushingData,
   isTimeSyncPeer,
   queueSyncedRange,
@@ -233,16 +234,16 @@ export function MultiChartArea({
               const followerStore = paneStores[i as 0 | 1 | 2 | 3].getState();
               const followerLatest = followerStore.latestPrice;
               if (followerLatest === null) continue;
-              let price: number | null = otherSeries.coordinateToPrice(param.point.y);
-              if (price !== null && (price < followerLatest * 0.5 || price > followerLatest * 2))
-                price = null;
-              if (price === null) {
-                const timeSecs = param.time as number;
-                const bar = followerStore.bars.find(
-                  (b) => Math.floor(b.timestamp / 1000) === timeSecs
-                );
-                price = bar?.close ?? followerLatest;
-              }
+              const point = param.point;
+              const timeSecs = param.time as number;
+              const price = followerCrosshairPrice({
+                sourcePaneIndex: param.paneIndex,
+                mapY: () => otherSeries.coordinateToPrice(point.y),
+                barClose: () =>
+                  followerStore.bars.find((b) => Math.floor(b.timestamp / 1000) === timeSecs)
+                    ?.close,
+                followerLatest,
+              });
               other.setCrosshairPosition(price, param.time, otherSeries);
             }
           } catch {

@@ -23,6 +23,7 @@ import {
 import type { MarketCategory } from '@crypto-dashboard/sdk';
 import type { IndicatorInstance } from '@/lib/indicators/types';
 import { createDefaultIndicatorInstances } from '@/lib/indicators/catalog';
+import { normalizeIndicatorInstances } from '@/lib/indicators/persistence';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -180,11 +181,6 @@ interface LayoutState {
     instanceId: string,
     patch: Partial<IndicatorInstance>
   ) => void;
-  setIndicatorPosition: (
-    paneIndex: number,
-    instanceId: string,
-    position: { x: number; y: number }
-  ) => void;
   toggleSync: (key: keyof SyncOptions) => void;
   setPaneSizes: (layout: LayoutId, sizes: PaneSizes) => void;
   setBottomPanelHeight: (height: number) => void;
@@ -266,7 +262,14 @@ export const useLayoutStore = create<LayoutState>()(
       },
 
       setPaneTimeRangePreset: (paneIndex, preset) => {
-        const { panes } = get();
+        const { panes, syncOptions } = get();
+        // A preset carries its own interval (1D → 1m, 5D → 5m…), so it follows interval sync:
+        // a pane that took the synced interval but kept its own (stale) preset would apply the
+        // wrong range for it — or none — and stop matching the other panes.
+        if (syncOptions.interval) {
+          set({ panes: panes.map((p) => ({ ...p, timeRangePreset: preset })) });
+          return;
+        }
         const updated = [...panes];
         updated[paneIndex] = { ...updated[paneIndex], timeRangePreset: preset };
         set({ panes: updated });
@@ -297,10 +300,15 @@ export const useLayoutStore = create<LayoutState>()(
           return;
         }
         if (turningOn && key === 'interval') {
-          const sourceInterval = (panes[activePane] ?? DEFAULT_PANES[0]).interval;
+          const source = panes[activePane] ?? DEFAULT_PANES[0];
           set({
             syncOptions: newSyncOptions,
-            panes: panes.map((p) => ({ ...p, interval: sourceInterval })),
+            // The preset goes with the interval it implies (see setPaneTimeRangePreset)
+            panes: panes.map((p) => ({
+              ...p,
+              interval: source.interval,
+              timeRangePreset: source.timeRangePreset,
+            })),
           });
           return;
         }
@@ -345,18 +353,6 @@ export const useLayoutStore = create<LayoutState>()(
           return { panes };
         }),
 
-      setIndicatorPosition: (paneIndex, instanceId, position) =>
-        set((s) => {
-          const panes = [...s.panes];
-          panes[paneIndex] = {
-            ...panes[paneIndex],
-            indicators: panes[paneIndex].indicators.map((inst) =>
-              inst.instanceId === instanceId ? { ...inst, position } : inst
-            ),
-          };
-          return { panes };
-        }),
-
       setPaneSizes: (layout, sizes) =>
         set((s) => ({ paneSizes: { ...s.paneSizes, [layout]: sizes } })),
 
@@ -367,7 +363,7 @@ export const useLayoutStore = create<LayoutState>()(
     }),
     {
       name: 'cd-layout',
-      version: 6,
+      version: 7,
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as Record<string, unknown>;
         // v1 → v2: add indicators to panes
@@ -395,6 +391,24 @@ export const useLayoutStore = create<LayoutState>()(
         if (version < 5) state.marketHandoffDone = false;
         // v5 → v6: the USDT Perpetual mark-price line (BP-3), on by default
         if (version < 6) state.showMarkPriceLine = true;
+        // v6 → v7: "Percent Change" became ROC (length 1 = the same output) and "Weighted Close"
+        // became Typical Price (owner, 2026-10-03). Colour and visibility carry over; an unknown
+        // id or a malformed entry is dropped instead of reaching the chart.
+        if (version < 7) {
+          const panes = state.panes;
+          if (Array.isArray(panes)) {
+            state.panes = panes.map((pane: unknown) =>
+              pane && typeof pane === 'object'
+                ? {
+                    ...pane,
+                    indicators: normalizeIndicatorInstances(
+                      (pane as Record<string, unknown>).indicators
+                    ),
+                  }
+                : pane
+            );
+          }
+        }
         return state as unknown as LayoutState;
       },
       // Clamp activePane on hydration: persisted state could have an activePane
@@ -456,10 +470,15 @@ export const useLayoutStore = create<LayoutState>()(
         if (typeof merged.bottomPanelHeight !== 'number' || merged.bottomPanelHeight < 80) {
           merged.bottomPanelHeight = 208;
         }
-        // Ensure all panes have indicators array (v2+ field)
+        // Ensure all panes have indicators array (v2+ field), each entry checked — a malformed
+        // or tampered payload at the current version must not reach the chart either
         for (let i = 0; i < merged.panes.length; i++) {
           if (!merged.panes[i].indicators) {
             merged.panes[i].indicators = i === 0 ? createDefaultIndicatorInstances() : [];
+          } else {
+            merged.panes[i].indicators = normalizeIndicatorInstances(
+              merged.panes[i].indicators
+            ).slice(0, MAX_INDICATORS_PER_PANE);
           }
         }
         return merged;

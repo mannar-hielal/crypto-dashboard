@@ -5,6 +5,7 @@
  *   - setLayout(): activePane clamped to count-1 (not reset to 0) when out of range
  *   - setPaneSymbol(): single-pane update vs. sync.symbol broadcast
  *   - setPaneInterval(): single-pane update vs. sync.interval broadcast
+ *   - range presets (setPaneTimeRangePreset + setPaneInterval): follow sync.interval to every pane
  *   - toggleSync(): toggles individual sync flags + snap-on-enable for symbol/interval
  *   - setPaneChartType() + persisted chartType migration/validation (v3)
  *   - setPaneCategory() + category sync + persisted category migration/validation (v4)
@@ -13,7 +14,8 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useLayoutStore, type PaneConfig } from '../layoutStore';
-import { SYMBOLS, INTERVALS } from '@/lib/markets';
+import { SYMBOLS, INTERVALS, TIME_RANGE_PRESETS, type TimeRangePreset } from '@/lib/markets';
+import type { LayoutId } from '../layoutStore';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -151,6 +153,79 @@ describe('layoutStore', () => {
       useLayoutStore.getState().setPaneInterval(0, '1h');
       const { panes } = useLayoutStore.getState();
       expect(panes.every((p) => p.interval === '1h')).toBe(true);
+    });
+  });
+
+  // ── Range presets (TimeRangeSwitcher) ────────────────────────────────────
+
+  describe('range presets with sync.interval', () => {
+    /** What DashboardPage's TimeRangeSwitcher onPresetChange does for the active pane. */
+    function applyPreset(paneIndex: number, preset: TimeRangePreset) {
+      const { setPaneTimeRangePreset, setPaneInterval } = useLayoutStore.getState();
+      setPaneTimeRangePreset(paneIndex, preset);
+      const p = TIME_RANGE_PRESETS.find((pr) => pr.key === preset);
+      if (p) setPaneInterval(paneIndex, p.interval);
+    }
+
+    function syncedSameSymbol(layout: LayoutId) {
+      useLayoutStore.setState({
+        layout,
+        syncOptions: { symbol: true, interval: true, crosshair: true, timeRange: true },
+      });
+      useLayoutStore.getState().setPaneSymbol(0, SYMBOLS[0].symbol);
+    }
+
+    const cases: Array<[LayoutId, number]> = [
+      ['3h', 3],
+      ['4', 4],
+    ];
+
+    for (const [layout, count] of cases) {
+      for (let active = 0; active < count; active++) {
+        it(`should give every pane the preset and its interval when pane ${active} applies one in layout ${layout}`, () => {
+          syncedSameSymbol(layout);
+          // An earlier preset on another pane (e.g. the top-left one, active by default)
+          const earlier = (active + 1) % count;
+          useLayoutStore.getState().setActivePane(earlier);
+          applyPreset(earlier, '1D');
+          useLayoutStore.getState().setActivePane(active);
+
+          applyPreset(active, '5D');
+
+          const panes = useLayoutStore.getState().panes.slice(0, count);
+          for (const p of panes) {
+            expect(p.interval).toBe('5m');
+            expect(p.timeRangePreset).toBe('5D');
+          }
+        });
+      }
+    }
+
+    it('should clear the preset on every pane when the interval is picked by hand with sync on', () => {
+      syncedSameSymbol('4');
+      applyPreset(0, '1D');
+      // SymbolBar / PaneHeader interval picker: clear the preset, then set the interval
+      useLayoutStore.getState().setPaneTimeRangePreset(2, null);
+      useLayoutStore.getState().setPaneInterval(2, '4h');
+      const { panes } = useLayoutStore.getState();
+      expect(panes.every((p) => p.timeRangePreset === null && p.interval === '4h')).toBe(true);
+    });
+
+    it('should keep the preset on the target pane only when sync.interval is off', () => {
+      applyPreset(1, '5D');
+      const { panes } = useLayoutStore.getState();
+      expect(panes[1].timeRangePreset).toBe('5D');
+      expect(panes[0].timeRangePreset).toBeNull();
+      expect(panes[0].interval).toBe(INTERVALS[0]);
+    });
+
+    it('should snap every pane to the active pane preset when interval sync is turned on', () => {
+      useLayoutStore.setState({ layout: '4', activePane: 0 });
+      applyPreset(0, '5D');
+      applyPreset(3, '1D');
+      useLayoutStore.getState().toggleSync('interval');
+      const { panes } = useLayoutStore.getState();
+      expect(panes.every((p) => p.timeRangePreset === '5D' && p.interval === '5m')).toBe(true);
     });
   });
 
@@ -473,6 +548,160 @@ describe('layoutStore', () => {
       useLayoutStore.setState({ marketHandoffDone: false });
       useLayoutStore.getState().completeMarketHandoff();
       expect(useLayoutStore.getState().marketHandoffDone).toBe(true);
+    });
+  });
+  // ── Indicator renames (v7, owner 2026-10-03) ─────────────────────────────────
+
+  describe('[10.6.10] indicators (v7: Percent Change → ROC, Weighted Close → Typical Price)', () => {
+    const { migrate, merge } = useLayoutStore.persist.getOptions();
+
+    function v6Pane(indicators: unknown): Record<string, unknown> {
+      return {
+        symbol: 'BTCUSDT',
+        interval: '1m',
+        chartType: 'candles',
+        category: 'spot',
+        indicators,
+      };
+    }
+
+    it('should turn a saved percent-change into ROC length 1 on close, keeping colour and visibility', () => {
+      const v6 = {
+        panes: [
+          v6Pane([
+            {
+              instanceId: 'percent-change_1_0',
+              indicatorId: 'percent-change',
+              params: { offset: 0 },
+              color: '#06b6d4',
+              lineWidth: 3,
+              lineStyle: 'dashed',
+              enabled: false,
+              position: { x: 8, y: 40 },
+            },
+          ]),
+        ],
+      };
+      const migrated = migrate!(v6, 6) as { panes: PaneConfig[] };
+      expect(migrated.panes[0].indicators).toEqual([
+        {
+          instanceId: 'percent-change_1_0',
+          indicatorId: 'roc',
+          params: { length: 1, source: 'close' },
+          color: '#06b6d4',
+          lineWidth: 3,
+          lineStyle: 'dashed',
+          enabled: false,
+        },
+      ]);
+    });
+
+    it('should turn a saved weighted-close into Typical Price', () => {
+      const v6 = {
+        panes: [
+          v6Pane([
+            {
+              instanceId: 'wc_1',
+              indicatorId: 'weighted-close',
+              params: {},
+              color: '#22c55e',
+              lineWidth: 2,
+              lineStyle: 'solid',
+              enabled: true,
+              position: { x: 8, y: 100 },
+            },
+          ]),
+        ],
+      };
+      const migrated = migrate!(v6, 6) as { panes: PaneConfig[] };
+      expect(migrated.panes[0].indicators[0]).toMatchObject({
+        instanceId: 'wc_1',
+        indicatorId: 'typical-price',
+        color: '#22c55e',
+        enabled: true,
+      });
+    });
+
+    it('should keep other indicators as they were', () => {
+      const ema = {
+        instanceId: 'ema_1',
+        indicatorId: 'ema',
+        params: { length: 50, source: 'close' },
+        color: '#3b82f6',
+        lineWidth: 2,
+        lineStyle: 'solid',
+        enabled: true,
+      };
+      const migrated = migrate!(
+        { panes: [v6Pane([{ ...ema, position: { x: 8, y: 40 } }])] },
+        6
+      ) as { panes: PaneConfig[] };
+      // The legacy floating-pill position is dropped, everything else is kept
+      expect(migrated.panes[0].indicators).toEqual([ema]);
+    });
+
+    it.each([
+      ['an unknown id', [{ instanceId: 'x', indicatorId: 'ichimoku' }]],
+      ['a non-object entry', [null, 42, 'ema', ['ema']]],
+      ['a missing instanceId', [{ indicatorId: 'ema' }]],
+      ['a numeric indicatorId', [{ instanceId: 'x', indicatorId: 7 }]],
+      ['a prototype key as id', [{ instanceId: 'x', indicatorId: '__proto__' }]],
+    ])('should drop %s without crashing', (_name, indicators) => {
+      const migrated = migrate!({ panes: [v6Pane(indicators)] }, 6) as { panes: PaneConfig[] };
+      expect(migrated.panes[0].indicators).toEqual([]);
+    });
+
+    it('should survive indicators that are not an array, and panes that are not objects', () => {
+      expect(() => migrate!({ panes: [v6Pane('oops'), null, 3] }, 6)).not.toThrow();
+      const migrated = migrate!({ panes: [v6Pane({ a: 1 })] }, 6) as { panes: PaneConfig[] };
+      expect(migrated.panes[0].indicators).toEqual([]);
+      expect(() => migrate!({ panes: 'nope' }, 6)).not.toThrow();
+    });
+
+    it('should repair invalid fields from the catalog defaults', () => {
+      const migrated = migrate!(
+        {
+          panes: [
+            v6Pane([
+              {
+                instanceId: 'm_1',
+                indicatorId: 'momentum',
+                params: { length: 'x', evil: { nested: true } },
+                color: 5,
+                lineWidth: 9,
+                lineStyle: 'wavy',
+                enabled: 'yes',
+              },
+            ]),
+          ],
+        },
+        6
+      ) as { panes: PaneConfig[] };
+      expect(migrated.panes[0].indicators[0]).toMatchObject({
+        indicatorId: 'momentum',
+        params: { length: 10, source: 'close' }, // a non-number length → its default
+        lineWidth: 2,
+        lineStyle: 'solid',
+        enabled: true,
+      });
+      expect(migrated.panes[0].indicators[0].params).not.toHaveProperty('evil');
+    });
+
+    it('merge should also drop an unknown id saved at the current version', () => {
+      const current = useLayoutStore.getState();
+      const persisted = {
+        panes: current.panes.map((p, i) =>
+          i === 0
+            ? {
+                ...p,
+                indicators: [
+                  { instanceId: 'bad', indicatorId: 'nope' },
+                ] as unknown as PaneConfig['indicators'],
+              }
+            : p
+        ),
+      };
+      expect(merge!(persisted, current).panes[0].indicators).toEqual([]);
     });
   });
 });
