@@ -172,6 +172,9 @@ function seriesByPane(): string[][] {
   );
 }
 
+/** Every ResizeObserver ChartPanel created, and whether it still observes */
+const observers: { live: boolean }[] = [];
+
 beforeEach(() => {
   h.series.length = 0;
   h.removedPaneIndices.length = 0;
@@ -180,10 +183,19 @@ beforeEach(() => {
   vi.stubGlobal(
     'ResizeObserver',
     class {
-      observe() {}
-      disconnect() {}
+      live = false;
+      constructor() {
+        observers.push(this);
+      }
+      observe() {
+        this.live = true;
+      }
+      disconnect() {
+        this.live = false;
+      }
     }
   );
+  observers.length = 0;
   vi.stubGlobal('requestAnimationFrame', () => 0);
   vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(500);
   paneStores[0].getState().reset();
@@ -323,6 +335,29 @@ describe('ChartPanel indicator panes', () => {
 });
 
 // ─── Drawings stay on the price pane ─────────────────────────────────────────
+
+describe('ChartPanel rebalance before the chart has a height', () => {
+  it('[10.6.13] should keep one waiting observer across rebalances and disconnect it on unmount', () => {
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(0);
+    const mom = inst('mom1', 'momentum');
+    const macd = inst('macd1', 'macd');
+    const { rerender, unmount } = render(panel([mom]));
+    const liveAtMount = () => observers.filter((o) => o.live).length;
+    // ChartPanel's own resize observer + the one waiting to rebalance
+    expect(liveAtMount()).toBe(2);
+
+    // Add, hide, show, remove — four more rebalances while the height is still 0
+    rerender(panel([mom, macd]));
+    rerender(panel([mom, { ...macd, enabled: false }]));
+    rerender(panel([mom, macd]));
+    rerender(panel([mom]));
+    expect(observers.length).toBeGreaterThan(2); // each wait made a new one…
+    expect(liveAtMount()).toBe(2); // …and disconnected the one before
+
+    unmount();
+    expect(observers.filter((o) => o.live)).toHaveLength(0);
+  });
+});
 
 describe('ChartPanel drawing tools with indicator panes', () => {
   function click(el: Element, y: number) {

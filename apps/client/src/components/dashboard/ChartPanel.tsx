@@ -149,6 +149,9 @@ export function ChartPanel({
   const [candleApi, setCandleApi] = useState<ISeriesApi<'Candlestick'> | null>(null);
   // Bumped whenever an indicator's series or pane comes or goes — the legend re-measures
   const [indicatorLayoutVersion, setIndicatorLayoutVersion] = useState(0);
+  // The one observer waiting for the chart to get a height before the panes are rebalanced — at
+  // most one at a time, replaced by each new wait and disconnected on unmount
+  const rebalanceObserverRef = useRef<ResizeObserver | null>(null);
 
   const bars = useStore(paneStores[paneIndex], (s) => s.bars);
 
@@ -881,6 +884,7 @@ export function ChartPanel({
 
     const primitives = primitiveRefs.current;
     const panes = paneRefs.current;
+    const rebalanceObserver = rebalanceObserverRef;
     let changed = false;
 
     /** Series first, then the instance's own pane (owner, 2026-10-03: remove → removePane) */
@@ -992,11 +996,15 @@ export function ChartPanel({
         if (paneArea <= 0) {
           const el = containerRef.current;
           if (!el) return;
+          // Only the latest change's rebalance matters: a wait already pending is replaced
+          rebalanceObserverRef.current?.disconnect();
           const ro = new ResizeObserver(() => {
             if (el.clientHeight <= 0) return;
             ro.disconnect();
+            if (rebalanceObserverRef.current === ro) rebalanceObserverRef.current = null;
             rebalance();
           });
+          rebalanceObserverRef.current = ro;
           ro.observe(el);
           return;
         }
@@ -1022,6 +1030,8 @@ export function ChartPanel({
       if (chartReadyRef.current) return;
       primitives.clear();
       panes.clear();
+      rebalanceObserver.current?.disconnect();
+      rebalanceObserver.current = null;
     };
   }, [indicators, paneIndex]);
 
