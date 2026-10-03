@@ -87,7 +87,7 @@ test('[10.4.6] zooming one pane zooms the other to the same time range @full', a
         probe<{ from: number; to: number }>(page, 0, 'range'),
         probe<{ from: number; to: number }>(page, 1, 'range'),
       ]);
-      return r0.from === r1.from && r0.to === r1.to;
+      return !!r0 && !!r1 && r0.from === r1.from && r0.to === r1.to;
     })
     .toBe(true);
 });
