@@ -3714,3 +3714,35 @@ for visitors, with a tooltip for signed-in users; removing the overlay in DevToo
   `e2e/tests/chart/chart.spec` [14.1.11]–[14.1.13]. Locally the seeded-user e2e cases need ports 3001 / 5173 free (the
   dev CSP allows only `:3001`).
 - **Not in this change:** the Account Settings "Fees" row that overflows at narrow widths (left for later).
+
+### feat: landing page — try the chart first, then the account (2026-10-03) ✅
+
+**Context:** owner, 2026-10-03 (visual Q&A passed): the landing page led with "register" while `/chart` already works
+without an account. The page now leads with the live chart and shows what a free account adds, and its feature
+claims were checked against the code.
+
+- **Hero (live state):** badge "Live charts · No signup", headline "Live crypto charts." (gradient) / "No signup."
+  (white), subline "Open it. Draw on it. Decide later.", primary **Open the Live Chart** → `/chart`, secondary
+  **Create Free Account** → `/register`. The pre-launch hero is unchanged except its body loses "register in 20
+  seconds".
+- **Band under the hero:** `components/landing/AccountUnlocksTerminal` (CSS Module, `font.mono`) replaces the "See it
+  before you sign up" banner: "The chart's free. So is the trading desk." over a terminal card listing what an account
+  unlocks (orders, exits, perps, spot, history, journal, engine) as a `<dl>`, with **Create free account →** →
+  `/register` and "$10,000 virtual balance". Below 640 px each value wraps under its key and the button is full width.
+- **Fact fixes (landing):** "6 timeframes" → 10 (`lib/markets.ts` `INTERVALS`); the ticker and preview graphics say
+  USDT pairs with round, illustrative numbers; the preview's "Try It Now" → `/register` and its "log in to see live
+  charts" caption are gone; `CtaSection` (live) is now "Ready to trade? Create your free account" / **Create Free
+  Account** instead of "Start trading in 20 seconds".
+- **Fact fixes (`/features`):** 10 timeframes; the five real layouts (`ChartLayoutPicker` `LAYOUT_ORDER`: single, 2
+  columns, 2 rows, 3 columns, 2×2 — no "1+3"); pairs DOT → BNB (`ALLOWED_SYMBOLS`); leverage set per symbol, USDT
+  Perpetual only, up to 10× (`leverageFor` in `paperStore`, `MAX_LEVERAGE`); journal = text notes; order history =
+  filled, cancelled, rejected (`PaperOrderStatus`). Removed as unverified: "Sub-100ms latency", "Market Overview",
+  "OHLCV History … backtesting". Kept: "Offline Support" — the Workbox service worker precaches the app's assets
+  (`vite.config.ts` `VitePWA` `workbox.globPatterns` / `navigateFallback`).
+- **SEO:** landing title "Free Live Crypto Charts & Paper Trading" (Bybit only as "live market data from Bybit" in the
+  description); `/chart` description: live charts, indicators and drawing tools with no signup, trading with a free
+  account.
+- **Anchors:** `landing.hero.chart`, `landing.hero.register`, `landing.unlocks.register`.
+- **Tests:** `AccountUnlocksTerminal.test` (every row, decorative ✓ hidden, `/register` link), `LandingPage.test` (hero
+  links in the live state, the band, the removed claims, the pre-launch hero), `FeaturesPage.test` (each fact fix),
+  `CtaSection.test` updated for the new copy.

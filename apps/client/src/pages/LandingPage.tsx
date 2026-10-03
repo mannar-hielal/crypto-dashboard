@@ -6,7 +6,9 @@ import { SeoHead } from '@/components/SeoHead';
 import { Button } from '@/components/ui/button';
 import { AuthLayout } from '@/components/AuthLayout';
 import { CtaSection } from '@/components/CtaSection';
+import { AccountUnlocksTerminal } from '@/components/landing/AccountUnlocksTerminal';
 import { TopBar } from '@/components/dashboard/TopBar';
+import { guide } from '@/lib/guideAnchors';
 import { bg, color, gradient, font } from '@/lib/tokens';
 import macHeaderApp from '@/assets/hero-mac-app.png';
 import chartImg from '@/assets/chart.svg';
@@ -127,7 +129,7 @@ const alternatingSections = [
   {
     icon: <TrendingUp className="h-6 w-6" style={{ color: color.purple }} />,
     title: 'Advanced Charts',
-    desc: 'Up to 4 multi-layout panes with 6 timeframes (1m, 5m, 15m, 1h, 4h, 1d). Sync symbol, interval, crosshair, and time range across panes. 9 built-in indicators — EMA, SMA, VWAP, MACD, and more — each a draggable, customizable widget. Full drawing toolkit included: trend lines, Fibonacci, shapes, text, and freehand.',
+    desc: 'Up to 4 multi-layout panes with 10 timeframes (1m to 1M). Sync symbol, interval, crosshair, and time range across panes. 9 built-in indicators — EMA, SMA, VWAP, MACD, and more — each a draggable, customizable widget. Full drawing toolkit included: trend lines, Fibonacci, shapes, text, and freehand.',
     graphic: <img src={chartImg} alt="" loading="lazy" className="w-full max-w-lg select-none" />,
     ctaLabel: 'Discover Charts',
     ctaHref: '/features#charts',
@@ -156,10 +158,11 @@ const alternatingSections = [
     graphic: (
       <div className="flex flex-wrap items-center justify-center gap-4">
         {[
-          { pair: 'BTC/USD', price: '83,412', chg: '+2.14%', up: true },
-          { pair: 'ETH/USD', price: '1,582', chg: '+1.84%', up: true },
-          { pair: 'SOL/USD', price: '120.45', chg: '-0.83%', up: false },
-          { pair: 'XRP/USD', price: '2.20', chg: '+3.12%', up: true },
+          // A static illustration, not quotes: round numbers, no live-looking precision
+          { pair: 'BTC/USDT', price: '83,000', chg: '+2.1%', up: true },
+          { pair: 'ETH/USDT', price: '1,600', chg: '+1.8%', up: true },
+          { pair: 'SOL/USDT', price: '120', chg: '-0.8%', up: false },
+          { pair: 'XRP/USDT', price: '2.2', chg: '+3.1%', up: true },
         ].map((t) => (
           <div
             key={t.pair}
@@ -192,8 +195,8 @@ export function LandingPage() {
   return (
     <>
       <SeoHead
-        title="Paper Trade Crypto Free — Real-Time Bybit Data"
-        description="Practice crypto trading risk-free with real-time Bybit price feeds. Free paper trading platform with live charts, indicators, and $10,000 virtual balance."
+        title="Free Live Crypto Charts & Paper Trading"
+        description="Free live crypto charts with indicators and drawing tools — no signup. Create a free account to paper trade with a $10,000 virtual balance on live market data from Bybit."
         path="/"
         {...(!isLive && { noIndex: true })}
       />
@@ -237,7 +240,7 @@ export function LandingPage() {
                   className="text-xs font-medium tracking-wide uppercase"
                   style={{ color: color.muted }}
                 >
-                  {isLive ? 'Free Paper Trading Platform' : 'Launching Soon'}
+                  {isLive ? 'Live charts · No signup' : 'Launching Soon'}
                 </span>
               </motion.div>
 
@@ -246,20 +249,38 @@ export function LandingPage() {
                 className="text-5xl font-black leading-tight sm:text-6xl lg:text-7xl"
                 style={{ fontFamily: font.sans }}
               >
-                <span
-                  style={{
-                    background: gradient.brand,
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                  }}
-                >
-                  Paper trade crypto,{' '}
-                </span>
-                <span className="text-white uppercase">FREE</span>
+                {isLive ? (
+                  <>
+                    <span
+                      className="block"
+                      style={{
+                        background: gradient.brand,
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                      }}
+                    >
+                      Live crypto charts.
+                    </span>
+                    <span className="block text-white">No signup.</span>
+                  </>
+                ) : (
+                  <>
+                    <span
+                      style={{
+                        background: gradient.brand,
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                      }}
+                    >
+                      Paper trade crypto,{' '}
+                    </span>
+                    <span className="text-white uppercase">FREE</span>
+                  </>
+                )}
               </motion.h1>
 
               <motion.p variants={itemVariants} className="text-xl font-semibold text-white">
-                Stop paying. Start learning.
+                {isLive ? 'Open it. Draw on it. Decide later.' : 'Stop paying. Start learning.'}
               </motion.p>
 
               <motion.p
@@ -267,11 +288,12 @@ export function LandingPage() {
                 className="max-w-xl text-base leading-relaxed"
                 style={{ color: color.muted }}
               >
-                Real-time Bybit data, professional charts, and $10K virtual balance — register in 20
-                seconds.
+                {isLive
+                  ? 'Real-time candles for BTC, ETH, SOL and 6 more pairs, 9 indicators, drawing tools and up to 4 synced charts — right in your browser.'
+                  : 'Real-time Bybit data, professional charts, and $10K virtual balance.'}
               </motion.p>
 
-              <motion.div variants={itemVariants} className="flex gap-4">
+              <motion.div variants={itemVariants} className="flex flex-wrap gap-4">
                 {isLive ? (
                   <Button
                     asChild
@@ -279,7 +301,9 @@ export function LandingPage() {
                     className="h-12 rounded-full px-8 text-base font-semibold text-white shadow-lg"
                     style={{ background: gradient.brand }}
                   >
-                    <Link to="/register">Start Paper Trading</Link>
+                    <Link to="/chart" {...guide('landing.hero.chart')}>
+                      Open the Live Chart
+                    </Link>
                   </Button>
                 ) : (
                   <Button
@@ -300,7 +324,13 @@ export function LandingPage() {
                   className="h-12 rounded-full border-white/20 px-8 text-base font-semibold"
                   style={{ color: color.muted }}
                 >
-                  <Link to="/features">See Features</Link>
+                  {isLive ? (
+                    <Link to="/register" {...guide('landing.hero.register')}>
+                      Create Free Account
+                    </Link>
+                  ) : (
+                    <Link to="/features">See Features</Link>
+                  )}
                 </Button>
               </motion.div>
             </motion.div>
@@ -324,32 +354,16 @@ export function LandingPage() {
           </div>
         </div>
 
-        {/* ─── Live chart banner ───────────────────────────────────────── */}
-        <div className="mx-auto flex w-full max-w-6xl justify-center px-4 pt-8">
+        {/* ─── What a free account unlocks ────────────────────────────── */}
+        <div className="mx-auto flex w-full max-w-6xl justify-center px-4 pt-12">
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="flex flex-col items-center gap-3 rounded-full border border-white/10 px-6 py-3 text-center sm:flex-row sm:gap-4 sm:text-left"
-            style={{ background: `${color.glow}15` }}
+            className="w-full"
           >
-            <span
-              className="flex h-2 w-2 shrink-0 rounded-full"
-              style={{ background: color.green }}
-            />
-            <span className="text-sm" style={{ color: color.muted }}>
-              <span className="font-semibold text-white">See it before you sign up.</span> Live BTC,
-              ETH, SOL and more — 9 indicators, full charting toolkit. No account required.
-            </span>
-            <Button
-              asChild
-              size="sm"
-              className="h-9 shrink-0 rounded-full px-5 text-sm font-semibold text-white shadow-md"
-              style={{ background: gradient.brand }}
-            >
-              <Link to="/chart">Try It Free — No Signup</Link>
-            </Button>
+            <AccountUnlocksTerminal />
           </motion.div>
         </div>
 
@@ -656,9 +670,10 @@ export function LandingPage() {
                     {/* Price cards */}
                     <div className="mt-4 grid grid-cols-3 gap-2">
                       {[
-                        { pair: 'BTC/USD', price: '$51,667' },
-                        { pair: 'ETH/USD', price: '$33,669' },
-                        { pair: 'SOL/USD', price: '$25,515' },
+                        // Illustration only — round numbers, not quotes
+                        { pair: 'BTC/USDT', price: '83,000' },
+                        { pair: 'ETH/USDT', price: '1,600' },
+                        { pair: 'SOL/USDT', price: '120' },
                       ].map((c) => (
                         <div
                           key={c.pair}
@@ -676,16 +691,8 @@ export function LandingPage() {
                 </div>
               </div>
               <p className="text-sm" style={{ color: color.muted }}>
-                Clean, focused interface — log in to see live charts
+                Clean, focused interface — the live chart needs no login
               </p>
-              <Button
-                asChild
-                size="lg"
-                className="rounded-full px-8 text-base font-semibold text-white shadow-lg"
-                style={{ background: gradient.brand }}
-              >
-                <Link to="/register">Try It Now</Link>
-              </Button>
             </motion.div>
           </motion.div>
 

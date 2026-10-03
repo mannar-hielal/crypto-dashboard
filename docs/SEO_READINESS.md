@@ -24,7 +24,7 @@
 
 - [ ] **Blog / educational content** — 3–5 articles ("What is paper trading?", "How to read candlestick charts").
 - [ ] **Backlink strategy** — Product Hunt, relevant subreddits, paper trading comparison sites, GitHub.
-- [ ] **Competitive differentiation** — Visible USP on landing page (real-time Bybit data, free, no sign-up wall).
+- [x] **Competitive differentiation** — Visible USP on landing page (real-time Bybit data, free, no sign-up wall). Done 2026-10-03: hero "Live crypto charts. No signup." → `/chart`; landing retitled "Free Live Crypto Charts & Paper Trading" (Bybit only as the data source); `/chart` description no longer promises trading without an account.
 
 ## Infrastructure & pre-launch
 

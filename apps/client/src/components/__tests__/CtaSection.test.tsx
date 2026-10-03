@@ -72,7 +72,7 @@ describe('CtaSection', () => {
 
     it('does not show the live trading CTA', async () => {
       await renderPreLaunch();
-      expect(screen.queryByText(/start trading/i)).toBeNull();
+      expect(screen.queryByText(/create your free account/i)).toBeNull();
     });
   });
 
@@ -90,13 +90,14 @@ describe('CtaSection', () => {
     it('shows the live CTA heading when VITE_IS_LIVE is true', async () => {
       const { CtaSection: LiveCtaSection } = await import('../CtaSection');
       render(React.createElement(LiveCtaSection));
-      expect(screen.getByText(/start trading/i)).not.toBeNull();
+      expect(screen.getByText(/create your free account/i)).not.toBeNull();
+      expect(screen.queryByText(/20 seconds/i)).toBeNull();
     });
 
-    it('shows a Get Started Free link when live', async () => {
+    it('shows a Create Free Account link when live', async () => {
       const { CtaSection: LiveCtaSection } = await import('../CtaSection');
       render(React.createElement(LiveCtaSection));
-      const link = screen.getByText(/get started free/i);
+      const link = screen.getByText(/create free account/i);
       expect(link).not.toBeNull();
       expect(link.closest('a')?.getAttribute('href')).toBe('/register');
     });
