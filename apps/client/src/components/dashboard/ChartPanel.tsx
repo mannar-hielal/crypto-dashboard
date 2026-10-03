@@ -769,9 +769,15 @@ export function ChartPanel({
       // restoring that would undo the sync for good (10.4.6, see queueSyncedRange in chartSync.ts).
       const pendingSync = notFirstLoad && !isReload ? pendingSyncRange(paneIndex) : undefined;
       if (pendingSync) {
-        chartRef.current
-          ?.timeScale()
-          .setVisibleRange(pendingSync as { from: UTCTimestamp; to: UTCTimestamp });
+        try {
+          chartRef.current
+            ?.timeScale()
+            .setVisibleRange(pendingSync as { from: UTCTimestamp; to: UTCTimestamp });
+        } catch {
+          // The new data can leave the time scale refusing a range queued against the old one
+          // ("Value is null"): fall back to the plain restore rather than abort the push
+          if (savedRange) chartRef.current?.timeScale().setVisibleLogicalRange(savedRange);
+        }
       } else if (savedRange && notFirstLoad) {
         chartRef.current?.timeScale().setVisibleLogicalRange(savedRange);
       }
