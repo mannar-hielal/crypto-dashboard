@@ -22,6 +22,9 @@ test('[8.8] reset clears an open position, a resting limit and the journal; bala
 
   await at(page, 'account.settings').click();
   await at(page, 'acct-settings.reset').click();
+  // The button swaps with an exit animation (AnimatePresence mode="wait"): click the confirm
+  // step only once it is there, or the click lands on the departing "Reset account"
+  await expect(at(page, 'acct-settings.reset')).toHaveText('Confirm reset?');
   await at(page, 'acct-settings.reset').click(); // the two-step confirm
 
   await at(page, 'account.tab', 'positions').click();
