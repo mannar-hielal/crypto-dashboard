@@ -76,3 +76,54 @@ export function runPaneDataPush(paneIndex: number, push: () => void): void {
 export function isPanePushingData(paneIndex: number): boolean {
   return panesPushingData.has(paneIndex);
 }
+
+// ── Pending sync targets ─────────────────────────────────────────────────────
+// 🔐 lightweight-charts' setVisibleRange() doesn't move the chart at once: it queues the range and
+// applies it on the chart's next animation frame. A live tick pushed to the follower pane before
+// that frame (ChartPanel: getVisibleLogicalRange → setData/update → setVisibleLogicalRange) read
+// the not-yet-applied OLD range and queued it again, last one winning — the follower snapped back
+// to its pre-zoom range and stayed there, since its restore is a data push and never re-broadcasts.
+// Headless WebKit on CI draws frames slowly enough that the 1 s feed tick landed inside that window
+// in 4 runs out of 4 (10.4.6); any browser hits it when a tick and a sync share a frame. The sync therefore records the range it queued until the frame has applied
+// it, and the pane's data push restores that range instead of the stale one it reads back.
+export interface SyncedTimeRange {
+  from: unknown;
+  to: unknown;
+}
+
+const pendingSyncRanges = new Map<number, SyncedTimeRange>();
+
+export function setPendingSyncRange(paneIndex: number, range: SyncedTimeRange): void {
+  pendingSyncRanges.set(paneIndex, range);
+}
+
+/** The range the sync queued on this pane that its chart hasn't applied yet, if any */
+export function pendingSyncRange(paneIndex: number): SyncedTimeRange | undefined {
+  return pendingSyncRanges.get(paneIndex);
+}
+
+/**
+ * Forget the pane's pending range once its frame has applied it. Only that exact range: a newer
+ * one queued in the meantime must outlive the older range's frame.
+ */
+export function clearPendingSyncRange(paneIndex: number, range?: SyncedTimeRange): void {
+  if (range === undefined || pendingSyncRanges.get(paneIndex) === range) {
+    pendingSyncRanges.delete(paneIndex);
+  }
+}
+
+/**
+ * Queue `range` on a follower pane through `apply` (its chart's setVisibleRange) and keep it as the
+ * pane's pending range until `nextFrame` — requested after `apply`, so it runs after the chart's own
+ * frame that applies the range.
+ */
+export function queueSyncedRange(
+  paneIndex: number,
+  range: SyncedTimeRange,
+  apply: (range: SyncedTimeRange) => void,
+  nextFrame: (cb: () => void) => unknown
+): void {
+  apply(range); // first: a range the chart refused (throws) is never left pending
+  setPendingSyncRange(paneIndex, range);
+  nextFrame(() => clearPendingSyncRange(paneIndex, range));
+}

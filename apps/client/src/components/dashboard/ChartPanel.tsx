@@ -28,7 +28,7 @@ import {
   schedulePersistDrawings,
   getPersistenceKey,
 } from '@/lib/drawingManager';
-import { runPaneDataPush } from '@/lib/chartSync';
+import { pendingSyncRange, runPaneDataPush } from '@/lib/chartSync';
 import { toHeikinAshi } from '@/lib/heikinAshi';
 import { IndicatorWidgets } from '@/components/indicators/IndicatorWidgets';
 import { useTradeLines } from '@/hooks/useTradeLines';
@@ -764,8 +764,15 @@ export function ChartPanel({
         paddingSeriesRef.current?.setData(paddingData);
       }
 
-      // Restore saved logical range (setData resets it — known lw-charts bug)
-      if (savedRange && notFirstLoad) {
+      // Restore saved logical range (setData resets it — known lw-charts bug). 🔐 A range the time
+      // sync queued but the chart hasn't drawn yet wins: savedRange was read before it applied, and
+      // restoring that would undo the sync for good (10.4.6, see queueSyncedRange in chartSync.ts).
+      const pendingSync = notFirstLoad && !isReload ? pendingSyncRange(paneIndex) : undefined;
+      if (pendingSync) {
+        chartRef.current
+          ?.timeScale()
+          .setVisibleRange(pendingSync as { from: UTCTimestamp; to: UTCTimestamp });
+      } else if (savedRange && notFirstLoad) {
         chartRef.current?.timeScale().setVisibleLogicalRange(savedRange);
       }
 

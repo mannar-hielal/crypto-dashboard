@@ -79,8 +79,9 @@ test('[10.4.6] zooming one pane zooms the other to the same time range @full', a
   await expect
     .poll(async () => (await probe<{ from: number; to: number }>(page, 0, 'range'))?.from)
     .not.toBe(before.from);
-  // WebKit applies the wheel zoom over several frames: a snapshot of pane 0 taken mid-zoom never
-  // matched pane 1's settled range (run 37118729135). Compare the two panes once both have settled.
+  // Pane 1 applies the synced range on its next frame, so compare the two panes once both have
+  // settled. On CI WebKit pane 1 never followed: a live tick landing before that frame restored its
+  // old range (runs 37118729135, 37120772041; fixed by queueSyncedRange in lib/chartSync.ts).
   await expect
     .poll(async () => {
       const [r0, r1] = await Promise.all([
