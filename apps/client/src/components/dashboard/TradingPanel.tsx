@@ -838,7 +838,9 @@ export function TradingPanel({
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden"
+              // shrink-0: in the scrolling column a short screen (a phone) would otherwise squeeze
+              // this overflow-hidden box to nothing, leaving the price under the Amount row
+              className="shrink-0 overflow-hidden"
             >
               <label
                 htmlFor={priceInputId}

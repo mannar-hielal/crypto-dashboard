@@ -100,3 +100,31 @@ test('[20.4] phone: Assets → Sell opens the order form on Sell with the coins 
   await expect(at(page, 'trade.submit')).toContainText('Sell');
   await expect(at(page, 'trade.amount')).toHaveValue(/^99\.9/);
 });
+
+test('[20.5] phone: the Limit and Stop tabs show the price field above the amount @mobile', async ({
+  page,
+  seededUser,
+}) => {
+  test.skip((page.viewportSize()?.width ?? 0) >= 640, 'phones only');
+  await signInAs(page, seededUser.email, seededUser.password);
+  await page.goto('/dashboard/usdt/BTCUSDT');
+  await at(page, 'trade.mobile.buy').click();
+  for (const tab of ['limit', 'stop'] as const) {
+    await at(page, `trade.type.${tab}`).click();
+    const price = at(page, 'trade.price');
+    // The form's scrolling column squeezed the field's box to nothing on a phone, leaving the field
+    // under the Amount row. Polled: the field opens with a height animation
+    await expect
+      .poll(() =>
+        price.evaluate((el) => {
+          const r = el.getBoundingClientRect();
+          const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+          return r.height > 24 && !!hit && (hit === el || el.contains(hit) || hit.contains(el));
+        })
+      )
+      .toBe(true);
+    const box = (await price.boundingBox())!;
+    const amount = (await at(page, 'trade.amount').boundingBox())!;
+    expect(box.y + box.height).toBeLessThanOrEqual(amount.y);
+  }
+});
