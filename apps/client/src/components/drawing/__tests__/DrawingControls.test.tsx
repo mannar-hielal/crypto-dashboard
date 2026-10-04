@@ -198,6 +198,21 @@ describe('right-click menu', () => {
     expect(manager.drawings()).toHaveLength(0);
   });
 
+  it('[10.7.20] should ignore a right-click in the middle of a drag', () => {
+    const { manager, containerRef, chartEl, press, onCursor } = setup();
+    const id = addHorizontalLine(manager, 900); // y = 100
+    act(() => press(150, 100)); // select it
+    chartEl.dispatchEvent(
+      new MouseEvent('pointerdown', { clientX: 150, clientY: 100, button: 0, bubbles: true })
+    );
+    document.dispatchEvent(new MouseEvent('pointermove', { clientX: 150, clientY: 130 }));
+    fireEvent.contextMenu(containerRef.current!, { clientX: 150, clientY: 130 });
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(onCursor).not.toHaveBeenCalled();
+    document.dispatchEvent(new MouseEvent('pointerup', { clientX: 150, clientY: 130 }));
+    expect(manager.get(id)!.points[0]!.price).toBe(870); // the drag went on to its end
+  });
+
   it('[10.7.20] should return to the cursor on a right-click off any drawing', () => {
     const { containerRef, onCursor } = setup();
     fireEvent.contextMenu(containerRef.current!, { clientX: 300, clientY: 250 });
@@ -296,5 +311,26 @@ describe('settings dialog', () => {
     expect(price.getAttribute('aria-invalid')).toBe('true');
     fireEvent.click(within(dialog).getByRole('button', { name: 'Ok' }));
     expect(manager.get(id)!.points[1]!.price).toBe(950);
+  });
+});
+
+describe('table cells', () => {
+  it('[10.7.22] should edit a cell of a selected Table in place: Enter saves, Esc cancels', () => {
+    const { manager, press } = setup();
+    const id = manager.add({ kind: 'table', points: [{ time: T0 + 50, price: 900 }] } as never);
+    act(() => press(60, 108)); // select the table (its top-left cell)
+    act(() => press(60, 108)); // a click on a cell of the selected table edits it
+    const cell = screen.getByRole('textbox', { name: 'Table cell' });
+    fireEvent.change(cell, { target: { value: 'Entry' } });
+    fireEvent.keyDown(cell, { key: 'Enter' });
+    expect(screen.queryByRole('textbox', { name: 'Table cell' })).toBeNull();
+    expect(JSON.stringify(manager.get(id)!.style)).toContain('Entry');
+
+    act(() => press(60, 108));
+    const again = screen.getByRole('textbox', { name: 'Table cell' }) as HTMLTextAreaElement;
+    expect(again.value).toBe('Entry');
+    fireEvent.change(again, { target: { value: 'Nope' } });
+    fireEvent.keyDown(again, { key: 'Escape' });
+    expect(JSON.stringify(manager.get(id)!.style)).not.toContain('Nope');
   });
 });

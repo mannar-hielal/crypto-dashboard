@@ -37,6 +37,21 @@ export function getPersistenceKey(symbol: string): string {
   return `cd-drawings-v2-${symbol}`;
 }
 
+/**
+ * The drawing store from before July 2026 (`cd-drawings`, no symbol): one list for every chart,
+ * unread since the library replaced it (852e24b) and with no symbol to convert it under. Removed
+ * once, so it stops taking up the storage the drawings that load need.
+ */
+export const PRE_LIBRARY_DRAWINGS_KEY = 'cd-drawings';
+
+export function dropPreLibraryDrawings(): void {
+  try {
+    localStorage.removeItem(PRE_LIBRARY_DRAWINGS_KEY);
+  } catch {
+    // Blocked storage: nothing to free
+  }
+}
+
 /** Library 0.1's drawings of a symbol — read once to migrate, then left for a rollback */
 export function getLegacyPersistenceKey(symbol: string): string {
   return `cd-drawings-${symbol}`;

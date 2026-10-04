@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DrawingKind, DrawingManager } from 'lightweight-charts-drawing';
 import { useLayoutStore } from '@/store/layoutStore';
-import { TOOL_MAP, isSyncingDrawings } from '@/lib/drawingManager';
+import { TOOL_MAP, dropPreLibraryDrawings, isSyncingDrawings } from '@/lib/drawingManager';
 import {
   HOST_TOOLS,
   applyMagnet,
@@ -142,6 +142,9 @@ export function useDrawingSession(): DrawingSession {
   function paneHistory(paneIndex?: number) {
     return paneIndex === undefined ? activeHistory() : histories.current[paneIndex];
   }
+
+  // The pre-July drawing store has nothing left to load (drawingManager)
+  useEffect(dropPreLibraryDrawings, []);
 
   // ── TradingView shortcuts (window-wide; ignored while typing in a field) ──
   useEffect(() => {

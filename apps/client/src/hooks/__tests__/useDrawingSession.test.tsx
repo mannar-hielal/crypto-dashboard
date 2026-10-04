@@ -102,3 +102,15 @@ describe('useDrawingSession', () => {
     expect(a.manager.drawings()[0]!.points[0]!.price).toBe(905);
   });
 });
+
+describe('the pre-July drawing store', () => {
+  it('should be removed once the dashboard opens; the per-symbol sets stay', () => {
+    localStorage.setItem('cd-drawings', JSON.stringify({ state: { drawings: [] }, version: 4 }));
+    localStorage.setItem('cd-drawings-v2-BTCUSDT', '[]');
+    localStorage.setItem('cd-drawings-BTCUSDT', '[]'); // 0.1's, kept for a rollback
+    renderHook(() => useDrawingSession());
+    expect(localStorage.getItem('cd-drawings')).toBeNull();
+    expect(localStorage.getItem('cd-drawings-v2-BTCUSDT')).toBe('[]');
+    expect(localStorage.getItem('cd-drawings-BTCUSDT')).toBe('[]');
+  });
+});

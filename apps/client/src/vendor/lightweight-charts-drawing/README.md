@@ -48,6 +48,8 @@ Record every change here: date, file, what, why.
   `insertCopies(drawings, dx, dy)` (TV Clone / Paste: copies moved by pane pixels through
   `translateDrawing`, unlocked, added and selected, one `gestureEnd`). Why: the host's undo history
   and clipboard (drawing plan, Phase F). Tests: `drawingHistory.test`, `drawingClipboard.test`.
+- 2026-10-04 — `index.ts`: exports `tableCells`, so the host's table cell editor (`tableEdit`)
+  starts from the cell's text. Test: `DrawingControls.test` [10.7.22].
 - ESLint: `apps/client/eslint.config.js` relaxes, for `src/vendor/**` only, `_` unused params and
   rest siblings, `no-fallthrough` on empty cases, and `no-useless-assignment`. The folder is outside
   the client coverage floors; fixes here still get tests (`src/lib/__tests__/drawingLibrary.test.ts`).

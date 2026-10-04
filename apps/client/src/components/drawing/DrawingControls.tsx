@@ -16,7 +16,12 @@ import {
   EyeOff,
   Trash2,
 } from 'lucide-react';
-import type { Drawing, DrawingManager } from 'lightweight-charts-drawing';
+import {
+  tableCells,
+  type Drawing,
+  type DrawingManager,
+  type TableCellRef,
+} from 'lightweight-charts-drawing';
 import { runDrawingAction, styleSelection, type DrawingMenuAction } from '@/lib/drawingActions';
 import { formatModShortcut, isMacPlatform } from '@/lib/drawingShortcuts';
 import { toolLabel } from '@/lib/libraryTools';
@@ -24,6 +29,7 @@ import { guide } from '@/lib/guideAnchors';
 import { DrawingFloatingToolbar } from './DrawingFloatingToolbar';
 import { DrawingMenu, type MenuEntry } from './DrawingMenu';
 import { DrawingSettingsDialog } from './DrawingSettingsDialog';
+import { DrawingCellEditor } from './DrawingCellEditor';
 
 interface DrawingControlsProps {
   manager: DrawingManager | null;
@@ -37,6 +43,11 @@ export function DrawingControls({ manager, containerRef, onCursor }: DrawingCont
   const [bounds, setBounds] = useState({ width: 0, height: 0 });
   const [menuAt, setMenuAt] = useState<{ left: number; top: number } | null>(null);
   const [settingsFor, setSettingsFor] = useState<Drawing | null>(null);
+  const [cellEdit, setCellEdit] = useState<{
+    drawing: Drawing;
+    cell: TableCellRef;
+    box: { left: number; top: number; width: number; height: number };
+  } | null>(null);
   const [mac] = useState(isMacPlatform);
 
   // The selection, kept current through edits
@@ -50,6 +61,12 @@ export function DrawingControls({ manager, containerRef, onCursor }: DrawingCont
       offSelection();
       offChange();
     };
+  }, [manager]);
+
+  // A click on a cell of a selected Table: our editor opens over it (TradingView)
+  useEffect(() => {
+    if (!manager) return;
+    return manager.on('tableEdit', (drawing, cell, box) => setCellEdit({ drawing, cell, box }));
   }, [manager]);
 
   // The pane's size, to keep the toolbar inside it — watched only while the toolbar shows
@@ -70,6 +87,8 @@ export function DrawingControls({ manager, containerRef, onCursor }: DrawingCont
     if (!el) return;
     const onContextMenu = (e: MouseEvent) => {
       e.preventDefault();
+      // Mid-drag (the left button still down): no menu, no tool change; the drag carries on
+      if (manager?.busy()) return;
       const id = manager?.hoveredId();
       if (!manager || !id || manager.tool() !== null) {
         setMenuAt(null);
@@ -157,6 +176,21 @@ export function DrawingControls({ manager, containerRef, onCursor }: DrawingCont
             act(id as DrawingMenuAction);
           }}
           onClose={() => setMenuAt(null)}
+        />
+      )}
+      {cellEdit && (
+        <DrawingCellEditor
+          key={`${cellEdit.drawing.id}:${cellEdit.cell.join(',')}`}
+          box={cellEdit.box}
+          initialText={
+            tableCells(cellEdit.drawing.style)[cellEdit.cell[0]]?.[cellEdit.cell[1]] ?? ''
+          }
+          fontSize={cellEdit.drawing.style.fontSize ?? 14}
+          onSave={(text) => manager.setTableCellText(cellEdit.drawing.id, cellEdit.cell, text)}
+          onClose={() => {
+            setCellEdit(null);
+            manager.endTableEdit();
+          }}
         />
       )}
       {settingsFor && (
