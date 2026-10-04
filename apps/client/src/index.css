@@ -460,6 +460,20 @@
   }
 }
 
+/* A touch target of 24 px (9 px gutter + 15 px over the button's right edge) where there's no
+   hover or right-click: the arrow is the only way to a group's menu there. The button's centre,
+   under its icon, still arms the tool (review #241) */
+@media (hover: none) {
+  .toolbar-caret::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 24px;
+  }
+}
+
 .toolbar-slot:hover .toolbar-caret,
 .toolbar-caret:focus-visible,
 .toolbar-caret[aria-expanded='true'] {

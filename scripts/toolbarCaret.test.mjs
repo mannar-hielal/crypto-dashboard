@@ -25,3 +25,10 @@ test('the base .toolbar-caret rule never hides the arrow (touch keeps it visible
   assert.ok(base, 'the base .toolbar-caret rule is there');
   assert.doesNotMatch(base[0], /opacity: 0/);
 });
+
+test('on touch screens the arrow has a 24 px touch target', () => {
+  assert.match(
+    CSS,
+    /@media \(hover: none\) \{ \.toolbar-caret::before \{[^}]*width: 24px;[^}]*\} \}/
+  );
+});
