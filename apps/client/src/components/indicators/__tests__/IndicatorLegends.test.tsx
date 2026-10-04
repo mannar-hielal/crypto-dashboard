@@ -247,10 +247,10 @@ describe('IndicatorLegends', () => {
     expect(ema.textContent).toContain('100.00');
     expect(hover).toEqual([true]);
 
-    // Off the column, out of the chart: told to ChartPanel, and the next leave clears as usual
+    // Off the column, out of the chart: told to ChartPanel, and back to the last bar at once, with
+    // no crosshair event (none comes once the pointer is off the chart)
     fireEvent.pointerOut(ema, { relatedTarget: document.body });
     expect(hover).toEqual([true, false]);
-    act(() => crosshairHandler?.({ seriesData: new Map() } as unknown as MouseEventParams<Time>));
     expect(legendRow('indicator.legend', 'ema_1').textContent).toContain('101.00');
   });
 

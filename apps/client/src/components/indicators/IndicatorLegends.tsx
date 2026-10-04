@@ -313,7 +313,13 @@ export function IndicatorLegends({
         onPointerOut={(e) => {
           if (e.currentTarget.contains(e.relatedTarget as Node | null)) return; // row to row
           overLegendRef.current = false;
-          onLegendHover?.(false, e.relatedTarget);
+          // Out of the chart altogether: no crosshair event will follow, so fall back to the last
+          // bar now, in step with the OHLC legend ChartPanel clears
+          const leftTo = e.relatedTarget;
+          if (!(leftTo instanceof Node && containerRef.current?.contains(leftTo))) {
+            setCrosshair(null);
+          }
+          onLegendHover?.(false, leftTo);
         }}
       >
         {priceLegend}
