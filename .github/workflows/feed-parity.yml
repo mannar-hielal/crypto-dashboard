@@ -80,15 +80,22 @@ jobs:
           set -o pipefail
           image="registry.fly.io/$PARITY_APP:feed-${{ github.run_id }}"
           failed=0
+          # The machine's state: "gone" when the list call worked and it isn't there, "unknown" when the
+          # call failed (a network blip, a Fly API error): only stopped / destroyed / gone end a wait
+          machine_state() {
+            local out
+            out=$(flyctl machine list --app "$PARITY_APP" --json 2>/dev/null) || { echo unknown; return 0; }
+            printf '%s' "$out" | jq -r --arg id "$1" 'first(.[] | select(.id == $id) | .state) // "gone"' 2>/dev/null \
+              || echo unknown
+          }
           # Poll until the machine has stopped, or $2 seconds pass. flyctl machine wait gives up after
           # about a minute whatever --wait-timeout says (Fly caps the wait call), which read the feed
           # check's logs while it was still running: every nightly run failed from 2026-09-30
           wait_stopped() {
             local id=$1 deadline=$(( $(date +%s) + $2 )) state
             while :; do
-              state=$(flyctl machine list --app "$PARITY_APP" --json \
-                | jq -r --arg id "$id" '.[] | select(.id == $id) | .state')
-              case "$state" in stopped|destroyed|"") return 0 ;; esac
+              state=$(machine_state "$id")
+              case "$state" in stopped|destroyed|gone) return 0 ;; esac
               [ "$(date +%s)" -ge "$deadline" ] && return 1
               sleep 15
             done

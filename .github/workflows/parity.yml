@@ -109,12 +109,20 @@ jobs:
           # A wait timeout must still fetch the logs: they matter most for a machine that didn't stop
           # Poll the state: flyctl machine wait gives up after about a minute whatever --wait-timeout
           # says (Fly caps the wait call), so a run longer than that read its logs too early
+          # The machine's state: "gone" when the list call worked and it isn't there, "unknown" when the
+          # call failed (a network blip, a Fly API error): only stopped / destroyed / gone end the wait,
+          # and a failed call never aborts the step (the logs are still fetched)
+          machine_state() {
+            local out
+            out=$(flyctl machine list --app "$PARITY_APP" --json 2>/dev/null) || { echo unknown; return 0; }
+            printf '%s' "$out" | jq -r --arg id "$1" 'first(.[] | select(.id == $id) | .state) // "gone"' 2>/dev/null \
+              || echo unknown
+          }
           wait_ok=1
           deadline=$(( $(date +%s) + 720 ))
           while :; do
-            state=$(flyctl machine list --app "$PARITY_APP" --json \
-              | jq -r --arg id "$id" '.[] | select(.id == $id) | .state')
-            case "$state" in stopped|destroyed|"") break ;; esac
+            state=$(machine_state "$id")
+            case "$state" in stopped|destroyed|gone) break ;; esac
             [ "$(date +%s)" -ge "$deadline" ] && { wait_ok=0; break; }
             sleep 15
           done
