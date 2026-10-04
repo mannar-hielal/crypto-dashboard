@@ -176,6 +176,14 @@ overlay legend rows stay readable over the candles — M, eyeballed per UI relea
     → Expect Style and Coordinates tabs; tick Extend Right, Ok → Expect the line runs to the right edge.
 17. Draw a Table, click it, click a cell → Expect a text field over the cell; type, Enter → Expect the text in the
     cell; click it again, type, Esc → Expect the old text.
+18. Draw a Long Position, right-click it → Expect "Create limit order…" after Copy, in its own group (not on the
+    line from step 16). Pick it → Expect the order form on Limit, Buy, the entry as the price, the target as TP, the
+    stop as SL and the tool's qty in coins; nothing placed. Repeat with a Short Position → Expect Sell. On a phone,
+    tap the position, More → Create limit order… → Expect the form sheet to open filled in, its Price field showing.
+19. Signed in, draw a Long Position, Settings… → Expect Inputs first: account size = your balance, the symbol's
+    leverage. Change the Profit level ticks → Expect its price to follow; switch Risk to USDT → Expect the same risk
+    in USDT; Ok → Expect the box and the Qty label to follow. Style → untick Qty, tick Always show stats, Ok → Expect
+    the stats without hovering, with no Qty.
 
 ### 5 — Symbol pair icons (5.1–5.8)
 

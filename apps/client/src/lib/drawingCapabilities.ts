@@ -5,6 +5,9 @@
 
 import { OVERLAY_SPECS, factoryStyleFor, type DrawingKind } from 'lightweight-charts-drawing';
 
+/** The font sizes the settings dialog offers (TradingView's list) */
+export const FONT_SIZES = [10, 11, 12, 14, 16, 20, 24, 28, 32, 40] as const;
+
 /** Tools with no line of their own: a text box, a marker, a pin */
 const NO_LINE: ReadonlySet<string> = new Set([
   'text',
@@ -43,12 +46,17 @@ export interface DrawingCapabilities {
   priceLabels: boolean;
   /** The style field the text colour lives in: text boxes draw their text in `color` */
   textColorKey: 'textColor' | 'color';
+  /** A Long / Short Position: the Inputs tab and the stop / target / stats styling */
+  position: boolean;
+  /** "Create limit order…" in the right-click menu (TradingView: the position tools only) */
+  limitOrder: boolean;
 }
 
 export function capabilitiesOf(kind: DrawingKind): DrawingCapabilities {
   const spec = OVERLAY_SPECS[kind];
   const factory = factoryStyleFor(kind);
   const levels = Array.isArray(factory.levels);
+  const position = kind === 'long-position' || kind === 'short-position';
   return {
     line: !NO_LINE.has(kind),
     fill: typeof factory.fillBackground === 'boolean' && !levels,
@@ -57,5 +65,7 @@ export function capabilitiesOf(kind: DrawingKind): DrawingCapabilities {
     levels,
     priceLabels: typeof factory.showPriceLabels === 'boolean',
     textColorKey: typeof factory.textColor === 'string' ? 'textColor' : 'color',
+    position,
+    limitOrder: position,
   };
 }

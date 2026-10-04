@@ -50,6 +50,11 @@ Record every change here: date, file, what, why.
   and clipboard (drawing plan, Phase F). Tests: `drawingHistory.test`, `drawingClipboard.test`.
 - 2026-10-04 — `index.ts`: exports `tableCells`, so the host's table cell editor (`tableEdit`)
   starts from the cell's text. Test: `DrawingControls.test` [10.7.22].
+- 2026-10-04 — `index.ts`: exports `positionLevels`, `positionQty`, `levelFromPrice`,
+  `POSITION_STATS`, `positionStatOn` and `PositionStatKey`, so the host's "Create limit order…" (the
+  Long / Short Position right-click item) reads the entry, TP, SL and qty the tool shows, and its
+  settings dialog edits the Inputs and Stats. No code change. Tests: `positionOrder.test`,
+  `DrawingControls.test` [10.7.24].
 - ESLint: `apps/client/eslint.config.js` relaxes, for `src/vendor/**` only, `_` unused params and
   rest siblings, `no-fallthrough` on empty cases, and `no-useless-assignment`. The folder is outside
   the client coverage floors; fixes here still get tests (`src/lib/__tests__/drawingLibrary.test.ts`).

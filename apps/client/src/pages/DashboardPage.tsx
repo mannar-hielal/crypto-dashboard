@@ -212,16 +212,20 @@ export function DashboardInner() {
   const isTradingPanelVisible = !editTarget && tradingPanelOpen;
 
   // Below lg the form isn't docked: a prefill (Assets → Sell) must also open it, on its side, or the
-  // tap looks dead (review #200). Adjusted while rendering when a new request arrives (no effect)
+  // tap looks dead (review #200). A limit order from a position drawing ("Create limit order…")
+  // opens the form at every width, on the Limit tab, as TradingView opens its order panel.
+  // Adjusted while rendering when a new request arrives (no effect)
   // The form may take (and clear) the request first, so follow the request counter, not the request
   const prefillSeq = useOrderPrefillStore((s) => s.seq);
   const prefillSide = useOrderPrefillStore((s) => s.lastSide);
+  const prefillLimit = useOrderPrefillStore((s) => s.lastLimit);
   const [openedForSeq, setOpenedForSeq] = useState(prefillSeq);
   if (prefillSeq !== openedForSeq) {
     setOpenedForSeq(prefillSeq);
-    if (isMobile) {
+    if (isMobile || prefillLimit) {
       setEditTarget(null);
       setTradingSide(prefillSide);
+      if (prefillLimit) setTradingTab('limit');
       setTradingPanelOpen(true);
     }
   }

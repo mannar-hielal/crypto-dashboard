@@ -1,7 +1,8 @@
 /**
  * TradingView's drawing settings (the floating toolbar's gear, "Settings…" on right-click): Style,
- * Text and Coordinates tabs, showing only what the tool supports. The edits go to a draft and apply
- * on OK, as one undo step; Cancel or Esc drops them.
+ * Text and Coordinates tabs, showing only what the tool supports — a Long / Short Position has
+ * Inputs and Style instead (PositionSettings). The edits go to a draft and apply on OK, as one undo
+ * step; Cancel or Esc drops them.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -9,17 +10,17 @@ import { createPortal } from 'react-dom';
 import type { DataPoint, Drawing, DrawingStyle, LevelDef } from 'lightweight-charts-drawing';
 
 type LineStyle = DrawingStyle['lineStyle'];
-import { capabilitiesOf } from '@/lib/drawingCapabilities';
-import { MAX_DRAWING_TEXT, parseDecimal } from '@/lib/drawingActions';
+import { FONT_SIZES, capabilitiesOf } from '@/lib/drawingCapabilities';
+import { MAX_DRAWING_TEXT } from '@/lib/drawingActions';
 import { guide } from '@/lib/guideAnchors';
-import { DrawingColorPopover } from './DrawingColorPopover';
+import { PositionColors, PositionInfo, PositionInputs } from './PositionSettings';
+import { ColorField, NumberField } from './SettingsFields';
 import styles from './DrawingSettingsDialog.module.css';
 
-type Tab = 'style' | 'text' | 'coordinates';
+type Tab = 'inputs' | 'style' | 'text' | 'coordinates';
 
 const LINE_WIDTHS = [1, 2, 3, 4] as const;
 const LINE_STYLES: readonly LineStyle[] = ['solid', 'dashed', 'dotted'];
-const FONT_SIZES = [10, 11, 12, 14, 16, 20, 24, 28, 32, 40] as const;
 
 function formatTime(time: DataPoint['time']): string {
   const seconds = typeof time === 'number' ? time : Number(time);
@@ -33,80 +34,14 @@ function formatTime(time: DataPoint['time']): string {
   });
 }
 
-// ─── A colour button opening the picker ─────────────────────────────────────
-
-interface ColorFieldProps {
-  label: string;
-  value: string;
-  opacity?: number;
-  onChange: (color: string) => void;
-  onOpacityChange?: (opacity: number) => void;
-}
-
-function ColorField({ label, value, opacity, onChange, onOpacityChange }: ColorFieldProps) {
-  const [at, setAt] = useState<{ left: number; top: number } | null>(null);
-  return (
-    <>
-      <button
-        type="button"
-        className={styles.swatch}
-        style={{ background: value }}
-        aria-label={label}
-        onClick={(e) => {
-          const r = e.currentTarget.getBoundingClientRect();
-          setAt(at ? null : { left: r.left, top: r.bottom + 6 });
-        }}
-      />
-      {at && (
-        <DrawingColorPopover
-          label={label}
-          value={value}
-          opacity={opacity}
-          position={at}
-          onChange={onChange}
-          onOpacityChange={onOpacityChange}
-          onClose={() => setAt(null)}
-        />
-      )}
-    </>
-  );
-}
-
-// ─── A number typed as text (locale commas allowed), committed on blur ──────
-
-interface NumberFieldProps {
-  label: string;
-  value: number;
-  onChange: (value: number) => void;
-}
-
-function NumberField({ label, value, onChange }: NumberFieldProps) {
-  const [text, setText] = useState(String(value));
-  const valid = parseDecimal(text) !== null;
-  return (
-    <input
-      type="text"
-      inputMode="decimal"
-      aria-label={label}
-      aria-invalid={!valid}
-      maxLength={32}
-      className={`${styles.input}${valid ? '' : ` ${styles.invalid}`}`}
-      value={text}
-      onChange={(e) => {
-        setText(e.target.value);
-        const n = parseDecimal(e.target.value);
-        if (n !== null) onChange(n);
-      }}
-    />
-  );
-}
-
 // ─── Dialog ─────────────────────────────────────────────────────────────────
 
 interface DrawingSettingsDialogProps {
   drawing: Drawing;
   /** A label for the tool, e.g. "Trend Line" */
   title: string;
+  /** The chart's price step: a position's ticks count it, as its labels do */
+  pip: number;
   onApply: (next: Drawing) => void;
   onClose: () => void;
 }
@@ -114,12 +49,13 @@ interface DrawingSettingsDialogProps {
 export function DrawingSettingsDialog({
   drawing,
   title,
+  pip,
   onApply,
   onClose,
 }: DrawingSettingsDialogProps) {
   const caps = capabilitiesOf(drawing.kind);
   const [draft, setDraft] = useState<Drawing>(drawing);
-  const [tab, setTab] = useState<Tab>('style');
+  const [tab, setTab] = useState<Tab>(caps.position ? 'inputs' : 'style');
   const dialogRef = useRef<HTMLDivElement>(null);
   const s = draft.style;
 
@@ -142,11 +78,22 @@ export function DrawingSettingsDialog({
     );
   }
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: 'style', label: 'Style' },
-    ...(caps.text ? [{ id: 'text' as const, label: 'Text' }] : []),
-    ...(!draft.anchored ? [{ id: 'coordinates' as const, label: 'Coordinates' }] : []),
-  ];
+  /** A position's entry: both its points sit at it (the second only sets where the box ends) */
+  function setEntry(price: number) {
+    setDraft((d) => ({ ...d, points: d.points.map((p) => ({ ...p, price })) }) as Drawing);
+  }
+
+  // A position's entry is in its Inputs, so it has no Coordinates (TradingView)
+  const tabs: { id: Tab; label: string }[] = caps.position
+    ? [
+        { id: 'inputs', label: 'Inputs' },
+        { id: 'style', label: 'Style' },
+      ]
+    : [
+        { id: 'style', label: 'Style' },
+        ...(caps.text ? [{ id: 'text' as const, label: 'Text' }] : []),
+        ...(!draft.anchored ? [{ id: 'coordinates' as const, label: 'Coordinates' }] : []),
+      ];
   const textColorValue = (caps.textColorKey === 'textColor' ? s.textColor : s.color) ?? s.color;
 
   function onKeyDown(e: React.KeyboardEvent) {
@@ -210,8 +157,12 @@ export function DrawingSettingsDialog({
           role="tabpanel"
           id={`drawing-panel-${tab}`}
           aria-labelledby={`drawing-tab-${tab}`}
-          className={styles.panel}
+          className={`${styles.panel}${caps.position ? ` ${styles.position}` : ''}`}
         >
+          {tab === 'inputs' && (
+            <PositionInputs draft={draft} pip={pip} setStyle={setStyle} setEntry={setEntry} />
+          )}
+
           {tab === 'style' && (
             <>
               {caps.line && (
@@ -248,6 +199,7 @@ export function DrawingSettingsDialog({
                   </select>
                 </div>
               )}
+              {caps.position && <PositionColors style={s} setStyle={setStyle} />}
               {caps.extend && (
                 <div className={styles.row}>
                   <span className={styles.label}>Extend</span>
@@ -282,6 +234,7 @@ export function DrawingSettingsDialog({
                   </label>
                 </div>
               )}
+              {caps.position && <PositionInfo style={s} setStyle={setStyle} />}
               {(caps.fill || caps.levels) && (
                 <div className={styles.row}>
                   <span className={styles.label}>Background</span>

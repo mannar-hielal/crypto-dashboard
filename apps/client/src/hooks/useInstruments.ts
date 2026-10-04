@@ -11,13 +11,18 @@ import { marketApi, type Instrument, type MarketCategory } from '@crypto-dashboa
 
 // Bounded: one entry per market (2)
 const cache = new Map<MarketCategory, Promise<Instrument[]>>();
+// The same lists once loaded, for a synchronous read (bounded the same way)
+const loaded = new Map<MarketCategory, Instrument[]>();
 
 function load(category: MarketCategory): Promise<Instrument[]> {
   let pending = cache.get(category);
   if (!pending) {
     pending = marketApi
       .getInstruments(category)
-      .then((res) => res.instruments)
+      .then((res) => {
+        loaded.set(category, res.instruments);
+        return res.instruments;
+      })
       .catch((err: unknown) => {
         cache.delete(category); // let a later mount retry
         throw err;
@@ -25,6 +30,11 @@ function load(category: MarketCategory): Promise<Instrument[]> {
     cache.set(category, pending);
   }
   return pending;
+}
+
+/** A symbol's rules if its market's list has already loaded (no request), else null */
+export function cachedInstrument(category: MarketCategory, symbol: string): Instrument | null {
+  return loaded.get(category)?.find((i) => i.symbol === symbol) ?? null;
 }
 
 export function useInstrument(category: MarketCategory, symbol: string): Instrument | null {

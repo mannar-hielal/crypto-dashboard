@@ -98,6 +98,16 @@ interface TradingPanelProps {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+/**
+ * A prefilled price as the input shows it: the producer has put it on the tick, so all its
+ * decimals, without grouping or exponent (never `1e-7`); empty when there is none
+ */
+function prefillPrice(v: number | undefined): string {
+  return v !== undefined && v > 0
+    ? v.toLocaleString('en-US', { useGrouping: false, maximumFractionDigits: 20 })
+    : '';
+}
+
 export function TradingPanel({
   onClose,
   initialTab = 'market',
@@ -182,12 +192,14 @@ export function TradingPanel({
   const [placing, setPlacing] = useState(false);
 
   // ── Local state ───────────────────────────────────────────────────────────
-  // Assets → Sell: a prefill request meant for this market and symbol, taken at mount (the form
-  // remounts when the market or symbol changes, so this is where a Sell of another coin lands)
+  // Assets → Sell / "Create limit order…": a prefill request meant for this market and symbol, taken
+  // at mount (the form remounts when the market or symbol changes, so this is where a Sell of
+  // another coin, or a drawing's order in another pane, lands)
   const [initialPrefill] = useState(() => {
     const r = useOrderPrefillStore.getState().request;
     return r && r.category === category && r.symbol === symbol ? r : null;
   });
+  const initialLimit = initialPrefill?.type === 'limit' ? initialPrefill : null;
   const [side, setSide] = useState<OrderSide>(initialPrefill?.side ?? initialSide);
   // The panel stays mounted: a side chosen from outside (the mobile Buy / Sell bar) applies here too.
   // Adjusted while rendering when the prop changes (React's pattern; no effect)
@@ -198,17 +210,17 @@ export function TradingPanel({
   }
   // Spot has no stop orders: a remembered Stop tab opens as Market there
   const [tab, setTab] = useState<OrderTab>(
-    category === 'spot' && initialTab === 'stop' ? 'market' : initialTab
+    initialLimit ? 'limit' : category === 'spot' && initialTab === 'stop' ? 'market' : initialTab
   );
   const [qtyMode, setQtyMode] = useState<QtyMode>(initialPrefill ? 'units' : 'usd');
   const [qtyInput, setQtyInput] = useState(initialPrefill ? initialPrefill.qty.toString() : '');
   // Empty on every key-reset mount — displayPrice (below) falls back to latestPrice
   // so the field always reflects the new symbol's live price without useEffect.
-  const [priceInput, setPriceInput] = useState('');
-  const [tpEnabled, setTpEnabled] = useState(false);
-  const [slEnabled, setSlEnabled] = useState(false);
-  const [tpInput, setTpInput] = useState('');
-  const [slInput, setSlInput] = useState('');
+  const [priceInput, setPriceInput] = useState(() => prefillPrice(initialLimit?.price));
+  const [tpEnabled, setTpEnabled] = useState(!!initialLimit?.takeProfit);
+  const [slEnabled, setSlEnabled] = useState(!!initialLimit?.stopLoss);
+  const [tpInput, setTpInput] = useState(() => prefillPrice(initialLimit?.takeProfit));
+  const [slInput, setSlInput] = useState(() => prefillPrice(initialLimit?.stopLoss));
   const [exitsOpen, setExitsOpen] = useState(true);
   // BP-5 B (USDT Perpetual): what the TP / SL trigger on, and the reduce-only flags
   const [tpTriggerBy, setTpTriggerBy] = useState<PaperTriggerBy>('LastPrice');
@@ -228,17 +240,34 @@ export function TradingPanel({
     if (initialPrefill) {
       useOrderPrefillStore.getState().clear();
       onSideChange?.(initialPrefill.side);
+      if (initialPrefill.type === 'limit') onTabChange?.('limit');
     }
     return useOrderPrefillStore.subscribe(({ request: r }) => {
       if (!r || r.category !== category || r.symbol !== symbol) return;
+      // A request made with another pane activated (a drawing's order on a pane showing the same
+      // symbol): this form is about to remount for that pane, and the new one takes it at mount
+      if (useLayoutStore.getState().activePane !== activePane) return;
       useOrderPrefillStore.getState().clear();
       setSide(r.side);
       onSideChange?.(r.side);
       setQtyMode('units');
       setQtyInput(r.qty.toString());
       setFormError(null);
+      if (r.type !== 'limit') return;
+      // Set directly, not through handleSideChange / handleTabChange: those clear the typed price,
+      // TP and SL, which are exactly what this request fills in
+      setTab('limit');
+      onTabChange?.('limit');
+      setPriceInput(prefillPrice(r.price));
+      setTpEnabled(!!r.takeProfit);
+      setTpInput(prefillPrice(r.takeProfit));
+      setSlEnabled(!!r.stopLoss);
+      setSlInput(prefillPrice(r.stopLoss));
+      setBypassWarning(false);
+      setSltpConfirmPending(false);
+      setSltpConfirmBypassed(false);
     });
-  }, [initialPrefill, category, symbol, onSideChange]);
+  }, [initialPrefill, category, symbol, activePane, onSideChange, onTabChange]);
 
   // ── Derived values ────────────────────────────────────────────────────────
 
@@ -838,7 +867,9 @@ export function TradingPanel({
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden"
+              // shrink-0: in the scrolling column a short screen (a phone) would otherwise squeeze
+              // this overflow-hidden box to nothing, leaving the price under the Amount row
+              className="shrink-0 overflow-hidden"
             >
               <label
                 htmlFor={priceInputId}

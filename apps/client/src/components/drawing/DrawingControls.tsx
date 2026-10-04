@@ -15,7 +15,9 @@ import {
   LockOpen,
   EyeOff,
   Trash2,
+  ChartLine,
 } from 'lucide-react';
+import { priceTickSize } from '@crypto-dashboard/sdk';
 import {
   tableCells,
   type Drawing,
@@ -26,6 +28,11 @@ import { runDrawingAction, styleSelection, type DrawingMenuAction } from '@/lib/
 import { formatModShortcut, isMacPlatform } from '@/lib/drawingShortcuts';
 import { toolLabel } from '@/lib/libraryTools';
 import { guide } from '@/lib/guideAnchors';
+import { capabilitiesOf } from '@/lib/drawingCapabilities';
+import { positionOrderFromDrawing } from '@/lib/positionOrder';
+import { useInstrument } from '@/hooks/useInstruments';
+import { useLayoutStore } from '@/store/layoutStore';
+import { useOrderPrefillStore } from '@/store/orderPrefillStore';
 import { DrawingFloatingToolbar } from './DrawingFloatingToolbar';
 import { DrawingMenu, type MenuEntry } from './DrawingMenu';
 import { DrawingSettingsDialog } from './DrawingSettingsDialog';
@@ -36,19 +43,34 @@ interface DrawingControlsProps {
   containerRef: RefObject<HTMLDivElement | null>;
   /** Right-click off a drawing: back to the cursor */
   onCursor: () => void;
+  /** The pane and the symbol it shows: a position drawing's "Create limit order…" is for them */
+  paneIndex: 0 | 1 | 2 | 3;
+  symbol: string;
+  /** The chart's price step, read when the settings open (a position's ticks count it) */
+  pipSize: () => number;
 }
 
-export function DrawingControls({ manager, containerRef, onCursor }: DrawingControlsProps) {
+export function DrawingControls({
+  manager,
+  containerRef,
+  onCursor,
+  paneIndex,
+  symbol,
+  pipSize,
+}: DrawingControlsProps) {
   const [selected, setSelected] = useState<readonly Drawing[]>([]);
   const [bounds, setBounds] = useState({ width: 0, height: 0 });
   const [menuAt, setMenuAt] = useState<{ left: number; top: number } | null>(null);
-  const [settingsFor, setSettingsFor] = useState<Drawing | null>(null);
+  const [settingsFor, setSettingsFor] = useState<{ drawing: Drawing; pip: number } | null>(null);
   const [cellEdit, setCellEdit] = useState<{
     drawing: Drawing;
     cell: TableCellRef;
     box: { left: number; top: number; width: number; height: number };
   } | null>(null);
   const [mac] = useState(isMacPlatform);
+  // Drawings are kept per symbol, not per market: the order is for the market this pane shows
+  const category = useLayoutStore((s) => s.panes[paneIndex]?.category ?? 'linear');
+  const instrument = useInstrument(category, symbol);
 
   // The selection, kept current through edits
   useEffect(() => {
@@ -108,10 +130,30 @@ export function DrawingControls({ manager, containerRef, onCursor }: DrawingCont
     if (!manager) return;
     if (action === 'settings') {
       const first = manager.selection()[0];
-      setSettingsFor(first ? (manager.get(first) ?? null) : null);
+      const drawing = first ? manager.get(first) : undefined;
+      setSettingsFor(drawing ? { drawing, pip: pipSize() } : null);
+      return;
+    }
+    if (action === 'limit-order') {
+      createLimitOrder();
       return;
     }
     runDrawingAction(manager, action);
+  }
+
+  /** TradingView's "Create limit order…": the order form opens filled in, nothing is placed */
+  function createLimitOrder() {
+    const drawing = selected.length === 1 ? selected[0] : undefined;
+    if (!drawing) return;
+    const order = positionOrderFromDrawing(drawing, {
+      tickSize: instrument?.tickSize || priceTickSize(category, symbol),
+      qtyStep: instrument?.qtyStep ?? 0,
+    });
+    if (!order) return;
+    // The form follows the active pane: activate this one first, so the request lands in its form
+    const layout = useLayoutStore.getState();
+    if (layout.activePane !== paneIndex) layout.setActivePane(paneIndex);
+    useOrderPrefillStore.getState().prefill({ category, symbol, type: 'limit', ...order });
   }
 
   const locked = selected.length > 0 && selected.every((d) => d.locked);
@@ -132,6 +174,18 @@ export function DrawingControls({ manager, containerRef, onCursor }: DrawingCont
       shortcut: formatModShortcut('C', mac),
     },
     { type: 'separator', id: 'sep-1' },
+    ...(selected.length === 1 && capabilitiesOf(selected[0].kind).limitOrder
+      ? ([
+          {
+            type: 'item',
+            id: 'limit-order',
+            label: 'Create limit order…',
+            icon: <ChartLine size={16} />,
+            attrs: guide('drawing.menu', 'limit-order') as Record<string, string>,
+          },
+          { type: 'separator', id: 'sep-order' },
+        ] satisfies MenuEntry[])
+      : []),
     { type: 'item', id: 'front', label: 'Bring to front', icon: <ArrowUpToLine size={16} /> },
     { type: 'item', id: 'back', label: 'Send to back', icon: <ArrowDownToLine size={16} /> },
     { type: 'separator', id: 'sep-2' },
@@ -195,9 +249,10 @@ export function DrawingControls({ manager, containerRef, onCursor }: DrawingCont
       )}
       {settingsFor && (
         <DrawingSettingsDialog
-          key={settingsFor.id}
-          drawing={settingsFor}
-          title={toolLabel(settingsFor.kind)}
+          key={settingsFor.drawing.id}
+          drawing={settingsFor.drawing}
+          title={toolLabel(settingsFor.drawing.kind)}
+          pip={settingsFor.pip}
           onApply={(next) => manager.update(next)}
           onClose={() => setSettingsFor(null)}
         />
