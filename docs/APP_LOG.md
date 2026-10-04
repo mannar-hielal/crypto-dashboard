@@ -3898,3 +3898,13 @@ group order, the last tool per group remembered.
 - **Tests:** TRADING_TEST_PLAN 10.7.12–10.7.22; UI_REPRODUCTIONS 10.7 steps 9–17.
 - **Later (not in this PR):** touch editing, patterns / Elliott / icons, drawings in indicator panes, templates,
   hide / lock all, per-interval visibility.
+
+### fix: Fly parity jobs wait for their machine by polling (2026-10-04) ✅
+
+**Context:** "Feed parity and spec drift" failed every night from at least 2026-09-30. Each time, the job reported "machine did not reach stopped within 15m0s" one minute after starting the feed check.
+
+`flyctl machine wait --wait-timeout 15m` gives up after about 60 s, whatever the timeout. The job then read the logs of a check that was still running (it takes about 5 minutes), found no "exited normally", and failed. The spec-drift check passed only because it takes about 2 s.
+
+- **`feed-parity.yml`:** `wait_stopped` polls the machine's state every 15 s. The deadline is 15 minutes; when it passes, the job reports "did not stop within 15 minutes".
+- **`parity.yml`:** the same loop, with a 12-minute deadline. It passed only while its run fit inside the one minute.
+- **Fly cost:** a few cents a month. The feed machine (shared-cpu-1x, 512 MB, sin) now runs about 6 minutes a night instead of about 1, roughly 3 hours a month.

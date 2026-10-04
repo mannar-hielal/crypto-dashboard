@@ -107,8 +107,17 @@ jobs:
           [ -n "$id" ] || { echo "::error::Parity machine $name not found"; exit 1; }
           echo "id=$id" >> "$GITHUB_OUTPUT"
           # A wait timeout must still fetch the logs: they matter most for a machine that didn't stop
+          # Poll the state: flyctl machine wait gives up after about a minute whatever --wait-timeout
+          # says (Fly caps the wait call), so a run longer than that read its logs too early
           wait_ok=1
-          flyctl machine wait "$id" --app "$PARITY_APP" --state stopped --wait-timeout 12m || wait_ok=0
+          deadline=$(( $(date +%s) + 720 ))
+          while :; do
+            state=$(flyctl machine list --app "$PARITY_APP" --json \
+              | jq -r --arg id "$id" '.[] | select(.id == $id) | .state')
+            case "$state" in stopped|destroyed|"") break ;; esac
+            [ "$(date +%s)" -ge "$deadline" ] && { wait_ok=0; break; }
+            sleep 15
+          done
           sleep 10 # let the last log lines reach the log buffer
           flyctl logs --app "$PARITY_APP" --machine "$id" --no-tail | tee parity.log || true
           [ "$wait_ok" = 1 ] || { echo "::error::Parity machine $id did not stop within 12 minutes"; exit 1; }

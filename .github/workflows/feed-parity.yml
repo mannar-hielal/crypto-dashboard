@@ -80,6 +80,19 @@ jobs:
           set -o pipefail
           image="registry.fly.io/$PARITY_APP:feed-${{ github.run_id }}"
           failed=0
+          # Poll until the machine has stopped, or $2 seconds pass. flyctl machine wait gives up after
+          # about a minute whatever --wait-timeout says (Fly caps the wait call), which read the feed
+          # check's logs while it was still running: every nightly run failed from 2026-09-30
+          wait_stopped() {
+            local id=$1 deadline=$(( $(date +%s) + $2 )) state
+            while :; do
+              state=$(flyctl machine list --app "$PARITY_APP" --json \
+                | jq -r --arg id "$id" '.[] | select(.id == $id) | .state')
+              case "$state" in stopped|destroyed|"") return 0 ;; esac
+              [ "$(date +%s)" -ge "$deadline" ] && return 1
+              sleep 15
+            done
+          }
           # $1 = machine name suffix, $2 = the log line that means "passed", rest = the command
           run_check() {
             local suffix=$1 pass=$2; shift 2
@@ -107,9 +120,11 @@ jobs:
             id=$(flyctl machine list --app "$PARITY_APP" --json | jq -r --arg n "$name" '.[] | select(.name == $n) | .id')
             [ -n "$id" ] || { echo "::error::Machine $name not found"; return 1; }
             echo "$id" >> machines.txt
-            flyctl machine wait "$id" --app "$PARITY_APP" --state stopped --wait-timeout 15m || true
+            local stopped=1
+            wait_stopped "$id" 900 || stopped=0
             sleep 10 # let the last log lines reach the log buffer
             flyctl logs --app "$PARITY_APP" --machine "$id" --no-tail | tee "$suffix.log" || true
+            [ "$stopped" = 1 ] || { echo "::error::Machine $name did not stop within 15 minutes"; return 1; }
             grep -q 'exited normally with code: 0' "$suffix.log" && grep -q "$pass" "$suffix.log"
           }
           if [ "$FEED" = true ]; then
