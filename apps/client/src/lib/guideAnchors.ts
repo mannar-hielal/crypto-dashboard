@@ -73,6 +73,12 @@ export const GUIDE_ANCHORS = [
   'chart.mark-line',
   // toolbar (drawing tools, left of the chart; key = the tool group id)
   'toolbar.tool',
+  // a tool in a group's menu (key = the tool id, e.g. horizontal-line, eraser)
+  'toolbar.subtool',
+  // the selected drawing's floating toolbar, its right-click menu and its settings dialog
+  'drawing.toolbar',
+  'drawing.menu',
+  'drawing.settings',
   // indicator (key = the catalog id for an option, the instance id for everything else)
   'indicator.menu',
   'indicator.option',
@@ -238,6 +244,8 @@ export const GUIDE_ANCHORS = [
   'landing.hero.chart',
   'landing.hero.register',
   'landing.unlocks.register',
+  // footer
+  'footer.chart-credit',
   // lock (signed-out visitors on /chart)
   'lock.overlay',
   'lock.sign-in',

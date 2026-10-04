@@ -14,7 +14,9 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html'],
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['src/main.tsx', 'src/**/__tests__/**'],
+      // The forked drawing library is third-party code, not measured before the fork (it was in
+      // node_modules) — excluded so the floors keep measuring our own code
+      exclude: ['src/main.tsx', 'src/**/__tests__/**', 'src/vendor/**'],
       // Floors just under today's numbers (2026-09-28, after both M1 PRs), raised as
       // tests land — never lowered
       thresholds: { lines: 51, statements: 50, branches: 54, functions: 50 },
@@ -24,6 +26,11 @@ export default defineConfig({
     alias: {
       // Mirror the @/ path alias from tsconfig.app.json so imports resolve in tests
       '@': resolve(__dirname, './src'),
+      // Forked library — mirrors the vite.config.ts / tsconfig alias
+      'lightweight-charts-drawing': resolve(
+        __dirname,
+        './src/vendor/lightweight-charts-drawing/index.ts'
+      ),
     },
   },
 });

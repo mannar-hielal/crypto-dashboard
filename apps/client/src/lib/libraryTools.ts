@@ -18,6 +18,7 @@ export interface ToolGroup {
   categories: ToolCategory[];
 }
 
+/** TradingView's order: trend lines, Fib & Gann, forecast & measure, shapes, text & notes */
 export const TOOL_GROUPS: ToolGroup[] = [
   {
     id: 'trend-lines',
@@ -50,9 +51,9 @@ export const TOOL_GROUPS: ToolGroup[] = [
       {
         label: 'Pitchforks',
         tools: [
-          { id: 'andrews-pitchfork', label: 'Pitchfork' },
+          { id: 'pitchfork', label: 'Pitchfork' },
           { id: 'schiff-pitchfork', label: 'Schiff Pitchfork' },
-          { id: 'modified-schiff-pitchfork', label: 'Modified Schiff' },
+          { id: 'modified-schiff-pitchfork', label: 'Modified Schiff Pitchfork' },
           { id: 'inside-pitchfork', label: 'Inside Pitchfork' },
         ],
       },
@@ -67,14 +68,14 @@ export const TOOL_GROUPS: ToolGroup[] = [
         label: 'Fibonacci',
         tools: [
           { id: 'fib-retracement', label: 'Fib Retracement' },
-          { id: 'fib-extension', label: 'Fib Extension' },
+          { id: 'trend-based-fib-extension', label: 'Trend-Based Fib Extension' },
           { id: 'fib-channel', label: 'Fib Channel' },
           { id: 'fib-time-zone', label: 'Fib Time Zone' },
-          { id: 'fib-speed-fan', label: 'Fib Speed Fan' },
-          { id: 'fib-time-extension', label: 'Fib Time Extension' },
+          { id: 'fib-speed-resistance-fan', label: 'Fib Speed Resistance Fan' },
+          { id: 'trend-based-fib-time', label: 'Trend-Based Fib Time' },
           { id: 'fib-circles', label: 'Fib Circles' },
           { id: 'fib-spiral', label: 'Fib Spiral' },
-          { id: 'fib-arcs', label: 'Fib Arcs' },
+          { id: 'fib-speed-resistance-arcs', label: 'Fib Speed Resistance Arcs' },
           { id: 'fib-wedge', label: 'Fib Wedge' },
           { id: 'pitchfan', label: 'Pitchfan' },
         ],
@@ -83,9 +84,34 @@ export const TOOL_GROUPS: ToolGroup[] = [
         label: 'Gann',
         tools: [
           { id: 'gann-box', label: 'Gann Box' },
-          { id: 'gann-fan', label: 'Gann Fan' },
           { id: 'gann-square-fixed', label: 'Gann Square Fixed' },
           { id: 'gann-square', label: 'Gann Square' },
+          { id: 'gann-fan', label: 'Gann Fan' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'measure',
+    icon: Ruler,
+    label: 'Forecast & Measure',
+    categories: [
+      {
+        label: 'Projection',
+        tools: [
+          { id: 'long-position', label: 'Long Position' },
+          { id: 'short-position', label: 'Short Position' },
+          { id: 'position-forecast', label: 'Forecast' },
+          { id: 'bar-pattern', label: 'Bars Pattern' },
+          { id: 'sector', label: 'Projection' },
+        ],
+      },
+      {
+        label: 'Measurer',
+        tools: [
+          { id: 'price-range', label: 'Price Range' },
+          { id: 'date-range', label: 'Date Range' },
+          { id: 'date-and-price-range', label: 'Date and Price Range' },
         ],
       },
     ],
@@ -136,9 +162,8 @@ export const TOOL_GROUPS: ToolGroup[] = [
       {
         label: 'Text & Notes',
         tools: [
-          { id: 'text-annotation', label: 'Text' },
+          { id: 'text', label: 'Text' },
           { id: 'callout', label: 'Callout' },
-          { id: 'anchored-text', label: 'Anchored Text' },
           { id: 'note', label: 'Note' },
           { id: 'price-note', label: 'Price Note' },
           { id: 'price-label', label: 'Price Label' },
@@ -147,31 +172,6 @@ export const TOOL_GROUPS: ToolGroup[] = [
           { id: 'comment', label: 'Comment' },
           { id: 'signpost', label: 'Signpost' },
           { id: 'table', label: 'Table' },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'measure',
-    icon: Ruler,
-    label: 'Forecast & Measure',
-    categories: [
-      {
-        label: 'Projection',
-        tools: [
-          { id: 'long-position', label: 'Long Position' },
-          { id: 'short-position', label: 'Short Position' },
-          { id: 'forecast', label: 'Forecast' },
-          { id: 'bars-pattern', label: 'Bars Pattern' },
-          { id: 'projection', label: 'Projection' },
-        ],
-      },
-      {
-        label: 'Measurer',
-        tools: [
-          { id: 'price-range', label: 'Price Range' },
-          { id: 'date-range', label: 'Date Range' },
-          { id: 'date-price-range', label: 'Date & Price Range' },
         ],
       },
     ],
@@ -191,4 +191,55 @@ export function findGroupByToolType(toolType: string): ToolGroup | undefined {
   return TOOL_GROUPS.find((g) =>
     g.categories.some((cat) => cat.tools.some((t) => t.id === toolType))
   );
+}
+
+// ─── The last tool used in each group (TradingView remembers it) ────────────
+
+const SUB_TOOLS_KEY = 'cd-drawing-subtools';
+
+/** Each group's first tool: what a group button arms before anything else was picked */
+export function defaultSubTools(): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const g of TOOL_GROUPS) {
+    const first = getDefaultToolForGroup(g.id);
+    if (first) map[g.id] = first;
+  }
+  return map;
+}
+
+/** The saved last tool per group, over the defaults; 🔐 entries naming an unknown group or a tool
+ *  outside its group are dropped (localStorage is untrusted input) */
+export function loadSubTools(): Record<string, string> {
+  const map = defaultSubTools();
+  try {
+    const raw = JSON.parse(localStorage.getItem(SUB_TOOLS_KEY) ?? 'null') as unknown;
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      for (const g of TOOL_GROUPS) {
+        const tool = (raw as Record<string, unknown>)[g.id];
+        if (typeof tool === 'string' && findGroupByToolType(tool)?.id === g.id) map[g.id] = tool;
+      }
+    }
+  } catch {
+    // Blocked storage or bad JSON: the defaults
+  }
+  return map;
+}
+
+export function saveSubTools(map: Record<string, string>): void {
+  try {
+    localStorage.setItem(SUB_TOOLS_KEY, JSON.stringify(map));
+  } catch {
+    // Full or blocked storage: remembered for this session only
+  }
+}
+
+/** A tool's menu name ("Trend Line"); a kind outside the menu reads as its id in words */
+export function toolLabel(toolId: string): string {
+  for (const g of TOOL_GROUPS) {
+    for (const c of g.categories) {
+      const t = c.tools.find((x) => x.id === toolId);
+      if (t) return t.label;
+    }
+  }
+  return toolId.replace(/-/g, ' ').replace(/^./, (ch) => ch.toUpperCase());
 }

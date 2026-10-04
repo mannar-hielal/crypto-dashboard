@@ -19,6 +19,9 @@ test('[13.3.1][4.6] what tab A does shows in tab B; a reload keeps it @full', as
   // past 60 s on a slower run (release #221). The work, not a hang: every step was still
   // progressing, B was signed in and never locked (3× the timeout)
   test.slow(browserName === 'webkit', 'two live dashboards: WebKit on CI needs 30–60 s');
+  // The rows' "within 2 s": WebKit on CI, 5–10× slower, missed the reset step by a little on
+  // release #237 (both tries; 10 s for the whole test locally), so 6 s there
+  const syncMs = browserName === 'webkit' ? 6_000 : 2_000;
   await feed.quote('spot', 'AVAXUSDT', { bid: 19.99, ask: 20, last: 20 });
   const a = await context.newPage();
   await signInAs(a, seededUser.email, seededUser.password);
@@ -29,15 +32,15 @@ test('[13.3.1][4.6] what tab A does shows in tab B; a reload keeps it @full', as
 
   // Finished orders stay listed beside the working ones for 2 minutes: count the working ones
   await placeOrder(a, { side: 'buy', type: 'limit', price: '18', amount: '10', unit: 'coin' });
-  await expect(at(b, 'orders.subtab.count', 'working')).toHaveText('1', { timeout: 2_000 });
+  await expect(at(b, 'orders.subtab.count', 'working')).toHaveText('1', { timeout: syncMs });
 
   await at(a, 'account.tab', 'orders').click();
   await at(a, 'orders.row.cancel').click();
-  await expect(at(b, 'orders.subtab.count', 'working')).toHaveCount(0, { timeout: 2_000 });
+  await expect(at(b, 'orders.subtab.count', 'working')).toHaveCount(0, { timeout: syncMs });
 
   await at(b, 'account.tab', 'assets').click();
   await placeOrder(a, { side: 'buy', type: 'market', amount: '10', unit: 'coin' });
-  await expect(at(b, 'assets.row', 'AVAX')).toBeVisible({ timeout: 2_000 });
+  await expect(at(b, 'assets.row', 'AVAX')).toBeVisible({ timeout: syncMs });
 
   await b.reload();
   await at(b, 'account.tab', 'assets').click();
@@ -50,6 +53,6 @@ test('[13.3.1][4.6] what tab A does shows in tab B; a reload keeps it @full', as
   // step only once it is there, or the click lands on the departing "Reset account"
   await expect(at(a, 'acct-settings.reset')).toHaveText('Confirm reset?');
   await at(a, 'acct-settings.reset').click();
-  await expect(at(b, 'assets.row', 'AVAX')).toHaveCount(0, { timeout: 2_000 });
-  await expect(at(b, 'assets.row', 'USDT')).toContainText('10,000.00', { timeout: 2_000 });
+  await expect(at(b, 'assets.row', 'AVAX')).toHaveCount(0, { timeout: syncMs });
+  await expect(at(b, 'assets.row', 'USDT')).toContainText('10,000.00', { timeout: syncMs });
 });

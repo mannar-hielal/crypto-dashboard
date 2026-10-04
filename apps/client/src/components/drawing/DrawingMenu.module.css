@@ -1,0 +1,113 @@
+/* The drawing tools' popup menu. Colours from tokens.ts via the @theme mirror in index.css; raw
+   values without a CSS variable are noted with their token. */
+
+.menu {
+  position: fixed;
+  z-index: 50; /* zIndex.dropdown */
+  min-width: 176px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 4px 0;
+  border: 1px solid rgba(255, 255, 255, 0.08); /* border.card */
+  border-radius: 6px;
+  background: var(--color-bg-panel);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4); /* shadow.dropdown */
+  animation: menu-in 120ms ease-out;
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu {
+    animation: none;
+  }
+}
+
+.header {
+  padding: 4px 12px;
+  color: var(--color-brand-muted);
+  font-size: 11px; /* fontSize.xs10 */
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.separator {
+  height: 1px;
+  margin: 4px 8px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.08); /* border.card */
+}
+
+.item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  color: var(--color-brand-muted);
+  font-size: 13px; /* fontSize.xs11 */
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  outline: none;
+}
+
+.item:hover:not(:disabled),
+.item:focus-visible {
+  background: rgba(255, 255, 255, 0.08); /* toolbar.buttonBgHover */
+  color: var(--color-brand-white);
+}
+
+.item:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--color-brand-purple-dark); /* focusRing.color */
+}
+
+.item:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.checked {
+  background: rgba(105, 91, 236, 0.125); /* toolbar.buttonBgActive (purpleDark at 20 hex) */
+  color: var(--color-brand-purple);
+}
+
+.danger:hover:not(:disabled),
+.danger:focus-visible {
+  color: var(--color-brand-red);
+}
+
+.icon {
+  display: flex;
+  width: 16px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.label {
+  flex: 1;
+  white-space: nowrap;
+}
+
+.shortcut {
+  margin-left: 16px;
+  color: var(--color-brand-muted);
+  font-family: inherit;
+  font-size: 11px; /* fontSize.xs10 */
+  opacity: 0.7;
+}
+
+.check {
+  width: 12px;
+  font-size: 12px;
+  text-align: center;
+}

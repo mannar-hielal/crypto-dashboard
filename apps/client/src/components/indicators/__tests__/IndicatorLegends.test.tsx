@@ -77,7 +77,12 @@ const INDICATORS = [
 ];
 
 function renderLegends(
-  overrides: { indicators?: IndicatorInstance[]; onRemove?: () => void; onUpdate?: () => void } = {}
+  overrides: {
+    indicators?: IndicatorInstance[];
+    onRemove?: () => void;
+    onUpdate?: () => void;
+    onLegendHover?: (over: boolean, leftTo: EventTarget | null) => void;
+  } = {}
 ) {
   const container = document.createElement('div');
   container.getBoundingClientRect = () => ({ top: 0, height: 500 }) as DOMRect;
@@ -101,6 +106,7 @@ function renderLegends(
       priceLegend={<div>OHLC</div>}
       onRemove={overrides.onRemove ?? (() => undefined)}
       onUpdate={overrides.onUpdate ?? (() => undefined)}
+      onLegendHover={overrides.onLegendHover}
     />
   );
 }
@@ -137,6 +143,55 @@ describe('IndicatorLegends', () => {
     expect(header.style.top).toBe('400px');
   });
 
+  it('[10.6.1] should move a pane header when the price pane above it changes height', () => {
+    // The real chart: a price pane and Momentum's pane below it; only the price pane resizes
+    const observed: Element[] = [];
+    let onResize: () => void = () => undefined;
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(cb: () => void) {
+          onResize = cb;
+        }
+        observe(el: Element) {
+          observed.push(el);
+        }
+        disconnect() {}
+      }
+    );
+    const pricePane = pane(0, 0);
+    const momPane = pane(1, 3); // laid out before the rebalance: right under the chart's top
+    const withPanes = { ...chart, panes: () => [pricePane, momPane] } as unknown as IChartApi;
+    const container = document.createElement('div');
+    container.getBoundingClientRect = () => ({ top: 0, height: 500 }) as DOMRect;
+    render(
+      <IndicatorLegends
+        chart={withPanes}
+        source={source}
+        containerRef={{ current: container }}
+        indicators={INDICATORS}
+        primitiveRefs={{
+          current: new Map([
+            ['ema_1', primitive([emaLine])],
+            ['mom_1', primitive([momLine])],
+          ]),
+        }}
+        paneRefs={{ current: new Map([['mom_1', momPane]]) }}
+        layoutVersion={1}
+        priceLegend={<div>OHLC</div>}
+        onRemove={() => undefined}
+        onUpdate={() => undefined}
+      />
+    );
+    expect(legendRow('indicator.pane-legend', 'mom_1').style.top).toBe('3px');
+    expect(observed).toContain(pricePane.getHTMLElement());
+
+    // The rebalance grows the price pane: Momentum's pane moves down without changing size
+    momPane.getHTMLElement()!.getBoundingClientRect = () => ({ top: 400, height: 100 }) as DOMRect;
+    act(() => onResize());
+    expect(legendRow('indicator.pane-legend', 'mom_1').style.top).toBe('400px');
+  });
+
   it('should stack an overlay under the price legend', () => {
     renderLegends();
     const row = legendRow('indicator.legend', 'ema_1');
@@ -168,6 +223,87 @@ describe('IndicatorLegends', () => {
 
     act(() => crosshairHandler?.({ seriesData: new Map() } as unknown as MouseEventParams<Time>));
     expect(legendRow('indicator.pane-legend', 'mom_1').textContent).toContain('-1.50');
+  });
+
+  it('[10.6.7] should keep the values while the pointer is on the legend column, not blink', () => {
+    const hover: boolean[] = [];
+    renderLegends({ onLegendHover: (over) => hover.push(over) });
+    act(() =>
+      crosshairHandler?.({
+        time: 1 as Time,
+        point: { x: 10, y: 10 },
+        seriesData: new Map<unknown, unknown>([
+          [source, { time: 1 }],
+          [momLine, { time: 1, value: 4 }],
+          [emaLine, { time: 1, value: 100 }],
+        ]),
+      } as unknown as MouseEventParams<Time>)
+    );
+    const ema = legendRow('indicator.legend', 'ema_1');
+
+    // Onto the row: the chart reports "no crosshair", which must not clear (the rows would jump)
+    fireEvent.pointerOver(ema);
+    act(() => crosshairHandler?.({ seriesData: new Map() } as unknown as MouseEventParams<Time>));
+    expect(ema.textContent).toContain('100.00');
+    expect(hover).toEqual([true]);
+
+    // Off the column, out of the chart: told to ChartPanel, and back to the last bar at once, with
+    // no crosshair event (none comes once the pointer is off the chart)
+    fireEvent.pointerOut(ema, { relatedTarget: document.body });
+    expect(hover).toEqual([true, false]);
+    expect(legendRow('indicator.legend', 'ema_1').textContent).toContain('101.00');
+  });
+
+  it('[10.6.7] should stop holding the values once the pointer is back on the chart, even if its pointerout was lost', () => {
+    renderLegends();
+    const ema = legendRow('indicator.legend', 'ema_1');
+    act(() =>
+      crosshairHandler?.({
+        time: 1 as Time,
+        point: { x: 10, y: 10 },
+        seriesData: new Map<unknown, unknown>([
+          [source, { time: 1 }],
+          [emaLine, { time: 1, value: 100 }],
+        ]),
+      } as unknown as MouseEventParams<Time>)
+    );
+    fireEvent.pointerOver(ema); // …and no pointerout ever comes (the row was re-rendered away)
+
+    // The pointer is on the canvas again: a crosshair event with a point, past the newest candle
+    act(() =>
+      crosshairHandler?.({
+        point: { x: 900, y: 10 },
+        seriesData: new Map(),
+      } as unknown as MouseEventParams<Time>)
+    );
+    expect(legendRow('indicator.legend', 'ema_1').textContent).toContain('101.00');
+  });
+
+  it('[10.6.7] should release the hold when the rows change under the pointer', () => {
+    const hover: boolean[] = [];
+    const { rerender } = renderLegends({ onLegendHover: (over) => hover.push(over) });
+    fireEvent.pointerOver(legendRow('indicator.legend', 'ema_1'));
+    expect(hover).toEqual([true]);
+
+    // The EMA row is removed while the pointer is on it: no pointerout
+    const container = document.createElement('div');
+    container.getBoundingClientRect = () => ({ top: 0, height: 500 }) as DOMRect;
+    rerender(
+      <IndicatorLegends
+        chart={chart}
+        source={source}
+        containerRef={{ current: container }}
+        indicators={[INDICATORS[1]]}
+        primitiveRefs={{ current: new Map([['mom_1', primitive([momLine])]]) }}
+        paneRefs={{ current: new Map([['mom_1', pane(1, 400)]]) }}
+        layoutVersion={1}
+        priceLegend={<div>OHLC</div>}
+        onRemove={() => undefined}
+        onUpdate={() => undefined}
+        onLegendHover={(over) => hover.push(over)}
+      />
+    );
+    expect(hover).toEqual([true, false]);
   });
 
   it('[10.6.7] should fall back to the last bar past the newest candle (no candle under the crosshair)', () => {

@@ -21,7 +21,6 @@ const h = vi.hoisted(() => ({
   seriesOptions: [] as Record<string, unknown>[],
   priceScaleOptions: [] as Record<string, unknown>[],
   timeScaleCalls: [] as { method: string; args: unknown[] }[],
-  drawingHandlers: new Map<string, ((e: { drawing?: object }) => void)[]>(),
   // Calls on each series, in addSeries order (0 = candles, 1 = padding).
   seriesCalls: [] as { method: string; args: unknown[] }[][],
 }));
@@ -80,23 +79,19 @@ vi.mock('lightweight-charts', async (importOriginal) => {
   };
 });
 
+// Drawings stay out of the autoscale by the library's design (its primitive has no autoscaleInfo):
+// lib/__tests__/drawingLibrary.test.ts — here it is a stub
 vi.mock('lightweight-charts-drawing', () => ({
-  // A regular function (not a class) so `new` may return the proxy.
   DrawingManager: function DrawingManager() {
     return new Proxy(
-      {},
+      { on: () => () => undefined, selection: () => [] } as Record<string, unknown>,
       {
-        get: (_t, prop) =>
-          prop === 'on'
-            ? (event: string, cb: (e: { drawing?: object }) => void) => {
-                h.drawingHandlers.set(event, [...(h.drawingHandlers.get(event) ?? []), cb]);
-                return () => undefined;
-              }
-            : stub(),
+        get: (t, prop) => (prop in t ? t[prop as string] : () => undefined),
       }
     );
   },
-  ToolRegistry: stub(),
+  parseDrawings: (x: unknown) => (Array.isArray(x) ? x : []),
+  setFibLabelMode: () => undefined,
 }));
 
 vi.mock('@/components/indicators/IndicatorLegends', () => ({
@@ -127,7 +122,6 @@ describe('ChartPanel price scale autoscale', () => {
     h.seriesOptions.length = 0;
     h.priceScaleOptions.length = 0;
     h.timeScaleCalls.length = 0;
-    h.drawingHandlers.clear();
     h.seriesCalls.length = 0;
     rafCallbacks.length = 0;
     vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
@@ -148,6 +142,12 @@ describe('ChartPanel price scale autoscale', () => {
     cleanup();
     vi.unstubAllGlobals();
     paneStores[0].getState().reset();
+  });
+
+  it('should show the TradingView attribution logo the chart licence requires', () => {
+    render(<ChartPanel paneIndex={0} symbol="BTCUSDT" interval="1m" indicators={[]} />);
+    const opts = h.createChartOptions[0] as { layout?: { attributionLogo?: boolean } };
+    expect(opts.layout?.attributionLogo).toBe(true);
   });
 
   it('does not disable autoscale on the right price scale at creation', () => {
@@ -195,17 +195,6 @@ describe('ChartPanel price scale autoscale', () => {
     expect(scroll).toBeDefined();
     // Negative position = scrolled left of the time scale's end (the padding).
     expect(scroll?.args[0]).toBeLessThan(-100);
-  });
-
-  it('opts every drawing out of autoscale, including restored ones', () => {
-    render(<ChartPanel paneIndex={0} symbol="BTCUSDT" interval="1m" indicators={[]} />);
-    const handlers = h.drawingHandlers.get('drawing:added') ?? [];
-    expect(handlers.length).toBeGreaterThan(0);
-    const drawing = {
-      autoscaleInfo: () => ({ priceRange: { minValue: 1, maxValue: 1_000_000 } }),
-    };
-    for (const cb of handlers) cb({ drawing });
-    expect(drawing.autoscaleInfo()).toBeNull();
   });
 
   it('draws Heikin Ashi values and keeps the real last price visible', () => {

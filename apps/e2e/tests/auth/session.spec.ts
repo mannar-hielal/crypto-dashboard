@@ -23,9 +23,12 @@ test('[19.15] signing out works with the network down @full', async ({
   page,
   context,
   seededUser,
+  browserName,
 }) => {
-  // Row 19.15: the offline notice used to cover the top bar; it is a bottom toast since the fix
-  test.setTimeout(20_000);
+  // Row 19.15: the offline notice used to cover the top bar; it is a bottom toast since the fix.
+  // A short limit keeps an offline hang from eating the run, but WebKit on CI took 19.6 s on
+  // 2026-10-03 and failed at 20 s on release #237 (both tries; 5.6 s locally): a minute there
+  test.setTimeout(browserName === 'webkit' ? 60_000 : 20_000);
   await signInAs(page, seededUser.email, seededUser.password);
   // The dashboard is loaded (its code arrives lazily) before the network goes
   await expect(at(page, 'nav.user-menu')).toBeVisible();

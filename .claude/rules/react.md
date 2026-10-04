@@ -96,8 +96,9 @@ parse step — never `type="number"`, which breaks on locale thousands separator
   removed chart, and indicators silently stop rendering.
 - Drag-to-grab cursor state is toggled via a DOM `data-dragging` attribute, not React state — keep
   this zero-re-render pattern for high-frequency interaction state (crosshair, dragging).
-- New drawing shapes must go through the shared `hitTestBodies` dispatch in `coordinates.ts` —
-  never reimplement hit-testing inline per shape.
+- Drawing tools come from the forked library in `src/vendor/lightweight-charts-drawing/` (hit
+  tests, placement and drag rules live there, per tool kind) — change a tool's behaviour in the fork
+  and log it in its README; never re-implement hit-testing or placement in ChartPanel.
 
 ## Cross-references
 

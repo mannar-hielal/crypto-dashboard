@@ -5,7 +5,6 @@ import { motion, AnimatePresence, useMotionValue, useTransform, animate } from '
 import { AlertTriangle } from 'lucide-react';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import type { IChartApi } from 'lightweight-charts';
-import { DrawingManager } from 'lightweight-charts-drawing';
 import { SeoHead } from '@/components/SeoHead';
 import { usePaneFeeds } from '@/hooks/usePaneFeeds';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -21,7 +20,7 @@ import { authApi } from '@crypto-dashboard/sdk';
 import { TopBar } from '@/components/dashboard/TopBar';
 import { LeftToolbar } from '@/components/dashboard/LeftToolbar';
 import { CURSOR_CSS_MAP, type CursorVariantId } from '@/lib/cursors';
-import { TOOL_MAP } from '@/lib/drawingManager';
+import { useDrawingSession } from '@/hooks/useDrawingSession';
 import { MultiChartArea } from '@/components/dashboard/MultiChartArea';
 import { OrderAccountManagementPanel } from '@/components/dashboard/OrderAccountManagementPanel';
 import { TickerBar } from '@/components/dashboard/TickerBar';
@@ -134,31 +133,9 @@ export function DashboardPage() {
 
 export function DashboardInner() {
   const [cursorVariant, setCursorVariant] = useState<CursorVariantId>('cross');
-  const [activeToolType, setActiveToolType] = useState<string | null>(null);
-  const drawingManagerRefs = useRef<(DrawingManager | null)[]>([null, null, null, null]);
+  const drawing = useDrawingSession();
+  const { activeToolType } = drawing;
   const chartRefs = useRef<(IChartApi | null)[]>([null, null, null, null]);
-
-  function handleDrawingManagerReady(paneIndex: number, manager: DrawingManager) {
-    drawingManagerRefs.current[paneIndex] = manager;
-    manager.on('tool:changed', () => {
-      setActiveToolType(manager.getActiveTool());
-    });
-  }
-
-  function handleToolChange(toolType: string | null) {
-    setActiveToolType(toolType);
-    if (toolType === 'zoom-in' || toolType === 'eraser') return;
-    const paneIndex = useLayoutStore.getState().activePane;
-    const manager = drawingManagerRefs.current[paneIndex];
-    if (manager) {
-      manager.setActiveTool(toolType === null ? null : (TOOL_MAP[toolType] ?? toolType));
-    }
-  }
-
-  function handleBinAction() {
-    const paneIndex = useLayoutStore.getState().activePane;
-    drawingManagerRefs.current[paneIndex]?.clearAll();
-  }
 
   function handleChartRefReady(paneIndex: number, chart: IChartApi) {
     chartRefs.current[paneIndex] = chart;
@@ -440,12 +417,19 @@ export function DashboardInner() {
           className="shrink-0 overflow-hidden"
         >
           <LeftToolbar
-            onToolChange={handleToolChange}
-            onBinAction={handleBinAction}
+            onToolChange={drawing.selectTool}
+            subTools={drawing.subTools}
             onZoomOut={handleZoomOut}
             cursorVariant={cursorVariant}
             onCursorVariantChange={handleCursorVariantChange}
             activeToolType={activeToolType}
+            stayInDrawingMode={drawing.stayInDrawingMode}
+            onStayInDrawingModeChange={drawing.setStayInDrawingMode}
+            magnet={drawing.magnet}
+            onMagnetChange={drawing.setMagnet}
+            getDrawingCounts={drawing.drawingCounts}
+            onRemoveDrawings={drawing.removeDrawings}
+            onShowHiddenDrawings={drawing.showHiddenDrawings}
           />
         </motion.div>
 
@@ -464,10 +448,10 @@ export function DashboardInner() {
           >
             <ErrorBoundary>
               <MultiChartArea
-                onDrawingManagerReady={handleDrawingManagerReady}
+                onDrawingManagerReady={drawing.onManagerReady}
                 onChartRefReady={handleChartRefReady}
                 activeToolType={activeToolType}
-                onToolChange={handleToolChange}
+                onToolChange={drawing.selectTool}
               />
             </ErrorBoundary>
           </motion.div>
@@ -647,7 +631,7 @@ export function DashboardInner() {
 
       {/* ── Dashboard footer ─────────────────────────────────────────────── */}
       <div
-        className="flex h-auto w-full shrink-0 flex-col items-center gap-0.5 border-t border-white/5 px-4 py-1.5 sm:h-7 sm:flex-row sm:items-center sm:justify-between sm:gap-0 sm:py-0"
+        className="flex h-auto w-full shrink-0 flex-col items-center gap-0.5 border-t border-white/5 px-4 py-1.5 sm:min-h-7 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-4 sm:gap-y-0.5 sm:py-1"
         style={{ background: bg.footer }}
       >
         <span style={{ fontSize: fontSize.xs10, color: color.muted }}>
@@ -655,7 +639,7 @@ export function DashboardInner() {
           <span className="hidden sm:inline"> For educational purposes.</span>
         </span>
         <nav
-          className="flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 sm:flex-nowrap sm:gap-4"
+          className="flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 sm:justify-end sm:gap-x-4"
           style={{ fontSize: fontSize.xs10, color: `${color.muted}b3` }}
         >
           <Link to="/terms" className="transition-colors hover:text-white/50">
@@ -673,6 +657,16 @@ export function DashboardInner() {
           <span className="hidden font-medium sm:ml-2 sm:inline">
             © {new Date().getFullYear()} cryptopapertrade.com
           </span>
+          {/* 🔐 Licence: lightweight-charts' NOTICE text with a link to tradingview.com (Apache 2.0) */}
+          <a
+            href="https://www.tradingview.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition-colors hover:text-white/50"
+            {...guide('footer.chart-credit')}
+          >
+            Charts: TradingView Lightweight Charts™ © 2025 TradingView, Inc.
+          </a>
         </nav>
       </div>
     </div>
