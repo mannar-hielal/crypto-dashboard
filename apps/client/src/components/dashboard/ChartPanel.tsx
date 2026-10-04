@@ -38,6 +38,7 @@ import { useTradeLines } from '@/hooks/useTradeLines';
 import { TradeLineAmend } from './TradeLineAmend';
 import { DrawingTextEditor } from './DrawingTextEditor';
 import { DrawingControls } from '@/components/drawing/DrawingControls';
+import { candlePriceFormat } from '@/lib/priceFormat';
 
 const CHART_BG = chartColors.bg;
 
@@ -370,6 +371,13 @@ export function ChartPanel({
     containerRef,
     toolActive: !!activeToolType,
   });
+
+  // ── The candles' price step and decimals: the symbol's tick (lib/priceFormat.ts) ──
+  const category = useLayoutStore((s) => s.panes[paneIndex]?.category ?? 'linear');
+  useEffect(() => {
+    const format = candlePriceFormat(category, symbol);
+    if (format) candleRef.current?.applyOptions({ priceFormat: format });
+  }, [category, symbol]);
 
   // ── Symbol change: save the old symbol's drawings, show the new one's ──
   useEffect(() => {
