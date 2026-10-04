@@ -428,6 +428,10 @@ export function LeftToolbar({
         tooltip="Remove drawings"
         active={activeToolType === 'eraser'}
         onClick={openBinMenu}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          openBinMenu(e.currentTarget.parentElement ?? e.currentTarget);
+        }}
         caretLabel="Remove options"
         menuOpen={menu?.open.kind === 'bin'}
         onOpenMenu={openBinMenu}

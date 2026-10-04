@@ -123,6 +123,12 @@ describe('LeftToolbar — Remove', () => {
     expect(onShow).toHaveBeenCalled();
   });
 
+  it('[10.7.17] should open the same menu on a right-click of the bin', () => {
+    render(<LeftToolbar getDrawingCounts={() => ({ total: 2, hidden: 0 })} />);
+    fireEvent.contextMenu(button('Remove drawings'));
+    expect(screen.getByRole('menuitem', { name: /Remove 2 drawings/ })).toBeTruthy();
+  });
+
   it('[10.7.17] should cancel the confirm with Escape', () => {
     const onRemove = vi.fn();
     render(
