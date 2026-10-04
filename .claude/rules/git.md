@@ -119,7 +119,7 @@ weekly engine job (M7) and the `HARDENING_PLAN.md` checks, which add their rows 
 | ---------------------------------------------------- | --------------------------------------- | ----------- |
 | Prod smoke (`prod-smoke.yml`)                        | every 8 h, and after every deploy       | ~180        |
 | E2E full set (`e2e-nightly.yml`)                     | nightly, and every push to a release PR | ~455        |
-| Feed parity + spec drift (`feed-parity.yml`)         | nightly (drift on Sundays)              | ~120        |
+| Feed parity + spec drift (`feed-parity.yml`)         | every other day (drift weekly, Sun/Mon) | ~120        |
 | Testnet parity (`parity.yml`)                        | daily                                   | ~90         |
 | Engine properties + mutation (`engine-depth.yml`)    | weekly (Sunday)                         | ~60         |
 | Dependabot                                           | monthly                                 | ~20         |

@@ -93,6 +93,35 @@
   margin-bottom: 8px;
 }
 
+/* A position's tabs: wider labels ("Account size", "Qty precision"), groups without a frame */
+.position .label {
+  width: 92px;
+}
+
+.group {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+/* A group heading in a tab (a position's Profit level, Stop level, Info) */
+.section {
+  margin: 6px 0 8px;
+  color: var(--color-brand-muted);
+  font-size: 11px; /* fontSize.xxs */
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* A position's stats checkboxes, two to a row */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin-bottom: 12px;
+}
+
 .check {
   display: flex;
   align-items: center;

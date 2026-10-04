@@ -70,7 +70,7 @@ const MIN_PANEL_HEIGHT = 80;
  *   │ Left │  ──────────────────────────────  │ Trading    │
  *   │ Tool │  OrderAccountManagementPanel     │ Panel      │
  *   │ bar  │  (animated height / flex-1 when  │ (w-64,     │
- *   │(w-11)│   maximized)                     │ full h) ✓  │
+ *   │(w-13)│   maximized)                     │ full h) ✓  │
  *   ├──────┴──────────────────────────────────┴────────────┤
  *   │   TickerBar          (h-8)                           │
  *   ├──────────────────────────────────────────────────────┤
@@ -212,16 +212,20 @@ export function DashboardInner() {
   const isTradingPanelVisible = !editTarget && tradingPanelOpen;
 
   // Below lg the form isn't docked: a prefill (Assets → Sell) must also open it, on its side, or the
-  // tap looks dead (review #200). Adjusted while rendering when a new request arrives (no effect)
+  // tap looks dead (review #200). A limit order from a position drawing ("Create limit order…")
+  // opens the form at every width, on the Limit tab, as TradingView opens its order panel.
+  // Adjusted while rendering when a new request arrives (no effect)
   // The form may take (and clear) the request first, so follow the request counter, not the request
   const prefillSeq = useOrderPrefillStore((s) => s.seq);
   const prefillSide = useOrderPrefillStore((s) => s.lastSide);
+  const prefillLimit = useOrderPrefillStore((s) => s.lastLimit);
   const [openedForSeq, setOpenedForSeq] = useState(prefillSeq);
   if (prefillSeq !== openedForSeq) {
     setOpenedForSeq(prefillSeq);
-    if (isMobile) {
+    if (isMobile || prefillLimit) {
       setEditTarget(null);
       setTradingSide(prefillSide);
+      if (prefillLimit) setTradingTab('limit');
       setTradingPanelOpen(true);
     }
   }
@@ -412,7 +416,7 @@ export function DashboardInner() {
       {/* ── Main content row ──────────────────────────────────────────────── */}
       <div className={`flex min-h-0 flex-1${isMobile ? ' relative' : ''}`}>
         <motion.div
-          animate={{ width: leftToolbarOpen ? 44 : 0 }}
+          animate={{ width: leftToolbarOpen ? 52 : 0 }}
           transition={{ duration: 0.2, ease: 'easeInOut' }}
           className="shrink-0 overflow-hidden"
         >

@@ -94,7 +94,12 @@ manager refs cleaned up with the chart (`connectPaneManager`), Fib pill labels (
   below, unlocked, selected; the clipboard is shared by the panes.
 - **Selection controls** (`components/drawing/DrawingControls.tsx`): the floating toolbar
   (`DrawingFloatingToolbar`, only the tool's controls: `lib/drawingCapabilities.ts`; draggable,
-  `cd-drawing-toolbar-pos`), the right-click menu (`lib/drawingActions.ts`), the settings dialog
+  `cd-drawing-toolbar-pos`), the right-click menu (`lib/drawingActions.ts`; on a Long / Short
+  Position also "Create limit order…", which fills the order form through `orderPrefillStore` —
+  `lib/positionOrder.ts`), the settings dialog (a position gets Inputs + Style from
+  `PositionSettings.tsx`; its new-drawing defaults come from `lib/positionDefaults.ts`). The
+  drawings' pip (ticks, label precision) is the candles' `priceFormat.minMove`, which ChartPanel
+  sets to the symbol's tick (`lib/priceFormat.ts`)
   (`DrawingSettingsDialog`: Style / Text / Coordinates, applies on Ok as one step), the table cell
   editor (`DrawingCellEditor`, the library's `tableEdit`). A right-click off a drawing returns to
   the cursor; mid-drag it does nothing.

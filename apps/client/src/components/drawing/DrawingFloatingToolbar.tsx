@@ -18,6 +18,7 @@ import {
   LockOpen,
   Trash2,
   MoreHorizontal,
+  ChartLine,
   Copy,
   CopyPlus,
   ArrowUpToLine,
@@ -28,7 +29,7 @@ import type { Drawing, DrawingStyle } from 'lightweight-charts-drawing';
 
 type LineStyle = DrawingStyle['lineStyle'];
 import { capabilitiesOf } from '@/lib/drawingCapabilities';
-import type { DrawingAction } from '@/lib/drawingActions';
+import type { DrawingMenuAction } from '@/lib/drawingActions';
 import { formatModShortcut, isMacPlatform } from '@/lib/drawingShortcuts';
 import { guide } from '@/lib/guideAnchors';
 import { DrawingMenu, type MenuEntry } from './DrawingMenu';
@@ -99,7 +100,9 @@ interface DrawingFloatingToolbarProps {
   onToggleLock: () => void;
   onRemove: () => void;
   onSettings: () => void;
-  onAction: (action: DrawingAction) => void;
+  /** More menu: the drawing actions, and "Create limit order…" on a position (the touch path to
+   *  it: a phone has no right-click) */
+  onAction: (action: DrawingMenuAction) => void;
 }
 
 export function DrawingFloatingToolbar({
@@ -219,6 +222,17 @@ export function DrawingFloatingToolbar({
           icon: <Copy size={16} />,
           shortcut: formatModShortcut('C', mac),
         },
+        ...(drawings.length === 1 && caps.limitOrder
+          ? ([
+              { type: 'separator', id: 'sep-order' },
+              {
+                type: 'item',
+                id: 'limit-order',
+                label: 'Create limit order…',
+                icon: <ChartLine size={16} />,
+              },
+            ] satisfies MenuEntry[])
+          : []),
         { type: 'separator', id: 'sep-1' },
         { type: 'item', id: 'front', label: 'Bring to front', icon: <ArrowUpToLine size={16} /> },
         { type: 'item', id: 'back', label: 'Send to back', icon: <ArrowDownToLine size={16} /> },
@@ -234,7 +248,7 @@ export function DrawingFloatingToolbar({
     if (kind === 'width') onStyle({ width: Number(id) });
     else if (kind === 'style') onStyle({ lineStyle: id as LineStyle });
     else if (kind === 'font') onStyle({ fontSize: Number(id) });
-    else if (kind === 'more') onAction(id as DrawingAction);
+    else if (kind === 'more') onAction(id as DrawingMenuAction);
   }
 
   const menu =

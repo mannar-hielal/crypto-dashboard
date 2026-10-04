@@ -13,8 +13,11 @@ export const MAX_DRAWING_TEXT = 2000;
 /** The floating toolbar's More menu */
 export type DrawingAction = 'clone' | 'copy' | 'front' | 'back' | 'hide';
 
-/** What a right-click on a drawing offers (TradingView's order) */
-export type DrawingMenuAction = DrawingAction | 'settings' | 'lock' | 'remove';
+/**
+ * What a right-click on a drawing offers (TradingView's order). `settings` and `limit-order` (a
+ * position drawing's "Create limit order…") open app UI, so DrawingControls handles them
+ */
+export type DrawingMenuAction = DrawingAction | 'settings' | 'limit-order' | 'lock' | 'remove';
 
 /** Apply `action` to the manager's selection */
 export function runDrawingAction(manager: DrawingManager, action: DrawingMenuAction): void {

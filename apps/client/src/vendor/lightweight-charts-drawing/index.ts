@@ -65,6 +65,16 @@ export { fibLevelAt } from './core/scene/fib';
 export { setFibLabelMode, type FibLabelMode } from './core/kinds/fib-labels';
 export type { Scene, SceneItem, Paint, Shadow } from './core/scene/types';
 export { hitTestKind } from './core/kinds/hit-tests';
+// Local change (cryptopapertrade): the position tools' levels, qty and stats, for "Create limit
+// order…" and the host's Inputs / Style tabs
+export {
+  POSITION_STATS,
+  levelFromPrice,
+  positionLevels,
+  positionQty,
+  positionStatOn,
+} from './core/kinds/position';
+export type { PositionStatKey } from './core/types';
 export {
   drawingAxisLabels,
   type PriceAxisLabel,
