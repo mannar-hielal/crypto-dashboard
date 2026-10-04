@@ -30,6 +30,12 @@ describe('LeftToolbar — stay in drawing mode', () => {
     expect(stay.getAttribute('data-tooltip')).toBe('Stay in drawing mode: on');
   });
 
+  it('should keep the lock badge in the icon’s fixed 22 px box (the .toolbar-icon class)', () => {
+    render(<LeftToolbar />);
+    const box = button('Stay in drawing mode').querySelector('.toolbar-icon');
+    expect(box?.querySelectorAll('svg')).toHaveLength(2); // the pencil and its lock
+  });
+
   it('[10.7.12] should flip the switch on click without arming or disarming a tool', () => {
     const onStay = vi.fn();
     const onTool = vi.fn();
