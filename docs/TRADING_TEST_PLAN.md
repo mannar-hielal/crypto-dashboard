@@ -120,7 +120,7 @@ browser test); T3 covers wiring and user journeys, not maths; M is for what's le
 - **Weekly spec-drift check.** A script compares `bybitSpec.ts` constants with Bybit's public API (fee rates via the
   help-centre values we store, `instruments-info`, `risk-limit` tiers, `fundingIntervalHour`) and opens an issue when
   Bybit changes a value — today that is only caught when someone re-reads the docs.
-- **Feed parity replaces the TradingView side-by-side checks (Section 6).** A nightly job samples our own
+- **Feed parity replaces the TradingView side-by-side checks (Section 6).** A job every other day samples our own
   `/api/market` quotes, 1m candles and mark / funding and Bybit's public v5 REST at the same timestamps and asserts the
   Section 6 tolerances. The TradingView checks are retired (Part B, "TradingView cross-checks — retired"):
   TradingView's paper trading follows its own fees, fills and (no) perpetual rules, so it stopped being a valid
@@ -348,7 +348,7 @@ drops the `(Pn)` tag. Format: `what — rows — target tier (roadmap step)`.
       does **not** settle APP_LOG's open questions: the scenario never reaches a max-reducible margin or a 110090
       refusal, and its unrealised P&L is too small to prove O5 or `positionValue`'s basis — still open there
 - [x] Feed parity job: Sell / Buy vs best bid / ask, last 1m candle, mark / index / funding, freshness — rows
-      6.1–6.4 — T4 (P3; M6: `tools/feedParity.ts`, nightly in `feed-parity.yml`)
+      6.1–6.4 — T4 (P3; M6: `tools/feedParity.ts`, every other day in `feed-parity.yml`)
 - [x] Browser tab title — row 6.6 — T3 (P2; M5d `feed/feedUi.spec`)
 - [x] Spot feed in the browser: spread badge, last candle vs Bybit Spot, cached quote on reload — rows
       12.1.1–12.1.3 — T3 on the replay feed (P2; M5d `feed/feedUi.spec`, `chart/chartSync.spec`)
@@ -404,7 +404,7 @@ _P2 — replay feed and browser tests (7)_
 _P3 — Bybit parity (1, plus the two Stage 6 T4 items)_
 
 - [x] Weekly spec-drift check of `bybitSpec.ts` against Bybit's public API, opening an issue on a change — (P3;
-      M6: `tools/specDrift.ts`, Sundays in `feed-parity.yml`; instrument rules and risk tiers — fee rates need a
+      M6: `tools/specDrift.ts`, weekly (Sunday or Monday) in `feed-parity.yml`; instrument rules and risk tiers — fee rates need a
       signed-in account, so they stay a manual check)
 
 _P4 — invariants and mutation testing (2)_
@@ -1495,7 +1495,7 @@ cross-phase regression suite and the server-side account safeguards.
 
 | #   | Scenario                                                 | Expected                                                                                                | Status | Tier            | Notes                                                                                                                                                                                                                                                                                                       |
 | --- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------ | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 6.1 | Our Sell / Buy vs Bybit's best bid / ask, same moment    | Spot and linear, each symbol: equal, or at most one tick apart (the stream may be one update ahead)     | ✅     | T4              | `feedParity.ts` nightly (`feed-parity.yml`); within 0.1 % (the reads are up to a second apart, so one tick is too tight for a moving book), bid ≤ ask; first run 2026-09-29 against production: 18 markets × 5 samples and 36 closed candles, all matching.                                                 |
+| 6.1 | Our Sell / Buy vs Bybit's best bid / ask, same moment    | Spot and linear, each symbol: equal, or at most one tick apart (the stream may be one update ahead)     | ✅     | T4              | `feedParity.ts` every other day (`feed-parity.yml`); within 0.1 % (the reads are up to a second apart, so one tick is too tight for a moving book), bid ≤ ask; first run 2026-09-29 against production: 18 markets × 5 samples and 36 closed candles, all matching.                                         |
 | 6.2 | Our last closed 1m candle vs Bybit's kline               | OHLC equal for spot and linear; no step where history meets the live bars (F1)                          | ✅     | T4              | `feedParity.ts`: every 1m candle production closes during the run has exactly Bybit's OHLC; first run 2026-09-29 against production: 18 markets × 5 samples and 36 closed candles, all matching.                                                                                                            |
 | 6.3 | Our mark / index / funding rate vs Bybit's linear ticker | Equal within one tick; next funding time identical                                                      | ✅     | T4              | `feedParity.ts`: mark / index within 0.1 %, funding rate and next funding time equal; first run 2026-09-29 against production: 18 markets × 5 samples and 36 closed candles, all matching.                                                                                                                  |
 | 6.4 | Feed freshness over the sample window                    | No quote older than 10 s while Bybit's is moving; the server reconnects within its backoff after a drop | ✅     | T4 + T1         | `feedParity.ts`: every market keeps sending tickers whose values match Bybit (the server's own quote age isn't visible from outside — the engine's 10 s rule is `services.test`); reconnect after a drop: `fakeBybit.test` "a stall stops the pushes; a drop closes the socket and the manager reconnects". |

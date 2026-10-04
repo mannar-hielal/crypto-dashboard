@@ -1,9 +1,9 @@
 name: Feed parity and spec drift
 
 # T4 in docs/TRADING_TEST_PLAN.md (roadmap P3, M6):
-#   - nightly, feed parity (apps/server/src/tools/feedParity.ts): production's market feed against
+#   - every other day, feed parity (apps/server/src/tools/feedParity.ts): production's market feed against
 #     Bybit mainnet at the same moments — quotes, mark / index / funding, closed 1m candles (rows 6.1–6.4);
-#   - weekly (Sunday), spec drift (apps/server/src/tools/specDrift.ts): bybitSpec.ts's dated instrument
+#   - weekly (the Sunday run, or Monday's when Sunday has none), spec drift (apps/server/src/tools/specDrift.ts): bybitSpec.ts's dated instrument
 #     rules and risk tiers against Bybit's live public API.
 # Both read public data only (production's public market API and Bybit's public REST): no keys, no
 # writes. They run on a one-off Fly Machine in sin, in the parity app (crypto-dashboard-parity),
@@ -11,7 +11,10 @@ name: Feed parity and spec drift
 
 on:
   schedule:
-    - cron: '47 4 * * *' # 04:47 UTC daily: feed parity (and spec drift on Sundays)
+    # 04:47 UTC on odd days of the month: feed parity, and spec drift on a Sunday or Monday run. Every
+    # other day, not nightly: a run takes ~8 Actions minutes, so nightly would be ~240 a month against
+    # the ~120 budgeted (owner, 2026-10-04: no extra cost; .claude/rules/git.md § Actions budget)
+    - cron: '47 4 1-31/2 * *'
   workflow_dispatch:
     inputs:
       check:
@@ -56,7 +59,9 @@ jobs:
             both) feed=true; drift=true ;;
             feed) feed=true ;;
             drift) drift=true ;;
-            scheduled) feed=true; [ "$(date -u +%u)" = 7 ] && drift=true ;;
+            # Weekly drift: Sunday's run, else Monday's (one of the two always runs; both at a month's
+            # end, when the 31st and the 1st are both odd — a second ~2 s drift check, harmless)
+            scheduled) feed=true; case "$(date -u +%u)" in 7|1) drift=true ;; esac ;;
           esac
           echo "feed=$feed" >> "$GITHUB_OUTPUT"
           echo "drift=$drift" >> "$GITHUB_OUTPUT"

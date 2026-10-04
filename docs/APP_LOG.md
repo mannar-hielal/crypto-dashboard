@@ -3907,4 +3907,5 @@ group order, the last tool per group remembered.
 
 - **`feed-parity.yml`:** `wait_stopped` polls the machine's state every 15 s. The deadline is 15 minutes; when it passes, the job reports "did not stop within 15 minutes".
 - **`parity.yml`:** the same loop, with a 12-minute deadline. It passed only while its run fit inside the one minute.
-- **Fly cost:** a few cents a month. The feed machine (shared-cpu-1x, 512 MB, sin) now runs about 6 minutes a night instead of about 1, roughly 3 hours a month.
+- **Schedule:** every other day instead of nightly (owner, 2026-10-04: no extra cost). A full run takes about 8 Actions minutes, so nightly would have been about 240 a month against the ~120 budgeted. Spec drift runs weekly, on the Sunday or Monday run.
+- **Fly cost:** unchanged, at a few cents a month. The machine runs about 6 minutes every other day.
