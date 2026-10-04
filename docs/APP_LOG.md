@@ -3899,6 +3899,18 @@ group order, the last tool per group remembered.
 - **Later (not in this PR):** touch editing, patterns / Elliott / icons, drawings in indicator panes, templates,
   hide / lock all, per-interval visibility.
 
+### feat: drawing toolbar at TradingView's sizes (2026-10-04) ✅
+
+**Context:** owner, 2026-10-04, from a TradingView screenshot; visual Q&A answers "Exact TradingView" and "the arrow on hover, outside".
+
+- **Sizes** (measured from the screenshot at 2×):
+  - the bar is 52 px wide (was 44);
+  - buttons are 34 × 34 px with 6 px corners (were 40 × 40), 38 px apart (4 px gaps);
+  - icons are 22 px with 1 px strokes;
+  - dividers are 34 px.
+- **Arrow:** each group's menu arrow sits in the 9 px gutter right of the button. It shows while the button is hovered, the arrow has keyboard focus, or the menu is open. On touch screens (no hover) it stays visible. Right-click still opens the menu.
+- **Files:** `index.css` (`.toolbar-btn`, `.toolbar-caret`, `.toolbar-divider`), `LeftToolbar.tsx` (`w-13`, icon sizes), DashboardPage (the toolbar's open width).
+
 ### fix: Fly parity jobs wait for their machine by polling (2026-10-04) ✅
 
 **Context:** "Feed parity and spec drift" failed every night from at least 2026-09-30. Each time, the job reported "machine did not reach stopped within 15m0s" one minute after starting the feed check.
