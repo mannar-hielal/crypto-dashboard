@@ -1,5 +1,6 @@
 import { parseDrawings } from 'lightweight-charts-drawing';
 import type { DrawingManager, Drawing } from 'lightweight-charts-drawing';
+import { convertLegacyDrawings } from '@/lib/drawingMigration';
 
 // 🔐 Hard cap on persisted drawings per symbol — prevents unbounded localStorage
 //    growth from an untracked drawing spree (and keeps the restore cost bounded).
@@ -36,6 +37,11 @@ export function getPersistenceKey(symbol: string): string {
   return `cd-drawings-v2-${symbol}`;
 }
 
+/** Library 0.1's drawings of a symbol — read once to migrate, then left for a rollback */
+export function getLegacyPersistenceKey(symbol: string): string {
+  return `cd-drawings-${symbol}`;
+}
+
 // 🔐 localStorage can throw (blocked storage, private mode) — treat it as optional
 function readKey(key: string): string | null {
   try {
@@ -63,11 +69,18 @@ function parseJson(raw: string): unknown {
 
 /**
  * The saved drawings of a symbol, schema-checked (🔐 localStorage is untrusted input: anything
- * malformed is dropped, never thrown).
+ * malformed is dropped, never thrown). The first load after the library upgrade converts the 0.1
+ * entries and saves them under the new key, so the conversion runs once.
  */
 export function loadDrawings(symbol: string): Drawing[] {
   const saved = readKey(getPersistenceKey(symbol));
-  return saved === null ? [] : parseDrawings(parseJson(saved)).slice(-MAX_DRAWINGS);
+  if (saved !== null) return parseDrawings(parseJson(saved)).slice(-MAX_DRAWINGS);
+
+  const legacy = readKey(getLegacyPersistenceKey(symbol));
+  if (legacy === null) return [];
+  const converted = convertLegacyDrawings(parseJson(legacy)).slice(-MAX_DRAWINGS);
+  writeKey(getPersistenceKey(symbol), JSON.stringify(converted));
+  return converted;
 }
 
 /** Replace the manager's drawings with the symbol's saved set (empty when none) */
