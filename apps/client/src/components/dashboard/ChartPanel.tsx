@@ -56,7 +56,8 @@ interface ChartPanelProps {
   chartType?: ChartType;
   onChartReady?: (chart: IChartApi, series: ISeriesApi<'Candlestick'>) => void;
   onChartDestroy?: () => void;
-  onDrawingManagerReady?: (manager: DrawingManager) => void;
+  /** Returns a cleanup, run when this chart goes */
+  onDrawingManagerReady?: (manager: DrawingManager) => (() => void) | void;
   activeToolType?: string | null;
   onToolChange?: (toolType: string | null) => void;
 }
@@ -282,7 +283,7 @@ export function ChartPanel({
       );
     });
 
-    onDrawingManagerReady?.(manager);
+    const releaseManager = onDrawingManagerReady?.(manager);
 
     // ── Right-click → cursor (selection) mode ─────────────────────────────
     const handleContextMenu = (e: MouseEvent) => {
@@ -345,6 +346,7 @@ export function ChartPanel({
       chartReadyRef.current = false;
       if (rafRef.current !== undefined) cancelAnimationFrame(rafRef.current);
       ro.disconnect();
+      releaseManager?.();
       detachDrawings();
       unsubTextEdit();
       clearTimeout(textEditTimer);

@@ -4,7 +4,12 @@
 
 import { afterEach, describe, expect, it } from 'vitest';
 import type { DrawingManager } from 'lightweight-charts-drawing';
-import { keepSelectionInOnePane, nextActiveTool, startEraser } from '@/lib/drawingTools';
+import {
+  connectPaneManager,
+  keepSelectionInOnePane,
+  nextActiveTool,
+  startEraser,
+} from '@/lib/drawingTools';
 import { addHorizontalLine, managerOnFakeChart } from './fakeDrawingChart';
 
 let managers: DrawingManager[] = [];
@@ -93,5 +98,46 @@ describe('keepSelectionInOnePane', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete' }));
     expect(b.manager.get(lineB)).toBeUndefined();
     expect(a.manager.get(lineA)).toBeDefined();
+  });
+});
+
+describe('connectPaneManager', () => {
+  it('should track the pane’s manager and its tool events until the cleanup, then forget both', () => {
+    const panes: (DrawingManager | null)[] = [null, null];
+    const a = setup();
+    const tools: (string | null)[] = [];
+    const release = connectPaneManager(panes, 0, a.manager, (k) => tools.push(k));
+    expect(panes[0]).toBe(a.manager);
+    a.manager.setTool('trend-line');
+    expect(tools).toEqual(['trend-line']);
+
+    release();
+    expect(panes[0]).toBeNull();
+    a.manager.setTool(null);
+    expect(tools).toEqual(['trend-line']);
+  });
+
+  it('should leave the slot to a newer manager (a remount) on the old one’s cleanup', () => {
+    const panes: (DrawingManager | null)[] = [null];
+    const old = setup();
+    const next = setup();
+    const releaseOld = connectPaneManager(panes, 0, old.manager, () => undefined);
+    connectPaneManager(panes, 0, next.manager, () => undefined);
+    releaseOld();
+    expect(panes[0]).toBe(next.manager);
+  });
+
+  it('should stop clearing the other panes’ selection after the cleanup', () => {
+    const panes: (DrawingManager | null)[] = [null, null];
+    const a = setup();
+    const b = setup();
+    const releaseA = connectPaneManager(panes, 0, a.manager, () => undefined);
+    connectPaneManager(panes, 1, b.manager, () => undefined);
+    addHorizontalLine(a.manager, 900);
+    const lineB = addHorizontalLine(b.manager, 900);
+    releaseA();
+    b.press(150, 100);
+    a.press(150, 100);
+    expect(b.manager.selection()).toEqual([lineB]);
   });
 });

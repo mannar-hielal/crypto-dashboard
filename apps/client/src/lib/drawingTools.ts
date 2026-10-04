@@ -43,3 +43,25 @@ export function keepSelectionInOnePane(
     for (const m of panes()) if (m && m !== owner && m.selection().length > 0) m.select([]);
   });
 }
+
+/**
+ * A pane's manager joins the dashboard: it goes into `panes[paneIndex]`, its `tool` events reach
+ * `onTool`, and its selection clears the other panes' (keepSelectionInOnePane). Returns the
+ * cleanup for when the pane's chart goes: listeners off, and the slot emptied if it still holds
+ * this manager (a remount may already have put the next one there).
+ */
+export function connectPaneManager(
+  panes: (DrawingManager | null)[],
+  paneIndex: number,
+  manager: DrawingManager,
+  onTool: (kind: string | null) => void
+): () => void {
+  panes[paneIndex] = manager;
+  const offTool = manager.on('tool', onTool);
+  const offSelection = keepSelectionInOnePane(manager, () => panes);
+  return () => {
+    offTool();
+    offSelection();
+    if (panes[paneIndex] === manager) panes[paneIndex] = null;
+  };
+}

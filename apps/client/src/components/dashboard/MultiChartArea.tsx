@@ -111,7 +111,8 @@ function ResizeSplitter({ axis, position, splitterRef, onPointerDown }: Splitter
 // ─── MultiChartArea ───────────────────────────────────────────────────────────
 
 interface MultiChartAreaProps {
-  onDrawingManagerReady?: (paneIndex: number, manager: DrawingManager) => void;
+  /** Returns the cleanup ChartPanel runs when the pane's chart goes */
+  onDrawingManagerReady?: (paneIndex: number, manager: DrawingManager) => (() => void) | void;
   onChartRefReady?: (paneIndex: number, chart: IChartApi) => void;
   activeToolType?: string | null;
   onToolChange?: (toolType: string | null) => void;
