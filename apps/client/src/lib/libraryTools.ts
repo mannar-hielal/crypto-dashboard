@@ -232,3 +232,14 @@ export function saveSubTools(map: Record<string, string>): void {
     // Full or blocked storage: remembered for this session only
   }
 }
+
+/** A tool's menu name ("Trend Line"); a kind outside the menu reads as its id in words */
+export function toolLabel(toolId: string): string {
+  for (const g of TOOL_GROUPS) {
+    for (const c of g.categories) {
+      const t = c.tools.find((x) => x.id === toolId);
+      if (t) return t.label;
+    }
+  }
+  return toolId.replace(/-/g, ' ').replace(/^./, (ch) => ch.toUpperCase());
+}

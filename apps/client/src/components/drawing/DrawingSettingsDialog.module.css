@@ -1,0 +1,193 @@
+/* The drawing settings dialog. Colours from tokens.ts via the @theme mirror in index.css; raw
+   values without a CSS variable are noted with their token. */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200; /* zIndex.modal */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(6, 4, 19, 0.6); /* bg.page at 60 % */
+}
+
+.dialog {
+  display: flex;
+  width: 100%;
+  max-width: 400px;
+  max-height: calc(100vh - 32px);
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.1); /* border.input */
+  border-radius: 8px;
+  background: var(--color-bg-footer); /* bg.modal */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); /* shadow.modal */
+}
+
+.title {
+  margin: 0;
+  padding: 14px 16px 8px;
+  color: var(--color-brand-white);
+  font-size: 16px; /* fontSize.sm */
+  font-weight: 600;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06); /* border.divider */
+}
+
+.tab {
+  padding: 8px 10px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--color-brand-muted);
+  font-size: 13px; /* fontSize.xs11 */
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab[aria-selected='true'] {
+  border-bottom-color: var(--color-brand-purple);
+  color: var(--color-brand-white);
+}
+
+.tab:focus-visible,
+.cancel:focus-visible,
+.ok:focus-visible,
+.swatch:focus-visible {
+  outline: 2px solid var(--color-brand-purple-dark); /* focusRing */
+  outline-offset: 2px;
+}
+
+.panel {
+  overflow-y: auto;
+  padding: 12px 16px;
+}
+
+.row,
+.level {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.label {
+  width: 80px;
+  color: var(--color-brand-muted);
+  font-size: 13px; /* fontSize.xs11 */
+}
+
+.levels {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.levels .label {
+  margin-bottom: 8px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-brand-white);
+  font-size: 13px; /* fontSize.xs11 */
+}
+
+.check input,
+.level input[type='checkbox'] {
+  accent-color: var(--color-brand-purple);
+}
+
+.swatch {
+  width: 28px;
+  height: 28px; /* size.xs */
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12); /* border.hover */
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.select,
+.input,
+.textarea {
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1); /* border.input */
+  border-radius: 4px;
+  background: var(--color-bg-panel);
+  color: var(--color-brand-white);
+  font-size: 13px; /* fontSize.xs11 */
+  outline: none;
+}
+
+.input {
+  width: 110px;
+  font-variant-numeric: tabular-nums;
+}
+
+.select:focus,
+.input:focus,
+.textarea:focus {
+  border-color: var(--color-brand-purple-dark);
+}
+
+.invalid {
+  border-color: var(--color-brand-red);
+}
+
+.textarea {
+  width: 100%;
+  min-height: 90px;
+  margin-bottom: 10px;
+  resize: vertical;
+}
+
+.time {
+  color: var(--color-brand-muted);
+  font-size: 13px; /* fontSize.xs11 */
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06); /* border.divider */
+}
+
+.cancel,
+.ok {
+  min-height: 34px; /* size.sm */
+  padding: 0 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px; /* fontSize.xs11 */
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cancel {
+  background: transparent;
+  color: var(--color-brand-muted);
+}
+
+.cancel:hover {
+  color: var(--color-brand-white);
+}
+
+.ok {
+  background: var(--color-brand-purple-dark);
+  color: var(--color-brand-white);
+}
+
+.ok:hover {
+  filter: brightness(1.1);
+}

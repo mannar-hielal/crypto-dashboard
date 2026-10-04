@@ -83,9 +83,12 @@ vi.mock('lightweight-charts', async (importOriginal) => {
 // lib/__tests__/drawingLibrary.test.ts — here it is a stub
 vi.mock('lightweight-charts-drawing', () => ({
   DrawingManager: function DrawingManager() {
-    return new Proxy({ on: () => () => undefined } as Record<string, unknown>, {
-      get: (t, prop) => (prop in t ? t[prop as string] : () => undefined),
-    });
+    return new Proxy(
+      { on: () => () => undefined, selection: () => [] } as Record<string, unknown>,
+      {
+        get: (t, prop) => (prop in t ? t[prop as string] : () => undefined),
+      }
+    );
   },
   parseDrawings: (x: unknown) => (Array.isArray(x) ? x : []),
   setFibLabelMode: () => undefined,

@@ -119,6 +119,48 @@ export const border = {
   card: 'rgba(255,255,255,0.08)',
 } as const;
 
+// ─── Drawing colours (canvas content: the drawing tools' colour picker) ─────────
+// TradingView's picker: a grey row, then its main hues. Drawn on the chart canvas, like chart.*
+
+export const drawingPalette = [
+  [
+    '#ffffff',
+    '#d1d4dc',
+    '#b2b5be',
+    '#9598a1',
+    '#787b86',
+    '#5d606b',
+    '#434651',
+    '#2a2e39',
+    '#131722',
+    '#000000',
+  ],
+  [
+    '#f23645',
+    '#ff9800',
+    '#ffeb3b',
+    '#4caf50',
+    '#089981',
+    '#00bcd4',
+    '#2962ff',
+    '#673ab7',
+    '#9c27b0',
+    '#e91e63',
+  ],
+  [
+    '#f7525f',
+    '#ffb74d',
+    '#fff176',
+    '#81c784',
+    '#42bda8',
+    '#4dd0e1',
+    '#5b9cf6',
+    '#9575cd',
+    '#ba68c8',
+    '#f06292',
+  ],
+] as const;
+
 // ─── Shadows ─────────────────────────────────────────────────────────────────
 
 export const shadow = {
