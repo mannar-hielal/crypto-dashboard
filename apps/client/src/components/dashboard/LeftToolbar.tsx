@@ -77,7 +77,7 @@ export function LeftToolbar({
     'trend-lines': 'trend-line',
     'fib-gann': 'fib-retracement',
     shapes: 'rectangle',
-    annotations: 'text-annotation',
+    annotations: 'text',
     measure: 'long-position',
     bin: 'remove-all',
   });

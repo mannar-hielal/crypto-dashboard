@@ -28,7 +28,8 @@
     /* Path alias — import from '@/components/...' instead of '../../components/...' */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "lightweight-charts-drawing": ["./src/vendor/lightweight-charts-drawing/index.ts"]
     }
   },
   "include": ["src"]

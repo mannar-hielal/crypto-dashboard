@@ -34,7 +34,7 @@
 import { useRef, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import type { IChartApi, ISeriesApi } from 'lightweight-charts';
-import { DrawingManager } from 'lightweight-charts-drawing';
+import type { DrawingManager } from 'lightweight-charts-drawing';
 import { useLayoutStore, LAYOUT_PANE_COUNT, DEFAULT_PANE_SIZES } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
 import {

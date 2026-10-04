@@ -5,7 +5,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform, animate } from '
 import { AlertTriangle } from 'lucide-react';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import type { IChartApi } from 'lightweight-charts';
-import { DrawingManager } from 'lightweight-charts-drawing';
+import type { DrawingKind, DrawingManager } from 'lightweight-charts-drawing';
 import { SeoHead } from '@/components/SeoHead';
 import { usePaneFeeds } from '@/hooks/usePaneFeeds';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -140,9 +140,8 @@ export function DashboardInner() {
 
   function handleDrawingManagerReady(paneIndex: number, manager: DrawingManager) {
     drawingManagerRefs.current[paneIndex] = manager;
-    manager.on('tool:changed', () => {
-      setActiveToolType(manager.getActiveTool());
-    });
+    // The library disarms its tool after a placement (TradingView: back to the cursor) or on Escape
+    manager.on('tool', (kind) => setActiveToolType(kind));
   }
 
   function handleToolChange(toolType: string | null) {
@@ -151,13 +150,13 @@ export function DashboardInner() {
     const paneIndex = useLayoutStore.getState().activePane;
     const manager = drawingManagerRefs.current[paneIndex];
     if (manager) {
-      manager.setActiveTool(toolType === null ? null : (TOOL_MAP[toolType] ?? toolType));
+      manager.setTool(toolType === null ? null : ((TOOL_MAP[toolType] ?? toolType) as DrawingKind));
     }
   }
 
   function handleBinAction() {
     const paneIndex = useLayoutStore.getState().activePane;
-    drawingManagerRefs.current[paneIndex]?.clearAll();
+    drawingManagerRefs.current[paneIndex]?.clear();
   }
 
   function handleChartRefReady(paneIndex: number, chart: IChartApi) {

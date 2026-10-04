@@ -737,26 +737,6 @@ export function CalloutIcon({ size }: IconProps) {
   );
 }
 
-export function AnchoredTextIcon({ size }: IconProps) {
-  return (
-    <svg {...s(size)}>
-      <circle cx="4" cy="12" r="1.5" />
-      <rect x="7" y="3" width="8" height="10" rx="1" />
-      <text
-        x="11"
-        y="10"
-        textAnchor="middle"
-        fill="currentColor"
-        stroke="none"
-        fontSize="7"
-        fontWeight="bold"
-      >
-        T
-      </text>
-    </svg>
-  );
-}
-
 export function NoteIcon({ size }: IconProps) {
   return (
     <svg {...s(size)}>
@@ -1041,19 +1021,19 @@ export const TOOL_ICONS: Record<string, (props: IconProps) => JSX.Element> = {
   'regression-trend': RegressionTrendIcon,
   'flat-top-bottom': FlatTopBottomIcon,
   'disjoint-channel': DisjointChannelIcon,
-  'andrews-pitchfork': AndrewsPitchforkIcon,
+  pitchfork: AndrewsPitchforkIcon,
   'schiff-pitchfork': SchiffPitchforkIcon,
   'modified-schiff-pitchfork': ModifiedSchiffPitchforkIcon,
   'inside-pitchfork': InsidePitchforkIcon,
   'fib-retracement': FibRetracementIcon,
-  'fib-extension': FibExtensionIcon,
+  'trend-based-fib-extension': FibExtensionIcon,
   'fib-channel': FibChannelIcon,
   'fib-time-zone': FibTimeZoneIcon,
-  'fib-speed-fan': FibSpeedFanIcon,
-  'fib-time-extension': FibTimeExtensionIcon,
+  'fib-speed-resistance-fan': FibSpeedFanIcon,
+  'trend-based-fib-time': FibTimeExtensionIcon,
   'fib-circles': FibCirclesIcon,
   'fib-spiral': FibSpiralIcon,
-  'fib-arcs': FibArcsIcon,
+  'fib-speed-resistance-arcs': FibArcsIcon,
   'fib-wedge': FibWedgeIcon,
   pitchfan: PitchfanIcon,
   'gann-box': GannBoxIcon,
@@ -1076,9 +1056,8 @@ export const TOOL_ICONS: Record<string, (props: IconProps) => JSX.Element> = {
   polyline: PolylineIcon,
   curve: CurveIcon,
   'double-curve': DoubleCurveIcon,
-  'text-annotation': TextAnnotationIcon,
+  text: TextAnnotationIcon,
   callout: CalloutIcon,
-  'anchored-text': AnchoredTextIcon,
   note: NoteIcon,
   'price-note': PriceNoteIcon,
   'price-label': PriceLabelIcon,
@@ -1089,11 +1068,11 @@ export const TOOL_ICONS: Record<string, (props: IconProps) => JSX.Element> = {
   table: TableIcon,
   'long-position': LongPositionIcon,
   'short-position': ShortPositionIcon,
-  forecast: ForecastIcon,
-  'bars-pattern': BarsPatternIcon,
-  projection: ProjectionIcon,
+  'position-forecast': ForecastIcon,
+  'bar-pattern': BarsPatternIcon,
+  sector: ProjectionIcon,
   'price-range': PriceRangeIcon,
   'date-range': DateRangeIcon,
-  'date-price-range': DatePriceRangeIcon,
+  'date-and-price-range': DatePriceRangeIcon,
   eraser: EraserIcon,
 };

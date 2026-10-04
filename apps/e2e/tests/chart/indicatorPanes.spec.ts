@@ -31,7 +31,7 @@ const paneBoxes = (page: Page) =>
 /** Saved drawings for the chart's symbol (lib/drawingManager.ts persists them per symbol) */
 const savedDrawings = (page: Page) =>
   page.evaluate(() => {
-    const raw = localStorage.getItem('cd-drawings-BTCUSDT');
+    const raw = localStorage.getItem('cd-drawings-v2-BTCUSDT');
     return raw ? (JSON.parse(raw) as unknown[]).length : 0;
   });
 

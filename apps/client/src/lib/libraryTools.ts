@@ -50,9 +50,9 @@ export const TOOL_GROUPS: ToolGroup[] = [
       {
         label: 'Pitchforks',
         tools: [
-          { id: 'andrews-pitchfork', label: 'Pitchfork' },
+          { id: 'pitchfork', label: 'Pitchfork' },
           { id: 'schiff-pitchfork', label: 'Schiff Pitchfork' },
-          { id: 'modified-schiff-pitchfork', label: 'Modified Schiff' },
+          { id: 'modified-schiff-pitchfork', label: 'Modified Schiff Pitchfork' },
           { id: 'inside-pitchfork', label: 'Inside Pitchfork' },
         ],
       },
@@ -67,14 +67,14 @@ export const TOOL_GROUPS: ToolGroup[] = [
         label: 'Fibonacci',
         tools: [
           { id: 'fib-retracement', label: 'Fib Retracement' },
-          { id: 'fib-extension', label: 'Fib Extension' },
+          { id: 'trend-based-fib-extension', label: 'Trend-Based Fib Extension' },
           { id: 'fib-channel', label: 'Fib Channel' },
           { id: 'fib-time-zone', label: 'Fib Time Zone' },
-          { id: 'fib-speed-fan', label: 'Fib Speed Fan' },
-          { id: 'fib-time-extension', label: 'Fib Time Extension' },
+          { id: 'fib-speed-resistance-fan', label: 'Fib Speed Resistance Fan' },
+          { id: 'trend-based-fib-time', label: 'Trend-Based Fib Time' },
           { id: 'fib-circles', label: 'Fib Circles' },
           { id: 'fib-spiral', label: 'Fib Spiral' },
-          { id: 'fib-arcs', label: 'Fib Arcs' },
+          { id: 'fib-speed-resistance-arcs', label: 'Fib Speed Resistance Arcs' },
           { id: 'fib-wedge', label: 'Fib Wedge' },
           { id: 'pitchfan', label: 'Pitchfan' },
         ],
@@ -136,9 +136,8 @@ export const TOOL_GROUPS: ToolGroup[] = [
       {
         label: 'Text & Notes',
         tools: [
-          { id: 'text-annotation', label: 'Text' },
+          { id: 'text', label: 'Text' },
           { id: 'callout', label: 'Callout' },
-          { id: 'anchored-text', label: 'Anchored Text' },
           { id: 'note', label: 'Note' },
           { id: 'price-note', label: 'Price Note' },
           { id: 'price-label', label: 'Price Label' },
@@ -161,9 +160,9 @@ export const TOOL_GROUPS: ToolGroup[] = [
         tools: [
           { id: 'long-position', label: 'Long Position' },
           { id: 'short-position', label: 'Short Position' },
-          { id: 'forecast', label: 'Forecast' },
-          { id: 'bars-pattern', label: 'Bars Pattern' },
-          { id: 'projection', label: 'Projection' },
+          { id: 'position-forecast', label: 'Forecast' },
+          { id: 'bar-pattern', label: 'Bars Pattern' },
+          { id: 'sector', label: 'Projection' },
         ],
       },
       {
@@ -171,7 +170,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
         tools: [
           { id: 'price-range', label: 'Price Range' },
           { id: 'date-range', label: 'Date Range' },
-          { id: 'date-price-range', label: 'Date & Price Range' },
+          { id: 'date-and-price-range', label: 'Date and Price Range' },
         ],
       },
     ],
