@@ -47,7 +47,11 @@ async function openChart(page: Page) {
 
 test('[10.6.1][10.6.2][10.6.3][10.6.4] each Momentum / MACD gets its own pane; removing one drops its pane and legend; a reload keeps the rest @full', async ({
   page,
+  browserName,
 }) => {
+  // Five panes and two reloads of the chart: 1.1 min on WebKit on CI on 2026-10-03 (6 s locally),
+  // past the 60 s limit on release #237, both tries
+  test.slow(browserName === 'webkit', 'five chart panes: WebKit on CI needs about a minute');
   await openChart(page);
 
   // 10.6.1 — two Momentums: two stacked panes below the price pane
