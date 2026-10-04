@@ -134,6 +134,37 @@ describe('forked drawing library on a chart', () => {
   });
 });
 
+describe('forked drawing library: drags stay in the price pane', () => {
+  it('[10.7.7] should stop a dragged anchor at the price pane’s bottom edge', () => {
+    const { manager, chartEl, press } = setup();
+    const id = addHorizontalLine(manager, 900); // y = 100
+    press(150, 100); // select it
+    chartEl.dispatchEvent(
+      new MouseEvent('pointerdown', { clientX: 150, clientY: 100, button: 0, bubbles: true })
+    );
+    // Far below the pane, into an indicator pane
+    document.dispatchEvent(new MouseEvent('pointermove', { clientX: 150, clientY: PANE_H + 200 }));
+    document.dispatchEvent(new MouseEvent('pointerup', { clientX: 150, clientY: PANE_H + 200 }));
+    expect(manager.get(id)!.points[0]!.price).toBe(1000 - PANE_H);
+  });
+
+  it('[10.7.7] should stop a dragged trend-line end at the price axis', () => {
+    const { manager, chartEl, press } = setup();
+    manager.setTool('trend-line');
+    press(100, 100);
+    press(200, 50);
+    const id = manager.drawings()[0]!.id;
+    chartEl.dispatchEvent(
+      new MouseEvent('pointerdown', { clientX: 200, clientY: 50, button: 0, bubbles: true })
+    );
+    document.dispatchEvent(new MouseEvent('pointermove', { clientX: PANE_W + 80, clientY: -40 }));
+    document.dispatchEvent(new MouseEvent('pointerup', { clientX: PANE_W + 80, clientY: -40 }));
+    const end = manager.get(id)!.points[1]!;
+    expect(end.price).toBe(1000);
+    expect(Number(end.time)).toBeLessThanOrEqual(T0 + PANE_W);
+  });
+});
+
 describe('forked drawing library: times between and after bars', () => {
   // 5-minute bars, as after switching a 1-minute chart to 5m
   const bars: OHLC[] = Array.from({ length: 10 }, (_, i) => ({

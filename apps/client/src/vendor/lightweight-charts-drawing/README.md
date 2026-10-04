@@ -41,6 +41,9 @@ Record every change here: date, file, what, why.
   level's right end, kept inside the pane. Ordering, level colours and fills unchanged. Why: the
   owner's visual Q&A (2026-10-04) — the app's earlier labels read better over candles. Test:
   `[10.7.10]`.
+- 2026-10-04 — `runtime/manager.ts` `dragMove`: the pointer is clamped to the pane during a drag,
+  so an anchor or a whole drawing dragged past it (into an indicator pane, onto an axis) stops at the
+  edge instead of following the pointer out (drawing plan, Phase B). Test: `[10.7.7]`.
 - ESLint: `apps/client/eslint.config.js` relaxes, for `src/vendor/**` only, `_` unused params and
   rest siblings, `no-fallthrough` on empty cases, and `no-useless-assignment`. The folder is outside
   the client coverage floors; fixes here still get tests (`src/lib/__tests__/drawingLibrary.test.ts`).

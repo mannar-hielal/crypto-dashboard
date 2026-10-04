@@ -910,9 +910,13 @@ export class DrawingManager {
     document.addEventListener('pointerup', up);
   }
 
-  private dragMove(cur: Pt): void {
+  private dragMove(curRaw: Pt): void {
     const g = this.gesture;
     if (!g) return;
+    // Local change (cryptopapertrade, 2026-10-04): the pointer is clamped to the pane, so an
+    // anchor or body dragged past it (into an indicator pane, onto an axis) stops at its edge.
+    const { w, h } = this.paneSize();
+    const cur = { x: Math.max(0, Math.min(w, curRaw.x)), y: Math.max(0, Math.min(h, curRaw.y)) };
     if (!g.active) {
       if (!g.canDrag) return;
       if (Math.hypot(cur.x - g.startCursor.x, cur.y - g.startCursor.y) < DRAG_THRESHOLD) return;
