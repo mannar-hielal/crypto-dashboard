@@ -28,3 +28,18 @@ export function startEraser(manager: DrawingManager): () => void {
     for (const id of ids) if (!manager.get(id)?.locked) manager.remove(id);
   });
 }
+
+/**
+ * One pane holds the drawing selection: a selection in `owner` clears every other pane's. The
+ * library's Delete listens on the window, so this keeps Delete to the pane last clicked.
+ * Returns the off switch.
+ */
+export function keepSelectionInOnePane(
+  owner: DrawingManager,
+  panes: () => readonly (DrawingManager | null)[]
+): () => void {
+  return owner.on('selection', (ids) => {
+    if (ids.length === 0) return;
+    for (const m of panes()) if (m && m !== owner && m.selection().length > 0) m.select([]);
+  });
+}

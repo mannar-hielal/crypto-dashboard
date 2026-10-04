@@ -22,7 +22,7 @@ import { TopBar } from '@/components/dashboard/TopBar';
 import { LeftToolbar } from '@/components/dashboard/LeftToolbar';
 import { CURSOR_CSS_MAP, type CursorVariantId } from '@/lib/cursors';
 import { TOOL_MAP } from '@/lib/drawingManager';
-import { HOST_TOOLS, nextActiveTool } from '@/lib/drawingTools';
+import { HOST_TOOLS, keepSelectionInOnePane, nextActiveTool } from '@/lib/drawingTools';
 import { MultiChartArea } from '@/components/dashboard/MultiChartArea';
 import { OrderAccountManagementPanel } from '@/components/dashboard/OrderAccountManagementPanel';
 import { TickerBar } from '@/components/dashboard/TickerBar';
@@ -144,6 +144,8 @@ export function DashboardInner() {
     // The library disarms its tool after a placement (TradingView: back to the cursor) or on Escape;
     // its disarm never ends the Eraser or zoom-in
     manager.on('tool', (kind) => setActiveToolType((prev) => nextActiveTool(prev, kind)));
+    // Delete removes the selection of the pane last clicked only
+    keepSelectionInOnePane(manager, () => drawingManagerRefs.current);
   }
 
   function handleToolChange(toolType: string | null) {

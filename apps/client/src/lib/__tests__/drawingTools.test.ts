@@ -4,7 +4,7 @@
 
 import { afterEach, describe, expect, it } from 'vitest';
 import type { DrawingManager } from 'lightweight-charts-drawing';
-import { nextActiveTool, startEraser } from '@/lib/drawingTools';
+import { keepSelectionInOnePane, nextActiveTool, startEraser } from '@/lib/drawingTools';
 import { addHorizontalLine, managerOnFakeChart } from './fakeDrawingChart';
 
 let managers: DrawingManager[] = [];
@@ -72,5 +72,26 @@ describe('nextActiveTool', () => {
     expect(nextActiveTool('trend-line', null)).toBeNull();
     expect(nextActiveTool('eraser', 'rectangle')).toBe('rectangle');
     expect(nextActiveTool(null, 'trend-line')).toBe('trend-line');
+  });
+});
+
+describe('keepSelectionInOnePane', () => {
+  it('[10.7.3] should keep the selection, and so Delete, to the pane last clicked', () => {
+    const a = setup();
+    const b = setup();
+    const panes = () => [a.manager, b.manager];
+    keepSelectionInOnePane(a.manager, panes);
+    keepSelectionInOnePane(b.manager, panes);
+    const lineA = addHorizontalLine(a.manager, 900);
+    const lineB = addHorizontalLine(b.manager, 900);
+
+    a.press(150, 100);
+    b.press(150, 100);
+    expect(a.manager.selection()).toEqual([]);
+    expect(b.manager.selection()).toEqual([lineB]);
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete' }));
+    expect(b.manager.get(lineB)).toBeUndefined();
+    expect(a.manager.get(lineA)).toBeDefined();
   });
 });
