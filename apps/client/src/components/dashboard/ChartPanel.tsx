@@ -37,6 +37,7 @@ import { IndicatorLegends } from '@/components/indicators/IndicatorLegends';
 import { useTradeLines } from '@/hooks/useTradeLines';
 import { TradeLineAmend } from './TradeLineAmend';
 import { DrawingTextEditor } from './DrawingTextEditor';
+import { DrawingControls } from '@/components/drawing/DrawingControls';
 
 const CHART_BG = chartColors.bg;
 
@@ -147,6 +148,7 @@ export function ChartPanel({
   // before this component's, can subscribe once they exist
   const [chartApi, setChartApi] = useState<IChartApi | null>(null);
   const [candleApi, setCandleApi] = useState<ISeriesApi<'Candlestick'> | null>(null);
+  const [drawingManager, setDrawingManager] = useState<DrawingManager | null>(null);
   // Bumped whenever an indicator's series or pane comes or goes — the legend re-measures
   const [indicatorLayoutVersion, setIndicatorLayoutVersion] = useState(0);
   // The one observer waiting for the chart to get a height before the panes are rebalanced — at
@@ -285,13 +287,7 @@ export function ChartPanel({
 
     const releaseManager = onDrawingManagerReady?.(manager);
 
-    // ── Right-click → cursor (selection) mode ─────────────────────────────
-    const handleContextMenu = (e: MouseEvent) => {
-      e.preventDefault();
-      onToolChangeRef.current?.(null);
-    };
-    const container = containerRef.current;
-    container.addEventListener('contextmenu', handleContextMenu);
+    // Right-click (a drawing's menu, else back to the cursor) is DrawingControls'
 
     // ── Crosshair (hover legend) ───────────────────────────────────────────
     chart.subscribeCrosshairMove((param) => {
@@ -339,6 +335,7 @@ export function ChartPanel({
     }
     setChartApi(chart);
     setCandleApi(candleRef.current);
+    setDrawingManager(manager);
 
     chartReadyRef.current = true;
 
@@ -350,13 +347,13 @@ export function ChartPanel({
       detachDrawings();
       unsubTextEdit();
       clearTimeout(textEditTimer);
-      container.removeEventListener('contextmenu', handleContextMenu);
       manager.destroy();
       managerRef.current = null;
       chart.remove();
       chartRef.current = null;
       setChartApi(null);
       setCandleApi(null);
+      setDrawingManager(null);
       // The price line died with the chart — StrictMode re-mounts must not
       // call applyOptions on it.
       realPriceLineRef.current = null;
@@ -792,6 +789,9 @@ export function ChartPanel({
     [paneIndex]
   );
 
+  // Right-click off a drawing (or with a tool armed): back to the cursor
+  const handleRightClickCursor = useCallback(() => onToolChangeRef.current?.(null), []);
+
   // ── Eraser: a click on a drawing removes it ─────────────────────────────
   useEffect(() => {
     const manager = managerRef.current;
@@ -897,6 +897,12 @@ export function ChartPanel({
           }}
         />
       )}
+
+      <DrawingControls
+        manager={drawingManager}
+        containerRef={containerRef}
+        onCursor={handleRightClickCursor}
+      />
 
       {editingTextInfo && (
         <DrawingTextEditor

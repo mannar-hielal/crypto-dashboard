@@ -1,0 +1,79 @@
+/* The drawing tools' confirm dialog. Colours from tokens.ts via the @theme mirror in index.css;
+   raw values without a CSS variable are noted with their token. */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200; /* zIndex.modal */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(6, 4, 19, 0.6); /* bg.page at 60 % */
+}
+
+.dialog {
+  width: 100%;
+  max-width: 320px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1); /* border.input */
+  border-radius: 8px;
+  background: var(--color-bg-footer); /* bg.modal */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); /* shadow.modal */
+}
+
+.title {
+  margin: 0 0 8px;
+  color: var(--color-brand-white);
+  font-size: 16px; /* fontSize.sm */
+  font-weight: 600;
+}
+
+.message {
+  margin: 0;
+  color: var(--color-brand-muted);
+  font-size: 13px; /* fontSize.xs11 */
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.cancel,
+.confirm {
+  min-height: 34px; /* size.sm */
+  padding: 0 14px;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px; /* fontSize.xs11 */
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cancel {
+  background: transparent;
+  color: var(--color-brand-muted);
+}
+
+.cancel:hover {
+  color: var(--color-brand-white);
+}
+
+.confirm {
+  background: var(--color-brand-red);
+  color: var(--color-bg-page); /* dark text on a coloured fill (design.md) */
+}
+
+.confirm:hover {
+  filter: brightness(1.08);
+}
+
+.cancel:focus-visible,
+.confirm:focus-visible {
+  outline: 2px solid var(--color-brand-purple-dark); /* focusRing */
+  outline-offset: 3px;
+}

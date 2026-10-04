@@ -3,9 +3,9 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { useRef } from 'react';
 import { useDataTooltip, type TooltipPlacement } from '@/hooks/useDataTooltip';
 
-function Bar({ placement }: { placement: TooltipPlacement }) {
+function Bar({ placement, delayMs }: { placement: TooltipPlacement; delayMs?: number }) {
   const ref = useRef<HTMLDivElement>(null);
-  const tooltip = useDataTooltip(ref, placement);
+  const tooltip = useDataTooltip(ref, placement, delayMs);
   return (
     <div ref={ref}>
       <button type="button" data-tooltip="Trend line">
@@ -31,6 +31,15 @@ describe('useDataTooltip', () => {
     render(<Bar placement="right" />);
     fireEvent.mouseOver(screen.getByText('tool'));
     act(() => vi.advanceTimersByTime(1499));
+    expect(screen.queryByRole('tooltip')).toBeNull();
+    act(() => vi.advanceTimersByTime(1));
+    expect(screen.getByRole('tooltip').textContent).toBe('Trend line');
+  });
+
+  it('should take the container’s own default delay (the drawing toolbar’s 400 ms)', () => {
+    render(<Bar placement="right" delayMs={400} />);
+    fireEvent.mouseOver(screen.getByText('tool'));
+    act(() => vi.advanceTimersByTime(399));
     expect(screen.queryByRole('tooltip')).toBeNull();
     act(() => vi.advanceTimersByTime(1));
     expect(screen.getByRole('tooltip').textContent).toBe('Trend line');

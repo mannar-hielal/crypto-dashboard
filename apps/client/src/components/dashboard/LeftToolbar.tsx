@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import type { ElementType } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useRef } from 'react';
+import type { ElementType, ReactNode } from 'react';
+import { motion } from 'framer-motion';
 import {
   MousePointer2,
   TrendingUp,
@@ -9,60 +9,154 @@ import {
   Type,
   Ruler,
   Trash2,
+  Pencil,
+  Lock,
+  Magnet,
+  Eye,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
-import { bg, color } from '@/lib/tokens';
+import { bg } from '@/lib/tokens';
 import { useDataTooltip } from '@/hooks/useDataTooltip';
 import { CURSOR_VARIANTS, type CursorVariantId } from '@/lib/cursors';
-import { TOOL_GROUPS } from '@/lib/libraryTools';
-import type { ToolDef } from '@/lib/libraryTools';
+import { TOOL_GROUPS, findGroupByToolType, loadSubTools, saveSubTools } from '@/lib/libraryTools';
 import { TOOL_ICONS } from '@/lib/toolIcons';
 import { guide } from '@/lib/guideAnchors';
+import { formatModShortcut, formatToolShortcut, isMacPlatform } from '@/lib/drawingShortcuts';
+import type { MagnetSetting } from '@/lib/drawingTools';
+import { DrawingMenu, type MenuEntry } from '@/components/drawing/DrawingMenu';
+import { DrawingConfirmDialog } from '@/components/drawing/DrawingConfirmDialog';
 
-const BIN_TOOLS: ToolDef[] = [
-  { id: 'remove-all', label: 'Remove All' },
-  { id: 'eraser', label: 'Eraser' },
-];
+// TradingView-quick: the toolbar's tooltips show after 400 ms
+const TOOLBAR_TOOLTIP_DELAY_MS = 400;
 
-// ─── Tool toolbar button definitions ────────────────────────────────────────
+const GROUP_ICONS: Record<string, ElementType> = {
+  'trend-lines': TrendingUp,
+  'fib-gann': GitBranch,
+  measure: Ruler,
+  shapes: Shapes,
+  annotations: Type,
+};
 
-type ToolButton = {
-  id: string;
-  icon: ElementType;
+const MAGNET_LABELS = { weak: 'Weak magnet', strong: 'Strong magnet' } as const;
+
+/** What the menu that's open belongs to */
+type OpenMenu =
+  | { kind: 'cursor' }
+  | { kind: 'group'; groupId: string }
+  | { kind: 'magnet' }
+  | { kind: 'bin'; total: number; hidden: number };
+
+/** "1 drawing" / "5 drawings" */
+function drawingsLabel(n: number): string {
+  return `${n} drawing${n === 1 ? '' : 's'}`;
+}
+
+// ─── A toolbar button with an optional caret strip (its menu) ───────────────
+
+interface ToolbarSlotProps {
   label: string;
-} | null;
+  tooltip: string;
+  active: boolean;
+  /** A switch (magnet, stay in drawing mode) reports its state as aria-pressed */
+  pressed?: boolean;
+  /** Gets the slot (button + caret), where a menu opens from */
+  onClick: (slot: HTMLElement) => void;
+  onContextMenu?: (e: React.MouseEvent<HTMLElement>) => void;
+  children: ReactNode;
+  /** The caret's accessible name; no caret without it */
+  caretLabel?: string;
+  menuOpen?: boolean;
+  onOpenMenu?: (anchor: HTMLElement) => void;
+  attrs?: Record<string, string>;
+  buttonRef?: React.Ref<HTMLButtonElement>;
+}
 
-const MAIN_BUTTONS: ToolButton[] = [
-  { id: 'cursor', icon: MousePointer2, label: 'Cursor' },
-  null,
-  { id: 'trend-lines', icon: TrendingUp, label: 'Trend Lines' },
-  { id: 'fib-gann', icon: GitBranch, label: 'Fib & Gann' },
-  { id: 'shapes', icon: Shapes, label: 'Shapes' },
-  { id: 'annotations', icon: Type, label: 'Text & Notes' },
-  { id: 'measure', icon: Ruler, label: 'Forecast & Measure' },
-  null,
-  { id: 'bin', icon: Trash2, label: 'Remove All' },
-];
+/** The caret is the button's sibling, not its child: a button inside a button is invalid and
+ *  unreachable by keyboard (axe nested-interactive, visual gate 2026-09-29) */
+function ToolbarSlot({
+  label,
+  tooltip,
+  active,
+  pressed,
+  onClick,
+  onContextMenu,
+  children,
+  caretLabel,
+  menuOpen = false,
+  onOpenMenu,
+  attrs,
+  buttonRef,
+}: ToolbarSlotProps) {
+  return (
+    <div className="toolbar-slot">
+      <motion.button
+        ref={buttonRef}
+        type="button"
+        {...attrs}
+        data-tooltip={tooltip}
+        aria-label={label}
+        aria-pressed={pressed}
+        onClick={(e) => onClick(e.currentTarget.parentElement ?? e.currentTarget)}
+        onContextMenu={onContextMenu}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        className={`toolbar-btn focus-ring${active ? ' active' : ''}`}
+      >
+        <span className="relative z-10 flex h-6 w-6 items-center justify-center">{children}</span>
+      </motion.button>
+      {caretLabel && onOpenMenu && (
+        <button
+          type="button"
+          className="toolbar-caret focus-ring"
+          aria-label={caretLabel}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          onClick={(e) => onOpenMenu(e.currentTarget.parentElement ?? e.currentTarget)}
+        >
+          <span className="toolbar-caret-arrow" aria-hidden="true" />
+        </button>
+      )}
+    </div>
+  );
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface LeftToolbarProps {
   onToolChange?: (toolType: string | null) => void;
-  onBinAction?: () => void;
   onZoomOut?: () => void;
   cursorVariant?: CursorVariantId;
   onCursorVariantChange?: (variant: CursorVariantId) => void;
   activeToolType?: string | null;
+  /** The tool each group button arms (the last one used in the group) */
+  subTools?: Record<string, string>;
+  /** TradingView's "Stay in drawing mode": a placed drawing leaves its tool armed */
+  stayInDrawingMode?: boolean;
+  onStayInDrawingModeChange?: (on: boolean) => void;
+  magnet?: MagnetSetting;
+  onMagnetChange?: (magnet: MagnetSetting) => void;
+  /** The active pane's drawings (all, and hidden), read when the Remove menu opens */
+  getDrawingCounts?: () => { total: number; hidden: number };
+  /** Remove the active pane's drawings (after the confirm) */
+  onRemoveDrawings?: () => void;
+  onShowHiddenDrawings?: () => void;
 }
 
 export function LeftToolbar({
   onToolChange,
-  onBinAction,
   onZoomOut,
   cursorVariant: cursorVariantProp,
   onCursorVariantChange,
   activeToolType: activeToolTypeProp,
+  subTools: subToolsProp,
+  stayInDrawingMode = false,
+  onStayInDrawingModeChange,
+  magnet = { on: false, mode: 'weak' },
+  onMagnetChange,
+  getDrawingCounts,
+  onRemoveDrawings,
+  onShowHiddenDrawings,
 }: LeftToolbarProps) {
   // ── Cursor (local state falls back when uncontrolled) ──────────────────
   const [localCursorVariant, setLocalCursorVariant] = useState<CursorVariantId>('cross');
@@ -72,154 +166,171 @@ export function LeftToolbar({
   const [localToolType, setLocalToolType] = useState<string | null>(null);
   const activeToolType = activeToolTypeProp !== undefined ? activeToolTypeProp : localToolType;
 
-  // Last-selected sub-tool per group (persists across group switches)
-  const [subToolMap, setSubToolMap] = useState<Record<string, string>>({
-    'trend-lines': 'trend-line',
-    'fib-gann': 'fib-retracement',
-    shapes: 'rectangle',
-    annotations: 'text',
-    measure: 'long-position',
-    bin: 'remove-all',
-  });
+  // The last tool used in each group, remembered across reloads (TradingView); the dashboard
+  // owns it (a shortcut changes it too), local state when uncontrolled
+  const [localSubTools, setLocalSubTools] = useState<Record<string, string>>(loadSubTools);
+  const subToolMap = subToolsProp ?? localSubTools;
 
-  // ── Generic popup menu state (replaces individual menu states) ──────────
-  const [popupMenu, setPopupMenu] = useState<{
-    groupId: string;
-    left: number;
-    top: number;
-  } | null>(null);
-  const popupRef = useRef<HTMLDivElement>(null);
-
-  // ── Cursor variant menu (kept separate — these are CSS cursors, not drawing tools) ──
-  const [showCursorMenu, setShowCursorMenu] = useState(false);
-  const cursorBtnRef = useRef<HTMLButtonElement>(null);
-  const cursorMenuRef = useRef<HTMLDivElement>(null);
-  const [cursorMenuPos, setCursorMenuPos] = useState({ left: 0, top: 0 });
+  const [menu, setMenu] = useState<{ open: OpenMenu; left: number; top: number } | null>(null);
+  const menuOpenerRef = useRef<HTMLElement | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState<number | null>(null);
 
   const asideRef = useRef<HTMLElement>(null);
+  const tooltip = useDataTooltip(asideRef, 'right', TOOLBAR_TOOLTIP_DELAY_MS);
+  const [mac] = useState(isMacPlatform);
 
   // ── Handlers ────────────────────────────────────────────────────────────
 
-  function handleMainClick(groupId: string) {
-    if (groupId === 'cursor') {
-      setLocalToolType(null);
-      onToolChange?.(null);
-      return;
-    }
-    if (groupId === 'bin') {
-      const toolType = subToolMap[groupId];
-      if (toolType === 'remove-all') {
-        onBinAction?.();
-        setLocalToolType(null);
-        onToolChange?.(null);
-      } else {
-        setLocalToolType(toolType);
-        onToolChange?.(toolType);
+  function arm(toolType: string | null) {
+    setLocalToolType(toolType);
+    onToolChange?.(toolType);
+  }
+
+  function openMenu(open: OpenMenu, anchor: HTMLElement) {
+    const rect = anchor.getBoundingClientRect();
+    menuOpenerRef.current = anchor.querySelector('button') ?? anchor;
+    setMenu({ open, left: rect.right + 6, top: rect.top });
+  }
+
+  function toggleMenu(open: OpenMenu, anchor: HTMLElement) {
+    if (menu && menu.open.kind === open.kind) {
+      const same =
+        open.kind !== 'group' || (menu.open.kind === 'group' && menu.open.groupId === open.groupId);
+      if (same) {
+        setMenu(null);
+        return;
       }
-      return;
     }
-    const toolType = subToolMap[groupId];
-    if (toolType) {
-      setLocalToolType(toolType);
-      onToolChange?.(toolType);
+    openMenu(open, anchor);
+  }
+
+  function openBinMenu(anchor: HTMLElement) {
+    const counts = getDrawingCounts?.() ?? { total: 0, hidden: 0 };
+    toggleMenu({ kind: 'bin', ...counts }, anchor);
+  }
+
+  function handleMenuSelect(id: string) {
+    const open = menu?.open;
+    setMenu(null);
+    if (!open) return;
+    if (open.kind === 'cursor') {
+      // TradingView's Eraser sits in the cursor menu: it is the Eraser tool, not a pointer style
+      if (id === 'eraser') {
+        arm('eraser');
+        return;
+      }
+      setLocalCursorVariant(id as CursorVariantId);
+      onCursorVariantChange?.(id as CursorVariantId);
+      arm(null);
+    } else if (open.kind === 'group') {
+      const next = { ...subToolMap, [open.groupId]: id };
+      setLocalSubTools(next);
+      saveSubTools(next);
+      arm(id);
+    } else if (open.kind === 'magnet') {
+      onMagnetChange?.({ on: true, mode: id as MagnetSetting['mode'] });
+    } else if (id === 'remove-drawings') {
+      setConfirmRemove(open.total);
+    } else if (id === 'show-hidden') {
+      onShowHiddenDrawings?.();
+    } else if (id === 'eraser') {
+      arm(activeToolType === 'eraser' ? null : 'eraser');
     }
   }
 
-  function handleContextMenu(e: React.MouseEvent, groupId: string) {
-    e.preventDefault();
-    const rect = e.currentTarget.getBoundingClientRect();
-    setPopupMenu({ groupId, left: rect.right + 6, top: rect.top });
-  }
-
-  function handleSubToolSelect(groupId: string, toolType: string) {
-    setSubToolMap((prev) => ({ ...prev, [groupId]: toolType }));
-    setPopupMenu(null);
-    if (groupId === 'bin' && toolType === 'remove-all') {
-      setLocalToolType(null);
-      onToolChange?.(null);
-      onBinAction?.();
-    } else {
-      setLocalToolType(toolType);
-      onToolChange?.(toolType);
+  function menuEntries(open: OpenMenu): { label: string; entries: MenuEntry[] } {
+    if (open.kind === 'cursor') {
+      return {
+        label: 'Cursors',
+        entries: CURSOR_VARIANTS.map((v, i): MenuEntry => {
+          if (v === null) return { type: 'separator', id: `sep-${i}` };
+          const VariantIcon = v.icon;
+          return {
+            type: 'item',
+            id: v.id,
+            label: v.label,
+            icon: <VariantIcon size={18} />,
+            checked:
+              v.id === 'eraser'
+                ? activeToolType === 'eraser'
+                : activeToolType === null && cursorVariant === v.id,
+          };
+        }),
+      };
     }
-  }
-
-  function isGroupActive(groupId: string): boolean {
-    if (groupId === 'cursor') return activeToolType === null;
-    if (groupId === 'bin') return activeToolType === 'eraser';
-    if (activeToolType === null) return false;
-    const group = TOOL_GROUPS.find((g) => g.id === groupId);
-    if (!group) return false;
-    return group.categories.some((cat) => cat.tools.some((t) => t.id === activeToolType));
-  }
-
-  // ── Click-outside: generic popup ────────────────────────────────────────
-  const handleMousedown = useCallback((e: MouseEvent) => {
-    if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
-      setPopupMenu(null);
+    if (open.kind === 'magnet') {
+      return {
+        label: 'Magnet',
+        entries: (['weak', 'strong'] as const).map((mode) => ({
+          type: 'item',
+          id: mode,
+          label: MAGNET_LABELS[mode],
+          icon: <Magnet size={16} strokeWidth={1.5} />,
+          checked: magnet.on && magnet.mode === mode,
+        })),
+      };
     }
-  }, []);
-
-  useEffect(() => {
-    if (popupMenu) {
-      document.addEventListener('mousedown', handleMousedown);
-    }
-    return () => document.removeEventListener('mousedown', handleMousedown);
-  }, [popupMenu, handleMousedown]);
-
-  // ── Click-outside: cursor menu ──────────────────────────────────────────
-  const handleCursorMousedown = useCallback((e: MouseEvent) => {
-    if (
-      cursorMenuRef.current &&
-      !cursorMenuRef.current.contains(e.target as Node) &&
-      cursorBtnRef.current &&
-      !cursorBtnRef.current.contains(e.target as Node)
-    ) {
-      setShowCursorMenu(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (showCursorMenu) {
-      document.addEventListener('mousedown', handleCursorMousedown);
-    }
-    return () => document.removeEventListener('mousedown', handleCursorMousedown);
-  }, [showCursorMenu, handleCursorMousedown]);
-
-  // ── Cursor handlers ─────────────────────────────────────────────────────
-  function handleCursorContextMenu(e: React.MouseEvent) {
-    e.preventDefault();
-    const rect = cursorBtnRef.current?.getBoundingClientRect();
-    if (rect) {
-      setCursorMenuPos({ left: rect.right + 6, top: rect.top });
-    }
-    setShowCursorMenu((v) => !v);
-  }
-
-  function handleCursorVariantSelect(id: CursorVariantId) {
-    setLocalCursorVariant(id);
-    setLocalToolType(null);
-    setShowCursorMenu(false);
-    onCursorVariantChange?.(id);
-    onToolChange?.(null);
-  }
-
-  // ── Tooltip (data-tooltip on each button) ───────────────────────────────
-  const tooltip = useDataTooltip(asideRef, 'right');
-
-  // ── Get the active group for popup menu ─────────────────────────────────
-  const activePopupGroup = popupMenu
-    ? popupMenu.groupId === 'bin'
-      ? {
-          id: 'bin',
-          icon: Trash2,
-          label: 'Remove All',
-          categories: [{ label: 'Tools', tools: BIN_TOOLS }],
+    if (open.kind === 'bin') {
+      const EraserIcon = TOOL_ICONS.eraser;
+      const entries: MenuEntry[] = [
+        {
+          type: 'item',
+          id: 'remove-drawings',
+          label: `Remove ${drawingsLabel(open.total)}`,
+          icon: <Trash2 size={16} strokeWidth={1.5} />,
+          disabled: open.total === 0,
+          danger: true,
+          attrs: guide('toolbar.subtool', 'remove-drawings') as Record<string, string>,
+        },
+      ];
+      if (open.hidden > 0) {
+        entries.push({
+          type: 'item',
+          id: 'show-hidden',
+          label: `Show ${drawingsLabel(open.hidden)} hidden`,
+          icon: <Eye size={16} strokeWidth={1.5} />,
+        });
+      }
+      entries.push(
+        { type: 'separator', id: 'sep' },
+        {
+          type: 'item',
+          id: 'eraser',
+          label: 'Eraser',
+          icon: EraserIcon ? <EraserIcon size={16} /> : undefined,
+          checked: activeToolType === 'eraser',
+          attrs: guide('toolbar.subtool', 'eraser') as Record<string, string>,
         }
-      : TOOL_GROUPS.find((g) => g.id === popupMenu.groupId)
-    : null;
+      );
+      return { label: 'Remove', entries };
+    }
+    const group = TOOL_GROUPS.find((g) => g.id === open.groupId);
+    const entries: MenuEntry[] = [];
+    for (const cat of group?.categories ?? []) {
+      entries.push({ type: 'header', id: `cat-${cat.label}`, label: cat.label });
+      for (const t of cat.tools) {
+        const ToolIcon = TOOL_ICONS[t.id];
+        entries.push({
+          type: 'item',
+          id: t.id,
+          label: t.label,
+          icon: ToolIcon ? <ToolIcon size={16} /> : undefined,
+          shortcut: formatToolShortcut(t.id, mac),
+          checked: activeToolType === t.id,
+          attrs: guide('toolbar.subtool', t.id) as Record<string, string>,
+        });
+      }
+    }
+    return { label: `${group?.label ?? ''} tools`, entries };
+  }
 
+  const cursorDef = CURSOR_VARIANTS.find(
+    (v): v is NonNullable<typeof v> => v !== null && v.id === cursorVariant
+  );
+  const CursorIcon = cursorDef?.icon;
   const zoomActive = activeToolType === 'zoom-in';
+  const magnetTooltip = magnet.on ? `Magnet: ${MAGNET_LABELS[magnet.mode]}` : 'Magnet';
+  const openMenuContent = menu ? menuEntries(menu.open) : null;
 
   return (
     <aside
@@ -227,355 +338,144 @@ export function LeftToolbar({
       className="flex w-11 shrink-0 flex-col items-center gap-0.5 border-r border-white/6 py-2 overflow-y-auto"
       style={{ background: bg.page }}
     >
-      {MAIN_BUTTONS.map((tool, i) => {
-        if (tool === null) {
-          return <div key={`sep-${i}`} className="toolbar-divider" />;
-        }
+      {/* ── Cursor ─────────────────────────────────────────────────────── */}
+      <ToolbarSlot
+        label={cursorDef?.label ?? 'Cursor'}
+        tooltip={cursorDef?.label ?? 'Cursor'}
+        active={activeToolType === null}
+        onClick={() => arm(null)}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          toggleMenu({ kind: 'cursor' }, e.currentTarget.parentElement ?? e.currentTarget);
+        }}
+        caretLabel="Change cursor style"
+        menuOpen={menu?.open.kind === 'cursor'}
+        onOpenMenu={(anchor) => toggleMenu({ kind: 'cursor' }, anchor)}
+        attrs={guide('toolbar.tool', 'cursor') as Record<string, string>}
+      >
+        {CursorIcon ? <CursorIcon size={24} /> : <MousePointer2 size={24} strokeWidth={1} />}
+      </ToolbarSlot>
 
-        const Icon = tool.icon;
-        const toolActive = isGroupActive(tool.id);
-        const isCursor = tool.id === 'cursor';
+      <div className="toolbar-divider" />
 
-        // ── Cursor tool ──────────────────────────────────────────────────
-        if (isCursor) {
-          const cursorVariantDef = CURSOR_VARIANTS.find(
-            (v): v is NonNullable<typeof v> => v !== null && v.id === cursorVariant
-          );
-          const CursorIcon = cursorVariantDef?.icon ?? Icon;
-
-          // The caret is the button's sibling, not its child: a button inside a button is invalid and
-          // unreachable by keyboard (axe nested-interactive, visual gate 2026-09-29)
-          return (
-            <div key={tool.id} className="toolbar-slot">
-              <motion.button
-                ref={cursorBtnRef}
-                data-tooltip={cursorVariantDef?.label ?? 'Cursor'}
-                aria-label={cursorVariantDef?.label ?? 'Cursor'}
-                onClick={() => {
-                  setLocalToolType(null);
-                  onToolChange?.(null);
-                }}
-                onContextMenu={handleCursorContextMenu}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                className={`toolbar-btn focus-ring${toolActive ? ' active' : ''}`}
-              >
-                {toolActive && (
-                  <motion.span
-                    layoutId="toolbar-active"
-                    className="absolute inset-0 rounded"
-                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                  />
-                )}
-                <CursorIcon size={24} />
-              </motion.button>
-              <span
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleCursorContextMenu(e);
-                }}
-                className="toolbar-caret absolute bottom-0.5 right-0.5 z-10 cursor-pointer"
-                aria-label="Change cursor style"
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') handleCursorContextMenu(e as never);
-                }}
-                style={{
-                  width: 0,
-                  height: 0,
-                  borderLeft: '6px solid transparent',
-                  borderRight: '6px solid transparent',
-                  borderTop: '6px solid currentColor',
-                  opacity: 0.6,
-                  background: 'none',
-                  padding: 0,
-                }}
-              />
-            </div>
-          );
-        }
-
-        // ── Drawing tool groups ──────────────────────────────────────────
-        const hasSubmenu = TOOL_GROUPS.some((g) => g.id === tool.id) || tool.id === 'bin';
-
-        // Show the selected subtool's icon in the toolbar
-        const selectedToolId = subToolMap[tool.id];
-        const selectedToolDef = selectedToolId
-          ? tool.id === 'bin'
-            ? (BIN_TOOLS.find((t) => t.id === selectedToolId) ?? null)
-            : (TOOL_GROUPS.find((g) => g.id === tool.id)
-                ?.categories.flatMap((c) => c.tools)
-                .find((t) => t.id === selectedToolId) ?? null)
-          : null;
-        const SelectedIcon = selectedToolDef ? TOOL_ICONS[selectedToolDef.id] : null;
-        const toolLabel = selectedToolDef?.label ?? tool.label;
-        const showToolIcon = SelectedIcon != null;
-
+      {/* ── Drawing tool groups (TradingView's order) ──────────────────── */}
+      {TOOL_GROUPS.map((group) => {
+        const toolId = subToolMap[group.id];
+        const toolDef = group.categories.flatMap((c) => c.tools).find((t) => t.id === toolId);
+        const ToolIcon = toolDef ? TOOL_ICONS[toolDef.id] : undefined;
+        const GroupIcon = GROUP_ICONS[group.id] ?? Shapes;
+        const label = toolDef?.label ?? group.label;
+        const shortcut = toolDef ? formatToolShortcut(toolDef.id, mac) : undefined;
+        const active =
+          activeToolType !== null && findGroupByToolType(activeToolType)?.id === group.id;
         return (
-          <div key={tool.id} className="toolbar-slot">
-            <motion.button
-              {...guide('toolbar.tool', tool.id)}
-              data-tooltip={toolLabel}
-              aria-label={toolLabel}
-              onClick={() => handleMainClick(tool.id)}
-              onContextMenu={(e) => hasSubmenu && handleContextMenu(e, tool.id)}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              className={`toolbar-btn focus-ring${toolActive ? ' active' : ''}`}
-            >
-              {toolActive && (
-                <motion.span
-                  layoutId="toolbar-active"
-                  className="absolute inset-0 rounded"
-                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                />
-              )}
-              {showToolIcon ? (
-                <span className="relative z-10 flex items-center justify-center w-full">
-                  <SelectedIcon size={22} />
-                </span>
-              ) : (
-                <Icon className="relative z-10 h-6 w-6" strokeWidth={1} />
-              )}
-            </motion.button>
-            {hasSubmenu && (
-              <span
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const parent = (e.currentTarget as HTMLElement).parentElement;
-                  if (parent) {
-                    const rect = parent.getBoundingClientRect();
-                    setPopupMenu({ groupId: tool.id, left: rect.right + 6, top: rect.top });
-                  }
-                }}
-                className="toolbar-caret absolute bottom-0.5 right-0.5 z-10 cursor-pointer"
-                aria-label={`${toolLabel} tools`}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    const parent = (e.currentTarget as HTMLElement).parentElement;
-                    if (parent) {
-                      const rect = parent.getBoundingClientRect();
-                      setPopupMenu({ groupId: tool.id, left: rect.right + 6, top: rect.top });
-                    }
-                  }
-                }}
-                style={{
-                  width: 0,
-                  height: 0,
-                  borderLeft: '6px solid transparent',
-                  borderRight: '6px solid transparent',
-                  borderTop: '6px solid currentColor',
-                  opacity: 0.6,
-                  background: 'none',
-                  padding: 0,
-                }}
-              />
-            )}
-          </div>
+          <ToolbarSlot
+            key={group.id}
+            label={label}
+            tooltip={shortcut ? `${label} · ${shortcut}` : label}
+            active={active}
+            onClick={() => {
+              if (toolId) arm(toolId);
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              toggleMenu(
+                { kind: 'group', groupId: group.id },
+                e.currentTarget.parentElement ?? e.currentTarget
+              );
+            }}
+            caretLabel={`${group.label} tools`}
+            menuOpen={menu?.open.kind === 'group' && menu.open.groupId === group.id}
+            onOpenMenu={(anchor) => toggleMenu({ kind: 'group', groupId: group.id }, anchor)}
+            attrs={guide('toolbar.tool', group.id) as Record<string, string>}
+          >
+            {ToolIcon ? <ToolIcon size={22} /> : <GroupIcon className="h-6 w-6" strokeWidth={1} />}
+          </ToolbarSlot>
         );
       })}
 
       <div className="toolbar-divider" />
-      <motion.button
-        data-tooltip="Zoom in"
-        aria-label="Zoom in"
-        onClick={() => {
-          if (zoomActive) {
-            setLocalToolType(null);
-            onToolChange?.(null);
-          } else {
-            setLocalToolType('zoom-in');
-            onToolChange?.('zoom-in');
-          }
+
+      {/* ── Magnet, Stay in drawing mode, Remove: switches, not tools ──── */}
+      <ToolbarSlot
+        label="Magnet"
+        tooltip={magnetTooltip}
+        active={magnet.on}
+        pressed={magnet.on}
+        onClick={() => onMagnetChange?.({ ...magnet, on: !magnet.on })}
+        caretLabel="Magnet strength"
+        menuOpen={menu?.open.kind === 'magnet'}
+        onOpenMenu={(anchor) => toggleMenu({ kind: 'magnet' }, anchor)}
+        attrs={guide('toolbar.tool', 'magnet') as Record<string, string>}
+      >
+        <Magnet className="h-5 w-5" strokeWidth={1} />
+      </ToolbarSlot>
+
+      <ToolbarSlot
+        label="Stay in drawing mode"
+        tooltip={stayInDrawingMode ? 'Stay in drawing mode: on' : 'Stay in drawing mode'}
+        active={stayInDrawingMode}
+        pressed={stayInDrawingMode}
+        onClick={() => onStayInDrawingModeChange?.(!stayInDrawingMode)}
+        attrs={guide('toolbar.tool', 'stay-mode') as Record<string, string>}
+      >
+        <Pencil className="h-5 w-5" strokeWidth={1} />
+        <Lock className="absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5" strokeWidth={1.5} />
+      </ToolbarSlot>
+
+      <ToolbarSlot
+        label="Remove drawings"
+        tooltip="Remove drawings"
+        active={activeToolType === 'eraser'}
+        onClick={openBinMenu}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          openBinMenu(e.currentTarget.parentElement ?? e.currentTarget);
         }}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        className={`toolbar-btn focus-ring${zoomActive ? ' active' : ''}`}
+        caretLabel="Remove options"
+        menuOpen={menu?.open.kind === 'bin'}
+        onOpenMenu={openBinMenu}
+        attrs={guide('toolbar.tool', 'bin') as Record<string, string>}
       >
-        {zoomActive && (
-          <motion.span
-            layoutId="toolbar-active"
-            className="absolute inset-0 rounded"
-            transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-          />
-        )}
-        <ZoomIn className="relative z-10" size={24} strokeWidth={1} />
-      </motion.button>
-      <motion.button
-        data-tooltip="Zoom out"
-        aria-label="Zoom out"
-        onClick={onZoomOut}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        className="toolbar-btn"
+        <Trash2 className="h-6 w-6" strokeWidth={1} />
+      </ToolbarSlot>
+
+      <div className="toolbar-divider" />
+      <ToolbarSlot
+        label="Zoom in"
+        tooltip="Zoom in"
+        active={zoomActive}
+        onClick={() => arm(zoomActive ? null : 'zoom-in')}
       >
+        <ZoomIn size={24} strokeWidth={1} />
+      </ToolbarSlot>
+      <ToolbarSlot label="Zoom out" tooltip="Zoom out" active={false} onClick={() => onZoomOut?.()}>
         <ZoomOut size={24} strokeWidth={1} />
-      </motion.button>
+      </ToolbarSlot>
 
-      {/* ── Cursor variant popup menu ─────────────────────────────────── */}
-      <AnimatePresence>
-        {showCursorMenu && (
-          <motion.div
-            ref={cursorMenuRef}
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.12 }}
-            className="fixed z-50 w-44 overflow-hidden rounded-md border border-white/8 py-1 shadow-xl"
-            style={{
-              left: cursorMenuPos.left,
-              top: cursorMenuPos.top,
-              background: bg.panel,
-            }}
-          >
-            {CURSOR_VARIANTS.map((variant, idx) => {
-              if (variant === null) {
-                return (
-                  <div
-                    key={`div-${idx}`}
-                    className="mx-2 my-1 h-px rounded-full"
-                    style={{ background: `color-mix(in srgb, ${color.white} 8%, transparent)` }}
-                  />
-                );
-              }
+      {menu && openMenuContent && (
+        <DrawingMenu
+          label={openMenuContent.label}
+          entries={openMenuContent.entries}
+          position={{ left: menu.left, top: menu.top }}
+          onSelect={handleMenuSelect}
+          onClose={() => setMenu(null)}
+          returnFocus={() => menuOpenerRef.current?.focus()}
+        />
+      )}
 
-              const VariantIcon = variant.icon;
-              const isSelected = cursorVariant === variant.id;
-
-              return (
-                <button
-                  key={variant.id}
-                  onClick={() => handleCursorVariantSelect(variant.id)}
-                  className="flex w-full items-center gap-2.5 px-2 py-1.5 text-left transition-colors"
-                  style={{
-                    background: isSelected ? `${color.purpleDark}20` : 'transparent',
-                    color: isSelected ? color.purple : color.muted,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isSelected) {
-                      e.currentTarget.style.background = `${color.white}08`;
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isSelected) {
-                      e.currentTarget.style.background = 'transparent';
-                    }
-                  }}
-                >
-                  <VariantIcon size={22} />
-                  <span className="flex-1 text-xs font-medium">{variant.label}</span>
-                  {isSelected && (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={1}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  )}
-                </button>
-              );
-            })}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── Generic tool group popup menu ──────────────────────────────── */}
-      <AnimatePresence>
-        {popupMenu && activePopupGroup && (
-          <motion.div
-            ref={popupRef}
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.12 }}
-            className="fixed z-50 overflow-hidden rounded-md border border-white/8 py-1 shadow-xl"
-            style={{
-              left: popupMenu.left,
-              top: popupMenu.top,
-              background: bg.panel,
-              maxHeight: '80vh',
-              overflowY: 'auto',
-            }}
-          >
-            {activePopupGroup.categories.map((cat, ci) => (
-              <div key={`cat-${ci}`}>
-                {ci > 0 && (
-                  <div
-                    className="mx-2 my-1 h-px rounded-full"
-                    style={{ background: `color-mix(in srgb, ${color.white} 8%, transparent)` }}
-                  />
-                )}
-                <div
-                  className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider"
-                  style={{ color: `${color.muted}80` }}
-                >
-                  {cat.label}
-                </div>
-                {cat.tools.map((toolDef) => {
-                  const isSelected = activeToolType === toolDef.id;
-                  const ToolIcon = toolDef.id === 'remove-all' ? Trash2 : TOOL_ICONS[toolDef.id];
-                  return (
-                    <button
-                      key={toolDef.id}
-                      {...guide('toolbar.subtool', toolDef.id)}
-                      onClick={() => handleSubToolSelect(activePopupGroup.id, toolDef.id)}
-                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left transition-colors"
-                      style={{
-                        background: isSelected ? `${color.purpleDark}20` : 'transparent',
-                        color: isSelected ? color.purple : color.muted,
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isSelected) {
-                          e.currentTarget.style.background = `${color.white}08`;
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isSelected) {
-                          e.currentTarget.style.background = 'transparent';
-                        }
-                      }}
-                    >
-                      {toolDef.id === 'remove-all' ? (
-                        <Trash2 size={16} strokeWidth={1} />
-                      ) : ToolIcon ? (
-                        <ToolIcon size={16} />
-                      ) : (
-                        <span className="w-4" />
-                      )}
-                      <span className="flex-1 text-xs font-medium">{toolDef.label}</span>
-                      {isSelected && (
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth={1}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {confirmRemove !== null && (
+        <DrawingConfirmDialog
+          title={`Remove ${drawingsLabel(confirmRemove)}?`}
+          message={`Only the active chart's drawings are removed. You can undo with ${formatModShortcut('Z', mac)}.`}
+          confirmLabel="Remove"
+          onCancel={() => setConfirmRemove(null)}
+          onConfirm={() => {
+            setConfirmRemove(null);
+            onRemoveDrawings?.();
+          }}
+        />
+      )}
 
       {tooltip}
     </aside>

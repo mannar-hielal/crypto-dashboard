@@ -1,0 +1,71 @@
+/* The drawing colour picker. Colours from tokens.ts via the @theme mirror in index.css; raw values
+   without a CSS variable are noted with their token. */
+
+.popover {
+  position: fixed;
+  z-index: 50; /* zIndex.dropdown */
+  width: 232px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08); /* border.card */
+  border-radius: 6px;
+  background: var(--color-bg-panel);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4); /* shadow.dropdown */
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 4px;
+}
+
+.swatch {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12); /* border.hover */
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.swatch:hover {
+  transform: scale(1.15);
+}
+
+.swatch[aria-checked='true'] {
+  outline: 2px solid var(--color-brand-white);
+  outline-offset: 1px;
+}
+
+.swatch:focus-visible {
+  outline: 2px solid var(--color-brand-purple-dark); /* focusRing */
+  outline-offset: 2px;
+}
+
+.custom,
+.opacity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  color: var(--color-brand-muted);
+  font-size: 13px; /* fontSize.xs11 */
+}
+
+.custom input[type='color'] {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.opacity input {
+  flex: 1;
+  accent-color: var(--color-brand-purple);
+}
+
+.opacity output {
+  width: 36px;
+  text-align: right;
+}

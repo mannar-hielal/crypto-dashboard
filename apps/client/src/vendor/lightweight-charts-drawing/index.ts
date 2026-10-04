@@ -83,6 +83,8 @@ export {
   type LoadedImage,
 } from './core/kinds/images';
 export type { TableCellRef, TableUi } from './core/kinds/table';
+// Local change (cryptopapertrade, 2026-10-04): the host's cell editor reads a cell's text
+export { tableCells } from './core/kinds/table';
 
 // ============ Interaction rules ============
 export { finishPlacement, buildNewDrawing } from './core/interact/placement';

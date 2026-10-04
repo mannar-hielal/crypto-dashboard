@@ -3,7 +3,7 @@
  * and how they share the active-tool state with it. Used by DashboardPage and ChartPanel.
  */
 
-import type { DrawingManager } from 'lightweight-charts-drawing';
+import type { DrawingManager, MagnetMode } from 'lightweight-charts-drawing';
 
 /** Toolbar tools that aren't library tools: the library never arms them */
 export const HOST_TOOLS: ReadonlySet<string> = new Set(['zoom-in', 'eraser']);
@@ -46,7 +46,8 @@ export function keepSelectionInOnePane(
 
 /**
  * A pane's manager joins the dashboard: it goes into `panes[paneIndex]`, its `tool` events reach
- * `onTool`, and its selection clears the other panes' (keepSelectionInOnePane). Returns the
+ * `onTool`, its selection clears the other panes' (keepSelectionInOnePane), and it takes the
+ * current "Stay in drawing mode" and magnet settings. Returns the
  * cleanup for when the pane's chart goes: listeners off, and the slot emptied if it still holds
  * this manager (a remount may already have put the next one there).
  */
@@ -54,9 +55,12 @@ export function connectPaneManager(
   panes: (DrawingManager | null)[],
   paneIndex: number,
   manager: DrawingManager,
-  onTool: (kind: string | null) => void
+  onTool: (kind: string | null) => void,
+  prefs: { stayInDrawingMode?: boolean; magnet?: MagnetMode } = {}
 ): () => void {
   panes[paneIndex] = manager;
+  manager.setStayInDrawingMode(prefs.stayInDrawingMode ?? false);
+  manager.setMagnet(prefs.magnet ?? 'off');
   const offTool = manager.on('tool', onTool);
   const offSelection = keepSelectionInOnePane(manager, () => panes);
   return () => {
@@ -64,4 +68,80 @@ export function connectPaneManager(
     offSelection();
     if (panes[paneIndex] === manager) panes[paneIndex] = null;
   };
+}
+
+// ─── Stay in drawing mode ───────────────────────────────────────────────────
+
+const STAY_IN_DRAWING_MODE_KEY = 'cd-drawing-stay-mode';
+
+/** The saved "Stay in drawing mode" switch (TradingView remembers it); off when unset or unreadable */
+export function loadStayInDrawingMode(): boolean {
+  // 🔐 localStorage can throw (blocked storage, private mode) — treat it as optional
+  try {
+    return localStorage.getItem(STAY_IN_DRAWING_MODE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * "Stay in drawing mode" (TradingView's toolbar lock): on, a placed drawing leaves its tool armed
+ * for the next one, unselected; off, the tool returns to the cursor with the drawing selected.
+ * Applies to every pane's manager and saves the switch.
+ */
+export function applyStayInDrawingMode(
+  panes: readonly (DrawingManager | null)[],
+  on: boolean
+): void {
+  for (const m of panes) m?.setStayInDrawingMode(on);
+  try {
+    localStorage.setItem(STAY_IN_DRAWING_MODE_KEY, on ? '1' : '0');
+  } catch {
+    // Full or blocked storage: the switch holds for this session
+  }
+}
+
+// ─── Magnet ─────────────────────────────────────────────────────────────────
+
+const MAGNET_KEY = 'cd-drawing-magnet';
+
+/** The toolbar magnet (TradingView): on or off, and the strength it snaps with when on */
+export interface MagnetSetting {
+  on: boolean;
+  mode: 'weak' | 'strong';
+}
+
+export const MAGNET_DEFAULT: MagnetSetting = { on: false, mode: 'weak' };
+
+/** The library's magnet mode for a setting */
+export function magnetModeOf(setting: MagnetSetting): MagnetMode {
+  return setting.on ? setting.mode : 'off';
+}
+
+/** The saved magnet; the default (off, weak) when unset, unreadable or malformed */
+export function loadMagnet(): MagnetSetting {
+  try {
+    // 🔐 localStorage is untrusted input: only the two known fields, only known values
+    const raw = JSON.parse(localStorage.getItem(MAGNET_KEY) ?? 'null') as unknown;
+    if (raw && typeof raw === 'object') {
+      const { on, mode } = raw as Record<string, unknown>;
+      if (typeof on === 'boolean' && (mode === 'weak' || mode === 'strong')) return { on, mode };
+    }
+  } catch {
+    // Blocked storage or bad JSON: the default
+  }
+  return MAGNET_DEFAULT;
+}
+
+/** The magnet onto every pane's manager, and saved */
+export function applyMagnet(
+  panes: readonly (DrawingManager | null)[],
+  setting: MagnetSetting
+): void {
+  for (const m of panes) m?.setMagnet(magnetModeOf(setting));
+  try {
+    localStorage.setItem(MAGNET_KEY, JSON.stringify(setting));
+  } catch {
+    // Full or blocked storage: the setting holds for this session
+  }
 }

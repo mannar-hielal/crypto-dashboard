@@ -75,24 +75,32 @@ Also done (2026-10-04, after the owner's visual Q&A): one drawing set per symbol
 panes (`attachDrawings`), anchors and drags clamped to the price pane (fork), pane listeners and
 manager refs cleaned up with the chart (`connectPaneManager`), Fib pill labels (fork
 `setFibLabelMode('pill')`), the editor on a CSS Module with tokens, converted position boxes keep
-0.1's 200 px width. Still open:
+0.1's 200 px width.
 
-- **B — correctness:** right-click during a drag; the pre-migration `cd-drawings` key (no symbol)
-  is never read or removed; Table cells can't be edited (no `tableEdit` editor).
-- **C — readable labels** (visual Q&A first): 0.4 already renders in CSS px on HiDPI (media
-  coordinate space) with TradingView sizes; what's left is colours / tokens for the dark theme,
-  anchors from `interaction.*`, the flyout header and tooltip delay. Owner, 2026-10-04: new
-  drawings use the library's TradingView defaults; Fib levels keep our pill labels; positions keep
-  0.4's behaviour (zones at rest, text on hover / selection).
-- **D — TradingView interaction:** a "stay in drawing mode" lock (`stayInDrawingMode`), magnet
-  toggle (`setMagnet`), press-drag placement, Remove as a confirmed dropdown, remember the last
-  sub-tool.
-- **E — floating toolbar + context menu** (visual Q&A first): revive `DrawingPropertiesMenu` /
-  `ColorPicker` / `KebabMenu` on the 0.4 model (`update` with a new `style`; `locked`, clone via
-  `add`, `bringToFront` / `sendToBack`).
-- **F — undo / redo** (`gestureEnd` marks a step), copy / paste, TradingView shortcuts (`OverlaySpec
-.hotkey`), accessible menus.
-- **G — names and order** in `libraryTools.ts` (the renamed tools already use TradingView names).
+**Done 2026-10-04 (owner's round 2, one PR):**
+
+- **Toolbar** (`LeftToolbar`): groups in TradingView's order; each group remembers its last tool
+  (`useDrawingSession.subTools`, saved `cd-drawing-subtools`, checked on load); magnet with
+  Weak / Strong (`cd-drawing-magnet`); Stay in drawing mode (`cd-drawing-stay-mode`); Remove menu
+  ("Remove N drawings" with a confirm, "Show N hidden", Eraser); the cursor menu's Eraser arms the
+  Eraser. Shortcuts show in the flyout rows and tooltips. Menus are `DrawingMenu` (role=menu,
+  arrows, Esc back to the opener). Tooltips after 400 ms.
+- **Session** (`hooks/useDrawingSession.ts`): the armed tool, each pane's manager and undo history,
+  the switches, and TradingView's shortcuts (`lib/drawingShortcuts.ts`), all on the active pane.
+- **Undo / redo** (`lib/drawingHistory.ts`): snapshots of the list, one step per gesture
+  (fork `busy()` + `gestureEnd`) or per task otherwise, 100 kept, reset on a load or a copy from
+  another pane (`isSyncingDrawings`).
+- **Clone / copy / paste** (`lib/drawingClipboard.ts`, fork `insertCopies`): 20 px right of and
+  below, unlocked, selected; the clipboard is shared by the panes.
+- **Selection controls** (`components/drawing/DrawingControls.tsx`): the floating toolbar
+  (`DrawingFloatingToolbar`, only the tool's controls: `lib/drawingCapabilities.ts`; draggable,
+  `cd-drawing-toolbar-pos`), the right-click menu (`lib/drawingActions.ts`), the settings dialog
+  (`DrawingSettingsDialog`: Style / Text / Coordinates, applies on Ok as one step), the table cell
+  editor (`DrawingCellEditor`, the library's `tableEdit`). A right-click off a drawing returns to
+  the cursor; mid-drag it does nothing.
+- **Phase B leftovers:** the pre-July `cd-drawings` store (no symbol) is removed once
+  (`dropPreLibraryDrawings`).
+
 - Later: touch editing, patterns / Elliott / icons in the menu, drawings in indicator panes
   (`Drawing.owner`), templates, hide / lock all.
 

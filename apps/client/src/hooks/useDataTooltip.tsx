@@ -1,7 +1,7 @@
 /**
  * `data-tooltip` hover tooltips for every descendant of a container — one delegated listener, no
  * per-element state. Mark an element `data-tooltip="text"` (optional `data-tooltip-delay="ms"`,
- * default 1500) and render the returned node anywhere in the container's component.
+ * default `delayMs`, 1500 unless the container passes another) and render the returned node anywhere in the container's component.
  *
  * Placement: `right` (vertical toolbars — LeftToolbar) or `bottom-end` (below, right edges aligned —
  * for controls near the right edge of a horizontal bar, so the tooltip never leaves the viewport).
@@ -23,7 +23,8 @@ const GAP_PX = 10;
 
 export function useDataTooltip(
   containerRef: RefObject<HTMLElement | null>,
-  placement: TooltipPlacement
+  placement: TooltipPlacement,
+  delayMs: number = DEFAULT_DELAY_MS
 ): ReactNode {
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -47,7 +48,7 @@ export function useDataTooltip(
       if (el === lastEl) return;
       lastEl = el;
       const text = el.getAttribute('data-tooltip') || '';
-      const delay = Number(el.getAttribute('data-tooltip-delay')) || DEFAULT_DELAY_MS;
+      const delay = Number(el.getAttribute('data-tooltip-delay')) || delayMs;
       clearTimeout(timeoutRef.current);
       timeoutRef.current = setTimeout(() => {
         setTooltip({ text, rect: el.getBoundingClientRect() });
@@ -67,7 +68,7 @@ export function useDataTooltip(
       container.removeEventListener('mouseleave', onMouseLeave);
       clearTimeout(timeoutRef.current);
     };
-  }, [containerRef]);
+  }, [containerRef, delayMs]);
 
   if (!tooltip) return null;
 

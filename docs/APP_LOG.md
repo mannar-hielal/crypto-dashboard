@@ -3867,3 +3867,34 @@ defaults (converted 0.1 drawings keep their colours); positions keep 0.4's behav
 - **Text editor** on a CSS Module with tokens (bg.modal, bg.panel, color.purple, …).
 - **Tests:** `drawingFibLabels.test` [10.7.10], `drawingManager.test` [10.7.11], `drawingLibrary.test` [10.7.7],
   `drawingMigration.test` (box width), `drawingTools.test` (connectPaneManager).
+
+### feat: drawing tools — "Stay in drawing mode" (2026-10-04) ✅
+
+**Context:** plan Phase D. Owner visual Q&A, 2026-10-04: the button sits above Remove All, TradingView style (pencil
+with a small lock, the active purple state when on, tooltip "Stay in drawing mode: on"), and the switch is remembered.
+
+- **LeftToolbar** `stay-mode` button (`aria-pressed`), a switch: it never arms or disarms a tool.
+- **`lib/drawingTools.ts`:** `applyStayInDrawingMode` sets the library's `setStayInDrawingMode` on every pane and saves
+  `cd-drawing-stay-mode` (`'1'`/`'0'`; blocked storage reads as off); `connectPaneManager` gives a pane mounted later
+  the current switch. On, a placed drawing leaves its tool armed and unselected; Esc or the cursor ends it.
+- **Tests:** `drawingTools.test` and `LeftToolbar.test` [10.7.12]; UI_REPRODUCTIONS 10.7 step 9.
+
+### feat: drawing tools like TradingView — round 2 (2026-10-04) ✅
+
+**Context:** the owner's goal, 2026-10-04: a TradingView user should use our drawing tools with almost no learning
+curve. Plan phases B–G in one PR (owner: "finish phases a-g in one big PR"). Visual Q&A answers: TradingView layouts
+for the floating toolbar, the Remove dropdown (with a confirm), the magnet (Weak / Strong), the right-click menu,
+shortcuts in menus and tooltips; flyout headers readable, a full-height caret, tooltips after 400 ms, TradingView's
+group order, the last tool per group remembered.
+
+- **Toolbar:** Forecast & Measure before Shapes, Gann as Box, Square Fixed, Square, Fan; magnet, Stay in drawing mode
+  and Remove at the bottom; menus keyboard-accessible (`DrawingMenu`); the cursor menu's Eraser now erases (it only
+  changed the pointer before).
+- **Undo / redo, clone, copy / paste, shortcuts:** `drawingHistory`, `drawingClipboard`, `drawingShortcuts`, wired in
+  `useDrawingSession` (the drawing state moved out of DashboardPage).
+- **Selection:** floating toolbar, right-click menu, settings dialog, table cell editor (`components/drawing/`).
+- **Fork changes:** `busy()`, `insertCopies()`, `tableCells` exported (README).
+- **Phase B leftovers:** the pre-July `cd-drawings` store removed once; a right-click mid-drag does nothing.
+- **Tests:** TRADING_TEST_PLAN 10.7.12–10.7.22; UI_REPRODUCTIONS 10.7 steps 9–17.
+- **Later (not in this PR):** touch editing, patterns / Elliott / icons, drawings in indicator panes, templates,
+  hide / lock all, per-interval visibility.
