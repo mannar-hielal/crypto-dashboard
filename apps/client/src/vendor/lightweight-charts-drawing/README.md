@@ -44,6 +44,10 @@ Record every change here: date, file, what, why.
 - 2026-10-04 — `runtime/manager.ts` `dragMove`: the pointer is clamped to the pane during a drag,
   so an anchor or a whole drawing dragged past it (into an indicator pane, onto an axis) stops at the
   edge instead of following the pointer out (drawing plan, Phase B). Test: `[10.7.7]`.
+- 2026-10-04 — `runtime/manager.ts`: `busy()` (a pointer gesture is in progress) and
+  `insertCopies(drawings, dx, dy)` (TV Clone / Paste: copies moved by pane pixels through
+  `translateDrawing`, unlocked, added and selected, one `gestureEnd`). Why: the host's undo history
+  and clipboard (drawing plan, Phase F). Tests: `drawingHistory.test`, `drawingClipboard.test`.
 - ESLint: `apps/client/eslint.config.js` relaxes, for `src/vendor/**` only, `_` unused params and
   rest siblings, `no-fallthrough` on empty cases, and `no-useless-assignment`. The folder is outside
   the client coverage floors; fixes here still get tests (`src/lib/__tests__/drawingLibrary.test.ts`).

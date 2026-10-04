@@ -277,6 +277,27 @@ export class DrawingManager {
     this.select([]);
     this.changed();
   }
+  /** Local change (cryptopapertrade, 2026-10-04): a pointer gesture (drag, Ctrl+drag clone) is
+   *  in progress — the host's undo records the gesture once, at `gestureEnd`. */
+  busy(): boolean {
+    return this.gesture !== null;
+  }
+  /** Local change (cryptopapertrade, 2026-10-04): TV Clone / Paste — copies of `drawings`, moved
+   *  by (dx, dy) pane pixels (anchored ones by their pane position), added and selected; a copy
+   *  that would leave the price scale goes in unmoved. Returns the new ids. */
+  insertCopies(drawings: readonly Drawing[], dx: number, dy: number): string[] {
+    const pane = this.paneSize();
+    const ids: string[] = [];
+    for (const d of drawings) {
+      const pts = screenPoints(this.coords, d, pane);
+      const moved = pts ? translateDrawing(this.coords, d, pts, dx, dy, pane) : null;
+      const { id: _id, ...copy } = moved ?? d;
+      ids.push(this.add({ ...copy, locked: false } as unknown as NewDrawing));
+    }
+    this.select(ids);
+    this.emit('gestureEnd');
+    return ids;
+  }
   /** Z-order (TV Visual order): the list order is the draw order. */
   bringToFront(id: string): void {
     this.reorder(id, this.list.length - 1);

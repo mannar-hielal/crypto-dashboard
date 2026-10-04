@@ -107,6 +107,11 @@ const paneSymbols = new Map<DrawingManager, string>();
 // Set while we load or copy drawings into a manager: its `change` is ours, not the user's
 let syncing = false;
 
+/** A load or a copy from another pane is changing a manager now (not the user): undo skips it */
+export function isSyncingDrawings(): boolean {
+  return syncing;
+}
+
 function peersOf(manager: DrawingManager, symbol: string): DrawingManager[] {
   const peers: DrawingManager[] = [];
   for (const [m, sym] of paneSymbols) if (m !== manager && sym === symbol) peers.push(m);
