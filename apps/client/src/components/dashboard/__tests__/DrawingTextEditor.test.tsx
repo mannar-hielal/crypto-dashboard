@@ -39,7 +39,8 @@ describe('DrawingTextEditor', () => {
   it('[10.7.4] should discard the text on Escape and on a press outside', () => {
     const { onSave, onClose, box } = open();
     fireEvent.keyDown(box, { key: 'Escape' });
-    fireEvent.mouseDown(box.closest('.absolute')!);
+    // The backdrop: the dialog's parent
+    fireEvent.mouseDown(box.parentElement!.parentElement!);
     expect(onSave).not.toHaveBeenCalled();
     expect(onClose).toHaveBeenCalledTimes(2);
   });
