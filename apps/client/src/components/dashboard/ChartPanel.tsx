@@ -30,6 +30,7 @@ import {
   type TimeRangePreset,
 } from '@/lib/markets';
 import { restoreDrawings, persistDrawings, schedulePersistDrawings } from '@/lib/drawingManager';
+import { startEraser } from '@/lib/drawingTools';
 import { pendingSyncRange, runPaneDataPush } from '@/lib/chartSync';
 import { toHeikinAshi } from '@/lib/heikinAshi';
 import { IndicatorLegends } from '@/components/indicators/IndicatorLegends';
@@ -804,6 +805,13 @@ export function ChartPanel({
     },
     [paneIndex]
   );
+
+  // ── Eraser: a click on a drawing removes it ─────────────────────────────
+  useEffect(() => {
+    const manager = managerRef.current;
+    if (activeToolType !== 'eraser' || !manager) return;
+    return startEraser(manager);
+  }, [activeToolType]);
 
   // ── Escape key exits zoom-in mode ───────────────────────────────────────
   useEffect(() => {

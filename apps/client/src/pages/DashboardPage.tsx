@@ -22,6 +22,7 @@ import { TopBar } from '@/components/dashboard/TopBar';
 import { LeftToolbar } from '@/components/dashboard/LeftToolbar';
 import { CURSOR_CSS_MAP, type CursorVariantId } from '@/lib/cursors';
 import { TOOL_MAP } from '@/lib/drawingManager';
+import { HOST_TOOLS, nextActiveTool } from '@/lib/drawingTools';
 import { MultiChartArea } from '@/components/dashboard/MultiChartArea';
 import { OrderAccountManagementPanel } from '@/components/dashboard/OrderAccountManagementPanel';
 import { TickerBar } from '@/components/dashboard/TickerBar';
@@ -140,13 +141,15 @@ export function DashboardInner() {
 
   function handleDrawingManagerReady(paneIndex: number, manager: DrawingManager) {
     drawingManagerRefs.current[paneIndex] = manager;
-    // The library disarms its tool after a placement (TradingView: back to the cursor) or on Escape
-    manager.on('tool', (kind) => setActiveToolType(kind));
+    // The library disarms its tool after a placement (TradingView: back to the cursor) or on Escape;
+    // its disarm never ends the Eraser or zoom-in
+    manager.on('tool', (kind) => setActiveToolType((prev) => nextActiveTool(prev, kind)));
   }
 
   function handleToolChange(toolType: string | null) {
     setActiveToolType(toolType);
-    if (toolType === 'zoom-in' || toolType === 'eraser') return;
+    // The Eraser and zoom-in are ours: ChartPanel disarms the library's tool for the Eraser
+    if (toolType !== null && HOST_TOOLS.has(toolType)) return;
     const paneIndex = useLayoutStore.getState().activePane;
     const manager = drawingManagerRefs.current[paneIndex];
     if (manager) {

@@ -728,9 +728,10 @@ symbol, arrange the charts, and tell the Sell (best bid) and Buy (best ask) pric
 > Library: the forked `lightweight-charts-drawing` 0.4.0 (`apps/client/src/vendor/`, owner 2026-10-04). Unit rows run
 > the fork on a fake chart (`lib/__tests__/drawingLibrary.test`). Run on `/chart` (no sign-in needed).
 
-| #      | Action                                                         | Expected                                                                               | Status | Tier | Notes                                                                                      |
-| ------ | -------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------ | ---- | ------------------------------------------------------------------------------------------ |
-| 10.7.1 | Trend line: double-click on one spot, then click a second spot | Nothing is placed by the double-click; the line goes from the first spot to the second | ✅     | T2   | `drawingLibrary.test` "[10.7.1]…" — a fork change (`runtime/manager.ts` `placementClick`). |
+| #      | Action                                                           | Expected                                                                                               | Status | Tier    | Notes                                                                                                                                                             |
+| ------ | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 10.7.1 | Trend line: double-click on one spot, then click a second spot   | Nothing is placed by the double-click; the line goes from the first spot to the second                 | ✅     | T2      | `drawingLibrary.test` "[10.7.1]…" — a fork change (`runtime/manager.ts` `placementClick`).                                                                        |
+| 10.7.2 | Draw a horizontal line; Remove menu → **Eraser**; click the line | The line is gone (and from storage); a locked drawing stays; a drawing tool that was armed is disarmed | ✅     | T2 + T3 | `drawingTools.test` "[10.7.2]…" (`lib/drawingTools.ts` `startEraser`); `e2e/tests/chart/drawingTools.spec` "[10.7.2]…". Before 2026-10-04 the Eraser did nothing. |
 
 ### Section 5 — Symbol Pair Icons (visual regression)
 
