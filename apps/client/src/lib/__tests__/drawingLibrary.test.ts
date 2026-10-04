@@ -5,9 +5,17 @@
  * drawings never take part in the price-axis autoscale.
  */
 
-import { afterEach, describe, expect, it } from 'vitest';
-import type { DrawingManager } from 'lightweight-charts-drawing';
-import { PANE_H, PANE_W, T0, addHorizontalLine, managerOnFakeChart } from './fakeDrawingChart';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { makeCoords } from 'lightweight-charts-drawing';
+import type { DrawingManager, OHLC } from 'lightweight-charts-drawing';
+import {
+  PANE_H,
+  PANE_W,
+  T0,
+  addHorizontalLine,
+  fakeChart,
+  managerOnFakeChart,
+} from './fakeDrawingChart';
 
 let managers: DrawingManager[] = [];
 
@@ -24,7 +32,7 @@ afterEach(() => {
 });
 
 describe('forked drawing library on a chart', () => {
-  it('[10.6.5] should place a trend line from two clicks in the price pane, then return to the cursor with it selected', () => {
+  it('[10.6.5][10.7.5] should place a trend line from two clicks in the price pane, then return to the cursor with it selected', () => {
     const { manager, press } = setup();
     const tools: (string | null)[] = [];
     manager.on('tool', (k) => tools.push(k));
@@ -52,7 +60,7 @@ describe('forked drawing library on a chart', () => {
     expect(manager.tool()).toBe('trend-line');
   });
 
-  it('should place nothing from a press on the price axis', () => {
+  it('[10.7.6] should place nothing from a press on the price axis', () => {
     const { manager, press } = setup();
     manager.setTool('horizontal-line');
     press(PANE_W + 20, 100);
@@ -103,5 +111,61 @@ describe('forked drawing library on a chart', () => {
       { time: T0 + 100, price: 900 },
       { time: T0 + 200, price: 950 },
     ]);
+  });
+
+  it('[10.7.7] should hold the chart still while an anchor is dragged, and give it back on release', () => {
+    const { manager, chart, chartEl, press } = setup();
+    const applyOptions = vi.fn();
+    chart.applyOptions = applyOptions;
+    const id = addHorizontalLine(manager, 900);
+    press(150, 100); // select it
+    applyOptions.mockClear();
+    chartEl.dispatchEvent(
+      new MouseEvent('pointerdown', { clientX: 150, clientY: 100, button: 0, bubbles: true })
+    );
+    document.dispatchEvent(new MouseEvent('pointermove', { clientX: 150, clientY: 140 }));
+    expect(applyOptions).toHaveBeenCalledWith({ handleScroll: false, handleScale: false });
+    expect(manager.get(id)!.points[0]!.price).toBe(860);
+    document.dispatchEvent(new MouseEvent('pointerup', { clientX: 150, clientY: 140 }));
+    expect(applyOptions).toHaveBeenLastCalledWith({
+      handleScroll: { mouseWheel: true },
+      handleScale: { mouseWheel: true },
+    });
+  });
+});
+
+describe('forked drawing library: times between and after bars', () => {
+  // 5-minute bars, as after switching a 1-minute chart to 5m
+  const bars: OHLC[] = Array.from({ length: 10 }, (_, i) => ({
+    time: (T0 + i * 300) as OHLC['time'],
+    open: 1,
+    high: 1,
+    low: 1,
+    close: 1,
+  }));
+
+  function coords() {
+    const { chart, series } = fakeChart();
+    // Bars sit at x = 0, 10, 20, …: logical index i ↔ x = 10 i, and only bar times map exactly
+    const ts = chart.timeScale();
+    Object.assign(ts, {
+      timeToCoordinate: (t: number) => {
+        const i = bars.findIndex((b) => b.time === t);
+        return i < 0 ? null : i * 10;
+      },
+      logicalToCoordinate: (l: number) => l * 10,
+      coordinateToTime: () => null,
+    });
+    return makeCoords(chart as never, series as never, () => bars);
+  }
+
+  it('[10.7.8] should place a time between two bars (a 1-minute point on 5-minute bars) between them', () => {
+    // T0 + 60 s is a fifth of the way from bar 0 to bar 1
+    expect(coords().timeToX((T0 + 60) as OHLC['time'])).toBeCloseTo(2, 6);
+  });
+
+  it('[10.7.8] should place a time after the last bar on the extrapolated bar grid', () => {
+    // Two bar intervals after the last bar (index 9)
+    expect(coords().timeToX((T0 + 11 * 300) as OHLC['time'])).toBeCloseTo(110, 6);
   });
 });

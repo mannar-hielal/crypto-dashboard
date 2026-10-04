@@ -69,7 +69,8 @@ export function managerOnFakeChart() {
     f.chartEl.dispatchEvent(
       new MouseEvent('pointerdown', { clientX: x, clientY: y, button: 0, bubbles: true })
     );
-    window.dispatchEvent(new MouseEvent('pointerup', { clientX: x, clientY: y, bubbles: true }));
+    // On the document: the library ends drags there and placements on the window (it bubbles up)
+    document.dispatchEvent(new MouseEvent('pointerup', { clientX: x, clientY: y, bubbles: true }));
   };
   return { ...f, manager, press };
 }

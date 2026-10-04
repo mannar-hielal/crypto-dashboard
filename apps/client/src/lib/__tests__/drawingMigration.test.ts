@@ -198,7 +198,7 @@ describe('convertLegacyDrawing', () => {
 });
 
 describe('convertLegacyDrawings', () => {
-  it('should convert a whole saved set and skip what it can’t', () => {
+  it('[10.7.9] should convert a whole saved set and skip what it can’t', () => {
     const out = convertLegacyDrawings([
       TREND,
       HLINE,
@@ -242,7 +242,7 @@ describe('loadDrawings — the one-time migration', () => {
   beforeEach(() => localStorage.clear());
   afterEach(() => localStorage.clear());
 
-  it('should convert the 0.1 key once, save it under the new key and leave the 0.1 key for a rollback', () => {
+  it('[10.7.9] should convert the 0.1 key once, save it under the new key and leave the 0.1 key for a rollback', () => {
     const legacy = JSON.stringify([TREND, TEXT]);
     localStorage.setItem(getLegacyPersistenceKey('BTCUSDT'), legacy);
     const first = loadDrawings('BTCUSDT');
