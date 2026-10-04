@@ -140,6 +140,11 @@ interface IndicatorLegendsProps {
   priceLegend?: ReactNode;
   onRemove: (instanceId: string) => void;
   onUpdate: (instanceId: string, patch: Partial<IndicatorInstance>) => void;
+  /**
+   * The pointer moved onto (`true`) or off (`false`) the price pane's legend column; `leftTo` is
+   * where it went. ChartPanel keeps the OHLC legend while it's over the column (see below).
+   */
+  onLegendHover?: (over: boolean, leftTo: EventTarget | null) => void;
 }
 
 export function IndicatorLegends({
@@ -153,8 +158,13 @@ export function IndicatorLegends({
   priceLegend,
   onRemove,
   onUpdate,
+  onLegendHover,
 }: IndicatorLegendsProps) {
   const [crosshair, setCrosshair] = useState<SeriesDataAt | null>(null);
+  // Over the legend column the chart reports "no crosshair". Clearing then would drop the OHLC
+  // legend above the rows, shift them up from under the pointer, bring the crosshair back, shift
+  // them down… a blink on every mouse move. So nothing clears while the pointer is on the column.
+  const overLegendRef = useRef(false);
   const [, setDataTick] = useState(0);
   const [tops, setTops] = useState<Tops>({});
   const [settingsTarget, setSettingsTarget] = useState<{
@@ -168,6 +178,7 @@ export function IndicatorLegends({
     const onMove = (param: MouseEventParams<Time>) => {
       // Off the chart, or past the newest candle (the padding area): the last bar's values
       const onBar = param.time !== undefined && param.point && param.seriesData.has(source);
+      if (!onBar && overLegendRef.current) return; // keep the values shown (see overLegendRef)
       setCrosshair(onBar ? param.seriesData : null);
     };
     chart.subscribeCrosshairMove(onMove);
@@ -293,7 +304,18 @@ export function IndicatorLegends({
 
   return (
     <>
-      <div className={styles.mainStack}>
+      <div
+        className={styles.mainStack}
+        onPointerOver={() => {
+          overLegendRef.current = true;
+          onLegendHover?.(true, null);
+        }}
+        onPointerOut={(e) => {
+          if (e.currentTarget.contains(e.relatedTarget as Node | null)) return; // row to row
+          overLegendRef.current = false;
+          onLegendHover?.(false, e.relatedTarget);
+        }}
+      >
         {priceLegend}
         {mainRows}
       </div>

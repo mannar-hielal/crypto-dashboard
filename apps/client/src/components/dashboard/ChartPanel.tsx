@@ -170,6 +170,8 @@ export function ChartPanel({
   const userZoomedRef = useRef(false);
 
   const [hoverData, setHoverData] = useState<LegendData | null>(null);
+  /** The pointer is on the legend column: keep the OHLC legend (IndicatorLegends' overLegendRef) */
+  const legendHoverRef = useRef(false);
   const [editingTextInfo, setEditingTextInfo] = useState<{
     drawingId: string;
     text: string;
@@ -599,6 +601,8 @@ export function ChartPanel({
     // ── Crosshair (hover legend) ───────────────────────────────────────────
     chart.subscribeCrosshairMove((param) => {
       if (!param.time || !param.point || !candleRef.current) {
+        // Off the chart onto the legend column: keep it, or the rows below it jump and blink
+        if (legendHoverRef.current) return;
         setHoverData(null);
         return;
       }
@@ -1303,6 +1307,13 @@ export function ChartPanel({
         layoutVersion={indicatorLayoutVersion}
         indicators={indicators}
         priceLegend={priceLegend}
+        onLegendHover={(over, leftTo) => {
+          legendHoverRef.current = over;
+          // Off the column and out of the chart too: the crosshair won't report it, so clear here
+          if (!over && !(leftTo instanceof Node && containerRef.current?.contains(leftTo))) {
+            setHoverData(null);
+          }
+        }}
         onRemove={(instanceId) => useLayoutStore.getState().removeIndicator(paneIndex, instanceId)}
         onUpdate={(instanceId, updates) =>
           useLayoutStore.getState().updateIndicator(paneIndex, instanceId, updates)

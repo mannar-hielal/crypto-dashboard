@@ -77,7 +77,12 @@ const INDICATORS = [
 ];
 
 function renderLegends(
-  overrides: { indicators?: IndicatorInstance[]; onRemove?: () => void; onUpdate?: () => void } = {}
+  overrides: {
+    indicators?: IndicatorInstance[];
+    onRemove?: () => void;
+    onUpdate?: () => void;
+    onLegendHover?: (over: boolean, leftTo: EventTarget | null) => void;
+  } = {}
 ) {
   const container = document.createElement('div');
   container.getBoundingClientRect = () => ({ top: 0, height: 500 }) as DOMRect;
@@ -101,6 +106,7 @@ function renderLegends(
       priceLegend={<div>OHLC</div>}
       onRemove={overrides.onRemove ?? (() => undefined)}
       onUpdate={overrides.onUpdate ?? (() => undefined)}
+      onLegendHover={overrides.onLegendHover}
     />
   );
 }
@@ -217,6 +223,35 @@ describe('IndicatorLegends', () => {
 
     act(() => crosshairHandler?.({ seriesData: new Map() } as unknown as MouseEventParams<Time>));
     expect(legendRow('indicator.pane-legend', 'mom_1').textContent).toContain('-1.50');
+  });
+
+  it('[10.6.7] should keep the values while the pointer is on the legend column, not blink', () => {
+    const hover: boolean[] = [];
+    renderLegends({ onLegendHover: (over) => hover.push(over) });
+    act(() =>
+      crosshairHandler?.({
+        time: 1 as Time,
+        point: { x: 10, y: 10 },
+        seriesData: new Map<unknown, unknown>([
+          [source, { time: 1 }],
+          [momLine, { time: 1, value: 4 }],
+          [emaLine, { time: 1, value: 100 }],
+        ]),
+      } as unknown as MouseEventParams<Time>)
+    );
+    const ema = legendRow('indicator.legend', 'ema_1');
+
+    // Onto the row: the chart reports "no crosshair", which must not clear (the rows would jump)
+    fireEvent.pointerOver(ema);
+    act(() => crosshairHandler?.({ seriesData: new Map() } as unknown as MouseEventParams<Time>));
+    expect(ema.textContent).toContain('100.00');
+    expect(hover).toEqual([true]);
+
+    // Off the column, out of the chart: told to ChartPanel, and the next leave clears as usual
+    fireEvent.pointerOut(ema, { relatedTarget: document.body });
+    expect(hover).toEqual([true, false]);
+    act(() => crosshairHandler?.({ seriesData: new Map() } as unknown as MouseEventParams<Time>));
+    expect(legendRow('indicator.legend', 'ema_1').textContent).toContain('101.00');
   });
 
   it('[10.6.7] should fall back to the last bar past the newest candle (no candle under the crosshair)', () => {
