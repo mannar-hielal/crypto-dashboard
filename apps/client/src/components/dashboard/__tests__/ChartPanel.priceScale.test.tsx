@@ -150,6 +150,12 @@ describe('ChartPanel price scale autoscale', () => {
     paneStores[0].getState().reset();
   });
 
+  it('should show the TradingView attribution logo the chart licence requires', () => {
+    render(<ChartPanel paneIndex={0} symbol="BTCUSDT" interval="1m" indicators={[]} />);
+    const opts = h.createChartOptions[0] as { layout?: { attributionLogo?: boolean } };
+    expect(opts.layout?.attributionLogo).toBe(true);
+  });
+
   it('does not disable autoscale on the right price scale at creation', () => {
     render(<ChartPanel paneIndex={0} symbol="BTCUSDT" interval="1m" indicators={[]} />);
     const opts = h.createChartOptions[0] as { rightPriceScale?: { autoScale?: boolean } };

@@ -170,6 +170,8 @@ export function ChartPanel({
   const userZoomedRef = useRef(false);
 
   const [hoverData, setHoverData] = useState<LegendData | null>(null);
+  /** The pointer is on the legend column: keep the OHLC legend (IndicatorLegends' overLegendRef) */
+  const legendHoverRef = useRef(false);
   const [editingTextInfo, setEditingTextInfo] = useState<{
     drawingId: string;
     text: string;
@@ -205,7 +207,9 @@ export function ChartPanel({
         textColor: chartColors.textColor,
         fontFamily: font.sans,
         fontSize: 12,
-        attributionLogo: false,
+        // 🔐 Licence: lightweight-charts (Apache 2.0) requires a link to tradingview.com where users
+        // see the charts — the logo satisfies it; the NOTICE text is in the dashboard footer
+        attributionLogo: true,
         // Indicator panes resize by dragging the separators (owner, 2026-10-03)
         panes: {
           enableResize: true,
@@ -596,7 +600,11 @@ export function ChartPanel({
 
     // ── Crosshair (hover legend) ───────────────────────────────────────────
     chart.subscribeCrosshairMove((param) => {
+      // A point means the pointer is on the canvas, not on the legend column (see IndicatorLegends)
+      if (param.point) legendHoverRef.current = false;
       if (!param.time || !param.point || !candleRef.current) {
+        // Off the chart onto the legend column: keep it, or the rows below it jump and blink
+        if (legendHoverRef.current) return;
         setHoverData(null);
         return;
       }
@@ -1301,6 +1309,13 @@ export function ChartPanel({
         layoutVersion={indicatorLayoutVersion}
         indicators={indicators}
         priceLegend={priceLegend}
+        onLegendHover={(over, leftTo) => {
+          legendHoverRef.current = over;
+          // Off the column and out of the chart too: the crosshair won't report it, so clear here
+          if (!over && !(leftTo instanceof Node && containerRef.current?.contains(leftTo))) {
+            setHoverData(null);
+          }
+        }}
         onRemove={(instanceId) => useLayoutStore.getState().removeIndicator(paneIndex, instanceId)}
         onUpdate={(instanceId, updates) =>
           useLayoutStore.getState().updateIndicator(paneIndex, instanceId, updates)

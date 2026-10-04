@@ -140,6 +140,11 @@ interface IndicatorLegendsProps {
   priceLegend?: ReactNode;
   onRemove: (instanceId: string) => void;
   onUpdate: (instanceId: string, patch: Partial<IndicatorInstance>) => void;
+  /**
+   * The pointer moved onto (`true`) or off (`false`) the price pane's legend column; `leftTo` is
+   * where it went. ChartPanel keeps the OHLC legend while it's over the column (see below).
+   */
+  onLegendHover?: (over: boolean, leftTo: EventTarget | null) => void;
 }
 
 export function IndicatorLegends({
@@ -153,8 +158,13 @@ export function IndicatorLegends({
   priceLegend,
   onRemove,
   onUpdate,
+  onLegendHover,
 }: IndicatorLegendsProps) {
   const [crosshair, setCrosshair] = useState<SeriesDataAt | null>(null);
+  // Over the legend column the chart reports "no crosshair". Clearing then would drop the OHLC
+  // legend above the rows, shift them up from under the pointer, bring the crosshair back, shift
+  // them down… a blink on every mouse move. So nothing clears while the pointer is on the column.
+  const overLegendRef = useRef(false);
   const [, setDataTick] = useState(0);
   const [tops, setTops] = useState<Tops>({});
   const [settingsTarget, setSettingsTarget] = useState<{
@@ -167,7 +177,11 @@ export function IndicatorLegends({
     if (!chart || !source) return;
     const onMove = (param: MouseEventParams<Time>) => {
       // Off the chart, or past the newest candle (the padding area): the last bar's values
+      // A point means the pointer is on the canvas, so it isn't on the legend column — this also
+      // recovers when a row was removed under the pointer and its pointerout never came
+      if (param.point) overLegendRef.current = false;
       const onBar = param.time !== undefined && param.point && param.seriesData.has(source);
+      if (!onBar && overLegendRef.current) return; // keep the values shown (see overLegendRef)
       setCrosshair(onBar ? param.seriesData : null);
     };
     chart.subscribeCrosshairMove(onMove);
@@ -193,6 +207,16 @@ export function IndicatorLegends({
     };
   }, [source]);
 
+  // Rows changed (one removed under the pointer, say): its pointerout may never come, so don't keep
+  // holding the hovered values for a column the pointer may have left
+  useEffect(() => {
+    if (!overLegendRef.current) return;
+    overLegendRef.current = false;
+    onLegendHover?.(false, null);
+    // onLegendHover is a fresh arrow each render; only a change of rows should reset
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [indicators]);
+
   // ── Header positions: each pane's top, re-read whenever a pane moves ──────
   // A separator drag fires no chart event, so a ResizeObserver on the panes catches it.
   const measure = useCallback(() => {
@@ -214,7 +238,10 @@ export function IndicatorLegends({
     if (!container) return;
     const ro = new ResizeObserver(measure);
     ro.observe(container);
-    for (const pane of paneRefs.current.values()) {
+    // Every pane, the price pane included: a pane above that changes height moves the indicator
+    // panes below it without resizing them, and a ResizeObserver only fires on size changes
+    const allPanes = chart?.panes?.() ?? [...paneRefs.current.values()];
+    for (const pane of allPanes) {
       const el = pane.getHTMLElement();
       if (!el) continue;
       ro.observe(el);
@@ -290,7 +317,24 @@ export function IndicatorLegends({
 
   return (
     <>
-      <div className={styles.mainStack}>
+      <div
+        className={styles.mainStack}
+        onPointerOver={() => {
+          overLegendRef.current = true;
+          onLegendHover?.(true, null);
+        }}
+        onPointerOut={(e) => {
+          if (e.currentTarget.contains(e.relatedTarget as Node | null)) return; // row to row
+          overLegendRef.current = false;
+          // Out of the chart altogether: no crosshair event will follow, so fall back to the last
+          // bar now, in step with the OHLC legend ChartPanel clears
+          const leftTo = e.relatedTarget;
+          if (!(leftTo instanceof Node && containerRef.current?.contains(leftTo))) {
+            setCrosshair(null);
+          }
+          onLegendHover?.(false, leftTo);
+        }}
+      >
         {priceLegend}
         {mainRows}
       </div>

@@ -238,6 +238,8 @@ export const GUIDE_ANCHORS = [
   'landing.hero.chart',
   'landing.hero.register',
   'landing.unlocks.register',
+  // footer
+  'footer.chart-credit',
   // lock (signed-out visitors on /chart)
   'lock.overlay',
   'lock.sign-in',
