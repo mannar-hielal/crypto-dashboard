@@ -430,8 +430,34 @@
   display: flex;
 }
 
+/* The caret: a full-height strip over the button's right edge (TradingView), easy to hit */
 .toolbar-caret {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  width: 10px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 3px;
+  border-radius: 0 0.25rem 0.25rem 0;
   color: var(--exgen-muted);
+  cursor: pointer;
+}
+
+.toolbar-caret:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.toolbar-caret-arrow {
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid currentColor;
+  opacity: 0.8;
 }
 
 .toolbar-slot:hover .toolbar-caret {

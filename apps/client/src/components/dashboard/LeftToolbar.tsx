@@ -14,7 +14,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
-import { bg, color } from '@/lib/tokens';
+import { bg, color, fontSize } from '@/lib/tokens';
 import { useDataTooltip } from '@/hooks/useDataTooltip';
 import { CURSOR_VARIANTS, type CursorVariantId } from '@/lib/cursors';
 import { TOOL_GROUPS } from '@/lib/libraryTools';
@@ -26,6 +26,8 @@ const BIN_TOOLS: ToolDef[] = [
   { id: 'remove-all', label: 'Remove All' },
   { id: 'eraser', label: 'Eraser' },
 ];
+
+const TOOLBAR_TOOLTIP_DELAY_MS = 400;
 
 // ─── Tool toolbar button definitions ────────────────────────────────────────
 
@@ -213,7 +215,8 @@ export function LeftToolbar({
   }
 
   // ── Tooltip (data-tooltip on each button) ───────────────────────────────
-  const tooltip = useDataTooltip(asideRef, 'right');
+  // TradingView-quick: the toolbar's tooltips show after 400 ms
+  const tooltip = useDataTooltip(asideRef, 'right', TOOLBAR_TOOLTIP_DELAY_MS);
 
   // ── Get the active group for popup menu ─────────────────────────────────
   const activePopupGroup = popupMenu
@@ -282,24 +285,16 @@ export function LeftToolbar({
                   e.stopPropagation();
                   handleCursorContextMenu(e);
                 }}
-                className="toolbar-caret absolute bottom-0.5 right-0.5 z-10 cursor-pointer"
+                className="toolbar-caret"
                 aria-label="Change cursor style"
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') handleCursorContextMenu(e as never);
                 }}
-                style={{
-                  width: 0,
-                  height: 0,
-                  borderLeft: '6px solid transparent',
-                  borderRight: '6px solid transparent',
-                  borderTop: '6px solid currentColor',
-                  opacity: 0.6,
-                  background: 'none',
-                  padding: 0,
-                }}
-              />
+              >
+                <span className="toolbar-caret-arrow" aria-hidden="true" />
+              </span>
             </div>
           );
         }
@@ -380,7 +375,7 @@ export function LeftToolbar({
                     setPopupMenu({ groupId: tool.id, left: rect.right + 6, top: rect.top });
                   }
                 }}
-                className="toolbar-caret absolute bottom-0.5 right-0.5 z-10 cursor-pointer"
+                className="toolbar-caret"
                 aria-label={`${toolLabel} tools`}
                 role="button"
                 tabIndex={0}
@@ -393,17 +388,9 @@ export function LeftToolbar({
                     }
                   }
                 }}
-                style={{
-                  width: 0,
-                  height: 0,
-                  borderLeft: '6px solid transparent',
-                  borderRight: '6px solid transparent',
-                  borderTop: '6px solid currentColor',
-                  opacity: 0.6,
-                  background: 'none',
-                  padding: 0,
-                }}
-              />
+              >
+                <span className="toolbar-caret-arrow" aria-hidden="true" />
+              </span>
             )}
           </div>
         );
@@ -547,8 +534,8 @@ export function LeftToolbar({
                   />
                 )}
                 <div
-                  className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider"
-                  style={{ color: `${color.muted}80` }}
+                  className="px-3 py-1 font-semibold uppercase tracking-wider"
+                  style={{ fontSize: fontSize.xs10, color: color.muted }}
                 >
                   {cat.label}
                 </div>
