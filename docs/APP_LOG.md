@@ -3848,3 +3848,22 @@ upstream. Phase A of the drawing-tools plan (`.claude/skills/drawing-tools` has 
 - **Tests:** `drawingLibrary.test` (the fork on a fake chart), `drawingManager.test`, `drawingMigration.test`,
   `drawingTools.test`, `DrawingTextEditor.test`; e2e `chart/drawingTools.spec` `[10.7.2]` and `[10.6.5]`.
   TRADING_TEST_PLAN section 10.7.
+
+### fix: drawing tools — the owner's visual Q&A follow-ups (2026-10-04) ✅
+
+**Context:** owner, 2026-10-04 (visual Q&A on the 0.4 screenshots): new drawings take the library's TradingView
+defaults (converted 0.1 drawings keep their colours); positions keep 0.4's behaviour; Fib levels keep our pill labels.
+
+- **Fib pill labels** (fork change, `setFibLabelMode('pill')` set in ChartPanel): `61.8% · price`, white on the level
+  colour at the level's right end, for the retracement and the trend-based extension; TradingView's ordering, level
+  colours and fills stay.
+- **Converted positions** keep 0.1's 200 px box width (the converter gets the pane's bar length and default spacing).
+  The converted parallel channel was checked: both edges and the middle line are there; 0.4 draws the band with
+  vertical ends.
+- **One drawing set per symbol** across panes (`attachDrawings`): a drawing in pane B no longer erases pane A's, and
+  both panes show both.
+- **Drags stay in the price pane** (fork change): anchors and bodies stop at its edges.
+- **Cleanup:** a pane's `tool` / `selection` listeners and its manager ref go with its chart (`connectPaneManager`).
+- **Text editor** on a CSS Module with tokens (bg.modal, bg.panel, color.purple, …).
+- **Tests:** `drawingFibLabels.test` [10.7.10], `drawingManager.test` [10.7.11], `drawingLibrary.test` [10.7.7],
+  `drawingMigration.test` (box width), `drawingTools.test` (connectPaneManager).

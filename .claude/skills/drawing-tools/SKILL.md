@@ -47,17 +47,17 @@ locked?, hidden?, … }`, TradingView factory defaults in `specs.ts`, hit tests,
 
 ## Where our code lives
 
-| File                                                         | Role                                                                                                                                                                                                                                                                           |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `apps/client/src/components/dashboard/ChartPanel.tsx`        | One `DrawingManager(chart, candles, { fontFamily: font.sans })` per pane in the mount effect: restore, `change` → debounced save under the current symbol, `textEdit` → our editor, right-click → cursor, Eraser effect, symbol-switch save + restore, `destroy()` on cleanup. |
-| `apps/client/src/components/dashboard/DrawingTextEditor.tsx` | The text editor: only Save / Ctrl+Enter keep the text (Cancel, Escape, outside discard). Opened one tick after `textEdit` (the placing press's mousedown would blur it).                                                                                                       |
-| `apps/client/src/lib/drawingManager.ts`                      | Storage per symbol: `cd-drawings-v2-<SYMBOL>` (0.4 JSON), `MAX_DRAWINGS = 200` on load and save, `parseDrawings`, storage errors swallowed; `TOOL_MAP` for old toolbar ids; runs the 0.1 migration once.                                                                       |
-| `apps/client/src/lib/drawingMigration.ts`                    | Pure 0.1 → 0.4 converter (`cd-drawings-<SYMBOL>` is kept for a rollback). Renames, position / channel geometry, style; drops arc, curves, bars pattern, projection, Gann square fixed, arrow marker, disjoint channel, table.                                                  |
-| `apps/client/src/lib/drawingTools.ts`                        | `HOST_TOOLS` (Eraser, zoom-in), `nextActiveTool`, `startEraser`, `keepSelectionInOnePane` (Delete acts on the pane last clicked).                                                                                                                                              |
-| `apps/client/src/lib/libraryTools.ts`                        | `TOOL_GROUPS` — the left-toolbar groups / categories / tools; ids are 0.4 `DrawingKind`s.                                                                                                                                                                                      |
-| `apps/client/src/lib/toolIcons.tsx`                          | `TOOL_ICONS` — an SVG icon per tool id.                                                                                                                                                                                                                                        |
-| `apps/client/src/components/dashboard/LeftToolbar.tsx`       | Flyout menus over `TOOL_GROUPS` (anchors `toolbar.tool` / `toolbar.subtool`), cursor variants, the Remove group (Remove All, Eraser).                                                                                                                                          |
-| `apps/client/src/pages/DashboardPage.tsx`                    | `activeToolType`; `handleToolChange` arms the active pane's manager (`setTool`); `tool` events update the state; `handleBinAction` = `clear()` on the active pane; manager refs per pane.                                                                                      |
+| File                                                         | Role                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/client/src/components/dashboard/ChartPanel.tsx`        | One `DrawingManager(chart, candles, { fontFamily: font.sans })` per pane in the mount effect: `attachDrawings` (shared per-symbol set, debounced save), `textEdit` → our editor, right-click → cursor, Eraser effect, symbol-switch save + restore, `destroy()` on cleanup.                                               |
+| `apps/client/src/components/dashboard/DrawingTextEditor.tsx` | The text editor: only Save / Ctrl+Enter keep the text (Cancel, Escape, outside discard). Opened one tick after `textEdit` (the placing press's mousedown would blur it).                                                                                                                                                  |
+| `apps/client/src/lib/drawingManager.ts`                      | Storage per symbol: `cd-drawings-v2-<SYMBOL>` (0.4 JSON), `MAX_DRAWINGS = 200` on load and save, `parseDrawings`, storage errors swallowed; `TOOL_MAP` for old toolbar ids; runs the 0.1 migration once. `attachDrawings` / `switchDrawingsSymbol`: one set per symbol shared by every pane showing it (module registry). |
+| `apps/client/src/lib/drawingMigration.ts`                    | Pure 0.1 → 0.4 converter (`cd-drawings-<SYMBOL>` is kept for a rollback). Renames, position / channel geometry, style; drops arc, curves, bars pattern, projection, Gann square fixed, arrow marker, disjoint channel, table.                                                                                             |
+| `apps/client/src/lib/drawingTools.ts`                        | `HOST_TOOLS` (Eraser, zoom-in), `nextActiveTool`, `startEraser`, `keepSelectionInOnePane` (Delete acts on the pane last clicked).                                                                                                                                                                                         |
+| `apps/client/src/lib/libraryTools.ts`                        | `TOOL_GROUPS` — the left-toolbar groups / categories / tools; ids are 0.4 `DrawingKind`s.                                                                                                                                                                                                                                 |
+| `apps/client/src/lib/toolIcons.tsx`                          | `TOOL_ICONS` — an SVG icon per tool id.                                                                                                                                                                                                                                                                                   |
+| `apps/client/src/components/dashboard/LeftToolbar.tsx`       | Flyout menus over `TOOL_GROUPS` (anchors `toolbar.tool` / `toolbar.subtool`), cursor variants, the Remove group (Remove All, Eraser).                                                                                                                                                                                     |
+| `apps/client/src/pages/DashboardPage.tsx`                    | `activeToolType`; `handleToolChange` arms the active pane's manager (`setTool`); `tool` events update the state; `handleBinAction` = `clear()` on the active pane; manager refs per pane.                                                                                                                                 |
 
 Tests: `lib/__tests__/drawingLibrary.test.ts` runs the fork on a fake chart
 (`fakeDrawingChart.ts`); `drawingManager.test.ts`, `drawingMigration.test.ts`,
@@ -71,16 +71,19 @@ The plan file lives outside the repo. Done in Phase A (fork 0.4.0): text saved a
 drawings surviving an interval change / off-bar times, no ghost preview, Eraser, editor Cancel,
 anchor drag no longer pans, no placement on the axes, Delete only in the pane last clicked, no
 zero-length drawing from a double-click, storage errors caught, the symbol-switch save capped.
-Still open:
+Also done (2026-10-04, after the owner's visual Q&A): one drawing set per symbol shared by the
+panes (`attachDrawings`), anchors and drags clamped to the price pane (fork), pane listeners and
+manager refs cleaned up with the chart (`connectPaneManager`), Fib pill labels (fork
+`setFibLabelMode('pill')`), the editor on a CSS Module with tokens, converted position boxes keep
+0.1's 200 px width. Still open:
 
-- **B — correctness:** two panes on the same symbol overwrite each other's saved drawings (needs one
-  store per symbol); an anchor drag isn't clamped to the price pane; right-click during a drag;
-  DashboardPage's `tool` / `selection` listeners and destroyed panes' manager refs aren't cleaned
-  up; the pre-migration `cd-drawings` key (no symbol) is never read or removed; Table cells can't be
-  edited (no `tableEdit` editor).
+- **B — correctness:** right-click during a drag; the pre-migration `cd-drawings` key (no symbol)
+  is never read or removed; Table cells can't be edited (no `tableEdit` editor).
 - **C — readable labels** (visual Q&A first): 0.4 already renders in CSS px on HiDPI (media
   coordinate space) with TradingView sizes; what's left is colours / tokens for the dark theme,
-  anchors from `interaction.*`, the flyout header and tooltip delay, the editor's tokens.
+  anchors from `interaction.*`, the flyout header and tooltip delay. Owner, 2026-10-04: new
+  drawings use the library's TradingView defaults; Fib levels keep our pill labels; positions keep
+  0.4's behaviour (zones at rest, text on hover / selection).
 - **D — TradingView interaction:** a "stay in drawing mode" lock (`stayInDrawingMode`), magnet
   toggle (`setMagnet`), press-drag placement, Remove as a confirmed dropdown, remember the last
   sub-tool.
