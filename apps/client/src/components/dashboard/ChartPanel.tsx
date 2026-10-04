@@ -15,7 +15,7 @@ import type {
   UTCTimestamp,
 } from 'lightweight-charts';
 import { useStore } from 'zustand';
-import { DrawingManager } from 'lightweight-charts-drawing';
+import { DrawingManager, setFibLabelMode } from 'lightweight-charts-drawing';
 import { paneStores } from '@/store/paneStore';
 import { useLayoutStore } from '@/store/layoutStore';
 import type { ChartType } from '@/store/layoutStore';
@@ -39,6 +39,10 @@ import { TradeLineAmend } from './TradeLineAmend';
 import { DrawingTextEditor } from './DrawingTextEditor';
 
 const CHART_BG = chartColors.bg;
+
+// Fib levels keep our pill labels, `61.8% · price` on the level colour (owner, visual Q&A
+// 2026-10-04); the rest of the drawings use the library's TradingView look
+setFibLabelMode('pill');
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 

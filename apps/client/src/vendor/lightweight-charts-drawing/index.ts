@@ -61,6 +61,8 @@ export { parseDrawings, migrateDrawing } from './core/serialize';
 // ============ Scenes and hit tests (hosts drawing their own way) ============
 export { sceneOf, sceneLockedAnchors, type SceneContext } from './core/scene';
 export { fibLevelAt } from './core/scene/fib';
+// Local change (cryptopapertrade): pill labels for the horizontal fib levels
+export { setFibLabelMode, type FibLabelMode } from './core/kinds/fib-labels';
 export type { Scene, SceneItem, Paint, Shadow } from './core/scene/types';
 export { hitTestKind } from './core/kinds/hit-tests';
 export {

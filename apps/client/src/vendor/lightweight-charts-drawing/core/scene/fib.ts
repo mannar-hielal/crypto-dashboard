@@ -22,12 +22,18 @@ import {
   TREND_FIB_TIME_TREND_DEFAULT,
 } from '../specs';
 import { tvTextLayout } from '../kinds/tv-text';
-import { fibCoeffText, fibLevelLabel } from '../kinds/fib-labels';
+import {
+  fibCoeffText,
+  fibLevelLabel,
+  fibPillBox,
+  fibPillText,
+  getFibLabelMode,
+} from '../kinds/fib-labels';
 import { trendFibTimeLevels } from '../kinds/fib-time';
 import { extendRay, speedFanGeometry } from '../kinds/speed-fan';
 import { spiralSamples } from '../kinds/hit-tests';
 import type { Scene, SceneItem } from './types';
-import { textCrossesLine, tvTextItems } from './text';
+import { measureText, textCrossesLine, tvTextItems } from './text';
 import { activeLevels, extendSeg, levelDash, levelFillOpacity, levelWidth } from './levels';
 
 /** "0.618" without trailing zeros. */
@@ -93,15 +99,54 @@ export function fibHLevelItems(
   };
   const showC = s.showCoeffs !== false;
   const showP = s.showPrices !== false;
+  // Local change (cryptopapertrade): the host's pill labels (fib-labels.ts setFibLabelMode)
+  const pill = getFibLabelMode() === 'pill';
   let text = '';
   if (showC) text += fibCoeffText(lvl.coeff, !!s.fibLevelsAsPercents);
   if (showP) text += ` (${price.toFixed(digits)})`;
-  const label = fibLevelLabel({
-    ...base,
-    text,
-    horz: s.horzLabelsAlign ?? 'left',
-    vert: s.vertLabelsAlign ?? 'middle',
-  });
+  const label = pill
+    ? null
+    : fibLevelLabel({
+        ...base,
+        text,
+        horz: s.horzLabelsAlign ?? 'left',
+        vert: s.vertLabelsAlign ?? 'middle',
+      });
+  const pillText = pill ? fibPillText(lvl.coeff, showP ? price.toFixed(digits) : null, showC) : '';
+  const pillItems: SceneItem[] = [];
+  if (pillText) {
+    const box = fibPillBox({
+      textW: measureText(pillText, base.fs),
+      y,
+      right,
+      paneW,
+      extendRight: base.extendRight,
+      fs: base.fs,
+    });
+    pillItems.push(
+      {
+        t: 'rect',
+        x: box.x,
+        y: box.y,
+        w: box.w,
+        h: box.h,
+        rx: 2,
+        ry: 2,
+        fill: lvl.color,
+        fillOpacity: 0.8,
+      },
+      {
+        t: 'text',
+        x: box.textX,
+        y,
+        text: pillText,
+        size: base.fs,
+        fill: '#ffffff',
+        anchor: 'start',
+        baseline: 'central',
+      }
+    );
+  }
   const lvText =
     s.showText !== false && lvl.text
       ? fibLevelLabel({
@@ -125,6 +170,7 @@ export function fibHLevelItems(
       clip: cut.clip,
     },
     ...(label ? [tvTextItems(label, lvl.color)] : []),
+    ...pillItems,
     ...(lvText ? [tvTextItems(lvText, lvl.color)] : []),
   ];
 }
