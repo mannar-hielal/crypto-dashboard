@@ -19,6 +19,7 @@ import {
   parseDrawings,
 } from 'lightweight-charts-drawing';
 import type { DataPoint, Drawing, DrawingKind, DrawingStyle } from 'lightweight-charts-drawing';
+import { MAX_DRAWING_TEXT } from '@/lib/drawingActions';
 
 /** 0.1 tool type → 0.4 kind, where the name changed (0.4 follows TradingView) */
 const RENAMED: Record<string, DrawingKind> = {
@@ -214,7 +215,8 @@ export function convertLegacyDrawing(raw: unknown, scale?: LegacyChartScale): Dr
   const points = pointsFor(kind, anchors);
   if (!points) return null;
   const spec = findOverlaySpec(kind);
-  const text = typeof o.text === 'string' ? o.text : undefined;
+  // 🔐 Capped like a typed text (MAX_DRAWING_TEXT): a 0.1 save is untrusted input
+  const text = typeof o.text === 'string' ? o.text.slice(0, MAX_DRAWING_TEXT) : undefined;
   return {
     id: raw.id,
     kind,

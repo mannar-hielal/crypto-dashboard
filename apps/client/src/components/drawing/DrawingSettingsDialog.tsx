@@ -10,15 +10,12 @@ import type { DataPoint, Drawing, DrawingStyle, LevelDef } from 'lightweight-cha
 
 type LineStyle = DrawingStyle['lineStyle'];
 import { capabilitiesOf } from '@/lib/drawingCapabilities';
-import { parseDecimal } from '@/lib/drawingActions';
+import { MAX_DRAWING_TEXT, parseDecimal } from '@/lib/drawingActions';
 import { guide } from '@/lib/guideAnchors';
 import { DrawingColorPopover } from './DrawingColorPopover';
 import styles from './DrawingSettingsDialog.module.css';
 
 type Tab = 'style' | 'text' | 'coordinates';
-
-/** 🔐 Bounded text: the drawing is saved to localStorage with every edit */
-const MAX_DRAWING_TEXT = 2000;
 
 const LINE_WIDTHS = [1, 2, 3, 4] as const;
 const LINE_STYLES: readonly LineStyle[] = ['solid', 'dashed', 'dotted'];
