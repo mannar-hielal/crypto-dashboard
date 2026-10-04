@@ -600,6 +600,8 @@ export function ChartPanel({
 
     // ── Crosshair (hover legend) ───────────────────────────────────────────
     chart.subscribeCrosshairMove((param) => {
+      // A point means the pointer is on the canvas, not on the legend column (see IndicatorLegends)
+      if (param.point) legendHoverRef.current = false;
       if (!param.time || !param.point || !candleRef.current) {
         // Off the chart onto the legend column: keep it, or the rows below it jump and blink
         if (legendHoverRef.current) return;

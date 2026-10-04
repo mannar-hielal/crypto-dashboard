@@ -254,6 +254,58 @@ describe('IndicatorLegends', () => {
     expect(legendRow('indicator.legend', 'ema_1').textContent).toContain('101.00');
   });
 
+  it('[10.6.7] should stop holding the values once the pointer is back on the chart, even if its pointerout was lost', () => {
+    renderLegends();
+    const ema = legendRow('indicator.legend', 'ema_1');
+    act(() =>
+      crosshairHandler?.({
+        time: 1 as Time,
+        point: { x: 10, y: 10 },
+        seriesData: new Map<unknown, unknown>([
+          [source, { time: 1 }],
+          [emaLine, { time: 1, value: 100 }],
+        ]),
+      } as unknown as MouseEventParams<Time>)
+    );
+    fireEvent.pointerOver(ema); // …and no pointerout ever comes (the row was re-rendered away)
+
+    // The pointer is on the canvas again: a crosshair event with a point, past the newest candle
+    act(() =>
+      crosshairHandler?.({
+        point: { x: 900, y: 10 },
+        seriesData: new Map(),
+      } as unknown as MouseEventParams<Time>)
+    );
+    expect(legendRow('indicator.legend', 'ema_1').textContent).toContain('101.00');
+  });
+
+  it('[10.6.7] should release the hold when the rows change under the pointer', () => {
+    const hover: boolean[] = [];
+    const { rerender } = renderLegends({ onLegendHover: (over) => hover.push(over) });
+    fireEvent.pointerOver(legendRow('indicator.legend', 'ema_1'));
+    expect(hover).toEqual([true]);
+
+    // The EMA row is removed while the pointer is on it: no pointerout
+    const container = document.createElement('div');
+    container.getBoundingClientRect = () => ({ top: 0, height: 500 }) as DOMRect;
+    rerender(
+      <IndicatorLegends
+        chart={chart}
+        source={source}
+        containerRef={{ current: container }}
+        indicators={[INDICATORS[1]]}
+        primitiveRefs={{ current: new Map([['mom_1', primitive([momLine])]]) }}
+        paneRefs={{ current: new Map([['mom_1', pane(1, 400)]]) }}
+        layoutVersion={1}
+        priceLegend={<div>OHLC</div>}
+        onRemove={() => undefined}
+        onUpdate={() => undefined}
+        onLegendHover={(over) => hover.push(over)}
+      />
+    );
+    expect(hover).toEqual([true, false]);
+  });
+
   it('[10.6.7] should fall back to the last bar past the newest candle (no candle under the crosshair)', () => {
     renderLegends();
     act(() =>

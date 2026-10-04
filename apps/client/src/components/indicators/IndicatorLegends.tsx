@@ -177,6 +177,9 @@ export function IndicatorLegends({
     if (!chart || !source) return;
     const onMove = (param: MouseEventParams<Time>) => {
       // Off the chart, or past the newest candle (the padding area): the last bar's values
+      // A point means the pointer is on the canvas, so it isn't on the legend column — this also
+      // recovers when a row was removed under the pointer and its pointerout never came
+      if (param.point) overLegendRef.current = false;
       const onBar = param.time !== undefined && param.point && param.seriesData.has(source);
       if (!onBar && overLegendRef.current) return; // keep the values shown (see overLegendRef)
       setCrosshair(onBar ? param.seriesData : null);
@@ -203,6 +206,16 @@ export function IndicatorLegends({
       if (raf !== undefined) cancelAnimationFrame(raf);
     };
   }, [source]);
+
+  // Rows changed (one removed under the pointer, say): its pointerout may never come, so don't keep
+  // holding the hovered values for a column the pointer may have left
+  useEffect(() => {
+    if (!overLegendRef.current) return;
+    overLegendRef.current = false;
+    onLegendHover?.(false, null);
+    // onLegendHover is a fresh arrow each render; only a change of rows should reset
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [indicators]);
 
   // ── Header positions: each pane's top, re-read whenever a pane moves ──────
   // A separator drag fires no chart event, so a ResizeObserver on the panes catches it.
