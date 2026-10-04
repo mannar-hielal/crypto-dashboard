@@ -15,7 +15,10 @@ test('[13.2.1] a limit buy fills while no tab is open; the next visit shows it @
   context,
   seededUser,
   feed,
+  browserName,
 }) => {
+  // Two visits to a live dashboard: ~47 s to past 60 s on WebKit on CI (release #237), ~9 s locally
+  test.slow(browserName === 'webkit', 'two dashboard visits: WebKit on CI needs about a minute');
   await feed.quote('spot', 'BNBUSDT', { bid: 599.9, ask: 600, last: 600 });
   const page = await context.newPage();
   await signInAs(page, seededUser.email, seededUser.password);
@@ -46,7 +49,10 @@ test('[13.2.2] a take-profit sells while no tab is open @full', async ({
   context,
   seededUser,
   feed,
+  browserName,
 }) => {
+  // Two visits to a live dashboard: ~47 s to past 60 s on WebKit on CI (release #237), ~9 s locally
+  test.slow(browserName === 'webkit', 'two dashboard visits: WebKit on CI needs about a minute');
   await feed.quote('spot', 'BNBUSDT', { bid: 599.9, ask: 600, last: 600 });
   const page = await context.newPage();
   await signInAs(page, seededUser.email, seededUser.password);
