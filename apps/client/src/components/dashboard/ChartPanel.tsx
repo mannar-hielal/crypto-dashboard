@@ -36,6 +36,7 @@ import { toHeikinAshi } from '@/lib/heikinAshi';
 import { IndicatorLegends } from '@/components/indicators/IndicatorLegends';
 import { useTradeLines } from '@/hooks/useTradeLines';
 import { TradeLineAmend } from './TradeLineAmend';
+import { DrawingTextEditor } from './DrawingTextEditor';
 
 const CHART_BG = chartColors.bg;
 
@@ -913,68 +914,12 @@ export function ChartPanel({
       )}
 
       {editingTextInfo && (
-        <div
-          className="absolute inset-0 z-20 flex items-center justify-center bg-black/40"
-          onMouseDown={() => setEditingTextInfo(null)}
-        >
-          <div
-            className="rounded-lg border border-white/10 bg-gray-900 p-3 shadow-xl"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <textarea
-              autoFocus
-              className="w-64 rounded border border-white/10 bg-gray-800 p-2 text-sm text-white outline-none"
-              defaultValue={editingTextInfo.text}
-              onChange={(e) =>
-                setEditingTextInfo((prev) => (prev ? { ...prev, text: e.target.value } : null))
-              }
-              onBlur={(e) => {
-                commitDrawingText(
-                  managerRef.current,
-                  editingTextInfo.drawingId,
-                  e.currentTarget.value
-                );
-                setEditingTextInfo(null);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  e.stopPropagation();
-                  setEditingTextInfo(null);
-                } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                  e.stopPropagation();
-                  commitDrawingText(
-                    managerRef.current,
-                    editingTextInfo.drawingId,
-                    e.currentTarget.value
-                  );
-                  setEditingTextInfo(null);
-                }
-              }}
-              rows={3}
-            />
-            <div className="mt-2 flex justify-end gap-2">
-              <button
-                className="rounded px-2 py-1 text-xs text-white/60 hover:text-white"
-                onClick={() => setEditingTextInfo(null)}
-              >
-                Cancel
-              </button>
-              <button
-                className="rounded bg-purple-600 px-2 py-1 text-xs font-medium text-white hover:bg-purple-500"
-                onClick={() => {
-                  commitDrawingText(
-                    managerRef.current,
-                    editingTextInfo.drawingId,
-                    editingTextInfo.text
-                  );
-                  setEditingTextInfo(null);
-                }}
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
+        <DrawingTextEditor
+          key={editingTextInfo.drawingId}
+          initialText={editingTextInfo.text}
+          onSave={(text) => commitDrawingText(managerRef.current, editingTextInfo.drawingId, text)}
+          onClose={() => setEditingTextInfo(null)}
+        />
       )}
 
       <IndicatorLegends
