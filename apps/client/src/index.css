@@ -449,8 +449,15 @@
   background: transparent;
   color: var(--exgen-muted);
   cursor: pointer;
-  opacity: 0;
   transition: opacity 0.12s;
+}
+
+/* Hidden at rest only where a pointer can hover: a touch screen has no hover to reveal it, so the
+   arrow stays visible there (review #241) */
+@media (hover: hover) {
+  .toolbar-caret {
+    opacity: 0;
+  }
 }
 
 .toolbar-slot:hover .toolbar-caret,

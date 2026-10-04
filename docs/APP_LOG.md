@@ -3908,5 +3908,5 @@ group order, the last tool per group remembered.
   - buttons are 34 × 34 px with 6 px corners (were 40 × 40), 38 px apart (4 px gaps);
   - icons are 22 px with 1 px strokes;
   - dividers are 34 px.
-- **Arrow:** each group's menu arrow sits in the 9 px gutter right of the button. It shows while the button is hovered, the arrow has keyboard focus, or the menu is open. Right-click still opens the menu.
+- **Arrow:** each group's menu arrow sits in the 9 px gutter right of the button. It shows while the button is hovered, the arrow has keyboard focus, or the menu is open. On touch screens (no hover) it stays visible. Right-click still opens the menu.
 - **Files:** `index.css` (`.toolbar-btn`, `.toolbar-caret`, `.toolbar-divider`), `LeftToolbar.tsx` (`w-13`, icon sizes), DashboardPage (the toolbar's open width).
