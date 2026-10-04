@@ -31,6 +31,11 @@ import { findGroupByToolType, loadSubTools, saveSubTools } from '@/lib/libraryTo
 
 const PANES = 4;
 
+/** Text highlighted on the page (a selection that isn't collapsed) */
+function hasPageTextSelection(): boolean {
+  return (window.getSelection()?.toString() ?? '') !== '';
+}
+
 /** Arm `toolType` in one pane's manager (null disarms); the host's own tools never reach it */
 function armInPane(manager: DrawingManager | null | undefined, toolType: string | null): void {
   if (!manager || (toolType !== null && HOST_TOOLS.has(toolType))) return;
@@ -163,8 +168,9 @@ export function useDrawingSession(): DrawingSession {
       } else if (hit.type === 'redo') {
         if (!history?.redo()) return;
       } else if (hit.type === 'copy') {
-        // Nothing selected: the browser copies text as usual
-        if (!manager || copySelection(manager) === 0) return;
+        // Highlighted page text (a table, the order panel) is the user's copy, not the drawing's;
+        // with no drawing selected either, the browser copies as usual
+        if (hasPageTextSelection() || !manager || copySelection(manager) === 0) return;
       } else if (hit.type === 'paste') {
         if (!manager || !hasClipboard()) return;
         pasteClipboard(manager);

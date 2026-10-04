@@ -71,6 +71,24 @@ describe('useDrawingSession', () => {
     expect(a.manager.selection()).toHaveLength(1);
   });
 
+  it('[10.7.14] should leave Ctrl+C to the browser while page text is highlighted', () => {
+    const { result } = renderHook(() => useDrawingSession());
+    const a = pane(result.current, 0);
+    a.manager.select([addHorizontalLine(a.manager, 900)]);
+    const p = document.createElement('p');
+    p.textContent = 'Order panel text';
+    document.body.appendChild(p);
+    window.getSelection()!.selectAllChildren(p);
+    const e = new KeyboardEvent('keydown', { code: 'KeyC', ctrlKey: true, cancelable: true });
+    act(() => {
+      window.dispatchEvent(e);
+    });
+    expect(e.defaultPrevented).toBe(false);
+    window.getSelection()!.removeAllRanges();
+    act(() => ctrl('KeyV'));
+    expect(a.manager.drawings()).toHaveLength(1); // nothing was copied
+  });
+
   it('[10.7.17] should remove the active pane’s drawings and bring hidden ones back', async () => {
     const { result } = renderHook(() => useDrawingSession());
     const a = pane(result.current, 0);
