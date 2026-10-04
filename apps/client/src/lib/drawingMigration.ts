@@ -158,8 +158,22 @@ function pointsFor(kind: DrawingKind, a: DataPoint[]): DataPoint[] | null {
   }
 }
 
+/**
+ * The chart the conversion runs for: its bar length and spacing. 0.1 drew a position box a fixed
+ * 200 px wide from the entry (no right-edge time was saved), so this turns those 200 px into bars.
+ */
+export interface LegacyChartScale {
+  /** Seconds per bar of the pane's interval */
+  barSeconds: number;
+  /** Pixels per bar at the interval's default zoom */
+  barSpacing: number;
+}
+
+/** 0.1's position box width, in px from the entry (LongPosition / ShortPosition computeGeometry) */
+export const LEGACY_POSITION_BOX_PX = 200;
+
 /** One 0.1 entry → a 0.4 drawing (before 0.4's own schema check), or null to skip it */
-export function convertLegacyDrawing(raw: unknown): Drawing | null {
+export function convertLegacyDrawing(raw: unknown, scale?: LegacyChartScale): Drawing | null {
   if (!isLegacy(raw)) return null;
   const kind = legacyKindOf(raw.type);
   if (!kind) return null;
@@ -174,10 +188,16 @@ export function convertLegacyDrawing(raw: unknown): Drawing | null {
   if (kind === 'long-position' || kind === 'short-position') {
     if (anchors.length !== 3) return null;
     const [entry, stop, target] = anchors as [DataPoint, DataPoint, DataPoint];
-    const closeTime = [stop.time, target.time].reduce(
-      (t, x) => (Number(x) > Number(t) ? x : t),
-      entry.time
-    );
+    // The box keeps 0.1's 200 px at the interval's default zoom; without a scale, it ends at the
+    // latest saved point
+    const bars =
+      scale && scale.barSpacing > 0 && scale.barSeconds > 0
+        ? Math.ceil(LEGACY_POSITION_BOX_PX / scale.barSpacing)
+        : 0;
+    const closeTime =
+      bars > 0 && typeof entry.time === 'number'
+        ? ((entry.time + bars * scale!.barSeconds) as DataPoint['time'])
+        : [stop.time, target.time].reduce((t, x) => (Number(x) > Number(t) ? x : t), entry.time);
     const style = styleFor(kind, raw);
     style.stopLevel = Math.abs(entry.price - stop.price);
     style.profitLevel = Math.abs(target.price - entry.price);
@@ -208,12 +228,12 @@ export function convertLegacyDrawing(raw: unknown): Drawing | null {
 }
 
 /** A saved 0.1 array → 0.4 drawings, checked and point-migrated by 0.4's own parser */
-export function convertLegacyDrawings(raw: unknown): Drawing[] {
+export function convertLegacyDrawings(raw: unknown, scale?: LegacyChartScale): Drawing[] {
   if (!Array.isArray(raw)) return [];
   const out: Drawing[] = [];
   for (const entry of raw) {
     try {
-      const d = convertLegacyDrawing(entry);
+      const d = convertLegacyDrawing(entry, scale);
       if (d) out.push(d);
     } catch {
       // One bad entry never costs the rest

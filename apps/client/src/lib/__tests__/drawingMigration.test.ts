@@ -130,6 +130,21 @@ describe('convertLegacyDrawing', () => {
     expect(d.style.stopColor).toBe('#f23645');
   });
 
+  it('[10.7.9] should keep a position box 200 px wide (0.1’s fixed width) at the pane’s default zoom', () => {
+    // 1m bars, 7 px each: 200 px = 29 bars (rounded up)
+    const d = convertLegacyDrawing(LONG, { barSeconds: 60, barSpacing: 7 })!;
+    expect(d.points[1]).toEqual({ time: 1791112620 + 29 * 60, price: 83196.72291296624 });
+    const short = convertLegacyDrawing(
+      { ...LONG, type: 'short-position' },
+      { barSeconds: 86400, barSpacing: 9 }
+    )!;
+    expect(short.points[1]!.time).toBe(1791112620 + 23 * 86400);
+  });
+
+  it('should fall back to the latest saved point for the box end without a chart scale', () => {
+    expect(convertLegacyDrawing(LONG)!.points[1]!.time).toBe(1791113160);
+  });
+
   it('should re-anchor a parallel channel’s width point to the first point’s time', () => {
     const d = convertLegacyDrawing(CHANNEL)!;
     expect(d.points[2]).toEqual({ time: 1791105000, price: 82950 });

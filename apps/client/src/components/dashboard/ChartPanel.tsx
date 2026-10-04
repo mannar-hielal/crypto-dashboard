@@ -106,6 +106,11 @@ const INTERVAL_SECONDS: Record<Interval, number> = {
   '1M': 2592000,
 };
 
+/** The pane's bar length and default spacing, for converting library-0.1 drawings (position box) */
+function legacyScale(interval: Interval) {
+  return { barSeconds: INTERVAL_SECONDS[interval], barSpacing: INTERVAL_BAR_SPACING[interval] };
+}
+
 /** Save an edited text into its drawing (the library's update emits `change`, which persists) */
 function commitDrawingText(manager: DrawingManager | null, drawingId: string, text: string): void {
   const drawing = manager?.get(drawingId);
@@ -263,7 +268,7 @@ export function ChartPanel({
     //    candles (autoscale stays ON, see above).
     const manager = new DrawingManager(chart, candleRef.current, { fontFamily: font.sans });
     managerRef.current = manager;
-    restoreDrawings(manager, symbol);
+    restoreDrawings(manager, symbol, legacyScale(interval));
     prevSymbolRef.current = symbol;
 
     // 🔐 Persist under the CURRENT symbol, not the mount-time one — prevSymbolRef
@@ -393,11 +398,11 @@ export function ChartPanel({
       //    drawings but keyed to the old symbol's localStorage key, silently
       //    overwriting the save just above. restoreDrawings replaces the whole set.
       prevSymbolRef.current = symbol;
-      restoreDrawings(manager, symbol);
+      restoreDrawings(manager, symbol, legacyScale(interval));
     } else {
       prevSymbolRef.current = symbol;
     }
-  }, [symbol]);
+  }, [symbol, interval]);
 
   // ── 2. Push data whenever bars changes ───────────────────────────────────
   useEffect(() => {
