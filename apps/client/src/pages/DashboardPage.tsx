@@ -647,7 +647,7 @@ export function DashboardInner() {
 
       {/* ── Dashboard footer ─────────────────────────────────────────────── */}
       <div
-        className="flex h-auto w-full shrink-0 flex-col items-center gap-0.5 border-t border-white/5 px-4 py-1.5 sm:h-7 sm:flex-row sm:items-center sm:justify-between sm:gap-0 sm:py-0"
+        className="flex h-auto w-full shrink-0 flex-col items-center gap-0.5 border-t border-white/5 px-4 py-1.5 sm:min-h-7 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-4 sm:gap-y-0.5 sm:py-1"
         style={{ background: bg.footer }}
       >
         <span style={{ fontSize: fontSize.xs10, color: color.muted }}>
@@ -655,7 +655,7 @@ export function DashboardInner() {
           <span className="hidden sm:inline"> For educational purposes.</span>
         </span>
         <nav
-          className="flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 sm:flex-nowrap sm:gap-4"
+          className="flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 sm:justify-end sm:gap-x-4"
           style={{ fontSize: fontSize.xs10, color: `${color.muted}b3` }}
         >
           <Link to="/terms" className="transition-colors hover:text-white/50">
@@ -673,6 +673,16 @@ export function DashboardInner() {
           <span className="hidden font-medium sm:ml-2 sm:inline">
             © {new Date().getFullYear()} cryptopapertrade.com
           </span>
+          {/* 🔐 Licence: lightweight-charts' NOTICE text with a link to tradingview.com (Apache 2.0) */}
+          <a
+            href="https://www.tradingview.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition-colors hover:text-white/50"
+            {...guide('footer.chart-credit')}
+          >
+            Charts: TradingView Lightweight Charts™ © 2025 TradingView, Inc.
+          </a>
         </nav>
       </div>
     </div>

@@ -205,7 +205,9 @@ export function ChartPanel({
         textColor: chartColors.textColor,
         fontFamily: font.sans,
         fontSize: 12,
-        attributionLogo: false,
+        // 🔐 Licence: lightweight-charts (Apache 2.0) requires a link to tradingview.com where users
+        // see the charts — the logo satisfies it; the NOTICE text is in the dashboard footer
+        attributionLogo: true,
         // Indicator panes resize by dragging the separators (owner, 2026-10-03)
         panes: {
           enableResize: true,
