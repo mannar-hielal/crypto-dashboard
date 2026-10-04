@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { MAX_DRAWING_TEXT } from '@/lib/drawingActions';
 import styles from './DrawingTextEditor.module.css';
 
 // ─── Drawing text editor ─────────────────────────────────────────────────────
@@ -24,6 +25,8 @@ export function DrawingTextEditor({ initialText, onSave, onClose }: DrawingTextE
         <textarea
           autoFocus
           className={styles.text}
+          aria-label="Drawing text"
+          maxLength={MAX_DRAWING_TEXT}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {

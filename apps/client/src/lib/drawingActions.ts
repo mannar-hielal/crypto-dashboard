@@ -6,6 +6,10 @@
 import type { Drawing, DrawingManager, DrawingStyle } from 'lightweight-charts-drawing';
 import { cloneSelection, copySelection } from '@/lib/drawingClipboard';
 
+/** 🔐 A drawing's text is bounded: the set is saved to localStorage on every edit, and a huge
+ *  paste would fill the quota and silently stop every later save */
+export const MAX_DRAWING_TEXT = 2000;
+
 /** The floating toolbar's More menu */
 export type DrawingAction = 'clone' | 'copy' | 'front' | 'back' | 'hide';
 

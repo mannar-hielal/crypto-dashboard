@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { DrawingTextEditor } from '../DrawingTextEditor';
+import { MAX_DRAWING_TEXT } from '@/lib/drawingActions';
 
 function open(initialText = 'Old') {
   const onSave = vi.fn();
@@ -14,6 +15,11 @@ function open(initialText = 'Old') {
 afterEach(cleanup);
 
 describe('DrawingTextEditor', () => {
+  it('should bound the text, which is saved to localStorage with every edit', () => {
+    open();
+    expect(screen.getByRole('textbox').getAttribute('maxlength')).toBe(String(MAX_DRAWING_TEXT));
+  });
+
   it('[10.7.4] should save the typed text on Save', () => {
     const { onSave, onClose } = open();
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));

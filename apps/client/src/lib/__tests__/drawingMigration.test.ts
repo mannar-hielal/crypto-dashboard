@@ -14,6 +14,7 @@ import {
 } from '@/lib/drawingMigration';
 import { getLegacyPersistenceKey, getPersistenceKey, loadDrawings } from '@/lib/drawingManager';
 import { TOOL_GROUPS } from '@/lib/libraryTools';
+import { MAX_DRAWING_TEXT } from '@/lib/drawingActions';
 
 const STYLE_01 = {
   lineColor: '#2962FF',
@@ -115,6 +116,11 @@ describe('convertLegacyDrawing', () => {
     expect(d.kind).toBe('text');
     expect(d.text).toBe('Breakout');
     expect(d.points).toEqual([{ time: 1791107000, price: 83200 }]);
+  });
+
+  it('should cap a carried-over text at MAX_DRAWING_TEXT (a 0.1 save is untrusted input)', () => {
+    const huge = sample('text-annotation', [[1791107000, 83200]], { text: 'x'.repeat(50_000) });
+    expect(convertLegacyDrawing(huge)!.text).toHaveLength(MAX_DRAWING_TEXT);
   });
 
   it('should convert a long position: stop and target become distances, the box ends at the latest point', () => {
