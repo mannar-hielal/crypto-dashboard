@@ -18,6 +18,7 @@ export interface ToolGroup {
   categories: ToolCategory[];
 }
 
+/** TradingView's order: trend lines, Fib & Gann, forecast & measure, shapes, text & notes */
 export const TOOL_GROUPS: ToolGroup[] = [
   {
     id: 'trend-lines',
@@ -83,9 +84,34 @@ export const TOOL_GROUPS: ToolGroup[] = [
         label: 'Gann',
         tools: [
           { id: 'gann-box', label: 'Gann Box' },
-          { id: 'gann-fan', label: 'Gann Fan' },
           { id: 'gann-square-fixed', label: 'Gann Square Fixed' },
           { id: 'gann-square', label: 'Gann Square' },
+          { id: 'gann-fan', label: 'Gann Fan' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'measure',
+    icon: Ruler,
+    label: 'Forecast & Measure',
+    categories: [
+      {
+        label: 'Projection',
+        tools: [
+          { id: 'long-position', label: 'Long Position' },
+          { id: 'short-position', label: 'Short Position' },
+          { id: 'position-forecast', label: 'Forecast' },
+          { id: 'bar-pattern', label: 'Bars Pattern' },
+          { id: 'sector', label: 'Projection' },
+        ],
+      },
+      {
+        label: 'Measurer',
+        tools: [
+          { id: 'price-range', label: 'Price Range' },
+          { id: 'date-range', label: 'Date Range' },
+          { id: 'date-and-price-range', label: 'Date and Price Range' },
         ],
       },
     ],
@@ -146,31 +172,6 @@ export const TOOL_GROUPS: ToolGroup[] = [
           { id: 'comment', label: 'Comment' },
           { id: 'signpost', label: 'Signpost' },
           { id: 'table', label: 'Table' },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'measure',
-    icon: Ruler,
-    label: 'Forecast & Measure',
-    categories: [
-      {
-        label: 'Projection',
-        tools: [
-          { id: 'long-position', label: 'Long Position' },
-          { id: 'short-position', label: 'Short Position' },
-          { id: 'position-forecast', label: 'Forecast' },
-          { id: 'bar-pattern', label: 'Bars Pattern' },
-          { id: 'sector', label: 'Projection' },
-        ],
-      },
-      {
-        label: 'Measurer',
-        tools: [
-          { id: 'price-range', label: 'Price Range' },
-          { id: 'date-range', label: 'Date Range' },
-          { id: 'date-and-price-range', label: 'Date and Price Range' },
         ],
       },
     ],
