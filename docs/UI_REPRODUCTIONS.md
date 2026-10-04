@@ -137,7 +137,7 @@ overlay legend rows stay readable over the candles — M, eyeballed per UI relea
 8. [toolbar.tool `trend-lines`], click twice inside a Momentum pane → Expect nothing is drawn; click twice in the price
    pane → Expect a trend line, selected, and the toolbar back on the cursor.
 
-### 10.7 — Drawing tools (10.7.1–10.7.12)
+### 10.7 — Drawing tools (10.7.1–10.7.22)
 
 **UI reproduction** — `/chart`, no sign-in, 1m. The library is the fork in `apps/client/src/vendor/` (0.4.0).
 
@@ -160,6 +160,22 @@ overlay legend rows stay readable over the candles — M, eyeballed per UI relea
    mode: on". Draw two trend lines in a row → Expect the tool stays armed after each, nothing selected; reload → Expect
    the switch still on. Click it again, draw a line → Expect back to the cursor with the line selected. _Explain:
    "TradingView's lock for drawing many lines without re-picking the tool."_
+10. Draw two lines, drag one, then Ctrl/Cmd+Z three times and Ctrl/Cmd+Y → Expect the drag, then each line taken back
+    one at a time, then put back. _Explain: "One undo per thing you did, as in TradingView."_
+11. Select a line, Ctrl/Cmd+C, Ctrl/Cmd+V → Expect a copy a little right of and below it, selected.
+12. Press Alt+H (⌥H on a Mac) → Expect the horizontal line tool armed and shown on the Trend Lines button; open
+    [toolbar.tool `trend-lines`]'s caret → Expect "⌥H" / "Alt+H" dimmed on its row.
+13. Click [toolbar.tool `magnet`]'s caret → Strong magnet; place a horizontal line near a candle → Expect it on the
+    candle's open, high, low or close.
+14. Click [toolbar.tool `bin`] → Expect "Remove N drawings", "Eraser"; pick Remove → Expect a confirm; Cancel → nothing
+    removed; again → Remove → all gone; Ctrl/Cmd+Z → all back.
+15. Select a line → Expect [drawing.toolbar] at the top of the chart: colour, width, style, settings, lock, remove,
+    More. Pick red, 3px, dashed → Expect the line changes. Drag the toolbar by its handle, reload, select → Expect it
+    where you left it.
+16. Right-click the line → Expect Settings…, Clone, Copy, Bring to front, Send to back, Lock, Hide, Remove. Settings…
+    → Expect Style and Coordinates tabs; tick Extend Right, Ok → Expect the line runs to the right edge.
+17. Draw a Table, click it, click a cell → Expect a text field over the cell; type, Enter → Expect the text in the
+    cell; click it again, type, Esc → Expect the old text.
 
 ### 5 — Symbol pair icons (5.1–5.8)
 
