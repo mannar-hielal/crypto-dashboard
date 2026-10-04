@@ -103,7 +103,7 @@ function ToolbarSlot({
         whileTap={{ scale: 0.9 }}
         className={`toolbar-btn focus-ring${active ? ' active' : ''}`}
       >
-        <span className="relative z-10 flex h-6 w-6 items-center justify-center">{children}</span>
+        <span className="relative z-10 flex items-center justify-center">{children}</span>
       </motion.button>
       {caretLabel && onOpenMenu && (
         <button
@@ -335,7 +335,7 @@ export function LeftToolbar({
   return (
     <aside
       ref={asideRef}
-      className="flex w-11 shrink-0 flex-col items-center gap-0.5 border-r border-white/6 py-2 overflow-y-auto"
+      className="flex w-13 shrink-0 flex-col items-center gap-1 border-r border-white/6 py-2 overflow-y-auto overflow-x-hidden"
       style={{ background: bg.page }}
     >
       {/* ── Cursor ─────────────────────────────────────────────────────── */}
@@ -353,7 +353,7 @@ export function LeftToolbar({
         onOpenMenu={(anchor) => toggleMenu({ kind: 'cursor' }, anchor)}
         attrs={guide('toolbar.tool', 'cursor') as Record<string, string>}
       >
-        {CursorIcon ? <CursorIcon size={24} /> : <MousePointer2 size={24} strokeWidth={1} />}
+        {CursorIcon ? <CursorIcon size={22} /> : <MousePointer2 size={22} strokeWidth={1} />}
       </ToolbarSlot>
 
       <div className="toolbar-divider" />
@@ -389,7 +389,7 @@ export function LeftToolbar({
             onOpenMenu={(anchor) => toggleMenu({ kind: 'group', groupId: group.id }, anchor)}
             attrs={guide('toolbar.tool', group.id) as Record<string, string>}
           >
-            {ToolIcon ? <ToolIcon size={22} /> : <GroupIcon className="h-6 w-6" strokeWidth={1} />}
+            {ToolIcon ? <ToolIcon size={22} /> : <GroupIcon size={22} strokeWidth={1} />}
           </ToolbarSlot>
         );
       })}
@@ -408,7 +408,7 @@ export function LeftToolbar({
         onOpenMenu={(anchor) => toggleMenu({ kind: 'magnet' }, anchor)}
         attrs={guide('toolbar.tool', 'magnet') as Record<string, string>}
       >
-        <Magnet className="h-5 w-5" strokeWidth={1} />
+        <Magnet size={22} strokeWidth={1} />
       </ToolbarSlot>
 
       <ToolbarSlot
@@ -419,7 +419,7 @@ export function LeftToolbar({
         onClick={() => onStayInDrawingModeChange?.(!stayInDrawingMode)}
         attrs={guide('toolbar.tool', 'stay-mode') as Record<string, string>}
       >
-        <Pencil className="h-5 w-5" strokeWidth={1} />
+        <Pencil size={20} strokeWidth={1} />
         <Lock className="absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5" strokeWidth={1.5} />
       </ToolbarSlot>
 
@@ -437,7 +437,7 @@ export function LeftToolbar({
         onOpenMenu={openBinMenu}
         attrs={guide('toolbar.tool', 'bin') as Record<string, string>}
       >
-        <Trash2 className="h-6 w-6" strokeWidth={1} />
+        <Trash2 size={22} strokeWidth={1} />
       </ToolbarSlot>
 
       <div className="toolbar-divider" />
@@ -447,10 +447,10 @@ export function LeftToolbar({
         active={zoomActive}
         onClick={() => arm(zoomActive ? null : 'zoom-in')}
       >
-        <ZoomIn size={24} strokeWidth={1} />
+        <ZoomIn size={22} strokeWidth={1} />
       </ToolbarSlot>
       <ToolbarSlot label="Zoom out" tooltip="Zoom out" active={false} onClick={() => onZoomOut?.()}>
-        <ZoomOut size={24} strokeWidth={1} />
+        <ZoomOut size={22} strokeWidth={1} />
       </ToolbarSlot>
 
       {menu && openMenuContent && (

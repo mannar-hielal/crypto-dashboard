@@ -70,7 +70,7 @@ const MIN_PANEL_HEIGHT = 80;
  *   │ Left │  ──────────────────────────────  │ Trading    │
  *   │ Tool │  OrderAccountManagementPanel     │ Panel      │
  *   │ bar  │  (animated height / flex-1 when  │ (w-64,     │
- *   │(w-11)│   maximized)                     │ full h) ✓  │
+ *   │(w-13)│   maximized)                     │ full h) ✓  │
  *   ├──────┴──────────────────────────────────┴────────────┤
  *   │   TickerBar          (h-8)                           │
  *   ├──────────────────────────────────────────────────────┤
@@ -412,7 +412,7 @@ export function DashboardInner() {
       {/* ── Main content row ──────────────────────────────────────────────── */}
       <div className={`flex min-h-0 flex-1${isMobile ? ' relative' : ''}`}>
         <motion.div
-          animate={{ width: leftToolbarOpen ? 44 : 0 }}
+          animate={{ width: leftToolbarOpen ? 52 : 0 }}
           transition={{ duration: 0.2, ease: 'easeInOut' }}
           className="shrink-0 overflow-hidden"
         >
