@@ -270,7 +270,7 @@ describe('right-click menu', () => {
       price: 900,
       takeProfit: 840,
       stopLoss: 930,
-      qty: 8.333333333333334, // no step without the rules: the form floors it
+      qty: 8.333, // the rules not loaded: floored to 3 decimals
     });
     expect(manager.drawings()).toHaveLength(1); // the drawing stays
   });

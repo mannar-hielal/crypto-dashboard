@@ -7,6 +7,7 @@
 import { positionLevels, positionQty, type Drawing } from 'lightweight-charts-drawing';
 import { capabilitiesOf } from '@/lib/drawingCapabilities';
 import { floorToStep } from '@/lib/orderMath';
+import { stepDecimals } from '@/lib/priceFormat';
 import { roundToTick } from '@/lib/tradeLines';
 
 export interface PositionOrder {
@@ -35,8 +36,15 @@ export function positionOrderFromDrawing(
   const price = roundToTick(entry, instrument.tickSize);
   const takeProfit = roundToTick(entry + sign * profit, instrument.tickSize);
   const stopLoss = roundToTick(entry - sign * stop, instrument.tickSize);
-  // The qty the tool computes (risk ÷ stop distance, capped by its leverage), in coins
-  const qty = floorToStep(positionQty(d.style, entry, stop).qty, instrument.qtyStep);
+  // The qty the tool computes (risk ÷ stop distance, capped by its leverage), in coins, floored to
+  // the step; before the market's rules load, to the drawing's qty decimals (else 3), never unfloored
+  // (the server refuses an off-step qty)
+  const precision = d.style.qtyPrecision ?? '';
+  const step =
+    instrument.qtyStep > 0
+      ? instrument.qtyStep
+      : 10 ** -(/^\d+$/.test(precision) ? Number(precision) : stepDecimals(0));
+  const qty = floorToStep(positionQty(d.style, entry, stop).qty, step);
   if (![takeProfit, stopLoss, qty].every((v) => Number.isFinite(v) && v > 0)) return null;
   return { side: sign === 1 ? 'buy' : 'sell', price, takeProfit, stopLoss, qty };
 }

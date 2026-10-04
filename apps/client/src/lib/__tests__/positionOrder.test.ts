@@ -56,6 +56,19 @@ describe('positionOrderFromDrawing', () => {
     expect(order).toMatchObject({ price: 900, takeProfit: 960.1, stopLoss: 870, qty: 8 });
   });
 
+  it('[10.7.23] should floor the qty before the market’s rules load (review #243)', () => {
+    const noRules = { tickSize: 0.1, qtyStep: 0 };
+    // The drawing's qty decimals: 250 ÷ 30 = 8.333… → 8.33
+    expect(
+      positionOrderFromDrawing(
+        position('long-position', 900, { stopLevel: 30, profitLevel: 60, qtyPrecision: '2' }),
+        noRules
+      )?.qty
+    ).toBe(8.33);
+    // None (or TradingView's "default"): 3 decimals
+    expect(positionOrderFromDrawing(position('long-position', 900), noRules)?.qty).toBe(8.333);
+  });
+
   it('[10.7.23] should use the qty the tool’s own risk inputs give', () => {
     const order = positionOrderFromDrawing(
       position('long-position', 900, {
