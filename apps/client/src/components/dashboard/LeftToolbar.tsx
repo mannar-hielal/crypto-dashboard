@@ -103,7 +103,9 @@ function ToolbarSlot({
         whileTap={{ scale: 0.9 }}
         className={`toolbar-btn focus-ring${active ? ' active' : ''}`}
       >
-        <span className="relative z-10 flex items-center justify-center">{children}</span>
+        <span className="toolbar-icon relative z-10 flex items-center justify-center">
+          {children}
+        </span>
       </motion.button>
       {caretLabel && onOpenMenu && (
         <button

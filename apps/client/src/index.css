@@ -388,6 +388,12 @@
   position: relative;
 }
 
+/* The icon's box: 22 px, so a corner badge (the lock on Stay in drawing mode) sits at its corner */
+.toolbar-icon {
+  width: 22px;
+  height: 22px;
+}
+
 .toolbar-btn:hover {
   background: rgba(255, 255, 255, 0.08);
   color: var(--exgen-white);

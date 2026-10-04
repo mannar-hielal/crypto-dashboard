@@ -32,3 +32,7 @@ test('on touch screens the arrow has a 24 px touch target', () => {
     /@media \(hover: none\) \{ \.toolbar-caret::before \{[^}]*width: 24px;[^}]*\} \}/
   );
 });
+
+test('toolbar icons sit in a fixed 22 px box, so corner badges keep their place', () => {
+  assert.match(CSS, /\.toolbar-icon \{ width: 22px; height: 22px; \}/);
+});
