@@ -7,10 +7,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DrawingManager } from 'lightweight-charts-drawing';
 import {
   MAX_DRAWINGS,
+  attachDrawings,
   getPersistenceKey,
   loadDrawings,
   persistDrawings,
   restoreDrawings,
+  switchDrawingsSymbol,
 } from '@/lib/drawingManager';
 import { T0, managerOnFakeChart } from './fakeDrawingChart';
 
@@ -107,5 +109,83 @@ describe('persistDrawings / restoreDrawings', () => {
       throw new DOMException('full', 'QuotaExceededError');
     });
     expect(() => persistDrawings(m, 'BTCUSDT')).not.toThrow();
+  });
+});
+
+describe('attachDrawings — one set per symbol across panes', () => {
+  const detaches: (() => void)[] = [];
+
+  function pane(symbol: string) {
+    const f = managerOnFakeChart();
+    managers.push(f.manager);
+    detaches.push(attachDrawings(f.manager, symbol));
+    return f.manager;
+  }
+
+  const ids = (m: DrawingManager) =>
+    m
+      .drawings()
+      .map((d) => d.id)
+      .sort();
+  const saved = (symbol: string) =>
+    (JSON.parse(localStorage.getItem(getPersistenceKey(symbol)) ?? '[]') as { id: string }[])
+      .map((d) => d.id)
+      .sort();
+
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => {
+    for (const d of detaches.splice(0)) d();
+    vi.useRealTimers();
+  });
+
+  it('[10.7.11] should keep pane A’s drawing when pane B on the same symbol draws, and show both in both', () => {
+    const a = pane('BTCUSDT');
+    const b = pane('BTCUSDT');
+    a.add(line('fromA') as never);
+    vi.advanceTimersByTime(200);
+    expect(ids(b)).toEqual(['fromA']);
+
+    b.add(line('fromB', 850) as never);
+    vi.advanceTimersByTime(200);
+    expect(ids(a)).toEqual(['fromA', 'fromB']);
+    expect(ids(b)).toEqual(['fromA', 'fromB']);
+    expect(saved('BTCUSDT')).toEqual(['fromA', 'fromB']);
+  });
+
+  it('[10.7.11] should give a pane opening a symbol the set another pane shows, unsaved edits included', () => {
+    const a = pane('BTCUSDT');
+    a.add(line('pending') as never); // not saved yet: still inside the debounce
+    const b = pane('BTCUSDT');
+    expect(ids(b)).toEqual(['pending']);
+  });
+
+  it('[10.7.11] should leave panes on other symbols alone', () => {
+    const a = pane('BTCUSDT');
+    const e = pane('ETHUSDT');
+    a.add(line('btc') as never);
+    vi.advanceTimersByTime(200);
+    expect(ids(e)).toEqual([]);
+    expect(saved('ETHUSDT')).toEqual([]);
+  });
+
+  it('should save the old symbol’s set and load the new one’s on a symbol switch', () => {
+    localStorage.setItem(getPersistenceKey('ETHUSDT'), JSON.stringify([line('eth')]));
+    const a = pane('BTCUSDT');
+    a.add(line('btc') as never);
+    switchDrawingsSymbol(a, 'ETHUSDT');
+    expect(saved('BTCUSDT')).toEqual(['btc']);
+    expect(ids(a)).toEqual(['eth']);
+    // A later edit lands under ETH, not BTC
+    a.add(line('eth2') as never);
+    vi.advanceTimersByTime(200);
+    expect(saved('ETHUSDT')).toEqual(['eth', 'eth2']);
+    expect(saved('BTCUSDT')).toEqual(['btc']);
+  });
+
+  it('should save a pending edit when the pane goes', () => {
+    const a = pane('BTCUSDT');
+    a.add(line('last') as never);
+    detaches.pop()!();
+    expect(saved('BTCUSDT')).toEqual(['last']);
   });
 });

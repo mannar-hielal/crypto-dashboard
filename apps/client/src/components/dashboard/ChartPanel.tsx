@@ -29,7 +29,7 @@ import {
   type Interval,
   type TimeRangePreset,
 } from '@/lib/markets';
-import { restoreDrawings, persistDrawings, schedulePersistDrawings } from '@/lib/drawingManager';
+import { attachDrawings, switchDrawingsSymbol } from '@/lib/drawingManager';
 import { startEraser } from '@/lib/drawingTools';
 import { pendingSyncRange, runPaneDataPush } from '@/lib/chartSync';
 import { toHeikinAshi } from '@/lib/heikinAshi';
@@ -135,7 +135,6 @@ export function ChartPanel({
   const prevLenRef = useRef(0);
   const rafRef = useRef<number | undefined>(undefined);
   const managerRef = useRef<DrawingManager | null>(null);
-  const prevSymbolRef = useRef<string>('');
 
   const candleRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const paddingSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
@@ -157,7 +156,7 @@ export function ChartPanel({
 
   const chartReadyRef = useRef(false);
   const prevIntervalRef = useRef(interval);
-  // 🔐 Separate from prevSymbolRef above — that one drives the drawings-
+  // 🔐 Separate from the drawings' symbol (lib/drawingManager.ts keeps that) — the drawings-
   // persistence effect and has its own sequencing. This one only tracks
   // which symbol the bars-push effect below last rendered for.
   const prevBarsSymbolRef = useRef(symbol);
@@ -268,17 +267,9 @@ export function ChartPanel({
     //    candles (autoscale stays ON, see above).
     const manager = new DrawingManager(chart, candleRef.current, { fontFamily: font.sans });
     managerRef.current = manager;
-    restoreDrawings(manager, symbol, legacyScale(interval));
-    prevSymbolRef.current = symbol;
-
-    // 🔐 Persist under the CURRENT symbol, not the mount-time one — prevSymbolRef
-    //    is kept current by the symbol-change effect below, so a drawing made
-    //    after switching BTC→ETH writes to the ETH key instead of overwriting
-    //    BTC's saved drawings (silent data loss). Debounced to avoid re-writing
-    //    the full set on every drag move.
-    const unsubChange = manager.on('change', () =>
-      schedulePersistDrawings(manager, prevSymbolRef.current ?? symbol)
-    );
+    // 🔐 The pane joins its symbol's drawing set (shared with any other pane on the symbol);
+    //    edits are saved, debounced, under the symbol the pane shows at that moment
+    const detachDrawings = attachDrawings(manager, symbol, legacyScale(interval));
     // A text tool was placed or double-clicked: our editor opens. Deferred: the library emits from
     // the placing pointerdown, and that press's mousedown would take the focus off the textarea
     // (whose blur closes the editor)
@@ -354,7 +345,7 @@ export function ChartPanel({
       chartReadyRef.current = false;
       if (rafRef.current !== undefined) cancelAnimationFrame(rafRef.current);
       ro.disconnect();
-      unsubChange();
+      detachDrawings();
       unsubTextEdit();
       clearTimeout(textEditTimer);
       container.removeEventListener('contextmenu', handleContextMenu);
@@ -381,27 +372,10 @@ export function ChartPanel({
     toolActive: !!activeToolType,
   });
 
-  // ── Re-persist on symbol change ──────────────────────────────────────────
+  // ── Symbol change: save the old symbol's drawings, show the new one's ──
   useEffect(() => {
     const manager = managerRef.current;
-    if (!manager) {
-      prevSymbolRef.current = symbol;
-      return;
-    }
-    if (prevSymbolRef.current && prevSymbolRef.current !== symbol) {
-      persistDrawings(manager, prevSymbolRef.current);
-      // 🔐 Update prevSymbolRef to the NEW symbol before clearAll/restoreDrawings,
-      //    not after. Those calls synchronously emit drawing:cleared/added
-      //    events, each invoking the `save` closure above (which persists under
-      //    prevSymbolRef.current) — if that ref still pointed at the old symbol
-      //    here, the debounced save fires later with the new symbol's restored
-      //    drawings but keyed to the old symbol's localStorage key, silently
-      //    overwriting the save just above. restoreDrawings replaces the whole set.
-      prevSymbolRef.current = symbol;
-      restoreDrawings(manager, symbol, legacyScale(interval));
-    } else {
-      prevSymbolRef.current = symbol;
-    }
+    if (manager) switchDrawingsSymbol(manager, symbol, legacyScale(interval));
   }, [symbol, interval]);
 
   // ── 2. Push data whenever bars changes ───────────────────────────────────
