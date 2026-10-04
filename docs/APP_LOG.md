@@ -3910,3 +3910,14 @@ group order, the last tool per group remembered.
   - dividers are 34 px.
 - **Arrow:** each group's menu arrow sits in the 9 px gutter right of the button. It shows while the button is hovered, the arrow has keyboard focus, or the menu is open. On touch screens (no hover) it stays visible. Right-click still opens the menu.
 - **Files:** `index.css` (`.toolbar-btn`, `.toolbar-caret`, `.toolbar-divider`), `LeftToolbar.tsx` (`w-13`, icon sizes), DashboardPage (the toolbar's open width).
+
+### fix: Fly parity jobs wait for their machine by polling (2026-10-04) ✅
+
+**Context:** "Feed parity and spec drift" failed every night from at least 2026-09-30. Each time, the job reported "machine did not reach stopped within 15m0s" one minute after starting the feed check.
+
+`flyctl machine wait --wait-timeout 15m` gives up after about 60 s, whatever the timeout. The job then read the logs of a check that was still running (it takes about 5 minutes), found no "exited normally", and failed. The spec-drift check passed only because it takes about 2 s.
+
+- **`feed-parity.yml`:** `wait_stopped` polls the machine's state every 15 s. The deadline is 15 minutes; when it passes, the job reports "did not stop within 15 minutes".
+- **`parity.yml`:** the same loop, with a 12-minute deadline. It passed only while its run fit inside the one minute.
+- **Schedule:** every other day instead of nightly (owner, 2026-10-04: no extra cost). A full run takes about 8 Actions minutes, so nightly would have been about 240 a month against the ~120 budgeted. Spec drift runs weekly, on the Sunday or Monday run.
+- **Fly cost:** unchanged, at a few cents a month. The machine runs about 6 minutes every other day.
