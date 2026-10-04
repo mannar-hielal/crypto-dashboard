@@ -31,6 +31,9 @@ Record every change here: date, file, what, why.
 - 2026-10-04 — every file: formatted with the repo's Prettier config (no code change).
 - 2026-10-04 — `index.ts`: MIT attribution header; `VERSION` is the literal `"0.4.0"` (upstream
   sets `__VERSION__` with a vite `define`); `version.d.ts` (that global's declaration) removed.
+- 2026-10-04 — `runtime/manager.ts` `placementClick`: a click within
+  `MIN_DISTANCE_BETWEEN_POINTS` (5 px) of the previous point adds no point to a fixed-count tool, so
+  a double-click never places a zero-length drawing (drawing plan, Phase B). Test: `[10.7.1]`.
 - ESLint: `apps/client/eslint.config.js` relaxes, for `src/vendor/**` only, `_` unused params and
   rest siblings, `no-fallthrough` on empty cases, and `no-useless-assignment`. The folder is outside
   the client coverage floors; fixes here still get tests (`src/lib/__tests__/drawingLibrary.test.ts`).

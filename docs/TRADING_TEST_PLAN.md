@@ -723,6 +723,15 @@ symbol, arrange the charts, and tell the Sell (best bid) and Buy (best ask) pric
 | 10.6.12 | Formulas                                                                                    | Momentum, ROC (lengths 1 and 9), Typical Price, MACD 12/26/9 (first defined bars) and EMA / SMA after warm-up match hand-computed values                                                                                                                          | ✅     | T1      | `formulas.test` "[10.6.12]…"; `macd.test` "[10.6.12] calculateMacd".                                                                                                                                                                                                                       |
 | 10.6.13 | Add, remove, hide and show indicator panes; drag a separator in between; try a 4-chart cell | The price pane keeps at least half the chart; the indicator panes are equal — 20% each (60 px minimum) while that leaves the price pane half, else they split the other half (below 60 px when they must). A drag stays until the next add / remove / hide / show | ✅     | T1 + T2 | `paneLayout.test` "[10.6.13] paneHeights…" (1–5 panes, short and 4-chart heights); `ChartPanel.indicatorPanes.test` "[10.6.13]…" (rebalance, drag kept). Measured 2026-10-03 at 1440×900: 2× Momentum, 2× MACD, ROC → price 240 px, panes 48 px; 4-chart cell → price 98 px, panes ~20 px. |
 
+### Section 10.7 — Drawing tools
+
+> Library: the forked `lightweight-charts-drawing` 0.4.0 (`apps/client/src/vendor/`, owner 2026-10-04). Unit rows run
+> the fork on a fake chart (`lib/__tests__/drawingLibrary.test`). Run on `/chart` (no sign-in needed).
+
+| #      | Action                                                         | Expected                                                                               | Status | Tier | Notes                                                                                      |
+| ------ | -------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------ | ---- | ------------------------------------------------------------------------------------------ |
+| 10.7.1 | Trend line: double-click on one spot, then click a second spot | Nothing is placed by the double-click; the line goes from the first spot to the second | ✅     | T2   | `drawingLibrary.test` "[10.7.1]…" — a fork change (`runtime/manager.ts` `placementClick`). |
+
 ### Section 5 — Symbol Pair Icons (visual regression)
 
 > **Manual verification status (02.05.2026):** 5.1–5.7 manually verified — all ✅.

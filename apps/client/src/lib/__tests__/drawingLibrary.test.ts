@@ -91,4 +91,17 @@ describe('forked drawing library on a chart', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete' }));
     expect(manager.get(locked)).toBeDefined();
   });
+
+  it('[10.7.1] should place no zero-length drawing from a double-click — the second point waits for a real click', () => {
+    const { manager, press } = setup();
+    manager.setTool('trend-line');
+    press(100, 100);
+    press(101, 101); // the double-click's second press, on the first point
+    expect(manager.drawings()).toHaveLength(0);
+    press(200, 50);
+    expect(manager.drawings()[0]!.points).toEqual([
+      { time: T0 + 100, price: 900 },
+      { time: T0 + 200, price: 950 },
+    ]);
+  });
 });

@@ -733,6 +733,12 @@ export class DrawingManager {
         return;
       }
     }
+    // Local change (cryptopapertrade, 2026-10-04): a click on the previous point (a
+    // double-click) adds no point to a fixed-count tool, so no zero-length drawing is placed.
+    if (!spec.variableLength && pend.length >= 1) {
+      const last = projectPoint(c, pend[pend.length - 1]);
+      if (last && Math.hypot(last.x - sp.x, last.y - sp.y) < MIN_DISTANCE_BETWEEN_POINTS) return;
+    }
     const dp0 = this.dataAt(sp);
     if (!dp0) return;
     // Shift: the TV per-tool placement rule (45° against the previous point,
