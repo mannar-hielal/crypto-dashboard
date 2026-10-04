@@ -1,6 +1,6 @@
 /**
  * The selected drawing's floating toolbar, right-click menu and settings dialog
- * (components/drawing), on the forked library with a fake chart. TRADING_TEST_PLAN 10.7.19–10.7.21.
+ * (components/drawing), on the forked library with a fake chart. TRADING_TEST_PLAN 10.7.19–10.7.25.
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -11,6 +11,11 @@ import { DrawingControls } from '@/components/drawing/DrawingControls';
 import { capabilitiesOf } from '@/lib/drawingCapabilities';
 import { resetClipboard } from '@/lib/drawingClipboard';
 import { T0, addHorizontalLine, managerOnFakeChart } from '@/lib/__tests__/fakeDrawingChart';
+import { useLayoutStore } from '@/store/layoutStore';
+import { useOrderPrefillStore } from '@/store/orderPrefillStore';
+
+// The instrument rules never load here: the order falls back to the SDK's tick (BTCUSDT perp 0.1)
+vi.mock('@/hooks/useInstruments', () => ({ useInstrument: () => null }));
 
 let managers: DrawingManager[] = [];
 
@@ -25,7 +30,7 @@ class FakeResizeObserver {
   disconnect() {}
 }
 
-function setup() {
+function setup(paneIndex: 0 | 1 | 2 | 3 = 0) {
   vi.stubGlobal('ResizeObserver', FakeResizeObserver);
   vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(800);
   vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(500);
@@ -35,7 +40,14 @@ function setup() {
   const onCursor = vi.fn();
   const view = render(
     <div ref={containerRef}>
-      <DrawingControls manager={f.manager} containerRef={containerRef} onCursor={onCursor} />
+      <DrawingControls
+        manager={f.manager}
+        containerRef={containerRef}
+        onCursor={onCursor}
+        paneIndex={paneIndex}
+        symbol="BTCUSDT"
+        pipSize={() => 0.01}
+      />
     </div>
   );
   return { ...f, containerRef, onCursor, view };
@@ -51,8 +63,21 @@ function addTrendLine(manager: DrawingManager): string {
   } as never);
 }
 
+/** A position: entry 900 (y 100), stop 30 and target 60 away, from x 100 to 200 */
+function addPosition(manager: DrawingManager, kind: 'long-position' | 'short-position'): string {
+  return manager.add({
+    kind,
+    points: [
+      { time: T0 + 100, price: 900 },
+      { time: T0 + 200, price: 900 },
+    ],
+    style: { stopLevel: 30, profitLevel: 60 },
+  } as never);
+}
+
 afterEach(() => {
   cleanup();
+  useOrderPrefillStore.getState().clear();
   for (const m of managers) m.destroy();
   managers = [];
   resetClipboard();
@@ -198,6 +223,84 @@ describe('right-click menu', () => {
     expect(manager.drawings()).toHaveLength(0);
   });
 
+  it('[10.7.23] should offer Create limit order… on a position, in its own group after Copy', () => {
+    const { manager, containerRef, chartEl } = setup();
+    addPosition(manager, 'long-position');
+    chartEl.dispatchEvent(
+      new MouseEvent('pointermove', { clientX: 150, clientY: 80, bubbles: true })
+    );
+    fireEvent.contextMenu(containerRef.current!, { clientX: 150, clientY: 80 });
+    const menu = screen.getByRole('menu', { name: 'Drawing' });
+    const names = within(menu)
+      .getAllByRole('menuitem')
+      .map((r) => r.textContent?.replace(/(Ctrl\+.*|⌘.*|Del)$/, ''));
+    expect(names.slice(0, 5)).toEqual([
+      'Settings…',
+      'Clone',
+      'Copy',
+      'Create limit order…',
+      'Bring to front',
+    ]);
+    // Its own group: a separator on each side
+    const item = within(menu).getByRole('menuitem', { name: /Create limit order/ });
+    const row = item.closest('[role="menu"] > *')!;
+    expect(row.previousElementSibling?.getAttribute('role')).toBe('separator');
+    expect(row.nextElementSibling?.getAttribute('role')).toBe('separator');
+  });
+
+  it('[10.7.23] should fill the order form with the position’s order, activating its pane', () => {
+    useLayoutStore.setState((s) => ({
+      activePane: 0,
+      panes: s.panes.map((p, i) => (i === 1 ? { ...p, symbol: 'BTCUSDT', category: 'linear' } : p)),
+    }));
+    const { manager, containerRef, chartEl } = setup(1);
+    addPosition(manager, 'short-position');
+    // A short: the target zone is below the entry (y 100 → 160)
+    chartEl.dispatchEvent(
+      new MouseEvent('pointermove', { clientX: 150, clientY: 120, bubbles: true })
+    );
+    fireEvent.contextMenu(containerRef.current!, { clientX: 150, clientY: 120 });
+    fireEvent.click(screen.getByRole('menuitem', { name: /Create limit order/ }));
+    expect(useLayoutStore.getState().activePane).toBe(1);
+    expect(useOrderPrefillStore.getState().request).toEqual({
+      category: 'linear',
+      symbol: 'BTCUSDT',
+      type: 'limit',
+      side: 'sell',
+      price: 900,
+      takeProfit: 840,
+      stopLoss: 930,
+      qty: 8.333333333333334, // no step without the rules: the form floors it
+    });
+    expect(manager.drawings()).toHaveLength(1); // the drawing stays
+  });
+
+  it('[10.7.23] should offer it in the toolbar’s More menu too (the touch path)', () => {
+    const { manager } = setup();
+    const id = addPosition(manager, 'long-position');
+    act(() => manager.select([id]));
+    fireEvent.click(screen.getByRole('button', { name: 'More' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /Create limit order/ }));
+    expect(useOrderPrefillStore.getState().request).toMatchObject({
+      side: 'buy',
+      price: 900,
+      takeProfit: 960,
+      stopLoss: 870,
+    });
+  });
+
+  it('[10.7.23] should not offer it on other drawings', () => {
+    const { manager, containerRef, chartEl } = setup();
+    addHorizontalLine(manager, 900);
+    chartEl.dispatchEvent(
+      new MouseEvent('pointermove', { clientX: 150, clientY: 100, bubbles: true })
+    );
+    fireEvent.contextMenu(containerRef.current!, { clientX: 150, clientY: 100 });
+    expect(screen.queryByRole('menuitem', { name: /Create limit order/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'More' }));
+    expect(screen.queryByRole('menuitem', { name: /Create limit order/ })).toBeNull();
+  });
+
   it('[10.7.20] should ignore a right-click in the middle of a drag', () => {
     const { manager, containerRef, chartEl, press, onCursor } = setup();
     const id = addHorizontalLine(manager, 900); // y = 100
@@ -332,5 +435,123 @@ describe('table cells', () => {
     fireEvent.change(again, { target: { value: 'Nope' } });
     fireEvent.keyDown(again, { key: 'Escape' });
     expect(JSON.stringify(manager.get(id)!.style)).not.toContain('Nope');
+  });
+});
+
+describe('position settings', () => {
+  function openPosition(kind: 'long-position' | 'short-position' = 'long-position') {
+    const { manager } = setup();
+    const id = addPosition(manager, kind);
+    act(() => manager.select([id]));
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    const dialog = screen.getByRole('dialog', {
+      name: kind === 'long-position' ? 'Long Position' : 'Short Position',
+    });
+    const field = (name: string) =>
+      within(dialog).getByRole('textbox', { name }) as HTMLInputElement;
+    return { manager, id, dialog, field };
+  }
+
+  it('[10.7.24] should open on Inputs, with ticks and prices of the target and the stop linked', () => {
+    const { manager, id, dialog, field } = openPosition();
+    expect(
+      within(dialog)
+        .getAllByRole('tab')
+        .map((t) => t.textContent)
+    ).toEqual(['Inputs', 'Style']);
+    expect(within(dialog).getByRole('tab', { name: 'Inputs' }).getAttribute('aria-selected')).toBe(
+      'true'
+    );
+    // Entry 900, target 60 and stop 30 away, in the chart's 0.01 steps
+    expect(field('Entry price').value).toBe('900');
+    expect(field('Profit level ticks').value).toBe('6000');
+    expect(field('Profit level price').value).toBe('960');
+    expect(field('Stop level ticks').value).toBe('3000');
+    expect(field('Stop level price').value).toBe('870');
+
+    fireEvent.change(field('Profit level ticks'), { target: { value: '5000' } });
+    expect(field('Profit level price').value).toBe('950');
+    fireEvent.change(field('Stop level price'), { target: { value: '880' } });
+    expect(field('Stop level ticks').value).toBe('2000');
+    // A stop on the wrong side of the entry stays one tick away from it (TradingView)
+    fireEvent.change(field('Stop level ticks'), { target: { value: '0' } });
+    expect(field('Stop level ticks').getAttribute('aria-invalid')).toBe('true');
+    fireEvent.change(field('Stop level ticks'), { target: { value: '2000' } });
+
+    fireEvent.change(field('Entry price'), { target: { value: '910' } });
+    expect(field('Profit level price').value).toBe('960'); // the levels move with the entry
+    fireEvent.change(field('Account size'), { target: { value: '2,000' } });
+    fireEvent.change(field('Leverage'), { target: { value: '10' } });
+    fireEvent.change(within(dialog).getByRole('combobox', { name: 'Risk unit' }), {
+      target: { value: 'money' },
+    });
+    expect(field('Risk').value).toBe('500'); // 25 % of 2,000
+    fireEvent.change(within(dialog).getByRole('combobox', { name: 'Qty precision' }), {
+      target: { value: '3' },
+    });
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Ok' }));
+    const d = manager.get(id)!;
+    expect(d.points.map((p) => p.price)).toEqual([910, 910]);
+    expect(d.style).toMatchObject({
+      profitLevel: 50,
+      stopLevel: 20,
+      accountSize: 2000,
+      leverage: 10,
+      riskDisplayMode: 'money',
+      riskAmount: 500,
+      qtyPrecision: '3',
+    });
+  });
+
+  it('[10.7.24] should show a drawn entry on the price step', () => {
+    const { manager } = setup();
+    const id = manager.add({
+      kind: 'long-position',
+      points: [
+        { time: T0 + 100, price: 900.123456 },
+        { time: T0 + 200, price: 900.123456 },
+      ],
+      style: { stopLevel: 30, profitLevel: 60 },
+    } as never);
+    act(() => manager.select([id]));
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    const dialog = screen.getByRole('dialog', { name: 'Long Position' });
+    expect(
+      (within(dialog).getByRole('textbox', { name: 'Entry price' }) as HTMLInputElement).value
+    ).toBe('900.12');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Ok' }));
+    expect(manager.get(id)!.points[0]!.price).toBe(900.123456); // untouched until edited
+  });
+
+  it('[10.7.24] should put a short’s target below the entry and its stop above', () => {
+    const { field } = openPosition('short-position');
+    expect(field('Profit level price').value).toBe('840');
+    expect(field('Stop level price').value).toBe('930');
+  });
+
+  it('[10.7.25] should style the stop, target, text and stats', () => {
+    const { manager, id, dialog } = openPosition();
+    fireEvent.click(within(dialog).getByRole('tab', { name: 'Style' }));
+    for (const name of ['Line colour', 'Stop colour', 'Target colour', 'Text colour'])
+      expect(within(dialog).getByRole('button', { name })).toBeTruthy();
+    const stats = within(dialog).getByRole('group', { name: 'Stats' });
+    const tpPl = within(stats).getByRole('checkbox', { name: 'TP PL' }) as HTMLInputElement;
+    const qty = within(stats).getByRole('checkbox', { name: 'Qty' }) as HTMLInputElement;
+    expect([tpPl.checked, qty.checked]).toEqual([false, true]); // TradingView's factory
+    fireEvent.click(tpPl);
+    fireEvent.click(qty);
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: 'Compact stats mode' }));
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: 'Always show stats' }));
+    fireEvent.change(within(dialog).getByRole('combobox', { name: 'Font size' }), {
+      target: { value: '14' },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Ok' }));
+    expect(manager.get(id)!.style).toMatchObject({
+      positionStats: { tpPL: true, qty: false },
+      compactStats: true,
+      showStats: true,
+      fontSize: 14,
+    });
   });
 });

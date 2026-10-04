@@ -15,7 +15,13 @@ import type {
   UTCTimestamp,
 } from 'lightweight-charts';
 import { useStore } from 'zustand';
-import { DrawingManager, setFibLabelMode } from 'lightweight-charts-drawing';
+import {
+  DrawingManager,
+  setDefaultStyleOverride,
+  setFibLabelMode,
+} from 'lightweight-charts-drawing';
+import { positionDefaultStyle } from '@/lib/positionDefaults';
+import { candlePriceFormat } from '@/lib/priceFormat';
 import { paneStores } from '@/store/paneStore';
 import { useLayoutStore } from '@/store/layoutStore';
 import type { ChartType } from '@/store/layoutStore';
@@ -38,13 +44,14 @@ import { useTradeLines } from '@/hooks/useTradeLines';
 import { TradeLineAmend } from './TradeLineAmend';
 import { DrawingTextEditor } from './DrawingTextEditor';
 import { DrawingControls } from '@/components/drawing/DrawingControls';
-import { candlePriceFormat } from '@/lib/priceFormat';
 
 const CHART_BG = chartColors.bg;
 
 // Fib levels keep our pill labels, `61.8% · price` on the level colour (owner, visual Q&A
 // 2026-10-04); the rest of the drawings use the library's TradingView look
 setFibLabelMode('pill');
+// A new position drawing's risk inputs come from the account, not TradingView's stock defaults
+setDefaultStyleOverride(positionDefaultStyle);
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -799,6 +806,11 @@ export function ChartPanel({
 
   // Right-click off a drawing (or with a tool armed): back to the cursor
   const handleRightClickCursor = useCallback(() => onToolChangeRef.current?.(null), []);
+  /** The candles' price step, as the drawings read it (lightweight-charts' 0.01 unless set) */
+  const candlePipSize = useCallback(() => {
+    const minMove = candleRef.current?.options().priceFormat.minMove;
+    return typeof minMove === 'number' && minMove > 0 ? minMove : 0.01;
+  }, []);
 
   // ── Eraser: a click on a drawing removes it ─────────────────────────────
   useEffect(() => {
@@ -910,6 +922,9 @@ export function ChartPanel({
         manager={drawingManager}
         containerRef={containerRef}
         onCursor={handleRightClickCursor}
+        paneIndex={paneIndex}
+        symbol={symbol}
+        pipSize={candlePipSize}
       />
 
       {editingTextInfo && (

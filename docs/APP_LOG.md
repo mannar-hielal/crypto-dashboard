@@ -3921,3 +3921,43 @@ group order, the last tool per group remembered.
 - **`parity.yml`:** the same loop, with a 12-minute deadline. It passed only while its run fit inside the one minute.
 - **Schedule:** every other day instead of nightly (owner, 2026-10-04: no extra cost). A full run takes about 8 Actions minutes, so nightly would have been about 240 a month against the ~120 budgeted. Spec drift runs weekly, on the Sunday or Monday run.
 - **Fly cost:** unchanged, at a few cents a month. The machine runs about 6 minutes every other day.
+
+### feat: "Create limit order…" and the settings of the Long / Short Position tools (2026-10-04) ✅
+
+**Context:** TradingView parity — TradingView's right-click on a Long or Short Position drawing offers "Create limit
+order…", which opens its order panel filled in from the drawing. Only those two tools have it (TradingView's own
+announcement); its "+" on the price scale and the chart's Trade menu belong to no drawing and are out of scope. Owner
+answers 2026-10-04: the position tools only; prefill the form, never place directly; the drawing's own qty; the item in
+its own group in the middle of the menu.
+
+- **Menu** (`DrawingControls`): "Create limit order…" after Copy, between separators, only for one selected Long /
+  Short Position (`capabilitiesOf(kind).limitOrder`).
+- **The order** (`lib/positionOrder.ts`, fork exports `positionLevels` / `positionQty`): long → Buy, short → Sell; the
+  entry is the limit price, the target the TP, the stop the SL, all on the tick; the qty is the tool's (risk ÷ stop
+  distance, capped by its leverage), in coins, floored to the step. The market is the pane's (drawings are per symbol).
+- **The form** (`orderPrefillStore` gains `type: 'limit'`, `price`, `takeProfit`, `stopLoss`): TradingPanel opens on
+  Limit with all of it, set without the side / tab handlers that clear a typed price; DashboardPage opens the form at
+  every width for a limit request. A position in another pane activates that pane first; the old form leaves the
+  request to the new one. Nothing is placed until Buy / Sell, and the form's checks still apply.
+- **Position settings** (same PR, owner 2026-10-04: "both work in same PR", TradingView's Inputs and Style tabs, no
+  Visibility or Template): Settings… on a position opens on **Inputs** (`PositionSettings`): account size (USDT),
+  risk in % or USDT (switching converts it), entry price, leverage, profit and stop level as ticks or a price (linked;
+  `levelFromPrice` keeps a level a tick on its side), qty precision. Left out: the account currency (always USDT) and
+  lot size (a USDT contract is one coin). **Style** adds stop / target colours with opacity, text colour and size,
+  and Info: the stats, compact mode, always show stats. No Coordinates tab: the entry is in Inputs. Ticks count the
+  chart's price step (the candles keep lightweight-charts' 0.01), the same as the drawing's own labels.
+- **Defaults** (`lib/positionDefaults.ts`, `setDefaultStyleOverride` in ChartPanel): a new position takes the paper
+  balance as its account, the symbol's leverage (Spot 1×) and the qty step's decimals, not TradingView's stock
+  1000 / 10000× / whole units, so its Qty — and the order "Create limit order…" fills in — fits the account. Risk
+  stays TradingView's 25 %.
+- **Found in the browser check and fixed here:**
+  - **Phone Limit / Stop price field:** the order form's scrolling column squeezed the price box (`overflow-hidden`,
+    for its open animation) to nothing on a phone, leaving the field under the Amount row — the order still used the
+    price, unseen. `shrink-0` on it (TradingPanel); e2e [20.5].
+  - **Touch path:** a phone has no right-click, and a long-press opens no menu (touch editing is still "later"), so
+    "Create limit order…" is also in the floating toolbar's More menu on a position.
+  - **The candles' price step:** ChartPanel never set the series' `priceFormat`, so every symbol showed 2 decimals
+    (DOGE at 0.18) and the drawings counted ticks of 0.01 (953,256 "ticks" on a BTC position). The candles now take
+    the symbol's tick and its decimals for the pane's market (`lib/priceFormat.ts`, the SDK's tick table): BTCUSDT
+    1 decimal, DOGEUSDT 5. The price axis, the drawing labels and the position Inputs' ticks follow. [10.3.4]
+- **Tests:** TRADING_TEST_PLAN 10.3.4, 10.7.23–10.7.26, 20.5; UI_REPRODUCTIONS 10.7 steps 18–19.

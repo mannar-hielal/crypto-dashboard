@@ -92,6 +92,7 @@ vi.mock('lightweight-charts-drawing', () => ({
   },
   parseDrawings: (x: unknown) => (Array.isArray(x) ? x : []),
   setFibLabelMode: () => undefined,
+  setDefaultStyleOverride: () => undefined,
 }));
 
 vi.mock('@/components/indicators/IndicatorLegends', () => ({
