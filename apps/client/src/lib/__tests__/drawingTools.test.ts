@@ -5,7 +5,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { DrawingManager } from 'lightweight-charts-drawing';
 import {
+  MAGNET_DEFAULT,
+  applyMagnet,
   applyStayInDrawingMode,
+  loadMagnet,
+  magnetModeOf,
   connectPaneManager,
   loadStayInDrawingMode,
   keepSelectionInOnePane,
@@ -149,7 +153,7 @@ describe('stay in drawing mode', () => {
   it('[10.7.12] should leave the tool armed and the drawing unselected after a placement when on', () => {
     const panes: (DrawingManager | null)[] = [null];
     const a = setup();
-    connectPaneManager(panes, 0, a.manager, () => undefined, true);
+    connectPaneManager(panes, 0, a.manager, () => undefined, { stayInDrawingMode: true });
     a.manager.setTool('trend-line');
     a.press(100, 100);
     a.press(200, 50);
@@ -176,8 +180,12 @@ describe('stay in drawing mode', () => {
     const panes: (DrawingManager | null)[] = [null, null, null];
     const a = setup();
     const b = setup();
-    connectPaneManager(panes, 0, a.manager, () => undefined, loadStayInDrawingMode());
-    connectPaneManager(panes, 2, b.manager, () => undefined, loadStayInDrawingMode());
+    connectPaneManager(panes, 0, a.manager, () => undefined, {
+      stayInDrawingMode: loadStayInDrawingMode(),
+    });
+    connectPaneManager(panes, 2, b.manager, () => undefined, {
+      stayInDrawingMode: loadStayInDrawingMode(),
+    });
     expect(loadStayInDrawingMode()).toBe(false);
 
     applyStayInDrawingMode(panes, true);
@@ -203,5 +211,32 @@ describe('stay in drawing mode', () => {
     expect(() => applyStayInDrawingMode([], true)).not.toThrow();
     get.mockRestore();
     set.mockRestore();
+  });
+});
+
+describe('magnet setting', () => {
+  it('[10.7.16] should set every pane and remember the setting across a reload', () => {
+    const panes: (DrawingManager | null)[] = [null, null];
+    const a = setup();
+    connectPaneManager(panes, 1, a.manager, () => undefined, {
+      magnet: magnetModeOf(loadMagnet()),
+    });
+    expect(loadMagnet()).toEqual(MAGNET_DEFAULT);
+    applyMagnet(panes, { on: true, mode: 'strong' });
+    expect(loadMagnet()).toEqual({ on: true, mode: 'strong' });
+    expect(magnetModeOf(loadMagnet())).toBe('strong');
+    expect(magnetModeOf({ on: false, mode: 'strong' })).toBe('off');
+  });
+
+  it('should read a malformed saved magnet as the default', () => {
+    for (const raw of [
+      '{',
+      '"strong"',
+      '{"on":"yes","mode":"strong"}',
+      '{"on":true,"mode":"max"}',
+    ]) {
+      localStorage.setItem('cd-drawing-magnet', raw);
+      expect(loadMagnet()).toEqual(MAGNET_DEFAULT);
+    }
   });
 });

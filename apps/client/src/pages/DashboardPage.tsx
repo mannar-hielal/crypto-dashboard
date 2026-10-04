@@ -5,7 +5,6 @@ import { motion, AnimatePresence, useMotionValue, useTransform, animate } from '
 import { AlertTriangle } from 'lucide-react';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import type { IChartApi } from 'lightweight-charts';
-import type { DrawingKind, DrawingManager } from 'lightweight-charts-drawing';
 import { SeoHead } from '@/components/SeoHead';
 import { usePaneFeeds } from '@/hooks/usePaneFeeds';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -21,14 +20,7 @@ import { authApi } from '@crypto-dashboard/sdk';
 import { TopBar } from '@/components/dashboard/TopBar';
 import { LeftToolbar } from '@/components/dashboard/LeftToolbar';
 import { CURSOR_CSS_MAP, type CursorVariantId } from '@/lib/cursors';
-import { TOOL_MAP } from '@/lib/drawingManager';
-import {
-  HOST_TOOLS,
-  applyStayInDrawingMode,
-  connectPaneManager,
-  loadStayInDrawingMode,
-  nextActiveTool,
-} from '@/lib/drawingTools';
+import { useDrawingSession } from '@/hooks/useDrawingSession';
 import { MultiChartArea } from '@/components/dashboard/MultiChartArea';
 import { OrderAccountManagementPanel } from '@/components/dashboard/OrderAccountManagementPanel';
 import { TickerBar } from '@/components/dashboard/TickerBar';
@@ -141,47 +133,9 @@ export function DashboardPage() {
 
 export function DashboardInner() {
   const [cursorVariant, setCursorVariant] = useState<CursorVariantId>('cross');
-  const [activeToolType, setActiveToolType] = useState<string | null>(null);
-  const drawingManagerRefs = useRef<(DrawingManager | null)[]>([null, null, null, null]);
+  const drawing = useDrawingSession();
+  const { activeToolType } = drawing;
   const chartRefs = useRef<(IChartApi | null)[]>([null, null, null, null]);
-  const [stayInDrawingMode, setStayInDrawingMode] = useState(loadStayInDrawingMode);
-  // A pane mounted later reads the switch here, not from a stale closure
-  const stayInDrawingModeRef = useRef(stayInDrawingMode);
-
-  /** A pane's drawing manager: tracked per pane until its chart goes (the returned cleanup).
-   *  The library disarms its tool after a placement (TradingView: back to the cursor) or on
-   *  Escape — never ending the Eraser or zoom-in; Delete acts on the pane last clicked only. */
-  function handleDrawingManagerReady(paneIndex: number, manager: DrawingManager) {
-    return connectPaneManager(
-      drawingManagerRefs.current,
-      paneIndex,
-      manager,
-      (kind) => setActiveToolType((prev) => nextActiveTool(prev, kind)),
-      stayInDrawingModeRef.current
-    );
-  }
-
-  function handleStayInDrawingModeChange(on: boolean) {
-    stayInDrawingModeRef.current = on;
-    setStayInDrawingMode(on);
-    applyStayInDrawingMode(drawingManagerRefs.current, on);
-  }
-
-  function handleToolChange(toolType: string | null) {
-    setActiveToolType(toolType);
-    // The Eraser and zoom-in are ours: ChartPanel disarms the library's tool for the Eraser
-    if (toolType !== null && HOST_TOOLS.has(toolType)) return;
-    const paneIndex = useLayoutStore.getState().activePane;
-    const manager = drawingManagerRefs.current[paneIndex];
-    if (manager) {
-      manager.setTool(toolType === null ? null : ((TOOL_MAP[toolType] ?? toolType) as DrawingKind));
-    }
-  }
-
-  function handleBinAction() {
-    const paneIndex = useLayoutStore.getState().activePane;
-    drawingManagerRefs.current[paneIndex]?.clear();
-  }
 
   function handleChartRefReady(paneIndex: number, chart: IChartApi) {
     chartRefs.current[paneIndex] = chart;
@@ -463,14 +417,19 @@ export function DashboardInner() {
           className="shrink-0 overflow-hidden"
         >
           <LeftToolbar
-            onToolChange={handleToolChange}
-            onBinAction={handleBinAction}
+            onToolChange={drawing.selectTool}
+            subTools={drawing.subTools}
             onZoomOut={handleZoomOut}
             cursorVariant={cursorVariant}
             onCursorVariantChange={handleCursorVariantChange}
             activeToolType={activeToolType}
-            stayInDrawingMode={stayInDrawingMode}
-            onStayInDrawingModeChange={handleStayInDrawingModeChange}
+            stayInDrawingMode={drawing.stayInDrawingMode}
+            onStayInDrawingModeChange={drawing.setStayInDrawingMode}
+            magnet={drawing.magnet}
+            onMagnetChange={drawing.setMagnet}
+            getDrawingCounts={drawing.drawingCounts}
+            onRemoveDrawings={drawing.removeDrawings}
+            onShowHiddenDrawings={drawing.showHiddenDrawings}
           />
         </motion.div>
 
@@ -489,10 +448,10 @@ export function DashboardInner() {
           >
             <ErrorBoundary>
               <MultiChartArea
-                onDrawingManagerReady={handleDrawingManagerReady}
+                onDrawingManagerReady={drawing.onManagerReady}
                 onChartRefReady={handleChartRefReady}
                 activeToolType={activeToolType}
-                onToolChange={handleToolChange}
+                onToolChange={drawing.selectTool}
               />
             </ErrorBoundary>
           </motion.div>
