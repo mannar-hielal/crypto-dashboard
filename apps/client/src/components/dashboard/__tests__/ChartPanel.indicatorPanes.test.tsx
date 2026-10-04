@@ -50,8 +50,6 @@ const h = vi.hoisted(() => {
     /** Every series added: its options, the pane object it went in, removed or not */
     series: [] as { options: Record<string, unknown>; pane: unknown; removed: boolean }[],
     removedPaneIndices: [] as number[],
-    addedDrawings: [] as unknown[],
-    activeTool: null as string | null,
     mainPaneHeight: 300,
     timeScaleHeight: 0,
   };
@@ -122,23 +120,16 @@ vi.mock('lightweight-charts', async (importOriginal) => {
   };
 });
 
+// The drawing library's own rules (price pane only, placement) are tested on a fake chart in
+// lib/__tests__/drawingLibrary.test.ts — here it is a stub
 vi.mock('lightweight-charts-drawing', () => ({
   DrawingManager: function DrawingManager() {
-    return new Proxy(
-      {
-        on: () => () => undefined,
-        getActiveTool: () => h.activeTool,
-        addDrawing: (d: unknown) => h.addedDrawings.push(d),
-      } as Record<string, unknown>,
-      { get: (t, prop) => (prop in t ? t[prop as string] : () => stub()) }
-    );
+    return new Proxy({ on: () => () => undefined } as Record<string, unknown>, {
+      get: (t, prop) => (prop in t ? t[prop as string] : () => undefined),
+    });
   },
-  ToolRegistry: {
-    getInstance: () => ({
-      get: () => ({ requiredAnchors: 1 }),
-      createDrawing: (type: string, id: string) => ({ type, id }),
-    }),
-  },
+  parseDrawings: (x: unknown) => (Array.isArray(x) ? x : []),
+  setFibLabelMode: () => undefined,
 }));
 
 vi.mock('@/components/indicators/IndicatorLegends', () => ({
@@ -179,8 +170,6 @@ const observers: { live: boolean; callback: () => void }[] = [];
 beforeEach(() => {
   h.series.length = 0;
   h.removedPaneIndices.length = 0;
-  h.addedDrawings.length = 0;
-  h.activeTool = null;
   h.timeScaleHeight = 0;
   vi.stubGlobal(
     'ResizeObserver',
@@ -374,29 +363,5 @@ describe('ChartPanel rebalance before the chart has a height', () => {
     for (const o of waiting) o.callback();
     expect(observers.length).toBe(created);
     expect(observers.filter((o) => o.live)).toHaveLength(waiting.length);
-  });
-});
-
-describe('ChartPanel drawing tools with indicator panes', () => {
-  function click(el: Element, y: number) {
-    const init = { button: 0, clientX: 100, clientY: y, bubbles: true };
-    el.dispatchEvent(new PointerEvent('pointerdown', init));
-    el.dispatchEvent(new PointerEvent('pointerup', init));
-  }
-
-  it('[10.6.5] should place a drawing from a click in the price pane', () => {
-    const { container } = render(panel([inst('mom1', 'momentum')]));
-    h.activeTool = 'horizontal-line';
-    const chartEl = container.querySelector('.h-full.w-full > .h-full.w-full')!;
-    click(chartEl, 120);
-    expect(h.addedDrawings).toHaveLength(1);
-  });
-
-  it('[10.6.5] should create no drawing from a click in an indicator pane', () => {
-    const { container } = render(panel([inst('mom1', 'momentum')]));
-    h.activeTool = 'horizontal-line';
-    const chartEl = container.querySelector('.h-full.w-full > .h-full.w-full')!;
-    click(chartEl, h.mainPaneHeight + 40); // inside Momentum's pane
-    expect(h.addedDrawings).toHaveLength(0);
   });
 });

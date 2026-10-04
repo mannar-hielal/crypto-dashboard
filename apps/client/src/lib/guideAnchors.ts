@@ -73,6 +73,8 @@ export const GUIDE_ANCHORS = [
   'chart.mark-line',
   // toolbar (drawing tools, left of the chart; key = the tool group id)
   'toolbar.tool',
+  // a tool in a group's menu (key = the tool id, e.g. horizontal-line, eraser)
+  'toolbar.subtool',
   // indicator (key = the catalog id for an option, the instance id for everything else)
   'indicator.menu',
   'indicator.option',

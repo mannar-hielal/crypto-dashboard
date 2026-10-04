@@ -1,12 +1,13 @@
-import { DrawingManager, ToolRegistry } from 'lightweight-charts-drawing';
-import type { SerializedDrawing } from 'lightweight-charts-drawing';
+import { parseDrawings } from 'lightweight-charts-drawing';
+import type { DrawingManager, Drawing } from 'lightweight-charts-drawing';
+import { convertLegacyDrawings, type LegacyChartScale } from '@/lib/drawingMigration';
 
 // 🔐 Hard cap on persisted drawings per symbol — prevents unbounded localStorage
 //    growth from an untracked drawing spree (and keeps the restore cost bounded).
-const MAX_DRAWINGS = 200;
+export const MAX_DRAWINGS = 200;
 
-// Short debounce so drag updates (drawing:updated fires per anchor move) don't
-// re-serialize the full drawing set on every pointermove.
+// Short debounce so drag updates (`change` fires per pointermove) don't
+// re-serialize the full drawing set on every move.
 const PERSIST_DEBOUNCE_MS = 150;
 // 🔐 Keyed by DrawingManager instance, not by symbol string. Two panes can
 // show the same symbol at once, each with its own DrawingManager — keying by
@@ -16,6 +17,7 @@ const PERSIST_DEBOUNCE_MS = 150;
 // any of them are currently showing.
 const persistTimers = new WeakMap<DrawingManager, ReturnType<typeof setTimeout>>();
 
+/** Toolbar ids from before the library menu → library kinds (TradingView names) */
 export const TOOL_MAP: Record<string, string> = {
   trendline: 'trend-line',
   horizontal: 'horizontal-line',
@@ -23,86 +25,171 @@ export const TOOL_MAP: Record<string, string> = {
   ray: 'ray',
   parallel: 'parallel-channel',
   polyline: 'polyline',
-  text: 'text-annotation',
+  text: 'text',
   note: 'note',
   callout: 'callout',
   priceNote: 'price-note',
   priceLabel: 'price-label',
 };
 
+/** The drawings of a symbol (library 0.4 model) */
 export function getPersistenceKey(symbol: string): string {
+  return `cd-drawings-v2-${symbol}`;
+}
+
+/** Library 0.1's drawings of a symbol — read once to migrate, then left for a rollback */
+export function getLegacyPersistenceKey(symbol: string): string {
   return `cd-drawings-${symbol}`;
 }
 
-export function restoreDrawings(manager: DrawingManager, symbol: string) {
-  const key = getPersistenceKey(symbol);
-  const saved = localStorage.getItem(key);
-  if (!saved) return;
-
-  let data: SerializedDrawing[];
+// 🔐 localStorage can throw (blocked storage, private mode) — treat it as optional
+function readKey(key: string): string | null {
   try {
-    const parsed = JSON.parse(saved) as unknown;
-    if (!Array.isArray(parsed) || parsed.length === 0) return;
-    data = parsed as SerializedDrawing[];
+    return localStorage.getItem(key);
   } catch {
-    // Not valid JSON at all — nothing recoverable here.
-    localStorage.removeItem(key);
-    return;
-  }
-
-  // 🔐 Import one drawing at a time instead of manager.importDrawings(data, ...)
-  //    — that runs the whole array through a single factory call and aborts
-  //    on the first exception, which the outer try/catch used to turn into
-  //    "delete every saved drawing for this symbol" for a single corrupted
-  //    or no-longer-supported entry. Skip just the bad one instead.
-  const registry = ToolRegistry.getInstance();
-  for (const raw of data) {
-    try {
-      const drawing = registry.createDrawing(raw.type, raw.id, raw.anchors, raw.style, raw.options);
-      if (drawing) manager.addDrawing(drawing);
-    } catch {
-      // Skip this one entry; the rest of the saved set is still restored.
-    }
+    return null;
   }
 }
 
-export function persistDrawings(manager: DrawingManager, symbol: string) {
-  const key = getPersistenceKey(symbol);
-  const drawings = manager.exportDrawings();
-  // Cap then write the full set — the debounce coalesces rapid anchor-drag
-  // events so we don't re-serialize on every pointermove.
-  const capped = drawings.slice(-MAX_DRAWINGS);
-  localStorage.setItem(key, JSON.stringify(capped));
+function writeKey(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Full or blocked storage: the drawings stay on the chart for this session
+  }
 }
 
-/** Debounced variant used by live editing — coalesces drag updates per pane. */
-export function schedulePersistDrawings(manager: DrawingManager, symbol: string) {
+function parseJson(raw: string): unknown {
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The saved drawings of a symbol, schema-checked (🔐 localStorage is untrusted input: anything
+ * malformed is dropped, never thrown). The first load after the library upgrade converts the 0.1
+ * entries and saves them under the new key, so the conversion runs once.
+ */
+export function loadDrawings(symbol: string, scale?: LegacyChartScale): Drawing[] {
+  const saved = readKey(getPersistenceKey(symbol));
+  if (saved !== null) return parseDrawings(parseJson(saved)).slice(-MAX_DRAWINGS);
+
+  const legacy = readKey(getLegacyPersistenceKey(symbol));
+  if (legacy === null) return [];
+  const converted = convertLegacyDrawings(parseJson(legacy), scale).slice(-MAX_DRAWINGS);
+  writeKey(getPersistenceKey(symbol), JSON.stringify(converted));
+  return converted;
+}
+
+/** Replace the manager's drawings with the symbol's saved set (empty when none) */
+export function restoreDrawings(
+  manager: DrawingManager,
+  symbol: string,
+  scale?: LegacyChartScale
+): void {
+  manager.importJSON(loadDrawings(symbol, scale));
+}
+
+export function persistDrawings(manager: DrawingManager, symbol: string): void {
+  const capped = manager.drawings().slice(-MAX_DRAWINGS);
+  writeKey(getPersistenceKey(symbol), JSON.stringify(capped));
+}
+
+// ─── One drawing set per symbol, shared by every pane showing it ─────────────
+// 🔐 Two panes on one symbol used to keep two copies: each saved its own set under the same
+//    key, so a save from pane B erased pane A's newer drawings. Now every pane's manager is
+//    registered with its symbol; an edit is saved (debounced) and copied into the other panes on
+//    that symbol, and a pane that opens a symbol another pane shows takes that pane's set.
+
+const paneSymbols = new Map<DrawingManager, string>();
+// Set while we load or copy drawings into a manager: its `change` is ours, not the user's
+let syncing = false;
+
+function peersOf(manager: DrawingManager, symbol: string): DrawingManager[] {
+  const peers: DrawingManager[] = [];
+  for (const [m, sym] of paneSymbols) if (m !== manager && sym === symbol) peers.push(m);
+  return peers;
+}
+
+function replaceQuietly(manager: DrawingManager, drawings: readonly Drawing[]): void {
+  syncing = true;
+  try {
+    manager.importJSON(drawings);
+  } finally {
+    syncing = false;
+  }
+}
+
+/** Save the manager's set under its symbol and copy it into the other panes on that symbol */
+function saveAndShare(manager: DrawingManager): void {
+  const symbol = paneSymbols.get(manager);
+  if (symbol === undefined) return;
+  persistDrawings(manager, symbol);
+  const list = manager.drawings();
+  for (const peer of peersOf(manager, symbol)) replaceQuietly(peer, list);
+}
+
+/** A pending debounced save of this manager, done now */
+function flushPending(manager: DrawingManager): void {
+  const timer = persistTimers.get(manager);
+  if (timer === undefined) return;
+  clearTimeout(timer);
+  persistTimers.delete(manager);
+  saveAndShare(manager);
+}
+
+/** The symbol's set into the manager: from a pane already showing it, else from storage */
+function loadInto(manager: DrawingManager, symbol: string, scale?: LegacyChartScale): void {
+  const peer = peersOf(manager, symbol)[0];
+  if (peer) flushPending(peer);
+  replaceQuietly(manager, peer ? peer.drawings() : loadDrawings(symbol, scale));
+}
+
+/** Debounced save + share after an edit — coalesces drag updates per pane. */
+function scheduleSave(manager: DrawingManager): void {
+  if (syncing) return;
   const existing = persistTimers.get(manager);
   if (existing) clearTimeout(existing);
   persistTimers.set(
     manager,
     setTimeout(() => {
       persistTimers.delete(manager);
-      persistDrawings(manager, symbol);
+      saveAndShare(manager);
     }, PERSIST_DEBOUNCE_MS)
   );
 }
 
 /**
- * Drawings live on the price pane only. The library selects a drawing on a chart click by
- * hit-testing `param.point`, which is relative to the pane clicked (lightweight-charts 5.2.0), so a
- * click near an indicator pane's top would select a drawing near the price pane's. Its click
- * handler is private API (`handleClick`, bound in the constructor of lightweight-charts-drawing
- * 0.1.1, subscribed by `attach()`): replace it before `attach()` with one that ignores sub-pane
- * clicks. `drawingManager.test` fails if a library upgrade stops subscribing this guard.
+ * A pane's manager joins the symbol's shared set: loads it, then saves and shares every edit.
+ * Returns the detach (saves a pending edit first).
  */
-export function guardClicksToPricePane(manager: DrawingManager): void {
-  const internals = manager as unknown as {
-    handleClick: (param: { paneIndex?: number }) => void;
+export function attachDrawings(
+  manager: DrawingManager,
+  symbol: string,
+  scale?: LegacyChartScale
+): () => void {
+  paneSymbols.set(manager, symbol);
+  loadInto(manager, symbol, scale);
+  const off = manager.on('change', () => scheduleSave(manager));
+  return () => {
+    flushPending(manager);
+    off();
+    paneSymbols.delete(manager);
   };
-  const libraryHandleClick = internals.handleClick;
-  internals.handleClick = (param) => {
-    if ((param.paneIndex ?? 0) !== 0) return;
-    libraryHandleClick.call(manager, param);
-  };
+}
+
+/** The pane switched symbol: save its set under the old one, then load the new one's */
+export function switchDrawingsSymbol(
+  manager: DrawingManager,
+  symbol: string,
+  scale?: LegacyChartScale
+): void {
+  const previous = paneSymbols.get(manager);
+  if (previous === undefined || previous === symbol) return;
+  flushPending(manager);
+  persistDrawings(manager, previous);
+  paneSymbols.set(manager, symbol);
+  loadInto(manager, symbol, scale);
 }

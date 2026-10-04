@@ -34,7 +34,7 @@
 import { useRef, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import type { IChartApi, ISeriesApi } from 'lightweight-charts';
-import { DrawingManager } from 'lightweight-charts-drawing';
+import type { DrawingManager } from 'lightweight-charts-drawing';
 import { useLayoutStore, LAYOUT_PANE_COUNT, DEFAULT_PANE_SIZES } from '@/store/layoutStore';
 import { paneStores } from '@/store/paneStore';
 import {
@@ -111,7 +111,8 @@ function ResizeSplitter({ axis, position, splitterRef, onPointerDown }: Splitter
 // ─── MultiChartArea ───────────────────────────────────────────────────────────
 
 interface MultiChartAreaProps {
-  onDrawingManagerReady?: (paneIndex: number, manager: DrawingManager) => void;
+  /** Returns the cleanup ChartPanel runs when the pane's chart goes */
+  onDrawingManagerReady?: (paneIndex: number, manager: DrawingManager) => (() => void) | void;
   onChartRefReady?: (paneIndex: number, chart: IChartApi) => void;
   activeToolType?: string | null;
   onToolChange?: (toolType: string | null) => void;

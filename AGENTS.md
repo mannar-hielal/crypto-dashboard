@@ -95,37 +95,33 @@ expect(useLayoutStore.getState().activePane).toBe(2);
 ## Architecture — Chart to Toolbar to Drawing
 
 - `DashboardPage` holds `cursorVariant` state, passes it down as `data-cursor` attribute on the chart `<div>`.
-- `LeftToolbar` receives `onCursorVariantChange` callback. **Line tools are not yet wired** — `activeTool` is local to `LeftToolbar`.
+- `LeftToolbar` sends the picked tool up (`onToolChange`); `DashboardPage` holds `activeToolType` and arms the active pane's `DrawingManager`.
 - `ChartPanel` creates `lightweight-charts` instance, exposes refs via `onChartReady(chart, series)` to `MultiChartArea`.
 - Cross-pane sync: crosshair (`subscribeCrosshairMove`) + time range (`subscribeVisibleTimeRangeChange`).
 - Drag-to-grab cursor: `data-dragging` attribute toggled via DOM (zero re-renders).
 
-**Adding drawing tools** requires:
-
-1. Add `onToolChange` prop to `LeftToolbar`
-2. Lift `activeTool`/`lineTool` state to `DashboardPage`
-3. Pass through `MultiChartArea` → `ChartPanel`
-4. Create `ISeriesPrimitive` subclass for canvas rendering
-5. Create `drawingStore` (Zustand) for persistent drawings
-6. Wire `subscribeClick`/`subscribeDblClick` in `useDrawingInteraction` hook
+**Drawing tools** come from the forked `lightweight-charts-drawing` 0.4.0 in
+`apps/client/src/vendor/` (MIT, maintained here only; imported by its package name through an
+alias). `ChartPanel` creates one `DrawingManager` per pane; storage is `lib/drawingManager.ts`; the
+menu is `lib/libraryTools.ts`. See `.claude/skills/drawing-tools`.
 
 ## Component hierarchy (key paths)
 
 ```
 DashboardPage
-├── LeftToolbar          ← onCursorVariantChange, (future) onToolChange
+├── LeftToolbar          ← onCursorVariantChange, onToolChange, onBinAction
 ├── MultiChartArea
-│   └── ChartPanel       ← onChartReady(chart, series), (future) activeTool, lineTool
+│   └── ChartPanel       ← onChartReady(chart, series), onDrawingManagerReady, activeToolType
 └── TradingPanel
 ```
 
 - `tokens.ts` is the single source of truth for colors — no hex in components.
 - **New UI components MUST use CSS Modules** (`*.module.css`) with camelCase class names. Existing Tailwind-utility components remain as-is.
 - No inline `style` props except for dynamic values from `tokens.ts`.
-- Drawing tool primitives live in `src/lib/drawing/` (types, renderers, composites).
+- Drawing tools: the fork in `src/vendor/lightweight-charts-drawing/` (local changes listed in its README).
 - ChartPanel primitive lifecycle effect at line ~672 MUST have a cleanup function (detachPrimitive + removeSeries + clear ref map) — React StrictMode double-mounts in dev and stale primitive refs cause indicator lines to silently not render.
 - `cursors.tsx` exports SVG icon functions + `CURSOR_CSS_MAP` (data-URI cursors).
-- `lineTools.tsx` exports SVG icon functions + `LINE_TOOLS` array — UI only, no drawing logic.
+- `toolIcons.tsx` exports an SVG icon per drawing tool id (`TOOL_ICONS`) — UI only, no drawing logic.
 
 ## Chart quirks
 

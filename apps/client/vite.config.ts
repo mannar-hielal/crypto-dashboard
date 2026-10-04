@@ -134,6 +134,12 @@ export default defineConfig(({ mode }) => ({
     alias: {
       // Allows: import { Button } from '@/components/ui/button'
       '@': path.resolve(__dirname, './src'),
+      // Forked library (see src/vendor/lightweight-charts-drawing/README.md) — existing
+      // `from 'lightweight-charts-drawing'` imports resolve to the in-repo copy
+      'lightweight-charts-drawing': path.resolve(
+        __dirname,
+        './src/vendor/lightweight-charts-drawing/index.ts'
+      ),
     },
   },
   server: {

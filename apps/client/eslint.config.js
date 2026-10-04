@@ -32,4 +32,21 @@ export default defineConfig([
       'react-refresh/only-export-components': 'off',
     },
   },
+  {
+    // Forked lightweight-charts-drawing (src/vendor/lightweight-charts-drawing/README.md):
+    // upstream code kept close to its source so later fixes stay reviewable. Only the rules it
+    // breaks are relaxed, and only here.
+    files: ['src/vendor/**/*.ts'],
+    rules: {
+      // Upstream drops fields with `{ field: _x, ...rest }` and marks unused params with `_`
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', ignoreRestSiblings: true },
+      ],
+      // A comment between grouped empty `case`s (placement.ts) reads as a fallthrough
+      'no-fallthrough': ['error', { allowEmptyCase: true }],
+      // Two defensive initial values that every branch overwrites (signpost.ts, text-tools.ts)
+      'no-useless-assignment': 'off',
+    },
+  },
 ]);

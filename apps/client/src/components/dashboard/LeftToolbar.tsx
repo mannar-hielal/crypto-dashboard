@@ -77,7 +77,7 @@ export function LeftToolbar({
     'trend-lines': 'trend-line',
     'fib-gann': 'fib-retracement',
     shapes: 'rectangle',
-    annotations: 'text-annotation',
+    annotations: 'text',
     measure: 'long-position',
     bin: 'remove-all',
   });
@@ -527,6 +527,7 @@ export function LeftToolbar({
                   return (
                     <button
                       key={toolDef.id}
+                      {...guide('toolbar.subtool', toolDef.id)}
                       onClick={() => handleSubToolSelect(activePopupGroup.id, toolDef.id)}
                       className="flex w-full items-center gap-2 px-3 py-1.5 text-left transition-colors"
                       style={{

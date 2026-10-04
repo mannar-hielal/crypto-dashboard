@@ -5,7 +5,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform, animate } from '
 import { AlertTriangle } from 'lucide-react';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import type { IChartApi } from 'lightweight-charts';
-import { DrawingManager } from 'lightweight-charts-drawing';
+import type { DrawingKind, DrawingManager } from 'lightweight-charts-drawing';
 import { SeoHead } from '@/components/SeoHead';
 import { usePaneFeeds } from '@/hooks/usePaneFeeds';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -22,6 +22,7 @@ import { TopBar } from '@/components/dashboard/TopBar';
 import { LeftToolbar } from '@/components/dashboard/LeftToolbar';
 import { CURSOR_CSS_MAP, type CursorVariantId } from '@/lib/cursors';
 import { TOOL_MAP } from '@/lib/drawingManager';
+import { HOST_TOOLS, connectPaneManager, nextActiveTool } from '@/lib/drawingTools';
 import { MultiChartArea } from '@/components/dashboard/MultiChartArea';
 import { OrderAccountManagementPanel } from '@/components/dashboard/OrderAccountManagementPanel';
 import { TickerBar } from '@/components/dashboard/TickerBar';
@@ -138,26 +139,29 @@ export function DashboardInner() {
   const drawingManagerRefs = useRef<(DrawingManager | null)[]>([null, null, null, null]);
   const chartRefs = useRef<(IChartApi | null)[]>([null, null, null, null]);
 
+  /** A pane's drawing manager: tracked per pane until its chart goes (the returned cleanup).
+   *  The library disarms its tool after a placement (TradingView: back to the cursor) or on
+   *  Escape — never ending the Eraser or zoom-in; Delete acts on the pane last clicked only. */
   function handleDrawingManagerReady(paneIndex: number, manager: DrawingManager) {
-    drawingManagerRefs.current[paneIndex] = manager;
-    manager.on('tool:changed', () => {
-      setActiveToolType(manager.getActiveTool());
-    });
+    return connectPaneManager(drawingManagerRefs.current, paneIndex, manager, (kind) =>
+      setActiveToolType((prev) => nextActiveTool(prev, kind))
+    );
   }
 
   function handleToolChange(toolType: string | null) {
     setActiveToolType(toolType);
-    if (toolType === 'zoom-in' || toolType === 'eraser') return;
+    // The Eraser and zoom-in are ours: ChartPanel disarms the library's tool for the Eraser
+    if (toolType !== null && HOST_TOOLS.has(toolType)) return;
     const paneIndex = useLayoutStore.getState().activePane;
     const manager = drawingManagerRefs.current[paneIndex];
     if (manager) {
-      manager.setActiveTool(toolType === null ? null : (TOOL_MAP[toolType] ?? toolType));
+      manager.setTool(toolType === null ? null : ((TOOL_MAP[toolType] ?? toolType) as DrawingKind));
     }
   }
 
   function handleBinAction() {
     const paneIndex = useLayoutStore.getState().activePane;
-    drawingManagerRefs.current[paneIndex]?.clearAll();
+    drawingManagerRefs.current[paneIndex]?.clear();
   }
 
   function handleChartRefReady(paneIndex: number, chart: IChartApi) {

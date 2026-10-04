@@ -1,88 +1,115 @@
 ---
 name: drawing-tools
-description: Use when working on the chart drawing system — files under apps/client/src/lib/drawing/, apps/client/src/hooks/useDrawingInteraction.ts, apps/client/src/store/drawingStore.ts, apps/client/src/components/drawing/*, or anywhere ChartPanel/DashboardPage/LeftToolbar handle activeTool/lineTool. Also use when the user mentions trendline, horizontal/vertical line, ray, parallel channel, polyline, text tool, freehand, eraser, bin tool, ISeriesPrimitive, or lightweight-charts. Covers the P1–P5 roadmap in docs/DRAWING_TOOLS.md, the state machine, hit-test math, and known bugs.
+description: Use when working on the chart drawing tools — the forked library in apps/client/src/vendor/lightweight-charts-drawing/ (0.4.0), ChartPanel's DrawingManager setup and text editor (DrawingTextEditor.tsx), lib/drawingManager.ts (per-symbol storage, cap, TOOL_MAP), lib/drawingMigration.ts (0.1 → 0.4 saves), lib/drawingTools.ts (Eraser, one-pane selection), lib/libraryTools.ts (the tool menu), lib/toolIcons.tsx, LeftToolbar's drawing groups / Eraser / Remove, or DashboardPage's activeToolType. Also use when the user mentions trend line, horizontal/vertical line, ray, channel, pitchfork, Fibonacci, Gann, position tool, text/note/callout, eraser, remove drawings, magnet, Shift constraints, drawing labels, ISeriesPrimitive drawings, or "drawings disappear". Covers where each piece lives, the fork's rules, the known bugs and the TradingView-parity roadmap.
 ---
 
 # Drawing Tools — cryptopapertrade.com
 
-Architecture, status, and roadmap live in `docs/DRAWING_TOOLS.md` — read it before any change. This skill is the working companion: what's wired, what's UI-only, what breaks, and how to add shapes safely.
+The chart's drawings come from **`lightweight-charts-drawing` 0.4.0, forked into the repo** (owner,
+2026-10-04). The library does the drawing work the TradingView way: placement with a live preview,
+hover, selection, anchor and body drags, magnet, Shift constraints, Delete / Escape, axis labels.
+Our code creates a manager per pane, stores drawings per symbol, opens the text editor, and draws the
+tool menu.
 
-## Component hierarchy (drawing is only partially wired)
+History: a custom system until 2026-07-21 (`drawingStore`, `useDrawingInteraction`,
+`components/drawing/*` — deleted; the old floating toolbar is recoverable from
+`git show 852e24b^:apps/client/src/components/drawing/DrawingPropertiesMenu.tsx`, plus
+`ColorPicker.tsx` and `KebabMenu.tsx`), then the npm package 0.1.1 until 2026-10-04.
 
-```
-DashboardPage  (activeTool, selectedLineTool, cursorVariant state)
-├── LeftToolbar           onCursorVariantChange, (line tool submenu — UI only)
-└── MultiChartArea ─────── activeTool, lineTool, onExitDrawingMode
-      └── ChartPanel
-            ├── DrawingPrimitive            (ISeriesPrimitive on candle series)
-            ├── useDrawingInteraction       (state machine)
-            └── DrawingPropertiesMenu       (portal to document.body on selection)
-```
+## The fork — `apps/client/src/vendor/lightweight-charts-drawing/`
 
-## File inventory (touches for any shape change)
+- Upstream `deepentropy/lightweight-charts-drawing`, tag `v0.4.0`, commit `6bebe05` (2026-10-02),
+  MIT. `LICENSE` and `README.md` sit in the folder; `index.ts` has the attribution header.
+- **Owner rule: the fork stays in this repo.** No issues, PRs or patches upstream — only read its
+  source.
+- **Every local change is logged in the fork's `README.md`** (date, file, what, why), so a diff
+  against upstream stays explainable. Fix library behaviour there, not with private-API wrappers in
+  ChartPanel.
+- App code imports it by name (`from 'lightweight-charts-drawing'`): an alias in
+  `apps/client/vite.config.ts`, `vitest.config.ts` and both tsconfig `paths`.
+- Lint: `apps/client/eslint.config.js` relaxes a few rules for `src/vendor/**` only. Prettier and
+  the strict tsconfig apply. `src/vendor/**` is outside the coverage floors, but a fork fix still
+  gets a test.
+- Layout: `src/core` (the drawing model `Drawing { id, kind, points: [{ time, price }], style, text?,
+locked?, hidden?, … }`, TradingView factory defaults in `specs.ts`, hit tests, placement / drag /
+  Shift rules in `core/interact`, renderer-neutral scenes in `core/scene`) and `src/runtime`
+  (`DrawingManager`, `makeCoords`, the canvas renderer `scene-canvas.ts`).
+- `DrawingManager(chart, series, { fontFamily })` API: `setTool(kind | null)`, `tool()`, `add`,
+  `update`, `remove`, `clear`, `select`, `selection()`, `get`, `drawings()`, `importJSON`,
+  `exportJSON`, `destroy()`; events `change`, `add`, `update`, `remove`, `selection`, `tool`,
+  `textEdit`, `gestureEnd`, `tableEdit`. Saved form = the `Drawing` array (`parseDrawings` checks it).
+- Rules it gives us: presses outside its series' pane (indicator panes, both axes) are ignored —
+  that is how drawings stay on the price pane; its primitive has no `autoscaleInfo` (drawings never
+  stretch the price axis); after a placement it disarms (`tool` null) and selects the new drawing
+  unless `stayInDrawingMode`; it holds the chart (`handleScroll` / `handleScale` off) during a
+  gesture; times between bars / past the last bar map by interpolation / extrapolation, so drawings
+  survive an interval change.
 
-| File                                                           | Role                                                                                                        |
-| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `apps/client/src/lib/drawing/types.ts`                         | `Drawing`, `DrawingPoint`, `InProgressDrawing`, `ShapeData` discriminated union, `DrawingType`, `LineStyle` |
-| `apps/client/src/lib/drawing/coordinates.ts`                   | Pure hit-test math: `pointToSegmentDist`, `pointToRayDist`, `hitTestBodies`                                 |
-| `apps/client/src/lib/drawing/DrawingPrimitive.ts`              | `ISeriesPrimitive` canvas rendering + per-shape `hitTest`                                                   |
-| `apps/client/src/lib/lineTools.tsx`                            | SVG icons + `LINE_TOOLS` (6 tool definitions)                                                               |
-| `apps/client/src/store/drawingStore.ts`                        | Zustand store + `persist` middleware (key `cd-drawings`, version 2)                                         |
-| `apps/client/src/hooks/useDrawingInteraction.ts`               | State machine `IDLE → DRAWING → PLACING` + pointer capture                                                  |
-| `apps/client/src/components/drawing/DrawingPropertiesMenu.tsx` | Floating toolbar (color, width, style, label, lock, delete, kebab)                                          |
-| `apps/client/src/components/drawing/ColorPicker.tsx`           | 10 grays + 6×10 color swatch grid                                                                           |
-| `apps/client/src/components/drawing/KebabMenu.tsx`             | Clone, Visual Order submenu, Delete                                                                         |
+## Where our code lives
 
-## What's wired (don't re-implement)
+| File                                                         | Role                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/client/src/components/dashboard/ChartPanel.tsx`        | One `DrawingManager(chart, candles, { fontFamily: font.sans })` per pane in the mount effect: `attachDrawings` (shared per-symbol set, debounced save), `textEdit` → our editor, right-click → cursor, Eraser effect, symbol-switch save + restore, `destroy()` on cleanup.                                               |
+| `apps/client/src/components/dashboard/DrawingTextEditor.tsx` | The text editor: only Save / Ctrl+Enter keep the text (Cancel, Escape, outside discard). Opened one tick after `textEdit` (the placing press's mousedown would blur it).                                                                                                                                                  |
+| `apps/client/src/lib/drawingManager.ts`                      | Storage per symbol: `cd-drawings-v2-<SYMBOL>` (0.4 JSON), `MAX_DRAWINGS = 200` on load and save, `parseDrawings`, storage errors swallowed; `TOOL_MAP` for old toolbar ids; runs the 0.1 migration once. `attachDrawings` / `switchDrawingsSymbol`: one set per symbol shared by every pane showing it (module registry). |
+| `apps/client/src/lib/drawingMigration.ts`                    | Pure 0.1 → 0.4 converter (`cd-drawings-<SYMBOL>` is kept for a rollback). Renames, position / channel geometry, style; drops arc, curves, bars pattern, projection, Gann square fixed, arrow marker, disjoint channel, table.                                                                                             |
+| `apps/client/src/lib/drawingTools.ts`                        | `HOST_TOOLS` (Eraser, zoom-in), `nextActiveTool`, `startEraser`, `keepSelectionInOnePane` (Delete acts on the pane last clicked).                                                                                                                                                                                         |
+| `apps/client/src/lib/libraryTools.ts`                        | `TOOL_GROUPS` — the left-toolbar groups / categories / tools; ids are 0.4 `DrawingKind`s.                                                                                                                                                                                                                                 |
+| `apps/client/src/lib/toolIcons.tsx`                          | `TOOL_ICONS` — an SVG icon per tool id.                                                                                                                                                                                                                                                                                   |
+| `apps/client/src/components/dashboard/LeftToolbar.tsx`       | Flyout menus over `TOOL_GROUPS` (anchors `toolbar.tool` / `toolbar.subtool`), cursor variants, the Remove group (Remove All, Eraser).                                                                                                                                                                                     |
+| `apps/client/src/pages/DashboardPage.tsx`                    | `activeToolType`; `handleToolChange` arms the active pane's manager (`setTool`); `tool` events update the state; `handleBinAction` = `clear()` on the active pane; manager refs per pane.                                                                                                                                 |
 
-- Trendline, horizontal, vertical, ray, **parallel channel** (3-click) — full placement, drag, properties, persistence, clone (32px downward offset), visual order, undo/redo (Ctrl+Z / Ctrl+Shift+Z, session-only depth 50).
-- Eraser cursor variant removes drawings on click (locked drawings included — `isLocked` only blocks drag/handle drag, not deletion).
-- Bin tool: left-click removes all (respects `alwaysRemoveLocked` toggle, default OFF); right-click submenu with the locked-drawings toggle.
-- `cd-drawings` localStorage v2, migrated from v1; selectedDrawingId intentionally **not** persisted.
-- `createDrawingStyle()` factory centralises defaults — callers pass `shape` + overrides.
-- Per-shape rendering branches + per-shape hit-testing dispatched from `hitTestBodies` in `coordinates.ts`.
-- Keyboard: `Escape` cancels in-progress placement or deselects; `Delete`/`Backspace` removes selected; right-click exits drawing mode and restores previous tool from `previousToolRef`.
-- `data-drawing-hover` and `data-drawing-active` attributes on chart div; hover legend (`ChartPanel.tsx:544`) is hidden when `inProgressDrawing !== null`.
+Tests: `lib/__tests__/drawingLibrary.test.ts` runs the fork on a fake chart
+(`fakeDrawingChart.ts`); `drawingManager.test.ts`, `drawingMigration.test.ts`,
+`drawingTools.test.ts`, `components/dashboard/__tests__/DrawingTextEditor.test.tsx`; e2e
+`apps/e2e/tests/chart/drawingTools.spec.ts` and `indicatorPanes.spec.ts` `[10.6.5]`. Rows:
+`docs/TRADING_TEST_PLAN.md` sections 10.6.5 and 10.7.
 
-## What's UI-only / blocked (don't ship as "done")
+## Known bugs and the roadmap (owner plan, 2026-10-04)
 
-- **Polyline** — no `ISeriesPrimitive` multi-point logic. `PLACEMENT_CONFIGS.polyline` is commented as future (`totalPoints: 0, finishOn: 'dblclick'`). lightweight-charts v5 has no `subscribeDblClick`; needs a DOM `dblclick` listener + `lastClickTimeRef` guard.
-- **Text** tool — toolbar button only.
-- **Freehand Draw** — toolbar button only.
-- **Rectangle / Fibonacci** — removed; would need new `ShapeData` variants + renderers.
-- **Clip/paste** — KebabMenu shows a "Copy" concept but it is **not wired**.
+The plan file lives outside the repo. Done in Phase A (fork 0.4.0): text saved after an edit,
+drawings surviving an interval change / off-bar times, no ghost preview, Eraser, editor Cancel,
+anchor drag no longer pans, no placement on the axes, Delete only in the pane last clicked, no
+zero-length drawing from a double-click, storage errors caught, the symbol-switch save capped.
+Also done (2026-10-04, after the owner's visual Q&A): one drawing set per symbol shared by the
+panes (`attachDrawings`), anchors and drags clamped to the price pane (fork), pane listeners and
+manager refs cleaned up with the chart (`connectPaneManager`), Fib pill labels (fork
+`setFibLabelMode('pill')`), the editor on a CSS Module with tokens, converted position boxes keep
+0.1's 200 px width. Still open:
 
-## Known limitations / latent bugs to watch
+- **B — correctness:** right-click during a drag; the pre-migration `cd-drawings` key (no symbol)
+  is never read or removed; Table cells can't be edited (no `tableEdit` editor).
+- **C — readable labels** (visual Q&A first): 0.4 already renders in CSS px on HiDPI (media
+  coordinate space) with TradingView sizes; what's left is colours / tokens for the dark theme,
+  anchors from `interaction.*`, the flyout header and tooltip delay. Owner, 2026-10-04: new
+  drawings use the library's TradingView defaults; Fib levels keep our pill labels; positions keep
+  0.4's behaviour (zones at rest, text on hover / selection).
+- **D — TradingView interaction:** a "stay in drawing mode" lock (`stayInDrawingMode`), magnet
+  toggle (`setMagnet`), press-drag placement, Remove as a confirmed dropdown, remember the last
+  sub-tool.
+- **E — floating toolbar + context menu** (visual Q&A first): revive `DrawingPropertiesMenu` /
+  `ColorPicker` / `KebabMenu` on the 0.4 model (`update` with a new `style`; `locked`, clone via
+  `add`, `bringToFront` / `sendToBack`).
+- **F — undo / redo** (`gestureEnd` marks a step), copy / paste, TradingView shortcuts (`OverlaySpec
+.hotkey`), accessible menus.
+- **G — names and order** in `libraryTools.ts` (the renamed tools already use TradingView names).
+- Later: touch editing, patterns / Elliott / icons in the menu, drawings in indicator panes
+  (`Drawing.owner`), templates, hide / lock all.
 
-1. `ChartPanel` computes toolbar position from `container.getBoundingClientRect()` — **latent scroll-safety bug**, only hidden today because the dashboard doesn't scroll. Reposition toolbar on scroll/resize (P4.4).
-2. `DrawingPropertiesMenu` always renders all 8 buttons regardless of shape — rectangle would need fill color / fill opacity inputs instead of line color. P4.3.
-3. `cloneDrawing(id, priceOffset?)` works for trendline/horizontal/vertical but **mangles parallel channel's 3-point geometry** unless per-shape clone is delegated to the renderer. P4.2.
-4. No snap-to-grid or snap-to-OHLC for horizontal/vertical/ray. P5.1.
-5. Multi-segment polyline rendering is not in current shape renderers — each renderer is single-segment only.
-6. Cosmetic, non-blocking: exit-order Type in Order History shows `MARKET` instead of TVP's `Take Profit` / `Stop Loss` (see `docs/TRADING_TEST_PLAN.md` notes). Tracked as a future labelling pass.
+## Rules when changing drawings
 
-## How to add a new shape (follow the roadmap order)
-
-> The cardinal rule from `docs/DRAWING_TOOLS.md`: **foundation before shapes**. Don't add `if (shape.type === 'x')` branches to the monoliths. Add via the registry.
-
-1. **Type**: extend `ShapeData` union in `types.ts` with a new variant carrying a tuple-typed `points` array (e.g. `[DrawingPoint, DrawingPoint, DrawingPoint, DrawingPoint]` for a rectangle). Never a flat bag.
-2. **Placement config**: add a `PLACEMENT_CONFIGS[toolId]` entry in `useDrawingInteraction.ts` with `{ totalPoints, finishOn: 'click' | 'dblclick' }`.
-3. **Renderer**: implement the `ShapeRenderer` interface — `draw`, `drawPreview`, `hitBody`, `getHandles`, `getToolbarAnchor`. All math goes through `coordinates.ts` (point-to-segment, point-to-ray, infinite-line distance) — never re-implement hit-test inline.
-4. **Registry**: register the renderer in the `RENDERERS` record keyed by shape type. `DrawingPrimitive.draw()` stays a thin dispatcher (~20 lines).
-5. **Store factory**: `addDrawing(d)` accepts `{ shape: ShapeData } & Partial<StyleFields>`; new style fields (e.g. `fillColor`, `fillOpacity`) go into the factory defaults, not scattered at call sites.
-6. **Persistence migration**: any persisted-schema change bumps `cd-drawings` version and writes a `migrate(prev, version)` that wraps/reshapes old data. Never break old localStorage silently (cross-ref **`bug-sweep`** skill P2-38 client-side security).
-7. **Toolbar anchor**: implement `getToolbarAnchor(shape, rc)` so the properties toolbar lands correctly per shape (midpoint for 2-point shapes, anchor for 1-point, bounding-box center for N-point).
-8. **Properties menu**: conditionally render buttons per shape capability (P4.3).
-9. **Tests**: add store + coordinates tests. Existing baseline = 65 tests (34 store + 31 coordinates). Hit-test parity must be covered because canvas rendering isn't asserted in jsdom.
-10. **AGENTS.md / DRAWING_TOOLS.md**: update "What's Implemented" / "What's UI Only" / "Known Limitations" sections.
+- A change to the saved shape must still read old saves: `localStorage` is untrusted input — check
+  it, skip what doesn't parse, never crash on restore; keep the 200 cap.
+- Every `manager.on(...)` or listener added in ChartPanel is undone in the effect cleanup
+  (StrictMode double-mounts); `manager.destroy()` stays last before `chart.remove()`.
+- User text is drawn on the canvas only (never HTML).
+- Any visual change (labels, anchors, colours, toolbar, menus) goes through the visual Q&A gate in
+  `.claude/rules/design.md` first.
 
 ## Test commands
 
 ```bash
-pnpm --filter @crypto-dashboard/client test -- drawingStore
-pnpm --filter @crypto-dashboard/client test -- coordinates
+cd apps/client && VITE_IS_LIVE=false npx vitest run src/lib/__tests__/drawing
 pnpm --filter @crypto-dashboard/client type-check
 pnpm lint
 ```
-
-Run `pnpm --filter @crypto-dashboard/client dev` and manually verify: place, drag, resize, select (lock still selectable), delete via keyboard + toolbar, clone, visual order, undo/redo, persistence across reload, properties toolbar positioning, eraser removal (incl. locked), bin tool locked-toggle.
