@@ -770,8 +770,8 @@ partial fills, ADL, insurance fund · VIP tiers, fee coupons, USDC / inverse con
 | `apps/client/src/components/dashboard/PaneHeader.tsx`                                      | Per-pane mini header (symbol picker, interval buttons, live price, connection dot)                                                                                     |
 | `apps/client/src/components/dashboard/MultiChartArea.tsx`                                  | CSS grid renderer for all layouts; wires crosshair + time-range sync                                                                                                   |
 | `apps/client/src/lib/tokens.ts`                                                            | Visual source of truth — spacing, colors, sizes, layout (fallback: Figma via `.claude/skills/figma-theme-source`)                                                      |
-| `apps/client/src/lib/drawing/types.ts`                                                     | Drawing type definitions (`Drawing`, `DrawingPoint`, `LineStyle`, etc.)                                                                                                |
-| `apps/client/src/lib/drawingManager.ts`                                                    | Drawing tools on the `lightweight-charts-drawing` library (replaced the custom drawing system, 2026-07-21)                                                             |
+| `apps/client/src/vendor/lightweight-charts-drawing/`                                       | Forked drawing library 0.4.0 (MIT, maintained here only) — imported by name via an alias; its README lists local changes                                               |
+| `apps/client/src/lib/drawingManager.ts`                                                    | Drawing storage per symbol (`cd-drawings-v2-<SYMBOL>`, cap 200); 0.1 saves converted once by `drawingMigration.ts`                                                     |
 | `apps/client/src/lib/cursors.tsx`                                                          | Cursor variant icons + data-URI CSS map for chart cursor overrides                                                                                                     |
 | `.claude/skills/bug-sweep/SKILL.md`                                                        | Pre-commit / proactive-audit checklist (138 items, priorities P1–P12) — single source of truth. Was `docs/REVIEW_CHECKLIST.md` — consolidated.                         |
 | `docs/APP_LOG.md`                                                                          | This file — full project context, attach at start of every session                                                                                                     |
@@ -3812,3 +3812,39 @@ claims were checked against the code.
   `lg:text-7xl`); the account-unlocks band shows only when live (no sign-up offer beside "Launching soon"); the
   CtaSection live copy "Ready to trade? Create your free account" approved; the Paper Trading picture's 40 px shift
   right now starts at `md`, which ends a 24 px sideways scroll on phones (375 px) that predates this change.
+
+### feat: drawing tools on a fork of lightweight-charts-drawing 0.4.0 (2026-10-04) ✅
+
+**Context:** owner, 2026-10-04: the drawing tools need fixes inside the library, so it is forked into the repo, based on
+upstream's TradingView-faithful rewrite (0.4.0), not the 0.1.1 the app used. The fork stays here only: no issues or PRs
+upstream. Phase A of the drawing-tools plan (`.claude/skills/drawing-tools` has the roadmap).
+
+- **Fork:** `deepentropy/lightweight-charts-drawing` tag `v0.4.0` (commit `6bebe05`, 2026-10-02) →
+  `apps/client/src/vendor/lightweight-charts-drawing/` with its MIT `LICENSE`, an attribution header and a `README.md`
+  (source, local changes). An alias keeps `from 'lightweight-charts-drawing'`; the npm dependency is gone; `fancy-canvas`
+  2.1.0 is a type-only devDependency. Upstream's peer is lightweight-charts `^5.0.0` (built on 5.2.1; we run 5.2.0).
+- **What the library now does for us (TradingView behaviour):** placement with a live preview, then back to the cursor
+  with the new drawing selected; hover with anchors; selection and Ctrl multi-select; anchor and body drags that hold the
+  chart still; magnet and Shift rules; Delete (locked drawings skipped) and Escape; price / time axis labels; 86 tools
+  with TradingView defaults. Removed as redundant: our click-to-place handlers, the `__preview__` drawing, the time
+  extrapolation, the body drag, our Delete handler, the click guard and the autoscale opt-out (the library ignores
+  presses outside the price pane and its primitive has no `autoscaleInfo`).
+- **Menu:** ids are the library's kinds, the renamed ones with TradingView names (Pitchfork, Trend-Based Fib Extension,
+  Fib Speed Resistance Fan / Arcs, Trend-Based Fib Time, Date and Price Range; Forecast, Bars Pattern and Projection
+  keep their labels); Anchored Text is gone (TradingView retired it).
+- **Storage:** `cd-drawings-v2-<SYMBOL>` (0.4 JSON), cap 200 on load and save, schema-checked, storage errors caught. The
+  0.1 key `cd-drawings-<SYMBOL>` is converted once (`lib/drawingMigration.ts`) and left in place for a rollback; arc,
+  curves, bars pattern, projection, Gann square fixed, arrow marker, disjoint channel and table don't convert.
+- **Fixed with the switch (drawing plan, Phase B):** edited text is saved; drawings survive an interval change and
+  off-bar times; the preview can't be saved; the Eraser removes the drawing clicked (`lib/drawingTools.ts`); the text
+  editor's Cancel discards (`DrawingTextEditor.tsx`); an anchor drag no longer pans; no placement on the axes; Delete
+  only in the pane last clicked; no zero-length drawing from a double-click (a fork change, in its README).
+- **Still open:** two panes on one symbol overwrite each other's saves; anchor drags aren't clamped to the price pane;
+  right-click during a drag; listener / manager-ref cleanup in DashboardPage; the old `cd-drawings` key; Table cell
+  editing.
+- **Look:** the drawings now use the library's TradingView defaults and labels (e.g. Fib levels and fills, position
+  zones, axis pills, Geist text); converted 0.1 drawings keep their colour and width. Any further visual change waits
+  for the owner's visual Q&A (Phase C).
+- **Tests:** `drawingLibrary.test` (the fork on a fake chart), `drawingManager.test`, `drawingMigration.test`,
+  `drawingTools.test`, `DrawingTextEditor.test`; e2e `chart/drawingTools.spec` `[10.7.2]` and `[10.6.5]`.
+  TRADING_TEST_PLAN section 10.7.

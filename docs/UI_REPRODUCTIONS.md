@@ -135,7 +135,27 @@ overlay legend rows stay readable over the candles — M, eyeballed per UI relea
 7. Drag a pane separator → Expect the panes resize and every header stays at its pane's top. Add another indicator
    → Expect the drag is undone: the price pane at least half, the indicator panes all the same height.
 8. [toolbar.tool `trend-lines`], click twice inside a Momentum pane → Expect nothing is drawn; click twice in the price
-   pane → Expect a trend line.
+   pane → Expect a trend line, selected, and the toolbar back on the cursor.
+
+### 10.7 — Drawing tools (10.7.1–10.7.9)
+
+**UI reproduction** — `/chart`, no sign-in, 1m. The library is the fork in `apps/client/src/vendor/` (0.4.0).
+
+1. [toolbar.tool `trend-lines`], click twice in the price pane → Expect the line while you move to the second point,
+   then the line placed and selected (anchors shown) and the cursor tool active again. _Explain: "Like TradingView:
+   one drawing, then back to the cursor."_
+2. Same tool, double-click on one spot, then click elsewhere → Expect the line from the first spot to the second, none
+   of zero length.
+3. With a tool, click on the price axis → Expect nothing placed.
+4. Drag an anchor of the line → Expect it moves and the chart doesn't scroll while you drag.
+5. Right-click [toolbar.tool `annotations`] → [toolbar.subtool `text`], click in the price pane → Expect the editor;
+   type, **Cancel** → Expect the old text ("Add text"); double-click the text, type, **Save** → Expect the new text;
+   reload → Expect it is still there.
+6. Switch the interval to 5m and back → Expect the drawings stay where they were in time.
+7. Right-click [toolbar.tool `bin`] → [toolbar.subtool `eraser`], click a drawing → Expect it is gone; a locked one
+   stays.
+8. 2-chart layout, same or another symbol: select a drawing in each pane in turn, press Delete → Expect only the pane
+   clicked last loses its drawing.
 
 ### 5 — Symbol pair icons (5.1–5.8)
 
