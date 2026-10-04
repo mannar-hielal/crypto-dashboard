@@ -137,6 +137,55 @@ describe('IndicatorLegends', () => {
     expect(header.style.top).toBe('400px');
   });
 
+  it('[10.6.1] should move a pane header when the price pane above it changes height', () => {
+    // The real chart: a price pane and Momentum's pane below it; only the price pane resizes
+    const observed: Element[] = [];
+    let onResize: () => void = () => undefined;
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(cb: () => void) {
+          onResize = cb;
+        }
+        observe(el: Element) {
+          observed.push(el);
+        }
+        disconnect() {}
+      }
+    );
+    const pricePane = pane(0, 0);
+    const momPane = pane(1, 3); // laid out before the rebalance: right under the chart's top
+    const withPanes = { ...chart, panes: () => [pricePane, momPane] } as unknown as IChartApi;
+    const container = document.createElement('div');
+    container.getBoundingClientRect = () => ({ top: 0, height: 500 }) as DOMRect;
+    render(
+      <IndicatorLegends
+        chart={withPanes}
+        source={source}
+        containerRef={{ current: container }}
+        indicators={INDICATORS}
+        primitiveRefs={{
+          current: new Map([
+            ['ema_1', primitive([emaLine])],
+            ['mom_1', primitive([momLine])],
+          ]),
+        }}
+        paneRefs={{ current: new Map([['mom_1', momPane]]) }}
+        layoutVersion={1}
+        priceLegend={<div>OHLC</div>}
+        onRemove={() => undefined}
+        onUpdate={() => undefined}
+      />
+    );
+    expect(legendRow('indicator.pane-legend', 'mom_1').style.top).toBe('3px');
+    expect(observed).toContain(pricePane.getHTMLElement());
+
+    // The rebalance grows the price pane: Momentum's pane moves down without changing size
+    momPane.getHTMLElement()!.getBoundingClientRect = () => ({ top: 400, height: 100 }) as DOMRect;
+    act(() => onResize());
+    expect(legendRow('indicator.pane-legend', 'mom_1').style.top).toBe('400px');
+  });
+
   it('should stack an overlay under the price legend', () => {
     renderLegends();
     const row = legendRow('indicator.legend', 'ema_1');

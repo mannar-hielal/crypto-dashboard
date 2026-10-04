@@ -214,7 +214,10 @@ export function IndicatorLegends({
     if (!container) return;
     const ro = new ResizeObserver(measure);
     ro.observe(container);
-    for (const pane of paneRefs.current.values()) {
+    // Every pane, the price pane included: a pane above that changes height moves the indicator
+    // panes below it without resizing them, and a ResizeObserver only fires on size changes
+    const allPanes = chart?.panes?.() ?? [...paneRefs.current.values()];
+    for (const pane of allPanes) {
       const el = pane.getHTMLElement();
       if (!el) continue;
       ro.observe(el);
