@@ -9,6 +9,8 @@ import {
   Type,
   Ruler,
   Trash2,
+  Pencil,
+  Lock,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
@@ -42,6 +44,7 @@ const MAIN_BUTTONS: ToolButton[] = [
   { id: 'annotations', icon: Type, label: 'Text & Notes' },
   { id: 'measure', icon: Ruler, label: 'Forecast & Measure' },
   null,
+  { id: 'stay-mode', icon: Pencil, label: 'Stay in drawing mode' },
   { id: 'bin', icon: Trash2, label: 'Remove All' },
 ];
 
@@ -54,6 +57,9 @@ interface LeftToolbarProps {
   cursorVariant?: CursorVariantId;
   onCursorVariantChange?: (variant: CursorVariantId) => void;
   activeToolType?: string | null;
+  /** TradingView's "Stay in drawing mode": a placed drawing leaves its tool armed */
+  stayInDrawingMode?: boolean;
+  onStayInDrawingModeChange?: (on: boolean) => void;
 }
 
 export function LeftToolbar({
@@ -63,6 +69,8 @@ export function LeftToolbar({
   cursorVariant: cursorVariantProp,
   onCursorVariantChange,
   activeToolType: activeToolTypeProp,
+  stayInDrawingMode = false,
+  onStayInDrawingModeChange,
 }: LeftToolbarProps) {
   // ── Cursor (local state falls back when uncontrolled) ──────────────────
   const [localCursorVariant, setLocalCursorVariant] = useState<CursorVariantId>('cross');
@@ -292,6 +300,29 @@ export function LeftToolbar({
                   padding: 0,
                 }}
               />
+            </div>
+          );
+        }
+
+        // ── Stay in drawing mode: a switch, not a tool (TradingView's pencil + lock) ──
+        if (tool.id === 'stay-mode') {
+          return (
+            <div key={tool.id} className="toolbar-slot">
+              <motion.button
+                {...guide('toolbar.tool', tool.id)}
+                data-tooltip={stayInDrawingMode ? `${tool.label}: on` : tool.label}
+                aria-label={tool.label}
+                aria-pressed={stayInDrawingMode}
+                onClick={() => onStayInDrawingModeChange?.(!stayInDrawingMode)}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className={`toolbar-btn focus-ring${stayInDrawingMode ? ' active' : ''}`}
+              >
+                <span className="relative z-10 flex h-6 w-6 items-center justify-center">
+                  <Pencil className="h-5 w-5" strokeWidth={1} />
+                  <Lock className="absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5" strokeWidth={1.5} />
+                </span>
+              </motion.button>
             </div>
           );
         }

@@ -137,7 +137,7 @@ overlay legend rows stay readable over the candles — M, eyeballed per UI relea
 8. [toolbar.tool `trend-lines`], click twice inside a Momentum pane → Expect nothing is drawn; click twice in the price
    pane → Expect a trend line, selected, and the toolbar back on the cursor.
 
-### 10.7 — Drawing tools (10.7.1–10.7.9)
+### 10.7 — Drawing tools (10.7.1–10.7.12)
 
 **UI reproduction** — `/chart`, no sign-in, 1m. The library is the fork in `apps/client/src/vendor/` (0.4.0).
 
@@ -156,6 +156,10 @@ overlay legend rows stay readable over the candles — M, eyeballed per UI relea
    stays.
 8. 2-chart layout, same or another symbol: select a drawing in each pane in turn, press Delete → Expect only the pane
    clicked last loses its drawing.
+9. Click [toolbar.tool `stay-mode`] (pencil with a lock, above Remove) → Expect it turns purple, tooltip "Stay in drawing
+   mode: on". Draw two trend lines in a row → Expect the tool stays armed after each, nothing selected; reload → Expect
+   the switch still on. Click it again, draw a line → Expect back to the cursor with the line selected. _Explain:
+   "TradingView's lock for drawing many lines without re-picking the tool."_
 
 ### 5 — Symbol pair icons (5.1–5.8)
 

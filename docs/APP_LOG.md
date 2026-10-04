@@ -3867,3 +3867,14 @@ defaults (converted 0.1 drawings keep their colours); positions keep 0.4's behav
 - **Text editor** on a CSS Module with tokens (bg.modal, bg.panel, color.purple, …).
 - **Tests:** `drawingFibLabels.test` [10.7.10], `drawingManager.test` [10.7.11], `drawingLibrary.test` [10.7.7],
   `drawingMigration.test` (box width), `drawingTools.test` (connectPaneManager).
+
+### feat: drawing tools — "Stay in drawing mode" (2026-10-04) ✅
+
+**Context:** plan Phase D. Owner visual Q&A, 2026-10-04: the button sits above Remove All, TradingView style (pencil
+with a small lock, the active purple state when on, tooltip "Stay in drawing mode: on"), and the switch is remembered.
+
+- **LeftToolbar** `stay-mode` button (`aria-pressed`), a switch: it never arms or disarms a tool.
+- **`lib/drawingTools.ts`:** `applyStayInDrawingMode` sets the library's `setStayInDrawingMode` on every pane and saves
+  `cd-drawing-stay-mode` (`'1'`/`'0'`; blocked storage reads as off); `connectPaneManager` gives a pane mounted later
+  the current switch. On, a placed drawing leaves its tool armed and unselected; Esc or the cursor ends it.
+- **Tests:** `drawingTools.test` and `LeftToolbar.test` [10.7.12]; UI_REPRODUCTIONS 10.7 step 9.

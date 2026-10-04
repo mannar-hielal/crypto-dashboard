@@ -46,7 +46,8 @@ export function keepSelectionInOnePane(
 
 /**
  * A pane's manager joins the dashboard: it goes into `panes[paneIndex]`, its `tool` events reach
- * `onTool`, and its selection clears the other panes' (keepSelectionInOnePane). Returns the
+ * `onTool`, its selection clears the other panes' (keepSelectionInOnePane), and it takes the
+ * current "Stay in drawing mode" switch. Returns the
  * cleanup for when the pane's chart goes: listeners off, and the slot emptied if it still holds
  * this manager (a remount may already have put the next one there).
  */
@@ -54,9 +55,11 @@ export function connectPaneManager(
   panes: (DrawingManager | null)[],
   paneIndex: number,
   manager: DrawingManager,
-  onTool: (kind: string | null) => void
+  onTool: (kind: string | null) => void,
+  stayInDrawingMode = false
 ): () => void {
   panes[paneIndex] = manager;
+  manager.setStayInDrawingMode(stayInDrawingMode);
   const offTool = manager.on('tool', onTool);
   const offSelection = keepSelectionInOnePane(manager, () => panes);
   return () => {
@@ -64,4 +67,35 @@ export function connectPaneManager(
     offSelection();
     if (panes[paneIndex] === manager) panes[paneIndex] = null;
   };
+}
+
+// ─── Stay in drawing mode ───────────────────────────────────────────────────
+
+const STAY_IN_DRAWING_MODE_KEY = 'cd-drawing-stay-mode';
+
+/** The saved "Stay in drawing mode" switch (TradingView remembers it); off when unset or unreadable */
+export function loadStayInDrawingMode(): boolean {
+  // 🔐 localStorage can throw (blocked storage, private mode) — treat it as optional
+  try {
+    return localStorage.getItem(STAY_IN_DRAWING_MODE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * "Stay in drawing mode" (TradingView's toolbar lock): on, a placed drawing leaves its tool armed
+ * for the next one, unselected; off, the tool returns to the cursor with the drawing selected.
+ * Applies to every pane's manager and saves the switch.
+ */
+export function applyStayInDrawingMode(
+  panes: readonly (DrawingManager | null)[],
+  on: boolean
+): void {
+  for (const m of panes) m?.setStayInDrawingMode(on);
+  try {
+    localStorage.setItem(STAY_IN_DRAWING_MODE_KEY, on ? '1' : '0');
+  } catch {
+    // Full or blocked storage: the switch holds for this session
+  }
 }

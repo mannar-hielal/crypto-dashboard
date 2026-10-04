@@ -2,10 +2,12 @@
  * Toolbar tools around the drawing library (lib/drawingTools.ts), on the fork with a fake chart.
  */
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { DrawingManager } from 'lightweight-charts-drawing';
 import {
+  applyStayInDrawingMode,
   connectPaneManager,
+  loadStayInDrawingMode,
   keepSelectionInOnePane,
   nextActiveTool,
   startEraser,
@@ -24,6 +26,7 @@ afterEach(() => {
   for (const m of managers) m.destroy();
   managers = [];
   document.body.innerHTML = '';
+  localStorage.clear();
 });
 
 describe('startEraser', () => {
@@ -139,5 +142,66 @@ describe('connectPaneManager', () => {
     b.press(150, 100);
     a.press(150, 100);
     expect(b.manager.selection()).toEqual([lineB]);
+  });
+});
+
+describe('stay in drawing mode', () => {
+  it('[10.7.12] should leave the tool armed and the drawing unselected after a placement when on', () => {
+    const panes: (DrawingManager | null)[] = [null];
+    const a = setup();
+    connectPaneManager(panes, 0, a.manager, () => undefined, true);
+    a.manager.setTool('trend-line');
+    a.press(100, 100);
+    a.press(200, 50);
+    expect(a.manager.drawings()).toHaveLength(1);
+    expect(a.manager.tool()).toBe('trend-line');
+    expect(a.manager.selection()).toEqual([]);
+    a.press(100, 150); // straight into the next one
+    a.press(200, 150);
+    expect(a.manager.drawings()).toHaveLength(2);
+  });
+
+  it('[10.7.12] should return to the cursor with the drawing selected when off (TradingView default)', () => {
+    const panes: (DrawingManager | null)[] = [null];
+    const a = setup();
+    connectPaneManager(panes, 0, a.manager, () => undefined);
+    a.manager.setTool('trend-line');
+    a.press(100, 100);
+    a.press(200, 50);
+    expect(a.manager.tool()).toBeNull();
+    expect(a.manager.selection()).toEqual([a.manager.drawings()[0]!.id]);
+  });
+
+  it('[10.7.12] should switch every pane and remember the switch across a reload', () => {
+    const panes: (DrawingManager | null)[] = [null, null, null];
+    const a = setup();
+    const b = setup();
+    connectPaneManager(panes, 0, a.manager, () => undefined, loadStayInDrawingMode());
+    connectPaneManager(panes, 2, b.manager, () => undefined, loadStayInDrawingMode());
+    expect(loadStayInDrawingMode()).toBe(false);
+
+    applyStayInDrawingMode(panes, true);
+    expect(loadStayInDrawingMode()).toBe(true);
+    for (const pane of [a, b]) {
+      pane.manager.setTool('horizontal-line');
+      pane.press(100, 100);
+      expect(pane.manager.tool()).toBe('horizontal-line');
+    }
+
+    applyStayInDrawingMode(panes, false);
+    expect(loadStayInDrawingMode()).toBe(false);
+  });
+
+  it('should read as off when storage throws', () => {
+    const get = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    const set = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    expect(loadStayInDrawingMode()).toBe(false);
+    expect(() => applyStayInDrawingMode([], true)).not.toThrow();
+    get.mockRestore();
+    set.mockRestore();
   });
 });

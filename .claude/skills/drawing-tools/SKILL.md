@@ -84,7 +84,9 @@ manager refs cleaned up with the chart (`connectPaneManager`), Fib pill labels (
   anchors from `interaction.*`, the flyout header and tooltip delay. Owner, 2026-10-04: new
   drawings use the library's TradingView defaults; Fib levels keep our pill labels; positions keep
   0.4's behaviour (zones at rest, text on hover / selection).
-- **D — TradingView interaction:** a "stay in drawing mode" lock (`stayInDrawingMode`), magnet
+- **D — TradingView interaction:** ~~"stay in drawing mode" lock~~ (done 2026-10-04: LeftToolbar
+  `stay-mode` button above Remove, `applyStayInDrawingMode` in `lib/drawingTools.ts` sets every pane
+  and saves `cd-drawing-stay-mode`; new panes get it via `connectPaneManager`), magnet
   toggle (`setMagnet`), press-drag placement, Remove as a confirmed dropdown, remember the last
   sub-tool.
 - **E — floating toolbar + context menu** (visual Q&A first): revive `DrawingPropertiesMenu` /
