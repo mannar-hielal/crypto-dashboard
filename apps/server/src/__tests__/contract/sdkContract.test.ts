@@ -353,6 +353,12 @@ const CALLS: Call[] = [
     status: 200,
     response: f.learnProgressItem,
   },
+  {
+    name: 'learnApi.trackEvent',
+    run: () => learnApi.trackEvent({ name: 'tour_started', itemId: 'primer' }, T),
+    status: 204,
+    response: undefined,
+  },
   // admin
   {
     name: 'adminApi.getRetentionMetrics',

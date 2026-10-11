@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import { LEARN_ITEM_IDS as SDK_IDS } from '@crypto-dashboard/sdk';
-import { LEARN_ITEM_IDS } from '../constants.js';
+import {
+  LEARN_EVENT_NAMES as SDK_EVENT_NAMES,
+  LEARN_ITEM_IDS as SDK_IDS,
+} from '@crypto-dashboard/sdk';
+import { LEARN_EVENT_NAMES, LEARN_ITEM_IDS, LEARN_TOUR_IDS } from '../constants.js';
 
 // ─── Mock Prisma ─────────────────────────────────────────────────────────────
 vi.mock('../plugins/prisma.js', () => {
@@ -13,6 +16,10 @@ vi.mock('../plugins/prisma.js', () => {
         findUnique: vi.fn(),
         upsert: vi.fn(),
         createMany: vi.fn(),
+      },
+      learningEvent: {
+        count: vi.fn(),
+        create: vi.fn(),
       },
     };
     app.decorate('prisma', prismaClient as never);
@@ -28,6 +35,13 @@ const AT = new Date('2026-10-11T10:00:00.000Z');
 describe('learn item ids', () => {
   it('should be the same list as the SDK (the server cannot import the SDK at runtime)', () => {
     expect([...LEARN_ITEM_IDS]).toEqual([...SDK_IDS]);
+  });
+});
+
+describe('learn event names and tours', () => {
+  it('should match the SDK, and the tours should be the items without the card', () => {
+    expect([...LEARN_EVENT_NAMES]).toEqual([...SDK_EVENT_NAMES]);
+    expect([...LEARN_TOUR_IDS]).toEqual(LEARN_ITEM_IDS.filter((i) => i !== 'welcome-card'));
   });
 });
 
@@ -168,5 +182,71 @@ describe('/api/learn/progress', () => {
       payload: { status: 'completed' },
     });
     expect(res.statusCode).toBe(401);
+  });
+});
+
+describe('POST /api/learn/events', () => {
+  let app: FastifyInstance;
+  let token: string;
+
+  beforeAll(async () => {
+    app = await buildApp();
+    token = app.jwt.sign({ userId: 'user-1', email: 'user@test.com' });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(app.prisma.learningEvent.count).mockResolvedValue(0 as never);
+    vi.mocked(app.prisma.learningEvent.create).mockResolvedValue({} as never);
+  });
+
+  const post = (payload: unknown, withToken = true) =>
+    app.inject({
+      method: 'POST',
+      url: '/api/learn/events',
+      headers: withToken ? { authorization: `Bearer ${token}` } : {},
+      payload: payload as never,
+    });
+
+  it('should store an event for the caller and answer 204', async () => {
+    const res = await post({ name: 'tour_step', itemId: 'primer', stepId: 'primer.3' });
+
+    expect(res.statusCode).toBe(204);
+    expect(app.prisma.learningEvent.create).toHaveBeenCalledWith({
+      data: { userId: 'user-1', name: 'tour_step', itemId: 'primer', stepId: 'primer.3' },
+    });
+  });
+
+  it('should answer 401 without a token, and store nothing', async () => {
+    const res = await post({ name: 'tour_started', itemId: 'primer' }, false);
+    expect(res.statusCode).toBe(401);
+    expect(app.prisma.learningEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('should refuse a name, tour or step outside the allowlist', async () => {
+    expect((await post({ name: 'page_view', itemId: 'primer' })).statusCode).toBe(400);
+    expect((await post({ name: 'tour_started', itemId: 'welcome-card' })).statusCode).toBe(400);
+    expect((await post({ name: 'tour_step', itemId: 'primer', stepId: 'x y' })).statusCode).toBe(
+      400
+    );
+    expect(app.prisma.learningEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('should refuse a step that belongs to another tour', async () => {
+    const res = await post({ name: 'tour_step', itemId: 'primer', stepId: 'buy-first-coin.2' });
+    expect(res.statusCode).toBe(400);
+    expect(app.prisma.learningEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('should drop the event, with a 204, once the user holds the cap', async () => {
+    vi.mocked(app.prisma.learningEvent.count).mockResolvedValue(500 as never);
+    const res = await post({ name: 'tour_started', itemId: 'primer' });
+
+    expect(res.statusCode).toBe(204);
+    expect(app.prisma.learningEvent.create).not.toHaveBeenCalled();
   });
 });

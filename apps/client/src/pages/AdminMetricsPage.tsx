@@ -7,7 +7,13 @@
 import { useEffect, useReducer, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { adminApi } from '@crypto-dashboard/sdk';
-import type { MetricsRate, RetentionCohort, RetentionMetricsResponse } from '@crypto-dashboard/sdk';
+import type {
+  MetricsRate,
+  RetentionCohort,
+  RetentionMetricsResponse,
+  TourFunnelTour,
+} from '@crypto-dashboard/sdk';
+import { TOURS } from '@/guide/tours';
 import { Footer } from '@/components/Footer';
 import { SeoHead } from '@/components/SeoHead';
 import { useAuthStore } from '@/store/authStore';
@@ -87,6 +93,46 @@ function Row({ cohort, total }: { cohort: RetentionCohort; total?: boolean }) {
         <RateCell rate={cohort.firstOrderWithStopLoss} />
       </td>
     </tr>
+  );
+}
+
+/** A tour's step as a short line: its text, cut at 60 characters */
+function stepLabel(itemId: string, stepId: string): string {
+  const step = TOURS.find((t) => t.id === itemId)?.steps.find((st) => st.id === stepId);
+  const n = stepId.slice(stepId.lastIndexOf('.') + 1);
+  if (!step) return `Step ${n}`;
+  const text = step.text.length > 60 ? `${step.text.slice(0, 57)}…` : step.text;
+  return `${n}. ${text}`;
+}
+
+function FunnelRows({ tour }: { tour: TourFunnelTour }) {
+  const title = TOURS.find((t) => t.id === tour.itemId)?.title ?? tour.itemId;
+  return (
+    <>
+      <tr className={styles.totalRow}>
+        <td>{title}</td>
+        <td>{tour.started}</td>
+        <td>
+          {tour.started === 0 ? (
+            <span className={styles.none}>—</span>
+          ) : (
+            <>
+              {tour.completed} / {tour.started}
+              <span className={styles.pct}>
+                {Math.round((tour.completed / tour.started) * 100)}% finished
+              </span>
+            </>
+          )}
+        </td>
+      </tr>
+      {tour.steps.map((st) => (
+        <tr key={st.stepId}>
+          <td>{stepLabel(tour.itemId, st.stepId)}</td>
+          <td>{st.viewers}</td>
+          <td>{st.closedHere}</td>
+        </tr>
+      ))}
+    </>
   );
 }
 
@@ -228,6 +274,28 @@ export function AdminMetricsPage() {
                   </tbody>
                 </table>
               </div>
+
+              <h2 className={styles.sectionTitle}>Guided tours</h2>
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>Tour / step</th>
+                      <th>People who saw it</th>
+                      <th>Finished / left here</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.tourFunnel.map((t) => (
+                      <FunnelRows key={t.itemId} tour={t} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className={styles.note}>
+                Counts people, not events, over the last 180 days. &quot;Left here&quot; = the step
+                a person closed the tour on.
+              </p>
 
               <p className={styles.note}>
                 <strong>Activated</strong> = first order placed within 7 days of signup.{' '}

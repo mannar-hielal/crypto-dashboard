@@ -74,6 +74,16 @@ export function PrivacyPage() {
                 <td>SHA-256 hash in database, 7-day TTL, then auto-deleted</td>
               </tr>
               <tr>
+                <td>Learning events</td>
+                <td>
+                  Seeing where people get stuck in the guided tours, so we can make them clearer
+                </td>
+                <td>
+                  The tour and step you reached and when — no text you typed. At most 500 per
+                  account, deleted after 180 days or with your account.
+                </td>
+              </tr>
+              <tr>
                 <td>Learning progress</td>
                 <td>
                   Remembering which guided tours you have finished and whether you dismissed the
@@ -155,8 +165,9 @@ export function PrivacyPage() {
             </li>
             <li>
               <strong>Legitimate interest (Art. 6(1)(f) GDPR)</strong>: security logging, abuse
-              prevention, platform stability, and counting in aggregate how often people return
-              (activity days). You may object to this (Section 11).
+              prevention, platform stability, and counting in aggregate how often people return and
+              where they stop in the guided tours (activity days and learning events). You may
+              object to this (Section 11).
             </li>
             <li>
               <strong>Consent (Art. 6(1)(a) GDPR)</strong>: newsletter subscription — you explicitly
@@ -205,8 +216,8 @@ export function PrivacyPage() {
               <strong>Refresh tokens</strong>: automatically expire and are deleted after 7 days.
             </li>
             <li>
-              <strong>Activity days</strong>: deleted automatically after <strong>180 days</strong>,
-              and with your account.
+              <strong>Activity days and learning events</strong>: deleted automatically after{' '}
+              <strong>180 days</strong>, and with your account.
             </li>
             <li>
               <strong>Password reset tokens</strong>: automatically invalidated after use or after 1

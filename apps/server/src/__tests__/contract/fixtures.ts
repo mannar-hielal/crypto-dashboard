@@ -154,6 +154,14 @@ export const retentionMetricsResponse: RetentionMetricsResponse = {
   windowWeeks: 12,
   truncated: false,
   activityTrackedSince: '2026-10-12',
+  tourFunnel: [
+    {
+      itemId: 'primer',
+      started: 3,
+      completed: 2,
+      steps: [{ stepId: 'primer.1', viewers: 3, closedHere: 1 }],
+    },
+  ],
   totals: { ...cohort, weekStart: null },
   cohorts: [cohort],
 };

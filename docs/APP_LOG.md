@@ -4067,3 +4067,25 @@ menu opening a side panel, progress on the account (server), desktop first, tour
 - **Privacy policy 1.3:** a "Learning progress" row in §3 (with the activity-days row of U4).
 - **Tests:** `learn.test.ts` (auth, allowlist, never downgraded, strips extra fields), contract, Postgres
   `learningProgress.int.test.ts`; client `useTourProgress`, `LearnCard`, `LearnPanel`.
+
+### feat: tour funnel — where people stop in the guided tours, from an allowlisted event table (2026-10-11) ✅
+
+**Context:** unit U7 (option C of the analytics plan). The tours exist to get people to a first trade; this says which
+step loses them, without recording anything the learner typed.
+
+- **Table** `LearningEvent` (migration `20261011160000_learning_events`): `userId`, `name`, `itemId` (the tour),
+  optional `stepId`, `at`; cascade on user delete; indexed by user and by time.
+- **Write** `POST /api/learn/events` (`routes/learn`, `services/LearningEvents.ts`): 🔐 an allowlist — name ∈
+  `tour_started | tour_step | tour_completed | tour_closed`, tour ∈ the three tours (never the welcome card), step
+  matching `<tour>.<n>` and belonging to the tour it names; 204 whether stored or dropped; **at most 500 rows a
+  user** (further events are dropped, not stored); 120 / min rate limit; fire-and-forget on the client.
+- **Client** (`guide/useTourProgress.ts`): from the tour store — a start with its first step, each step moved to
+  (Back included), a finish, a close on the step it was on. The server's own progress answer is not reported.
+- **Report:** `tourFunnel` on the retention response: per tour the people who started and finished it, and per step
+  the people who saw it and those who left on it (a person whose last event in the tour was a close). People, never
+  events. Over the 180-day period, the admin and QA accounts left out. Shown as a "Guided tours" table on
+  `/admin/metrics`.
+- **Retention:** the daily job also purges events older than 180 days. **Privacy policy 1.3:** a "Learning events"
+  row in §3, §5 and §7 updated.
+- **Tests:** route (allowlist, tour-owns-the-step, cap, 401), funnel builder (people not events, last-event close,
+  numeric step order), client event emission, page table; Postgres: cap, purge boundary, cascade, report.

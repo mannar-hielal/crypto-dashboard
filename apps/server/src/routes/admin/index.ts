@@ -20,6 +20,28 @@ const rateSchema = {
   },
 };
 
+const tourFunnelSchema = {
+  type: 'object',
+  required: ['itemId', 'started', 'completed', 'steps'],
+  properties: {
+    itemId: { type: 'string' },
+    started: { type: 'integer' },
+    completed: { type: 'integer' },
+    steps: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['stepId', 'viewers', 'closedHere'],
+        properties: {
+          stepId: { type: 'string' },
+          viewers: { type: 'integer' },
+          closedHere: { type: 'integer' },
+        },
+      },
+    },
+  },
+};
+
 const cohortSchema = {
   type: 'object',
   required: [
@@ -70,6 +92,7 @@ export async function adminRoutes(app: FastifyInstance) {
               'windowWeeks',
               'truncated',
               'activityTrackedSince',
+              'tourFunnel',
               'totals',
               'cohorts',
             ],
@@ -78,6 +101,7 @@ export async function adminRoutes(app: FastifyInstance) {
               windowWeeks: { type: 'integer' },
               truncated: { type: 'boolean' },
               activityTrackedSince: { type: 'string', nullable: true },
+              tourFunnel: { type: 'array', items: tourFunnelSchema },
               totals: cohortSchema,
               cohorts: { type: 'array', items: cohortSchema },
             },

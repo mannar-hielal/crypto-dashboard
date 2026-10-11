@@ -54,6 +54,7 @@ export const ModelName = {
   User: 'User',
   UserActivity: 'UserActivity',
   LearningProgress: 'LearningProgress',
+  LearningEvent: 'LearningEvent',
   RefreshToken: 'RefreshToken',
   PasswordResetToken: 'PasswordResetToken',
   VerificationToken: 'VerificationToken',
@@ -119,6 +120,18 @@ export const LearningProgressScalarFieldEnum = {
 } as const
 
 export type LearningProgressScalarFieldEnum = (typeof LearningProgressScalarFieldEnum)[keyof typeof LearningProgressScalarFieldEnum]
+
+
+export const LearningEventScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  name: 'name',
+  itemId: 'itemId',
+  stepId: 'stepId',
+  at: 'at'
+} as const
+
+export type LearningEventScalarFieldEnum = (typeof LearningEventScalarFieldEnum)[keyof typeof LearningEventScalarFieldEnum]
 
 
 export const RefreshTokenScalarFieldEnum = {

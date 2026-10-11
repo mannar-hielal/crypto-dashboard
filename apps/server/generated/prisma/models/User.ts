@@ -242,6 +242,7 @@ export type UserWhereInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenListRelationFilter
   activityDays?: Prisma.UserActivityListRelationFilter
   learningProgress?: Prisma.LearningProgressListRelationFilter
+  learningEvents?: Prisma.LearningEventListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -268,6 +269,7 @@ export type UserOrderByWithRelationInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenOrderByRelationAggregateInput
   activityDays?: Prisma.UserActivityOrderByRelationAggregateInput
   learningProgress?: Prisma.LearningProgressOrderByRelationAggregateInput
+  learningEvents?: Prisma.LearningEventOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -297,6 +299,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   emailChangeTokens?: Prisma.EmailChangeTokenListRelationFilter
   activityDays?: Prisma.UserActivityListRelationFilter
   learningProgress?: Prisma.LearningProgressListRelationFilter
+  learningEvents?: Prisma.LearningEventListRelationFilter
 }, "id" | "email" | "username">
 
 export type UserOrderByWithAggregationInput = {
@@ -357,6 +360,7 @@ export type UserCreateInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
   activityDays?: Prisma.UserActivityCreateNestedManyWithoutUserInput
   learningProgress?: Prisma.LearningProgressCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -383,6 +387,7 @@ export type UserUncheckedCreateInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
   activityDays?: Prisma.UserActivityUncheckedCreateNestedManyWithoutUserInput
   learningProgress?: Prisma.LearningProgressUncheckedCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserUpdateInput = {
@@ -409,6 +414,7 @@ export type UserUpdateInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
   activityDays?: Prisma.UserActivityUpdateManyWithoutUserNestedInput
   learningProgress?: Prisma.LearningProgressUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -435,6 +441,7 @@ export type UserUncheckedUpdateInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
   activityDays?: Prisma.UserActivityUncheckedUpdateManyWithoutUserNestedInput
   learningProgress?: Prisma.LearningProgressUncheckedUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -568,6 +575,20 @@ export type UserUpdateOneRequiredWithoutLearningProgressNestedInput = {
   upsert?: Prisma.UserUpsertWithoutLearningProgressInput
   connect?: Prisma.UserWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutLearningProgressInput, Prisma.UserUpdateWithoutLearningProgressInput>, Prisma.UserUncheckedUpdateWithoutLearningProgressInput>
+}
+
+export type UserCreateNestedOneWithoutLearningEventsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutLearningEventsInput, Prisma.UserUncheckedCreateWithoutLearningEventsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutLearningEventsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutLearningEventsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutLearningEventsInput, Prisma.UserUncheckedCreateWithoutLearningEventsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutLearningEventsInput
+  upsert?: Prisma.UserUpsertWithoutLearningEventsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutLearningEventsInput, Prisma.UserUpdateWithoutLearningEventsInput>, Prisma.UserUncheckedUpdateWithoutLearningEventsInput>
 }
 
 export type UserCreateNestedOneWithoutRefreshTokensInput = {
@@ -733,6 +754,7 @@ export type UserCreateWithoutActivityDaysInput = {
   verificationTokens?: Prisma.VerificationTokenCreateNestedManyWithoutUserInput
   emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
   learningProgress?: Prisma.LearningProgressCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutActivityDaysInput = {
@@ -758,6 +780,7 @@ export type UserUncheckedCreateWithoutActivityDaysInput = {
   verificationTokens?: Prisma.VerificationTokenUncheckedCreateNestedManyWithoutUserInput
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
   learningProgress?: Prisma.LearningProgressUncheckedCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutActivityDaysInput = {
@@ -799,6 +822,7 @@ export type UserUpdateWithoutActivityDaysInput = {
   verificationTokens?: Prisma.VerificationTokenUpdateManyWithoutUserNestedInput
   emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
   learningProgress?: Prisma.LearningProgressUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutActivityDaysInput = {
@@ -824,6 +848,7 @@ export type UserUncheckedUpdateWithoutActivityDaysInput = {
   verificationTokens?: Prisma.VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
   learningProgress?: Prisma.LearningProgressUncheckedUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutLearningProgressInput = {
@@ -849,6 +874,7 @@ export type UserCreateWithoutLearningProgressInput = {
   verificationTokens?: Prisma.VerificationTokenCreateNestedManyWithoutUserInput
   emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
   activityDays?: Prisma.UserActivityCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutLearningProgressInput = {
@@ -874,6 +900,7 @@ export type UserUncheckedCreateWithoutLearningProgressInput = {
   verificationTokens?: Prisma.VerificationTokenUncheckedCreateNestedManyWithoutUserInput
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
   activityDays?: Prisma.UserActivityUncheckedCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutLearningProgressInput = {
@@ -915,6 +942,7 @@ export type UserUpdateWithoutLearningProgressInput = {
   verificationTokens?: Prisma.VerificationTokenUpdateManyWithoutUserNestedInput
   emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
   activityDays?: Prisma.UserActivityUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutLearningProgressInput = {
@@ -940,6 +968,127 @@ export type UserUncheckedUpdateWithoutLearningProgressInput = {
   verificationTokens?: Prisma.VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
   activityDays?: Prisma.UserActivityUncheckedUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutLearningEventsInput = {
+  id?: string
+  email: string
+  username: string
+  password: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  emailVerifiedAt?: Date | string | null
+  termsAcceptedAt?: Date | string | null
+  termsAcceptedIp?: string | null
+  deletionRequestedAt?: Date | string | null
+  deletionWarningSentAt?: Date | string | null
+  account?: Prisma.AccountCreateNestedOneWithoutUserInput
+  trades?: Prisma.TradeCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrderCreateNestedManyWithoutUserInput
+  positions?: Prisma.PositionCreateNestedManyWithoutUserInput
+  journalEntries?: Prisma.JournalEntryCreateNestedManyWithoutUserInput
+  balanceEvents?: Prisma.BalanceEventCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenCreateNestedManyWithoutUserInput
+  passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+  verificationTokens?: Prisma.VerificationTokenCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
+  activityDays?: Prisma.UserActivityCreateNestedManyWithoutUserInput
+  learningProgress?: Prisma.LearningProgressCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutLearningEventsInput = {
+  id?: string
+  email: string
+  username: string
+  password: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  emailVerifiedAt?: Date | string | null
+  termsAcceptedAt?: Date | string | null
+  termsAcceptedIp?: string | null
+  deletionRequestedAt?: Date | string | null
+  deletionWarningSentAt?: Date | string | null
+  account?: Prisma.AccountUncheckedCreateNestedOneWithoutUserInput
+  trades?: Prisma.TradeUncheckedCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrderUncheckedCreateNestedManyWithoutUserInput
+  positions?: Prisma.PositionUncheckedCreateNestedManyWithoutUserInput
+  journalEntries?: Prisma.JournalEntryUncheckedCreateNestedManyWithoutUserInput
+  balanceEvents?: Prisma.BalanceEventUncheckedCreateNestedManyWithoutUserInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+  verificationTokens?: Prisma.VerificationTokenUncheckedCreateNestedManyWithoutUserInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
+  activityDays?: Prisma.UserActivityUncheckedCreateNestedManyWithoutUserInput
+  learningProgress?: Prisma.LearningProgressUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutLearningEventsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutLearningEventsInput, Prisma.UserUncheckedCreateWithoutLearningEventsInput>
+}
+
+export type UserUpsertWithoutLearningEventsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutLearningEventsInput, Prisma.UserUncheckedUpdateWithoutLearningEventsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutLearningEventsInput, Prisma.UserUncheckedCreateWithoutLearningEventsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutLearningEventsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutLearningEventsInput, Prisma.UserUncheckedUpdateWithoutLearningEventsInput>
+}
+
+export type UserUpdateWithoutLearningEventsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  account?: Prisma.AccountUpdateOneWithoutUserNestedInput
+  trades?: Prisma.TradeUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrderUpdateManyWithoutUserNestedInput
+  positions?: Prisma.PositionUpdateManyWithoutUserNestedInput
+  journalEntries?: Prisma.JournalEntryUpdateManyWithoutUserNestedInput
+  balanceEvents?: Prisma.BalanceEventUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUpdateManyWithoutUserNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+  verificationTokens?: Prisma.VerificationTokenUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
+  activityDays?: Prisma.UserActivityUpdateManyWithoutUserNestedInput
+  learningProgress?: Prisma.LearningProgressUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutLearningEventsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  account?: Prisma.AccountUncheckedUpdateOneWithoutUserNestedInput
+  trades?: Prisma.TradeUncheckedUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrderUncheckedUpdateManyWithoutUserNestedInput
+  positions?: Prisma.PositionUncheckedUpdateManyWithoutUserNestedInput
+  journalEntries?: Prisma.JournalEntryUncheckedUpdateManyWithoutUserNestedInput
+  balanceEvents?: Prisma.BalanceEventUncheckedUpdateManyWithoutUserNestedInput
+  refreshTokens?: Prisma.RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+  verificationTokens?: Prisma.VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+  emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
+  activityDays?: Prisma.UserActivityUncheckedUpdateManyWithoutUserNestedInput
+  learningProgress?: Prisma.LearningProgressUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutRefreshTokensInput = {
@@ -965,6 +1114,7 @@ export type UserCreateWithoutRefreshTokensInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
   activityDays?: Prisma.UserActivityCreateNestedManyWithoutUserInput
   learningProgress?: Prisma.LearningProgressCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutRefreshTokensInput = {
@@ -990,6 +1140,7 @@ export type UserUncheckedCreateWithoutRefreshTokensInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
   activityDays?: Prisma.UserActivityUncheckedCreateNestedManyWithoutUserInput
   learningProgress?: Prisma.LearningProgressUncheckedCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutRefreshTokensInput = {
@@ -1031,6 +1182,7 @@ export type UserUpdateWithoutRefreshTokensInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
   activityDays?: Prisma.UserActivityUpdateManyWithoutUserNestedInput
   learningProgress?: Prisma.LearningProgressUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutRefreshTokensInput = {
@@ -1056,6 +1208,7 @@ export type UserUncheckedUpdateWithoutRefreshTokensInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
   activityDays?: Prisma.UserActivityUncheckedUpdateManyWithoutUserNestedInput
   learningProgress?: Prisma.LearningProgressUncheckedUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutPasswordResetTokensInput = {
@@ -1081,6 +1234,7 @@ export type UserCreateWithoutPasswordResetTokensInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
   activityDays?: Prisma.UserActivityCreateNestedManyWithoutUserInput
   learningProgress?: Prisma.LearningProgressCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutPasswordResetTokensInput = {
@@ -1106,6 +1260,7 @@ export type UserUncheckedCreateWithoutPasswordResetTokensInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
   activityDays?: Prisma.UserActivityUncheckedCreateNestedManyWithoutUserInput
   learningProgress?: Prisma.LearningProgressUncheckedCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutPasswordResetTokensInput = {
@@ -1147,6 +1302,7 @@ export type UserUpdateWithoutPasswordResetTokensInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
   activityDays?: Prisma.UserActivityUpdateManyWithoutUserNestedInput
   learningProgress?: Prisma.LearningProgressUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutPasswordResetTokensInput = {
@@ -1172,6 +1328,7 @@ export type UserUncheckedUpdateWithoutPasswordResetTokensInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
   activityDays?: Prisma.UserActivityUncheckedUpdateManyWithoutUserNestedInput
   learningProgress?: Prisma.LearningProgressUncheckedUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutVerificationTokensInput = {
@@ -1197,6 +1354,7 @@ export type UserCreateWithoutVerificationTokensInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
   activityDays?: Prisma.UserActivityCreateNestedManyWithoutUserInput
   learningProgress?: Prisma.LearningProgressCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutVerificationTokensInput = {
@@ -1222,6 +1380,7 @@ export type UserUncheckedCreateWithoutVerificationTokensInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
   activityDays?: Prisma.UserActivityUncheckedCreateNestedManyWithoutUserInput
   learningProgress?: Prisma.LearningProgressUncheckedCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutVerificationTokensInput = {
@@ -1263,6 +1422,7 @@ export type UserUpdateWithoutVerificationTokensInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
   activityDays?: Prisma.UserActivityUpdateManyWithoutUserNestedInput
   learningProgress?: Prisma.LearningProgressUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutVerificationTokensInput = {
@@ -1288,6 +1448,7 @@ export type UserUncheckedUpdateWithoutVerificationTokensInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
   activityDays?: Prisma.UserActivityUncheckedUpdateManyWithoutUserNestedInput
   learningProgress?: Prisma.LearningProgressUncheckedUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutEmailChangeTokensInput = {
@@ -1313,6 +1474,7 @@ export type UserCreateWithoutEmailChangeTokensInput = {
   verificationTokens?: Prisma.VerificationTokenCreateNestedManyWithoutUserInput
   activityDays?: Prisma.UserActivityCreateNestedManyWithoutUserInput
   learningProgress?: Prisma.LearningProgressCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutEmailChangeTokensInput = {
@@ -1338,6 +1500,7 @@ export type UserUncheckedCreateWithoutEmailChangeTokensInput = {
   verificationTokens?: Prisma.VerificationTokenUncheckedCreateNestedManyWithoutUserInput
   activityDays?: Prisma.UserActivityUncheckedCreateNestedManyWithoutUserInput
   learningProgress?: Prisma.LearningProgressUncheckedCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutEmailChangeTokensInput = {
@@ -1379,6 +1542,7 @@ export type UserUpdateWithoutEmailChangeTokensInput = {
   verificationTokens?: Prisma.VerificationTokenUpdateManyWithoutUserNestedInput
   activityDays?: Prisma.UserActivityUpdateManyWithoutUserNestedInput
   learningProgress?: Prisma.LearningProgressUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutEmailChangeTokensInput = {
@@ -1404,6 +1568,7 @@ export type UserUncheckedUpdateWithoutEmailChangeTokensInput = {
   verificationTokens?: Prisma.VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
   activityDays?: Prisma.UserActivityUncheckedUpdateManyWithoutUserNestedInput
   learningProgress?: Prisma.LearningProgressUncheckedUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutAccountInput = {
@@ -1429,6 +1594,7 @@ export type UserCreateWithoutAccountInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
   activityDays?: Prisma.UserActivityCreateNestedManyWithoutUserInput
   learningProgress?: Prisma.LearningProgressCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutAccountInput = {
@@ -1454,6 +1620,7 @@ export type UserUncheckedCreateWithoutAccountInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
   activityDays?: Prisma.UserActivityUncheckedCreateNestedManyWithoutUserInput
   learningProgress?: Prisma.LearningProgressUncheckedCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutAccountInput = {
@@ -1495,6 +1662,7 @@ export type UserUpdateWithoutAccountInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
   activityDays?: Prisma.UserActivityUpdateManyWithoutUserNestedInput
   learningProgress?: Prisma.LearningProgressUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAccountInput = {
@@ -1520,6 +1688,7 @@ export type UserUncheckedUpdateWithoutAccountInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
   activityDays?: Prisma.UserActivityUncheckedUpdateManyWithoutUserNestedInput
   learningProgress?: Prisma.LearningProgressUncheckedUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutPositionsInput = {
@@ -1545,6 +1714,7 @@ export type UserCreateWithoutPositionsInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
   activityDays?: Prisma.UserActivityCreateNestedManyWithoutUserInput
   learningProgress?: Prisma.LearningProgressCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutPositionsInput = {
@@ -1570,6 +1740,7 @@ export type UserUncheckedCreateWithoutPositionsInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
   activityDays?: Prisma.UserActivityUncheckedCreateNestedManyWithoutUserInput
   learningProgress?: Prisma.LearningProgressUncheckedCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutPositionsInput = {
@@ -1611,6 +1782,7 @@ export type UserUpdateWithoutPositionsInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
   activityDays?: Prisma.UserActivityUpdateManyWithoutUserNestedInput
   learningProgress?: Prisma.LearningProgressUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutPositionsInput = {
@@ -1636,6 +1808,7 @@ export type UserUncheckedUpdateWithoutPositionsInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
   activityDays?: Prisma.UserActivityUncheckedUpdateManyWithoutUserNestedInput
   learningProgress?: Prisma.LearningProgressUncheckedUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutOrdersInput = {
@@ -1661,6 +1834,7 @@ export type UserCreateWithoutOrdersInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
   activityDays?: Prisma.UserActivityCreateNestedManyWithoutUserInput
   learningProgress?: Prisma.LearningProgressCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutOrdersInput = {
@@ -1686,6 +1860,7 @@ export type UserUncheckedCreateWithoutOrdersInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
   activityDays?: Prisma.UserActivityUncheckedCreateNestedManyWithoutUserInput
   learningProgress?: Prisma.LearningProgressUncheckedCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutOrdersInput = {
@@ -1727,6 +1902,7 @@ export type UserUpdateWithoutOrdersInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
   activityDays?: Prisma.UserActivityUpdateManyWithoutUserNestedInput
   learningProgress?: Prisma.LearningProgressUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutOrdersInput = {
@@ -1752,6 +1928,7 @@ export type UserUncheckedUpdateWithoutOrdersInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
   activityDays?: Prisma.UserActivityUncheckedUpdateManyWithoutUserNestedInput
   learningProgress?: Prisma.LearningProgressUncheckedUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutTradesInput = {
@@ -1777,6 +1954,7 @@ export type UserCreateWithoutTradesInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
   activityDays?: Prisma.UserActivityCreateNestedManyWithoutUserInput
   learningProgress?: Prisma.LearningProgressCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutTradesInput = {
@@ -1802,6 +1980,7 @@ export type UserUncheckedCreateWithoutTradesInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
   activityDays?: Prisma.UserActivityUncheckedCreateNestedManyWithoutUserInput
   learningProgress?: Prisma.LearningProgressUncheckedCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutTradesInput = {
@@ -1843,6 +2022,7 @@ export type UserUpdateWithoutTradesInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
   activityDays?: Prisma.UserActivityUpdateManyWithoutUserNestedInput
   learningProgress?: Prisma.LearningProgressUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutTradesInput = {
@@ -1868,6 +2048,7 @@ export type UserUncheckedUpdateWithoutTradesInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
   activityDays?: Prisma.UserActivityUncheckedUpdateManyWithoutUserNestedInput
   learningProgress?: Prisma.LearningProgressUncheckedUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutJournalEntriesInput = {
@@ -1893,6 +2074,7 @@ export type UserCreateWithoutJournalEntriesInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
   activityDays?: Prisma.UserActivityCreateNestedManyWithoutUserInput
   learningProgress?: Prisma.LearningProgressCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutJournalEntriesInput = {
@@ -1918,6 +2100,7 @@ export type UserUncheckedCreateWithoutJournalEntriesInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
   activityDays?: Prisma.UserActivityUncheckedCreateNestedManyWithoutUserInput
   learningProgress?: Prisma.LearningProgressUncheckedCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutJournalEntriesInput = {
@@ -1959,6 +2142,7 @@ export type UserUpdateWithoutJournalEntriesInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
   activityDays?: Prisma.UserActivityUpdateManyWithoutUserNestedInput
   learningProgress?: Prisma.LearningProgressUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutJournalEntriesInput = {
@@ -1984,6 +2168,7 @@ export type UserUncheckedUpdateWithoutJournalEntriesInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
   activityDays?: Prisma.UserActivityUncheckedUpdateManyWithoutUserNestedInput
   learningProgress?: Prisma.LearningProgressUncheckedUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutBalanceEventsInput = {
@@ -2009,6 +2194,7 @@ export type UserCreateWithoutBalanceEventsInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenCreateNestedManyWithoutUserInput
   activityDays?: Prisma.UserActivityCreateNestedManyWithoutUserInput
   learningProgress?: Prisma.LearningProgressCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutBalanceEventsInput = {
@@ -2034,6 +2220,7 @@ export type UserUncheckedCreateWithoutBalanceEventsInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedCreateNestedManyWithoutUserInput
   activityDays?: Prisma.UserActivityUncheckedCreateNestedManyWithoutUserInput
   learningProgress?: Prisma.LearningProgressUncheckedCreateNestedManyWithoutUserInput
+  learningEvents?: Prisma.LearningEventUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutBalanceEventsInput = {
@@ -2075,6 +2262,7 @@ export type UserUpdateWithoutBalanceEventsInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUpdateManyWithoutUserNestedInput
   activityDays?: Prisma.UserActivityUpdateManyWithoutUserNestedInput
   learningProgress?: Prisma.LearningProgressUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutBalanceEventsInput = {
@@ -2100,6 +2288,7 @@ export type UserUncheckedUpdateWithoutBalanceEventsInput = {
   emailChangeTokens?: Prisma.EmailChangeTokenUncheckedUpdateManyWithoutUserNestedInput
   activityDays?: Prisma.UserActivityUncheckedUpdateManyWithoutUserNestedInput
   learningProgress?: Prisma.LearningProgressUncheckedUpdateManyWithoutUserNestedInput
+  learningEvents?: Prisma.LearningEventUncheckedUpdateManyWithoutUserNestedInput
 }
 
 
@@ -2119,6 +2308,7 @@ export type UserCountOutputType = {
   emailChangeTokens: number
   activityDays: number
   learningProgress: number
+  learningEvents: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2133,6 +2323,7 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   emailChangeTokens?: boolean | UserCountOutputTypeCountEmailChangeTokensArgs
   activityDays?: boolean | UserCountOutputTypeCountActivityDaysArgs
   learningProgress?: boolean | UserCountOutputTypeCountLearningProgressArgs
+  learningEvents?: boolean | UserCountOutputTypeCountLearningEventsArgs
 }
 
 /**
@@ -2222,6 +2413,13 @@ export type UserCountOutputTypeCountLearningProgressArgs<ExtArgs extends runtime
   where?: Prisma.LearningProgressWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountLearningEventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.LearningEventWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -2247,6 +2445,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   emailChangeTokens?: boolean | Prisma.User$emailChangeTokensArgs<ExtArgs>
   activityDays?: boolean | Prisma.User$activityDaysArgs<ExtArgs>
   learningProgress?: boolean | Prisma.User$learningProgressArgs<ExtArgs>
+  learningEvents?: boolean | Prisma.User$learningEventsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -2306,6 +2505,7 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   emailChangeTokens?: boolean | Prisma.User$emailChangeTokensArgs<ExtArgs>
   activityDays?: boolean | Prisma.User$activityDaysArgs<ExtArgs>
   learningProgress?: boolean | Prisma.User$learningProgressArgs<ExtArgs>
+  learningEvents?: boolean | Prisma.User$learningEventsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -2326,6 +2526,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     emailChangeTokens: Prisma.$EmailChangeTokenPayload<ExtArgs>[]
     activityDays: Prisma.$UserActivityPayload<ExtArgs>[]
     learningProgress: Prisma.$LearningProgressPayload<ExtArgs>[]
+    learningEvents: Prisma.$LearningEventPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2745,6 +2946,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   emailChangeTokens<T extends Prisma.User$emailChangeTokensArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$emailChangeTokensArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EmailChangeTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   activityDays<T extends Prisma.User$activityDaysArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$activityDaysArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$UserActivityPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   learningProgress<T extends Prisma.User$learningProgressArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$learningProgressArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LearningProgressPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  learningEvents<T extends Prisma.User$learningEventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$learningEventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LearningEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -3458,6 +3660,30 @@ export type User$learningProgressArgs<ExtArgs extends runtime.Types.Extensions.I
   take?: number
   skip?: number
   distinct?: Prisma.LearningProgressScalarFieldEnum | Prisma.LearningProgressScalarFieldEnum[]
+}
+
+/**
+ * User.learningEvents
+ */
+export type User$learningEventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the LearningEvent
+   */
+  select?: Prisma.LearningEventSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the LearningEvent
+   */
+  omit?: Prisma.LearningEventOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.LearningEventInclude<ExtArgs> | null
+  where?: Prisma.LearningEventWhereInput
+  orderBy?: Prisma.LearningEventOrderByWithRelationInput | Prisma.LearningEventOrderByWithRelationInput[]
+  cursor?: Prisma.LearningEventWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.LearningEventScalarFieldEnum | Prisma.LearningEventScalarFieldEnum[]
 }
 
 /**

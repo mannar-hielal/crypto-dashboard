@@ -54,6 +54,18 @@ function metrics(over: Partial<RetentionMetricsResponse> = {}): RetentionMetrics
     windowWeeks: 12,
     truncated: false,
     activityTrackedSince: '2026-10-14',
+    tourFunnel: [
+      {
+        itemId: 'primer',
+        started: 10,
+        completed: 4,
+        steps: [
+          { stepId: 'primer.1', viewers: 10, closedHere: 1 },
+          { stepId: 'primer.2', viewers: 7, closedHere: 3 },
+        ],
+      },
+      { itemId: 'buy-first-coin', started: 0, completed: 0, steps: [] },
+    ],
     totals: cohort({ weekStart: null, signups: 128, verified: 96 }),
     cohorts: [
       cohort({ weekStart: '2026-10-05' }),
@@ -111,6 +123,17 @@ describe('AdminMetricsPage', () => {
 
     await waitFor(() => expect(screen.getByText(/recorded since 2026-10-14/)).not.toBeNull());
     expect(screen.getByText(/never register/)).not.toBeNull();
+  });
+
+  it('shows the tours’ funnel: who saw each step and where they left', async () => {
+    mockGetMetrics.mockResolvedValue(metrics());
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText('What you’re looking at')).not.toBeNull());
+    expect(screen.getByText('4 / 10')).not.toBeNull();
+    expect(screen.getByText(/40% finished/)).not.toBeNull();
+    // a tour nobody opened still shows, at zero
+    expect(screen.getByText('Buy your first coin')).not.toBeNull();
   });
 
   it('says so when sign-in days are not recorded yet', async () => {

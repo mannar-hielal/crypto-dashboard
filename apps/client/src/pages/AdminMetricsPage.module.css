@@ -190,3 +190,10 @@
 .error {
   color: var(--color-brand-red);
 }
+
+.sectionTitle {
+  margin: 32px 0 12px;
+  color: var(--color-brand-white);
+  font-size: 18px; /* fontSize.base */
+  font-weight: 700;
+}

@@ -46,6 +46,7 @@ model User {
   emailChangeTokens   EmailChangeToken[] // 🔐 pending email changes
   activityDays        UserActivity[] // one row per UTC day the user signed in or resumed a session
   learningProgress    LearningProgress[] // guided tours finished / the welcome card dismissed
+  learningEvents      LearningEvent[] // which tour steps were viewed (the funnel), capped per user
 
   @@index([email])
   @@index([username])
@@ -74,6 +75,22 @@ model LearningProgress {
   updatedAt DateTime @updatedAt
 
   @@id([userId, itemId])
+}
+
+// One row per guided-tour event (privacy policy §3, "Learning events"): which tour and step, and
+// when — no free text. The name, tour and step shape are allowlisted in the route; a user holds at
+// most 500 rows; rows older than 180 days are purged by the daily job; the rest go with the user.
+model LearningEvent {
+  id     String   @id @default(cuid())
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name   String   @db.VarChar(30)
+  itemId String   @db.VarChar(40)
+  stepId String?  @db.VarChar(40)
+  at     DateTime @default(now())
+
+  @@index([userId])
+  @@index([at]) // the purge and the funnel read by age
 }
 
 // 🔐 One row per active session. Deleted on logout. Rotated on refresh.

@@ -15,6 +15,8 @@
 import type { FastifyInstance } from 'fastify';
 import type { MetricsRate, RetentionCohort, RetentionMetricsResponse } from '@crypto-dashboard/sdk';
 import { config } from '../config.js';
+import { LEARN_EVENT_RETENTION_DAYS, LEARN_TOUR_IDS } from '../constants.js';
+import { buildTourFunnel, type EventRow } from './LearningEvents.js';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -63,6 +65,8 @@ export interface ReportInput {
   truncated: boolean;
   /** UTC date of the oldest recorded activity day, or null when none exist yet */
   activityTrackedSince?: string | null;
+  /** Guided-tour events in the retention period */
+  tourEvents?: EventRow[];
 }
 
 /** Monday 00:00 UTC of the week `d` falls in */
@@ -192,6 +196,7 @@ export function buildRetentionReport(
     windowWeeks,
     truncated: input.truncated,
     activityTrackedSince: input.activityTrackedSince ?? null,
+    tourFunnel: buildTourFunnel(input.tourEvents ?? [], LEARN_TOUR_IDS),
     totals,
     cohorts: [...cohorts.values()], // inserted newest first
   };
@@ -219,51 +224,71 @@ export async function loadRetentionReport(
     orderType: { in: [...USER_ORDER_TYPES] },
   };
 
-  const [userRows, firstOrderRows, orderActivity, noteActivity, signInDays, oldestSignIn] =
-    await Promise.all([
-      prisma.user.findMany({
-        where: userFilter,
-        orderBy: { createdAt: 'asc' },
-        take: MAX_USERS + 1,
-        select: {
-          id: true,
-          createdAt: true,
-          emailVerifiedAt: true,
-          account: { select: { resetCount: true, lastReset: true } },
+  const [
+    userRows,
+    firstOrderRows,
+    orderActivity,
+    noteActivity,
+    signInDays,
+    oldestSignIn,
+    tourEventRows,
+  ] = await Promise.all([
+    prisma.user.findMany({
+      where: userFilter,
+      orderBy: { createdAt: 'asc' },
+      take: MAX_USERS + 1,
+      select: {
+        id: true,
+        createdAt: true,
+        emailVerifiedAt: true,
+        account: { select: { resetCount: true, lastReset: true } },
+      },
+    }),
+    prisma.order.findMany({
+      where: placedByUser,
+      orderBy: { createdAt: 'asc' },
+      distinct: ['userId'],
+      take: MAX_USERS + 1,
+      select: { userId: true, createdAt: true, stopLoss: true },
+    }),
+    prisma.order.findMany({
+      where: { ...placedByUser, createdAt: { gte: start } },
+      take: MAX_ACTIVITY_ROWS,
+      select: { userId: true, createdAt: true },
+    }),
+    prisma.journalEntry.findMany({
+      where: { user: userFilter, isUserNote: true, createdAt: { gte: start } },
+      take: MAX_ACTIVITY_ROWS,
+      select: { userId: true, createdAt: true },
+    }),
+    prisma.userActivity.findMany({
+      where: { user: userFilter, day: { gte: start } },
+      take: MAX_ACTIVITY_ROWS,
+      select: { userId: true, day: true },
+    }),
+    // Not filtered by user: "since when do we record sign-in days at all"
+    prisma.userActivity.findFirst({ orderBy: { day: 'asc' }, select: { day: true } }),
+    // The funnel is over everyone in the retention period, not only the signup window's cohorts
+    prisma.learningEvent.findMany({
+      where: {
+        user: {
+          email: { not: config.adminEmail },
+          username: { notIn: [...EXCLUDED_USERNAMES] },
         },
-      }),
-      prisma.order.findMany({
-        where: placedByUser,
-        orderBy: { createdAt: 'asc' },
-        distinct: ['userId'],
-        take: MAX_USERS + 1,
-        select: { userId: true, createdAt: true, stopLoss: true },
-      }),
-      prisma.order.findMany({
-        where: { ...placedByUser, createdAt: { gte: start } },
-        take: MAX_ACTIVITY_ROWS,
-        select: { userId: true, createdAt: true },
-      }),
-      prisma.journalEntry.findMany({
-        where: { user: userFilter, isUserNote: true, createdAt: { gte: start } },
-        take: MAX_ACTIVITY_ROWS,
-        select: { userId: true, createdAt: true },
-      }),
-      prisma.userActivity.findMany({
-        where: { user: userFilter, day: { gte: start } },
-        take: MAX_ACTIVITY_ROWS,
-        select: { userId: true, day: true },
-      }),
-      // Not filtered by user: "since when do we record sign-in days at all"
-      prisma.userActivity.findFirst({ orderBy: { day: 'asc' }, select: { day: true } }),
-    ]);
+        at: { gte: new Date(now.getTime() - LEARN_EVENT_RETENTION_DAYS * DAY_MS) },
+      },
+      take: MAX_ACTIVITY_ROWS,
+      select: { userId: true, name: true, itemId: true, stepId: true, at: true },
+    }),
+  ]);
 
   const truncated =
     userRows.length > MAX_USERS ||
     firstOrderRows.length > MAX_USERS ||
     orderActivity.length >= MAX_ACTIVITY_ROWS ||
     noteActivity.length >= MAX_ACTIVITY_ROWS ||
-    signInDays.length >= MAX_ACTIVITY_ROWS;
+    signInDays.length >= MAX_ACTIVITY_ROWS ||
+    tourEventRows.length >= MAX_ACTIVITY_ROWS;
 
   return buildRetentionReport(
     {
@@ -285,6 +310,7 @@ export async function loadRetentionReport(
       ],
       truncated,
       activityTrackedSince: oldestSignIn ? oldestSignIn.day.toISOString().slice(0, 10) : null,
+      tourEvents: tourEventRows,
     },
     now,
     windowWeeks

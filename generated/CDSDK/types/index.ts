@@ -89,6 +89,23 @@ export interface SetLearnProgressRequest {
   status: LearnStatus;
 }
 
+/** What the client may report about a guided tour (a funnel: started → steps → completed / closed) */
+export const LEARN_EVENT_NAMES = [
+  'tour_started',
+  'tour_step',
+  'tour_completed',
+  'tour_closed',
+] as const;
+export type LearnEventName = (typeof LEARN_EVENT_NAMES)[number];
+
+export interface LearnEventRequest {
+  name: LearnEventName;
+  /** The tour: never `welcome-card` */
+  itemId: Exclude<LearnItemId, 'welcome-card'>;
+  /** `<tour id>.<n>`: the step viewed, or the step the tour was closed on */
+  stepId?: string;
+}
+
 // ─── Admin: retention metrics ────────────────────────────────────────────────
 
 /** `count` of the `eligible` users — a window not yet fully elapsed leaves a user out of `eligible` */
@@ -117,6 +134,22 @@ export interface RetentionCohort {
   firstOrderWithStopLoss: MetricsRate;
 }
 
+/** People who viewed one step of a tour (a person counts once however often they went back) */
+export interface TourFunnelStep {
+  stepId: string;
+  viewers: number;
+  /** People whose last event in this tour was closing it on this step */
+  closedHere: number;
+}
+
+export interface TourFunnelTour {
+  itemId: string;
+  /** People who started it, and who finished it, in the last 180 days */
+  started: number;
+  completed: number;
+  steps: TourFunnelStep[];
+}
+
 export interface RetentionMetricsResponse {
   generatedAt: string;
   windowWeeks: number;
@@ -127,6 +160,8 @@ export interface RetentionMetricsResponse {
    * older than this under-count return: their sign-ins were not recorded yet.
    */
   activityTrackedSince: string | null;
+  /** The guided tours' funnel, from learning events (recorded since the tours shipped) */
+  tourFunnel: TourFunnelTour[];
   totals: RetentionCohort;
   cohorts: RetentionCohort[];
 }

@@ -33,6 +33,11 @@ export type UserActivity = Prisma.UserActivityModel
  */
 export type LearningProgress = Prisma.LearningProgressModel
 /**
+ * Model LearningEvent
+ * 
+ */
+export type LearningEvent = Prisma.LearningEventModel
+/**
  * Model RefreshToken
  * 
  */

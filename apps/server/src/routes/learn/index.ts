@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { LearnItemId, LearnStatus } from '@crypto-dashboard/sdk';
-import { LEARN_ITEM_IDS } from '../../constants.js';
+import { LEARN_EVENT_NAMES, LEARN_ITEM_IDS, LEARN_TOUR_IDS } from '../../constants.js';
+import { recordLearningEvent } from '../../services/LearningEvents.js';
 
 // ─── SHARED RESPONSE SCHEMAS ────────────────────────────────────────────────
 
@@ -130,6 +131,44 @@ export async function learnRoutes(app: FastifyInstance) {
         select: { itemId: true, status: true, updatedAt: true },
       });
       return reply.send({ item: toItem(row ?? { itemId, status, updatedAt: new Date() }) });
+    }
+  );
+
+  // ─── POST /events ─────────────────────────────────────────────────────────
+  app.post(
+    '/events',
+    {
+      schema: {
+        tags: ['Learn'],
+        summary: 'Report a guided-tour event (the funnel: which step people reach)',
+        description:
+          'Fire-and-forget. 204 whether stored or dropped over the per-user cap; the body is an ' +
+          'allowlist: an event name, a tour id and a `<tour>.<n>` step.',
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: 'object',
+          required: ['name', 'itemId'],
+          additionalProperties: false,
+          properties: {
+            name: { type: 'string', enum: [...LEARN_EVENT_NAMES] },
+            itemId: { type: 'string', enum: [...LEARN_TOUR_IDS], maxLength: 40 },
+            stepId: { type: 'string', pattern: '^[a-z0-9-]+\\.[0-9]{1,2}$', maxLength: 40 },
+          },
+        },
+        response: { 204: { type: 'null' }, 400: errorResponse, 401: errorResponse },
+      },
+      config: { rateLimit: { max: 120, timeWindow: '1 minute' } },
+      onRequest: [app.authenticate],
+    },
+    async (request, reply) => {
+      const { userId } = request.user as { userId: string };
+      const body = request.body as { name: string; itemId: string; stepId?: string };
+      // 🔐 A step belongs to the tour it names: `primer.3` on `buy-first-coin` is nonsense
+      if (body.stepId && !body.stepId.startsWith(`${body.itemId}.`)) {
+        return reply.status(400).send({ error: 'stepId does not belong to the tour' });
+      }
+      await recordLearningEvent(app.prisma, { userId, ...body });
+      return reply.status(204).send();
     }
   );
 }

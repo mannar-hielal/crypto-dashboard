@@ -42,3 +42,20 @@ export const LEARN_ITEM_IDS = [
   'sell-and-review',
   'welcome-card',
 ] as const;
+
+/** The guided tours (the welcome card has no steps); events are only accepted for these */
+export const LEARN_TOUR_IDS = ['primer', 'buy-first-coin', 'sell-and-review'] as const;
+
+/** Mirrors `LEARN_EVENT_NAMES` in the SDK (checked by `learn.test.ts`, like `LEARN_ITEM_IDS`) */
+export const LEARN_EVENT_NAMES = [
+  'tour_started',
+  'tour_step',
+  'tour_completed',
+  'tour_closed',
+] as const;
+
+/** 🔐 A user holds at most this many tour events; further ones are dropped, not stored */
+export const MAX_LEARN_EVENTS_PER_USER = 500;
+
+/** Older events are purged by the daily job and the privacy policy says so (§3, §7) */
+export const LEARN_EVENT_RETENTION_DAYS = 180;
