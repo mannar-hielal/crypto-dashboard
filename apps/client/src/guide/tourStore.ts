@@ -17,6 +17,8 @@ interface TourState {
   loaded: boolean;
   /** The welcome card was dismissed (or the primer finished) on this account */
   cardDismissed: boolean;
+  /** The "e-mail me when an order fills" offer was answered (taken, declined or already on) */
+  fillOfferDismissed: boolean;
   /** The Learn panel is open */
   panelOpen: boolean;
   start: (id: TourId) => void;
@@ -28,8 +30,13 @@ interface TourState {
   /** Replace the finished set (the server's answer) */
   setCompleted: (ids: TourId[]) => void;
   /** The account's saved progress arrived */
-  setProgress: (progress: { completed: TourId[]; cardDismissed: boolean }) => void;
+  setProgress: (progress: {
+    completed: TourId[];
+    cardDismissed: boolean;
+    fillOfferDismissed?: boolean;
+  }) => void;
   dismissCard: () => void;
+  dismissFillOffer: () => void;
   openPanel: () => void;
   closePanel: () => void;
   reset: () => void;
@@ -42,6 +49,7 @@ const initial = {
   completed: {},
   loaded: false,
   cardDismissed: false,
+  fillOfferDismissed: false,
   panelOpen: false,
 } as const;
 
@@ -81,8 +89,9 @@ export const useTourStore = create<TourState>()((set, get) => ({
       completed: Object.fromEntries(ids.map((id) => [id, true])) as Partial<Record<TourId, true>>,
     }),
 
-  setProgress: ({ completed, cardDismissed }) =>
+  setProgress: ({ completed, cardDismissed, fillOfferDismissed = false }) =>
     set({
+      fillOfferDismissed,
       completed: Object.fromEntries(completed.map((id) => [id, true])) as Partial<
         Record<TourId, true>
       >,
@@ -91,6 +100,8 @@ export const useTourStore = create<TourState>()((set, get) => ({
     }),
 
   dismissCard: () => set({ cardDismissed: true }),
+
+  dismissFillOffer: () => set({ fillOfferDismissed: true }),
 
   openPanel: () => set({ panelOpen: true }),
 

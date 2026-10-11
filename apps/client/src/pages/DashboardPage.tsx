@@ -36,6 +36,7 @@ import { bg, color, fontSize, rangeBar } from '@/lib/tokens';
 import { TIME_RANGE_PRESETS } from '@/lib/markets';
 import { TimeRangeSwitcher } from '@/components/dashboard/TimeRangeSwitcher';
 import { GuideOverlay } from '@/guide/GuideOverlay';
+import { FillEmailOffer } from '@/guide/FillEmailOffer';
 import { LearnCard } from '@/guide/LearnCard';
 import { LearnPanel } from '@/guide/LearnPanel';
 import { useTourProgress } from '@/guide/useTourProgress';
@@ -466,6 +467,7 @@ export function DashboardInner() {
               />
             </ErrorBoundary>
             <LearnCard />
+            <FillEmailOffer />
           </motion.div>
 
           {/* ── Time-range preset bar ──────────────────────────────────────────── */}

@@ -269,6 +269,55 @@ export const EmailService = {
     );
   },
 
+  /**
+   * The opt-in "an order of yours filled" e-mail: about the user's own order, nothing else — no
+   * promotion, no price commentary. `unsubscribeUrl` switches it off without signing in.
+   */
+  async sendOrderFilledEmail(
+    to: string,
+    username: string,
+    order: {
+      market: string;
+      symbol: string;
+      side: string;
+      type: string;
+      qty: string;
+      price: string;
+    },
+    unsubscribeUrl: string
+  ): Promise<void> {
+    recordOutboxEmail({ kind: 'order-filled', to, url: unsubscribeUrl });
+    const client = getResend();
+
+    if (!client) {
+      logMissingResendKey('Order filled email', { to, symbol: order.symbol });
+      return;
+    }
+
+    const e = escapeHtml;
+    const line = `${e(order.side)} ${e(order.type)} order for ${e(order.qty)} ${e(order.symbol)} (${e(order.market)})`;
+    await sendEmail(
+      client,
+      {
+        from: config.resendFromEmail,
+        to,
+        subject: `Your ${order.symbol} order filled — cryptopapertrade.com`,
+        html: `
+        <h2>Hi ${e(username)},</h2>
+        <p>Your ${line} filled at <strong>${e(order.price)}</strong>.</p>
+        <p>Open the app to see it under Positions or Assets. This is practice money — nothing here is real.</p>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0"/>
+        <p style="font-size:12px;color:#9ca3af;">
+          You asked us to e-mail you when an order of yours fills while you are away.
+          <a href="${e(unsubscribeUrl)}" style="color:#6366f1;text-decoration:underline;">Stop these e-mails</a>
+        </p>
+      `,
+      },
+      'Failed to send order filled email',
+      { to, symbol: order.symbol }
+    );
+  },
+
   async sendDeletionCancelledEmail(to: string, username: string): Promise<void> {
     recordOutboxEmail({ kind: 'deletion-cancelled', to });
     const client = getResend();

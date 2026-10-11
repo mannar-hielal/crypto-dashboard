@@ -2,6 +2,7 @@ import { guide } from '@/lib/guideAnchors';
 import { useState, useEffect, useRef } from 'react';
 import {
   X,
+  Bell,
   Check,
   User as UserIcon,
   Lock,
@@ -14,10 +15,11 @@ import {
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { z } from 'zod';
 import { useAuthStore } from '@/store/authStore';
-import { authApi } from '@crypto-dashboard/sdk';
+import { authApi, notificationsApi } from '@crypto-dashboard/sdk';
 import { bg, color, fontSize, gradient, radius } from '@/lib/tokens';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Toggle } from '@/components/ui/Toggle';
 import { usePaperStore } from '@/store/paperStore';
 
 interface SettingsModalProps {
@@ -59,6 +61,10 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
   const accessToken = useAuthStore((s) => s.accessToken);
   const updateUser = useAuthStore((s) => s.updateUser);
   const clearAuth = useAuthStore((s) => s.clearAuth);
+
+  // Opt-in "e-mail me when an order fills" (null = not read yet)
+  const [fillEmail, setFillEmail] = useState<boolean | null>(null);
+  const [fillEmailError, setFillEmailError] = useState<string | null>(null);
 
   const [username, setUsername] = useState(user?.username ?? '');
   const [isUpdatingUsername, setIsUpdatingUsername] = useState(false);
@@ -140,6 +146,22 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
       syncState();
     }
   }, [open, user]);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    let cancelled = false;
+    notificationsApi
+      .get(accessToken)
+      .then((r) => {
+        if (!cancelled) setFillEmail(r.fillEmail);
+      })
+      .catch(() => {
+        if (!cancelled) setFillEmailError('Could not read your e-mail preference.');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken]);
 
   if (!user || !accessToken) return null;
 
@@ -260,6 +282,18 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
       setIsDeleting(false);
     }
   };
+
+  async function handleFillEmail(next: boolean) {
+    if (!accessToken) return;
+    setFillEmailError(null);
+    setFillEmail(next); // optimistic; put back if the server refuses
+    try {
+      await notificationsApi.set({ fillEmail: next }, accessToken);
+    } catch (err) {
+      setFillEmail(!next);
+      setFillEmailError(err instanceof Error ? err.message : 'Could not save that.');
+    }
+  }
 
   const handleExportData = () => {
     // 🔐 Read fresh state inside the handler — the component does not subscribe
@@ -651,6 +685,43 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                       )}
                     </AnimatePresence>
                   </div>
+                </div>
+              </motion.section>
+
+              {/* Notifications Section */}
+              <motion.section variants={itemVariants} className="space-y-4">
+                <h3
+                  className="text-xs font-semibold uppercase tracking-widest flex items-center gap-2"
+                  style={{ color: color.muted }}
+                >
+                  <Bell className="w-3.5 h-3.5" /> Notifications
+                </h3>
+                <div
+                  className="p-6 rounded-2xl border border-white/8 space-y-3 shadow-sm"
+                  style={{ background: `color-mix(in srgb, ${color.white} 2%, transparent)` }}
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <p className="text-sm font-bold text-white">E-mail me when an order fills</p>
+                      <p className="text-xs max-w-[260px]" style={{ color: color.muted }}>
+                        Only for a pending limit or stop order that fills while you are not
+                        connected. Off unless you turn it on; every e-mail has a link to stop it.
+                      </p>
+                    </div>
+                    {fillEmail !== null && (
+                      <Toggle
+                        checked={fillEmail}
+                        onChange={(v) => void handleFillEmail(v)}
+                        label="E-mail me when an order fills"
+                        anchor="settings.notifications.fill-email"
+                      />
+                    )}
+                  </div>
+                  {fillEmailError && (
+                    <p className="text-xs" style={{ color: color.red }}>
+                      {fillEmailError}
+                    </p>
+                  )}
                 </div>
               </motion.section>
 

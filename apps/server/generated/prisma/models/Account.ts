@@ -692,10 +692,6 @@ export type IntFieldUpdateOperationsInput = {
   divide?: number
 }
 
-export type BoolFieldUpdateOperationsInput = {
-  set?: boolean
-}
-
 export type AccountCreateNestedOneWithoutSpotBalancesInput = {
   create?: Prisma.XOR<Prisma.AccountCreateWithoutSpotBalancesInput, Prisma.AccountUncheckedCreateWithoutSpotBalancesInput>
   connectOrCreate?: Prisma.AccountCreateOrConnectWithoutSpotBalancesInput

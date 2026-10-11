@@ -41,7 +41,9 @@ describe('learn item ids', () => {
 describe('learn event names and tours', () => {
   it('should match the SDK, and the tours should be the items without the card', () => {
     expect([...LEARN_EVENT_NAMES]).toEqual([...SDK_EVENT_NAMES]);
-    expect([...LEARN_TOUR_IDS]).toEqual(LEARN_ITEM_IDS.filter((i) => i !== 'welcome-card'));
+    expect([...LEARN_TOUR_IDS]).toEqual(
+      LEARN_ITEM_IDS.filter((i) => i !== 'welcome-card' && i !== 'fill-email-offer')
+    );
   });
 });
 

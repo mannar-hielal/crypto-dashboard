@@ -29,6 +29,11 @@ model User {
   termsAcceptedAt DateTime? // captures exactly when user agreed
   termsAcceptedIp String? // captures IP for legal audit trail
 
+  // 📧 Opt-in e-mail when a resting order fills while the user is away (privacy policy §3, §5:
+  //    consent, off by default). The timestamp is the proof of consent, like termsAcceptedAt.
+  fillEmailOptIn   Boolean   @default(false)
+  fillEmailOptInAt DateTime?
+
   // 🗑️ Account Deletion (Phase 3)
   deletionRequestedAt   DateTime? // null = active; non-null = pending deletion
   deletionWarningSentAt DateTime? // null = warning not yet sent; non-null = already sent

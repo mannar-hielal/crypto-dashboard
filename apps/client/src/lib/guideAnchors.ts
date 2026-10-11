@@ -266,6 +266,12 @@ export const GUIDE_ANCHORS = [
   'learn.panel.close',
   'learn.tour',
   'learn.tour.start',
+  // notifications (the opt-in order-fill e-mail)
+  'settings.notifications.fill-email',
+  'notify.offer',
+  'notify.offer.accept',
+  'notify.offer.dismiss',
+  'notify.unsubscribe.status',
 ] as const;
 
 export type GuideAnchor = (typeof GUIDE_ANCHORS)[number];

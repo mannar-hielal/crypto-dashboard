@@ -22,6 +22,7 @@ import {
   learnApi,
   marketApi,
   newsletterApi,
+  notificationsApi,
   paperApi,
 } from '@crypto-dashboard/sdk';
 
@@ -359,6 +360,25 @@ const CALLS: Call[] = [
     status: 204,
     response: undefined,
   },
+  // notifications
+  {
+    name: 'notificationsApi.get',
+    run: () => notificationsApi.get(T),
+    status: 200,
+    response: f.notificationSettings,
+  },
+  {
+    name: 'notificationsApi.set',
+    run: () => notificationsApi.set({ fillEmail: true }, T),
+    status: 200,
+    response: f.notificationSettings,
+  },
+  {
+    name: 'notificationsApi.unsubscribe',
+    run: () => notificationsApi.unsubscribe('a-long-enough-token'),
+    status: 200,
+    response: f.messageResponse,
+  },
   // admin
   {
     name: 'adminApi.getRetentionMetrics',
@@ -488,7 +508,15 @@ const NOT_HTTP = new Set(['marketApi.wsUrl', 'paperApi.wsUrl']);
 
 describe('SDK ↔ server contract (F9)', () => {
   it('covers every SDK function', () => {
-    const apis = { adminApi, authApi, learnApi, marketApi, newsletterApi, paperApi };
+    const apis = {
+      adminApi,
+      authApi,
+      learnApi,
+      marketApi,
+      newsletterApi,
+      notificationsApi,
+      paperApi,
+    };
     const called = new Set(CALLS.map((c) => c.name.split(' ')[0]));
     const functions = Object.entries(apis).flatMap(([api, members]) =>
       Object.keys(members).map((fn) => `${api}.${fn}`)

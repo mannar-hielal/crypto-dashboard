@@ -69,6 +69,7 @@ export const LEARN_ITEM_IDS = [
   'buy-first-coin',
   'sell-and-review',
   'welcome-card',
+  'fill-email-offer',
 ] as const;
 export type LearnItemId = (typeof LEARN_ITEM_IDS)[number];
 
@@ -100,10 +101,18 @@ export type LearnEventName = (typeof LEARN_EVENT_NAMES)[number];
 
 export interface LearnEventRequest {
   name: LearnEventName;
-  /** The tour: never `welcome-card` */
-  itemId: Exclude<LearnItemId, 'welcome-card'>;
+  /** The tour: never one of the offers */
+  itemId: Exclude<LearnItemId, 'welcome-card' | 'fill-email-offer'>;
   /** `<tour id>.<n>`: the step viewed, or the step the tour was closed on */
   stepId?: string;
+}
+
+// ─── Notifications ───────────────────────────────────────────────────────────
+
+/** What the account has opted into by e-mail (off until the user turns it on) */
+export interface NotificationSettings {
+  /** An e-mail when a resting limit / stop order of theirs fills while they are not connected */
+  fillEmail: boolean;
 }
 
 // ─── Admin: retention metrics ────────────────────────────────────────────────

@@ -128,6 +128,8 @@ export const meResponse: MeResponse = {
   },
 };
 
+export const notificationSettings = { fillEmail: true } as const;
+
 export const learnProgressResponse: LearnProgressResponse = {
   items: [{ itemId: 'primer', status: 'completed', updatedAt: '2026-10-11T00:00:00.000Z' }],
 };

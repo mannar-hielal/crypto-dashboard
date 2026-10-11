@@ -59,6 +59,11 @@ const NewsletterUnsubscribedPage = lazy(() =>
     default: m.NewsletterUnsubscribedPage,
   }))
 );
+const FillEmailUnsubscribePage = lazy(() =>
+  import('@/pages/FillEmailUnsubscribePage').then((m) => ({
+    default: m.FillEmailUnsubscribePage,
+  }))
+);
 const AdminNewsletterPage = lazy(() =>
   import('@/pages/AdminNewsletterPage').then((m) => ({ default: m.AdminNewsletterPage }))
 );
@@ -116,6 +121,7 @@ export default function App() {
             <Route path="/verify-email-change" element={<VerifyEmailChangePage />} />
             <Route path="/newsletter/verify" element={<NewsletterVerifyPage />} />
             <Route path="/newsletter/unsubscribe" element={<NewsletterUnsubscribedPage />} />
+            <Route path="/notifications/unsubscribe" element={<FillEmailUnsubscribePage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/security" element={<SecurityPage />} />

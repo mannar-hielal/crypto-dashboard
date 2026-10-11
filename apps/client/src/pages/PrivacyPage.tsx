@@ -129,6 +129,18 @@ export function PrivacyPage() {
                 </td>
               </tr>
               <tr>
+                <td>Order-fill e-mail preference</td>
+                <td>
+                  Sending you one e-mail when a pending order of yours fills while you are away —
+                  only if you turn it on
+                </td>
+                <td>
+                  A yes / no on your account and the time you said yes (your proof of consent),
+                  deleted with your account. Off by default; every such e-mail has a link that turns
+                  it off.
+                </td>
+              </tr>
+              <tr>
                 <td>Newsletter subscription data</td>
                 <td>Double opt-in verification, sending newsletters</td>
                 <td>
@@ -174,6 +186,12 @@ export function PrivacyPage() {
               opt in, and we record your IP and timestamp at the point of consent. You may withdraw
               at any time via the unsubscribe link in every email.
             </li>
+            <li>
+              <strong>Consent (Art. 6(1)(a) GDPR)</strong>: the optional "order filled" e-mail — it
+              is off until you turn it on in Settings or accept the offer in the app, and we record
+              when you did. You may withdraw at any time in Settings or from the link in each such
+              e-mail.
+            </li>
           </ul>
         </section>
 
@@ -184,7 +202,8 @@ export function PrivacyPage() {
             <li>To display your paper trading history and virtual portfolio.</li>
             <li>
               To send transactional emails: password reset and newsletter confirmation/verification
-              (no marketing emails).
+              (no marketing emails) and, only if you opt in, one e-mail when a pending order of
+              yours fills while you are away.
             </li>
             <li>To detect and prevent abuse, fraud, or unauthorised access.</li>
             <li>

@@ -28,11 +28,16 @@ export function useTourProgress(): void {
         // The primer finished means the offer is done with, dismissed or not
         const cardDismissed =
           items.some((i) => i.itemId === 'welcome-card') || completed.includes('primer');
-        useTourStore.getState().setProgress({ completed, cardDismissed });
+        const fillOfferDismissed = items.some((i) => i.itemId === 'fill-email-offer');
+        useTourStore.getState().setProgress({ completed, cardDismissed, fillOfferDismissed });
       })
       .catch(() => {
         // Can't read it: show no offer rather than one that may already have been answered
-        if (!cancelled) useTourStore.getState().setProgress({ completed: [], cardDismissed: true });
+        if (!cancelled) {
+          useTourStore
+            .getState()
+            .setProgress({ completed: [], cardDismissed: true, fillOfferDismissed: true });
+        }
       });
     return () => {
       cancelled = true;
@@ -52,6 +57,10 @@ export function useTourProgress(): void {
       }
       if (state.cardDismissed && !prev.cardDismissed) {
         learnApi.setProgress('welcome-card', 'dismissed', accessToken).catch(() => undefined);
+      }
+
+      if (state.fillOfferDismissed && !prev.fillOfferDismissed) {
+        learnApi.setProgress('fill-email-offer', 'dismissed', accessToken).catch(() => undefined);
       }
 
       // The funnel (privacy policy §3 "Learning events"): started → each step → completed / closed

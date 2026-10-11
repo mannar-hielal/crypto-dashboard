@@ -41,9 +41,10 @@ export const LEARN_ITEM_IDS = [
   'buy-first-coin',
   'sell-and-review',
   'welcome-card',
+  'fill-email-offer',
 ] as const;
 
-/** The guided tours (the welcome card has no steps); events are only accepted for these */
+/** The guided tours (the offers have no steps); events are only accepted for these */
 export const LEARN_TOUR_IDS = ['primer', 'buy-first-coin', 'sell-and-review'] as const;
 
 /** Mirrors `LEARN_EVENT_NAMES` in the SDK (checked by `learn.test.ts`, like `LEARN_ITEM_IDS`) */

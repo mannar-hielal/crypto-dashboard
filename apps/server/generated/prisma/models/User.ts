@@ -34,6 +34,8 @@ export type UserMinAggregateOutputType = {
   emailVerifiedAt: Date | null
   termsAcceptedAt: Date | null
   termsAcceptedIp: string | null
+  fillEmailOptIn: boolean | null
+  fillEmailOptInAt: Date | null
   deletionRequestedAt: Date | null
   deletionWarningSentAt: Date | null
 }
@@ -48,6 +50,8 @@ export type UserMaxAggregateOutputType = {
   emailVerifiedAt: Date | null
   termsAcceptedAt: Date | null
   termsAcceptedIp: string | null
+  fillEmailOptIn: boolean | null
+  fillEmailOptInAt: Date | null
   deletionRequestedAt: Date | null
   deletionWarningSentAt: Date | null
 }
@@ -62,6 +66,8 @@ export type UserCountAggregateOutputType = {
   emailVerifiedAt: number
   termsAcceptedAt: number
   termsAcceptedIp: number
+  fillEmailOptIn: number
+  fillEmailOptInAt: number
   deletionRequestedAt: number
   deletionWarningSentAt: number
   _all: number
@@ -78,6 +84,8 @@ export type UserMinAggregateInputType = {
   emailVerifiedAt?: true
   termsAcceptedAt?: true
   termsAcceptedIp?: true
+  fillEmailOptIn?: true
+  fillEmailOptInAt?: true
   deletionRequestedAt?: true
   deletionWarningSentAt?: true
 }
@@ -92,6 +100,8 @@ export type UserMaxAggregateInputType = {
   emailVerifiedAt?: true
   termsAcceptedAt?: true
   termsAcceptedIp?: true
+  fillEmailOptIn?: true
+  fillEmailOptInAt?: true
   deletionRequestedAt?: true
   deletionWarningSentAt?: true
 }
@@ -106,6 +116,8 @@ export type UserCountAggregateInputType = {
   emailVerifiedAt?: true
   termsAcceptedAt?: true
   termsAcceptedIp?: true
+  fillEmailOptIn?: true
+  fillEmailOptInAt?: true
   deletionRequestedAt?: true
   deletionWarningSentAt?: true
   _all?: true
@@ -193,6 +205,8 @@ export type UserGroupByOutputType = {
   emailVerifiedAt: Date | null
   termsAcceptedAt: Date | null
   termsAcceptedIp: string | null
+  fillEmailOptIn: boolean
+  fillEmailOptInAt: Date | null
   deletionRequestedAt: Date | null
   deletionWarningSentAt: Date | null
   _count: UserCountAggregateOutputType | null
@@ -228,6 +242,8 @@ export type UserWhereInput = {
   emailVerifiedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   termsAcceptedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   termsAcceptedIp?: Prisma.StringNullableFilter<"User"> | string | null
+  fillEmailOptIn?: Prisma.BoolFilter<"User"> | boolean
+  fillEmailOptInAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   deletionRequestedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   deletionWarningSentAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   account?: Prisma.XOR<Prisma.AccountNullableScalarRelationFilter, Prisma.AccountWhereInput> | null
@@ -255,6 +271,8 @@ export type UserOrderByWithRelationInput = {
   emailVerifiedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   termsAcceptedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   termsAcceptedIp?: Prisma.SortOrderInput | Prisma.SortOrder
+  fillEmailOptIn?: Prisma.SortOrder
+  fillEmailOptInAt?: Prisma.SortOrderInput | Prisma.SortOrder
   deletionRequestedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   deletionWarningSentAt?: Prisma.SortOrderInput | Prisma.SortOrder
   account?: Prisma.AccountOrderByWithRelationInput
@@ -285,6 +303,8 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   emailVerifiedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   termsAcceptedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   termsAcceptedIp?: Prisma.StringNullableFilter<"User"> | string | null
+  fillEmailOptIn?: Prisma.BoolFilter<"User"> | boolean
+  fillEmailOptInAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   deletionRequestedAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   deletionWarningSentAt?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   account?: Prisma.XOR<Prisma.AccountNullableScalarRelationFilter, Prisma.AccountWhereInput> | null
@@ -312,6 +332,8 @@ export type UserOrderByWithAggregationInput = {
   emailVerifiedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   termsAcceptedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   termsAcceptedIp?: Prisma.SortOrderInput | Prisma.SortOrder
+  fillEmailOptIn?: Prisma.SortOrder
+  fillEmailOptInAt?: Prisma.SortOrderInput | Prisma.SortOrder
   deletionRequestedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   deletionWarningSentAt?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.UserCountOrderByAggregateInput
@@ -332,6 +354,8 @@ export type UserScalarWhereWithAggregatesInput = {
   emailVerifiedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
   termsAcceptedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
   termsAcceptedIp?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  fillEmailOptIn?: Prisma.BoolWithAggregatesFilter<"User"> | boolean
+  fillEmailOptInAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
   deletionRequestedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
   deletionWarningSentAt?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
 }
@@ -346,6 +370,8 @@ export type UserCreateInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountCreateNestedOneWithoutUserInput
@@ -373,6 +399,8 @@ export type UserUncheckedCreateInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountUncheckedCreateNestedOneWithoutUserInput
@@ -400,6 +428,8 @@ export type UserUpdateInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUpdateOneWithoutUserNestedInput
@@ -427,6 +457,8 @@ export type UserUncheckedUpdateInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUncheckedUpdateOneWithoutUserNestedInput
@@ -454,6 +486,8 @@ export type UserCreateManyInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
 }
@@ -468,6 +502,8 @@ export type UserUpdateManyMutationInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -482,6 +518,8 @@ export type UserUncheckedUpdateManyInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -496,6 +534,8 @@ export type UserCountOrderByAggregateInput = {
   emailVerifiedAt?: Prisma.SortOrder
   termsAcceptedAt?: Prisma.SortOrder
   termsAcceptedIp?: Prisma.SortOrder
+  fillEmailOptIn?: Prisma.SortOrder
+  fillEmailOptInAt?: Prisma.SortOrder
   deletionRequestedAt?: Prisma.SortOrder
   deletionWarningSentAt?: Prisma.SortOrder
 }
@@ -510,6 +550,8 @@ export type UserMaxOrderByAggregateInput = {
   emailVerifiedAt?: Prisma.SortOrder
   termsAcceptedAt?: Prisma.SortOrder
   termsAcceptedIp?: Prisma.SortOrder
+  fillEmailOptIn?: Prisma.SortOrder
+  fillEmailOptInAt?: Prisma.SortOrder
   deletionRequestedAt?: Prisma.SortOrder
   deletionWarningSentAt?: Prisma.SortOrder
 }
@@ -524,6 +566,8 @@ export type UserMinOrderByAggregateInput = {
   emailVerifiedAt?: Prisma.SortOrder
   termsAcceptedAt?: Prisma.SortOrder
   termsAcceptedIp?: Prisma.SortOrder
+  fillEmailOptIn?: Prisma.SortOrder
+  fillEmailOptInAt?: Prisma.SortOrder
   deletionRequestedAt?: Prisma.SortOrder
   deletionWarningSentAt?: Prisma.SortOrder
 }
@@ -547,6 +591,10 @@ export type NullableDateTimeFieldUpdateOperationsInput = {
 
 export type NullableStringFieldUpdateOperationsInput = {
   set?: string | null
+}
+
+export type BoolFieldUpdateOperationsInput = {
+  set?: boolean
 }
 
 export type UserCreateNestedOneWithoutActivityDaysInput = {
@@ -741,6 +789,8 @@ export type UserCreateWithoutActivityDaysInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountCreateNestedOneWithoutUserInput
@@ -767,6 +817,8 @@ export type UserUncheckedCreateWithoutActivityDaysInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountUncheckedCreateNestedOneWithoutUserInput
@@ -809,6 +861,8 @@ export type UserUpdateWithoutActivityDaysInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUpdateOneWithoutUserNestedInput
@@ -835,6 +889,8 @@ export type UserUncheckedUpdateWithoutActivityDaysInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUncheckedUpdateOneWithoutUserNestedInput
@@ -861,6 +917,8 @@ export type UserCreateWithoutLearningProgressInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountCreateNestedOneWithoutUserInput
@@ -887,6 +945,8 @@ export type UserUncheckedCreateWithoutLearningProgressInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountUncheckedCreateNestedOneWithoutUserInput
@@ -929,6 +989,8 @@ export type UserUpdateWithoutLearningProgressInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUpdateOneWithoutUserNestedInput
@@ -955,6 +1017,8 @@ export type UserUncheckedUpdateWithoutLearningProgressInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUncheckedUpdateOneWithoutUserNestedInput
@@ -981,6 +1045,8 @@ export type UserCreateWithoutLearningEventsInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountCreateNestedOneWithoutUserInput
@@ -1007,6 +1073,8 @@ export type UserUncheckedCreateWithoutLearningEventsInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountUncheckedCreateNestedOneWithoutUserInput
@@ -1049,6 +1117,8 @@ export type UserUpdateWithoutLearningEventsInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUpdateOneWithoutUserNestedInput
@@ -1075,6 +1145,8 @@ export type UserUncheckedUpdateWithoutLearningEventsInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUncheckedUpdateOneWithoutUserNestedInput
@@ -1101,6 +1173,8 @@ export type UserCreateWithoutRefreshTokensInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountCreateNestedOneWithoutUserInput
@@ -1127,6 +1201,8 @@ export type UserUncheckedCreateWithoutRefreshTokensInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountUncheckedCreateNestedOneWithoutUserInput
@@ -1169,6 +1245,8 @@ export type UserUpdateWithoutRefreshTokensInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUpdateOneWithoutUserNestedInput
@@ -1195,6 +1273,8 @@ export type UserUncheckedUpdateWithoutRefreshTokensInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUncheckedUpdateOneWithoutUserNestedInput
@@ -1221,6 +1301,8 @@ export type UserCreateWithoutPasswordResetTokensInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountCreateNestedOneWithoutUserInput
@@ -1247,6 +1329,8 @@ export type UserUncheckedCreateWithoutPasswordResetTokensInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountUncheckedCreateNestedOneWithoutUserInput
@@ -1289,6 +1373,8 @@ export type UserUpdateWithoutPasswordResetTokensInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUpdateOneWithoutUserNestedInput
@@ -1315,6 +1401,8 @@ export type UserUncheckedUpdateWithoutPasswordResetTokensInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUncheckedUpdateOneWithoutUserNestedInput
@@ -1341,6 +1429,8 @@ export type UserCreateWithoutVerificationTokensInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountCreateNestedOneWithoutUserInput
@@ -1367,6 +1457,8 @@ export type UserUncheckedCreateWithoutVerificationTokensInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountUncheckedCreateNestedOneWithoutUserInput
@@ -1409,6 +1501,8 @@ export type UserUpdateWithoutVerificationTokensInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUpdateOneWithoutUserNestedInput
@@ -1435,6 +1529,8 @@ export type UserUncheckedUpdateWithoutVerificationTokensInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUncheckedUpdateOneWithoutUserNestedInput
@@ -1461,6 +1557,8 @@ export type UserCreateWithoutEmailChangeTokensInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountCreateNestedOneWithoutUserInput
@@ -1487,6 +1585,8 @@ export type UserUncheckedCreateWithoutEmailChangeTokensInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountUncheckedCreateNestedOneWithoutUserInput
@@ -1529,6 +1629,8 @@ export type UserUpdateWithoutEmailChangeTokensInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUpdateOneWithoutUserNestedInput
@@ -1555,6 +1657,8 @@ export type UserUncheckedUpdateWithoutEmailChangeTokensInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUncheckedUpdateOneWithoutUserNestedInput
@@ -1581,6 +1685,8 @@ export type UserCreateWithoutAccountInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   trades?: Prisma.TradeCreateNestedManyWithoutUserInput
@@ -1607,6 +1713,8 @@ export type UserUncheckedCreateWithoutAccountInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   trades?: Prisma.TradeUncheckedCreateNestedManyWithoutUserInput
@@ -1649,6 +1757,8 @@ export type UserUpdateWithoutAccountInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   trades?: Prisma.TradeUpdateManyWithoutUserNestedInput
@@ -1675,6 +1785,8 @@ export type UserUncheckedUpdateWithoutAccountInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   trades?: Prisma.TradeUncheckedUpdateManyWithoutUserNestedInput
@@ -1701,6 +1813,8 @@ export type UserCreateWithoutPositionsInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountCreateNestedOneWithoutUserInput
@@ -1727,6 +1841,8 @@ export type UserUncheckedCreateWithoutPositionsInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountUncheckedCreateNestedOneWithoutUserInput
@@ -1769,6 +1885,8 @@ export type UserUpdateWithoutPositionsInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUpdateOneWithoutUserNestedInput
@@ -1795,6 +1913,8 @@ export type UserUncheckedUpdateWithoutPositionsInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUncheckedUpdateOneWithoutUserNestedInput
@@ -1821,6 +1941,8 @@ export type UserCreateWithoutOrdersInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountCreateNestedOneWithoutUserInput
@@ -1847,6 +1969,8 @@ export type UserUncheckedCreateWithoutOrdersInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountUncheckedCreateNestedOneWithoutUserInput
@@ -1889,6 +2013,8 @@ export type UserUpdateWithoutOrdersInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUpdateOneWithoutUserNestedInput
@@ -1915,6 +2041,8 @@ export type UserUncheckedUpdateWithoutOrdersInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUncheckedUpdateOneWithoutUserNestedInput
@@ -1941,6 +2069,8 @@ export type UserCreateWithoutTradesInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountCreateNestedOneWithoutUserInput
@@ -1967,6 +2097,8 @@ export type UserUncheckedCreateWithoutTradesInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountUncheckedCreateNestedOneWithoutUserInput
@@ -2009,6 +2141,8 @@ export type UserUpdateWithoutTradesInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUpdateOneWithoutUserNestedInput
@@ -2035,6 +2169,8 @@ export type UserUncheckedUpdateWithoutTradesInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUncheckedUpdateOneWithoutUserNestedInput
@@ -2061,6 +2197,8 @@ export type UserCreateWithoutJournalEntriesInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountCreateNestedOneWithoutUserInput
@@ -2087,6 +2225,8 @@ export type UserUncheckedCreateWithoutJournalEntriesInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountUncheckedCreateNestedOneWithoutUserInput
@@ -2129,6 +2269,8 @@ export type UserUpdateWithoutJournalEntriesInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUpdateOneWithoutUserNestedInput
@@ -2155,6 +2297,8 @@ export type UserUncheckedUpdateWithoutJournalEntriesInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUncheckedUpdateOneWithoutUserNestedInput
@@ -2181,6 +2325,8 @@ export type UserCreateWithoutBalanceEventsInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountCreateNestedOneWithoutUserInput
@@ -2207,6 +2353,8 @@ export type UserUncheckedCreateWithoutBalanceEventsInput = {
   emailVerifiedAt?: Date | string | null
   termsAcceptedAt?: Date | string | null
   termsAcceptedIp?: string | null
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: Date | string | null
   deletionRequestedAt?: Date | string | null
   deletionWarningSentAt?: Date | string | null
   account?: Prisma.AccountUncheckedCreateNestedOneWithoutUserInput
@@ -2249,6 +2397,8 @@ export type UserUpdateWithoutBalanceEventsInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUpdateOneWithoutUserNestedInput
@@ -2275,6 +2425,8 @@ export type UserUncheckedUpdateWithoutBalanceEventsInput = {
   emailVerifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   termsAcceptedIp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  fillEmailOptIn?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  fillEmailOptInAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionRequestedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   deletionWarningSentAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   account?: Prisma.AccountUncheckedUpdateOneWithoutUserNestedInput
@@ -2431,6 +2583,8 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   emailVerifiedAt?: boolean
   termsAcceptedAt?: boolean
   termsAcceptedIp?: boolean
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: boolean
   deletionRequestedAt?: boolean
   deletionWarningSentAt?: boolean
   account?: boolean | Prisma.User$accountArgs<ExtArgs>
@@ -2459,6 +2613,8 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   emailVerifiedAt?: boolean
   termsAcceptedAt?: boolean
   termsAcceptedIp?: boolean
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: boolean
   deletionRequestedAt?: boolean
   deletionWarningSentAt?: boolean
 }, ExtArgs["result"]["user"]>
@@ -2473,6 +2629,8 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   emailVerifiedAt?: boolean
   termsAcceptedAt?: boolean
   termsAcceptedIp?: boolean
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: boolean
   deletionRequestedAt?: boolean
   deletionWarningSentAt?: boolean
 }, ExtArgs["result"]["user"]>
@@ -2487,11 +2645,13 @@ export type UserSelectScalar = {
   emailVerifiedAt?: boolean
   termsAcceptedAt?: boolean
   termsAcceptedIp?: boolean
+  fillEmailOptIn?: boolean
+  fillEmailOptInAt?: boolean
   deletionRequestedAt?: boolean
   deletionWarningSentAt?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "username" | "password" | "createdAt" | "updatedAt" | "emailVerifiedAt" | "termsAcceptedAt" | "termsAcceptedIp" | "deletionRequestedAt" | "deletionWarningSentAt", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "username" | "password" | "createdAt" | "updatedAt" | "emailVerifiedAt" | "termsAcceptedAt" | "termsAcceptedIp" | "fillEmailOptIn" | "fillEmailOptInAt" | "deletionRequestedAt" | "deletionWarningSentAt", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   account?: boolean | Prisma.User$accountArgs<ExtArgs>
   trades?: boolean | Prisma.User$tradesArgs<ExtArgs>
@@ -2538,6 +2698,8 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     emailVerifiedAt: Date | null
     termsAcceptedAt: Date | null
     termsAcceptedIp: string | null
+    fillEmailOptIn: boolean
+    fillEmailOptInAt: Date | null
     deletionRequestedAt: Date | null
     deletionWarningSentAt: Date | null
   }, ExtArgs["result"]["user"]>
@@ -2985,6 +3147,8 @@ export interface UserFieldRefs {
   readonly emailVerifiedAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly termsAcceptedAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly termsAcceptedIp: Prisma.FieldRef<"User", 'String'>
+  readonly fillEmailOptIn: Prisma.FieldRef<"User", 'Boolean'>
+  readonly fillEmailOptInAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly deletionRequestedAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly deletionWarningSentAt: Prisma.FieldRef<"User", 'DateTime'>
 }

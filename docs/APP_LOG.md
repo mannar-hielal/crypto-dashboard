@@ -4089,3 +4089,31 @@ step loses them, without recording anything the learner typed.
   row in §3, §5 and §7 updated.
 - **Tests:** route (allowlist, tour-owns-the-step, cap, 401), funnel builder (people not events, last-event close,
   numeric step order), client event emission, page table; Postgres: cap, purge boundary, cascade, report.
+
+### feat: opt-in "your order filled while you were away" e-mail (2026-10-11) ✅
+
+**Context:** unit U8. The strategy report's natural comeback hook for a 24/7 engine; owner's answer 2026-10-11:
+opt-in, about the user's own order only, one-click unsubscribe. Consent, not legitimate interest (privacy policy
+§5).
+
+- **Opt-in** (`User.fillEmailOptIn`, `fillEmailOptInAt`, migration `20261011170000_fill_email_opt_in`): off by
+  default; turning it on records when (the proof of consent) and needs a verified address (403 otherwise).
+  `GET` / `PUT /api/notifications` (`routes/notifications`). In the app: a toggle in Settings → Notifications, and
+  a one-time card (`FillEmailOffer`, same card as the welcome card, never at the same time) once the account has a
+  resting order — answered either way it is retired (`fill-email-offer` in `LEARN_ITEM_IDS`).
+- **Send** (`services/FillNotifier.ts`, wired in `plugins/trading.ts`): listens to the committed deltas the sockets
+  get; only a resting limit / stop order that left the pending list filled (never a market order, an exit leg or a
+  liquidation) and only when the user has no open private socket (`PaperEventBus.hasListeners`) — they would have
+  seen it. Opted in, verified, not deleting the account. 🔐 At most 20 e-mails per user per UTC day (a bounded
+  counter map). `EmailService.sendOrderFilledEmail` escapes every field and states only the order.
+- **Unsubscribe:** every e-mail carries `/notifications/unsubscribe?token=…`. 🔐 The token is `<userId>.<HMAC>`
+  (`lib/unsubscribeToken.ts`), **not a JWT**: it shares the signing secret, and a JWT-shaped token would pass
+  `app.authenticate` as an access token. It can only switch that user's e-mail off; `POST /api/notifications/
+unsubscribe` answers the same for any account state (`updateMany`), a forged token is a 400.
+- **Known gap:** "Export My Data" is built in the browser and does not include activity days, learning events or
+  tour progress (available on request, privacy policy §11) — a server-side export is the follow-up.
+- **Privacy policy 1.3:** a row in §3, a consent bullet in §5, the transactional-e-mail bullet in §6.
+- **Tests:** token (round trip, tampering, not JWT-shaped), routes (verified requirement, consent time, forged
+  token), notifier (which fills count, presence, opt-in / verified / deleting, daily cap, never throws into the
+  bus), event bus presence, contract; client offer / page / (Settings toggle); Postgres: defaults, consent time,
+  unsubscribe of a deleted account.
