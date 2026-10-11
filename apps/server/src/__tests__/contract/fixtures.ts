@@ -25,6 +25,8 @@ import type {
   PlaceOrderRequest,
   PlaceSpotExitsRequest,
   RefreshResponse,
+  RetentionCohort,
+  RetentionMetricsResponse,
   RiskLimitResponse,
   SubscribersResponse,
   UpdatePositionExitsRequest,
@@ -123,6 +125,27 @@ export const meResponse: MeResponse = {
       updatedAt: '2026-09-29T00:00:00.000Z',
     },
   },
+};
+
+const cohort: RetentionCohort = {
+  weekStart: '2026-09-28',
+  signups: 4,
+  verified: 3,
+  activated: { eligible: 4, count: 2 },
+  medianHoursToFirstOrder: 1.5,
+  activeWeek1: { eligible: 4, count: 1 },
+  activeWeek2: { eligible: 0, count: 0 },
+  activeWeek4: { eligible: 0, count: 0 },
+  resetUsers: 1,
+  firstOrderWithStopLoss: { eligible: 2, count: 1 },
+};
+
+export const retentionMetricsResponse: RetentionMetricsResponse = {
+  generatedAt: '2026-10-11T00:00:00.000Z',
+  windowWeeks: 12,
+  truncated: false,
+  totals: { ...cohort, weekStart: null },
+  cohorts: [cohort],
 };
 
 export const subscribersResponse: SubscribersResponse = {

@@ -61,6 +61,43 @@ export interface SubscribersResponse {
   total: number;
 }
 
+// ─── Admin: retention metrics ────────────────────────────────────────────────
+
+/** `count` of the `eligible` users — a window not yet fully elapsed leaves a user out of `eligible` */
+export interface MetricsRate {
+  eligible: number;
+  count: number;
+}
+
+/** One weekly signup cohort (Monday 00:00 UTC start), aggregates only — never a user id or email */
+export interface RetentionCohort {
+  /** ISO date (YYYY-MM-DD) of the cohort's Monday, or `null` on the totals row */
+  weekStart: string | null;
+  signups: number;
+  verified: number;
+  /** A user-placed order within 7 days of signup */
+  activated: MetricsRate;
+  /** Median hours from signup to the first user-placed order, over the users who activated */
+  medianHoursToFirstOrder: number | null;
+  /** Active on a UTC day within days 1–7 / 8–14 / 22–28 after the signup day */
+  activeWeek1: MetricsRate;
+  activeWeek2: MetricsRate;
+  activeWeek4: MetricsRate;
+  /** Users who reset their account at least once */
+  resetUsers: number;
+  /** Of the users with a first order: those whose first order carried a stop-loss */
+  firstOrderWithStopLoss: MetricsRate;
+}
+
+export interface RetentionMetricsResponse {
+  generatedAt: string;
+  windowWeeks: number;
+  /** True when the user row cap cut the window short — the numbers are then a lower bound */
+  truncated: boolean;
+  totals: RetentionCohort;
+  cohorts: RetentionCohort[];
+}
+
 // ─── Market ──────────────────────────────────────────────────────────────────
 
 /**

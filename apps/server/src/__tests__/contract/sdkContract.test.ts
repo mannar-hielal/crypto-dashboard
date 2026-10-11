@@ -16,7 +16,7 @@
 
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import { authApi, marketApi, newsletterApi, paperApi } from '@crypto-dashboard/sdk';
+import { adminApi, authApi, marketApi, newsletterApi, paperApi } from '@crypto-dashboard/sdk';
 
 // The route schemas are all this needs: Prisma is never reached
 vi.mock('../../plugins/prisma.js', () => {
@@ -333,6 +333,13 @@ const CALLS: Call[] = [
     status: 200,
     response: f.messageResponse,
   },
+  // admin
+  {
+    name: 'adminApi.getRetentionMetrics',
+    run: () => adminApi.getRetentionMetrics(T),
+    status: 200,
+    response: f.retentionMetricsResponse,
+  },
   // paper
   {
     name: 'paperApi.getState',
@@ -455,7 +462,7 @@ const NOT_HTTP = new Set(['marketApi.wsUrl', 'paperApi.wsUrl']);
 
 describe('SDK ↔ server contract (F9)', () => {
   it('covers every SDK function', () => {
-    const apis = { authApi, marketApi, newsletterApi, paperApi };
+    const apis = { adminApi, authApi, marketApi, newsletterApi, paperApi };
     const called = new Set(CALLS.map((c) => c.name.split(' ')[0]));
     const functions = Object.entries(apis).flatMap(([api, members]) =>
       Object.keys(members).map((fn) => `${api}.${fn}`)
