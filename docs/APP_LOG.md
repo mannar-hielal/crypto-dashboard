@@ -4023,3 +4023,26 @@ registered users are to be told by e-mail (not sent from code; see below).
   `refresh` (records, not on failure, not for a signed-out probe, a failing write doesn't fail the login),
   `adminMetrics` mock, the page note; `userActivity.int.test.ts` on Postgres (one row per day, the purge keeps the
   boundary day, cascade on user delete, the report reads sign-in days, `activityTrackedSince`).
+
+### feat: guided tours — the overlay, a primer and a first trade in three short chapters (2026-10-11) ✅
+
+**Context:** unit U5 of the retention plan; docs/GUIDED_TRADE_MVP.md reshaped (concepts before buttons, dollars not
+coins, no leverage in the first session, at most five steps a tour — completion falls fast past five). Owner's
+visual Q&A 2026-10-11: ring + bubble on the real control with the page left undimmed, a bubble of "Step n of N",
+text, "You should see", Back / Skip, and `bg.tooltip` on a new `zIndex.tour` (250).
+
+- **Tours** (`guide/tours.ts`, pure data): `primer` ("What you're looking at": price, pair, a bar, the practice
+  balance, hand-off), `buy-first-coin` (spot: Buy vs Sell price, Market, USDT, type 100, place the order) and
+  `sell-and-review` (Assets → Sell → place it → the fee debrief → one check question: "price rose 0.05% — in profit
+  after fees?"). Steps that repeat a scenario action reuse the shared builders in `guide/steps.ts` (`chooseType`,
+  `submit`, `openTab`), so the form's controls read the same in a test, the manual steps and a bubble.
+- **Overlay** (`guide/GuideOverlay.tsx`, `bubblePlacement.ts`, `tourStore.ts`): follows the control every frame
+  (the form animates open); a `click` step moves on when the learner clicks the control, a `type` step enables Next
+  once the field has a value, a reading step has Next, and the submit steps wait for the form's own signal — the
+  amount field emptied — so a refused order does not move the tour on. A control that is not on screen gets a
+  line saying what to open, never a state change. Esc / ✕ / Skip close it; it changes nothing in the app.
+- **Anchors:** `symbolbar.price` (new, on the live price readout) and `tour.*` for the bubble. `zIndex.tour` added.
+- **Tests:** `bubblePlacement`, `tours` (≤ 5 steps, registered anchors, numbering, chaining), `tourStore`,
+  `GuideOverlay` (rendering, Next / Back, missing control, click and type rules, refused vs accepted order, quiz,
+  hand-off, cleanup).
+- **Wiring:** the card, the Learn menu and saving progress are U6; nothing starts a tour until then.

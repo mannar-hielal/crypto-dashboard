@@ -411,6 +411,7 @@ export function SymbolBar({
           exit={{ opacity: 0, y: -5 }}
           transition={{ duration: 0.15, ease: 'easeOut' }}
           className="flex shrink-0 items-center gap-2 tabular-nums"
+          {...guide('symbolbar.price')}
         >
           {latestPrice !== null ? (
             <>

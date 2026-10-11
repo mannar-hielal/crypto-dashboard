@@ -58,6 +58,7 @@ export const GUIDE_ANCHORS = [
   'settings.close',
   // symbolbar
   'symbolbar.symbol-picker',
+  'symbolbar.price',
   'symbolbar.symbol-option',
   'symbolbar.trade-toggle',
   'symbolbar.funding',
@@ -250,6 +251,12 @@ export const GUIDE_ANCHORS = [
   'lock.overlay',
   'lock.sign-in',
   'lock.close',
+  // tour (the guided-tour bubble)
+  'tour.bubble',
+  'tour.next',
+  'tour.back',
+  'tour.skip',
+  'tour.quiz-option',
 ] as const;
 
 export type GuideAnchor = (typeof GUIDE_ANCHORS)[number];

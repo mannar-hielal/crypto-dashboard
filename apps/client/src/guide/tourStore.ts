@@ -1,0 +1,66 @@
+/**
+ * The running tour: which one, which step, and what the learner has finished. In memory only — the
+ * account keeps "completed" (guide/tourProgress.ts syncs it); a reload simply closes a tour.
+ */
+
+import { create } from 'zustand';
+import { getTour, type TourId } from './tours';
+
+interface TourState {
+  activeId: TourId | null;
+  stepIndex: number;
+  /** The option chosen on a quiz step, or null */
+  quizAnswer: number | null;
+  /** Tours finished, from the server and this session */
+  completed: Partial<Record<TourId, true>>;
+  start: (id: TourId) => void;
+  next: () => void;
+  back: () => void;
+  /** Close without finishing: Skip, ✕ or Esc */
+  close: () => void;
+  answerQuiz: (index: number) => void;
+  /** Replace the finished set (the server's answer) */
+  setCompleted: (ids: TourId[]) => void;
+  reset: () => void;
+}
+
+const initial = { activeId: null, stepIndex: 0, quizAnswer: null, completed: {} } as const;
+
+export const useTourStore = create<TourState>()((set, get) => ({
+  ...initial,
+
+  start: (id) => set({ activeId: id, stepIndex: 0, quizAnswer: null }),
+
+  next: () => {
+    const { activeId, stepIndex } = get();
+    if (!activeId) return;
+    const tour = getTour(activeId);
+    if (stepIndex < tour.steps.length - 1) {
+      set({ stepIndex: stepIndex + 1, quizAnswer: null });
+      return;
+    }
+    // Last step: the tour is done; hand over to the next chapter when there is one
+    set((s) => ({
+      completed: { ...s.completed, [activeId]: true },
+      activeId: tour.next ?? null,
+      stepIndex: 0,
+      quizAnswer: null,
+    }));
+  },
+
+  back: () => {
+    const { stepIndex } = get();
+    if (stepIndex > 0) set({ stepIndex: stepIndex - 1, quizAnswer: null });
+  },
+
+  close: () => set({ activeId: null, stepIndex: 0, quizAnswer: null }),
+
+  answerQuiz: (index) => set({ quizAnswer: index }),
+
+  setCompleted: (ids) =>
+    set({
+      completed: Object.fromEntries(ids.map((id) => [id, true])) as Partial<Record<TourId, true>>,
+    }),
+
+  reset: () => set({ ...initial, completed: {} }),
+}));

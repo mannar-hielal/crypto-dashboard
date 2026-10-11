@@ -35,6 +35,7 @@ import { PendingOrderEditPanel } from '@/components/dashboard/PendingOrderEditPa
 import { bg, color, fontSize, rangeBar } from '@/lib/tokens';
 import { TIME_RANGE_PRESETS } from '@/lib/markets';
 import { TimeRangeSwitcher } from '@/components/dashboard/TimeRangeSwitcher';
+import { GuideOverlay } from '@/guide/GuideOverlay';
 
 // ─── Edit target type ────────────────────────────────────────────────────────
 type EditTarget =
@@ -374,6 +375,7 @@ export function DashboardInner() {
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden" style={{ background: bg.page }}>
       <TopBar />
+      <GuideOverlay />
 
       {/* ⚠️ Deletion Pending Banner */}
       <AnimatePresence>
