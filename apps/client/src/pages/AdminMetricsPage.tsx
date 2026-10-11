@@ -231,15 +231,17 @@ export function AdminMetricsPage() {
 
               <p className={styles.note}>
                 <strong>Activated</strong> = first order placed within 7 days of signup.{' '}
-                <strong>Wk 1 / 2 / 4</strong> = acted on a later UTC day within days 1–7, 8–14,
-                22–28 (an order, a note or a reset); a week counts only once it has fully passed.
-                Cohorts are signup weeks starting Monday UTC; the admin and QA accounts are left
-                out.
+                <strong>Wk 1 / 2 / 4</strong> = active on a later UTC day within days 1–7, 8–14,
+                22–28 (a sign-in or session restore, an order, a note or a reset); a week counts
+                only once it has fully passed. Cohorts are signup weeks starting Monday UTC; the
+                admin and QA accounts are left out.
               </p>
               <p className={styles.note}>
-                <strong>What this can&apos;t see:</strong> users who only watch charts, visitors who
-                never register, and tour steps — the page under-counts return until a daily activity
-                record exists.
+                <strong>What this can&apos;t see:</strong>{' '}
+                {data.activityTrackedSince
+                  ? `sign-in days are recorded since ${data.activityTrackedSince}, so cohorts before that under-count return; `
+                  : 'sign-in days are not recorded yet, so return counts only orders, notes and resets; '}
+                visitors who never register, and tour steps.
               </p>
             </>
           )}

@@ -9,6 +9,7 @@ vi.mock('../plugins/prisma.js', () => {
       user: { findMany: vi.fn() },
       order: { findMany: vi.fn() },
       journalEntry: { findMany: vi.fn() },
+      userActivity: { findMany: vi.fn(), findFirst: vi.fn() },
     };
     app.decorate('prisma', prismaClient as never);
   };
@@ -41,6 +42,8 @@ describe('GET /api/admin/metrics/retention', () => {
     vi.mocked(app.prisma.user.findMany).mockResolvedValue([] as never);
     vi.mocked(app.prisma.order.findMany).mockResolvedValue([] as never);
     vi.mocked(app.prisma.journalEntry.findMany).mockResolvedValue([] as never);
+    vi.mocked(app.prisma.userActivity.findMany).mockResolvedValue([] as never);
+    vi.mocked(app.prisma.userActivity.findFirst).mockResolvedValue(null as never);
   });
 
   const get = (token?: string) =>

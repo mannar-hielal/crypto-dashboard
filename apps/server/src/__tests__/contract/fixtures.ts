@@ -144,6 +144,7 @@ export const retentionMetricsResponse: RetentionMetricsResponse = {
   generatedAt: '2026-10-11T00:00:00.000Z',
   windowWeeks: 12,
   truncated: false,
+  activityTrackedSince: '2026-10-12',
   totals: { ...cohort, weekStart: null },
   cohorts: [cohort],
 };

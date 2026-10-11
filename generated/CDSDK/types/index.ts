@@ -94,6 +94,11 @@ export interface RetentionMetricsResponse {
   windowWeeks: number;
   /** True when the user row cap cut the window short — the numbers are then a lower bound */
   truncated: boolean;
+  /**
+   * UTC date (YYYY-MM-DD) of the oldest recorded sign-in day, or null before any exists. Cohorts
+   * older than this under-count return: their sign-ins were not recorded yet.
+   */
+  activityTrackedSince: string | null;
   totals: RetentionCohort;
   cohorts: RetentionCohort[];
 }

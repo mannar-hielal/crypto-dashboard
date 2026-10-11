@@ -65,11 +65,19 @@ export async function adminRoutes(app: FastifyInstance) {
         response: {
           200: {
             type: 'object',
-            required: ['generatedAt', 'windowWeeks', 'truncated', 'totals', 'cohorts'],
+            required: [
+              'generatedAt',
+              'windowWeeks',
+              'truncated',
+              'activityTrackedSince',
+              'totals',
+              'cohorts',
+            ],
             properties: {
               generatedAt: { type: 'string' },
               windowWeeks: { type: 'integer' },
               truncated: { type: 'boolean' },
+              activityTrackedSince: { type: 'string', nullable: true },
               totals: cohortSchema,
               cohorts: { type: 'array', items: cohortSchema },
             },

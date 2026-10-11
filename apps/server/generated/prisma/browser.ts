@@ -23,6 +23,11 @@ export * from './enums.js';
  */
 export type User = Prisma.UserModel
 /**
+ * Model UserActivity
+ * 
+ */
+export type UserActivity = Prisma.UserActivityModel
+/**
  * Model RefreshToken
  * 
  */

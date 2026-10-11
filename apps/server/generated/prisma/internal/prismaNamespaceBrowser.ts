@@ -52,6 +52,7 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   User: 'User',
+  UserActivity: 'UserActivity',
   RefreshToken: 'RefreshToken',
   PasswordResetToken: 'PasswordResetToken',
   VerificationToken: 'VerificationToken',
@@ -99,6 +100,14 @@ export const UserScalarFieldEnum = {
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const UserActivityScalarFieldEnum = {
+  userId: 'userId',
+  day: 'day'
+} as const
+
+export type UserActivityScalarFieldEnum = (typeof UserActivityScalarFieldEnum)[keyof typeof UserActivityScalarFieldEnum]
 
 
 export const RefreshTokenScalarFieldEnum = {

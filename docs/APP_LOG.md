@@ -3994,3 +3994,32 @@ trade.
   `AdminMetricsPage.test.tsx`; contract case.
 - **Next:** a once-a-day `UserActivity` row so watchers count (migration + privacy-policy line), then an
   allowlisted event table for the tour funnel; then the opt-in "order filled while you were away" e-mail.
+
+### feat: activity days — a daily sign-in record so the retention report sees people who only watch charts (2026-10-11) ✅
+
+**Context:** unit U4 of the retention plan. The metrics page (above) could only see a user who placed an order,
+wrote a note or reset — a visitor who just looks at charts left no row. Owner answers 2026-10-11: count a sign-in or
+session restore; keep 180 days; the privacy policy is updated and the change is treated as **material**, so
+registered users are to be told by e-mail (not sent from code; see below).
+
+- **Table** `UserActivity` (migration `20261011140000_user_activity_days`): `userId` + UTC `day` (`@db.Date`),
+  primary key `(userId, day)`, `@@index([day])`, `onDelete: Cascade` — one row per user per day, no time, IP or
+  device.
+- **Write** (`services/UserActivity.ts`): `trackActivity(app, userId)` on `POST /login` (after a successful
+  password check) and `POST /refresh` (after the new token is issued) — the app's boot probe plus each token
+  renewal. One `createMany({ skipDuplicates })` (`ON CONFLICT DO NOTHING`), fire-and-forget; a failure is logged
+  with `{ err }` and never fails the login or refresh. No signed-out visitor, no 401, no failed login records a day.
+- **Purge:** a third pass in the existing daily job (`index.ts`, its own try) deletes `day < today − 180`. Account
+  deletion cascades.
+- **Report:** the retention report counts activity days as activity and returns `activityTrackedSince` (the oldest
+  recorded day): cohorts older than that under-count return, and the page says so with the date. The previous
+  "can't see people who only watch charts" blind spot is closed from that date on.
+- **Privacy policy** v1.2 → **1.3** (October 11, 2026): "Activity days" row in §3, a bullet in §6 and §7, and
+  legitimate interest (Art. 6(1)(f), right to object in §11) named in §5.
+- **Not done here:** the notice e-mail to registered users (§13 says material changes are e-mailed). Nothing in the
+  code sends it; it is a separate, deliberate step. **Do not release this unit until the owner has sent the notice**
+  (or decided the change is non-material), because the policy page and the recording go live together.
+- **Tests:** `userActivity.test.ts` (UTC day, idempotent insert, never throws, purge cutoff), auth `login` /
+  `refresh` (records, not on failure, not for a signed-out probe, a failing write doesn't fail the login),
+  `adminMetrics` mock, the page note; `userActivity.int.test.ts` on Postgres (one row per day, the purge keeps the
+  boundary day, cascade on user delete, the report reads sign-in days, `activityTrackedSince`).

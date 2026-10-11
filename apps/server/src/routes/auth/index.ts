@@ -4,6 +4,7 @@ import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { Prisma } from '../../../generated/prisma/client.js';
 import { config } from '../../config.js';
 import { EmailService } from '../../services/EmailService.js';
+import { trackActivity } from '../../services/UserActivity.js';
 import { clientIp } from '../../lib/clientIp.js';
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -845,6 +846,7 @@ export async function authRoutes(app: FastifyInstance) {
       }
 
       const accessToken = await issueTokens(reply, user.id, user.email);
+      trackActivity(app, user.id);
 
       return reply.send({
         accessToken,
@@ -918,6 +920,7 @@ export async function authRoutes(app: FastifyInstance) {
         }
 
         const accessToken = await issueTokens(reply, user.id, user.email);
+        trackActivity(app, user.id);
 
         return reply.send({ accessToken });
       });

@@ -47,6 +47,11 @@ export { Prisma }
  */
 export type User = Prisma.UserModel
 /**
+ * Model UserActivity
+ * 
+ */
+export type UserActivity = Prisma.UserActivityModel
+/**
  * Model RefreshToken
  * 
  */

@@ -42,6 +42,9 @@ vi.mock('../plugins/prisma.js', () => {
         delete: vi.fn().mockResolvedValue({}),
         deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
+      userActivity: {
+        createMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
       refreshToken: {
         // Default: always succeeds — individual tests can override with mockResolvedValueOnce
         create: vi.fn().mockResolvedValue({}),
@@ -237,6 +240,52 @@ describe('POST /api/auth/login', () => {
     expect(typeof res.json<{ accessToken: string }>().accessToken).toBe('string');
   });
 
+  it('records the sign-in as an activity day, and a failing write never fails the login', async () => {
+    const hashed = await argon2.hash(validUser.password);
+    const createMany = app.prisma.userActivity.createMany as ReturnType<typeof vi.fn>;
+    createMany.mockClear();
+    createMany.mockRejectedValueOnce(new Error('db down'));
+    (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'user-1',
+      email: validUser.email,
+      username: validUser.username,
+      password: hashed,
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { email: validUser.email, password: validUser.password },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(createMany).toHaveBeenCalledTimes(1);
+    expect(createMany).toHaveBeenCalledWith({
+      data: [{ userId: 'user-1', day: expect.any(Date) }],
+      skipDuplicates: true,
+    });
+  });
+
+  it('records no activity day for a failed sign-in', async () => {
+    const hashed = await argon2.hash('DifferentPass1!');
+    const createMany = app.prisma.userActivity.createMany as ReturnType<typeof vi.fn>;
+    createMany.mockClear();
+    (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'user-1',
+      email: validUser.email,
+      password: hashed,
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { email: validUser.email, password: validUser.password },
+    });
+
+    expect(res.statusCode).toBe(401);
+    expect(createMany).not.toHaveBeenCalled();
+  });
+
   it('returns 401 on wrong password', async () => {
     const hashed = await argon2.hash('DifferentPass1!');
 
@@ -403,6 +452,43 @@ describe('POST /api/auth/refresh', () => {
 
     expect(res.statusCode).toBe(200);
     expect(typeof res.json<{ accessToken: string }>().accessToken).toBe('string');
+  });
+
+  it('records the session restore as an activity day', async () => {
+    const createMany = app.prisma.userActivity.createMany as ReturnType<typeof vi.fn>;
+    createMany.mockClear();
+    (app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'rt-1',
+      tokenHash: 'hashed',
+      userId: 'user-9',
+      expiresAt: FUTURE,
+    });
+    (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'user-9',
+      email: validUser.email,
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/refresh',
+      headers: { cookie: `refresh_token=${'b'.repeat(64)}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(createMany).toHaveBeenCalledWith({
+      data: [{ userId: 'user-9', day: expect.any(Date) }],
+      skipDuplicates: true,
+    });
+  });
+
+  it('records nothing when there is no refresh cookie (a signed-out visitor)', async () => {
+    const createMany = app.prisma.userActivity.createMany as ReturnType<typeof vi.fn>;
+    createMany.mockClear();
+
+    const res = await app.inject({ method: 'POST', url: '/api/auth/refresh' });
+
+    expect(res.statusCode).toBe(204);
+    expect(createMany).not.toHaveBeenCalled();
   });
 
   it('should answer 204 with no token and no cookie when no refresh cookie is present', async () => {

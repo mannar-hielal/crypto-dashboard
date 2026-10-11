@@ -13,7 +13,7 @@ export function PrivacyPage() {
         description="Privacy policy for cryptopapertrade.com. Learn how we collect, use, and protect your data (nDSG and GDPR compliant)."
         path="/privacy"
       />
-      <LegalLayout title="Privacy Policy" lastUpdated="September 24, 2026" version="1.2">
+      <LegalLayout title="Privacy Policy" lastUpdated="October 11, 2026" version="1.3">
         <section>
           <h2>1. Data Controller</h2>
           <p>
@@ -72,6 +72,17 @@ export function PrivacyPage() {
                 <td>Refresh tokens</td>
                 <td>Maintaining login sessions</td>
                 <td>SHA-256 hash in database, 7-day TTL, then auto-deleted</td>
+              </tr>
+              <tr>
+                <td>Activity days</td>
+                <td>
+                  Counting, in aggregate, how often people come back, so we can improve the service
+                </td>
+                <td>
+                  One record per day on which you signed in or resumed your session: your account
+                  and the date only — no time, IP address or device. Deleted after 180 days, or with
+                  your account.
+                </td>
               </tr>
               <tr>
                 <td>Paper trade history</td>
@@ -133,7 +144,8 @@ export function PrivacyPage() {
             </li>
             <li>
               <strong>Legitimate interest (Art. 6(1)(f) GDPR)</strong>: security logging, abuse
-              prevention, platform stability.
+              prevention, platform stability, and counting in aggregate how often people return
+              (activity days). You may object to this (Section 11).
             </li>
             <li>
               <strong>Consent (Art. 6(1)(a) GDPR)</strong>: newsletter subscription — you explicitly
@@ -153,6 +165,10 @@ export function PrivacyPage() {
               (no marketing emails).
             </li>
             <li>To detect and prevent abuse, fraud, or unauthorised access.</li>
+            <li>
+              To count, in aggregate, how many people come back to the service, so we can see
+              whether changes help (we read totals, not individual people's days).
+            </li>
           </ul>
           <p>
             <strong>
@@ -176,6 +192,10 @@ export function PrivacyPage() {
             </li>
             <li>
               <strong>Refresh tokens</strong>: automatically expire and are deleted after 7 days.
+            </li>
+            <li>
+              <strong>Activity days</strong>: deleted automatically after <strong>180 days</strong>,
+              and with your account.
             </li>
             <li>
               <strong>Password reset tokens</strong>: automatically invalidated after use or after 1

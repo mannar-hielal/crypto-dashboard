@@ -385,6 +385,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 export const ModelName = {
   User: 'User',
+  UserActivity: 'UserActivity',
   RefreshToken: 'RefreshToken',
   PasswordResetToken: 'PasswordResetToken',
   VerificationToken: 'VerificationToken',
@@ -414,7 +415,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "refreshToken" | "passwordResetToken" | "verificationToken" | "emailChangeToken" | "subscriber" | "account" | "spotBalance" | "symbolSetting" | "position" | "order" | "trade" | "journalEntry" | "balanceEvent" | "engineLease"
+    modelProps: "user" | "userActivity" | "refreshToken" | "passwordResetToken" | "verificationToken" | "emailChangeToken" | "subscriber" | "account" | "spotBalance" | "symbolSetting" | "position" | "order" | "trade" | "journalEntry" | "balanceEvent" | "engineLease"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -489,6 +490,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.UserCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.UserCountAggregateOutputType> | number
+        }
+      }
+    }
+    UserActivity: {
+      payload: Prisma.$UserActivityPayload<ExtArgs>
+      fields: Prisma.UserActivityFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.UserActivityFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserActivityPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.UserActivityFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserActivityPayload>
+        }
+        findFirst: {
+          args: Prisma.UserActivityFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserActivityPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.UserActivityFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserActivityPayload>
+        }
+        findMany: {
+          args: Prisma.UserActivityFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserActivityPayload>[]
+        }
+        create: {
+          args: Prisma.UserActivityCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserActivityPayload>
+        }
+        createMany: {
+          args: Prisma.UserActivityCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.UserActivityCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserActivityPayload>[]
+        }
+        delete: {
+          args: Prisma.UserActivityDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserActivityPayload>
+        }
+        update: {
+          args: Prisma.UserActivityUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserActivityPayload>
+        }
+        deleteMany: {
+          args: Prisma.UserActivityDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.UserActivityUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.UserActivityUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserActivityPayload>[]
+        }
+        upsert: {
+          args: Prisma.UserActivityUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserActivityPayload>
+        }
+        aggregate: {
+          args: Prisma.UserActivityAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateUserActivity>
+        }
+        groupBy: {
+          args: Prisma.UserActivityGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UserActivityGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.UserActivityCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UserActivityCountAggregateOutputType> | number
         }
       }
     }
@@ -1584,6 +1659,14 @@ export const UserScalarFieldEnum = {
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
 
 
+export const UserActivityScalarFieldEnum = {
+  userId: 'userId',
+  day: 'day'
+} as const
+
+export type UserActivityScalarFieldEnum = (typeof UserActivityScalarFieldEnum)[keyof typeof UserActivityScalarFieldEnum]
+
+
 export const RefreshTokenScalarFieldEnum = {
   id: 'id',
   tokenHash: 'tokenHash',
@@ -2062,6 +2145,7 @@ export type PrismaClientOptions = ({
 }
 export type GlobalOmitConfig = {
   user?: Prisma.UserOmit
+  userActivity?: Prisma.UserActivityOmit
   refreshToken?: Prisma.RefreshTokenOmit
   passwordResetToken?: Prisma.PasswordResetTokenOmit
   verificationToken?: Prisma.VerificationTokenOmit

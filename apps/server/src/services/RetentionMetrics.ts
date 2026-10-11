@@ -6,9 +6,10 @@
  * `loadRetentionReport` runs the bounded Prisma queries. The report holds aggregates only: no user
  * id, e-mail or username ever leaves this module.
  *
- * What "active" means here: a user-initiated action leaves a row — an order the user placed, a note
- * the user wrote, an account reset. Engine fills and liquidations are not activity, and a user who
- * only watches charts is invisible (the page says so).
+ * What "active" means here: a day the user signed in or resumed a session (`UserActivity`, kept 180
+ * days), or a user-initiated action that leaves a row — an order the user placed, a note the user
+ * wrote, an account reset. Engine fills and liquidations are not activity. Activity days only exist
+ * from the day they started being recorded (`activityTrackedSince`), so older cohorts under-count.
  */
 
 import type { FastifyInstance } from 'fastify';
@@ -60,6 +61,8 @@ export interface ReportInput {
   firstOrders: FirstOrder[];
   activity: ActivityRow[];
   truncated: boolean;
+  /** UTC date of the oldest recorded activity day, or null when none exist yet */
+  activityTrackedSince?: string | null;
 }
 
 /** Monday 00:00 UTC of the week `d` falls in */
@@ -188,6 +191,7 @@ export function buildRetentionReport(
     generatedAt: now.toISOString(),
     windowWeeks,
     truncated: input.truncated,
+    activityTrackedSince: input.activityTrackedSince ?? null,
     totals,
     cohorts: [...cohorts.values()], // inserted newest first
   };
@@ -215,42 +219,51 @@ export async function loadRetentionReport(
     orderType: { in: [...USER_ORDER_TYPES] },
   };
 
-  const [userRows, firstOrderRows, orderActivity, noteActivity] = await Promise.all([
-    prisma.user.findMany({
-      where: userFilter,
-      orderBy: { createdAt: 'asc' },
-      take: MAX_USERS + 1,
-      select: {
-        id: true,
-        createdAt: true,
-        emailVerifiedAt: true,
-        account: { select: { resetCount: true, lastReset: true } },
-      },
-    }),
-    prisma.order.findMany({
-      where: placedByUser,
-      orderBy: { createdAt: 'asc' },
-      distinct: ['userId'],
-      take: MAX_USERS + 1,
-      select: { userId: true, createdAt: true, stopLoss: true },
-    }),
-    prisma.order.findMany({
-      where: { ...placedByUser, createdAt: { gte: start } },
-      take: MAX_ACTIVITY_ROWS,
-      select: { userId: true, createdAt: true },
-    }),
-    prisma.journalEntry.findMany({
-      where: { user: userFilter, isUserNote: true, createdAt: { gte: start } },
-      take: MAX_ACTIVITY_ROWS,
-      select: { userId: true, createdAt: true },
-    }),
-  ]);
+  const [userRows, firstOrderRows, orderActivity, noteActivity, signInDays, oldestSignIn] =
+    await Promise.all([
+      prisma.user.findMany({
+        where: userFilter,
+        orderBy: { createdAt: 'asc' },
+        take: MAX_USERS + 1,
+        select: {
+          id: true,
+          createdAt: true,
+          emailVerifiedAt: true,
+          account: { select: { resetCount: true, lastReset: true } },
+        },
+      }),
+      prisma.order.findMany({
+        where: placedByUser,
+        orderBy: { createdAt: 'asc' },
+        distinct: ['userId'],
+        take: MAX_USERS + 1,
+        select: { userId: true, createdAt: true, stopLoss: true },
+      }),
+      prisma.order.findMany({
+        where: { ...placedByUser, createdAt: { gte: start } },
+        take: MAX_ACTIVITY_ROWS,
+        select: { userId: true, createdAt: true },
+      }),
+      prisma.journalEntry.findMany({
+        where: { user: userFilter, isUserNote: true, createdAt: { gte: start } },
+        take: MAX_ACTIVITY_ROWS,
+        select: { userId: true, createdAt: true },
+      }),
+      prisma.userActivity.findMany({
+        where: { user: userFilter, day: { gte: start } },
+        take: MAX_ACTIVITY_ROWS,
+        select: { userId: true, day: true },
+      }),
+      // Not filtered by user: "since when do we record sign-in days at all"
+      prisma.userActivity.findFirst({ orderBy: { day: 'asc' }, select: { day: true } }),
+    ]);
 
   const truncated =
     userRows.length > MAX_USERS ||
     firstOrderRows.length > MAX_USERS ||
     orderActivity.length >= MAX_ACTIVITY_ROWS ||
-    noteActivity.length >= MAX_ACTIVITY_ROWS;
+    noteActivity.length >= MAX_ACTIVITY_ROWS ||
+    signInDays.length >= MAX_ACTIVITY_ROWS;
 
   return buildRetentionReport(
     {
@@ -266,11 +279,12 @@ export async function loadRetentionReport(
         createdAt: o.createdAt,
         hasStopLoss: o.stopLoss !== null,
       })),
-      activity: [...orderActivity, ...noteActivity].map((r) => ({
-        userId: r.userId,
-        at: r.createdAt,
-      })),
+      activity: [
+        ...[...orderActivity, ...noteActivity].map((r) => ({ userId: r.userId, at: r.createdAt })),
+        ...signInDays.map((r) => ({ userId: r.userId, at: r.day })),
+      ],
       truncated,
+      activityTrackedSince: oldestSignIn ? oldestSignIn.day.toISOString().slice(0, 10) : null,
     },
     now,
     windowWeeks
