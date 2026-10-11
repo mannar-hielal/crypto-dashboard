@@ -67,7 +67,8 @@ exists, and the controls that sit outside any single route handler.
 - **Forced-version overrides**: `package.json`'s `pnpm.overrides` pins a long list of transitive
   dependencies (`undici`, `hono`, `brace-expansion`, `ip-address`, `fast-uri`, `js-yaml`, `axios`,
   `sharp`, `postcss`, `body-parser`, `find-my-way`, `@fastify/static`, `nanoid`, `valibot`, `ws`,
-  `serialize-javascript`, `@hono/node-server`) to CVE-patched minimum versions regardless of what a
+  `serialize-javascript`, `@hono/node-server`, `fast-jwt`, `source-map-js`, `proxy-addr`,
+  `@modelcontextprotocol/sdk`) to CVE-patched minimum versions regardless of what a
   direct dependency requests. When `pnpm audit` flags a new transitive CVE, the fix is a new
   override entry here (with a version floor, ideally a range like `existing@<fixed`: `>=fixed`),
   not a blanket `pnpm update` that may silently downgrade something else.
