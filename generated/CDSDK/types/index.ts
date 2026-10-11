@@ -61,6 +61,34 @@ export interface SubscribersResponse {
   total: number;
 }
 
+// ─── Learn: guided tours ─────────────────────────────────────────────────────
+
+/** Everything the account remembers about learning: the three tours and the welcome card */
+export const LEARN_ITEM_IDS = [
+  'primer',
+  'buy-first-coin',
+  'sell-and-review',
+  'welcome-card',
+] as const;
+export type LearnItemId = (typeof LEARN_ITEM_IDS)[number];
+
+/** `completed`: finished (never downgraded); `dismissed`: the learner closed the offer */
+export type LearnStatus = 'completed' | 'dismissed';
+
+export interface LearnProgressItem {
+  itemId: LearnItemId;
+  status: LearnStatus;
+  updatedAt: string;
+}
+
+export interface LearnProgressResponse {
+  items: LearnProgressItem[];
+}
+
+export interface SetLearnProgressRequest {
+  status: LearnStatus;
+}
+
 // ─── Admin: retention metrics ────────────────────────────────────────────────
 
 /** `count` of the `eligible` users — a window not yet fully elapsed leaves a user out of `eligible` */

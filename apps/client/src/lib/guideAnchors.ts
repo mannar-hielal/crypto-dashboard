@@ -257,6 +257,15 @@ export const GUIDE_ANCHORS = [
   'tour.back',
   'tour.skip',
   'tour.quiz-option',
+  // learn (the welcome card, the Learn panel)
+  'nav.learn',
+  'learn.card',
+  'learn.card.start',
+  'learn.card.dismiss',
+  'learn.panel',
+  'learn.panel.close',
+  'learn.tour',
+  'learn.tour.start',
 ] as const;
 
 export type GuideAnchor = (typeof GUIDE_ANCHORS)[number];

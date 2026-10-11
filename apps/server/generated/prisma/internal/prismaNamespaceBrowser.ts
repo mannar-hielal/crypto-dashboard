@@ -53,6 +53,7 @@ export const AnyNull = runtime.AnyNull
 export const ModelName = {
   User: 'User',
   UserActivity: 'UserActivity',
+  LearningProgress: 'LearningProgress',
   RefreshToken: 'RefreshToken',
   PasswordResetToken: 'PasswordResetToken',
   VerificationToken: 'VerificationToken',
@@ -108,6 +109,16 @@ export const UserActivityScalarFieldEnum = {
 } as const
 
 export type UserActivityScalarFieldEnum = (typeof UserActivityScalarFieldEnum)[keyof typeof UserActivityScalarFieldEnum]
+
+
+export const LearningProgressScalarFieldEnum = {
+  userId: 'userId',
+  itemId: 'itemId',
+  status: 'status',
+  updatedAt: 'updatedAt'
+} as const
+
+export type LearningProgressScalarFieldEnum = (typeof LearningProgressScalarFieldEnum)[keyof typeof LearningProgressScalarFieldEnum]
 
 
 export const RefreshTokenScalarFieldEnum = {

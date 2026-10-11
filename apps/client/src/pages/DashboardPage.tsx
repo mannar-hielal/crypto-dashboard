@@ -36,6 +36,9 @@ import { bg, color, fontSize, rangeBar } from '@/lib/tokens';
 import { TIME_RANGE_PRESETS } from '@/lib/markets';
 import { TimeRangeSwitcher } from '@/components/dashboard/TimeRangeSwitcher';
 import { GuideOverlay } from '@/guide/GuideOverlay';
+import { LearnCard } from '@/guide/LearnCard';
+import { LearnPanel } from '@/guide/LearnPanel';
+import { useTourProgress } from '@/guide/useTourProgress';
 
 // ─── Edit target type ────────────────────────────────────────────────────────
 type EditTarget =
@@ -96,6 +99,7 @@ export function DashboardRedirect() {
  * link never connects the saved layout's market first.
  */
 export function DashboardPage() {
+  useTourProgress();
   const { pathname } = useLocation();
   const parsed = parseMarketPath(pathname);
   useMarketUrlSync();
@@ -376,6 +380,7 @@ export function DashboardInner() {
     <div className="flex h-screen w-full flex-col overflow-hidden" style={{ background: bg.page }}>
       <TopBar />
       <GuideOverlay />
+      <LearnPanel />
 
       {/* ⚠️ Deletion Pending Banner */}
       <AnimatePresence>
@@ -460,6 +465,7 @@ export function DashboardInner() {
                 onToolChange={drawing.selectTool}
               />
             </ErrorBoundary>
+            <LearnCard />
           </motion.div>
 
           {/* ── Time-range preset bar ──────────────────────────────────────────── */}

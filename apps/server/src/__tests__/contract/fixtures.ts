@@ -24,6 +24,7 @@ import type {
   PaperStateDTO,
   PlaceOrderRequest,
   PlaceSpotExitsRequest,
+  LearnProgressResponse,
   RefreshResponse,
   RetentionCohort,
   RetentionMetricsResponse,
@@ -126,6 +127,14 @@ export const meResponse: MeResponse = {
     },
   },
 };
+
+export const learnProgressResponse: LearnProgressResponse = {
+  items: [{ itemId: 'primer', status: 'completed', updatedAt: '2026-10-11T00:00:00.000Z' }],
+};
+
+export const learnProgressItem = {
+  item: { itemId: 'primer', status: 'completed', updatedAt: '2026-10-11T00:00:00.000Z' },
+} as const;
 
 const cohort: RetentionCohort = {
   weekStart: '2026-09-28',

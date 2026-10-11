@@ -74,6 +74,17 @@ export function PrivacyPage() {
                 <td>SHA-256 hash in database, 7-day TTL, then auto-deleted</td>
               </tr>
               <tr>
+                <td>Learning progress</td>
+                <td>
+                  Remembering which guided tours you have finished and whether you dismissed the
+                  welcome offer
+                </td>
+                <td>
+                  A few records tied to your account (a tour name and a status), stored in our
+                  database and deleted with your account.
+                </td>
+              </tr>
+              <tr>
                 <td>Activity days</td>
                 <td>
                   Counting, in aggregate, how often people come back, so we can improve the service

@@ -45,6 +45,7 @@ model User {
   verificationTokens  VerificationToken[] // 🔐 pending email verifications
   emailChangeTokens   EmailChangeToken[] // 🔐 pending email changes
   activityDays        UserActivity[] // one row per UTC day the user signed in or resumed a session
+  learningProgress    LearningProgress[] // guided tours finished / the welcome card dismissed
 
   @@index([email])
   @@index([username])
@@ -60,6 +61,19 @@ model UserActivity {
 
   @@id([userId, day])
   @@index([day]) // the purge deletes by age
+}
+
+// What a user has done with the guided tours: a finished tour, or the welcome card dismissed
+// (`itemId` is an allowlist in the route and the SDK, so a user holds at most a handful of rows).
+// Part of the account: deleted with it (onDelete: Cascade).
+model LearningProgress {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemId    String   @db.VarChar(40)
+  status    String   @db.VarChar(20) // "completed" | "dismissed"
+  updatedAt DateTime @updatedAt
+
+  @@id([userId, itemId])
 }
 
 // 🔐 One row per active session. Deleted on logout. Rotated on refresh.

@@ -1,8 +1,12 @@
 # Guided Trade — MVP Plan
 
-> **Owner:** Mannar Hielal · **Written:** 2026-09-30 · **Status:** ⏸ deferred (owner, 2026-09-30) — not started,
-> with Q1–Q3 below unanswered on purpose. First deferred until the test plan was done (2026-09-29); with that done,
-> the owner deferred it again. Nothing here is scheduled: pick it up only when the owner asks, starting with Q1–Q3.
+> **Owner:** Mannar Hielal · **Written:** 2026-09-30 · **Status:** ✅ built 2026-10-11 (units U5–U6 of the retention
+> plan; see `docs/APP_LOG.md`). It followed owner decisions of 2026-10-11 that **reshape this plan**: a short in-app
+> primer before any trade, the learner spends dollars not coins, three chapters of at most five steps, no leverage in
+> the first session (the perp-long tour waits for a later stage and a gate), progress on the account, a welcome card
+> plus a Learn panel, desktop first. The two MVP tours below are superseded by `guide/tours.ts` (`primer`,
+> `buy-first-coin`, `sell-and-review`); the rest of this file (the anchors, the scenario format, the catalogue) still
+> applies.
 >
 > Moved here from the test implementation plan (retired 2026-09-30): its scenario format, the per-section "Guided
 > trade" verdicts, the Rollout milestone and its Q1 / Q2. The UI reproductions in `docs/UI_REPRODUCTIONS.md` are

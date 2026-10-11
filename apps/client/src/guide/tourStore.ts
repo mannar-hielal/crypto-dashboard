@@ -13,6 +13,12 @@ interface TourState {
   quizAnswer: number | null;
   /** Tours finished, from the server and this session */
   completed: Partial<Record<TourId, true>>;
+  /** The account's progress has been read (the card waits for it, so it never flashes) */
+  loaded: boolean;
+  /** The welcome card was dismissed (or the primer finished) on this account */
+  cardDismissed: boolean;
+  /** The Learn panel is open */
+  panelOpen: boolean;
   start: (id: TourId) => void;
   next: () => void;
   back: () => void;
@@ -21,10 +27,23 @@ interface TourState {
   answerQuiz: (index: number) => void;
   /** Replace the finished set (the server's answer) */
   setCompleted: (ids: TourId[]) => void;
+  /** The account's saved progress arrived */
+  setProgress: (progress: { completed: TourId[]; cardDismissed: boolean }) => void;
+  dismissCard: () => void;
+  openPanel: () => void;
+  closePanel: () => void;
   reset: () => void;
 }
 
-const initial = { activeId: null, stepIndex: 0, quizAnswer: null, completed: {} } as const;
+const initial = {
+  activeId: null,
+  stepIndex: 0,
+  quizAnswer: null,
+  completed: {},
+  loaded: false,
+  cardDismissed: false,
+  panelOpen: false,
+} as const;
 
 export const useTourStore = create<TourState>()((set, get) => ({
   ...initial,
@@ -61,6 +80,21 @@ export const useTourStore = create<TourState>()((set, get) => ({
     set({
       completed: Object.fromEntries(ids.map((id) => [id, true])) as Partial<Record<TourId, true>>,
     }),
+
+  setProgress: ({ completed, cardDismissed }) =>
+    set({
+      completed: Object.fromEntries(completed.map((id) => [id, true])) as Partial<
+        Record<TourId, true>
+      >,
+      cardDismissed,
+      loaded: true,
+    }),
+
+  dismissCard: () => set({ cardDismissed: true }),
+
+  openPanel: () => set({ panelOpen: true }),
+
+  closePanel: () => set({ panelOpen: false }),
 
   reset: () => set({ ...initial, completed: {} }),
 }));

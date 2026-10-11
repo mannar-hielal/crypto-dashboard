@@ -29,3 +29,16 @@ export type AllowedSymbol = (typeof ALLOWED_SYMBOLS)[number];
 export const ALLOWED_CATEGORIES = ['spot', 'linear'] as const;
 
 export type BybitCategory = (typeof ALLOWED_CATEGORIES)[number];
+
+/**
+ * What the account remembers about the guided tours (routes/learn). 🔐 An allowlist: the route's
+ * schema takes only these, so a user holds at most this many rows. Mirrors `LEARN_ITEM_IDS` in the
+ * SDK — a runtime import of the SDK's TypeScript source isn't available to the built server, so
+ * `learn.test.ts` checks the two lists are the same.
+ */
+export const LEARN_ITEM_IDS = [
+  'primer',
+  'buy-first-coin',
+  'sell-and-review',
+  'welcome-card',
+] as const;

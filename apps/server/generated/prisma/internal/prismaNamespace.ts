@@ -386,6 +386,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 export const ModelName = {
   User: 'User',
   UserActivity: 'UserActivity',
+  LearningProgress: 'LearningProgress',
   RefreshToken: 'RefreshToken',
   PasswordResetToken: 'PasswordResetToken',
   VerificationToken: 'VerificationToken',
@@ -415,7 +416,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "userActivity" | "refreshToken" | "passwordResetToken" | "verificationToken" | "emailChangeToken" | "subscriber" | "account" | "spotBalance" | "symbolSetting" | "position" | "order" | "trade" | "journalEntry" | "balanceEvent" | "engineLease"
+    modelProps: "user" | "userActivity" | "learningProgress" | "refreshToken" | "passwordResetToken" | "verificationToken" | "emailChangeToken" | "subscriber" | "account" | "spotBalance" | "symbolSetting" | "position" | "order" | "trade" | "journalEntry" | "balanceEvent" | "engineLease"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -564,6 +565,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.UserActivityCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.UserActivityCountAggregateOutputType> | number
+        }
+      }
+    }
+    LearningProgress: {
+      payload: Prisma.$LearningProgressPayload<ExtArgs>
+      fields: Prisma.LearningProgressFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.LearningProgressFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LearningProgressPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.LearningProgressFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LearningProgressPayload>
+        }
+        findFirst: {
+          args: Prisma.LearningProgressFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LearningProgressPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.LearningProgressFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LearningProgressPayload>
+        }
+        findMany: {
+          args: Prisma.LearningProgressFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LearningProgressPayload>[]
+        }
+        create: {
+          args: Prisma.LearningProgressCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LearningProgressPayload>
+        }
+        createMany: {
+          args: Prisma.LearningProgressCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.LearningProgressCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LearningProgressPayload>[]
+        }
+        delete: {
+          args: Prisma.LearningProgressDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LearningProgressPayload>
+        }
+        update: {
+          args: Prisma.LearningProgressUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LearningProgressPayload>
+        }
+        deleteMany: {
+          args: Prisma.LearningProgressDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.LearningProgressUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.LearningProgressUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LearningProgressPayload>[]
+        }
+        upsert: {
+          args: Prisma.LearningProgressUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LearningProgressPayload>
+        }
+        aggregate: {
+          args: Prisma.LearningProgressAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateLearningProgress>
+        }
+        groupBy: {
+          args: Prisma.LearningProgressGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LearningProgressGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.LearningProgressCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LearningProgressCountAggregateOutputType> | number
         }
       }
     }
@@ -1667,6 +1742,16 @@ export const UserActivityScalarFieldEnum = {
 export type UserActivityScalarFieldEnum = (typeof UserActivityScalarFieldEnum)[keyof typeof UserActivityScalarFieldEnum]
 
 
+export const LearningProgressScalarFieldEnum = {
+  userId: 'userId',
+  itemId: 'itemId',
+  status: 'status',
+  updatedAt: 'updatedAt'
+} as const
+
+export type LearningProgressScalarFieldEnum = (typeof LearningProgressScalarFieldEnum)[keyof typeof LearningProgressScalarFieldEnum]
+
+
 export const RefreshTokenScalarFieldEnum = {
   id: 'id',
   tokenHash: 'tokenHash',
@@ -2146,6 +2231,7 @@ export type PrismaClientOptions = ({
 export type GlobalOmitConfig = {
   user?: Prisma.UserOmit
   userActivity?: Prisma.UserActivityOmit
+  learningProgress?: Prisma.LearningProgressOmit
   refreshToken?: Prisma.RefreshTokenOmit
   passwordResetToken?: Prisma.PasswordResetTokenOmit
   verificationToken?: Prisma.VerificationTokenOmit

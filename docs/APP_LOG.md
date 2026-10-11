@@ -4046,3 +4046,24 @@ text, "You should see", Back / Skip, and `bg.tooltip` on a new `zIndex.tour` (25
   `GuideOverlay` (rendering, Next / Back, missing control, click and type rules, refused vs accepted order, quiz,
   hand-off, cleanup).
 - **Wiring:** the card, the Learn menu and saving progress are U6; nothing starts a tour until then.
+
+### feat: tours are reachable — the welcome card, the Learn panel and progress saved on the account (2026-10-11) ✅
+
+**Context:** unit U6. Owner's answers 2026-10-11: a small card bottom-left of the chart, a "Learn" entry in the user
+menu opening a side panel, progress on the account (server), desktop first, tours re-runnable on any account.
+
+- **Server:** table `LearningProgress` (migration `20261011150000_learning_progress`, key `(userId, itemId)`,
+  cascade on user delete); `GET /api/learn/progress` and `PUT /api/learn/progress/:itemId` (`routes/learn`).
+  🔐 The item id is an allowlist (`LEARN_ITEM_IDS`, three tours + `welcome-card`), so a user holds at most four rows;
+  body `{ status: completed | dismissed }`; `completed` is never downgraded (a dismissal only creates the row). The
+  allowlist is duplicated in `constants.ts` because the built server can't import the SDK's TypeScript at runtime;
+  `learn.test.ts` checks the two lists are equal.
+- **SDK:** `learnApi`, `LearnItemId`, `LearnStatus`, `LearnProgressResponse`; contract fixtures.
+- **Client:** `useTourProgress` reads the account's progress once signed in and writes each new finish / dismissal
+  (a failed write is dropped: progress then lives only in the session); `LearnCard` (offered once, waits for the
+  progress so it never flashes, gone once dismissed or the primer is finished, "larger screen" on phones, no Start
+  there); `LearnPanel` (tick + Start / Repeat per tour, disabled below lg); a "Learn" entry in the user menu.
+- **Anchors:** `nav.learn`, `learn.card*`, `learn.panel*`, `learn.tour*`.
+- **Privacy policy 1.3:** a "Learning progress" row in §3 (with the activity-days row of U4).
+- **Tests:** `learn.test.ts` (auth, allowlist, never downgraded, strips extra fields), contract, Postgres
+  `learningProgress.int.test.ts`; client `useTourProgress`, `LearnCard`, `LearnPanel`.
