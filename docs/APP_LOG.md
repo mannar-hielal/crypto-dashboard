@@ -3961,3 +3961,36 @@ its own group in the middle of the menu.
     the symbol's tick and its decimals for the pane's market (`lib/priceFormat.ts`, the SDK's tick table): BTCUSDT
     1 decimal, DOGEUSDT 5. The price axis, the drawing labels and the position Inputs' ticks follow. [10.3.4]
 - **Tests:** TRADING_TEST_PLAN 10.3.4, 10.7.23–10.7.26, 20.5; UI_REPRODUCTIONS 10.7 steps 18–19.
+
+### feat: admin retention metrics — weekly signup cohorts from the tables we already keep (2026-10-11) ✅
+
+**Context:** `reports/` (education + business strategy) found that most users leave within days and that the app
+has no product analytics, so nothing says whether activation, week-1 return or the first-order funnel is the leak.
+Owner answers 2026-10-11: start with the cheapest option (numbers from existing tables, no schema change, no
+privacy change), read on an admin page. A daily activity record and funnel events come later, with the guided
+trade.
+
+- **Endpoint** `GET /api/admin/metrics/retention` (`routes/admin`, `services/RetentionMetrics.ts`): admin only
+  (`lib/requireAdmin.ts` — the same `config.adminEmail` check the newsletter list used, now one hook; the
+  newsletter route uses it too, same order: JWT, then 403). Aggregates only — no id, e-mail or username leaves the
+  server. Typed Prisma only, every query bounded by the 12-week window and a row cap (`truncated` flag when it
+  bites), one cached report for 10 minutes.
+- **What it counts:** weekly signup cohorts (Monday 00:00 UTC): signups, verified, **activated** (a user-placed
+  order within 7 days — `createType` null and `orderType` MARKET / LIMIT / STOP, so engine TP / SL legs and
+  liquidations don't count), median hours to the first order, **return** in weeks 1 / 2 / 4 (activity on a later
+  UTC day: a user-placed order, a user-written note, or a reset), reset users, and the share of first orders with a
+  stop-loss. A rate is `count / eligible`: a user counts in the denominator only once the window has fully passed.
+  The admin and `cpt_qa_test` accounts are left out (e2e runs on its own database).
+- **Blind spots, written on the page:** a user who only watches charts leaves no row; visitors who never register;
+  no tour data; only the last reset is stored.
+- **Client:** `/admin/metrics` (`AdminMetricsPage`, CSS Module on tokens): a four-figure strip and the cohort
+  table, "count / eligible" with the percentage beneath (owner's visual Q&A 2026-10-11); a "Metrics" entry in the
+  user menu next to Admin, visible to the admin only. Gated like the newsletter page: the server's 403 is the real
+  check, the client redirect only hides it. Not in `robots.txt` (listing it would advertise the path); `noIndex`.
+- **SDK:** `adminApi.getRetentionMetrics`, `RetentionMetricsResponse` / `RetentionCohort` / `MetricsRate`;
+  contract fixture added.
+- **Tests:** `retentionMetrics.test.ts` (week boundaries, activation window, return windows, engine rows,
+  truncation, no identifiers), `adminMetrics.test.ts` (401 / 403 / 200, exclusions, cache), newsletter 403,
+  `AdminMetricsPage.test.tsx`; contract case.
+- **Next:** a once-a-day `UserActivity` row so watchers count (migration + privacy-policy line), then an
+  allowlisted event table for the tour funnel; then the opt-in "order filled while you were away" e-mail.

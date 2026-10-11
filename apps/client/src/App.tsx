@@ -62,6 +62,9 @@ const NewsletterUnsubscribedPage = lazy(() =>
 const AdminNewsletterPage = lazy(() =>
   import('@/pages/AdminNewsletterPage').then((m) => ({ default: m.AdminNewsletterPage }))
 );
+const AdminMetricsPage = lazy(() =>
+  import('@/pages/AdminMetricsPage').then((m) => ({ default: m.AdminMetricsPage }))
+);
 
 // 🔐 Module-level flag — unlike useRef, this survives React StrictMode's
 // simulated mount → unmount → remount cycle, so only ONE /refresh fires
@@ -129,6 +132,7 @@ export default function App() {
               <Route path="/dashboard/usdt/:symbol" element={<DashboardPage />} />
               <Route path="/dashboard/*" element={<DashboardRedirect />} />
               <Route path="/admin/newsletter" element={<AdminNewsletterPage />} />
+              <Route path="/admin/metrics" element={<AdminMetricsPage />} />
             </Route>
 
             {/* Catch-all — redirect to landing */}

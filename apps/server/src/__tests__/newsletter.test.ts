@@ -358,6 +358,19 @@ describe('Newsletter Routes', () => {
       expect(res.statusCode).toBe(401);
     });
 
+    it('returns 403 for a signed-in user who is not the admin, and reads nothing', async () => {
+      const userToken = app.jwt.sign({ userId: 'user-1', email: 'user@test.com' });
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/newsletter/subscribers',
+        headers: { authorization: `Bearer ${userToken}` },
+      });
+
+      expect(res.statusCode).toBe(403);
+      expect(res.json()).toEqual({ error: 'Forbidden' });
+      expect(app.prisma.subscriber.findMany).not.toHaveBeenCalled();
+    });
+
     it('returns all subscribers without status filter', async () => {
       const mockSubscribers = [
         {
