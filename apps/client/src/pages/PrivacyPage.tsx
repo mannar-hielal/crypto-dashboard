@@ -207,6 +207,10 @@ export function PrivacyPage() {
             </li>
             <li>To detect and prevent abuse, fraud, or unauthorised access.</li>
             <li>
+              To show you your own habit badges and learning streak, counted from your own orders,
+              journal notes and tour progress (nothing extra is stored for them).
+            </li>
+            <li>
               To count, in aggregate, how many people come back to the service, so we can see
               whether changes help (we read totals, not individual people's days).
             </li>

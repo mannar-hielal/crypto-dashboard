@@ -1,6 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
+
+const getHabits = vi.fn();
+vi.mock('@crypto-dashboard/sdk', () => ({
+  learnApi: { getHabits: (...a: unknown[]) => getHabits(...a) },
+}));
+vi.mock('@/store/authStore', () => ({
+  useAuthStore: (selector: (s: { accessToken: string }) => unknown) =>
+    selector({ accessToken: 'tok' }),
+}));
 
 let desktop = true;
 vi.mock('@/hooks/useMediaQuery', () => ({ useMediaQuery: () => desktop }));
@@ -25,6 +34,8 @@ describe('LearnPanel', () => {
   beforeEach(() => {
     desktop = true;
     navigate.mockReset();
+    getHabits.mockReset();
+    getHabits.mockResolvedValue({ badges: [], learningDays: 0, streakDays: 0 });
     useTourStore.getState().reset();
   });
   afterEach(() => cleanup());
@@ -72,5 +83,48 @@ describe('LearnPanel', () => {
       expect((b as HTMLButtonElement).disabled).toBe(true);
     }
     expect(screen.getByText(/larger screen/)).not.toBeNull();
+  });
+
+  describe('habits', () => {
+    it('should show the streak and each badge with its progress', async () => {
+      getHabits.mockResolvedValue({
+        learningDays: 4,
+        streakDays: 2,
+        badges: [
+          { id: 'first-stop-loss', earned: true, progress: 1, target: 1 },
+          { id: 'ten-stop-losses', earned: false, progress: 4, target: 10 },
+        ],
+      });
+      useTourStore.setState({ panelOpen: true });
+      renderPanel();
+
+      await waitFor(() => expect(screen.getByText(/2-day learning streak/)).not.toBeNull());
+      expect(screen.getByText(/4 learning days/)).not.toBeNull();
+      expect(screen.getByText('Protected a trade')).not.toBeNull();
+      expect(screen.getByText(/4 \/ 10/)).not.toBeNull();
+      expect(getHabits).toHaveBeenCalledWith('tok');
+    });
+
+    it('should say there is no streak yet, and that habits are not about profit', async () => {
+      useTourStore.setState({ panelOpen: true });
+      renderPanel();
+
+      await waitFor(() => expect(screen.getByText(/No learning streak yet/)).not.toBeNull());
+      expect(screen.getByText(/never about profit/)).not.toBeNull();
+    });
+
+    it('should not load anything while the panel is closed', () => {
+      renderPanel();
+      expect(getHabits).not.toHaveBeenCalled();
+    });
+
+    it('should say so when the habits cannot be loaded, and keep the tours usable', async () => {
+      getHabits.mockRejectedValue(new Error('offline'));
+      useTourStore.setState({ panelOpen: true });
+      renderPanel();
+
+      await waitFor(() => expect(screen.getByText(/Could not load your habits/)).not.toBeNull());
+      expect(screen.getAllByText('Start').length).toBeGreaterThan(0);
+    });
   });
 });

@@ -1,6 +1,12 @@
 import type { FastifyInstance } from 'fastify';
 import type { LearnItemId, LearnStatus } from '@crypto-dashboard/sdk';
-import { LEARN_EVENT_NAMES, LEARN_ITEM_IDS, LEARN_TOUR_IDS } from '../../constants.js';
+import {
+  HABIT_BADGE_IDS,
+  LEARN_EVENT_NAMES,
+  LEARN_ITEM_IDS,
+  LEARN_TOUR_IDS,
+} from '../../constants.js';
+import { loadHabits } from '../../services/Habits.js';
 import { recordLearningEvent } from '../../services/LearningEvents.js';
 
 // ─── SHARED RESPONSE SCHEMAS ────────────────────────────────────────────────
@@ -169,6 +175,51 @@ export async function learnRoutes(app: FastifyInstance) {
       }
       await recordLearningEvent(app.prisma, { userId, ...body });
       return reply.status(204).send();
+    }
+  );
+
+  // ─── GET /habits ──────────────────────────────────────────────────────────
+  app.get(
+    '/habits',
+    {
+      schema: {
+        tags: ['Learn'],
+        summary: 'Habit badges and the learning streak',
+        description:
+          'Counted from rows the account already has. Badges are careful habits (a stop-loss, a ' +
+          'journal, a tour) — never profit or how often someone trades.',
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            required: ['badges', 'learningDays', 'streakDays'],
+            properties: {
+              badges: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['id', 'earned', 'progress', 'target'],
+                  properties: {
+                    id: { type: 'string', enum: [...HABIT_BADGE_IDS] },
+                    earned: { type: 'boolean' },
+                    progress: { type: 'integer' },
+                    target: { type: 'integer' },
+                  },
+                },
+              },
+              learningDays: { type: 'integer' },
+              streakDays: { type: 'integer' },
+            },
+          },
+          401: errorResponse,
+        },
+      },
+      config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+      onRequest: [app.authenticate],
+    },
+    async (request, reply) => {
+      const { userId } = request.user as { userId: string };
+      return reply.send(await loadHabits(app.prisma, userId));
     }
   );
 }

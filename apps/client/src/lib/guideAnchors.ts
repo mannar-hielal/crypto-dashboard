@@ -272,6 +272,9 @@ export const GUIDE_ANCHORS = [
   'notify.offer.accept',
   'notify.offer.dismiss',
   'notify.unsubscribe.status',
+  'learn.habit',
+  'learn.streak',
+  'learn.habits.error',
 ] as const;
 
 export type GuideAnchor = (typeof GUIDE_ANCHORS)[number];

@@ -24,6 +24,7 @@ import type {
   PaperStateDTO,
   PlaceOrderRequest,
   PlaceSpotExitsRequest,
+  HabitsResponse,
   LearnProgressResponse,
   RefreshResponse,
   RetentionCohort,
@@ -126,6 +127,12 @@ export const meResponse: MeResponse = {
       updatedAt: '2026-09-29T00:00:00.000Z',
     },
   },
+};
+
+export const habitsResponse: HabitsResponse = {
+  badges: [{ id: 'first-stop-loss', earned: true, progress: 1, target: 1 }],
+  learningDays: 3,
+  streakDays: 2,
 };
 
 export const notificationSettings = { fillEmail: true } as const;

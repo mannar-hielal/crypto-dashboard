@@ -1,4 +1,5 @@
 import type {
+  HabitsResponse,
   LearnEventRequest,
   LearnItemId,
   LearnProgressItem,
@@ -30,6 +31,12 @@ export const learnApi = {
       method: 'PUT',
       headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
+    }),
+
+  /** The account's habit badges and learning streak, counted from what is already stored */
+  getHabits: (accessToken: string) =>
+    request<HabitsResponse>('/api/learn/habits', {
+      headers: { Authorization: `Bearer ${accessToken}` },
     }),
 
   /** Fire-and-forget: report a tour event (accepted with 204, or silently dropped over the cap) */

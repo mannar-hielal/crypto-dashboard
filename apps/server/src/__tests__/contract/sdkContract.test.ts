@@ -343,6 +343,12 @@ const CALLS: Call[] = [
   },
   // learn
   {
+    name: 'learnApi.getHabits',
+    run: () => learnApi.getHabits(T),
+    status: 200,
+    response: f.habitsResponse,
+  },
+  {
     name: 'learnApi.getProgress',
     run: () => learnApi.getProgress(T),
     status: 200,

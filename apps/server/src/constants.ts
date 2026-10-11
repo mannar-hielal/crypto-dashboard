@@ -60,3 +60,12 @@ export const MAX_LEARN_EVENTS_PER_USER = 500;
 
 /** Older events are purged by the daily job and the privacy policy says so (§3, §7) */
 export const LEARN_EVENT_RETENTION_DAYS = 180;
+
+/** Mirrors `HABIT_BADGE_IDS` in the SDK (checked by `learn.test.ts`) */
+export const HABIT_BADGE_IDS = [
+  'first-stop-loss',
+  'ten-stop-losses',
+  'journal-week',
+  'first-tour',
+  'all-tours',
+] as const;

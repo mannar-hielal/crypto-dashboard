@@ -4117,3 +4117,23 @@ unsubscribe` answers the same for any account state (`updateMany`), a forged tok
   token), notifier (which fills count, presence, opt-in / verified / deleting, daily cap, never throws into the
   bus), event bus presence, contract; client offer / page / (Settings toggle); Postgres: defaults, consent time,
   unsubscribe of a deleted account.
+
+### feat: habit badges and the learning streak in the Learn panel (2026-10-11) ✅
+
+**Context:** unit U9, the last of the retention plan. Owner's answer 2026-10-11: inside the Learn panel only — no
+trading streak, no confetti, no sound, nothing on the trading screen. The education report's rule: reward careful
+habits, never profits or how often someone trades.
+
+- **Badges** (`services/Habits.ts`, `GET /api/learn/habits`): `first-stop-loss` and `ten-stop-losses` (user-placed
+  orders that carried a stop-loss — never an engine exit leg, a liquidation or another user's), `journal-week`
+  (notes on seven different days, not seven notes), `first-tour` and `all-tours`. All counted from rows the app
+  already keeps; nothing new is stored. A test pins that no badge id names profit, winning or trading often.
+- **Streak:** a _learning day_ is a day the account moved through a guided-tour step or wrote a journal note
+  (placing a trade is never one). The streak is the run of consecutive days ending today or yesterday, so it
+  survives until midnight.
+- **Panel:** "Your habits" under the tours — the streak line, then each badge with a tick or `n / target`, and a
+  line saying habits are never about profit or how often you trade. Read when the panel opens and again after a
+  tour is finished; a failed read says so and leaves the tours usable (`guide/habits.ts` holds the wording).
+- **Privacy policy 1.3:** a §6 line (the numbers are counted from existing data).
+- **Tests:** pure `computeHabits` / `streakEndingAt`, route (401, own rows only), SDK contract, wording guard,
+  panel rendering and failure; Postgres: stop-loss counting, notes vs automatic lines, tour events and progress.

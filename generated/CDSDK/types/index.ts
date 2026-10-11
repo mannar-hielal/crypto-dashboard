@@ -107,6 +107,34 @@ export interface LearnEventRequest {
   stepId?: string;
 }
 
+// ─── Learn: habits ───────────────────────────────────────────────────────────
+
+/** Careful habits, never profit: what the Learn panel can award */
+export const HABIT_BADGE_IDS = [
+  'first-stop-loss',
+  'ten-stop-losses',
+  'journal-week',
+  'first-tour',
+  'all-tours',
+] as const;
+export type HabitBadgeId = (typeof HABIT_BADGE_IDS)[number];
+
+export interface HabitBadge {
+  id: HabitBadgeId;
+  earned: boolean;
+  /** Counted so far, capped at `target` */
+  progress: number;
+  target: number;
+}
+
+export interface HabitsResponse {
+  badges: HabitBadge[];
+  /** Days on which the account looked at a guided tour or wrote a journal note */
+  learningDays: number;
+  /** Consecutive learning days up to today (or yesterday, so a streak survives until midnight) */
+  streakDays: number;
+}
+
 // ─── Notifications ───────────────────────────────────────────────────────────
 
 /** What the account has opted into by e-mail (off until the user turns it on) */
