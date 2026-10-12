@@ -8,6 +8,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useSignInToTrade } from '@/hooks/useSignIn';
 import { usePaperStore } from '@/store/paperStore';
 import { useTourStore } from '@/guide/tourStore';
+import { isAdminEmail } from '@/lib/adminEmail';
 import { bg, color, fontSize, gradient, radius } from '@/lib/tokens';
 import { SettingsModal } from './SettingsModal';
 import { TradeMenu } from './TradeMenu';
@@ -167,7 +168,7 @@ export function TopBar({ marketing = false }: TopBarProps) {
                       <GraduationCap className="h-3.5 w-3.5" />
                       Learn
                     </motion.button>
-                    {user?.email === import.meta.env.VITE_ADMIN_EMAIL && (
+                    {isAdminEmail(user?.email) && (
                       <motion.button
                         onClick={() => {
                           setMenuOpen(false);
@@ -184,7 +185,7 @@ export function TopBar({ marketing = false }: TopBarProps) {
                         Admin
                       </motion.button>
                     )}
-                    {user?.email === import.meta.env.VITE_ADMIN_EMAIL && (
+                    {isAdminEmail(user?.email) && (
                       <motion.button
                         onClick={() => {
                           setMenuOpen(false);

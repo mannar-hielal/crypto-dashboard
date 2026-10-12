@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/authStore';
 import { newsletterApi } from '@crypto-dashboard/sdk';
 import type { SubscriberInfo } from '@crypto-dashboard/sdk';
 import { bg, color, fontSize } from '@/lib/tokens';
+import { isAdminEmail } from '@/lib/adminEmail';
 
 type StatusFilter = 'all' | 'pending' | 'verified' | 'unsubscribed';
 
@@ -73,13 +74,13 @@ export function AdminNewsletterPage() {
   const [showEmails, setShowEmails] = useState(false);
 
   useEffect(() => {
-    if (user && user.email !== import.meta.env.VITE_ADMIN_EMAIL) {
+    if (user && !isAdminEmail(user.email)) {
       navigate('/dashboard', { replace: true });
     }
   }, [user, navigate]);
 
   useEffect(() => {
-    if (!accessToken || user?.email !== import.meta.env.VITE_ADMIN_EMAIL) return;
+    if (!accessToken || !isAdminEmail(user?.email)) return;
 
     const filterParam = statusFilter === 'all' ? undefined : statusFilter;
 

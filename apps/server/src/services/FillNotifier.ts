@@ -89,33 +89,41 @@ export class FillNotifier {
 
     let count = 0;
     for (const order of filled) {
-      if (!this.allow(event.userId)) break;
-      await this.mailer.sendOrderFilledEmail(
-        user.email,
-        user.username,
-        {
-          market: order.category === 'spot' ? 'Spot' : 'USDT Perpetual',
-          symbol: order.symbol,
-          side: order.side === 'buy' ? 'Buy' : 'Sell',
-          type: order.type === 'limit' ? 'limit' : 'stop',
-          qty: order.qty,
-          price: order.fillPrice ?? order.limitPrice ?? order.stopPrice ?? '—',
-        },
-        `${config.clientUrl}/notifications/unsubscribe?token=${encodeURIComponent(
-          makeUnsubscribeToken(event.userId)
-        )}`
-      );
-      count += 1;
+      if (!this.reserve(event.userId)) break;
+      try {
+        await this.mailer.sendOrderFilledEmail(
+          user.email,
+          user.username,
+          {
+            market: order.category === 'spot' ? 'Spot' : 'USDT Perpetual',
+            symbol: order.symbol,
+            side: order.side === 'buy' ? 'Buy' : 'Sell',
+            type: order.type === 'limit' ? 'limit' : 'stop',
+            qty: order.qty,
+            price: order.fillPrice ?? order.limitPrice ?? order.stopPrice ?? '—',
+          },
+          `${config.clientUrl}/notifications/unsubscribe?token=${encodeURIComponent(
+            makeUnsubscribeToken(event.userId)
+          )}`
+        );
+        count += 1;
+      } catch (err) {
+        // One failed send (a mail-provider outage) neither costs the user a daily slot nor drops
+        // the other fills of this change
+        this.refund(event.userId);
+        log.error({ err }, 'Could not send an order-filled e-mail');
+      }
     }
     return count;
   }
 
   /**
-   * The per-user, per-UTC-day cap; counts the e-mail it allows. 🔐 Fails closed: when the map holds
+   * Takes one of the user's daily slots before the send (so parallel events cannot both pass the
+   * cap); `refund` gives it back when the send failed. 🔐 Fails closed: when the map holds
    * `maxTrackedUsers` users, a user it is not already counting gets no e-mail rather than the
    * counters being cleared (which would hand every capped user a fresh allowance mid-day).
    */
-  private allow(userId: string): boolean {
+  private reserve(userId: string): boolean {
     const today = this.now().toISOString().slice(0, 10);
     if (today !== this.day) {
       this.day = today;
@@ -126,5 +134,10 @@ export class FillNotifier {
     if ((n ?? 0) >= MAX_PER_DAY) return false;
     this.sent.set(userId, (n ?? 0) + 1);
     return true;
+  }
+
+  private refund(userId: string): void {
+    const n = this.sent.get(userId);
+    if (n !== undefined && n > 0) this.sent.set(userId, n - 1);
   }
 }

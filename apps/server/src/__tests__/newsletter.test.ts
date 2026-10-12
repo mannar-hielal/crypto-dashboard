@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, afterAll, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterAll, afterEach } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 
 // ─── Mock EmailService ───────────────────────────────────────────────────────
@@ -13,6 +13,7 @@ vi.mock('../plugins/prisma.js', () => {
   const skipOverride = Symbol.for('skip-override');
   const plugin = async (app: FastifyInstance) => {
     const prismaClient = {
+      user: { findUnique: vi.fn() },
       subscriber: {
         create: vi.fn(),
         findUnique: vi.fn(),
@@ -345,6 +346,14 @@ describe('Newsletter Routes', () => {
   });
 
   describe('GET /api/newsletter/subscribers', () => {
+    beforeEach(() => {
+      // requireAdmin reads the account: the admin, verified
+      vi.mocked(app.prisma.user.findUnique).mockResolvedValue({
+        email: 'admin@test.com',
+        emailVerifiedAt: new Date(),
+      } as never);
+    });
+
     afterEach(() => {
       vi.clearAllMocks();
     });

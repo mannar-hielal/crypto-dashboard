@@ -6,7 +6,7 @@ vi.mock('../plugins/prisma.js', () => {
   const skipOverride = Symbol.for('skip-override');
   const plugin = async (app: FastifyInstance) => {
     const prismaClient = {
-      user: { findMany: vi.fn() },
+      user: { findMany: vi.fn(), findUnique: vi.fn() },
       order: { findMany: vi.fn() },
       journalEntry: { findMany: vi.fn() },
       userActivity: { findMany: vi.fn(), findFirst: vi.fn() },
@@ -41,6 +41,10 @@ describe('GET /api/admin/metrics/retention', () => {
     vi.clearAllMocks();
     clearRetentionCache();
     vi.mocked(app.prisma.user.findMany).mockResolvedValue([] as never);
+    vi.mocked(app.prisma.user.findUnique).mockResolvedValue({
+      email: 'admin@test.com',
+      emailVerifiedAt: new Date(),
+    } as never);
     vi.mocked(app.prisma.order.findMany).mockResolvedValue([] as never);
     vi.mocked(app.prisma.journalEntry.findMany).mockResolvedValue([] as never);
     vi.mocked(app.prisma.userActivity.findMany).mockResolvedValue([] as never);

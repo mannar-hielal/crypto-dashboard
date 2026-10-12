@@ -135,6 +135,27 @@ describe('FillNotifier', () => {
     expect(await notifier.handle(event([order()], ['o1']))).toBe(1);
   });
 
+  it('should not charge a daily slot for a send that failed, nor drop the rest of the change', async () => {
+    const { notifier, send } = setup();
+    send.mockRejectedValueOnce(new Error('resend down')).mockResolvedValue(undefined);
+    const two = [order({ id: 'a' }), order({ id: 'b' })];
+
+    // the first fill's send fails, the second still goes
+    expect(await notifier.handle(event(two, ['a', 'b']))).toBe(1);
+    expect(send).toHaveBeenCalledTimes(2);
+
+    // and the failed attempt cost nothing: a full day's allowance is still there
+    const many = Array.from({ length: MAX_PER_DAY }, (_, i) => order({ id: `m${i}` }));
+    expect(
+      await notifier.handle(
+        event(
+          many,
+          many.map((o) => o.id)
+        )
+      )
+    ).toBe(MAX_PER_DAY - 1);
+  });
+
   it('should not reset anyone’s counter when the map fills: a new user gets no e-mail instead', async () => {
     const findUnique = vi.fn().mockResolvedValue(OPTED_IN);
     const send = vi.fn().mockResolvedValue(undefined);
