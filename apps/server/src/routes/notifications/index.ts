@@ -86,8 +86,11 @@ export async function notificationsRoutes(app: FastifyInstance) {
         }
       }
 
-      await app.prisma.user.update({
-        where: { id: userId },
+      // 🔐 Only when the choice changes: `fillEmailOptInAt` is the proof of consent, so a repeat of
+      //    the same answer (a double click, a retry) must not move it. The state in the `where`
+      //    makes it idempotent and race-safe — the second of two concurrent requests matches nothing
+      await app.prisma.user.updateMany({
+        where: { id: userId, fillEmailOptIn: !fillEmail },
         data: { fillEmailOptIn: fillEmail, fillEmailOptInAt: fillEmail ? new Date() : null },
       });
       return reply.send({ fillEmail });
