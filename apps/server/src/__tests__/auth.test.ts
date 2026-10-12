@@ -859,6 +859,35 @@ describe('POST /api/auth/verify-email-change', () => {
     expect(res.json<{ message: string }>().message).toMatch(/email updated successfully/i);
   });
 
+  it('should switch the order-fill e-mail off when the address changes (consent is per address)', async () => {
+    (app.prisma.emailChangeToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'ect-2',
+      tokenHash: 'hashed',
+      userId: 'user-1',
+      newEmail: 'new-email@example.com',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      user: { id: 'user-1', email: 'old-email@example.com', username: 'testuser' },
+    });
+    const update = app.prisma.user.update as ReturnType<typeof vi.fn>;
+    update.mockClear();
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/verify-email-change',
+      payload: { token: VALID_TOKEN },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: expect.objectContaining({
+        email: 'new-email@example.com',
+        fillEmailOptIn: false,
+        fillEmailOptInAt: null,
+      }),
+    });
+  });
+
   it('should answer 400, not 500, when a concurrent duplicate request already consumed the token', async () => {
     (app.prisma.emailChangeToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       id: 'ect-1',

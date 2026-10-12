@@ -6,6 +6,13 @@
  * go through, never an exit leg, never a liquidation. And only for a user who opted in, whose
  * e-mail is verified, who is not deleting the account, and who has no socket open (they would
  * have seen it). 🔐 Bounded: at most `MAX_PER_DAY` e-mails per user per UTC day.
+ *
+ * Single-machine assumption (the same one `PaperEventBus` documents): production runs one Fly
+ * Machine (`fly.toml`: `min_machines_running = 1`, one shared-cpu VM), and resting orders are
+ * filled only by the machine that holds the engine lease. So the sockets `hasListeners` sees are
+ * all the sockets there are, and the daily counter lives with the one process that sends. Running
+ * several machines needs both moved off this process: presence via Redis pub/sub like the bus, the
+ * counter into the database.
  */
 
 import type { FastifyInstance } from 'fastify';
