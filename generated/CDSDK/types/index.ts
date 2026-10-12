@@ -61,6 +61,88 @@ export interface SubscribersResponse {
   total: number;
 }
 
+// ─── Learn: guided tours ─────────────────────────────────────────────────────
+
+/** Everything the account remembers about learning: the three tours and the welcome card */
+export const LEARN_ITEM_IDS = [
+  'primer',
+  'buy-first-coin',
+  'sell-and-review',
+  'welcome-card',
+  'fill-email-offer',
+] as const;
+export type LearnItemId = (typeof LEARN_ITEM_IDS)[number];
+
+/** `completed`: finished (never downgraded); `dismissed`: the learner closed the offer */
+export type LearnStatus = 'completed' | 'dismissed';
+
+export interface LearnProgressItem {
+  itemId: LearnItemId;
+  status: LearnStatus;
+  updatedAt: string;
+}
+
+export interface LearnProgressResponse {
+  items: LearnProgressItem[];
+}
+
+export interface SetLearnProgressRequest {
+  status: LearnStatus;
+}
+
+/** What the client may report about a guided tour (a funnel: started → steps → completed / closed) */
+export const LEARN_EVENT_NAMES = [
+  'tour_started',
+  'tour_step',
+  'tour_completed',
+  'tour_closed',
+] as const;
+export type LearnEventName = (typeof LEARN_EVENT_NAMES)[number];
+
+export interface LearnEventRequest {
+  name: LearnEventName;
+  /** The tour: never one of the offers */
+  itemId: Exclude<LearnItemId, 'welcome-card' | 'fill-email-offer'>;
+  /** `<tour id>.<n>`: the step viewed, or the step the tour was closed on */
+  stepId?: string;
+}
+
+// ─── Learn: habits ───────────────────────────────────────────────────────────
+
+/** Careful habits, never profit: what the Learn panel can award */
+export const HABIT_BADGE_IDS = [
+  'first-stop-loss',
+  'ten-stop-losses',
+  'journal-week',
+  'first-tour',
+  'all-tours',
+] as const;
+export type HabitBadgeId = (typeof HABIT_BADGE_IDS)[number];
+
+export interface HabitBadge {
+  id: HabitBadgeId;
+  earned: boolean;
+  /** Counted so far, capped at `target` */
+  progress: number;
+  target: number;
+}
+
+export interface HabitsResponse {
+  badges: HabitBadge[];
+  /** Days on which the account looked at a guided tour or wrote a journal note */
+  learningDays: number;
+  /** Consecutive learning days up to today (or yesterday, so a streak survives until midnight) */
+  streakDays: number;
+}
+
+// ─── Notifications ───────────────────────────────────────────────────────────
+
+/** What the account has opted into by e-mail (off until the user turns it on) */
+export interface NotificationSettings {
+  /** An e-mail when a resting limit / stop order of theirs fills while they are not connected */
+  fillEmail: boolean;
+}
+
 // ─── Admin: retention metrics ────────────────────────────────────────────────
 
 /** `count` of the `eligible` users — a window not yet fully elapsed leaves a user out of `eligible` */
@@ -89,11 +171,34 @@ export interface RetentionCohort {
   firstOrderWithStopLoss: MetricsRate;
 }
 
+/** People who viewed one step of a tour (a person counts once however often they went back) */
+export interface TourFunnelStep {
+  stepId: string;
+  viewers: number;
+  /** People whose last event in this tour was closing it on this step */
+  closedHere: number;
+}
+
+export interface TourFunnelTour {
+  itemId: string;
+  /** People who started it, and who finished it, in the last 180 days */
+  started: number;
+  completed: number;
+  steps: TourFunnelStep[];
+}
+
 export interface RetentionMetricsResponse {
   generatedAt: string;
   windowWeeks: number;
   /** True when the user row cap cut the window short — the numbers are then a lower bound */
   truncated: boolean;
+  /**
+   * UTC date (YYYY-MM-DD) of the oldest recorded sign-in day, or null before any exists. Cohorts
+   * older than this under-count return: their sign-ins were not recorded yet.
+   */
+  activityTrackedSince: string | null;
+  /** The guided tours' funnel, from learning events (recorded since the tours shipped) */
+  tourFunnel: TourFunnelTour[];
   totals: RetentionCohort;
   cohorts: RetentionCohort[];
 }

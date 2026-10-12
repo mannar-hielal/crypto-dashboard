@@ -2,6 +2,8 @@ import { buildApp } from './app.js';
 import { config } from './config.js';
 import { logger } from './logger.js';
 import { EmailService } from './services/EmailService.js';
+import { purgeOldActivity } from './services/UserActivity.js';
+import { purgeOldLearningEvents } from './services/LearningEvents.js';
 import { DIGEST_WINDOW_MS, startErrorDigest } from './lib/errorAlerts.js';
 
 type AppInstance = Awaited<ReturnType<typeof buildApp>>;
@@ -56,6 +58,17 @@ async function startPurgeJob(app: AppInstance) {
       }
     } catch (err) {
       app.log.error(err, 'Error during account purge job');
+    }
+
+    // 3. Activity days past their retention period (privacy policy §7); its own try so a failure
+    //    here can't hide the account pass above, nor the other way round
+    try {
+      const purged = await purgeOldActivity(app.prisma, now);
+      if (purged > 0) app.log.info({ count: purged }, 'Purged old activity days');
+      const purgedEvents = await purgeOldLearningEvents(app.prisma, now);
+      if (purgedEvents > 0) app.log.info({ count: purgedEvents }, 'Purged old learning events');
+    } catch (err) {
+      app.log.error(err, 'Error purging activity days and learning events');
     }
   };
 

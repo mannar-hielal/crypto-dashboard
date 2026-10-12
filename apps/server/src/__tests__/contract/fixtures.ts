@@ -24,6 +24,8 @@ import type {
   PaperStateDTO,
   PlaceOrderRequest,
   PlaceSpotExitsRequest,
+  HabitsResponse,
+  LearnProgressResponse,
   RefreshResponse,
   RetentionCohort,
   RetentionMetricsResponse,
@@ -127,6 +129,22 @@ export const meResponse: MeResponse = {
   },
 };
 
+export const habitsResponse: HabitsResponse = {
+  badges: [{ id: 'first-stop-loss', earned: true, progress: 1, target: 1 }],
+  learningDays: 3,
+  streakDays: 2,
+};
+
+export const notificationSettings = { fillEmail: true } as const;
+
+export const learnProgressResponse: LearnProgressResponse = {
+  items: [{ itemId: 'primer', status: 'completed', updatedAt: '2026-10-11T00:00:00.000Z' }],
+};
+
+export const learnProgressItem = {
+  item: { itemId: 'primer', status: 'completed', updatedAt: '2026-10-11T00:00:00.000Z' },
+} as const;
+
 const cohort: RetentionCohort = {
   weekStart: '2026-09-28',
   signups: 4,
@@ -144,6 +162,15 @@ export const retentionMetricsResponse: RetentionMetricsResponse = {
   generatedAt: '2026-10-11T00:00:00.000Z',
   windowWeeks: 12,
   truncated: false,
+  activityTrackedSince: '2026-10-12',
+  tourFunnel: [
+    {
+      itemId: 'primer',
+      started: 3,
+      completed: 2,
+      steps: [{ stepId: 'primer.1', viewers: 3, closedHere: 1 }],
+    },
+  ],
   totals: { ...cohort, weekStart: null },
   cohorts: [cohort],
 };

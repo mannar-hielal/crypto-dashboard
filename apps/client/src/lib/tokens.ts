@@ -216,6 +216,7 @@ export const zIndex = {
   dropdown: 50,
   tooltip: 100,
   modal: 200,
+  tour: 250, // guided-tour ring + bubble: above dialogs, below toasts
   toast: 300,
   drawingOverlay: 400,
 } as const;

@@ -4,6 +4,7 @@ import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { Prisma } from '../../../generated/prisma/client.js';
 import { config } from '../../config.js';
 import { EmailService } from '../../services/EmailService.js';
+import { trackActivity } from '../../services/UserActivity.js';
 import { clientIp } from '../../lib/clientIp.js';
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -845,6 +846,7 @@ export async function authRoutes(app: FastifyInstance) {
       }
 
       const accessToken = await issueTokens(reply, user.id, user.email);
+      trackActivity(app, user.id);
 
       return reply.send({
         accessToken,
@@ -918,6 +920,7 @@ export async function authRoutes(app: FastifyInstance) {
         }
 
         const accessToken = await issueTokens(reply, user.id, user.email);
+        trackActivity(app, user.id);
 
         return reply.send({ accessToken });
       });
@@ -1260,7 +1263,13 @@ export async function authRoutes(app: FastifyInstance) {
         if (count === 0) throw new TokenConsumedError();
         await tx.user.update({
           where: { id: stored.userId },
-          data: { email: newEmail, emailVerifiedAt: new Date() },
+          data: {
+            email: newEmail,
+            emailVerifiedAt: new Date(),
+            // 🔐 Consent to be mailed is consent for one address: it does not follow the change
+            fillEmailOptIn: false,
+            fillEmailOptInAt: null,
+          },
         });
         // 🔐 Standards: Security logout after email change
         await tx.refreshToken.deleteMany({ where: { userId: stored.userId } });

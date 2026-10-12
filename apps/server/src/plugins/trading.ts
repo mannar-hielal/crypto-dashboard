@@ -31,6 +31,7 @@ import {
 } from '../trading/bybitSpec.js';
 import type { Category, InstrumentRules } from '../trading/engine/index.js';
 import { getInstruments, getRiskLimit } from '../services/BybitMarketInfo.js';
+import { FillNotifier } from '../services/FillNotifier.js';
 import { ALLOWED_CATEGORIES, ALLOWED_SYMBOLS } from '../constants.js';
 
 const log = logger.child({ plugin: 'trading' });
@@ -131,6 +132,9 @@ async function tradingPlugin(fastify: FastifyInstance): Promise<void> {
     holder: `${hostname()}-${process.pid}-${randomBytes(4).toString('hex')}`,
   });
 
+  // Opt-in "your order filled while you were away" e-mail (never in tests: they have no feed)
+  const stopFillNotifier = new FillNotifier(fastify.prisma, events).start();
+
   // Start after the server is ready so the Bybit feed and DB are up; never block boot on it.
   let rulesTimer: NodeJS.Timeout | null = null;
   fastify.addHook('onReady', async () => {
@@ -147,6 +151,7 @@ async function tradingPlugin(fastify: FastifyInstance): Promise<void> {
   });
   fastify.addHook('onClose', async () => {
     if (rulesTimer) clearInterval(rulesTimer);
+    stopFillNotifier();
     await engine.stop();
   });
 }

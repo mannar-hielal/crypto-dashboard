@@ -52,6 +52,9 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   User: 'User',
+  UserActivity: 'UserActivity',
+  LearningProgress: 'LearningProgress',
+  LearningEvent: 'LearningEvent',
   RefreshToken: 'RefreshToken',
   PasswordResetToken: 'PasswordResetToken',
   VerificationToken: 'VerificationToken',
@@ -94,11 +97,43 @@ export const UserScalarFieldEnum = {
   emailVerifiedAt: 'emailVerifiedAt',
   termsAcceptedAt: 'termsAcceptedAt',
   termsAcceptedIp: 'termsAcceptedIp',
+  fillEmailOptIn: 'fillEmailOptIn',
+  fillEmailOptInAt: 'fillEmailOptInAt',
   deletionRequestedAt: 'deletionRequestedAt',
   deletionWarningSentAt: 'deletionWarningSentAt'
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const UserActivityScalarFieldEnum = {
+  userId: 'userId',
+  day: 'day'
+} as const
+
+export type UserActivityScalarFieldEnum = (typeof UserActivityScalarFieldEnum)[keyof typeof UserActivityScalarFieldEnum]
+
+
+export const LearningProgressScalarFieldEnum = {
+  userId: 'userId',
+  itemId: 'itemId',
+  status: 'status',
+  updatedAt: 'updatedAt'
+} as const
+
+export type LearningProgressScalarFieldEnum = (typeof LearningProgressScalarFieldEnum)[keyof typeof LearningProgressScalarFieldEnum]
+
+
+export const LearningEventScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  name: 'name',
+  itemId: 'itemId',
+  stepId: 'stepId',
+  at: 'at'
+} as const
+
+export type LearningEventScalarFieldEnum = (typeof LearningEventScalarFieldEnum)[keyof typeof LearningEventScalarFieldEnum]
 
 
 export const RefreshTokenScalarFieldEnum = {

@@ -1,0 +1,54 @@
+/* The "stop these e-mails" landing page: one card, one answer. Colours from tokens.ts via the
+   @theme mirror in index.css. */
+
+.page {
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--color-bg-page);
+}
+
+.card {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 28rem;
+  border: 1px solid var(--color-brand-purple-deep);
+  border-radius: 16px;
+  padding: 32px;
+  background: var(--color-bg-panel);
+  text-align: center;
+  color: var(--color-brand-white);
+}
+
+.title {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.text {
+  margin: 0;
+  color: var(--color-brand-muted);
+  font-size: 14px; /* fontSize.xs */
+  line-height: 1.5;
+}
+
+.error {
+  color: var(--color-brand-red);
+}
+
+.link {
+  display: inline-block;
+  margin-top: 20px;
+  color: var(--color-brand-purple);
+  font-size: 14px; /* fontSize.xs */
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--color-brand-purple-dark); /* focusRing */
+  outline-offset: 3px;
+}

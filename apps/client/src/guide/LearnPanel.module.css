@@ -1,0 +1,144 @@
+/* The Learn panel: the tours, one list, opened from the user menu. Colours from tokens.ts via the
+   @theme mirror in index.css; raw values without a CSS variable are noted with their token. */
+
+.panel {
+  position: fixed;
+  top: 48px; /* below the top bar (h-12) */
+  right: 0;
+  bottom: 0;
+  z-index: 200; /* zIndex.modal */
+  box-sizing: border-box;
+  width: 360px;
+  max-width: 100vw;
+  overflow-y: auto;
+  border-left: 1px solid rgba(255, 255, 255, 0.06); /* border.divider */
+  padding: 16px;
+  background: var(--color-bg-footer); /* bg.modal */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); /* shadow.modal */
+  color: var(--color-brand-white);
+  font-size: 14px; /* fontSize.xs */
+  line-height: 1.5;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.title {
+  margin: 0;
+  font-size: 18px; /* fontSize.base */
+  font-weight: 700;
+}
+
+.close {
+  display: inline-flex;
+  border: 0;
+  border-radius: 6px;
+  padding: 4px;
+  background: transparent;
+  color: var(--color-brand-muted);
+  cursor: pointer;
+}
+
+.close:hover {
+  color: var(--color-brand-white);
+}
+
+.intro {
+  margin: 0 0 16px;
+  color: var(--color-brand-muted);
+}
+
+.sectionTitle {
+  margin: 20px 0 8px;
+  color: var(--color-brand-muted);
+  font-size: 13px; /* fontSize.xs11 */
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tour {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(105, 91, 236, 0.2); /* color.purpleDark at 20 % */
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--color-bg-panel);
+}
+
+.tick {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+  color: var(--color-brand-green);
+}
+
+.tickDone {
+  border-color: var(--color-brand-green);
+}
+
+.tourText {
+  min-width: 0;
+  flex: 1;
+}
+
+.tourTitle {
+  margin: 0;
+  font-weight: 600;
+}
+
+.tourMeta {
+  margin: 0;
+  color: var(--color-brand-muted);
+  font-size: 13px; /* fontSize.xs11 */
+}
+
+.start {
+  flex: none;
+  border: 0;
+  border-radius: 9999px;
+  padding: 5px 14px;
+  background: var(--color-bg-surface);
+  color: var(--color-brand-white);
+  font: inherit;
+  cursor: pointer;
+}
+
+.start:hover:not(:disabled) {
+  background: var(--color-brand-purple-dark);
+}
+
+.start:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.note {
+  margin: 12px 0 0;
+  color: var(--color-brand-muted);
+  font-size: 13px; /* fontSize.xs11 */
+}
+
+.panel button:focus-visible {
+  outline: 2px solid var(--color-brand-purple-dark); /* focusRing */
+  outline-offset: 3px;
+}

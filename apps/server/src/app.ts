@@ -19,6 +19,8 @@ import { authRoutes } from './routes/auth/index.js';
 import { paperRoutes } from './routes/paper/index.js';
 import { newsletterRoutes } from './routes/newsletter/index.js';
 import { adminRoutes } from './routes/admin/index.js';
+import { learnRoutes } from './routes/learn/index.js';
+import { notificationsRoutes } from './routes/notifications/index.js';
 import { testHooksRoutes } from './routes/test/index.js';
 import { errorAlertHook } from './lib/errorAlerts.js';
 
@@ -215,6 +217,8 @@ export async function buildApp() {
   await app.register(paperRoutes, { prefix: '/api/paper' });
   await app.register(newsletterRoutes, { prefix: '/api/newsletter' });
   await app.register(adminRoutes, { prefix: '/api/admin' });
+  await app.register(learnRoutes, { prefix: '/api/learn' });
+  await app.register(notificationsRoutes, { prefix: '/api/notifications' });
   // 🔐 Test-only (F2): not registered at all unless ENABLE_TEST_HOOKS=1, which config.ts refuses in
   //    production — the routes then don't exist (404), rather than exist and refuse
   if (config.testHooks) {
