@@ -13,7 +13,7 @@ export function PrivacyPage() {
         description="Privacy policy for cryptopapertrade.com. Learn how we collect, use, and protect your data (nDSG and GDPR compliant)."
         path="/privacy"
       />
-      <LegalLayout title="Privacy Policy" lastUpdated="September 24, 2026" version="1.2">
+      <LegalLayout title="Privacy Policy" lastUpdated="October 11, 2026" version="1.3">
         <section>
           <h2>1. Data Controller</h2>
           <p>
@@ -74,6 +74,38 @@ export function PrivacyPage() {
                 <td>SHA-256 hash in database, 7-day TTL, then auto-deleted</td>
               </tr>
               <tr>
+                <td>Learning events</td>
+                <td>
+                  Seeing where people get stuck in the guided tours, so we can make them clearer
+                </td>
+                <td>
+                  The tour and step you reached and when — no text you typed. At most 500 per
+                  account, deleted after 180 days or with your account.
+                </td>
+              </tr>
+              <tr>
+                <td>Learning progress</td>
+                <td>
+                  Remembering which guided tours you have finished and whether you dismissed the
+                  welcome offer
+                </td>
+                <td>
+                  A few records tied to your account (a tour name and a status), stored in our
+                  database and deleted with your account.
+                </td>
+              </tr>
+              <tr>
+                <td>Activity days</td>
+                <td>
+                  Counting, in aggregate, how often people come back, so we can improve the service
+                </td>
+                <td>
+                  One record per day on which you signed in or resumed your session: your account
+                  and the date only — no time, IP address or device. Deleted after 180 days, or with
+                  your account.
+                </td>
+              </tr>
+              <tr>
                 <td>Paper trade history</td>
                 <td>
                   Displaying your simulated portfolio, positions, and order/trade history — and
@@ -94,6 +126,18 @@ export function PrivacyPage() {
                 <td>
                   IP address + request metadata — retained for 30 days (Fly.io) or 7 days
                   (Cloudflare). See Section 7 for details.
+                </td>
+              </tr>
+              <tr>
+                <td>Order-fill e-mail preference</td>
+                <td>
+                  Sending you one e-mail when a pending order of yours fills while you are away —
+                  only if you turn it on
+                </td>
+                <td>
+                  A yes / no on your account and the time you said yes (your proof of consent),
+                  deleted with your account. Off by default; every such e-mail has a link that turns
+                  it off.
                 </td>
               </tr>
               <tr>
@@ -133,12 +177,20 @@ export function PrivacyPage() {
             </li>
             <li>
               <strong>Legitimate interest (Art. 6(1)(f) GDPR)</strong>: security logging, abuse
-              prevention, platform stability.
+              prevention, platform stability, and counting in aggregate how often people return and
+              where they stop in the guided tours (activity days and learning events). You may
+              object to this (Section 11).
             </li>
             <li>
               <strong>Consent (Art. 6(1)(a) GDPR)</strong>: newsletter subscription — you explicitly
               opt in, and we record your IP and timestamp at the point of consent. You may withdraw
               at any time via the unsubscribe link in every email.
+            </li>
+            <li>
+              <strong>Consent (Art. 6(1)(a) GDPR)</strong>: the optional "order filled" e-mail — it
+              is off until you turn it on in Settings or accept the offer in the app, and we record
+              when you did. You may withdraw at any time in Settings or from the link in each such
+              e-mail.
             </li>
           </ul>
         </section>
@@ -150,9 +202,18 @@ export function PrivacyPage() {
             <li>To display your paper trading history and virtual portfolio.</li>
             <li>
               To send transactional emails: password reset and newsletter confirmation/verification
-              (no marketing emails).
+              (no marketing emails) and, only if you opt in, one e-mail when a pending order of
+              yours fills while you are away.
             </li>
             <li>To detect and prevent abuse, fraud, or unauthorised access.</li>
+            <li>
+              To show you your own habit badges and learning streak, counted from your own orders,
+              journal notes and tour progress (nothing extra is stored for them).
+            </li>
+            <li>
+              To count, in aggregate, how many people come back to the service, so we can see
+              whether changes help (we read totals, not individual people's days).
+            </li>
           </ul>
           <p>
             <strong>
@@ -176,6 +237,10 @@ export function PrivacyPage() {
             </li>
             <li>
               <strong>Refresh tokens</strong>: automatically expire and are deleted after 7 days.
+            </li>
+            <li>
+              <strong>Activity days and learning events</strong>: deleted automatically after{' '}
+              <strong>180 days</strong>, and with your account.
             </li>
             <li>
               <strong>Password reset tokens</strong>: automatically invalidated after use or after 1

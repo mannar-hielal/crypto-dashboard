@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, afterAll, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterAll, afterEach } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 
 // ─── Mock EmailService ───────────────────────────────────────────────────────
@@ -13,6 +13,7 @@ vi.mock('../plugins/prisma.js', () => {
   const skipOverride = Symbol.for('skip-override');
   const plugin = async (app: FastifyInstance) => {
     const prismaClient = {
+      user: { findUnique: vi.fn() },
       subscriber: {
         create: vi.fn(),
         findUnique: vi.fn(),
@@ -345,6 +346,14 @@ describe('Newsletter Routes', () => {
   });
 
   describe('GET /api/newsletter/subscribers', () => {
+    beforeEach(() => {
+      // requireAdmin reads the account: the admin, verified
+      vi.mocked(app.prisma.user.findUnique).mockResolvedValue({
+        email: 'admin@test.com',
+        emailVerifiedAt: new Date(),
+      } as never);
+    });
+
     afterEach(() => {
       vi.clearAllMocks();
     });
@@ -356,6 +365,19 @@ describe('Newsletter Routes', () => {
       });
 
       expect(res.statusCode).toBe(401);
+    });
+
+    it('returns 403 for a signed-in user who is not the admin, and reads nothing', async () => {
+      const userToken = app.jwt.sign({ userId: 'user-1', email: 'user@test.com' });
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/newsletter/subscribers',
+        headers: { authorization: `Bearer ${userToken}` },
+      });
+
+      expect(res.statusCode).toBe(403);
+      expect(res.json()).toEqual({ error: 'Forbidden' });
+      expect(app.prisma.subscriber.findMany).not.toHaveBeenCalled();
     });
 
     it('returns all subscribers without status filter', async () => {

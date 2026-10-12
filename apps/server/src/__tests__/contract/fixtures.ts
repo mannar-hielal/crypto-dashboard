@@ -24,7 +24,11 @@ import type {
   PaperStateDTO,
   PlaceOrderRequest,
   PlaceSpotExitsRequest,
+  HabitsResponse,
+  LearnProgressResponse,
   RefreshResponse,
+  RetentionCohort,
+  RetentionMetricsResponse,
   RiskLimitResponse,
   SubscribersResponse,
   UpdatePositionExitsRequest,
@@ -123,6 +127,52 @@ export const meResponse: MeResponse = {
       updatedAt: '2026-09-29T00:00:00.000Z',
     },
   },
+};
+
+export const habitsResponse: HabitsResponse = {
+  badges: [{ id: 'first-stop-loss', earned: true, progress: 1, target: 1 }],
+  learningDays: 3,
+  streakDays: 2,
+};
+
+export const notificationSettings = { fillEmail: true } as const;
+
+export const learnProgressResponse: LearnProgressResponse = {
+  items: [{ itemId: 'primer', status: 'completed', updatedAt: '2026-10-11T00:00:00.000Z' }],
+};
+
+export const learnProgressItem = {
+  item: { itemId: 'primer', status: 'completed', updatedAt: '2026-10-11T00:00:00.000Z' },
+} as const;
+
+const cohort: RetentionCohort = {
+  weekStart: '2026-09-28',
+  signups: 4,
+  verified: 3,
+  activated: { eligible: 4, count: 2 },
+  medianHoursToFirstOrder: 1.5,
+  activeWeek1: { eligible: 4, count: 1 },
+  activeWeek2: { eligible: 0, count: 0 },
+  activeWeek4: { eligible: 0, count: 0 },
+  resetUsers: 1,
+  firstOrderWithStopLoss: { eligible: 2, count: 1 },
+};
+
+export const retentionMetricsResponse: RetentionMetricsResponse = {
+  generatedAt: '2026-10-11T00:00:00.000Z',
+  windowWeeks: 12,
+  truncated: false,
+  activityTrackedSince: '2026-10-12',
+  tourFunnel: [
+    {
+      itemId: 'primer',
+      started: 3,
+      completed: 2,
+      steps: [{ stepId: 'primer.1', viewers: 3, closedHere: 1 }],
+    },
+  ],
+  totals: { ...cohort, weekStart: null },
+  cohorts: [cohort],
 };
 
 export const subscribersResponse: SubscribersResponse = {

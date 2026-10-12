@@ -1,0 +1,199 @@
+/* Admin retention metrics. Colours from tokens.ts via the @theme mirror in index.css; raw values
+   without a CSS variable are noted with their token. */
+
+.page {
+  position: relative;
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  background: linear-gradient(
+    180deg,
+    var(--color-bg-deep) 0%,
+    var(--color-bg-page) 30%,
+    var(--color-bg-navy) 100%
+  );
+}
+
+.main {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 64rem;
+  margin: 0 auto;
+  flex: 1;
+  padding: 48px 16px;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.title {
+  margin: 0;
+  color: var(--color-brand-white);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  margin: 4px 0 0;
+  color: var(--color-brand-muted);
+  font-size: 14px; /* fontSize.xs */
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pill {
+  border: 0;
+  border-radius: 9999px;
+  padding: 6px 16px;
+  background: var(--color-bg-surface);
+  color: var(--color-brand-muted);
+  font-size: 14px; /* fontSize.xs */
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.pill:hover:not(:disabled) {
+  color: var(--color-brand-white);
+}
+
+.pill:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.card {
+  border: 1px solid rgba(105, 91, 236, 0.2); /* color.purpleDark at 20 % */
+  border-radius: 12px;
+  padding: 16px;
+  background: var(--color-bg-panel);
+}
+
+.cardLabel {
+  margin: 0;
+  color: var(--color-brand-muted);
+  font-size: 14px; /* fontSize.xs */
+}
+
+.cardValue {
+  margin: 4px 0 0;
+  color: var(--color-brand-white);
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.cardSub {
+  margin: 2px 0 0;
+  color: var(--color-brand-muted);
+  font-size: 14px; /* fontSize.xs */
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid rgba(105, 91, 236, 0.2); /* color.purpleDark at 20 % */
+  border-radius: 12px;
+  background: var(--color-bg-panel);
+}
+
+.table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  text-align: right;
+  font-size: 14px; /* fontSize.xs */
+}
+
+.table th,
+.table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(78, 50, 135, 0.25); /* color.purpleDeep */
+}
+
+.table th {
+  color: var(--color-brand-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.table td {
+  color: var(--color-brand-white);
+  font-variant-numeric: tabular-nums;
+}
+
+.table tr:last-child td {
+  border-bottom: 0;
+}
+
+.table th:first-child,
+.table td:first-child {
+  text-align: left;
+}
+
+.totalRow td {
+  background: rgba(255, 255, 255, 0.03);
+  font-weight: 600;
+}
+
+.pct {
+  display: block;
+  color: var(--color-brand-muted);
+  font-size: 13px; /* fontSize.xs11 */
+  font-weight: 400;
+}
+
+.none {
+  color: var(--color-brand-muted);
+}
+
+.note {
+  margin: 16px 0 0;
+  color: var(--color-brand-muted);
+  font-size: 14px; /* fontSize.xs */
+  line-height: 1.5;
+}
+
+.warn {
+  margin: 0 0 16px;
+  border: 1px solid rgba(231, 171, 51, 0.4); /* color.amber at 40 % */
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: var(--color-brand-amber);
+  font-size: 14px; /* fontSize.xs */
+}
+
+.state {
+  padding: 64px 24px;
+  text-align: center;
+  color: var(--color-brand-muted);
+  font-size: 16px; /* fontSize.sm */
+}
+
+.error {
+  color: var(--color-brand-red);
+}
+
+.sectionTitle {
+  margin: 32px 0 12px;
+  color: var(--color-brand-white);
+  font-size: 18px; /* fontSize.base */
+  font-weight: 700;
+}

@@ -57,6 +57,11 @@ export class PaperEventBus {
     };
   }
 
+  /** Whether any of the user's private sockets is open — i.e. they are looking at the app */
+  hasListeners(userId: string): boolean {
+    return (this.byUser.get(userId)?.size ?? 0) > 0;
+  }
+
   /** Subscribe to every user's changes (the matching engine). */
   subscribeAll(listener: Listener): () => void {
     this.global.add(listener);

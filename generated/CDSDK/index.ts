@@ -4,4 +4,7 @@ export * from './api/auth.js';
 export * from './api/market.js';
 export * from './api/paper.js';
 export * from './api/newsletter.js';
+export * from './api/admin.js';
+export * from './api/learn.js';
+export * from './api/notifications.js';
 export * from './spec/bybit.js';

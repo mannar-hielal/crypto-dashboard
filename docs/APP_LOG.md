@@ -3961,3 +3961,228 @@ its own group in the middle of the menu.
     the symbol's tick and its decimals for the pane's market (`lib/priceFormat.ts`, the SDK's tick table): BTCUSDT
     1 decimal, DOGEUSDT 5. The price axis, the drawing labels and the position Inputs' ticks follow. [10.3.4]
 - **Tests:** TRADING_TEST_PLAN 10.3.4, 10.7.23–10.7.26, 20.5; UI_REPRODUCTIONS 10.7 steps 18–19.
+
+### feat: admin retention metrics — weekly signup cohorts from the tables we already keep (2026-10-11) ✅
+
+**Context:** `reports/` (education + business strategy) found that most users leave within days and that the app
+has no product analytics, so nothing says whether activation, week-1 return or the first-order funnel is the leak.
+Owner answers 2026-10-11: start with the cheapest option (numbers from existing tables, no schema change, no
+privacy change), read on an admin page. A daily activity record and funnel events come later, with the guided
+trade.
+
+- **Endpoint** `GET /api/admin/metrics/retention` (`routes/admin`, `services/RetentionMetrics.ts`): admin only
+  (`lib/requireAdmin.ts` — the same `config.adminEmail` check the newsletter list used, now one hook; the
+  newsletter route uses it too, same order: JWT, then 403). Aggregates only — no id, e-mail or username leaves the
+  server. Typed Prisma only, every query bounded by the 12-week window and a row cap (`truncated` flag when it
+  bites), one cached report for 10 minutes.
+- **What it counts:** weekly signup cohorts (Monday 00:00 UTC): signups, verified, **activated** (a user-placed
+  order within 7 days — `createType` null and `orderType` MARKET / LIMIT / STOP, so engine TP / SL legs and
+  liquidations don't count), median hours to the first order, **return** in weeks 1 / 2 / 4 (activity on a later
+  UTC day: a user-placed order, a user-written note, or a reset), reset users, and the share of first orders with a
+  stop-loss. A rate is `count / eligible`: a user counts in the denominator only once the window has fully passed.
+  The admin and `cpt_qa_test` accounts are left out (e2e runs on its own database).
+- **Blind spots, written on the page:** a user who only watches charts leaves no row; visitors who never register;
+  no tour data; only the last reset is stored.
+- **Client:** `/admin/metrics` (`AdminMetricsPage`, CSS Module on tokens): a four-figure strip and the cohort
+  table, "count / eligible" with the percentage beneath (owner's visual Q&A 2026-10-11); a "Metrics" entry in the
+  user menu next to Admin, visible to the admin only. Gated like the newsletter page: the server's 403 is the real
+  check, the client redirect only hides it. Not in `robots.txt` (listing it would advertise the path); `noIndex`.
+- **SDK:** `adminApi.getRetentionMetrics`, `RetentionMetricsResponse` / `RetentionCohort` / `MetricsRate`;
+  contract fixture added.
+- **Tests:** `retentionMetrics.test.ts` (week boundaries, activation window, return windows, engine rows,
+  truncation, no identifiers), `adminMetrics.test.ts` (401 / 403 / 200, exclusions, cache), newsletter 403,
+  `AdminMetricsPage.test.tsx`; contract case.
+- **Next:** a once-a-day `UserActivity` row so watchers count (migration + privacy-policy line), then an
+  allowlisted event table for the tour funnel; then the opt-in "order filled while you were away" e-mail.
+
+### feat: activity days — a daily sign-in record so the retention report sees people who only watch charts (2026-10-11) ✅
+
+**Context:** unit U4 of the retention plan. The metrics page (above) could only see a user who placed an order,
+wrote a note or reset — a visitor who just looks at charts left no row. Owner answers 2026-10-11: count a sign-in or
+session restore; keep 180 days; the privacy policy is updated and the change is treated as **material**, so
+registered users are to be told by e-mail (not sent from code; see below).
+
+- **Table** `UserActivity` (migration `20261011140000_user_activity_days`): `userId` + UTC `day` (`@db.Date`),
+  primary key `(userId, day)`, `@@index([day])`, `onDelete: Cascade` — one row per user per day, no time, IP or
+  device.
+- **Write** (`services/UserActivity.ts`): `trackActivity(app, userId)` on `POST /login` (after a successful
+  password check) and `POST /refresh` (after the new token is issued) — the app's boot probe plus each token
+  renewal. One `createMany({ skipDuplicates })` (`ON CONFLICT DO NOTHING`), fire-and-forget; a failure is logged
+  with `{ err }` and never fails the login or refresh. No signed-out visitor, no 401, no failed login records a day.
+- **Purge:** a third pass in the existing daily job (`index.ts`, its own try) deletes `day < today − 180`. Account
+  deletion cascades.
+- **Report:** the retention report counts activity days as activity and returns `activityTrackedSince` (the oldest
+  recorded day): cohorts older than that under-count return, and the page says so with the date. The previous
+  "can't see people who only watch charts" blind spot is closed from that date on.
+- **Privacy policy** v1.2 → **1.3** (October 11, 2026): "Activity days" row in §3, a bullet in §6 and §7, and
+  legitimate interest (Art. 6(1)(f), right to object in §11) named in §5.
+- **Not done here:** the notice e-mail to registered users (§13 says material changes are e-mailed). Nothing in the
+  code sends it; it is a separate, deliberate step. **Do not release this unit until the owner has sent the notice**
+  (or decided the change is non-material), because the policy page and the recording go live together.
+- **Tests:** `userActivity.test.ts` (UTC day, idempotent insert, never throws, purge cutoff), auth `login` /
+  `refresh` (records, not on failure, not for a signed-out probe, a failing write doesn't fail the login),
+  `adminMetrics` mock, the page note; `userActivity.int.test.ts` on Postgres (one row per day, the purge keeps the
+  boundary day, cascade on user delete, the report reads sign-in days, `activityTrackedSince`).
+
+### feat: guided tours — the overlay, a primer and a first trade in three short chapters (2026-10-11) ✅
+
+**Context:** unit U5 of the retention plan; docs/GUIDED_TRADE_MVP.md reshaped (concepts before buttons, dollars not
+coins, no leverage in the first session, at most five steps a tour — completion falls fast past five). Owner's
+visual Q&A 2026-10-11: ring + bubble on the real control with the page left undimmed, a bubble of "Step n of N",
+text, "You should see", Back / Skip, and `bg.tooltip` on a new `zIndex.tour` (250).
+
+- **Tours** (`guide/tours.ts`, pure data): `primer` ("What you're looking at": price, pair, a bar, the practice
+  balance, hand-off), `buy-first-coin` (spot: Buy vs Sell price, Market, USDT, type 100, place the order) and
+  `sell-and-review` (Assets → Sell → place it → the fee debrief → one check question: "price rose 0.05% — in profit
+  after fees?"). Steps that repeat a scenario action reuse the shared builders in `guide/steps.ts` (`chooseType`,
+  `submit`, `openTab`), so the form's controls read the same in a test, the manual steps and a bubble.
+- **Overlay** (`guide/GuideOverlay.tsx`, `bubblePlacement.ts`, `tourStore.ts`): follows the control every frame
+  (the form animates open); a `click` step moves on when the learner clicks the control, a `type` step enables Next
+  once the field has a value, a reading step has Next, and the submit steps wait for the form's own signal — the
+  amount field emptied — so a refused order does not move the tour on. A control that is not on screen gets a
+  line saying what to open, never a state change. Esc / ✕ / Skip close it; it changes nothing in the app.
+- **Anchors:** `symbolbar.price` (new, on the live price readout) and `tour.*` for the bubble. `zIndex.tour` added.
+- **Tests:** `bubblePlacement`, `tours` (≤ 5 steps, registered anchors, numbering, chaining), `tourStore`,
+  `GuideOverlay` (rendering, Next / Back, missing control, click and type rules, refused vs accepted order, quiz,
+  hand-off, cleanup).
+- **Wiring:** the card, the Learn menu and saving progress are U6; nothing starts a tour until then.
+
+### feat: tours are reachable — the welcome card, the Learn panel and progress saved on the account (2026-10-11) ✅
+
+**Context:** unit U6. Owner's answers 2026-10-11: a small card bottom-left of the chart, a "Learn" entry in the user
+menu opening a side panel, progress on the account (server), desktop first, tours re-runnable on any account.
+
+- **Server:** table `LearningProgress` (migration `20261011150000_learning_progress`, key `(userId, itemId)`,
+  cascade on user delete); `GET /api/learn/progress` and `PUT /api/learn/progress/:itemId` (`routes/learn`).
+  🔐 The item id is an allowlist (`LEARN_ITEM_IDS`, three tours + `welcome-card`), so a user holds at most four rows;
+  body `{ status: completed | dismissed }`; `completed` is never downgraded (a dismissal only creates the row). The
+  allowlist is duplicated in `constants.ts` because the built server can't import the SDK's TypeScript at runtime;
+  `learn.test.ts` checks the two lists are equal.
+- **SDK:** `learnApi`, `LearnItemId`, `LearnStatus`, `LearnProgressResponse`; contract fixtures.
+- **Client:** `useTourProgress` reads the account's progress once signed in and writes each new finish / dismissal
+  (a failed write is dropped: progress then lives only in the session); `LearnCard` (offered once, waits for the
+  progress so it never flashes, gone once dismissed or the primer is finished, "larger screen" on phones, no Start
+  there); `LearnPanel` (tick + Start / Repeat per tour, disabled below lg); a "Learn" entry in the user menu.
+- **Anchors:** `nav.learn`, `learn.card*`, `learn.panel*`, `learn.tour*`.
+- **Privacy policy 1.3:** a "Learning progress" row in §3 (with the activity-days row of U4).
+- **Tests:** `learn.test.ts` (auth, allowlist, never downgraded, strips extra fields), contract, Postgres
+  `learningProgress.int.test.ts`; client `useTourProgress`, `LearnCard`, `LearnPanel`.
+
+### feat: tour funnel — where people stop in the guided tours, from an allowlisted event table (2026-10-11) ✅
+
+**Context:** unit U7 (option C of the analytics plan). The tours exist to get people to a first trade; this says which
+step loses them, without recording anything the learner typed.
+
+- **Table** `LearningEvent` (migration `20261011160000_learning_events`): `userId`, `name`, `itemId` (the tour),
+  optional `stepId`, `at`; cascade on user delete; indexed by user and by time.
+- **Write** `POST /api/learn/events` (`routes/learn`, `services/LearningEvents.ts`): 🔐 an allowlist — name ∈
+  `tour_started | tour_step | tour_completed | tour_closed`, tour ∈ the three tours (never the welcome card), step
+  matching `<tour>.<n>` and belonging to the tour it names; 204 once accepted; **at most 500 rows a user**
+  — a `tour_step` already recorded for that tour and step is not stored again, and past the cap the oldest rows
+  are pruned (never the new event), in a transaction that first locks the user row so it holds under parallel
+  requests; 120 / min rate limit; fire-and-forget on the client.
+- **Client** (`guide/useTourProgress.ts`): from the tour store — a start with its first step, each step moved to
+  (Back included), a finish, a close on the step it was on. The server's own progress answer is not reported.
+- **Report:** `tourFunnel` on the retention response: per tour the people who started and finished it, and per step
+  the people who saw it and those who left on it (a person whose last event in the tour was a close). People, never
+  events. Over the 180-day period, the admin and QA accounts left out. Shown as a "Guided tours" table on
+  `/admin/metrics`.
+- **Retention:** the daily job also purges events older than 180 days. **Privacy policy 1.3:** a "Learning events"
+  row in §3, §5 and §7 updated.
+- **Tests:** route (allowlist, tour-owns-the-step, cap, 401), funnel builder (people not events, last-event close,
+  numeric step order), client event emission, page table; Postgres: cap, purge boundary, cascade, report.
+
+### feat: opt-in "your order filled while you were away" e-mail (2026-10-11) ✅
+
+**Context:** unit U8. The strategy report's natural comeback hook for a 24/7 engine; owner's answer 2026-10-11:
+opt-in, about the user's own order only, one-click unsubscribe. Consent, not legitimate interest (privacy policy
+§5).
+
+- **Opt-in** (`User.fillEmailOptIn`, `fillEmailOptInAt`, migration `20261011170000_fill_email_opt_in`): off by
+  default; turning it on records when (the proof of consent) and needs a verified address (403 otherwise).
+  `GET` / `PUT /api/notifications` (`routes/notifications`). In the app: a toggle in Settings → Notifications, and
+  a one-time card (`FillEmailOffer`, same card as the welcome card, never at the same time) once the account has a
+  resting order — answered either way it is retired (`fill-email-offer` in `LEARN_ITEM_IDS`).
+- **Send** (`services/FillNotifier.ts`, wired in `plugins/trading.ts`): listens to the committed deltas the sockets
+  get; only a resting limit / stop order that left the pending list filled (never a market order, an exit leg or a
+  liquidation) and only when the user has no open private socket (`PaperEventBus.hasListeners`) — they would have
+  seen it. Opted in, verified, not deleting the account. 🔐 At most 20 e-mails per user per UTC day (a bounded
+  counter map). `EmailService.sendOrderFilledEmail` escapes every field and states only the order.
+- **Unsubscribe:** every e-mail carries `/notifications/unsubscribe?token=…`. 🔐 The token is `<userId>.<HMAC>`
+  (`lib/unsubscribeToken.ts`), **not a JWT**: it shares the signing secret, and a JWT-shaped token would pass
+  `app.authenticate` as an access token. It can only switch that user's e-mail off; `POST /api/notifications/
+unsubscribe` answers the same for any account state (`updateMany`), a forged token is a 400.
+- **Known gap:** "Export My Data" is built in the browser and does not include activity days, learning events or
+  tour progress (available on request, privacy policy §11) — a server-side export is the follow-up.
+- **Privacy policy 1.3:** a row in §3, a consent bullet in §5, the transactional-e-mail bullet in §6.
+- **Tests:** token (round trip, tampering, not JWT-shaped), routes (verified requirement, consent time, forged
+  token), notifier (which fills count, presence, opt-in / verified / deleting, daily cap, never throws into the
+  bus), event bus presence, contract; client offer / page / (Settings toggle); Postgres: defaults, consent time,
+  unsubscribe of a deleted account.
+
+### feat: habit badges and the learning streak in the Learn panel (2026-10-11) ✅
+
+**Context:** unit U9, the last of the retention plan. Owner's answer 2026-10-11: inside the Learn panel only — no
+trading streak, no confetti, no sound, nothing on the trading screen. The education report's rule: reward careful
+habits, never profits or how often someone trades.
+
+- **Badges** (`services/Habits.ts`, `GET /api/learn/habits`): `first-stop-loss` and `ten-stop-losses` (user-placed
+  orders that carried a stop-loss — never an engine exit leg, a liquidation or another user's), `journal-week`
+  (notes on seven different days, not seven notes), `first-tour` and `all-tours`. All counted from rows the app
+  already keeps; nothing new is stored. A test pins that no badge id names profit, winning or trading often.
+- **Streak:** a _learning day_ is a day the account moved through a guided-tour step or wrote a journal note
+  (placing a trade is never one). The streak is the run of consecutive days ending today or yesterday, so it
+  survives until midnight.
+- **Panel:** "Your habits" under the tours — the streak line, then each badge with a tick or `n / target`, and a
+  line saying habits are never about profit or how often you trade. Read when the panel opens and again after a
+  tour is finished; a failed read says so and leaves the tours usable (`guide/habits.ts` holds the wording).
+- **Privacy policy 1.3:** a §6 line (the numbers are counted from existing data).
+- **Tests:** pure `computeHabits` / `streakEndingAt`, route (401, own rows only), SDK contract, wording guard,
+  panel rendering and failure; Postgres: stop-loss counting, notes vs automatic lines, tour events and progress.
+
+### fix: the welcome card no longer sits over the phone order form (2026-10-12) ✅
+
+Found by the release PR's E2E full set (`[20.5]`, mobile-safari, both tries): the welcome / e-mail-offer card was
+`z-index: 100`, above the phone and tablet order-form sheet (`z-30`), so on a short phone screen (iPhone, ~390 × 664)
+its text covered the Limit / Stop price field. Now `z-index: 20`: above the chart, below the sheet. Verified in a
+browser at 390 × 664 — before: the hit element at the field's centre is the card's paragraph; after: the field.
+The existing `[20.5]` is the regression test (a fresh seeded account shows the card).
+
+### fix: the order-fill e-mail's consent time is kept when the same yes is sent again (2026-10-12) ✅
+
+Review of the release PR: `PUT /api/notifications` ran an unconditional update, so a repeated `{ fillEmail: true }`
+(a double click, a retry) overwrote `fillEmailOptInAt`, the proof of consent. It is now an `updateMany` with the
+current state in the `where` — only a change matches, so a repeat is a no-op and the first time stays; it is also
+race-safe. Tests: route (the `where` carries the opposite state), Postgres (a repeated yes leaves the time).
+
+### fix: the welcome / e-mail-offer card lets the pointer through to the chart (2026-10-12) ✅
+
+Release PR E2E (`[10.4.6]`, chromium, both tries): the card floats over the bottom-left of the chart area and, in a
+two-pane layout at 1280 × 720, sat on the centre of pane 0 — the wheel went to the card, not the chart. A card that
+blocks charting until it is dismissed is a defect, not only a test problem. `pointer-events: none` on the card, `auto`
+on its buttons: the card looks as approved and only its buttons take the pointer. Verified in a browser at 1280 × 720:
+over the card's text the element under the pointer is the chart canvas; Start / Not now / ✕ still work.
+
+### fix: the admin check reads the account, and the fill e-mail's daily slot is charged only for a send that happened (2026-10-12) ✅
+
+Review of the release PR.
+
+- **`requireAdmin`** no longer trusts the token's `email` claim alone: the claim is compared with the configured
+  address the way registration stores addresses (trimmed, lower-cased), and a claim that matches is then checked
+  against the account — read by `userId`, it must have that address _now_ and a verified one. A claim that is not
+  the admin address never reaches the database. A stale claim (the address changed since the token was signed) or an
+  unverified registration of the admin address (verification is not needed to obtain a token) no longer passes.
+  Used by `/api/admin/*` and the newsletter list. The client's "hide the admin menu" check compares the same way
+  (`lib/adminEmail.ts`); the server stays the real check.
+- **`FillNotifier`** takes the daily slot before the send (so parallel events can't both pass the cap) and gives it
+  back if the send throws; a failed send (a mail-provider outage) is caught and logged per order, so it neither
+  costs a slot nor drops the other fills of that change.
+
+Follow-up on the same review (FillNotifier): the refund of a failed send is day-aware — `reserve` returns the UTC
+day it took the slot on and `refund` only gives it back if that is still today (a send that began before midnight
+and failed after it must not touch the new day's counter) — and a user whose sends fail five times in a UTC day
+is not tried again until the next day, so a provider outage can't make every fill retry it all day.
+
+Follow-up (review of the admin check): `requireAdmin` also refuses an admin account that has asked to be deleted,
+and the retention report excludes the admin the way the check matches it — trimmed and case-insensitive — in both
+queries (users, and the funnel's events), so a differently-cased `ADMIN_EMAIL` no longer counts the admin in.

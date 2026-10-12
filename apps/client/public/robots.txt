@@ -17,6 +17,7 @@ Disallow: /unverified
 Disallow: /verify-email
 Disallow: /verify-email-change
 Disallow: /reset-password
+Disallow: /notifications/
 Disallow: /api/
 
 # Sitemap location

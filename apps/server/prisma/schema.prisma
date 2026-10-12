@@ -29,6 +29,11 @@ model User {
   termsAcceptedAt DateTime? // captures exactly when user agreed
   termsAcceptedIp String? // captures IP for legal audit trail
 
+  // 📧 Opt-in e-mail when a resting order fills while the user is away (privacy policy §3, §5:
+  //    consent, off by default). The timestamp is the proof of consent, like termsAcceptedAt.
+  fillEmailOptIn   Boolean   @default(false)
+  fillEmailOptInAt DateTime?
+
   // 🗑️ Account Deletion (Phase 3)
   deletionRequestedAt   DateTime? // null = active; non-null = pending deletion
   deletionWarningSentAt DateTime? // null = warning not yet sent; non-null = already sent
@@ -44,9 +49,53 @@ model User {
   passwordResetTokens PasswordResetToken[] // 🔐 pending resets
   verificationTokens  VerificationToken[] // 🔐 pending email verifications
   emailChangeTokens   EmailChangeToken[] // 🔐 pending email changes
+  activityDays        UserActivity[] // one row per UTC day the user signed in or resumed a session
+  learningProgress    LearningProgress[] // guided tours finished / the welcome card dismissed
+  learningEvents      LearningEvent[] // which tour steps were viewed (the funnel), capped per user
 
   @@index([email])
   @@index([username])
+}
+
+// One row per user per UTC day on which they signed in or resumed their session (privacy policy
+// §3, "Activity days"). Only the account and the date — no time, IP or device. Rows older than
+// 180 days are purged by the daily job; the rest go with the user (onDelete: Cascade).
+model UserActivity {
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day    DateTime @db.Date
+
+  @@id([userId, day])
+  @@index([day]) // the purge deletes by age
+}
+
+// What a user has done with the guided tours: a finished tour, or the welcome card dismissed
+// (`itemId` is an allowlist in the route and the SDK, so a user holds at most a handful of rows).
+// Part of the account: deleted with it (onDelete: Cascade).
+model LearningProgress {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemId    String   @db.VarChar(40)
+  status    String   @db.VarChar(20) // "completed" | "dismissed"
+  updatedAt DateTime @updatedAt
+
+  @@id([userId, itemId])
+}
+
+// One row per guided-tour event (privacy policy §3, "Learning events"): which tour and step, and
+// when — no free text. The name, tour and step shape are allowlisted in the route; a user holds at
+// most 500 rows; rows older than 180 days are purged by the daily job; the rest go with the user.
+model LearningEvent {
+  id     String   @id @default(cuid())
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name   String   @db.VarChar(30)
+  itemId String   @db.VarChar(40)
+  stepId String?  @db.VarChar(40)
+  at     DateTime @default(now())
+
+  @@index([userId])
+  @@index([at]) // the purge and the funnel read by age
 }
 
 // 🔐 One row per active session. Deleted on logout. Rotated on refresh.

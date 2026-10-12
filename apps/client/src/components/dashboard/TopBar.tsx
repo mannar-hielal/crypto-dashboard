@@ -2,11 +2,13 @@ import { signOutOnServer } from '@/lib/session';
 import { guide } from '@/lib/guideAnchors';
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router';
-import { LogOut, ChevronDown, Settings, ShieldCheck } from 'lucide-react';
+import { LogOut, ChevronDown, Settings, ShieldCheck, BarChart3, GraduationCap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 import { useSignInToTrade } from '@/hooks/useSignIn';
 import { usePaperStore } from '@/store/paperStore';
+import { useTourStore } from '@/guide/tourStore';
+import { isAdminEmail } from '@/lib/adminEmail';
 import { bg, color, fontSize, gradient, radius } from '@/lib/tokens';
 import { SettingsModal } from './SettingsModal';
 import { TradeMenu } from './TradeMenu';
@@ -150,7 +152,23 @@ export function TopBar({ marketing = false }: TopBarProps) {
                       <Settings className="h-3.5 w-3.5" />
                       Settings
                     </motion.button>
-                    {user?.email === import.meta.env.VITE_ADMIN_EMAIL && (
+                    <motion.button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        useTourStore.getState().openPanel();
+                      }}
+                      {...guide('nav.learn')}
+                      whileHover={{ background: bg.surface }}
+                      className="flex w-full items-center gap-2 px-3 py-2.5 text-xs transition-colors hover:text-white"
+                      style={{
+                        color: color.muted,
+                        borderBottom: `1px solid color-mix(in srgb, ${color.white} 5%, transparent)`,
+                      }}
+                    >
+                      <GraduationCap className="h-3.5 w-3.5" />
+                      Learn
+                    </motion.button>
+                    {isAdminEmail(user?.email) && (
                       <motion.button
                         onClick={() => {
                           setMenuOpen(false);
@@ -165,6 +183,23 @@ export function TopBar({ marketing = false }: TopBarProps) {
                       >
                         <ShieldCheck className="h-3.5 w-3.5" />
                         Admin
+                      </motion.button>
+                    )}
+                    {isAdminEmail(user?.email) && (
+                      <motion.button
+                        onClick={() => {
+                          setMenuOpen(false);
+                          navigate('/admin/metrics');
+                        }}
+                        whileHover={{ background: bg.surface }}
+                        className="flex w-full items-center gap-2 px-3 py-2.5 text-xs transition-colors hover:text-white"
+                        style={{
+                          color: color.muted,
+                          borderBottom: `1px solid color-mix(in srgb, ${color.white} 5%, transparent)`,
+                        }}
+                      >
+                        <BarChart3 className="h-3.5 w-3.5" />
+                        Metrics
                       </motion.button>
                     )}
                     <motion.button

@@ -16,7 +16,8 @@ export type OutboxKind =
   | 'deletion-cancelled'
   | 'deletion-warning'
   | 'deletion-completed'
-  | 'newsletter-confirmation';
+  | 'newsletter-confirmation'
+  | 'order-filled';
 
 export interface OutboxEmail {
   to: string;

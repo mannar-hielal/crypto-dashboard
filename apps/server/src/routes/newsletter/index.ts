@@ -5,6 +5,7 @@ import { config } from '../../config.js';
 import type { SubscriberStatus } from '../../../generated/prisma/client.js';
 import type { FastifyRequest } from 'fastify';
 import { clientIp } from '../../lib/clientIp.js';
+import { requireAdmin } from '../../lib/requireAdmin.js';
 
 // ─── HELPERS ────────────────────────────────────────────────────────────────
 
@@ -83,14 +84,10 @@ export async function newsletterRoutes(app: FastifyInstance) {
           },
         },
       },
-      onRequest: [app.authenticate],
+      // 🔐 Same two checks, same order as before: valid JWT, then the admin e-mail → 403
+      onRequest: [app.authenticate, requireAdmin],
     },
     async (request: FastifyRequest, reply) => {
-      const user = request.user as { userId: string; email: string } | undefined;
-      if (!user || user.email !== config.adminEmail) {
-        return reply.status(403).send({ error: 'Forbidden' });
-      }
-
       const { status } = request.query as { status?: SubscriberStatus };
 
       const where = status ? { status } : {};
