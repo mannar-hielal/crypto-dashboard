@@ -26,7 +26,7 @@ import { EmailService } from './EmailService.js';
 const log = logger.child({ service: 'FillNotifier' });
 
 export const MAX_PER_DAY = 20;
-/** The counters map never holds more than this many users: past it, it starts the day again */
+/** The counters map never holds more than this many users in a day */
 const MAX_TRACKED_USERS = 10_000;
 
 type Prisma = FastifyInstance['prisma'];
@@ -56,7 +56,8 @@ export class FillNotifier {
     private readonly prisma: Prisma,
     private readonly events: Pick<PaperEventBus, 'subscribeAll' | 'hasListeners'>,
     private readonly mailer: Mailer = EmailService,
-    private readonly now: () => Date = () => new Date()
+    private readonly now: () => Date = () => new Date(),
+    private readonly maxTrackedUsers: number = MAX_TRACKED_USERS
   ) {}
 
   /** Start listening; returns the unsubscribe function */
@@ -109,16 +110,21 @@ export class FillNotifier {
     return count;
   }
 
-  /** The per-user, per-UTC-day cap; counts the e-mail it allows */
+  /**
+   * The per-user, per-UTC-day cap; counts the e-mail it allows. 🔐 Fails closed: when the map holds
+   * `maxTrackedUsers` users, a user it is not already counting gets no e-mail rather than the
+   * counters being cleared (which would hand every capped user a fresh allowance mid-day).
+   */
   private allow(userId: string): boolean {
     const today = this.now().toISOString().slice(0, 10);
-    if (today !== this.day || this.sent.size >= MAX_TRACKED_USERS) {
+    if (today !== this.day) {
       this.day = today;
       this.sent = new Map();
     }
-    const n = this.sent.get(userId) ?? 0;
-    if (n >= MAX_PER_DAY) return false;
-    this.sent.set(userId, n + 1);
+    const n = this.sent.get(userId);
+    if (n === undefined && this.sent.size >= this.maxTrackedUsers) return false;
+    if ((n ?? 0) >= MAX_PER_DAY) return false;
+    this.sent.set(userId, (n ?? 0) + 1);
     return true;
   }
 }

@@ -55,7 +55,7 @@ export const LEARN_EVENT_NAMES = [
   'tour_closed',
 ] as const;
 
-/** 🔐 A user holds at most this many tour events; further ones are dropped, not stored */
+/** 🔐 A user holds at most this many tour events; past it the oldest are pruned (LearningEvents) */
 export const MAX_LEARN_EVENTS_PER_USER = 500;
 
 /** Older events are purged by the daily job and the privacy policy says so (§3, §7) */

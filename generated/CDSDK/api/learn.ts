@@ -39,7 +39,7 @@ export const learnApi = {
       headers: { Authorization: `Bearer ${accessToken}` },
     }),
 
-  /** Fire-and-forget: report a tour event (accepted with 204, or silently dropped over the cap) */
+  /** Fire-and-forget: report a tour event (accepted with 204) */
   trackEvent: (event: LearnEventRequest, accessToken: string) =>
     request<void>('/api/learn/events', {
       method: 'POST',

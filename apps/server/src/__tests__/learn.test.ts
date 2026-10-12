@@ -27,6 +27,8 @@ vi.mock('../plugins/prisma.js', () => {
         count: vi.fn(),
         create: vi.fn(),
         findMany: vi.fn(),
+        findFirst: vi.fn(),
+        deleteMany: vi.fn(),
       },
       order: { count: vi.fn() },
       journalEntry: { findMany: vi.fn() },
@@ -223,6 +225,9 @@ describe('POST /api/learn/events', () => {
     vi.clearAllMocks();
     vi.mocked(app.prisma.learningEvent.count).mockResolvedValue(0 as never);
     vi.mocked(app.prisma.learningEvent.create).mockResolvedValue({} as never);
+    vi.mocked(app.prisma.learningEvent.findFirst).mockResolvedValue(null as never);
+    vi.mocked(app.prisma.learningEvent.findMany).mockResolvedValue([] as never);
+    vi.mocked(app.prisma.learningEvent.deleteMany).mockResolvedValue({ count: 0 } as never);
   });
 
   const post = (payload: unknown, withToken = true) =>
@@ -263,12 +268,40 @@ describe('POST /api/learn/events', () => {
     expect(app.prisma.learningEvent.create).not.toHaveBeenCalled();
   });
 
-  it('should drop the event, with a 204, once the user holds the cap', async () => {
+  it('should prune the oldest rows, not drop the new event, once the user holds the cap', async () => {
     vi.mocked(app.prisma.learningEvent.count).mockResolvedValue(500 as never);
-    const res = await post({ name: 'tour_started', itemId: 'primer' });
+    vi.mocked(app.prisma.learningEvent.findMany).mockResolvedValue([{ id: 'old-1' }] as never);
+    const res = await post({ name: 'tour_completed', itemId: 'primer' });
+
+    expect(res.statusCode).toBe(204);
+    expect(app.prisma.learningEvent.findMany).toHaveBeenCalledWith({
+      where: { userId: 'user-1' },
+      orderBy: { at: 'asc' },
+      take: 1,
+      select: { id: true },
+    });
+    expect(app.prisma.learningEvent.deleteMany).toHaveBeenCalledWith({
+      where: { id: { in: ['old-1'] } },
+    });
+    expect(app.prisma.learningEvent.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('should not store a step the account has already recorded for that tour', async () => {
+    vi.mocked(app.prisma.learningEvent.findFirst).mockResolvedValue({ id: 'seen' } as never);
+    const res = await post({ name: 'tour_step', itemId: 'primer', stepId: 'primer.2' });
 
     expect(res.statusCode).toBe(204);
     expect(app.prisma.learningEvent.create).not.toHaveBeenCalled();
+    expect(app.prisma.learningEvent.count).not.toHaveBeenCalled();
+  });
+
+  it('should always store a start, a finish and a close, whatever was recorded before', async () => {
+    vi.mocked(app.prisma.learningEvent.findFirst).mockResolvedValue({ id: 'seen' } as never);
+    for (const name of ['tour_started', 'tour_completed', 'tour_closed']) {
+      vi.mocked(app.prisma.learningEvent.create).mockClear();
+      await post({ name, itemId: 'primer', stepId: 'primer.1' });
+      expect(app.prisma.learningEvent.create).toHaveBeenCalledTimes(1);
+    }
   });
 });
 

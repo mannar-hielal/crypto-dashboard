@@ -22,21 +22,43 @@ describe('LearningEvent (Postgres)', () => {
     await db.$disconnect();
   });
 
-  it('stores events up to the per-user cap and drops the rest', async () => {
+  it('prunes the oldest rows at the cap so a finish or a close is never lost', async () => {
     const userId = await createUser(db);
+    const base = new Date('2026-10-01T00:00:00.000Z').getTime();
     await db.learningEvent.createMany({
-      data: Array.from({ length: MAX_LEARN_EVENTS_PER_USER }, () => ({
+      data: Array.from({ length: MAX_LEARN_EVENTS_PER_USER }, (_, i) => ({
         userId,
-        name: 'tour_step',
+        name: 'tour_started',
         itemId: 'primer',
-        stepId: 'primer.1',
+        at: new Date(base + i * 1000),
       })),
     });
 
-    const stored = await recordLearningEvent(db, { userId, name: 'tour_step', itemId: 'primer' });
+    const stored = await recordLearningEvent(db, {
+      userId,
+      name: 'tour_completed',
+      itemId: 'primer',
+    });
 
-    expect(stored).toBe(false);
+    expect(stored).toBe(true);
     expect(await db.learningEvent.count({ where: { userId } })).toBe(MAX_LEARN_EVENTS_PER_USER);
+    expect(await db.learningEvent.count({ where: { userId, name: 'tour_completed' } })).toBe(1);
+    // the oldest one made room
+    expect(await db.learningEvent.count({ where: { userId, at: new Date(base) } })).toBe(0);
+  });
+
+  it('does not store a repeated step for the same tour, but does for another tour', async () => {
+    const userId = await createUser(db);
+    const step = { userId, name: 'tour_step', itemId: 'primer', stepId: 'primer.2' };
+    await recordLearningEvent(db, step);
+    await recordLearningEvent(db, step);
+    await recordLearningEvent(db, {
+      ...step,
+      itemId: 'buy-first-coin',
+      stepId: 'buy-first-coin.2',
+    });
+
+    expect(await db.learningEvent.count({ where: { userId } })).toBe(2);
   });
 
   it('holds the cap exactly when requests for one user arrive in parallel', async () => {
@@ -50,14 +72,15 @@ describe('LearningEvent (Postgres)', () => {
       })),
     });
 
-    // Twenty at once against five free slots: check-then-insert would let most of them in
+    // Twenty at once against five free slots: each is stored, the oldest rows make room, and the
+    // count never passes the cap (check-then-insert would have left it at cap + 15)
     const results = await Promise.all(
       Array.from({ length: 20 }, () =>
-        recordLearningEvent(db, { userId, name: 'tour_step', itemId: 'primer' })
+        recordLearningEvent(db, { userId, name: 'tour_started', itemId: 'primer' })
       )
     );
 
-    expect(results.filter(Boolean)).toHaveLength(5);
+    expect(results.every(Boolean)).toBe(true);
     expect(await db.learningEvent.count({ where: { userId } })).toBe(MAX_LEARN_EVENTS_PER_USER);
   });
 

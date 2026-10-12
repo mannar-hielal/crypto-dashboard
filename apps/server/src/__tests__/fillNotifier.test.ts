@@ -135,6 +135,35 @@ describe('FillNotifier', () => {
     expect(await notifier.handle(event([order()], ['o1']))).toBe(1);
   });
 
+  it('should not reset anyone’s counter when the map fills: a new user gets no e-mail instead', async () => {
+    const findUnique = vi.fn().mockResolvedValue(OPTED_IN);
+    const send = vi.fn().mockResolvedValue(undefined);
+    const notifier = new FillNotifier(
+      { user: { findUnique } } as never,
+      { subscribeAll: vi.fn(), hasListeners: vi.fn().mockReturnValue(false) } as never,
+      { sendOrderFilledEmail: send } as never,
+      () => new Date('2026-10-12T10:00:00Z'),
+      2 // room for two users
+    );
+
+    expect(await notifier.handle(event([order()], ['o1'], 'u-a'))).toBe(1);
+    expect(await notifier.handle(event([order()], ['o1'], 'u-b'))).toBe(1);
+    // a third user: the map is full, so no e-mail (not a cleared map)
+    expect(await notifier.handle(event([order()], ['o1'], 'u-c'))).toBe(0);
+    // u-a was counted and is still counted: it can reach its cap, not start again
+    const many = Array.from({ length: MAX_PER_DAY + 5 }, (_, i) => order({ id: `m${i}` }));
+    expect(
+      await notifier.handle(
+        event(
+          many,
+          many.map((o) => o.id),
+          'u-a'
+        )
+      )
+    ).toBe(MAX_PER_DAY - 1);
+    expect(await notifier.handle(event([order()], ['o1'], 'u-a'))).toBe(0);
+  });
+
   it('should escape nothing it does not need to: the summary holds only the order’s own fields', async () => {
     const { notifier, send } = setup();
     await notifier.handle(

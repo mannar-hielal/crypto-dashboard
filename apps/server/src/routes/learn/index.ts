@@ -148,7 +148,7 @@ export async function learnRoutes(app: FastifyInstance) {
         tags: ['Learn'],
         summary: 'Report a guided-tour event (the funnel: which step people reach)',
         description:
-          'Fire-and-forget. 204 whether stored or dropped over the per-user cap; the body is an ' +
+          'Fire-and-forget. 204 once accepted (a repeated step is not stored again; past the per-user cap the oldest rows are pruned); the body is an ' +
           'allowlist: an event name, a tour id and a `<tour>.<n>` step.',
         security: [{ bearerAuth: [] }],
         body: {

@@ -94,6 +94,7 @@ export async function loadHabits(
     }),
     prisma.learningEvent.findMany({
       where: { userId, name: { in: ['tour_started', 'tour_step'] } },
+      orderBy: { at: 'desc' }, // the most recent days if there are ever more rows than we read
       take: MAX_ROWS,
       select: { at: true },
     }),

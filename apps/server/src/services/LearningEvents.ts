@@ -3,7 +3,8 @@
  * answer one question — where do people stop? — so the funnel below counts people, never events.
  *
  * 🔐 Bounded three ways: the route allowlists the name, tour and step shape; a user holds at most
- * `MAX_LEARN_EVENTS_PER_USER` rows; the daily job purges rows past the retention period.
+ * `MAX_LEARN_EVENTS_PER_USER` rows (the oldest are pruned past it); the daily job purges rows past
+ * the retention period.
  */
 
 import type { FastifyInstance } from 'fastify';
@@ -24,12 +25,17 @@ export interface EventInput {
 }
 
 /**
- * Returns false when the user is at the cap and the event was dropped.
+ * Stores one event; false only when the account is gone.
  *
- * 🔐 The cap is strict under concurrency: count-then-insert is not atomic, so the whole thing runs
- * in a transaction that first takes the user's row lock (an `updateMany` on the user row, typed
- * Prisma — no raw SQL). Concurrent requests for one user queue on that lock, so each counts what the
- * one before it inserted; requests for other users never wait.
+ * 🔐 Bounded and strict under concurrency: the whole thing runs in a transaction that first takes
+ * the user's row lock (an `updateMany` on the user row, typed Prisma — no raw SQL), so parallel
+ * requests for one user queue and each sees what the one before it wrote.
+ *
+ * Two rules keep the funnel's rows alive instead of dropping them at the cap:
+ * - a `tour_step` already recorded for this tour and step is not stored again (the funnel counts
+ *   people per step, so a repeat adds nothing — going back and forth would only fill the cap);
+ * - at the cap the user's *oldest* rows are pruned to make room, never the new event, so
+ *   `tour_completed` / `tour_closed` / `tour_started` always land (the journal's own pattern).
  */
 export async function recordLearningEvent(prisma: Prisma, e: EventInput): Promise<boolean> {
   return prisma.$transaction(async (tx) => {
@@ -39,8 +45,26 @@ export async function recordLearningEvent(prisma: Prisma, e: EventInput): Promis
     });
     if (locked === 0) return false; // the account is gone
 
+    if (e.name === 'tour_step' && e.stepId) {
+      const seen = await tx.learningEvent.findFirst({
+        where: { userId: e.userId, name: 'tour_step', itemId: e.itemId, stepId: e.stepId },
+        select: { id: true },
+      });
+      if (seen) return true;
+    }
+
     const held = await tx.learningEvent.count({ where: { userId: e.userId } });
-    if (held >= MAX_LEARN_EVENTS_PER_USER) return false;
+    if (held >= MAX_LEARN_EVENTS_PER_USER) {
+      const oldest = await tx.learningEvent.findMany({
+        where: { userId: e.userId },
+        orderBy: { at: 'asc' },
+        take: held - MAX_LEARN_EVENTS_PER_USER + 1,
+        select: { id: true },
+      });
+      await tx.learningEvent.deleteMany({
+        where: { id: { in: oldest.map((r) => r.id) } },
+      });
+    }
 
     await tx.learningEvent.create({
       data: { userId: e.userId, name: e.name, itemId: e.itemId, stepId: e.stepId ?? null },

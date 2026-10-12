@@ -4077,8 +4077,10 @@ step loses them, without recording anything the learner typed.
   optional `stepId`, `at`; cascade on user delete; indexed by user and by time.
 - **Write** `POST /api/learn/events` (`routes/learn`, `services/LearningEvents.ts`): 🔐 an allowlist — name ∈
   `tour_started | tour_step | tour_completed | tour_closed`, tour ∈ the three tours (never the welcome card), step
-  matching `<tour>.<n>` and belonging to the tour it names; 204 whether stored or dropped; **at most 500 rows a
-  user** (further events are dropped, not stored); 120 / min rate limit; fire-and-forget on the client.
+  matching `<tour>.<n>` and belonging to the tour it names; 204 once accepted; **at most 500 rows a user**
+  — a `tour_step` already recorded for that tour and step is not stored again, and past the cap the oldest rows
+  are pruned (never the new event), in a transaction that first locks the user row so it holds under parallel
+  requests; 120 / min rate limit; fire-and-forget on the client.
 - **Client** (`guide/useTourProgress.ts`): from the tour store — a start with its first step, each step moved to
   (Back included), a finish, a close on the step it was on. The server's own progress answer is not reported.
 - **Report:** `tourFunnel` on the retention response: per tour the people who started and finished it, and per step
