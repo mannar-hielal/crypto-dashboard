@@ -59,8 +59,9 @@ describe('/api/notifications', () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ fillEmail: true });
-    expect(app.prisma.user.update).toHaveBeenCalledWith({
-      where: { id: 'user-1' },
+    // only a change matches: an account already opted in matches nothing, so its time stays
+    expect(app.prisma.user.updateMany).toHaveBeenCalledWith({
+      where: { id: 'user-1', fillEmailOptIn: false },
       data: { fillEmailOptIn: true, fillEmailOptInAt: expect.any(Date) },
     });
   });
@@ -89,8 +90,8 @@ describe('/api/notifications', () => {
 
     expect(res.statusCode).toBe(200);
     expect(app.prisma.user.findUnique).not.toHaveBeenCalled();
-    expect(app.prisma.user.update).toHaveBeenCalledWith({
-      where: { id: 'user-1' },
+    expect(app.prisma.user.updateMany).toHaveBeenCalledWith({
+      where: { id: 'user-1', fillEmailOptIn: true },
       data: { fillEmailOptIn: false, fillEmailOptInAt: null },
     });
   });

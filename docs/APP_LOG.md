@@ -4147,3 +4147,10 @@ Found by the release PR's E2E full set (`[20.5]`, mobile-safari, both tries): th
 its text covered the Limit / Stop price field. Now `z-index: 20`: above the chart, below the sheet. Verified in a
 browser at 390 × 664 — before: the hit element at the field's centre is the card's paragraph; after: the field.
 The existing `[20.5]` is the regression test (a fresh seeded account shows the card).
+
+### fix: the order-fill e-mail's consent time is kept when the same yes is sent again (2026-10-12) ✅
+
+Review of the release PR: `PUT /api/notifications` ran an unconditional update, so a repeated `{ fillEmail: true }`
+(a double click, a retry) overwrote `fillEmailOptInAt`, the proof of consent. It is now an `updateMany` with the
+current state in the `where` — only a change matches, so a repeat is a no-op and the first time stays; it is also
+race-safe. Tests: route (the `where` carries the opposite state), Postgres (a repeated yes leaves the time).

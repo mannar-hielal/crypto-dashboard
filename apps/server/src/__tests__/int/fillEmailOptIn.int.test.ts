@@ -40,6 +40,24 @@ describe('User.fillEmailOptIn (Postgres)', () => {
     expect(off.fillEmailOptInAt).toBeNull();
   });
 
+  it('keeps the original consent time when the same yes is sent again', async () => {
+    const id = await createUser(db);
+    const first = new Date('2026-10-12T10:00:00Z');
+    await db.user.update({
+      where: { id },
+      data: { fillEmailOptIn: true, fillEmailOptInAt: first },
+    });
+
+    // What PUT { fillEmail: true } runs: the state is in the where, so a repeat matches nothing
+    const again = await db.user.updateMany({
+      where: { id, fillEmailOptIn: false },
+      data: { fillEmailOptIn: true, fillEmailOptInAt: new Date('2026-10-13T10:00:00Z') },
+    });
+
+    expect(again.count).toBe(0);
+    expect((await db.user.findUniqueOrThrow({ where: { id } })).fillEmailOptInAt).toEqual(first);
+  });
+
   it('treats an unsubscribe for a deleted account as a no-op, not an error', async () => {
     const result = await db.user.updateMany({
       where: { id: 'no-such-user' },
