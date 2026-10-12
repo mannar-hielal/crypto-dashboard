@@ -4205,3 +4205,11 @@ caused by the 2026-10-11/12 release (activity days, tours, e-mail, habits touch 
 `stop-loss by mark` matches. No production behaviour is involved (a scheduled comparison against a public testnet).
 Left as is rather than loosening the job's tolerances to make it green; revisit when the testnet book is stable, or
 decide on a one-tick tolerance for `avgPrice` explicitly.
+
+### fix: BNBUSDT's price tick is 0.01 on Bybit, spot and USDT Perpetual (2026-10-12) ✅
+
+The weekly spec-drift check (run 38238513965, the manual re-run after the audit fix) found Bybit changed BNBUSDT's
+`tickSize` from 0.1 to 0.01 on both categories. Updated in the server's dated snapshot (`bybitSpec.ts` FALLBACK) and
+the SDK's tick tables (`generated/CDSDK/spec/bybit.ts`, which a parity test holds equal). The live instrument cache
+already served the new tick; the snapshot is the fallback when Bybit is unreachable and what the chart's price format
+reads before the market loads. A finer tick only accepts more prices, so no existing order or drawing is affected.
