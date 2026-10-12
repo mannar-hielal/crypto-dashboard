@@ -88,6 +88,7 @@ type RuleRow = { tickSize: string; qtyStep: string; minOrderQty: string; minNoti
 /**
  * Snapshot of Bybit mainnet /v5/market/instruments-info, fetched 2026-09-26 — used only if the live cache is empty
  * and Bybit is unreachable. Spot qtyStep is basePrecision, spot minNotional is minOrderAmt.
+ * BNBUSDT's tickSize (spot and linear) updated 2026-10-12 from 0.1 to 0.01 — the spec-drift check's finding.
  */
 const FALLBACK: Record<Category, Record<string, RuleRow>> = {
   spot: {
@@ -95,7 +96,7 @@ const FALLBACK: Record<Category, Record<string, RuleRow>> = {
     ETHUSDT: { tickSize: '0.01', qtyStep: '0.00001', minOrderQty: '0.00001', minNotional: '5' },
     SOLUSDT: { tickSize: '0.01', qtyStep: '0.0001', minOrderQty: '0.0001', minNotional: '5' },
     XRPUSDT: { tickSize: '0.0001', qtyStep: '0.01', minOrderQty: '0.01', minNotional: '5' },
-    BNBUSDT: { tickSize: '0.1', qtyStep: '0.0001', minOrderQty: '0.0001', minNotional: '5' },
+    BNBUSDT: { tickSize: '0.01', qtyStep: '0.0001', minOrderQty: '0.0001', minNotional: '5' },
     DOGEUSDT: { tickSize: '0.00001', qtyStep: '0.1', minOrderQty: '0.1', minNotional: '5' },
     ADAUSDT: { tickSize: '0.0001', qtyStep: '0.01', minOrderQty: '0.01', minNotional: '5' },
     AVAXUSDT: { tickSize: '0.001', qtyStep: '0.001', minOrderQty: '0.001', minNotional: '5' },
@@ -106,7 +107,7 @@ const FALLBACK: Record<Category, Record<string, RuleRow>> = {
     ETHUSDT: { tickSize: '0.01', qtyStep: '0.01', minOrderQty: '0.01', minNotional: '5' },
     SOLUSDT: { tickSize: '0.01', qtyStep: '0.1', minOrderQty: '0.1', minNotional: '5' },
     XRPUSDT: { tickSize: '0.0001', qtyStep: '0.1', minOrderQty: '0.1', minNotional: '5' },
-    BNBUSDT: { tickSize: '0.1', qtyStep: '0.01', minOrderQty: '0.01', minNotional: '5' },
+    BNBUSDT: { tickSize: '0.01', qtyStep: '0.01', minOrderQty: '0.01', minNotional: '5' },
     DOGEUSDT: { tickSize: '0.00001', qtyStep: '1', minOrderQty: '1', minNotional: '5' },
     ADAUSDT: { tickSize: '0.0001', qtyStep: '1', minOrderQty: '1', minNotional: '5' },
     AVAXUSDT: { tickSize: '0.001', qtyStep: '0.1', minOrderQty: '0.1', minNotional: '5' },

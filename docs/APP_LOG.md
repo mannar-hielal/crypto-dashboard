@@ -4186,3 +4186,11 @@ is not tried again until the next day, so a provider outage can't make every fil
 Follow-up (review of the admin check): `requireAdmin` also refuses an admin account that has asked to be deleted,
 and the retention report excludes the admin the way the check matches it — trimmed and case-insensitive — in both
 queries (users, and the funnel's events), so a differently-cased `ADMIN_EMAIL` no longer counts the admin in.
+
+### fix: BNBUSDT's price tick is 0.01 on Bybit, spot and USDT Perpetual (2026-10-12) ✅
+
+The weekly spec-drift check (run 38238513965, the manual re-run after the audit fix) found Bybit changed BNBUSDT's
+`tickSize` from 0.1 to 0.01 on both categories. Updated in the server's dated snapshot (`bybitSpec.ts` FALLBACK) and
+the SDK's tick tables (`generated/CDSDK/spec/bybit.ts`, which a parity test holds equal). The live instrument cache
+already served the new tick; the snapshot is the fallback when Bybit is unreachable and what the chart's price format
+reads before the market loads. A finer tick only accepts more prices, so no existing order or drawing is affected.
