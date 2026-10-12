@@ -33,9 +33,13 @@ const MAX_TRACKED_USERS = 10_000;
 
 type Prisma = FastifyInstance['prisma'];
 
-/** A resting order that filled in this change: in `pendingRemove`, filled, not a system order */
+/** A resting order that filled in this change: its pending id in `pendingRemove`, filled, not a system order */
 export function filledRestingOrders(event: PaperEvent): PaperOrderDTO[] {
-  const removed = new Set(event.delta.pendingRemove);
+  // The delta's `pendingRemove` holds the pending order's own id; the engine writes the history row
+  // it becomes as `o-<pending id>` (engine/spot.ts historyRow, engine/actions.ts pendingFillRecord).
+  // Matching the bare id never found a fill — so the e-mail never sent (found on production
+  // 2026-10-12, when a real fill with the account away sent nothing).
+  const removed = new Set(event.delta.pendingRemove.map((id) => `o-${id}`));
   if (removed.size === 0) return [];
   return event.delta.orders.filter(
     (o) =>
