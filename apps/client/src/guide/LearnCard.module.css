@@ -8,6 +8,9 @@
   /* Above the chart and its legends, below the phone / tablet order-form sheet (z-30): the card
      must never sit over the form it points at (e2e [20.5]) */
   z-index: 20;
+  /* The card floats over the chart: it must not eat the chart's wheel / drag / hover where its text
+     sits (e2e [10.4.6]); only its buttons take the pointer */
+  pointer-events: none;
   box-sizing: border-box;
   width: 280px;
   max-width: calc(100% - 24px);
@@ -81,6 +84,10 @@
 
 .link:hover {
   color: var(--color-brand-white);
+}
+
+.card button {
+  pointer-events: auto;
 }
 
 .card button:focus-visible {

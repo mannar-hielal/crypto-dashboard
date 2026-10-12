@@ -4154,3 +4154,11 @@ Review of the release PR: `PUT /api/notifications` ran an unconditional update, 
 (a double click, a retry) overwrote `fillEmailOptInAt`, the proof of consent. It is now an `updateMany` with the
 current state in the `where` — only a change matches, so a repeat is a no-op and the first time stays; it is also
 race-safe. Tests: route (the `where` carries the opposite state), Postgres (a repeated yes leaves the time).
+
+### fix: the welcome / e-mail-offer card lets the pointer through to the chart (2026-10-12) ✅
+
+Release PR E2E (`[10.4.6]`, chromium, both tries): the card floats over the bottom-left of the chart area and, in a
+two-pane layout at 1280 × 720, sat on the centre of pane 0 — the wheel went to the card, not the chart. A card that
+blocks charting until it is dismissed is a defect, not only a test problem. `pointer-events: none` on the card, `auto`
+on its buttons: the card looks as approved and only its buttons take the pointer. Verified in a browser at 1280 × 720:
+over the card's text the element under the pointer is the chart canvas; Start / Not now / ✕ still work.
