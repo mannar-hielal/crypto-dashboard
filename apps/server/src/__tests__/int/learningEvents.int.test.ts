@@ -39,6 +39,37 @@ describe('LearningEvent (Postgres)', () => {
     expect(await db.learningEvent.count({ where: { userId } })).toBe(MAX_LEARN_EVENTS_PER_USER);
   });
 
+  it('holds the cap exactly when requests for one user arrive in parallel', async () => {
+    const userId = await createUser(db);
+    await db.learningEvent.createMany({
+      data: Array.from({ length: MAX_LEARN_EVENTS_PER_USER - 5 }, () => ({
+        userId,
+        name: 'tour_step',
+        itemId: 'primer',
+        stepId: 'primer.1',
+      })),
+    });
+
+    // Twenty at once against five free slots: check-then-insert would let most of them in
+    const results = await Promise.all(
+      Array.from({ length: 20 }, () =>
+        recordLearningEvent(db, { userId, name: 'tour_step', itemId: 'primer' })
+      )
+    );
+
+    expect(results.filter(Boolean)).toHaveLength(5);
+    expect(await db.learningEvent.count({ where: { userId } })).toBe(MAX_LEARN_EVENTS_PER_USER);
+  });
+
+  it('drops the event for an account that no longer exists, without an error', async () => {
+    const stored = await recordLearningEvent(db, {
+      userId: 'no-such-user',
+      name: 'tour_started',
+      itemId: 'primer',
+    });
+    expect(stored).toBe(false);
+  });
+
   it('purges events older than 180 days and keeps the boundary day', async () => {
     const userId = await createUser(db);
     const day = (iso: string) => new Date(`${iso}T12:00:00.000Z`);

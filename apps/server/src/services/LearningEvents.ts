@@ -23,14 +23,30 @@ export interface EventInput {
   stepId?: string;
 }
 
-/** Returns false when the user is at the cap and the event was dropped */
+/**
+ * Returns false when the user is at the cap and the event was dropped.
+ *
+ * 🔐 The cap is strict under concurrency: count-then-insert is not atomic, so the whole thing runs
+ * in a transaction that first takes the user's row lock (an `updateMany` on the user row, typed
+ * Prisma — no raw SQL). Concurrent requests for one user queue on that lock, so each counts what the
+ * one before it inserted; requests for other users never wait.
+ */
 export async function recordLearningEvent(prisma: Prisma, e: EventInput): Promise<boolean> {
-  const held = await prisma.learningEvent.count({ where: { userId: e.userId } });
-  if (held >= MAX_LEARN_EVENTS_PER_USER) return false;
-  await prisma.learningEvent.create({
-    data: { userId: e.userId, name: e.name, itemId: e.itemId, stepId: e.stepId ?? null },
+  return prisma.$transaction(async (tx) => {
+    const { count: locked } = await tx.user.updateMany({
+      where: { id: e.userId },
+      data: { updatedAt: new Date() },
+    });
+    if (locked === 0) return false; // the account is gone
+
+    const held = await tx.learningEvent.count({ where: { userId: e.userId } });
+    if (held >= MAX_LEARN_EVENTS_PER_USER) return false;
+
+    await tx.learningEvent.create({
+      data: { userId: e.userId, name: e.name, itemId: e.itemId, stepId: e.stepId ?? null },
+    });
+    return true;
   });
-  return true;
 }
 
 export async function purgeOldLearningEvents(

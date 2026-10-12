@@ -30,6 +30,10 @@ vi.mock('../plugins/prisma.js', () => {
       },
       order: { count: vi.fn() },
       journalEntry: { findMany: vi.fn() },
+      user: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+      $transaction: vi
+        .fn()
+        .mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(prismaClient)),
     };
     app.decorate('prisma', prismaClient as never);
   };
