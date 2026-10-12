@@ -4213,3 +4213,20 @@ The weekly spec-drift check (run 38238513965, the manual re-run after the audit 
 the SDK's tick tables (`generated/CDSDK/spec/bybit.ts`, which a parity test holds equal). The live instrument cache
 already served the new tick; the snapshot is the fallback when Bybit is unreachable and what the chart's price format
 reads before the market loads. A finer tick only accepts more prices, so no existing order or drawing is affected.
+
+### fix: the order-fill e-mail never matched a fill — found by a real test on production (2026-10-12) ✅
+
+The opt-in "your order filled while you were away" e-mail was shipped in the 2026-10-12 release and **never sent
+one**. A contained test on production (opt in, a tiny resting Spot limit buy that filled with no socket open) sent
+nothing, and the owner confirmed no e-mail arrived. Cause: `filledRestingOrders` looked for the pending order's id in
+the delta's `orders`, but the engine writes the history row of a filled resting order as `o-<pending id>`
+(`engine/spot.ts` `historyRow`, `engine/actions.ts` `pendingFillRecord`) while `pendingRemove` holds the bare id — so
+no fill ever matched. The unit tests built their events by hand with the same id on both sides, so they passed.
+
+- **Fix:** match `o-<pendingRemove id>`.
+- **Regression test** (`fillNotifier.engine.test.ts`): the delta comes from the engine's own functions —
+  `placeSpotLimit` / `placePending` → `executeTrigger` → `deltaDTO` — for a Spot and a USDT Perpetual limit fill,
+  plus a market buy and a cancel (neither matches), and the notifier end to end. With the old matcher three of its
+  four tests fail. The hand-made unit tests now use the engine's id shape too.
+- **Lesson:** a check built from fixtures that mirror the code under test cannot catch a wrong assumption about the
+  data; the first live fill is the test that mattered.
