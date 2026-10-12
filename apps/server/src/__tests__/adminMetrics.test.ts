@@ -96,10 +96,11 @@ describe('GET /api/admin/metrics/retention', () => {
   it('leaves the admin and the QA account out of every query', async () => {
     await get(adminToken);
     const where = vi.mocked(app.prisma.user.findMany).mock.calls[0][0]?.where as {
-      email: { not: string };
+      NOT: { email: { equals: string; mode: string } };
       username: { notIn: string[] };
     };
-    expect(where.email).toEqual({ not: 'admin@test.com' });
+    // case-insensitive, like the admin check
+    expect(where.NOT).toEqual({ email: { equals: 'admin@test.com', mode: 'insensitive' } });
     expect(where.username.notIn).toContain('cpt_qa_test');
   });
 

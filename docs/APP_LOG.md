@@ -4182,3 +4182,7 @@ Follow-up on the same review (FillNotifier): the refund of a failed send is day-
 day it took the slot on and `refund` only gives it back if that is still today (a send that began before midnight
 and failed after it must not touch the new day's counter) — and a user whose sends fail five times in a UTC day
 is not tried again until the next day, so a provider outage can't make every fill retry it all day.
+
+Follow-up (review of the admin check): `requireAdmin` also refuses an admin account that has asked to be deleted,
+and the retention report excludes the admin the way the check matches it — trimmed and case-insensitive — in both
+queries (users, and the funnel's events), so a differently-cased `ADMIN_EMAIL` no longer counts the admin in.

@@ -24,7 +24,7 @@ describe('requireAdmin', () => {
     expect(t.status).not.toHaveBeenCalled();
     expect(t.findUnique).toHaveBeenCalledWith({
       where: { id: 'u1' },
-      select: { email: true, emailVerifiedAt: true },
+      select: { email: true, emailVerifiedAt: true, deletionRequestedAt: true },
     });
   });
 
@@ -66,6 +66,15 @@ describe('requireAdmin', () => {
     const t = run(
       { userId: 'u1', email: 'admin@test.com' },
       { email: 'new-address@test.com', emailVerifiedAt: VERIFIED }
+    );
+    await t.result;
+    expect(t.status).toHaveBeenCalledWith(403);
+  });
+
+  it('should refuse the admin account once it has asked to be deleted', async () => {
+    const t = run(
+      { userId: 'u1', email: 'admin@test.com' },
+      { email: 'admin@test.com', emailVerifiedAt: VERIFIED, deletionRequestedAt: new Date() }
     );
     await t.result;
     expect(t.status).toHaveBeenCalledWith(403);
