@@ -4186,3 +4186,30 @@ is not tried again until the next day, so a provider outage can't make every fil
 Follow-up (review of the admin check): `requireAdmin` also refuses an admin account that has asked to be deleted,
 and the retention report excludes the admin the way the check matches it — trimmed and case-insensitive — in both
 queries (users, and the funnel's events), so a differently-cased `ADMIN_EMAIL` no longer counts the admin in.
+
+### docs: Bybit testnet parity — a known gap since 2026-10-10 (issue #219) ✅
+
+The nightly testnet parity job (`parity.yml`) passed on 2026-10-09 and has failed on 2026-10-10, -11 and -12, with the
+**same engine commit** (`fb12e16`, then `11be569`): the engine did not change, Bybit's testnet data did. It is not
+caused by the 2026-10-11/12 release (activity days, tours, e-mail, habits touch no engine code). The step log of
+2026-10-12 (`parity-log`) shows four of five steps differing in fields that depend on testnet market data:
+
+- **`avgPrice` / `avgEntryPrice`:** Bybit 83003.95, paper 83004 — the testnet filled a market order at a price off the
+  0.1 grid the paper ask snapshot is on, i.e. a thin, finer-grained testnet book at fill time.
+- **`positionValue`:** Bybit 166.02938, paper 166.008 — 0.002 BTC × mark 83014.7 vs × entry 83004 (a mark-vs-entry
+  basis; passed before, so it follows a testnet mark moving away from the fill).
+- **`liqPrice`:** 74950.9 vs 74951, 69931.6 vs 69931.7 — one tick, a consequence of the entry price above.
+- **cross account figures:** `totalInitialMargin` 8.3324 vs 8.3425, `totalAvailableBalance` 9977.3058 vs 9977.2957 —
+  the same 0.01 USDT, again from the entry-price difference.
+
+`stop-loss by mark` matches. No production behaviour is involved (a scheduled comparison against a public testnet).
+Left as is rather than loosening the job's tolerances to make it green; revisit when the testnet book is stable, or
+decide on a one-tick tolerance for `avgPrice` explicitly.
+
+### fix: BNBUSDT's price tick is 0.01 on Bybit, spot and USDT Perpetual (2026-10-12) ✅
+
+The weekly spec-drift check (run 38238513965, the manual re-run after the audit fix) found Bybit changed BNBUSDT's
+`tickSize` from 0.1 to 0.01 on both categories. Updated in the server's dated snapshot (`bybitSpec.ts` FALLBACK) and
+the SDK's tick tables (`generated/CDSDK/spec/bybit.ts`, which a parity test holds equal). The live instrument cache
+already served the new tick; the snapshot is the fallback when Bybit is unreachable and what the chart's price format
+reads before the market loads. A finer tick only accepts more prices, so no existing order or drawing is affected.
