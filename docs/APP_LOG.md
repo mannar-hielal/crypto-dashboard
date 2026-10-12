@@ -4177,3 +4177,8 @@ Review of the release PR.
 - **`FillNotifier`** takes the daily slot before the send (so parallel events can't both pass the cap) and gives it
   back if the send throws; a failed send (a mail-provider outage) is caught and logged per order, so it neither
   costs a slot nor drops the other fills of that change.
+
+Follow-up on the same review (FillNotifier): the refund of a failed send is day-aware — `reserve` returns the UTC
+day it took the slot on and `refund` only gives it back if that is still today (a send that began before midnight
+and failed after it must not touch the new day's counter) — and a user whose sends fail five times in a UTC day
+is not tried again until the next day, so a provider outage can't make every fill retry it all day.

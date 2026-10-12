@@ -26,6 +26,8 @@ import { EmailService } from './EmailService.js';
 const log = logger.child({ service: 'FillNotifier' });
 
 export const MAX_PER_DAY = 20;
+/** A user whose sends keep failing (a provider outage) is left alone for the rest of the UTC day */
+export const MAX_FAILURES_PER_DAY = 5;
 /** The counters map never holds more than this many users in a day */
 const MAX_TRACKED_USERS = 10_000;
 
@@ -51,6 +53,7 @@ export interface Mailer {
 export class FillNotifier {
   private day = '';
   private sent = new Map<string, number>();
+  private failed = new Map<string, number>();
 
   constructor(
     private readonly prisma: Prisma,
@@ -89,7 +92,8 @@ export class FillNotifier {
 
     let count = 0;
     for (const order of filled) {
-      if (!this.reserve(event.userId)) break;
+      const reservedOn = this.reserve(event.userId);
+      if (reservedOn === null) break;
       try {
         await this.mailer.sendOrderFilledEmail(
           user.email,
@@ -110,7 +114,7 @@ export class FillNotifier {
       } catch (err) {
         // One failed send (a mail-provider outage) neither costs the user a daily slot nor drops
         // the other fills of this change
-        this.refund(event.userId);
+        this.refund(event.userId, reservedOn);
         log.error({ err }, 'Could not send an order-filled e-mail');
       }
     }
@@ -119,25 +123,32 @@ export class FillNotifier {
 
   /**
    * Takes one of the user's daily slots before the send (so parallel events cannot both pass the
-   * cap); `refund` gives it back when the send failed. 🔐 Fails closed: when the map holds
-   * `maxTrackedUsers` users, a user it is not already counting gets no e-mail rather than the
-   * counters being cleared (which would hand every capped user a fresh allowance mid-day).
+   * cap) and returns the UTC day it was taken on, or null when there is none to take; `refund`
+   * gives it back when the send failed. 🔐 Fails closed: when the map holds `maxTrackedUsers`
+   * users, a user it is not already counting gets no e-mail rather than the counters being cleared
+   * (which would hand every capped user a fresh allowance mid-day); and a user whose sends have
+   * failed `MAX_FAILURES_PER_DAY` times today is not tried again until tomorrow.
    */
-  private reserve(userId: string): boolean {
+  private reserve(userId: string): string | null {
     const today = this.now().toISOString().slice(0, 10);
     if (today !== this.day) {
       this.day = today;
       this.sent = new Map();
+      this.failed = new Map();
     }
     const n = this.sent.get(userId);
-    if (n === undefined && this.sent.size >= this.maxTrackedUsers) return false;
-    if ((n ?? 0) >= MAX_PER_DAY) return false;
+    if (n === undefined && this.sent.size >= this.maxTrackedUsers) return null;
+    if ((n ?? 0) >= MAX_PER_DAY) return null;
+    if ((this.failed.get(userId) ?? 0) >= MAX_FAILURES_PER_DAY) return null;
     this.sent.set(userId, (n ?? 0) + 1);
-    return true;
+    return today;
   }
 
-  private refund(userId: string): void {
+  /** Gives the slot back — only if the day it was taken on is still the current one */
+  private refund(userId: string, day: string): void {
+    if (day !== this.day) return; // the counters were reset at midnight: nothing of it is left
     const n = this.sent.get(userId);
     if (n !== undefined && n > 0) this.sent.set(userId, n - 1);
+    this.failed.set(userId, (this.failed.get(userId) ?? 0) + 1);
   }
 }
