@@ -9,9 +9,11 @@ import {
 import { readUnsubscribeToken } from '../lib/unsubscribeToken.js';
 import type { PaperEvent } from '../trading/PaperEventBus.js';
 
+/** `id` is the pending order's id; the history row the engine writes for it is `o-<id>` */
 function order(over: Partial<PaperOrderDTO> = {}): PaperOrderDTO {
+  const { id = 'o1', ...rest } = over;
   return {
-    id: 'o1',
+    id: `o-${id}`,
     category: 'spot',
     symbol: 'BTCUSDT',
     side: 'buy',
@@ -23,7 +25,7 @@ function order(over: Partial<PaperOrderDTO> = {}): PaperOrderDTO {
     commission: '0',
     placingTime: 1,
     closingTime: 2,
-    ...over,
+    ...rest,
   };
 }
 
@@ -131,7 +133,7 @@ describe('FillNotifier', () => {
   it('should cap the e-mails per user per UTC day and start again the next day', async () => {
     const { notifier, send, clock } = setup();
     const many = Array.from({ length: MAX_PER_DAY + 5 }, (_, i) => order({ id: `o${i}` }));
-    const removed = many.map((o) => o.id);
+    const removed = many.map((o) => o.id.slice(2));
 
     expect(await notifier.handle(event(many, removed))).toBe(MAX_PER_DAY);
     expect(send).toHaveBeenCalledTimes(MAX_PER_DAY);
@@ -155,7 +157,7 @@ describe('FillNotifier', () => {
       await notifier.handle(
         event(
           many,
-          many.map((o) => o.id)
+          many.map((o) => o.id.slice(2))
         )
       )
     ).toBe(MAX_PER_DAY - 1);
@@ -176,7 +178,7 @@ describe('FillNotifier', () => {
       await notifier.handle(
         event(
           many,
-          many.map((o) => o.id)
+          many.map((o) => o.id.slice(2))
         )
       )
     ).toBe(MAX_PER_DAY);
@@ -190,7 +192,7 @@ describe('FillNotifier', () => {
     await notifier.handle(
       event(
         many,
-        many.map((o) => o.id)
+        many.map((o) => o.id.slice(2))
       )
     );
     // exactly the failure cap's worth of attempts, not one per order
@@ -227,7 +229,7 @@ describe('FillNotifier', () => {
       await notifier.handle(
         event(
           many,
-          many.map((o) => o.id),
+          many.map((o) => o.id.slice(2)),
           'u-a'
         )
       )
