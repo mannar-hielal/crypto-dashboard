@@ -4139,3 +4139,11 @@ habits, never profits or how often someone trades.
 - **Privacy policy 1.3:** a §6 line (the numbers are counted from existing data).
 - **Tests:** pure `computeHabits` / `streakEndingAt`, route (401, own rows only), SDK contract, wording guard,
   panel rendering and failure; Postgres: stop-loss counting, notes vs automatic lines, tour events and progress.
+
+### fix: the welcome card no longer sits over the phone order form (2026-10-12) ✅
+
+Found by the release PR's E2E full set (`[20.5]`, mobile-safari, both tries): the welcome / e-mail-offer card was
+`z-index: 100`, above the phone and tablet order-form sheet (`z-30`), so on a short phone screen (iPhone, ~390 × 664)
+its text covered the Limit / Stop price field. Now `z-index: 20`: above the chart, below the sheet. Verified in a
+browser at 390 × 664 — before: the hit element at the field's centre is the card's paragraph; after: the field.
+The existing `[20.5]` is the regression test (a fresh seeded account shows the card).
