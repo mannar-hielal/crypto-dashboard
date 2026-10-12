@@ -111,6 +111,8 @@ describe('loadRetentionReport (Postgres)', () => {
 
   it('leaves the admin and the QA account out of every number', async () => {
     await makeUser({ email: 'admin@test.com', username: 'the_admin' });
+    // the same address in another case still counts as the admin
+    await makeUser({ email: 'Admin@Test.com', username: 'the_admin_cased' });
     await makeUser({ username: 'cpt_qa_test' });
     const real = await makeUser({});
     await placeOrder(real, hoursAfter(1));

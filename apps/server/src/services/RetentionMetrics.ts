@@ -206,6 +206,11 @@ export function buildRetentionReport(
 
 type Prisma = FastifyInstance['prisma'];
 
+/** The admin's account, matched the way `requireAdmin` does: trimmed and case-insensitive */
+function adminAccount() {
+  return { email: { equals: config.adminEmail.trim(), mode: 'insensitive' as const } };
+}
+
 /** Every query below is bounded by the window and by a row cap, and reads typed Prisma only */
 export async function loadRetentionReport(
   prisma: Prisma,
@@ -215,7 +220,7 @@ export async function loadRetentionReport(
   const start = new Date(weekStartUtc(now).getTime() - (windowWeeks - 1) * WEEK_MS);
   const userFilter = {
     createdAt: { gte: start },
-    email: { not: config.adminEmail },
+    NOT: adminAccount(),
     username: { notIn: [...EXCLUDED_USERNAMES] },
   };
   const placedByUser = {
@@ -272,7 +277,7 @@ export async function loadRetentionReport(
     prisma.learningEvent.findMany({
       where: {
         user: {
-          email: { not: config.adminEmail },
+          NOT: adminAccount(),
           username: { notIn: [...EXCLUDED_USERNAMES] },
         },
         at: { gte: new Date(now.getTime() - LEARN_EVENT_RETENTION_DAYS * DAY_MS) },

@@ -6,7 +6,7 @@ vi.mock('../plugins/prisma.js', () => {
   const skipOverride = Symbol.for('skip-override');
   const plugin = async (app: FastifyInstance) => {
     const prismaClient = {
-      user: { findMany: vi.fn() },
+      user: { findMany: vi.fn(), findUnique: vi.fn() },
       order: { findMany: vi.fn() },
       journalEntry: { findMany: vi.fn() },
       userActivity: { findMany: vi.fn(), findFirst: vi.fn() },
@@ -41,6 +41,10 @@ describe('GET /api/admin/metrics/retention', () => {
     vi.clearAllMocks();
     clearRetentionCache();
     vi.mocked(app.prisma.user.findMany).mockResolvedValue([] as never);
+    vi.mocked(app.prisma.user.findUnique).mockResolvedValue({
+      email: 'admin@test.com',
+      emailVerifiedAt: new Date(),
+    } as never);
     vi.mocked(app.prisma.order.findMany).mockResolvedValue([] as never);
     vi.mocked(app.prisma.journalEntry.findMany).mockResolvedValue([] as never);
     vi.mocked(app.prisma.userActivity.findMany).mockResolvedValue([] as never);
@@ -92,10 +96,11 @@ describe('GET /api/admin/metrics/retention', () => {
   it('leaves the admin and the QA account out of every query', async () => {
     await get(adminToken);
     const where = vi.mocked(app.prisma.user.findMany).mock.calls[0][0]?.where as {
-      email: { not: string };
+      NOT: { email: { equals: string; mode: string } };
       username: { notIn: string[] };
     };
-    expect(where.email).toEqual({ not: 'admin@test.com' });
+    // case-insensitive, like the admin check
+    expect(where.NOT).toEqual({ email: { equals: 'admin@test.com', mode: 'insensitive' } });
     expect(where.username.notIn).toContain('cpt_qa_test');
   });
 

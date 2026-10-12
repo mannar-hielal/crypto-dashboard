@@ -17,6 +17,7 @@ import { TOURS } from '@/guide/tours';
 import { Footer } from '@/components/Footer';
 import { SeoHead } from '@/components/SeoHead';
 import { useAuthStore } from '@/store/authStore';
+import { isAdminEmail } from '@/lib/adminEmail';
 import styles from './AdminMetricsPage.module.css';
 
 interface State {
@@ -153,7 +154,7 @@ export function AdminMetricsPage() {
   const navigate = useNavigate();
   const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
-  const isAdmin = user?.email === import.meta.env.VITE_ADMIN_EMAIL;
+  const isAdmin = isAdminEmail(user?.email);
 
   const [state, dispatch] = useReducer(reducer, initialState);
   // Bumped by Refresh: the load effect re-runs for it (a reducer dispatch, not setState in an effect)

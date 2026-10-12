@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { PaperOrderDTO } from '@crypto-dashboard/sdk';
-import { MAX_PER_DAY, FillNotifier, filledRestingOrders } from '../services/FillNotifier.js';
+import {
+  MAX_FAILURES_PER_DAY,
+  MAX_PER_DAY,
+  FillNotifier,
+  filledRestingOrders,
+} from '../services/FillNotifier.js';
 import { readUnsubscribeToken } from '../lib/unsubscribeToken.js';
 import type { PaperEvent } from '../trading/PaperEventBus.js';
 
@@ -132,6 +137,72 @@ describe('FillNotifier', () => {
     expect(send).toHaveBeenCalledTimes(MAX_PER_DAY);
 
     clock.now = new Date('2026-10-13T00:00:01Z');
+    expect(await notifier.handle(event([order()], ['o1']))).toBe(1);
+  });
+
+  it('should not charge a daily slot for a send that failed, nor drop the rest of the change', async () => {
+    const { notifier, send } = setup();
+    send.mockRejectedValueOnce(new Error('resend down')).mockResolvedValue(undefined);
+    const two = [order({ id: 'a' }), order({ id: 'b' })];
+
+    // the first fill's send fails, the second still goes
+    expect(await notifier.handle(event(two, ['a', 'b']))).toBe(1);
+    expect(send).toHaveBeenCalledTimes(2);
+
+    // and the failed attempt cost nothing: a full day's allowance is still there
+    const many = Array.from({ length: MAX_PER_DAY }, (_, i) => order({ id: `m${i}` }));
+    expect(
+      await notifier.handle(
+        event(
+          many,
+          many.map((o) => o.id)
+        )
+      )
+    ).toBe(MAX_PER_DAY - 1);
+  });
+
+  it('should not refund into the next day when a send that began before midnight fails after it', async () => {
+    const { notifier, send, clock } = setup();
+    clock.now = new Date('2026-10-12T23:59:59Z');
+    send.mockImplementationOnce(async () => {
+      clock.now = new Date('2026-10-13T00:00:01Z'); // midnight passes during the send
+      throw new Error('resend down');
+    });
+    await notifier.handle(event([order()], ['o1']));
+
+    // the new day starts with a full, untouched allowance — not a refunded or negative one
+    const many = Array.from({ length: MAX_PER_DAY + 3 }, (_, i) => order({ id: `m${i}` }));
+    expect(
+      await notifier.handle(
+        event(
+          many,
+          many.map((o) => o.id)
+        )
+      )
+    ).toBe(MAX_PER_DAY);
+  });
+
+  it('should leave a user alone for the rest of the day once their sends keep failing', async () => {
+    const { notifier, send, clock } = setup();
+    send.mockRejectedValue(new Error('resend down'));
+    const many = Array.from({ length: MAX_FAILURES_PER_DAY + 4 }, (_, i) => order({ id: `m${i}` }));
+
+    await notifier.handle(
+      event(
+        many,
+        many.map((o) => o.id)
+      )
+    );
+    // exactly the failure cap's worth of attempts, not one per order
+    expect(send).toHaveBeenCalledTimes(MAX_FAILURES_PER_DAY);
+
+    send.mockClear();
+    await notifier.handle(event([order()], ['o1']));
+    expect(send).not.toHaveBeenCalled();
+
+    // tomorrow they are tried again
+    clock.now = new Date('2026-10-13T08:00:00Z');
+    send.mockResolvedValue(undefined);
     expect(await notifier.handle(event([order()], ['o1']))).toBe(1);
   });
 

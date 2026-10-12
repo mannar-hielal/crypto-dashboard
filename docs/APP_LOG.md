@@ -4162,3 +4162,27 @@ two-pane layout at 1280 × 720, sat on the centre of pane 0 — the wheel went t
 blocks charting until it is dismissed is a defect, not only a test problem. `pointer-events: none` on the card, `auto`
 on its buttons: the card looks as approved and only its buttons take the pointer. Verified in a browser at 1280 × 720:
 over the card's text the element under the pointer is the chart canvas; Start / Not now / ✕ still work.
+
+### fix: the admin check reads the account, and the fill e-mail's daily slot is charged only for a send that happened (2026-10-12) ✅
+
+Review of the release PR.
+
+- **`requireAdmin`** no longer trusts the token's `email` claim alone: the claim is compared with the configured
+  address the way registration stores addresses (trimmed, lower-cased), and a claim that matches is then checked
+  against the account — read by `userId`, it must have that address _now_ and a verified one. A claim that is not
+  the admin address never reaches the database. A stale claim (the address changed since the token was signed) or an
+  unverified registration of the admin address (verification is not needed to obtain a token) no longer passes.
+  Used by `/api/admin/*` and the newsletter list. The client's "hide the admin menu" check compares the same way
+  (`lib/adminEmail.ts`); the server stays the real check.
+- **`FillNotifier`** takes the daily slot before the send (so parallel events can't both pass the cap) and gives it
+  back if the send throws; a failed send (a mail-provider outage) is caught and logged per order, so it neither
+  costs a slot nor drops the other fills of that change.
+
+Follow-up on the same review (FillNotifier): the refund of a failed send is day-aware — `reserve` returns the UTC
+day it took the slot on and `refund` only gives it back if that is still today (a send that began before midnight
+and failed after it must not touch the new day's counter) — and a user whose sends fail five times in a UTC day
+is not tried again until the next day, so a provider outage can't make every fill retry it all day.
+
+Follow-up (review of the admin check): `requireAdmin` also refuses an admin account that has asked to be deleted,
+and the retention report excludes the admin the way the check matches it — trimmed and case-insensitive — in both
+queries (users, and the funnel's events), so a differently-cased `ADMIN_EMAIL` no longer counts the admin in.
