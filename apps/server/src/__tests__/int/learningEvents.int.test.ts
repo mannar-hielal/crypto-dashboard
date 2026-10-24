@@ -141,10 +141,32 @@ describe('LearningEvent (Postgres)', () => {
     expect(primer.started).toBe(2);
     expect(primer.completed).toBe(1);
     expect(primer.steps).toEqual([{ stepId: 'primer.1', viewers: 1, closedHere: 1 }]);
+    // The lessons first, then the tours
     expect(r.tourFunnel.map((t) => t.itemId)).toEqual([
+      'lesson-01',
+      'lesson-02',
       'primer',
       'buy-first-coin',
       'sell-and-review',
+    ]);
+  });
+
+  it('keeps only the latest rating per person and lesson', async () => {
+    const userId = await createUser(db);
+    const rate = (n: number, itemId = 'lesson-01') =>
+      recordLearningEvent(db, { userId, name: 'lesson_rated', itemId, stepId: `${itemId}.${n}` });
+    await rate(2);
+    await rate(5);
+    await rate(3, 'lesson-02');
+
+    const ratings = await db.learningEvent.findMany({
+      where: { userId, name: 'lesson_rated' },
+      orderBy: { itemId: 'asc' },
+      select: { itemId: true, stepId: true },
+    });
+    expect(ratings).toEqual([
+      { itemId: 'lesson-01', stepId: 'lesson-01.5' },
+      { itemId: 'lesson-02', stepId: 'lesson-02.3' },
     ]);
   });
 });
