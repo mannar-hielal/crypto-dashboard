@@ -25,6 +25,7 @@ vi.mock('../plugins/prisma.js', () => {
 import { buildApp } from '../app.js';
 import { clearMarketInfoCache } from '../services/BybitMarketInfo.js';
 import { resetBybitBreakers } from '../lib/fetchWithRetry.js';
+import { clearHistoryCache } from '../routes/market/index.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -66,6 +67,7 @@ describe('GET /api/market/candles', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     resetBybitBreakers();
+    clearHistoryCache();
   });
 
   // ── Happy path ──────────────────────────────────────────────────────────────
@@ -181,6 +183,132 @@ describe('GET /api/market/candles', () => {
     const calledUrl = (fetchMock.mock.calls[0] as [string])[0];
     expect(calledUrl).toContain('category=spot');
     expect(calledUrl).toContain('interval=60');
+  });
+
+  it('passes a validated end time through to Bybit, for history further back', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ retCode: 0, retMsg: 'OK', result: { list: SAMPLE_LIST } }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const end = Date.UTC(2021, 4, 20);
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/market/candles?category=linear&symbol=BTCUSDT&interval=1d&limit=116&end=${end}`,
+    });
+
+    expect(res.statusCode).toBe(200);
+    const calledUrl = (fetchMock.mock.calls[0] as [string])[0];
+    expect(calledUrl).toContain(`end=${end}`);
+    expect(calledUrl).toContain('interval=D');
+  });
+
+  it('snaps an end time to its candle’s open time, so any time in that candle shares one request', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ retCode: 0, retMsg: 'OK', result: { list: SAMPLE_LIST } }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const day = Date.UTC(2021, 4, 20);
+
+    for (const end of [day + 1, day + 43_200_000, day + 86_399_999]) {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/market/candles?category=linear&symbol=BTCUSDT&interval=1d&limit=116&end=${end}`,
+      });
+      expect(res.statusCode).toBe(200);
+    }
+    // Closed history: fetched once, then served from the cache
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect((fetchMock.mock.calls[0] as [string])[0]).toContain(`end=${day}`);
+  });
+
+  it('never caches the candle still being drawn', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ retCode: 0, retMsg: 'OK', result: { list: SAMPLE_LIST } }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const now = Date.now();
+    for (let i = 0; i < 2; i++) {
+      await app.inject({
+        method: 'GET',
+        url: `/api/market/candles?symbol=BTCUSDT&interval=1d&end=${now}`,
+      });
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps at most 64 cached windows, dropping the least recently used', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ retCode: 0, retMsg: 'OK', result: { list: SAMPLE_LIST } }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const first = Date.UTC(2021, 0, 1);
+    const ask = (d: number) =>
+      app.inject({
+        method: 'GET',
+        url: `/api/market/candles?symbol=BTCUSDT&interval=1d&end=${first + d * 86_400_000}`,
+      });
+    for (let d = 0; d < 65; d++) await ask(d);
+    expect(fetchMock).toHaveBeenCalledTimes(65);
+    await ask(64); // still cached
+    expect(fetchMock).toHaveBeenCalledTimes(65);
+    await ask(0); // the oldest, dropped
+    expect(fetchMock).toHaveBeenCalledTimes(66);
+    // A window in use stays: read day 2 again, then add a new one — day 3 goes, not day 2
+    await ask(2);
+    expect(fetchMock).toHaveBeenCalledTimes(66);
+    await ask(100);
+    await ask(2);
+    expect(fetchMock).toHaveBeenCalledTimes(67);
+    await ask(3);
+    expect(fetchMock).toHaveBeenCalledTimes(68);
+  });
+
+  it('takes an end time only with daily, weekly or monthly candles', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/market/candles?symbol=BTCUSDT&interval=1m&end=${Date.UTC(2021, 4, 20)}`,
+    });
+    expect(res.statusCode).toBe(400);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('sends no end time to Bybit when none is asked for', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ retCode: 0, retMsg: 'OK', result: { list: SAMPLE_LIST } }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await app.inject({ method: 'GET', url: '/api/market/candles?symbol=BTCUSDT&interval=1m' });
+    expect((fetchMock.mock.calls[0] as [string])[0]).not.toContain('end=');
+  });
+
+  it.each([
+    ['before 2017', String(Date.UTC(2016, 11, 31)), 400],
+    ['in the future', String(Date.now() + 3 * 86_400_000), 400],
+    ['not digits', '2021-05-20', 400],
+    ['too long', '12345678901234', 400],
+  ])('refuses an end time %s', async (_label, end, status) => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/market/candles?symbol=BTCUSDT&interval=1d&end=${encodeURIComponent(end)}`,
+    });
+    expect(res.statusCode).toBe(status);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('fetches linear history when category=linear', async () => {

@@ -305,6 +305,12 @@ const CALLS: Call[] = [
     response: f.candlesResponse,
   },
   {
+    name: 'marketApi.getCandles (end)',
+    run: () => marketApi.getCandles('BTCUSDT', '1d', 116, 'linear', Date.UTC(2021, 4, 20)),
+    status: 200,
+    response: f.candlesResponse,
+  },
+  {
     name: 'marketApi.getInstruments',
     run: () => marketApi.getInstruments('linear'),
     status: 200,

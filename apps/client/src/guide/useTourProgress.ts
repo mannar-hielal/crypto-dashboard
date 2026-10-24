@@ -8,6 +8,8 @@ import { useEffect } from 'react';
 import { learnApi } from '@crypto-dashboard/sdk';
 import type { LearnEventRequest } from '@crypto-dashboard/sdk';
 import { useAuthStore } from '@/store/authStore';
+import { useLessonStore } from './lessonStore';
+import { isLessonId, type LessonId } from './lessons';
 import { useTourStore } from './tourStore';
 import { isTourId, type TourId } from './tours';
 
@@ -25,9 +27,15 @@ export function useTourProgress(): void {
         const completed = items
           .filter((i) => i.status === 'completed' && isTourId(i.itemId))
           .map((i) => i.itemId as TourId);
-        // The primer finished means the offer is done with, dismissed or not
+        const lessons = items
+          .filter((i) => i.status === 'completed' && isLessonId(i.itemId))
+          .map((i) => i.itemId as LessonId);
+        // Lesson 1 (or its primer) finished means the offer is done with, dismissed or not
         const cardDismissed =
-          items.some((i) => i.itemId === 'welcome-card') || completed.includes('primer');
+          items.some((i) => i.itemId === 'welcome-card') ||
+          completed.includes('primer') ||
+          lessons.includes('lesson-01');
+        useLessonStore.getState().setCompleted(lessons);
         const fillOfferDismissed = items.some((i) => i.itemId === 'fill-email-offer');
         useTourStore.getState().setProgress({ completed, cardDismissed, fillOfferDismissed });
       })
@@ -68,10 +76,9 @@ export function useTourProgress(): void {
         learnApi
           .trackEvent({ name, itemId, ...(stepId ? { stepId } : {}) }, accessToken)
           .catch(() => undefined);
-      const finished = (Object.keys(state.completed) as TourId[]).filter(
-        (id) => !prev.completed[id]
-      );
-      for (const id of finished) send('tour_completed', id);
+      // A finish, a replay of a finished tour included (`completed` doesn't change then)
+      const finished = state.finishes !== prev.finishes ? prev.activeId : null;
+      if (finished) send('tour_completed', finished);
 
       const { activeId, stepIndex } = state;
       if (activeId !== null && activeId !== prev.activeId) {
@@ -79,9 +86,43 @@ export function useTourProgress(): void {
         send('tour_step', activeId, `${activeId}.1`);
       } else if (activeId !== null && stepIndex !== prev.stepIndex) {
         send('tour_step', activeId, `${activeId}.${stepIndex + 1}`);
-      } else if (activeId === null && prev.activeId !== null && finished.length === 0) {
+      } else if (activeId === null && prev.activeId !== null && !finished) {
         // Closed (Skip, ✕, Esc) on the step it was showing
         send('tour_closed', prev.activeId, `${prev.activeId}.${prev.stepIndex + 1}`);
+      }
+    });
+  }, [accessToken]);
+
+  // Lessons: progress, and their screens as the funnel's steps (`lesson-02.<n>`), plus the rating
+  useEffect(() => {
+    if (!accessToken) return;
+    return useLessonStore.subscribe((state, prev) => {
+      const send = (name: LearnEventRequest['name'], itemId: LessonId, stepId?: string) =>
+        learnApi
+          .trackEvent({ name, itemId, ...(stepId ? { stepId } : {}) }, accessToken)
+          .catch(() => undefined);
+
+      // A finish (Finish or the next lesson), a replay included. Counted, not read from `completed`:
+      // that also changes when the server's progress loads, which is no finish at all
+      const finished = state.finishes !== prev.finishes ? prev.activeId : null;
+      if (finished) {
+        learnApi.setProgress(finished, 'completed', accessToken).catch(() => undefined);
+        send('tour_completed', finished);
+      }
+
+      const { activeId, screen } = state;
+      if (activeId !== null && activeId !== prev.activeId) {
+        send('tour_started', activeId);
+        send('tour_step', activeId, `${activeId}.1`);
+      } else if (activeId !== null && screen !== prev.screen) {
+        send('tour_step', activeId, `${activeId}.${screen + 1}`);
+      } else if (activeId === null && prev.activeId !== null && !finished) {
+        send('tour_closed', prev.activeId, `${prev.activeId}.${prev.screen + 1}`);
+      }
+
+      const rated = activeId ?? prev.activeId;
+      if (state.rating !== null && state.rating !== prev.rating && rated) {
+        send('lesson_rated', rated, `${rated}.${state.rating}`);
       }
     });
   }, [accessToken]);

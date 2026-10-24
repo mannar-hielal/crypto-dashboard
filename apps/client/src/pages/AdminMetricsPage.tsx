@@ -13,6 +13,13 @@ import type {
   RetentionMetricsResponse,
   TourFunnelTour,
 } from '@crypto-dashboard/sdk';
+import {
+  LESSONS,
+  isLessonId,
+  lessonScreens,
+  type Lesson,
+  type LessonScreen,
+} from '@/guide/lessons';
 import { TOURS } from '@/guide/tours';
 import { Footer } from '@/components/Footer';
 import { SeoHead } from '@/components/SeoHead';
@@ -97,17 +104,43 @@ function Row({ cohort, total }: { cohort: RetentionCohort; total?: boolean }) {
   );
 }
 
-/** A tour's step as a short line: its text, cut at 60 characters */
+/** A lesson's screen as a short name ("Card: What a price is", "Question 2", "Try it", …) */
+function screenName(lesson: Lesson, sc: LessonScreen): string {
+  switch (sc.kind) {
+    case 'card':
+      return `Card: ${lesson.cards[sc.index].title}`;
+    case 'moment':
+      return 'Your call (mid-lesson question)';
+    case 'try':
+      return lesson.tour ? 'Try it on the real screen' : 'Try it (in the lesson)';
+    case 'check':
+      return `Question ${sc.index + 1}`;
+    case 'note':
+      return 'Journal line';
+    case 'close':
+      return 'The rule and the rating';
+  }
+}
+
+/** A tour's step (or a lesson's screen) as a short line, cut at 60 characters */
 function stepLabel(itemId: string, stepId: string): string {
-  const step = TOURS.find((t) => t.id === itemId)?.steps.find((st) => st.id === stepId);
   const n = stepId.slice(stepId.lastIndexOf('.') + 1);
+  if (isLessonId(itemId)) {
+    const lesson = LESSONS.find((l) => l.id === itemId);
+    const sc = lesson ? lessonScreens(lesson)[Number(n) - 1] : undefined;
+    return lesson && sc ? `${n}. ${screenName(lesson, sc)}` : `Screen ${n}`;
+  }
+  const step = TOURS.find((t) => t.id === itemId)?.steps.find((st) => st.id === stepId);
   if (!step) return `Step ${n}`;
   const text = step.text.length > 60 ? `${step.text.slice(0, 57)}…` : step.text;
   return `${n}. ${text}`;
 }
 
 function FunnelRows({ tour }: { tour: TourFunnelTour }) {
-  const title = TOURS.find((t) => t.id === tour.itemId)?.title ?? tour.itemId;
+  const lesson = LESSONS.find((l) => l.id === tour.itemId);
+  const title = lesson
+    ? `Lesson ${lesson.number}: ${lesson.title}`
+    : (TOURS.find((t) => t.id === tour.itemId)?.title ?? tour.itemId);
   return (
     <>
       <tr className={styles.totalRow}>
@@ -123,6 +156,11 @@ function FunnelRows({ tour }: { tour: TourFunnelTour }) {
                 {Math.round((tour.completed / tour.started) * 100)}% finished
               </span>
             </>
+          )}
+          {tour.rating && (
+            <span className={styles.pct}>
+              rated {tour.rating.average} / 5 by {tour.rating.count}
+            </span>
           )}
         </td>
       </tr>

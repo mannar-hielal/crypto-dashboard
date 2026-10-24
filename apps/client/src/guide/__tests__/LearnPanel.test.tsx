@@ -21,7 +21,9 @@ vi.mock('react-router', async (importOriginal) => ({
 }));
 
 import { LearnPanel } from '@/guide/LearnPanel';
+import { useLessonStore } from '@/guide/lessonStore';
 import { useTourStore } from '@/guide/tourStore';
+import { useArticleStore } from '@/learn/articleStore';
 
 const renderPanel = () =>
   render(
@@ -37,6 +39,7 @@ describe('LearnPanel', () => {
     getHabits.mockReset();
     getHabits.mockResolvedValue({ badges: [], learningDays: 0, streakDays: 0 });
     useTourStore.getState().reset();
+    useLessonStore.getState().reset();
   });
   afterEach(() => cleanup());
 
@@ -45,15 +48,36 @@ describe('LearnPanel', () => {
     expect(screen.queryByText('Guided practice')).toBeNull();
   });
 
-  it('should list the three tours, ticking the finished ones', () => {
+  it('should list both lessons and the three tours, ticking the finished ones', () => {
     useTourStore.setState({ panelOpen: true, completed: { primer: true } });
     renderPanel();
 
+    expect(screen.getByText('1. What is Bitcoin?')).not.toBeNull();
+    expect(screen.getByText('2. Who sets the price?')).not.toBeNull();
     expect(screen.getByText('What you’re looking at')).not.toBeNull();
     expect(screen.getByText('Buy your first coin')).not.toBeNull();
     expect(screen.getByText('Sell it and read the result')).not.toBeNull();
     expect(screen.getByText('Repeat')).not.toBeNull();
-    expect(screen.getAllByText('Start')).toHaveLength(2);
+    expect(screen.getAllByText('Start')).toHaveLength(4);
+  });
+
+  it('should open a lesson from the panel, and tick it once done', () => {
+    useTourStore.setState({ panelOpen: true });
+    renderPanel();
+    fireEvent.click(document.querySelector('[data-guide="learn.lesson.start"]')!);
+    expect(useTourStore.getState().panelOpen).toBe(false);
+    expect(useLessonStore.getState().activeId).toBe('lesson-01');
+
+    cleanup();
+    useLessonStore.getState().reset();
+    useLessonStore.getState().setCompleted(['lesson-01']);
+    useTourStore.setState({ panelOpen: true });
+    renderPanel();
+    expect(document.querySelector('[data-guide="learn.lesson.start"]')!.textContent).toBe('Repeat');
+    expect(
+      document.querySelector('[data-guide="learn.lesson.start"][data-guide-key="lesson-02"]')!
+        .textContent
+    ).toBe('Start');
   });
 
   it('should run a tour again on any account: navigate, close, start', () => {
@@ -67,6 +91,20 @@ describe('LearnPanel', () => {
     expect(useTourStore.getState().activeId).toBe('buy-first-coin');
   });
 
+  it('should list the library and open an article in the drawer', () => {
+    useArticleStore.getState().reset();
+    useTourStore.setState({ panelOpen: true });
+    renderPanel();
+    expect(screen.getByText('Library')).not.toBeNull();
+    expect(screen.getByText('SunCoin: money in a notebook')).not.toBeNull();
+
+    fireEvent.click(
+      document.querySelector('[data-guide="learn.article.open"][data-guide-key="exchange-price"]')!
+    );
+    expect(useTourStore.getState().panelOpen).toBe(false);
+    expect(useArticleStore.getState()).toMatchObject({ openId: 'exchange-price', from: null });
+  });
+
   it('should close from its ✕', () => {
     useTourStore.setState({ panelOpen: true });
     renderPanel();
@@ -74,14 +112,19 @@ describe('LearnPanel', () => {
     expect(useTourStore.getState().panelOpen).toBe(false);
   });
 
-  it('should disable Start on a phone and say why', () => {
+  it('should disable a tour’s Start on a phone and say why, but keep lessons open', () => {
     desktop = false;
     useTourStore.setState({ panelOpen: true });
     renderPanel();
 
-    for (const b of screen.getAllByText('Start')) {
-      expect((b as HTMLButtonElement).disabled).toBe(true);
+    for (const b of document.querySelectorAll<HTMLButtonElement>(
+      '[data-guide="learn.tour.start"]'
+    )) {
+      expect(b.disabled).toBe(true);
     }
+    expect(
+      document.querySelector<HTMLButtonElement>('[data-guide="learn.lesson.start"]')!.disabled
+    ).toBe(false);
     expect(screen.getByText(/larger screen/)).not.toBeNull();
   });
 

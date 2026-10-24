@@ -169,8 +169,90 @@
   outline-offset: 3px;
 }
 
+/* A step the learner has to act on: the ring itself breathes (no outer halo spreading onto its
+   neighbours) and an arrow beside the control nudges toward it */
+.ringAction {
+  animation: ring-breathe 1.6s ease-in-out infinite;
+}
+
+@keyframes ring-breathe {
+  0%,
+  100% {
+    border-color: var(--color-brand-purple-dark); /* focusRing.color */
+    box-shadow: 0 0 0 3px rgba(105, 91, 236, 0.25); /* focusRing.color at 25 % */
+  }
+  50% {
+    border-color: var(--color-brand-purple); /* color.purple */
+    box-shadow: 0 0 0 4px rgba(105, 91, 236, 0.6); /* focusRing.color at 60 % */
+  }
+}
+
+.arrow {
+  position: fixed;
+  z-index: 250; /* zIndex.tour */
+  display: flex;
+  color: var(--color-brand-white); /* color.white */
+  pointer-events: none;
+  animation: arrow-nudge 0.9s ease-in-out infinite;
+  transition:
+    top 120ms ease-out,
+    left 120ms ease-out;
+}
+
+/* The nudge is always toward the control */
+.arrowLeft {
+  --nudge-x: 4px;
+}
+
+.arrowRight {
+  --nudge-x: -4px;
+}
+
+.arrowAbove {
+  --nudge-y: 4px;
+}
+
+.arrowBelow {
+  --nudge-y: -4px;
+}
+
+@keyframes arrow-nudge {
+  50% {
+    transform: translate(var(--nudge-x, 0), var(--nudge-y, 0));
+  }
+}
+
+.turn {
+  margin: 0 0 6px;
+  color: var(--color-brand-purple-dark); /* focusRing.color */
+  font-size: 13px; /* fontSize.xs11 */
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ring {
     transition: none;
   }
+
+  /* No motion: the action ring is thicker and brighter, the arrow stays still */
+  .ringAction {
+    animation: none;
+    border-width: 3px;
+    box-shadow: 0 0 0 5px rgba(105, 91, 236, 0.5); /* focusRing.color at 50 % */
+  }
+
+  .arrow {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* A checked task is done (a hover step): the word plus the tick, never colour alone */
+.done {
+  margin: 8px 0 0;
+  color: var(--color-brand-green); /* color.green, as the Learn panel's done tick */
+  font-size: 14px; /* fontSize.xs */
+  font-weight: 600;
 }

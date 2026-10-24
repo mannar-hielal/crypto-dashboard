@@ -56,6 +56,13 @@ function metrics(over: Partial<RetentionMetricsResponse> = {}): RetentionMetrics
     activityTrackedSince: '2026-10-14',
     tourFunnel: [
       {
+        itemId: 'lesson-02',
+        started: 6,
+        completed: 5,
+        steps: [{ stepId: 'lesson-02.7', viewers: 5, closedHere: 1 }],
+        rating: { count: 3, average: 4.3 },
+      },
+      {
         itemId: 'primer',
         started: 10,
         completed: 4,
@@ -134,6 +141,15 @@ describe('AdminMetricsPage', () => {
     expect(screen.getByText(/40% finished/)).not.toBeNull();
     // a tour nobody opened still shows, at zero
     expect(screen.getByText('Buy your first coin')).not.toBeNull();
+  });
+
+  it('shows a lesson by its name, its screens by what they are, and its rating', async () => {
+    mockGetMetrics.mockResolvedValue(metrics());
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText('Lesson 2: Who sets the price?')).not.toBeNull());
+    expect(screen.getByText('7. Try it on the real screen')).not.toBeNull();
+    expect(screen.getByText(/rated 4.3 \/ 5 by 3/)).not.toBeNull();
   });
 
   it('says so when sign-in days are not recorded yet', async () => {

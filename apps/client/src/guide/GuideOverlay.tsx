@@ -1,24 +1,59 @@
 /**
  * The guided tour: a ring around the real control and a bubble beside it (owner's visual Q&A
  * 2026-10-11 — the page is not dimmed, the learner clicks the real thing). A step moves on when the
- * learner does it: a click on the control, a value typed into it, or the Next button on a step
- * that only reads. The overlay changes nothing in the app: when a control isn't on screen it says
+ * learner does it: a click on the control, a value typed into it, the pointer on the candle a
+ * `hover` step asks for (guide/chartHover.ts), or the Next button on a step that only reads. The overlay changes nothing in the app: when a control isn't on screen it says
  * what to open.
  */
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, X } from 'lucide-react';
 import { guide, guideSelector } from '@/lib/guideAnchors';
 import { placeBubble, type Box } from './bubblePlacement';
+import { matchesHover, onHover } from './chartHover';
 import { useTourStore } from './tourStore';
 import { getTour, type TourStep } from './tours';
 import styles from './GuideOverlay.module.css';
 
 const RING_PAD = 3;
+const ARROW_SIZE = 30;
+/** Gap between the ring and the arrow, so the two never merge into one shape */
+const ARROW_GAP = 10;
+
+type ArrowSide = 'left' | 'right' | 'above' | 'below';
+const ARROW_CLASS = {
+  left: 'arrowLeft',
+  right: 'arrowRight',
+  above: 'arrowAbove',
+  below: 'arrowBelow',
+} as const;
+
+/** Beside the control, in the free space (never over the text above it); above or below only
+ *  when the control has no room at either side */
+function arrowSideFor(rect: Box, bubble: 'below' | 'above' | 'inside' | 'center'): ArrowSide {
+  const room = ARROW_GAP + ARROW_SIZE + RING_PAD + 8;
+  if (rect.left >= room) return 'left';
+  if (rect.left + rect.width + room <= window.innerWidth) return 'right';
+  return bubble === 'above' || rect.top < room ? 'below' : 'above';
+}
+
+function arrowPosition(rect: Box, side: ArrowSide): { top: number; left: number } {
+  const offset = RING_PAD + ARROW_GAP + ARROW_SIZE;
+  const midX = rect.left + rect.width / 2 - ARROW_SIZE / 2;
+  const midY = rect.top + rect.height / 2 - ARROW_SIZE / 2;
+  if (side === 'left') return { top: midY, left: rect.left - offset };
+  if (side === 'right') return { top: midY, left: rect.left + rect.width + RING_PAD + ARROW_GAP };
+  if (side === 'above') return { top: rect.top - offset, left: midX };
+  return { top: rect.top + rect.height + RING_PAD + ARROW_GAP, left: midX };
+}
 const BUBBLE_WIDTH = 340;
 /** After a submit click, how long to wait for the order to be accepted before giving up */
 const ACCEPT_TIMEOUT_MS = 15_000;
+/** A `hover: 'last'` step: how long the pointer rests on the newest candle (a pass-over isn't reading) */
+const HOVER_HOLD_MS = 1000;
+/** How long "Done ✓" shows before a checked task moves on */
+const DONE_PAUSE_MS = 700;
 
 const sameBox = (a: Box | null, b: Box | null) =>
   a === b ||
@@ -136,6 +171,8 @@ function TourBubble({
   });
   /** After the click on a `doneWhenEmpty` step: waiting for the order to be accepted */
   const [awaiting, setAwaiting] = useState<{ since: number; hadValue: boolean } | null>(null);
+  /** A `hover` step's task is done: "Done ✓" shows, then the tour moves on */
+  const [hoverDone, setHoverDone] = useState(false);
 
   const onScreen = tracked.rect !== null;
   const hasTarget = step.anchor !== undefined;
@@ -195,6 +232,33 @@ function TourBubble({
     return () => document.removeEventListener('click', onClick, true);
   }, [step, advance]);
 
+  // A `hover` step: done when the pointer is on the asked-for candle (held a moment on the newest)
+  useEffect(() => {
+    if (step.kind !== 'hover' || !step.hover || hoverDone) return;
+    const want = step.hover;
+    let hold: number | undefined;
+    const unsubscribe = onHover((bar) => {
+      if (!matchesHover(want, bar)) {
+        window.clearTimeout(hold);
+        hold = undefined;
+        return;
+      }
+      if (want !== 'last') setHoverDone(true);
+      else if (hold === undefined)
+        hold = window.setTimeout(() => setHoverDone(true), HOVER_HOLD_MS);
+    });
+    return () => {
+      unsubscribe();
+      window.clearTimeout(hold);
+    };
+  }, [step, hoverDone]);
+
+  useEffect(() => {
+    if (!hoverDone) return;
+    const t = window.setTimeout(onNext, DONE_PAUSE_MS);
+    return () => window.clearTimeout(t);
+  }, [hoverDone, onNext]);
+
   // An accepted order empties the amount field (the form's own signal); a refused one doesn't
   useEffect(() => {
     if (!awaiting) return;
@@ -217,11 +281,15 @@ function TourBubble({
   const nextLabel =
     step.kind === 'quiz' ? 'Finish' : (step.nextLabel ?? (isLast ? 'Finish' : 'Next →'));
 
+  // The learner has to act on this step (click, type or point), not just read it
+  const isAction = step.kind === 'click' || step.kind === 'type' || step.kind === 'hover';
+  const arrowSide = tracked.rect ? arrowSideFor(tracked.rect, placement.placement) : 'left';
+
   return createPortal(
     <>
       {onScreen && tracked.rect && (
         <div
-          className={styles.ring}
+          className={isAction ? `${styles.ring} ${styles.ringAction}` : styles.ring}
           aria-hidden="true"
           data-tour-ring=""
           style={{
@@ -232,6 +300,19 @@ function TourBubble({
           }}
         />
       )}
+      {isAction && onScreen && tracked.rect && (
+        <div
+          className={`${styles.arrow} ${styles[ARROW_CLASS[arrowSide]]}`}
+          aria-hidden="true"
+          data-tour-arrow={arrowSide}
+          style={arrowPosition(tracked.rect, arrowSide)}
+        >
+          {arrowSide === 'left' && <ArrowRight size={ARROW_SIZE} strokeWidth={3} />}
+          {arrowSide === 'right' && <ArrowLeft size={ARROW_SIZE} strokeWidth={3} />}
+          {arrowSide === 'above' && <ArrowDown size={ARROW_SIZE} strokeWidth={3} />}
+          {arrowSide === 'below' && <ArrowUp size={ARROW_SIZE} strokeWidth={3} />}
+        </div>
+      )}
       <div
         ref={bubbleRef}
         className={styles.bubble}
@@ -240,6 +321,7 @@ function TourBubble({
         style={{ top: placement.top, left: placement.left }}
         {...guide('tour.bubble')}
       >
+        {isAction && <p className={styles.turn}>Your turn</p>}
         <div className={styles.head}>
           <span className={styles.counter}>
             {title} · Step {index + 1} of {total}
@@ -303,6 +385,11 @@ function TourBubble({
               </p>
             )}
             {awaiting && <p className={styles.live}>Waiting for the order to go through…</p>}
+            {hoverDone && (
+              <p className={styles.done} role="status" {...guide('tour.done')}>
+                Done ✓
+              </p>
+            )}
           </>
         )}
 
@@ -315,6 +402,17 @@ function TourBubble({
           <button type="button" className={styles.link} onClick={onClose} {...guide('tour.skip')}>
             Skip tour
           </button>
+          {step.kind === 'hover' && !hoverDone && (
+            // Pointing needs a mouse; a keyboard or touch learner moves on without it
+            <button
+              type="button"
+              className={styles.link}
+              onClick={onNext}
+              {...guide('tour.skip-step')}
+            >
+              Skip this step
+            </button>
+          )}
           <span className={styles.spacer} />
           {(step.kind === 'observe' || step.kind === 'type' || step.kind === 'quiz') && (
             <button

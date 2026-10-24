@@ -1,34 +1,30 @@
 /**
- * The welcome card: offered once, on a dashboard where the account has not finished the primer and
- * has not dismissed it. Phones get the same card without Start — the tours are desktop-first
- * (owner, 2026-10-11). Dismissal is saved on the account.
+ * The welcome card: offered once, on a dashboard where the account has not finished Lesson 1 (or
+ * the primer) and has not dismissed it. Start opens Lesson 1 on any screen size — its cards work
+ * on phones; only its "try it" part needs a larger screen (owner, 2026-10-22). Dismissal is saved
+ * on the account.
  */
 
 import { X } from 'lucide-react';
-import { useNavigate } from 'react-router';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { guide } from '@/lib/guideAnchors';
 import styles from './LearnCard.module.css';
+import { useLessonStore } from './lessonStore';
 import { useTourStore } from './tourStore';
-import { getTour } from './tours';
 
 /** Tours need the order form docked beside the chart: lg and up (design.md, responsive layout) */
 export const TOUR_MIN_WIDTH = '(min-width: 1024px)';
 
 export function LearnCard() {
-  const navigate = useNavigate();
-  const desktop = useMediaQuery(TOUR_MIN_WIDTH);
   const loaded = useTourStore((s) => s.loaded);
   const dismissed = useTourStore((s) => s.cardDismissed);
-  const running = useTourStore((s) => s.activeId !== null);
+  const touring = useTourStore((s) => s.activeId !== null);
+  const learning = useLessonStore((s) => s.activeId !== null);
 
-  if (!loaded || dismissed || running) return null;
+  if (!loaded || dismissed || touring || learning) return null;
 
   const start = () => {
-    const tour = getTour('primer');
     useTourStore.getState().dismissCard();
-    navigate(tour.startUrl);
-    useTourStore.getState().start('primer');
+    useLessonStore.getState().start('lesson-01');
   };
   const dismiss = () => useTourStore.getState().dismissCard();
 
@@ -47,21 +43,17 @@ export function LearnCard() {
         </button>
       </div>
       <p className={styles.text}>
-        {desktop
-          ? 'Make your first practice trade in about 3 minutes. No real money, no sign-up to anything.'
-          : 'The guided practice trade works best on a larger screen. Open this page on a laptop or tablet to try it.'}
+        Start with a 5-minute lesson: who sets the price, and where to see it. No real money.
       </p>
       <div className={styles.foot}>
-        {desktop && (
-          <button
-            type="button"
-            className={styles.primary}
-            onClick={start}
-            {...guide('learn.card.start')}
-          >
-            Start
-          </button>
-        )}
+        <button
+          type="button"
+          className={styles.primary}
+          onClick={start}
+          {...guide('learn.card.start')}
+        >
+          Start
+        </button>
         <button type="button" className={styles.link} onClick={dismiss}>
           Not now
         </button>

@@ -17,15 +17,18 @@ export const marketApi = {
    * @param interval - e.g. '1m' | '5m' | '15m' | '1h' | '4h' | '1d'
    * @param limit - number of candles to return (max 1000)
    * @param category - Bybit market: 'spot' (default) or 'linear' (USDT Perpetual)
+   * @param end - optional: the newest candle's open time (ms epoch, 2017 to now), for history
+   *   further back than the latest `limit` candles
    */
   getCandles: (
     symbol = 'BTCUSDT',
     interval = '1m',
     limit = 200,
-    category: MarketCategory = 'spot'
+    category: MarketCategory = 'spot',
+    end?: number
   ) =>
     fetch(
-      `${BASE_URL}/api/market/candles?category=${category}&symbol=${symbol}&interval=${interval}&limit=${limit}`,
+      `${BASE_URL}/api/market/candles?category=${category}&symbol=${symbol}&interval=${interval}&limit=${limit}${end === undefined ? '' : `&end=${end}`}`,
       { signal: AbortSignal.timeout(10_000) }
     ).then(async (res) => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

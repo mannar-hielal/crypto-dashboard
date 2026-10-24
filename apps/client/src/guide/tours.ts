@@ -1,7 +1,8 @@
 /**
  * The guided tours (docs/GUIDED_TRADE_MVP.md, reshaped 2026-10-11): short chapters of at most five
- * steps, chained — a primer that only reads, then buying a first coin, then selling it back and
- * reading the result. Research (reports/) says completion falls fast past five steps.
+ * steps — a primer of three small tasks on the live chart (Lesson 1's "Try it", guide/lessons.ts),
+ * then buying a first coin chained to selling it back and reading the result. Research (reports/)
+ * says completion falls fast past five steps.
  *
  * Steps that repeat a scenario action reuse the shared builders in `steps.ts` (one wording for the
  * form's controls everywhere); the learner-facing text for the new ones lives here. Pure data: no
@@ -9,6 +10,7 @@
  */
 
 import type { GuideAnchor } from '@/lib/guideAnchors';
+import type { HoverWant } from './chartHover';
 import { chooseType, openTab, submit } from './steps';
 import type { StepDraft } from './scenario';
 
@@ -19,7 +21,7 @@ export function isTourId(value: string): value is TourId {
   return (TOUR_IDS as readonly string[]).includes(value);
 }
 
-export type TourStepKind = 'observe' | 'click' | 'type' | 'quiz';
+export type TourStepKind = 'observe' | 'click' | 'type' | 'quiz' | 'hover';
 
 export interface TourQuiz {
   question: string;
@@ -48,6 +50,8 @@ export interface TourStep {
   doneWhenEmpty?: GuideAnchor;
   /** What to open first when the control isn't on screen */
   missingHint?: string;
+  /** `hover`: the candle the learner must point at (guide/chartHover.ts) */
+  hover?: HoverWant;
   quiz?: TourQuiz;
 }
 
@@ -85,41 +89,32 @@ function numbered(id: TourId, steps: Array<Omit<TourStep, 'id'>>): TourStep[] {
 
 // ─── 1. What you're looking at ───────────────────────────────────────────────
 
+// Lesson 1's "Try it on the real screen" (guide/lessons.ts) — it runs inside the lesson, or alone
+// from the Learn panel. Three tasks the app checks (owner 2026-10-23: the learner proves the skill on
+// the live chart); the practice balance is named in the lesson's "Try it" screen instead.
 const primer: Tour = {
   id: 'primer',
   title: 'What you’re looking at',
-  blurb: 'Price, chart, practice money — in about a minute, no trading yet.',
+  blurb: 'Tap the live price and read two candles — no trading yet.',
   minutes: 1,
   startUrl: '/dashboard/spot/BTC/USDT',
-  next: 'buy-first-coin',
   steps: numbered('primer', [
     {
-      kind: 'observe',
+      kind: 'click',
       anchor: 'symbolbar.price',
-      text: 'This is Bitcoin’s live price, in dollars. USDT is a coin built to stay worth one dollar, so a price in USDT reads like a price in dollars.',
+      text: 'Tap the live price. It’s the last deal between a buyer and a seller, and it changes with every new one. USDT is a coin built to stay at one dollar, so read it as dollars.',
     },
     {
-      kind: 'observe',
-      anchor: 'symbolbar.symbol-picker',
-      text: 'BTCUSDT means Bitcoin priced in USDT. Open this any time to pick another coin.',
-    },
-    {
-      kind: 'observe',
+      kind: 'hover',
       anchor: 'pane.chart',
-      text: 'Each bar is a slice of time. Its top and bottom are the highest and lowest price in that time, so a tall bar means the price moved a lot.',
+      hover: 'last',
+      text: 'Hover the newest candle, on the far right. It’s still being drawn: its close is the price you just tapped.',
     },
     {
-      kind: 'observe',
-      anchor: 'account.summary.balance',
-      text: 'This is your practice balance. It is play money: nothing here can cost you real money, so this is a safe place to make mistakes.',
-      missingHint: 'Open the account panel under the chart to see your balance.',
-    },
-    {
-      kind: 'observe',
-      anchor: 'trade.side.buy',
-      text: 'Ready? Your first practice trade takes about three minutes. You will buy a small amount of Bitcoin, then sell it back.',
-      nextLabel: 'Start my first trade',
-      missingHint: FORM_HINT,
+      kind: 'hover',
+      anchor: 'pane.chart',
+      hover: 'falling',
+      text: 'Now find a red candle and hover it. Red means that slice of time closed lower than it opened.',
     },
   ]),
 };
