@@ -13,6 +13,8 @@ interface TourState {
   quizAnswer: number | null;
   /** Tours finished, from the server and this session */
   completed: Partial<Record<TourId, true>>;
+  /** Counts every finish this session, a replay included: what the funnel reports as completed */
+  finishes: number;
   /** The account's progress has been read (the card waits for it, so it never flashes) */
   loaded: boolean;
   /** The welcome card was dismissed (or the primer finished) on this account */
@@ -47,6 +49,7 @@ const initial = {
   stepIndex: 0,
   quizAnswer: null,
   completed: {},
+  finishes: 0,
   loaded: false,
   cardDismissed: false,
   fillOfferDismissed: false,
@@ -69,6 +72,7 @@ export const useTourStore = create<TourState>()((set, get) => ({
     // Last step: the tour is done; hand over to the next chapter when there is one
     set((s) => ({
       completed: { ...s.completed, [activeId]: true },
+      finishes: s.finishes + 1,
       activeId: tour.next ?? null,
       stepIndex: 0,
       quizAnswer: null,

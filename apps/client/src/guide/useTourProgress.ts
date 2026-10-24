@@ -76,10 +76,9 @@ export function useTourProgress(): void {
         learnApi
           .trackEvent({ name, itemId, ...(stepId ? { stepId } : {}) }, accessToken)
           .catch(() => undefined);
-      const finished = (Object.keys(state.completed) as TourId[]).filter(
-        (id) => !prev.completed[id]
-      );
-      for (const id of finished) send('tour_completed', id);
+      // A finish, a replay of a finished tour included (`completed` doesn't change then)
+      const finished = state.finishes !== prev.finishes ? prev.activeId : null;
+      if (finished) send('tour_completed', finished);
 
       const { activeId, stepIndex } = state;
       if (activeId !== null && activeId !== prev.activeId) {
@@ -87,7 +86,7 @@ export function useTourProgress(): void {
         send('tour_step', activeId, `${activeId}.1`);
       } else if (activeId !== null && stepIndex !== prev.stepIndex) {
         send('tour_step', activeId, `${activeId}.${stepIndex + 1}`);
-      } else if (activeId === null && prev.activeId !== null && finished.length === 0) {
+      } else if (activeId === null && prev.activeId !== null && !finished) {
         // Closed (Skip, ✕, Esc) on the step it was showing
         send('tour_closed', prev.activeId, `${prev.activeId}.${prev.stepIndex + 1}`);
       }
@@ -103,12 +102,12 @@ export function useTourProgress(): void {
           .trackEvent({ name, itemId, ...(stepId ? { stepId } : {}) }, accessToken)
           .catch(() => undefined);
 
-      const finished = (Object.keys(state.completed) as LessonId[]).filter(
-        (id) => !prev.completed[id]
-      );
-      for (const id of finished) {
-        learnApi.setProgress(id, 'completed', accessToken).catch(() => undefined);
-        send('tour_completed', id);
+      // A finish (Finish or the next lesson), a replay included. Counted, not read from `completed`:
+      // that also changes when the server's progress loads, which is no finish at all
+      const finished = state.finishes !== prev.finishes ? prev.activeId : null;
+      if (finished) {
+        learnApi.setProgress(finished, 'completed', accessToken).catch(() => undefined);
+        send('tour_completed', finished);
       }
 
       const { activeId, screen } = state;
@@ -117,7 +116,7 @@ export function useTourProgress(): void {
         send('tour_step', activeId, `${activeId}.1`);
       } else if (activeId !== null && screen !== prev.screen) {
         send('tour_step', activeId, `${activeId}.${screen + 1}`);
-      } else if (activeId === null && prev.activeId !== null && finished.length === 0) {
+      } else if (activeId === null && prev.activeId !== null && !finished) {
         send('tour_closed', prev.activeId, `${prev.activeId}.${prev.screen + 1}`);
       }
 

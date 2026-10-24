@@ -174,6 +174,19 @@ describe('useTourProgress', () => {
       expect(sent.some((s: string) => s.startsWith('tour_closed'))).toBe(false);
     });
 
+    it('should report a replay of a finished tour as a finish, never as a close', async () => {
+      getProgress.mockResolvedValue({ items: [item('primer', 'completed')] });
+      renderHook(() => useTourProgress());
+      await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
+      act(() => useTourStore.getState().start('primer'));
+      trackEvent.mockClear();
+      act(() => {
+        for (let i = 0; i < 3; i++) useTourStore.getState().next();
+      });
+      expect(names()).toContainEqual({ name: 'tour_completed', itemId: 'primer' });
+      expect(names().some((n: { name: string }) => n.name === 'tour_closed')).toBe(false);
+    });
+
     it('should keep going when a report fails', async () => {
       await loaded();
       trackEvent.mockRejectedValue(new Error('offline'));
@@ -190,6 +203,23 @@ describe('useTourProgress', () => {
       setProgress.mockClear();
     }
     const calls = () => trackEvent.mock.calls.map((c) => c[0]);
+
+    it('should report nothing when finished lessons arrive from the server', async () => {
+      getProgress.mockResolvedValue({ items: [item('lesson-01', 'completed')] });
+      renderHook(() => useTourProgress());
+      await waitFor(() => expect(useLessonStore.getState().completed['lesson-01']).toBe(true));
+      expect(trackEvent).not.toHaveBeenCalled();
+      expect(setProgress).not.toHaveBeenCalled();
+    });
+
+    it('should report a replay of a finished lesson as a finish, never as a close', async () => {
+      await loaded([item('lesson-01', 'completed')]);
+      act(() => useLessonStore.getState().start('lesson-01'));
+      trackEvent.mockClear();
+      act(() => useLessonStore.getState().finish());
+      expect(calls()).toEqual([{ name: 'tour_completed', itemId: 'lesson-01' }]);
+      expect(setProgress).toHaveBeenCalledWith('lesson-01', 'completed', 'tok');
+    });
 
     it('should load finished lessons, and treat Lesson 1 as the offer being done with', async () => {
       await loaded([item('lesson-01', 'completed')]);

@@ -20,6 +20,8 @@ interface LessonState {
   rating: number | null;
   /** Lessons finished, from the server and this session */
   completed: Partial<Record<LessonId, true>>;
+  /** Counts every finish this session, a replay included: what the funnel reports as completed */
+  finishes: number;
   /** Open a lesson, at its first screen or (from an article's "Learn it in Lesson 1") at a card */
   start: (id: LessonId, screen?: number) => void;
   next: () => void;
@@ -45,6 +47,7 @@ const initial = {
   inTour: false,
   rating: null,
   completed: {},
+  finishes: 0,
 } as const;
 
 export const useLessonStore = create<LessonState>()((set, get) => ({
@@ -95,6 +98,7 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
     if (!activeId) return;
     set((s) => ({
       completed: { ...s.completed, [activeId]: true },
+      finishes: s.finishes + 1,
       activeId: null,
       screen: 0,
       answers: {},
