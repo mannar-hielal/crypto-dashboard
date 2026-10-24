@@ -13,7 +13,7 @@ export function PrivacyPage() {
         description="Privacy policy for cryptopapertrade.com. Learn how we collect, use, and protect your data (nDSG and GDPR compliant)."
         path="/privacy"
       />
-      <LegalLayout title="Privacy Policy" lastUpdated="October 22, 2026" version="1.3">
+      <LegalLayout title="Privacy Policy" lastUpdated="October 24, 2026" version="1.4">
         <section>
           <h2>1. Data Controller</h2>
           <p>

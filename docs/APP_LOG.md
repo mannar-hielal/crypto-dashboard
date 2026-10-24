@@ -4273,8 +4273,9 @@ phones get the cards, a journal line and an optional 1–5 rating. There is no n
   - the screens are reported as `tour_*` steps (`lesson-01.<n>`);
   - a new `lesson_rated` event accepts only a lesson and 1–5;
   - the admin funnel lists the lesson first, names its screens and shows the average rating (each person's latest).
-- **Privacy policy:** the "Learning events" row now names lessons and the optional rating (date 22 Oct 2026,
-  version unchanged).
+- **Privacy policy:** the "Learning events" row now names lessons and the optional rating. Version **1.4**, dated
+  24 Oct 2026 (review on #262). The owner treats it as **not material**: an optional, learner-given rating inside the
+  existing category, with the same retention, legal basis and recipients, so no notice e-mail (§13).
 - **Tests:**
   - lesson rules: at most five cards of 50 words, 2–3 questions, an honest praised answer, a hype guard;
   - the store, the sheet's full walk, progress and events, the route's rating validation, the funnel rating, the
