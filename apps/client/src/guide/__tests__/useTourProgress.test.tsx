@@ -19,6 +19,7 @@ vi.mock('@/store/authStore', () => ({
 }));
 
 import { useTourProgress } from '@/guide/useTourProgress';
+import { useLessonStore } from '@/guide/lessonStore';
 import { useTourStore } from '@/guide/tourStore';
 
 const item = (itemId: string, status: string) => ({
@@ -31,6 +32,7 @@ describe('useTourProgress', () => {
   beforeEach(() => {
     token = 'tok';
     useTourStore.getState().reset();
+    useLessonStore.getState().reset();
     getProgress.mockReset();
     setProgress.mockReset();
     setProgress.mockResolvedValue({});
@@ -176,6 +178,50 @@ describe('useTourProgress', () => {
       await loaded();
       trackEvent.mockRejectedValue(new Error('offline'));
       expect(() => act(() => useTourStore.getState().start('primer'))).not.toThrow();
+    });
+  });
+
+  describe('lessons', () => {
+    async function loaded(items: ReturnType<typeof item>[] = []) {
+      getProgress.mockResolvedValue({ items });
+      renderHook(() => useTourProgress());
+      await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
+      trackEvent.mockClear();
+      setProgress.mockClear();
+    }
+    const calls = () => trackEvent.mock.calls.map((c) => c[0]);
+
+    it('should load finished lessons, and treat Lesson 1 as the offer being done with', async () => {
+      await loaded([item('lesson-01', 'completed')]);
+      expect(useLessonStore.getState().completed).toEqual({ 'lesson-01': true });
+      expect(useTourStore.getState().cardDismissed).toBe(true);
+    });
+
+    it('should report the screens as steps, a close on its screen, and save a finish', async () => {
+      await loaded();
+      act(() => useLessonStore.getState().start('lesson-01'));
+      act(() => useLessonStore.getState().next());
+      act(() => useLessonStore.getState().close());
+      expect(calls()).toEqual([
+        { name: 'tour_started', itemId: 'lesson-01' },
+        { name: 'tour_step', itemId: 'lesson-01', stepId: 'lesson-01.1' },
+        { name: 'tour_step', itemId: 'lesson-01', stepId: 'lesson-01.2' },
+        { name: 'tour_closed', itemId: 'lesson-01', stepId: 'lesson-01.2' },
+      ]);
+      expect(setProgress).not.toHaveBeenCalled();
+
+      trackEvent.mockClear();
+      act(() => useLessonStore.getState().start('lesson-01'));
+      act(() => useLessonStore.getState().rate(5));
+      act(() => useLessonStore.getState().finish());
+      expect(calls()).toContainEqual({
+        name: 'lesson_rated',
+        itemId: 'lesson-01',
+        stepId: 'lesson-01.5',
+      });
+      expect(calls()).toContainEqual({ name: 'tour_completed', itemId: 'lesson-01' });
+      expect(calls().some((c) => c.name === 'tour_closed')).toBe(false);
+      expect(setProgress).toHaveBeenCalledWith('lesson-01', 'completed', 'tok');
     });
   });
 });
