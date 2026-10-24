@@ -5,6 +5,7 @@ import {
   LineSeries,
   CrosshairMode,
   LineStyle,
+  MismatchDirection,
 } from 'lightweight-charts';
 import type {
   IChartApi,
@@ -304,7 +305,8 @@ export function ChartPanel({
       // move is reported, a leave or a gap as null
       if (hasHoverListeners()) {
         const series = candleRef.current;
-        const bars = series?.data();
+        // The newest bar without copying the whole series on every pointer move
+        const newest = series?.dataByIndex(Infinity, MismatchDirection.NearestLeft);
         reportHover(
           crosshairHover(
             param.time === undefined ? undefined : (param.time as number),
@@ -312,7 +314,7 @@ export function ChartPanel({
             series
               ? (param.seriesData.get(series) as { open: number; close: number } | undefined)
               : undefined,
-            bars?.length ? (bars[bars.length - 1].time as number) : undefined
+            newest ? (newest.time as number) : undefined
           )
         );
       }
