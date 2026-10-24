@@ -40,6 +40,7 @@ import { startEraser } from '@/lib/drawingTools';
 import { pendingSyncRange, runPaneDataPush } from '@/lib/chartSync';
 import { toHeikinAshi } from '@/lib/heikinAshi';
 import { IndicatorLegends } from '@/components/indicators/IndicatorLegends';
+import { hasHoverListeners, reportHover } from '@/guide/chartHover';
 import { useTradeLines } from '@/hooks/useTradeLines';
 import { TradeLineAmend } from './TradeLineAmend';
 import { DrawingTextEditor } from './DrawingTextEditor';
@@ -314,6 +315,17 @@ export function ChartPanel({
       if (!candle) {
         setHoverData(null);
         return;
+      }
+
+      // The tour's "hover a candle" tasks (guide/chartHover.ts), only while one is listening
+      if (hasHoverListeners()) {
+        const bars = candleRef.current.data();
+        reportHover({
+          time: param.time as number,
+          open: candle.open,
+          close: candle.close,
+          isLast: bars[bars.length - 1]?.time === param.time,
+        });
       }
 
       setHoverData({

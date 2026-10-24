@@ -48,8 +48,8 @@ describe('tours', () => {
     });
   }
 
-  it('should chain primer → buy-first-coin → sell-and-review and end there', () => {
-    expect(getTour('primer').next).toBe('buy-first-coin');
+  it('should end the primer alone, and chain buy-first-coin → sell-and-review', () => {
+    expect(getTour('primer').next).toBeUndefined();
     expect(getTour('buy-first-coin').next).toBe('sell-and-review');
     expect(getTour('sell-and-review').next).toBeUndefined();
   });

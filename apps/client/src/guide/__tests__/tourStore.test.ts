@@ -22,12 +22,20 @@ describe('tourStore', () => {
   });
 
   it('should hand over to the next chapter and mark the finished one completed', () => {
+    s().start('buy-first-coin');
+    const last = getTour('buy-first-coin').steps.length;
+    for (let i = 0; i < last; i++) s().next();
+    expect(s().completed['buy-first-coin']).toBe(true);
+    expect(s().activeId).toBe('sell-and-review');
+    expect(s().stepIndex).toBe(0);
+  });
+
+  it('should end the primer without handing over (Lesson 1 offers the next step)', () => {
     s().start('primer');
     const last = getTour('primer').steps.length;
     for (let i = 0; i < last; i++) s().next();
     expect(s().completed.primer).toBe(true);
-    expect(s().activeId).toBe('buy-first-coin');
-    expect(s().stepIndex).toBe(0);
+    expect(s().activeId).toBeNull();
   });
 
   it('should end after the last chapter', () => {
