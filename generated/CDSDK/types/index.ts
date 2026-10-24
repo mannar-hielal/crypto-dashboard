@@ -63,13 +63,15 @@ export interface SubscribersResponse {
 
 // ─── Learn: guided tours ─────────────────────────────────────────────────────
 
-/** Everything the account remembers about learning: the three tours and the welcome card */
+/** Everything the account remembers about learning: the tours, the lessons and the offers */
 export const LEARN_ITEM_IDS = [
   'primer',
   'buy-first-coin',
   'sell-and-review',
   'welcome-card',
   'fill-email-offer',
+  'lesson-01',
+  'lesson-02',
 ] as const;
 export type LearnItemId = (typeof LEARN_ITEM_IDS)[number];
 
@@ -96,14 +98,18 @@ export const LEARN_EVENT_NAMES = [
   'tour_step',
   'tour_completed',
   'tour_closed',
+  'lesson_rated',
 ] as const;
 export type LearnEventName = (typeof LEARN_EVENT_NAMES)[number];
 
 export interface LearnEventRequest {
   name: LearnEventName;
-  /** The tour: never one of the offers */
+  /** The tour or lesson: never one of the offers */
   itemId: Exclude<LearnItemId, 'welcome-card' | 'fill-email-offer'>;
-  /** `<tour id>.<n>`: the step viewed, or the step the tour was closed on */
+  /**
+   * `<item id>.<n>`: the step (a lesson's screen) viewed, or the one it was closed on. For
+   * `lesson_rated` (lessons only) `n` is the rating, 1–5.
+   */
   stepId?: string;
 }
 
@@ -185,6 +191,8 @@ export interface TourFunnelTour {
   started: number;
   completed: number;
   steps: TourFunnelStep[];
+  /** Lessons only: the optional 1–5 ratings (each person's latest), or absent when none */
+  rating?: { count: number; average: number };
 }
 
 export interface RetentionMetricsResponse {

@@ -15,7 +15,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { MetricsRate, RetentionCohort, RetentionMetricsResponse } from '@crypto-dashboard/sdk';
 import { config } from '../config.js';
-import { LEARN_EVENT_RETENTION_DAYS, LEARN_TOUR_IDS } from '../constants.js';
+import { LEARN_EVENT_RETENTION_DAYS, LEARN_LESSON_IDS, LEARN_TOUR_IDS } from '../constants.js';
 import { buildTourFunnel, type EventRow } from './LearningEvents.js';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -196,7 +196,7 @@ export function buildRetentionReport(
     windowWeeks,
     truncated: input.truncated,
     activityTrackedSince: input.activityTrackedSince ?? null,
-    tourFunnel: buildTourFunnel(input.tourEvents ?? [], LEARN_TOUR_IDS),
+    tourFunnel: buildTourFunnel(input.tourEvents ?? [], [...LEARN_LESSON_IDS, ...LEARN_TOUR_IDS]),
     totals,
     cohorts: [...cohorts.values()], // inserted newest first
   };

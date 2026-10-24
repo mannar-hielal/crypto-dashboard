@@ -1,6 +1,7 @@
 /**
- * Guided-tour events (privacy policy §3, "Learning events"): which tour and step, and when. They
- * answer one question — where do people stop? — so the funnel below counts people, never events.
+ * Guided-tour and lesson events (privacy policy §3, "Learning events"): which tour or lesson, which
+ * step, and when — plus a lesson's optional 1–5 rating. They answer where people stop and how a
+ * lesson landed, so the funnel below counts people, never events.
  *
  * 🔐 Bounded three ways: the route allowlists the name, tour and step shape; a user holds at most
  * `MAX_LEARN_EVENTS_PER_USER` rows (the oldest are pruned past it); the daily job purges rows past
@@ -132,11 +133,28 @@ export function buildTourFunnel(rows: EventRow[], tourIds: readonly string[]): T
         closedHere: closedByStep.get(stepId) ?? 0,
       }));
 
+    // A lesson's rating: each person's latest counts once (`lesson-01.4` → 4)
+    const ratingByUser = new Map<string, EventRow>();
+    for (const r of mine) {
+      if (r.name !== 'lesson_rated' || !r.stepId) continue;
+      const prev = ratingByUser.get(r.userId);
+      if (!prev || r.at >= prev.at) ratingByUser.set(r.userId, r);
+    }
+    const ratings = [...ratingByUser.values()].map((r) => stepNumber(r.stepId ?? ''));
+
     return {
       itemId,
       started: usersOf('tour_started').size,
       completed: usersOf('tour_completed').size,
       steps,
+      ...(ratings.length > 0
+        ? {
+            rating: {
+              count: ratings.length,
+              average: Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10,
+            },
+          }
+        : {}),
     };
   });
 }

@@ -7,8 +7,10 @@ import {
 } from '@crypto-dashboard/sdk';
 import {
   HABIT_BADGE_IDS,
+  LEARN_EVENT_ITEM_IDS,
   LEARN_EVENT_NAMES,
   LEARN_ITEM_IDS,
+  LEARN_LESSON_IDS,
   LEARN_TOUR_IDS,
 } from '../constants.js';
 
@@ -53,6 +55,14 @@ describe('learn item ids', () => {
   });
 });
 
+describe('learn event items', () => {
+  it('should accept events for every tour and lesson, and for no offer', () => {
+    expect([...LEARN_EVENT_ITEM_IDS]).toEqual([...LEARN_TOUR_IDS, ...LEARN_LESSON_IDS]);
+    for (const id of LEARN_EVENT_ITEM_IDS) expect(LEARN_ITEM_IDS).toContain(id);
+    expect(LEARN_EVENT_ITEM_IDS).not.toContain('welcome-card');
+  });
+});
+
 describe('habit badge ids', () => {
   it('should be the same list as the SDK', () => {
     expect([...HABIT_BADGE_IDS]).toEqual([...SDK_BADGES]);
@@ -60,9 +70,9 @@ describe('habit badge ids', () => {
 });
 
 describe('learn event names and tours', () => {
-  it('should match the SDK, and the tours should be the items without the card', () => {
+  it('should match the SDK, and the tours and lessons should be the items without the offers', () => {
     expect([...LEARN_EVENT_NAMES]).toEqual([...SDK_EVENT_NAMES]);
-    expect([...LEARN_TOUR_IDS]).toEqual(
+    expect([...LEARN_TOUR_IDS, ...LEARN_LESSON_IDS]).toEqual(
       LEARN_ITEM_IDS.filter((i) => i !== 'welcome-card' && i !== 'fill-email-offer')
     );
   });
@@ -293,6 +303,37 @@ describe('POST /api/learn/events', () => {
     expect(res.statusCode).toBe(204);
     expect(app.prisma.learningEvent.create).not.toHaveBeenCalled();
     expect(app.prisma.learningEvent.count).not.toHaveBeenCalled();
+  });
+
+  it('should store a lesson screen like a tour step', async () => {
+    const res = await post({ name: 'tour_step', itemId: 'lesson-01', stepId: 'lesson-01.7' });
+
+    expect(res.statusCode).toBe(204);
+    expect(app.prisma.learningEvent.create).toHaveBeenCalledWith({
+      data: { userId: 'user-1', name: 'tour_step', itemId: 'lesson-01', stepId: 'lesson-01.7' },
+    });
+  });
+
+  it('should store a lesson rating of 1 to 5', async () => {
+    const res = await post({ name: 'lesson_rated', itemId: 'lesson-01', stepId: 'lesson-01.4' });
+
+    expect(res.statusCode).toBe(204);
+    expect(app.prisma.learningEvent.create).toHaveBeenCalledWith({
+      data: { userId: 'user-1', name: 'lesson_rated', itemId: 'lesson-01', stepId: 'lesson-01.4' },
+    });
+  });
+
+  it('should refuse a rating outside 1–5, on a tour, or without a value', async () => {
+    for (const stepId of ['lesson-01.0', 'lesson-01.6', 'lesson-01.12']) {
+      expect((await post({ name: 'lesson_rated', itemId: 'lesson-01', stepId })).statusCode).toBe(
+        400
+      );
+    }
+    expect(
+      (await post({ name: 'lesson_rated', itemId: 'primer', stepId: 'primer.3' })).statusCode
+    ).toBe(400);
+    expect((await post({ name: 'lesson_rated', itemId: 'lesson-01' })).statusCode).toBe(400);
+    expect(app.prisma.learningEvent.create).not.toHaveBeenCalled();
   });
 
   it('should always store a start, a finish and a close, whatever was recorded before', async () => {

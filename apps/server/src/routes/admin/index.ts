@@ -39,6 +39,11 @@ const tourFunnelSchema = {
         },
       },
     },
+    rating: {
+      type: 'object',
+      required: ['count', 'average'],
+      properties: { count: { type: 'integer' }, average: { type: 'number' } },
+    },
   },
 };
 

@@ -90,4 +90,17 @@ describe('buildTourFunnel', () => {
     expect(f[0].started).toBe(1);
     expect(f[1].started).toBe(2);
   });
+
+  it("should average a lesson's ratings, each person's latest once, and add none when unrated", () => {
+    const rows = [
+      ev('a', 'lesson_rated', 'lesson-01.2', 0, 'lesson-01'),
+      ev('a', 'lesson_rated', 'lesson-01.5', 1, 'lesson-01'), // a changed mind: 5 counts
+      ev('b', 'lesson_rated', 'lesson-01.4', 2, 'lesson-01'),
+      ev('c', 'tour_completed', null, 3, 'lesson-01'),
+    ];
+    const [lesson, primer] = buildTourFunnel(rows, ['lesson-01', 'primer']);
+    expect(lesson.rating).toEqual({ count: 2, average: 4.5 });
+    expect(lesson.steps).toEqual([]); // a rating is not a step
+    expect(primer).not.toHaveProperty('rating');
+  });
 });

@@ -42,10 +42,18 @@ export const LEARN_ITEM_IDS = [
   'sell-and-review',
   'welcome-card',
   'fill-email-offer',
+  'lesson-01',
+  'lesson-02',
 ] as const;
 
-/** The guided tours (the offers have no steps); events are only accepted for these */
+/** The guided tours (the offers have no steps) */
 export const LEARN_TOUR_IDS = ['primer', 'buy-first-coin', 'sell-and-review'] as const;
+
+/** The lessons (cards → a tour → questions → a journal line); mirrors `LESSON_IDS` in the client */
+export const LEARN_LESSON_IDS = ['lesson-01', 'lesson-02'] as const;
+
+/** Events are only accepted for these: a lesson reports its screens like a tour reports its steps */
+export const LEARN_EVENT_ITEM_IDS = [...LEARN_TOUR_IDS, ...LEARN_LESSON_IDS] as const;
 
 /** Mirrors `LEARN_EVENT_NAMES` in the SDK (checked by `learn.test.ts`, like `LEARN_ITEM_IDS`) */
 export const LEARN_EVENT_NAMES = [
@@ -53,6 +61,8 @@ export const LEARN_EVENT_NAMES = [
   'tour_step',
   'tour_completed',
   'tour_closed',
+  // A lesson's optional 1–5 rating, carried as the step `<lesson>.<rating>`
+  'lesson_rated',
 ] as const;
 
 /** 🔐 A user holds at most this many tour events; past it the oldest are pruned (LearningEvents) */
