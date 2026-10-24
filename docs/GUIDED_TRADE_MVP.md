@@ -8,6 +8,12 @@
 > `buy-first-coin`, `sell-and-review`); the rest of this file (the anchors, the scenario format, the catalogue) still
 > applies.
 >
+> **2026-10-22:** Lesson 1 (`guide/lessons.ts`, `LessonSheet.tsx`) now wraps the `primer` as its "Try it" part; the
+> primer no longer chains to `buy-first-coin` (the lesson's last screen offers it). See APP_LOG.
+>
+> **2026-10-23:** the primer's steps are now checked tasks (tap the live price; hover the newest candle; hover a red
+> one): a new `hover` step kind, fed by `guide/chartHover.ts`. See APP_LOG.
+>
 > Moved here from the test implementation plan (retired 2026-09-30): its scenario format, the per-section "Guided
 > trade" verdicts, the Rollout milestone and its Q1 / Q2. The UI reproductions in `docs/UI_REPRODUCTIONS.md` are
 > the step-by-step source for each tour; `docs/TRADING_TEST_PLAN.md` Part B holds the cases they cite.

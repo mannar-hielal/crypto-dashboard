@@ -2,9 +2,10 @@ import type { FastifyInstance } from 'fastify';
 import type { LearnItemId, LearnStatus } from '@crypto-dashboard/sdk';
 import {
   HABIT_BADGE_IDS,
+  LEARN_EVENT_ITEM_IDS,
   LEARN_EVENT_NAMES,
   LEARN_ITEM_IDS,
-  LEARN_TOUR_IDS,
+  LEARN_LESSON_IDS,
 } from '../../constants.js';
 import { loadHabits } from '../../services/Habits.js';
 import { recordLearningEvent } from '../../services/LearningEvents.js';
@@ -146,10 +147,11 @@ export async function learnRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Learn'],
-        summary: 'Report a guided-tour event (the funnel: which step people reach)',
+        summary: 'Report a guided-tour or lesson event (the funnel: which step people reach)',
         description:
           'Fire-and-forget. 204 once accepted (a repeated step is not stored again; past the per-user cap the oldest rows are pruned); the body is an ' +
-          'allowlist: an event name, a tour id and a `<tour>.<n>` step.',
+          'allowlist: an event name, a tour or lesson id and a `<item>.<n>` step. `lesson_rated` ' +
+          'takes a lesson and `<lesson>.<1–5>`, the rating.',
         security: [{ bearerAuth: [] }],
         body: {
           type: 'object',
@@ -157,7 +159,7 @@ export async function learnRoutes(app: FastifyInstance) {
           additionalProperties: false,
           properties: {
             name: { type: 'string', enum: [...LEARN_EVENT_NAMES] },
-            itemId: { type: 'string', enum: [...LEARN_TOUR_IDS], maxLength: 40 },
+            itemId: { type: 'string', enum: [...LEARN_EVENT_ITEM_IDS], maxLength: 40 },
             stepId: { type: 'string', pattern: '^[a-z0-9-]+\\.[0-9]{1,2}$', maxLength: 40 },
           },
         },
@@ -172,6 +174,14 @@ export async function learnRoutes(app: FastifyInstance) {
       // 🔐 A step belongs to the tour it names: `primer.3` on `buy-first-coin` is nonsense
       if (body.stepId && !body.stepId.startsWith(`${body.itemId}.`)) {
         return reply.status(400).send({ error: 'stepId does not belong to the tour' });
+      }
+      // 🔐 A rating is a lesson's, and a whole number 1–5 — nothing else rides on this event
+      if (body.name === 'lesson_rated') {
+        const isLesson = (LEARN_LESSON_IDS as readonly string[]).includes(body.itemId);
+        const rating = body.stepId ? Number(body.stepId.slice(body.itemId.length + 1)) : NaN;
+        if (!isLesson || !Number.isInteger(rating) || rating < 1 || rating > 5) {
+          return reply.status(400).send({ error: 'a rating is a lesson and 1–5' });
+        }
       }
       await recordLearningEvent(app.prisma, { userId, ...body });
       return reply.status(204).send();

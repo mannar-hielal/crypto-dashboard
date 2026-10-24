@@ -12,6 +12,7 @@ vi.mock('react-router', async (importOriginal) => ({
 }));
 
 import { LearnCard } from '@/guide/LearnCard';
+import { useLessonStore } from '@/guide/lessonStore';
 import { useTourStore } from '@/guide/tourStore';
 
 const renderCard = () =>
@@ -26,6 +27,7 @@ describe('LearnCard', () => {
     desktop = true;
     navigate.mockReset();
     useTourStore.getState().reset();
+    useLessonStore.getState().reset();
     useTourStore.getState().setProgress({ completed: [], cardDismissed: false });
   });
   afterEach(() => cleanup());
@@ -42,12 +44,13 @@ describe('LearnCard', () => {
     expect(screen.getByText('Start')).not.toBeNull();
   });
 
-  it('should start the primer on the spot market and retire itself', () => {
+  it('should open Lesson 1 and retire itself', () => {
     renderCard();
     fireEvent.click(screen.getByText('Start'));
 
-    expect(navigate).toHaveBeenCalledWith('/dashboard/spot/BTC/USDT');
-    expect(useTourStore.getState().activeId).toBe('primer');
+    expect(useLessonStore.getState().activeId).toBe('lesson-01');
+    expect(useLessonStore.getState().screen).toBe(0);
+    expect(useTourStore.getState().activeId).toBeNull();
     expect(useTourStore.getState().cardDismissed).toBe(true);
   });
 
@@ -76,11 +79,16 @@ describe('LearnCard', () => {
     expect(screen.queryByText('New to crypto?')).toBeNull();
   });
 
-  it('should say "larger screen" on a phone and offer no Start', () => {
+  it('should offer Start on a phone too (the lesson cards work there)', () => {
     desktop = false;
     renderCard();
-    expect(screen.getByText(/larger screen/)).not.toBeNull();
-    expect(screen.queryByText('Start')).toBeNull();
+    expect(screen.getByText('Start')).not.toBeNull();
     expect(screen.getByText('Not now')).not.toBeNull();
+  });
+
+  it('should not show while a lesson runs', () => {
+    act(() => useLessonStore.getState().start('lesson-01'));
+    renderCard();
+    expect(screen.queryByText('New to crypto?')).toBeNull();
   });
 });

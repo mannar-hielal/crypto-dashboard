@@ -39,6 +39,8 @@ import { GuideOverlay } from '@/guide/GuideOverlay';
 import { FillEmailOffer } from '@/guide/FillEmailOffer';
 import { LearnCard } from '@/guide/LearnCard';
 import { LearnPanel } from '@/guide/LearnPanel';
+import { LessonSheet } from '@/guide/LessonSheet';
+import { ArticleDrawer } from '@/learn/ArticleDrawer';
 import { useTourProgress } from '@/guide/useTourProgress';
 
 // ─── Edit target type ────────────────────────────────────────────────────────
@@ -381,6 +383,8 @@ export function DashboardInner() {
     <div className="flex h-screen w-full flex-col overflow-hidden" style={{ background: bg.page }}>
       <TopBar />
       <GuideOverlay />
+      <LessonSheet />
+      <ArticleDrawer />
       <LearnPanel />
 
       {/* ⚠️ Deletion Pending Banner */}

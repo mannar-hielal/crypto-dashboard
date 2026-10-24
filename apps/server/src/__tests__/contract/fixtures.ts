@@ -165,6 +165,13 @@ export const retentionMetricsResponse: RetentionMetricsResponse = {
   activityTrackedSince: '2026-10-12',
   tourFunnel: [
     {
+      itemId: 'lesson-01',
+      started: 4,
+      completed: 3,
+      steps: [{ stepId: 'lesson-01.1', viewers: 4, closedHere: 0 }],
+      rating: { count: 2, average: 4.5 },
+    },
+    {
       itemId: 'primer',
       started: 3,
       completed: 2,

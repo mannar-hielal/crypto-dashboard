@@ -1,0 +1,167 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
+
+let desktop = true;
+vi.mock('@/hooks/useMediaQuery', () => ({ useMediaQuery: () => desktop }));
+
+const navigate = vi.fn();
+vi.mock('react-router', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('react-router')>()),
+  useNavigate: () => navigate,
+}));
+
+import { useLessonStore } from '@/guide/lessonStore';
+import { useTourStore } from '@/guide/tourStore';
+import { ArticleDrawer, RichText } from '@/learn/ArticleDrawer';
+import { useArticleStore } from '@/learn/articleStore';
+
+const drawer = () => document.querySelector('[role="dialog"]');
+const renderDrawer = () =>
+  render(
+    <MemoryRouter>
+      <ArticleDrawer />
+    </MemoryRouter>
+  );
+const open = (...args: Parameters<ReturnType<typeof useArticleStore.getState>['open']>) =>
+  act(() => useArticleStore.getState().open(...args));
+
+describe('ArticleDrawer', () => {
+  beforeEach(() => {
+    desktop = true;
+    navigate.mockReset();
+    useArticleStore.getState().reset();
+    useLessonStore.getState().reset();
+    useTourStore.getState().reset();
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+  afterEach(() => cleanup());
+
+  it('should render nothing while no article is open', () => {
+    renderDrawer();
+    expect(drawer()).toBeNull();
+  });
+
+  it('should show an article from the library: title, time, self-test, sources folded away', () => {
+    renderDrawer();
+    open('suncoin');
+    expect(screen.getByRole('heading', { name: 'SunCoin: money in a notebook' })).toBeTruthy();
+    expect(drawer()!.textContent).toContain('6 min read');
+    expect(drawer()!.textContent).toContain('Library');
+    expect(drawer()!.textContent).toContain('Quick self-test');
+
+    const sources = document.querySelector('[data-guide="article.sources"]') as HTMLDetailsElement;
+    expect(sources.open).toBe(false);
+    const link = sources.querySelector('a')!;
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('rel')).toBe('noopener noreferrer');
+  });
+
+  it('should run the SunCoin notebook a line at a time, and start over', () => {
+    renderDrawer();
+    open('suncoin');
+    const next = document.querySelector<HTMLButtonElement>('[data-guide="article.notebook.next"]')!;
+    expect(drawer()!.textContent).toContain('The notebook is empty.');
+    for (let i = 0; i < 6; i++) fireEvent.click(next);
+    expect(next.disabled).toBe(true);
+    expect(drawer()!.textContent).toContain('6 of 6 lines');
+    expect(drawer()!.textContent).toContain('none appeared or vanished');
+    fireEvent.click(document.querySelector('[data-guide="article.notebook.reset"]')!);
+    expect(drawer()!.textContent).toContain('0 of 6 lines');
+  });
+
+  it('should show what Nora’s edit does, and the other notebooks outvoting it', () => {
+    renderDrawer();
+    open('suncoin');
+    fireEvent.change(document.querySelector('[data-guide="article.nora.amount"]')!, {
+      target: { value: '30' },
+    });
+    expect(drawer()!.textContent).toContain('Leo now has -24');
+    expect(drawer()!.textContent).toContain('still add up to 15');
+    fireEvent.click(document.querySelector('[data-guide="article.nora.copies"]')!);
+    expect(drawer()!.textContent).toContain('4 of 5 copies still say Leo paid 3');
+  });
+
+  it('should step through a payment with the mailbox, and point to the card that teaches it', () => {
+    renderDrawer();
+    open('mailboxes-keys');
+    fireEvent.click(
+      document.querySelector('[data-guide="article.mailbox.step"][data-guide-key="3"]')!
+    );
+    expect(drawer()!.textContent).toContain('The box is locked');
+    expect(drawer()!.textContent).toContain('Lesson 1: A mailbox and a key →');
+  });
+
+  it('should say where an article will be practised when no lesson does it yet', () => {
+    renderDrawer();
+    open('getting-bitcoin');
+    expect(drawer()!.textContent).toContain('Coming in a later lesson');
+    expect(drawer()!.textContent).toContain('Mt. Gox');
+  });
+
+  it('should come back to the lesson it was opened from', () => {
+    act(() => useLessonStore.getState().start('lesson-01', 2));
+    renderDrawer();
+    open('suncoin', { from: { lesson: 'lesson-01', screen: 2 } });
+    fireEvent.click(screen.getByText('← Back to Lesson 1'));
+    expect(drawer()).toBeNull();
+    expect(useLessonStore.getState().screen).toBe(2);
+  });
+
+  it('should open the lesson at the card that teaches it', () => {
+    renderDrawer();
+    open('suncoin');
+    fireEvent.click(document.querySelector('[data-guide="article.practice"]')!);
+    expect(drawer()).toBeNull();
+    expect(useLessonStore.getState().activeId).toBe('lesson-01');
+    expect(useLessonStore.getState().screen).toBe(2);
+  });
+
+  it('should start a practice tour on a larger screen only', () => {
+    renderDrawer();
+    open('exchange-price');
+    fireEvent.click(
+      document.querySelector('[data-guide="article.practice"][data-guide-key="primer"]')!
+    );
+    expect(navigate).toHaveBeenCalledWith('/dashboard/spot/BTC/USDT');
+    expect(useTourStore.getState().activeId).toBe('primer');
+
+    cleanup();
+    desktop = false;
+    renderDrawer();
+    open('exchange-price');
+    const tour = document.querySelector<HTMLButtonElement>(
+      '[data-guide="article.practice"][data-guide-key="primer"]'
+    )!;
+    expect(tour.disabled).toBe(true);
+  });
+
+  it('should open at the asked-for section', () => {
+    renderDrawer();
+    open('exchange-price', { section: 'candles' });
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+    expect(document.getElementById('article-section-candles')).not.toBeNull();
+  });
+
+  it('should close with ✕, Esc and a click outside', () => {
+    renderDrawer();
+    open('suncoin');
+    fireEvent.click(screen.getByLabelText('Close the article'));
+    expect(drawer()).toBeNull();
+    open('suncoin');
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(drawer()).toBeNull();
+    open('suncoin');
+    fireEvent.click(document.querySelector('[data-guide="article.drawer"]')!);
+    expect(drawer()).toBeNull();
+  });
+});
+
+describe('RichText', () => {
+  it('should bold **runs** and keep everything else plain text, never HTML', () => {
+    const { container } = render(<RichText text="A **ledger** is <b>a list</b>." />);
+    expect(container.querySelector('strong')!.textContent).toBe('ledger');
+    expect(container.querySelector('b')).toBeNull();
+    expect(container.textContent).toBe('A ledger is <b>a list</b>.');
+  });
+});

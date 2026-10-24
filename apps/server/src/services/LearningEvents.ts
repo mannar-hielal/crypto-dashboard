@@ -1,6 +1,7 @@
 /**
- * Guided-tour events (privacy policy §3, "Learning events"): which tour and step, and when. They
- * answer one question — where do people stop? — so the funnel below counts people, never events.
+ * Guided-tour and lesson events (privacy policy §3, "Learning events"): which tour or lesson, which
+ * step, and when — plus a lesson's optional 1–5 rating. They answer where people stop and how a
+ * lesson landed, so the funnel below counts people, never events.
  *
  * 🔐 Bounded three ways: the route allowlists the name, tour and step shape; a user holds at most
  * `MAX_LEARN_EVENTS_PER_USER` rows (the oldest are pruned past it); the daily job purges rows past
@@ -51,6 +52,14 @@ export async function recordLearningEvent(prisma: Prisma, e: EventInput): Promis
         select: { id: true },
       });
       if (seen) return true;
+    }
+
+    // A rating replaces the person's earlier ones for that lesson: only the latest is ever read,
+    // and piling them up would push the account's own tour steps out under the cap
+    if (e.name === 'lesson_rated') {
+      await tx.learningEvent.deleteMany({
+        where: { userId: e.userId, name: 'lesson_rated', itemId: e.itemId },
+      });
     }
 
     const held = await tx.learningEvent.count({ where: { userId: e.userId } });
@@ -110,9 +119,11 @@ export function buildTourFunnel(rows: EventRow[], tourIds: readonly string[]): T
       set.add(r.userId);
     }
 
-    // Where each person's most recent event was a close: the step they left on
+    // Where each person's most recent event was a close: the step they left on. A rating isn't a
+    // step: it's counted on its own below, and must never hide a close recorded just before it
     const lastByUser = new Map<string, EventRow>();
     for (const r of mine) {
+      if (r.name === 'lesson_rated') continue;
       const prev = lastByUser.get(r.userId);
       if (!prev || r.at >= prev.at) lastByUser.set(r.userId, r);
     }
@@ -132,11 +143,28 @@ export function buildTourFunnel(rows: EventRow[], tourIds: readonly string[]): T
         closedHere: closedByStep.get(stepId) ?? 0,
       }));
 
+    // A lesson's rating: each person's latest counts once (`lesson-01.4` → 4)
+    const ratingByUser = new Map<string, EventRow>();
+    for (const r of mine) {
+      if (r.name !== 'lesson_rated' || !r.stepId) continue;
+      const prev = ratingByUser.get(r.userId);
+      if (!prev || r.at >= prev.at) ratingByUser.set(r.userId, r);
+    }
+    const ratings = [...ratingByUser.values()].map((r) => stepNumber(r.stepId ?? ''));
+
     return {
       itemId,
       started: usersOf('tour_started').size,
       completed: usersOf('tour_completed').size,
       steps,
+      ...(ratings.length > 0
+        ? {
+            rating: {
+              count: ratings.length,
+              average: Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10,
+            },
+          }
+        : {}),
     };
   });
 }

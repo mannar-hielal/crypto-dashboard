@@ -6,6 +6,7 @@ import { ALLOWED_CATEGORIES, ALLOWED_SYMBOLS, type BybitCategory } from '../../c
 import { bybitRestBaseUrl, getInstruments, getRiskLimit } from '../../services/BybitMarketInfo.js';
 import { bybitBreakers, fetchWithRetry } from '../../lib/fetchWithRetry.js';
 import { clientIp } from '../../lib/clientIp.js';
+import { intervalMs, snapEnd } from '../../lib/candleEnd.js';
 
 const log = logger.child({ route: 'market' });
 
@@ -90,25 +91,63 @@ interface BybitKlineResponse {
   };
 }
 
-// 🔐 Coalesce concurrent requests for the same category/symbol/interval/limit
+// 🔐 Coalesce concurrent requests for the same category/symbol/interval/limit/end
 //    into a single upstream fetch — a burst of reconnecting clients (e.g. after
 //    a server restart, before the aggregator warms up) would otherwise each
 //    fire their own REST call and risk tripping Bybit's rate limit.
 const inFlightCandleFetches = new Map<string, Promise<LiveBar['kline'][]>>();
 
+// 🔐 Closed history (an `end` before the current candle) never changes, so it's kept for a while:
+//    a lesson's chart asks for the same few windows over and over. `end` is snapped to its
+//    candle's open time first (lib/candleEnd.ts), so arbitrary values share keys. Capped, least
+//    recently used out first: a hit moves to the back, so the lessons' windows stay while a scan
+//    of other dates cycles through the rest.
+const HISTORY_CACHE_MAX = 64;
+const HISTORY_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+const historyCache = new Map<string, { at: number; candles: LiveBar['kline'][] }>();
+
+/** Test seam: forget the cached history */
+export function clearHistoryCache(): void {
+  historyCache.clear();
+}
+
 function fetchHistoricalCandles(
   category: BybitCategory,
   symbol: string,
   interval: AllowedInterval,
-  limit: number
+  limit: number,
+  rawEnd?: number
 ): Promise<LiveBar['kline'][]> {
-  const cacheKey = `${category}:${symbol}:${interval}:${limit}`;
+  const end = rawEnd === undefined ? undefined : snapEnd(rawEnd, interval);
+  const cacheKey = `${category}:${symbol}:${interval}:${limit}:${end ?? ''}`;
+
+  const closed = end !== undefined && end + intervalMs(interval) <= Date.now();
+  if (closed) {
+    const hit = historyCache.get(cacheKey);
+    historyCache.delete(cacheKey);
+    if (hit && Date.now() - hit.at < HISTORY_CACHE_TTL_MS) {
+      historyCache.set(cacheKey, hit); // most recently used
+      return Promise.resolve(hit.candles);
+    }
+  }
+
   const existing = inFlightCandleFetches.get(cacheKey);
   if (existing) return existing;
 
-  const promise = fetchHistoricalCandlesFromBybit(category, symbol, interval, limit).finally(() => {
-    inFlightCandleFetches.delete(cacheKey);
-  });
+  const promise = fetchHistoricalCandlesFromBybit(category, symbol, interval, limit, end)
+    .then((candles) => {
+      if (closed) {
+        if (historyCache.size >= HISTORY_CACHE_MAX) {
+          const oldest = historyCache.keys().next().value;
+          if (oldest !== undefined) historyCache.delete(oldest);
+        }
+        historyCache.set(cacheKey, { at: Date.now(), candles });
+      }
+      return candles;
+    })
+    .finally(() => {
+      inFlightCandleFetches.delete(cacheKey);
+    });
   inFlightCandleFetches.set(cacheKey, promise);
   return promise;
 }
@@ -117,7 +156,8 @@ async function fetchHistoricalCandlesFromBybit(
   category: BybitCategory,
   symbol: string,
   interval: AllowedInterval,
-  limit: number
+  limit: number,
+  end?: number
 ): Promise<LiveBar['kline'][]> {
   // interval is a typed AllowedInterval key — safe, controlled access
   // eslint-disable-next-line security/detect-object-injection
@@ -128,6 +168,7 @@ async function fetchHistoricalCandlesFromBybit(
     interval: bybitInterval,
     limit: String(limit),
   });
+  if (end !== undefined) params.set('end', String(end));
   const url = `${bybitRestBaseUrl()}/v5/market/kline?${params.toString()}`;
 
   const res = await fetchWithRetry(url, bybitBreakers.kline, { timeoutMs: 10_000, attempts: 2 });
@@ -167,7 +208,30 @@ interface CandleQuerystring {
   symbol?: string;
   interval?: string;
   limit?: string;
+  end?: string;
 }
+
+/**
+ * 🔐 `end` reaches further back than the live window, so each distinct value can be its own Bybit
+ * call: it's only taken with day, week or month candles (all a lesson needs; a few thousand
+ * windows instead of millions at 1m), and those requests have a stricter limit of their own.
+ */
+const END_INTERVALS: readonly string[] = ['1d', '1w', '1M'];
+const hasEnd = (request: FastifyRequest) =>
+  typeof (request.query as { end?: unknown } | undefined)?.end === 'string';
+
+/** `/candles`: 100 a minute per visitor, as everywhere; 20 when reaching back with `end` */
+export const CANDLES_RATE_LIMIT = {
+  timeWindow: '1 minute',
+  max: (request: FastifyRequest) => (hasEnd(request) ? 20 : 100),
+  keyGenerator: (request: FastifyRequest) =>
+    `${hasEnd(request) ? 'history' : 'live'}:${clientIp(request)}`,
+};
+
+/** The earliest `end` a history request may ask for (1 Jan 2017, UTC); later than now is refused too */
+const HISTORY_FLOOR_MS = Date.UTC(2017, 0, 1);
+/** Clock-skew allowance for `end`, so a client a little ahead of the server isn't refused */
+const END_SKEW_MS = 86_400_000;
 
 interface WsQuerystring {
   category?: string;
@@ -180,6 +244,7 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.get<{ Querystring: CandleQuerystring }>(
     '/candles',
     {
+      config: { rateLimit: CANDLES_RATE_LIMIT },
       schema: {
         tags: ['Market'],
         summary: 'Historical OHLCV candles for one market (spot or linear)',
@@ -191,6 +256,8 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
             symbol: { type: 'string', maxLength: 20, default: 'BTCUSDT' },
             interval: { type: 'string', maxLength: 3, default: '1m' },
             limit: { type: 'string', maxLength: 5, default: '200' },
+            // 🔐 Digits only, bounded: the last candle's open time (ms). Absent = up to now
+            end: { type: 'string', maxLength: 13, pattern: '^[0-9]{1,13}$' },
           },
         },
         response: {
@@ -222,11 +289,20 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
       if (!isAllowedInterval(intervalRaw)) {
         return reply.status(400).send({ error: `Interval not supported: ${intervalRaw}` });
       }
+      const end = request.query.end === undefined ? undefined : Number(request.query.end);
+      if (end !== undefined && !END_INTERVALS.includes(intervalRaw)) {
+        return reply
+          .status(400)
+          .send({ error: 'end works with daily, weekly or monthly candles (1d, 1w, 1M)' });
+      }
+      if (end !== undefined && (end < HISTORY_FLOOR_MS || end > Date.now() + END_SKEW_MS)) {
+        return reply.status(400).send({ error: 'end must be a time between 2017 and now' });
+      }
       const symbol = symbolRaw; // AllowedSymbol
       const interval = intervalRaw; // AllowedInterval
 
       try {
-        const candles = await fetchHistoricalCandles(category, symbol, interval, limit);
+        const candles = await fetchHistoricalCandles(category, symbol, interval, limit, end);
         return reply.send({ category, symbol, interval, candles });
       } catch (err) {
         log.error({ err, category, symbol, interval }, 'Failed to fetch historical candles');

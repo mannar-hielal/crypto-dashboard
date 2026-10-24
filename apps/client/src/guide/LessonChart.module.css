@@ -1,0 +1,11 @@
+/* A lesson's mini chart (owner's visual Q&A 2026-10-23): the drawn picture's slot, 160 px high,
+   full width on phones. The canvas colours come from tokens.ts `chart.*`. */
+
+.chart {
+  width: 100%;
+  max-width: 360px; /* the LessonArt picture's width */
+  height: 160px;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 10px;
+}

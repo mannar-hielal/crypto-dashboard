@@ -225,6 +225,32 @@ Preconditions: signed out (a private window).
 5. Phone width → Expect [trade.mobile.buy] / [trade.mobile.sell] dimmed and not tappable, with the account panel's
    one-row **Sign in to trade** just above them.
 
+### Learning path — Lessons 1 and 2, the knowledge base (no Part B rows yet)
+
+**UI reproduction** — a new account on `http://localhost:5173/dashboard/spot/BTC/USDT` (local dev; the history
+charts need the real Bybit feed, the fake feed draws its own candles) or production. The content is
+`apps/client/src/guide/lessons.ts` and `apps/client/src/learn/articles.ts`; the unit tests hold their rules.
+
+1. [learn.card.start] → Expect **Lesson 1 · What is Bitcoin?**, card 1 of 12, Tick surprised beside two pizzas and
+   the BTC mark. Every card has Tick or Tock in its picture.
+2. Card 4 → Expect the dotted world map with seven linked ledgers. [lesson.term `node`] → Expect a peek ("A computer
+   that keeps a full copy…"); [lesson.peek.more] → Expect the _SunCoin_ article in the drawer (full screen on a
+   phone) and the lesson hidden; [article.back] → Expect card 4 again.
+3. The moment → pick "Her edit is accepted" → Expect "Not quite." and Tock calm beside the question (never worried).
+4. Try it → [article.nora.amount] 30 → Expect "Leo now has -24 and Emi 32 … still add up to 15"; tick "Many
+   notebooks" → Expect "4 of 5 copies still say Leo paid 3". [lesson.try] Continue.
+5. The questions, then the note (Skip), then the close → Expect three "You can now…" lines, each with **Read more →**;
+   [lesson.next-lesson] → Expect Lesson 1 ticked done and **Lesson 2 · Who sets the price?** at card 1.
+6. Cards 4–5 (live data only) → Expect real daily candles: Tesla 2021 with three markers; the ETF chart ending on 10
+   Jan 2024. Answer the moment → Expect the chart to play on to 23 Jan with "−14.5%".
+7. Desktop: Try it → [lesson.try] Show me → tap [symbolbar.price], rest on the newest candle, hover a red one → Expect
+   "Done ✓" after each, then the questions. A phone gets Continue instead.
+8. User menu → Learn → Expect both lessons, the three tours and a **Library** of six articles;
+   [learn.article.open `exchange-price`] → Expect the drawer with **Library** in its head and the sources folded.
+
+**Manual check (M).** The pictures and the guides' faces at 375, 412, 820 and 1440 px (nothing clipped, the
+presenter never over the scene). Frequency: per release touching `guide/LessonArt.tsx`, `guide/art/` or the lessons.
+
 ## Stage 1 — Spot basics
 
 ### 14.6 — Spot (14.6.1–14.6.10)

@@ -1,0 +1,401 @@
+/* The lesson sheet (owner's visual Q&A 2026-10-22): centred over the dimmed dashboard, full screen
+   below sm (640 px). Colours from tokens.ts via the @theme mirror in index.css; raw values without
+   a CSS variable are noted with their token. */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200; /* zIndex.modal: below the tour (250), which takes over during "try it" */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  border: 1px solid rgba(105, 91, 236, 0.4); /* color.purpleDark at 40 % */
+  border-radius: 16px;
+  padding: 16px 20px 18px;
+  background: var(--color-bg-panel); /* bg.panel */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); /* shadow.modal */
+  color: var(--color-brand-white);
+  font-size: 16px; /* fontSize.sm — reading text */
+  line-height: 1.5; /* lineHeight.normal */
+}
+
+.sheet:focus {
+  outline: none;
+}
+
+@media (max-width: 639px) {
+  .overlay {
+    padding: 0;
+  }
+
+  .sheet {
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    padding: 12px 16px 16px;
+  }
+}
+
+/* ─── Head: ✕, progress, counter ─────────────────────────────────────────── */
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.close {
+  display: inline-flex;
+  border: 0;
+  border-radius: 6px;
+  padding: 2px;
+  background: transparent;
+  color: var(--color-brand-muted);
+  cursor: pointer;
+}
+
+.close:hover {
+  color: var(--color-brand-white);
+}
+
+.progress {
+  flex: 1;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: var(--color-bg-surface); /* bg.surface */
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--color-brand-purple-dark); /* color.purpleDark */
+  transition: width 200ms ease-out;
+}
+
+.counter {
+  color: var(--color-brand-muted);
+  font-size: 13px; /* fontSize.xs11 */
+}
+
+/* ─── Text ────────────────────────────────────────────────────────────────── */
+
+.kicker {
+  margin: 0;
+  color: var(--color-brand-purple); /* color.purple */
+  font-size: 13px; /* fontSize.xs11 */
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.heading {
+  margin: 4px 0 12px;
+  font-size: 18px; /* fontSize.base */
+  font-weight: 700;
+  line-height: 1.375; /* lineHeight.snug */
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.text {
+  margin: 0;
+}
+
+.line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+}
+
+.speaker {
+  font-weight: 700;
+}
+
+.context {
+  margin: 0;
+  border-left: 3px solid var(--color-brand-purple-dark); /* color.purpleDark */
+  padding: 4px 0 4px 10px;
+  color: var(--color-brand-muted);
+}
+
+.question {
+  margin: 0;
+  font-weight: 600;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.option {
+  border: 1px solid rgba(255, 255, 255, 0.1); /* border.input */
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: var(--color-bg-footer); /* bg.modal */
+  color: var(--color-brand-white);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.option:hover:not(:disabled) {
+  border-color: var(--color-brand-purple-dark);
+}
+
+.option:disabled {
+  cursor: default;
+}
+
+/* Right / wrong: the border colour plus the "Right." / "Not quite." words, never colour alone */
+.right {
+  border-color: var(--color-brand-green);
+}
+
+.wrong {
+  border-color: var(--color-brand-red);
+}
+
+.explain {
+  margin: 0;
+  color: var(--color-brand-muted);
+}
+
+.hint {
+  margin: 0;
+  color: var(--color-brand-muted);
+  font-size: 14px; /* fontSize.xs */
+}
+
+.error {
+  margin: 0;
+  color: var(--color-brand-amber); /* color.amber */
+  font-size: 14px; /* fontSize.xs */
+}
+
+.noteLabel {
+  color: var(--color-brand-muted);
+}
+
+.note {
+  box-sizing: border-box;
+  width: 100%;
+  resize: vertical;
+  border: 1px solid rgba(255, 255, 255, 0.1); /* border.input */
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--color-bg-footer); /* bg.modal */
+  color: var(--color-brand-white);
+  font: inherit;
+}
+
+.rule {
+  margin: 0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: var(--color-bg-surface); /* bg.surface */
+  font-size: 18px; /* fontSize.base */
+  font-weight: 700;
+}
+
+.rating {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stars {
+  display: flex;
+  gap: 4px;
+}
+
+.star {
+  display: inline-flex;
+  border: 0;
+  border-radius: 6px;
+  padding: 4px;
+  background: transparent;
+  color: var(--color-brand-muted);
+  cursor: pointer;
+}
+
+.starOn {
+  color: var(--color-brand-amber); /* color.amber */
+}
+
+.starOn svg {
+  fill: currentColor;
+}
+
+/* ─── Foot ────────────────────────────────────────────────────────────────── */
+
+.foot,
+.inlineActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.foot {
+  margin-top: 18px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.link {
+  border: 0;
+  background: transparent;
+  color: var(--color-brand-muted);
+  font: inherit;
+  font-size: 14px; /* fontSize.xs */
+  cursor: pointer;
+}
+
+.link:hover {
+  color: var(--color-brand-white);
+}
+
+.primary {
+  min-height: 36px;
+  border: 0;
+  border-radius: 9999px;
+  padding: 8px 20px;
+  background: var(--color-brand-purple-dark); /* color.purpleDark */
+  color: var(--color-brand-white);
+  font: inherit;
+  font-size: 14px; /* fontSize.xs */
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.sheet button:focus-visible,
+.note:focus-visible {
+  outline: 2px solid var(--color-brand-purple-dark); /* focusRing */
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progressFill {
+    transition: none;
+  }
+}
+
+/* ─── Terms, their peek, the can-do list (owner's visual Q&A 2026-10-23) ─────── */
+
+/* A tappable term: the text stays white, a dotted purple underline says "there's more here" */
+.term {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline dotted var(--color-brand-purple); /* color.purple */
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.term[aria-expanded='true'] {
+  color: var(--color-brand-white);
+  text-decoration-style: solid;
+}
+
+.peek {
+  border-left: 3px solid var(--color-brand-purple); /* color.purple */
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--color-bg-surface); /* bg.surface */
+}
+
+.peekHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.peekText {
+  margin: 6px 0 0;
+}
+
+.peekLabel {
+  color: var(--color-brand-muted);
+}
+
+.peek .link {
+  margin-top: 8px;
+  padding: 0;
+}
+
+.canDo {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.canDo li + li {
+  margin-top: 6px;
+}
+
+.canDo .link {
+  padding: 0;
+}
+
+/* ─── The guides on cards and questions (owner's visual Q&A 2026-10-24) ──────── */
+
+/* A chart card: the presenting guide beside the chart, which keeps its full height */
+.chartRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+}
+
+.chartGuide {
+  flex-shrink: 0;
+  width: 44px; /* the guide's 64 × 92 figure, scaled */
+  height: 64px;
+}
+
+/* A question with the guide beside it; the guide reacts once it's answered */
+.questionHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reactGuide {
+  flex-shrink: 0;
+  width: 36px;
+  height: 52px;
+}

@@ -1,0 +1,235 @@
+/* The lessons' pictures and the two guides. Colours from tokens.ts via the @theme mirror in
+   index.css; raw values without a CSS variable are noted with their token. */
+
+.art {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  height: auto;
+  margin: 0 auto;
+}
+
+.avatar {
+  flex-shrink: 0;
+  width: 32px; /* the guide's 64 × 92 figure at half size */
+  height: 46px;
+}
+
+/* Up / down: the fill and stroke of a candle or a guide */
+.up {
+  color: var(--color-brand-green); /* color.green */
+}
+
+.down {
+  color: var(--color-brand-red); /* color.red */
+}
+
+.body {
+  fill: currentColor;
+}
+
+.wick {
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.eye {
+  fill: var(--color-brand-white);
+}
+
+.pupil {
+  fill: var(--color-bg-page);
+}
+
+.mouth {
+  fill: none;
+  stroke: var(--color-bg-page);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.panel {
+  fill: var(--color-bg-surface); /* bg.surface */
+  stroke: rgba(105, 91, 236, 0.5); /* color.purpleDark at 50 % */
+  stroke-width: 1;
+}
+
+.rule {
+  stroke: var(--color-brand-muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.6;
+}
+
+.link {
+  fill: none;
+  stroke: var(--color-brand-muted);
+  stroke-width: 2;
+  stroke-dasharray: 4 4;
+}
+
+.chip {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.chipText {
+  fill: currentColor;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.price {
+  fill: var(--color-brand-white);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.headline {
+  fill: var(--color-brand-white);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.label {
+  fill: var(--color-brand-muted);
+  font-size: 12px;
+}
+
+/* ─── Lesson 1's pictures (2026-10-23) ─────────────────────────────────────── */
+
+/* A coin: amber, as SunCoin in the articles (color.amber) */
+.coin {
+  fill: var(--color-brand-amber);
+}
+
+.coinText {
+  fill: var(--color-bg-page);
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.crust {
+  fill: var(--color-brand-amber); /* color.amber */
+  opacity: 0.6;
+}
+
+.cheese {
+  fill: var(--color-bg-surface); /* bg.surface */
+  stroke: var(--color-brand-amber);
+  stroke-width: 1.5;
+}
+
+.topping {
+  fill: var(--color-brand-purple-dark); /* color.purpleDark: decoration, not a buy/sell red */
+}
+
+.notebookLine {
+  fill: var(--color-brand-white);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.slot {
+  fill: var(--color-bg-page); /* bg.page */
+}
+
+.key {
+  fill: none;
+  stroke: var(--color-brand-amber); /* color.amber */
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.hand {
+  stroke: var(--color-brand-white);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+/* A banknote's outline */
+.note {
+  fill: none;
+  stroke: var(--color-brand-muted); /* green stays for buy and profit (design.md) */
+  stroke-width: 2;
+}
+
+/* ─── The guides' faces and arms (2026-10-24) ─────────────────────────────── */
+
+.mouthOpen {
+  fill: var(--color-bg-page); /* bg.page */
+}
+
+.brow {
+  fill: none;
+  stroke: var(--color-bg-page);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.arm {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+/* A presenting guide steps into the scene once (none with reduced motion) */
+.presenter {
+  animation: presenterIn 360ms ease-out both;
+}
+
+@keyframes presenterIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .presenter {
+    animation: none;
+  }
+}
+
+/* ─── Icon colours (Phosphor duotone takes currentColor; its tint is the same colour at 20 %) ─── */
+
+.amber {
+  color: var(--color-brand-amber); /* color.amber: coins, keys, the things of value */
+}
+
+.system {
+  color: var(--color-brand-purple); /* color.purple: institutions, the system */
+}
+
+.muted {
+  color: var(--color-brand-muted);
+}
+
+.white {
+  color: var(--color-brand-white);
+}
+
+.notebookTitle {
+  fill: var(--color-brand-white);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* The dotted world map and the ledger network on it */
+.dots {
+  fill: var(--color-brand-muted);
+  opacity: 0.35;
+}
+
+.network {
+  stroke: var(--color-brand-purple-dark); /* color.purpleDark */
+  stroke-width: 1.5;
+  opacity: 0.8;
+}
+
+.nodeHalo {
+  fill: var(--color-brand-purple-dark); /* color.purpleDark */
+}

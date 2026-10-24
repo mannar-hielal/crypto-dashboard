@@ -4230,3 +4230,162 @@ no fill ever matched. The unit tests built their events by hand with the same id
   four tests fail. The hand-made unit tests now use the engine's id shape too.
 - **Lesson:** a check built from fixtures that mirror the code under test cannot catch a wrong assumption about the
   data; the first live fill is the test that mattered.
+
+### security: floors for six new high advisories (follow-redirects, vite, zod, undici, body-parser) (2026-10-24) ✅
+
+**Context:** `pnpm audit --audit-level=high` (the preinstall and pre-commit gate) failed on advisories published
+1–23 October, blocking every install. Fixed the `security.md` way, never bypassed:
+
+- `pnpm.overrides`: `follow-redirects >=1.16.1` (new; via `bybit-api` → `axios`), `undici ^7.30.1` (via `jsdom`),
+  `body-parser >=2.4.0` (via the Figma MCP server's `express`);
+- `vite ^8.1.6` (client dev server), `zod ^4.6.6` (client and `mcp-servers/figma`);
+- the lockfile was re-resolved with `--lockfile-only --ignore-scripts`, then a normal install ran the audit gate green
+  (no high or critical findings). All suites pass and the client builds; the lockfile resolves `vite` to 8.3.5 within the range.
+
+### feat: Lesson 1 "Who sets the price?" — the first lesson of the beginner path, presented by Tick & Tock (2026-10-22) ✅
+
+**Context:** the guided-learning plan (owner, 2026-10-22; working notes kept outside the repo). Each lesson is short
+illustrated cards, a short tour on the real screen, two or three questions with a "why", and one journal line. The
+lessons follow the education report: reward the plan, never the guess, and no hype. Visual Q&A answers: a centred
+sheet (full screen on phones), the lesson wraps the primer, guides named Tick (green, curious) and Tock (red, calm),
+phones get the cards, a journal line and an optional 1–5 rating. There is no narration yet.
+
+- **Content** (`guide/lessons.ts`, pure data):
+  - five cards: who decides the price, what crypto is, what a price is, Tesla 2021 up and down, and the January 2024
+    fund approval followed by a fall;
+  - a mid-lesson "what happened next?" question where _No one could know in advance_ is the praised answer;
+  - three checks, a note prompt, and the rule "A price is people, not a prediction";
+  - every dated price checked against Bybit BTCUSDT daily candles (noted beside it).
+- **Sheet** (`guide/LessonSheet.tsx`, `lessonStore.ts`, `LessonArt.tsx`):
+  - it steps aside while the primer runs as "Try it" and comes back on the questions however the tour ends;
+  - phones skip "Try it" with a note;
+  - the note goes to the journal (`addJournalNote`, so it counts as a learning day);
+  - the close offers "Buy your first coin";
+  - the art is inline SVG from our own tokens; the guides carry a shape cue (wick up / wick down), not only a colour.
+- **Primer:** rewritten as the lesson's three steps (price, candle, balance). It no longer hands over to the buy
+  tour; the lesson's close does.
+- **Welcome card and Learn panel:**
+  - the card's Start opens Lesson 1 on every screen size;
+  - the panel lists "Lessons" above the tours;
+  - lesson completion is saved as `lesson-01`.
+- **Server:**
+  - `lesson-01` joins `LEARN_ITEM_IDS` and the events allowlist (`LEARN_EVENT_ITEM_IDS`);
+  - the screens are reported as `tour_*` steps (`lesson-01.<n>`);
+  - a new `lesson_rated` event accepts only a lesson and 1–5;
+  - the admin funnel lists the lesson first, names its screens and shows the average rating (each person's latest).
+- **Privacy policy:** the "Learning events" row now names lessons and the optional rating. Version **1.4**, dated
+  24 Oct 2026 (review on #262). The owner treats it as **not material**: an optional, learner-given rating inside the
+  existing category, with the same retention, legal basis and recipients, so no notice e-mail (§13).
+- **Tests:**
+  - lesson rules: at most five cards of 50 words, 2–3 questions, an honest praised answer, a hype guard;
+  - the store, the sheet's full walk, progress and events, the route's rating validation, the funnel rating, the
+    admin page;
+  - a throwaway Playwright run screenshotted every screen at 1440 px and on a Pixel 7.
+
+### feat: a knowledge base linked both ways with the lessons; Lesson 1 v2 with a real history chart and checked tasks (2026-10-23) ✅
+
+**Context:** the knowledge-base plan (owner, 2026-10-23; working notes kept outside the repo). Lessons stay short and
+about trading; the depth lives in articles, rewritten in our voice from the owner's notes. A **concept** is the unit:
+each one has a peek (one sentence and a "Think of it as…" line), the article that explains it, and the tours that
+practise it. Visual Q&A answers: an inline peek inside the lesson sheet, articles in a 440 px right-hand drawer (full
+screen on phones), the real mini chart in the picture's slot, and terms marked with a dotted purple underline.
+
+- **Content** (`learn/`, pure data):
+  - `concepts.ts`: 15 Stage 0 concepts (ledger, blockchain, exchange, last price, spread, candle, private key…);
+  - `articles.ts`: three articles: _SunCoin: money in a notebook_, _How an exchange sets the price_, _Mailboxes and
+    keys_. Each has sources (in a folded list, so the reading never leaves the app), a self-test and a checked date;
+  - `graph.ts`: the links both ways are worked out from what lessons and concepts declare, never hand-kept;
+  - one metaphor per idea: SunCoin and Nora's notebook for the ledger, the mailbox for addresses and keys.
+- **Built for paid tiers later** (`learn/access.ts`): code asks for a capability key, never a plan name; every
+  lesson, concept and article carries `access` (all `learn.core`, free). A test holds "a free item never links to a
+  paid one". No payments, no entitlements endpoint: paid content, if it ever exists, is served by the server, never
+  bundled.
+- **Lesson 1 v2** (`guide/lessons.ts`, `LessonSheet.tsx`):
+  - cards 2 and 3 mark four terms (`[[ledger]]`, `[[last deal|last-price]]`); a tap opens the peek, "Read more"
+    opens the article while the lesson waits hidden, and "Back to Lesson 1" returns to the same card;
+  - the Tesla and ETF cards show a real mini chart (`LessonChart.tsx`): Bybit USDT-perpetual daily candles (spot has
+    no 2021 history) with dated markers, falling back to the drawn picture if history can't load;
+  - **fix:** v1's ETF card said the price fell before the question asked what happened next. The card's chart now
+    stops on 10 January 2024 and plays on to the 23rd only after the learner answers;
+  - the close lists three "You can now…" lines, each opening its article at the section.
+- **Try it: checked tasks** (`tours.ts`, `GuideOverlay.tsx`, `chartHover.ts`): the primer is now tap the live price,
+  rest the pointer on the newest candle, then find a red one. ChartPanel reports the hovered candle only while a
+  tour listens (read only). "Done ✓" shows, then the tour moves on; "Skip this step" for keyboard and touch users.
+- **Article widgets** (`ArticleWidgets.tsx`): the SunCoin notebook a line at a time, "Nora cheats" (edit line 4: the
+  total stays 15, so nothing gives the edit away, until four other notebooks outvote it), an order book, a payment
+  in three mailbox steps.
+- **Learn panel:** a "Library" section opens any article.
+- **Server:** `/api/market/candles` takes an optional `end` (digits only, 2017 to now, else 400), passed to Bybit and
+  part of the coalescing key; the SDK's `getCandles` takes it as a fifth argument.
+- **No new learning events** and no privacy change: opening terms and articles isn't tracked yet.
+- **Tests:** the graph rules, terms, SunCoin sums, the chart (freeze, reveal, fallback, cache), the drawer, the sheet's
+  peek and article round trip, hover tasks, the route's `end` validation; a throwaway Playwright walk at 1440 px and
+  on a Pixel 7.
+
+### feat: two lessons — Lesson 1 "What is Bitcoin?" from the owner's notes, Lesson 2 "Who sets the price?" (2026-10-23) ✅
+
+**Context:** the owner found one lesson mixing two sources messy. Lesson 1 now draws on the owner's notes from Kevin
+and Colt's lectures (the Drive docs), each card's terms opening the matching article; Lesson 2 is the price lesson,
+modelled on Finelo's concise style, with what Lesson 1 covers stripped out. Owner answers: a Pizza Day hook, one
+bridge sentence back to Lesson 1, "Nora cheats" as Lesson 1's "Try it", one article per Drive doc. Unreleased, so
+the ids were renumbered freely (`lesson-01` = Bitcoin, `lesson-02` = price).
+
+- **Lesson 1** (`guide/lessons.ts`): two pizzas (22 May 2010) → money runs on trust (2008, Satoshi Nakamoto) → a
+  notebook, not coins → many notebooks, no Nora → a mailbox and a key. The moment asks what happens when Nora edits
+  line 4; "Try it" is the Nora-cheats widget inside the sheet, on every screen size (`tryWidget`); the checks cover
+  where a balance lives, a recovery-phrase scam and Mt. Gox. Rule: "Bitcoin replaces 'trust me' with 'check it'."
+  Its close opens Lesson 2 on any screen (`next: { kind: 'lesson' }`).
+- **Lesson 2:** "What crypto is" removed; "What a price is" gains one bridge sentence; a new card, "A market that
+  never closes" (24/7, liquidity, spread, from Finelo's Lesson 2 without its hype); Tesla and ETF charts unchanged.
+- **Articles:** three new ones, one per Drive doc: _Money 101_ (02), _Bitcoin's story, and its plan in plain words_
+  (04: timeline, the whitepaper in six steps, mining, satoshis), _Getting bitcoin: three ways_ (05; the custody,
+  Mt. Gox and Bybit section moved here from _Mailboxes and keys_). New concepts: money, Satoshi Nakamoto, satoshi,
+  mining.
+- **Pictures** (`LessonArt.tsx`): pizza, money, notebook, mailbox, a 24/7 market, from our tokens.
+- **Server/SDK:** `lesson-02` joins `LEARN_ITEM_IDS` / `LEARN_LESSON_IDS`; the admin funnel names a widget try
+  "Try it (in the lesson)".
+- **Tests:** both lessons' rules (one "Try it" each, a real next step, Lesson 1 free of prices, Lesson 2 free of
+  Lesson 1's terms), the new graph links, the in-sheet try and lesson-to-lesson close; a throwaway Playwright walk
+  through both lessons at 1440 px and on a Pixel 7.
+
+### feat: lesson visuals — Phosphor duotone icons, Tick and Tock presenting every card with moods, a dotted world map (2026-10-24) ✅
+
+**Context:** the owner found the hand-drawn shapes too primitive and wanted each card presented by a guide, as
+Finelo's mascot points at its scene. Visual Q&A: Phosphor duotone, the guide inside the scene pointing, a dotted
+world map, eight moods (`worried` for warnings only).
+
+- **New dependency:** `@phosphor-icons/react` 2.1.10 (MIT, no install scripts, no dependencies, exact pin), for
+  lesson and article illustrations only; Lucide stays for interface controls; the BTC mark is the real logo from
+  `cryptocurrency-icons`.
+- **The guides** (`guide/art/Guide.tsx`): faces for `smile`, `grin`, `wink`, `surprised`, `curious`, `thinking`,
+  `worried`, `calm`, and arms (`stand`, `point`, `wave`); Tick keeps the top wick, Tock the bottom one. Every card
+  has a `presenter`; on a chart card the guide stands beside the chart. Questions react: the right answer gets
+  Tick's grin, "Not quite" gets Tock, calm (`questionGuide` in `lessons.ts`); only the scam question shows Tock
+  worried.
+- **Scenes** (`guide/LessonArt.tsx`): pizzas → the BTC mark; a bank, a state and a game maker, each with coins;
+  Nora's notebook; the dotted world map with seven linked ledger nodes; a mailbox with the BTC mark dropping in and a
+  key; buyers and sellers meeting at a price tag; a globe and a clock for the 24/7 market.
+- **World map data** (`guide/art/worldDots.ts`): 1,010 dots generated once with `dotted-map` (MIT; Natural Earth,
+  public domain). No runtime dependency.
+- **Drawer:** the mailbox steps use the Phosphor mailbox, the BTC mark, a lock and a key; the SunCoin widgets have
+  notebook headers.
+- **Tests:** every mood and pose for both guides, every scene with its presenter, the map's dots and nodes (they
+  caught an encoding bug), the reaction rule, and "worried only for a warning"; a throwaway Playwright run
+  screenshotted every card at 1440 px and on a Pixel 7.
+
+**Review on #262 (Claude review, all threads fixed):**
+
+- `/api/market/candles?end=`:
+  - `end` is snapped to its candle's open time (`lib/candleEnd.ts`) and closed history is cached (64 windows, 6 h,
+    least recently used out);
+  - `end` is taken only with `1d`, `1w` or `1M` candles;
+  - requests with it get their own bucket of 20 a minute per visitor (`CANDLES_RATE_LIMIT`).
+- Learning events:
+  - a rating replaces the person's earlier ones for that lesson;
+  - the funnel skips ratings when finding where someone left.
+- Finishing a replayed tour or lesson is reported as completed, not closed. Both stores count their finishes. This
+  also stops the server's progress load from re-sending `tour_completed` for lessons. The tour half of the bug was
+  already in production.
+- A hover task hears when the pointer leaves the chart (`crosshairHover`), so a "rest on it" timer can't finish after
+  the pointer moved away.
+- Privacy policy 1.4 (see the Lesson 1 entry).

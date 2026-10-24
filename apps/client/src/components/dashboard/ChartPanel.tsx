@@ -5,6 +5,7 @@ import {
   LineSeries,
   CrosshairMode,
   LineStyle,
+  MismatchDirection,
 } from 'lightweight-charts';
 import type {
   IChartApi,
@@ -40,6 +41,7 @@ import { startEraser } from '@/lib/drawingTools';
 import { pendingSyncRange, runPaneDataPush } from '@/lib/chartSync';
 import { toHeikinAshi } from '@/lib/heikinAshi';
 import { IndicatorLegends } from '@/components/indicators/IndicatorLegends';
+import { crosshairHover, hasHoverListeners, reportHover } from '@/guide/chartHover';
 import { useTradeLines } from '@/hooks/useTradeLines';
 import { TradeLineAmend } from './TradeLineAmend';
 import { DrawingTextEditor } from './DrawingTextEditor';
@@ -299,6 +301,23 @@ export function ChartPanel({
 
     // ── Crosshair (hover legend) ───────────────────────────────────────────
     chart.subscribeCrosshairMove((param) => {
+      // The tour's "hover a candle" tasks (guide/chartHover.ts), only while one is listening: every
+      // move is reported, a leave or a gap as null
+      if (hasHoverListeners()) {
+        const series = candleRef.current;
+        // The newest bar without copying the whole series on every pointer move
+        const newest = series?.dataByIndex(Infinity, MismatchDirection.NearestLeft);
+        reportHover(
+          crosshairHover(
+            param.time === undefined ? undefined : (param.time as number),
+            !!param.point,
+            series
+              ? (param.seriesData.get(series) as { open: number; close: number } | undefined)
+              : undefined,
+            newest ? (newest.time as number) : undefined
+          )
+        );
+      }
       // A point means the pointer is on the canvas, not on the legend column (see IndicatorLegends)
       if (param.point) legendHoverRef.current = false;
       if (!param.time || !param.point || !candleRef.current) {

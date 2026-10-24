@@ -73,6 +73,10 @@ export const chart = {
   // Canvas text colour for axis labels / crosshair values
   textColor: '#d1d4dc',
 
+  // Dated event markers on a lesson's history chart (guide/LessonChart) — color.amber, an event,
+  // never a buy/sell signal
+  lessonMarker: '#e7ab33',
+
   // Canvas background — must match bg.page exactly
   bg: '#060413',
 } as const;
