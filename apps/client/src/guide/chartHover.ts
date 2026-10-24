@@ -36,6 +36,21 @@ export function onHover(listener: Listener): () => void {
   };
 }
 
+/**
+ * What a crosshair move means for a hover task: the candle under the pointer, or null when it's off
+ * the chart or on a gap with no candle (a leave has to be reported, or a "rest on it" timer would
+ * finish after the pointer moved away). `lastTime` is the newest candle's time.
+ */
+export function crosshairHover(
+  time: number | undefined,
+  onCanvas: boolean,
+  candle: { open: number; close: number } | undefined,
+  lastTime: number | undefined
+): HoveredBar | null {
+  if (time === undefined || !onCanvas || !candle) return null;
+  return { time, open: candle.open, close: candle.close, isLast: time === lastTime };
+}
+
 /** Whether the hovered candle is the one a task asks for */
 export function matchesHover(want: HoverWant, bar: HoveredBar | null): boolean {
   if (!bar) return false;

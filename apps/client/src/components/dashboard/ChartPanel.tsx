@@ -40,7 +40,7 @@ import { startEraser } from '@/lib/drawingTools';
 import { pendingSyncRange, runPaneDataPush } from '@/lib/chartSync';
 import { toHeikinAshi } from '@/lib/heikinAshi';
 import { IndicatorLegends } from '@/components/indicators/IndicatorLegends';
-import { hasHoverListeners, reportHover } from '@/guide/chartHover';
+import { crosshairHover, hasHoverListeners, reportHover } from '@/guide/chartHover';
 import { useTradeLines } from '@/hooks/useTradeLines';
 import { TradeLineAmend } from './TradeLineAmend';
 import { DrawingTextEditor } from './DrawingTextEditor';
@@ -300,6 +300,22 @@ export function ChartPanel({
 
     // ── Crosshair (hover legend) ───────────────────────────────────────────
     chart.subscribeCrosshairMove((param) => {
+      // The tour's "hover a candle" tasks (guide/chartHover.ts), only while one is listening: every
+      // move is reported, a leave or a gap as null
+      if (hasHoverListeners()) {
+        const series = candleRef.current;
+        const bars = series?.data();
+        reportHover(
+          crosshairHover(
+            param.time === undefined ? undefined : (param.time as number),
+            !!param.point,
+            series
+              ? (param.seriesData.get(series) as { open: number; close: number } | undefined)
+              : undefined,
+            bars?.length ? (bars[bars.length - 1].time as number) : undefined
+          )
+        );
+      }
       // A point means the pointer is on the canvas, not on the legend column (see IndicatorLegends)
       if (param.point) legendHoverRef.current = false;
       if (!param.time || !param.point || !candleRef.current) {
@@ -315,17 +331,6 @@ export function ChartPanel({
       if (!candle) {
         setHoverData(null);
         return;
-      }
-
-      // The tour's "hover a candle" tasks (guide/chartHover.ts), only while one is listening
-      if (hasHoverListeners()) {
-        const bars = candleRef.current.data();
-        reportHover({
-          time: param.time as number,
-          open: candle.open,
-          close: candle.close,
-          isLast: bars[bars.length - 1]?.time === param.time,
-        });
       }
 
       setHoverData({

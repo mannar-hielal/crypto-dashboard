@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { hasHoverListeners, matchesHover, onHover, reportHover } from '@/guide/chartHover';
+import {
+  crosshairHover,
+  hasHoverListeners,
+  matchesHover,
+  onHover,
+  reportHover,
+} from '@/guide/chartHover';
 
 const bar = (open: number, close: number, isLast = false) => ({ time: 1, open, close, isLast });
 
@@ -24,5 +30,19 @@ describe('chartHover', () => {
     expect(matchesHover('falling', bar(2, 1))).toBe(true);
     expect(matchesHover('falling', bar(1, 1))).toBe(false);
     expect(matchesHover('falling', null)).toBe(false);
+  });
+
+  it('should read a crosshair move as a candle, or as nothing when off the chart or on a gap', () => {
+    const c = { open: 1, close: 2 };
+    expect(crosshairHover(100, true, c, 100)).toEqual({
+      time: 100,
+      open: 1,
+      close: 2,
+      isLast: true,
+    });
+    expect(crosshairHover(90, true, c, 100)?.isLast).toBe(false);
+    expect(crosshairHover(undefined, false, undefined, 100)).toBeNull(); // left the chart
+    expect(crosshairHover(100, false, c, 100)).toBeNull(); // on the legend column
+    expect(crosshairHover(100, true, undefined, 100)).toBeNull(); // a gap with no candle
   });
 });

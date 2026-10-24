@@ -280,6 +280,21 @@ describe('GuideOverlay', () => {
     expect(useTourStore.getState().stepIndex).toBe(2);
   });
 
+  it('should not tick the newest candle done when the pointer leaves the chart before the hold', async () => {
+    addControl('pane.chart');
+    useTourStore.getState().start('primer');
+    useTourStore.setState({ stepIndex: 1 });
+    render(<GuideOverlay />);
+    await frame();
+
+    hover({ open: 1, close: 2, isLast: true });
+    await frame(300);
+    hover(null); // left the chart
+    await frame(1000);
+    expect(document.querySelector('[data-guide="tour.done"]')).toBeNull();
+    expect(useTourStore.getState().stepIndex).toBe(1);
+  });
+
   it('should let a learner without a mouse skip a hover task', async () => {
     addControl('pane.chart');
     useTourStore.getState().start('primer');
