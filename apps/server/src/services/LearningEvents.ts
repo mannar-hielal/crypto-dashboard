@@ -111,9 +111,11 @@ export function buildTourFunnel(rows: EventRow[], tourIds: readonly string[]): T
       set.add(r.userId);
     }
 
-    // Where each person's most recent event was a close: the step they left on
+    // Where each person's most recent event was a close: the step they left on. A rating isn't a
+    // step: it's counted on its own below, and must never hide a close recorded just before it
     const lastByUser = new Map<string, EventRow>();
     for (const r of mine) {
+      if (r.name === 'lesson_rated') continue;
       const prev = lastByUser.get(r.userId);
       if (!prev || r.at >= prev.at) lastByUser.set(r.userId, r);
     }

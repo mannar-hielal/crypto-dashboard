@@ -103,4 +103,16 @@ describe('buildTourFunnel', () => {
     expect(lesson.steps).toEqual([]); // a rating is not a step
     expect(primer).not.toHaveProperty('rating');
   });
+
+  it('should still count a close when a rating is recorded after it', () => {
+    // A rating and a quick ✕ arrive close together; the server may record the rating last
+    const rows = [
+      ev('a', 'tour_step', 'lesson-01.12', 0, 'lesson-01'),
+      ev('a', 'tour_closed', 'lesson-01.12', 1, 'lesson-01'),
+      ev('a', 'lesson_rated', 'lesson-01.3', 2, 'lesson-01'),
+    ];
+    const [lesson] = buildTourFunnel(rows, ['lesson-01']);
+    expect(lesson.steps).toEqual([{ stepId: 'lesson-01.12', viewers: 1, closedHere: 1 }]);
+    expect(lesson.rating).toEqual({ count: 1, average: 3 });
+  });
 });

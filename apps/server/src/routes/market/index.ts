@@ -6,6 +6,7 @@ import { ALLOWED_CATEGORIES, ALLOWED_SYMBOLS, type BybitCategory } from '../../c
 import { bybitRestBaseUrl, getInstruments, getRiskLimit } from '../../services/BybitMarketInfo.js';
 import { bybitBreakers, fetchWithRetry } from '../../lib/fetchWithRetry.js';
 import { clientIp } from '../../lib/clientIp.js';
+import { intervalMs, snapEnd } from '../../lib/candleEnd.js';
 
 const log = logger.child({ route: 'market' });
 
@@ -96,22 +97,53 @@ interface BybitKlineResponse {
 //    fire their own REST call and risk tripping Bybit's rate limit.
 const inFlightCandleFetches = new Map<string, Promise<LiveBar['kline'][]>>();
 
+// 🔐 Closed history (an `end` before the current candle) never changes, so it's kept for a while:
+//    a lesson's chart asks for the same few windows over and over. `end` is snapped to its
+//    candle's open time first (lib/candleEnd.ts), so arbitrary values share keys. Capped: the
+//    oldest entry goes when it's full.
+const HISTORY_CACHE_MAX = 64;
+const HISTORY_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+const historyCache = new Map<string, { at: number; candles: LiveBar['kline'][] }>();
+
+/** Test seam: forget the cached history */
+export function clearHistoryCache(): void {
+  historyCache.clear();
+}
+
 function fetchHistoricalCandles(
   category: BybitCategory,
   symbol: string,
   interval: AllowedInterval,
   limit: number,
-  end?: number
+  rawEnd?: number
 ): Promise<LiveBar['kline'][]> {
+  const end = rawEnd === undefined ? undefined : snapEnd(rawEnd, interval);
   const cacheKey = `${category}:${symbol}:${interval}:${limit}:${end ?? ''}`;
+
+  const closed = end !== undefined && end + intervalMs(interval) <= Date.now();
+  if (closed) {
+    const hit = historyCache.get(cacheKey);
+    if (hit && Date.now() - hit.at < HISTORY_CACHE_TTL_MS) return Promise.resolve(hit.candles);
+    historyCache.delete(cacheKey);
+  }
+
   const existing = inFlightCandleFetches.get(cacheKey);
   if (existing) return existing;
 
-  const promise = fetchHistoricalCandlesFromBybit(category, symbol, interval, limit, end).finally(
-    () => {
+  const promise = fetchHistoricalCandlesFromBybit(category, symbol, interval, limit, end)
+    .then((candles) => {
+      if (closed) {
+        if (historyCache.size >= HISTORY_CACHE_MAX) {
+          const oldest = historyCache.keys().next().value;
+          if (oldest !== undefined) historyCache.delete(oldest);
+        }
+        historyCache.set(cacheKey, { at: Date.now(), candles });
+      }
+      return candles;
+    })
+    .finally(() => {
       inFlightCandleFetches.delete(cacheKey);
-    }
-  );
+    });
   inFlightCandleFetches.set(cacheKey, promise);
   return promise;
 }

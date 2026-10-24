@@ -25,6 +25,7 @@ vi.mock('../plugins/prisma.js', () => {
 import { buildApp } from '../app.js';
 import { clearMarketInfoCache } from '../services/BybitMarketInfo.js';
 import { resetBybitBreakers } from '../lib/fetchWithRetry.js';
+import { clearHistoryCache } from '../routes/market/index.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -66,6 +67,7 @@ describe('GET /api/market/candles', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     resetBybitBreakers();
+    clearHistoryCache();
   });
 
   // ── Happy path ──────────────────────────────────────────────────────────────
@@ -201,6 +203,65 @@ describe('GET /api/market/candles', () => {
     const calledUrl = (fetchMock.mock.calls[0] as [string])[0];
     expect(calledUrl).toContain(`end=${end}`);
     expect(calledUrl).toContain('interval=D');
+  });
+
+  it('snaps an end time to its candle’s open time, so any time in that candle shares one request', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ retCode: 0, retMsg: 'OK', result: { list: SAMPLE_LIST } }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const day = Date.UTC(2021, 4, 20);
+
+    for (const end of [day + 1, day + 43_200_000, day + 86_399_999]) {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/market/candles?category=linear&symbol=BTCUSDT&interval=1d&limit=116&end=${end}`,
+      });
+      expect(res.statusCode).toBe(200);
+    }
+    // Closed history: fetched once, then served from the cache
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect((fetchMock.mock.calls[0] as [string])[0]).toContain(`end=${day}`);
+  });
+
+  it('never caches the candle still being drawn', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ retCode: 0, retMsg: 'OK', result: { list: SAMPLE_LIST } }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const now = Date.now();
+    for (let i = 0; i < 2; i++) {
+      await app.inject({
+        method: 'GET',
+        url: `/api/market/candles?symbol=BTCUSDT&interval=1d&end=${now}`,
+      });
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps at most 64 cached windows, dropping the oldest', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ retCode: 0, retMsg: 'OK', result: { list: SAMPLE_LIST } }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const first = Date.UTC(2021, 0, 1);
+    const ask = (d: number) =>
+      app.inject({
+        method: 'GET',
+        url: `/api/market/candles?symbol=BTCUSDT&interval=1d&end=${first + d * 86_400_000}`,
+      });
+    for (let d = 0; d < 65; d++) await ask(d);
+    expect(fetchMock).toHaveBeenCalledTimes(65);
+    await ask(64); // still cached
+    expect(fetchMock).toHaveBeenCalledTimes(65);
+    await ask(0); // the oldest, dropped
+    expect(fetchMock).toHaveBeenCalledTimes(66);
   });
 
   it('sends no end time to Bybit when none is asked for', async () => {
