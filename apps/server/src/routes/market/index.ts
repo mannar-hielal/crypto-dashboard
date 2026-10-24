@@ -207,6 +207,23 @@ interface CandleQuerystring {
   end?: string;
 }
 
+/**
+ * 🔐 `end` reaches further back than the live window, so each distinct value can be its own Bybit
+ * call: it's only taken with day, week or month candles (all a lesson needs; a few thousand
+ * windows instead of millions at 1m), and those requests have a stricter limit of their own.
+ */
+const END_INTERVALS: readonly string[] = ['1d', '1w', '1M'];
+const hasEnd = (request: FastifyRequest) =>
+  typeof (request.query as { end?: unknown } | undefined)?.end === 'string';
+
+/** `/candles`: 100 a minute per visitor, as everywhere; 20 when reaching back with `end` */
+export const CANDLES_RATE_LIMIT = {
+  timeWindow: '1 minute',
+  max: (request: FastifyRequest) => (hasEnd(request) ? 20 : 100),
+  keyGenerator: (request: FastifyRequest) =>
+    `${hasEnd(request) ? 'history' : 'live'}:${clientIp(request)}`,
+};
+
 /** The earliest `end` a history request may ask for (1 Jan 2017, UTC); later than now is refused too */
 const HISTORY_FLOOR_MS = Date.UTC(2017, 0, 1);
 /** Clock-skew allowance for `end`, so a client a little ahead of the server isn't refused */
@@ -223,6 +240,7 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.get<{ Querystring: CandleQuerystring }>(
     '/candles',
     {
+      config: { rateLimit: CANDLES_RATE_LIMIT },
       schema: {
         tags: ['Market'],
         summary: 'Historical OHLCV candles for one market (spot or linear)',
@@ -268,6 +286,11 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
         return reply.status(400).send({ error: `Interval not supported: ${intervalRaw}` });
       }
       const end = request.query.end === undefined ? undefined : Number(request.query.end);
+      if (end !== undefined && !END_INTERVALS.includes(intervalRaw)) {
+        return reply
+          .status(400)
+          .send({ error: 'end works with daily, weekly or monthly candles (1d, 1w, 1M)' });
+      }
       if (end !== undefined && (end < HISTORY_FLOOR_MS || end > Date.now() + END_SKEW_MS)) {
         return reply.status(400).send({ error: 'end must be a time between 2017 and now' });
       }

@@ -264,6 +264,17 @@ describe('GET /api/market/candles', () => {
     expect(fetchMock).toHaveBeenCalledTimes(66);
   });
 
+  it('takes an end time only with daily, weekly or monthly candles', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/market/candles?symbol=BTCUSDT&interval=1m&end=${Date.UTC(2021, 4, 20)}`,
+    });
+    expect(res.statusCode).toBe(400);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('sends no end time to Bybit when none is asked for', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
