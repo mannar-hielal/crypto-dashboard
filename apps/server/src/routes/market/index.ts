@@ -90,7 +90,7 @@ interface BybitKlineResponse {
   };
 }
 
-// 🔐 Coalesce concurrent requests for the same category/symbol/interval/limit
+// 🔐 Coalesce concurrent requests for the same category/symbol/interval/limit/end
 //    into a single upstream fetch — a burst of reconnecting clients (e.g. after
 //    a server restart, before the aggregator warms up) would otherwise each
 //    fire their own REST call and risk tripping Bybit's rate limit.
@@ -100,15 +100,18 @@ function fetchHistoricalCandles(
   category: BybitCategory,
   symbol: string,
   interval: AllowedInterval,
-  limit: number
+  limit: number,
+  end?: number
 ): Promise<LiveBar['kline'][]> {
-  const cacheKey = `${category}:${symbol}:${interval}:${limit}`;
+  const cacheKey = `${category}:${symbol}:${interval}:${limit}:${end ?? ''}`;
   const existing = inFlightCandleFetches.get(cacheKey);
   if (existing) return existing;
 
-  const promise = fetchHistoricalCandlesFromBybit(category, symbol, interval, limit).finally(() => {
-    inFlightCandleFetches.delete(cacheKey);
-  });
+  const promise = fetchHistoricalCandlesFromBybit(category, symbol, interval, limit, end).finally(
+    () => {
+      inFlightCandleFetches.delete(cacheKey);
+    }
+  );
   inFlightCandleFetches.set(cacheKey, promise);
   return promise;
 }
@@ -117,7 +120,8 @@ async function fetchHistoricalCandlesFromBybit(
   category: BybitCategory,
   symbol: string,
   interval: AllowedInterval,
-  limit: number
+  limit: number,
+  end?: number
 ): Promise<LiveBar['kline'][]> {
   // interval is a typed AllowedInterval key — safe, controlled access
   // eslint-disable-next-line security/detect-object-injection
@@ -128,6 +132,7 @@ async function fetchHistoricalCandlesFromBybit(
     interval: bybitInterval,
     limit: String(limit),
   });
+  if (end !== undefined) params.set('end', String(end));
   const url = `${bybitRestBaseUrl()}/v5/market/kline?${params.toString()}`;
 
   const res = await fetchWithRetry(url, bybitBreakers.kline, { timeoutMs: 10_000, attempts: 2 });
@@ -167,7 +172,13 @@ interface CandleQuerystring {
   symbol?: string;
   interval?: string;
   limit?: string;
+  end?: string;
 }
+
+/** The earliest `end` a history request may ask for (1 Jan 2017, UTC); later than now is refused too */
+const HISTORY_FLOOR_MS = Date.UTC(2017, 0, 1);
+/** Clock-skew allowance for `end`, so a client a little ahead of the server isn't refused */
+const END_SKEW_MS = 86_400_000;
 
 interface WsQuerystring {
   category?: string;
@@ -191,6 +202,8 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
             symbol: { type: 'string', maxLength: 20, default: 'BTCUSDT' },
             interval: { type: 'string', maxLength: 3, default: '1m' },
             limit: { type: 'string', maxLength: 5, default: '200' },
+            // 🔐 Digits only, bounded: the last candle's open time (ms). Absent = up to now
+            end: { type: 'string', maxLength: 13, pattern: '^[0-9]{1,13}$' },
           },
         },
         response: {
@@ -222,11 +235,15 @@ export async function marketRoutes(fastify: FastifyInstance): Promise<void> {
       if (!isAllowedInterval(intervalRaw)) {
         return reply.status(400).send({ error: `Interval not supported: ${intervalRaw}` });
       }
+      const end = request.query.end === undefined ? undefined : Number(request.query.end);
+      if (end !== undefined && (end < HISTORY_FLOOR_MS || end > Date.now() + END_SKEW_MS)) {
+        return reply.status(400).send({ error: 'end must be a time between 2017 and now' });
+      }
       const symbol = symbolRaw; // AllowedSymbol
       const interval = intervalRaw; // AllowedInterval
 
       try {
-        const candles = await fetchHistoricalCandles(category, symbol, interval, limit);
+        const candles = await fetchHistoricalCandles(category, symbol, interval, limit, end);
         return reply.send({ category, symbol, interval, candles });
       } catch (err) {
         log.error({ err, category, symbol, interval }, 'Failed to fetch historical candles');

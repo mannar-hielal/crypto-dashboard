@@ -183,6 +183,54 @@ describe('GET /api/market/candles', () => {
     expect(calledUrl).toContain('interval=60');
   });
 
+  it('passes a validated end time through to Bybit, for history further back', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ retCode: 0, retMsg: 'OK', result: { list: SAMPLE_LIST } }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const end = Date.UTC(2021, 4, 20);
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/market/candles?category=linear&symbol=BTCUSDT&interval=1d&limit=116&end=${end}`,
+    });
+
+    expect(res.statusCode).toBe(200);
+    const calledUrl = (fetchMock.mock.calls[0] as [string])[0];
+    expect(calledUrl).toContain(`end=${end}`);
+    expect(calledUrl).toContain('interval=D');
+  });
+
+  it('sends no end time to Bybit when none is asked for', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ retCode: 0, retMsg: 'OK', result: { list: SAMPLE_LIST } }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await app.inject({ method: 'GET', url: '/api/market/candles?symbol=BTCUSDT&interval=1m' });
+    expect((fetchMock.mock.calls[0] as [string])[0]).not.toContain('end=');
+  });
+
+  it.each([
+    ['before 2017', String(Date.UTC(2016, 11, 31)), 400],
+    ['in the future', String(Date.now() + 3 * 86_400_000), 400],
+    ['not digits', '2021-05-20', 400],
+    ['too long', '12345678901234', 400],
+  ])('refuses an end time %s', async (_label, end, status) => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/market/candles?symbol=BTCUSDT&interval=1d&end=${encodeURIComponent(end)}`,
+    });
+    expect(res.statusCode).toBe(status);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('fetches linear history when category=linear', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
