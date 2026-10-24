@@ -4230,3 +4230,14 @@ no fill ever matched. The unit tests built their events by hand with the same id
   four tests fail. The hand-made unit tests now use the engine's id shape too.
 - **Lesson:** a check built from fixtures that mirror the code under test cannot catch a wrong assumption about the
   data; the first live fill is the test that mattered.
+
+### security: floors for six new high advisories (follow-redirects, vite, zod, undici, body-parser) (2026-10-24) ✅
+
+**Context:** `pnpm audit --audit-level=high` (the preinstall and pre-commit gate) failed on advisories published
+1–23 October, blocking every install. Fixed the `security.md` way, never bypassed:
+
+- `pnpm.overrides`: `follow-redirects >=1.16.1` (new; via `bybit-api` → `axios`), `undici ^7.30.1` (via `jsdom`),
+  `body-parser >=2.4.0` (via the Figma MCP server's `express`);
+- `vite ^8.1.6` (client dev server), `zod ^4.6.6` (client and `mcp-servers/figma`);
+- the lockfile was re-resolved with `--lockfile-only --ignore-scripts`, then a normal install ran the audit gate green
+  (no high or critical findings). All suites pass and the client builds; the lockfile resolves `vite` to 8.3.5 within the range.
