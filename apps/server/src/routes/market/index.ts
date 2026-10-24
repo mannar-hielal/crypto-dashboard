@@ -99,8 +99,9 @@ const inFlightCandleFetches = new Map<string, Promise<LiveBar['kline'][]>>();
 
 // 🔐 Closed history (an `end` before the current candle) never changes, so it's kept for a while:
 //    a lesson's chart asks for the same few windows over and over. `end` is snapped to its
-//    candle's open time first (lib/candleEnd.ts), so arbitrary values share keys. Capped: the
-//    oldest entry goes when it's full.
+//    candle's open time first (lib/candleEnd.ts), so arbitrary values share keys. Capped, least
+//    recently used out first: a hit moves to the back, so the lessons' windows stay while a scan
+//    of other dates cycles through the rest.
 const HISTORY_CACHE_MAX = 64;
 const HISTORY_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const historyCache = new Map<string, { at: number; candles: LiveBar['kline'][] }>();
@@ -123,8 +124,11 @@ function fetchHistoricalCandles(
   const closed = end !== undefined && end + intervalMs(interval) <= Date.now();
   if (closed) {
     const hit = historyCache.get(cacheKey);
-    if (hit && Date.now() - hit.at < HISTORY_CACHE_TTL_MS) return Promise.resolve(hit.candles);
     historyCache.delete(cacheKey);
+    if (hit && Date.now() - hit.at < HISTORY_CACHE_TTL_MS) {
+      historyCache.set(cacheKey, hit); // most recently used
+      return Promise.resolve(hit.candles);
+    }
   }
 
   const existing = inFlightCandleFetches.get(cacheKey);

@@ -243,7 +243,7 @@ describe('GET /api/market/candles', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it('keeps at most 64 cached windows, dropping the oldest', async () => {
+  it('keeps at most 64 cached windows, dropping the least recently used', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -262,6 +262,14 @@ describe('GET /api/market/candles', () => {
     expect(fetchMock).toHaveBeenCalledTimes(65);
     await ask(0); // the oldest, dropped
     expect(fetchMock).toHaveBeenCalledTimes(66);
+    // A window in use stays: read day 2 again, then add a new one — day 3 goes, not day 2
+    await ask(2);
+    expect(fetchMock).toHaveBeenCalledTimes(66);
+    await ask(100);
+    await ask(2);
+    expect(fetchMock).toHaveBeenCalledTimes(67);
+    await ask(3);
+    expect(fetchMock).toHaveBeenCalledTimes(68);
   });
 
   it('takes an end time only with daily, weekly or monthly candles', async () => {
