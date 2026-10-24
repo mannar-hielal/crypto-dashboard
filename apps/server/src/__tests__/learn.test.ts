@@ -312,10 +312,18 @@ describe('POST /api/learn/events', () => {
     expect(app.prisma.learningEvent.create).toHaveBeenCalledWith({
       data: { userId: 'user-1', name: 'tour_step', itemId: 'lesson-01', stepId: 'lesson-01.7' },
     });
+    // Only a rating clears earlier ratings
+    expect(app.prisma.learningEvent.deleteMany).not.toHaveBeenCalledWith({
+      where: expect.objectContaining({ name: 'lesson_rated' }),
+    });
   });
 
   it('should store a lesson rating of 1 to 5', async () => {
     const res = await post({ name: 'lesson_rated', itemId: 'lesson-01', stepId: 'lesson-01.4' });
+    // A new rating replaces the person's earlier ones for that lesson
+    expect(app.prisma.learningEvent.deleteMany).toHaveBeenCalledWith({
+      where: { userId: 'user-1', name: 'lesson_rated', itemId: 'lesson-01' },
+    });
 
     expect(res.statusCode).toBe(204);
     expect(app.prisma.learningEvent.create).toHaveBeenCalledWith({

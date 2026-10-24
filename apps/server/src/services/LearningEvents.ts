@@ -54,6 +54,14 @@ export async function recordLearningEvent(prisma: Prisma, e: EventInput): Promis
       if (seen) return true;
     }
 
+    // A rating replaces the person's earlier ones for that lesson: only the latest is ever read,
+    // and piling them up would push the account's own tour steps out under the cap
+    if (e.name === 'lesson_rated') {
+      await tx.learningEvent.deleteMany({
+        where: { userId: e.userId, name: 'lesson_rated', itemId: e.itemId },
+      });
+    }
+
     const held = await tx.learningEvent.count({ where: { userId: e.userId } });
     if (held >= MAX_LEARN_EVENTS_PER_USER) {
       const oldest = await tx.learningEvent.findMany({
