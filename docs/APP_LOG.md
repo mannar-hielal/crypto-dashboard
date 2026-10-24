@@ -4372,3 +4372,20 @@ world map, eight moods (`worried` for warnings only).
 - **Tests:** every mood and pose for both guides, every scene with its presenter, the map's dots and nodes (they
   caught an encoding bug), the reaction rule, and "worried only for a warning"; a throwaway Playwright run
   screenshotted every card at 1440 px and on a Pixel 7.
+
+**Review on #262 (Claude review, all threads fixed):**
+
+- `/api/market/candles?end=`:
+  - `end` is snapped to its candle's open time (`lib/candleEnd.ts`) and closed history is cached (64 windows, 6 h,
+    least recently used out);
+  - `end` is taken only with `1d`, `1w` or `1M` candles;
+  - requests with it get their own bucket of 20 a minute per visitor (`CANDLES_RATE_LIMIT`).
+- Learning events:
+  - a rating replaces the person's earlier ones for that lesson;
+  - the funnel skips ratings when finding where someone left.
+- Finishing a replayed tour or lesson is reported as completed, not closed. Both stores count their finishes. This
+  also stops the server's progress load from re-sending `tour_completed` for lessons. The tour half of the bug was
+  already in production.
+- A hover task hears when the pointer leaves the chart (`crosshairHover`), so a "rest on it" timer can't finish after
+  the pointer moved away.
+- Privacy policy 1.4 (see the Lesson 1 entry).
