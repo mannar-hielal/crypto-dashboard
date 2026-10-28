@@ -38,7 +38,8 @@ import { TimeRangeSwitcher } from '@/components/dashboard/TimeRangeSwitcher';
 import { GuideOverlay } from '@/guide/GuideOverlay';
 import { FillEmailOffer } from '@/guide/FillEmailOffer';
 import { LearnCard } from '@/guide/LearnCard';
-import { LearnPanel } from '@/guide/LearnPanel';
+import { CheckpointSheet } from '@/learn/CheckpointSheet';
+import { PathDrawer } from '@/learn/PathDrawer';
 import { LessonSheet } from '@/guide/LessonSheet';
 import { ArticleDrawer } from '@/learn/ArticleDrawer';
 import { useTourProgress } from '@/guide/useTourProgress';
@@ -385,7 +386,8 @@ export function DashboardInner() {
       <GuideOverlay />
       <LessonSheet />
       <ArticleDrawer />
-      <LearnPanel />
+      <PathDrawer />
+      <CheckpointSheet />
 
       {/* ⚠️ Deletion Pending Banner */}
       <AnimatePresence>

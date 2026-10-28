@@ -1,0 +1,196 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
+
+const getHabits = vi.fn();
+vi.mock('@crypto-dashboard/sdk', () => ({
+  learnApi: { getHabits: (...a: unknown[]) => getHabits(...a) },
+}));
+vi.mock('@/store/authStore', () => ({
+  useAuthStore: (selector: (s: { accessToken: string }) => unknown) =>
+    selector({ accessToken: 'tok' }),
+}));
+
+let wide = true;
+vi.mock('@/hooks/useMediaQuery', () => ({ useMediaQuery: () => wide }));
+
+const navigate = vi.fn();
+vi.mock('react-router', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('react-router')>()),
+  useNavigate: () => navigate,
+}));
+
+import { useLessonStore } from '@/guide/lessonStore';
+import { useTourStore } from '@/guide/tourStore';
+import { guideSelector } from '@/lib/guideAnchors';
+import { useArticleStore } from '@/learn/articleStore';
+import { PathDrawer } from '@/learn/PathDrawer';
+import { usePathStore } from '@/learn/pathStore';
+
+const renderDrawer = () =>
+  render(
+    <MemoryRouter>
+      <PathDrawer />
+    </MemoryRouter>
+  );
+
+const nodeButton = (key: string) =>
+  document.querySelector<HTMLButtonElement>(`${guideSelector('path.node', key)} button`)!;
+
+describe('PathDrawer', () => {
+  beforeEach(() => {
+    wide = true;
+    navigate.mockReset();
+    getHabits.mockReset();
+    getHabits.mockResolvedValue({ badges: [], learningDays: 0, streakDays: 0 });
+    useTourStore.getState().reset();
+    useLessonStore.getState().reset();
+    usePathStore.getState().reset();
+    useArticleStore.getState().reset();
+  });
+  afterEach(() => cleanup());
+
+  it('should render nothing until it is opened', () => {
+    renderDrawer();
+    expect(document.querySelector(guideSelector('path.drawer'))).toBeNull();
+  });
+
+  it('should show chapter 1 with its stops, the next step marked, and chapter 2 coming soon', () => {
+    useTourStore.setState({ panelOpen: true });
+    renderDrawer();
+
+    expect(screen.getByRole('dialog', { name: 'Crypto path' })).toBeTruthy();
+    expect(screen.getByText('Foundations of crypto')).toBeTruthy();
+    expect(screen.getByText('Start')).toBeTruthy();
+    expect(nodeButton('lesson:lesson-01').getAttribute('aria-label')).toBe(
+      'Lesson: What is Bitcoin?, next step'
+    );
+    expect(nodeButton('lesson:lesson-02').getAttribute('aria-disabled')).toBe('true');
+    expect(screen.getByText('Trade with a plan')).toBeTruthy();
+    expect(screen.getByText(/Coming soon/)).toBeTruthy();
+    expect(
+      screen.getByRole('progressbar', { name: 'Path progress' }).getAttribute('aria-valuenow')
+    ).toBe('0');
+  });
+
+  it('should start the next lesson and close the map', () => {
+    useTourStore.setState({ panelOpen: true });
+    renderDrawer();
+    fireEvent.click(nodeButton('lesson:lesson-01'));
+    expect(useTourStore.getState().panelOpen).toBe(false);
+    expect(useLessonStore.getState().activeId).toBe('lesson-01');
+  });
+
+  it('should explain a locked stop instead of starting it', () => {
+    useTourStore.setState({ panelOpen: true });
+    renderDrawer();
+    fireEvent.click(nodeButton('lesson:lesson-02'));
+    expect(useLessonStore.getState().activeId).toBeNull();
+    expect(useTourStore.getState().panelOpen).toBe(true);
+    expect(screen.getByText('Finish “What is Bitcoin?” first.')).toBeTruthy();
+  });
+
+  it('should never make a coming-soon stop focusable', () => {
+    useTourStore.setState({ panelOpen: true });
+    renderDrawer();
+    const soon = document.querySelector(guideSelector('path.chapter', 'ch2'))!;
+    expect(soon.querySelectorAll('button')).toHaveLength(0);
+  });
+
+  it('should offer the checkpoint under the first locked stop, and open it', () => {
+    useTourStore.setState({ panelOpen: true });
+    renderDrawer();
+    fireEvent.click(document.querySelector(guideSelector('path.test-out'))!);
+    expect(useTourStore.getState().panelOpen).toBe(false);
+    expect(usePathStore.getState().checkpointId).toBe('checkpoint-ch1');
+  });
+
+  it('should run a tour on a larger screen: navigate, close, start', () => {
+    useLessonStore.getState().setCompleted(['lesson-01', 'lesson-02']);
+    useTourStore.setState({ panelOpen: true });
+    renderDrawer();
+    fireEvent.click(nodeButton('tour:buy-first-coin'));
+    expect(navigate).toHaveBeenCalledWith('/dashboard/spot/BTC/USDT');
+    expect(useTourStore.getState()).toMatchObject({ panelOpen: false, activeId: 'buy-first-coin' });
+  });
+
+  it('should let a phone skip a tour for now, which opens the next stop', () => {
+    wide = false;
+    useLessonStore.getState().setCompleted(['lesson-01', 'lesson-02']);
+    useTourStore.setState({ panelOpen: true });
+    renderDrawer();
+
+    fireEvent.click(nodeButton('tour:buy-first-coin'));
+    expect(useTourStore.getState().activeId).toBeNull();
+    expect(screen.getByText(/needs a laptop or tablet/)).toBeTruthy();
+
+    fireEvent.click(document.querySelector(guideSelector('path.tour.skip', 'buy-first-coin'))!);
+    expect(usePathStore.getState().skippedTours).toEqual({ 'buy-first-coin': true });
+    expect(
+      document
+        .querySelector(guideSelector('path.node', 'tour:sell-and-review'))!
+        .getAttribute('data-state')
+    ).toBe('current');
+  });
+
+  it('should show what a chapter covers from its book button', () => {
+    useTourStore.setState({ panelOpen: true });
+    renderDrawer();
+    fireEvent.click(document.querySelector(guideSelector('path.chapter.info', 'ch1'))!);
+    const overview = document.querySelector(guideSelector('path.chapter.overview'))!;
+    expect(overview.textContent).toContain('Who sets the price?');
+    expect(overview.textContent).toContain('After this chapter you can');
+  });
+
+  it('should show the streak, and keep the library and habits in their own tab', async () => {
+    getHabits.mockResolvedValue({
+      learningDays: 4,
+      streakDays: 2,
+      badges: [{ id: 'ten-stop-losses', earned: false, progress: 4, target: 10 }],
+    });
+    useTourStore.setState({ panelOpen: true });
+    renderDrawer();
+
+    await waitFor(() =>
+      expect(document.querySelector(guideSelector('learn.streak'))!.textContent).toContain('2')
+    );
+    fireEvent.click(document.querySelector(guideSelector('path.tab', 'library'))!);
+    expect(screen.getByText('SunCoin: money in a notebook')).toBeTruthy();
+    expect(screen.getByText(/4 \/ 10/)).toBeTruthy();
+    expect(screen.getByText(/never about profit/)).toBeTruthy();
+
+    fireEvent.click(document.querySelector(guideSelector('learn.article.open', 'exchange-price'))!);
+    expect(useTourStore.getState().panelOpen).toBe(false);
+    expect(useArticleStore.getState().openId).toBe('exchange-price');
+  });
+
+  it('should say so when the habits cannot be loaded', async () => {
+    getHabits.mockRejectedValue(new Error('offline'));
+    useTourStore.setState({ panelOpen: true });
+    renderDrawer();
+    fireEvent.click(document.querySelector(guideSelector('path.tab', 'library'))!);
+    await waitFor(() => expect(screen.getByText(/Could not load your habits/)).toBeTruthy());
+  });
+
+  it('should close from its ✕, from Esc and from the dimmed backdrop', () => {
+    useTourStore.setState({ panelOpen: true });
+    renderDrawer();
+    fireEvent.click(screen.getByLabelText('Close the learning path'));
+    expect(useTourStore.getState().panelOpen).toBe(false);
+
+    cleanup();
+    useTourStore.setState({ panelOpen: true });
+    renderDrawer();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(useTourStore.getState().panelOpen).toBe(false);
+
+    cleanup();
+    useTourStore.setState({ panelOpen: true });
+    renderDrawer();
+    const drawer = document.querySelector(guideSelector('path.drawer'))!;
+    fireEvent.mouseDown(drawer);
+    expect(useTourStore.getState().panelOpen).toBe(true);
+    fireEvent.mouseDown(drawer.parentElement!);
+    expect(useTourStore.getState().panelOpen).toBe(false);
+  });
+});

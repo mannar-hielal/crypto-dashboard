@@ -1,0 +1,231 @@
+/**
+ * A chapter's checkpoint (learning map, owner's visual Q&A 2026-10-24), in the lesson sheet's frame
+ * and with its question view: five mixed questions, each explained once answered, then the result.
+ * A pass opens the rest of the path; a miss names where the idea was taught, with a way back
+ * there, and the checkpoint can be taken again at once. No lives, timers or prizes. Closing it goes
+ * back to the map.
+ */
+
+import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { X } from 'lucide-react';
+import { useNavigate } from 'react-router';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { guide } from '@/lib/guideAnchors';
+import { TOUR_MIN_WIDTH } from '@/guide/LearnCard';
+import { QuestionView } from '@/guide/LessonSheet';
+import styles from '@/guide/LessonSheet.module.css';
+import { useLessonStore } from '@/guide/lessonStore';
+import { getLesson } from '@/guide/lessons';
+import { useTourStore } from '@/guide/tourStore';
+import { getTour } from '@/guide/tours';
+import {
+  checkpointScore,
+  getCheckpoint,
+  type CheckpointQuestion,
+  type TaughtIn,
+} from './checkpoints';
+import { usePathStore } from './pathStore';
+
+function taughtInLabel(t: TaughtIn): string {
+  if (t.kind === 'lesson') {
+    const lesson = getLesson(t.id);
+    return `Lesson ${lesson.number}: ${lesson.title}`;
+  }
+  return `Practice: ${getTour(t.id).title}`;
+}
+
+interface MissedProps {
+  q: CheckpointQuestion;
+  wide: boolean;
+  onReview: (t: TaughtIn) => void;
+}
+
+function Missed({ q, wide, onReview }: MissedProps) {
+  // A tour runs on a larger screen only: a phone gets its name without a button
+  const canGo = q.taughtIn.kind === 'lesson' || wide;
+  return (
+    <li>
+      <p className={styles.text}>{q.question}</p>
+      {canGo ? (
+        <button
+          type="button"
+          className={styles.link}
+          onClick={() => onReview(q.taughtIn)}
+          {...guide('checkpoint.review', q.taughtIn.id)}
+        >
+          Review {taughtInLabel(q.taughtIn)} →
+        </button>
+      ) : (
+        <p className={styles.hint}>Taught in {taughtInLabel(q.taughtIn)} (on a larger screen)</p>
+      )}
+    </li>
+  );
+}
+
+export function CheckpointSheet() {
+  const navigate = useNavigate();
+  const wide = useMediaQuery(TOUR_MIN_WIDTH);
+  const checkpointId = usePathStore((s) => s.checkpointId);
+  const index = usePathStore((s) => s.question);
+  const answers = usePathStore((s) => s.answers);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // Esc closes, back to the map
+  useEffect(() => {
+    if (!checkpointId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      usePathStore.getState().closeCheckpoint();
+      useTourStore.getState().openPanel();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [checkpointId]);
+
+  // Each new question takes the focus, so a screen reader reads it from the top
+  useEffect(() => {
+    dialogRef.current?.focus();
+  }, [checkpointId, index]);
+
+  if (!checkpointId) return null;
+  const checkpoint = getCheckpoint(checkpointId);
+  const total = checkpoint.questions.length;
+  const atResult = index >= total;
+  const question = atResult ? null : checkpoint.questions[index];
+  const answered = answers[index] !== undefined;
+  const { answer, next, closeCheckpoint, startCheckpoint } = usePathStore.getState();
+
+  const backToPath = () => {
+    closeCheckpoint();
+    useTourStore.getState().openPanel();
+  };
+
+  const review = (t: TaughtIn) => {
+    closeCheckpoint();
+    if (t.kind === 'lesson') {
+      useLessonStore.getState().start(t.id);
+      return;
+    }
+    navigate(getTour(t.id).startUrl);
+    useTourStore.getState().start(t.id);
+  };
+
+  const score = checkpointScore(checkpoint, answers);
+  const passed = score >= checkpoint.pass;
+  const missed = checkpoint.questions.filter((q, i) => answers[i] !== q.correct);
+
+  return createPortal(
+    <div className={styles.overlay}>
+      <div
+        ref={dialogRef}
+        className={styles.sheet}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="checkpoint-heading"
+        tabIndex={-1}
+        {...guide('checkpoint.sheet')}
+      >
+        <div className={styles.head}>
+          <button
+            type="button"
+            className={styles.close}
+            aria-label="Close the checkpoint"
+            onClick={backToPath}
+            {...guide('checkpoint.close')}
+          >
+            <X size={18} />
+          </button>
+          <div
+            className={styles.progress}
+            role="progressbar"
+            aria-label="Checkpoint progress"
+            aria-valuemin={0}
+            aria-valuemax={total}
+            aria-valuenow={Math.min(index, total)}
+          >
+            <div
+              className={styles.progressFill}
+              style={{ width: `${(Math.min(index + (answered ? 1 : 0), total) / total) * 100}%` }}
+            />
+          </div>
+          {!atResult && (
+            <span className={styles.counter}>
+              {index + 1} / {total}
+            </span>
+          )}
+        </div>
+
+        <p className={styles.kicker}>{checkpoint.title}</p>
+
+        {question ? (
+          <>
+            <h2 id="checkpoint-heading" className={styles.heading}>
+              Check yourself
+            </h2>
+            <div className={styles.body}>
+              <QuestionView q={question} answer={answers[index]} onAnswer={answer} />
+            </div>
+            <div className={styles.foot}>
+              <span className={styles.spacer} />
+              <button
+                type="button"
+                className={styles.primary}
+                disabled={!answered}
+                onClick={next}
+                {...guide('checkpoint.next')}
+              >
+                {index + 1 === total ? 'See the result' : 'Next →'}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h2 id="checkpoint-heading" className={styles.heading}>
+              {passed ? 'Checkpoint passed' : 'Not yet'}
+            </h2>
+            <div className={styles.body} {...guide('checkpoint.result')}>
+              <p className={styles.rule}>
+                {score} of {total} right
+              </p>
+              <p className={styles.text}>
+                {passed
+                  ? 'You know this chapter. Everything in it stays open to revisit, and the next chapter opens as soon as it’s ready.'
+                  : `You need ${checkpoint.pass} to pass. That’s normal on a first try: here is where each idea was taught.`}
+              </p>
+              {missed.length > 0 && (
+                <ul className={styles.canDo}>
+                  {missed.map((q) => (
+                    <Missed key={q.question} q={q} wide={wide} onReview={review} />
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className={styles.foot}>
+              {!passed && (
+                <button
+                  type="button"
+                  className={styles.link}
+                  onClick={() => startCheckpoint(checkpointId)}
+                  {...guide('checkpoint.retry')}
+                >
+                  Try again
+                </button>
+              )}
+              <span className={styles.spacer} />
+              <button
+                type="button"
+                className={styles.primary}
+                onClick={backToPath}
+                {...guide('checkpoint.done')}
+              >
+                Back to the path
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>,
+    document.body
+  );
+}
