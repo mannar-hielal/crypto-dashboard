@@ -7,6 +7,7 @@ import {
 } from '@crypto-dashboard/sdk';
 import {
   HABIT_BADGE_IDS,
+  LEARN_CHECKPOINT_IDS,
   LEARN_EVENT_ITEM_IDS,
   LEARN_EVENT_NAMES,
   LEARN_ITEM_IDS,
@@ -72,9 +73,10 @@ describe('habit badge ids', () => {
 describe('learn event names and tours', () => {
   it('should match the SDK, and the tours and lessons should be the items without the offers', () => {
     expect([...LEARN_EVENT_NAMES]).toEqual([...SDK_EVENT_NAMES]);
-    expect([...LEARN_TOUR_IDS, ...LEARN_LESSON_IDS]).toEqual(
+    expect([...LEARN_TOUR_IDS, ...LEARN_LESSON_IDS, ...LEARN_CHECKPOINT_IDS]).toEqual(
       LEARN_ITEM_IDS.filter((i) => i !== 'welcome-card' && i !== 'fill-email-offer')
     );
+    for (const id of LEARN_CHECKPOINT_IDS) expect(LEARN_EVENT_ITEM_IDS).not.toContain(id);
   });
 });
 
@@ -149,6 +151,24 @@ describe('/api/learn/progress', () => {
         update: { status: 'completed' },
       })
     );
+  });
+
+  it('PUT completed: records a passed chapter checkpoint', async () => {
+    vi.mocked(app.prisma.learningProgress.upsert).mockResolvedValueOnce({
+      itemId: 'checkpoint-ch1',
+      status: 'completed',
+      updatedAt: AT,
+    } as never);
+
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/learn/progress/checkpoint-ch1',
+      headers: auth(),
+      payload: { status: 'completed' },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().item.itemId).toBe('checkpoint-ch1');
   });
 
   it('PUT dismissed: only creates, so it never overwrites a completion', async () => {
@@ -266,6 +286,7 @@ describe('POST /api/learn/events', () => {
   it('should refuse a name, tour or step outside the allowlist', async () => {
     expect((await post({ name: 'page_view', itemId: 'primer' })).statusCode).toBe(400);
     expect((await post({ name: 'tour_started', itemId: 'welcome-card' })).statusCode).toBe(400);
+    expect((await post({ name: 'tour_started', itemId: 'checkpoint-ch1' })).statusCode).toBe(400);
     expect((await post({ name: 'tour_step', itemId: 'primer', stepId: 'x y' })).statusCode).toBe(
       400
     );

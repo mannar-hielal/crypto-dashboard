@@ -72,6 +72,8 @@ export const LEARN_ITEM_IDS = [
   'fill-email-offer',
   'lesson-01',
   'lesson-02',
+  // A chapter's checkpoint on the learning path: passed, it opens the next chapter
+  'checkpoint-ch1',
 ] as const;
 export type LearnItemId = (typeof LEARN_ITEM_IDS)[number];
 
@@ -104,8 +106,8 @@ export type LearnEventName = (typeof LEARN_EVENT_NAMES)[number];
 
 export interface LearnEventRequest {
   name: LearnEventName;
-  /** The tour or lesson: never one of the offers */
-  itemId: Exclude<LearnItemId, 'welcome-card' | 'fill-email-offer'>;
+  /** The tour or lesson: never one of the offers or a checkpoint */
+  itemId: Exclude<LearnItemId, 'welcome-card' | 'fill-email-offer' | 'checkpoint-ch1'>;
   /**
    * `<item id>.<n>`: the step (a lesson's screen) viewed, or the one it was closed on. For
    * `lesson_rated` (lessons only) `n` is the rating, 1–5.

@@ -7,6 +7,8 @@
 import { useEffect } from 'react';
 import { learnApi } from '@crypto-dashboard/sdk';
 import type { LearnEventRequest } from '@crypto-dashboard/sdk';
+import { isCheckpointId, type CheckpointId } from '@/learn/checkpoints';
+import { usePathStore } from '@/learn/pathStore';
 import { useAuthStore } from '@/store/authStore';
 import { useLessonStore } from './lessonStore';
 import { isLessonId, type LessonId } from './lessons';
@@ -36,6 +38,15 @@ export function useTourProgress(): void {
           completed.includes('primer') ||
           lessons.includes('lesson-01');
         useLessonStore.getState().setCompleted(lessons);
+        // The learning map: practice skipped on a phone, and checkpoints passed
+        usePathStore.getState().setProgress({
+          skippedTours: items
+            .filter((i) => i.status === 'dismissed' && isTourId(i.itemId))
+            .map((i) => i.itemId as TourId),
+          checkpoints: items
+            .filter((i) => i.status === 'completed' && isCheckpointId(i.itemId))
+            .map((i) => i.itemId as CheckpointId),
+        });
         const fillOfferDismissed = items.some((i) => i.itemId === 'fill-email-offer');
         useTourStore.getState().setProgress({ completed, cardDismissed, fillOfferDismissed });
       })
@@ -45,6 +56,7 @@ export function useTourProgress(): void {
           useTourStore
             .getState()
             .setProgress({ completed: [], cardDismissed: true, fillOfferDismissed: true });
+          usePathStore.getState().setProgress({ skippedTours: [], checkpoints: [] });
         }
       });
     return () => {
@@ -89,6 +101,25 @@ export function useTourProgress(): void {
       } else if (activeId === null && prev.activeId !== null && !finished) {
         // Closed (Skip, ✕, Esc) on the step it was showing
         send('tour_closed', prev.activeId, `${prev.activeId}.${prev.stepIndex + 1}`);
+      }
+    });
+  }, [accessToken]);
+
+  // The learning map: a tour skipped for now, a checkpoint passed
+  useEffect(() => {
+    if (!accessToken) return;
+    return usePathStore.subscribe((state, prev) => {
+      // The read above flips `loaded`: that change is the server's answer, not the learner's
+      if (!prev.loaded) return;
+      for (const id of Object.keys(state.skippedTours) as TourId[]) {
+        if (!prev.skippedTours[id]) {
+          learnApi.setProgress(id, 'dismissed', accessToken).catch(() => undefined);
+        }
+      }
+      for (const id of Object.keys(state.checkpoints) as CheckpointId[]) {
+        if (!prev.checkpoints[id]) {
+          learnApi.setProgress(id, 'completed', accessToken).catch(() => undefined);
+        }
       }
     });
   }, [accessToken]);

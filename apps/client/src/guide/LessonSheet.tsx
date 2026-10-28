@@ -24,6 +24,8 @@ import { conceptFor } from '@/learn/graph';
 import { parseTerms } from '@/learn/terms';
 import { usePaperStore } from '@/store/paperStore';
 import { GuideFigure } from './art/Guide';
+import { CardBeats } from './CardBeats';
+import { GuidesMeet } from './GuidesMeet';
 import { GuideAvatar, LessonArt } from './LessonArt';
 import { LessonChart } from './LessonChart';
 import { TOUR_MIN_WIDTH } from './LearnCard';
@@ -113,7 +115,7 @@ function TermPeek({
 
 // ─── Screens ─────────────────────────────────────────────────────────────────
 
-function QuestionView({
+export function QuestionView({
   q,
   answer,
   onAnswer,
@@ -271,6 +273,12 @@ function CloseView({ lesson, screen }: { lesson: Lesson; screen: number }) {
 
 // ─── The sheet ───────────────────────────────────────────────────────────────
 
+/** The card shown on a screen, if that screen is a card */
+function cardAt(lesson: Lesson, screen: number) {
+  const s = lessonScreens(lesson)[screen];
+  return s?.kind === 'card' ? lesson.cards[s.index] : null;
+}
+
 export function LessonSheet() {
   const navigate = useNavigate();
   const desktop = useMediaQuery(TOUR_MIN_WIDTH);
@@ -282,6 +290,8 @@ export function LessonSheet() {
   const dialogRef = useRef<HTMLDivElement>(null);
   /** The term whose peek is open, on the screen it was opened on; Next and Back close it */
   const [peek, setPeek] = useState<{ screen: number; id: string } | null>(null);
+  /** Cold-open cards whose lines are all in (`lesson:screen`): Back to one doesn't replay it */
+  const [revealed, setRevealed] = useState<ReadonlySet<string>>(() => new Set());
 
   const lesson = activeId ? getLesson(activeId) : null;
   const lessonTour = lesson?.tour ?? null;
@@ -311,6 +321,33 @@ export function LessonSheet() {
   useEffect(() => {
     dialogRef.current?.focus();
   }, [screenIndex, activeId, inTour, articleOpen]);
+
+  // Whether the screen's Next may show yet: a cold-open card waits for its lines
+  const beatsKey = lesson ? `${lesson.id}:${screenIndex}` : '';
+  const screenCard = lesson ? cardAt(lesson, screenIndex) : null;
+  const ready = (!screenCard?.beats && !screenCard?.meet) || revealed.has(beatsKey);
+  const reveal = () => setRevealed((r) => (r.has(beatsKey) ? r : new Set(r).add(beatsKey)));
+
+  // Enter or → moves on (not from a button, an option or the note: they handle their own keys);
+  // during a cold open, it shows the lines first
+  useEffect(() => {
+    if (!activeId || inTour || articleOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' && e.key !== 'ArrowRight') return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('button, a, input, textarea, select')) return;
+      const button = document.querySelector<HTMLButtonElement>('[data-guide="lesson.next"]');
+      if (!ready) {
+        e.preventDefault();
+        setRevealed((r) => new Set(r).add(beatsKey));
+      } else if (button && !button.disabled) {
+        e.preventDefault();
+        button.click();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [activeId, inTour, articleOpen, ready, beatsKey]);
 
   // The lesson waits, hidden, while its tour runs or an article is open in the drawer
   if (!lesson || inTour || articleOpen) return null;
@@ -371,7 +408,14 @@ export function LessonSheet() {
     case 'card': {
       const card = lesson.cards[screen.index];
       heading = card.title;
-      body = (
+      body = card.meet ? (
+        <GuidesMeet meet={card.meet} done={ready} onDone={reveal} />
+      ) : card.beats ? (
+        <>
+          {card.art && <LessonArt id={card.art} presenter={card.presenter} />}
+          <CardBeats beats={card.beats} done={ready} onDone={reveal} />
+        </>
+      ) : (
         <>
           {card.chart ? (
             // A real chart keeps its whole slot: the presenter stands beside it
@@ -384,7 +428,7 @@ export function LessonSheet() {
               />
             </div>
           ) : (
-            <LessonArt id={card.art} presenter={card.presenter} />
+            card.art && <LessonArt id={card.art} presenter={card.presenter} />
           )}
           {card.text && <CardText text={card.text} openTerm={openTerm} onTerm={toggleTerm} />}
           {peekConcept && (
@@ -393,6 +437,15 @@ export function LessonSheet() {
               onClose={() => setPeek(null)}
               onMore={() => readMore(peekConcept)}
             />
+          )}
+          {card.points && (
+            <ul className={styles.points}>
+              {card.points.map((point) => (
+                <li key={point.label}>
+                  <strong>{point.label}</strong> {point.text}
+                </li>
+              ))}
+            </ul>
           )}
           {card.lines?.map((line) => (
             <p key={line.text} className={styles.line}>
@@ -451,7 +504,7 @@ export function LessonSheet() {
           {!desktop && (
             <p className={styles.hint}>
               This part needs a larger screen (a laptop or tablet). You can skip it for now and come
-              back to it from Learn.
+              back to it from the learning path.
             </p>
           )}
           <div className={styles.inlineActions}>
@@ -484,6 +537,7 @@ export function LessonSheet() {
 
   // The try and note screens carry their own buttons; the close has Finish (and the next step)
   const showNext = screen.kind === 'card' || isQuestion;
+  const nextWords = (screenCard?.nextLabel ?? 'Continue') + ' →';
 
   return createPortal(
     <div className={styles.overlay} {...guide('lesson.overlay')}>
@@ -530,70 +584,93 @@ export function LessonSheet() {
         <h2 id="lesson-heading" className={styles.heading}>
           {heading}
         </h2>
-        <div className={styles.body}>{body}</div>
+        <div className={styles.body} data-tone={screenCard?.beats ? 'cinema' : undefined}>
+          {body}
+        </div>
 
-        <div className={styles.foot}>
-          {screenIndex > 0 && screen.kind !== 'close' && (
+        {showNext ? (
+          <div className={styles.footStack}>
             <button
+              // A new key on each screen (and once the lines are in) replays the shine
+              key={`${screenIndex}:${ready}`}
               type="button"
-              className={styles.link}
-              onClick={() => {
-                setPeek(null);
-                back();
-              }}
-              {...guide('lesson.back')}
-            >
-              ← Back
-            </button>
-          )}
-          <span className={styles.spacer} />
-          {showNext && (
-            <button
-              type="button"
-              className={styles.primary}
+              className={`${styles.primary} ${styles.nextButton}`}
               disabled={isQuestion && !answered}
+              data-ready={ready}
+              aria-hidden={ready ? undefined : true}
+              tabIndex={ready ? undefined : -1}
               onClick={() => {
                 setPeek(null);
                 next();
               }}
               {...guide('lesson.next')}
             >
-              Next →
+              {nextWords}
             </button>
-          )}
-          {screen.kind === 'close' &&
-            (offerNext ? (
-              <>
-                <button
-                  type="button"
-                  className={styles.link}
-                  onClick={finish}
-                  {...guide('lesson.finish')}
-                >
-                  Finish for now
-                </button>
+            {screenIndex > 0 && (
+              <button
+                type="button"
+                className={styles.link}
+                onClick={() => {
+                  setPeek(null);
+                  back();
+                }}
+                {...guide('lesson.back')}
+              >
+                ← Back
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className={styles.foot}>
+            {screenIndex > 0 && screen.kind !== 'close' && (
+              <button
+                type="button"
+                className={styles.link}
+                onClick={() => {
+                  setPeek(null);
+                  back();
+                }}
+                {...guide('lesson.back')}
+              >
+                ← Back
+              </button>
+            )}
+            <span className={styles.spacer} />
+            {screen.kind === 'close' &&
+              (offerNext ? (
+                <>
+                  <button
+                    type="button"
+                    className={styles.link}
+                    onClick={finish}
+                    {...guide('lesson.finish')}
+                  >
+                    Finish for now
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.primary}
+                    onClick={startNext}
+                    {...guide(
+                      nextStep?.kind === 'lesson' ? 'lesson.next-lesson' : 'lesson.next-tour'
+                    )}
+                  >
+                    {nextLabel}
+                  </button>
+                </>
+              ) : (
                 <button
                   type="button"
                   className={styles.primary}
-                  onClick={startNext}
-                  {...guide(
-                    nextStep?.kind === 'lesson' ? 'lesson.next-lesson' : 'lesson.next-tour'
-                  )}
+                  onClick={finish}
+                  {...guide('lesson.finish')}
                 >
-                  {nextLabel}
+                  Finish
                 </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                className={styles.primary}
-                onClick={finish}
-                {...guide('lesson.finish')}
-              >
-                Finish
-              </button>
-            ))}
-        </div>
+              ))}
+          </div>
+        )}
       </div>
     </div>,
     document.body

@@ -122,6 +122,36 @@
   margin: 0;
 }
 
+/* A cold open (owner's visual Q&A 2026-10-25): a darker stage with a soft amber light on the scene */
+.body[data-tone='cinema'] {
+  margin: 0 -20px;
+  padding: 16px 20px 20px;
+  background:
+    radial-gradient(ellipse at 50% 25%, rgba(231, 171, 51, 0.12), transparent 60%),
+    /* color.amber at 12 % */ var(--color-bg-deep); /* bg.deep */
+}
+
+@media (max-width: 639px) {
+  .body[data-tone='cinema'] {
+    margin: 0 -16px;
+    padding: 16px;
+  }
+}
+
+/* A card's bold-labelled points (Lesson 1's "What can go wrong with one Nora?") */
+.points {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+  list-style: disc; /* the base styles turn list markers off */
+}
+
+.points li::marker {
+  color: var(--color-brand-purple); /* color.purple */
+}
+
 .line {
   display: flex;
   align-items: center;
@@ -281,21 +311,84 @@
 }
 
 .primary {
+  position: relative;
+  overflow: hidden;
   min-height: 36px;
   border: 0;
-  border-radius: 9999px;
+  border-radius: 25px; /* radius.button */
   padding: 8px 20px;
-  background: var(--color-brand-purple-dark); /* color.purpleDark */
+  /* gradient.brand: the primary action */
+  background: linear-gradient(90deg, var(--color-brand-grad-from), var(--color-brand-grad-to));
+  /* A darker ledge it sits on, as the map's stops do; a tap presses it down onto it */
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--color-brand-purple-deep) 75%, black);
   color: var(--color-brand-white);
   font: inherit;
   font-size: 14px; /* fontSize.xs */
   font-weight: 600;
   cursor: pointer;
+  transition:
+    transform 80ms ease-out,
+    box-shadow 80ms ease-out,
+    filter 120ms ease-out;
+}
+
+.primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.primary:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 color-mix(in srgb, var(--color-brand-purple-deep) 75%, black);
 }
 
 .primary:disabled {
   opacity: 0.5;
+  box-shadow: none;
   cursor: default;
+}
+
+/* The lesson's Next (owner's visual Q&A 2026-10-25): full width, thumb-sized, with Back under it */
+.footStack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.nextButton {
+  width: 100%;
+  min-height: 48px; /* size.lg: a primary CTA, thumb-sized */
+  padding: 12px 20px;
+  font-size: 16px; /* fontSize.sm */
+  font-weight: 700;
+}
+
+/* Hidden, keeping its space, until a cold open's lines are in */
+.nextButton[data-ready='false'] {
+  visibility: hidden;
+}
+
+/* One shine across it when it appears */
+.nextButton:not(:disabled)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 70%
+  );
+  transform: translateX(-120%);
+  animation: shine 900ms ease-out 250ms 1 both;
+  pointer-events: none;
+}
+
+@keyframes shine {
+  to {
+    transform: translateX(120%);
+  }
 }
 
 .sheet button:focus-visible,
@@ -307,6 +400,18 @@
 @media (prefers-reduced-motion: reduce) {
   .progressFill {
     transition: none;
+  }
+
+  .primary {
+    transition: none;
+  }
+
+  .primary:active:not(:disabled) {
+    transform: none;
+  }
+
+  .nextButton::after {
+    display: none;
   }
 }
 

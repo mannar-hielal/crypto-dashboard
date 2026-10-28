@@ -1,0 +1,540 @@
+/* The learning map (owner's visual Q&A 2026-10-24): a 400 px drawer on the right over the dimmed
+   dashboard, full screen below sm (640 px). Each chapter sets --tone (its color.* token) and
+   --tone-ink (the text on it). Colours from tokens.ts via the @theme mirror in index.css; raw
+   values without a CSS variable are noted with their token. */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200; /* zIndex.modal: the lesson's and the article's layer */
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(0, 0, 0, 0.5); /* the lesson sheet's dim */
+}
+
+.drawer {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 400px;
+  height: 100%;
+  border-left: 1px solid rgba(105, 91, 236, 0.4); /* color.purpleDark at 40 %, as the lesson sheet */
+  background: var(--color-bg-footer); /* bg.modal */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); /* shadow.modal */
+  color: var(--color-brand-white);
+  font-size: 14px; /* fontSize.xs */
+  line-height: 1.5; /* lineHeight.normal */
+}
+
+.drawer:focus {
+  outline: none;
+}
+
+@media (max-width: 639px) {
+  .drawer {
+    max-width: none;
+    border-left: 0;
+  }
+}
+
+/* ─── Head: title, streak, ✕, progress, tabs ─────────────────────────────── */
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 6px;
+}
+
+.title {
+  flex: 1;
+  margin: 0;
+  font-size: 18px; /* fontSize.base */
+  font-weight: 700;
+}
+
+.streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 9999px;
+  padding: 2px 10px;
+  background: var(--color-bg-surface); /* bg.surface */
+  color: var(--color-brand-amber); /* color.amber */
+  font-weight: 700;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.close {
+  display: inline-flex;
+  border: 0;
+  border-radius: 6px;
+  padding: 4px;
+  background: transparent;
+  color: var(--color-brand-muted);
+  cursor: pointer;
+}
+
+.close:hover {
+  color: var(--color-brand-white);
+}
+
+.progressRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px 10px;
+}
+
+.progress {
+  flex: 1;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: var(--color-bg-surface); /* bg.surface */
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--color-brand-green); /* color.green */
+  transition: width 300ms ease-out;
+}
+
+.percent {
+  min-width: 3ch;
+  color: var(--color-brand-green);
+  font-weight: 700;
+  text-align: right;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06); /* border.divider */
+  padding: 0 16px;
+}
+
+.tab {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 8px 12px;
+  background: transparent;
+  color: var(--color-brand-muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--color-brand-white);
+}
+
+.tabOn {
+  border-bottom-color: var(--color-brand-purple-dark); /* color.purpleDark */
+  color: var(--color-brand-white);
+}
+
+/* The tab's content scrolls; the chapter bands stick to its top */
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 16px 24px;
+}
+
+.intro,
+.hint {
+  margin: 12px 0 0;
+  color: var(--color-brand-muted);
+  font-size: 13px; /* fontSize.xs11 */
+}
+
+/* ─── A chapter ───────────────────────────────────────────────────────────── */
+
+.chapter {
+  margin-top: 16px;
+}
+
+.band {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--tone);
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--tone) 70%, black);
+  color: var(--tone-ink);
+}
+
+.chapterMuted .band {
+  opacity: 0.55;
+}
+
+.bandText {
+  flex: 1;
+  padding: 12px 16px;
+}
+
+.bandTitle {
+  margin: 0;
+  font-size: 16px; /* fontSize.sm */
+  font-weight: 700;
+  line-height: 1.375; /* lineHeight.snug */
+}
+
+.bandMeta {
+  margin: 2px 0 0;
+  font-size: 13px; /* fontSize.xs11 */
+  font-weight: 600;
+}
+
+.bandButton {
+  display: inline-flex;
+  align-items: center;
+  border: 0;
+  border-left: 1px solid color-mix(in srgb, var(--tone-ink) 20%, transparent);
+  padding: 0 18px;
+  background: transparent;
+  color: var(--tone-ink);
+  cursor: pointer;
+}
+
+.bandButton:hover {
+  background: color-mix(in srgb, var(--tone-ink) 10%, transparent);
+}
+
+.overview {
+  margin-top: 12px;
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: var(--color-bg-panel); /* bg.panel */
+}
+
+.overviewHead {
+  margin: 10px 0 4px;
+  color: var(--color-brand-muted);
+  font-size: 13px; /* fontSize.xs11 */
+  font-weight: 600;
+}
+
+.overviewList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.overviewList li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 6px;
+}
+
+.overviewList svg {
+  flex: none;
+}
+
+/* ─── The stops ───────────────────────────────────────────────────────────── */
+
+.stops {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 20px 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.connector svg {
+  display: block;
+}
+
+.connector line {
+  stroke: rgba(255, 255, 255, 0.18);
+  stroke-dasharray: 6 6;
+  stroke-linecap: round;
+  stroke-width: 3;
+}
+
+.stop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+}
+
+.bubbleRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.bubble {
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 4px 14px;
+  background: var(--color-bg-panel); /* bg.panel */
+  color: var(--color-brand-white);
+  font-weight: 700;
+}
+
+.bubble::after {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--color-bg-panel);
+  content: '';
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.peek {
+  display: inline-flex;
+}
+
+.node {
+  position: relative;
+  display: inline-flex;
+  width: 64px;
+  height: 64px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--tone);
+  box-shadow: 0 5px 0 color-mix(in srgb, var(--tone) 65%, black);
+  color: var(--tone-ink);
+  cursor: pointer;
+  transition: transform 120ms ease-out;
+}
+
+.node:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--tone) 65%, black);
+}
+
+.current {
+  outline: 4px solid color-mix(in srgb, var(--tone) 35%, transparent);
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .current {
+    animation: breathe 2.4s ease-in-out infinite;
+  }
+}
+
+@keyframes breathe {
+  50% {
+    outline-offset: 7px;
+  }
+}
+
+.open {
+  background: color-mix(in srgb, var(--tone) 55%, var(--color-bg-panel));
+}
+
+/* Skipped on a phone: a hollow ring, to do on a computer */
+.skipped {
+  background: var(--color-bg-panel);
+  box-shadow:
+    inset 0 0 0 3px var(--tone),
+    0 5px 0 rgba(0, 0, 0, 0.35);
+  color: var(--color-brand-white);
+}
+
+.locked,
+.pro,
+.soon {
+  background: var(--color-bg-surface); /* bg.surface */
+  box-shadow: 0 5px 0 color-mix(in srgb, var(--color-bg-surface) 60%, black);
+  color: var(--color-brand-muted);
+}
+
+.locked,
+.pro {
+  cursor: help;
+}
+
+.pro {
+  color: var(--color-brand-amber); /* color.amber: a gem, never the padlock */
+}
+
+.soon {
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+  background: transparent;
+  box-shadow: none;
+  cursor: default;
+}
+
+.badge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--color-bg-footer);
+  border-radius: 9999px;
+  background: var(--color-bg-panel);
+  color: var(--color-brand-muted);
+}
+
+.caption {
+  color: var(--color-brand-muted);
+  font-size: 13px; /* fontSize.xs11 */
+  text-align: center;
+}
+
+.stop[data-state='current'] .caption {
+  color: var(--color-brand-white);
+  font-weight: 600;
+}
+
+.proTag {
+  margin-left: 6px;
+  border-radius: 4px;
+  padding: 0 5px;
+  background: color-mix(in srgb, var(--color-brand-amber) 20%, transparent);
+  color: var(--color-brand-amber);
+  font-size: 11px; /* fontSize.xxs */
+  font-weight: 700;
+}
+
+.note {
+  margin: 0;
+  border-radius: 10px;
+  padding: 8px 12px;
+  background: var(--color-bg-panel); /* bg.panel */
+  color: var(--color-brand-muted);
+  font-size: 13px; /* fontSize.xs11 */
+  text-align: center;
+}
+
+.noteAction {
+  display: block;
+  margin: 6px auto 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--color-brand-white);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.testOut {
+  margin: 4px 0;
+  color: var(--color-brand-muted);
+  font-size: 13px; /* fontSize.xs11 */
+  text-align: center;
+}
+
+.testOut .noteAction {
+  display: inline;
+  margin: 0;
+}
+
+/* ─── Library tab ─────────────────────────────────────────────────────────── */
+
+.sectionTitle {
+  margin: 20px 0 8px;
+  color: var(--color-brand-muted);
+  font-size: 13px; /* fontSize.xs11 */
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(105, 91, 236, 0.2); /* color.purpleDark at 20 % */
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--color-bg-panel); /* bg.panel */
+}
+
+.rowText {
+  min-width: 0;
+  flex: 1;
+}
+
+.rowTitle {
+  margin: 0;
+  font-weight: 600;
+}
+
+.rowMeta {
+  margin: 0;
+  color: var(--color-brand-muted);
+  font-size: 13px; /* fontSize.xs11 */
+}
+
+.rowAction {
+  flex: none;
+  border: 0;
+  border-radius: 9999px;
+  padding: 5px 14px;
+  background: var(--color-bg-surface); /* bg.surface */
+  color: var(--color-brand-white);
+  font: inherit;
+  cursor: pointer;
+}
+
+.rowAction:hover {
+  background: var(--color-brand-purple-dark);
+}
+
+.tick {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+  color: var(--color-brand-green);
+}
+
+.tickDone {
+  border-color: var(--color-brand-green);
+}
+
+.drawer button:focus-visible {
+  outline: 2px solid var(--color-brand-purple-dark); /* focusRing */
+  outline-offset: 3px;
+}

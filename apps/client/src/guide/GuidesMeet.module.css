@@ -1,0 +1,82 @@
+/* The guides introduce themselves (owner 2026-10-25). Colours from tokens.ts via the @theme mirror
+   in index.css; raw values without a CSS variable are noted with their token. */
+
+.meet {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Clipped, so a guide sliding in never makes the page scroll sideways */
+.stage {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 20px;
+  overflow: hidden;
+  padding: 4px 0 8px;
+}
+
+.guide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.figure {
+  width: 72px; /* the guide's 64 × 92 figure, scaled */
+  height: 104px;
+}
+
+/* A speech bubble with a small tail toward its guide */
+.bubble {
+  position: relative;
+  margin: 0;
+  border: 1px solid rgba(105, 91, 236, 0.5); /* color.purpleDark at 50 % */
+  border-radius: 14px;
+  padding: 6px 12px;
+  background: var(--color-bg-surface); /* bg.surface */
+  font-size: 14px; /* fontSize.xs */
+  font-weight: 600;
+  white-space: nowrap;
+  transform-origin: bottom center;
+}
+
+.bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  border-right: 1px solid rgba(105, 91, 236, 0.5); /* color.purpleDark at 50 % */
+  border-bottom: 1px solid rgba(105, 91, 236, 0.5);
+  background: var(--color-bg-surface); /* bg.surface */
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.lead {
+  margin: 0;
+  font-weight: 600;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tick {
+  flex-shrink: 0;
+  color: var(--color-brand-purple); /* color.purple (green stays for buy/profit) */
+}

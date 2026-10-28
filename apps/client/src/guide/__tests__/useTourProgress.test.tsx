@@ -21,6 +21,7 @@ vi.mock('@/store/authStore', () => ({
 import { useTourProgress } from '@/guide/useTourProgress';
 import { useLessonStore } from '@/guide/lessonStore';
 import { useTourStore } from '@/guide/tourStore';
+import { usePathStore } from '@/learn/pathStore';
 
 const item = (itemId: string, status: string) => ({
   itemId,
@@ -33,6 +34,7 @@ describe('useTourProgress', () => {
     token = 'tok';
     useTourStore.getState().reset();
     useLessonStore.getState().reset();
+    usePathStore.getState().reset();
     getProgress.mockReset();
     setProgress.mockReset();
     setProgress.mockResolvedValue({});
@@ -95,6 +97,50 @@ describe('useTourProgress', () => {
     });
     expect(setProgress).toHaveBeenCalledWith('sell-and-review', 'completed', 'tok');
     expect(setProgress).toHaveBeenCalledTimes(2);
+  });
+
+  it('should load the learning map’s skipped tours and passed checkpoints', async () => {
+    getProgress.mockResolvedValue({
+      items: [
+        item('buy-first-coin', 'dismissed'),
+        item('checkpoint-ch1', 'completed'),
+        item('welcome-card', 'dismissed'),
+      ],
+    });
+    renderHook(() => useTourProgress());
+
+    await waitFor(() => expect(usePathStore.getState().loaded).toBe(true));
+    expect(usePathStore.getState().skippedTours).toEqual({ 'buy-first-coin': true });
+    expect(usePathStore.getState().checkpoints).toEqual({ 'checkpoint-ch1': true });
+    expect(useTourStore.getState().completed).toEqual({});
+    expect(setProgress).not.toHaveBeenCalled();
+  });
+
+  it('should save a tour skipped for now and a passed checkpoint, once each', async () => {
+    getProgress.mockResolvedValue({ items: [] });
+    renderHook(() => useTourProgress());
+    await waitFor(() => expect(usePathStore.getState().loaded).toBe(true));
+
+    act(() => {
+      usePathStore.getState().skipTour('buy-first-coin');
+      usePathStore.getState().skipTour('buy-first-coin');
+      usePathStore.getState().setProgress({ skippedTours: ['buy-first-coin'], checkpoints: [] });
+    });
+    expect(setProgress).toHaveBeenCalledWith('buy-first-coin', 'dismissed', 'tok');
+    expect(setProgress).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      usePathStore.setState({ checkpoints: { 'checkpoint-ch1': true } });
+    });
+    expect(setProgress).toHaveBeenCalledWith('checkpoint-ch1', 'completed', 'tok');
+    expect(setProgress).toHaveBeenCalledTimes(2);
+  });
+
+  it('should treat unreadable progress as nothing skipped or passed', async () => {
+    getProgress.mockRejectedValue(new Error('network'));
+    renderHook(() => useTourProgress());
+    await waitFor(() => expect(usePathStore.getState().loaded).toBe(true));
+    expect(usePathStore.getState().checkpoints).toEqual({});
   });
 
   it('should do nothing without a session', () => {

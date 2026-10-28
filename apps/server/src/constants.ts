@@ -44,6 +44,8 @@ export const LEARN_ITEM_IDS = [
   'fill-email-offer',
   'lesson-01',
   'lesson-02',
+  // A chapter's checkpoint on the learning path: passed, it opens the next chapter
+  'checkpoint-ch1',
 ] as const;
 
 /** The guided tours (the offers have no steps) */
@@ -51,6 +53,9 @@ export const LEARN_TOUR_IDS = ['primer', 'buy-first-coin', 'sell-and-review'] as
 
 /** The lessons (cards → a tour → questions → a journal line); mirrors `LESSON_IDS` in the client */
 export const LEARN_LESSON_IDS = ['lesson-01', 'lesson-02'] as const;
+
+/** The learning path's chapter checkpoints: progress only, never events */
+export const LEARN_CHECKPOINT_IDS = ['checkpoint-ch1'] as const;
 
 /** Events are only accepted for these: a lesson reports its screens like a tour reports its steps */
 export const LEARN_EVENT_ITEM_IDS = [...LEARN_TOUR_IDS, ...LEARN_LESSON_IDS] as const;

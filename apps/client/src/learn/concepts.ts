@@ -87,7 +87,7 @@ export const CONCEPTS: readonly Concept[] = [
     term: 'Mining',
     peek: 'Adding a new block to the blockchain by solving a hard puzzle, paid in new bitcoin and fees.',
     think: 'digging for gold, where the shovel is a computer.',
-    article: 'bitcoin-story',
+    article: 'bitcoin-network',
     access: FREE,
   },
   {
@@ -104,7 +104,7 @@ export const CONCEPTS: readonly Concept[] = [
     peek: 'Bitcoin’s ledger: payments grouped into blocks, each sealed with a fingerprint of the one before.',
     think:
       'a stack of sealed envelopes, each stamped with the previous seal. Open one and the rest break.',
-    article: 'suncoin',
+    article: 'bitcoin-network',
     access: FREE,
   },
   {
@@ -112,7 +112,7 @@ export const CONCEPTS: readonly Concept[] = [
     term: 'Node',
     peek: 'A computer that keeps a full copy of the blockchain and checks every new payment against the rules.',
     think: 'one of thousands of Noras, all checking each other.',
-    article: 'suncoin',
+    article: 'bitcoin-network',
     access: FREE,
   },
   {
@@ -120,7 +120,7 @@ export const CONCEPTS: readonly Concept[] = [
     term: 'Decentralized',
     peek: 'No single person or company can change the records alone: many independent computers must agree.',
     think: 'a group chat where the majority decides what really happened.',
-    article: 'suncoin',
+    article: 'bitcoin-network',
     access: FREE,
   },
   {

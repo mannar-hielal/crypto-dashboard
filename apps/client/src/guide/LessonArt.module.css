@@ -233,3 +233,72 @@
 .nodeHalo {
   fill: var(--color-brand-purple-dark); /* color.purpleDark */
 }
+
+/* ─── Lesson 1's cold open ───────────────────────────────────────────────── */
+
+/* A slow push in on the scene ("Ken Burns"), once; still for reduced motion */
+.kenBurns {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: kenBurns 6s ease-out both;
+}
+
+.glow {
+  fill: var(--color-brand-amber); /* color.amber */
+  opacity: 0.12;
+}
+
+@keyframes kenBurns {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kenBurns {
+    animation: none;
+  }
+}
+
+/* ─── Lesson 1's "Money runs on trust" (owner 2026-10-25) ───────────────── */
+
+/* Each tile drops in from above and settles, one after another; still for reduced motion */
+.drop {
+  transform-box: fill-box;
+  animation: drop 650ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+.drop[data-drop='1'] {
+  animation-delay: 250ms;
+}
+
+.drop[data-drop='2'] {
+  animation-delay: 500ms;
+}
+
+.drop[data-drop='3'] {
+  animation-delay: 750ms;
+}
+
+@keyframes drop {
+  from {
+    transform: translateY(-110px);
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drop {
+    animation: none;
+  }
+}
