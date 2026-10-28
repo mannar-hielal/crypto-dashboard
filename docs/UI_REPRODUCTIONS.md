@@ -231,11 +231,25 @@ Preconditions: signed out (a private window).
 charts need the real Bybit feed, the fake feed draws its own candles) or production. The content is
 `apps/client/src/guide/lessons.ts` and `apps/client/src/learn/articles.ts`; the unit tests hold their rules.
 
-1. [learn.card.start] → Expect **Lesson 1 · What is Bitcoin?**, card 1 of 12, Tick surprised beside two pizzas and
-   the BTC mark. Every card has Tick or Tock in its picture.
-2. Card 4 → Expect the dotted world map with seven linked ledgers. [lesson.term `node`] → Expect a peek ("A computer
-   that keeps a full copy…"); [lesson.peek.more] → Expect the _SunCoin_ article in the drawer (full screen on a
-   phone) and the lesson hidden; [article.back] → Expect card 4 again.
+1. [learn.card.start] → Expect **Lesson 1 · What is Bitcoin?**, card 1 of 14: a dark stage, two pizzas and the BTC
+   mark, and the lines coming in one by one ("22 May 2010 · Florida" … "Back then, they cost him $41." …
+   "Nobody in that room knew those pizzas would one day be worth over $1 billion!"). [lesson.next] stays hidden until the last line is in, then shows
+   full width as **Unlock your learning journey →** with one shine across it. Pressing it sinks it onto
+   its ledge. Open it again and press Enter (or tap [lesson.beats]) during the reveal → Expect every line at once,
+   still on card 1. With the OS's reduced motion on → Expect every line at once, no shine (M).
+   Then → or Enter → Expect **Meet your guides**: Tick slides in from the left ("Hi, I'm Tick."), Tock from the
+   right ("Hi, I'm Tock."), they meet in the middle with a small lean, then "In the next 7 minutes you'll learn:" and
+   three ✓ lines fade in one by one; [lesson.next] shows only after the last, as **Start with money itself →**, with
+   ← Back under it. Enter (or a tap on [lesson.meet]) during the scene shows it all at once. ← Back → Expect card 1
+   complete, not replayed. Every card has Tick or Tock in its picture.
+   Next → Expect **Money runs on trust**: the three tiles (a bank, a state, a game maker) drop in one after another,
+   Tock looking straight out, and no Satoshi in the text. Next → Expect **A notebook, not coins**: four lines in Nora's
+   notebook (Emi, Leo, Sofia, then Leo → Emi 3) and no "Bitcoin" in the text. [lesson.next] **What if Nora cheats? →**
+   → Expect **What can go wrong with one Nora?**: four tiles (print, move, rewrite, lose) dropping in one after another,
+   four bold points, and **What if everyone kept a copy? →**.
+2. Card 6 → Expect the dotted world map with seven linked ledgers. [lesson.term `node`] → Expect a peek ("A computer
+   that keeps a full copy…"); [lesson.peek.more] → Expect the _Many notebooks, no Nora_ article in the drawer (full
+   screen on a phone) and the lesson hidden; [article.back] → Expect card 6 again.
 3. The moment → pick "Her edit is accepted" → Expect "Not quite." and Tock calm beside the question (never worried).
 4. Try it → [article.nora.amount] 30 → Expect "Leo now has -24 and Emi 32 … still add up to 15"; tick "Many
    notebooks" → Expect "4 of 5 copies still say Leo paid 3". [lesson.try] Continue.
@@ -245,11 +259,35 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
    Jan 2024. Answer the moment → Expect the chart to play on to 23 Jan with "−14.5%".
 7. Desktop: Try it → [lesson.try] Show me → tap [symbolbar.price], rest on the newest candle, hover a red one → Expect
    "Done ✓" after each, then the questions. A phone gets Continue instead.
-8. User menu → Learn → Expect both lessons, the three tours and a **Library** of six articles;
+8. [nav.learn] (the Route icon beside the avatar) → [path.tab `library`] → Expect a **Library** of seven articles;
    [learn.article.open `exchange-price`] → Expect the drawer with **Library** in its head and the sources folded.
 
 **Manual check (M).** The pictures and the guides' faces at 375, 412, 820 and 1440 px (nothing clipped, the
 presenter never over the scene). Frequency: per release touching `guide/LessonArt.tsx`, `guide/art/` or the lessons.
+
+### Learning path — the learning map (no Part B rows yet)
+
+**UI reproduction** — a new account on `http://localhost:5173/dashboard/spot/BTC/USDT`. The map is
+`apps/client/src/learn/path.ts` (rules) and `learn/PathDrawer.tsx`; the checkpoint is `learn/checkpoints.ts`.
+
+1. Look at the top bar → Expect the Route icon left of the avatar with an amber dot; the user menu has Settings and
+   Sign out but no Learn.
+2. [nav.learn] → Expect **Crypto path** at 0 %, chapter 1 "Foundations of crypto" in purple with "0 of 5 done",
+   **Start** and Tick over Lesson 1, padlocks on the next three stops, the crown open, and chapter 2 "Trade with a
+   plan" greyed with "Coming soon" and dashed stops nobody can tab to. Close and reopen → Expect no dot.
+3. Tap [path.node `lesson:lesson-02`] → Expect "Finish “What is Bitcoin?” first." and no lesson.
+   [path.chapter.info `ch1`] → Expect the five stops with minutes and "After this chapter you can".
+4. [path.node `lesson:lesson-01`] → finish the lesson → reopen → Expect it ticked, 20 %, **Continue** on Lesson 2,
+   and the dot back on the Route icon before reopening.
+5. [path.test-out] → answer one wrong, four right → Expect "Checkpoint passed · 4 of 5 right";
+   [checkpoint.done] → Expect the map with the crown ticked and the rest of chapter 1 open but not ticked.
+6. Phone width (a fresh account with Lessons 1–2 done): [path.node `tour:buy-first-coin`] → Expect the laptop note;
+   [path.tour.skip `buy-first-coin`] → Expect a hollow ring and **Start** on "Sell it and read the result".
+7. A failed checkpoint (three right or fewer) → Expect "Not yet", a **Review Lesson N →** per missed question (a tour's
+   only on a larger screen) and **Try again**.
+
+**Manual check (M).** The map at 375, 412, 820 and 1440 px: the zig-zag inside the drawer, the sticky chapter band,
+the bubble and Tick never clipped. Frequency: per release touching `learn/Path*` or `learn/CheckpointSheet.tsx`.
 
 ## Stage 1 — Spot basics
 

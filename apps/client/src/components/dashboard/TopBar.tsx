@@ -1,13 +1,16 @@
 import { signOutOnServer } from '@/lib/session';
 import { guide } from '@/lib/guideAnchors';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router';
-import { LogOut, ChevronDown, Settings, ShieldCheck, BarChart3, GraduationCap } from 'lucide-react';
+import { LogOut, ChevronDown, Settings, ShieldCheck, BarChart3, Route } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 import { useSignInToTrade } from '@/hooks/useSignIn';
 import { usePaperStore } from '@/store/paperStore';
 import { useTourStore } from '@/guide/tourStore';
+import { openKeys } from '@/learn/path';
+import { usePathSeen } from '@/learn/pathSeen';
+import { usePathView } from '@/learn/usePathView';
 import { isAdminEmail } from '@/lib/adminEmail';
 import { bg, color, fontSize, gradient, radius } from '@/lib/tokens';
 import { SettingsModal } from './SettingsModal';
@@ -22,6 +25,49 @@ interface TopBarProps {
    * marketing page.
    */
   marketing?: boolean;
+}
+
+/**
+ * Opens the learning map (owner's visual Q&A 2026-10-24: its own button beside the avatar; the user
+ * menu keeps settings and auth). The amber dot: a step has opened since the map was last looked at.
+ */
+function LearningPathButton() {
+  const panelOpen = useTourStore((s) => s.panelOpen);
+  const loaded = useTourStore((s) => s.loaded);
+  const open = openKeys(usePathView());
+  const { fresh, markSeen } = usePathSeen(open);
+  const openSignature = open.join(',');
+
+  // Looking at the map marks what's open there as seen (however it was opened)
+  useEffect(() => {
+    if (panelOpen && loaded) markSeen();
+    // markSeen changes with `open`; the signature is the same thing as a stable value
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [panelOpen, loaded, openSignature]);
+
+  const dot = loaded && fresh && !panelOpen;
+  return (
+    <motion.button
+      type="button"
+      onClick={() => useTourStore.getState().openPanel()}
+      aria-label={dot ? 'Learning path: a new step is ready' : 'Learning path'}
+      title="Learning path"
+      whileHover={{ scale: 1.06 }}
+      whileTap={{ scale: 0.94 }}
+      className="relative flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:text-white"
+      style={{ color: panelOpen ? color.white : color.muted }}
+      {...guide('nav.learn')}
+    >
+      <Route className="h-[18px] w-[18px]" aria-hidden="true" />
+      {dot && (
+        <span
+          className="absolute right-1 top-1 h-2 w-2 rounded-full"
+          style={{ background: color.amber, boxShadow: `0 0 0 2px ${bg.panel}` }}
+          aria-hidden="true"
+        />
+      )}
+    </motion.button>
+  );
 }
 
 /**
@@ -88,7 +134,8 @@ export function TopBar({ marketing = false }: TopBarProps) {
             {accessToken ? 'Dashboard' : 'Live Chart'}
           </Link>
         ) : user ? (
-          <>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <LearningPathButton />
             <motion.button
               onClick={() => setMenuOpen((p) => !p)}
               aria-expanded={menuOpen}
@@ -151,22 +198,6 @@ export function TopBar({ marketing = false }: TopBarProps) {
                     >
                       <Settings className="h-3.5 w-3.5" />
                       Settings
-                    </motion.button>
-                    <motion.button
-                      onClick={() => {
-                        setMenuOpen(false);
-                        useTourStore.getState().openPanel();
-                      }}
-                      {...guide('nav.learn')}
-                      whileHover={{ background: bg.surface }}
-                      className="flex w-full items-center gap-2 px-3 py-2.5 text-xs transition-colors hover:text-white"
-                      style={{
-                        color: color.muted,
-                        borderBottom: `1px solid color-mix(in srgb, ${color.white} 5%, transparent)`,
-                      }}
-                    >
-                      <GraduationCap className="h-3.5 w-3.5" />
-                      Learn
                     </motion.button>
                     {isAdminEmail(user?.email) && (
                       <motion.button
@@ -231,7 +262,7 @@ export function TopBar({ marketing = false }: TopBarProps) {
                 </>
               )}
             </AnimatePresence>
-          </>
+          </div>
         ) : (
           <motion.button
             // Back to this market after signing in. Dashboard / /chart only: the marketing pages

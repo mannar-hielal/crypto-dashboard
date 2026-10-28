@@ -199,7 +199,7 @@ export function ArticleDrawer() {
           {article.title}
         </h2>
         <p className={styles.meta}>{article.minutes} min read</p>
-        <p className={styles.summary}>{article.summary}</p>
+        {article.summary && <p className={styles.summary}>{article.summary}</p>}
 
         {article.blocks.map((block) => (
           <Block key={blockKey(block)} block={block} />

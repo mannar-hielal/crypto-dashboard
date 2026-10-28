@@ -4389,3 +4389,88 @@ world map, eight moods (`worried` for warnings only).
 - A hover task hears when the pointer leaves the chart (`crosshairHover`), so a "rest on it" timer can't finish after
   the pointer moved away.
 - Privacy policy 1.4 (see the Lesson 1 entry).
+
+### 2026-10-24 — The learning map: its own Route button, chapters, locks and a checkpoint
+
+**Context:** the owner liked the Learn panel but wanted the user menu kept for settings and auth, and the learning
+content shown as a map, like Finelo's "Crypto path", unlocked lesson by lesson. Phones first, and ready for a future
+paid tier. Visual Q&A: lucide `Route` with an amber dot; a 400 px right drawer, full screen on phones; strict locks
+plus "test out"; the built chapter plus the next one as "Coming soon".
+
+- **Top bar:** a Route button left of the avatar (`nav.learn` moved onto it). The menu's Learn item is gone. The dot
+  shows when a stop opened since the map was last opened (`learn/pathSeen.ts`: open stop keys in localStorage,
+  bounded and validated; only a convenience).
+- **The map** (`learn/path.ts`, pure): chapter 1 is Lesson 1 → Lesson 2 → Buy your first coin → Sell it and read
+  the result → the Foundations checkpoint; chapter 2 "Trade with a plan" (limit orders, stop-loss / take-profit,
+  risk 1–2 %, scams) is titles only. `pathState()` gives each stop `done | current | open | skipped | locked | pro`:
+  - a stop opens when the one before it is done, or skipped (a tour on a phone);
+  - the checkpoint is always open; passing it (4 of 5) opens the rest of the chapter and the next one, and never
+    ticks what was skipped;
+  - `pro` (a gem, never a padlock) is for content outside the learner's entitlements; nothing is paid today, and a
+    Pro stop never blocks the free path.
+- **Drawer** (`learn/PathDrawer.tsx`, `PathNode.tsx`): progress %, streak chip, tabs Path | Library (articles and
+  habits, moved from `LearnPanel`, which is deleted), sticky chapter bands with a book button for the chapter's
+  stops and can-do lines, a zig-zag of 3D stops with dashed links, **Start/Continue** with Tick on the next one,
+  and a note instead of nothing on a locked, Pro or phone-tour stop. Esc, the backdrop and ✕ close it; focus stays
+  inside.
+- **Checkpoint** (`learn/checkpoints.ts`, `CheckpointSheet.tsx`, `pathStore.ts`): five interleaved questions in the
+  lesson sheet's frame (its `QuestionView` is now exported), each pointing back to where it was taught. No lives,
+  timers or prizes. Copy awaits the owner's review.
+- **Server/SDK:** `checkpoint-ch1` joins `LEARN_ITEM_IDS` (new `LEARN_CHECKPOINT_IDS`, never an event item). A tour
+  skipped on a phone is saved as `dismissed`, which the route already never lets overwrite a completion. No
+  migration.
+- **Locks are client-side** because every piece of content is free and already in the bundle; paid content, when it
+  exists, is served and checked by the server (`learn/access.ts`).
+- **Tests:** `path.test`, `pathStore.test`, `PathDrawer.test`, `CheckpointSheet.test`, the top bar's signed-in
+  cases, `useTourProgress` (load and save of skips and checkpoints), server `learn.test`. Screenshots at 1440 px and
+  390 × 844 against the local dev server. UI reproduction: "Learning path — the learning map".
+
+### 2026-10-25 — Lesson 1's cold open, and a Next button that names what comes next
+
+**Context:** the owner wanted Lesson 1 to open as dramatically as the Bitcoin Pizza Day posts do, not as a Q&A, a
+Next button that is very clickable, and Tick and Tock saying what's ahead. Visual Q&A: a cold open revealed beat by
+beat, then "Meet your guides"; the 2025 number shown, then twisted into hindsight; a full-width 3D pill on every
+card; each card's button names the question the next card answers.
+
+- **Cold open** (`guide/CardBeats.tsx`, `beats.ts`): a card's `beats` (kicker, headline, fact, counter, a guide's
+  line) come in one by one on a dark stage (`data-tone="cinema"`), and Next shows only once they're in. A tap on the
+  lines or Enter shows them all; it never skips the card. Back to it doesn't replay it. Every line is always in the
+  page (only transparent while hidden) and the counter's finished words are there for screen readers; reduced
+  motion shows everything at once.
+- **The number, honestly:** "Back then, they cost him $41.", then a plain last line with the billion in large
+  amber (owner 2026-10-28: no counter, no Tock line): "Nobody in that room knew those pizzas would one day be worth
+  over $1 billion!" Next reads "Unlock your learning journey →". The `counter` beat kind stays in `CardBeats` for a
+  later card. This replaces the "no
+  worth $X today" rule (`guided-learning-topics/04-two-lessons-plan.md`); no other dollar figure is in the lesson,
+  and a test holds both.
+- **Meet your guides** (`guide/GuidesMeet.tsx`, the owner's own staging): Tick slides in from the left with "Hi,
+  I'm Tick.", Tock from the right with "Hi, I'm Tock.", they meet in the middle with a small lean, then "In the next
+  7 minutes you'll learn:" and three ✓ lines fade in. Same rules as the cold open: Next waits, a tap or Enter shows
+  it all, Back doesn't replay, reduced motion shows the end at once, every word stays in the page. The stage is
+  clipped, so a slide never scrolls the page sideways. Lesson 1 is 7 minutes and 13 screens; the opening cards
+  (`beats`, `meet`) don't count toward the five teaching cards.
+- **Next button** (`LessonSheet.module.css`): `gradient.brand`, 48 px, full width with ← Back under it, on a darker
+  4 px ledge it sinks onto when pressed, one shine sweep when it appears. Its words come from the card's
+  `nextLabel` (≤ 40 characters, tested), else "Continue". Enter or → moves on from anywhere but a control. The other
+  primary buttons in the sheet get the same gradient and ledge.
+- **Art:** `pizzaNight` (no words, a slow push in, still with reduced motion); the old `pizza` art is gone.
+- **"Money runs on trust"** (card 3): the bank, state and game-maker tiles drop in from above one after another
+  (CSS, still with reduced motion); Tock presents with a new `frank` face (eyes straight at the learner, a level
+  mouth). The text drops Satoshi (owner: not before the learner has seen what goes wrong with someone in charge):
+  "…Handy, until they print more or change the rules overnight, and your money quietly buys less. To see why that
+  matters, shrink it down to three friends and one notebook." The _Bitcoin's story_ article now says it's practised
+  in a later lesson (`practiceSoon`) until a card names Satoshi again.
+- **Nora's problem before Bitcoin's answer** (owner 2026-10-25):
+  - Card 4 names Emi, Leo and Sofia (the art's notebook now has their four lines) and drops "Bitcoin keeps one too".
+  - New card 5, **What can go wrong with one Nora?**: four tiles (print, move, rewrite, lose) drop in, with four
+    bold points (`LessonCard.points`) trimmed to the 50-word rule from the owner's text, which the SunCoin article
+    keeps word for word. Its Next asks "What if everyone kept a copy?", answered by "Many notebooks, no Nora".
+    Lesson 1 is now 14 screens and five teaching cards.
+  - The _SunCoin_ article lays out only the problem: it opens straight on the story (no summary line, no
+    callout, owner 2026-10-28; "pretend money" says it isn't real), never names Bitcoin, and ends on
+    "what would you fix?". Its Bitcoin sections moved to a new article, _Many notebooks, no Nora: how Bitcoin keeps
+    the record_ (`bitcoin-network`), retold from the owner's mining page with the SunCoin cast (Sofia pays, Sneaky Sam
+    cheats), nodes and miners kept apart, the 2018 numbers replaced by ones that don't date, and a table answering
+    Nora's four problems. `node`, `blockchain`, `mining` and `decentralized` now open it.
+- **Tests:** `CardBeats.test`, `GuidesMeet.test`, four new `LessonSheet` cases, the lesson rules; screenshots at 1440 px and 390 × 844,
+  with and without reduced motion. Copy awaits the owner's review.

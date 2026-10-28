@@ -9,10 +9,12 @@
 
 import type { JSX } from 'react';
 import {
-  ArrowRight,
+  ArrowsLeftRight,
   Bank,
   Clock,
+  Coffee,
   Coins,
+  Eraser,
   GameController,
   Globe,
   HardDrives,
@@ -131,26 +133,22 @@ function Hook() {
   );
 }
 
-function Pizza() {
+/** Lesson 1's cold open: the pizzas and the coin, no words (the beats carry them), slowly zooming */
+function PizzaNight() {
   return (
-    <>
-      <PizzaIcon weight={DUO} x={76} y={18} size={72} className={styles.amber} />
-      <PizzaIcon weight={DUO} x={144} y={18} size={72} className={styles.amber} />
-      <ArrowRight weight="bold" x={220} y={42} size={28} className={styles.muted} />
-      <BtcMark x={252} y={30} size={52} />
-      <Label x={196} y={124}>
-        22 May 2010
-      </Label>
-      <Label x={196} y={142}>
-        10,000 bitcoin, two pizzas
-      </Label>
-    </>
+    <g className={styles.kenBurns}>
+      <circle cx="196" cy="74" r="62" className={styles.glow} />
+      <PizzaIcon weight={DUO} x={92} y={20} size={96} className={styles.amber} />
+      <PizzaIcon weight={DUO} x={176} y={30} size={96} className={styles.amber} />
+      <BtcMark x={250} y={8} size={44} />
+    </g>
   );
 }
 
+/** The three keepers of money, each tile dropping in from above after the one before */
 function Money() {
   const tile = (x: number, label: string, icon: JSX.Element) => (
-    <g key={label}>
+    <g key={label} className={styles.drop} data-drop={(x - 80) / 80}>
       <rect x={x} y="12" width="68" height="68" rx="14" className={styles.panel} />
       {icon}
       <Coins weight={DUO} x={x + 44} y={54} size={30} className={styles.amber} />
@@ -184,7 +182,7 @@ function Money() {
 }
 
 function Notebook() {
-  const lines = ['Start → Emi  6', 'Start → Leo  4', 'Leo → Emi  3'];
+  const lines = ['Start → Emi  6', 'Start → Leo  4', 'Start → Sofia  5', 'Leo → Emi  3'];
   return (
     <>
       <rect x="96" y="8" width="206" height="116" rx="10" className={styles.panel} />
@@ -193,12 +191,41 @@ function Notebook() {
         Nora’s notebook
       </text>
       {lines.map((text, i) => (
-        <text key={text} x="112" y={66 + i * 22} className={styles.notebookLine}>
+        <text key={text} x="112" y={60 + i * 19} className={styles.notebookLine}>
           {i + 1}. {text}
         </text>
       ))}
       <Label x={200} y={146}>
         a list of payments, no balances
+      </Label>
+    </>
+  );
+}
+
+/** What one keeper could do with one pen: four tiles dropping in, one after another */
+function OneNora() {
+  const risks = [
+    ['print', Coins, styles.amber],
+    ['move', ArrowsLeftRight, styles.system],
+    ['rewrite', Eraser, styles.system],
+    ['lose', Coffee, styles.system],
+  ] as const;
+  return (
+    <>
+      {risks.map(([label, Icon, tone], i) => {
+        const x = 84 + i * 58;
+        return (
+          <g key={label} className={styles.drop} data-drop={i}>
+            <rect x={x} y="16" width="50" height="50" rx="12" className={styles.panel} />
+            <Icon weight={DUO} x={x + 10} y={26} size={30} className={tone} />
+            <text x={x + 25} y="84" textAnchor="middle" className={styles.label}>
+              {label}
+            </text>
+          </g>
+        );
+      })}
+      <Label x={200} y={124}>
+        one pen, one notebook, one Nora
       </Label>
     </>
   );
@@ -358,9 +385,10 @@ function Etf() {
 
 const ART: Record<LessonArtId, () => JSX.Element> = {
   hook: Hook,
-  pizza: Pizza,
+  pizzaNight: PizzaNight,
   money: Money,
   notebook: Notebook,
+  oneNora: OneNora,
   ledger: WorldLedgers,
   mailbox: Mailbox,
   queues: Queues,

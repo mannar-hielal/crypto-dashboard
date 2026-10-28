@@ -38,12 +38,19 @@ describe('lessons', () => {
 
   for (const lesson of LESSONS) {
     describe(lesson.id, () => {
-      it('should have at most five cards of at most 50 words each', () => {
-        expect(lesson.cards.length).toBeGreaterThan(0);
-        expect(lesson.cards.length).toBeLessThanOrEqual(5);
+      it('should have at most five teaching cards (plus an opening) of at most 50 words each', () => {
+        // The opening (a cold open, "meet your guides") hooks; the rest teach
+        const teaching = lesson.cards.filter((c) => !c.beats && !c.meet);
+        expect(teaching.length).toBeGreaterThan(0);
+        expect(teaching.length).toBeLessThanOrEqual(5);
         for (const card of lesson.cards) {
           expect(cardWords(card), card.title).toBeLessThanOrEqual(50);
-          expect(!!card.text || !!card.lines?.length, card.title).toBe(true);
+          expect(
+            !!card.text || !!card.lines?.length || !!card.beats?.length || !!card.meet,
+            card.title
+          ).toBe(true);
+          // The Next button's words fit one line on a phone
+          if (card.nextLabel) expect(card.nextLabel.length, card.title).toBeLessThanOrEqual(40);
         }
       });
 
@@ -136,9 +143,58 @@ describe('lessons', () => {
     expect(l.title).toBe('What is Bitcoin?');
     expect(l.tryWidget).toBe('nora-cheats');
     expect(l.next).toEqual({ kind: 'lesson', id: 'lesson-02' });
-    expect(l.cards.map((c) => c.art)).toEqual(['pizza', 'money', 'notebook', 'ledger', 'mailbox']);
-    // No trading here, and no price claims to judge in hindsight
-    expect(JSON.stringify(l)).not.toMatch(/\$\d/);
+    expect(l.cards.map((c) => c.art)).toEqual([
+      'pizzaNight',
+      undefined,
+      'money',
+      'notebook',
+      'oneNora',
+      'ledger',
+      'mailbox',
+    ]);
+  });
+
+  it('should open Lesson 1 on the pizzas, with today’s number only as a lesson in hindsight', () => {
+    const l = getLesson('lesson-01');
+    const [open, ...rest] = l.cards;
+    // Owner 2026-10-25, 2026-10-28: the price then, then the twist: nobody knew it would be a billion
+    expect(open.beats?.map((b) => b.kind)).toEqual(['kicker', 'headline', 'fact', 'headline']);
+    const last = open.beats!.at(-1)!;
+    expect(last.text).toMatch(/nobody in that room knew/i);
+    // No other dollar figure anywhere in the lesson: no price claims to judge in hindsight
+    expect(JSON.stringify({ ...l, cards: rest })).not.toMatch(/\$\d/);
+    // The guides introduce themselves, then say what the lesson answers
+    expect(l.cards[1].meet).toMatchObject({ tick: 'Hi, I’m Tick.', tock: 'Hi, I’m Tock.' });
+    expect(l.cards[1].meet?.lead).toMatch(/next 7 minutes/);
+    expect(l.cards[1].meet?.list).toHaveLength(3);
+  });
+
+  it('should show what goes wrong with someone in charge before Lesson 1 names Satoshi', () => {
+    const trust = getLesson('lesson-01').cards[2];
+    expect(trust.title).toBe('Money runs on trust');
+    expect(trust.text).toMatch(/print more|change the rules/);
+    expect(trust.text).not.toMatch(/satoshi/i);
+    // Tock says it straight, looking at the learner
+    expect(trust.presenter).toMatchObject({ who: 'tock', mood: 'frank' });
+  });
+
+  it('should lay out Nora’s problem before Lesson 1 brings in Bitcoin’s answer', () => {
+    const l = getLesson('lesson-01');
+    const notebook = l.cards[3];
+    expect(notebook.text).toMatch(/Emi, Leo and Sofia/);
+    expect(notebook.text).not.toMatch(/bitcoin/i);
+    const risks = l.cards[4];
+    expect(risks.title).toBe('What can go wrong with one Nora?');
+    expect(risks.points?.map((p) => p.label)).toEqual([
+      'Print coins.',
+      'Move yours.',
+      'Rewrite history.',
+      'Lose it all.',
+    ]);
+    expect(JSON.stringify(risks)).not.toMatch(/bitcoin/i);
+    // The next card answers it: many copies, no Nora
+    expect(risks.nextLabel).toBe('What if everyone kept a copy?');
+    expect(l.cards[5].title).toBe('Many notebooks, no Nora');
   });
 
   it('should have Lesson 2 wrap the primer and lead to the first buy', () => {

@@ -52,24 +52,27 @@ describe('the learning graph', () => {
   });
 
   it('should send the lessons’ terms to their articles and the articles back to the cards', () => {
-    // Lesson 1 card 3 marks the ledger; Lesson 2 card 2 the exchange and the last price
-    expect(lessonPlacesOf('ledger')).toEqual([{ lesson: 'lesson-01', screen: 2 }]);
+    // Lesson 1 card 4 marks the ledger; Lesson 2 card 2 the exchange and the last price
+    expect(lessonPlacesOf('ledger')).toEqual([{ lesson: 'lesson-01', screen: 3 }]);
     expect(lessonPlacesOf('last-price')).toEqual([{ lesson: 'lesson-02', screen: 1 }]);
 
     expect(practiceFor('money-101')).toEqual([
-      { kind: 'lesson', lesson: 'lesson-01', screen: 1, label: 'Lesson 1: Money runs on trust' },
+      { kind: 'lesson', lesson: 'lesson-01', screen: 2, label: 'Lesson 1: Money runs on trust' },
     ]);
+    // SunCoin lays out the problem; the network article is the answer the next cards give
     expect(practiceFor('suncoin')).toEqual([
-      { kind: 'lesson', lesson: 'lesson-01', screen: 2, label: 'Lesson 1: A notebook, not coins' },
+      { kind: 'lesson', lesson: 'lesson-01', screen: 3, label: 'Lesson 1: A notebook, not coins' },
+    ]);
+    expect(practiceFor('bitcoin-network')).toEqual([
       {
         kind: 'lesson',
         lesson: 'lesson-01',
-        screen: 3,
+        screen: 5,
         label: 'Lesson 1: Many notebooks, no Nora',
       },
     ]);
     expect(practiceFor('mailboxes-keys')).toEqual([
-      { kind: 'lesson', lesson: 'lesson-01', screen: 4, label: 'Lesson 1: A mailbox and a key' },
+      { kind: 'lesson', lesson: 'lesson-01', screen: 6, label: 'Lesson 1: A mailbox and a key' },
     ]);
     expect(practiceFor('exchange-price')).toEqual([
       { kind: 'lesson', lesson: 'lesson-02', screen: 1, label: 'Lesson 2: What a price is' },

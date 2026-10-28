@@ -4,9 +4,12 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { TopBar } from '../TopBar';
+import { useLessonStore } from '@/guide/lessonStore';
+import { useTourStore } from '@/guide/tourStore';
+import { guideSelector } from '@/lib/guideAnchors';
 import { useAuthStore } from '@/store/authStore';
 import { useLayoutStore } from '@/store/layoutStore';
 
@@ -46,5 +49,47 @@ describe('TopBar signed out', () => {
     renderAt('/chart', false);
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
     expect(screen.getByText('login from /dashboard/usdt/ETHUSDT')).toBeTruthy();
+  });
+});
+
+describe('TopBar signed in', () => {
+  beforeEach(() => {
+    useAuthStore.getState().setAuth('tok', { id: 'u1', email: 'ada@example.com', username: 'ada' });
+    useTourStore.getState().reset();
+    useLessonStore.getState().reset();
+    window.localStorage.clear();
+  });
+
+  const routeButton = () => document.querySelector<HTMLButtonElement>(guideSelector('nav.learn'))!;
+
+  it('should open the learning path from its own button, beside the avatar', () => {
+    renderAt('/dashboard', false);
+    fireEvent.click(routeButton());
+    expect(useTourStore.getState().panelOpen).toBe(true);
+  });
+
+  it('should keep the user menu for settings and auth only', () => {
+    renderAt('/dashboard', false);
+    fireEvent.click(document.querySelector(guideSelector('nav.user-menu'))!);
+    expect(document.querySelector(guideSelector('nav.settings'))).toBeTruthy();
+    expect(document.querySelector(guideSelector('nav.sign-out'))).toBeTruthy();
+    expect(screen.queryByText('Learn')).toBeNull();
+  });
+
+  it('should show the dot once progress is read, and clear it once the map has been seen', () => {
+    renderAt('/dashboard', false);
+    // Before the account's progress arrives there is nothing to announce
+    expect(routeButton().getAttribute('aria-label')).toBe('Learning path');
+
+    act(() => useTourStore.setState({ loaded: true }));
+    expect(routeButton().getAttribute('aria-label')).toBe('Learning path: a new step is ready');
+
+    act(() => useTourStore.getState().openPanel());
+    act(() => useTourStore.getState().closePanel());
+    expect(routeButton().getAttribute('aria-label')).toBe('Learning path');
+
+    // A step that opens later brings it back
+    act(() => useLessonStore.getState().setCompleted(['lesson-01']));
+    expect(routeButton().getAttribute('aria-label')).toBe('Learning path: a new step is ready');
   });
 });

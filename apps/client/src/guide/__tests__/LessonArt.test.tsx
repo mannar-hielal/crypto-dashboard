@@ -7,7 +7,7 @@ import { MOODS, type LessonArtId } from '@/guide/lessons';
 
 const ARTS: LessonArtId[] = [
   'hook',
-  'pizza',
+  'pizzaNight',
   'money',
   'notebook',
   'ledger',
