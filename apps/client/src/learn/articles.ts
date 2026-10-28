@@ -16,6 +16,7 @@ import { FREE, type Entitlement } from './access';
 export const ARTICLE_IDS = [
   'money-101',
   'suncoin',
+  'bitcoin-network',
   'bitcoin-story',
   'getting-bitcoin',
   'mailboxes-keys',
@@ -53,8 +54,8 @@ export interface Source {
 export interface Article {
   id: ArticleId;
   title: string;
-  /** The whole article in one line */
-  summary: string;
+  /** The whole article in one line, under the title (SunCoin has none: owner 2026-10-28) */
+  summary?: string;
   minutes: number;
   /** Last fact-check (YYYY-MM-DD) */
   checked: string;
@@ -71,16 +72,14 @@ export interface Article {
 const suncoin: Article = {
   id: 'suncoin',
   title: 'SunCoin: money in a notebook',
-  summary:
-    'A currency doesn’t need coins or notes. It needs a trustworthy list of who paid whom, in order. Bitcoin is that list, kept by thousands of computers instead of one person.',
-  minutes: 6,
-  checked: '2026-10-23',
+  minutes: 5,
+  checked: '2026-10-28',
   access: FREE,
+  // Owner 2026-10-25: this article only lays out the problem; the answer is the next article's
   blocks: [
-    { kind: 'h', text: 'Meet SunCoin' },
     {
       kind: 'p',
-      text: 'Three friends, Emi, Leo and Sofia, want to trade with their own pretend money. There are no coins and no app. There is only a notebook, kept by their friend **Nora**. She starts it by handing out the first coins: 6 to Emi, 4 to Leo and 5 to Sofia. That’s 15 SunCoins in the whole world.',
+      text: 'Three friends, Emi, Leo and Sofia, want to trade with their own pretend money: **SunCoin**. There’s no real money and no app. There is only a notebook, kept by their friend **Nora**. She starts it by handing out the first SunCoins: 6 to Emi, 4 to Leo and 5 to Sofia. That’s 15 SunCoins in the whole world.',
     },
     { kind: 'widget', id: 'suncoin-notebook' },
     { kind: 'h', text: 'A payment is just one new line' },
@@ -99,7 +98,7 @@ const suncoin: Article = {
     },
     {
       kind: 'p',
-      text: '5 + 3 + 7 = 15, exactly what was handed out. No coin appeared or vanished. This list is called a **ledger**. Bitcoin’s ledger works the same way: your “balance” is what the list adds up to for you.',
+      text: '5 + 3 + 7 = 15, exactly what was handed out. No coin appeared or vanished. This list is called a **ledger**, and your “balance” is simply what the list adds up to for you.',
     },
     { kind: 'h', text: 'What can go wrong with one Nora?', id: 'one-nora' },
     {
@@ -119,30 +118,17 @@ const suncoin: Article = {
     { kind: 'widget', id: 'nora-cheats' },
     {
       kind: 'p',
-      text: 'Banks, payment apps and games keep their money exactly like this, with one trusted keeper of the notebook. Mostly that works well. But it means trusting that keeper.',
+      text: 'Nora doesn’t even have to be dishonest. She can make a mistake, get pressured by a friend, or simply be away when Leo needs to pay. Banks, payment apps and games keep their money exactly like this, with one trusted keeper of the notebook. Mostly that works well. But it always means trusting that keeper.',
     },
-    { kind: 'h', text: 'Bitcoin: many notebooks and no Nora' },
+    { kind: 'h', text: 'Your turn: what would you fix?', id: 'what-to-fix' },
     {
       kind: 'p',
-      text: 'Bitcoin, launched in January 2009 by someone using the name Satoshi Nakamoto, removes Nora:',
+      text: 'Look at the four risks again. They share one cause: a single person holds the only pen and the only copy. Now imagine the notebook weren’t Nora’s alone. What if every friend kept a copy, checked each new line before writing it down, and nobody could change the past without the others noticing?',
     },
     {
-      kind: 'list',
-      items: [
-        '**Many copies.** Thousands of computers, called **nodes**, each keep a full copy of the ledger. A new payment spreads from node to node, and each one checks it against the rules: is it signed by the owner, and do they have enough?',
-        '**Pages that seal each other.** Payments are grouped into **blocks**, and each block carries a fingerprint (a hash) of the block before it. Change an old line and its fingerprint changes, which breaks every block after it. That’s why it’s called a **blockchain**.',
-        '**Adding a page costs real work.** To add a block, a computer must solve a puzzle that is hard to solve but easy to check. This is called mining. Rewriting history would mean redoing that work faster than everyone else combined.',
-        '**Rules nobody can bend alone.** No single person can print extra coins or move yours: every node checks the rules, and changing them needs most of the network to agree. That’s what **decentralized** means.',
-      ],
-    },
-    { kind: 'h', text: 'What this does not mean' },
-    {
-      kind: 'list',
-      items: [
-        '**It doesn’t set the price.** The ledger records who owns what. The price is made somewhere else entirely: on exchanges, where buyers and sellers agree on deals.',
-        '**Payments aren’t instant.** A payment counts once it’s in a block and more blocks are built on top. On Bitcoin that takes minutes, not seconds, and it costs a fee.',
-        '**It isn’t anonymous.** Every line is public forever, though no names are written in it.',
-      ],
+      kind: 'callout',
+      tone: 'idea',
+      text: '**The question SunCoin leaves us with:** can money work with no Nora at all, kept and checked by many people who don’t need to trust each other? Lesson 1’s next card, and the article after this one, show one answer.',
     },
   ],
   selfTest: [
@@ -155,12 +141,188 @@ const suncoin: Article = {
       a: 'Print coins, move coins without asking, or rewrite history.',
     },
     {
-      q: 'Why is it hard to change an old Bitcoin block?',
-      a: 'Each block carries the previous one’s fingerprint, so a change breaks every later block, and redoing the work costs too much.',
+      q: 'What happens to SunCoin if the only notebook is lost?',
+      a: 'Every balance is gone: the notebook is the money.',
     },
     {
-      q: 'Does the blockchain decide Bitcoin’s price?',
-      a: 'No. It records ownership; the price is made on exchanges.',
+      q: 'What do all four risks have in common?',
+      a: 'One person holds the only pen and the only copy.',
+    },
+  ],
+  sources: [
+    {
+      label: 'Investopedia, “What Is a Ledger?”',
+      url: 'https://www.investopedia.com/terms/l/ledger.asp',
+    },
+    {
+      label: 'Bank of England, “Money creation in the modern economy” (2014)',
+      url: 'https://www.bankofengland.co.uk/quarterly-bulletin/2014/q1/money-creation-in-the-modern-economy',
+    },
+  ],
+};
+
+// ─── Many notebooks, no Nora: how Bitcoin's network keeps the record ─────────
+// From the owner's "Bitcoin mining for beginners" page (2026-10-25), retold with SunCoin's cast:
+// Nora is the keeper Bitcoin removes, so the one paying here is Sofia. The lecture's 2018 numbers
+// are left out or replaced by ones that don't date (sources below). Nodes and miners are kept apart:
+// every node stores, relays and checks; miners are the nodes that also race to add the next page.
+
+const bitcoinNetwork: Article = {
+  id: 'bitcoin-network',
+  title: 'Many notebooks, no Nora: how Bitcoin keeps the record',
+  summary:
+    'Bitcoin replaces Nora with thousands of computers that each keep a copy of the ledger, pass new payments along and check every one. Some of them, the miners, race to add the next page and are paid for it.',
+  minutes: 8,
+  checked: '2026-10-25',
+  access: FREE,
+  blocks: [
+    {
+      kind: 'p',
+      text: 'Forget pickaxes and caves. Bitcoin’s keepers are more like the world’s most suspicious office clerks: they keep the record book, pass news along, and double-check everyone’s paperwork.',
+    },
+    {
+      kind: 'callout',
+      tone: 'idea',
+      text: '**Think of it as SunCoin without Nora.** Instead of one keeper, thousands of volunteers each keep a copy of the notebook and shout “that’s fake!” whenever a line breaks the rules. These computers are called **nodes**.',
+    },
+    { kind: 'h', text: 'Keepers everywhere', id: 'nodes' },
+    {
+      kind: 'p',
+      text: 'There is no head office. Nodes are ordinary computers spread across the world: home PCs, data centres, university labs. Anyone can run one, and each checks the same rules. There are tens of thousands of them, and the exact number changes all the time. No single boss, and no single off switch.',
+    },
+    { kind: 'h', text: 'Three jobs, every node', id: 'three-jobs' },
+    {
+      kind: 'list',
+      ordered: true,
+      items: [
+        '**Store.** Keep a full copy of the ledger: every payment since January 2009. It runs to hundreds of gigabytes, and it only grows.',
+        '**Relay.** Pass new payments on to neighbouring nodes. It’s gossip, but useful gossip.',
+        '**Verify.** Check every payment against the rules before passing it on. A payment that breaks them is simply dropped.',
+      ],
+    },
+    { kind: 'h', text: 'News travels fast' },
+    {
+      kind: 'p',
+      text: 'Each node keeps a handful of connections to other nodes; Bitcoin’s most used software opens 8 outgoing ones for passing payments on. A new payment goes to those neighbours, who tell theirs, and so on: 1 node, then about 8, then about 64, then hundreds, then everyone, usually within seconds.',
+    },
+    {
+      kind: 'callout',
+      tone: 'idea',
+      text: '**Think of it as** a rumour in a school canteen, except this one is checked at every table.',
+    },
+    { kind: 'h', text: 'Two questions for every payment', id: 'checks' },
+    {
+      kind: 'p',
+      text: '**1. Does the sender have the coins?** Just like in Nora’s notebook, no balance is stored anywhere. A node reads the history: the coins the ledger says Sofia received and hasn’t spent yet.',
+    },
+    {
+      kind: 'table',
+      head: ['In the ledger', 'Sofia'],
+      rows: [
+        ['Monday: receives', '+5'],
+        ['Tuesday: receives', '+3'],
+        ['Wednesday: spends', '−2'],
+        ['She has', '6'],
+      ],
+    },
+    {
+      kind: 'p',
+      text: 'If Sofia now tries to send 9, every node rejects it: 9 is more than 6.',
+    },
+    {
+      kind: 'p',
+      text: '**2. Is it really Sofia asking?** Nodes never see Sofia’s **private key**, only her **public key**. So how can they tell Sofia from Sneaky Sam?',
+    },
+    {
+      kind: 'callout',
+      tone: 'idea',
+      text: '**Think of it as** a one-of-a-kind stamp. Sofia owns the stamp (her private key) and never shows it to anyone. Everyone can borrow a matching stamp-checker (her public key). The checker confirms “this mark came from that exact stamp”, but it can’t make new marks.',
+    },
+    {
+      kind: 'p',
+      text: 'Every payment travels with three things: the message (“send 2 to Leo”), Sofia’s **signature** (made from the message and her private key, on her own device) and her public key. A node feeds all three into a public checking formula and gets a plain yes or no. It also checks that the public key matches the address holding the coins. Watch every Sneaky Sam trick fail:',
+    },
+    {
+      kind: 'table',
+      head: ['Sneaky Sam tries…', 'Why it fails'],
+      rows: [
+        ['Signing with his own key', 'The signature doesn’t match Sofia’s public key'],
+        ['Reusing an old signature of Sofia’s', 'It was made for a different message'],
+        ['Editing a real payment', 'Change one digit and the signature no longer fits'],
+        ['Swapping in his own public key', 'It doesn’t match the address holding the coins'],
+      ],
+    },
+    {
+      kind: 'callout',
+      tone: 'idea',
+      text: '**The key idea:** checking a signature is easy for anyone; making one without the private key is practically impossible. To the network, “being Sofia” means holding the private key for her address, nothing else.',
+    },
+    {
+      kind: 'p',
+      text: '**Spending the same coins twice?** Nodes keep the first payment they see and ignore the copycat. Once a payment is sealed into a page of the ledger, the copy has no chance at all.',
+    },
+    { kind: 'h', text: 'Pages that seal each other', id: 'blocks' },
+    {
+      kind: 'p',
+      text: 'New payments are grouped into pages called **blocks**. Each block carries a fingerprint (a hash) of the block before it. Change one old line and its fingerprint changes, which breaks every block after it. That chain of pages is the **blockchain**.',
+    },
+    { kind: 'h', text: 'Miners: who writes the next page', id: 'miners' },
+    {
+      kind: 'p',
+      text: 'Every node keeps and checks the notebook, but adding a new page is a race. **Miners** are the nodes that enter it: they must solve a puzzle that is hard to solve but easy to check, and solving it costs real electricity. About every 10 minutes one of them wins, adds the block, and every other node checks it before accepting it. Rewriting history would mean redoing all that work faster than every honest miner combined.',
+    },
+    { kind: 'h', text: 'Why do miners bother?' },
+    {
+      kind: 'p',
+      text: 'The winner of each block is paid in newly created bitcoin plus the fees attached to the payments inside it. The new-coin part halves about every four years, in events called **halvings**: since April 2024 it has been 3.125 bitcoin per block, and the next halving is expected around 2028. That is the only way new bitcoin appears: on a public schedule that every node checks.',
+    },
+    { kind: 'h', text: 'Nora’s four problems, answered', id: 'answered' },
+    {
+      kind: 'table',
+      head: ['With one Nora', 'With the network'],
+      rows: [
+        ['Print coins', 'New coins only come from mining, on a schedule every node checks'],
+        ['Move your coins', 'Only a valid signature from your private key moves them'],
+        ['Rewrite history', 'Every block seals the one before; redoing the work is too costly'],
+        ['Lose everything', 'Tens of thousands of copies: losing one changes nothing'],
+      ],
+    },
+    { kind: 'h', text: 'Can I mine on my laptop?' },
+    {
+      kind: 'p',
+      text: 'You can, but you won’t earn anything worth the electricity. Mining today is done with **ASICs**, machines built to do this one job extremely fast, stacked in warehouses where power is cheap.',
+    },
+    {
+      kind: 'callout',
+      tone: 'idea',
+      text: '**Think of it as** entering a marathon on a skateboard while professionals turn up in sports cars. Allowed, but pointless.',
+    },
+    { kind: 'h', text: 'Is that a problem?' },
+    {
+      kind: 'p',
+      text: 'A bit. Bitcoin was meant to be spread out, but mining became a big industry, and a few large groups of miners (pools) find most blocks. So when you hear “decentralized”, think of a spectrum, not a switch.',
+    },
+  ],
+  selfTest: [
+    {
+      q: 'Name the three jobs every node does.',
+      a: 'Store the ledger, relay payments, verify payments.',
+    },
+    {
+      q: 'How does a node know Sofia has enough coins?',
+      a: 'It reads her history in the ledger; no balance is stored anywhere.',
+    },
+    {
+      q: 'Why can’t Sneaky Sam spend Sofia’s coins?',
+      a: 'He can’t make a valid signature without her private key.',
+    },
+    {
+      q: 'What makes a miner different from any other node?',
+      a: 'It also races to add the next block, solving a costly puzzle, and is paid if it wins.',
+    },
+    {
+      q: 'Why is mining on a laptop usually pointless?',
+      a: 'ASIC warehouses are vastly faster and cheaper to run, so they win nearly every block.',
     },
   ],
   sources: [
@@ -169,8 +331,16 @@ const suncoin: Article = {
       url: 'https://bitcoin.org/bitcoin.pdf',
     },
     {
-      label: 'The first Bitcoin block, 3 January 2009 (block explorer)',
-      url: 'https://mempool.space/block/0',
+      label: 'Bitcoin developer guide: the peer-to-peer network',
+      url: 'https://developer.bitcoin.org/devguide/p2p_network.html',
+    },
+    {
+      label: 'Bitnodes: reachable Bitcoin nodes, counted live',
+      url: 'https://bitnodes.io/',
+    },
+    {
+      label: 'Bitcoin Wiki, “Controlled supply” (block rewards and halvings)',
+      url: 'https://en.bitcoin.it/wiki/Controlled_supply',
     },
   ],
 };
@@ -476,6 +646,8 @@ const bitcoinStory: Article = {
   minutes: 7,
   checked: '2026-10-23',
   access: FREE,
+  // Owner 2026-10-25: Satoshi comes after the learner has seen what goes wrong with someone in charge
+  practiceSoon: 'a later lesson, once you’ve seen what goes wrong with someone in charge',
   blocks: [
     { kind: 'h', text: 'A short timeline' },
     {
@@ -634,6 +806,7 @@ const gettingBitcoin: Article = {
 export const ARTICLES: readonly Article[] = [
   money101,
   suncoin,
+  bitcoinNetwork,
   bitcoinStory,
   gettingBitcoin,
   mailboxesKeys,

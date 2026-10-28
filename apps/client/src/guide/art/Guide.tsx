@@ -110,6 +110,14 @@ function Face({ mood, top }: { mood: Mood; top: number }): JSX.Element {
           />
         </>
       );
+    case 'frank':
+      return (
+        <>
+          {eye(L)}
+          {eye(R)}
+          <path d={`M${CX - 5} ${mouthY} L${CX + 5} ${mouthY}`} className={styles.mouth} />
+        </>
+      );
     case 'calm':
       return (
         <>

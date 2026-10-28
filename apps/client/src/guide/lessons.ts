@@ -29,9 +29,10 @@ export function isLessonId(value: string): value is LessonId {
 /** The pictures `LessonArt` can draw, all from our own tokens */
 export type LessonArtId =
   | 'hook'
-  | 'pizza'
+  | 'pizzaNight'
   | 'money'
   | 'notebook'
+  | 'oneNora'
   | 'ledger'
   | 'mailbox'
   | 'queues'
@@ -42,7 +43,8 @@ export type LessonArtId =
 export type Speaker = 'tick' | 'tock';
 
 /**
- * The guides' faces (owner's visual Q&A 2026-10-24). `worried` is for warnings only (scams, never
+ * The guides' faces (owner's visual Q&A 2026-10-24; `frank` 2026-10-25: eyes straight at the
+ * learner, a level mouth, for a plain truth). `worried` is for warnings only (scams, never
  * share your key), never a reaction to a wrong answer: red is never the villain.
  */
 export const MOODS = [
@@ -54,6 +56,7 @@ export const MOODS = [
   'thinking',
   'worried',
   'calm',
+  'frank',
 ] as const;
 export type Mood = (typeof MOODS)[number];
 
@@ -98,16 +101,52 @@ export interface ChartScene {
   fallback: LessonArtId;
 }
 
+/**
+ * One line of a cold open (owner's visual Q&A 2026-10-25): the lines appear one after another, like
+ * a trailer, before the Next button shows. A `counter` ticks from `from` to `to`; its `text` is the
+ * finished line, which screen readers and reduced motion get straight away.
+ */
+export type Beat =
+  | { kind: 'kicker'; text: string }
+  | { kind: 'headline'; text: string; /** the words drawn big and amber */ emphasis?: string }
+  | { kind: 'fact'; text: string }
+  | { kind: 'counter'; text: string; label: string; from: number; to: number; prefix: string }
+  | { kind: 'line'; speaker: Speaker; mood: Mood; text: string };
+
+export interface GuidesMeeting {
+  tick: string;
+  tock: string;
+  /** The line above the list */
+  lead: string;
+  list: string[];
+}
+
+export interface CardPoint {
+  label: string;
+  text: string;
+}
+
 export interface LessonCard {
   title: string;
   /** Tick or Tock, standing in the picture and presenting it */
   presenter: Presenter;
-  /** The picture (a card with a `chart` shows the chart instead) */
-  art: LessonArtId;
+  /** The picture (a card with a `chart` shows the chart instead; a `meet` card is its own scene) */
+  art?: LessonArtId;
   chart?: ChartScene;
   /** Either plain text (may mark `[[terms]]`), or a short exchange between the two guides */
   text?: string;
   lines?: LessonLine[];
+  /** A cold open: lines revealed one by one (a card with beats shows no `text` or `lines`) */
+  beats?: Beat[];
+  /**
+   * The guides introduce themselves (owner 2026-10-25): Tick slides in from the left, Tock from the
+   * right, they meet in the middle, then what the lesson will answer fades in
+   */
+  meet?: GuidesMeeting;
+  /** Bold-labelled points under the text ("**Print coins.** Write …") */
+  points?: CardPoint[];
+  /** The Next button's words: the question the next card answers (default "Continue") */
+  nextLabel?: string;
 }
 
 /** One "You can now…" line on the close, with the article that goes deeper */
@@ -170,42 +209,90 @@ const lesson01: Lesson = {
   number: 1,
   title: 'What is Bitcoin?',
   stage: 'Getting started',
-  minutes: 6,
+  minutes: 7,
   tryWidget: 'nora-cheats',
   tryIntro:
     'Now be Nora. Change one line of the notebook and see what a single pen stroke does, then let the other notebooks check it.',
   cards: [
     {
-      // bitcointalk.org, 22 May 2010: 10,000 BTC for two pizzas. No "worth $X today": that's hindsight
+      // bitcointalk.org, 22 May 2010: Laszlo Hanyecz in Jacksonville, Florida, paid 10,000 BTC for
+      // two pizzas, about $41 then. Bitcoin traded above $100,000 for much of 2025, so "over $1
+      // billion" holds without picking a day. Owner 2026-10-25: show the number, then twist it into
+      // hindsight (nobody knew), so it teaches rather than sells. Owner 2026-10-28: no counter, and
+      // the billion lands in the last line, said plainly rather than by Tock
       title: 'Two pizzas',
-      art: 'pizza',
-      presenter: { who: 'tick', mood: 'surprised' },
-      lines: [
-        { speaker: 'tick', text: 'On 22 May 2010, someone paid 10,000 bitcoin for two pizzas.' },
+      art: 'pizzaNight',
+      presenter: { who: 'tock', mood: 'calm' },
+      beats: [
+        { kind: 'kicker', text: '22 May 2010 · Florida' },
         {
-          speaker: 'tock',
-          text: 'Why would anyone accept it? To see, start with what money is.',
+          kind: 'headline',
+          text: 'Laszlo Hanyecz paid 10,000 bitcoin for two pizzas.',
+          emphasis: '10,000 bitcoin',
+        },
+        { kind: 'fact', text: 'Back then, they cost him $41.' },
+        {
+          kind: 'headline',
+          text: 'Nobody in that room knew those pizzas would one day be worth over $1 billion!',
+          emphasis: 'over $1 billion',
         },
       ],
+      nextLabel: 'Unlock your learning journey',
     },
     {
-      // Bitcoin paper: 31 Oct 2008; first block: 3 Jan 2009
+      title: 'Meet your guides',
+      presenter: { who: 'tick', mood: 'smile', pose: 'wave' },
+      meet: {
+        tick: 'Hi, I’m Tick.',
+        tock: 'Hi, I’m Tock.',
+        lead: 'In the next 7 minutes you’ll learn:',
+        list: [
+          'what Bitcoin actually is',
+          'why anyone would want it',
+          'the one thing you never share',
+        ],
+      },
+      nextLabel: 'Start with money itself',
+    },
+    {
+      // Owner 2026-10-25: no Satoshi yet. The learner first sees what's wrong with someone in charge
+      // (more printed, rules changed), then meets money with no one in charge
       title: 'Money runs on trust',
       art: 'money',
-      presenter: { who: 'tock', mood: 'thinking', pose: 'stand' },
-      text: 'Notes, coins, even game tokens work because people trust [[someone in charge|money]]: a government, a bank, a game company. They can print more or change the rules. In 2008, as banks failed, [[Satoshi Nakamoto|satoshi-nakamoto]] proposed money with no one in charge.',
+      presenter: { who: 'tock', mood: 'frank', pose: 'stand' },
+      text: 'Bank notes, coins, even game tokens work because we trust [[someone in charge|money]]: a government, a bank, a game company. Handy, until they print more or change the rules overnight, and your money quietly buys less. To see why that matters, shrink it down to three friends and one notebook.',
+      nextLabel: 'So who keeps the record?',
     },
     {
       title: 'A notebook, not coins',
       art: 'notebook',
       presenter: { who: 'tick', mood: 'curious' },
-      text: 'Picture three friends whose only money is a notebook kept by Nora. Each payment is one new line, and nobody’s balance is written down: it’s what the list adds up to. That list is a [[ledger]]. Bitcoin keeps one too.',
+      // Owner 2026-10-25: the three friends of the SunCoin article, and no Bitcoin until Nora's
+      // problems are on the table
+      text: 'Three friends, Emi, Leo and Sofia, whose only money is SunCoin, a made-up coin kept in Nora’s notebook. Leo buys Emi’s sticker pack for 3: nothing changes hands, Nora writes “Leo → Emi, 3”. Nobody’s balance is written down: it’s what the lines add up to. That list is a [[ledger]].',
+      nextLabel: 'What if Nora cheats?',
+    },
+    {
+      // Owner 2026-10-25: the problem first, so the learner reaches "many keepers" themselves; the
+      // full wording is the SunCoin article's "What can go wrong with one Nora?"
+      title: 'What can go wrong with one Nora?',
+      art: 'oneNora',
+      presenter: { who: 'tock', mood: 'thinking', pose: 'stand' },
+      text: 'SunCoin works only because everyone trusts Nora. With one pen she could:',
+      points: [
+        { label: 'Print coins.', text: '“Start → Leo, 100”, and everyone’s coins buy less.' },
+        { label: 'Move yours.', text: '“Sofia → Emi, 7”, though Sofia never agreed.' },
+        { label: 'Rewrite history.', text: 'Change line 4 so Leo never paid.' },
+        { label: 'Lose it all.', text: 'Coffee on the only copy.' },
+      ],
+      nextLabel: 'What if everyone kept a copy?',
     },
     {
       title: 'Many notebooks, no Nora',
       art: 'ledger',
       presenter: { who: 'tick', mood: 'grin' },
       text: 'Bitcoin’s ledger is kept by thousands of computers, called [[nodes|node]], each with a full copy. They check every payment, and each page is sealed to the one before, so nobody can quietly rewrite the past. That chain of pages is the [[blockchain]].',
+      nextLabel: 'How do I own some?',
     },
     {
       title: 'A mailbox and a key',
@@ -453,6 +540,12 @@ export function lessonScreens(lesson: Lesson): LessonScreen[] {
 
 /** Every word in a card, for the 50-word rule (a term counts as the words of its label) */
 export function cardWords(card: LessonCard): number {
-  const text = [plainText(card.text ?? ''), ...(card.lines ?? []).map((l) => l.text)].join(' ');
+  const text = [
+    plainText(card.text ?? ''),
+    ...(card.lines ?? []).map((l) => l.text),
+    ...(card.meet ? [card.meet.tick, card.meet.tock, card.meet.lead, ...card.meet.list] : []),
+    ...(card.points ?? []).flatMap((p) => [p.label, p.text]),
+    ...(card.beats ?? []).map((b) => b.text),
+  ].join(' ');
   return text.split(/\s+/).filter((w) => /\w/.test(w)).length;
 }

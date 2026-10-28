@@ -204,7 +204,7 @@ describe('LessonSheet', () => {
   // ── Knowledge base (owner 2026-10-23) ──────────────────────────────────────
 
   it('should open a term’s peek inside the card, and close it again', () => {
-    at(3, 'lesson-01'); // Many notebooks, no Nora: [[nodes|node]], [[blockchain]]
+    at(5, 'lesson-01'); // Many notebooks, no Nora: [[nodes|node]], [[blockchain]]
     renderSheet();
     const term = document.querySelector<HTMLButtonElement>(
       '[data-guide="lesson.term"][data-guide-key="node"]'
@@ -230,7 +230,7 @@ describe('LessonSheet', () => {
   });
 
   it('should close a peek when the learner moves to another card', () => {
-    at(3, 'lesson-01');
+    at(5, 'lesson-01');
     renderSheet();
     fireEvent.click(document.querySelector('[data-guide="lesson.term"]')!);
     fireEvent.click(nextBtn()!);
@@ -289,11 +289,67 @@ describe('LessonSheet', () => {
     });
   });
 
+  // ── Lesson 1's cold open and the Next button (owner's visual Q&A 2026-10-25) ───
+
+  it('should hold Next until the cold open’s lines are in, then name what comes next', () => {
+    at(0, 'lesson-01');
+    renderSheet();
+    expect(nextBtn()!.dataset.ready).toBe('false');
+    expect(nextBtn()!.getAttribute('aria-hidden')).toBe('true');
+    // Enter first shows the lines, it doesn't skip the card
+    fireEvent.keyDown(sheet()!, { key: 'Enter' });
+    expect(useLessonStore.getState().screen).toBe(0);
+    expect(nextBtn()!.dataset.ready).toBe('true');
+    expect(nextBtn()!.textContent).toBe('Unlock your learning journey →');
+
+    fireEvent.keyDown(sheet()!, { key: 'ArrowRight' });
+    expect(useLessonStore.getState().screen).toBe(1);
+    expect(sheet()!.textContent).toContain('I’m Tick.');
+    expect(sheet()!.textContent).toContain('the one thing you never share');
+    expect(nextBtn()!.textContent).toBe('Start with money itself →');
+
+    // Back to the cold open: it doesn't play again
+    fireEvent.click(screen.getByText('← Back'));
+    expect(nextBtn()!.dataset.ready).toBe('true');
+  });
+
+  it('should hold Next while the guides meet, show it all on Enter, then move on', () => {
+    at(1, 'lesson-01');
+    renderSheet();
+    expect(document.querySelector('[data-guide="lesson.meet"]')!.textContent).toContain(
+      'Hi, I’m Tock.'
+    );
+    expect(nextBtn()!.dataset.ready).toBe('false');
+    fireEvent.keyDown(sheet()!, { key: 'Enter' });
+    expect(useLessonStore.getState().screen).toBe(1);
+    expect(nextBtn()!.dataset.ready).toBe('true');
+    fireEvent.keyDown(sheet()!, { key: 'Enter' });
+    expect(useLessonStore.getState().screen).toBe(2);
+  });
+
+  it('should show the cold open’s lines at a tap on them', () => {
+    at(0, 'lesson-01');
+    renderSheet();
+    fireEvent.click(document.querySelector('[data-guide="lesson.beats"]')!);
+    expect(nextBtn()!.dataset.ready).toBe('true');
+    expect(useLessonStore.getState().screen).toBe(0);
+  });
+
+  it('should say Continue where a card names nothing, and not move on from an unanswered question', () => {
+    at(6, 'lesson-01'); // A mailbox and a key
+    renderSheet();
+    expect(nextBtn()!.textContent).toBe('Continue →');
+    fireEvent.keyDown(sheet()!, { key: 'ArrowRight' });
+    expect(useLessonStore.getState().screen).toBe(7); // the moment
+    fireEvent.keyDown(sheet()!, { key: 'Enter' });
+    expect(useLessonStore.getState().screen).toBe(7);
+  });
+
   // ── Lesson 1: "Try it" inside the sheet, then on to Lesson 2 ─────────────────
 
   it('should run Lesson 1’s “Try it” inside the sheet, on a phone as well', () => {
     desktop = false;
-    at(6, 'lesson-01');
+    at(8, 'lesson-01');
     renderSheet();
     expect(sheet()!.textContent).toContain('Now be Nora');
     expect(screen.queryByText('Show me')).toBeNull();
@@ -302,12 +358,12 @@ describe('LessonSheet', () => {
     });
     expect(sheet()!.textContent).toContain('still add up to 15');
     fireEvent.click(document.querySelector('[data-guide="lesson.try"]')!);
-    expect(useLessonStore.getState().screen).toBe(7);
+    expect(useLessonStore.getState().screen).toBe(9);
   });
 
   it('should finish Lesson 1 and open Lesson 2 from its close, on any screen', () => {
     desktop = false;
-    at(11, 'lesson-01');
+    at(13, 'lesson-01');
     renderSheet();
     const nextLesson = document.querySelector('[data-guide="lesson.next-lesson"]')!;
     expect(nextLesson.textContent).toBe('Lesson 2: Who sets the price?');

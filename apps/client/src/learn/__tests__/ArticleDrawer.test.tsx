@@ -46,7 +46,7 @@ describe('ArticleDrawer', () => {
     renderDrawer();
     open('suncoin');
     expect(screen.getByRole('heading', { name: 'SunCoin: money in a notebook' })).toBeTruthy();
-    expect(drawer()!.textContent).toContain('6 min read');
+    expect(drawer()!.textContent).toContain('5 min read');
     expect(drawer()!.textContent).toContain('Library');
     expect(drawer()!.textContent).toContain('Quick self-test');
 
@@ -82,6 +82,19 @@ describe('ArticleDrawer', () => {
     expect(drawer()!.textContent).toContain('4 of 5 copies still say Leo paid 3');
   });
 
+  it('should end SunCoin on the problem, and answer it in the network article', () => {
+    renderDrawer();
+    open('suncoin');
+    expect(drawer()!.textContent).toContain('their own pretend money: SunCoin');
+    expect(drawer()!.textContent).toContain('what would you fix?');
+    expect(drawer()!.textContent).not.toMatch(/bitcoin/i);
+
+    open('bitcoin-network');
+    expect(drawer()!.textContent).toContain('Nora’s four problems, answered');
+    expect(drawer()!.textContent).toContain('Sneaky Sam');
+    expect(drawer()!.textContent).toContain('Lesson 1: Many notebooks, no Nora →');
+  });
+
   it('should step through a payment with the mailbox, and point to the card that teaches it', () => {
     renderDrawer();
     open('mailboxes-keys');
@@ -114,7 +127,7 @@ describe('ArticleDrawer', () => {
     fireEvent.click(document.querySelector('[data-guide="article.practice"]')!);
     expect(drawer()).toBeNull();
     expect(useLessonStore.getState().activeId).toBe('lesson-01');
-    expect(useLessonStore.getState().screen).toBe(2);
+    expect(useLessonStore.getState().screen).toBe(3);
   });
 
   it('should start a practice tour on a larger screen only', () => {
