@@ -14,18 +14,21 @@ import {
   Clock,
   Coffee,
   Coins,
+  DeviceMobile,
   Eraser,
   GameController,
   Globe,
+  HardDrive,
   HardDrives,
-  Key,
+  ListNumbers,
   Mailbox as MailboxIcon,
   Notebook as NotebookIcon,
-  Pizza as PizzaIcon,
   Scales,
   Tag,
+  Trash,
   User,
 } from '@phosphor-icons/react';
+import { StampShape } from '@/learn/StampShape';
 import { CRYPTO_ICON_URLS } from '@/lib/cryptoIcons';
 import { Guide, GuideFigure } from './art/Guide';
 import { WORLD_DOTS } from './art/worldDots';
@@ -134,17 +137,6 @@ function Hook() {
 }
 
 /** Lesson 1's cold open: the pizzas and the coin, no words (the beats carry them), slowly zooming */
-function PizzaNight() {
-  return (
-    <g className={styles.kenBurns}>
-      <circle cx="196" cy="74" r="62" className={styles.glow} />
-      <PizzaIcon weight={DUO} x={92} y={20} size={96} className={styles.amber} />
-      <PizzaIcon weight={DUO} x={176} y={30} size={96} className={styles.amber} />
-      <BtcMark x={250} y={8} size={44} />
-    </g>
-  );
-}
-
 /** The three keepers of money, each tile dropping in from above after the one before */
 function Money() {
   const tile = (x: number, label: string, icon: JSX.Element) => (
@@ -294,15 +286,120 @@ function WorldLedgers() {
   );
 }
 
+/** The address and the key drop in one after the other, as the Nora card's tiles (owner 2026-11-08) */
 function Mailbox() {
+  const tiles = [
+    ['address', MailboxIcon, styles.system, 112],
+    ['private key', null, styles.amber, 222],
+  ] as const;
   return (
     <>
-      <BtcMark x={84} y={14} size={34} />
-      <path d="M120 34 Q150 30 160 56" className={styles.link} />
-      <MailboxIcon weight={DUO} x={128} y={28} size={100} className={styles.system} />
-      <Key weight={DUO} x={244} y={58} size={50} className={styles.amber} />
-      <Label x={200} y={146}>
+      {tiles.map(([label, Icon, tone, x], i) => (
+        <g key={label} className={styles.drop} data-drop={i}>
+          <rect x={x} y="14" width="66" height="66" rx="14" className={styles.panel} />
+          {Icon ? (
+            <Icon weight={DUO} x={x + 11} y={25} size={44} className={tone} />
+          ) : (
+            // The private key is the stamp from the articles, seated in its checker
+            <StampShape x={x + 8} y={37} width={50} outline className={tone} />
+          )}
+          <text x={x + 33} y="98" textAnchor="middle" className={styles.label}>
+            {label}
+          </text>
+        </g>
+      ))}
+      <Label x={200} y={124}>
         anyone can pay in; only the key opens it
+      </Label>
+    </>
+  );
+}
+
+/** Lesson 2's cold open: an old hard drive dropped in the bin, on the dark stage */
+function HardDriveScene() {
+  return (
+    <g className={styles.kenBurns}>
+      <circle cx="196" cy="74" r="62" className={styles.glow} />
+      <HardDrive weight={DUO} x={108} y={14} size={84} className={styles.system} />
+      <Trash weight={DUO} x={196} y={44} size={88} className={styles.amber} />
+      <BtcMark x={262} y={10} size={36} />
+    </g>
+  );
+}
+
+/** The private key as a stamp, under its checker (the public key): the articles' picture */
+function Stamp() {
+  return (
+    <>
+      <StampShape x={96} y={14} width={120} outline filled={false} className={styles.amber} />
+      <text x={224} y="34" className={styles.label}>
+        checker
+      </text>
+      <text x={224} y="48" className={styles.chipText}>
+        public key
+      </text>
+      <StampShape x={96} y={74} width={120} className={styles.amber} />
+      <text x={224} y="94" className={styles.label}>
+        stamp
+      </text>
+      <text x={224} y="108" className={styles.chipText}>
+        private key
+      </text>
+      <Label x={200} y={140}>
+        anyone can check it; nobody can copy it
+      </Label>
+    </>
+  );
+}
+
+/** What the phone holds, what backs it up, and where the coins really are, dropping in one by one */
+function KeyHolders() {
+  const tiles = [
+    ['your phone', DeviceMobile, styles.system, 86],
+    ['recovery words', ListNumbers, styles.amber, 166],
+    ['the coins', Coins, styles.amber, 246],
+  ] as const;
+  return (
+    <>
+      {tiles.map(([label, Icon, tone, x], i) => (
+        <g key={label} className={styles.drop} data-drop={i}>
+          <rect x={x} y="14" width="62" height="62" rx="14" className={styles.panel} />
+          <Icon weight={DUO} x={x + 11} y={25} size={40} className={tone} />
+          <text x={x + 31} y="94" textAnchor="middle" className={styles.label}>
+            {label}
+          </text>
+        </g>
+      ))}
+      <Label x={200} y={124}>
+        the phone holds only the key
+      </Label>
+    </>
+  );
+}
+
+/** Who holds the key: an exchange for you, or you yourself */
+function Custody() {
+  const tiles = [
+    ['an exchange', Bank, styles.system, 104],
+    ['you', User, styles.system, 216],
+  ] as const;
+  return (
+    <>
+      {tiles.map(([label, Icon, tone, x], i) => (
+        <g key={label} className={styles.drop} data-drop={i}>
+          <rect x={x} y="10" width="72" height="72" rx="14" className={styles.panel} />
+          <Icon weight={DUO} x={x + 10} y={16} size={40} className={tone} />
+          <StampShape x={x + 16} y={58} width={40} className={styles.amber} />
+          <text x={x + 36} y="100" textAnchor="middle" className={styles.label}>
+            {label}
+          </text>
+        </g>
+      ))}
+      <text x={196} y="52" textAnchor="middle" className={styles.chipText}>
+        or
+      </text>
+      <Label x={200} y={126}>
+        whoever holds the key holds the coins
       </Label>
     </>
   );
@@ -385,12 +482,15 @@ function Etf() {
 
 const ART: Record<LessonArtId, () => JSX.Element> = {
   hook: Hook,
-  pizzaNight: PizzaNight,
   money: Money,
   notebook: Notebook,
   oneNora: OneNora,
   ledger: WorldLedgers,
   mailbox: Mailbox,
+  hardDrive: HardDriveScene,
+  stamp: Stamp,
+  keyHolders: KeyHolders,
+  custody: Custody,
   queues: Queues,
   busy: Busy,
   tesla: Tesla,

@@ -12,10 +12,10 @@ import { X } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { guide } from '@/lib/guideAnchors';
+import { startLesson, startTour } from '@/guide/afterNote';
 import { TOUR_MIN_WIDTH } from '@/guide/LearnCard';
 import { QuestionView } from '@/guide/LessonSheet';
 import styles from '@/guide/LessonSheet.module.css';
-import { useLessonStore } from '@/guide/lessonStore';
 import { getLesson } from '@/guide/lessons';
 import { useTourStore } from '@/guide/tourStore';
 import { getTour } from '@/guide/tours';
@@ -103,12 +103,9 @@ export function CheckpointSheet() {
 
   const review = (t: TaughtIn) => {
     closeCheckpoint();
-    if (t.kind === 'lesson') {
-      useLessonStore.getState().start(t.id);
-      return;
-    }
-    navigate(getTour(t.id).startUrl);
-    useTourStore.getState().start(t.id);
+    // As the map's and the articles' links (`afterNote.ts`): one lesson or tour on screen
+    if (t.kind === 'lesson') startLesson(t.id);
+    else startTour(t.id, navigate);
   };
 
   const score = checkpointScore(checkpoint, answers);

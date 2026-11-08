@@ -71,6 +71,7 @@ export const LEARN_ITEM_IDS = [
   'welcome-card',
   'fill-email-offer',
   'lesson-01',
+  'lesson-ownership',
   'lesson-02',
   // A chapter's checkpoint on the learning path: passed, it opens the next chapter
   'checkpoint-ch1',

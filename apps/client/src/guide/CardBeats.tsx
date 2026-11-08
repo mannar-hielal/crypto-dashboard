@@ -12,14 +12,12 @@ import { animate, motion, useReducedMotion } from 'framer-motion';
 import { guide } from '@/lib/guideAnchors';
 import { GuideAvatar } from './LessonArt';
 import { compact, counterValue, formatDollars } from './beats';
-import type { Beat } from './lessons';
+import { GUIDE_NAMES, type Beat } from './lessons';
 import styles from './CardBeats.module.css';
 
 /** The pause before each next line, and how long a counter takes */
 export const BEAT_MS = 650;
 const COUNTER_S = 1.6;
-
-const NAMES = { tick: 'Tick', tock: 'Tock' } as const;
 
 const beatVariants = {
   hidden: { opacity: 0, y: 10 },
@@ -87,7 +85,7 @@ function BeatLine({ beat, run, active }: { beat: Beat; run: boolean; active: boo
         <span className={styles.line}>
           <GuideAvatar who={beat.speaker} />
           <span>
-            <strong className={styles.speaker}>{NAMES[beat.speaker]}</strong> {beat.text}
+            <strong className={styles.speaker}>{GUIDE_NAMES[beat.speaker]}</strong> {beat.text}
           </span>
         </span>
       );

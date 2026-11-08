@@ -29,7 +29,22 @@ export function isArticleId(value: string): value is ArticleId {
 }
 
 /** The interactive pieces an article can hold (`ArticleWidgets.tsx`) */
-export type WidgetId = 'suncoin-notebook' | 'nora-cheats' | 'order-book' | 'mailbox-steps';
+export type WidgetId =
+  | 'suncoin-notebook'
+  | 'nora-cheats'
+  /** Nora's edit alone, no copies to check it: Lesson 1 shows the problem, Lesson 2 the answer */
+  | 'nora-edits'
+  | 'order-book'
+  | 'mailbox-steps'
+  | 'node-jobs'
+  | 'gossip'
+  | 'balance-history'
+  | 'stamp-check'
+  | 'block-chain'
+  | 'nora-answered'
+  | 'address-key'
+  | 'key-scenarios'
+  | 'public-ledger';
 
 export type ArticleBlock =
   /** A section heading; `id` lets a lesson link straight to it */
@@ -128,7 +143,7 @@ const suncoin: Article = {
     {
       kind: 'callout',
       tone: 'idea',
-      text: '**The question SunCoin leaves us with:** can money work with no Nora at all, kept and checked by many people who don’t need to trust each other? Lesson 1’s next card, and the article after this one, show one answer.',
+      text: '**The question SunCoin leaves us with:** can money work with no Nora at all, kept and checked by many people who don’t need to trust each other? Lesson 2, and the article after this one, show one answer.',
     },
   ],
   selfTest: [
@@ -171,136 +186,56 @@ const bitcoinNetwork: Article = {
   id: 'bitcoin-network',
   title: 'Many notebooks, no Nora: how Bitcoin keeps the record',
   summary:
-    'Bitcoin replaces Nora with thousands of computers that each keep a copy of the ledger, pass new payments along and check every one. Some of them, the miners, race to add the next page and are paid for it.',
-  minutes: 8,
-  checked: '2026-10-25',
+    'Thousands of computers each keep a copy of the ledger and check every payment, so nobody has to trust a Nora.',
+  minutes: 3,
+  checked: '2026-11-08',
   access: FREE,
+  // Owner 2026-11-08: short, and a graphic for every process; the long text version lives in git
   blocks: [
     {
-      kind: 'p',
-      text: 'Forget pickaxes and caves. Bitcoin’s keepers are more like the world’s most suspicious office clerks: they keep the record book, pass news along, and double-check everyone’s paperwork.',
-    },
-    {
       kind: 'callout',
       tone: 'idea',
-      text: '**Think of it as SunCoin without Nora.** Instead of one keeper, thousands of volunteers each keep a copy of the notebook and shout “that’s fake!” whenever a line breaks the rules. These computers are called **nodes**.',
-    },
-    { kind: 'h', text: 'Keepers everywhere', id: 'nodes' },
-    {
-      kind: 'p',
-      text: 'There is no head office. Nodes are ordinary computers spread across the world: home PCs, data centres, university labs. Anyone can run one, and each checks the same rules. There are tens of thousands of them, and the exact number changes all the time. No single boss, and no single off switch.',
+      text: '**SunCoin without Nora:** each of those computers is a **node**. Anyone can run one, and there is no off switch.',
     },
     { kind: 'h', text: 'Three jobs, every node', id: 'three-jobs' },
-    {
-      kind: 'list',
-      ordered: true,
-      items: [
-        '**Store.** Keep a full copy of the ledger: every payment since January 2009. It runs to hundreds of gigabytes, and it only grows.',
-        '**Relay.** Pass new payments on to neighbouring nodes. It’s gossip, but useful gossip.',
-        '**Verify.** Check every payment against the rules before passing it on. A payment that breaks them is simply dropped.',
-      ],
-    },
-    { kind: 'h', text: 'News travels fast' },
+    { kind: 'widget', id: 'node-jobs' },
     {
       kind: 'p',
-      text: 'Each node keeps a handful of connections to other nodes; Bitcoin’s most used software opens 8 outgoing ones for passing payments on. A new payment goes to those neighbours, who tell theirs, and so on: 1 node, then about 8, then about 64, then hundreds, then everyone, usually within seconds.',
+      text: 'Relaying is gossip, checked at every step. Send a payment and watch it spread:',
     },
+    { kind: 'widget', id: 'gossip' },
+    { kind: 'h', text: 'Two checks for every payment', id: 'checks' },
+    {
+      kind: 'p',
+      text: '**1. Does Sofia have the coins?** No balance is stored, as in Nora’s notebook: a node adds up her history.',
+    },
+    { kind: 'widget', id: 'balance-history' },
+    {
+      kind: 'p',
+      text: '**2. Is it really Sofia?** She marks each payment with a stamp only she holds, her **private key**. Everyone has a matching checker, her **public key**, which can test a mark but never make one.',
+    },
+    { kind: 'widget', id: 'stamp-check' },
     {
       kind: 'callout',
       tone: 'idea',
-      text: '**Think of it as** a rumour in a school canteen, except this one is checked at every table.',
-    },
-    { kind: 'h', text: 'Two questions for every payment', id: 'checks' },
-    {
-      kind: 'p',
-      text: '**1. Does the sender have the coins?** Just like in Nora’s notebook, no balance is stored anywhere. A node reads the history: the coins the ledger says Sofia received and hasn’t spent yet.',
-    },
-    {
-      kind: 'table',
-      head: ['In the ledger', 'Sofia'],
-      rows: [
-        ['Monday: receives', '+5'],
-        ['Tuesday: receives', '+3'],
-        ['Wednesday: spends', '−2'],
-        ['She has', '6'],
-      ],
-    },
-    {
-      kind: 'p',
-      text: 'If Sofia now tries to send 9, every node rejects it: 9 is more than 6.',
-    },
-    {
-      kind: 'p',
-      text: '**2. Is it really Sofia asking?** Nodes never see Sofia’s **private key**, only her **public key**. So how can they tell Sofia from Sneaky Sam?',
-    },
-    {
-      kind: 'callout',
-      tone: 'idea',
-      text: '**Think of it as** a one-of-a-kind stamp. Sofia owns the stamp (her private key) and never shows it to anyone. Everyone can borrow a matching stamp-checker (her public key). The checker confirms “this mark came from that exact stamp”, but it can’t make new marks.',
-    },
-    {
-      kind: 'p',
-      text: 'Every payment travels with three things: the message (“send 2 to Leo”), Sofia’s **signature** (made from the message and her private key, on her own device) and her public key. A node feeds all three into a public checking formula and gets a plain yes or no. It also checks that the public key matches the address holding the coins. Watch every Sneaky Sam trick fail:',
-    },
-    {
-      kind: 'table',
-      head: ['Sneaky Sam tries…', 'Why it fails'],
-      rows: [
-        ['Signing with his own key', 'The signature doesn’t match Sofia’s public key'],
-        ['Reusing an old signature of Sofia’s', 'It was made for a different message'],
-        ['Editing a real payment', 'Change one digit and the signature no longer fits'],
-        ['Swapping in his own public key', 'It doesn’t match the address holding the coins'],
-      ],
-    },
-    {
-      kind: 'callout',
-      tone: 'idea',
-      text: '**The key idea:** checking a signature is easy for anyone; making one without the private key is practically impossible. To the network, “being Sofia” means holding the private key for her address, nothing else.',
-    },
-    {
-      kind: 'p',
-      text: '**Spending the same coins twice?** Nodes keep the first payment they see and ignore the copycat. Once a payment is sealed into a page of the ledger, the copy has no chance at all.',
+      text: '**The key idea:** checking a mark is easy for anyone; making one without the private key is practically impossible.',
     },
     { kind: 'h', text: 'Pages that seal each other', id: 'blocks' },
     {
       kind: 'p',
-      text: 'New payments are grouped into pages called **blocks**. Each block carries a fingerprint (a hash) of the block before it. Change one old line and its fingerprint changes, which breaks every block after it. That chain of pages is the **blockchain**.',
+      text: 'Payments are grouped into pages called **blocks**, each sealed with a fingerprint of the one before. That chain is the **blockchain**. Try changing an old line:',
     },
-    { kind: 'h', text: 'Miners: who writes the next page', id: 'miners' },
+    { kind: 'widget', id: 'block-chain' },
     {
       kind: 'p',
-      text: 'Every node keeps and checks the notebook, but adding a new page is a race. **Miners** are the nodes that enter it: they must solve a puzzle that is hard to solve but easy to check, and solving it costs real electricity. About every 10 minutes one of them wins, adds the block, and every other node checks it before accepting it. Rewriting history would mean redoing all that work faster than every honest miner combined.',
-    },
-    { kind: 'h', text: 'Why do miners bother?' },
-    {
-      kind: 'p',
-      text: 'The winner of each block is paid in newly created bitcoin plus the fees attached to the payments inside it. The new-coin part halves about every four years, in events called **halvings**: since April 2024 it has been 3.125 bitcoin per block, and the next halving is expected around 2028. That is the only way new bitcoin appears: on a public schedule that every node checks.',
+      text: 'About every 10 minutes, **miners** race to add the next page by solving a costly puzzle, and the winner is paid in new bitcoin plus fees. Every node checks the page before accepting it.',
     },
     { kind: 'h', text: 'Nora’s four problems, answered', id: 'answered' },
-    {
-      kind: 'table',
-      head: ['With one Nora', 'With the network'],
-      rows: [
-        ['Print coins', 'New coins only come from mining, on a schedule every node checks'],
-        ['Move your coins', 'Only a valid signature from your private key moves them'],
-        ['Rewrite history', 'Every block seals the one before; redoing the work is too costly'],
-        ['Lose everything', 'Tens of thousands of copies: losing one changes nothing'],
-      ],
-    },
-    { kind: 'h', text: 'Can I mine on my laptop?' },
-    {
-      kind: 'p',
-      text: 'You can, but you won’t earn anything worth the electricity. Mining today is done with **ASICs**, machines built to do this one job extremely fast, stacked in warehouses where power is cheap.',
-    },
+    { kind: 'widget', id: 'nora-answered' },
     {
       kind: 'callout',
-      tone: 'idea',
-      text: '**Think of it as** entering a marathon on a skateboard while professionals turn up in sports cars. Allowed, but pointless.',
-    },
-    { kind: 'h', text: 'Is that a problem?' },
-    {
-      kind: 'p',
-      text: 'A bit. Bitcoin was meant to be spread out, but mining became a big industry, and a few large groups of miners (pools) find most blocks. So when you hear “decentralized”, think of a spectrum, not a switch.',
+      tone: 'warn',
+      text: '**“Decentralized” is a spectrum, not a switch:** a few big groups of miners (pools) find most blocks today.',
     },
   ],
   selfTest: [
@@ -309,20 +244,12 @@ const bitcoinNetwork: Article = {
       a: 'Store the ledger, relay payments, verify payments.',
     },
     {
-      q: 'How does a node know Sofia has enough coins?',
-      a: 'It reads her history in the ledger; no balance is stored anywhere.',
-    },
-    {
       q: 'Why can’t Sneaky Sam spend Sofia’s coins?',
-      a: 'He can’t make a valid signature without her private key.',
+      a: 'He can’t make Sofia’s mark without her private key, and her public key catches any fake.',
     },
     {
-      q: 'What makes a miner different from any other node?',
-      a: 'It also races to add the next block, solving a costly puzzle, and is paid if it wins.',
-    },
-    {
-      q: 'Why is mining on a laptop usually pointless?',
-      a: 'ASIC warehouses are vastly faster and cheaper to run, so they win nearly every block.',
+      q: 'What happens if someone changes an old line in the blockchain?',
+      a: 'That page’s fingerprint changes, so the seal on every later page breaks and every node rejects it.',
     },
   ],
   sources: [
@@ -337,10 +264,6 @@ const bitcoinNetwork: Article = {
     {
       label: 'Bitnodes: reachable Bitcoin nodes, counted live',
       url: 'https://bitnodes.io/',
-    },
-    {
-      label: 'Bitcoin Wiki, “Controlled supply” (block rewards and halvings)',
-      url: 'https://en.bitcoin.it/wiki/Controlled_supply',
     },
   ],
 };
@@ -473,79 +396,48 @@ const mailboxesKeys: Article = {
   title: 'Mailboxes and keys: how a Bitcoin payment works',
   summary:
     'An address is a mailbox slot anyone can post bitcoin into. A private key is the only key that opens the box. Whoever holds the key controls the coins.',
-  minutes: 7,
-  checked: '2026-10-23',
+  minutes: 3,
+  checked: '2026-11-08',
   access: FREE,
+  // Owner 2026-11-08: the Many notebooks recipe, one line of text and a graphic to tap
   blocks: [
-    { kind: 'h', text: 'The address: a mailbox slot' },
-    {
-      kind: 'p',
-      text: 'To receive bitcoin, a wallet app creates an **address**. Think of a mailbox with a slot: anyone can post bitcoin through it, and no one can take anything out with the address alone. So an address is safe to share. Real addresses are long strings of letters and numbers, so apps show them as a QR code, the same string as a picture you can scan.',
-    },
-    {
-      kind: 'p',
-      text: 'A wallet can make a new address whenever you like. Using a fresh one for each payment is common practice: it makes it harder for onlookers to link all your payments together.',
-    },
-    { kind: 'h', text: 'The private key: the only key to the box', id: 'key' },
-    {
-      kind: 'table',
-      head: ['', 'Address', 'Private key'],
-      rows: [
-        ['Does', 'Receives bitcoin', 'Spends what the address received'],
-        ['Like', 'Your home address', 'Your house key and password in one'],
-        ['Share it?', 'Yes, it’s safe', 'Never, with anyone'],
-      ],
-    },
-    {
-      kind: 'p',
-      text: 'To spend, your wallet uses the key to **sign** the payment. Every node can check the signature is genuine without ever seeing the key. That’s how the network knows a payment really came from the owner.',
-    },
+    { kind: 'h', text: 'Two things, two rules', id: 'key' },
+    { kind: 'widget', id: 'address-key' },
     { kind: 'h', text: 'A payment, step by step' },
     { kind: 'widget', id: 'mailbox-steps' },
     {
       kind: 'callout',
       tone: 'warn',
-      text: 'There is no undo. If Leo sends the wrong amount, or to the wrong address, no bank can reverse it. The only way back is asking the receiver to return it. You can post a letter; you can’t un-post it.',
+      text: '**There is no undo.** Send the wrong amount, or to the wrong address, and no bank can reverse it. You can post a letter; you can’t un-post it.',
     },
-    { kind: 'h', text: 'The twist: your coins aren’t in your phone' },
+    { kind: 'h', text: 'Your coins aren’t in your phone', id: 'phone' },
     {
       kind: 'p',
-      text: 'Your bitcoin never sits inside your phone or on an exchange’s computer. It lives on the blockchain, as entries in the public ledger. What you actually hold is the **key** that proves those entries are yours.',
+      text: 'The coins live on the blockchain. Your phone holds only the key, and a list of **recovery words** backs it up. See what each loss means:',
     },
-    {
-      kind: 'list',
-      items: [
-        '**Lose your phone, keep your key:** most wallets give you a backup list of words, a recovery phrase, that restores the keys on another device.',
-        '**Lose the key and every backup,** and the coins are locked forever. Nobody can open the box: not you, not the wallet company, not anyone.',
-        '**“Bitcoin got stolen”** almost always means someone got hold of the keys, through a scam, a fake website or a hacked company. The blockchain itself wasn’t broken.',
-      ],
-    },
+    { kind: 'widget', id: 'key-scenarios' },
     {
       kind: 'callout',
       tone: 'warn',
-      text: 'One rule: never share a private key or recovery phrase, and never type it into a website or send it to “support”. Real support never asks for it.',
+      text: '**One rule:** never share a private key or recovery words, and never type them into a website. Real support never asks for them.',
     },
+    { kind: 'h', text: 'Public, but not named', id: 'public' },
     {
       kind: 'p',
-      text: 'Who holds the key, an exchange or you, is a choice with risks either way: see **Getting bitcoin: three ways**.',
+      text: 'Every payment is public forever, but it shows addresses, not names. That’s **pseudonymous**, not anonymous:',
     },
-    { kind: 'h', text: 'Public, but not named' },
-    {
-      kind: 'p',
-      text: 'Every Bitcoin payment is public forever: anyone can see that one address paid another, how much and when. What they don’t see is a name. That’s **pseudonymous**, not anonymous. Once an address is linked to you, say by an exchange that checked your ID, your payments can be traced.',
-    },
-    { kind: 'h', text: 'On this app' },
+    { kind: 'widget', id: 'public-ledger' },
     {
       kind: 'callout',
       tone: 'idea',
-      text: 'Your practice account holds no keys and no real coins. It’s a simulated balance with nothing at risk: the safe place to learn how buying and selling feel before any of this matters.',
+      text: '**On this app** your practice account holds no keys and no real coins: the safe place to learn before any of this matters.',
     },
   ],
   selfTest: [
     { q: 'What can a stranger do with your address?', a: 'Send you bitcoin. Nothing else.' },
     {
-      q: 'Someone asks for your recovery phrase to “verify your wallet”. What is it?',
-      a: 'A scam. Never share it.',
+      q: 'Someone asks for your recovery words to “verify your wallet”. What is it?',
+      a: 'A scam. Never share them.',
     },
     {
       q: 'Where does your bitcoin actually live?',
@@ -601,7 +493,7 @@ const money101: Article = {
       tone: 'idea',
       text: 'All of these are only as safe as the company running them. If it changes the rules, shuts down or closes your account, your balance can shrink or vanish.',
     },
-    { kind: 'h', text: 'The weakness they share' },
+    { kind: 'h', text: 'The weakness they share', id: 'weakness' },
     {
       kind: 'p',
       text: 'Every kind except the gold in your hand depends on **someone in charge**: a government, a bank or a company. When that someone prints too much or changes the rules, the money suffers. Venezuela and Zimbabwe saw prices run out of control; in 2016 India withdrew its two largest banknotes almost overnight.',
@@ -649,7 +541,7 @@ const bitcoinStory: Article = {
   // Owner 2026-10-25: Satoshi comes after the learner has seen what goes wrong with someone in charge
   practiceSoon: 'a later lesson, once you’ve seen what goes wrong with someone in charge',
   blocks: [
-    { kind: 'h', text: 'A short timeline' },
+    { kind: 'h', text: 'A short timeline', id: 'timeline' },
     {
       kind: 'list',
       items: [
@@ -715,6 +607,10 @@ const bitcoinStory: Article = {
     {
       label: 'The first Bitcoin block, 3 January 2009 (block explorer)',
       url: 'https://mempool.space/block/0',
+    },
+    {
+      label: 'Bitcoin Wiki, “Genesis block” (the headline inside block 0)',
+      url: 'https://en.bitcoin.it/wiki/Genesis_block',
     },
     {
       label: 'The pizza offer on the bitcointalk forum, May 2010',
@@ -799,7 +695,6 @@ const gettingBitcoin: Article = {
       url: 'https://www.ic3.gov/PSA/2025/PSA250226',
     },
   ],
-  practiceSoon: 'a later lesson on exchanges and wallets',
 };
 
 /** In reading order: Lesson 1's articles (from the Drive docs, 02 to 06), then Lesson 2's */

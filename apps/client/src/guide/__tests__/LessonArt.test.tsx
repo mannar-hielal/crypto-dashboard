@@ -7,7 +7,6 @@ import { MOODS, type LessonArtId } from '@/guide/lessons';
 
 const ARTS: LessonArtId[] = [
   'hook',
-  'pizzaNight',
   'money',
   'notebook',
   'ledger',
@@ -54,7 +53,7 @@ describe('the guides', () => {
     expect(arms('wave')).toBe(1);
   });
 
-  it('should give dialogue lines a friendly face: Tick smiling, Tock calm', () => {
+  it('should give dialogue lines a friendly face: Pulin smiling, Berwyn calm', () => {
     const { container } = render(
       <>
         <GuideAvatar who="tick" />
@@ -82,6 +81,13 @@ describe('LessonArt', () => {
       expect(svg.querySelector('[data-mood="wink"]')?.getAttribute('data-pose'), id).toBe('point');
       unmount();
     }
+  });
+
+  it('should draw the private key as the articles’ stamp on the mailbox card', () => {
+    const { container } = render(
+      <LessonArt id="mailbox" presenter={{ who: 'tock', mood: 'wink' }} />
+    );
+    expect(container.querySelectorAll('svg[data-stamp]')).toHaveLength(1);
   });
 
   it('should draw no presenter when none is given (a chart card’s stand-in picture)', () => {

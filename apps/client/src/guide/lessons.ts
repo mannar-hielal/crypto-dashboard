@@ -17,9 +17,10 @@
 import { FREE, type Entitlement } from '@/learn/access';
 import type { ArticleId, WidgetId } from '@/learn/articles';
 import { plainText } from '@/learn/terms';
+import pizzaDay from '@/assets/lessons/pizza-day.jpg';
 import type { TourId } from './tours';
 
-export const LESSON_IDS = ['lesson-01', 'lesson-02'] as const;
+export const LESSON_IDS = ['lesson-01', 'lesson-ownership', 'lesson-02'] as const;
 export type LessonId = (typeof LESSON_IDS)[number];
 
 export function isLessonId(value: string): value is LessonId {
@@ -29,18 +30,27 @@ export function isLessonId(value: string): value is LessonId {
 /** The pictures `LessonArt` can draw, all from our own tokens */
 export type LessonArtId =
   | 'hook'
-  | 'pizzaNight'
   | 'money'
   | 'notebook'
   | 'oneNora'
   | 'ledger'
   | 'mailbox'
+  | 'hardDrive'
+  | 'stamp'
+  | 'keyHolders'
+  | 'custody'
   | 'queues'
   | 'busy'
   | 'tesla'
   | 'etf';
 
 export type Speaker = 'tick' | 'tock';
+
+/**
+ * What the learner calls the guides (owner 2026-11-08: Pulin and Berwyn). The ids stay `tick` and
+ * `tock` in the code; only these names are shown.
+ */
+export const GUIDE_NAMES: Record<Speaker, string> = { tick: 'Pulin', tock: 'Berwyn' };
 
 /**
  * The guides' faces (owner's visual Q&A 2026-10-24; `frank` 2026-10-25: eyes straight at the
@@ -126,12 +136,21 @@ export interface CardPoint {
   text: string;
 }
 
+export interface LessonPhoto {
+  src: string;
+  /** What the photo shows, for screen readers */
+  alt: string;
+  credit: string;
+}
+
 export interface LessonCard {
   title: string;
-  /** Tick or Tock, standing in the picture and presenting it */
-  presenter: Presenter;
+  /** Pulin or Berwyn, standing in the picture and presenting it (a photo stands alone) */
+  presenter?: Presenter;
   /** The picture (a card with a `chart` shows the chart instead; a `meet` card is its own scene) */
   art?: LessonArtId;
+  /** A real photograph in place of a drawing (owner 2026-11-08), with its credit */
+  photo?: LessonPhoto;
   chart?: ChartScene;
   /** Either plain text (may mark `[[terms]]`), or a short exchange between the two guides */
   text?: string;
@@ -150,6 +169,13 @@ export interface LessonCard {
 }
 
 /** One "You can now…" line on the close, with the article that goes deeper */
+/** The birth of Bitcoin, staged on a summary (`GenesisReveal`): a real headline in a real block */
+export interface Genesis {
+  kicker: string;
+  headline: string;
+  caption: string;
+}
+
 export interface CanDo {
   text: string;
   article: ArticleId;
@@ -190,11 +216,19 @@ export interface Lesson {
   notePrompt: string;
   /** What the learner can do after the lesson, shown on the close */
   canDo: CanDo[];
-  rule: string;
-  teaser: string;
+  /**
+   * The close's summary, in place of "You can now" (owner 2026-11-08): a few lines, each opening its
+   * article. Lessons without one list `canDo` instead.
+   */
+  recap?: { title: string; points: CanDo[]; highlight?: CanDo; genesis?: Genesis };
   /** What the close offers next: the next lesson, or a tour */
   next?: LessonNext;
   access: Entitlement;
+  /**
+   * Added to the screen number in the funnel's step ids (`lesson-01.21` = screen 1), so steps
+   * stored before the lesson's screens changed aren't counted as today's screens
+   */
+  stepBase?: number;
 }
 
 export type LessonNext = { kind: 'lesson'; id: LessonId } | { kind: 'tour'; id: TourId };
@@ -209,10 +243,14 @@ const lesson01: Lesson = {
   number: 1,
   title: 'What is Bitcoin?',
   stage: 'Getting started',
-  minutes: 7,
-  tryWidget: 'nora-cheats',
+  // Owner 2026-11-08: Lesson 1 is the problem only (one keeper); Lesson 2 answers it
+  minutes: 4,
+  // Its screens changed on 2026-11-08: today's are steps 21 on, earlier ones keep 1–20 (Lesson 3 too)
+  stepBase: 20,
+  // Nora's edit alone: the copies that outvote her are Lesson 2's answer (review 2026-11-08)
+  tryWidget: 'nora-edits',
   tryIntro:
-    'Now be Nora. Change one line of the notebook and see what a single pen stroke does, then let the other notebooks check it.',
+    'Now be Nora. Change one line of the notebook and see what a single pen stroke does, with nobody to check it.',
   cards: [
     {
       // bitcointalk.org, 22 May 2010: Laszlo Hanyecz in Jacksonville, Florida, paid 10,000 BTC for
@@ -221,8 +259,12 @@ const lesson01: Lesson = {
       // hindsight (nobody knew), so it teaches rather than sells. Owner 2026-10-28: no counter, and
       // the billion lands in the last line, said plainly rather than by Tock
       title: 'Two pizzas',
-      art: 'pizzaNight',
-      presenter: { who: 'tock', mood: 'calm' },
+      // Owner 2026-11-08: the real photo, no drawing and no guide; the owner holds the rights
+      photo: {
+        src: pizzaDay,
+        alt: 'Laszlo Hanyecz at a table with two children and two large pizzas in open boxes.',
+        credit: 'Photo: Laszlo Hanyecz',
+      },
       beats: [
         { kind: 'kicker', text: '22 May 2010 · Florida' },
         {
@@ -243,13 +285,13 @@ const lesson01: Lesson = {
       title: 'Meet your guides',
       presenter: { who: 'tick', mood: 'smile', pose: 'wave' },
       meet: {
-        tick: 'Hi, I’m Tick.',
-        tock: 'Hi, I’m Tock.',
-        lead: 'In the next 7 minutes you’ll learn:',
+        tick: 'Hi, I’m Pulin.',
+        tock: 'Hi, I’m Berwyn.',
+        lead: 'In the next 4 minutes you’ll learn:',
         list: [
-          'what Bitcoin actually is',
-          'why anyone would want it',
-          'the one thing you never share',
+          'why money needs someone you trust',
+          'what one record keeper could get away with',
+          'the question Bitcoin was built to answer',
         ],
       },
       nextLabel: 'Start with money itself',
@@ -285,30 +327,17 @@ const lesson01: Lesson = {
         { label: 'Rewrite history.', text: 'Change line 4 so Leo never paid.' },
         { label: 'Lose it all.', text: 'Coffee on the only copy.' },
       ],
-      nextLabel: 'What if everyone kept a copy?',
-    },
-    {
-      title: 'Many notebooks, no Nora',
-      art: 'ledger',
-      presenter: { who: 'tick', mood: 'grin' },
-      text: 'Bitcoin’s ledger is kept by thousands of computers, called [[nodes|node]], each with a full copy. They check every payment, and each page is sealed to the one before, so nobody can quietly rewrite the past. That chain of pages is the [[blockchain]].',
-      nextLabel: 'How do I own some?',
-    },
-    {
-      title: 'A mailbox and a key',
-      art: 'mailbox',
-      presenter: { who: 'tock', mood: 'wink' },
-      text: 'Your bitcoin [[address]] is like a mailbox slot: anyone can pay into it, and it’s safe to share. Your [[private key|private-key]] is the only key that opens it. Whoever has the key controls the coins, so never share it.',
+      nextLabel: 'Could money work with no Nora?',
     },
   ],
   moment: {
-    context: 'Nora quietly changes line 4, so the notebook says Leo paid 30 instead of 3.',
-    question: 'With thousands of copies of the notebook, what happens?',
+    context: 'Nora writes “Start → Nora, 50” in the only notebook.',
+    question: 'Who can stop her?',
     presenter: { who: 'tock', mood: 'thinking' },
-    options: ['Her edit is accepted', 'The other copies reject it', 'Bitcoin stops working'],
-    correct: 1,
+    options: ['Nobody: she holds the only pen', 'The bank', 'Emi, by checking her balance'],
+    correct: 0,
     explain:
-      'The other copies still say 3, so her copy is outvoted. To change Bitcoin’s past, someone would have to out-work the whole network at once.',
+      'With one keeper, the keeper’s word is the money. Next lesson: a notebook nobody holds alone.',
   },
   checks: [
     {
@@ -323,6 +352,154 @@ const lesson01: Lesson = {
         'The notebook only lists payments. A balance, in SunCoin or in Bitcoin, is what the list adds up to for you.',
     },
     {
+      question: 'Why is one notebook keeper a risk?',
+      options: [
+        'She could print, move or rewrite coins, and nobody could check',
+        'She might write too slowly',
+        'There is no risk if she’s a friend',
+      ],
+      correct: 0,
+      explain:
+        'One pen means one person decides what the notebook says. Even an honest keeper can make a mistake, or be pressured.',
+    },
+    {
+      question: 'A central bank prints a lot more money. What happens to the money you hold?',
+      options: ['It quietly buys less', 'It buys more', 'Nothing at all'],
+      correct: 0,
+      explain:
+        'More money chasing the same goods means each note buys less: the rules changed without asking you.',
+    },
+  ],
+  notePrompt: 'What would you like to understand better about money and Bitcoin?',
+  canDo: [
+    { text: 'Say why money depends on trust', article: 'money-101', section: 'weakness' },
+    { text: 'Explain where a balance lives', article: 'suncoin', section: 'no-balances' },
+    { text: 'Say why one notebook keeper is a risk', article: 'suncoin', section: 'one-nora' },
+  ],
+  // Owner 2026-11-08: the close sums up the problem that led to Bitcoin, and only now names Satoshi
+  recap: {
+    title: 'The problem',
+    // Owner 2026-11-08: what goes wrong when money sits with a central authority, then the answer
+    points: [
+      {
+        text: 'When a government or central bank controls money, it can print more of it, and the money you hold quietly buys less.',
+        article: 'money-101',
+        section: 'weakness',
+      },
+      {
+        text: 'It can also freeze accounts, block payments or change the rules overnight, and you can’t check it or say no.',
+        article: 'suncoin',
+        section: 'one-nora',
+      },
+    ],
+    // Block 0 (3 January 2009) carries this headline in its first transaction; Bitcoin Wiki,
+    // "Genesis block", and the block itself on mempool.space (bitcoin-story's sources)
+    genesis: {
+      kicker: 'Block 0 · 3 January 2009',
+      headline: 'The Times 03/Jan/2009 — Chancellor on brink of second bailout for banks',
+      caption: 'Satoshi Nakamoto wrote that headline into Bitcoin’s very first block.',
+    },
+    // The Bitcoin paper is dated 31 October 2008, during the financial crisis (bitcoin-story)
+    highlight: {
+      text: 'In 2008, as banks failed, someone called Satoshi Nakamoto proposed money that no one holds or controls. That was the birth of Bitcoin.',
+      article: 'bitcoin-story',
+      section: 'timeline',
+    },
+  },
+  next: { kind: 'lesson', id: 'lesson-ownership' },
+  access: FREE,
+};
+
+// ─── Lesson 2 — Who owns a bitcoin? ──────────────────────────────────────────
+// Owner 2026-11-08: split from Lesson 1. It answers Lesson 1's cliffhanger (many notebooks), then
+// what makes coins yours. A term first taught in Lesson 1 says so in the card's words.
+
+const lessonOwnership: Lesson = {
+  id: 'lesson-ownership',
+  number: 2,
+  title: 'Who owns a bitcoin?',
+  stage: 'Getting started',
+  minutes: 6,
+  tryWidget: 'stamp-check',
+  tryIntro: 'Now be Sneaky Sam: try to spend Sofia’s coins without her stamp.',
+  cards: [
+    {
+      // Decrypt and DL News, January 2025: in 2013 a hard drive holding the wallet for 8,000 BTC
+      // that James Howells mined in 2009 was thrown out by mistake and went to Newport's landfill;
+      // the High Court refused his bid to dig it up. No dollar figure: the hindsight rule of card 1
+      // of Lesson 1
+      title: 'A hard drive in the bin',
+      art: 'hardDrive',
+      presenter: { who: 'tock', mood: 'calm' },
+      beats: [
+        { kind: 'kicker', text: '2013 · Newport, Wales' },
+        { kind: 'headline', text: 'An old hard drive was thrown out by mistake.' },
+        {
+          kind: 'headline',
+          text: 'On it: the key to 8,000 bitcoin James Howells mined in 2009.',
+          emphasis: '8,000 bitcoin',
+        },
+        {
+          kind: 'fact',
+          text: 'It went to the landfill. Without that key, nobody can move those coins. Not even him.',
+        },
+      ],
+      nextLabel: 'Who keeps that record?',
+    },
+    {
+      title: 'Many notebooks, no Nora',
+      art: 'ledger',
+      presenter: { who: 'tick', mood: 'grin' },
+      text: 'In Lesson 1, Nora’s [[ledger]] had one keeper. Bitcoin’s has thousands: computers called [[nodes|node]], each with a full copy, checking every payment. Every page is sealed to the one before, so nobody can quietly rewrite the past.',
+      nextLabel: 'So what makes coins mine?',
+    },
+    {
+      title: 'A mailbox and a key',
+      art: 'mailbox',
+      presenter: { who: 'tock', mood: 'wink' },
+      text: 'Your bitcoin sits behind two things, an [[address]] and a [[private key|private-key]]:',
+      points: [
+        { label: 'Address.', text: 'A mailbox slot: anyone can pay in, and it’s safe to share.' },
+        {
+          label: 'Private key.',
+          text: 'The only key that opens it. Whoever has it controls the coins, so never share it.',
+        },
+      ],
+      nextLabel: 'How do the nodes know it’s me?',
+    },
+    {
+      title: 'A stamp only you hold',
+      art: 'stamp',
+      presenter: { who: 'tick', mood: 'curious' },
+      text: 'Your private key works like a stamp only you hold: every payment carries its mark. Everyone has the matching checker, your public key, so the [[nodes|node]] can check the mark, but nobody can copy the stamp.',
+      nextLabel: 'What if I lose my phone?',
+    },
+    {
+      title: 'Your coins aren’t in your phone',
+      art: 'keyHolders',
+      presenter: { who: 'tock', mood: 'frank', pose: 'stand' },
+      text: 'The coins stay on the [[blockchain]]; your phone holds only the key. A list of recovery words backs it up: lose the phone, keep the words, and you’re fine. Lose both, like James Howells, and nobody can open the box.',
+      nextLabel: 'Can someone hold it for me?',
+    },
+    {
+      // Mt. Gox, Feb 2014: about 850,000 BTC reported missing (learn/articles.ts, "Getting bitcoin")
+      title: 'Who holds your key?',
+      art: 'custody',
+      presenter: { who: 'tick', mood: 'thinking', pose: 'stand' },
+      text: 'Leave coins on an exchange and it holds the key for you: that’s [[custody]]. Handy, but if the company fails, as Mt. Gox did in 2014, the coins go with it.',
+    },
+  ],
+  moment: {
+    context: 'Your phone falls in the sea. Your recovery words are safe at home.',
+    question: 'What happens to your bitcoin?',
+    presenter: { who: 'tock', mood: 'thinking' },
+    options: ['It’s gone', 'Restore it on a new phone', 'The exchange refunds it'],
+    correct: 1,
+    explain:
+      'The coins never left the blockchain. The recovery words rebuild the key on any new phone.',
+  },
+  checks: [
+    {
       question:
         'Someone from “support” asks for your recovery phrase to fix your wallet. What do you do?',
       // A warning, not a punishment: the only place a guide looks worried
@@ -333,7 +510,6 @@ const lesson01: Lesson = {
         'A recovery phrase restores your private keys, and whoever has it controls your coins. Real support never asks for it.',
     },
     {
-      // Mt. Gox, Feb 2014: about 850,000 BTC reported missing (learn/articles.ts, "Getting bitcoin")
       question:
         'In 2014 the Mt. Gox exchange collapsed and customers’ bitcoin went missing. What failed?',
       options: ['Bitcoin itself', 'The exchange that held their keys', 'The internet'],
@@ -341,20 +517,28 @@ const lesson01: Lesson = {
       explain:
         'The blockchain kept working. A company that held its customers’ keys failed: the risk of letting someone else hold them.',
     },
+    {
+      question: 'What can a stranger do with your address?',
+      options: ['Send you bitcoin', 'Spend your bitcoin', 'See your private key'],
+      correct: 0,
+      explain: 'An address is a mailbox slot: anyone can pay in, and only your key opens it.',
+    },
   ],
-  notePrompt: 'What would you like to understand better about Bitcoin?',
+  notePrompt: 'What would you like to understand better about owning bitcoin?',
   canDo: [
-    { text: 'Explain where a balance lives', article: 'suncoin', section: 'no-balances' },
-    { text: 'Say why one notebook keeper is a risk', article: 'suncoin', section: 'one-nora' },
     { text: 'Tell an address from a private key', article: 'mailboxes-keys', section: 'key' },
+    { text: 'Say why recovery words stay secret', article: 'mailboxes-keys', section: 'phone' },
+    {
+      text: 'Explain how nodes know it’s really you',
+      article: 'bitcoin-network',
+      section: 'checks',
+    },
   ],
-  rule: 'Bitcoin replaces “trust me” with “check it”.',
-  teaser: 'Next: who sets the price of a bitcoin?',
   next: { kind: 'lesson', id: 'lesson-02' },
   access: FREE,
 };
 
-// ─── Lesson 2 — Who sets the price? ──────────────────────────────────────────
+// ─── Lesson 3 — Who sets the price? ──────────────────────────────────────────
 // Concise and about trading (Finelo's Lessons 1 and 2 as the model, never their wording or hype).
 // What Bitcoin is belongs to Lesson 1; one sentence bridges back to it.
 
@@ -388,10 +572,13 @@ const ETF_2024: ChartScene = {
 
 const lesson02: Lesson = {
   id: 'lesson-02',
-  number: 2,
+  // Lesson 3 since 2026-11-08; the id stays, as accounts store it
+  number: 3,
   title: 'Who sets the price?',
   stage: 'Getting started',
   minutes: 5,
+  // Its note screen became the summary on 2026-11-08: today's screens are steps 21 on
+  stepBase: 20,
   tour: 'primer',
   tryIntro:
     'Now do it on the real chart: three quick tasks, and we’ll tell you when each one’s done. Your 10,000 USDT of practice money waits in the account panel under the chart.',
@@ -412,7 +599,7 @@ const lesson02: Lesson = {
       title: 'What a price is',
       art: 'queues',
       presenter: { who: 'tock', mood: 'smile' },
-      text: 'Lesson 1’s ledger records who owns what; the price is made elsewhere. An [[exchange]] matches people who want to buy with people who want to sell. The price on your screen is simply their [[last deal|last-price]].',
+      text: 'The ledger from Lessons 1 and 2 records who owns what; the price is made elsewhere. An [[exchange]] matches people who want to buy with people who want to sell. The price on your screen is simply their [[last deal|last-price]].',
     },
     {
       title: 'A market that never closes',
@@ -490,13 +677,11 @@ const lesson02: Lesson = {
       section: 'news',
     },
   ],
-  rule: 'A price is people, not a prediction.',
-  teaser: 'Next: spend $100 of practice money on your first coin.',
   next: { kind: 'tour', id: 'buy-first-coin' },
   access: FREE,
 };
 
-export const LESSONS: readonly Lesson[] = [lesson01, lesson02];
+export const LESSONS: readonly Lesson[] = [lesson01, lessonOwnership, lesson02];
 
 export function getLesson(id: LessonId): Lesson {
   const lesson = LESSONS.find((l) => l.id === id);
@@ -505,26 +690,29 @@ export function getLesson(id: LessonId): Lesson {
 }
 
 /**
- * Who stands beside a question: its presenter until it's answered, then a reaction. The right answer
- * gets Tick's grin; "Not quite" gets Tock, calm, never sad or worried (red is never the villain).
+ * Who stands beside a question: the guide who asks it, from the question through the answer. The
+ * right answer gets their grin; "Not quite" gets them calm, never sad or worried (red is never the
+ * villain).
  */
 export function questionGuide(q: LessonQuestion, answer: number | undefined): Presenter {
-  if (answer === undefined) return q.presenter ?? { who: 'tock', mood: 'thinking' };
-  return answer === q.correct ? { who: 'tick', mood: 'grin' } : { who: 'tock', mood: 'calm' };
+  const asker = q.presenter ?? { who: 'tock', mood: 'thinking' };
+  if (answer === undefined) return asker;
+  // Owner 2026-11-08: the guide who asks stays through the answer: a grin when right, calm when not
+  return { who: asker.who, mood: answer === q.correct ? 'grin' : 'calm' };
 }
 
 // ─── Screens ─────────────────────────────────────────────────────────────────
 
 /**
  * The lesson as a run of screens, in order — what the sheet walks through and what the funnel
- * numbers (`lesson-02.<n>`, 1-based): cards, the moment, "try it", each question, the note, the end.
+ * numbers (`lesson-02.<n>`, 1-based): cards, the moment, "try it", each question, the summary, the end.
  */
 export type LessonScreen =
   | { kind: 'card'; index: number }
   | { kind: 'moment' }
   | { kind: 'try' }
   | { kind: 'check'; index: number }
-  | { kind: 'note' }
+  | { kind: 'summary' }
   | { kind: 'close' };
 
 export function lessonScreens(lesson: Lesson): LessonScreen[] {
@@ -533,9 +721,21 @@ export function lessonScreens(lesson: Lesson): LessonScreen[] {
     { kind: 'moment' as const },
     { kind: 'try' as const },
     ...lesson.checks.map((_, index) => ({ kind: 'check' as const, index })),
-    { kind: 'note' as const },
+    // Owner 2026-11-08: the summary, then the end with the journal line, the rating and the way on
+    { kind: 'summary' as const },
     { kind: 'close' as const },
   ];
+}
+
+/** The funnel's step id for a screen (0-based): `lesson-ownership.3`, or `lesson-01.23` past a `stepBase` */
+export function lessonStepId(lesson: Lesson, screen: number): string {
+  return `${lesson.id}.${(lesson.stepBase ?? 0) + screen + 1}`;
+}
+
+/** The screen (0-based) a step number stands for today, or null for an earlier version's step */
+export function lessonScreenOfStep(lesson: Lesson, step: number): number | null {
+  const screen = step - (lesson.stepBase ?? 0) - 1;
+  return screen >= 0 && screen < lessonScreens(lesson).length ? screen : null;
 }
 
 /** Every word in a card, for the 50-word rule (a term counts as the words of its label) */
