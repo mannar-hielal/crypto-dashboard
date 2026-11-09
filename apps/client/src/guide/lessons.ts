@@ -260,6 +260,8 @@ const lesson01: Lesson = {
       // the billion lands in the last line, said plainly rather than by Tock
       title: 'Two pizzas',
       // Owner 2026-11-08: the real photo, no drawing and no guide; the owner holds the rights
+      // The owner confirmed on 2026-11-08 that they hold the rights to publish this photograph
+      // (docs/APP_LOG.md, "Lesson 1 opens on the real photo"); credited under the image
       photo: {
         src: pizzaDay,
         alt: 'Laszlo Hanyecz at a table with two children and two large pizzas in open boxes.',
