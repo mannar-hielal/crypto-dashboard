@@ -52,6 +52,7 @@ export const CHAPTERS: readonly Chapter[] = [
     status: 'open',
     nodes: [
       { kind: 'lesson', id: 'lesson-01', access: FREE },
+      { kind: 'lesson', id: 'lesson-ownership', access: FREE },
       { kind: 'lesson', id: 'lesson-02', access: FREE },
       { kind: 'tour', id: 'buy-first-coin', access: FREE },
       { kind: 'tour', id: 'sell-and-review', access: FREE },

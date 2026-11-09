@@ -280,9 +280,10 @@ describe('useTourProgress', () => {
       act(() => useLessonStore.getState().close());
       expect(calls()).toEqual([
         { name: 'tour_started', itemId: 'lesson-01' },
-        { name: 'tour_step', itemId: 'lesson-01', stepId: 'lesson-01.1' },
-        { name: 'tour_step', itemId: 'lesson-01', stepId: 'lesson-01.2' },
-        { name: 'tour_closed', itemId: 'lesson-01', stepId: 'lesson-01.2' },
+        // Lesson 1's screens count from 21 (`stepBase`): 1–20 are its earlier version's
+        { name: 'tour_step', itemId: 'lesson-01', stepId: 'lesson-01.21' },
+        { name: 'tour_step', itemId: 'lesson-01', stepId: 'lesson-01.22' },
+        { name: 'tour_closed', itemId: 'lesson-01', stepId: 'lesson-01.22' },
       ]);
       expect(setProgress).not.toHaveBeenCalled();
 
@@ -298,6 +299,75 @@ describe('useTourProgress', () => {
       expect(calls()).toContainEqual({ name: 'tour_completed', itemId: 'lesson-01' });
       expect(calls().some((c) => c.name === 'tour_closed')).toBe(false);
       expect(setProgress).toHaveBeenCalledWith('lesson-01', 'completed', 'tok');
+    });
+
+    it('should send nothing for a look back at an earlier lesson, nor for the way back from it', async () => {
+      await loaded();
+      act(() => useLessonStore.getState().start('lesson-ownership'));
+      act(() => useLessonStore.getState().next());
+      trackEvent.mockClear();
+
+      act(() => useLessonStore.getState().visit('lesson-01', 5));
+      act(() => useLessonStore.getState().next());
+      act(() => useLessonStore.getState().rate(4));
+      act(() => useLessonStore.getState().returnBack());
+      // No start, step, close, finish or rating: Lesson 1 was rated when it was taken
+      expect(calls()).toEqual([]);
+
+      act(() => useLessonStore.getState().next());
+      expect(calls()).toEqual([
+        { name: 'tour_step', itemId: 'lesson-ownership', stepId: 'lesson-ownership.3' },
+      ]);
+    });
+
+    it('should not count opening the lesson already on screen as a drop-off, nor a reset as a finish', async () => {
+      await loaded();
+      act(() => useLessonStore.getState().start('lesson-02', 2));
+      act(() => useLessonStore.getState().finish());
+      act(() => useLessonStore.getState().start('lesson-02', 2));
+      trackEvent.mockClear();
+      setProgress.mockClear();
+      act(() => useLessonStore.getState().start('lesson-02', 4));
+      expect(calls()).toEqual([{ name: 'tour_step', itemId: 'lesson-02', stepId: 'lesson-02.25' }]);
+
+      act(() => useLessonStore.getState().reset());
+      expect(calls().some((c) => c.name === 'tour_completed')).toBe(false);
+      expect(setProgress).not.toHaveBeenCalled();
+      expect(calls().at(-1)).toEqual({
+        name: 'tour_closed',
+        itemId: 'lesson-02',
+        stepId: 'lesson-02.25',
+      });
+    });
+
+    it('should close the lesson a start replaces, a look back’s home included, and a reset during one', async () => {
+      await loaded();
+      act(() => useLessonStore.getState().start('lesson-ownership', 1));
+      act(() => useLessonStore.getState().visit('lesson-01', 3));
+      trackEvent.mockClear();
+      act(() => useLessonStore.getState().start('lesson-02', 4));
+      expect(calls()).toEqual([
+        { name: 'tour_closed', itemId: 'lesson-ownership', stepId: 'lesson-ownership.2' },
+        { name: 'tour_started', itemId: 'lesson-02' },
+        { name: 'tour_step', itemId: 'lesson-02', stepId: 'lesson-02.25' },
+      ]);
+
+      // A start outside a look back closes the lesson it replaces too
+      trackEvent.mockClear();
+      act(() => useLessonStore.getState().start('lesson-01'));
+      expect(calls()[0]).toEqual({
+        name: 'tour_closed',
+        itemId: 'lesson-02',
+        stepId: 'lesson-02.25',
+      });
+
+      act(() => useLessonStore.getState().start('lesson-02', 4));
+      act(() => useLessonStore.getState().visit('lesson-01', 3));
+      trackEvent.mockClear();
+      act(() => useLessonStore.getState().reset());
+      expect(calls()).toEqual([
+        { name: 'tour_closed', itemId: 'lesson-02', stepId: 'lesson-02.25' },
+      ]);
     });
   });
 });

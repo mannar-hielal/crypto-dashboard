@@ -15,8 +15,7 @@ import { guide } from '@/lib/guideAnchors';
 import { TOUR_MIN_WIDTH } from '@/guide/LearnCard';
 import { useLessonStore } from '@/guide/lessonStore';
 import { getLesson } from '@/guide/lessons';
-import { useTourStore } from '@/guide/tourStore';
-import { getTour } from '@/guide/tours';
+import { startLesson, startTour } from '@/guide/afterNote';
 import { getArticle, type ArticleBlock } from './articles';
 import { useArticleStore } from './articleStore';
 import { ArticleWidget } from './ArticleWidgets';
@@ -149,15 +148,14 @@ export function ArticleDrawer() {
 
   const practise = (link: PracticeLink) => {
     close();
-    if (link.kind === 'lesson') {
-      // Back into the lesson it came from: just show it again, where the learner left it
-      if (from?.lesson === link.lesson && useLessonStore.getState().activeId === link.lesson)
-        return;
-      useLessonStore.getState().start(link.lesson, link.screen);
+    if (link.kind === 'tour') {
+      startTour(link.tour, navigate);
       return;
     }
-    navigate(getTour(link.tour).startUrl);
-    useTourStore.getState().start(link.tour);
+    // Back into the lesson it was opened from: just show it again, where the learner left it
+    const { activeId } = useLessonStore.getState();
+    if (from?.lesson === link.lesson && activeId === link.lesson) return;
+    startLesson(link.lesson, link.screen);
   };
 
   return createPortal(

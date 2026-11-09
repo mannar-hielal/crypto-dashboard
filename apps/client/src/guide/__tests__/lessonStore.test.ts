@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { useLessonStore } from '@/guide/lessonStore';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { noteToSave, useLessonStore } from '@/guide/lessonStore';
 import { getLesson, lessonScreens } from '@/guide/lessons';
 
 const s = () => useLessonStore.getState();
@@ -65,7 +65,8 @@ describe('lessonStore', () => {
     s().finish();
     expect(s().completed['lesson-01']).toBe(true);
     expect(s().activeId).toBeNull();
-    expect(s().rating).toBe(4);
+    // The rating went to the funnel when it was given; it doesn't outlive the lesson
+    expect(s().rating).toBeNull();
   });
 
   it('should replace the finished set with the server’s answer', () => {
@@ -73,5 +74,132 @@ describe('lessonStore', () => {
     expect(s().completed).toEqual({ 'lesson-01': true });
     s().setCompleted([]);
     expect(s().completed).toEqual({});
+  });
+
+  it('should look back at an earlier lesson and return to the lesson as it was left', () => {
+    s().start('lesson-ownership', 4);
+    s().answer(1);
+    s().rate(3);
+    s().setNote('Keys, not coins');
+    s().visit('lesson-01', 2);
+    expect(s()).toMatchObject({
+      activeId: 'lesson-01',
+      screen: 2,
+      answers: {},
+      rating: null,
+      note: '',
+    });
+    expect(s().returnTo?.lesson).toBe('lesson-ownership');
+
+    // A look back from the look back still returns to where the learner started
+    s().visit('lesson-01', 3);
+    expect(s().returnTo?.lesson).toBe('lesson-ownership');
+
+    s().returnBack();
+    expect(s()).toMatchObject({
+      activeId: 'lesson-ownership',
+      screen: 4,
+      answers: { 4: 1 },
+      rating: 3,
+      returnTo: null,
+    });
+  });
+
+  it('should return to the lesson, not close or finish, on ✕ or Finish during a look back', () => {
+    s().start('lesson-ownership', 2);
+    s().visit('lesson-01', 1);
+    s().close();
+    expect(s()).toMatchObject({ activeId: 'lesson-ownership', screen: 2, returnTo: null });
+
+    s().visit('lesson-01', 1);
+    s().finish();
+    expect(s()).toMatchObject({ activeId: 'lesson-ownership', screen: 2, finishes: 0 });
+    expect(s().completed).toEqual({});
+  });
+
+  it('should save the journal line once, and keep a failure from stopping the learner twice', async () => {
+    const write = vi.fn().mockResolvedValueOnce('Network error').mockResolvedValue(null);
+    s().start('lesson-01');
+    expect(noteToSave(s())).toBe(false);
+    expect(await s().saveNote(write)).toBe(true); // nothing typed: nothing to save
+    s().setNote(' One pen ');
+    expect(noteToSave(s())).toBe(true);
+
+    expect(await s().saveNote(write)).toBe(false);
+    expect(s()).toMatchObject({
+      noteStatus: 'draft',
+      noteError: expect.stringContaining('carry on'),
+    });
+    // The way on, after a failure, goes on without another try; Save to journal tries again
+    expect(noteToSave(s())).toBe(false);
+    expect(await s().saveNote(write)).toBe(true);
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(await s().saveNote(write, true)).toBe(true);
+    expect(write).toHaveBeenLastCalledWith('One pen');
+    expect(s().noteStatus).toBe('saved');
+    expect(await s().saveNote(write)).toBe(true);
+    expect(write).toHaveBeenCalledTimes(2);
+  });
+
+  it('should not let a save that lands after the learner left mark the next lesson’s line', async () => {
+    let land: (v: null) => void = () => undefined;
+    const write = () => new Promise<null>((resolve) => (land = resolve));
+    s().start('lesson-01');
+    s().setNote('Slow');
+    const saving = s().saveNote(write);
+    expect(s().noteStatus).toBe('saving');
+
+    s().close();
+    s().start('lesson-ownership');
+    land(null);
+    expect(await saving).toBe(false);
+    expect(s()).toMatchObject({ activeId: 'lesson-ownership', note: '', noteStatus: 'draft' });
+  });
+
+  it('should go home from a look back when its lesson is started, carry on in its own, and start any other afresh', () => {
+    s().start('lesson-ownership', 3);
+    s().answer(0);
+    s().visit('lesson-01', 1);
+    s().start('lesson-ownership', 5); // home, answers kept, at the screen asked for
+    expect(s()).toMatchObject({
+      activeId: 'lesson-ownership',
+      screen: 5,
+      answers: { 3: 0 },
+      returnTo: null,
+    });
+    s().visit('lesson-01', 1);
+    s().start('lesson-ownership'); // no screen: where it was left
+    expect(s()).toMatchObject({ activeId: 'lesson-ownership', screen: 5, answers: { 3: 0 } });
+
+    s().visit('lesson-01', 1);
+    s().start('lesson-01', 4); // the look back's own lesson: the look back carries on, at that card
+    expect(s()).toMatchObject({ activeId: 'lesson-01', screen: 4 });
+    expect(s().returnTo?.lesson).toBe('lesson-ownership');
+
+    s().start('lesson-02'); // any other: a fresh run, the look back over
+    expect(s()).toMatchObject({ activeId: 'lesson-02', screen: 0, returnTo: null });
+    expect(s().starts).toBe(2);
+  });
+
+  it('should leave no rating behind once a lesson is finished', () => {
+    s().start('lesson-01');
+    s().rate(4);
+    s().finish();
+    expect(s()).toMatchObject({ activeId: null, rating: null, finishes: 1 });
+  });
+
+  it('should keep the lesson already on screen: its screen with none given, a card if asked, its tour', () => {
+    s().start('lesson-02', 3);
+    s().answer(1);
+    const run = s().run;
+    s().start('lesson-02');
+    expect(s()).toMatchObject({ activeId: 'lesson-02', screen: 3, answers: { 3: 1 }, run });
+    s().start('lesson-02', 6);
+    expect(s()).toMatchObject({ screen: 6, answers: { 3: 1 }, run });
+    expect(s().starts).toBe(1);
+
+    s().enterTour();
+    s().start('lesson-02', 2);
+    expect(s()).toMatchObject({ screen: 6, inTour: true });
   });
 });

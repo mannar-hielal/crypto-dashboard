@@ -43,7 +43,8 @@ export function LearnCard() {
         </button>
       </div>
       <p className={styles.text}>
-        Start with a 5-minute lesson: who sets the price, and where to see it. No real money.
+        Start with a 4-minute lesson: what Bitcoin is, and why money needs a record keeper. No real
+        money.
       </p>
       <div className={styles.foot}>
         <button

@@ -16,6 +16,7 @@ import type {
 import {
   LESSONS,
   isLessonId,
+  lessonScreenOfStep,
   lessonScreens,
   type Lesson,
   type LessonScreen,
@@ -115,10 +116,10 @@ function screenName(lesson: Lesson, sc: LessonScreen): string {
       return lesson.tour ? 'Try it on the real screen' : 'Try it (in the lesson)';
     case 'check':
       return `Question ${sc.index + 1}`;
-    case 'note':
-      return 'Journal line';
+    case 'summary':
+      return 'Summary';
     case 'close':
-      return 'The rule and the rating';
+      return 'Journal line and rating';
   }
 }
 
@@ -127,8 +128,11 @@ function stepLabel(itemId: string, stepId: string): string {
   const n = stepId.slice(stepId.lastIndexOf('.') + 1);
   if (isLessonId(itemId)) {
     const lesson = LESSONS.find((l) => l.id === itemId);
-    const sc = lesson ? lessonScreens(lesson)[Number(n) - 1] : undefined;
-    return lesson && sc ? `${n}. ${screenName(lesson, sc)}` : `Screen ${n}`;
+    if (!lesson) return `Screen ${n}`;
+    // A step from before the lesson's screens changed (Lesson 1's 1–20) names no screen of today's
+    const index = lessonScreenOfStep(lesson, Number(n));
+    if (index === null) return `Screen ${n} (an earlier version of the lesson)`;
+    return `${index + 1}. ${screenName(lesson, lessonScreens(lesson)[index])}`;
   }
   const step = TOURS.find((t) => t.id === itemId)?.steps.find((st) => st.id === stepId);
   if (!step) return `Step ${n}`;

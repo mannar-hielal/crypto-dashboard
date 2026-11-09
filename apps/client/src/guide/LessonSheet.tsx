@@ -16,24 +16,36 @@ import { Star, X } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { guide } from '@/lib/guideAnchors';
+import { trapFocus } from '@/lib/trapFocus';
 import { getArticle } from '@/learn/articles';
 import { useArticleStore } from '@/learn/articleStore';
 import { ArticleWidget } from '@/learn/ArticleWidgets';
 import type { Concept } from '@/learn/concepts';
-import { conceptFor } from '@/learn/graph';
+import { conceptFor, lessonPlaceLabel, lessonPlacesOf } from '@/learn/graph';
 import { parseTerms } from '@/learn/terms';
 import { usePaperStore } from '@/store/paperStore';
 import { GuideFigure } from './art/Guide';
 import { CardBeats } from './CardBeats';
+import { FinishLine } from './FinishLine';
+import { GenesisReveal } from './GenesisReveal';
 import { GuidesMeet } from './GuidesMeet';
 import { GuideAvatar, LessonArt } from './LessonArt';
 import { LessonChart } from './LessonChart';
 import { TOUR_MIN_WIDTH } from './LearnCard';
+import {
+  afterNote,
+  saveJournalLine,
+  setJournalWrite,
+  startTour as startTourShared,
+} from './afterNote';
 import { useLessonStore } from './lessonStore';
 import {
   getLesson,
+  GUIDE_NAMES,
   lessonScreens,
+  type CanDo,
   type Lesson,
+  type LessonPhoto,
   questionGuide,
   type LessonQuestion,
 } from './lessons';
@@ -41,7 +53,6 @@ import styles from './LessonSheet.module.css';
 import { useTourStore } from './tourStore';
 import { getTour } from './tours';
 
-const NAMES = { tick: 'Tick', tock: 'Tock' } as const;
 const NOTE_MAX = 500;
 
 // ─── Terms and their peek ────────────────────────────────────────────────────
@@ -78,14 +89,27 @@ function CardText({
   );
 }
 
+/** Where an earlier lesson first taught a term, as "Lesson 1: A notebook, not coins" */
+function earlierPlace(concept: Concept, current: Lesson) {
+  // Places are card screens, in lesson order (`lessonPlacesOf`)
+  const first = lessonPlacesOf(concept.id)[0];
+  if (!first || getLesson(first.lesson).number >= current.number) return null;
+  return { ...first, label: lessonPlaceLabel(first) };
+}
+
 function TermPeek({
   concept,
+  from,
   onClose,
   onMore,
+  onFrom,
 }: {
   concept: Concept;
+  /** The earlier lesson that taught it, if any (owner 2026-11-08) */
+  from: string | null;
   onClose: () => void;
   onMore: () => void;
+  onFrom: () => void;
 }) {
   return (
     <div className={styles.peek} role="region" aria-label={concept.term} {...guide('lesson.peek')}>
@@ -106,6 +130,16 @@ function TermPeek({
         <span className={styles.peekLabel}>Think of it as </span>
         {concept.think}
       </p>
+      {from && (
+        <button
+          type="button"
+          className={`${styles.link} ${styles.peekFrom}`}
+          onClick={onFrom}
+          {...guide('lesson.peek.from')}
+        >
+          From {from} →
+        </button>
+      )}
       <button type="button" className={styles.link} onClick={onMore} {...guide('lesson.peek.more')}>
         Read more ({getArticle(concept.article).minutes} min) →
       </button>
@@ -166,19 +200,16 @@ export function QuestionView({
   );
 }
 
-function NoteView({ prompt, onDone }: { prompt: string; onDone: () => void }) {
-  const addJournalNote = usePaperStore((s) => s.addJournalNote);
-  const [text, setText] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const save = async () => {
-    setSaving(true);
-    const err = await addJournalNote(text.trim());
-    setSaving(false);
-    if (err) setError('Could not save the note right now. You can skip it and carry on.');
-    else onDone();
-  };
+/**
+ * One line for the journal, on the lesson's last screen; optional. The draft lives in the lesson
+ * store, so the sheet's buttons that leave the screen can save it first (and wait for it) when
+ * "Save to journal" wasn't pressed
+ */
+function NoteView({ prompt }: { prompt: string }) {
+  const text = useLessonStore((s) => s.note);
+  const status = useLessonStore((s) => s.noteStatus);
+  const error = useLessonStore((s) => s.noteError);
+  const saved = status === 'saved';
 
   return (
     <>
@@ -192,7 +223,9 @@ function NoteView({ prompt, onDone }: { prompt: string; onDone: () => void }) {
         rows={3}
         maxLength={NOTE_MAX}
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        // Locked while it's on its way too: what's saved is what the learner sees
+        readOnly={saved || status === 'saving'}
+        onChange={(e) => useLessonStore.getState().setNote(e.target.value)}
         {...guide('lesson.note')}
       />
       <p className={styles.hint}>
@@ -200,84 +233,157 @@ function NoteView({ prompt, onDone }: { prompt: string; onDone: () => void }) {
       </p>
       {error && <p className={styles.error}>{error}</p>}
       <div className={styles.inlineActions}>
-        <button
-          type="button"
-          className={styles.primary}
-          disabled={text.trim() === '' || saving}
-          onClick={() => void save()}
-          {...guide('lesson.note.save')}
-        >
-          Save to journal
-        </button>
-        <button type="button" className={styles.link} onClick={onDone}>
-          Skip
-        </button>
+        {saved ? (
+          <p className={styles.saved} role="status">
+            ✓ Saved to your journal
+          </p>
+        ) : (
+          // While it saves, the button says so (any press now waits for it, so a button that waits
+          // isn't a mystery); it stays in place and enabled, so the focus never falls out
+          <button
+            type="button"
+            className={styles.primary}
+            aria-live="polite"
+            disabled={text.trim() === ''}
+            onClick={() => void saveJournalLine(true)}
+            {...guide('lesson.note.save')}
+          >
+            {status === 'saving' ? 'Saving your line…' : 'Save to journal'}
+          </button>
+        )}
       </div>
     </>
   );
 }
 
-function CloseView({ lesson, screen }: { lesson: Lesson; screen: number }) {
-  const rating = useLessonStore((s) => s.rating);
+/** A real photograph on a card (owner 2026-11-08), with its credit under it */
+function LessonPhotoView({ photo }: { photo: LessonPhoto }) {
   return (
-    <>
-      <p className={styles.question}>You can now</p>
+    <figure className={styles.photo} {...guide('lesson.photo')}>
+      <img src={photo.src} alt={photo.alt} className={styles.photoImg} />
+      <figcaption className={styles.photoCredit}>{photo.credit}</figcaption>
+    </figure>
+  );
+}
+
+/** A line to read more on: a recap line or a "You can now" line, each opening its article */
+function ReadMore({ item, lesson, screen }: { item: CanDo; lesson: Lesson; screen: number }) {
+  return (
+    <button
+      type="button"
+      className={styles.link}
+      onClick={() =>
+        useArticleStore.getState().open(item.article, {
+          section: item.section,
+          from: { lesson: lesson.id, screen },
+        })
+      }
+      {...guide(lesson.recap ? 'lesson.recap' : 'lesson.can-do', item.section ?? item.article)}
+    >
+      Read more →
+    </button>
+  );
+}
+
+/** The summary before the end: the lesson's recap, or what the learner can now do */
+function SummaryView({
+  lesson,
+  screen,
+  done,
+  onDone,
+}: {
+  lesson: Lesson;
+  screen: number;
+  /** For a staged summary (`recap.genesis`): everything shown */
+  done: boolean;
+  onDone: () => void;
+}) {
+  const recap = lesson.recap;
+  if (!recap) {
+    return (
       <ul className={styles.canDo}>
         {lesson.canDo.map((item) => (
           <li key={item.text}>
             <span aria-hidden="true">✓ </span>
-            {item.text}.{' '}
-            <button
-              type="button"
-              className={styles.link}
-              onClick={() =>
-                useArticleStore.getState().open(item.article, {
-                  section: item.section,
-                  from: { lesson: lesson.id, screen },
-                })
-              }
-              {...guide('lesson.can-do', item.section ?? item.article)}
-            >
-              Read more →
-            </button>
+            {item.text}. <ReadMore item={item} lesson={lesson} screen={screen} />
           </li>
         ))}
       </ul>
-      <p className={styles.rule} {...guide('lesson.rule')}>
-        {lesson.rule}
-      </p>
-      <p className={styles.text}>{lesson.teaser}</p>
-      <div className={styles.rating}>
-        <p className={styles.hint} id="lesson-rating">
-          How clear was this lesson? (optional)
-        </p>
-        <div role="group" aria-labelledby="lesson-rating" className={styles.stars}>
-          {[1, 2, 3, 4, 5].map((n) => (
-            <button
-              key={n}
-              type="button"
-              className={`${styles.star}${rating !== null && n <= rating ? ` ${styles.starOn}` : ''}`}
-              aria-label={`${n} of 5`}
-              aria-pressed={rating === n}
-              onClick={() => useLessonStore.getState().rate(n)}
-              {...guide('lesson.rating', String(n))}
-            >
-              <Star size={22} />
-            </button>
-          ))}
+    );
+  }
+  const highlight = recap.highlight && (
+    <p className={styles.highlight} {...guide('lesson.highlight')}>
+      {recap.highlight.text} <ReadMore item={recap.highlight} lesson={lesson} screen={screen} />
+    </p>
+  );
+  if (recap.genesis) {
+    return (
+      <GenesisReveal
+        genesis={recap.genesis}
+        points={recap.points.map((item) => ({
+          key: item.text,
+          node: (
+            <>
+              {item.text} <ReadMore item={item} lesson={lesson} screen={screen} />
+            </>
+          ),
+        }))}
+        highlight={highlight}
+        done={done}
+        onDone={onDone}
+      />
+    );
+  }
+  return (
+    <>
+      <ol className={styles.recap}>
+        {recap.points.map((item) => (
+          <li key={item.text}>
+            {item.text} <ReadMore item={item} lesson={lesson} screen={screen} />
+          </li>
+        ))}
+      </ol>
+      {highlight}
+    </>
+  );
+}
+
+/** The end (owner 2026-11-08): the finish ribbon, a line for the journal, the rating; the way on is below */
+function CloseView({ lesson }: { lesson: Lesson }) {
+  const rating = useLessonStore((s) => s.rating);
+  // A look back is no run of the lesson to rate: the learner rated it when they took it
+  const visiting = useLessonStore((s) => s.returnTo !== null);
+  return (
+    <>
+      <FinishLine />
+      <NoteView prompt={lesson.notePrompt} />
+      {!visiting && (
+        <div className={styles.rating}>
+          <p className={styles.hint} id="lesson-rating">
+            How clear was this lesson? (optional)
+          </p>
+          <div role="group" aria-labelledby="lesson-rating" className={styles.stars}>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                className={`${styles.star}${rating !== null && n <= rating ? ` ${styles.starOn}` : ''}`}
+                aria-label={`${n} of 5`}
+                aria-pressed={rating === n}
+                onClick={() => useLessonStore.getState().rate(n)}
+                {...guide('lesson.rating', String(n))}
+              >
+                <Star size={22} />
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }
 
 // ─── The sheet ───────────────────────────────────────────────────────────────
-
-/** The card shown on a screen, if that screen is a card */
-function cardAt(lesson: Lesson, screen: number) {
-  const s = lessonScreens(lesson)[screen];
-  return s?.kind === 'card' ? lesson.cards[s.index] : null;
-}
 
 export function LessonSheet() {
   const navigate = useNavigate();
@@ -286,10 +392,17 @@ export function LessonSheet() {
   const screenIndex = useLessonStore((s) => s.screen);
   const answers = useLessonStore((s) => s.answers);
   const inTour = useLessonStore((s) => s.inTour);
+  const returnTo = useLessonStore((s) => s.returnTo);
+  const writeNote = usePaperStore((s) => s.addJournalNote);
   const articleOpen = useArticleStore((s) => s.openId !== null);
+  const mapOpen = useTourStore((s) => s.panelOpen);
   const dialogRef = useRef<HTMLDivElement>(null);
-  /** The term whose peek is open, on the screen it was opened on; Next and Back close it */
-  const [peek, setPeek] = useState<{ screen: number; id: string } | null>(null);
+  /**
+   * The term whose peek is open, on the run and screen it was opened on: Next, Back and any change
+   * of lesson (a look back, the way back, a start) close it
+   */
+  const [peek, setPeek] = useState<{ run: number; screen: number; id: string } | null>(null);
+  const run = useLessonStore((s) => s.run);
   /** Cold-open cards whose lines are all in (`lesson:screen`): Back to one doesn't replay it */
   const [revealed, setRevealed] = useState<ReadonlySet<string>>(() => new Set());
 
@@ -307,31 +420,62 @@ export function LessonSheet() {
     });
   }, [inTour, lessonTour]);
 
-  // Esc closes the sheet (not while the tour or an article is open: each has its own Esc)
+  // The journal line is typed here, so here is where `afterNote` gets its writer
   useEffect(() => {
-    if (!activeId || inTour || articleOpen) return;
+    setJournalWrite(writeNote);
+    return () => setJournalWrite(null);
+  }, [writeNote]);
+
+  // Esc closes the sheet (not while the tour or an article is open: each has its own Esc)
+  // (an open term peek closes first: Esc then dismisses just the peek; the map, if open over the
+  // sheet, has its own Esc)
+  const peekOpen = peek !== null;
+  useEffect(() => {
+    if (!activeId || inTour || articleOpen || mapOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') useLessonStore.getState().close();
+      if (e.key !== 'Escape') return;
+      if (peekOpen) setPeek(null);
+      else afterNote(() => useLessonStore.getState().close());
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [activeId, inTour, articleOpen]);
+  }, [activeId, inTour, articleOpen, mapOpen, peekOpen]);
 
   // Each new screen takes the focus, so a screen reader reads it from the top
   useEffect(() => {
     dialogRef.current?.focus();
   }, [screenIndex, activeId, inTour, articleOpen]);
 
+  // When the map closes over the sheet, the sheet takes the focus back (so Tab stays trapped in
+  // it), unless what the map opened has taken it (a checkpoint's sheet)
+  const mapWasOpen = useRef(false);
+  useEffect(() => {
+    const closed = mapWasOpen.current && !mapOpen;
+    mapWasOpen.current = mapOpen;
+    if (!closed) return;
+    const active = document.activeElement;
+    if (!active || active === document.body || dialogRef.current?.contains(active)) {
+      dialogRef.current?.focus();
+    }
+  }, [mapOpen]);
+
   // Whether the screen's Next may show yet: a cold-open card waits for its lines
   const beatsKey = lesson ? `${lesson.id}:${screenIndex}` : '';
-  const screenCard = lesson ? cardAt(lesson, screenIndex) : null;
-  const ready = (!screenCard?.beats && !screenCard?.meet) || revealed.has(beatsKey);
+  const screens = lesson ? lessonScreens(lesson) : [];
+  const screen = screens.at(screenIndex);
+  const screenCard = lesson && screen?.kind === 'card' ? lesson.cards[screen.index] : null;
+  // A cold open, the guides' meeting and a staged summary (the genesis block) each play first
+  const staged =
+    !!screenCard?.beats ||
+    !!screenCard?.meet ||
+    (!!lesson?.recap?.genesis && screen?.kind === 'summary');
+  const ready = !staged || revealed.has(beatsKey);
   const reveal = () => setRevealed((r) => (r.has(beatsKey) ? r : new Set(r).add(beatsKey)));
 
   // Enter or → moves on (not from a button, an option or the note: they handle their own keys);
   // during a cold open, it shows the lines first
   useEffect(() => {
-    if (!activeId || inTour || articleOpen) return;
+    if (!activeId || inTour || articleOpen || mapOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Enter' && e.key !== 'ArrowRight') return;
       const target = e.target as HTMLElement | null;
@@ -347,15 +491,21 @@ export function LessonSheet() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [activeId, inTour, articleOpen, ready, beatsKey]);
+  }, [activeId, inTour, articleOpen, mapOpen, ready, beatsKey]);
 
   // The lesson waits, hidden, while its tour runs or an article is open in the drawer
   if (!lesson || inTour || articleOpen) return null;
 
-  const screens = lessonScreens(lesson);
-  const screen = screens[screenIndex];
   if (!screen) return null;
-  const { next, back, close, answer, finish } = useLessonStore.getState();
+  const { next, back, answer } = useLessonStore.getState();
+  const close = () => afterNote(() => useLessonStore.getState().close());
+  const goBack = () => {
+    setPeek(null);
+    back();
+  };
+  // The last screen's buttons save a journal line typed but not saved first, and wait for it: on a
+  // failure the learner stays, reads why, and the next press goes on without it
+  const finish = () => afterNote(() => useLessonStore.getState().finish(), { finishing: true });
   const isQuestion = screen.kind === 'moment' || screen.kind === 'check';
   const question =
     screen.kind === 'moment'
@@ -365,36 +515,46 @@ export function LessonSheet() {
         : null;
   const answered = answers[screenIndex] !== undefined;
 
+  // The lesson's own tour: handed over, the lesson waiting on this Try screen (`afterNote.ts`)
   const startTour = () => {
-    if (!lesson.tour) return;
-    const tourId = lesson.tour;
-    navigate(getTour(tourId).startUrl);
-    useLessonStore.getState().enterTour();
-    useTourStore.getState().start(tourId);
+    if (lesson.tour) startTourShared(lesson.tour, navigate);
   };
 
   // The close's next step: the next lesson (any screen), or a tour (a larger screen only)
   const nextStep = lesson.next;
-  const offerNext = !!nextStep && (nextStep.kind === 'lesson' || desktop);
-  const nextLabel = !nextStep
-    ? ''
-    : nextStep.kind === 'lesson'
-      ? `Lesson ${getLesson(nextStep.id).number}: ${getLesson(nextStep.id).title}`
-      : getTour(nextStep.id).title;
-  const startNext = () => {
-    if (!nextStep) return;
-    finish();
-    if (nextStep.kind === 'lesson') {
-      useLessonStore.getState().start(nextStep.id);
-      return;
-    }
-    navigate(getTour(nextStep.id).startUrl);
-    useTourStore.getState().start(nextStep.id);
-  };
+  // During a look back, the way on is back to the lesson the learner came from
+  const offerNext = !!returnTo || (!!nextStep && (nextStep.kind === 'lesson' || desktop));
+  const nextLabel = returnTo
+    ? `Back to Lesson ${getLesson(returnTo.lesson).number}: ${getLesson(returnTo.lesson).title}`
+    : !nextStep
+      ? ''
+      : nextStep.kind === 'lesson'
+        ? `Lesson ${getLesson(nextStep.id).number}: ${getLesson(nextStep.id).title}`
+        : getTour(nextStep.id).title;
+  const startNext = () =>
+    afterNote(
+      () => {
+        // From a look back, Finish leads back to the lesson the learner came from, as they left it
+        if (returnTo) {
+          useLessonStore.getState().finish();
+          return;
+        }
+        if (!nextStep) return;
+        useLessonStore.getState().finish();
+        if (nextStep.kind === 'lesson') {
+          useLessonStore.getState().start(nextStep.id);
+          return;
+        }
+        startTourShared(nextStep.id, navigate);
+      },
+      { finishing: true }
+    );
 
-  const openTerm = peek?.screen === screenIndex ? peek.id : null;
+  const openTerm = peek?.run === run && peek.screen === screenIndex ? peek.id : null;
   const peekConcept = openTerm ? conceptFor(openTerm) : null;
-  const toggleTerm = (id: string) => setPeek(openTerm === id ? null : { screen: screenIndex, id });
+  const earlier = peekConcept ? earlierPlace(peekConcept, lesson) : null;
+  const toggleTerm = (id: string) =>
+    setPeek(openTerm === id ? null : { run, screen: screenIndex, id });
   const readMore = (concept: Concept) => {
     setPeek(null);
     useArticleStore
@@ -412,15 +572,21 @@ export function LessonSheet() {
         <GuidesMeet meet={card.meet} done={ready} onDone={reveal} />
       ) : card.beats ? (
         <>
-          {card.art && <LessonArt id={card.art} presenter={card.presenter} />}
+          {card.photo ? (
+            <LessonPhotoView photo={card.photo} />
+          ) : (
+            card.art && <LessonArt id={card.art} presenter={card.presenter} />
+          )}
           <CardBeats beats={card.beats} done={ready} onDone={reveal} />
         </>
       ) : (
         <>
-          {card.chart ? (
+          {card.photo ? (
+            <LessonPhotoView photo={card.photo} />
+          ) : card.chart ? (
             // A real chart keeps its whole slot: the presenter stands beside it
             <div className={styles.chartRow}>
-              <GuideFigure {...card.presenter} className={styles.chartGuide} />
+              {card.presenter && <GuideFigure {...card.presenter} className={styles.chartGuide} />}
               <LessonChart
                 scene={card.chart}
                 revealed={false}
@@ -434,8 +600,14 @@ export function LessonSheet() {
           {peekConcept && (
             <TermPeek
               concept={peekConcept}
+              from={earlier?.label ?? null}
               onClose={() => setPeek(null)}
               onMore={() => readMore(peekConcept)}
+              onFrom={() => {
+                if (!earlier) return;
+                setPeek(null);
+                useLessonStore.getState().visit(earlier.lesson, earlier.screen);
+              }}
             />
           )}
           {card.points && (
@@ -451,7 +623,7 @@ export function LessonSheet() {
             <p key={line.text} className={styles.line}>
               <GuideAvatar who={line.speaker} />
               <span>
-                <strong className={styles.speaker}>{NAMES[line.speaker]}</strong> {line.text}
+                <strong className={styles.speaker}>{GUIDE_NAMES[line.speaker]}</strong> {line.text}
               </span>
             </p>
           ))}
@@ -525,18 +697,18 @@ export function LessonSheet() {
         </>
       );
       break;
-    case 'note':
-      heading = 'Your note';
-      body = <NoteView prompt={lesson.notePrompt} onDone={next} />;
+    case 'summary':
+      heading = lesson.recap?.title ?? 'You can now';
+      body = <SummaryView lesson={lesson} screen={screenIndex} done={ready} onDone={reveal} />;
       break;
     case 'close':
       heading = `Lesson ${lesson.number} done`;
-      body = <CloseView lesson={lesson} screen={screenIndex} />;
+      body = <CloseView lesson={lesson} />;
       break;
   }
 
-  // The try and note screens carry their own buttons; the close has Finish (and the next step)
-  const showNext = screen.kind === 'card' || isQuestion;
+  // The try screen carries its own buttons; the close has the way on (and Finish for now)
+  const showNext = screen.kind === 'card' || screen.kind === 'summary' || isQuestion;
   const nextWords = (screenCard?.nextLabel ?? 'Continue') + ' →';
 
   return createPortal(
@@ -548,6 +720,8 @@ export function LessonSheet() {
         aria-modal="true"
         aria-labelledby="lesson-heading"
         tabIndex={-1}
+        // Tab stays inside the sheet: the page behind it (the map's Route button…) is out of reach
+        onKeyDown={(e) => trapFocus(e, dialogRef.current)}
         {...guide('lesson.sheet')}
       >
         <div className={styles.head}>
@@ -581,6 +755,20 @@ export function LessonSheet() {
         <p className={styles.kicker}>
           Lesson {lesson.number} · {lesson.title}
         </p>
+        {returnTo && (
+          <button
+            type="button"
+            className={`${styles.link} ${styles.returnLink}`}
+            onClick={() => {
+              setPeek(null);
+              // From a look back's last screen too: a journal line typed there is saved first
+              afterNote(() => useLessonStore.getState().returnBack());
+            }}
+            {...guide('lesson.return')}
+          >
+            ← Back to Lesson {getLesson(returnTo.lesson).number}
+          </button>
+        )}
         <h2 id="lesson-heading" className={styles.heading}>
           {heading}
         </h2>
@@ -611,64 +799,55 @@ export function LessonSheet() {
               <button
                 type="button"
                 className={styles.link}
-                onClick={() => {
-                  setPeek(null);
-                  back();
-                }}
+                onClick={goBack}
                 {...guide('lesson.back')}
               >
                 ← Back
               </button>
             )}
           </div>
-        ) : (
-          <div className={styles.foot}>
-            {screenIndex > 0 && screen.kind !== 'close' && (
+        ) : screen.kind === 'close' ? (
+          // The way on first, as big as the cards' Next; finishing for now under it (2026-11-08)
+          <div className={styles.footStack}>
+            <button
+              type="button"
+              className={`${styles.primary} ${styles.nextButton}`}
+              data-ready="true"
+              onClick={offerNext ? startNext : finish}
+              {...guide(
+                !offerNext
+                  ? 'lesson.finish'
+                  : returnTo || nextStep?.kind === 'lesson'
+                    ? 'lesson.next-lesson'
+                    : 'lesson.next-tour'
+              )}
+            >
+              {offerNext ? nextLabel : 'Finish'}
+            </button>
+            {offerNext && !returnTo && (
               <button
                 type="button"
                 className={styles.link}
-                onClick={() => {
-                  setPeek(null);
-                  back();
-                }}
+                onClick={finish}
+                {...guide('lesson.finish')}
+              >
+                Finish for now
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className={styles.foot}>
+            {screenIndex > 0 && (
+              <button
+                type="button"
+                className={styles.link}
+                onClick={goBack}
                 {...guide('lesson.back')}
               >
                 ← Back
               </button>
             )}
             <span className={styles.spacer} />
-            {screen.kind === 'close' &&
-              (offerNext ? (
-                <>
-                  <button
-                    type="button"
-                    className={styles.link}
-                    onClick={finish}
-                    {...guide('lesson.finish')}
-                  >
-                    Finish for now
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.primary}
-                    onClick={startNext}
-                    {...guide(
-                      nextStep?.kind === 'lesson' ? 'lesson.next-lesson' : 'lesson.next-tour'
-                    )}
-                  >
-                    {nextLabel}
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  className={styles.primary}
-                  onClick={finish}
-                  {...guide('lesson.finish')}
-                >
-                  Finish
-                </button>
-              ))}
           </div>
         )}
       </div>

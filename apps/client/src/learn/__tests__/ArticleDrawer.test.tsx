@@ -90,9 +90,13 @@ describe('ArticleDrawer', () => {
     expect(drawer()!.textContent).not.toMatch(/bitcoin/i);
 
     open('bitcoin-network');
+    expect(drawer()!.textContent).toContain('3 min read');
+    expect(drawer()!.textContent).toContain('Three jobs, every node');
     expect(drawer()!.textContent).toContain('Nora’s four problems, answered');
-    expect(drawer()!.textContent).toContain('Sneaky Sam');
-    expect(drawer()!.textContent).toContain('Lesson 1: Many notebooks, no Nora →');
+    expect(
+      document.querySelector('[aria-label="Sofia’s stamp and the stamp-checker"]')
+    ).toBeTruthy();
+    expect(drawer()!.textContent).toContain('Lesson 2: Many notebooks, no Nora →');
   });
 
   it('should step through a payment with the mailbox, and point to the card that teaches it', () => {
@@ -102,14 +106,14 @@ describe('ArticleDrawer', () => {
       document.querySelector('[data-guide="article.mailbox.step"][data-guide-key="3"]')!
     );
     expect(drawer()!.textContent).toContain('The box is locked');
-    expect(drawer()!.textContent).toContain('Lesson 1: A mailbox and a key →');
+    expect(drawer()!.textContent).toContain('Lesson 2: A mailbox and a key →');
   });
 
   it('should say where an article will be practised when no lesson does it yet', () => {
     renderDrawer();
-    open('getting-bitcoin');
+    open('bitcoin-story');
     expect(drawer()!.textContent).toContain('Coming in a later lesson');
-    expect(drawer()!.textContent).toContain('Mt. Gox');
+    expect(drawer()!.textContent).toContain('Satoshi');
   });
 
   it('should come back to the lesson it was opened from', () => {
@@ -130,6 +134,24 @@ describe('ArticleDrawer', () => {
     expect(useLessonStore.getState().screen).toBe(3);
   });
 
+  it('should take a look back home when the practice link is the lesson it came from', () => {
+    act(() => {
+      useLessonStore.getState().start('lesson-ownership', 5);
+      useLessonStore.getState().answer(0);
+      useLessonStore.getState().visit('lesson-01', 3);
+    });
+    renderDrawer();
+    open('mailboxes-keys', { from: { lesson: 'lesson-01', screen: 3 } });
+    fireEvent.click(screen.getByText('Lesson 2: A mailbox and a key →'));
+    // Home, answers kept, at the card the link teaches
+    expect(useLessonStore.getState()).toMatchObject({
+      activeId: 'lesson-ownership',
+      answers: { 5: 0 },
+      returnTo: null,
+    });
+    expect(useLessonStore.getState().screen).not.toBe(5);
+  });
+
   it('should start a practice tour on a larger screen only', () => {
     renderDrawer();
     open('exchange-price');
@@ -147,6 +169,20 @@ describe('ArticleDrawer', () => {
       '[data-guide="article.practice"][data-guide-key="primer"]'
     )!;
     expect(tour.disabled).toBe(true);
+  });
+
+  it('should end the lesson on screen before a practice tour, so its sheet stays away', () => {
+    act(() => {
+      useLessonStore.getState().start('lesson-ownership', 2);
+      useLessonStore.getState().visit('lesson-01', 1);
+    });
+    renderDrawer();
+    open('exchange-price', { from: { lesson: 'lesson-01', screen: 1 } });
+    fireEvent.click(
+      document.querySelector('[data-guide="article.practice"][data-guide-key="primer"]')!
+    );
+    expect(useLessonStore.getState()).toMatchObject({ activeId: null, returnTo: null });
+    expect(useTourStore.getState().activeId).toBe('primer');
   });
 
   it('should open at the asked-for section', () => {

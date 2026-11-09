@@ -16,7 +16,10 @@ export default defineConfig({
   retries: CI ? 1 : 0,
   workers: CI ? 2 : undefined,
   timeout: 60_000,
-  expect: { timeout: 10_000 },
+  // CI's runner got about twice as slow with image ubuntu24/20261101 (from 20261012): the a11y check
+  // on /register went from 4.2 s to 8.7 s, and a dashboard's first load on the Vite dev server
+  // from a few seconds to ~15 s (release PR #269), past the 10 s default. Locally 10 s is plenty
+  expect: { timeout: CI ? 20_000 : 10_000 },
   reporter: CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: WEB_URL,

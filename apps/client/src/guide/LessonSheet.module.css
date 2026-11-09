@@ -242,15 +242,6 @@
   font: inherit;
 }
 
-.rule {
-  margin: 0;
-  border-radius: 12px;
-  padding: 14px 16px;
-  background: var(--color-bg-surface); /* bg.surface */
-  font-size: 18px; /* fontSize.base */
-  font-weight: 700;
-}
-
 .rating {
   display: flex;
   flex-direction: column;
@@ -462,6 +453,21 @@
   padding: 0;
 }
 
+/* "From Lesson 1: …": where an earlier lesson taught the term (owner 2026-11-08) */
+.peekFrom {
+  display: block;
+  color: var(--color-brand-purple); /* color.purple */
+}
+
+/* "← Back to Lesson 2": after looking back at an earlier card */
+.returnLink {
+  display: block;
+  margin: 0 0 6px;
+  padding: 0;
+  text-align: left;
+  color: var(--color-brand-purple); /* color.purple */
+}
+
 .canDo {
   margin: 0;
   padding: 0;
@@ -472,8 +478,25 @@
   margin-top: 6px;
 }
 
-.canDo .link {
+.canDo .link,
+.recap .link {
   padding: 0;
+}
+
+/* The summary (owner 2026-11-08): numbered, each line with its Read more */
+.recap {
+  margin: 0;
+  padding-left: 22px;
+  list-style: decimal; /* the base styles turn list markers off */
+}
+
+.recap li + li {
+  margin-top: 8px;
+}
+
+.recap ::marker {
+  color: var(--color-brand-purple); /* color.purple */
+  font-weight: 700;
 }
 
 /* ─── The guides on cards and questions (owner's visual Q&A 2026-10-24) ──────── */
@@ -503,4 +526,63 @@
   flex-shrink: 0;
   width: 36px;
   height: 52px;
+}
+
+/* A real photo on a card (owner 2026-11-08): framed in the cinema stage, a slow push in */
+.photo {
+  margin: 0 0 12px;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.photoImg {
+  display: block;
+  width: 100%;
+  height: auto;
+  animation: photoPush 6s ease-out both;
+}
+
+.photoCredit {
+  margin-top: 4px;
+  color: var(--color-brand-muted);
+  font-size: 12px; /* fontSize.xs10 */
+  text-align: right;
+}
+
+@keyframes photoPush {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .photoImg {
+    animation: none;
+  }
+}
+
+/* The summary's answer, set apart: the 2008 line (owner 2026-11-08) */
+.highlight {
+  margin: 14px 0 0;
+  border-left: 3px solid var(--color-brand-purple); /* color.purple */
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--color-bg-surface); /* bg.surface */
+  font-weight: 600;
+  line-height: 1.5; /* lineHeight.normal */
+}
+
+.highlight .link {
+  padding: 0;
+  font-weight: 400;
+}
+
+/* "✓ Saved to your journal" in place of the button */
+.saved {
+  margin: 0;
+  color: var(--color-brand-purple); /* color.purple */
+  font-weight: 600;
 }

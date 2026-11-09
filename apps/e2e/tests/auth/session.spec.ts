@@ -1,7 +1,7 @@
 /** A session survives a reload, and sign-out works with the network down (row 19.4, SC-19-4). */
 
 import { expect, test } from '../../fixtures';
-import { at, signInAs } from '../../helpers';
+import { COLD_LOAD_MS, at, signInAs } from '../../helpers';
 
 test('[19.4] a session survives a reload, then signs out @smoke @mobile', async ({
   page,
@@ -11,7 +11,10 @@ test('[19.4] a session survives a reload, then signs out @smoke @mobile', async 
   await expect(page).toHaveURL(/\/dashboard/);
   await page.reload();
   await expect(page).toHaveURL(/\/dashboard/);
-  await expect(at(page, 'nav.user-menu')).toContainText(seededUser.username);
+  // A reload is a cold page load: see COLD_LOAD_MS
+  await expect(at(page, 'nav.user-menu')).toContainText(seededUser.username, {
+    timeout: COLD_LOAD_MS,
+  });
   await at(page, 'nav.user-menu').click();
   await at(page, 'nav.sign-out').click();
   await expect(page).not.toHaveURL(/\/dashboard/);
