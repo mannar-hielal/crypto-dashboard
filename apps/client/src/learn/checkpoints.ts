@@ -49,7 +49,7 @@ const checkpointCh1: Checkpoint = {
       correct: 1,
       explain:
         'Bitcoin’s record is copied on thousands of computers. An edit that doesn’t match the other copies is simply rejected — no bank needed.',
-      taughtIn: { kind: 'lesson', id: 'lesson-01' },
+      taughtIn: { kind: 'lesson', id: 'lesson-ownership' },
     },
     {
       context:
@@ -59,7 +59,7 @@ const checkpointCh1: Checkpoint = {
       correct: 2,
       explain:
         'Your recovery phrase is your key. Whoever has it can move your coins, and real support never asks for it.',
-      taughtIn: { kind: 'lesson', id: 'lesson-01' },
+      taughtIn: { kind: 'lesson', id: 'lesson-ownership' },
     },
     {
       question: 'What sets Bitcoin’s price on an exchange right now?',

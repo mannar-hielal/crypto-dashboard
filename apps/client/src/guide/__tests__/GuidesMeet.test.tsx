@@ -34,7 +34,7 @@ describe('GuidesMeet', () => {
     }
   });
 
-  it('should bring Tick in first, then Tock, then the list, and say when it is over', () => {
+  it('should bring Pulin in first, then Berwyn, then the list, and say when it is over', () => {
     const onDone = vi.fn();
     render(<GuidesMeet meet={meet} done={false} onDone={onDone} />);
     // Tick is on his way in; nothing else yet

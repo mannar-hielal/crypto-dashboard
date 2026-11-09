@@ -13,6 +13,7 @@ type LineStyle = DrawingStyle['lineStyle'];
 import { FONT_SIZES, capabilitiesOf } from '@/lib/drawingCapabilities';
 import { MAX_DRAWING_TEXT } from '@/lib/drawingActions';
 import { guide } from '@/lib/guideAnchors';
+import { trapFocus } from '@/lib/trapFocus';
 import { PositionColors, PositionInfo, PositionInputs } from './PositionSettings';
 import { ColorField, NumberField } from './SettingsFields';
 import styles from './DrawingSettingsDialog.module.css';
@@ -101,22 +102,9 @@ export function DrawingSettingsDialog({
       e.preventDefault();
       e.stopPropagation();
       onClose();
-    } else if (e.key === 'Tab') {
+    } else {
       // Focus stays in the dialog
-      const focusables = Array.from(
-        dialogRef.current?.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), input, select, textarea, [tabindex="0"]'
-        ) ?? []
-      );
-      const first = focusables[0];
-      const last = focusables.at(-1);
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last?.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first?.focus();
-      }
+      trapFocus(e, dialogRef.current);
     }
   }
 

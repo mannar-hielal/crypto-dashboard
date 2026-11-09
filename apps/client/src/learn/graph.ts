@@ -28,6 +28,14 @@ export function lessonPlacesOf(concept: ConceptId): { lesson: LessonId; screen: 
   return out;
 }
 
+/** A lesson screen as a link's label: "Lesson 1: A notebook, not coins" (its card's title) */
+export function lessonPlaceLabel(place: { lesson: LessonId; screen: number }): string {
+  const lesson = getLesson(place.lesson);
+  const screen = lessonScreens(lesson)[place.screen];
+  const card = screen?.kind === 'card' ? lesson.cards[screen.index] : null;
+  return `Lesson ${lesson.number}: ${card?.title ?? lesson.title}`;
+}
+
 /** The concepts an article explains */
 export function conceptsOf(article: ArticleId): Concept[] {
   return CONCEPTS.filter((c) => c.article === article);
@@ -41,14 +49,11 @@ export function practiceFor(article: ArticleId): PracticeLink[] {
     for (const place of lessonPlacesOf(concept.id)) {
       const key = `${place.lesson}:${place.screen}`;
       if (lessons.has(key)) continue;
-      const lesson = getLesson(place.lesson);
-      const screen = lessonScreens(lesson)[place.screen];
-      const card = screen.kind === 'card' ? lesson.cards[screen.index] : null;
       lessons.set(key, {
         kind: 'lesson',
         lesson: place.lesson,
         screen: place.screen,
-        label: `Lesson ${lesson.number}: ${card?.title ?? lesson.title}`,
+        label: lessonPlaceLabel(place),
       });
     }
     for (const tour of concept.practisedIn ?? []) {

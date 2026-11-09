@@ -43,6 +43,7 @@ export const LEARN_ITEM_IDS = [
   'welcome-card',
   'fill-email-offer',
   'lesson-01',
+  'lesson-ownership',
   'lesson-02',
   // A chapter's checkpoint on the learning path: passed, it opens the next chapter
   'checkpoint-ch1',
@@ -52,7 +53,7 @@ export const LEARN_ITEM_IDS = [
 export const LEARN_TOUR_IDS = ['primer', 'buy-first-coin', 'sell-and-review'] as const;
 
 /** The lessons (cards → a tour → questions → a journal line); mirrors `LESSON_IDS` in the client */
-export const LEARN_LESSON_IDS = ['lesson-01', 'lesson-02'] as const;
+export const LEARN_LESSON_IDS = ['lesson-01', 'lesson-ownership', 'lesson-02'] as const;
 
 /** The learning path's chapter checkpoints: progress only, never events */
 export const LEARN_CHECKPOINT_IDS = ['checkpoint-ch1'] as const;

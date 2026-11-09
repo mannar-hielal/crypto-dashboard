@@ -1,0 +1,77 @@
+/* The finish ribbon at a lesson's end (owner 2026-11-08). Colours from tokens.ts via the @theme
+   mirror in index.css; raw values without a CSS variable are noted with their token. */
+
+/* Clipped, so the runners coming in never make the page scroll sideways */
+.finish {
+  overflow: hidden;
+  margin: 0 0 8px;
+  cursor: default;
+}
+
+.scene {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  margin: 0 auto;
+}
+
+.ground {
+  stroke: var(--color-brand-muted);
+  stroke-opacity: 0.4;
+  stroke-width: 2;
+}
+
+.lane {
+  stroke: var(--color-brand-muted);
+  stroke-opacity: 0.25;
+  stroke-dasharray: 6 8;
+  stroke-width: 2;
+}
+
+.pole {
+  stroke: var(--color-brand-white);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.ribbon {
+  stroke: var(--color-brand-grad-from); /* gradient.brand start: the finish tape */
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+/* Each half turns about its own end (the pivot comes with the animation) */
+.ribbonTop,
+.ribbonBottom {
+  transform-box: fill-box;
+}
+
+.flag {
+  transform-box: view-box;
+  transform-origin: 222px 12px; /* the top of the pole */
+}
+
+.checkDark {
+  fill: var(--color-bg-page); /* bg.page */
+}
+
+.checkLight {
+  fill: var(--color-brand-white);
+}
+
+.purple {
+  fill: var(--color-brand-purple);
+}
+
+.amber {
+  fill: var(--color-brand-amber);
+}
+
+.green {
+  fill: var(--color-brand-green);
+}
+
+.pink {
+  fill: var(--color-brand-grad-from); /* gradient.brand start */
+}

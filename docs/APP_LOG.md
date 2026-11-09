@@ -4474,3 +4474,228 @@ card; each card's button names the question the next card answers.
     Nora's four problems. `node`, `blockchain`, `mining` and `decentralized` now open it.
 - **Tests:** `CardBeats.test`, `GuidesMeet.test`, four new `LessonSheet` cases, the lesson rules; screenshots at 1440 px and 390 × 844,
   with and without reduced motion. Copy awaits the owner's review.
+
+### 2026-11-08 — "Many notebooks, no Nora" in 3 minutes, a graphic for every process
+
+The owner found the article too long (8 min, 13 sections). Their visual Q&A: the bare essentials, a tap-to-try
+stamp, and graphics for gossip, the sealed blocks, the balance and Nora's four problems. They review screenshots
+before anything ships.
+
+- **Four sections** (`bitcoin-network`, `learn/articles.ts`): three jobs, two checks, pages that seal each other,
+  Nora's four problems answered. Section ids `three-jobs`, `checks`, `blocks` and `answered` are kept, and the
+  same four terms still open it. Gone: the clerks intro, the double-spend paragraph, halvings, ASICs; pools are
+  one closing callout. Self-test 3 items; the "Controlled supply" source left with the halving figure.
+- **Six widgets** (`learn/ArticleWidgets.tsx`): `node-jobs` (Store, Relay, Verify tiles; icon beside the words
+  on a phone), `gossip` (1 → 8 → 64 dots, "Send a payment"), `balance-history` (+5 +3 −2 = 6, sending 9 is
+  rejected), `stamp-check` (from the owner's sketch: the stamp, her private key, is a solid amber shape and the checker, her
+  public key, the same shape in outline; Sofia's stamp seats in it ✓, Sam's has other notches and jams ✗, and an
+  edited message leaves her mark out of line ✗; the mark is printed small on the payment slip),
+  `block-chain` (four blocks, top to bottom at every width; changing block 2 breaks 3 and 4) and
+  `nora-answered` (the four lesson tiles flip to the network's answer; both faces always in the page).
+- **Colour:** green and red stay for money in and out (+/−); a passed check is purple with ✓ and a failed one
+  amber with ✗, as the Nora widget's warnings.
+- **Tests:** `ArticleWidgets.test` (each widget, reduced motion), the drawer test; screenshots at 390 × 844 and
+  1440 px, with and without reduced motion.
+
+### 2026-11-08 — "A mailbox and a key", and its article, in the same style
+
+The owner liked the new _Many notebooks_ and asked for the same treatment on the card after it and on its article.
+Their visual Q&A: about 3 minutes in four graphic-led parts, the private key drawn as the same stamp, and the card
+as two points with drop-in tiles.
+
+- **The card** (`guide/lessons.ts`, `LessonArt` `mailbox`): one line keeps the `address` and `private-key` terms,
+  then two points (Address, Private key); the picture is two tiles, a mailbox and a key, dropping in as the Nora
+  card's.
+- **The article** (`mailboxes-keys`, 7 min → 3): _Two things, two rules_ (`address-key`: two tiles, ✓ share it,
+  ✗ never share it; section id `key` kept for the lesson's link), _A payment, step by step_ (`mailbox-steps`; step
+  2 now shows the stamp seated in its checker), _Your coins aren't in your phone_ (`key-scenarios`: phone, recovery
+  words, coins; losing the phone ✓, losing both ✗ locked forever, "support" asking ✗ a scam) and _Public, but not
+  named_ (`public-ledger`: three lines of addresses; an exchange checking Leo's ID names every line with his).
+  Cut: the fresh-address paragraph, the table and the pointer to _Getting bitcoin_. "On this app" is the closing
+  callout.
+- **One picture for the private key** (owner, the same day): the stamp from _Many notebooks_ replaces the key icon
+  on the card's tile, the article's private-key tile and payment step 3 (step 2 already had it). The shapes moved
+  to `learn/stamp.ts` and one `learn/StampShape.tsx` draws them, in HTML or inside a scene's SVG. The words keep the
+  mailbox metaphor ("the only key that opens it"). In the payment steps Leo signs with his own stamp (`leo`: a
+  peak, a round bump, a tall tooth) and the box answers only to Emi's, each named under it.
+- **Tests:** three new widget tests and the stamp in step 2 (`ArticleWidgets.test`), the card's points and terms
+  (`lessons.test`). `LessonArt.test` checks the stamp on the card.
+
+### 2026-11-08 — Lesson 1 split in two: "What is Bitcoin?" and "Who owns a bitcoin?"
+
+The owner found Lesson 1 too packed (7 minutes: money and trust, Nora's notebook, Bitcoin's many notebooks, and
+address and key, with two of its three checks on keys). As agreed in their Q&A, it is now split after "What can go
+wrong with one Nora?": one big idea per lesson, each ending on the question the next answers.
+
+- **Lesson 1 · What is Bitcoin?** (`lesson-01`, 4 min): the pizzas, the guides ("In the next 4 minutes"), money
+  runs on trust, the notebook, one Nora, whose button now asks "Could money work with no Nora?". New moment (Nora
+  writes herself 50: nobody can stop her), the "be Nora" try kept as the cliffhanger, checks on where a balance
+  lives, the risk of one keeper and printed money. Rule: "Money with one keeper is only as honest as the keeper."
+- **Lesson 2 · Who owns a bitcoin?** (new, `lesson-ownership`, 6 min): a true cold open (2013, Newport: a hard
+  drive holding the key to 8,000 bitcoin James Howells mined in 2009, thrown out by mistake; Decrypt and DL News,
+  January 2025, in a code comment; no dollar figure), then Many notebooks, no Nora (moved, "In Lesson 1, Nora's
+  ledger…"), A mailbox and a key (moved), A stamp only you hold, Your coins aren't in your phone and Who holds your
+  key? (custody, Mt. Gox). Four new pictures (`hardDrive`, `stamp`, `keyHolders`, `custody`). Moment: a phone lost,
+  the words safe. Try: the stamp widget ("be Sneaky Sam"). Checks: the "support" scam and Mt. Gox (moved), what a
+  stranger can do with your address. Rule: "Whoever holds the key holds the coins."
+- **Lesson 3 · Who sets the price?** (`lesson-02`, renumbered): its bridge reads "The ledger from Lessons 1 and 2".
+- **Ids kept:** accounts already store `lesson-01` and `lesson-02`, so the new lesson has its own id and `number`
+  sets the order. It is in the client `LESSON_IDS`, the server's `LEARN_ITEM_IDS` / `LEARN_LESSON_IDS` and the SDK.
+  People who finished the old Lesson 1 see Lesson 2 as open, not done. The admin funnel labels old `lesson-01.<n>`
+  steps with today's shorter screen list, so steps above 5 recorded before today read wrong; no migration.
+- **Linking back:** a lesson that reuses an earlier lesson's term says so in the words (a test holds it), and the
+  term's peek shows "From Lesson 1: A notebook, not coins →" (`lesson.peek.from`, first place from
+  `lessonPlacesOf`). It opens that card; "← Back to Lesson 2" (`lesson.return`, `lessonStore.returnTo`) returns to
+  the exact card.
+- **On the way:** the map has six stops; both chapter-1 checkpoint questions on the record and the recovery phrase
+  point to Lesson 2; _Getting bitcoin_ is practised now (Lesson 2's custody card), so its "coming in a later lesson"
+  went; the welcome card's copy described the price lesson but opened Lesson 1, and now describes Lesson 1.
+- **Tests:** the lesson rules for three lessons (numbers, the new lesson's cards, "Lesson N" wherever an earlier
+  term returns), the sheet (Lesson 1's close to Lesson 2, the stamp try, the peek's way back and return), the map,
+  the graph, the drawer, the checkpoint, the server's new id.
+
+### 2026-11-08 — The guides are Pulin and Berwyn, and the one who asks stays for the answer
+
+- **New names:** Tick is now **Pulin** and Tock **Berwyn**, wherever a learner sees a name: the guides' meeting
+  ("Hi, I'm Pulin." / "Hi, I'm Berwyn."), the dialogue lines and the cold open's lines. One map,
+  `GUIDE_NAMES` in `guide/lessons.ts`, holds them; the ids stay `tick` and `tock` in the code, so nothing stored or
+  drawn changes. Older entries in this log keep the old names.
+- **The same guide through a question:** `questionGuide` used to swap to Tick's grin for a right answer and Tock's
+  calm for a wrong one. Now the guide who asks reacts: a grin when right, calm when not, never worried. A question
+  with no presenter is Berwyn's, thinking.
+- **Tests:** the reaction rule for both guides (`lessons.test`), the sheet's praise and the names in the meeting.
+
+### 2026-11-08 — Lesson 1 closes on the problem, a finish ribbon and an invitation
+
+The owner wanted "What is Bitcoin?" to end on what led to Bitcoin, with an outro that pulls the learner on and an
+animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi named here, the recap in place of
+"You can now", and the ribbon on every lesson.
+
+- **The finish ribbon** (`guide/FinishLine.tsx`): Pulin and Berwyn run in and break a ribbon; its halves swing
+  forward from their knots, the checkered flag waves and confetti falls in brand colours. About 1.5 s; a tap shows
+  the end and reduced motion shows it at once. Decorative (`aria-hidden`); anchor `lesson.finish-line`.
+- **"The problem, in three lines"** (`Lesson.recap`, optional): trust in a record keeper (`money-101#weakness`),
+  what one keeper can do (`suncoin#one-nora`), and 2008, when Satoshi Nakamoto proposed money with no one holding
+  the pen (`bitcoin-story#timeline`, a new section id). The first time Lesson 1 names Satoshi. Each line has its Read
+  more (`lesson.recap`). A lesson without a recap still lists "You can now"; `canDo` stays for the map.
+- **The outro:** the teaser is now Berwyn's line, with his face (`lesson.teaser`); Lesson 1's reads "So who owns a
+  bitcoin, if nobody holds the pen? Six minutes to find out."
+- **The buttons:** every close stacks the way on first, as a full-width pill, with "Finish for now" under it.
+- **Tests:** `FinishLine.test` (the run, a tap, reduced motion), the sheet (Lesson 1's close, a close with no
+  recap, the button order), the lesson rules (recap lines open real sections; Satoshi only in the recap).
+
+### 2026-11-08 — Lesson 1 opens on the real photo
+
+- The cold open's drawing (two pizzas, the BTC mark and Berwyn) gave way to the real photo of Laszlo Hanyecz with
+  the two pizzas, as the owner asked: no drawing, no guide. The owner confirmed they hold the rights to publish it;
+  it is credited "Photo: Laszlo Hanyecz" under the image. It ships as `src/assets/lessons/pizza-day.jpg` (1200 px,
+  about 150 kB), with alt text, and a slow push in that reduced motion turns off.
+- Cards can now carry `photo` (`src`, `alt`, `credit`) in place of `art`, and `presenter` is optional for a photo
+  card only (the lesson rules hold every other card to a guide). The `pizzaNight` drawing is gone.
+- Tests: the cold open has the credited photo and no guide (`lessons.test`, `LessonSheet.test`).
+
+### 2026-11-08 — The end of a lesson: a summary, then the journal, the rating and the way on
+
+- **Lesson 1's summary** is now **The problem**: two lines on what a government or central bank can do with money
+  (print more so yours buys less; freeze accounts, block payments, change the rules), and the 2008 line in a
+  highlighted box ("…proposed money that no one holds or controls. That was the birth of Bitcoin."). The rule and
+  Berwyn's teaser are gone from every lesson (the `rule` and `teaser` fields went with them).
+- **New order, every lesson:** … the questions, then the **summary** (the recap, or "You can now" for a lesson
+  without one) with Continue, then the **last screen**: the finish ribbon, "One line for your journal" (saving shows
+  "✓ Saved to your journal" and stays; no Skip, the buttons below go on), the optional rating, and the way on
+  ("Lesson 2: Who owns a bitcoin?") with "Finish for now". The number of screens is unchanged, so the funnel's step
+  numbers still line up; the step before the end was the journal and is now the summary (the admin page names it
+  "Summary", and the last one "Journal line and rating").
+- **Tests:** the summary (heading, two lines, the highlight and its link, no stars or ribbon there), the last screen
+  (ribbon, journal, five stars, the way on last), the journal saving in place and failing without trapping.
+
+### 2026-11-08 — "The problem": the birth of Bitcoin, staged as the genesis block
+
+The owner wanted Lesson 1's summary, the card the whole lesson builds to, to feel like the birth of something
+huge. Their Q&A: the genesis block, beat by beat with Continue held, as the pizza cold open.
+
+- **The scene** (`guide/GenesisReveal.tsx`, about 9 s): the two problems come in, then fade back as the stage goes
+  dark (the old world); the real headline types in, in a newspaper's italic serif: "The Times 03/Jan/2009 —
+  Chancellor on brink of second bailout for banks"; a block appears, beats twice, an amber ring bursts and the
+  Bitcoin mark rises in it; "Block 0 · 3 January 2009 · Satoshi Nakamoto wrote that headline into Bitcoin's very
+  first block."; then the owner's highlight, "…That was the birth of Bitcoin." True: block 0 carries that headline
+  in its first transaction (Bitcoin Wiki "Genesis block", now in _Bitcoin's story_'s sources, beside block 0 on
+  mempool.space).
+- **How it plays:** `recap.genesis` (kicker, headline, caption) turns a summary into the scene. The sheet's reveal
+  gate covers it like a cold open: Continue shows at the end; Enter or a tap shows it all; Back to it doesn't
+  replay it; reduced motion shows the end at once. Every word is always in the page, the full headline in a
+  screen-reader span while it types. Anchor `lesson.genesis`.
+- **Tests:** `GenesisReveal.test` (all words present, the run to its end, a tap, reduced motion), the sheet (held
+  Continue, Enter, no replay; a summary without genesis shows Continue at once), the lesson rules (the headline as
+  written into block 0).
+
+### 2026-11-08 — Review fixes for the lesson split, the close and the genesis block
+
+Fourteen code-review passes over the branch: the first thirteen found 76 issues, all fixed or shown unreachable, with tests; the last found none.
+
+- **Looking back at Lesson 1 from Lesson 2** (`lessonStore.visit` / `returnBack`): the visit no longer restarts a lesson.
+  - `returnTo` keeps the lesson the learner came from as they left it: its screen, answers and rating.
+  - During a visit, ✕/Esc, Finish and the close's main button ("Back to Lesson 2: …") all return there. "Finish for
+    now" and the rating are hidden: the lesson was rated when it was taken.
+  - `start(id, screen?)` (an article's "Learn it in Lesson N", the map's node):
+    - the lesson already on screen (a visit's own lesson included) keeps its run: at its own screen when none is
+      given, at the card asked for otherwise, and untouched while its tour runs;
+    - during a visit, the lesson the visit came from is the way home (`returnBack`), at the card asked for, if any;
+    - any other lesson is a fresh run, and ends a visit.
+  - Every lesson or tour started from the sheet, an article, the map or a checkpoint's Review goes through
+    `guide/afterNote.ts` (`startLesson`, `startTour`): one lesson or tour on screen.
+    - The lesson's own tour is handed over: the lesson waits where it is, and moves on after the tour only if it was
+      started from Try (`leaveTour`). A looked-back lesson's own tour is handed to the look back; from a look back,
+      the home lesson's own tour returns home first.
+    - Any other tour ends the lesson on screen first, so the sheet doesn't come back over it.
+    - Another lesson ends any running tour (a lesson's or one of its own).
+    - An article opened from a lesson, linking back to that same lesson, just shows it again where it was left.
+  - A term's open peek belongs to its run (`run`), so it closes when the lesson changes under it. Esc closes an open
+    peek first, and the lesson on the next press.
+  - The funnel (`useTourProgress`) sends nothing for a visit, nor for the way back. A `starts` counter tells a real
+    start from the way back. A start closes (`tour_closed`) the run it replaces if that wasn't finished: during a
+    visit, the lesson the learner came from. A reset during a visit closes that lesson too. Opening the lesson
+    already on screen is the same run carrying on: a step, not a close and a start. A reset (finishes back to 0) is
+    no finish, for lessons and tours alike.
+  - Ratings are sent only in a lesson's own run, never during a visit; `finish()` no longer keeps the rating.
+  - Every lesson run starts from one `freshRun()`. A `run` counter changes with each run (a reset included: it never
+    counts back), so a save that lands after the learner moved on changes nothing.
+- **Lessons 1 and 3's funnel steps:** both have `stepBase: 20`, so their screens are now reported as `lesson-01.21` /
+  `lesson-02.21` onwards (`lessonStepId`). Lesson 3's note screen became the summary, so its old step names were
+  wrong too.
+  - Steps stored before these changes (1–20) show in Admin metrics as "Screen n (an earlier version of the lesson)",
+    instead of under today's screen names.
+  - No server change: the step pattern and the per-user dedup are unchanged. This replaces the known issue noted
+    with the split.
+  - A start now reports the screen the lesson opened on, not always step 1.
+- **Journal line:** the draft and its status (`draft` / `saving` / `saved`) live in the lesson store, and
+  `saveNote(write)` sends it once.
+  - Every way off a run (Finish, "Finish for now", the next-lesson button, "← Back to Lesson N", ✕, Esc, an
+    article's practice link) first saves a line typed but not saved, and waits for it (`guide/afterNote.ts`).
+  - While a save is under way (Save to journal, or an earlier press), one move waits for it: a finishing one (Finish,
+    the way on) over a closing one (✕, Esc), else the first asked. A learner who pressed Finish always finishes. The Save button says "Saving your line…" meanwhile.
+    The buttons stay in place and enabled, so the focus never falls out of the sheet. The save on its way is tracked
+    in one place (`saveJournalLine`, `saveNote`'s only caller). The lesson sheet hands `afterNote` its journal writer (`setJournalWrite`),
+    which keeps the module free of the paper store for the drawers.
+    The line itself is locked too, so what's saved is what the learner sees.
+  - The rule that keeps it small: a journal line exists only on the last screen, which has no Back, no terms and no
+    Read more (a test holds it). So the line never travels with a look back, and the only ways off are the ones
+    above.
+- **The sheet is a real modal:** Tab stays inside it (`lib/trapFocus.ts`), so the page behind it can't be reached
+  from the keyboard.
+  - The trap counts only what Tab can reach: no `tabIndex -1`, hidden or inert controls, such as a Next still
+    waiting for its cold open. Text fields count too.
+  - The map's drawer and the drawing settings dialog use the same helper.
+  - While the map is open over the sheet, the sheet's Esc and Enter / → stand aside. When the map closes, the sheet
+    takes the focus back, unless what the map opened (a checkpoint) has it.
+  - The trap looks only for the first and last controls, and skips `display: none` ones too (`checkVisibility`).
+  - On a failure the learner stays and reads why; the next press goes on without it, and "Save to journal" tries
+    again.
+- **Lesson 1's "Try it"** is the new `nora-edits` widget: Nora's edit with nobody to check it. The copies that
+  outvote her (`nora-cheats`, still in the SunCoin article) are Lesson 2's answer.
+- **Genesis block:** a part not shown yet is `inert`, so its hidden Read more can't be tabbed to or clicked.
+- **Smaller fixes:**
+  - a `photo` now shows on any card, not only cards with beats;
+  - `lessonPlaceLabel` (`learn/graph.ts`) is shared by the term peek's "From Lesson 1: …" and the articles' practice
+    links;
+  - the sheet builds the screen list once per render.

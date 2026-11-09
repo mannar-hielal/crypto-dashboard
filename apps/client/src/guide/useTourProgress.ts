@@ -11,7 +11,7 @@ import { isCheckpointId, type CheckpointId } from '@/learn/checkpoints';
 import { usePathStore } from '@/learn/pathStore';
 import { useAuthStore } from '@/store/authStore';
 import { useLessonStore } from './lessonStore';
-import { isLessonId, type LessonId } from './lessons';
+import { getLesson, isLessonId, lessonStepId, type LessonId } from './lessons';
 import { useTourStore } from './tourStore';
 import { isTourId, type TourId } from './tours';
 
@@ -89,7 +89,8 @@ export function useTourProgress(): void {
           .trackEvent({ name, itemId, ...(stepId ? { stepId } : {}) }, accessToken)
           .catch(() => undefined);
       // A finish, a replay of a finished tour included (`completed` doesn't change then)
-      const finished = state.finishes !== prev.finishes ? prev.activeId : null;
+      // (a reset sets the count back to 0: that's no finish)
+      const finished = state.finishes > prev.finishes ? prev.activeId : null;
       if (finished) send('tour_completed', finished);
 
       const { activeId, stepIndex } = state;
@@ -135,25 +136,50 @@ export function useTourProgress(): void {
 
       // A finish (Finish or the next lesson), a replay included. Counted, not read from `completed`:
       // that also changes when the server's progress loads, which is no finish at all
-      const finished = state.finishes !== prev.finishes ? prev.activeId : null;
+      // (a reset sets the count back to 0: that's no finish)
+      const finished = state.finishes > prev.finishes ? prev.activeId : null;
       if (finished) {
         learnApi.setProgress(finished, 'completed', accessToken).catch(() => undefined);
         send('tour_completed', finished);
       }
 
-      const { activeId, screen } = state;
-      if (activeId !== null && activeId !== prev.activeId) {
+      // A start ends the run before it, if that wasn't finished: during a look back, the lesson the
+      // learner came from. A look back ("From Lesson 1") and the way back from it are no lesson of
+      // their own: nothing is sent for them, and the lesson carries on where it was left
+      const { activeId, screen, returnTo } = state;
+      // (the lesson already on screen, opened again, is no start: the store keeps its run)
+      const started = activeId !== null && state.starts !== prev.starts;
+      const home = prev.returnTo
+        ? { id: prev.returnTo.lesson, screen: prev.returnTo.screen }
+        : prev.activeId !== null
+          ? { id: prev.activeId, screen: prev.screen }
+          : null;
+      const closeHome = () => {
+        if (home) send('tour_closed', home.id, lessonStepId(getLesson(home.id), home.screen));
+      };
+      if (started) {
+        if (!finished) closeHome();
         send('tour_started', activeId);
-        send('tour_step', activeId, `${activeId}.1`);
+        send('tour_step', activeId, lessonStepId(getLesson(activeId), screen));
+      } else if (returnTo || prev.returnTo) {
+        // A reset during a look back closes the lesson the learner came from
+        if (activeId === null && !finished) closeHome();
       } else if (activeId !== null && screen !== prev.screen) {
-        send('tour_step', activeId, `${activeId}.${screen + 1}`);
+        send('tour_step', activeId, lessonStepId(getLesson(activeId), screen));
       } else if (activeId === null && prev.activeId !== null && !finished) {
-        send('tour_closed', prev.activeId, `${prev.activeId}.${prev.screen + 1}`);
+        closeHome();
       }
 
-      const rated = activeId ?? prev.activeId;
-      if (state.rating !== null && state.rating !== prev.rating && rated) {
-        send('lesson_rated', rated, `${rated}.${state.rating}`);
+      // A rating given now, in a lesson's own run (not during a look back)
+      if (
+        state.rating !== null &&
+        state.rating !== prev.rating &&
+        activeId !== null &&
+        activeId === prev.activeId &&
+        !started &&
+        !returnTo
+      ) {
+        send('lesson_rated', activeId, `${activeId}.${state.rating}`);
       }
     });
   }, [accessToken]);

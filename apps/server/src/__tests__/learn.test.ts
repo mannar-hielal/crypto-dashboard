@@ -339,6 +339,24 @@ describe('POST /api/learn/events', () => {
     });
   });
 
+  it('should accept the lesson split from Lesson 1, under its own id (2026-11-08)', async () => {
+    const res = await post({
+      name: 'tour_step',
+      itemId: 'lesson-ownership',
+      stepId: 'lesson-ownership.3',
+    });
+
+    expect(res.statusCode).toBe(204);
+    expect(app.prisma.learningEvent.create).toHaveBeenCalledWith({
+      data: {
+        userId: 'user-1',
+        name: 'tour_step',
+        itemId: 'lesson-ownership',
+        stepId: 'lesson-ownership.3',
+      },
+    });
+  });
+
   it('should store a lesson rating of 1 to 5', async () => {
     const res = await post({ name: 'lesson_rated', itemId: 'lesson-01', stepId: 'lesson-01.4' });
     // A new rating replaces the person's earlier ones for that lesson

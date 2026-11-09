@@ -5,6 +5,7 @@
 
 import { expect, test } from '../../fixtures';
 import { guideSelector } from '@/lib/guideAnchors';
+import { COLD_LOAD_MS } from '../../helpers';
 
 const at = (anchor: Parameters<typeof guideSelector>[0], key?: string) =>
   guideSelector(anchor, key);
@@ -51,7 +52,10 @@ test('[19.2][19.4] register, verify the email once, then sign out and back in @s
   await page.locator(at('auth.login.submit')).click();
   await page.waitForURL(/\/dashboard/);
   await page.reload();
-  await expect(page.locator(at('nav.user-menu'))).toContainText(`reg_${tag.slice(-10)}`);
+  // A reload is a cold page load: see COLD_LOAD_MS
+  await expect(page.locator(at('nav.user-menu'))).toContainText(`reg_${tag.slice(-10)}`, {
+    timeout: COLD_LOAD_MS,
+  });
   await page.locator(at('nav.user-menu')).click();
   await page.locator(at('nav.sign-out')).click();
   await expect(page).not.toHaveURL(/\/dashboard/);

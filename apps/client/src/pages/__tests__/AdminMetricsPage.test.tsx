@@ -59,7 +59,7 @@ function metrics(over: Partial<RetentionMetricsResponse> = {}): RetentionMetrics
         itemId: 'lesson-02',
         started: 6,
         completed: 5,
-        steps: [{ stepId: 'lesson-02.7', viewers: 5, closedHere: 1 }],
+        steps: [{ stepId: 'lesson-02.27', viewers: 5, closedHere: 1 }],
         rating: { count: 3, average: 4.3 },
       },
       {
@@ -147,9 +147,31 @@ describe('AdminMetricsPage', () => {
     mockGetMetrics.mockResolvedValue(metrics());
     renderPage();
 
-    await waitFor(() => expect(screen.getByText('Lesson 2: Who sets the price?')).not.toBeNull());
+    await waitFor(() => expect(screen.getByText('Lesson 3: Who sets the price?')).not.toBeNull());
     expect(screen.getByText('7. Try it on the real screen')).not.toBeNull();
     expect(screen.getByText(/rated 4.3 \/ 5 by 3/)).not.toBeNull();
+  });
+
+  it('should name Lesson 1’s steps from 21 on as today’s screens, and earlier ones as an earlier version', async () => {
+    mockGetMetrics.mockResolvedValue(
+      metrics({
+        tourFunnel: [
+          {
+            itemId: 'lesson-01',
+            started: 4,
+            completed: 1,
+            steps: [
+              { stepId: 'lesson-01.6', viewers: 2, closedHere: 0 },
+              { stepId: 'lesson-01.21', viewers: 3, closedHere: 0 },
+            ],
+          },
+        ],
+      })
+    );
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText('1. Card: Two pizzas')).not.toBeNull());
+    expect(screen.getByText('Screen 6 (an earlier version of the lesson)')).not.toBeNull();
   });
 
   it('says so when sign-in days are not recorded yet', async () => {
