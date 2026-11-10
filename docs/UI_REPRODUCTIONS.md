@@ -225,36 +225,71 @@ Preconditions: signed out (a private window).
 5. Phone width → Expect [trade.mobile.buy] / [trade.mobile.sell] dimmed and not tappable, with the account panel's
    one-row **Sign in to trade** just above them.
 
-### Learning path — Lessons 1 and 2, the knowledge base (no Part B rows yet)
+### Learning path — Lessons 1, 2 and 3, the knowledge base (no Part B rows yet)
 
 **UI reproduction** — a new account on `http://localhost:5173/dashboard/spot/BTC/USDT` (local dev; the history
 charts need the real Bybit feed, the fake feed draws its own candles) or production. The content is
 `apps/client/src/guide/lessons.ts` and `apps/client/src/learn/articles.ts`; the unit tests hold their rules.
 
-1. [learn.card.start] → Expect **Lesson 1 · What is Bitcoin?**, card 1 of 14: a dark stage, two pizzas and the BTC
-   mark, and the lines coming in one by one ("22 May 2010 · Florida" … "Back then, they cost him $41." …
+1. [learn.card.start] → Expect **Lesson 1 · What is Bitcoin?**, card 1 of 12: a dark stage, the real photo of Laszlo Hanyecz with the two pizzas ([lesson.photo], credited "Photo: Laszlo Hanyecz", no guide), and the lines coming in one by one ("22 May 2010 · Florida" … "Back then, they cost him $41." …
    "Nobody in that room knew those pizzas would one day be worth over $1 billion!"). [lesson.next] stays hidden until the last line is in, then shows
    full width as **Unlock your learning journey →** with one shine across it. Pressing it sinks it onto
    its ledge. Open it again and press Enter (or tap [lesson.beats]) during the reveal → Expect every line at once,
    still on card 1. With the OS's reduced motion on → Expect every line at once, no shine (M).
-   Then → or Enter → Expect **Meet your guides**: Tick slides in from the left ("Hi, I'm Tick."), Tock from the
-   right ("Hi, I'm Tock."), they meet in the middle with a small lean, then "In the next 7 minutes you'll learn:" and
+   Then → or Enter → Expect **Meet your guides**: Pulin slides in from the left ("Hi, I'm Pulin."), Berwyn from the
+   right ("Hi, I'm Berwyn."), they meet in the middle with a small lean, then "In the next 4 minutes you'll learn:" and
    three ✓ lines fade in one by one; [lesson.next] shows only after the last, as **Start with money itself →**, with
    ← Back under it. Enter (or a tap on [lesson.meet]) during the scene shows it all at once. ← Back → Expect card 1
-   complete, not replayed. Every card has Tick or Tock in its picture.
+   complete, not replayed. Every card has Pulin or Berwyn in its picture.
    Next → Expect **Money runs on trust**: the three tiles (a bank, a state, a game maker) drop in one after another,
-   Tock looking straight out, and no Satoshi in the text. Next → Expect **A notebook, not coins**: four lines in Nora's
+   Berwyn looking straight out, and no Satoshi in the text. Next → Expect **A notebook, not coins**: four lines in Nora's
    notebook (Emi, Leo, Sofia, then Leo → Emi 3) and no "Bitcoin" in the text. [lesson.next] **What if Nora cheats? →**
    → Expect **What can go wrong with one Nora?**: four tiles (print, move, rewrite, lose) dropping in one after another,
-   four bold points, and **What if everyone kept a copy? →**.
-2. Card 6 → Expect the dotted world map with seven linked ledgers. [lesson.term `node`] → Expect a peek ("A computer
-   that keeps a full copy…"); [lesson.peek.more] → Expect the _Many notebooks, no Nora_ article in the drawer (full
-   screen on a phone) and the lesson hidden; [article.back] → Expect card 6 again.
-3. The moment → pick "Her edit is accepted" → Expect "Not quite." and Tock calm beside the question (never worried).
-4. Try it → [article.nora.amount] 30 → Expect "Leo now has -24 and Emi 32 … still add up to 15"; tick "Many
-   notebooks" → Expect "4 of 5 copies still say Leo paid 3". [lesson.try] Continue.
-5. The questions, then the note (Skip), then the close → Expect three "You can now…" lines, each with **Read more →**;
-   [lesson.next-lesson] → Expect Lesson 1 ticked done and **Lesson 2 · Who sets the price?** at card 1.
+   four bold points, and **Could money work with no Nora? →** (Lesson 1 ends on the problem; owner 2026-11-08).
+   The moment → "Nora writes “Start → Nora, 50”… Who can stop her?" → pick "The bank" → Expect "Not quite." and Berwyn
+   calm (never worried), the same guide who asked: Berwyn stays through the answer. Try it → [article.nora.amount] 30 → Expect "Leo now has -24 and Emi 32 … still add up to
+   15"; tick "Many notebooks" → Expect "4 of 5 copies still say Leo paid 3". The questions, then the summary → Expect **The problem** staged as [lesson.genesis] (about 9 s; Continue
+   hidden until it ends; Enter or a tap shows it all; reduced motion shows the end at once; Back to it doesn't
+   replay it): the two numbered lines (what a government or central bank can do with money, each with
+   [lesson.recap] Read more) come in, then fade back as the stage goes dark; "The Times 03/Jan/2009 — Chancellor
+   on brink of second bailout for banks" types in, in italic serif; a block appears under it, beats twice, an
+   amber ring bursts and the Bitcoin mark rises in it; "BLOCK 0 · 3 JANUARY 2009 Satoshi Nakamoto wrote that
+   headline into Bitcoin's very first block."; then [lesson.highlight] "In 2008, as banks failed, someone called
+   Satoshi Nakamoto proposed money that no one holds or controls. That was the birth of Bitcoin." (its Read more
+   opens _Bitcoin's story_ at its timeline); no rule, no stars. Continue → Expect **Lesson 1
+   done**: [lesson.finish-line] (Pulin and Berwyn break the ribbon, the halves swing down, confetti; a tap shows the
+   end, reduced motion shows it at once), "One line for your journal" ([lesson.note.save] → "✓ Saved to your
+   journal", the screen stays), the optional rating, and the full-width [lesson.next-lesson] **Lesson 2: Who owns a
+   bitcoin?** with "Finish for now" under it → Expect Lesson 1 ticked done and **Lesson 2 · Who owns a
+   bitcoin?** at card 1 of 13.
+2. Lesson 2's cold open → Expect the dark stage with a hard drive and a bin, and the lines one by one ("2013 ·
+   Newport, Wales" … "8,000 bitcoin" … "Not even him."), then **Who keeps that record? →**. Card 2 **Many notebooks,
+   no Nora** → Expect the dotted world map and "In Lesson 1, Nora's ledger…". [lesson.term `ledger`] → Expect the
+   peek with [lesson.peek.from] **From Lesson 1: A notebook, not coins →**; tap it → Expect Lesson 1's notebook card
+   and [lesson.return] **← Back to Lesson 2** under the kicker; tap it → Expect Lesson 2's card 2 again, no return
+   link, and any answers already given in Lesson 2 still there. During the look back, Esc, and Lesson 1's last
+   screen's [lesson.next-lesson] **Back to Lesson 2: Who owns a bitcoin?** (no "Finish for now"), also return to
+   Lesson 2's card 2. [lesson.term `node`] → Expect a peek ("A computer that keeps a full copy…") with no "From" line;
+   [lesson.peek.more] → Expect the _Many notebooks, no Nora_ article in the drawer (full
+   screen on a phone, 3 min read) and the lesson hidden. In it: [article.gossip.send] → Expect the dots lighting
+   ring by ring (1, 8, 64), all at once with reduced motion; [article.balance.try] → Expect "✗ Rejected by every
+   node: 9 is more than 6."; [article.stamp.try `sofia`] → Expect the amber stamp rising into the checker's outline and ✓;
+   [`sam`] → Sam's grey stamp jams against it, ✗; [`edit`] → "Send 20 to Sam" and Sofia's stamp out of line, ✗; [article.chain.change] → Expect blocks 3 and 4 dashed amber and block 2 "Sofia → Leo 20",
+   [article.chain.reset] mends them; [article.answer.tile `lose`] → Expect its answer shown and pressed. Then
+   [article.back] → Expect card 2 again.
+   Next → Expect **A mailbox and a key**: the address and private-key tiles dropping in one after the other, and two
+   bold points (Address, Private key). [lesson.term `address`] → [lesson.peek.more] → Expect _Mailboxes and keys_
+   (3 min read): two tiles (✓ share it, ✗ never share it); [article.mailbox.step `2`] → Expect the stamp seated in
+   its checker, ✓; [article.scenario.try `phone`] → "✓ Type your recovery words…", [`all`] → three dashed tiles and
+   "✗ locked forever", [`scam`] → "✗ A scam…"; [article.ledger.link] → Expect " Leo" beside bc1q…7f9a on all three
+   lines.
+3. Lesson 2's next cards → Expect **A stamp only you hold** (the stamp under its outline checker), **Your coins aren't
+   in your phone** (phone, recovery words and coins dropping in) and **Who holds your key?** (an exchange or you, each
+   with a stamp). The moment (the phone in the sea) → "Restore it on a new phone" ✓.
+4. Try it → Expect "Now be Sneaky Sam"; [article.stamp.try `sam`] → "✗ Not Sofia's mark". [lesson.try] Continue.
+5. The questions (the "support" scam with Berwyn worried, Mt. Gox, the address), the note (Skip), the close → Expect
+   "Whoever holds the key holds the coins" and [lesson.next-lesson] → Expect Lesson 2 ticked done and **Lesson 3 · Who
+   sets the price?** at card 1.
 6. Cards 4–5 (live data only) → Expect real daily candles: Tesla 2021 with three markers; the ETF chart ending on 10
    Jan 2024. Answer the moment → Expect the chart to play on to 23 Jan with "−14.5%".
 7. Desktop: Try it → [lesson.try] Show me → tap [symbolbar.price], rest on the newest candle, hover a red one → Expect
@@ -272,22 +307,22 @@ presenter never over the scene). Frequency: per release touching `guide/LessonAr
 
 1. Look at the top bar → Expect the Route icon left of the avatar with an amber dot; the user menu has Settings and
    Sign out but no Learn.
-2. [nav.learn] → Expect **Crypto path** at 0 %, chapter 1 "Foundations of crypto" in purple with "0 of 5 done",
-   **Start** and Tick over Lesson 1, padlocks on the next three stops, the crown open, and chapter 2 "Trade with a
+2. [nav.learn] → Expect **Crypto path** at 0 %, chapter 1 "Foundations of crypto" in purple with "0 of 6 done",
+   **Start** and Pulin over Lesson 1, padlocks on the next four stops, the crown open, and chapter 2 "Trade with a
    plan" greyed with "Coming soon" and dashed stops nobody can tab to. Close and reopen → Expect no dot.
-3. Tap [path.node `lesson:lesson-02`] → Expect "Finish “What is Bitcoin?” first." and no lesson.
-   [path.chapter.info `ch1`] → Expect the five stops with minutes and "After this chapter you can".
-4. [path.node `lesson:lesson-01`] → finish the lesson → reopen → Expect it ticked, 20 %, **Continue** on Lesson 2,
+3. Tap [path.node `lesson:lesson-ownership`] → Expect "Finish “What is Bitcoin?” first." and no lesson.
+   [path.chapter.info `ch1`] → Expect the six stops with minutes and "After this chapter you can".
+4. [path.node `lesson:lesson-01`] → finish the lesson → reopen → Expect it ticked, 17 %, **Continue** on Lesson 2,
    and the dot back on the Route icon before reopening.
 5. [path.test-out] → answer one wrong, four right → Expect "Checkpoint passed · 4 of 5 right";
    [checkpoint.done] → Expect the map with the crown ticked and the rest of chapter 1 open but not ticked.
-6. Phone width (a fresh account with Lessons 1–2 done): [path.node `tour:buy-first-coin`] → Expect the laptop note;
+6. Phone width (a fresh account with Lessons 1–3 done): [path.node `tour:buy-first-coin`] → Expect the laptop note;
    [path.tour.skip `buy-first-coin`] → Expect a hollow ring and **Start** on "Sell it and read the result".
 7. A failed checkpoint (three right or fewer) → Expect "Not yet", a **Review Lesson N →** per missed question (a tour's
    only on a larger screen) and **Try again**.
 
 **Manual check (M).** The map at 375, 412, 820 and 1440 px: the zig-zag inside the drawer, the sticky chapter band,
-the bubble and Tick never clipped. Frequency: per release touching `learn/Path*` or `learn/CheckpointSheet.tsx`.
+the bubble and Pulin never clipped. Frequency: per release touching `learn/Path*` or `learn/CheckpointSheet.tsx`.
 
 ## Stage 1 — Spot basics
 

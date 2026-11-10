@@ -144,6 +144,7 @@ describe('LearningEvent (Postgres)', () => {
     // The lessons first, then the tours
     expect(r.tourFunnel.map((t) => t.itemId)).toEqual([
       'lesson-01',
+      'lesson-ownership',
       'lesson-02',
       'primer',
       'buy-first-coin',

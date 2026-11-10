@@ -422,9 +422,338 @@
   outline-offset: 3px;
 }
 
+/* Many notebooks (owner 2026-11-08): a graphic for every process */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tile,
+.answer,
+.answerOn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08); /* border.card */
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.tilesTwo {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.shareOk,
+.shareNo {
+  font-size: 13px; /* fontSize.xs11 */
+  font-weight: 600;
+}
+
+.shareOk {
+  color: var(--color-brand-purple); /* color.purple: safe, with a ✓ */
+}
+
+.shareNo {
+  color: var(--color-brand-amber); /* color.amber: a warning, with a ✗ */
+}
+
+/* Your coins aren't in your phone: three things, and what each loss takes */
+.holdings {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.holding,
+.holdingLost {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08); /* border.card */
+  border-radius: 10px;
+  padding: 10px;
+  transition: opacity 0.3s ease-out;
+}
+
+.holdingLost {
+  border-color: var(--color-brand-amber); /* a warning, with a ✗ */
+  border-style: dashed;
+}
+
+.holdingLost > svg {
+  opacity: 0.4;
+}
+
+.nameTag {
+  color: var(--color-brand-amber); /* color.amber: the name the ledger never showed */
+}
+
+.tileName {
+  font-size: 15px; /* fontSize.sm */
+}
+
+.tileText {
+  color: var(--color-brand-muted);
+  font-size: 13px; /* fontSize.xs11 */
+  line-height: 1.375; /* lineHeight.snug */
+}
+
+.gossip {
+  display: block;
+  width: 100%;
+  max-width: 200px;
+  height: auto;
+  margin: 0 auto;
+}
+
+.dot,
+.dotLit {
+  transition:
+    fill 0.4s ease-out,
+    opacity 0.4s ease-out;
+}
+
+.dot {
+  fill: var(--color-brand-muted);
+  opacity: 0.3;
+}
+
+.dotLit {
+  fill: var(--color-brand-purple); /* color.purple: the network */
+  opacity: 1;
+}
+
+.coins {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.coin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 56px;
+  border: 1px solid rgba(255, 255, 255, 0.08); /* border.card */
+  border-radius: 9999px;
+  padding: 8px 10px;
+  font-size: 18px; /* fontSize.base */
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.coinTotal {
+  border-color: var(--color-brand-amber); /* color.amber: what she has */
+  color: var(--color-brand-amber);
+}
+
+.coinDay {
+  color: var(--color-brand-muted);
+  font-size: 12px; /* fontSize.xs10 */
+  font-weight: 400;
+}
+
+.stampMessage {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 56px;
+  border: 1px dashed rgba(255, 255, 255, 0.2); /* a paper slip */
+  border-radius: 10px;
+  padding: 8px 12px;
+  background: var(--color-bg-surface); /* bg.surface */
+  font-weight: 600;
+}
+
+/* The owner's sketch: the checker is the stamp's shape in outline (amber: keys, as the mailbox) */
+.stampScene {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  height: auto;
+  margin: 10px auto 0;
+}
+
+.checkerLine {
+  fill: none;
+  stroke: var(--color-brand-amber);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.stampFill {
+  fill: var(--color-brand-amber);
+  fill-opacity: 0.7; /* softer than the checker's line, so a seated stamp still shows its outline */
+}
+
+.samFill {
+  fill: var(--color-brand-muted);
+}
+
+/* The stamp rests under the checker and rises into it on a try */
+.stamp {
+  transform: translate(8px, 74px);
+  transition: transform 0.6s ease-out;
+}
+
+.stamp[data-pose='seat'] {
+  transform: translate(8px, 14px);
+}
+
+.stamp[data-pose='jam'] {
+  transform: translate(8px, 30px);
+}
+
+.stamp[data-pose='shift'] {
+  transform: translate(22px, 24px);
+}
+
+.sceneLabel {
+  fill: var(--color-brand-white);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.sceneNote {
+  fill: var(--color-brand-muted);
+  font-size: 9px;
+}
+
+.mark {
+  width: 56px;
+  height: auto;
+}
+
+.okLine {
+  margin: 10px 0;
+  color: var(--color-brand-purple); /* color.purple: passed, with a ✓ (green stays for money in) */
+}
+
+.chain {
+  display: flex;
+  flex-direction: column; /* top to bottom at every width, so the broken seals stay in view */
+  gap: 22px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.block {
+  position: relative;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 112px;
+  border: 1px solid var(--color-brand-purple-dark); /* sealed */
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 14px; /* fontSize.xs */
+}
+
+.block + .block::before {
+  content: '↑';
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  color: var(--color-brand-muted);
+  transform: translateX(-50%);
+}
+
+.blockBroken {
+  border-color: var(--color-brand-amber); /* color.amber: a warning, with a ✗ */
+  border-style: dashed;
+}
+
+.blockName {
+  font-weight: 700;
+}
+
+.seal {
+  color: var(--color-brand-purple); /* color.purple */
+  font-family: ui-monospace, monospace;
+  font-size: 13px; /* fontSize.xs11 */
+  white-space: nowrap; /* a seal or an address reads as one piece */
+}
+
+.answers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.answer,
+.answerOn {
+  min-height: 96px;
+  background: transparent;
+  color: var(--color-brand-white);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease-out,
+    background 0.2s ease-out;
+}
+
+.answerOn {
+  border-color: var(--color-brand-purple-dark);
+  background: var(--color-bg-surface); /* bg.surface */
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 @media (max-width: 639px) {
-  .people {
+  .people,
+  .tiles,
+  .tilesTwo {
     grid-template-columns: 1fr;
+  }
+
+  /* A phone: the icon beside its words, so three jobs fit in one glance */
+  .tile {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 12px;
+    align-items: center;
+  }
+
+  .tile > svg {
+    grid-row: 1 / span 4;
+  }
+
+  .tile > :not(svg) {
+    grid-column: 2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot,
+  .dotLit,
+  .answer,
+  .answerOn,
+  .stamp,
+  .holding,
+  .holdingLost {
+    transition: none;
   }
 }
 

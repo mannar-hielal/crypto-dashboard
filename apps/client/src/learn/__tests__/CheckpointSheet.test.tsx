@@ -90,7 +90,9 @@ describe('CheckpointSheet', () => {
 
     expect(screen.getByText('Not yet')).toBeTruthy();
     expect(usePathStore.getState().checkpoints).toEqual({});
-    const reviews = document.querySelectorAll(guideSelector('checkpoint.review', 'lesson-01'));
+    const reviews = document.querySelectorAll(
+      guideSelector('checkpoint.review', 'lesson-ownership')
+    );
     expect(reviews).toHaveLength(2);
 
     fireEvent.click(document.querySelector(guideSelector('checkpoint.retry'))!);

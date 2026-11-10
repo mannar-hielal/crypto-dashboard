@@ -1,6 +1,6 @@
 /**
  * The guided tours (docs/GUIDED_TRADE_MVP.md, reshaped 2026-10-11): short chapters of at most five
- * steps — a primer of three small tasks on the live chart (Lesson 1's "Try it", guide/lessons.ts),
+ * steps — a primer of three small tasks on the live chart (Lesson 3's "Try it", guide/lessons.ts),
  * then buying a first coin chained to selling it back and reading the result. Research (reports/)
  * says completion falls fast past five steps.
  *
@@ -89,7 +89,7 @@ function numbered(id: TourId, steps: Array<Omit<TourStep, 'id'>>): TourStep[] {
 
 // ─── 1. What you're looking at ───────────────────────────────────────────────
 
-// Lesson 1's "Try it on the real screen" (guide/lessons.ts) — it runs inside the lesson, or alone
+// Lesson 3's "Try it on the real screen" (guide/lessons.ts) — it runs inside the lesson, or alone
 // from the Learn panel. Three tasks the app checks (owner 2026-10-23: the learner proves the skill on
 // the live chart); the practice balance is named in the lesson's "Try it" screen instead.
 const primer: Tour = {

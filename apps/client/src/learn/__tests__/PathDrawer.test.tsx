@@ -87,7 +87,7 @@ describe('PathDrawer', () => {
     fireEvent.click(nodeButton('lesson:lesson-02'));
     expect(useLessonStore.getState().activeId).toBeNull();
     expect(useTourStore.getState().panelOpen).toBe(true);
-    expect(screen.getByText('Finish “What is Bitcoin?” first.')).toBeTruthy();
+    expect(screen.getByText('Finish “Who owns a bitcoin?” first.')).toBeTruthy();
   });
 
   it('should never make a coming-soon stop focusable', () => {
@@ -106,7 +106,7 @@ describe('PathDrawer', () => {
   });
 
   it('should run a tour on a larger screen: navigate, close, start', () => {
-    useLessonStore.getState().setCompleted(['lesson-01', 'lesson-02']);
+    useLessonStore.getState().setCompleted(['lesson-01', 'lesson-ownership', 'lesson-02']);
     useTourStore.setState({ panelOpen: true });
     renderDrawer();
     fireEvent.click(nodeButton('tour:buy-first-coin'));
@@ -116,7 +116,7 @@ describe('PathDrawer', () => {
 
   it('should let a phone skip a tour for now, which opens the next stop', () => {
     wide = false;
-    useLessonStore.getState().setCompleted(['lesson-01', 'lesson-02']);
+    useLessonStore.getState().setCompleted(['lesson-01', 'lesson-ownership', 'lesson-02']);
     useTourStore.setState({ panelOpen: true });
     renderDrawer();
 

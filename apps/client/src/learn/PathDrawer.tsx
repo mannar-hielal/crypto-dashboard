@@ -6,13 +6,7 @@
  * material and are never locked — and the habit badges.
  */
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-  type KeyboardEvent as ReactKeyboardEvent,
-} from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { BookText, Flame, X } from 'lucide-react';
 import { learnApi } from '@crypto-dashboard/sdk';
@@ -22,10 +16,10 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { guide } from '@/lib/guideAnchors';
 import { bg, color } from '@/lib/tokens';
 import { TOUR_MIN_WIDTH } from '@/guide/LearnCard';
-import { useLessonStore } from '@/guide/lessonStore';
 import { getLesson } from '@/guide/lessons';
+import { startLesson, startTour } from '@/guide/afterNote';
 import { useTourStore } from '@/guide/tourStore';
-import { getTour } from '@/guide/tours';
+import { trapFocus } from '@/lib/trapFocus';
 import { useAuthStore } from '@/store/authStore';
 import { LibraryTab } from './LibraryTab';
 import { nodeOffset, type ChapterView, type NodeKind, type NodeView } from './path';
@@ -316,12 +310,12 @@ export function PathDrawer() {
   const start = ({ node }: NodeView) => {
     close();
     switch (node.kind) {
+      // As an article's links (`afterNote.ts`): the journal line first, one lesson or tour on screen
       case 'lesson':
-        useLessonStore.getState().start(node.id);
+        startLesson(node.id);
         return;
       case 'tour':
-        navigate(getTour(node.id).startUrl);
-        useTourStore.getState().start(node.id);
+        startTour(node.id, navigate);
         return;
       case 'checkpoint':
         usePathStore.getState().startCheckpoint(node.id);
@@ -330,24 +324,6 @@ export function PathDrawer() {
 
   const skipTour = ({ node }: NodeView) => {
     if (node.kind === 'tour') usePathStore.getState().skipTour(node.id);
-  };
-
-  // Tab stays inside the drawer while it's open
-  const trapFocus = (e: ReactKeyboardEvent) => {
-    if (e.key !== 'Tab' || !drawerRef.current) return;
-    const focusable = drawerRef.current.querySelectorAll<HTMLElement>(
-      'button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
-    );
-    if (focusable.length === 0) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
-    }
   };
 
   return createPortal(
@@ -364,7 +340,8 @@ export function PathDrawer() {
         aria-modal="true"
         aria-labelledby="path-title"
         tabIndex={-1}
-        onKeyDown={trapFocus}
+        // Tab stays inside the drawer while it's open
+        onKeyDown={(e) => trapFocus(e, drawerRef.current)}
         {...guide('path.drawer')}
       >
         <div className={styles.head}>

@@ -6,6 +6,13 @@ import { guideSelector, type GuideAnchor } from '@/lib/guideAnchors';
 export const at = (page: Page, anchor: GuideAnchor, key?: string) =>
   page.locator(guideSelector(anchor, key));
 
+/**
+ * How long a check right after a cold page load waits (a reload, a first visit): the session restore,
+ * then the dashboard's modules from the Vite dev server. CI's runner took ~12 s for that on
+ * 2026-11-08 (every smoke test 2–3× slower than on 2026-10-28; ~1 s locally), past the 10 s expect.
+ */
+export const COLD_LOAD_MS = 30_000;
+
 /** Sign in through the login form; waits until the app has navigated away from /login. */
 export async function signInAs(page: Page, email: string, password: string): Promise<void> {
   await page.goto('/login');
