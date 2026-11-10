@@ -93,6 +93,7 @@ The repository is public since 2026-09-29, so anyone can open a PR from a fork.
   Its `branches:` filter matches the _head_ branch name, which a fork controls.
 
 - `pull_request` runs from forks get no secrets. A job that needs them (claude-review) fails there, and that's expected.
+- Dependabot's runs get only Dependabot secrets, so claude-review skips Dependabot PRs (`if:` on the job) rather than failing on an empty token.
 
 ## Secrets management
 
