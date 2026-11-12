@@ -4584,6 +4584,12 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
 - **Tests:** `FinishLine.test` (the run, a tap, reduced motion), the sheet (Lesson 1's close, a close with no
   recap, the button order), the lesson rules (recap lines open real sections; Satoshi only in the recap).
 
+### 2026-11-12 — Lesson photos at one height
+
+- Every lesson photo now shows at the Pizza Day photo's shape (1200 × 736, `aspect-ratio` + `object-fit: cover`), so
+  Lesson 2's landfill photo is as tall as Lesson 1's (owner). A taller photo is cropped from the bottom
+  (`object-position: center top`), which keeps the digger and James Howells' portrait.
+
 ### 2026-11-12 — Bitcoin's story: mining in depth, with the mining race
 
 - The owner asked to elaborate on mining in _Bitcoin's story, and its plan in plain words_:
