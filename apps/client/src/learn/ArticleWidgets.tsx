@@ -1030,6 +1030,97 @@ function BitcoinTimeline() {
   );
 }
 
+// ─── Mining: the race to seal the next block ─────────────────────────────────
+
+/**
+ * Owner 2026-11-12: four miners guess numbers until one gives the block a fingerprint (hash) starting
+ * with zeros; that block seals onto the chain and its miner is paid. A sketch: real fingerprints are
+ * 64 characters and real miners try trillions of guesses a second, so here a winner comes on round 3.
+ * The reward is 3.125 bitcoin since the April 2024 halving (bitcoin-story's sources)
+ */
+const MINERS = ['Miner A', 'Miner B', 'Miner C', 'Miner D'] as const;
+const WIN_ROUND = 3;
+const WINNER = 2;
+
+/** A made-up but steady guess and fingerprint for a miner in a round (never starting 0000 by chance) */
+function miningGuess(round: number, miner: number): { guess: number; hash: string } {
+  let h = 2166136261 ^ (round * 97 + miner * 31);
+  const hex: string[] = [];
+  for (let i = 0; i < 6; i++) {
+    h = Math.imul(h ^ (h >>> 13), 16777619) >>> 0;
+    hex.push((h & 0xff).toString(16).padStart(2, '0'));
+  }
+  const guess = 10000 + (h % 89999);
+  const won = round === WIN_ROUND && miner === WINNER;
+  const tail = hex.join('').slice(4, 8);
+  // A losing fingerprint starts with a letter, so it never looks like a win
+  const hash = won ? `0000${tail}` : `${'abcdef'[h % 6]}${hex.join('').slice(1, 8)}`;
+  return { guess, hash };
+}
+
+function MiningRace() {
+  const [round, setRound] = useState(0);
+  const won = round >= WIN_ROUND;
+  const status =
+    round === 0
+      ? 'Payments are waiting. Press Try a guess.'
+      : won
+        ? '✓ Miner C found a fingerprint starting 0000. Every node checks it with one calculation, the block is sealed onto the chain, and Miner C is paid 3.125 new bitcoin plus the fees.'
+        : `Round ${round}: no fingerprint starts with 0000 yet. Real miners make trillions of guesses a second.`;
+  return (
+    <figure className={styles.widget} aria-label="Miners racing to seal the next block">
+      <p className={styles.miningPending}>
+        Waiting to be recorded: <code className={styles.seal}>Sofia → Leo, 2</code>{' '}
+        <code className={styles.seal}>Emi → Sam, 1</code> …
+      </p>
+      <ol className={styles.miners}>
+        {MINERS.map((name, i) => {
+          const g = round > 0 ? miningGuess(Math.min(round, WIN_ROUND), i) : null;
+          const win = won && i === WINNER;
+          return (
+            <li key={name} className={win ? styles.minerWin : styles.miner} data-win={win}>
+              <strong className={styles.tileName}>{name}</strong>
+              <span className={styles.tileText}>{g ? `guess ${g.guess}` : 'ready'}</span>
+              <code className={styles.seal}>{g ? `${g.hash}…` : '········'}</code>
+              <span aria-hidden="true">{g ? (win ? '✓' : '✗') : ''}</span>
+            </li>
+          );
+        })}
+      </ol>
+      {won && (
+        <p className={styles.miningBlock}>
+          <span className={styles.miningChain} aria-hidden="true">
+            ▭ ─ ▭ ─ <span className={styles.miningNew}>▣</span>
+          </span>{' '}
+          New block sealed to the one before. Reward: 3.125 new bitcoin + the fees.
+        </p>
+      )}
+      <p className={won ? styles.okLine : styles.story} role="status">
+        {status}
+      </p>
+      <div className={styles.widgetActions}>
+        <button
+          type="button"
+          className={styles.stepBtn}
+          disabled={won}
+          onClick={() => setRound((r) => r + 1)}
+          {...guide('article.mining.guess')}
+        >
+          Try a guess
+        </button>
+        <button
+          type="button"
+          className={styles.stepBtn}
+          onClick={() => setRound(0)}
+          {...guide('article.mining.reset')}
+        >
+          Start over
+        </button>
+      </div>
+    </figure>
+  );
+}
+
 export function ArticleWidget({ id }: { id: WidgetId }) {
   switch (id) {
     case 'suncoin-notebook':
@@ -1062,5 +1153,7 @@ export function ArticleWidget({ id }: { id: WidgetId }) {
       return <PublicLedger />;
     case 'bitcoin-timeline':
       return <BitcoinTimeline />;
+    case 'mining-race':
+      return <MiningRace />;
   }
 }

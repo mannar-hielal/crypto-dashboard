@@ -114,6 +114,13 @@ describe('the learning graph', () => {
         screen: 1,
         label: 'Lesson 2: Money that no one controls',
       },
+      // The stamp card's [[miners|mining]]: mining's deep section lives here (owner 2026-11-12)
+      {
+        kind: 'lesson',
+        lesson: 'lesson-ownership',
+        screen: 4,
+        label: 'Lesson 2: A stamp only you hold',
+      },
     ]);
   });
 

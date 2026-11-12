@@ -4584,6 +4584,28 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
 - **Tests:** `FinishLine.test` (the run, a tap, reduced motion), the sheet (Lesson 1's close, a close with no
   recap, the button order), the lesson rules (recap lines open real sections; Satoshi only in the recap).
 
+### 2026-11-12 — Bitcoin's story: mining in depth, with the mining race
+
+- The owner asked to elaborate on mining in _Bitcoin's story, and its plan in plain words_:
+  - **The plan, in six steps** is now six one-liners.
+  - **"Why a payment isn't instant"** and **"Satoshis: you never need a whole coin"** are gone.
+  - **Mining: how a new block is added** is the last section:
+    - blocks, and the hash that must start with zeros;
+    - hard to find, easy to check;
+    - a block about every 10 minutes, with the difficulty retargeted every 2,016 blocks;
+    - the reward (new bitcoin plus fees) halving every 210,000 blocks: 50 → 3.125 since April 2024;
+    - 21 million in all, the last around 2140;
+    - why it keeps the record honest;
+    - an honest note on electricity and specialised machines.
+  - The article now reads in about 4 minutes (was 7).
+- **The mining race** (`mining-race` widget, the owner's pick in the visual Q&A):
+  - four miners guess, and fingerprints miss until Miner C's starts 0000 on round 3;
+  - the block seals onto the chain and the reward shows;
+  - **Start over** resets it.
+    It's a sketch: the fingerprints are shortened, and real miners make trillions of guesses a second.
+- The `mining` concept now opens this article (Lesson 2's "miners" term leads to it). The self-test swaps the satoshis
+  question for two on mining. The `satoshi` concept still points here; no card uses it.
+
 ### 2026-11-12 — The Finelo content gaps closed
 
 - The owner's choices on what Finelo's first two lessons teach and ours didn't:

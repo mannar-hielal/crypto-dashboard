@@ -87,7 +87,8 @@ export const CONCEPTS: readonly Concept[] = [
     term: 'Mining',
     peek: 'Adding a new block to the blockchain by solving a hard puzzle, paid in new bitcoin and fees.',
     think: 'digging for gold, where the shovel is a computer.',
-    article: 'bitcoin-network',
+    // Owner 2026-11-12: the story article's mining section is the deep one (with the mining race)
+    article: 'bitcoin-story',
     access: FREE,
   },
   {
