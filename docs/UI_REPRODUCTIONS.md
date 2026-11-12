@@ -266,7 +266,7 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
    ([lesson.photo], no credit line, no guide), and the lines one by one ("2013 ·
    Newport, Wales" … "8,000 bitcoin" … "Not even him." … "In the next 8 minutes: what Bitcoin is…"), then **Unlock what Bitcoin really is →**. Card 2 **Money that no
    one controls** → Expect Pulin beside the Bitcoin mark rising with its amber burst (still with reduced motion),
-   "Bitcoin is digital money that runs without a bank or a boss…", four bold points (No one in charge, A fixed
+   "Bitcoin is decentralized digital money…" ([lesson.term `decentralized`]), four bold points (No one in charge, A fixed
    supply, Open to check, Yours, with a key), [lesson.more] Read more → (opens _Bitcoin's story_), and **So who
    keeps the ledger? →**. Card 3 **One ledger, thousands of copies** → Expect the dotted world map, "In Lesson 1 we saw the risk of one record keeper…" (no
    Nora anywhere in Lesson 2) and **How do I receive bitcoin? →**. [lesson.term `ledger`] → Expect the

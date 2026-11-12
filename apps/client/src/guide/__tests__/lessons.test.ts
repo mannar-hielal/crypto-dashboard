@@ -263,6 +263,14 @@ describe('lessons', () => {
     expect(l2.teaser).toMatch(/^Next: who decides/);
   });
 
+  it('should name block, hash, mining and decentralized in Lesson 2 (the Finelo gaps)', () => {
+    const l2 = getLesson('lesson-ownership');
+    const card = (title: string) => l2.cards.find((c) => c.title === title)!;
+    expect(card('Money that no one controls').text).toContain('[[decentralized]]');
+    expect(card('One ledger, thousands of copies').text).toMatch(/called a block.*called a hash/);
+    expect(card('A stamp only you hold').text).toContain('[[miners|mining]]');
+  });
+
   it('should only tease a next lesson that the close really offers', () => {
     // A teaser promises the next lesson, so it needs a lesson to go on to (review #275)
     for (const l of LESSONS) {

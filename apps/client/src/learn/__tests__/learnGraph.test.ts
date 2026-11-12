@@ -74,6 +74,7 @@ describe('the learning graph', () => {
       },
     ]);
     expect(practiceFor('bitcoin-network').map((p) => p.label)).toEqual([
+      'Lesson 2: Money that no one controls',
       'Lesson 2: One ledger, thousands of copies',
       'Lesson 2: A stamp only you hold',
       'Lesson 2: Your bitcoin isn’t in your phone',
