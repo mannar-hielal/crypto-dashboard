@@ -1,6 +1,6 @@
 /**
- * The learning map (owner's visual Q&A 2026-10-24, after Finelo's "Crypto path"): chapters of
- * nodes walked in order — a lesson, then practice on the real screen, then the chapter's checkpoint.
+ * The learning map, "Crypto trading path" (owner's visual Q&A 2026-10-24; renamed and given our own
+ * vertical rail 2026-11-12): chapters of nodes walked in order — a lesson, then practice on the real screen, then the chapter's checkpoint.
  * A node opens once the one before it is done; a practice tour skipped on a phone counts as passed,
  * so a small screen never blocks the path. The checkpoint is always open: passing it early ("test
  * out") opens the rest of the chapter and the next one, without ticking what was skipped.
@@ -89,27 +89,37 @@ export const CHAPTERS: readonly Chapter[] = [
  */
 export type NodeState = 'done' | 'current' | 'open' | 'skipped' | 'locked' | 'pro';
 
+/**
+ * What a stop asks of the learner (owner 2026-11-12): `hands-on` when they do something themselves
+ * (a lesson with a "Now you try it", or practice on the real screen), `read` for cards and articles
+ * only, `check` for a checkpoint. The map draws each differently.
+ */
+export type StopMode = 'read' | 'hands-on' | 'check';
+
+/** What a stop's card says it asks of the learner */
+export const MODE_LABEL: Record<StopMode, string> = {
+  read: 'Read',
+  'hands-on': 'Hands-on',
+  check: 'Checkpoint',
+};
+
 export interface NodeView {
   node: BuiltNode;
   key: string;
   title: string;
   minutes: number;
+  mode: StopMode;
   state: NodeState;
 }
 
-interface ChapterViewBase {
-  /** Stops in the chapters before this one: the map's zig-zag carries on across chapters */
-  firstIndex: number;
-}
-
 export type ChapterView =
-  | (ChapterViewBase & {
+  | {
       chapter: Chapter & { status: 'open' };
       locked: boolean;
       nodes: NodeView[];
       done: number;
-    })
-  | (ChapterViewBase & { chapter: Chapter & { status: 'soon' }; locked: true; nodes: []; done: 0 });
+    }
+  | { chapter: Chapter & { status: 'soon' }; locked: true; nodes: []; done: 0 };
 
 export interface PathProgress {
   lessons: Partial<Record<LessonId, true>>;
@@ -127,11 +137,6 @@ export interface PathView {
   current: string | null;
 }
 
-/** The map's zig-zag: a stop's sideways offset in px, by its index on the whole map */
-export function nodeOffset(index: number): number {
-  return Math.round(Math.sin(index * 0.9) * 40);
-}
-
 export const nodeKey = (node: { kind: NodeKind; id: string }): string => `${node.kind}:${node.id}`;
 
 export function nodeTitle(node: BuiltNode): string {
@@ -142,6 +147,19 @@ export function nodeTitle(node: BuiltNode): string {
       return getTour(node.id).title;
     case 'checkpoint':
       return getCheckpoint(node.id).title;
+  }
+}
+
+export function nodeMode(node: BuiltNode): StopMode {
+  switch (node.kind) {
+    case 'lesson': {
+      const lesson = getLesson(node.id);
+      return lesson.tryWidget !== undefined || lesson.tour !== undefined ? 'hands-on' : 'read';
+    }
+    case 'tour':
+      return 'hands-on';
+    case 'checkpoint':
+      return 'check';
   }
 }
 
@@ -179,18 +197,14 @@ export function pathState(
   let current: string | null = null;
   let built = 0;
   let finished = 0;
-  let stops = 0;
   // The first chapter is open; each later one opens when the one before it has its checkpoint passed
   let chapterOpen = true;
 
   const views = chapters.map((chapter): ChapterView => {
-    const firstIndex = stops;
     if (chapter.status === 'soon') {
       chapterOpen = false;
-      stops += chapter.preview.length;
-      return { chapter, firstIndex, locked: true, nodes: [], done: 0 };
+      return { chapter, locked: true, nodes: [], done: 0 };
     }
-    stops += chapter.nodes.length;
     const locked = !chapterOpen;
     const checkpoint = checkpointOf(chapter);
     const testedOut = checkpoint ? isDone(checkpoint, progress) : false;
@@ -200,7 +214,13 @@ export function pathState(
 
     const nodes = chapter.nodes.map((node): NodeView => {
       const key = nodeKey(node);
-      const view = { node, key, title: nodeTitle(node), minutes: nodeMinutes(node) };
+      const view = {
+        node,
+        key,
+        title: nodeTitle(node),
+        minutes: nodeMinutes(node),
+        mode: nodeMode(node),
+      };
       built += 1;
       if (!canOpen(node.access, granted) || !canOpen(chapter.access, granted)) {
         // Not on the plan: never blocks what comes after it (a free path never ends at a paywall)
@@ -230,7 +250,7 @@ export function pathState(
     });
 
     chapterOpen = !locked && testedOut;
-    return { chapter, firstIndex, locked, nodes, done };
+    return { chapter, locked, nodes, done };
   });
 
   return {

@@ -59,15 +59,18 @@ describe('PathDrawer', () => {
     useTourStore.setState({ panelOpen: true });
     renderDrawer();
 
-    expect(screen.getByRole('dialog', { name: 'Crypto path' })).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Crypto trading path' })).toBeTruthy();
     expect(screen.getByText('Foundations of crypto')).toBeTruthy();
     expect(screen.getByText('Start')).toBeTruthy();
     expect(nodeButton('lesson:lesson-01').getAttribute('aria-label')).toBe(
-      'Lesson: What is the problem?, next step'
+      'Lesson, hands-on: What is the problem?, next step'
     );
     expect(nodeButton('lesson:lesson-02').getAttribute('aria-disabled')).toBe('true');
     expect(screen.getByText('Trade with a plan')).toBeTruthy();
-    expect(screen.getByText(/Coming soon/)).toBeTruthy();
+    expect(screen.getAllByText(/Coming soon/).length).toBeGreaterThan(0);
+    // The legend explains the two marker shapes (owner 2026-11-12)
+    expect(screen.getByRole('list', { name: 'Kinds of stop' }).textContent).toContain('Hands-on');
+    expect(document.querySelector('[data-guide="path.node"][data-mode="hands-on"]')).not.toBeNull();
     expect(
       screen.getByRole('progressbar', { name: 'Path progress' }).getAttribute('aria-valuenow')
     ).toBe('0');

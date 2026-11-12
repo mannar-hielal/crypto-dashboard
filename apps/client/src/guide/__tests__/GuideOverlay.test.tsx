@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { reportHover } from '@/guide/chartHover';
+import { registerNewestCandle, reportHover } from '@/guide/chartHover';
 import { GuideOverlay } from '@/guide/GuideOverlay';
 import { useTourStore } from '@/guide/tourStore';
 
@@ -278,6 +278,45 @@ describe('GuideOverlay', () => {
     expect(document.querySelector('[data-guide="tour.done"]')).not.toBeNull();
     await frame(800);
     expect(useTourStore.getState().stepIndex).toBe(2);
+  });
+
+  it('should ring the newest candle and point the arrow down at it, not at the whole chart', async () => {
+    const chart = addControl('pane.chart');
+    const container = document.createElement('div');
+    chart.appendChild(container);
+    const unregister = registerNewestCandle(container, () => ({
+      top: 300,
+      left: 900,
+      width: 10,
+      height: 40,
+    }));
+    useTourStore.getState().start('primer');
+    useTourStore.setState({ stepIndex: 1 });
+    render(<GuideOverlay />);
+    await frame();
+
+    const ring = document.querySelector<HTMLElement>('[data-tour-ring]')!;
+    expect(ring.getAttribute('data-tour-ring')).toBe('candle');
+    expect(ring.style.left).toBe('897px'); // the candle, less the ring's padding
+    const arrow = document.querySelector<HTMLElement>('[data-tour-arrow]')!;
+    expect(arrow.getAttribute('data-tour-arrow')).toBe('above');
+    unregister();
+  });
+
+  it('should fall back to the whole chart when the newest candle is off screen', async () => {
+    const chart = addControl('pane.chart');
+    const container = document.createElement('div');
+    chart.appendChild(container);
+    const unregister = registerNewestCandle(container, () => null);
+    useTourStore.getState().start('primer');
+    useTourStore.setState({ stepIndex: 1 });
+    render(<GuideOverlay />);
+    await frame();
+
+    const ring = document.querySelector<HTMLElement>('[data-tour-ring]')!;
+    expect(ring.getAttribute('data-tour-ring')).toBe('');
+    expect(ring.style.left).toBe('197px');
+    unregister();
   });
 
   it('should not tick the newest candle done when the pointer leaves the chart before the hold', async () => {

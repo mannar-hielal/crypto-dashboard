@@ -4584,6 +4584,26 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
 - **Tests:** `FinishLine.test` (the run, a tap, reduced motion), the sheet (Lesson 1's close, a close with no
   recap, the button order), the lesson rules (recap lines open real sections; Satoshi only in the recap).
 
+### 2026-11-12 — Crypto trading path: our own rail, hands-on stops, and the arrow on the newest candle
+
+- **Renamed** "Crypto path" → **"Crypto trading path"** (owner).
+- **Our own look, not Finelo's** (owner's visual Q&A): the zig-zag of 3D stops, the dashed links and Tick over the next
+  stop are gone. Each chapter is a straight vertical **rail**: a marker on the rail and a card beside it (title, kind,
+  minutes), one button per stop, a **Start/Continue** chip on the next one. Notes and "Take the checkpoint" sit under
+  the cards.
+- **Hands-on vs reading** (owner: "any lesson with an exercise"): `nodeMode` in `learn/path.ts` marks a stop
+  `hands-on` when the learner does something (a lesson with `tryWidget` or `tour`, and every practice tour), `read` for
+  cards and articles only, `check` for a checkpoint. Hands-on markers are green rounded squares (a pointing hand on a
+  lesson, the target on a tour) with a "● Hands-on" tag; reading markers stay round in the chapter's colour; the
+  checkpoint is a diamond. A legend under the intro names both. Today every lesson has a "Now you try it", so all
+  five are hands-on; a reading-only lesson will show round.
+- **The primer's step 2 arrow** ("Hover the newest candle") now rings **the newest candle** and points down at it, not
+  at the whole chart (owner). ChartPanel registers a locator (`registerNewestCandle` in `guide/chartHover.ts`) that the
+  overlay reads every frame while a `hover: 'last'` step is open, so the ring follows the candle as it grows or the
+  chart scrolls; with the candle off screen it falls back to the whole chart.
+- **Tests:** `chartHover.test` (the candle box, the locator), `GuideOverlay.test` (ring on the candle, arrow above, the
+  fallback), `path.test` (`nodeMode`), `PathDrawer.test` (the title, the legend, the mode).
+
 ### 2026-11-12 — Lesson photos at one height
 
 - Every lesson photo now shows at the Pizza Day photo's shape (1200 × 736, `aspect-ratio` + `object-fit: cover`), so

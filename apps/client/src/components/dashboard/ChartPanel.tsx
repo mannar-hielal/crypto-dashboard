@@ -41,7 +41,13 @@ import { startEraser } from '@/lib/drawingTools';
 import { pendingSyncRange, runPaneDataPush } from '@/lib/chartSync';
 import { toHeikinAshi } from '@/lib/heikinAshi';
 import { IndicatorLegends } from '@/components/indicators/IndicatorLegends';
-import { crosshairHover, hasHoverListeners, reportHover } from '@/guide/chartHover';
+import {
+  candleBoxFrom,
+  crosshairHover,
+  hasHoverListeners,
+  registerNewestCandle,
+  reportHover,
+} from '@/guide/chartHover';
 import { useTradeLines } from '@/hooks/useTradeLines';
 import { TradeLineAmend } from './TradeLineAmend';
 import { DrawingTextEditor } from './DrawingTextEditor';
@@ -364,10 +370,39 @@ export function ChartPanel({
     setCandleApi(candleRef.current);
     setDrawingManager(manager);
 
+    // The tour's "hover the newest candle" arrow (guide/chartHover.ts): read on demand, only while
+    // a tour step asks, so a chart with no tour pays nothing
+    const container = containerRef.current;
+    const unregisterNewest = registerNewestCandle(container, () => {
+      const series = candleRef.current;
+      if (!series) return null;
+      const newest = series.dataByIndex(Infinity, MismatchDirection.NearestLeft) as {
+        time: number;
+        high?: number;
+        low?: number;
+        value?: number;
+      } | null;
+      if (!newest) return null;
+      const high = newest.high ?? newest.value;
+      const low = newest.low ?? newest.value;
+      if (high === undefined || low === undefined) return null;
+      const timeScale = chart.timeScale();
+      const r = container.getBoundingClientRect();
+      return candleBoxFrom(
+        { top: r.top, left: r.left, width: r.width, height: r.height },
+        timeScale.timeToCoordinate(newest.time as UTCTimestamp),
+        series.priceToCoordinate(high),
+        series.priceToCoordinate(low),
+        timeScale.options().barSpacing,
+        timeScale.width()
+      );
+    });
+
     chartReadyRef.current = true;
 
     return () => {
       chartReadyRef.current = false;
+      unregisterNewest();
       if (rafRef.current !== undefined) cancelAnimationFrame(rafRef.current);
       ro.disconnect();
       releaseManager?.();

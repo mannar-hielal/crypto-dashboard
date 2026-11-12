@@ -299,8 +299,8 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
    sets the price?** at card 1.
 6. Cards 4–5 (live data only) → Expect real daily candles: Tesla 2021 with three markers; the ETF chart ending on 10
    Jan 2024. Answer the moment → Expect the chart to play on to 23 Jan with "−14.5%".
-7. Desktop: Try it → [lesson.try] Show me → tap [symbolbar.price], rest on the newest candle, hover a red one → Expect
-   "Done ✓" after each, then the questions. A phone gets Continue instead.
+7. Desktop: Try it → [lesson.try] Show me → tap [symbolbar.price] → Expect step 2's ring on the newest
+   candle with the arrow above it, pointing down; rest on it, hover a red one → Expect "Done ✓" after each, then the questions. A phone gets Continue instead.
 8. [nav.learn] (the Route icon beside the avatar) → [path.tab `library`] → Expect a **Library** of seven articles;
    [learn.article.open `exchange-price`] → Expect the drawer with **Library** in its head and the sources folded.
 
@@ -314,9 +314,11 @@ presenter never over the scene). Frequency: per release touching `guide/LessonAr
 
 1. Look at the top bar → Expect the Route icon left of the avatar with an amber dot; the user menu has Settings and
    Sign out but no Learn.
-2. [nav.learn] → Expect **Crypto path** at 0 %, chapter 1 "Foundations of crypto" in purple with "0 of 6 done",
-   **Start** and Pulin over Lesson 1, padlocks on the next four stops, the crown open, and chapter 2 "Trade with a
-   plan" greyed with "Coming soon" and dashed stops nobody can tab to. Close and reopen → Expect no dot.
+2. [nav.learn] → Expect **Crypto trading path** at 0 %, the legend (round = Read, green square = Hands-on), chapter 1
+   "Foundations of crypto" in purple with "0 of 6 done", a vertical rail with a **Start** chip on Lesson 1, padlocks
+   on the next four stops, every lesson and tour marked "● Hands-on" (green squares), the checkpoint a diamond, and
+   chapter 2 "Trade with a plan" greyed with "Coming soon" and dashed stops nobody can tab to. Close and reopen →
+   Expect no dot.
 3. Tap [path.node `lesson:lesson-ownership`] → Expect "Finish “What is the problem?” first." and no lesson.
    [path.chapter.info `ch1`] → Expect the six stops with minutes and "After this chapter you can".
 4. [path.node `lesson:lesson-01`] → finish the lesson → reopen → Expect it ticked, 17 %, **Continue** on Lesson 2,
@@ -328,8 +330,8 @@ presenter never over the scene). Frequency: per release touching `guide/LessonAr
 7. A failed checkpoint (three right or fewer) → Expect "Not yet", a **Review Lesson N →** per missed question (a tour's
    only on a larger screen) and **Try again**.
 
-**Manual check (M).** The map at 375, 412, 820 and 1440 px: the zig-zag inside the drawer, the sticky chapter band,
-the bubble and Pulin never clipped. Frequency: per release touching `learn/Path*` or `learn/CheckpointSheet.tsx`.
+**Manual check (M).** The map at 375, 412, 820 and 1440 px: the rail inside the drawer, the sticky chapter band,
+the Start chip and the cards' text never clipped. Frequency: per release touching `learn/Path*` or `learn/CheckpointSheet.tsx`.
 
 ## Stage 1 — Spot basics
 

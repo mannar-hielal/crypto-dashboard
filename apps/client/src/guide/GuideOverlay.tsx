@@ -11,7 +11,7 @@ import { createPortal } from 'react-dom';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, X } from 'lucide-react';
 import { guide, guideSelector } from '@/lib/guideAnchors';
 import { placeBubble, type Box } from './bubblePlacement';
-import { matchesHover, onHover } from './chartHover';
+import { matchesHover, newestCandleBox, onHover } from './chartHover';
 import { useTourStore } from './tourStore';
 import { getTour, type TourStep } from './tours';
 import styles from './GuideOverlay.module.css';
@@ -30,9 +30,15 @@ const ARROW_CLASS = {
 } as const;
 
 /** Beside the control, in the free space (never over the text above it); above or below only
- *  when the control has no room at either side */
-function arrowSideFor(rect: Box, bubble: 'below' | 'above' | 'inside' | 'center'): ArrowSide {
+ *  when the control has no room at either side. A candle is pointed at from above (below when
+ *  it's at the top of the chart), like a marker on the chart. */
+function arrowSideFor(
+  rect: Box,
+  bubble: 'below' | 'above' | 'inside' | 'center',
+  candle = false
+): ArrowSide {
   const room = ARROW_GAP + ARROW_SIZE + RING_PAD + 8;
+  if (candle) return rect.top >= room ? 'above' : 'below';
   if (rect.left >= room) return 'left';
   if (rect.left + rect.width + room <= window.innerWidth) return 'right';
   return bubble === 'above' || rect.top < room ? 'below' : 'above';
@@ -70,15 +76,18 @@ interface Tracked {
   value: string;
   /** The value of the `doneWhenEmpty` input; null while it is not on screen */
   doneValue: string | null;
+  /** `rect` is the newest candle (a `hover: 'last'` step), not the whole anchor */
+  candle: boolean;
 }
 
-const NONE: Tracked = { rect: null, value: '', doneValue: null };
+const NONE: Tracked = { rect: null, value: '', doneValue: null, candle: false };
 
 /** Follows the step's control every frame (the form animates open, panes resize, tabs switch) */
 function useTracked(step: TourStep): Tracked {
   const [tracked, setTracked] = useState<Tracked>(NONE);
   const selector = step.anchor ? guideSelector(step.anchor, step.key) : null;
   const doneSelector = step.doneWhenEmpty ? guideSelector(step.doneWhenEmpty) : null;
+  const pointAtNewest = step.kind === 'hover' && step.hover === 'last';
 
   useEffect(() => {
     let raf = 0;
@@ -87,6 +96,7 @@ function useTracked(step: TourStep): Tracked {
       const el = selector ? document.querySelector<HTMLElement>(selector) : null;
       let rect: Box | null = null;
       let value = '';
+      let candle = false;
       if (el) {
         const r = el.getBoundingClientRect();
         // Zero-size = present but hidden (the order form is mounted while closed)
@@ -98,19 +108,28 @@ function useTracked(step: TourStep): Tracked {
           }
         }
         if (el instanceof HTMLInputElement) value = el.value;
+        // The newest candle, when it's on screen; else the whole chart, as before
+        const newest = rect && pointAtNewest ? newestCandleBox(el) : null;
+        if (newest) {
+          rect = newest;
+          candle = true;
+        }
       }
       const doneEl = doneSelector ? document.querySelector<HTMLInputElement>(doneSelector) : null;
       const doneValue = doneEl ? doneEl.value : null;
       setTracked((prev) =>
-        sameBox(prev.rect, rect) && prev.value === value && prev.doneValue === doneValue
+        sameBox(prev.rect, rect) &&
+        prev.value === value &&
+        prev.doneValue === doneValue &&
+        prev.candle === candle
           ? prev
-          : { rect, value, doneValue }
+          : { rect, value, doneValue, candle }
       );
       raf = requestAnimationFrame(tick);
     };
     tick();
     return () => cancelAnimationFrame(raf);
-  }, [selector, doneSelector]);
+  }, [selector, doneSelector, pointAtNewest]);
 
   return tracked;
 }
@@ -283,7 +302,9 @@ function TourBubble({
 
   // The learner has to act on this step (click, type or point), not just read it
   const isAction = step.kind === 'click' || step.kind === 'type' || step.kind === 'hover';
-  const arrowSide = tracked.rect ? arrowSideFor(tracked.rect, placement.placement) : 'left';
+  const arrowSide = tracked.rect
+    ? arrowSideFor(tracked.rect, placement.placement, tracked.candle)
+    : 'left';
 
   return createPortal(
     <>
@@ -291,7 +312,7 @@ function TourBubble({
         <div
           className={isAction ? `${styles.ring} ${styles.ringAction}` : styles.ring}
           aria-hidden="true"
-          data-tour-ring=""
+          data-tour-ring={tracked.candle ? 'candle' : ''}
           style={{
             top: tracked.rect.top - RING_PAD,
             left: tracked.rect.left - RING_PAD,

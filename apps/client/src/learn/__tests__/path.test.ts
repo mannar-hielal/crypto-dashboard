@@ -3,7 +3,7 @@ import { FREE } from '@/learn/access';
 import { CHECKPOINTS } from '@/learn/checkpoints';
 import {
   CHAPTERS,
-  nodeOffset,
+  nodeMode,
   openKeys,
   pathState,
   type Chapter,
@@ -101,7 +101,6 @@ describe('pathState', () => {
     expect(soon.chapter.status).toBe('soon');
     expect(soon.locked).toBe(true);
     expect(soon.nodes).toEqual([]);
-    expect(soon.firstIndex).toBe(6);
   });
 
   it('should lock a later chapter until the one before it has its checkpoint passed', () => {
@@ -118,7 +117,6 @@ describe('pathState', () => {
     );
     expect(after.chapters[1].locked).toBe(false);
     expect(after.current).toBe('lesson:lesson-02');
-    expect(after.chapters[1].firstIndex).toBe(6);
   });
 
   it('should show a stop that is not on the plan as Pro, not locked, and not block the path', () => {
@@ -157,10 +155,20 @@ describe('the map', () => {
     }
   });
 
-  it('should zig-zag within 40 px either side', () => {
-    const offsets = Array.from({ length: 12 }, (_, i) => nodeOffset(i));
-    expect(offsets[0]).toBe(0);
-    expect(Math.max(...offsets.map(Math.abs))).toBeLessThanOrEqual(40);
-    expect(new Set(offsets).size).toBeGreaterThan(3);
+  it('should mark a stop hands-on when the learner tries it themselves', () => {
+    // Owner 2026-11-12: any lesson with a "Now you try it" is hands-on, as is practice on the screen
+    expect(nodeMode({ kind: 'lesson', id: 'lesson-01', access: FREE })).toBe('hands-on'); // Nora's ledger
+    expect(nodeMode({ kind: 'lesson', id: 'lesson-02', access: FREE })).toBe('hands-on'); // the real chart
+    expect(nodeMode({ kind: 'tour', id: 'buy-first-coin', access: FREE })).toBe('hands-on');
+    expect(nodeMode({ kind: 'checkpoint', id: 'checkpoint-ch1', access: FREE })).toBe('check');
+    const view = pathState(empty());
+    expect(view.chapters[0].nodes.map((n) => n.mode)).toEqual([
+      'hands-on',
+      'hands-on',
+      'hands-on',
+      'hands-on',
+      'hands-on',
+      'check',
+    ]);
   });
 });
