@@ -538,3 +538,59 @@
   outline: 2px solid var(--color-brand-purple-dark); /* focusRing */
   outline-offset: 3px;
 }
+
+/* ─── Duolingo-style progress and practice marks (owner 2026-11-12) ─────────── */
+
+/* How much of a begun lesson is done: a ring around the stop, from 12 o'clock */
+.ring {
+  position: absolute;
+  top: -12px;
+  left: -12px;
+  width: 88px;
+  height: 88px;
+  pointer-events: none;
+}
+
+.ringTrack,
+.ringArc {
+  fill: none;
+  stroke-width: 6;
+}
+
+.ringTrack {
+  stroke: rgba(255, 255, 255, 0.08); /* border.* scale: a faint track under the tone's arc */
+}
+
+.ringArc {
+  stroke: var(--tone);
+  stroke-linecap: round;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ringArc {
+    transition: stroke-dasharray 400ms ease-out;
+  }
+}
+
+/* The ring is the stop's highlight: no second outline around it */
+.node:has(.ring) {
+  outline: none;
+  animation: none;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 10px 0 16px;
+  padding: 0;
+  color: var(--color-brand-muted); /* color.muted */
+  font-size: 12px;
+  list-style: none;
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

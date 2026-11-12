@@ -11,11 +11,12 @@ import { usePathStore } from './pathStore';
 
 export function usePathView(): PathView {
   const lessons = useLessonStore((s) => s.completed);
+  const reached = useLessonStore((s) => s.reached);
   const tours = useTourStore((s) => s.completed);
   const skippedTours = usePathStore((s) => s.skippedTours);
   const checkpoints = usePathStore((s) => s.checkpoints);
   return useMemo(
-    () => pathState({ lessons, tours, skippedTours, checkpoints }),
-    [lessons, tours, skippedTours, checkpoints]
+    () => pathState({ lessons, tours, skippedTours, checkpoints, reached }),
+    [lessons, tours, skippedTours, checkpoints, reached]
   );
 }

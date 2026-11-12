@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  candleBoxFrom,
   crosshairHover,
   hasHoverListeners,
   matchesHover,
+  newestCandleBox,
+  registerNewestCandle,
   onHover,
   reportHover,
 } from '@/guide/chartHover';
@@ -44,5 +47,37 @@ describe('chartHover', () => {
     expect(crosshairHover(undefined, false, undefined, 100)).toBeNull(); // left the chart
     expect(crosshairHover(100, false, c, 100)).toBeNull(); // on the legend column
     expect(crosshairHover(100, true, undefined, 100)).toBeNull(); // a gap with no candle
+  });
+
+  it('should box the newest candle in viewport pixels, and give up when it is off the plot', () => {
+    const box = { top: 100, left: 50, width: 800, height: 400 };
+    // x 700 in the chart, high at y 120 and low at y 180, 6 px bars
+    expect(candleBoxFrom(box, 700, 120, 180, 6, 740)).toEqual({
+      top: 220,
+      left: 745,
+      width: 10, // a thin candle still gets a ring-able box
+      height: 60,
+    });
+    // A flat candle (high = low) still has a height
+    expect(candleBoxFrom(box, 700, 150, 150, 12, 740)?.height).toBe(12);
+    expect(candleBoxFrom(box, null, 120, 180, 6, 740)).toBeNull(); // not in the data
+    expect(candleBoxFrom(box, 760, 120, 180, 6, 740)).toBeNull(); // under the price scale
+    expect(candleBoxFrom(box, -4, 120, 180, 6, 740)).toBeNull(); // scrolled off left
+    expect(candleBoxFrom(box, 700, null, 180, 6, 740)).toBeNull();
+    expect(candleBoxFrom(box, 700, -200, -150, 6, 740)).toBeNull(); // above the pane
+    expect(candleBoxFrom(box, 700, 500, 520, 6, 740)).toBeNull(); // below it
+  });
+
+  it('should find the newest candle of the chart inside the anchor, and forget an unmounted one', () => {
+    const anchor = document.createElement('div');
+    const container = document.createElement('div');
+    anchor.appendChild(container);
+    const other = document.createElement('div');
+    const box = { top: 1, left: 2, width: 10, height: 12 };
+    const unregister = registerNewestCandle(container, () => box);
+    expect(newestCandleBox(anchor)).toEqual(box);
+    expect(newestCandleBox(other)).toBeNull();
+    unregister();
+    expect(newestCandleBox(anchor)).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 /**
- * The learning map (owner's visual Q&A 2026-10-24, after Finelo's "Crypto path"): chapters of
- * nodes walked in order — a lesson, then practice on the real screen, then the chapter's checkpoint.
+ * The learning map, "Crypto trading path" (owner's visual Q&A 2026-10-24; renamed 2026-11-12, the
+ * zig-zag kept): chapters of nodes walked in order — a lesson, then practice on the real screen, then the chapter's checkpoint.
  * A node opens once the one before it is done; a practice tour skipped on a phone counts as passed,
  * so a small screen never blocks the path. The checkpoint is always open: passing it early ("test
  * out") opens the rest of the chapter and the next one, without ticking what was skipped.
@@ -9,7 +9,7 @@
  * plan: a gem). Nothing is paid today. Pure data and logic: no React, no store.
  */
 
-import { getLesson, type LessonId } from '@/guide/lessons';
+import { getLesson, lessonScreens, type LessonId } from '@/guide/lessons';
 import { getTour, type TourId } from '@/guide/tours';
 import { canOpen, FREE, type Entitlement } from './access';
 import { getCheckpoint, type CheckpointId } from './checkpoints';
@@ -95,6 +95,11 @@ export interface NodeView {
   title: string;
   minutes: number;
   state: NodeState;
+  /**
+   * How much of a started lesson is done, 0–1 (owner 2026-11-12, Duolingo's ring): the furthest
+   * screen reached over the lesson's screens. Null for a tour, a checkpoint, or a lesson not begun
+   */
+  fraction: number | null;
 }
 
 interface ChapterViewBase {
@@ -117,6 +122,8 @@ export interface PathProgress {
   /** Tours skipped for now (the server's `dismissed`) */
   skippedTours: Partial<Record<TourId, true>>;
   checkpoints: Partial<Record<CheckpointId, true>>;
+  /** The furthest screen (0-based) reached in each lesson, synced through the server */
+  reached?: Partial<Record<LessonId, number>>;
 }
 
 export interface PathView {
@@ -127,9 +134,22 @@ export interface PathView {
   current: string | null;
 }
 
-/** The map's zig-zag: a stop's sideways offset in px, by its index on the whole map */
+/** The map's zig-zag (owner 2026-11-12: back, it breaks the monotony): a stop's sideways offset */
 export function nodeOffset(index: number): number {
   return Math.round(Math.sin(index * 0.9) * 40);
+}
+
+/** A started, unfinished lesson's share done; null when there's nothing to show */
+export function lessonFraction(
+  id: LessonId,
+  reached: number | undefined,
+  done: boolean
+): number | null {
+  if (done || reached === undefined) return null;
+  const screens = lessonScreens(getLesson(id)).length;
+  // On the last screen without a Finish the ring is full but the lesson isn't done: it stays, so
+  // the bubble still says Continue
+  return Math.min(reached + 1, screens) / screens;
 }
 
 export const nodeKey = (node: { kind: NodeKind; id: string }): string => `${node.kind}:${node.id}`;
@@ -143,6 +163,11 @@ export function nodeTitle(node: BuiltNode): string {
     case 'checkpoint':
       return getCheckpoint(node.id).title;
   }
+}
+
+/** A stop done on the real chart: practice, or a lesson whose "Try it" is a tour there (Lesson 3) */
+export function onChart(node: BuiltNode): boolean {
+  return node.kind === 'tour' || (node.kind === 'lesson' && getLesson(node.id).tour !== undefined);
 }
 
 function nodeMinutes(node: BuiltNode): number {
@@ -200,7 +225,16 @@ export function pathState(
 
     const nodes = chapter.nodes.map((node): NodeView => {
       const key = nodeKey(node);
-      const view = { node, key, title: nodeTitle(node), minutes: nodeMinutes(node) };
+      const view = {
+        node,
+        key,
+        title: nodeTitle(node),
+        minutes: nodeMinutes(node),
+        fraction:
+          node.kind === 'lesson'
+            ? lessonFraction(node.id, progress.reached?.[node.id], isDone(node, progress))
+            : null,
+      };
       built += 1;
       if (!canOpen(node.access, granted) || !canOpen(chapter.access, granted)) {
         // Not on the plan: never blocks what comes after it (a free path never ends at a paywall)

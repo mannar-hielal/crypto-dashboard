@@ -1,18 +1,21 @@
 /**
  * One stop on the learning map: a round button that shows what it is (a lesson 📖, practice on the
- * real screen 🎯, a checkpoint 👑) and where the learner stands with it. The next step carries a
+ * chart 🏋 — the buy and sell practice, and a lesson whose "Try it" is on the chart; a checkpoint 👑,
+ * owner 2026-11-12) and where the learner stands with it: a lesson begun shows a ring of how much is done,
+ * as Duolingo's path does. The next step carries a
  * "Start" bubble and Tick beside it. A stop that can't be started explains why in a short note
  * under it, instead of doing nothing: not reached yet, needs a larger screen, or not on the plan.
  */
 
 import { useState, type ReactNode } from 'react';
-import { BookOpen, Check, Crown, Gem, Laptop, Lock, Target } from 'lucide-react';
+import { BookOpen, Check, Crown, Dumbbell, Gem, Laptop, Lock } from 'lucide-react';
 import { GuideAvatar } from '@/guide/LessonArt';
 import { guide } from '@/lib/guideAnchors';
-import { nodeOffset, type NodeKind, type NodeView } from './path';
+import { getLesson, lessonScreens } from '@/guide/lessons';
+import { nodeOffset, onChart, type NodeKind, type NodeView } from './path';
 import styles from './PathDrawer.module.css';
 
-const KIND_ICON = { lesson: BookOpen, tour: Target, checkpoint: Crown } as const;
+const KIND_ICON = { lesson: BookOpen, tour: Dumbbell, checkpoint: Crown } as const;
 
 const KIND_LABEL: Record<NodeKind, string> = {
   lesson: 'Lesson',
@@ -29,8 +32,44 @@ const STATE_LABEL = {
   pro: 'Pro',
 } as const;
 
-export function NodeIcon({ kind, size = 26 }: { kind: NodeKind; size?: number }) {
-  const Icon = KIND_ICON[kind];
+/** How much of a lesson is done, drawn around its stop from 12 o'clock (decorative: the label says it) */
+function ProgressRing({ fraction }: { fraction: number }) {
+  const r = 40;
+  const length = 2 * Math.PI * r;
+  return (
+    <svg
+      className={styles.ring}
+      viewBox="0 0 88 88"
+      aria-hidden="true"
+      data-progress={fraction.toFixed(2)}
+    >
+      <circle cx="44" cy="44" r={r} className={styles.ringTrack} />
+      <circle
+        cx="44"
+        cy="44"
+        r={r}
+        className={styles.ringArc}
+        strokeDasharray={`${length * fraction} ${length}`}
+        transform="rotate(-90 44 44)"
+      />
+    </svg>
+  );
+}
+
+/**
+ * A stop's icon. Owner 2026-11-12: the dumbbell marks what's done on the real chart (practice, and a
+ * lesson whose "Try it" is a tour there, Lesson 3); every other lesson is a book
+ */
+export function NodeIcon({
+  kind,
+  onChart = false,
+  size = 26,
+}: {
+  kind: NodeKind;
+  onChart?: boolean;
+  size?: number;
+}) {
+  const Icon = kind === 'lesson' && onChart ? Dumbbell : KIND_ICON[kind];
   return <Icon size={size} aria-hidden="true" />;
 }
 
@@ -57,7 +96,10 @@ export function PathNode({
   onSkipTour,
 }: PathNodeProps) {
   const [noteOpen, setNoteOpen] = useState(false);
-  const { node, state, title } = view;
+  const { node, state, title, fraction } = view;
+  const screens = node.kind === 'lesson' ? lessonScreens(getLesson(node.id)).length : 0;
+  const progress =
+    fraction !== null ? `, ${Math.round(fraction * screens)} of ${screens} screens` : '';
   const phoneTour = node.kind === 'tour' && !wide;
   // These open a note under the stop instead of starting it
   const explains = state === 'locked' || state === 'pro' || phoneTour;
@@ -97,7 +139,7 @@ export function PathNode({
     ) : state === 'pro' ? (
       <Gem size={24} aria-hidden="true" />
     ) : (
-      <NodeIcon kind={node.kind} />
+      <NodeIcon kind={node.kind} onChart={onChart(view.node)} />
     );
 
   return (
@@ -118,11 +160,12 @@ export function PathNode({
       <button
         type="button"
         className={`${styles.node} ${styles[state]}`}
-        aria-label={`${KIND_LABEL[node.kind]}: ${title}, ${STATE_LABEL[state]}`}
+        aria-label={`${KIND_LABEL[node.kind]}${onChart(view.node) ? ', on the real chart' : ''}: ${title}, ${STATE_LABEL[state]}${progress}`}
         aria-disabled={state === 'locked' || state === 'pro' ? true : undefined}
         aria-expanded={explains ? noteOpen : undefined}
         onClick={() => (explains ? setNoteOpen((o) => !o) : onStart(view))}
       >
+        {fraction !== null && <ProgressRing fraction={fraction} />}
         {icon}
         {state === 'locked' && (
           <span className={styles.badge}>

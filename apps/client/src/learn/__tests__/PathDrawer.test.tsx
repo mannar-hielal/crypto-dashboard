@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 
 const getHabits = vi.fn();
@@ -21,6 +21,7 @@ vi.mock('react-router', async (importOriginal) => ({
 }));
 
 import { useLessonStore } from '@/guide/lessonStore';
+import { getLesson, lessonScreens } from '@/guide/lessons';
 import { useTourStore } from '@/guide/tourStore';
 import { guideSelector } from '@/lib/guideAnchors';
 import { useArticleStore } from '@/learn/articleStore';
@@ -59,7 +60,7 @@ describe('PathDrawer', () => {
     useTourStore.setState({ panelOpen: true });
     renderDrawer();
 
-    expect(screen.getByRole('dialog', { name: 'Crypto path' })).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Crypto trading path' })).toBeTruthy();
     expect(screen.getByText('Foundations of crypto')).toBeTruthy();
     expect(screen.getByText('Start')).toBeTruthy();
     expect(nodeButton('lesson:lesson-01').getAttribute('aria-label')).toBe(
@@ -67,10 +68,38 @@ describe('PathDrawer', () => {
     );
     expect(nodeButton('lesson:lesson-02').getAttribute('aria-disabled')).toBe('true');
     expect(screen.getByText('Trade with a plan')).toBeTruthy();
-    expect(screen.getByText(/Coming soon/)).toBeTruthy();
+    expect(screen.getAllByText(/Coming soon/).length).toBeGreaterThan(0);
+    // The legend names the two icons, and nothing says "Hands-on" any more (owner 2026-11-12)
+    const legend = screen.getByRole('list', { name: 'Kinds of stop' }).textContent;
+    expect(legend).toContain('Practice on the real chart');
+    expect(document.body.textContent).not.toContain('Hands-on');
     expect(
       screen.getByRole('progressbar', { name: 'Path progress' }).getAttribute('aria-valuenow')
     ).toBe('0');
+  });
+
+  it('should ring a begun lesson with how much is done, and mark what is done on the chart with a dumbbell', () => {
+    // Owner 2026-11-12, after Duolingo: a ring for a lesson part done, a dumbbell for practice
+    act(() => useLessonStore.getState().setReached({ 'lesson-01': 4 }));
+    useTourStore.setState({ panelOpen: true });
+    renderDrawer();
+    const screens = lessonScreens(getLesson('lesson-01')).length;
+    const lesson1 = nodeButton('lesson:lesson-01');
+    expect(lesson1.querySelector('[data-progress]')!.getAttribute('data-progress')).toBe(
+      (5 / screens).toFixed(2)
+    );
+    expect(lesson1.getAttribute('aria-label')).toContain(`, 5 of ${screens} screens`);
+    // A lesson is a book, with no badge; what's done on the real chart is a dumbbell: the
+    // practice, and Lesson 3, whose "Try it" is there
+    expect(lesson1.querySelector('.lucide-book-open')).not.toBeNull();
+    expect(lesson1.querySelector('.lucide-dumbbell')).toBeNull();
+    expect(nodeButton('lesson:lesson-02').querySelector('.lucide-dumbbell')).not.toBeNull();
+    expect(nodeButton('lesson:lesson-02').getAttribute('aria-label')).toContain(
+      'Lesson, on the real chart: Who sets the price?'
+    );
+    expect(nodeButton('tour:buy-first-coin').querySelector('.lucide-dumbbell')).not.toBeNull();
+    // A lesson not begun has no ring
+    expect(nodeButton('lesson:lesson-ownership').querySelector('[data-progress]')).toBeNull();
   });
 
   it('should start the next lesson and close the map', () => {

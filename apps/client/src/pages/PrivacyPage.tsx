@@ -13,7 +13,7 @@ export function PrivacyPage() {
         description="Privacy policy for cryptopapertrade.com. Learn how we collect, use, and protect your data (nDSG and GDPR compliant)."
         path="/privacy"
       />
-      <LegalLayout title="Privacy Policy" lastUpdated="October 24, 2026" version="1.4">
+      <LegalLayout title="Privacy Policy" lastUpdated="November 12, 2026" version="1.5">
         <section>
           <h2>1. Data Controller</h2>
           <p>
@@ -88,12 +88,13 @@ export function PrivacyPage() {
               <tr>
                 <td>Learning progress</td>
                 <td>
-                  Remembering which guided tours you have finished and whether you dismissed the
-                  welcome offer
+                  Remembering which guided tours and lessons you have finished, how far you got in a
+                  lesson you began, and whether you dismissed the welcome offer
                 </td>
                 <td>
-                  A few records tied to your account (a tour name and a status), stored in our
-                  database and deleted with your account.
+                  A few records tied to your account (a tour or lesson name, a status and, for a
+                  lesson you began, the furthest screen), stored in our database and deleted with
+                  your account.
                 </td>
               </tr>
               <tr>

@@ -46,7 +46,7 @@ describe('ArticleDrawer', () => {
     renderDrawer();
     open('suncoin');
     expect(screen.getByRole('heading', { name: 'SunCoin: money in a notebook' })).toBeTruthy();
-    expect(drawer()!.textContent).toContain('5 min read');
+    expect(drawer()!.textContent).toContain('3 min read');
     expect(drawer()!.textContent).toContain('Library');
     expect(drawer()!.textContent).toContain('Quick self-test');
 
@@ -90,7 +90,7 @@ describe('ArticleDrawer', () => {
     expect(drawer()!.textContent).not.toMatch(/bitcoin/i);
 
     open('bitcoin-network');
-    expect(drawer()!.textContent).toContain('3 min read');
+    expect(drawer()!.textContent).toContain('4 min read');
     expect(drawer()!.textContent).toContain('Three jobs, every node');
     expect(drawer()!.textContent).toContain('Nora’s four problems, answered');
     expect(
@@ -189,9 +189,9 @@ describe('ArticleDrawer', () => {
 
   it('should open at the asked-for section', () => {
     renderDrawer();
-    open('exchange-price', { section: 'candles' });
+    open('exchange-price', { section: 'liquidity' });
     expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
-    expect(document.getElementById('article-section-candles')).not.toBeNull();
+    expect(document.getElementById('article-section-liquidity')).not.toBeNull();
   });
 
   it('should close with ✕, Esc and a click outside', () => {

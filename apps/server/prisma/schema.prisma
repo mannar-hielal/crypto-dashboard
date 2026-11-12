@@ -76,7 +76,9 @@ model LearningProgress {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   itemId    String   @db.VarChar(40)
-  status    String   @db.VarChar(20) // "completed" | "dismissed"
+  status    String   @db.VarChar(20) // "completed" | "dismissed" | "started" (a lesson begun)
+  // A begun lesson's furthest screen, as its funnel step number (the map's progress ring)
+  step      Int?     @db.SmallInt
   updatedAt DateTime @updatedAt
 
   @@id([userId, itemId])

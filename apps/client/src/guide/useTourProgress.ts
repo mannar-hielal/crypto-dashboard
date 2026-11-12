@@ -11,12 +11,23 @@ import { isCheckpointId, type CheckpointId } from '@/learn/checkpoints';
 import { usePathStore } from '@/learn/pathStore';
 import { useAuthStore } from '@/store/authStore';
 import { useLessonStore } from './lessonStore';
-import { getLesson, isLessonId, lessonStepId, type LessonId } from './lessons';
+import { getLesson, isLessonId, lessonScreenOfStep, lessonStepId, type LessonId } from './lessons';
 import { useTourStore } from './tourStore';
 import { isTourId, type TourId } from './tours';
 
+/** A lesson's furthest screen, as its funnel step number (the server's `started` row) */
+function sendReached(id: LessonId, screen: number, accessToken: string): void {
+  const step = Number(lessonStepId(getLesson(id), screen).split('.')[1]);
+  learnApi.setProgress(id, 'started', accessToken, step).catch(() => undefined);
+}
+
 export function useTourProgress(): void {
   const accessToken = useAuthStore((s) => s.accessToken);
+
+  // Signed out: the furthest screens belong to the account that made them, never the next one
+  useEffect(() => {
+    if (!accessToken) useLessonStore.getState().clearReached();
+  }, [accessToken]);
 
   // Read
   useEffect(() => {
@@ -38,6 +49,23 @@ export function useTourProgress(): void {
           completed.includes('primer') ||
           lessons.includes('lesson-01');
         useLessonStore.getState().setCompleted(lessons);
+        // How far each begun lesson got (the map's ring). A step from an earlier version of the
+        // lesson names no screen today: that lesson's ring starts again
+        const reached: Partial<Record<LessonId, number>> = {};
+        for (const i of items) {
+          if (i.status !== 'started' || !isLessonId(i.itemId) || i.step === undefined) continue;
+          const screen = lessonScreenOfStep(getLesson(i.itemId), i.step);
+          if (screen !== null) reached[i.itemId] = screen;
+        }
+        // Screens reached here before the answer came (or before signing in) that the server
+        // doesn't have yet: sent now, as nothing will rise past them to send them later
+        const local = useLessonStore.getState().reached;
+        for (const [id, screen] of Object.entries(local) as [LessonId, number][]) {
+          if (screen > (reached[id] ?? -1) && !lessons.includes(id)) {
+            sendReached(id, screen, accessToken);
+          }
+        }
+        useLessonStore.getState().setReached(reached);
         // The learning map: practice skipped on a phone, and checkpoints passed
         usePathStore.getState().setProgress({
           skippedTours: items
@@ -122,6 +150,20 @@ export function useTourProgress(): void {
           learnApi.setProgress(id, 'completed', accessToken).catch(() => undefined);
         }
       }
+    });
+  }, [accessToken]);
+
+  // A lesson's furthest screen, synced: one write each time it rises (never for the server's own
+  // answer, which arrives through `setReached` with the furthest screens it already holds)
+  useEffect(() => {
+    if (!accessToken) return;
+    return useLessonStore.subscribe((state, prev) => {
+      if (state.reached === prev.reached || state.activeId === null) return;
+      const id = state.activeId;
+      const now = state.reached[id];
+      // A replay of a finished lesson changes nothing on the server: no write
+      if (now === undefined || now <= (prev.reached[id] ?? -1) || state.completed[id]) return;
+      sendReached(id, now, accessToken);
     });
   }, [accessToken]);
 

@@ -1121,6 +1121,443 @@ function MiningRace() {
   );
 }
 
+// ─── Sell into the queue (How an exchange sets the price, 2026-11-12) ────────
+
+interface Level {
+  price: number;
+  size: number;
+}
+
+/** Made-up queues: a busy one, a cent apart, and a thin one with gaps between its offers */
+const BUSY_BIDS: readonly Level[] = [100, 99.99, 99.98, 99.97, 99.96].map((price) => ({
+  price,
+  size: 5,
+}));
+const THIN_BIDS: readonly Level[] = [
+  { price: 100, size: 1 },
+  { price: 99, size: 1 },
+  { price: 97, size: 2 },
+  { price: 94, size: 2 },
+  { price: 90, size: 4 },
+];
+const QUEUE_LIMIT = 97;
+
+/** Each coin's sale price, best bid first, never below `limit` (the rest waits unsold) */
+function sellInto(queue: readonly Level[], coins: number, limit?: number): number[] {
+  const fills: number[] = [];
+  for (const level of queue) {
+    if (limit !== undefined && level.price < limit) break;
+    for (let i = 0; i < level.size && fills.length < coins; i++) fills.push(level.price);
+  }
+  return fills;
+}
+
+const usd = (n: number, digits = 2) =>
+  n.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+
+function QueueColumn({
+  name,
+  queue,
+  fills,
+}: {
+  name: string;
+  queue: readonly Level[];
+  fills: number[];
+}) {
+  // How many coins each level sold, best bid first
+  const takenAt = queue.map((level, i) => {
+    const before = queue.slice(0, i).reduce((n, l) => n + l.size, 0);
+    return Math.max(0, Math.min(level.size, fills.length - before));
+  });
+  const avg = fills.length ? fills.reduce((a, b) => a + b, 0) / fills.length : 0;
+  const last = fills.at(-1);
+  return (
+    <li className={styles.tile}>
+      <strong className={styles.tileName}>{name}</strong>
+      <table className={styles.table}>
+        <thead>
+          <tr>
+            <th scope="col">Bid</th>
+            <th scope="col">Waiting</th>
+          </tr>
+        </thead>
+        <tbody>
+          {queue.map((level, i) => {
+            const taken = takenAt[i];
+            return (
+              <tr key={level.price}>
+                <td className={styles.plus}>{usd(level.price)}</td>
+                <td>
+                  <s className={styles.eaten} aria-label={`${taken} sold`}>
+                    {'▮'.repeat(taken)}
+                  </s>
+                  <span aria-label={`${level.size - taken} left`}>
+                    {'▮'.repeat(level.size - taken)}
+                  </span>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      {last !== undefined && (
+        <span className={styles.tileText}>
+          Average {usd(avg, 3)} · worst {usd(last)} ·{' '}
+          <span className={last < 100 ? styles.minus : undefined}>
+            slippage −{usd(((100 - last) / 100) * 100, 2)}%
+          </span>
+        </span>
+      )}
+    </li>
+  );
+}
+
+function EatTheQueue() {
+  const [coins, setCoins] = useState(6);
+  const [limit, setLimit] = useState(false);
+  const busy = sellInto(BUSY_BIDS, coins, limit ? QUEUE_LIMIT : undefined);
+  const thin = sellInto(THIN_BIDS, coins, limit ? QUEUE_LIMIT : undefined);
+  const unsold = coins - thin.length;
+  const status = `Thin queue: your ${thin.length} coin${thin.length === 1 ? '' : 's'} sold at ${thin
+    .map((p) => usd(p, 0))
+    .join(', ')}. The price on everyone’s screen is now ${usd(thin.at(-1) ?? 100, 0)}.${
+    unsold > 0 ? ` ${unsold} wait unsold: a limit sets the worst price you accept.` : ''
+  }`;
+  return (
+    <figure
+      className={styles.widget}
+      aria-label="Sell the same amount into a busy queue and a thin one"
+    >
+      <label className={styles.story} htmlFor="queue-size">
+        Sell how many coins? <strong>{coins}</strong>
+      </label>
+      <input
+        id="queue-size"
+        type="range"
+        min={1}
+        max={10}
+        value={coins}
+        aria-valuetext={`Sell ${coins} coins`}
+        className={styles.range}
+        onChange={(e) => setCoins(Number(e.target.value))}
+        {...guide('article.queue.size')}
+      />
+      <ul className={`${styles.tiles} ${styles.tilesTwo}`}>
+        <QueueColumn name="Busy" queue={BUSY_BIDS} fills={busy} />
+        <QueueColumn name="Thin" queue={THIN_BIDS} fills={thin} />
+      </ul>
+      <p className={styles.story} role="status">
+        {status}
+      </p>
+      <div className={styles.widgetActions}>
+        <button
+          type="button"
+          className={limit ? styles.stepOn : styles.stepBtn}
+          aria-pressed={limit}
+          onClick={() => setLimit((l) => !l)}
+          {...guide('article.queue.limit')}
+        >
+          Set a limit at {QUEUE_LIMIT}
+        </button>
+      </div>
+      <figcaption className={styles.caption}>
+        Made-up numbers. Every price starts at 100.00.
+      </figcaption>
+    </figure>
+  );
+}
+
+// ─── Build a candle from its deals (Candles, news and big swings) ────────────
+
+/** Made-up deals in two one-minute slots: one ends green, one red */
+const CANDLE_MINUTES: readonly (readonly number[])[] = [
+  [64010, 64060, 63940, 63980, 64120, 64090],
+  [64090, 64150, 64030, 63900, 63960, 63920],
+];
+
+function CandleBuilder() {
+  const reduced = useReducedMotion();
+  const [minute, setMinute] = useState(0);
+  const [deals, setDeals] = useState(1);
+  const all = CANDLE_MINUTES[minute];
+  const seen = all.slice(0, deals);
+  const open = seen[0];
+  const close = seen.at(-1) ?? open;
+  const high = Math.max(...seen);
+  const low = Math.min(...seen);
+  const done = deals === all.length;
+  const up = close >= open;
+  // The y scale covers both minutes, so the candle grows inside a steady frame
+  const top = 64200;
+  const bottom = 63850;
+  const y = (v: number) => 10 + ((top - v) / (top - bottom)) * 140;
+  const body = {
+    y: y(Math.max(open, close)),
+    h: Math.max(y(Math.min(open, close)) - y(Math.max(open, close)), 2),
+  };
+  const fmt = (n: number) => n.toLocaleString('en-US');
+  const status = done
+    ? `${up ? '▲ Closed higher than it opened: green.' : '▼ Closed lower than it opened: red.'} That’s all a candle says. Open ${fmt(open)}, high ${fmt(high)}, low ${fmt(low)}, close ${fmt(close)}.`
+    : `Deal ${deals} of ${all.length}: ${fmt(close)}. Open ${fmt(open)}, high ${fmt(high)}, low ${fmt(low)}, close so far ${fmt(close)}.`;
+  return (
+    <figure className={styles.widget} aria-label="A candle drawn deal by deal">
+      <div className={styles.candleRow}>
+        <svg viewBox="0 0 120 160" className={styles.candleSvg} aria-hidden="true">
+          <g className={done ? (up ? styles.plus : styles.minus) : styles.system}>
+            <line
+              x1="40"
+              x2="40"
+              y1={y(high)}
+              y2={y(low)}
+              stroke="currentColor"
+              strokeWidth="2.5"
+            />
+            <rect
+              x="26"
+              y={body.y}
+              width="28"
+              height={body.h}
+              rx="2"
+              fill="currentColor"
+              className={reduced ? undefined : styles.candleGrow}
+            />
+          </g>
+          <text x="62" y={y(high) + 4} className={styles.candleLabel}>
+            {high === low ? 'Open' : 'High'}
+          </text>
+          {y(low) - y(high) > 12 && (
+            <text x="62" y={y(low) + 4} className={styles.candleLabel}>
+              Low
+            </text>
+          )}
+        </svg>
+        <ol className={styles.dealList}>
+          {all.map((p, i) => (
+            <li key={i} className={i < deals ? styles.dealOn : styles.dealOff}>
+              {i < deals ? fmt(p) : '·····'}
+              {i === 0 && i < deals ? ' (open)' : ''}
+              {i === deals - 1 && i > 0 ? (done ? ' (close)' : ' (latest)') : ''}
+            </li>
+          ))}
+        </ol>
+      </div>
+      <p className={done ? styles.okLine : styles.story} role="status">
+        {status}
+      </p>
+      <div className={styles.widgetActions}>
+        {done ? (
+          <button
+            type="button"
+            className={styles.stepBtn}
+            onClick={() => {
+              setMinute((m) => (m + 1) % CANDLE_MINUTES.length);
+              setDeals(1);
+            }}
+            {...guide('article.candle.next')}
+          >
+            Try another minute
+          </button>
+        ) : (
+          <button
+            type="button"
+            className={styles.stepBtn}
+            onClick={() => setDeals((d) => d + 1)}
+            {...guide('article.candle.next')}
+          >
+            Next deal
+          </button>
+        )}
+        <button
+          type="button"
+          className={styles.stepBtn}
+          onClick={() => {
+            setMinute(0);
+            setDeals(1);
+          }}
+          {...guide('article.candle.reset')}
+        >
+          Start over
+        </button>
+      </div>
+      <figcaption className={styles.caption}>Made-up deals in one minute.</figcaption>
+    </figure>
+  );
+}
+
+// ─── Same swing, different sizes (Candles, news and big swings) ──────────────
+
+/** Bybit BTCUSDT perpetual daily, 19 May 2021 (checked 2026-11-12) */
+const MAY_19 = { open: 42903.5, low: 28801, close: 36727 } as const;
+const SWING_SIZES = [50, 100, 500, 1000] as const;
+
+/** What a trade bought at the open is worth at the low or the close, to the cent */
+function swingValue(size: number, at: 'low' | 'close'): number {
+  return Math.round(((size * MAY_19[at]) / MAY_19.open) * 100) / 100;
+}
+
+function SwingSizer() {
+  const [size, setSize] = useState<number>(100);
+  const [at, setAt] = useState<'low' | 'close'>('low');
+  const value = swingValue(size, at);
+  const pct = ((MAY_19[at] / MAY_19.open - 1) * 100).toFixed(1).replace('-', '−');
+  return (
+    <figure className={styles.widget} aria-label="One day's swing at different trade sizes">
+      <p className={styles.story}>Bitcoin, 19 May 2021, bought at the open ($42,903.50).</p>
+      <div className={styles.widgetActions} role="group" aria-label="Trade size">
+        {SWING_SIZES.map((n) => (
+          <button
+            key={n}
+            type="button"
+            className={size === n ? styles.stepOn : styles.stepBtn}
+            aria-pressed={size === n}
+            onClick={() => setSize(n)}
+            {...guide('article.swing.size', String(n))}
+          >
+            ${usd(n, 0)}
+          </button>
+        ))}
+      </div>
+      <div className={styles.widgetActions} role="group" aria-label="When">
+        {(['low', 'close'] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            className={at === m ? styles.stepOn : styles.stepBtn}
+            aria-pressed={at === m}
+            onClick={() => setAt(m)}
+            {...guide('article.swing.moment', m)}
+          >
+            {m === 'low' ? 'At the low' : 'At the close'}
+          </button>
+        ))}
+      </div>
+      <p className={styles.story} role="status">
+        ${usd(size)} became ${usd(value)} {at === 'low' ? 'at the low' : 'at the close'}:{' '}
+        <span className={styles.minus}>
+          −${usd(Math.round((size - value) * 100) / 100)} ({pct}%)
+        </span>
+        .
+      </p>
+      <p className={styles.okLine}>
+        The swing was the same {pct}% for everyone. Only the size was yours to choose.
+      </p>
+      <p className={styles.story}>A typical day in 2025, from high to low (Bybit):</p>
+      <ul className={styles.swingBars}>
+        <li>
+          <span>Bitcoin</span>
+          <span className={styles.swingBar} style={{ width: '30%' }} aria-hidden="true" />
+          <span>about 3%</span>
+        </li>
+        <li>
+          <span>Dogecoin</span>
+          <span className={styles.swingBar} style={{ width: '65%' }} aria-hidden="true" />
+          <span>about 6.5%</span>
+        </li>
+      </ul>
+    </figure>
+  );
+}
+
+// ─── Red flag or not? (Check before you trust) ──────────────────────────────
+
+const SCAM_STATEMENTS: readonly { text: string; flag: boolean; why: string }[] = [
+  {
+    text: 'The team is anonymous: no names, no company.',
+    flag: true,
+    why: 'Nobody can be held to account if the money disappears.',
+  },
+  {
+    text: 'The website promises 2% a day.',
+    flag: true,
+    why: 'No honest project promises a fixed return. A promise is a warning, not a reason.',
+  },
+  {
+    text: 'A test sale of $1 fails: “selling paused”.',
+    flag: true,
+    why: 'If you can’t sell it, you don’t really have it. That was the Squid Game trap.',
+  },
+  {
+    text: 'Its price rose 80% this week.',
+    flag: false,
+    why: 'Not a red flag on its own, but no proof either: a rise only means people traded. Squid rose too.',
+  },
+  {
+    text: 'A celebrity posted about it.',
+    flag: false,
+    why: 'Not a red flag on its own, but popularity proves nothing about who runs it or whether you can sell.',
+  },
+  {
+    text: 'It trades on a large exchange with a busy order book.',
+    flag: false,
+    why: 'A good sign that you could sell, though still no guarantee the coin is worth anything.',
+  },
+];
+
+const RED_FLAGS = SCAM_STATEMENTS.filter((s) => s.flag).length;
+
+function ScamCheck() {
+  const [index, setIndex] = useState(0);
+  const [answers, setAnswers] = useState<(boolean | undefined)[]>([]);
+  const item = SCAM_STATEMENTS[index];
+  const answer = answers[index];
+  const answered = answers.filter((a) => a !== undefined).length;
+  const all = answered === SCAM_STATEMENTS.length;
+  const pick = (flag: boolean) =>
+    setAnswers((a) => {
+      const next = [...a];
+      next[index] = flag;
+      return next;
+    });
+  return (
+    <figure className={styles.widget} aria-label="Red flag or not: a made-up coin">
+      <p className={styles.story}>
+        <strong>PupCoin</strong> (made up, not a real coin) · statement {index + 1} of{' '}
+        {SCAM_STATEMENTS.length}
+      </p>
+      <p className={styles.scamStatement}>“{item.text}”</p>
+      <div className={styles.widgetActions}>
+        {([true, false] as const).map((flag) => (
+          <button
+            key={String(flag)}
+            type="button"
+            className={answer === flag ? styles.stepOn : styles.stepBtn}
+            aria-pressed={answer === flag}
+            onClick={() => pick(flag)}
+            {...guide('article.scam.flag', flag ? 'red' : 'not')}
+          >
+            {flag ? 'Red flag' : 'Not a red flag'}
+          </button>
+        ))}
+      </div>
+      <p className={answer === undefined ? styles.story : styles.okLine} role="status">
+        {answer === undefined
+          ? 'Your call: red flag, or not?'
+          : `${answer === item.flag ? '✓' : '•'} ${item.flag ? 'Red flag.' : 'Not a red flag.'} ${item.why}`}
+      </p>
+      {all && <p className={styles.alert}>{RED_FLAGS} red flags. One is enough to walk away.</p>}
+      <div className={styles.widgetActions}>
+        <button
+          type="button"
+          className={styles.stepBtn}
+          disabled={index === 0}
+          onClick={() => setIndex((i) => i - 1)}
+        >
+          ← Back
+        </button>
+        <button
+          type="button"
+          className={styles.stepBtn}
+          disabled={index === SCAM_STATEMENTS.length - 1}
+          onClick={() => setIndex((i) => i + 1)}
+          {...guide('article.scam.next')}
+        >
+          Next →
+        </button>
+      </div>
+    </figure>
+  );
+}
+
 export function ArticleWidget({ id }: { id: WidgetId }) {
   switch (id) {
     case 'suncoin-notebook':
@@ -1153,6 +1590,14 @@ export function ArticleWidget({ id }: { id: WidgetId }) {
       return <PublicLedger />;
     case 'bitcoin-timeline':
       return <BitcoinTimeline />;
+    case 'eat-the-queue':
+      return <EatTheQueue />;
+    case 'candle-builder':
+      return <CandleBuilder />;
+    case 'swing-sizer':
+      return <SwingSizer />;
+    case 'scam-check':
+      return <ScamCheck />;
     case 'mining-race':
       return <MiningRace />;
   }

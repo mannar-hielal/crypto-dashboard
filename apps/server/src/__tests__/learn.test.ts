@@ -25,6 +25,7 @@ vi.mock('../plugins/prisma.js', () => {
         findUnique: vi.fn(),
         upsert: vi.fn(),
         createMany: vi.fn(),
+        updateMany: vi.fn(),
       },
       learningEvent: {
         count: vi.fn(),
@@ -148,7 +149,7 @@ describe('/api/learn/progress', () => {
       expect.objectContaining({
         where: { userId_itemId: { userId: 'user-1', itemId: 'primer' } },
         create: { userId: 'user-1', itemId: 'primer', status: 'completed' },
-        update: { status: 'completed' },
+        update: { status: 'completed', step: null },
       })
     );
   });
@@ -225,6 +226,125 @@ describe('/api/learn/progress', () => {
       expect.objectContaining({
         create: { userId: 'user-1', itemId: 'primer', status: 'completed' },
       })
+    );
+  });
+
+  it('PUT started: records how far a lesson has got, and the step only rises', async () => {
+    // The row exists: the step is raised, and what was asked comes back without a read
+    vi.mocked(app.prisma.learningProgress.createMany).mockResolvedValueOnce({ count: 0 });
+    vi.mocked(app.prisma.learningProgress.updateMany).mockResolvedValueOnce({ count: 1 });
+
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/learn/progress/lesson-02',
+      headers: auth(),
+      payload: { status: 'started', step: 46 },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().item).toMatchObject({ itemId: 'lesson-02', status: 'started', step: 46 });
+    expect(app.prisma.learningProgress.findUnique).not.toHaveBeenCalled();
+    // Created if missing; otherwise raised only while unfinished and only to a higher step
+    expect(app.prisma.learningProgress.createMany).toHaveBeenCalledWith({
+      data: [{ userId: 'user-1', itemId: 'lesson-02', status: 'started', step: 46 }],
+      skipDuplicates: true,
+    });
+    expect(app.prisma.learningProgress.updateMany).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-1',
+        itemId: 'lesson-02',
+        status: 'started',
+        OR: [{ step: null }, { step: { lt: 46 } }],
+      },
+      data: { step: 46 },
+    });
+    expect(app.prisma.learningProgress.upsert).not.toHaveBeenCalled();
+  });
+
+  it('PUT started: a finished lesson stays finished', async () => {
+    vi.mocked(app.prisma.learningProgress.createMany).mockResolvedValueOnce({ count: 0 });
+    vi.mocked(app.prisma.learningProgress.updateMany).mockResolvedValueOnce({ count: 0 });
+    vi.mocked(app.prisma.learningProgress.findUnique).mockResolvedValueOnce({
+      itemId: 'lesson-01',
+      status: 'completed',
+      step: null,
+      updatedAt: AT,
+    } as never);
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/learn/progress/lesson-01',
+      headers: auth(),
+      payload: { status: 'started', step: 23 },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().item).toEqual({
+      itemId: 'lesson-01',
+      status: 'completed',
+      updatedAt: AT.toISOString(),
+    });
+  });
+
+  it('PUT started: refuses a tour, a missing step and a step out of range, before any write', async () => {
+    const put = (url: string, payload: unknown) =>
+      app.inject({ method: 'PUT', url, headers: auth(), payload: payload as never });
+
+    expect(
+      (await put('/api/learn/progress/primer', { status: 'started', step: 2 })).statusCode
+    ).toBe(400);
+    expect((await put('/api/learn/progress/lesson-02', { status: 'started' })).statusCode).toBe(
+      400
+    );
+    expect(
+      (await put('/api/learn/progress/lesson-02', { status: 'started', step: 0 })).statusCode
+    ).toBe(400);
+    expect(
+      (await put('/api/learn/progress/lesson-02', { status: 'started', step: 1000 })).statusCode
+    ).toBe(400);
+    // A step only with a start
+    expect(
+      (await put('/api/learn/progress/lesson-02', { status: 'completed', step: 5 })).statusCode
+    ).toBe(400);
+    expect(
+      (await put('/api/learn/progress/lesson-02', { status: 'started', step: 'x' })).statusCode
+    ).toBe(400);
+    expect(app.prisma.learningProgress.createMany).not.toHaveBeenCalled();
+    expect(app.prisma.learningProgress.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('PUT started: a new row is created and answered without a read back', async () => {
+    vi.mocked(app.prisma.learningProgress.createMany).mockResolvedValueOnce({ count: 1 });
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/learn/progress/lesson-01',
+      headers: auth(),
+      payload: { status: 'started', step: 21 },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().item).toMatchObject({ itemId: 'lesson-01', status: 'started', step: 21 });
+    expect(app.prisma.learningProgress.updateMany).not.toHaveBeenCalled();
+    expect(app.prisma.learningProgress.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('PUT completed: a finished lesson drops its furthest screen', async () => {
+    vi.mocked(app.prisma.learningProgress.upsert).mockResolvedValueOnce({
+      itemId: 'lesson-02',
+      status: 'completed',
+      step: null,
+      updatedAt: AT,
+    } as never);
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/learn/progress/lesson-02',
+      headers: auth(),
+      payload: { status: 'completed' },
+    });
+    expect(res.json().item).toEqual({
+      itemId: 'lesson-02',
+      status: 'completed',
+      updatedAt: AT.toISOString(),
+    });
+    expect(app.prisma.learningProgress.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ update: { status: 'completed', step: null } })
     );
   });
 

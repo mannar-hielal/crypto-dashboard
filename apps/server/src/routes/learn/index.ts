@@ -24,7 +24,9 @@ const itemSchema = {
   required: ['itemId', 'status', 'updatedAt'],
   properties: {
     itemId: { type: 'string', enum: [...LEARN_ITEM_IDS] },
-    status: { type: 'string', enum: ['completed', 'dismissed'] },
+    status: { type: 'string', enum: ['completed', 'dismissed', 'started'] },
+    /** A lesson's furthest screen, as the funnel's step number (`lesson-02.<n>`) */
+    step: { type: 'integer' },
     updatedAt: { type: 'string' },
   },
 };
@@ -32,14 +34,24 @@ const itemSchema = {
 interface ItemRow {
   itemId: string;
   status: string;
+  step?: number | null;
   updatedAt: Date;
 }
 
 const toItem = (r: ItemRow) => ({
   itemId: r.itemId as LearnItemId,
   status: r.status as LearnStatus,
+  ...(typeof r.step === 'number' ? { step: r.step } : {}),
   updatedAt: r.updatedAt.toISOString(),
 });
+
+const ROW = { itemId: true, status: true, step: true, updatedAt: true } as const;
+
+/**
+ * A lesson's furthest screen is stored as its funnel step number, which includes the lesson's
+ * `stepBase` (raised by 20 at each rebuild, never lowered). Room for many rebuilds; a SmallInt column
+ */
+const MAX_STEP = 999;
 
 // ─── ROUTES ─────────────────────────────────────────────────────────────────
 
@@ -72,7 +84,7 @@ export async function learnRoutes(app: FastifyInstance) {
       const { userId } = request.user as { userId: string };
       const rows = await app.prisma.learningProgress.findMany({
         where: { userId },
-        select: { itemId: true, status: true, updatedAt: true },
+        select: ROW,
       });
       return reply.send({ items: rows.map(toItem) });
     }
@@ -84,9 +96,10 @@ export async function learnRoutes(app: FastifyInstance) {
     {
       schema: {
         tags: ['Learn'],
-        summary: 'Mark a tour finished or the welcome card dismissed',
+        summary: 'Mark a tour finished, an offer dismissed, or how far a lesson has got',
         description:
-          'Idempotent. `completed` is never downgraded: a dismissal after a completion is a no-op.',
+          'Idempotent. `completed` is never downgraded: a dismissal or a start after a completion is a no-op. ' +
+          '`started` takes a lesson and its furthest screen as `step` (the funnel step number); the stored step only rises.',
         security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
@@ -98,7 +111,10 @@ export async function learnRoutes(app: FastifyInstance) {
           type: 'object',
           required: ['status'],
           additionalProperties: false,
-          properties: { status: { type: 'string', enum: ['completed', 'dismissed'] } },
+          properties: {
+            status: { type: 'string', enum: ['completed', 'dismissed', 'started'] },
+            step: { type: 'integer', minimum: 1, maximum: MAX_STEP },
+          },
         },
         response: {
           200: {
@@ -116,14 +132,56 @@ export async function learnRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { userId } = request.user as { userId: string };
       const { itemId } = request.params as { itemId: LearnItemId };
-      const { status } = request.body as { status: LearnStatus };
+      const { status, step } = request.body as { status: LearnStatus; step?: number };
+
+      // 🔐 A step belongs to a start only: a finish or a dismissal carrying one is a bad request
+      if (status !== 'started' && step !== undefined) {
+        return reply.status(400).send({ error: 'Only a start takes a step' });
+      }
+
+      if (status === 'started') {
+        // 🔐 Only a lesson has screens, and a start always says how far
+        if (!(LEARN_LESSON_IDS as readonly string[]).includes(itemId) || step === undefined) {
+          return reply.status(400).send({ error: 'A start needs a lesson and its step' });
+        }
+        // 🔐 Never a downgrade: the row is created if missing, and its step only rises while the
+        // lesson is unfinished (a completed row is left as it is)
+        const created = await app.prisma.learningProgress.createMany({
+          data: [{ userId, itemId, status, step }],
+          skipDuplicates: true,
+        });
+        // A new row, or a raised step: what was asked is what's stored, so no read back
+        if (created.count === 1) {
+          return reply.send({ item: toItem({ itemId, status, step, updatedAt: new Date() }) });
+        }
+        const raisedRows = await app.prisma.learningProgress.updateMany({
+          where: {
+            userId,
+            itemId,
+            status: 'started',
+            OR: [{ step: null }, { step: { lt: step } }],
+          },
+          data: { step },
+        });
+        if (raisedRows.count === 1) {
+          return reply.send({ item: toItem({ itemId, status, step, updatedAt: new Date() }) });
+        }
+        const row = await app.prisma.learningProgress.findUnique({
+          where: { userId_itemId: { userId, itemId } },
+          select: ROW,
+        });
+        return reply.send({
+          item: toItem(row ?? { itemId, status, step, updatedAt: new Date() }),
+        });
+      }
 
       if (status === 'completed') {
         const row = await app.prisma.learningProgress.upsert({
           where: { userId_itemId: { userId, itemId } },
           create: { userId, itemId, status },
-          update: { status },
-          select: { itemId: true, status: true, updatedAt: true },
+          // A finished lesson no longer has a "furthest screen"
+          update: { status, step: null },
+          select: ROW,
         });
         return reply.send({ item: toItem(row) });
       }
@@ -135,9 +193,11 @@ export async function learnRoutes(app: FastifyInstance) {
       });
       const row = await app.prisma.learningProgress.findUnique({
         where: { userId_itemId: { userId, itemId } },
-        select: { itemId: true, status: true, updatedAt: true },
+        select: ROW,
       });
-      return reply.send({ item: toItem(row ?? { itemId, status, updatedAt: new Date() }) });
+      return reply.send({
+        item: toItem(row ?? { itemId, status, step: null, updatedAt: new Date() }),
+      });
     }
   );
 

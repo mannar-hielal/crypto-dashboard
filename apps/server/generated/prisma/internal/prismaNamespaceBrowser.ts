@@ -118,6 +118,7 @@ export const LearningProgressScalarFieldEnum = {
   userId: 'userId',
   itemId: 'itemId',
   status: 'status',
+  step: 'step',
   updatedAt: 'updatedAt'
 } as const
 

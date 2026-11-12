@@ -275,6 +275,7 @@ export const GUIDE_ANCHORS = [
   'path.chapter.overview',
   'path.node',
   'path.node.note',
+  'path.legend',
   'path.test-out',
   'path.tour.skip',
   // checkpoint (a chapter's five mixed questions)
@@ -339,6 +340,14 @@ export const GUIDE_ANCHORS = [
   'article.answer.tile',
   'article.scenario.try',
   /** The mining race: one round of guesses, and starting over */
+  'article.queue.size',
+  'article.queue.limit',
+  'article.candle.next',
+  'article.candle.reset',
+  'article.swing.size',
+  'article.swing.moment',
+  'article.scam.flag',
+  'article.scam.next',
   'article.mining.guess',
   'article.mining.reset',
   'article.ledger.link',
