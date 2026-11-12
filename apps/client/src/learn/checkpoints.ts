@@ -58,7 +58,7 @@ const checkpointCh1: Checkpoint = {
       options: ['Send it: they say they’re support', 'Send only the first half', 'Never share it'],
       correct: 2,
       explain:
-        'Your recovery phrase is your key. Whoever has it can move your coins, and real support never asks for it.',
+        'Your recovery phrase is your key. Whoever has it can move your bitcoin, and real support never asks for it.',
       taughtIn: { kind: 'lesson', id: 'lesson-ownership' },
     },
     {

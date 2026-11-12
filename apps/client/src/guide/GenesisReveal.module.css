@@ -1,4 +1,4 @@
-/* The birth of Bitcoin on Lesson 1's summary (owner 2026-11-08). Colours from tokens.ts via the
+/* The birth of Bitcoin on Lesson 1's summary (owner 2026-11-12). Colours from tokens.ts via the
    @theme mirror in index.css; raw values without a CSS variable are noted with their token. */
 
 /* From the third step the scene goes dark: the old world fades, something new begins */
@@ -15,14 +15,22 @@
   background: var(--color-bg-deep); /* bg.deep: the cinema stage */
 }
 
+/* One cell for every part, so each replaces the last without the layout jumping */
+.stage {
+  display: grid;
+  align-items: center;
+  min-height: 260px;
+}
+
+.stage > * {
+  grid-area: 1 / 1;
+}
+
 .points {
   margin: 0;
   padding: 4px 4px 0 26px;
+  align-self: start;
   list-style: decimal; /* the base styles turn list markers off */
-  transition:
-    opacity 0.6s ease-out,
-    transform 0.6s ease-out;
-  transform-origin: top left;
 }
 
 .points li + li {
@@ -34,44 +42,33 @@
   font-weight: 700;
 }
 
-/* The old world: still readable, set back */
-.pointsDim {
-  opacity: 0.55; /* set back, still readable; its Read more links still work */
-  transform: scale(0.97);
-}
-
-.points li {
-  transition: color 0.6s ease-out;
-}
-
-.pointsDim li {
-  color: var(--color-brand-muted);
-}
-
-.pointsDim li::marker {
-  color: var(--color-brand-muted);
-}
-
-.headline {
-  margin: 18px 8px 0;
+/* A story line never takes a click: one hidden in the shared cell would sit over a problem's Read
+   more and swallow the tap (review 2026-11-12); a tap anywhere still reaches the scene */
+.line {
+  pointer-events: none;
+  margin: 0 12px;
   color: var(--color-brand-white);
-  font-family: Georgia, 'Times New Roman', serif; /* a newspaper's type, for the headline only */
   font-size: 18px; /* fontSize.base */
-  font-style: italic;
+  font-weight: 600;
   line-height: 1.375; /* lineHeight.snug */
   text-align: center;
 }
 
-.caret {
+.line strong {
   color: var(--color-brand-amber); /* color.amber */
+}
+
+.finale {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .scene {
   display: block;
   width: 100%;
-  max-width: 240px;
+  max-width: 220px;
   height: auto;
-  margin: 4px auto 0;
   overflow: visible;
 }
 
@@ -81,30 +78,19 @@
   stroke-width: 3;
 }
 
-.block {
+.mark {
   transform-box: fill-box;
   transform-origin: center;
+  filter: drop-shadow(0 0 14px rgba(231, 171, 51, 0.6)); /* color.amber glow */
 }
 
-.blockFace {
-  fill: var(--color-bg-surface); /* bg.surface */
-  stroke: var(--color-brand-purple); /* color.purple */
-  stroke-width: 3;
-  filter: drop-shadow(0 0 10px rgba(231, 171, 51, 0.55)); /* color.amber glow */
-}
-
-.caption {
-  margin: 4px 8px 12px;
+.end {
+  margin: 4px 12px 12px;
   color: var(--color-brand-white);
+  font-size: 18px; /* fontSize.base */
+  font-weight: 600;
+  line-height: 1.375; /* lineHeight.snug */
   text-align: center;
-}
-
-.kicker {
-  display: block;
-  color: var(--color-brand-amber); /* color.amber */
-  font-size: 13px; /* fontSize.xs11 */
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
 }
 
 .srOnly {
@@ -117,9 +103,17 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .genesis,
-  .points,
-  .points li {
+  .genesis {
     transition: none;
   }
+}
+
+/* Reduced motion: the stage flows, every part shown one under another */
+.genesis[data-full='true'] .stage {
+  display: block;
+  min-height: 0;
+}
+
+.genesis[data-full='true'] .line {
+  margin: 14px 12px 0;
 }

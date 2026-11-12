@@ -96,7 +96,7 @@ describe('ArticleDrawer', () => {
     expect(
       document.querySelector('[aria-label="Sofia’s stamp and the stamp-checker"]')
     ).toBeTruthy();
-    expect(drawer()!.textContent).toContain('Lesson 2: Many notebooks, no Nora →');
+    expect(drawer()!.textContent).toContain('Lesson 2: One ledger, thousands of copies →');
   });
 
   it('should step through a payment with the mailbox, and point to the card that teaches it', () => {
@@ -109,10 +109,12 @@ describe('ArticleDrawer', () => {
     expect(drawer()!.textContent).toContain('Lesson 2: A mailbox and a key →');
   });
 
-  it('should say where an article will be practised when no lesson does it yet', () => {
+  it('should send the story article back to the Lesson 2 card whose Read more opens it', () => {
     renderDrawer();
     open('bitcoin-story');
-    expect(drawer()!.textContent).toContain('Coming in a later lesson');
+    // Owner 2026-11-12: no "Coming in a later lesson" once a lesson card links here
+    expect(drawer()!.textContent).not.toContain('Coming in a later lesson');
+    expect(drawer()!.textContent).toContain('Lesson 2: Money that no one controls');
     expect(drawer()!.textContent).toContain('Satoshi');
   });
 

@@ -8,6 +8,7 @@
 import { X } from 'lucide-react';
 import { guide } from '@/lib/guideAnchors';
 import styles from './LearnCard.module.css';
+import { getLesson } from './lessons';
 import { useLessonStore } from './lessonStore';
 import { useTourStore } from './tourStore';
 
@@ -43,8 +44,8 @@ export function LearnCard() {
         </button>
       </div>
       <p className={styles.text}>
-        Start with a 4-minute lesson: what Bitcoin is, and why money needs a record keeper. No real
-        money.
+        Start with a {getLesson('lesson-01').minutes}-minute lesson: why money needs someone you
+        trust, and what goes wrong when one keeper holds the record. No real money.
       </p>
       <div className={styles.foot}>
         <button

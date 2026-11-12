@@ -462,7 +462,7 @@
   color: var(--color-brand-amber); /* color.amber: a warning, with a ✗ */
 }
 
-/* Your coins aren't in your phone: three things, and what each loss takes */
+/* Your bitcoin isn't in your phone: three things, and what each loss takes */
 .holdings {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -781,4 +781,127 @@
   gap: 8px;
   margin: 0 0 10px;
   font-weight: 700;
+}
+
+/* ─── Bitcoin's first steps: the timeline (owner 2026-11-12) ─────────────── */
+
+/* A rail down the left, a dot per date; the entries drop in one after another */
+.timeline {
+  position: relative;
+  margin: 0;
+  padding: 0 0 0 22px;
+  list-style: none;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 6px;
+  width: 2px;
+  background: var(--color-brand-purple-dark); /* color.purpleDark: the rail */
+}
+
+.timelineEntry {
+  position: relative;
+  animation: timelineIn 0.5s ease-out both;
+}
+
+.timelineEntry + .timelineEntry {
+  margin-top: 16px;
+}
+
+.timelineEntry[data-drop='1'] {
+  animation-delay: 0.15s;
+}
+
+.timelineEntry[data-drop='2'] {
+  animation-delay: 0.3s;
+}
+
+.timelineDot {
+  position: absolute;
+  top: 16px;
+  left: -21px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--color-bg-panel); /* bg.panel: a gap around the dot */
+  border-radius: 50%;
+  background: var(--color-brand-purple); /* color.purple */
+}
+
+.timelineHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* The picture's tile: the paper, block 0, the pizzas */
+.timelinePicture {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border: 1px solid var(--color-brand-purple-dark); /* color.purpleDark */
+  border-radius: 10px;
+  background: var(--color-bg-surface); /* bg.surface */
+}
+
+.timelinePicture[data-picture='block'] {
+  border: 2px solid var(--color-brand-purple); /* color.purple: block 0, framed as the lessons' Bitcoin mark */
+}
+
+.timelinePicture[data-picture='pizza'] {
+  width: 64px;
+}
+
+.timelineMark {
+  width: 26px;
+  height: 26px;
+}
+
+.timelinePhoto {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.timelineDate {
+  color: var(--color-brand-white);
+}
+
+.timelineText {
+  margin: 6px 0 0;
+  color: var(--color-brand-muted);
+}
+
+.timelineCredit {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px; /* fontSize.xs10 */
+}
+
+.timelineText strong,
+.timelineText em {
+  color: var(--color-brand-white);
+}
+
+@keyframes timelineIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timelineEntry {
+    animation: none;
+  }
 }

@@ -316,7 +316,7 @@ describe('useTourProgress', () => {
 
       act(() => useLessonStore.getState().next());
       expect(calls()).toEqual([
-        { name: 'tour_step', itemId: 'lesson-ownership', stepId: 'lesson-ownership.3' },
+        { name: 'tour_step', itemId: 'lesson-ownership', stepId: 'lesson-ownership.23' },
       ]);
     });
 
@@ -347,7 +347,7 @@ describe('useTourProgress', () => {
       trackEvent.mockClear();
       act(() => useLessonStore.getState().start('lesson-02', 4));
       expect(calls()).toEqual([
-        { name: 'tour_closed', itemId: 'lesson-ownership', stepId: 'lesson-ownership.2' },
+        { name: 'tour_closed', itemId: 'lesson-ownership', stepId: 'lesson-ownership.22' },
         { name: 'tour_started', itemId: 'lesson-02' },
         { name: 'tour_step', itemId: 'lesson-02', stepId: 'lesson-02.25' },
       ]);

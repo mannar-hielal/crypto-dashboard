@@ -586,3 +586,8 @@
   color: var(--color-brand-purple); /* color.purple */
   font-weight: 600;
 }
+
+/* A card's Read more, under its points (owner 2026-11-12) */
+.more {
+  margin: 8px 0 0;
+}

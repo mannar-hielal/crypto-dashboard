@@ -63,7 +63,7 @@ describe('PathDrawer', () => {
     expect(screen.getByText('Foundations of crypto')).toBeTruthy();
     expect(screen.getByText('Start')).toBeTruthy();
     expect(nodeButton('lesson:lesson-01').getAttribute('aria-label')).toBe(
-      'Lesson: What is Bitcoin?, next step'
+      'Lesson: What is the problem?, next step'
     );
     expect(nodeButton('lesson:lesson-02').getAttribute('aria-disabled')).toBe('true');
     expect(screen.getByText('Trade with a plan')).toBeTruthy();
@@ -87,7 +87,7 @@ describe('PathDrawer', () => {
     fireEvent.click(nodeButton('lesson:lesson-02'));
     expect(useLessonStore.getState().activeId).toBeNull();
     expect(useTourStore.getState().panelOpen).toBe(true);
-    expect(screen.getByText('Finish “Who owns a bitcoin?” first.')).toBeTruthy();
+    expect(screen.getByText('Finish “What is Bitcoin?” first.')).toBeTruthy();
   });
 
   it('should never make a coming-soon stop focusable', () => {

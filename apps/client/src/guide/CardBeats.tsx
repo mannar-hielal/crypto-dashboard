@@ -13,6 +13,7 @@ import { guide } from '@/lib/guideAnchors';
 import { GuideAvatar } from './LessonArt';
 import { compact, counterValue, formatDollars } from './beats';
 import { GUIDE_NAMES, type Beat } from './lessons';
+import { emphasize } from './emphasize';
 import styles from './CardBeats.module.css';
 
 /** The pause before each next line, and how long a counter takes */
@@ -51,15 +52,7 @@ function Counter({ beat, run, active }: { beat: CounterBeat; run: boolean; activ
 }
 
 function Headline({ beat }: { beat: Extract<Beat, { kind: 'headline' }> }) {
-  const at = beat.emphasis ? beat.text.indexOf(beat.emphasis) : -1;
-  if (!beat.emphasis || at < 0) return <>{beat.text}</>;
-  return (
-    <>
-      {beat.text.slice(0, at)}
-      <strong className={styles.big}>{beat.emphasis}</strong>
-      {beat.text.slice(at + beat.emphasis.length)}
-    </>
-  );
+  return emphasize(beat.text, beat.emphasis, styles.big);
 }
 
 function BeatLine({ beat, run, active }: { beat: Beat; run: boolean; active: boolean }) {
