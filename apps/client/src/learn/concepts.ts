@@ -96,7 +96,7 @@ export const CONCEPTS: readonly Concept[] = [
     id: 'ledger',
     term: 'Ledger',
     peek: 'A list of every payment, in order. Balances aren’t stored: they’re worked out by reading the list.',
-    think: 'Nora’s notebook: one new line per payment, nothing ever erased.',
+    think: 'a notebook with one new line per payment, and nothing ever erased.',
     article: 'suncoin',
     access: FREE,
   },
@@ -113,7 +113,9 @@ export const CONCEPTS: readonly Concept[] = [
     id: 'node',
     term: 'Node',
     peek: 'A computer that keeps a full copy of the blockchain and checks every new payment against the rules.',
-    think: 'one of thousands of Noras, all checking each other.',
+    // Owner 2026-11-12: the sceptical office worker, not Nora (Lesson 2 no longer leans on her)
+    think:
+      'a sceptical office worker who checks every payment against the rules before filing it, and keeps their own copy of every page.',
     article: 'bitcoin-network',
     access: FREE,
   },

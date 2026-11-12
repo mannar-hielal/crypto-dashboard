@@ -4589,6 +4589,10 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
 - Every lesson photo now shows at the Pizza Day photo's shape (1200 × 736, `aspect-ratio` + `object-fit: cover`), so
   Lesson 2's landfill photo is as tall as Lesson 1's (owner). A taller photo is cropped from the bottom
   (`object-position: center top`), which keeps the digger and James Howells' portrait.
+- The **node** peek's analogy is now the sceptical office worker (owner): "a sceptical office worker who checks every
+  payment against the rules before filing it, and keeps their own copy of every page" (was "one of thousands of
+  Noras"). The **ledger** peek, which Lesson 2's ledger card also opens, drops Nora too ("a notebook with one new
+  line per payment, and nothing ever erased"); a test keeps Nora out of every peek Lesson 2 opens.
 
 ### 2026-11-12 — Bitcoin's story: mining in depth, with the mining race
 

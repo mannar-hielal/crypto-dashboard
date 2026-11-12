@@ -215,6 +215,9 @@ describe('lessons', () => {
     for (const card of l.cards) {
       for (const id of termIds(card.text ?? '')) {
         expect(getConcept(id as ConceptId).peek, id).not.toMatch(/\bcoins?\b/i);
+        // …nor leans on Lesson 1's Nora (owner 2026-11-12: the node is a sceptical office worker)
+        const concept = getConcept(id as ConceptId);
+        expect(`${concept.peek} ${concept.think}`, id).not.toMatch(/Nora/);
       }
     }
     // Owner 2026-11-12: the Bitcoin card, the mark from Lesson 1's end, what sets it apart, and
