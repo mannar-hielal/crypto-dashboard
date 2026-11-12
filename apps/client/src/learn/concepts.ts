@@ -114,8 +114,7 @@ export const CONCEPTS: readonly Concept[] = [
     term: 'Node',
     peek: 'A computer that keeps a full copy of the blockchain and checks every new payment against the rules.',
     // Owner 2026-11-12: the sceptical office worker, not Nora (Lesson 2 no longer leans on her)
-    think:
-      'a sceptical office worker who checks every payment against the rules before filing it, and keeps their own copy of every page.',
+    think: 'a sceptical office worker who checks every payment before filing it.',
     article: 'bitcoin-network',
     access: FREE,
   },

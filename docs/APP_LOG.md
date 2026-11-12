@@ -4597,6 +4597,10 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
   before…", with a Read more that opens _Bitcoin's story_ at **Mining: how a new block is added**. The card already
   has its two tappable terms, so "miners" is plain text there; the stamp card is about sending again. A test checks
   that a card's Read more section is a real heading of its article.
+- Code review (no security findings: copy, one CSS rule, tests): the stamp card names [[miners]] again ("once the nodes
+  accept it, miners add it to a new block"), so the mining peek opens from a lesson; the landfill photo's alt no
+  longer mentions the workers the new crop hides; the node analogy is shortened to fit a phone peek ("a sceptical
+  office worker who checks every payment before filing it").
 
 ### 2026-11-12 — Bitcoin's story: mining in depth, with the mining race
 

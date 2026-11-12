@@ -121,6 +121,13 @@ describe('the learning graph', () => {
         screen: 2,
         label: 'Lesson 2: One ledger, thousands of copies',
       },
+      // The stamp card's [[miners|mining]] (review: the mining concept opens from a lesson again)
+      {
+        kind: 'lesson',
+        lesson: 'lesson-ownership',
+        screen: 4,
+        label: 'Lesson 2: A stamp only you hold',
+      },
     ]);
   });
 

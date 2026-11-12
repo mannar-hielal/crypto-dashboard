@@ -480,7 +480,8 @@ const lessonOwnership: Lesson = {
       // the real photo"); they gave no credit line, so none is shown
       photo: {
         src: howellsLandfill,
-        alt: 'A digger on a huge landfill heap with workers below; inset, a portrait of James Howells.',
+        // The card shows the photo's top (the frame matches Lesson 1's), so the alt names what's in view
+        alt: 'A digger on a huge landfill heap; inset, a portrait of James Howells.',
         credit: null,
       },
       beats: [
@@ -566,7 +567,7 @@ const lessonOwnership: Lesson = {
       title: 'A stamp only you hold',
       art: 'stamp',
       presenter: { who: 'tick', mood: 'curious' },
-      text: 'Now Sofia sends. Her wallet stamps “Sofia → Leo, 2” with her private key, a mark only she can make. The payment carries the matching checker, her public key, so every [[node]] can confirm the mark is hers, and that she has 2 bitcoin to send, before it goes into the ledger. Anyone can check the stamp, but nobody can copy it: a payment without her mark is refused.',
+      text: 'Now Sofia sends. Her wallet stamps “Sofia → Leo, 2” with her private key, a mark only she can make. The payment carries the matching checker, her public key, so every [[node]] can confirm the mark is hers, and that she has 2 bitcoin to send, before it goes into the ledger. Nobody can copy the stamp, and once the nodes accept it, [[miners|mining]] add it to a new block.',
       nextLabel: 'So where is my bitcoin?',
     },
     {

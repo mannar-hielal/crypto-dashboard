@@ -277,6 +277,8 @@ describe('lessons', () => {
       article: 'bitcoin-story',
       section: 'mining',
     });
+    // …and the stamp card names the miners as a term, so the mining peek opens from a lesson
+    expect(card('A stamp only you hold').text).toContain('[[miners|mining]]');
   });
 
   it('should only tease a next lesson that the close really offers', () => {
