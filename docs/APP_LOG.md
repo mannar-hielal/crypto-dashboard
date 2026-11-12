@@ -4593,6 +4593,10 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
   payment against the rules before filing it, and keeps their own copy of every page" (was "one of thousands of
   Noras"). The **ledger** peek, which Lesson 2's ledger card also opens, drops Nora too ("a notebook with one new
   line per payment, and nothing ever erased"); a test keeps Nora out of every peek Lesson 2 opens.
+- **Mining moves to the ledger card** (owner): "Each page, called a block, is added by miners and sealed to the one
+  before…", with a Read more that opens _Bitcoin's story_ at **Mining: how a new block is added**. The card already
+  has its two tappable terms, so "miners" is plain text there; the stamp card is about sending again. A test checks
+  that a card's Read more section is a real heading of its article.
 
 ### 2026-11-12 — Bitcoin's story: mining in depth, with the mining race
 

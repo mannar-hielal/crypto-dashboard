@@ -271,7 +271,12 @@ describe('lessons', () => {
     const card = (title: string) => l2.cards.find((c) => c.title === title)!;
     expect(card('Money that no one controls').text).toContain('[[decentralized]]');
     expect(card('One ledger, thousands of copies').text).toMatch(/called a block.*called a hash/);
-    expect(card('A stamp only you hold').text).toContain('[[miners|mining]]');
+    // Owner 2026-11-12: mining sits on the ledger card, its Read more opening the mining section
+    expect(card('One ledger, thousands of copies').text).toMatch(/added by miners/);
+    expect(card('One ledger, thousands of copies').more).toEqual({
+      article: 'bitcoin-story',
+      section: 'mining',
+    });
   });
 
   it('should only tease a next lesson that the close really offers', () => {
