@@ -5,6 +5,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { authApi } from '@crypto-dashboard/sdk';
 import {
+  isNetworkError,
   msUntilExpiry,
   refreshAccessToken,
   restoreSession,
@@ -104,6 +105,29 @@ describe('restoreSession()', () => {
 });
 
 describe('msUntilExpiry()', () => {
+  it('should keep the session waiting when opened offline, and restore it once back online', async () => {
+    // PWA readiness (2026-11-13): an offline launch used to land on /login, signed out
+    useAuthStore.setState({ accessToken: null, user: null, isLoading: true });
+    refresh.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    await restoreSession();
+    expect(useAuthStore.getState().isLoading).toBe(true); // not "signed out"
+
+    refresh.mockResolvedValueOnce({ accessToken: 'new' } as never);
+    me.mockResolvedValueOnce({ user: { id: 'u1' } } as never);
+    window.dispatchEvent(new Event('online'));
+    await vi.waitFor(() => expect(useAuthStore.getState().accessToken).toBe('new'));
+    expect(refresh).toHaveBeenCalledTimes(2);
+  });
+
+  it('should still sign out when the server refuses the session (not a network failure)', async () => {
+    useAuthStore.setState({ accessToken: null, user: null, isLoading: true });
+    refresh.mockRejectedValueOnce(new Error('Unauthorized'));
+    await restoreSession();
+    expect(useAuthStore.getState().isLoading).toBe(false);
+    expect(isNetworkError(new Error('Unauthorized'))).toBe(false);
+    expect(isNetworkError(new TypeError('Failed to fetch'))).toBe(true);
+  });
+
   it('reads exp from the token payload', () => {
     const exp = Math.floor(Date.now() / 1000) + 600;
     const token = `x.${btoa(JSON.stringify({ exp })).replace(/=+$/, '')}.y`;

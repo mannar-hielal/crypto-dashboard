@@ -116,10 +116,39 @@ export async function restoreSession(): Promise<void> {
     }
     const { user } = await authApi.me(res.accessToken);
     setAuth(res.accessToken, user);
-  } catch {
+  } catch (err) {
+    // Offline, or the server out of reach (fetch rejects with a TypeError): the session may be
+    // fine, so don't treat the learner as signed out. Stay loading and try again once the
+    // browser is back online (PWA readiness, 2026-11-13: the installed app opened offline used to
+    // land on /login and stay signed out)
+    if (isNetworkError(err)) {
+      retryWhenOnline();
+      return;
+    }
     // Refresh rejected (expired / revoked cookie) or /me failed — stay signed out.
     setLoading(false);
   }
+}
+
+/** A request that never reached the server, as opposed to one the server refused */
+export function isNetworkError(err: unknown): boolean {
+  return err instanceof TypeError || (typeof navigator !== 'undefined' && !navigator.onLine);
+}
+
+let waitingForOnline = false;
+
+/** One retry of the restore when the connection comes back (one listener, however many tries) */
+function retryWhenOnline(): void {
+  if (waitingForOnline) return;
+  waitingForOnline = true;
+  window.addEventListener(
+    'online',
+    () => {
+      waitingForOnline = false;
+      void restoreSession();
+    },
+    { once: true }
+  );
 }
 
 /**

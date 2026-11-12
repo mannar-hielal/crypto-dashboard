@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
+import { APP_NAME, shareStep, type InstallPlatform as Platform } from '@/lib/pwaInstall';
 
 // BeforeInstallPromptEvent is not yet in standard TS DOM lib
 interface BeforeInstallPromptEvent extends Event {
@@ -9,18 +10,22 @@ interface BeforeInstallPromptEvent extends Event {
 
 const DISMISSED_KEY = 'pwa-install-banner-dismissed';
 
+/** Stable keys for the three steps (each list has exactly three) */
+const STEP_IDS = ['open', 'add', 'done'] as const;
+
 /**
- * Unified PWA install banner for iOS Safari and Android Chrome.
+ * Unified PWA install banner: iOS (Safari and, since iOS 16.4, Chrome, Edge and Firefox), Android
+ * Chrome / Samsung Internet, and Firefox on Android (its menu installs; no prompt event).
  *
- * iOS Safari:  no automatic prompt API exists — shows manual instructions
- *              (Share → "Add to Home Screen"). Dismissed state persisted to localStorage.
+ * iOS, Firefox on Android: no prompt API — shows the steps, with the Share button or menu where
+ *              that browser keeps it. Dismissed state persisted to localStorage.
  *
  * Android / Chrome: intercepts `beforeinstallprompt`, prevents the default browser
  *              mini-infobar, and shows a custom branded banner with an Install button.
  *              Hides automatically on `appinstalled`.
  */
 export function PWAInstallBanner() {
-  const [platform, setPlatform] = useState<'ios' | 'ipad' | 'ios-other' | 'android' | null>(null);
+  const [platform, setPlatform] = useState<Platform | null>(null);
   const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null);
   const androidTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Respect the OS "reduce motion" preference — disables the attention shake
@@ -40,9 +45,9 @@ export function PWAInstallBanner() {
     const isInStandaloneMode =
       'standalone' in navigator && (navigator as { standalone?: boolean }).standalone === true;
 
-    // Non-Safari iOS browsers (Chrome/CriOS, Edge/EdgA/EdgiOS, Firefox/FxiOS, Opera/OPiOS)
-    // cannot install PWAs — the Share sheet "Add to Home Screen" option only exists in Safari.
-    // Tell the user to open the URL in Safari instead.
+    // Other iOS browsers (Chrome/CriOS, Edge/EdgiOS, Firefox/FxiOS, Opera/OPiOS): since iOS 16.4
+    // they add to the Home Screen from their own Share menu, so they get the same steps, with the
+    // Share button where that browser keeps it
     const isNonSafariIOS = isIOS && /CriOS|EdgA|EdgiOS|FxiOS|OPiOS/i.test(ua);
 
     // iPad detection: used to show correct Share button location in instructions.
@@ -55,6 +60,13 @@ export function PWAInstallBanner() {
         () => setPlatform(isNonSafariIOS ? 'ios-other' : isIPad ? 'ipad' : 'ios'),
         2500
       );
+      return () => clearTimeout(timer);
+    }
+
+    // ── Firefox on Android: no beforeinstallprompt, but its menu installs ─────
+    const isStandalone = window.matchMedia?.('(display-mode: standalone)').matches === true;
+    if (/Android/i.test(ua) && /Firefox/i.test(ua) && !isStandalone) {
+      const timer = setTimeout(() => setPlatform('android-firefox'), 2500);
       return () => clearTimeout(timer);
     }
 
@@ -112,7 +124,7 @@ export function PWAInstallBanner() {
       initial={{ y: 120, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ type: 'spring', stiffness: 380, damping: 28 }}
-      className="fixed bottom-4 left-4 right-4 z-50"
+      className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-4 right-4 z-50"
     >
       {/* Layer 2 — periodic attention shake; pauses between each cycle */}
       <motion.div
@@ -151,82 +163,77 @@ export function PWAInstallBanner() {
 
         <div className="flex items-start gap-3 pr-6">
           {/* App icon */}
-          <img
-            src="/pwa-192x192.png"
-            alt="cryptopapertrade.com"
-            className="h-12 w-12 flex-shrink-0 rounded-xl"
-          />
+          <img src="/pwa-192x192.png" alt="" className="h-12 w-12 flex-shrink-0 rounded-xl" />
 
           <div className="flex-1">
-            {platform === 'ios' || platform === 'ipad' ? (
-              // ── iOS / iPadOS Safari: visual step-by-step guide ────────────────
-              // Apple provides no JS API to trigger "Add to Home Screen" — the user
-              // must do it manually via the Share sheet. We make it as clear as possible.
+            {platform !== 'android' ? (
+              // ── iOS / iPadOS (any browser) and Firefox on Android: the steps ──
+              // No JS API adds to the Home Screen there: the learner does it from the browser's
+              // Share sheet or menu, so the steps say where that is in their browser
               <>
-                <p className="text-sm font-semibold">Install cryptopapertrade.com</p>
-                <div className="mt-2 space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="bg-primary text-primary-foreground flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
-                      1
-                    </span>
-                    <p className="text-muted-foreground text-xs">
-                      Tap the{' '}
-                      <span className="inline-flex items-center gap-0.5 font-medium">
-                        Share
-                        <svg
-                          viewBox="0 0 24 24"
-                          className="inline-block h-3.5 w-3.5"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
-                        >
-                          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-                          <polyline points="16 6 12 2 8 6" />
-                          <line x1="12" y1="2" x2="12" y2="15" />
-                        </svg>
-                      </span>{' '}
-                      button{' '}
-                      {platform === 'ipad'
-                        ? 'in the top-right toolbar of Safari'
-                        : 'at the bottom of Safari'}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="bg-primary text-primary-foreground flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
-                      2
-                    </span>
-                    <p className="text-muted-foreground text-xs">
-                      Scroll down and tap{' '}
-                      <strong className="text-foreground">"Add to Home Screen"</strong>
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="bg-primary text-primary-foreground flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
-                      3
-                    </span>
-                    <p className="text-muted-foreground text-xs">
-                      Tap <strong className="text-foreground">"Add"</strong> — done!
-                    </p>
-                  </div>
-                </div>
-              </>
-            ) : platform === 'ios-other' ? (
-              // ── Chrome / Edge / Firefox on iOS or iPadOS: must use Safari ─────
-              <>
-                <p className="text-sm font-semibold">Install cryptopapertrade.com</p>
-                <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                  To install this app, open this page in <strong>Safari</strong> — your current
-                  browser doesn&apos;t support PWA installation on this device.
-                </p>
+                <p className="text-sm font-semibold">Install {APP_NAME}</p>
+                <ol className="mt-2 space-y-1.5" aria-label="How to install">
+                  {(platform === 'android-firefox'
+                    ? [
+                        <>
+                          Open Firefox’s <strong className="text-foreground">⋮</strong> menu
+                        </>,
+                        <>
+                          Tap <strong className="text-foreground">“Install”</strong> (or “Add to
+                          Home screen”)
+                        </>,
+                        <>
+                          Tap <strong className="text-foreground">“Add”</strong> — done!
+                        </>,
+                      ]
+                    : [
+                        <>
+                          Tap the{' '}
+                          <span className="inline-flex items-center gap-0.5 font-medium">
+                            Share
+                            <svg
+                              viewBox="0 0 24 24"
+                              className="inline-block h-3.5 w-3.5"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden="true"
+                            >
+                              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                              <polyline points="16 6 12 2 8 6" />
+                              <line x1="12" y1="2" x2="12" y2="15" />
+                            </svg>
+                          </span>{' '}
+                          button {shareStep(platform, navigator.userAgent)}
+                        </>,
+                        <>
+                          Scroll down and tap{' '}
+                          <strong className="text-foreground">“Add to Home Screen”</strong>
+                        </>,
+                        <>
+                          Tap <strong className="text-foreground">“Add”</strong> — done!
+                        </>,
+                      ]
+                  ).map((step, i) => (
+                    <li key={STEP_IDS[i]} className="flex items-center gap-2">
+                      <span
+                        aria-hidden="true"
+                        className="bg-primary text-primary-foreground flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
+                      >
+                        {i + 1}
+                      </span>
+                      <p className="text-muted-foreground text-xs">{step}</p>
+                    </li>
+                  ))}
+                </ol>
               </>
             ) : (
               // ── Android / Chrome: real install button ─────────────────────────
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold">Install cryptopapertrade.com</p>
+                  <p className="text-sm font-semibold">Install {APP_NAME}</p>
                   <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
                     Add to your home screen for a faster, full-screen experience.
                   </p>

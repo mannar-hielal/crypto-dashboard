@@ -110,7 +110,7 @@ export function AdminNewsletterPage() {
       />
 
       <div
-        className="relative flex min-h-screen flex-col"
+        className="relative flex min-h-dvh flex-col"
         style={{
           background: `linear-gradient(180deg, ${bg.deep} 0%, ${bg.page} 30%, ${bg.navy} 100%)`,
         }}

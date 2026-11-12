@@ -4,6 +4,7 @@
 .page {
   display: flex;
   min-height: 100vh;
+  min-height: 100dvh; /* the visible height: iOS Safari's 100vh runs behind its toolbar */
   align-items: center;
   justify-content: center;
   padding: 16px;

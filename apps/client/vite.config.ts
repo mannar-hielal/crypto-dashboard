@@ -48,8 +48,9 @@ export default defineConfig(({ mode }) => ({
 
       // Web App Manifest — controls how the app appears when installed on mobile/desktop
       manifest: {
-        name: 'cryptopapertrade.com',
-        short_name: 'CP Trade',
+        name: 'Crypto Paper Trade',
+        // The home-screen label (owner 2026-11-13); about 12 characters show before it's cut
+        short_name: 'CryptoPaperTrade',
         description: 'Paper trade crypto with real-time Bybit price feeds',
         theme_color: '#080B14', // Browser chrome color on mobile
         background_color: '#080B14', // Splash screen background

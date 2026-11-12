@@ -20,6 +20,7 @@
   width: 100%;
   max-width: 480px;
   max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
   overflow-y: auto;
   border: 1px solid rgba(105, 91, 236, 0.4); /* color.purpleDark at 40 % */
   border-radius: 16px;
@@ -40,13 +41,20 @@
     padding: 0;
   }
 
+  /* Full screen: clear of the notch and the home bar (installed iOS app) */
+  .sheet {
+    padding-top: max(12px, env(safe-area-inset-top));
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
   .sheet {
     max-width: none;
     height: 100%;
     max-height: none;
     border: 0;
     border-radius: 0;
-    padding: 12px 16px 16px;
+    padding-right: 16px;
+    padding-left: 16px;
   }
 }
 

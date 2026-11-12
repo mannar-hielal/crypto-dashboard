@@ -40,8 +40,20 @@
   #root {
     width: 100%;
     min-height: 100vh;
+    min-height: 100dvh; /* the visible height: iOS Safari's 100vh runs behind its toolbar */
     display: flex;
     flex-direction: column;
+  }
+}
+
+/* iOS zooms the page in when an input under 16 px is focused, and doesn't zoom back (PWA readiness,
+   2026-11-13). Only iOS supports -webkit-touch-callout, so desktops and Android keep the dense 13–14 px
+   panel text; !important beats the order form's inline font sizes */
+@supports (-webkit-touch-callout: none) {
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1em) !important;
   }
 }
 
