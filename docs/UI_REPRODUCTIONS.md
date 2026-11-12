@@ -246,20 +246,20 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
    notebook (Emi, Leo, Sofia, then Leo → Emi 3) and no "Bitcoin" in the text. [lesson.next] **What if Nora cheats? →**
    → Expect **What can go wrong with one Nora?**: four tiles (print, move, rewrite, lose) dropping in one after another,
    four bold points, and **Could money work with no Nora? →** (Lesson 1 ends on the problem; owner 2026-11-08).
-   The moment → "Nora writes “Start → Nora, 50”… Who can stop her?" → pick "The bank" → Expect "Not quite." and Berwyn
+   The moment → "Nora writes “Start → Nora, 50”… Who can stop her?" → pick "The bank" → Expect [lesson.picked] "You picked “The bank”." then "Not quite." and Berwyn
    calm (never worried), the same guide who asked: Berwyn stays through the answer. Try it → [article.nora.amount] 30 → Expect "Leo now has -24 and Emi 32 … still add up to
-   15"; tick "Many notebooks" → Expect "4 of 5 copies still say Leo paid 3". The questions, then the summary → Expect **The problem** staged as [lesson.genesis] (about 22 s, each line held by its length;
+   15"; tick "Many notebooks" → Expect "4 of 5 copies still say Leo paid 3". The questions, then the summary → Expect **The problem** staged as [lesson.genesis] (about 24 s, each line held by its length;
    Continue hidden until it ends; Enter, a tap, Back to it later and reduced motion all show the problems, the
    story and the end at once, still, one under another; only a run played to its end rests on the mark alone): the two numbered lines (what a government or central bank can do with money, each with
    [lesson.recap] Read more) come in, then fade away as the stage goes dark; then one line at a time, each fading in
-   and out in the middle: "However, for most people there was no other choice." → "In 2008, that trust broke." →
+   and out in the middle: "However, for most people there was no other choice." → "In 2008, that trust broke: Lehman Brothers, a 158-year-old bank, collapsed." →
    "Banks failed, and governments rushed to rescue them with newly printed money." → "Then someone called Satoshi
    Nakamoto proposed money that no one holds or controls." (the name in amber); then the Bitcoin mark rises in the
    middle with a glow and an amber ring bursts, and [lesson.highlight] "That was the birth of Bitcoin." lands under
    it, with no Read more (Lesson 2 goes on); no rule, no stars. Continue → Expect **Lesson 1
    done**: [lesson.finish-line] (Pulin and Berwyn break the ribbon, the halves swing down, confetti; a tap shows the
    end, reduced motion shows it at once), "One line for your journal" ([lesson.note.save] → "✓ Saved to your
-   journal", the screen stays), the optional rating, and the full-width [lesson.next-lesson] **Lesson 2: What is
+   journal", the screen stays), the optional rating, [lesson.teaser] "You've seen the problem. Next, the answer: …", and the full-width [lesson.next-lesson] **Lesson 2: What is
    Bitcoin?** with "Finish for now" under it → Expect Lesson 1 ticked done and **Lesson 2 · What is
    Bitcoin?** at card 1 of 14.
 2. Lesson 2's cold open → Expect the dark stage with the real photo of the Newport landfill and James Howells
@@ -288,14 +288,14 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
    its checker, ✓; [article.scenario.try `phone`] → "✓ Type your recovery words…", [`all`] → three dashed tiles and
    "✗ locked forever", [`scam`] → "✗ A scam…"; [article.ledger.link] → Expect " Leo" beside bc1q…7f9a on all three
    lines.
-3. Lesson 2's next cards → Expect **A stamp only you hold** (the stamp under its outline checker; "To send, your
-   wallet stamps the payment…"; **So where is my bitcoin? →**), **Your bitcoin isn't in your phone** (phone,
+3. Lesson 2's next cards → Expect **A stamp only you hold** (the stamp under its outline checker; "Now Sofia sends. Her
+   wallet stamps “Sofia → Leo, 2”…"; **So where is my bitcoin? →**), **Your bitcoin isn't in your phone** (phone,
    recovery words and the ledger notebook dropping in, "your balance = the ledger, added up", no coin picture;
    **Can someone hold my key for me? →**) and **Who holds your key?** (an exchange or you, each
-   with a stamp). The moment (the phone in the sea) → "Restore it on a new phone" ✓.
+   with a stamp; "Here, nothing is real bitcoin: your balance is virtual practice money…"). The moment (the phone in the sea) → "Restore it on a new phone" ✓.
 4. Try it → Expect "Now be Sneaky Sam"; [article.stamp.try `sam`] → "✗ Not Sofia's mark". [lesson.try] Continue.
 5. The questions (the "support" scam with Berwyn worried, Mt. Gox, the address), the note (Skip), the close → Expect
-   [lesson.next-lesson] → Expect Lesson 2 ticked done and **Lesson 3 · Who
+   [lesson.teaser] "Next: who decides what one bitcoin costs, on the real chart." and [lesson.next-lesson] → Expect Lesson 2 ticked done and **Lesson 3 · Who
    sets the price?** at card 1.
 6. Cards 4–5 (live data only) → Expect real daily candles: Tesla 2021 with three markers; the ETF chart ending on 10
    Jan 2024. Answer the moment → Expect the chart to play on to 23 Jan with "−14.5%".
