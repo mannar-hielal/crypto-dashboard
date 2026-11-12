@@ -124,6 +124,16 @@ describe('the learning graph', () => {
     ]);
   });
 
+  it('should open every concept on an article that really explains its term (review #278)', () => {
+    for (const concept of CONCEPTS) {
+      const article = getArticle(concept.article);
+      const words = JSON.stringify([article.title, article.summary, article.blocks]).toLowerCase();
+      // "Satoshi" may appear as satoshis; "Decentralized" as decentralised; match the stem
+      const stem = concept.term.toLowerCase().slice(0, Math.max(5, concept.term.length - 2));
+      expect(words, `${concept.id} → ${concept.article}`).toContain(stem);
+    }
+  });
+
   it('should keep free things free: a free lesson never links to a paid concept or article', () => {
     for (const lesson of LESSONS) {
       if (lesson.access !== FREE) continue;

@@ -4604,7 +4604,9 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
   - **Start over** resets it.
     It's a sketch: the fingerprints are shortened, and real miners make trillions of guesses a second.
 - The `mining` concept now opens this article (Lesson 2's "miners" term leads to it). The self-test swaps the satoshis
-  question for two on mining. The `satoshi` concept still points here; no card uses it.
+  question for two on mining. Review #278: the `satoshi` concept now opens _Getting bitcoin_, which gained one line
+  ("one bitcoin splits into 100,000,000 satoshis… $100 simply buys a fraction"), and a test checks that every
+  concept's article really mentions its term.
 
 ### 2026-11-12 — The Finelo content gaps closed
 

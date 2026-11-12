@@ -647,13 +647,17 @@ const gettingBitcoin: Article = {
   summary:
     'You can buy bitcoin on an exchange, receive it from another person, or earn it by mining. The easy way puts a company between you and your coins.',
   minutes: 6,
-  checked: '2026-10-23',
+  checked: '2026-11-12',
   access: FREE,
   blocks: [
     { kind: 'h', text: '1. Buy it on an exchange' },
     {
       kind: 'p',
       text: 'An exchange works like a currency booth at the airport: you hand over ordinary money and receive bitcoin, for a fee. You sign up, prove who you are, link a bank account or card, and buy. The exchange is a company, though, not part of Bitcoin.',
+    },
+    {
+      kind: 'p',
+      text: 'You never need a whole coin: one bitcoin splits into 100,000,000 **satoshis**, named after Bitcoin’s author, so $100 simply buys a fraction of one.',
     },
     { kind: 'h', text: 'Who holds the key?', id: 'custody' },
     {
