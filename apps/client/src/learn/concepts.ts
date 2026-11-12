@@ -79,7 +79,8 @@ export const CONCEPTS: readonly Concept[] = [
     term: 'Satoshi',
     peek: 'The smallest unit of bitcoin: one bitcoin is 100,000,000 satoshis, so you never need to buy a whole coin.',
     think: 'a slice of pizza: you don’t have to buy the whole pizza.',
-    article: 'bitcoin-story',
+    // Moved from Bitcoin's story when its satoshis section went (review #278): buying a fraction
+    article: 'getting-bitcoin',
     access: FREE,
   },
   {
@@ -87,7 +88,8 @@ export const CONCEPTS: readonly Concept[] = [
     term: 'Mining',
     peek: 'Adding a new block to the blockchain by solving a hard puzzle, paid in new bitcoin and fees.',
     think: 'digging for gold, where the shovel is a computer.',
-    article: 'bitcoin-network',
+    // Owner 2026-11-12: the story article's mining section is the deep one (with the mining race)
+    article: 'bitcoin-story',
     access: FREE,
   },
   {

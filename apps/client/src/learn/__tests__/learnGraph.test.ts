@@ -114,7 +114,24 @@ describe('the learning graph', () => {
         screen: 1,
         label: 'Lesson 2: Money that no one controls',
       },
+      // The stamp card's [[miners|mining]]: mining's deep section lives here (owner 2026-11-12)
+      {
+        kind: 'lesson',
+        lesson: 'lesson-ownership',
+        screen: 4,
+        label: 'Lesson 2: A stamp only you hold',
+      },
     ]);
+  });
+
+  it('should open every concept on an article that really explains its term (review #278)', () => {
+    for (const concept of CONCEPTS) {
+      const article = getArticle(concept.article);
+      const words = JSON.stringify([article.title, article.summary, article.blocks]).toLowerCase();
+      // "Satoshi" may appear as satoshis; "Decentralized" as decentralised; match the stem
+      const stem = concept.term.toLowerCase().slice(0, Math.max(5, concept.term.length - 2));
+      expect(words, `${concept.id} → ${concept.article}`).toContain(stem);
+    }
   });
 
   it('should keep free things free: a free lesson never links to a paid concept or article', () => {

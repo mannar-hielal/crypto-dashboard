@@ -905,3 +905,47 @@
     animation: none;
   }
 }
+
+/* ─── Mining: the race to seal the next block (owner 2026-11-12) ─────────── */
+
+.miningPending {
+  margin: 0 0 10px;
+  color: var(--color-brand-muted); /* color.muted */
+}
+
+.miners {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.miner,
+.minerWin {
+  display: grid;
+  grid-template-columns: 5.5em 1fr auto 1em;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.08); /* border.card */
+  border-radius: 10px;
+  padding: 6px 10px;
+}
+
+.minerWin {
+  border-color: var(--color-brand-amber); /* color.amber: the winning fingerprint */
+}
+
+.miningBlock {
+  margin: 10px 0 0;
+  color: var(--color-brand-white); /* color.white */
+}
+
+.miningChain {
+  color: var(--color-brand-purple); /* color.purple: the chain */
+  font-family: ui-monospace, monospace; /* as .seal */
+}
+
+.miningNew {
+  color: var(--color-brand-amber); /* color.amber: the new block */
+}

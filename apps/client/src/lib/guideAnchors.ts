@@ -338,6 +338,9 @@ export const GUIDE_ANCHORS = [
   'article.chain.reset',
   'article.answer.tile',
   'article.scenario.try',
+  /** The mining race: one round of guesses, and starting over */
+  'article.mining.guess',
+  'article.mining.reset',
   'article.ledger.link',
   // notifications (the opt-in order-fill e-mail)
   'settings.notifications.fill-email',

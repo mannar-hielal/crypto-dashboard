@@ -46,7 +46,9 @@ export type WidgetId =
   | 'key-scenarios'
   | 'public-ledger'
   /** Bitcoin's story: the three dates on a rail, each with its picture (owner 2026-11-12) */
-  | 'bitcoin-timeline';
+  | 'bitcoin-timeline'
+  /** Bitcoin's story, mining: miners race to find a fingerprint starting 0000 (owner 2026-11-12) */
+  | 'mining-race';
 
 export type ArticleBlock =
   /** A section heading; `id` lets a lesson link straight to it */
@@ -537,45 +539,54 @@ const bitcoinStory: Article = {
   title: 'Bitcoin’s story, and its plan in plain words',
   summary:
     'In 2008 someone called Satoshi Nakamoto published a nine-page plan for online cash without a bank. Its idea fits in one line: replace “trust me” with “check it”.',
-  minutes: 7,
+  minutes: 4,
   checked: '2026-11-12',
   access: FREE,
   // Practised in Lesson 2's Bitcoin card, whose Read more opens it (owner 2026-11-12)
   blocks: [
     { kind: 'h', text: 'A short timeline', id: 'timeline' },
     { kind: 'widget', id: 'bitcoin-timeline' },
+    // Owner 2026-11-12: the plan as one-liners; mining expanded, last, with the mining race
     { kind: 'h', text: 'The plan, in six steps' },
     {
       kind: 'list',
       ordered: true,
       items: [
-        '**The problem.** Paying online means trusting a middleman, a bank or a card company. Payments can be reversed, fees add up, and everyone has to hope the middleman is honest.',
-        '**The idea.** Replace “trust me” with “check it”: if two strangers can prove a payment is real, no middleman is needed.',
-        '**The catch: spending twice.** A digital coin is just data, and data can be copied. What stops someone paying with the same coin twice?',
-        '**A shared notebook.** Everyone keeps the full list of payments, in order. If a coin is spent twice, the second payment is rejected.',
-        '**Sealed pages.** Payments are grouped into blocks, each stamped with a fingerprint of the one before. Change an old page and every later seal breaks.',
-        '**Work to add a page.** Adding a block means solving a puzzle that is hard to solve and easy to check. Rewriting history would mean redoing all that work faster than everyone else together.',
+        '**The problem:** paying online means trusting a middleman.',
+        '**The idea:** replace “trust me” with “check it”.',
+        '**The catch:** digital money is data, and data can be spent twice.',
+        '**A shared notebook:** everyone keeps every payment, in order.',
+        '**Sealed pages:** each block carries a fingerprint of the one before.',
+        '**Work to add a page:** miners solve a hard puzzle first (see Mining, below).',
       ],
-    },
-    { kind: 'h', text: 'Why anyone does the work: mining', id: 'mining' },
-    {
-      kind: 'p',
-      text: 'Whoever adds a block is paid in new bitcoin and in the fees of the payments inside it. That’s **mining**. It also explains why honest players tend to win: following the rules pays better than trying to cheat them.',
-    },
-    { kind: 'h', text: 'Why a payment isn’t instant' },
-    {
-      kind: 'p',
-      text: 'A new payment spreads from computer to computer, like news through a school. It counts once it’s in a block and more blocks are built on top of it. On Bitcoin that takes minutes, not seconds, and every payment pays a fee.',
-    },
-    { kind: 'h', text: 'Satoshis: you never need a whole coin', id: 'satoshis' },
-    {
-      kind: 'p',
-      text: 'One bitcoin splits into 100,000,000 **satoshis**, named after the paper’s author. Buying $100 of bitcoin simply gets you a fraction of a coin, the way you can buy a slice without buying the pizza.',
     },
     {
       kind: 'callout',
       tone: 'warn',
       text: 'Public isn’t the same as anonymous. Every payment can be seen; only the names are missing. The paper says so itself.',
+    },
+    { kind: 'h', text: 'Mining: how a new block is added', id: 'mining' },
+    {
+      kind: 'p',
+      text: 'Miners gather the payments waiting to be recorded into a block. Before it can join the chain, they must find a number that gives the block a fingerprint, its **hash**, starting with a long run of zeros. There is no shortcut: only guessing, trillions of times a second. Try it:',
+    },
+    { kind: 'widget', id: 'mining-race' },
+    {
+      kind: 'p',
+      text: 'The first miner to find one shares the block. Every node checks it with a single calculation (hard to find, easy to check) and adds it to its copy, and the race starts again. A new block comes about every **10 minutes**: every 2,016 blocks, roughly two weeks, the puzzle gets harder or easier to keep that pace.',
+    },
+    {
+      kind: 'p',
+      text: 'The winner is paid twice: in **new bitcoin**, the block reward, and in the **fees** of the payments inside. The reward halves every 210,000 blocks, about every four years: 50, 25, 12.5, 6.25, and 3.125 bitcoin since April 2024. That is why no more than 21 million bitcoin will ever exist; the last are due around 2140.',
+    },
+    {
+      kind: 'p',
+      text: 'It also keeps the record honest. To rewrite an old block, a cheater would have to redo its work and the work of every block after it, faster than all the other miners together. Following the rules pays better than cheating.',
+    },
+    {
+      kind: 'callout',
+      tone: 'idea',
+      text: 'Mining today runs in warehouses of specialised machines and uses a lot of electricity. A laptop can’t compete, and you never need to mine to own bitcoin.',
     },
   ],
   selfTest: [
@@ -591,7 +602,14 @@ const bitcoinStory: Article = {
       q: 'Why do miners do the work?',
       a: 'They are paid in new bitcoin and fees for each block they add.',
     },
-    { q: 'How many satoshis make one bitcoin?', a: '100,000,000.' },
+    {
+      q: 'Why is a block hard to add but easy to check?',
+      a: 'Finding the winning number takes trillions of guesses; checking it takes one calculation.',
+    },
+    {
+      q: 'What happens to the block reward about every four years?',
+      a: 'It halves: it’s 3.125 bitcoin since April 2024, which caps the supply at 21 million.',
+    },
   ],
   sources: [
     {
@@ -610,6 +628,14 @@ const bitcoinStory: Article = {
       label: 'The pizza offer on the bitcointalk forum, May 2010',
       url: 'https://bitcointalk.org/index.php?topic=137.0',
     },
+    {
+      label: 'Bitcoin Wiki, “Controlled supply” (the reward schedule and halvings)',
+      url: 'https://en.bitcoin.it/wiki/Controlled_supply',
+    },
+    {
+      label: 'Bitcoin Wiki, “Difficulty” (retargeting every 2,016 blocks)',
+      url: 'https://en.bitcoin.it/wiki/Difficulty',
+    },
   ],
 };
 
@@ -621,13 +647,17 @@ const gettingBitcoin: Article = {
   summary:
     'You can buy bitcoin on an exchange, receive it from another person, or earn it by mining. The easy way puts a company between you and your coins.',
   minutes: 6,
-  checked: '2026-10-23',
+  checked: '2026-11-12',
   access: FREE,
   blocks: [
     { kind: 'h', text: '1. Buy it on an exchange' },
     {
       kind: 'p',
       text: 'An exchange works like a currency booth at the airport: you hand over ordinary money and receive bitcoin, for a fee. You sign up, prove who you are, link a bank account or card, and buy. The exchange is a company, though, not part of Bitcoin.',
+    },
+    {
+      kind: 'p',
+      text: 'You never need a whole coin: one bitcoin splits into 100,000,000 **satoshis**, named after Bitcoin’s author, so $100 simply buys a fraction of one.',
     },
     { kind: 'h', text: 'Who holds the key?', id: 'custody' },
     {

@@ -187,3 +187,32 @@ describe('the Bitcoin story timeline', () => {
     expect(screen.getByAltText(/Laszlo Hanyecz/)).toBeTruthy();
   });
 });
+
+describe('the mining race', () => {
+  afterEach(() => cleanup());
+
+  it('should miss until one fingerprint starts 0000, then seal the block and pay the reward', () => {
+    render(<ArticleWidget id="mining-race" />);
+    const wins = () => document.querySelectorAll('li[data-win="true"]').length;
+    expect(status()).toMatch(/Press Try a guess/);
+    click('article.mining.guess');
+    click('article.mining.guess');
+    // No losing fingerprint ever looks like a win
+    expect(wins()).toBe(0);
+    for (const code of document.querySelectorAll('li code')) {
+      expect(code.textContent).not.toMatch(/^0000/);
+    }
+    expect(status()).toMatch(/^Round 2: no fingerprint starts with 0000/);
+    click('article.mining.guess');
+    expect(wins()).toBe(1);
+    expect(document.querySelector('li[data-win="true"] code')!.textContent).toMatch(/^0000/);
+    expect(status()).toMatch(/^✓ Miner C found a fingerprint starting 0000/);
+    expect(status()).toMatch(/3\.125 new bitcoin plus the fees/);
+    expect(
+      document.querySelector<HTMLButtonElement>('[data-guide="article.mining.guess"]')!.disabled
+    ).toBe(true);
+    click('article.mining.reset');
+    expect(wins()).toBe(0);
+    expect(status()).toMatch(/Press Try a guess/);
+  });
+});
