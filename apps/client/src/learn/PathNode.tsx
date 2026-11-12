@@ -1,7 +1,7 @@
 /**
  * One stop on the learning map: a round button that shows what it is (a lesson 📖, practice on the
- * real screen 🏋, a checkpoint 👑; a lesson the learner tries out gets a small dumbbell badge, owner
- * 2026-11-12) and where the learner stands with it: a lesson begun shows a ring of how much is done,
+ * chart 🏋 — the buy and sell practice, and a lesson whose "Try it" is on the chart; a checkpoint 👑,
+ * owner 2026-11-12) and where the learner stands with it: a lesson begun shows a ring of how much is done,
  * as Duolingo's path does. The next step carries a
  * "Start" bubble and Tick beside it. A stop that can't be started explains why in a short note
  * under it, instead of doing nothing: not reached yet, needs a larger screen, or not on the plan.
@@ -12,7 +12,7 @@ import { BookOpen, Check, Crown, Dumbbell, Gem, Laptop, Lock } from 'lucide-reac
 import { GuideAvatar } from '@/guide/LessonArt';
 import { guide } from '@/lib/guideAnchors';
 import { getLesson, lessonScreens } from '@/guide/lessons';
-import { MODE_LABEL, nodeOffset, type NodeKind, type NodeView } from './path';
+import { nodeOffset, onChart, type NodeKind, type NodeView } from './path';
 import styles from './PathDrawer.module.css';
 
 const KIND_ICON = { lesson: BookOpen, tour: Dumbbell, checkpoint: Crown } as const;
@@ -56,8 +56,20 @@ function ProgressRing({ fraction }: { fraction: number }) {
   );
 }
 
-export function NodeIcon({ kind, size = 26 }: { kind: NodeKind; size?: number }) {
-  const Icon = KIND_ICON[kind];
+/**
+ * A stop's icon. Owner 2026-11-12: the dumbbell marks what's done on the real chart (practice, and a
+ * lesson whose "Try it" is a tour there, Lesson 3); every other lesson is a book
+ */
+export function NodeIcon({
+  kind,
+  onChart = false,
+  size = 26,
+}: {
+  kind: NodeKind;
+  onChart?: boolean;
+  size?: number;
+}) {
+  const Icon = kind === 'lesson' && onChart ? Dumbbell : KIND_ICON[kind];
   return <Icon size={size} aria-hidden="true" />;
 }
 
@@ -84,12 +96,10 @@ export function PathNode({
   onSkipTour,
 }: PathNodeProps) {
   const [noteOpen, setNoteOpen] = useState(false);
-  const { node, state, title, mode, fraction } = view;
+  const { node, state, title, fraction } = view;
   const screens = node.kind === 'lesson' ? lessonScreens(getLesson(node.id)).length : 0;
   const progress =
     fraction !== null ? `, ${Math.round(fraction * screens)} of ${screens} screens` : '';
-  // A lesson with a "Now you try it": the book keeps a small dumbbell
-  const triesIt = node.kind === 'lesson' && mode === 'hands-on';
   const phoneTour = node.kind === 'tour' && !wide;
   // These open a note under the stop instead of starting it
   const explains = state === 'locked' || state === 'pro' || phoneTour;
@@ -129,7 +139,7 @@ export function PathNode({
     ) : state === 'pro' ? (
       <Gem size={24} aria-hidden="true" />
     ) : (
-      <NodeIcon kind={node.kind} />
+      <NodeIcon kind={node.kind} onChart={onChart(view.node)} />
     );
 
   return (
@@ -138,7 +148,7 @@ export function PathNode({
       style={{ transform: `translateX(${nodeOffset(index)}px)` }}
       {...guide('path.node', view.key)}
       data-state={state}
-      data-mode={mode}
+      data-mode={view.mode}
     >
       {state === 'current' && (
         <div className={styles.bubbleRow} aria-hidden="true">
@@ -151,18 +161,13 @@ export function PathNode({
       <button
         type="button"
         className={`${styles.node} ${styles[state]}`}
-        aria-label={`${KIND_LABEL[node.kind]}${mode === 'hands-on' ? ', hands-on' : ''}: ${title}, ${STATE_LABEL[state]}${progress}`}
+        aria-label={`${KIND_LABEL[node.kind]}${onChart(view.node) ? ', on the real chart' : ''}: ${title}, ${STATE_LABEL[state]}${progress}`}
         aria-disabled={state === 'locked' || state === 'pro' ? true : undefined}
         aria-expanded={explains ? noteOpen : undefined}
         onClick={() => (explains ? setNoteOpen((o) => !o) : onStart(view))}
       >
         {fraction !== null && <ProgressRing fraction={fraction} />}
         {icon}
-        {triesIt && state !== 'done' && (
-          <span className={styles.tryBadge} aria-hidden="true">
-            <Dumbbell size={11} />
-          </span>
-        )}
         {state === 'locked' && (
           <span className={styles.badge}>
             <Lock size={12} aria-hidden="true" />
@@ -177,7 +182,6 @@ export function PathNode({
       <span className={styles.caption}>
         {title}
         {state === 'pro' && <span className={styles.proTag}>Pro</span>}
-        {mode === 'hands-on' && <span className={styles.modeTag}>{MODE_LABEL[mode]}</span>}
       </span>
       {noteOpen && note && (
         <p className={styles.note} role="status" {...guide('path.node.note', view.key)}>

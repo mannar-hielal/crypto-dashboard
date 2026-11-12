@@ -179,6 +179,11 @@ export function nodeTitle(node: BuiltNode): string {
   }
 }
 
+/** A stop done on the real chart: practice, or a lesson whose "Try it" is a tour there (Lesson 3) */
+export function onChart(node: BuiltNode): boolean {
+  return node.kind === 'tour' || (node.kind === 'lesson' && getLesson(node.id).tour !== undefined);
+}
+
 export function nodeMode(node: BuiltNode): StopMode {
   switch (node.kind) {
     case 'lesson': {

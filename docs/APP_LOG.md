@@ -4592,10 +4592,11 @@ on the newest candle.
 
 - **The map** (`learn/PathNode.tsx`, `PathDrawer.tsx`): the zig-zag of 3D round stops, the dashed links, and the
   Start/Continue bubble with Pulin, as before the rail.
-  - **Icons:** a lesson is a **book**; practice on the real screen (the buy and sell tours) is a **dumbbell** (was a
-    target); the checkpoint keeps the crown.
-  - **Hands-on:** a lesson with a "Now you try it" gets a small green dumbbell badge and a "● Hands-on" tag.
-  - **Legend:** under the intro.
+  - **Icons:** a lesson is a **book**; what's done **on the real chart** is a **dumbbell** (was a target): the buy and
+    sell practice, and Lesson 3, whose "Try it" is a tour there (`onChart` in `learn/path.ts`). The checkpoint keeps
+    the crown.
+  - **No "Hands-on" tag or badge** (owner, the same evening): they were tried and removed. The legend names the book
+    and "Practice on the real chart" only.
 - **Progress ring:** a lesson begun and not finished is ringed from 12 o'clock in the chapter's colour, for the share
   of its screens reached (`lessonFraction` in `learn/path.ts`). Its label adds ", 5 of 14 screens". The ring replaces
   the next step's breathing outline, and the bubble says Continue once any lesson is begun.

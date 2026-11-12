@@ -23,7 +23,7 @@ import { useTourStore } from '@/guide/tourStore';
 import { trapFocus } from '@/lib/trapFocus';
 import { useAuthStore } from '@/store/authStore';
 import { LibraryTab } from './LibraryTab';
-import { nodeOffset, type ChapterView, type NodeKind, type NodeView } from './path';
+import { nodeOffset, onChart, type ChapterView, type NodeKind, type NodeView } from './path';
 import { NodeIcon, PathNode } from './PathNode';
 import { usePathStore } from './pathStore';
 import { usePathView } from './usePathView';
@@ -59,7 +59,7 @@ function ChapterOverview({ nodes }: { nodes: NodeView[] }) {
       <ul className={styles.overviewList}>
         {nodes.map((v) => (
           <li key={v.key}>
-            <NodeIcon kind={v.node.kind} size={14} /> {v.title}
+            <NodeIcon kind={v.node.kind} onChart={onChart(v.node)} size={14} /> {v.title}
             <span className={styles.rowMeta}> · about {v.minutes} min</span>
           </li>
         ))}
@@ -421,13 +421,7 @@ export function PathDrawer() {
                   <NodeIcon kind="lesson" size={14} /> Lesson
                 </li>
                 <li>
-                  <NodeIcon kind="tour" size={14} /> Practice on the real screen
-                </li>
-                <li>
-                  <span className={styles.legendBadge} aria-hidden="true">
-                    <NodeIcon kind="tour" size={10} />
-                  </span>{' '}
-                  Hands-on: you try it in the lesson
+                  <NodeIcon kind="tour" size={14} /> Practice on the real chart
                 </li>
               </ul>
               {view.chapters.map((c) => (

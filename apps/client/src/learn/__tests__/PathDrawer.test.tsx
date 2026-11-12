@@ -64,20 +64,21 @@ describe('PathDrawer', () => {
     expect(screen.getByText('Foundations of crypto')).toBeTruthy();
     expect(screen.getByText('Start')).toBeTruthy();
     expect(nodeButton('lesson:lesson-01').getAttribute('aria-label')).toBe(
-      'Lesson, hands-on: What is the problem?, next step'
+      'Lesson: What is the problem?, next step'
     );
     expect(nodeButton('lesson:lesson-02').getAttribute('aria-disabled')).toBe('true');
     expect(screen.getByText('Trade with a plan')).toBeTruthy();
     expect(screen.getAllByText(/Coming soon/).length).toBeGreaterThan(0);
-    // The legend explains the two marker shapes (owner 2026-11-12)
-    expect(screen.getByRole('list', { name: 'Kinds of stop' }).textContent).toContain('Hands-on');
-    expect(document.querySelector('[data-guide="path.node"][data-mode="hands-on"]')).not.toBeNull();
+    // The legend names the two icons, and nothing says "Hands-on" any more (owner 2026-11-12)
+    const legend = screen.getByRole('list', { name: 'Kinds of stop' }).textContent;
+    expect(legend).toContain('Practice on the real chart');
+    expect(document.body.textContent).not.toContain('Hands-on');
     expect(
       screen.getByRole('progressbar', { name: 'Path progress' }).getAttribute('aria-valuenow')
     ).toBe('0');
   });
 
-  it('should ring a begun lesson with how much is done, and mark practice with a dumbbell', () => {
+  it('should ring a begun lesson with how much is done, and mark what is done on the chart with a dumbbell', () => {
     // Owner 2026-11-12, after Duolingo: a ring for a lesson part done, a dumbbell for practice
     act(() => useLessonStore.getState().setReached({ 'lesson-01': 4 }));
     useTourStore.setState({ panelOpen: true });
@@ -88,11 +89,16 @@ describe('PathDrawer', () => {
       (5 / screens).toFixed(2)
     );
     expect(lesson1.getAttribute('aria-label')).toContain(`, 5 of ${screens} screens`);
-    // A lesson with a "Now you try it" keeps its book, with a small dumbbell
+    // A lesson is a book, with no badge; what's done on the real chart is a dumbbell: the
+    // practice, and Lesson 3, whose "Try it" is there
     expect(lesson1.querySelector('.lucide-book-open')).not.toBeNull();
-    expect(lesson1.querySelector('.lucide-dumbbell')).not.toBeNull();
-    // Practice on the real screen is the dumbbell itself; a lesson not begun has no ring
+    expect(lesson1.querySelector('.lucide-dumbbell')).toBeNull();
+    expect(nodeButton('lesson:lesson-02').querySelector('.lucide-dumbbell')).not.toBeNull();
+    expect(nodeButton('lesson:lesson-02').getAttribute('aria-label')).toContain(
+      'Lesson, on the real chart: Who sets the price?'
+    );
     expect(nodeButton('tour:buy-first-coin').querySelector('.lucide-dumbbell')).not.toBeNull();
+    // A lesson not begun has no ring
     expect(nodeButton('lesson:lesson-ownership').querySelector('[data-progress]')).toBeNull();
   });
 
