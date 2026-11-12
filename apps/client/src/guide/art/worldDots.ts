@@ -1,5 +1,5 @@
 /**
- * A dotted world map for Lesson 1's "Many notebooks, no Nora" (owner's visual Q&A 2026-10-24).
+ * A dotted world map for Lesson 2's "One ledger, thousands of copies" (owner's visual Q&A 2026-10-24).
  * Generated once, offline, with `dotted-map` 3.1.0 (MIT; land shapes from Natural Earth, public
  * domain): `new DottedMap({ height: 34, grid: 'diagonal' }).getPoints()`. No runtime dependency:
  * only these 1010 dots ship. Each pair is x and y doubled to whole numbers, on a 0–134 by

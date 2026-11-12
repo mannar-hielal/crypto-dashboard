@@ -90,6 +90,14 @@ describe('LessonArt', () => {
     expect(container.querySelectorAll('svg[data-stamp]')).toHaveLength(1);
   });
 
+  it('should show the ledger, not coins, beside the phone and its recovery words', () => {
+    const { container } = render(<LessonArt id="keyHolders" />);
+    // Owner 2026-11-12: bitcoin has no coins; a balance is the ledger added up
+    expect(container.textContent).toContain('the ledger');
+    expect(container.textContent).toContain('your balance = the ledger, added up');
+    expect(container.textContent).not.toMatch(/coins/);
+  });
+
   it('should draw no presenter when none is given (a chart card’s stand-in picture)', () => {
     const { container } = render(<LessonArt id="tesla" />);
     expect(container.querySelector('[data-mood]')).toBeNull();

@@ -586,3 +586,21 @@
   color: var(--color-brand-purple); /* color.purple */
   font-weight: 600;
 }
+
+/* A card's Read more, under its points (owner 2026-11-12) */
+.more {
+  margin: 8px 0 0;
+}
+
+/* The Why opens on the learner's own choice, in the muted text colour (owner 2026-11-12) */
+.picked {
+  font-style: italic; /* set apart from the Why around it, which is already color.muted (review #275) */
+}
+
+/* The close's teaser: what the next lesson brings, above the way on (owner 2026-11-12) */
+.teaser {
+  margin: 16px 0 0; /* the spacing scale: 4 × 4px, as the close's other blocks */
+  color: var(--color-brand-white); /* color.white */
+  font-weight: 600;
+  text-align: center;
+}

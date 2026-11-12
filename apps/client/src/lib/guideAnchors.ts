@@ -299,6 +299,12 @@ export const GUIDE_ANCHORS = [
   'lesson.note',
   'lesson.note.save',
   'lesson.recap',
+  /** A card's Read more (key: the article) */
+  'lesson.more',
+  /** The Why's first words: the option the learner picked */
+  'lesson.picked',
+  /** The close's line on what the next lesson brings */
+  'lesson.teaser',
   'lesson.highlight',
   'lesson.genesis',
   'lesson.finish-line',
