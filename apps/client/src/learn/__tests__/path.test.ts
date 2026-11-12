@@ -5,7 +5,7 @@ import { CHECKPOINTS } from '@/learn/checkpoints';
 import {
   CHAPTERS,
   lessonFraction,
-  nodeMode,
+  onChart,
   nodeOffset,
   openKeys,
   pathState,
@@ -172,27 +172,19 @@ describe('the map', () => {
     expect(lessonFraction('lesson-02', 6, false)).toBeCloseTo(7 / screens);
     expect(lessonFraction('lesson-02', undefined, false)).toBeNull(); // not begun
     expect(lessonFraction('lesson-02', 6, true)).toBeNull(); // done: the tick instead
-    expect(lessonFraction('lesson-02', screens - 1, false)).toBeNull(); // the last screen, unfinished
+    // The last screen without a Finish: a full ring, still not done
+    expect(lessonFraction('lesson-02', screens - 1, false)).toBe(1);
     const view = pathState({ ...empty(), reached: { 'lesson-01': 2 } });
     const [l1, , , tour] = view.chapters[0].nodes;
     expect(l1.fraction).toBeCloseTo(3 / lessonScreens(getLesson('lesson-01')).length);
     expect(tour.fraction).toBeNull();
   });
 
-  it('should mark a stop hands-on when the learner tries it themselves', () => {
-    // Owner 2026-11-12: any lesson with a "Now you try it" is hands-on, as is practice on the screen
-    expect(nodeMode({ kind: 'lesson', id: 'lesson-01', access: FREE })).toBe('hands-on'); // Nora's ledger
-    expect(nodeMode({ kind: 'lesson', id: 'lesson-02', access: FREE })).toBe('hands-on'); // the real chart
-    expect(nodeMode({ kind: 'tour', id: 'buy-first-coin', access: FREE })).toBe('hands-on');
-    expect(nodeMode({ kind: 'checkpoint', id: 'checkpoint-ch1', access: FREE })).toBe('check');
-    const view = pathState(empty());
-    expect(view.chapters[0].nodes.map((n) => n.mode)).toEqual([
-      'hands-on',
-      'hands-on',
-      'hands-on',
-      'hands-on',
-      'hands-on',
-      'check',
-    ]);
+  it('should mark what is done on the real chart: the practice, and Lesson 3', () => {
+    // Owner 2026-11-12: the dumbbell icon
+    expect(onChart({ kind: 'lesson', id: 'lesson-01', access: FREE })).toBe(false);
+    expect(onChart({ kind: 'lesson', id: 'lesson-02', access: FREE })).toBe(true);
+    expect(onChart({ kind: 'tour', id: 'buy-first-coin', access: FREE })).toBe(true);
+    expect(onChart({ kind: 'checkpoint', id: 'checkpoint-ch1', access: FREE })).toBe(false);
   });
 });

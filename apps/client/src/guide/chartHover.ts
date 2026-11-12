@@ -102,6 +102,8 @@ export function candleBoxFrom(
   if (x === null || highY === null || lowY === null) return null;
   if (x < 0 || x > plotWidth || !Number.isFinite(highY) || !Number.isFinite(lowY)) return null;
   const width = Math.max(10, Math.round(barSpacing));
+  // Scrolled off the top of the pane: nothing to point at (the whole chart instead)
+  if (Math.max(highY, lowY) < 0) return null;
   const top = Math.max(0, Math.min(highY, lowY));
   const height = Math.max(12, Math.abs(lowY - highY));
   if (top > container.height) return null;

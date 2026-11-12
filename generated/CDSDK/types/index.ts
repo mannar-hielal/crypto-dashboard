@@ -98,7 +98,7 @@ export interface LearnProgressResponse {
 
 export interface SetLearnProgressRequest {
   status: LearnStatus;
-  /** With `started`: the lesson's furthest screen as its funnel step number (1–99) */
+  /** With `started` only: the lesson's furthest screen as its funnel step number (1–999) */
   step?: number;
 }
 

@@ -1493,6 +1493,8 @@ const SCAM_STATEMENTS: readonly { text: string; flag: boolean; why: string }[] =
   },
 ];
 
+const RED_FLAGS = SCAM_STATEMENTS.filter((s) => s.flag).length;
+
 function ScamCheck() {
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<(boolean | undefined)[]>([]);
@@ -1532,7 +1534,7 @@ function ScamCheck() {
           ? 'Your call: red flag, or not?'
           : `${answer === item.flag ? '✓' : '•'} ${item.flag ? 'Red flag.' : 'Not a red flag.'} ${item.why}`}
       </p>
-      {all && <p className={styles.alert}>3 red flags. One is enough to walk away.</p>}
+      {all && <p className={styles.alert}>{RED_FLAGS} red flags. One is enough to walk away.</p>}
       <div className={styles.widgetActions}>
         <button
           type="button"

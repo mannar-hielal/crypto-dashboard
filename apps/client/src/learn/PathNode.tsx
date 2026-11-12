@@ -148,7 +148,6 @@ export function PathNode({
       style={{ transform: `translateX(${nodeOffset(index)}px)` }}
       {...guide('path.node', view.key)}
       data-state={state}
-      data-mode={view.mode}
     >
       {state === 'current' && (
         <div className={styles.bubbleRow} aria-hidden="true">

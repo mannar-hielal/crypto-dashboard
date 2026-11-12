@@ -15,8 +15,19 @@ import { getLesson, isLessonId, lessonScreenOfStep, lessonStepId, type LessonId 
 import { useTourStore } from './tourStore';
 import { isTourId, type TourId } from './tours';
 
+/** A lesson's furthest screen, as its funnel step number (the server's `started` row) */
+function sendReached(id: LessonId, screen: number, accessToken: string): void {
+  const step = Number(lessonStepId(getLesson(id), screen).split('.')[1]);
+  learnApi.setProgress(id, 'started', accessToken, step).catch(() => undefined);
+}
+
 export function useTourProgress(): void {
   const accessToken = useAuthStore((s) => s.accessToken);
+
+  // Signed out: the furthest screens belong to the account that made them, never the next one
+  useEffect(() => {
+    if (!accessToken) useLessonStore.getState().clearReached();
+  }, [accessToken]);
 
   // Read
   useEffect(() => {
@@ -45,6 +56,14 @@ export function useTourProgress(): void {
           if (i.status !== 'started' || !isLessonId(i.itemId) || i.step === undefined) continue;
           const screen = lessonScreenOfStep(getLesson(i.itemId), i.step);
           if (screen !== null) reached[i.itemId] = screen;
+        }
+        // Screens reached here before the answer came (or before signing in) that the server
+        // doesn't have yet: sent now, as nothing will rise past them to send them later
+        const local = useLessonStore.getState().reached;
+        for (const [id, screen] of Object.entries(local) as [LessonId, number][]) {
+          if (screen > (reached[id] ?? -1) && !lessons.includes(id)) {
+            sendReached(id, screen, accessToken);
+          }
         }
         useLessonStore.getState().setReached(reached);
         // The learning map: practice skipped on a phone, and checkpoints passed
@@ -138,17 +157,13 @@ export function useTourProgress(): void {
   // answer, which arrives through `setReached` with the furthest screens it already holds)
   useEffect(() => {
     if (!accessToken) return;
-    // What this session already sent: a store update made inside another one's listeners is seen
-    // twice by later listeners, and each screen is worth one write
-    const sent: Partial<Record<LessonId, number>> = {};
     return useLessonStore.subscribe((state, prev) => {
-      if (state.reached === prev.reached || state.activeId === null || state.returnTo) return;
+      if (state.reached === prev.reached || state.activeId === null) return;
       const id = state.activeId;
       const now = state.reached[id];
-      if (now === undefined || now <= (prev.reached[id] ?? -1) || now <= (sent[id] ?? -1)) return;
-      sent[id] = now;
-      const step = Number(lessonStepId(getLesson(id), now).split('.')[1]);
-      learnApi.setProgress(id, 'started', accessToken, step).catch(() => undefined);
+      // A replay of a finished lesson changes nothing on the server: no write
+      if (now === undefined || now <= (prev.reached[id] ?? -1) || state.completed[id]) return;
+      sendReached(id, now, accessToken);
     });
   }, [accessToken]);
 

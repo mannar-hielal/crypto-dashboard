@@ -96,6 +96,8 @@ interface LessonState extends LessonRun {
   setCompleted: (ids: LessonId[]) => void;
   /** The server's furthest screens, merged: each lesson keeps the higher of the two */
   setReached: (reached: Partial<Record<LessonId, number>>) => void;
+  /** Forget the furthest screens (signed out: they belong to the account that made them) */
+  clearReached: () => void;
   reset: () => void;
 }
 
@@ -107,6 +109,15 @@ export function noteToSave(s: Pick<LessonRun, 'note' | 'noteStatus' | 'noteError
 /** A screen index kept within the lesson */
 function clampScreen(id: LessonId, screen: number): number {
   return Math.min(Math.max(0, screen), lessonScreens(getLesson(id)).length - 1);
+}
+
+/** `reached` with a lesson's furthest screen raised to `screen` (never lowered) */
+function raised(
+  reached: Partial<Record<LessonId, number>>,
+  id: LessonId,
+  screen: number
+): Partial<Record<LessonId, number>> {
+  return screen > (reached[id] ?? -1) ? { ...reached, [id]: screen } : reached;
 }
 
 /** A lesson's run from its start, or no lesson at all */
@@ -142,16 +153,30 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
     // look back's lesson too): the same run carries on, at that screen if one is given; during
     // its tour, the tour does
     if (s.activeId === id) {
-      if (screen !== undefined && !s.inTour) set({ screen: clampScreen(id, screen) });
+      if (screen !== undefined && !s.inTour) {
+        const at = clampScreen(id, screen);
+        // A look back's own lesson is only visited: it isn't begun by it
+        set({ screen: at, reached: s.returnTo ? s.reached : raised(s.reached, id, at) });
+      }
       return;
     }
     // The lesson a look back came from: home, as it was left
     if (s.returnTo?.lesson === id) {
       get().returnBack();
-      if (screen !== undefined) set({ screen: clampScreen(id, screen) });
+      if (screen !== undefined) {
+        const at = clampScreen(id, screen);
+        set((now) => ({ screen: at, reached: raised(now.reached, id, at) }));
+      }
       return;
     }
-    set({ ...freshRun(id, screen), returnTo: null, run: s.run + 1, starts: s.starts + 1 });
+    const run = freshRun(id, screen);
+    set({
+      ...run,
+      reached: raised(s.reached, id, run.screen),
+      returnTo: null,
+      run: s.run + 1,
+      starts: s.starts + 1,
+    });
   },
 
   visit: (id, screen) => {
@@ -178,10 +203,16 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
   },
 
   next: () => {
-    const { activeId, screen } = get();
+    const { activeId, screen, returnTo, reached } = get();
     if (!activeId) return;
     const last = lessonScreens(getLesson(activeId)).length - 1;
-    if (screen < last) set({ screen: screen + 1 });
+    if (screen >= last) return;
+    // The map's ring (owner 2026-11-12): the furthest screen of the learner's own lesson, never of
+    // one they're only looking back at
+    set({
+      screen: screen + 1,
+      reached: returnTo ? reached : raised(reached, activeId, screen + 1),
+    });
   },
 
   back: () => {
@@ -252,6 +283,8 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
       completed: Object.fromEntries(ids.map((id) => [id, true])) as Partial<Record<LessonId, true>>,
     }),
 
+  clearReached: () => set({ reached: {} }),
+
   setReached: (reached) =>
     set((s) => {
       const merged = { ...s.reached };
@@ -265,13 +298,3 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
   reset: () =>
     set((s) => ({ ...initial, answers: {}, completed: {}, reached: {}, run: s.run + 1 })),
 }));
-
-// The furthest screen rises with every screen the learner opens in their own lesson (not a look
-// back, which only visits). One place for every way the screen changes: next, start, a resume
-useLessonStore.subscribe((s) => {
-  if (!s.activeId || s.returnTo) return;
-  const furthest = s.reached[s.activeId] ?? -1;
-  if (s.screen > furthest) {
-    useLessonStore.setState({ reached: { ...s.reached, [s.activeId]: s.screen } });
-  }
-});

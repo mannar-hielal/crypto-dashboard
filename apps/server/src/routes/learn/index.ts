@@ -47,8 +47,11 @@ const toItem = (r: ItemRow) => ({
 
 const ROW = { itemId: true, status: true, step: true, updatedAt: true } as const;
 
-/** A lesson's furthest screen is stored as its funnel step number: at most two digits */
-const MAX_STEP = 99;
+/**
+ * A lesson's furthest screen is stored as its funnel step number, which includes the lesson's
+ * `stepBase` (raised by 20 at each rebuild, never lowered). Room for many rebuilds; a SmallInt column
+ */
+const MAX_STEP = 999;
 
 // ─── ROUTES ─────────────────────────────────────────────────────────────────
 
@@ -131,6 +134,11 @@ export async function learnRoutes(app: FastifyInstance) {
       const { itemId } = request.params as { itemId: LearnItemId };
       const { status, step } = request.body as { status: LearnStatus; step?: number };
 
+      // 🔐 A step belongs to a start only: a finish or a dismissal carrying one is a bad request
+      if (status !== 'started' && step !== undefined) {
+        return reply.status(400).send({ error: 'Only a start takes a step' });
+      }
+
       if (status === 'started') {
         // 🔐 Only a lesson has screens, and a start always says how far
         if (!(LEARN_LESSON_IDS as readonly string[]).includes(itemId) || step === undefined) {
@@ -138,11 +146,15 @@ export async function learnRoutes(app: FastifyInstance) {
         }
         // 🔐 Never a downgrade: the row is created if missing, and its step only rises while the
         // lesson is unfinished (a completed row is left as it is)
-        await app.prisma.learningProgress.createMany({
+        const created = await app.prisma.learningProgress.createMany({
           data: [{ userId, itemId, status, step }],
           skipDuplicates: true,
         });
-        await app.prisma.learningProgress.updateMany({
+        // A new row, or a raised step: what was asked is what's stored, so no read back
+        if (created.count === 1) {
+          return reply.send({ item: toItem({ itemId, status, step, updatedAt: new Date() }) });
+        }
+        const raisedRows = await app.prisma.learningProgress.updateMany({
           where: {
             userId,
             itemId,
@@ -151,6 +163,9 @@ export async function learnRoutes(app: FastifyInstance) {
           },
           data: { step },
         });
+        if (raisedRows.count === 1) {
+          return reply.send({ item: toItem({ itemId, status, step, updatedAt: new Date() }) });
+        }
         const row = await app.prisma.learningProgress.findUnique({
           where: { userId_itemId: { userId, itemId } },
           select: ROW,
@@ -164,7 +179,8 @@ export async function learnRoutes(app: FastifyInstance) {
         const row = await app.prisma.learningProgress.upsert({
           where: { userId_itemId: { userId, itemId } },
           create: { userId, itemId, status },
-          update: { status },
+          // A finished lesson no longer has a "furthest screen"
+          update: { status, step: null },
           select: ROW,
         });
         return reply.send({ item: toItem(row) });

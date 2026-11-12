@@ -64,6 +64,8 @@ describe('chartHover', () => {
     expect(candleBoxFrom(box, 760, 120, 180, 6, 740)).toBeNull(); // under the price scale
     expect(candleBoxFrom(box, -4, 120, 180, 6, 740)).toBeNull(); // scrolled off left
     expect(candleBoxFrom(box, 700, null, 180, 6, 740)).toBeNull();
+    expect(candleBoxFrom(box, 700, -200, -150, 6, 740)).toBeNull(); // above the pane
+    expect(candleBoxFrom(box, 700, 500, 520, 6, 740)).toBeNull(); // below it
   });
 
   it('should find the newest candle of the chart inside the anchor, and forget an unmounted one', () => {

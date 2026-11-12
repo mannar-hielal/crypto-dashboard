@@ -4611,6 +4611,18 @@ on the newest candle.
   - **Client:** `lessonStore.reached` holds the furthest screen per lesson. It rises with every screen of the learner's
     own lesson, never for a look back, and the server's answer is merged in. `useTourProgress` reads it (a step from an
     earlier version of a lesson names no screen and is ignored) and writes one `started` per new furthest screen.
+- **Code review fixes (same day):**
+  - **Sign-out:** the furthest screens are cleared on sign-out, so the next account on the tab never sees them.
+  - **Sync on load:** screens reached before the server answered (or before signing in) are sent once it has.
+  - **Replays:** a replay of a finished lesson sends nothing.
+  - **The last screen:** a lesson left there without Finish keeps a full ring and **Continue**.
+  - **`step` range:** 1–999, leaving room for many `stepBase` rebuilds (each adds 20).
+  - **Only a start takes a step:** a finish or a dismissal with one is a 400, and a finish clears the stored step.
+  - **Fewer queries:** a new row or a raised step is answered without a read back.
+  - **The store:** `reached` is raised inside the actions that change the screen, not by a store subscriber.
+  - **The arrow:** a candle scrolled above the pane falls back to the whole chart.
+  - **Cleanup:** the unused stop modes (`StopMode`, `nodeMode`, `MODE_LABEL`) are gone (`onChart` drives the
+    dumbbell). The red-flag sorter counts its flags.
 - **Privacy policy 1.5** (12 Nov 2026): the "Learning progress" row now names lessons and the furthest screen of a
   begun lesson. It's treated as **not material**, like 1.4: the same category, retention, legal basis and recipients.
   Owner to confirm.

@@ -1,6 +1,6 @@
 /**
- * The learning map, "Crypto trading path" (owner's visual Q&A 2026-10-24; renamed and given our own
- * vertical rail 2026-11-12): chapters of nodes walked in order — a lesson, then practice on the real screen, then the chapter's checkpoint.
+ * The learning map, "Crypto trading path" (owner's visual Q&A 2026-10-24; renamed 2026-11-12, the
+ * zig-zag kept): chapters of nodes walked in order — a lesson, then practice on the real screen, then the chapter's checkpoint.
  * A node opens once the one before it is done; a practice tour skipped on a phone counts as passed,
  * so a small screen never blocks the path. The checkpoint is always open: passing it early ("test
  * out") opens the rest of the chapter and the next one, without ticking what was skipped.
@@ -89,26 +89,11 @@ export const CHAPTERS: readonly Chapter[] = [
  */
 export type NodeState = 'done' | 'current' | 'open' | 'skipped' | 'locked' | 'pro';
 
-/**
- * What a stop asks of the learner (owner 2026-11-12): `hands-on` when they do something themselves
- * (a lesson with a "Now you try it", or practice on the real screen), `read` for cards and articles
- * only, `check` for a checkpoint. The map draws each differently.
- */
-export type StopMode = 'read' | 'hands-on' | 'check';
-
-/** What a stop's card says it asks of the learner */
-export const MODE_LABEL: Record<StopMode, string> = {
-  read: 'Read',
-  'hands-on': 'Hands-on',
-  check: 'Checkpoint',
-};
-
 export interface NodeView {
   node: BuiltNode;
   key: string;
   title: string;
   minutes: number;
-  mode: StopMode;
   state: NodeState;
   /**
    * How much of a started lesson is done, 0–1 (owner 2026-11-12, Duolingo's ring): the furthest
@@ -162,8 +147,9 @@ export function lessonFraction(
 ): number | null {
   if (done || reached === undefined) return null;
   const screens = lessonScreens(getLesson(id)).length;
-  const fraction = Math.min(reached + 1, screens) / screens;
-  return fraction > 0 && fraction < 1 ? fraction : null;
+  // On the last screen without a Finish the ring is full but the lesson isn't done: it stays, so
+  // the bubble still says Continue
+  return Math.min(reached + 1, screens) / screens;
 }
 
 export const nodeKey = (node: { kind: NodeKind; id: string }): string => `${node.kind}:${node.id}`;
@@ -182,19 +168,6 @@ export function nodeTitle(node: BuiltNode): string {
 /** A stop done on the real chart: practice, or a lesson whose "Try it" is a tour there (Lesson 3) */
 export function onChart(node: BuiltNode): boolean {
   return node.kind === 'tour' || (node.kind === 'lesson' && getLesson(node.id).tour !== undefined);
-}
-
-export function nodeMode(node: BuiltNode): StopMode {
-  switch (node.kind) {
-    case 'lesson': {
-      const lesson = getLesson(node.id);
-      return lesson.tryWidget !== undefined || lesson.tour !== undefined ? 'hands-on' : 'read';
-    }
-    case 'tour':
-      return 'hands-on';
-    case 'checkpoint':
-      return 'check';
-  }
 }
 
 function nodeMinutes(node: BuiltNode): number {
@@ -257,7 +230,6 @@ export function pathState(
         key,
         title: nodeTitle(node),
         minutes: nodeMinutes(node),
-        mode: nodeMode(node),
         fraction:
           node.kind === 'lesson'
             ? lessonFraction(node.id, progress.reached?.[node.id], isDone(node, progress))

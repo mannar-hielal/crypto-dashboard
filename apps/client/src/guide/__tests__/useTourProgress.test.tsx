@@ -278,6 +278,26 @@ describe('useTourProgress', () => {
       expect(setProgress).not.toHaveBeenCalled();
     });
 
+    it('should send screens reached before the server answered, then nothing twice', async () => {
+      // Begun before the progress loaded (or before signing in): nothing rises past it later
+      act(() => useLessonStore.getState().start('lesson-02', 3));
+      getProgress.mockResolvedValue({ items: [] });
+      renderHook(() => useTourProgress());
+      await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
+      expect(setProgress.mock.calls).toEqual([['lesson-02', 'started', 'tok', 44]]);
+      // The server's answer doesn't send it again
+      expect(useLessonStore.getState().reached).toEqual({ 'lesson-02': 3 });
+    });
+
+    it('should forget the furthest screens on sign-out, so the next account starts clean', async () => {
+      await loaded([{ ...item('lesson-02', 'started'), step: 46 }]);
+      expect(useLessonStore.getState().reached).toEqual({ 'lesson-02': 5 });
+      token = null; // signed out
+      renderHook(() => useTourProgress());
+      expect(useLessonStore.getState().reached).toEqual({});
+      token = 'tok';
+    });
+
     it('should never send a lower screen than the furthest one', async () => {
       await loaded([{ ...item('lesson-02', 'started'), step: 46 }]);
       act(() => useLessonStore.getState().start('lesson-02', 2));
@@ -357,8 +377,8 @@ describe('useTourProgress', () => {
 
       act(() => useLessonStore.getState().reset());
       expect(calls().some((c) => c.name === 'tour_completed')).toBe(false);
-      // Only the new furthest screen, never a finish
-      expect(setProgress.mock.calls).toEqual([['lesson-02', 'started', 'tok', 45]]);
+      // A replay of a finished lesson: no furthest-screen write (it changes nothing), never a finish
+      expect(setProgress).not.toHaveBeenCalled();
       expect(calls().at(-1)).toEqual({
         name: 'tour_closed',
         itemId: 'lesson-02',
