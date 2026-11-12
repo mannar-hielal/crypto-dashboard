@@ -114,7 +114,14 @@ describe('the learning graph', () => {
         screen: 1,
         label: 'Lesson 2: Money that no one controls',
       },
-      // The stamp card's [[miners|mining]]: mining's deep section lives here (owner 2026-11-12)
+      // The ledger card's Read more opens the mining section (owner 2026-11-12)
+      {
+        kind: 'lesson',
+        lesson: 'lesson-ownership',
+        screen: 2,
+        label: 'Lesson 2: One ledger, thousands of copies',
+      },
+      // The stamp card's [[miners|mining]] (review: the mining concept opens from a lesson again)
       {
         kind: 'lesson',
         lesson: 'lesson-ownership',
@@ -148,6 +155,13 @@ describe('the learning graph', () => {
       // Every other link a free lesson makes: a card's Read more, the recap and its highlight
       for (const card of lesson.cards) {
         if (card.more) expect(getArticle(card.more.article).access, card.title).toBe(FREE);
+        // …and a Read more's section is a real heading of its article
+        if (card.more?.section) {
+          const ids = getArticle(card.more.article).blocks.flatMap((b) =>
+            b.kind === 'h' && b.id ? [b.id] : []
+          );
+          expect(ids, card.title).toContain(card.more.section);
+        }
       }
       for (const item of [...(lesson.recap?.points ?? []), lesson.recap?.highlight]) {
         if (item?.article) expect(getArticle(item.article).access, item.text).toBe(FREE);

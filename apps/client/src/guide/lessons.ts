@@ -480,7 +480,8 @@ const lessonOwnership: Lesson = {
       // the real photo"); they gave no credit line, so none is shown
       photo: {
         src: howellsLandfill,
-        alt: 'A digger on a huge landfill heap with workers below; inset, a portrait of James Howells.',
+        // The card shows the photo's top (the frame matches Lesson 1's), so the alt names what's in view
+        alt: 'A digger on a huge landfill heap; inset, a portrait of James Howells.',
         credit: null,
       },
       beats: [
@@ -539,7 +540,9 @@ const lessonOwnership: Lesson = {
       title: 'One ledger, thousands of copies',
       art: 'ledger',
       presenter: { who: 'tick', mood: 'grin' },
-      text: 'In Lesson 1 we saw the risk of trusting one record keeper: whoever holds the only [[ledger]] can change it, freeze it or simply lose it. Bitcoin solves this by keeping copies everywhere. Thousands of computers around the world, called [[nodes|node]], each hold the full ledger and check every new payment. Each page, called a block, is sealed to the one before with a fingerprint called a hash, so nobody can quietly rewrite the past.',
+      text: 'In Lesson 1 we saw the risk of trusting one record keeper: whoever holds the only [[ledger]] can change it, freeze it or simply lose it. Bitcoin solves this by keeping copies everywhere. Thousands of computers around the world, called [[nodes|node]], each hold the full ledger and check every new payment. Each page, called a block, is added by miners and sealed to the one before with a fingerprint called a hash, so nobody can quietly rewrite the past.',
+      // Owner 2026-11-12: mining here, with its Read more on the story article's mining section
+      more: { article: 'bitcoin-story', section: 'mining' },
       nextLabel: 'How do I receive bitcoin?',
     },
     {
@@ -564,7 +567,7 @@ const lessonOwnership: Lesson = {
       title: 'A stamp only you hold',
       art: 'stamp',
       presenter: { who: 'tick', mood: 'curious' },
-      text: 'Now Sofia sends. Her wallet stamps “Sofia → Leo, 2” with her private key, a mark only she can make. The payment carries the matching checker, her public key, so every [[node]] can confirm the mark is hers, and that she has 2 bitcoin to send, before it goes into the ledger. Anyone can check the stamp, but nobody can copy it. New blocks are added by [[miners|mining]], computers paid in new bitcoin for the work.',
+      text: 'Now Sofia sends. Her wallet stamps “Sofia → Leo, 2” with her private key, a mark only she can make. The payment carries the matching checker, her public key, so every [[node]] can confirm the mark is hers, and that she has 2 bitcoin to send, before it goes into the ledger. Nobody can copy the stamp, and once the nodes accept it, [[miners|mining]] add it to a new block.',
       nextLabel: 'So where is my bitcoin?',
     },
     {

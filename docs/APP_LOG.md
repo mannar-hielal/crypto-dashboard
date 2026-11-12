@@ -4584,6 +4584,24 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
 - **Tests:** `FinishLine.test` (the run, a tap, reduced motion), the sheet (Lesson 1's close, a close with no
   recap, the button order), the lesson rules (recap lines open real sections; Satoshi only in the recap).
 
+### 2026-11-12 — Lesson photos at one height
+
+- Every lesson photo now shows at the Pizza Day photo's shape (1200 × 736, `aspect-ratio` + `object-fit: cover`), so
+  Lesson 2's landfill photo is as tall as Lesson 1's (owner). A taller photo is cropped from the bottom
+  (`object-position: center top`), which keeps the digger and James Howells' portrait.
+- The **node** peek's analogy is now the sceptical office worker (owner): "a sceptical office worker who checks every
+  payment against the rules before filing it, and keeps their own copy of every page" (was "one of thousands of
+  Noras"). The **ledger** peek, which Lesson 2's ledger card also opens, drops Nora too ("a notebook with one new
+  line per payment, and nothing ever erased"); a test keeps Nora out of every peek Lesson 2 opens.
+- **Mining moves to the ledger card** (owner): "Each page, called a block, is added by miners and sealed to the one
+  before…", with a Read more that opens _Bitcoin's story_ at **Mining: how a new block is added**. The card already
+  has its two tappable terms, so "miners" is plain text there; the stamp card is about sending again. A test checks
+  that a card's Read more section is a real heading of its article.
+- Code review (no security findings: copy, one CSS rule, tests): the stamp card names [[miners]] again ("once the nodes
+  accept it, miners add it to a new block"), so the mining peek opens from a lesson; the landfill photo's alt no
+  longer mentions the workers the new crop hides; the node analogy is shortened to fit a phone peek ("a sceptical
+  office worker who checks every payment before filing it").
+
 ### 2026-11-12 — Bitcoin's story: mining in depth, with the mining race
 
 - The owner asked to elaborate on mining in _Bitcoin's story, and its plan in plain words_:

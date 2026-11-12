@@ -215,6 +215,9 @@ describe('lessons', () => {
     for (const card of l.cards) {
       for (const id of termIds(card.text ?? '')) {
         expect(getConcept(id as ConceptId).peek, id).not.toMatch(/\bcoins?\b/i);
+        // …nor leans on Lesson 1's Nora (owner 2026-11-12: the node is a sceptical office worker)
+        const concept = getConcept(id as ConceptId);
+        expect(`${concept.peek} ${concept.think}`, id).not.toMatch(/Nora/);
       }
     }
     // Owner 2026-11-12: the Bitcoin card, the mark from Lesson 1's end, what sets it apart, and
@@ -268,6 +271,13 @@ describe('lessons', () => {
     const card = (title: string) => l2.cards.find((c) => c.title === title)!;
     expect(card('Money that no one controls').text).toContain('[[decentralized]]');
     expect(card('One ledger, thousands of copies').text).toMatch(/called a block.*called a hash/);
+    // Owner 2026-11-12: mining sits on the ledger card, its Read more opening the mining section
+    expect(card('One ledger, thousands of copies').text).toMatch(/added by miners/);
+    expect(card('One ledger, thousands of copies').more).toEqual({
+      article: 'bitcoin-story',
+      section: 'mining',
+    });
+    // …and the stamp card names the miners as a term, so the mining peek opens from a lesson
     expect(card('A stamp only you hold').text).toContain('[[miners|mining]]');
   });
 
