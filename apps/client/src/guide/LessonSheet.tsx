@@ -192,6 +192,10 @@ export function QuestionView({
       </div>
       {answered && (
         <p className={styles.explain} role="status">
+          {/* The learner's own choice first (owner 2026-11-12, from the Finelo review) */}
+          <span className={styles.picked} {...guide('lesson.picked')}>
+            You picked “{q.options[answer]}”.
+          </span>{' '}
           <strong>{answer === q.correct ? 'Right. ' : 'Not quite. '}</strong>
           {q.explain}
         </p>
@@ -398,6 +402,12 @@ function CloseView({ lesson }: { lesson: Lesson }) {
             ))}
           </div>
         </div>
+      )}
+      {/* What the next lesson brings, just above the way on; not on a look back, whose way on leads home */}
+      {lesson.teaser && !visiting && (
+        <p className={styles.teaser} {...guide('lesson.teaser')}>
+          {lesson.teaser}
+        </p>
       )}
     </>
   );

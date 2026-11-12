@@ -233,6 +233,32 @@ describe('lessons', () => {
     expect(JSON.stringify(l)).not.toMatch(/\$\d/);
   });
 
+  it('should carry the Finelo review’s small wins (owner 2026-11-12)', () => {
+    const l1 = getLesson('lesson-01');
+    const l2 = getLesson('lesson-ownership');
+    // A concrete 2008: Lehman Brothers
+    expect(l1.recap?.genesis?.lines[1].text).toMatch(/Lehman Brothers, a 158-year-old bank/);
+    // Lesson 2 says what it will teach, with its own length
+    expect(l2.cards[0].beats?.at(-1)?.text).toBe(
+      `In the next ${l2.minutes} minutes: what Bitcoin is, how you receive and send it, and why that key is everything.`
+    );
+    // One payment runs through the mechanism: Leo's address, Sofia's stamp, the ledger's line
+    const titles = [
+      'A mailbox and a key',
+      'A stamp only you hold',
+      'Your bitcoin isn’t in your phone',
+    ];
+    for (const title of titles) {
+      const card = l2.cards.find((c) => c.title === title)!;
+      expect(JSON.stringify(card), title).toMatch(/Sofia/);
+      expect(JSON.stringify(card), title).toMatch(/Leo/);
+    }
+    // A bridge to this app, and a teaser on each close
+    expect(l2.cards.at(-1)!.text).toMatch(/practice money the app holds/);
+    expect(l1.teaser).toMatch(/^You’ve seen the problem\. Next/);
+    expect(l2.teaser).toMatch(/^Next: who decides/);
+  });
+
   it('should start every lesson with an "Unlock" button on its first card', () => {
     // Owner 2026-11-12
     for (const l of LESSONS) expect(l.cards[0].nextLabel, l.id).toMatch(/^Unlock /);
