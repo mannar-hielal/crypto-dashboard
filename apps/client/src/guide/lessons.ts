@@ -3,7 +3,7 @@
  * real screen, two or three questions, one journal line. Tick (green, the curious one) and Tock
  * (red, the calm one) present them — red is never the villain.
  *
- * Rules the tests hold every lesson to: at most five cards of at most 50 words, two or three
+ * Rules the tests hold every lesson to: at most six cards of at most 80 words, two or three
  * questions with a "Why", praise for the plan and never for a lucky guess, no hype. Every dated
  * price is checked against Bybit's daily candles before it ships (noted beside it).
  *
@@ -17,6 +17,7 @@
 import { FREE, type Entitlement } from '@/learn/access';
 import type { ArticleId, WidgetId } from '@/learn/articles';
 import { plainText } from '@/learn/terms';
+import howellsLandfill from '@/assets/lessons/howells-landfill.jpg';
 import pizzaDay from '@/assets/lessons/pizza-day.jpg';
 import type { TourId } from './tours';
 
@@ -34,8 +35,9 @@ export type LessonArtId =
   | 'notebook'
   | 'oneNora'
   | 'ledger'
+  /** Lesson 2's Bitcoin card: the mark rising with its burst, as at the end of Lesson 1 */
+  | 'bitcoin'
   | 'mailbox'
-  | 'hardDrive'
   | 'stamp'
   | 'keyHolders'
   | 'custody'
@@ -140,7 +142,11 @@ export interface LessonPhoto {
   src: string;
   /** What the photo shows, for screen readers */
   alt: string;
-  credit: string;
+  /**
+   * Shown under the image. `null` only where the owner confirmed the rights and chose no credit
+   * line (Lesson 2's landfill, 2026-11-12): every photo states its attribution decision
+   */
+  credit: string | null;
 }
 
 export interface LessonCard {
@@ -164,16 +170,20 @@ export interface LessonCard {
   meet?: GuidesMeeting;
   /** Bold-labelled points under the text ("**Print coins.** Write …") */
   points?: CardPoint[];
+  /** A Read more under the card, to the article that goes deeper (owner 2026-11-12) */
+  more?: { article: ArticleId; section?: string };
   /** The Next button's words: the question the next card answers (default "Continue") */
   nextLabel?: string;
 }
 
 /** One "You can now…" line on the close, with the article that goes deeper */
-/** The birth of Bitcoin, staged on a summary (`GenesisReveal`): a real headline in a real block */
-export interface Genesis {
-  kicker: string;
-  headline: string;
-  caption: string;
+/**
+ * The birth of Bitcoin, staged on a summary (`GenesisReveal`, owner 2026-11-12): after the problem
+ * lines, each story line fades in and out in turn, then the Bitcoin mark, with the highlight under it
+ */
+export interface BirthStory {
+  /** Each line in turn; `emphasis`, a part of its text, is set apart (Satoshi's name) */
+  lines: { text: string; emphasis?: string }[];
 }
 
 export interface CanDo {
@@ -220,7 +230,13 @@ export interface Lesson {
    * The close's summary, in place of "You can now" (owner 2026-11-08): a few lines, each opening its
    * article. Lessons without one list `canDo` instead.
    */
-  recap?: { title: string; points: CanDo[]; highlight?: CanDo; genesis?: Genesis };
+  recap?: {
+    title: string;
+    points: CanDo[];
+    /** The conclusion; with no article it has no Read more (Lesson 1's ending, owner 2026-11-12) */
+    highlight?: { text: string; article?: ArticleId; section?: string };
+    genesis?: BirthStory;
+  };
   /** What the close offers next: the next lesson, or a tour */
   next?: LessonNext;
   access: Entitlement;
@@ -233,18 +249,22 @@ export interface Lesson {
 
 export type LessonNext = { kind: 'lesson'; id: LessonId } | { kind: 'tour'; id: TourId };
 
-// ─── Lesson 1 — What is Bitcoin? ─────────────────────────────────────────────
+// ─── Lesson 1 — What is the problem? ─────────────────────────────────────────
 // From the owner's notes on Kevin and Colt's lectures (Drive docs 01–06), rewritten in our voice;
 // each card's terms open the matching article (learn/articles.ts). Owner 2026-10-23: the Pizza Day
 // hook, and "Try it" is Nora cheating in the notebook, inside the sheet, on every screen size.
 
+/** Lesson 1's length: its card, the guides' meeting and the welcome card all say it */
+const LESSON_01_MINUTES = 5;
+
 const lesson01: Lesson = {
   id: 'lesson-01',
   number: 1,
-  title: 'What is Bitcoin?',
+  // Owner 2026-11-12: renamed from "What is Bitcoin?", which is now Lesson 2's title
+  title: 'What is the problem?',
   stage: 'Getting started',
   // Owner 2026-11-08: Lesson 1 is the problem only (one keeper); Lesson 2 answers it
-  minutes: 4,
+  minutes: LESSON_01_MINUTES,
   // Its screens changed on 2026-11-08: today's are steps 21 on, earlier ones keep 1–20 (Lesson 3 too)
   stepBase: 20,
   // Nora's edit alone: the copies that outvote her are Lesson 2's answer (review 2026-11-08)
@@ -281,7 +301,7 @@ const lesson01: Lesson = {
           emphasis: 'over $1 billion',
         },
       ],
-      nextLabel: 'Unlock your learning journey',
+      nextLabel: 'Unlock the story of Bitcoin',
     },
     {
       title: 'Meet your guides',
@@ -289,7 +309,7 @@ const lesson01: Lesson = {
       meet: {
         tick: 'Hi, I’m Pulin.',
         tock: 'Hi, I’m Berwyn.',
-        lead: 'In the next 4 minutes you’ll learn:',
+        lead: `In the next ${LESSON_01_MINUTES} minutes you’ll learn:`,
         list: [
           'why money needs someone you trust',
           'what one record keeper could get away with',
@@ -304,7 +324,7 @@ const lesson01: Lesson = {
       title: 'Money runs on trust',
       art: 'money',
       presenter: { who: 'tock', mood: 'frank', pose: 'stand' },
-      text: 'Bank notes, coins, even game tokens work because we trust [[someone in charge|money]]: a government, a bank, a game company. Handy, until they print more or change the rules overnight, and your money quietly buys less. To see why that matters, shrink it down to three friends and one notebook.',
+      text: 'Bank notes, coins, even game tokens only work because we all trust [[someone in charge|money]]: a government, a bank, a game company. Most of the time that’s handy. But whoever is in charge can print more or change the rules overnight, and the money in your pocket quietly buys less, without anyone asking you. To see why that matters, let’s shrink money down to three friends and one notebook.',
       nextLabel: 'So who keeps the record?',
     },
     {
@@ -313,7 +333,7 @@ const lesson01: Lesson = {
       presenter: { who: 'tick', mood: 'curious' },
       // Owner 2026-10-25: the three friends of the SunCoin article, and no Bitcoin until Nora's
       // problems are on the table
-      text: 'Three friends, Emi, Leo and Sofia, whose only money is SunCoin, a made-up coin kept in Nora’s notebook. Leo buys Emi’s sticker pack for 3: nothing changes hands, Nora writes “Leo → Emi, 3”. Nobody’s balance is written down: it’s what the lines add up to. That list is a [[ledger]].',
+      text: 'Meet three friends, Emi, Leo and Sofia. Their only money is SunCoin, a made-up coin that exists only as lines in Nora’s notebook. When Leo buys Emi’s sticker pack for 3, nothing changes hands: Nora just writes “Leo → Emi, 3”. Notice that nobody’s balance is written anywhere. Your SunCoin is simply what the lines add up to for you. A list like that is called a [[ledger]]: keep that word in mind, it comes back soon.',
       nextLabel: 'What if Nora cheats?',
     },
     {
@@ -322,12 +342,21 @@ const lesson01: Lesson = {
       title: 'What can go wrong with one Nora?',
       art: 'oneNora',
       presenter: { who: 'tock', mood: 'thinking', pose: 'stand' },
-      text: 'SunCoin works only because everyone trusts Nora. With one pen she could:',
+      text: 'SunCoin works only because everyone trusts Nora, and she holds the only pen. Imagine she has a bad day, or a bad idea. Alone, she could:',
       points: [
-        { label: 'Print coins.', text: '“Start → Leo, 100”, and everyone’s coins buy less.' },
-        { label: 'Move yours.', text: '“Sofia → Emi, 7”, though Sofia never agreed.' },
-        { label: 'Rewrite history.', text: 'Change line 4 so Leo never paid.' },
-        { label: 'Lose it all.', text: 'Coffee on the only copy.' },
+        {
+          label: 'Print coins.',
+          text: 'Write “Start → Leo, 100”: new money from nothing, so everyone else’s buys less.',
+        },
+        { label: 'Move yours.', text: 'Write “Sofia → Emi, 7”, though Sofia never agreed.' },
+        {
+          label: 'Rewrite history.',
+          text: 'Change line 4 so Leo never paid, and nobody could prove otherwise.',
+        },
+        {
+          label: 'Lose it all.',
+          text: 'Spill coffee on the only copy, and every balance is gone.',
+        },
       ],
       nextLabel: 'Could money work with no Nora?',
     },
@@ -394,36 +423,44 @@ const lesson01: Lesson = {
         section: 'one-nora',
       },
     ],
-    // Block 0 (3 January 2009) carries this headline in its first transaction; Bitcoin Wiki,
-    // "Genesis block", and the block itself on mempool.space (bitcoin-story's sources)
+    // Owner 2026-11-12: the story fades in line by line, then the Bitcoin mark. 2008: banks failed
+    // and governments and central banks rescued them, with bailouts and newly created money; the
+    // Bitcoin paper is dated 31 October 2008 (bitcoin-story). Block 0's Times headline moved to the
+    // article's timeline
     genesis: {
-      kicker: 'Block 0 · 3 January 2009',
-      headline: 'The Times 03/Jan/2009 — Chancellor on brink of second bailout for banks',
-      caption: 'Satoshi Nakamoto wrote that headline into Bitcoin’s very first block.',
+      lines: [
+        { text: 'However, for most people there was no other choice.' },
+        { text: 'In 2008, that trust broke.' },
+        { text: 'Banks failed, and governments rushed to rescue them with newly printed money.' },
+        {
+          text: 'Then someone called Satoshi Nakamoto proposed money that no one holds or controls.',
+          emphasis: 'Satoshi Nakamoto',
+        },
+      ],
     },
-    // The Bitcoin paper is dated 31 October 2008, during the financial crisis (bitcoin-story)
-    highlight: {
-      text: 'In 2008, as banks failed, someone called Satoshi Nakamoto proposed money that no one holds or controls. That was the birth of Bitcoin.',
-      article: 'bitcoin-story',
-      section: 'timeline',
-    },
+    // Owner 2026-11-12: no Read more at the very end of Lesson 1; Lesson 2 picks the story up
+    highlight: { text: 'That was the birth of Bitcoin.' },
   },
   next: { kind: 'lesson', id: 'lesson-ownership' },
   access: FREE,
 };
 
-// ─── Lesson 2 — Who owns a bitcoin? ──────────────────────────────────────────
+// ─── Lesson 2 — What is Bitcoin? ─────────────────────────────────────────────
 // Owner 2026-11-08: split from Lesson 1. It answers Lesson 1's cliffhanger (many notebooks), then
-// what makes coins yours. A term first taught in Lesson 1 says so in the card's words.
+// what makes bitcoin yours. A term first taught in Lesson 1 says so in the card's words.
 
 const lessonOwnership: Lesson = {
   id: 'lesson-ownership',
   number: 2,
-  title: 'Who owns a bitcoin?',
+  // Owner 2026-11-12: renamed from "Who owns a bitcoin?"
+  title: 'What is Bitcoin?',
   stage: 'Getting started',
-  minutes: 6,
+  minutes: 8,
+  // Owner 2026-11-12: the Bitcoin card went in as card 2, so today's screens are steps 21 on and
+  // earlier ones keep 1–20 (Lesson 1 too)
+  stepBase: 20,
   tryWidget: 'stamp-check',
-  tryIntro: 'Now be Sneaky Sam: try to spend Sofia’s coins without her stamp.',
+  tryIntro: 'Now be Sneaky Sam, a stranger: try to spend Sofia’s bitcoin without her stamp.',
   cards: [
     {
       // Decrypt and DL News, January 2025: in 2013 a hard drive holding the wallet for 8,000 BTC
@@ -431,8 +468,14 @@ const lessonOwnership: Lesson = {
       // the High Court refused his bid to dig it up. No dollar figure: the hindsight rule of card 1
       // of Lesson 1
       title: 'A hard drive in the bin',
-      art: 'hardDrive',
-      presenter: { who: 'tock', mood: 'calm' },
+      // Owner 2026-11-12: the real photo, no drawing and no guide, as Lesson 1's cold open. The
+      // owner confirmed they hold the rights to publish it (docs/APP_LOG.md, "Lesson 2 opens on
+      // the real photo"); they gave no credit line, so none is shown
+      photo: {
+        src: howellsLandfill,
+        alt: 'A digger on a huge landfill heap with workers below; inset, a portrait of James Howells.',
+        credit: null,
+      },
       beats: [
         { kind: 'kicker', text: '2013 · Newport, Wales' },
         { kind: 'headline', text: 'An old hard drive was thrown out by mistake.' },
@@ -443,52 +486,88 @@ const lessonOwnership: Lesson = {
         },
         {
           kind: 'fact',
-          text: 'It went to the landfill. Without that key, nobody can move those coins. Not even him.',
+          text: 'It went to the landfill. Without that key, nobody can move that bitcoin. Not even him.',
         },
       ],
-      nextLabel: 'Who keeps that record?',
+      nextLabel: 'Unlock what Bitcoin really is',
     },
     {
-      title: 'Many notebooks, no Nora',
+      // Owner 2026-11-12: the mark from the end of Lesson 1, then what makes Bitcoin different. The
+      // 21 million cap comes from Bitcoin's issuance rules (the block reward halves every 210,000
+      // blocks; bitcoin.org FAQ); the ledger is public (the public-ledger widget)
+      title: 'Money that no one controls',
+      art: 'bitcoin',
+      presenter: { who: 'tick', mood: 'grin' },
+      text: 'Bitcoin is digital money that runs without a bank or a boss. What makes it different:',
+      points: [
+        {
+          label: 'No one in charge.',
+          text: 'No bank, company or government runs it, so nobody can freeze it or change the rules alone.',
+        },
+        {
+          label: 'A fixed supply.',
+          text: 'No more than 21 million bitcoin will ever exist. Nobody can print more.',
+        },
+        {
+          label: 'Open to check.',
+          text: 'Every payment sits in a public ledger anyone can read.',
+        },
+        {
+          label: 'Yours, with a key.',
+          text: 'Whoever holds the key can spend it: no permission needed.',
+        },
+      ],
+      more: { article: 'bitcoin-story' },
+      nextLabel: 'So who keeps the ledger?',
+    },
+    {
+      // Owner 2026-11-12: no Nora here (a learner may come back days later), only Lesson 1's point.
+      // The buttons from here walk the process: receive, send (and the check), where it is
+      title: 'One ledger, thousands of copies',
       art: 'ledger',
       presenter: { who: 'tick', mood: 'grin' },
-      text: 'In Lesson 1, Nora’s [[ledger]] had one keeper. Bitcoin’s has thousands: computers called [[nodes|node]], each with a full copy, checking every payment. Every page is sealed to the one before, so nobody can quietly rewrite the past.',
-      nextLabel: 'So what makes coins mine?',
+      text: 'In Lesson 1 we saw the risk of trusting one record keeper: whoever holds the only [[ledger]] can change it, freeze it or simply lose it. Bitcoin solves this by keeping copies everywhere. Thousands of computers around the world, called [[nodes|node]], each hold the full ledger and check every new payment. Every page is sealed to the one before it, so nobody can quietly rewrite the past.',
+      nextLabel: 'How do I receive bitcoin?',
     },
     {
       title: 'A mailbox and a key',
       art: 'mailbox',
       presenter: { who: 'tock', mood: 'wink' },
-      text: 'Your bitcoin sits behind two things, an [[address]] and a [[private key|private-key]]:',
+      text: 'So how does bitcoin reach you? You share an [[address]], and you spend what arrives with its [[private key|private-key]]. Think of a mailbox with a lock:',
       points: [
-        { label: 'Address.', text: 'A mailbox slot: anyone can pay in, and it’s safe to share.' },
+        {
+          label: 'Address.',
+          text: 'The slot in the mailbox. Anyone can pay in, so it’s safe to share with whoever is sending you bitcoin.',
+        },
         {
           label: 'Private key.',
-          text: 'The only key that opens it. Whoever has it controls the coins, so never share it.',
+          text: 'The only key that can spend what’s paid in. Whoever has it controls that bitcoin, so never share it with anyone.',
         },
       ],
-      nextLabel: 'How do the nodes know it’s me?',
+      nextLabel: 'How do I send it?',
     },
     {
       title: 'A stamp only you hold',
       art: 'stamp',
       presenter: { who: 'tick', mood: 'curious' },
-      text: 'Your private key works like a stamp only you hold: every payment carries its mark. Everyone has the matching checker, your public key, so the [[nodes|node]] can check the mark, but nobody can copy the stamp.',
-      nextLabel: 'What if I lose my phone?',
+      text: 'Sending works the other way round. Your wallet stamps the payment with your private key, a mark only you can make. The payment carries the matching checker, your public key, so every [[node]] can confirm the mark is really yours before the payment goes into the ledger. Anyone can check the stamp, but nobody can copy it, and a payment without your mark is simply refused.',
+      nextLabel: 'So where is my bitcoin?',
     },
     {
-      title: 'Your coins aren’t in your phone',
+      // Owner 2026-11-12: no coin pictures or "the coins": bitcoin has no coins, a balance is the
+      // ledger's entries added up
+      title: 'Your bitcoin isn’t in your phone',
       art: 'keyHolders',
       presenter: { who: 'tock', mood: 'frank', pose: 'stand' },
-      text: 'The coins stay on the [[blockchain]]; your phone holds only the key. A list of recovery words backs it up: lose the phone, keep the words, and you’re fine. Lose both, like James Howells, and nobody can open the box.',
-      nextLabel: 'Can someone hold it for me?',
+      text: 'Here’s the surprise: there are no coins anywhere. The [[blockchain]] is just a record of payments, and your balance is what the payments to and from your address add up to. Your phone holds only the key that spends them, and a list of recovery words backs that key up. Lose the phone but keep the words, and you’re fine. Lose both, like James Howells, and nobody can ever spend that bitcoin again.',
+      nextLabel: 'Can someone hold my key for me?',
     },
     {
       // Mt. Gox, Feb 2014: about 850,000 BTC reported missing (learn/articles.ts, "Getting bitcoin")
       title: 'Who holds your key?',
       art: 'custody',
       presenter: { who: 'tick', mood: 'thinking', pose: 'stand' },
-      text: 'Leave coins on an exchange and it holds the key for you: that’s [[custody]]. Handy, but if the company fails, as Mt. Gox did in 2014, the coins go with it.',
+      text: 'You don’t have to hold the key yourself. Leave bitcoin on an exchange and it holds the key for you: that’s [[custody]]. It’s handy, and it’s how most people start. But your bitcoin is then only as safe as the company. When Mt. Gox failed in 2014, its customers’ bitcoin went with it.',
     },
   ],
   moment: {
@@ -498,7 +577,7 @@ const lessonOwnership: Lesson = {
     options: ['It’s gone', 'Restore it on a new phone', 'The exchange refunds it'],
     correct: 1,
     explain:
-      'The coins never left the blockchain. The recovery words rebuild the key on any new phone.',
+      'Your bitcoin was never in the phone: it’s recorded on the blockchain. The recovery words rebuild the key on any new phone.',
   },
   checks: [
     {
@@ -509,7 +588,7 @@ const lessonOwnership: Lesson = {
       options: ['Send it: they’re support', 'Send only half of it', 'Never share it'],
       correct: 2,
       explain:
-        'A recovery phrase restores your private keys, and whoever has it controls your coins. Real support never asks for it.',
+        'A recovery phrase restores your private keys, and whoever has it controls your bitcoin. Real support never asks for it.',
     },
     {
       question:
@@ -542,7 +621,7 @@ const lessonOwnership: Lesson = {
 
 // ─── Lesson 3 — Who sets the price? ──────────────────────────────────────────
 // Concise and about trading (Finelo's Lessons 1 and 2 as the model, never their wording or hype).
-// What Bitcoin is belongs to Lesson 1; one sentence bridges back to it.
+// What Bitcoin is belongs to Lessons 1 and 2; one sentence bridges back to them.
 
 const TESLA_2021: ChartScene = {
   symbol: 'BTCUSDT',
@@ -596,6 +675,8 @@ const lesson02: Lesson = {
           text: 'No one in charge. Everyone who is buying and selling it — right now, every second.',
         },
       ],
+      // Owner 2026-11-12: every lesson's first button starts with "Unlock"
+      nextLabel: 'Unlock who sets the price',
     },
     {
       title: 'What a price is',
@@ -740,7 +821,7 @@ export function lessonScreenOfStep(lesson: Lesson, step: number): number | null 
   return screen >= 0 && screen < lessonScreens(lesson).length ? screen : null;
 }
 
-/** Every word in a card, for the 50-word rule (a term counts as the words of its label) */
+/** Every word in a card, for the 80-word rule (a term counts as the words of its label) */
 export function cardWords(card: LessonCard): number {
   const text = [
     plainText(card.text ?? ''),

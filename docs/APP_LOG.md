@@ -4277,7 +4277,7 @@ phones get the cards, a journal line and an optional 1–5 rating. There is no n
   24 Oct 2026 (review on #262). The owner treats it as **not material**: an optional, learner-given rating inside the
   existing category, with the same retention, legal basis and recipients, so no notice e-mail (§13).
 - **Tests:**
-  - lesson rules: at most five cards of 50 words, 2–3 questions, an honest praised answer, a hype guard;
+  - lesson rules: at most five cards of 50 words (80 since 2026-11-12), 2–3 questions, an honest praised answer, a hype guard;
   - the store, the sheet's full walk, progress and events, the route's rating validation, the funnel rating, the
     admin page;
   - a throwaway Playwright run screenshotted every screen at 1440 px and on a Pixel 7.
@@ -4583,6 +4583,97 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
 - **The buttons:** every close stacks the way on first, as a full-width pill, with "Finish for now" under it.
 - **Tests:** `FinishLine.test` (the run, a tap, reduced motion), the sheet (Lesson 1's close, a close with no
   recap, the button order), the lesson rules (recap lines open real sections; Satoshi only in the recap).
+
+### 2026-11-12 — Lesson 2 opens on the real photo
+
+- Lesson 2's cold open ("A hard drive in the bin") now shows the real photo the owner sent, in place of the drawing
+  (a hard drive, a bin and Tock): the Newport landfill with a digger, and an inset portrait of James Howells. No
+  drawing and no guide, as Lesson 1. The owner confirmed on 2026-11-12 that they hold the rights to publish it and
+  gave no credit line, so none is shown: `photo.credit` is now optional and the caption renders only when given.
+  It ships as `src/assets/lessons/howells-landfill.jpg` (884 px, about 165 kB), with alt text. The `hardDrive`
+  drawing is gone.
+- Tests: Lesson 2's cold open has the photo with no credit, drawing or guide (`lessons.test`, `LessonSheet.test`).
+- **No Nora in Lesson 2** (owner, same day): a learner may come back days later and not remember her. Card 2 is now
+  **One ledger, thousands of copies** and recalls Lesson 1's point instead (one record keeper can change the ledger
+  or lose it).
+- **The buttons walk the process**: How do I receive bitcoin? (the mailbox and the key) → How do I send it? (the
+  stamp, and the nodes checking it before it goes into the ledger) → So where is my bitcoin? → Can someone hold my
+  key for me?
+- **No coins**: bitcoin has no coins anywhere; a balance is the payments to an address, added up from the ledger.
+  Card 5 is **Your bitcoin isn't in your phone**; its picture's coins tile became the ledger notebook (Lesson 1's
+  picture of the ledger), captioned "your balance = the ledger, added up" (owner's choice in the visual Q&A). The
+  custody card, the moment's answer and the article section of the same name say "bitcoin", not "the coins".
+- Tests: no Nora, the button order, "no coins anywhere" (`lessons.test`); the ledger tile, no coins (`LessonArt.test`).
+- **"Unlock" buttons** (owner, same day): every lesson's first card ends on a button starting with "Unlock": Lesson 1
+  **Unlock the story of Bitcoin**, Lesson 2 **Unlock who really owns bitcoin**, Lesson 3 **Unlock who sets the price**
+  (it showed "Continue" before). A test holds every lesson to it.
+- **Fuller cards in Lessons 1 and 2** (owner: the 50-word cards read compressed): each teaching card now walks the
+  idea through in 50–80 words, with a line that leads into the next card. The lesson rule is now **at most 80 words a
+  card** (`lessons.test`). Lesson 1 takes 5 minutes (was 4; the meet card and the dashboard's welcome card say so,
+  the welcome card now reading it from the lesson), Lesson 2 takes 7 (was 6). Lesson 1's notebook card still names no
+  Bitcoin (the problem comes first). The drawer articles are unchanged.
+- **Lesson 1's summary is a story now** (owner, same day; visual Q&A): the two problems come in, then fade away as
+  the stage darkens; four lines fade in and out one at a time ("However, for most people there was no other
+  choice." → "In 2008, that trust broke." → "Banks failed, and governments rushed to rescue them with newly printed
+  money." → "Then someone called Satoshi Nakamoto proposed money that no one holds or controls."); then the Bitcoin
+  mark rises in the middle with its burst, and "That was the birth of Bitcoin." lands under it.
+  That is also the end state (a tap, Enter, reduced motion, Back). The typed Times headline and block 0 left the
+  summary: `recap.genesis` is now `{ lines }` (`BirthStory`), and each line's hold follows its length.
+- **The story article's timeline is a picture** (`bitcoin-timeline` widget): a rail with a dot per date, each with
+  its tile (the paper; block 0 with the Bitcoin mark, now carrying the real Times headline; the Pizza Day photo),
+  dropping in one after another (still with reduced motion).
+- Tests: the story's order and one line at a time, the end state, reduced motion (`GenesisReveal.test`); the story
+  and the end line (`lessons.test`, `LessonSheet.test`); the timeline's dates, headline and pictures
+  (`ArticleWidgets.test`).
+- **New lesson titles** (owner, same day): Lesson 1 is **What is the problem?** (was "What is Bitcoin?") and Lesson
+  2 is **What is Bitcoin?** (was "Who owns a bitcoin?"). The welcome card now says Lesson 1 is about why money needs
+  someone you trust and what goes wrong with one keeper.
+- **Lesson 2 gets a Bitcoin card** after its cold open: **Money that no one controls**, with Pulin beside the mark
+  from Lesson 1's ending rising with its amber burst (CSS, still for reduced motion), four points (no one in charge;
+  a fixed supply, 21 million; open to check; yours, with a key) and a Read more to _Bitcoin's story_ (cards can now
+  carry `more`, anchor `lesson.more`). Its button leads on to **One ledger, thousands of copies**; the cold open's
+  button is now **Unlock what Bitcoin really is**. Lesson 2 has six teaching cards, so the rule is now at most six,
+  and it takes 8 minutes.
+- **Lesson 1 ends with no Read more**: "That was the birth of Bitcoin." stands alone (Lesson 2 picks the story up);
+  a highlight's article is now optional.
+- **Funnel:** Lesson 2's screens moved by one card, so it gets `stepBase: 20` like Lessons 1 and 3: today's steps are
+  21 on and the admin funnel labels the earlier ones as an earlier version.
+- **Code review fixes** (same day):
+  - With reduced motion the summary now shows the problems, the four story lines and the end at once, still and in
+    reading order (it showed only the end, so the story was never on screen); the problems' Read more stay reachable.
+  - Hidden story lines take no clicks (`pointer-events: none`), so a tap on a problem's Read more can't be swallowed
+    by an invisible line stacked over it; the end is hidden from screen readers until it is shown.
+  - Story lines carry their own `emphasis` (Satoshi's name), set apart by one helper shared with the cold open's
+    headlines (`guide/emphasize.tsx`).
+  - A photo's `credit` is required again, as `string | null`: `null` records the owner's "no credit line" (the
+    landfill photo), so a forgotten credit still fails type-check.
+  - No coins in Lesson 2's world: the try intro is "try to spend Sofia's bitcoin", the support-scam answer says
+    "controls your bitcoin", and the phone-loss widget's third tile is **Your bitcoin**, "entries in the ledger"
+    (notebook icon), with its results reworded.
+  - The timeline's pizza tile loads a 192 px thumbnail (13 kB, lazy) instead of the 1200 px photo; the lesson rules'
+    comments say six cards and 80 words.
+  - Second pass: the two problems are held by their length like the story lines (they had a fixed 0.9 s and 1.6 s,
+    less than the shorter lines after them); the screen-reader copy of the story now follows the problems; the
+    timeline credits the Pizza Day photo as Lesson 1 does; Lesson 1's meeting reads its minutes from the lesson; and a
+    card's Read more counts as practice, so _Bitcoin's story_ now sends readers to **Lesson 2: Money that no one
+    controls** (its "Coming in a later lesson" placeholder is gone). Once the story has played, the problems stay off
+    the summary's end, as the owner chose (Lesson 1 ends on the mark with no Read more).
+  - Third pass: a skip (tap, Enter, a problem's Read more) or a revisit now shows the whole summary, still and in
+    reading order, like reduced motion, so nobody loses the problems or the 2008 story; only a run that played to
+    its end rests on the mark alone. The steps are worked out from the number of problems (a third problem gets its
+    own turn), each problem's hold comes from its own text (`points: { text, node }`), and the practice graph walks
+    the lesson cards once (`cardPlaces`).
+  - Fourth pass: no "coins" left where Lesson 2 leads (the private-key peek, the support-scam checkpoint, the
+    _Mailboxes and keys_ summary; a test checks every peek its cards open); the free-content test now covers a card's
+    Read more and the recap's links; the Bitcoin card's burst no longer shows a still ring during its delay
+    (`forwards`) and reuses `BtcMark`; the timeline credit uses the 11 px token; the scene computes its steps once.
+    Kept as decided: a run played to its end rests on the mark alone (owner), and a card's Read more counts as a
+    place to practise its article (third pass).
+  - Fifth pass: the stamp card no longer says every node holds your public key (the payment carries it); a balance
+    is "what the payments to and from your address add up to" (not only those to it); "no more than 21 million";
+    focus on a problem's Read more moves to the scene when the problems clear, instead of dropping to the page; the
+    _Bitcoin's story_ and _Mailboxes and keys_ articles are dated checked 2026-11-12. Kept as decided: the landfill
+    photo's `credit: null` (the owner confirmed the rights and chose no credit line).
 
 ### 2026-11-08 — Lesson 1 opens on the real photo
 

@@ -15,6 +15,7 @@ import {
   Database,
   DeviceMobile,
   Eraser,
+  FileText,
   ListNumbers,
   Lock,
   Mailbox as MailboxIcon,
@@ -23,6 +24,8 @@ import {
   ShareNetwork,
   ShieldCheck,
 } from '@phosphor-icons/react';
+// A 192 px thumbnail for the 64 px tile, not the lesson's 1200 px photo (review 2026-11-12)
+import pizzaDayThumb from '@/assets/lessons/pizza-day-thumb.jpg';
 import { CRYPTO_ICON_URLS } from '@/lib/cryptoIcons';
 import { guide } from '@/lib/guideAnchors';
 import type { WidgetId } from './articles';
@@ -802,15 +805,16 @@ function AddressKey() {
   );
 }
 
-// ─── Your coins aren't in your phone ─────────────────────────────────────────
+// ─── Your bitcoin isn't in your phone ─────────────────────────────────────────
 
 type Loss = 'phone' | 'all' | 'scam';
-type Holding = 'phone' | 'words' | 'coins';
+// Owner 2026-11-12: no coins pictured, as in Lesson 2: what you hold is entries in the ledger
+type Holding = 'phone' | 'words' | 'ledger';
 
-const HOLDINGS: readonly { id: Holding; name: string; note: string; Icon: typeof Coins }[] = [
+const HOLDINGS: readonly { id: Holding; name: string; note: string; Icon: typeof Notebook }[] = [
   { id: 'phone', name: 'Your phone', note: 'holds the key', Icon: DeviceMobile },
   { id: 'words', name: 'Recovery words', note: 'back up the key', Icon: ListNumbers },
-  { id: 'coins', name: 'Your coins', note: 'on the blockchain', Icon: Coins },
+  { id: 'ledger', name: 'Your bitcoin', note: 'entries in the ledger', Icon: Notebook },
 ];
 
 const LOSSES: Record<
@@ -819,22 +823,22 @@ const LOSSES: Record<
 > = {
   phone: {
     button: 'Lose your phone',
-    lost: { phone: '✗ lost', words: null, coins: null },
+    lost: { phone: '✗ lost', words: null, ledger: null },
     ok: true,
-    result: '✓ Type your recovery words into a new phone: the key, and the coins, are back.',
+    result: '✓ Type your recovery words into a new phone: the key is back, and so is your bitcoin.',
   },
   all: {
     button: 'Lose phone and words',
-    lost: { phone: '✗ lost', words: '✗ lost', coins: '✗ locked forever' },
+    lost: { phone: '✗ lost', words: '✗ lost', ledger: '✗ locked forever' },
     ok: false,
     result: '✗ Nobody can open the box any more: not you, not the wallet company, not anyone.',
   },
   scam: {
     button: '“Support” asks for your words',
-    lost: { phone: null, words: '✗ handed over', coins: '✗ moved by the scammer' },
+    lost: { phone: null, words: '✗ handed over', ledger: '✗ moved by the scammer' },
     ok: false,
     result:
-      '✗ A scam: whoever has the words controls the coins. Nothing was hacked; the key was given away.',
+      '✗ A scam: whoever has the words controls the bitcoin. Nothing was hacked; the key was given away.',
   },
 };
 const LOSS_ORDER: readonly Loss[] = ['phone', 'all', 'scam'];
@@ -843,7 +847,7 @@ function KeyScenarios() {
   const [loss, setLoss] = useState<Loss | null>(null);
   const l = loss ? LOSSES[loss] : null;
   return (
-    <figure className={styles.widget} aria-label="What each loss means for your coins">
+    <figure className={styles.widget} aria-label="What each loss means for your bitcoin">
       <ol className={styles.holdings}>
         {HOLDINGS.map(({ id, name, note, Icon }) => {
           const lost = l?.lost[id] ?? null;
@@ -946,6 +950,86 @@ function PublicLedger() {
   );
 }
 
+// ─── Bitcoin's first steps: the timeline ─────────────────────────────────────
+
+/**
+ * Owner 2026-11-12: the story article's three dates as a rail, each with its picture. Block 0's
+ * headline is real (Bitcoin Wiki, "Genesis block", in the article's sources); the pizza photo is
+ * Lesson 1's, whose rights the owner holds
+ */
+const TIMELINE = [
+  {
+    date: '31 October 2008',
+    picture: 'paper',
+    text: (
+      <>
+        Someone, or some group, using the name <strong>Satoshi Nakamoto</strong> publishes the
+        Bitcoin paper. Nobody knows who it is to this day.
+      </>
+    ),
+  },
+  {
+    date: '3 January 2009',
+    picture: 'block',
+    text: (
+      <>
+        The network starts. Its first block, block 0, carries a real newspaper headline:{' '}
+        <em>“The Times 03/Jan/2009 Chancellor on brink of second bailout for banks”</em>.
+      </>
+    ),
+  },
+  {
+    date: '22 May 2010',
+    picture: 'pizza',
+    text: (
+      <>
+        A programmer pays 10,000 bitcoin for two pizzas, one of the first times bitcoin buys
+        something real. The day is now called Bitcoin Pizza Day.{' '}
+        {/* Credited as in Lesson 1, where the photo first appears */}
+        <span className={styles.timelineCredit}>Photo: Laszlo Hanyecz</span>
+      </>
+    ),
+  },
+] as const;
+
+function TimelinePicture({ picture }: { picture: (typeof TIMELINE)[number]['picture'] }) {
+  if (picture === 'paper') {
+    return <FileText weight="duotone" size={30} className={styles.system} aria-hidden="true" />;
+  }
+  if (picture === 'block') {
+    return <img src={CRYPTO_ICON_URLS.BTC} alt="" className={styles.timelineMark} />;
+  }
+  return (
+    <img
+      src={pizzaDayThumb}
+      alt="Laszlo Hanyecz at a table with two children and two large pizzas."
+      className={styles.timelinePhoto}
+      loading="lazy"
+    />
+  );
+}
+
+function BitcoinTimeline() {
+  return (
+    <figure className={styles.widget} aria-label="Bitcoin’s first steps">
+      <ol className={styles.timeline}>
+        {TIMELINE.map(({ date, picture, text }, i) => (
+          <li key={date} className={styles.timelineEntry} data-drop={i}>
+            <span className={styles.timelineDot} aria-hidden="true" />
+            <div className={styles.timelineHead}>
+              <span className={styles.timelinePicture} data-picture={picture}>
+                <TimelinePicture picture={picture} />
+              </span>
+              <strong className={styles.timelineDate}>{date}</strong>
+            </div>
+            <p className={styles.timelineText}>{text}</p>
+          </li>
+        ))}
+      </ol>
+    </figure>
+  );
+}
+
 export function ArticleWidget({ id }: { id: WidgetId }) {
   switch (id) {
     case 'suncoin-notebook':
@@ -976,5 +1060,7 @@ export function ArticleWidget({ id }: { id: WidgetId }) {
       return <KeyScenarios />;
     case 'public-ledger':
       return <PublicLedger />;
+    case 'bitcoin-timeline':
+      return <BitcoinTimeline />;
   }
 }

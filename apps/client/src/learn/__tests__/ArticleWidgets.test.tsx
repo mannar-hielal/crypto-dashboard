@@ -120,6 +120,9 @@ describe('the Many notebooks widgets', () => {
     const lost = () =>
       [...document.querySelectorAll('li[data-lost]')].map((li) => li.getAttribute('data-lost'));
     expect(lost()).toEqual(['false', 'false', 'false']);
+    // Owner 2026-11-12: no coins pictured or named, as in Lesson 2: your bitcoin is ledger entries
+    expect(document.body.textContent).toContain('Your bitcoin');
+    expect(document.body.textContent).not.toMatch(/coins/i);
     click('article.scenario.try', 'phone');
     expect(lost()).toEqual(['true', 'false', 'false']);
     expect(status()).toMatch(/^✓ Type your recovery words/);
@@ -129,6 +132,7 @@ describe('the Many notebooks widgets', () => {
     click('article.scenario.try', 'scam');
     expect(lost()).toEqual(['false', 'true', 'true']);
     expect(status()).toMatch(/^✗ A scam/);
+    expect(document.body.textContent).not.toMatch(/coins/i);
   });
 
   it('should name Leo on every line of his address once an exchange links it', () => {
@@ -158,5 +162,28 @@ describe('the Many notebooks widgets', () => {
     cleanup();
     render(<ArticleWidget id="nora-cheats" />);
     expect(document.querySelector(guideSelector('article.nora.copies'))).not.toBeNull();
+  });
+});
+
+describe('the Bitcoin story timeline', () => {
+  afterEach(() => cleanup());
+
+  it('should set out the three dates in order, each with its picture', () => {
+    render(<ArticleWidget id="bitcoin-timeline" />);
+    const entries = screen.getAllByRole('listitem');
+    expect(entries.map((li) => li.querySelector('strong')?.textContent)).toEqual([
+      '31 October 2008',
+      '3 January 2009',
+      '22 May 2010',
+    ]);
+    // Block 0's real headline (owner 2026-11-12: moved here from Lesson 1's summary)
+    expect(entries[1].textContent).toContain(
+      'The Times 03/Jan/2009 Chancellor on brink of second bailout for banks'
+    );
+    expect(entries[0].textContent).toContain('Satoshi Nakamoto');
+    expect(
+      entries.map((li) => li.querySelector('[data-picture]')?.getAttribute('data-picture'))
+    ).toEqual(['paper', 'block', 'pizza']);
+    expect(screen.getByAltText(/Laszlo Hanyecz/)).toBeTruthy();
   });
 });

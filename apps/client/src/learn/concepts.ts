@@ -193,7 +193,7 @@ export const CONCEPTS: readonly Concept[] = [
   {
     id: 'private-key',
     term: 'Private key',
-    peek: 'The secret that lets its holder spend what an address received. Whoever has it controls the coins.',
+    peek: 'The secret that lets its holder spend what an address received. Whoever has it controls that bitcoin.',
     think: 'the only key to the mailbox.',
     article: 'mailboxes-keys',
     access: FREE,

@@ -18,14 +18,12 @@ import {
   Eraser,
   GameController,
   Globe,
-  HardDrive,
   HardDrives,
   ListNumbers,
   Mailbox as MailboxIcon,
   Notebook as NotebookIcon,
   Scales,
   Tag,
-  Trash,
   User,
 } from '@phosphor-icons/react';
 import { StampShape } from '@/learn/StampShape';
@@ -118,8 +116,27 @@ function Label({ x, y, children }: { x: number; y: number; children: string }) {
 const DUO = 'duotone' as const;
 
 /** The real Bitcoin mark (cryptocurrency-icons, CC0) */
-function BtcMark({ x, y, size }: { x: number; y: number; size: number }) {
-  return <image href={CRYPTO_ICON_URLS.BTC} x={x} y={y} width={size} height={size} />;
+function BtcMark({
+  x,
+  y,
+  size,
+  className,
+}: {
+  x: number;
+  y: number;
+  size: number;
+  className?: string;
+}) {
+  return (
+    <image
+      href={CRYPTO_ICON_URLS.BTC}
+      x={x}
+      y={y}
+      width={size}
+      height={size}
+      className={className}
+    />
+  );
 }
 
 /** Lesson 2's hook: Tock waits calmly beside the price tag (Tick presents) */
@@ -315,18 +332,6 @@ function Mailbox() {
   );
 }
 
-/** Lesson 2's cold open: an old hard drive dropped in the bin, on the dark stage */
-function HardDriveScene() {
-  return (
-    <g className={styles.kenBurns}>
-      <circle cx="196" cy="74" r="62" className={styles.glow} />
-      <HardDrive weight={DUO} x={108} y={14} size={84} className={styles.system} />
-      <Trash weight={DUO} x={196} y={44} size={88} className={styles.amber} />
-      <BtcMark x={262} y={10} size={36} />
-    </g>
-  );
-}
-
 /** The private key as a stamp, under its checker (the public key): the articles' picture */
 function Stamp() {
   return (
@@ -352,12 +357,15 @@ function Stamp() {
   );
 }
 
-/** What the phone holds, what backs it up, and where the coins really are, dropping in one by one */
+/**
+ * What the phone holds, what backs it up, and where the bitcoin really is (the ledger: no coins, a
+ * balance is its entries added up; owner 2026-11-12), dropping in one by one
+ */
 function KeyHolders() {
   const tiles = [
     ['your phone', DeviceMobile, styles.system, 86],
     ['recovery words', ListNumbers, styles.amber, 166],
-    ['the coins', Coins, styles.amber, 246],
+    ['the ledger', NotebookIcon, styles.amber, 246],
   ] as const;
   return (
     <>
@@ -371,7 +379,7 @@ function KeyHolders() {
         </g>
       ))}
       <Label x={200} y={124}>
-        the phone holds only the key
+        your balance = the ledger, added up
       </Label>
     </>
   );
@@ -399,7 +407,7 @@ function Custody() {
         or
       </text>
       <Label x={200} y={126}>
-        whoever holds the key holds the coins
+        the key holder can spend the bitcoin
       </Label>
     </>
   );
@@ -480,14 +488,29 @@ function Etf() {
   );
 }
 
+/**
+ * Lesson 2's Bitcoin card (owner 2026-11-12): the mark that ends Lesson 1 rises again, glowing, with
+ * the amber ring bursting out of it; still for reduced motion
+ */
+function BitcoinBirth() {
+  return (
+    <>
+      <circle cx="204" cy="72" r="54" className={styles.burst} />
+      <g className={styles.rise}>
+        <BtcMark x={168} y={36} size={72} className={styles.glowMark} />
+      </g>
+    </>
+  );
+}
+
 const ART: Record<LessonArtId, () => JSX.Element> = {
   hook: Hook,
   money: Money,
   notebook: Notebook,
   oneNora: OneNora,
   ledger: WorldLedgers,
+  bitcoin: BitcoinBirth,
   mailbox: Mailbox,
-  hardDrive: HardDriveScene,
   stamp: Stamp,
   keyHolders: KeyHolders,
   custody: Custody,

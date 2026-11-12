@@ -299,6 +299,8 @@ export const GUIDE_ANCHORS = [
   'lesson.note',
   'lesson.note.save',
   'lesson.recap',
+  /** A card's Read more (key: the article) */
+  'lesson.more',
   'lesson.highlight',
   'lesson.genesis',
   'lesson.finish-line',

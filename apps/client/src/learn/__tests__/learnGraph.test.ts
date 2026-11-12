@@ -52,11 +52,11 @@ describe('the learning graph', () => {
   });
 
   it('should send the lessons’ terms to their articles and the articles back to the cards', () => {
-    // Lesson 1 card 4 marks the ledger, and Lesson 2 card 2 comes back to it; Lesson 3 card 2 the
+    // Lesson 1 card 4 marks the ledger, and Lesson 2 card 3 comes back to it; Lesson 3 card 2 the
     // exchange and the last price
     expect(lessonPlacesOf('ledger')).toEqual([
       { lesson: 'lesson-01', screen: 3 },
-      { lesson: 'lesson-ownership', screen: 1 },
+      { lesson: 'lesson-ownership', screen: 2 },
     ]);
     expect(lessonPlacesOf('last-price')).toEqual([{ lesson: 'lesson-02', screen: 1 }]);
 
@@ -69,20 +69,20 @@ describe('the learning graph', () => {
       {
         kind: 'lesson',
         lesson: 'lesson-ownership',
-        screen: 1,
-        label: 'Lesson 2: Many notebooks, no Nora',
+        screen: 2,
+        label: 'Lesson 2: One ledger, thousands of copies',
       },
     ]);
     expect(practiceFor('bitcoin-network').map((p) => p.label)).toEqual([
-      'Lesson 2: Many notebooks, no Nora',
+      'Lesson 2: One ledger, thousands of copies',
       'Lesson 2: A stamp only you hold',
-      'Lesson 2: Your coins aren’t in your phone',
+      'Lesson 2: Your bitcoin isn’t in your phone',
     ]);
     expect(practiceFor('mailboxes-keys')).toEqual([
       {
         kind: 'lesson',
         lesson: 'lesson-ownership',
-        screen: 2,
+        screen: 3,
         label: 'Lesson 2: A mailbox and a key',
       },
     ]);
@@ -90,7 +90,7 @@ describe('the learning graph', () => {
       {
         kind: 'lesson',
         lesson: 'lesson-ownership',
-        screen: 5,
+        screen: 6,
         label: 'Lesson 2: Who holds your key?',
       },
     ]);
@@ -105,8 +105,15 @@ describe('the learning graph', () => {
       { kind: 'tour', tour: 'primer', label: 'What you’re looking at' },
       { kind: 'tour', tour: 'buy-first-coin', label: 'Buy your first coin' },
     ]);
-    // Not practised yet: it says where it will be
-    expect(practiceFor('bitcoin-story')).toEqual([]);
+    // Owner 2026-11-12: Lesson 2's Bitcoin card opens it with its Read more, so it practises it
+    expect(practiceFor('bitcoin-story')).toEqual([
+      {
+        kind: 'lesson',
+        lesson: 'lesson-ownership',
+        screen: 1,
+        label: 'Lesson 2: Money that no one controls',
+      },
+    ]);
   });
 
   it('should keep free things free: a free lesson never links to a paid concept or article', () => {
@@ -120,6 +127,13 @@ describe('the learning graph', () => {
         }
       }
       for (const item of lesson.canDo) expect(getArticle(item.article).access).toBe(FREE);
+      // Every other link a free lesson makes: a card's Read more, the recap and its highlight
+      for (const card of lesson.cards) {
+        if (card.more) expect(getArticle(card.more.article).access, card.title).toBe(FREE);
+      }
+      for (const item of [...(lesson.recap?.points ?? []), lesson.recap?.highlight]) {
+        if (item?.article) expect(getArticle(item.article).access, item.text).toBe(FREE);
+      }
     }
     for (const article of ARTICLES) {
       if (article.access !== FREE) continue;

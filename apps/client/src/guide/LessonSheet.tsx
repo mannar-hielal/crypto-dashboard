@@ -256,18 +256,28 @@ function NoteView({ prompt }: { prompt: string }) {
   );
 }
 
-/** A real photograph on a card (owner 2026-11-08), with its credit under it */
+/** A real photograph on a card (owner 2026-11-08), with its credit under it when it has one */
 function LessonPhotoView({ photo }: { photo: LessonPhoto }) {
   return (
     <figure className={styles.photo} {...guide('lesson.photo')}>
       <img src={photo.src} alt={photo.alt} className={styles.photoImg} />
-      <figcaption className={styles.photoCredit}>{photo.credit}</figcaption>
+      {photo.credit && <figcaption className={styles.photoCredit}>{photo.credit}</figcaption>}
     </figure>
   );
 }
 
 /** A line to read more on: a recap line or a "You can now" line, each opening its article */
-function ReadMore({ item, lesson, screen }: { item: CanDo; lesson: Lesson; screen: number }) {
+function ReadMore({
+  item,
+  lesson,
+  screen,
+  anchor = lesson.recap ? 'lesson.recap' : 'lesson.can-do',
+}: {
+  item: Pick<CanDo, 'article' | 'section'>;
+  lesson: Lesson;
+  screen: number;
+  anchor?: 'lesson.recap' | 'lesson.can-do' | 'lesson.more';
+}) {
   return (
     <button
       type="button"
@@ -278,7 +288,7 @@ function ReadMore({ item, lesson, screen }: { item: CanDo; lesson: Lesson; scree
           from: { lesson: lesson.id, screen },
         })
       }
-      {...guide(lesson.recap ? 'lesson.recap' : 'lesson.can-do', item.section ?? item.article)}
+      {...guide(anchor, item.section ?? item.article)}
     >
       Read more →
     </button>
@@ -311,24 +321,34 @@ function SummaryView({
       </ul>
     );
   }
-  const highlight = recap.highlight && (
+  // A highlight with no article has no Read more (the end of Lesson 1, owner 2026-11-12). Its words
+  // are built once: in the purple box on a plain recap, under the Bitcoin mark on a staged one
+  const { article, section } = recap.highlight ?? {};
+  const highlightWords = recap.highlight && (
+    <>
+      {recap.highlight.text}{' '}
+      {article && <ReadMore item={{ article, section }} lesson={lesson} screen={screen} />}
+    </>
+  );
+  const highlight = highlightWords && (
     <p className={styles.highlight} {...guide('lesson.highlight')}>
-      {recap.highlight.text} <ReadMore item={recap.highlight} lesson={lesson} screen={screen} />
+      {highlightWords}
     </p>
   );
   if (recap.genesis) {
     return (
       <GenesisReveal
-        genesis={recap.genesis}
+        story={recap.genesis}
         points={recap.points.map((item) => ({
-          key: item.text,
+          text: item.text,
           node: (
             <>
               {item.text} <ReadMore item={item} lesson={lesson} screen={screen} />
             </>
           ),
         }))}
-        highlight={highlight}
+        // The story's last line under the Bitcoin mark, not in the purple box
+        highlight={highlightWords && <span {...guide('lesson.highlight')}>{highlightWords}</span>}
         done={done}
         onDone={onDone}
       />
@@ -464,7 +484,7 @@ export function LessonSheet() {
   const screens = lesson ? lessonScreens(lesson) : [];
   const screen = screens.at(screenIndex);
   const screenCard = lesson && screen?.kind === 'card' ? lesson.cards[screen.index] : null;
-  // A cold open, the guides' meeting and a staged summary (the genesis block) each play first
+  // A cold open, the guides' meeting and a staged summary (the birth of Bitcoin) each play first
   const staged =
     !!screenCard?.beats ||
     !!screenCard?.meet ||
@@ -618,6 +638,16 @@ export function LessonSheet() {
                 </li>
               ))}
             </ul>
+          )}
+          {card.more && (
+            <p className={styles.more}>
+              <ReadMore
+                item={card.more}
+                lesson={lesson}
+                screen={screenIndex}
+                anchor="lesson.more"
+              />
+            </p>
           )}
           {card.lines?.map((line) => (
             <p key={line.text} className={styles.line}>

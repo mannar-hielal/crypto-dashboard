@@ -44,7 +44,9 @@ export type WidgetId =
   | 'nora-answered'
   | 'address-key'
   | 'key-scenarios'
-  | 'public-ledger';
+  | 'public-ledger'
+  /** Bitcoin's story: the three dates on a rail, each with its picture (owner 2026-11-12) */
+  | 'bitcoin-timeline';
 
 export type ArticleBlock =
   /** A section heading; `id` lets a lesson link straight to it */
@@ -395,9 +397,9 @@ const mailboxesKeys: Article = {
   id: 'mailboxes-keys',
   title: 'Mailboxes and keys: how a Bitcoin payment works',
   summary:
-    'An address is a mailbox slot anyone can post bitcoin into. A private key is the only key that opens the box. Whoever holds the key controls the coins.',
+    'An address is a mailbox slot anyone can post bitcoin into. A private key is the only key that opens the box. Whoever holds the key controls the bitcoin.',
   minutes: 3,
-  checked: '2026-11-08',
+  checked: '2026-11-12',
   access: FREE,
   // Owner 2026-11-08: the Many notebooks recipe, one line of text and a graphic to tap
   blocks: [
@@ -410,10 +412,10 @@ const mailboxesKeys: Article = {
       tone: 'warn',
       text: '**There is no undo.** Send the wrong amount, or to the wrong address, and no bank can reverse it. You can post a letter; you can’t un-post it.',
     },
-    { kind: 'h', text: 'Your coins aren’t in your phone', id: 'phone' },
+    { kind: 'h', text: 'Your bitcoin isn’t in your phone', id: 'phone' },
     {
       kind: 'p',
-      text: 'The coins live on the blockchain. Your phone holds only the key, and a list of **recovery words** backs it up. See what each loss means:',
+      text: 'Your bitcoin is recorded on the blockchain, not stored in your phone. Your phone holds only the key, and a list of **recovery words** backs it up. See what each loss means:',
     },
     { kind: 'widget', id: 'key-scenarios' },
     {
@@ -536,20 +538,12 @@ const bitcoinStory: Article = {
   summary:
     'In 2008 someone called Satoshi Nakamoto published a nine-page plan for online cash without a bank. Its idea fits in one line: replace “trust me” with “check it”.',
   minutes: 7,
-  checked: '2026-10-23',
+  checked: '2026-11-12',
   access: FREE,
-  // Owner 2026-10-25: Satoshi comes after the learner has seen what goes wrong with someone in charge
-  practiceSoon: 'a later lesson, once you’ve seen what goes wrong with someone in charge',
+  // Practised in Lesson 2's Bitcoin card, whose Read more opens it (owner 2026-11-12)
   blocks: [
     { kind: 'h', text: 'A short timeline', id: 'timeline' },
-    {
-      kind: 'list',
-      items: [
-        '**31 October 2008:** someone, or some group, using the name **Satoshi Nakamoto** publishes the Bitcoin paper. Nobody knows who it is to this day.',
-        '**3 January 2009:** the network starts, with its first block.',
-        '**22 May 2010:** a programmer pays 10,000 bitcoin for two pizzas, one of the first times bitcoin buys something real. The day is now called Bitcoin Pizza Day.',
-      ],
-    },
+    { kind: 'widget', id: 'bitcoin-timeline' },
     { kind: 'h', text: 'The plan, in six steps' },
     {
       kind: 'list',
