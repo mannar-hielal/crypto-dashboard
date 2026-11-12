@@ -264,7 +264,7 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
    Bitcoin?** at card 1 of 14.
 2. Lesson 2's cold open → Expect the dark stage with the real photo of the Newport landfill and James Howells
    ([lesson.photo], no credit line, no guide), and the lines one by one ("2013 ·
-   Newport, Wales" … "8,000 bitcoin" … "Not even him."), then **Unlock what Bitcoin really is →**. Card 2 **Money that no
+   Newport, Wales" … "8,000 bitcoin" … "Not even him." … "In the next 8 minutes: what Bitcoin is…"), then **Unlock what Bitcoin really is →**. Card 2 **Money that no
    one controls** → Expect Pulin beside the Bitcoin mark rising with its amber burst (still with reduced motion),
    "Bitcoin is digital money that runs without a bank or a boss…", four bold points (No one in charge, A fixed
    supply, Open to check, Yours, with a key), [lesson.more] Read more → (opens _Bitcoin's story_), and **So who
@@ -282,7 +282,7 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
    [`sam`] → Sam's grey stamp jams against it, ✗; [`edit`] → "Send 20 to Sam" and Sofia's stamp out of line, ✗; [article.chain.change] → Expect blocks 3 and 4 dashed amber and block 2 "Sofia → Leo 20",
    [article.chain.reset] mends them; [article.answer.tile `lose`] → Expect its answer shown and pressed. Then
    [article.back] → Expect card 2 again.
-   Next → Expect **A mailbox and a key**: the address and private-key tiles dropping in one after the other, and two
+   Next → Expect **A mailbox and a key** ("Say Sofia wants to pay Leo 2 bitcoin…"; the stamp card follows "Sofia → Leo, 2" through the nodes' check): the address and private-key tiles dropping in one after the other, and two
    bold points (Address, Private key), then **How do I send it? →**. [lesson.term `address`] → [lesson.peek.more] → Expect _Mailboxes and keys_
    (3 min read): two tiles (✓ share it, ✗ never share it); [article.mailbox.step `2`] → Expect the stamp seated in
    its checker, ✓; [article.scenario.try `phone`] → "✓ Type your recovery words…", [`all`] → three dashed tiles and

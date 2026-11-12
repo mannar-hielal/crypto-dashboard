@@ -4584,6 +4584,14 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
 - **Tests:** `FinishLine.test` (the run, a tap, reduced motion), the sheet (Lesson 1's close, a close with no
   recap, the button order), the lesson rules (recap lines open real sections; Satoshi only in the recap).
 
+### 2026-11-12 — The Finelo review's small wins (S items)
+
+- Lesson 1's 2008 line names Lehman Brothers; Lesson 2's cold open ends on its objective ("In the next 8 minutes: …",
+  from the lesson's own length); one payment, Sofia → Leo 2 bitcoin, runs through the mailbox, stamp and phone cards;
+  the custody card says the app's bitcoin is practice money it holds; each close has a teaser above the way on
+  (`lesson.teaser`, not on a look back); every Why opens with "You picked “…”." (`lesson.picked`).
+- Review: `guided-learning-topics/06-finelo-comparison.md` (the owner's folder, not committed).
+
 ### 2026-11-12 — Lesson 2 opens on the real photo
 
 - Lesson 2's cold open ("A hard drive in the bin") now shows the real photo the owner sent, in place of the drawing

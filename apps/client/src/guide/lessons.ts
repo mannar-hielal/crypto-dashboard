@@ -224,6 +224,8 @@ export interface Lesson {
   moment: LessonQuestion;
   checks: LessonQuestion[];
   notePrompt: string;
+  /** One line on the close, above the way on: what the next lesson brings (owner 2026-11-12) */
+  teaser?: string;
   /** What the learner can do after the lesson, shown on the close */
   canDo: CanDo[];
   /**
@@ -402,6 +404,7 @@ const lesson01: Lesson = {
     },
   ],
   notePrompt: 'What would you like to understand better about money and Bitcoin?',
+  teaser: 'You’ve seen the problem. Next, the answer: what Bitcoin is, and how a payment works.',
   canDo: [
     { text: 'Say why money depends on trust', article: 'money-101', section: 'weakness' },
     { text: 'Explain where a balance lives', article: 'suncoin', section: 'no-balances' },
@@ -430,7 +433,8 @@ const lesson01: Lesson = {
     genesis: {
       lines: [
         { text: 'However, for most people there was no other choice.' },
-        { text: 'In 2008, that trust broke.' },
+        // Lehman Brothers, founded 1850, filed for bankruptcy on 15 September 2008 (bitcoin-story)
+        { text: 'In 2008, that trust broke: Lehman Brothers, a 158-year-old bank, collapsed.' },
         { text: 'Banks failed, and governments rushed to rescue them with newly printed money.' },
         {
           text: 'Then someone called Satoshi Nakamoto proposed money that no one holds or controls.',
@@ -449,13 +453,16 @@ const lesson01: Lesson = {
 // Owner 2026-11-08: split from Lesson 1. It answers Lesson 1's cliffhanger (many notebooks), then
 // what makes bitcoin yours. A term first taught in Lesson 1 says so in the card's words.
 
+/** Lesson 2's length: its stated objective says it too */
+const LESSON_02_MINUTES = 8;
+
 const lessonOwnership: Lesson = {
   id: 'lesson-ownership',
   number: 2,
   // Owner 2026-11-12: renamed from "Who owns a bitcoin?"
   title: 'What is Bitcoin?',
   stage: 'Getting started',
-  minutes: 8,
+  minutes: LESSON_02_MINUTES,
   // Owner 2026-11-12: the Bitcoin card went in as card 2, so today's screens are steps 21 on and
   // earlier ones keep 1–20 (Lesson 1 too)
   stepBase: 20,
@@ -487,6 +494,11 @@ const lessonOwnership: Lesson = {
         {
           kind: 'fact',
           text: 'It went to the landfill. Without that key, nobody can move that bitcoin. Not even him.',
+        },
+        // Owner 2026-11-12 (the Finelo review): the lesson says what it will teach
+        {
+          kind: 'fact',
+          text: `In the next ${LESSON_02_MINUTES} minutes: what Bitcoin is, how you receive and send it, and why that key is everything.`,
         },
       ],
       nextLabel: 'Unlock what Bitcoin really is',
@@ -533,15 +545,16 @@ const lessonOwnership: Lesson = {
       title: 'A mailbox and a key',
       art: 'mailbox',
       presenter: { who: 'tock', mood: 'wink' },
-      text: 'So how does bitcoin reach you? You share an [[address]], and you spend what arrives with its [[private key|private-key]]. Think of a mailbox with a lock:',
+      // Owner 2026-11-12: one payment, Sofia → Leo, runs through the next cards (Lesson 1's friends)
+      text: 'Say Sofia wants to pay Leo 2 bitcoin. Leo shares his [[address]], and only his [[private key|private-key]] can spend what arrives there. Think of a mailbox with a lock:',
       points: [
         {
           label: 'Address.',
-          text: 'The slot in the mailbox. Anyone can pay in, so it’s safe to share with whoever is sending you bitcoin.',
+          text: 'The slot in Leo’s mailbox. Anyone can pay in, so he can safely share it with Sofia, or with anyone.',
         },
         {
           label: 'Private key.',
-          text: 'The only key that can spend what’s paid in. Whoever has it controls that bitcoin, so never share it with anyone.',
+          text: 'The only key that can spend what’s paid in. Whoever has it controls that bitcoin, so Leo never shares it.',
         },
       ],
       nextLabel: 'How do I send it?',
@@ -550,7 +563,7 @@ const lessonOwnership: Lesson = {
       title: 'A stamp only you hold',
       art: 'stamp',
       presenter: { who: 'tick', mood: 'curious' },
-      text: 'Sending works the other way round. Your wallet stamps the payment with your private key, a mark only you can make. The payment carries the matching checker, your public key, so every [[node]] can confirm the mark is really yours before the payment goes into the ledger. Anyone can check the stamp, but nobody can copy it, and a payment without your mark is simply refused.',
+      text: 'Now Sofia sends. Her wallet stamps “Sofia → Leo, 2” with her private key, a mark only she can make. The payment carries the matching checker, her public key, so every [[node]] can confirm the mark is hers, and that she has 2 bitcoin to send, before it goes into the ledger. Anyone can check the stamp, but nobody can copy it: a payment without her mark is refused.',
       nextLabel: 'So where is my bitcoin?',
     },
     {
@@ -559,7 +572,7 @@ const lessonOwnership: Lesson = {
       title: 'Your bitcoin isn’t in your phone',
       art: 'keyHolders',
       presenter: { who: 'tock', mood: 'frank', pose: 'stand' },
-      text: 'Here’s the surprise: there are no coins anywhere. The [[blockchain]] is just a record of payments, and your balance is what the payments to and from your address add up to. Your phone holds only the key that spends them, and a list of recovery words backs that key up. Lose the phone but keep the words, and you’re fine. Lose both, like James Howells, and nobody can ever spend that bitcoin again.',
+      text: 'Here’s the surprise: nothing moved, because there are no coins anywhere. The [[blockchain]] just gained a line, “Sofia → Leo, 2”, and a balance is what the payments to and from an address add up to. Your phone holds only the key that spends them, and a list of recovery words backs that key up. Lose the phone but keep the words, and you’re fine. Lose both, like James Howells, and nobody can ever spend that bitcoin again.',
       nextLabel: 'Can someone hold my key for me?',
     },
     {
@@ -567,7 +580,7 @@ const lessonOwnership: Lesson = {
       title: 'Who holds your key?',
       art: 'custody',
       presenter: { who: 'tick', mood: 'thinking', pose: 'stand' },
-      text: 'You don’t have to hold the key yourself. Leave bitcoin on an exchange and it holds the key for you: that’s [[custody]]. It’s handy, and it’s how most people start. But your bitcoin is then only as safe as the company. When Mt. Gox failed in 2014, its customers’ bitcoin went with it.',
+      text: 'You don’t have to hold the key yourself. Leave bitcoin on an exchange and it holds the key for you: that’s [[custody]]. It’s handy, and it’s how most people start. But your bitcoin is then only as safe as the company. When Mt. Gox failed in 2014, its customers’ bitcoin went with it. Here, your bitcoin is practice money the app holds: custody too, with nothing at risk while you learn.',
     },
   ],
   moment: {
@@ -606,6 +619,7 @@ const lessonOwnership: Lesson = {
     },
   ],
   notePrompt: 'What would you like to understand better about owning bitcoin?',
+  teaser: 'Next: who decides what one bitcoin costs, on the real chart.',
   canDo: [
     { text: 'Tell an address from a private key', article: 'mailboxes-keys', section: 'key' },
     { text: 'Say why recovery words stay secret', article: 'mailboxes-keys', section: 'phone' },

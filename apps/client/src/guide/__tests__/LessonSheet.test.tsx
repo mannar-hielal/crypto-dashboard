@@ -94,6 +94,9 @@ describe('LessonSheet', () => {
 
     fireEvent.click(option(1)); // "It went down": right in hindsight, not the praised answer
     expect(sheet()!.textContent).toContain('Not quite.');
+    // The Why opens on the learner's own choice (owner 2026-11-12)
+    const picked = document.querySelector('[data-guide="lesson.picked"]')!;
+    expect(picked.textContent).toBe(`You picked “${getLesson('lesson-02').moment.options[1]}”.`);
     // Tock reacts, calm: red is never the villain
     expect(sheet()!.querySelector('[data-mood="calm"]')?.getAttribute('data-guide-who')).toBe(
       'tock'
@@ -453,6 +456,20 @@ describe('LessonSheet', () => {
     expect(sheet()!.querySelector('[data-lesson-art="bitcoin"]')).not.toBeNull();
     fireEvent.click(document.querySelector('[data-guide="lesson.more"]')!);
     expect(useArticleStore.getState()).toMatchObject({ openId: 'bitcoin-story' });
+  });
+
+  it('should tease the next lesson on the close, but not on a look back', () => {
+    at(11, 'lesson-01');
+    renderSheet();
+    expect(document.querySelector('[data-guide="lesson.teaser"]')!.textContent).toBe(
+      getLesson('lesson-01').teaser
+    );
+    act(() =>
+      useLessonStore.setState({
+        returnTo: { lesson: 'lesson-ownership', screen: 2, answers: {}, rating: null },
+      })
+    );
+    expect(document.querySelector('[data-guide="lesson.teaser"]')).toBeNull();
   });
 
   it('should hold Continue while the birth of Bitcoin plays, show it all on Enter, and not replay it', () => {
