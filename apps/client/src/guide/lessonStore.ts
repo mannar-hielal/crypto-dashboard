@@ -47,6 +47,11 @@ type ReturnPlace = Pick<LessonRun, 'screen' | 'answers' | 'rating'> & { lesson: 
 interface LessonState extends LessonRun {
   /** Lessons finished, from the server and this session */
   completed: Partial<Record<LessonId, true>>;
+  /**
+   * The furthest screen (0-based) reached in each lesson, from the server and this session: the
+   * map's progress ring (owner 2026-11-12). It only rises; a look back doesn't count
+   */
+  reached: Partial<Record<LessonId, number>>;
   /** Counts every finish this session, a replay included: what the funnel reports as completed */
   finishes: number;
   /** During a look back: the lesson to return to, for "← Back to Lesson N" */
@@ -89,6 +94,8 @@ interface LessonState extends LessonRun {
   /** Close without finishing: ✕ or Esc (during a look back: back to the lesson) */
   close: () => void;
   setCompleted: (ids: LessonId[]) => void;
+  /** The server's furthest screens, merged: each lesson keeps the higher of the two */
+  setReached: (reached: Partial<Record<LessonId, number>>) => void;
   reset: () => void;
 }
 
@@ -119,6 +126,7 @@ function freshRun(id: LessonId | null, screen = 0): LessonRun {
 const initial = {
   ...freshRun(null),
   completed: {},
+  reached: {},
   finishes: 0,
   returnTo: null,
   run: 0,
@@ -244,6 +252,26 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
       completed: Object.fromEntries(ids.map((id) => [id, true])) as Partial<Record<LessonId, true>>,
     }),
 
+  setReached: (reached) =>
+    set((s) => {
+      const merged = { ...s.reached };
+      for (const [id, screen] of Object.entries(reached) as [LessonId, number][]) {
+        merged[id] = Math.max(merged[id] ?? -1, clampScreen(id, screen));
+      }
+      return { reached: merged };
+    }),
+
   // `run` keeps counting: a save from before the reset must never match a run after it
-  reset: () => set((s) => ({ ...initial, answers: {}, completed: {}, run: s.run + 1 })),
+  reset: () =>
+    set((s) => ({ ...initial, answers: {}, completed: {}, reached: {}, run: s.run + 1 })),
 }));
+
+// The furthest screen rises with every screen the learner opens in their own lesson (not a look
+// back, which only visits). One place for every way the screen changes: next, start, a resume
+useLessonStore.subscribe((s) => {
+  if (!s.activeId || s.returnTo) return;
+  const furthest = s.reached[s.activeId] ?? -1;
+  if (s.screen > furthest) {
+    useLessonStore.setState({ reached: { ...s.reached, [s.activeId]: s.screen } });
+  }
+});

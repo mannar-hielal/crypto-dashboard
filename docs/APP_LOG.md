@@ -4584,6 +4584,42 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
 - **Tests:** `FinishLine.test` (the run, a tap, reduced motion), the sheet (Lesson 1's close, a close with no
   recap, the button order), the lesson rules (recap lines open real sections; Satoshi only in the recap).
 
+### 2026-11-12 — The zig-zag back, Duolingo-style: progress rings, a practice dumbbell, synced lesson progress
+
+The owner reversed the vertical rail (entry below) the same day: "the zig-zag broke the monotony". It's back, closer
+to Duolingo's path. Kept from the rail: the "Crypto trading path" title, the hands-on mode (`nodeMode`) and the arrow
+on the newest candle.
+
+- **The map** (`learn/PathNode.tsx`, `PathDrawer.tsx`): the zig-zag of 3D round stops, the dashed links, and the
+  Start/Continue bubble with Pulin, as before the rail.
+  - **Icons:** a lesson is a **book**; practice on the real screen (the buy and sell tours) is a **dumbbell** (was a
+    target); the checkpoint keeps the crown.
+  - **Hands-on:** a lesson with a "Now you try it" gets a small green dumbbell badge and a "● Hands-on" tag.
+  - **Legend:** under the intro.
+- **Progress ring:** a lesson begun and not finished is ringed from 12 o'clock in the chapter's colour, for the share
+  of its screens reached (`lessonFraction` in `learn/path.ts`). Its label adds ", 5 of 14 screens". The ring replaces
+  the next step's breathing outline, and the bubble says Continue once any lesson is begun.
+- **Synced** (owner's choice: on the server, not the device):
+  - **Schema:** `LearningProgress` gains a nullable `step` (migration `20261112220000_learning_progress_step`) and the
+    status `started`.
+  - **Route:** `PUT /api/learn/progress/:itemId` takes `{ status: 'started', step }`, for a lesson only, with `step`
+    1–99, which is the funnel's step number including `stepBase`.
+  - 🔐 **Never downgrades:** the row is created if missing, and its step only rises while the lesson is unfinished. A
+    completed row is never touched.
+  - **SDK:** `LearnStatus` adds `started`, `LearnProgressItem.step`, and `setProgress(…, step?)`.
+  - **Client:** `lessonStore.reached` holds the furthest screen per lesson. It rises with every screen of the learner's
+    own lesson, never for a look back, and the server's answer is merged in. `useTourProgress` reads it (a step from an
+    earlier version of a lesson names no screen and is ignored) and writes one `started` per new furthest screen.
+- **Privacy policy 1.5** (12 Nov 2026): the "Learning progress" row now names lessons and the furthest screen of a
+  begun lesson. It's treated as **not material**, like 1.4: the same category, retention, legal basis and recipients.
+  Owner to confirm.
+- **Tests:**
+  - server: `learn.test` (started, never lower, a finished lesson untouched, refusals);
+  - the contract fixtures;
+  - `learningProgress.int.test` (the two writes on Postgres);
+  - client: `path.test` (zig-zag, `lessonFraction`), `PathDrawer.test` (ring, dumbbell, badge, label),
+    `lessonStore.test` (`reached`), `useTourProgress.test` (read, stale step, one write per screen).
+
 ### 2026-11-12 — Lesson 3 rebuilt: who sets the price, why it swings, and check before you trust
 
 The owner's brief: cover Finelo's Lesson 3 and top it, with an attractive intro and 3–4-minute articles with

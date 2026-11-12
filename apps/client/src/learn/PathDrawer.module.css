@@ -250,155 +250,91 @@
 
 /* ─── The stops ───────────────────────────────────────────────────────────── */
 
-/* The rail (owner 2026-11-12): one straight line down the chapter, the stops' markers on it */
 .stops {
-  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin: 18px 0 8px;
+  align-items: center;
+  margin: 20px 0 8px;
   padding: 0;
   list-style: none;
 }
 
-.stops::before {
-  position: absolute;
-  top: 24px;
-  bottom: 24px;
-  left: 23px; /* the marker's centre */
-  width: 2px;
-  background: color-mix(in srgb, var(--tone) 45%, transparent);
-  content: '';
+.connector svg {
+  display: block;
+}
+
+.connector line {
+  stroke: rgba(255, 255, 255, 0.18);
+  stroke-dasharray: 6 6;
+  stroke-linecap: round;
+  stroke-width: 3;
 }
 
 .stop {
-  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-}
-
-/* A hands-on stop: the marker in green, a rounded square */
-.stop[data-mode='hands-on'] {
-  --tone: var(--color-brand-green); /* color.green */
-  --tone-ink: var(--color-bg-page); /* bg.page: dark ink, white on green is ~2:1 */
-}
-
-.stopButton,
-.stopRow {
-  display: flex;
-  width: 100%;
   align-items: center;
-  gap: 12px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: left;
+  gap: 6px;
+  max-width: 220px;
 }
 
-.stopButton {
-  cursor: pointer;
+.bubbleRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
 }
 
-.stop[data-state='locked'] .stopButton,
-.stop[data-state='pro'] .stopButton {
-  cursor: help;
+.bubble {
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 4px 14px;
+  background: var(--color-bg-panel); /* bg.panel */
+  color: var(--color-brand-white);
+  font-weight: 700;
+}
+
+.bubble::after {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--color-bg-panel);
+  content: '';
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.peek {
+  display: inline-flex;
 }
 
 .node {
   position: relative;
-  z-index: 1; /* over the rail */
   display: inline-flex;
-  width: 48px;
-  height: 48px;
-  flex: none;
+  width: 64px;
+  height: 64px;
   align-items: center;
   justify-content: center;
   border: 0;
   border-radius: 9999px;
   background: var(--tone);
+  box-shadow: 0 5px 0 color-mix(in srgb, var(--tone) 65%, black);
   color: var(--tone-ink);
+  cursor: pointer;
   transition: transform 120ms ease-out;
 }
 
-.stop[data-mode='hands-on'] .node {
-  border-radius: 14px;
-}
-
-.stop[data-mode='check'] .node {
-  border-radius: 10px;
-  transform: rotate(45deg) scale(0.86);
-}
-
-.stop[data-mode='check'] .node > svg {
-  transform: rotate(-45deg);
-}
-
-.card {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  flex-direction: column;
-  gap: 2px;
-  padding: 10px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  background: var(--color-bg-panel); /* bg.panel */
-  transition: border-color 120ms ease-out;
-}
-
-.stopButton:hover .card {
-  border-color: color-mix(in srgb, var(--tone) 60%, transparent);
-}
-
-.stop[data-state='current'] .card {
-  border-color: var(--tone);
-}
-
-.stop[data-state='locked'] .card,
-.stop[data-state='soon'] .card {
-  background: transparent;
-}
-
-.meta {
-  color: var(--color-brand-muted); /* color.muted */
-  font-size: 12px;
-}
-
-.mode {
-  font-weight: 600;
-}
-
-.stop[data-mode='hands-on'] .mode::before {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin-right: 5px;
-  border-radius: 9999px;
-  background: var(--color-brand-green); /* color.green */
-  content: '';
-  vertical-align: 1px;
-}
-
-.startChip {
-  flex: none;
-  padding: 6px 12px;
-  border-radius: 9999px;
-  background: var(--tone);
-  color: var(--tone-ink);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.stopButton:active .node:not(.locked, .pro) {
-  transform: scale(0.94);
+.node:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--tone) 65%, black);
 }
 
 .current {
-  outline: 3px solid color-mix(in srgb, var(--tone) 40%, transparent);
-  outline-offset: 3px;
+  outline: 4px solid color-mix(in srgb, var(--tone) 35%, transparent);
+  outline-offset: 4px;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -409,42 +345,8 @@
 
 @keyframes breathe {
   50% {
-    outline-offset: 6px;
+    outline-offset: 7px;
   }
-}
-
-/* The legend under the intro: the two marker shapes */
-.legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 16px;
-  margin: 10px 0 16px;
-  padding: 0;
-  color: var(--color-brand-muted);
-  font-size: 12px;
-  list-style: none;
-}
-
-.legend li {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.legendMark {
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-}
-
-.legendRead {
-  border-radius: 9999px;
-  background: var(--color-brand-purple-dark); /* color.purpleDark: chapter 1's tone */
-}
-
-.legendHands {
-  border-radius: 4px;
-  background: var(--color-brand-green); /* color.green */
 }
 
 .open {
@@ -454,7 +356,9 @@
 /* Skipped on a phone: a hollow ring, to do on a computer */
 .skipped {
   background: var(--color-bg-panel);
-  box-shadow: inset 0 0 0 3px var(--tone);
+  box-shadow:
+    inset 0 0 0 3px var(--tone),
+    0 5px 0 rgba(0, 0, 0, 0.35);
   color: var(--color-brand-white);
 }
 
@@ -462,7 +366,13 @@
 .pro,
 .soon {
   background: var(--color-bg-surface); /* bg.surface */
+  box-shadow: 0 5px 0 color-mix(in srgb, var(--color-bg-surface) 60%, black);
   color: var(--color-brand-muted);
+}
+
+.locked,
+.pro {
+  cursor: help;
 }
 
 .pro {
@@ -492,15 +402,14 @@
 }
 
 .caption {
-  color: var(--color-brand-white);
-  font-size: 14px;
-  font-weight: 600;
+  color: var(--color-brand-muted);
+  font-size: 13px; /* fontSize.xs11 */
+  text-align: center;
 }
 
-.stop[data-state='locked'] .caption,
-.stop[data-state='soon'] .caption {
-  color: var(--color-brand-muted);
-  font-weight: 500;
+.stop[data-state='current'] .caption {
+  color: var(--color-brand-white);
+  font-weight: 600;
 }
 
 .proTag {
@@ -514,17 +423,18 @@
 }
 
 .note {
-  margin: 0 0 0 60px; /* under the card, clear of the rail */
+  margin: 0;
   border-radius: 10px;
   padding: 8px 12px;
   background: var(--color-bg-panel); /* bg.panel */
   color: var(--color-brand-muted);
   font-size: 13px; /* fontSize.xs11 */
+  text-align: center;
 }
 
 .noteAction {
   display: block;
-  margin: 6px 0 0;
+  margin: 6px auto 0;
   border: 0;
   padding: 0;
   background: transparent;
@@ -536,9 +446,10 @@
 }
 
 .testOut {
-  margin: 0 0 0 60px;
+  margin: 4px 0;
   color: var(--color-brand-muted);
   font-size: 13px; /* fontSize.xs11 */
+  text-align: center;
 }
 
 .testOut .noteAction {
@@ -626,4 +537,98 @@
 .drawer button:focus-visible {
   outline: 2px solid var(--color-brand-purple-dark); /* focusRing */
   outline-offset: 3px;
+}
+
+/* ─── Duolingo-style progress and practice marks (owner 2026-11-12) ─────────── */
+
+/* How much of a begun lesson is done: a ring around the stop, from 12 o'clock */
+.ring {
+  position: absolute;
+  top: -12px;
+  left: -12px;
+  width: 88px;
+  height: 88px;
+  pointer-events: none;
+}
+
+.ringTrack,
+.ringArc {
+  fill: none;
+  stroke-width: 6;
+}
+
+.ringTrack {
+  stroke: rgba(255, 255, 255, 0.08); /* border.* scale: a faint track under the tone's arc */
+}
+
+.ringArc {
+  stroke: var(--tone);
+  stroke-linecap: round;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ringArc {
+    transition: stroke-dasharray 400ms ease-out;
+  }
+}
+
+/* The ring is the stop's highlight: no second outline around it */
+.node:has(.ring) {
+  outline: none;
+  animation: none;
+}
+
+/* A lesson the learner tries out: a small dumbbell on the book */
+.tryBadge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--color-bg-footer);
+  border-radius: 9999px;
+  background: var(--color-brand-green); /* color.green */
+  color: var(--color-bg-page); /* bg.page: dark ink on green */
+}
+
+.modeTag {
+  display: block;
+  color: var(--color-brand-green); /* color.green */
+  font-size: 11px; /* fontSize.xxs */
+  font-weight: 600;
+}
+
+.modeTag::before {
+  content: '● ';
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 10px 0 16px;
+  padding: 0;
+  color: var(--color-brand-muted); /* color.muted */
+  font-size: 12px;
+  list-style: none;
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legendBadge {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--color-brand-green); /* color.green */
+  color: var(--color-bg-page); /* bg.page */
 }

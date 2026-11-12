@@ -202,4 +202,23 @@ describe('lessonStore', () => {
     s().start('lesson-02', 2);
     expect(s()).toMatchObject({ screen: 6, inTour: true });
   });
+
+  it('should remember the furthest screen of each lesson, never lower it, and skip a look back', () => {
+    // The map's progress ring (owner 2026-11-12)
+    const st = useLessonStore.getState;
+    st().start('lesson-02', 3);
+    st().next();
+    expect(st().reached).toEqual({ 'lesson-02': 4 });
+    st().back();
+    st().back();
+    expect(st().reached['lesson-02']).toBe(4);
+    // A look back only visits: Lesson 1 isn't begun by it
+    st().visit('lesson-01', 6);
+    expect(st().reached['lesson-01']).toBeUndefined();
+    // The server's answer merges, each lesson keeping the higher
+    st().setReached({ 'lesson-02': 2, 'lesson-ownership': 5 });
+    expect(st().reached).toEqual({ 'lesson-02': 4, 'lesson-ownership': 5 });
+    st().reset();
+    expect(st().reached).toEqual({});
+  });
 });

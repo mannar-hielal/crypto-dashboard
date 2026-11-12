@@ -367,6 +367,12 @@ const CALLS: Call[] = [
     response: f.learnProgressItem,
   },
   {
+    name: 'learnApi.setProgress (a lesson begun, with its step)',
+    run: () => learnApi.setProgress('lesson-02', 'started', T, 46),
+    status: 200,
+    response: f.learnProgressStarted,
+  },
+  {
     name: 'learnApi.trackEvent',
     run: () => learnApi.trackEvent({ name: 'tour_started', itemId: 'primer' }, T),
     status: 204,

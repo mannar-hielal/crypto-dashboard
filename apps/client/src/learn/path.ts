@@ -9,7 +9,7 @@
  * plan: a gem). Nothing is paid today. Pure data and logic: no React, no store.
  */
 
-import { getLesson, type LessonId } from '@/guide/lessons';
+import { getLesson, lessonScreens, type LessonId } from '@/guide/lessons';
 import { getTour, type TourId } from '@/guide/tours';
 import { canOpen, FREE, type Entitlement } from './access';
 import { getCheckpoint, type CheckpointId } from './checkpoints';
@@ -110,16 +110,26 @@ export interface NodeView {
   minutes: number;
   mode: StopMode;
   state: NodeState;
+  /**
+   * How much of a started lesson is done, 0–1 (owner 2026-11-12, Duolingo's ring): the furthest
+   * screen reached over the lesson's screens. Null for a tour, a checkpoint, or a lesson not begun
+   */
+  fraction: number | null;
+}
+
+interface ChapterViewBase {
+  /** Stops in the chapters before this one: the map's zig-zag carries on across chapters */
+  firstIndex: number;
 }
 
 export type ChapterView =
-  | {
+  | (ChapterViewBase & {
       chapter: Chapter & { status: 'open' };
       locked: boolean;
       nodes: NodeView[];
       done: number;
-    }
-  | { chapter: Chapter & { status: 'soon' }; locked: true; nodes: []; done: 0 };
+    })
+  | (ChapterViewBase & { chapter: Chapter & { status: 'soon' }; locked: true; nodes: []; done: 0 });
 
 export interface PathProgress {
   lessons: Partial<Record<LessonId, true>>;
@@ -127,6 +137,8 @@ export interface PathProgress {
   /** Tours skipped for now (the server's `dismissed`) */
   skippedTours: Partial<Record<TourId, true>>;
   checkpoints: Partial<Record<CheckpointId, true>>;
+  /** The furthest screen (0-based) reached in each lesson, synced through the server */
+  reached?: Partial<Record<LessonId, number>>;
 }
 
 export interface PathView {
@@ -135,6 +147,23 @@ export interface PathView {
   percent: number;
   /** The next step's key, if any */
   current: string | null;
+}
+
+/** The map's zig-zag (owner 2026-11-12: back, it breaks the monotony): a stop's sideways offset */
+export function nodeOffset(index: number): number {
+  return Math.round(Math.sin(index * 0.9) * 40);
+}
+
+/** A started, unfinished lesson's share done; null when there's nothing to show */
+export function lessonFraction(
+  id: LessonId,
+  reached: number | undefined,
+  done: boolean
+): number | null {
+  if (done || reached === undefined) return null;
+  const screens = lessonScreens(getLesson(id)).length;
+  const fraction = Math.min(reached + 1, screens) / screens;
+  return fraction > 0 && fraction < 1 ? fraction : null;
 }
 
 export const nodeKey = (node: { kind: NodeKind; id: string }): string => `${node.kind}:${node.id}`;
@@ -197,14 +226,18 @@ export function pathState(
   let current: string | null = null;
   let built = 0;
   let finished = 0;
+  let stops = 0;
   // The first chapter is open; each later one opens when the one before it has its checkpoint passed
   let chapterOpen = true;
 
   const views = chapters.map((chapter): ChapterView => {
+    const firstIndex = stops;
     if (chapter.status === 'soon') {
       chapterOpen = false;
-      return { chapter, locked: true, nodes: [], done: 0 };
+      stops += chapter.preview.length;
+      return { chapter, firstIndex, locked: true, nodes: [], done: 0 };
     }
+    stops += chapter.nodes.length;
     const locked = !chapterOpen;
     const checkpoint = checkpointOf(chapter);
     const testedOut = checkpoint ? isDone(checkpoint, progress) : false;
@@ -220,6 +253,10 @@ export function pathState(
         title: nodeTitle(node),
         minutes: nodeMinutes(node),
         mode: nodeMode(node),
+        fraction:
+          node.kind === 'lesson'
+            ? lessonFraction(node.id, progress.reached?.[node.id], isDone(node, progress))
+            : null,
       };
       built += 1;
       if (!canOpen(node.access, granted) || !canOpen(chapter.access, granted)) {
@@ -250,7 +287,7 @@ export function pathState(
     });
 
     chapterOpen = !locked && testedOut;
-    return { chapter, locked, nodes, done };
+    return { chapter, firstIndex, locked, nodes, done };
   });
 
   return {

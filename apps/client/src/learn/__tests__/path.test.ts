@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { getLesson, lessonScreens } from '@/guide/lessons';
 import { FREE } from '@/learn/access';
 import { CHECKPOINTS } from '@/learn/checkpoints';
 import {
   CHAPTERS,
+  lessonFraction,
   nodeMode,
+  nodeOffset,
   openKeys,
   pathState,
   type Chapter,
@@ -101,6 +104,7 @@ describe('pathState', () => {
     expect(soon.chapter.status).toBe('soon');
     expect(soon.locked).toBe(true);
     expect(soon.nodes).toEqual([]);
+    expect(soon.firstIndex).toBe(6);
   });
 
   it('should lock a later chapter until the one before it has its checkpoint passed', () => {
@@ -116,6 +120,7 @@ describe('pathState', () => {
       [open, { ...open, id: 'two', number: 2, nodes: open.nodes.slice(2, 4) }]
     );
     expect(after.chapters[1].locked).toBe(false);
+    expect(after.chapters[1].firstIndex).toBe(6);
     expect(after.current).toBe('lesson:lesson-02');
   });
 
@@ -153,6 +158,25 @@ describe('the map', () => {
       expect(c.nodes.at(-1)?.kind).toBe('checkpoint');
       expect(c.nodes.filter((n) => n.kind === 'checkpoint')).toHaveLength(1);
     }
+  });
+
+  it('should zig-zag within 40 px either side (back by the owner, 2026-11-12)', () => {
+    const offsets = Array.from({ length: 12 }, (_, i) => nodeOffset(i));
+    expect(offsets[0]).toBe(0);
+    expect(Math.max(...offsets.map(Math.abs))).toBeLessThanOrEqual(40);
+    expect(new Set(offsets).size).toBeGreaterThan(3);
+  });
+
+  it('should ring a begun lesson with its share done, and nothing else', () => {
+    const screens = lessonScreens(getLesson('lesson-02')).length;
+    expect(lessonFraction('lesson-02', 6, false)).toBeCloseTo(7 / screens);
+    expect(lessonFraction('lesson-02', undefined, false)).toBeNull(); // not begun
+    expect(lessonFraction('lesson-02', 6, true)).toBeNull(); // done: the tick instead
+    expect(lessonFraction('lesson-02', screens - 1, false)).toBeNull(); // the last screen, unfinished
+    const view = pathState({ ...empty(), reached: { 'lesson-01': 2 } });
+    const [l1, , , tour] = view.chapters[0].nodes;
+    expect(l1.fraction).toBeCloseTo(3 / lessonScreens(getLesson('lesson-01')).length);
+    expect(tour.fraction).toBeNull();
   });
 
   it('should mark a stop hands-on when the learner tries it themselves', () => {

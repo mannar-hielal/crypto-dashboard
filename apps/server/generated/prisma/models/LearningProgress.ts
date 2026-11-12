@@ -20,14 +20,25 @@ export type LearningProgressModel = runtime.Types.Result.DefaultSelection<Prisma
 
 export type AggregateLearningProgress = {
   _count: LearningProgressCountAggregateOutputType | null
+  _avg: LearningProgressAvgAggregateOutputType | null
+  _sum: LearningProgressSumAggregateOutputType | null
   _min: LearningProgressMinAggregateOutputType | null
   _max: LearningProgressMaxAggregateOutputType | null
+}
+
+export type LearningProgressAvgAggregateOutputType = {
+  step: number | null
+}
+
+export type LearningProgressSumAggregateOutputType = {
+  step: number | null
 }
 
 export type LearningProgressMinAggregateOutputType = {
   userId: string | null
   itemId: string | null
   status: string | null
+  step: number | null
   updatedAt: Date | null
 }
 
@@ -35,6 +46,7 @@ export type LearningProgressMaxAggregateOutputType = {
   userId: string | null
   itemId: string | null
   status: string | null
+  step: number | null
   updatedAt: Date | null
 }
 
@@ -42,15 +54,25 @@ export type LearningProgressCountAggregateOutputType = {
   userId: number
   itemId: number
   status: number
+  step: number
   updatedAt: number
   _all: number
 }
 
 
+export type LearningProgressAvgAggregateInputType = {
+  step?: true
+}
+
+export type LearningProgressSumAggregateInputType = {
+  step?: true
+}
+
 export type LearningProgressMinAggregateInputType = {
   userId?: true
   itemId?: true
   status?: true
+  step?: true
   updatedAt?: true
 }
 
@@ -58,6 +80,7 @@ export type LearningProgressMaxAggregateInputType = {
   userId?: true
   itemId?: true
   status?: true
+  step?: true
   updatedAt?: true
 }
 
@@ -65,6 +88,7 @@ export type LearningProgressCountAggregateInputType = {
   userId?: true
   itemId?: true
   status?: true
+  step?: true
   updatedAt?: true
   _all?: true
 }
@@ -107,6 +131,18 @@ export type LearningProgressAggregateArgs<ExtArgs extends runtime.Types.Extensio
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: LearningProgressAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: LearningProgressSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: LearningProgressMinAggregateInputType
@@ -137,6 +173,8 @@ export type LearningProgressGroupByArgs<ExtArgs extends runtime.Types.Extensions
   take?: number
   skip?: number
   _count?: LearningProgressCountAggregateInputType | true
+  _avg?: LearningProgressAvgAggregateInputType
+  _sum?: LearningProgressSumAggregateInputType
   _min?: LearningProgressMinAggregateInputType
   _max?: LearningProgressMaxAggregateInputType
 }
@@ -145,8 +183,11 @@ export type LearningProgressGroupByOutputType = {
   userId: string
   itemId: string
   status: string
+  step: number | null
   updatedAt: Date
   _count: LearningProgressCountAggregateOutputType | null
+  _avg: LearningProgressAvgAggregateOutputType | null
+  _sum: LearningProgressSumAggregateOutputType | null
   _min: LearningProgressMinAggregateOutputType | null
   _max: LearningProgressMaxAggregateOutputType | null
 }
@@ -173,6 +214,7 @@ export type LearningProgressWhereInput = {
   userId?: Prisma.StringFilter<"LearningProgress"> | string
   itemId?: Prisma.StringFilter<"LearningProgress"> | string
   status?: Prisma.StringFilter<"LearningProgress"> | string
+  step?: Prisma.IntNullableFilter<"LearningProgress"> | number | null
   updatedAt?: Prisma.DateTimeFilter<"LearningProgress"> | Date | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
 }
@@ -181,6 +223,7 @@ export type LearningProgressOrderByWithRelationInput = {
   userId?: Prisma.SortOrder
   itemId?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  step?: Prisma.SortOrderInput | Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   user?: Prisma.UserOrderByWithRelationInput
 }
@@ -193,6 +236,7 @@ export type LearningProgressWhereUniqueInput = Prisma.AtLeast<{
   userId?: Prisma.StringFilter<"LearningProgress"> | string
   itemId?: Prisma.StringFilter<"LearningProgress"> | string
   status?: Prisma.StringFilter<"LearningProgress"> | string
+  step?: Prisma.IntNullableFilter<"LearningProgress"> | number | null
   updatedAt?: Prisma.DateTimeFilter<"LearningProgress"> | Date | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
 }, "userId_itemId">
@@ -201,10 +245,13 @@ export type LearningProgressOrderByWithAggregationInput = {
   userId?: Prisma.SortOrder
   itemId?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  step?: Prisma.SortOrderInput | Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.LearningProgressCountOrderByAggregateInput
+  _avg?: Prisma.LearningProgressAvgOrderByAggregateInput
   _max?: Prisma.LearningProgressMaxOrderByAggregateInput
   _min?: Prisma.LearningProgressMinOrderByAggregateInput
+  _sum?: Prisma.LearningProgressSumOrderByAggregateInput
 }
 
 export type LearningProgressScalarWhereWithAggregatesInput = {
@@ -214,12 +261,14 @@ export type LearningProgressScalarWhereWithAggregatesInput = {
   userId?: Prisma.StringWithAggregatesFilter<"LearningProgress"> | string
   itemId?: Prisma.StringWithAggregatesFilter<"LearningProgress"> | string
   status?: Prisma.StringWithAggregatesFilter<"LearningProgress"> | string
+  step?: Prisma.IntNullableWithAggregatesFilter<"LearningProgress"> | number | null
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"LearningProgress"> | Date | string
 }
 
 export type LearningProgressCreateInput = {
   itemId: string
   status: string
+  step?: number | null
   updatedAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutLearningProgressInput
 }
@@ -228,12 +277,14 @@ export type LearningProgressUncheckedCreateInput = {
   userId: string
   itemId: string
   status: string
+  step?: number | null
   updatedAt?: Date | string
 }
 
 export type LearningProgressUpdateInput = {
   itemId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  step?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutLearningProgressNestedInput
 }
@@ -242,6 +293,7 @@ export type LearningProgressUncheckedUpdateInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   itemId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  step?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -249,12 +301,14 @@ export type LearningProgressCreateManyInput = {
   userId: string
   itemId: string
   status: string
+  step?: number | null
   updatedAt?: Date | string
 }
 
 export type LearningProgressUpdateManyMutationInput = {
   itemId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  step?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -262,6 +316,7 @@ export type LearningProgressUncheckedUpdateManyInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   itemId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  step?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -284,13 +339,19 @@ export type LearningProgressCountOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   itemId?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  step?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type LearningProgressAvgOrderByAggregateInput = {
+  step?: Prisma.SortOrder
 }
 
 export type LearningProgressMaxOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   itemId?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  step?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
@@ -298,7 +359,12 @@ export type LearningProgressMinOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   itemId?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  step?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type LearningProgressSumOrderByAggregateInput = {
+  step?: Prisma.SortOrder
 }
 
 export type LearningProgressCreateNestedManyWithoutUserInput = {
@@ -343,15 +409,25 @@ export type LearningProgressUncheckedUpdateManyWithoutUserNestedInput = {
   deleteMany?: Prisma.LearningProgressScalarWhereInput | Prisma.LearningProgressScalarWhereInput[]
 }
 
+export type NullableIntFieldUpdateOperationsInput = {
+  set?: number | null
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
+}
+
 export type LearningProgressCreateWithoutUserInput = {
   itemId: string
   status: string
+  step?: number | null
   updatedAt?: Date | string
 }
 
 export type LearningProgressUncheckedCreateWithoutUserInput = {
   itemId: string
   status: string
+  step?: number | null
   updatedAt?: Date | string
 }
 
@@ -388,30 +464,35 @@ export type LearningProgressScalarWhereInput = {
   userId?: Prisma.StringFilter<"LearningProgress"> | string
   itemId?: Prisma.StringFilter<"LearningProgress"> | string
   status?: Prisma.StringFilter<"LearningProgress"> | string
+  step?: Prisma.IntNullableFilter<"LearningProgress"> | number | null
   updatedAt?: Prisma.DateTimeFilter<"LearningProgress"> | Date | string
 }
 
 export type LearningProgressCreateManyUserInput = {
   itemId: string
   status: string
+  step?: number | null
   updatedAt?: Date | string
 }
 
 export type LearningProgressUpdateWithoutUserInput = {
   itemId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  step?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type LearningProgressUncheckedUpdateWithoutUserInput = {
   itemId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  step?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type LearningProgressUncheckedUpdateManyWithoutUserInput = {
   itemId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  step?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -421,6 +502,7 @@ export type LearningProgressSelect<ExtArgs extends runtime.Types.Extensions.Inte
   userId?: boolean
   itemId?: boolean
   status?: boolean
+  step?: boolean
   updatedAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["learningProgress"]>
@@ -429,6 +511,7 @@ export type LearningProgressSelectCreateManyAndReturn<ExtArgs extends runtime.Ty
   userId?: boolean
   itemId?: boolean
   status?: boolean
+  step?: boolean
   updatedAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["learningProgress"]>
@@ -437,6 +520,7 @@ export type LearningProgressSelectUpdateManyAndReturn<ExtArgs extends runtime.Ty
   userId?: boolean
   itemId?: boolean
   status?: boolean
+  step?: boolean
   updatedAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["learningProgress"]>
@@ -445,10 +529,11 @@ export type LearningProgressSelectScalar = {
   userId?: boolean
   itemId?: boolean
   status?: boolean
+  step?: boolean
   updatedAt?: boolean
 }
 
-export type LearningProgressOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"userId" | "itemId" | "status" | "updatedAt", ExtArgs["result"]["learningProgress"]>
+export type LearningProgressOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"userId" | "itemId" | "status" | "step" | "updatedAt", ExtArgs["result"]["learningProgress"]>
 export type LearningProgressInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
@@ -468,6 +553,7 @@ export type $LearningProgressPayload<ExtArgs extends runtime.Types.Extensions.In
     userId: string
     itemId: string
     status: string
+    step: number | null
     updatedAt: Date
   }, ExtArgs["result"]["learningProgress"]>
   composites: {}
@@ -896,6 +982,7 @@ export interface LearningProgressFieldRefs {
   readonly userId: Prisma.FieldRef<"LearningProgress", 'String'>
   readonly itemId: Prisma.FieldRef<"LearningProgress", 'String'>
   readonly status: Prisma.FieldRef<"LearningProgress", 'String'>
+  readonly step: Prisma.FieldRef<"LearningProgress", 'Int'>
   readonly updatedAt: Prisma.FieldRef<"LearningProgress", 'DateTime'>
 }
     

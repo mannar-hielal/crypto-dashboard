@@ -241,7 +241,7 @@ describe('useTourProgress', () => {
   });
 
   describe('lessons', () => {
-    async function loaded(items: ReturnType<typeof item>[] = []) {
+    async function loaded(items: (ReturnType<typeof item> & { step?: number })[] = []) {
       getProgress.mockResolvedValue({ items });
       renderHook(() => useTourProgress());
       await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
@@ -267,6 +267,26 @@ describe('useTourProgress', () => {
       expect(setProgress).toHaveBeenCalledWith('lesson-01', 'completed', 'tok');
     });
 
+    it('should load how far each begun lesson got, ignoring a step from an earlier version', async () => {
+      await loaded([
+        { ...item('lesson-02', 'started'), step: 46 },
+        // Lesson 1's steps 1–20 were its earlier version's: no screen today
+        { ...item('lesson-01', 'started'), step: 5 },
+      ]);
+      expect(useLessonStore.getState().reached).toEqual({ 'lesson-02': 5 });
+      // The server's own answer is never written back
+      expect(setProgress).not.toHaveBeenCalled();
+    });
+
+    it('should never send a lower screen than the furthest one', async () => {
+      await loaded([{ ...item('lesson-02', 'started'), step: 46 }]);
+      act(() => useLessonStore.getState().start('lesson-02', 2));
+      act(() => useLessonStore.getState().next());
+      expect(setProgress).not.toHaveBeenCalled();
+      act(() => useLessonStore.getState().start('lesson-02', 6));
+      expect(setProgress.mock.calls).toEqual([['lesson-02', 'started', 'tok', 47]]);
+    });
+
     it('should load finished lessons, and treat Lesson 1 as the offer being done with', async () => {
       await loaded([item('lesson-01', 'completed')]);
       expect(useLessonStore.getState().completed).toEqual({ 'lesson-01': true });
@@ -285,7 +305,12 @@ describe('useTourProgress', () => {
         { name: 'tour_step', itemId: 'lesson-01', stepId: 'lesson-01.22' },
         { name: 'tour_closed', itemId: 'lesson-01', stepId: 'lesson-01.22' },
       ]);
-      expect(setProgress).not.toHaveBeenCalled();
+      // How far it got, once per new furthest screen (the map's ring, 2026-11-12); no finish
+      expect(setProgress.mock.calls).toEqual([
+        ['lesson-01', 'started', 'tok', 21],
+        ['lesson-01', 'started', 'tok', 22],
+      ]);
+      setProgress.mockClear();
 
       trackEvent.mockClear();
       act(() => useLessonStore.getState().start('lesson-01'));
@@ -332,7 +357,8 @@ describe('useTourProgress', () => {
 
       act(() => useLessonStore.getState().reset());
       expect(calls().some((c) => c.name === 'tour_completed')).toBe(false);
-      expect(setProgress).not.toHaveBeenCalled();
+      // Only the new furthest screen, never a finish
+      expect(setProgress.mock.calls).toEqual([['lesson-02', 'started', 'tok', 45]]);
       expect(calls().at(-1)).toEqual({
         name: 'tour_closed',
         itemId: 'lesson-02',

@@ -326,11 +326,13 @@ presenter never over the scene). Frequency: per release touching `guide/LessonAr
 
 1. Look at the top bar → Expect the Route icon left of the avatar with an amber dot; the user menu has Settings and
    Sign out but no Learn.
-2. [nav.learn] → Expect **Crypto trading path** at 0 %, the legend (round = Read, green square = Hands-on), chapter 1
-   "Foundations of crypto" in purple with "0 of 6 done", a vertical rail with a **Start** chip on Lesson 1, padlocks
-   on the next four stops, every lesson and tour marked "● Hands-on" (green squares), the checkpoint a diamond, and
-   chapter 2 "Trade with a plan" greyed with "Coming soon" and dashed stops nobody can tab to. Close and reopen →
-   Expect no dot.
+2. [nav.learn] → Expect **Crypto trading path** at 0 %, the legend (book = Lesson, dumbbell = Practice, a green
+   dumbbell badge = Hands-on), chapter 1 "Foundations of crypto" in purple with "0 of 6 done", the zig-zag with
+   **Start** and Pulin over Lesson 1, padlocks on the next four stops, a dumbbell on "Buy your first coin" and "Sell it
+   and read the result", the crown open, and chapter 2 "Trade with a plan" greyed with "Coming soon" and dashed stops
+   nobody can tab to. Close and reopen → Expect no dot.
+   Open Lesson 1 to its sixth screen, close it, reload → Expect a ring about half round Lesson 1 (read back from the
+   server) and **Continue**.
 3. Tap [path.node `lesson:lesson-ownership`] → Expect "Finish “What is the problem?” first." and no lesson.
    [path.chapter.info `ch1`] → Expect the six stops with minutes and "After this chapter you can".
 4. [path.node `lesson:lesson-01`] → finish the lesson → reopen → Expect it ticked, 17 %, **Continue** on Lesson 2,
@@ -342,8 +344,8 @@ presenter never over the scene). Frequency: per release touching `guide/LessonAr
 7. A failed checkpoint (three right or fewer) → Expect "Not yet", a **Review Lesson N →** per missed question (a tour's
    only on a larger screen) and **Try again**.
 
-**Manual check (M).** The map at 375, 412, 820 and 1440 px: the rail inside the drawer, the sticky chapter band,
-the Start chip and the cards' text never clipped. Frequency: per release touching `learn/Path*` or `learn/CheckpointSheet.tsx`.
+**Manual check (M).** The map at 375, 412, 820 and 1440 px: the zig-zag inside the drawer, the sticky chapter band,
+the bubble, Pulin and a progress ring never clipped. Frequency: per release touching `learn/Path*` or `learn/CheckpointSheet.tsx`.
 
 ## Stage 1 — Spot basics
 

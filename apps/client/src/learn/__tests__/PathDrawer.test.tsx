@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 
 const getHabits = vi.fn();
@@ -21,6 +21,7 @@ vi.mock('react-router', async (importOriginal) => ({
 }));
 
 import { useLessonStore } from '@/guide/lessonStore';
+import { getLesson, lessonScreens } from '@/guide/lessons';
 import { useTourStore } from '@/guide/tourStore';
 import { guideSelector } from '@/lib/guideAnchors';
 import { useArticleStore } from '@/learn/articleStore';
@@ -74,6 +75,25 @@ describe('PathDrawer', () => {
     expect(
       screen.getByRole('progressbar', { name: 'Path progress' }).getAttribute('aria-valuenow')
     ).toBe('0');
+  });
+
+  it('should ring a begun lesson with how much is done, and mark practice with a dumbbell', () => {
+    // Owner 2026-11-12, after Duolingo: a ring for a lesson part done, a dumbbell for practice
+    act(() => useLessonStore.getState().setReached({ 'lesson-01': 4 }));
+    useTourStore.setState({ panelOpen: true });
+    renderDrawer();
+    const screens = lessonScreens(getLesson('lesson-01')).length;
+    const lesson1 = nodeButton('lesson:lesson-01');
+    expect(lesson1.querySelector('[data-progress]')!.getAttribute('data-progress')).toBe(
+      (5 / screens).toFixed(2)
+    );
+    expect(lesson1.getAttribute('aria-label')).toContain(`, 5 of ${screens} screens`);
+    // A lesson with a "Now you try it" keeps its book, with a small dumbbell
+    expect(lesson1.querySelector('.lucide-book-open')).not.toBeNull();
+    expect(lesson1.querySelector('.lucide-dumbbell')).not.toBeNull();
+    // Practice on the real screen is the dumbbell itself; a lesson not begun has no ring
+    expect(nodeButton('tour:buy-first-coin').querySelector('.lucide-dumbbell')).not.toBeNull();
+    expect(nodeButton('lesson:lesson-ownership').querySelector('[data-progress]')).toBeNull();
   });
 
   it('should start the next lesson and close the map', () => {

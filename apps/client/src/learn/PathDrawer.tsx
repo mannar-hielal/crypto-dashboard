@@ -1,9 +1,9 @@
 /**
- * The learning map, "Crypto trading path" (owner's visual Q&A 2026-10-24; renamed, and a vertical
- * rail of our own in place of the zig-zag, 2026-11-12): opened from the Route button beside the
- * avatar, a 400 px drawer on the right over the dimmed dashboard, full screen on phones. Chapters
- * scroll by under a sticky band; each is a rail of stops walked in order (`learn/path.ts` holds the
- * rules), reading stops round and hands-on stops square, as the legend says. A second tab keeps the Library — articles are reference
+ * The learning map, "Crypto trading path" (owner's visual Q&A 2026-10-24; renamed 2026-11-12, and
+ * the zig-zag kept after a vertical rail was tried and reverted the same day): opened from the
+ * Route button beside the avatar, a 400 px drawer on the right over the dimmed dashboard, full
+ * screen on phones. Chapters scroll by under a sticky band; each is a zig-zag of stops walked in
+ * order (`learn/path.ts` holds the rules). A second tab keeps the Library — articles are reference
  * material and are never locked — and the habit badges.
  */
 
@@ -23,7 +23,7 @@ import { useTourStore } from '@/guide/tourStore';
 import { trapFocus } from '@/lib/trapFocus';
 import { useAuthStore } from '@/store/authStore';
 import { LibraryTab } from './LibraryTab';
-import { MODE_LABEL, type ChapterView, type NodeKind, type NodeView } from './path';
+import { nodeOffset, type ChapterView, type NodeKind, type NodeView } from './path';
 import { NodeIcon, PathNode } from './PathNode';
 import { usePathStore } from './pathStore';
 import { usePathView } from './usePathView';
@@ -38,6 +38,17 @@ const TABS: { id: Tab; label: string }[] = [
 
 // ─── A chapter ───────────────────────────────────────────────────────────────
 
+/** The dashed link between two stops, slanting with the zig-zag */
+function Connector({ index }: { index: number }) {
+  return (
+    <li className={styles.connector} role="presentation" aria-hidden="true">
+      <svg width="120" height="28" viewBox="0 0 120 28">
+        <line x1={60 + nodeOffset(index - 1)} y1="2" x2={60 + nodeOffset(index)} y2="26" />
+      </svg>
+    </li>
+  );
+}
+
 /** What a chapter teaches: its stops with their minutes, and what each lesson lets you do */
 function ChapterOverview({ nodes }: { nodes: NodeView[] }) {
   const canDo = nodes.flatMap((v) =>
@@ -48,11 +59,8 @@ function ChapterOverview({ nodes }: { nodes: NodeView[] }) {
       <ul className={styles.overviewList}>
         {nodes.map((v) => (
           <li key={v.key}>
-            <NodeIcon kind={v.node.kind} mode={v.mode} size={14} /> {v.title}
-            <span className={styles.rowMeta}>
-              {' '}
-              · {MODE_LABEL[v.mode]} · about {v.minutes} min
-            </span>
+            <NodeIcon kind={v.node.kind} size={14} /> {v.title}
+            <span className={styles.rowMeta}> · about {v.minutes} min</span>
           </li>
         ))}
       </ul>
@@ -80,7 +88,7 @@ interface ChapterSectionProps {
 
 function ChapterSection({ view, wide, started, onStart, onSkipTour }: ChapterSectionProps) {
   const [overview, setOverview] = useState(false);
-  const { chapter } = view;
+  const { chapter, firstIndex } = view;
   const soon = chapter.status === 'soon';
   // The chapter's colour, and dark ink on a light one (white on green is ~2:1)
   const toneStyle = {
@@ -127,8 +135,14 @@ function ChapterSection({ view, wide, started, onStart, onSkipTour }: ChapterSec
 
       {chapter.status === 'soon' ? (
         <ul className={styles.stops} aria-label={`Chapter ${chapter.number}, coming soon`}>
-          {chapter.preview.map((node) => (
-            <SoonStop key={node.title} kind={node.kind} title={node.title} />
+          {chapter.preview.map((node, i) => (
+            <SoonStop
+              key={node.title}
+              first={i === 0}
+              index={firstIndex + i}
+              kind={node.kind}
+              title={node.title}
+            />
           ))}
         </ul>
       ) : (
@@ -143,6 +157,8 @@ function ChapterSection({ view, wide, started, onStart, onSkipTour }: ChapterSec
               <ChapterStop
                 key={node.key}
                 node={node}
+                i={i}
+                index={firstIndex + i}
                 previous={i > 0 ? view.nodes[i - 1].title : null}
                 testOut={i === firstLocked && checkpoint ? checkpoint : null}
                 wide={wide}
@@ -159,28 +175,32 @@ function ChapterSection({ view, wide, started, onStart, onSkipTour }: ChapterSec
 }
 
 interface SoonStopProps {
+  first: boolean;
+  index: number;
   kind: NodeKind;
   title: string;
 }
 
-function SoonStop({ kind, title }: SoonStopProps) {
+function SoonStop({ first, index, kind, title }: SoonStopProps) {
   return (
-    <li className={styles.stop} data-state="soon">
-      <span className={styles.stopRow}>
+    <>
+      {!first && <Connector index={index} />}
+      <li className={styles.stop} style={{ transform: `translateX(${nodeOffset(index)}px)` }}>
         <span className={`${styles.node} ${styles.soon}`} aria-hidden="true">
           <NodeIcon kind={kind} />
         </span>
-        <span className={styles.card}>
-          <span className={styles.caption}>{title}</span>
-          <span className={styles.meta}>Coming soon</span>
-        </span>
-      </span>
-    </li>
+        <span className={styles.caption}>{title}</span>
+      </li>
+    </>
   );
 }
 
 interface ChapterStopProps {
   node: NodeView;
+  /** Index in the chapter */
+  i: number;
+  /** Index on the whole map (the zig-zag) */
+  index: number;
   previous: string | null;
   /** The chapter's checkpoint, offered under the first locked stop */
   testOut: NodeView | null;
@@ -192,6 +212,8 @@ interface ChapterStopProps {
 
 function ChapterStop({
   node,
+  i,
+  index,
   previous,
   testOut,
   wide,
@@ -201,8 +223,10 @@ function ChapterStop({
 }: ChapterStopProps) {
   return (
     <>
+      {i > 0 && <Connector index={index} />}
       <PathNode
         view={node}
+        index={index}
         wide={wide}
         started={started}
         previousTitle={previous}
@@ -282,7 +306,9 @@ export function PathDrawer() {
   if (!open) return null;
 
   const close = () => useTourStore.getState().closePanel();
-  const started = finished > 0;
+  // Something finished, or a lesson begun (its ring): the bubble says Continue
+  const started =
+    finished > 0 || view.chapters.some((c) => c.nodes.some((n) => n.fraction !== null));
 
   const start = ({ node }: NodeView) => {
     close();
@@ -392,18 +418,16 @@ export function PathDrawer() {
               </p>
               <ul className={styles.legend} aria-label="Kinds of stop" {...guide('path.legend')}>
                 <li>
-                  <span
-                    className={`${styles.legendMark} ${styles.legendRead}`}
-                    aria-hidden="true"
-                  />
-                  Read: cards and articles
+                  <NodeIcon kind="lesson" size={14} /> Lesson
                 </li>
                 <li>
-                  <span
-                    className={`${styles.legendMark} ${styles.legendHands}`}
-                    aria-hidden="true"
-                  />
-                  Hands-on: you try it yourself
+                  <NodeIcon kind="tour" size={14} /> Practice on the real screen
+                </li>
+                <li>
+                  <span className={styles.legendBadge} aria-hidden="true">
+                    <NodeIcon kind="tour" size={10} />
+                  </span>{' '}
+                  Hands-on: you try it in the lesson
                 </li>
               </ul>
               {view.chapters.map((c) => (
