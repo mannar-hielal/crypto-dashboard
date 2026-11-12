@@ -4584,6 +4584,45 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
 - **Tests:** `FinishLine.test` (the run, a tap, reduced motion), the sheet (Lesson 1's close, a close with no
   recap, the button order), the lesson rules (recap lines open real sections; Satoshi only in the recap).
 
+### 2026-11-12 — Lesson 3 rebuilt: who sets the price, why it swings, and check before you trust
+
+The owner's brief: cover Finelo's Lesson 3 and top it, with an attractive intro and 3–4-minute articles with
+something to do. The plan is `guided-learning-topics/08-lesson-3-plan.md` (revision 2026-11-12); the owner took its
+recommendations, and chose our own drawing over a photo for the cold open.
+
+- **Cold open, "One bitcoin for $8,200":** the Binance.US flash crash (21 Oct 2021, 11:34 UTC, a trader's algorithm
+  bug, back within the minute; CoinDesk, The Block). The picture (`flashCrash`) is Bybit's own 31 one-minute candles
+  for 11:20–11:50, barely moving, with a dashed wick drawn to "Binance.US: $8,200, off the scale". A cold open with a
+  drawing stands alone like a photo (the lesson rule allows `beats` + `art` without a presenter).
+- **Six cards, 69–77 words, each button naming the next step:** Two queues meet (Leo and Sofia, from Lesson 2), When
+  the queue runs thin (liquidity; Dogecoin's typical 2025 day ≈2.2× Bitcoin's, Bybit), Thousands of deals, one candle,
+  Same company, opposite moves (Tesla), then **the moment** (the ETF, its set-up now in the question's context), then
+  **Big swings, both ways** (the volatility card postponed earlier today: 19 May 2021, $100 → $67 at the low, "size for
+  the fall") and **Check before you trust** (the Squid Game rug pull, three checks, no price quoted). The "Who decides?"
+  and "Good news…" cards and the `hook`/`busy` drawings are gone; the spread lives in the article and the buy tour.
+- **`momentAfter`** (new on `Lesson`): the card the moment follows, so a lesson can go on teaching after it.
+  `lessonScreens()` splits there. Lesson 3: after card 4. **`stepBase` 40** (14 screens: steps 41–54).
+- **Questions:** a thin queue, sizing for the fall, the 2%-a-day coin. **Recap** with four lines (each opening its
+  article section) and the highlight "The price is people, trading every second." **Teaser** before a tour is now
+  allowed (the rule: a teaser names what the close offers). `minutes: 8`.
+- **Concepts:** `volatility`, `rug-pull` and `slippage` (new); `candle` and `hindsight` now open `price-swings`.
+- **Articles (3–4 min, each with something to do):**
+  - `exchange-price` rewritten: liquidity with the Binance.US story, slippage, small coins, limit orders, and the new
+    **`eat-the-queue`** widget (sell 1–10 coins into a busy and a thin queue; a limit at 97).
+  - `price-swings` (new): candles (moved, with the **`candle-builder`**: a candle drawn deal by deal), 24/7, news (China
+    24 Sep 2021 told correctly: −9.3% low, −4.5% close), volatility, and size for the fall with the **`swing-sizer`**
+    (19 May 2021 at $50–$1,000; losses always with a − sign, no gain in money).
+  - `spot-a-scam` (new): the Squid Game token, how a rug pull works, three checks with the **`scam-check`** sorter
+    (PupCoin, made up; wrong picks shown calmly), other costumes, why careful people fall for it, and what to do if
+    caught (stop paying, keep records, report, beware "recovery" services).
+- **Honest reading times:** a new test holds every article's `minutes` within one of its length (≈200 words a minute,
+  half a minute a widget). Relabelled: Money 101 5 → 2, SunCoin 5 → 3, Bitcoin's story 4 → 3, Getting bitcoin 6 → 3,
+  How Bitcoin's network works 3 → 4.
+- **Tests:** `lessons.test` (the new card list, the moment's place, card 5's both-ways and sizing, no price on the scam
+  card, the recap's articles, the teaser rule, `stepBase` 40), `LessonArt.test`, `LessonSheet.test` (new screen order,
+  the recap, teaching after the moment), `learnGraph.test`, `ArticleWidgets.test` (the four widgets),
+  `articleMinutes.test`, `useTourProgress.test` (step ids).
+
 ### 2026-11-12 — Crypto trading path: our own rail, hands-on stops, and the arrow on the newest candle
 
 - **Renamed** "Crypto path" → **"Crypto trading path"** (owner).

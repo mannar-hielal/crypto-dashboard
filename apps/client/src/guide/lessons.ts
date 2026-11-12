@@ -30,7 +30,6 @@ export function isLessonId(value: string): value is LessonId {
 
 /** The pictures `LessonArt` can draw, all from our own tokens */
 export type LessonArtId =
-  | 'hook'
   | 'money'
   | 'notebook'
   | 'oneNora'
@@ -42,9 +41,15 @@ export type LessonArtId =
   | 'keyHolders'
   | 'custody'
   | 'queues'
-  | 'busy'
   | 'tesla'
-  | 'etf';
+  | 'etf'
+  /** Lesson 3's cold open without a photo: Bybit's quiet minute candles, and Binance.US's wick */
+  | 'flashCrash'
+  /** A thin queue of buy offers eaten step by step */
+  | 'staircase'
+  | 'candleAnatomy'
+  | 'swings'
+  | 'checkCoin';
 
 export type Speaker = 'tick' | 'tock';
 
@@ -222,6 +227,11 @@ export interface Lesson {
   cards: LessonCard[];
   /** The mid-lesson moment: a question where the honest answer is the praised one */
   moment: LessonQuestion;
+  /**
+   * The card the moment follows (an index into `cards`; default the last card), so a lesson can go
+   * on teaching after it (Lesson 3's volatility card comes after the ETF answer, owner 2026-11-12)
+   */
+  momentAfter?: number;
   checks: LessonQuestion[];
   notePrompt: string;
   /** One line on the close, above the way on: what the next lesson brings (owner 2026-11-12) */
@@ -638,8 +648,14 @@ const lessonOwnership: Lesson = {
 };
 
 // ─── Lesson 3 — Who sets the price? ──────────────────────────────────────────
-// Concise and about trading (Finelo's Lessons 1 and 2 as the model, never their wording or hype).
-// What Bitcoin is belongs to Lessons 1 and 2; one sentence bridges back to them.
+// Rebuilt 2026-11-12 (guided-learning-topics/08-lesson-3-plan.md, owner: "cover Finelo's Lesson 3 and
+// top it"): a true cold open, the price as people (queues, liquidity, candles, news), the moment,
+// then the postponed volatility card and a short "check before you trust". Every dated price is
+// checked against Bybit's candles (noted beside it); the Binance.US and Squid Game facts against the
+// reporting (CoinDesk, The Block). The spread moved to the article and the buy tour's live note.
+
+/** Lesson 3's length: its cold open says it */
+const LESSON_03_MINUTES = 8;
 
 const TESLA_2021: ChartScene = {
   symbol: 'BTCUSDT',
@@ -669,44 +685,86 @@ const ETF_2024: ChartScene = {
   fallback: 'etf',
 };
 
+// Bybit BTCUSDT perpetual daily: 19 May 2021 open 42,903.5, low 28,801 (−32.9%), close 36,727;
+// 20 May +10.3% (36,727 → 40,500.5); 24 May +12.0% (34,658 → 38,817)
+const MAY_2021: ChartScene = {
+  symbol: 'BTCUSDT',
+  end: '2021-05-26',
+  bars: 17,
+  markers: [
+    { date: '2021-05-19', text: 'Low $28,801', position: 'below' },
+    { date: '2021-05-24', text: '+12.0%', position: 'above' },
+  ],
+  label:
+    'Bitcoin daily candles from 10 to 26 May 2021: a long fall on 19 May to a low of $28,801, then days that rose by 10% and 12%.',
+  fallback: 'swings',
+};
+
 const lesson02: Lesson = {
   id: 'lesson-02',
   // Lesson 3 since 2026-11-08; the id stays, as accounts store it
   number: 3,
   title: 'Who sets the price?',
   stage: 'Getting started',
-  minutes: 5,
-  // Its note screen became the summary on 2026-11-08: today's screens are steps 21 on
-  stepBase: 20,
+  minutes: LESSON_03_MINUTES,
+  // Rebuilt on 2026-11-12 (14 screens): today's screens are steps 41 on
+  stepBase: 40,
   tour: 'primer',
   tryIntro:
-    'Now do it on the real chart: three quick tasks, and we’ll tell you when each one’s done. Your 10,000 USDT of practice money waits in the account panel under the chart.',
+    'Now read the real chart: tap the price (the last deal), then two candles. We’ll tell you when each is done. Your 10,000 USDT of practice money waits in the account panel under the chart.',
   cards: [
     {
-      title: 'Who decides?',
-      art: 'hook',
-      presenter: { who: 'tick', mood: 'curious', pose: 'wave' },
-      lines: [
-        { speaker: 'tick', text: 'Who decides what one Bitcoin costs?' },
+      // CoinDesk and The Block, 21 Oct 2021: 11:34 UTC, from about $65,760 to $8,200 and back within
+      // the minute, "a bug in their trading algorithm". Bybit's 1-minute candle then: 65,800 → low
+      // 64,200 (−2.4%); Bitstamp −2.3%. No photo (owner 2026-11-12): our drawing from Bybit's candles
+      title: 'One bitcoin for $8,200',
+      art: 'flashCrash',
+      beats: [
+        { kind: 'kicker', text: '21 October 2021 · Binance.US' },
         {
-          speaker: 'tock',
-          text: 'No one in charge. Everyone who is buying and selling it — right now, every second.',
+          kind: 'headline',
+          text: 'For a moment, one bitcoin sold for $8,200.',
+          emphasis: '$8,200',
+        },
+        {
+          kind: 'fact',
+          text: 'A minute earlier it cost more than $65,000. On other exchanges it barely moved.',
+        },
+        {
+          kind: 'headline',
+          text: 'Nothing was hacked. One trader’s program sold far too much, far too fast.',
+        },
+        {
+          kind: 'fact',
+          text: `In the next ${LESSON_03_MINUTES} minutes: who sets the price, why it swings so hard, and how to stay safe while it does.`,
         },
       ],
       // Owner 2026-11-12: every lesson's first button starts with "Unlock"
       nextLabel: 'Unlock who sets the price',
     },
     {
-      title: 'What a price is',
+      title: 'Two queues meet',
       art: 'queues',
       presenter: { who: 'tock', mood: 'smile' },
-      text: 'The ledger from Lessons 1 and 2 records who owns what; the price is made elsewhere. An [[exchange]] matches people who want to buy with people who want to sell. The price on your screen is simply their [[last deal|last-price]].',
+      text: 'An [[exchange]] is a marketplace for coins. Buyers wait in one queue, each saying what they’ll pay; sellers wait in another, saying what they’ll accept. Say Leo, from Lesson 2, will pay $65,000 for a bitcoin, and Sofia will sell one for $65,000. The exchange matches them in a split second, and their deal becomes the number on everyone’s screen: the [[last price|last-price]]. Nobody decides it. The next deal replaces it, day and night.',
+      nextLabel: 'So why did it drop to $8,200?',
     },
     {
-      title: 'A market that never closes',
-      art: 'busy',
-      presenter: { who: 'tick', mood: 'grin' },
-      text: 'Crypto trades every hour of every day, across borders. In a busy market a buyer or seller is usually close to the price: that’s [[liquidity]]. The small gap between the best offer to buy and to sell is the [[spread]], a cost on every trade.',
+      // Bybit perpetuals, the 365 days of 2025: median daily (high − low) / open BTCUSDT 2.98%,
+      // DOGEUSDT 6.46% (×2.2)
+      title: 'When the queue runs thin',
+      art: 'staircase',
+      presenter: { who: 'tick', mood: 'thinking' },
+      text: 'Back to 21 October. One program sold a huge amount at once. It took the best buy offer, then the next, then the next, down a queue that ran thin fast. Each deal was lower, and each was “the price” for a moment. How many offers wait near the price is called [[liquidity]]. Bitcoin on a big exchange is usually deep. Smaller coins are thinner: in 2025 Dogecoin’s typical day swung about twice as far as Bitcoin’s.',
+      more: { article: 'exchange-price', section: 'liquidity' },
+      nextLabel: 'How does a chart show all this?',
+    },
+    {
+      title: 'Thousands of deals, one candle',
+      art: 'candleAnatomy',
+      presenter: { who: 'tock', mood: 'smile' },
+      text: 'Thousands of deals happen every minute, so charts sum them up. A [[candle]] covers one slice of time: its body runs from the first deal (the open) to the last (the close), and thin wicks reach the highest and lowest deals. Green means it closed higher than it opened; red, lower. Crypto never closes, so new candles keep coming, nights and holidays too. A candle shows what happened, never what comes next.',
+      nextLabel: 'What makes the candles jump?',
     },
     {
       // Bybit BTCUSDT perpetual daily: 8 Feb 2021 open 38,825.5 → 21 Feb close 57,459;
@@ -715,69 +773,121 @@ const lesson02: Lesson = {
       art: 'tesla',
       presenter: { who: 'tock', mood: 'thinking', pose: 'stand' },
       chart: TESLA_2021,
-      text: 'February 2021: Tesla said it had bought $1.5 billion of Bitcoin. The price rose from about $39,000 to above $57,000 in two weeks. May 2021: Tesla said it would stop accepting Bitcoin. The price fell 12.5% in a day.',
+      text: 'News changes what people are willing to pay. February 2021: Tesla said it had bought $1.5 billion of Bitcoin, and the price rose from about $39,000 to above $57,000 in two weeks. May 2021: Tesla said it would stop accepting it, and the price dropped 12.5% in a day. Same company, opposite moves. So can news tell you which way the price will go? Here’s one to judge yourself.',
+      nextLabel: 'Try it with real news',
     },
     {
-      // Bybit BTCUSDT perpetual daily: 10 Jan 2024 close 46,659.9 → 23 Jan close 39,900.1 (−14.5%).
-      // The chart stops on the 10th: what came next is the moment's question, so this card mustn't
-      // give it away
-      title: 'Good news…',
-      art: 'etf',
-      presenter: { who: 'tock', mood: 'thinking', pose: 'stand' },
-      chart: ETF_2024,
-      text: '10 January 2024: the US approved the first funds that hold Bitcoin directly, widely called the year’s biggest crypto news. The chart stops on that day. Before you see what came next: what would you expect?',
+      // The postponed volatility-and-risk card (2026-11-12), after the Tesla and ETF charts. Bybit
+      // BTCUSDT perpetual daily, 19 May 2021: open 42,903.5, low 28,801, close 36,727;
+      // $100 × 28,801 / 42,903.5 = $67.13
+      title: 'Big swings, both ways',
+      presenter: { who: 'tick', mood: 'frank', pose: 'stand' },
+      chart: MAY_2021,
+      text: 'Swings like these have a name: [[volatility]]. On 19 May 2021 bitcoin fell from about $42,900 to as low as $28,800, then closed the day near $36,700. It swings up just as hard, which is why no one can time it. Bigger swings mean bigger losses too: $100 of bitcoin bought that morning was worth $67 at the low. So size for the fall: only put in what you could watch drop by a third.',
+      more: { article: 'price-swings', section: 'size' },
+      nextLabel: 'Is a big swing the only risk?',
+    },
+    {
+      // CoinDesk and Cointelegraph, 1 Nov 2021: the creators cashed out millions and vanished; the
+      // project was unrelated to Netflix. No price is quoted (reports vary; nothing on Bybit)
+      title: 'Check before you trust',
+      art: 'checkCoin',
+      presenter: { who: 'tock', mood: 'frank' },
+      text: 'Not every risk is a swing. In October 2021 a token named after the series Squid Game climbed for days. Buyers then found they couldn’t sell it, and on 1 November its creators cashed out millions and vanished: a [[rug pull|rug-pull]]. A price on a screen only means someone traded. Before you trust any coin, check who runs it, whether you can sell it, and whether it promises easy profits.',
+      more: { article: 'spot-a-scam', section: 'checklist' },
+      nextLabel: 'Now try it on the real chart',
     },
   ],
+  // After the Tesla card: the ETF question, then the volatility and scam cards
+  momentAfter: 4,
   moment: {
-    context: '10 January 2024: “US approves the first spot Bitcoin funds.”',
+    // Bybit BTCUSDT perpetual daily: 10 Jan 2024 close 46,659.9 → 23 Jan close 39,900.1 (−14.5%).
+    // The chart stops on the 10th until the learner has answered
+    context:
+      '10 January 2024: the US approves the first funds that hold Bitcoin directly, widely called the year’s biggest crypto news. The chart stops on that day.',
     question: 'What happened to the price next?',
     presenter: { who: 'tock', mood: 'thinking' },
     options: ['It went up', 'It went down', 'No one could know in advance'],
     correct: 2,
     explain:
-      'It fell about 15% in two weeks, but that’s hindsight. On the day, no one could know. That’s why careful traders plan for both directions before they act.',
+      'It fell about 15% in two weeks, but that’s hindsight: on the day, no one could know, and Tesla’s news in 2021 went the other way. Careful traders plan for both directions before they act.',
     chart: ETF_2024,
   },
   checks: [
     {
-      question: 'What sets Bitcoin’s price on an exchange?',
+      question:
+        'Few people trade a small coin, and someone sells a large amount at once. What’s most likely?',
       options: [
-        'The company behind Bitcoin',
-        'The last deal between a buyer and a seller',
-        'The government',
+        'It all sells at the last price',
+        'Each deal is lower than the one before',
+        'The exchange holds the price still',
       ],
       correct: 1,
       explain:
-        'No one issues the price. It is simply the latest trade between someone buying and someone selling.',
+        'In a thin queue, a big order takes the best buyer, then the next, at worse and worse prices. That’s how bitcoin briefly sold for $8,200 on Binance.US.',
     },
     {
-      question: 'A big company announces it is buying Bitcoin. What happens to the price?',
-      options: ['It rises', 'It falls', 'It could do either; no one knows in advance'],
-      correct: 2,
-      explain:
-        'Tesla’s purchase came before a rise, but the 2024 fund approval came before a fall. News moves prices, in a direction no one can know beforehand.',
-    },
-    {
-      question: 'A green candle means…',
+      question: 'You plan to put practice money into bitcoin. Which plan sizes for the fall?',
+      presenter: { who: 'tick', mood: 'thinking' },
       options: [
-        'The price ended that period higher than it started',
-        'It is a good time to buy',
-        'Someone made a profit',
+        'An amount I could watch drop by a third',
+        'More than usual, since it rose last week',
+        'No plan: big swings even out',
       ],
       correct: 0,
-      explain: 'A candle describes what already happened in that slice of time. It is not advice.',
+      explain:
+        'On 19 May 2021 bitcoin fell about a third within the day. Size each trade so a fall like that would sting, not sink you. Last week’s rise says nothing about tomorrow.',
+    },
+    {
+      question:
+        'A new coin is up 80% this week, and its website promises 2% a day. What do you check first?',
+      options: [
+        'Who runs it, and whether you can sell it',
+        'How many people are posting about it',
+        'Nothing: the rise proves it’s real',
+      ],
+      correct: 0,
+      explain:
+        'A rising price only means people traded. The Squid Game token rose for days before buyers found they couldn’t sell. A promised return is a warning sign, not a reason.',
     },
   ],
   notePrompt: 'What is one thing you want to understand before your first trade?',
+  teaser: 'Next: spend $100 of practice money on Bitcoin, at a price you can now read.',
   canDo: [
     { text: 'Say who set the price you see', article: 'exchange-price', section: 'last-deal' },
-    { text: 'Read a candle’s open and close', article: 'exchange-price', section: 'candles' },
     {
-      text: 'Explain why news doesn’t tell you the direction',
+      text: 'Explain why a thin queue makes big jumps',
       article: 'exchange-price',
-      section: 'news',
+      section: 'liquidity',
     },
+    { text: 'Size a trade for the fall', article: 'price-swings', section: 'size' },
   ],
+  recap: {
+    title: 'Who sets the price?',
+    points: [
+      {
+        text: 'Nobody sets the price: it’s the last deal between a buyer and a seller.',
+        article: 'exchange-price',
+        section: 'last-deal',
+      },
+      {
+        text: 'Thin queues make big jumps, and smaller coins are thinner than Bitcoin.',
+        article: 'exchange-price',
+        section: 'liquidity',
+      },
+      {
+        text: 'News can move the price either way, and the swings are big: size every trade for the fall.',
+        article: 'price-swings',
+        section: 'volatility',
+      },
+      {
+        text: 'A price only means someone traded. Check who runs a coin, and whether you can sell it.',
+        article: 'spot-a-scam',
+        section: 'checklist',
+      },
+    ],
+    highlight: { text: 'The price is people, trading every second.' },
+  },
   next: { kind: 'tour', id: 'buy-first-coin' },
   access: FREE,
 };
@@ -817,9 +927,12 @@ export type LessonScreen =
   | { kind: 'close' };
 
 export function lessonScreens(lesson: Lesson): LessonScreen[] {
+  const cards = lesson.cards.map((_, index) => ({ kind: 'card' as const, index }));
+  const split = Math.min(lesson.momentAfter ?? cards.length - 1, cards.length - 1) + 1;
   return [
-    ...lesson.cards.map((_, index) => ({ kind: 'card' as const, index })),
+    ...cards.slice(0, split),
     { kind: 'moment' as const },
+    ...cards.slice(split),
     { kind: 'try' as const },
     ...lesson.checks.map((_, index) => ({ kind: 'check' as const, index })),
     // Owner 2026-11-08: the summary, then the end with the journal line, the rating and the way on

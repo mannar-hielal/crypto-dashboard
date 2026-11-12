@@ -21,6 +21,8 @@ export const ARTICLE_IDS = [
   'getting-bitcoin',
   'mailboxes-keys',
   'exchange-price',
+  'price-swings',
+  'spot-a-scam',
 ] as const;
 export type ArticleId = (typeof ARTICLE_IDS)[number];
 
@@ -48,7 +50,15 @@ export type WidgetId =
   /** Bitcoin's story: the three dates on a rail, each with its picture (owner 2026-11-12) */
   | 'bitcoin-timeline'
   /** Bitcoin's story, mining: miners race to find a fingerprint starting 0000 (owner 2026-11-12) */
-  | 'mining-race';
+  | 'mining-race'
+  /** How an exchange sets the price: sell into a busy and a thin queue (owner 2026-11-12) */
+  | 'eat-the-queue'
+  /** Candles, news and big swings: a candle drawn deal by deal */
+  | 'candle-builder'
+  /** The same −32.9% day at different trade sizes */
+  | 'swing-sizer'
+  /** Check before you trust: red flag or not? */
+  | 'scam-check';
 
 export type ArticleBlock =
   /** A section heading; `id` lets a lesson link straight to it */
@@ -91,7 +101,7 @@ export interface Article {
 const suncoin: Article = {
   id: 'suncoin',
   title: 'SunCoin: money in a notebook',
-  minutes: 5,
+  minutes: 3,
   checked: '2026-10-28',
   access: FREE,
   // Owner 2026-10-25: this article only lays out the problem; the answer is the next article's
@@ -191,7 +201,7 @@ const bitcoinNetwork: Article = {
   title: 'Many notebooks, no Nora: how Bitcoin keeps the record',
   summary:
     'Thousands of computers each keep a copy of the ledger and check every payment, so nobody has to trust a Nora.',
-  minutes: 3,
+  minutes: 4,
   checked: '2026-11-08',
   access: FREE,
   // Owner 2026-11-08: short, and a graphic for every process; the long text version lives in git
@@ -273,17 +283,19 @@ const bitcoinNetwork: Article = {
 };
 
 // ─── How an exchange sets the price ──────────────────────────────────────────
+// Rewritten for the rebuilt Lesson 3 (2026-11-12): the candles and news moved to `price-swings`;
+// liquidity got the Binance.US story, slippage and the eat-the-queue widget.
 
 const exchangePrice: Article = {
   id: 'exchange-price',
   title: 'How an exchange sets the price',
   summary:
     'Nobody decides the price of Bitcoin. The number on your screen is the last deal between someone who wanted to buy and someone who wanted to sell.',
-  minutes: 6,
-  checked: '2026-10-23',
+  minutes: 4,
+  checked: '2026-11-12',
   access: FREE,
   blocks: [
-    { kind: 'h', text: 'Two queues' },
+    { kind: 'h', text: 'Two queues', id: 'queues' },
     {
       kind: 'p',
       text: 'An **exchange** is a marketplace for coins. Buyers say what they’re willing to pay: these are **bids**. Sellers say what they’re willing to accept: these are **asks**. The exchange keeps them in two queues sorted by price, buyers bidding up from below and sellers asking down from above. Together they are the **order book**.',
@@ -304,10 +316,10 @@ const exchangePrice: Article = {
       anchor: 'symbolbar.price',
       text: 'On the chart: the live price at the top of the screen. Watch it for ten seconds and count the deals.',
     },
-    { kind: 'h', text: 'The gap: the spread' },
+    { kind: 'h', text: 'The gap: the spread', id: 'spread' },
     {
       kind: 'p',
-      text: 'There’s usually a small gap between the best bid and the best ask. That gap is the **spread**. If you buy at market right now, you pay the best ask; if you sold straight back, you’d get the best bid. You’d lose the spread, plus fees, even if the price didn’t move at all.',
+      text: 'There’s usually a small gap between the best bid and the best ask. That gap is the **spread**, and it’s the first thing every trade costs you. Buy at market and you pay the best ask; sell straight back and you get the best bid. You’d lose the spread, plus fees, even if the price didn’t move at all.',
     },
     {
       kind: 'callout',
@@ -315,52 +327,25 @@ const exchangePrice: Article = {
       anchor: 'trade.spread',
       text: 'On the chart: the order form shows the current spread.',
     },
-    { kind: 'h', text: 'Busy markets and quiet ones' },
+    { kind: 'h', text: 'When the queue runs thin', id: 'liquidity' },
     {
       kind: 'p',
-      text: '**Liquidity** is how many offers wait close to the price. In a busy market, like Bitcoin against USDT on a large exchange, the queues are deep: your order fills close to the last price and the spread is tiny. In a quiet market a large order can eat through the queue and fill at worse and worse prices. Crypto trades around the clock, but quiet hours and quiet coins still cost more to trade.',
-    },
-    { kind: 'h', text: 'From deals to candles', id: 'candles' },
-    {
-      kind: 'p',
-      text: 'Thousands of deals happen every minute, so charts summarise them. A **candle** sums up every deal in one slice of time, a minute, an hour or a day:',
-    },
-    {
-      kind: 'list',
-      items: [
-        '**Open:** the first deal’s price in that slice.',
-        '**Close:** the last deal’s price.',
-        '**High and low:** the thin lines, called wicks, reach the highest and lowest deals.',
-        '**Colour:** green if it closed higher than it opened, red if lower.',
-      ],
+      text: '**Liquidity** is how many offers wait close to the price. On 21 October 2021, at 11:34 UTC, a trading program on the Binance.US exchange sold a huge amount of bitcoin at once. It took the best bid, then the next, then the next, down a queue that ran thin fast. For a moment one bitcoin sold for **$8,200**, about 87% below the price a minute earlier. Within the minute it was back. Other exchanges barely moved: on Bybit that minute’s low was about 2% down. The exchange said the trader’s algorithm had a bug.',
     },
     {
       kind: 'p',
-      text: 'A candle describes what already happened. A green candle doesn’t mean “buy” and a red one doesn’t mean “sell”. It’s a weather report, not a forecast.',
+      text: 'Each of those deals was “the price” for an instant. The gap between the price you expected and the price you actually got is called **slippage**. Try it below: sell the same amount into a busy queue and a thin one.',
     },
-    {
-      kind: 'callout',
-      tone: 'chart',
-      anchor: 'pane.chart',
-      text: 'On the chart: hover the newest candle on the far right. It’s still being drawn, so its close is the last price.',
-    },
-    { kind: 'h', text: 'Why news doesn’t tell you the direction', id: 'news' },
+    { kind: 'widget', id: 'eat-the-queue' },
+    { kind: 'h', text: 'Small coins, thin queues', id: 'small-coins' },
     {
       kind: 'p',
-      text: 'If price is people, news moves it by changing what people are willing to pay. But nobody knows in advance how people will react:',
+      text: 'Bitcoin against USDT on a large exchange is one of the deepest markets in crypto. Smaller coins are thinner. In 2025 a typical day’s range, from the day’s high to its low, was about 3% for Bitcoin and about 6.5% for Dogecoin on Bybit: roughly twice as wide. Many smaller coins are thinner still, and the way out is hardest exactly when everyone wants out at once. A later lesson looks at other coins in more depth.',
     },
+    { kind: 'h', text: 'Don’t eat the whole queue', id: 'limit' },
     {
-      kind: 'list',
-      items: [
-        '**8 February 2021:** Tesla said it had bought $1.5 billion of Bitcoin. Over the next two weeks the price rose from about $39,000 to above $57,000.',
-        '**12 May 2021:** Tesla said it would stop accepting Bitcoin. The price fell 12.5% that day.',
-        '**10 January 2024:** the US approved the first funds that hold Bitcoin directly, widely called the year’s biggest crypto news. Two weeks later the price was about 15% lower.',
-      ],
-    },
-    {
-      kind: 'callout',
-      tone: 'idea',
-      text: 'Looking back, each move feels obvious. That’s hindsight. On the day, nobody knew, which is why careful traders plan for both directions before they act.',
+      kind: 'p',
+      text: 'A **market order** takes whatever is waiting, at whatever price. A **limit order** sets the worst price you’ll accept: what can fill at that price or better fills, and the rest waits in the queue until someone meets it, or until you cancel it. Trading an amount the queue can absorb, and using a limit when it’s thin, keeps slippage small.',
     },
   ],
   selfTest: [
@@ -373,12 +358,12 @@ const exchangePrice: Article = {
       a: 'You bought at the ask and sold at the bid: the spread, plus fees, is gone.',
     },
     {
-      q: 'A candle is green. What does that tell you?',
-      a: 'That slice of time closed higher than it opened. Nothing about what comes next.',
+      q: 'A big sell order hits a thin queue. What happens to the last price?',
+      a: 'It falls to the last level the order reached: each deal is lower than the one before.',
     },
     {
-      q: 'Good news comes out. What happens to the price?',
-      a: 'It could go either way. No one knows in advance.',
+      q: 'What does a limit order protect you from?',
+      a: 'Slippage past a price you set: the part that can’t fill at your price waits instead.',
     },
   ],
   sources: [
@@ -387,10 +372,211 @@ const exchangePrice: Article = {
       url: 'https://bybit-exchange.github.io/docs/v5/market/orderbook',
     },
     {
-      label: 'Prices: Bybit BTCUSDT perpetual daily candles (checked 2026-10-23)',
+      label:
+        'CoinDesk: Bitcoin flash crash on Binance.US attributed to a trader’s algorithm bug (21 Oct 2021)',
+      url: 'https://www.coindesk.com/markets/2021/10/21/bitcoin-price-flash-crash-on-binanceus-attributed-to-trader-algorithm-bug',
+    },
+    {
+      label: 'The Block: Binance.US blames the flash crash to $8,200 on a bug (21 Oct 2021)',
+      url: 'https://www.theblock.co/post/121657/binance-us-blames-bitcoin-flash-crash-to-8200-on-a-bug-in-a-clients-trading-algorithm',
+    },
+    {
+      label:
+        'Prices: Bybit BTCUSDT and DOGEUSDT perpetual candles, 1-minute and daily (checked 2026-11-12)',
       url: 'https://bybit-exchange.github.io/docs/v5/market/kline',
     },
   ],
+};
+
+// ─── Candles, news and big swings ────────────────────────────────────────────
+// New for the rebuilt Lesson 3 (2026-11-12): candles and news moved from `exchange-price`, plus the
+// postponed volatility section and "size for the fall". Prices: Bybit BTCUSDT perpetual daily.
+
+const priceSwings: Article = {
+  id: 'price-swings',
+  title: 'Candles, news and big swings',
+  summary:
+    'A candle sums up a slice of deals. News moves the price either way, and crypto’s swings are big in both directions, so the size of a trade matters more than its timing.',
+  minutes: 4,
+  checked: '2026-11-12',
+  access: FREE,
+  blocks: [
+    { kind: 'h', text: 'From deals to candles', id: 'candles' },
+    {
+      kind: 'p',
+      text: 'Thousands of deals happen every minute, so charts sum them up. A **candle** covers every deal in one slice of time, a minute, an hour or a day:',
+    },
+    {
+      kind: 'list',
+      items: [
+        '**Open:** the first deal’s price in that slice.',
+        '**Close:** the last deal’s price.',
+        '**High and low:** the thin lines, called wicks, reach the highest and lowest deals.',
+        '**Colour:** green if it closed higher than it opened, red if lower.',
+      ],
+    },
+    { kind: 'widget', id: 'candle-builder' },
+    {
+      kind: 'p',
+      text: 'A candle describes what already happened. A green candle doesn’t mean “buy” and a red one doesn’t mean “sell”. It’s a weather report, not a forecast.',
+    },
+    {
+      kind: 'callout',
+      tone: 'chart',
+      anchor: 'pane.chart',
+      text: 'On the chart: hover the newest candle on the far right. It’s still being drawn, so its close is the last price.',
+    },
+    { kind: 'h', text: 'A market that never closes', id: 'always-open' },
+    {
+      kind: 'p',
+      text: 'Stock markets close at night and at weekends. Crypto trades every hour of every day, so new candles keep coming through nights and holidays. Quieter hours often mean thinner queues, and a thin queue jumps further when a big order arrives (see how an exchange sets the price, on liquidity).',
+    },
+    { kind: 'h', text: 'Why news doesn’t tell you the direction', id: 'news' },
+    {
+      kind: 'p',
+      text: 'If price is people, news moves it by changing what people are willing to pay. But nobody knows in advance how people will react:',
+    },
+    {
+      kind: 'list',
+      items: [
+        '**8 February 2021:** Tesla said it had bought $1.5 billion of Bitcoin. Over the next two weeks the price rose from about $39,000 to above $57,000.',
+        '**12 May 2021:** Tesla said it would stop accepting Bitcoin. The price fell 12.5% that day.',
+        '**24 September 2021:** China’s central bank declared crypto business illegal. Bitcoin’s low that day was 9.3% below its open, and it closed 4.5% down: a real drop, not the wipe-out some retellings describe.',
+        '**10 January 2024:** the US approved the first funds that hold Bitcoin directly, widely called the year’s biggest crypto news. Two weeks later the price was about 15% lower.',
+      ],
+    },
+    {
+      kind: 'callout',
+      tone: 'idea',
+      text: 'Looking back, each move feels obvious. That’s hindsight. On the day, nobody knew, which is why careful traders plan for both directions before they act.',
+    },
+    { kind: 'h', text: 'Big, fast swings: volatility', id: 'volatility' },
+    {
+      kind: 'p',
+      text: '**Volatility** is how far and how fast a price swings. On 19 May 2021 bitcoin opened near $42,900, fell as low as $28,801, 32.9% down, and closed the day near $36,700. The next day it rose 10.3%, and on 24 May it rose 12.0%. Swings run both ways, which is exactly why no one can time them. Even in a calmer year like 2025, bitcoin’s typical day still ranged about 3% from high to low.',
+    },
+    { kind: 'h', text: 'Size for the fall', id: 'size' },
+    {
+      kind: 'p',
+      text: 'What you could lose is the amount you put in times the fall. You can’t choose the swing, but you choose the amount. Before a trade, picture a fall like 19 May’s and ask whether you could watch it calmly. If not, the trade is too big. Practice money is the place to learn how a fall feels, before it’s your own.',
+    },
+    { kind: 'widget', id: 'swing-sizer' },
+  ],
+  selfTest: [
+    {
+      q: 'A candle is green. What does that tell you?',
+      a: 'That slice of time closed higher than it opened. Nothing about what comes next.',
+    },
+    {
+      q: 'Good news comes out. What happens to the price?',
+      a: 'It could go either way. No one knows in advance.',
+    },
+    {
+      q: 'What is volatility?',
+      a: 'How far and how fast a price swings, in both directions.',
+    },
+    {
+      q: 'Two traders live through the same −30% day; one loses $30, the other $300. What differed?',
+      a: 'Only the size of their trades. The swing was the same for both.',
+    },
+  ],
+  sources: [
+    {
+      label: 'Prices: Bybit BTCUSDT perpetual daily candles (checked 2026-11-12)',
+      url: 'https://bybit-exchange.github.io/docs/v5/market/kline',
+    },
+    {
+      label: 'Tesla’s annual report for 2020 (Form 10-K, filed 8 Feb 2021), SEC EDGAR',
+      url: 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001318605&type=10-K',
+    },
+    {
+      label: 'SEC Chair’s statement on the approval of spot bitcoin funds (10 Jan 2024)',
+      url: 'https://www.sec.gov/news/statement/gensler-statement-spot-bitcoin-011023',
+    },
+  ],
+};
+
+// ─── Check before you trust ──────────────────────────────────────────────────
+// New for the rebuilt Lesson 3 (2026-11-12). Squid Game token: CoinDesk and Cointelegraph, 1 Nov
+// 2021. No price is quoted: reports vary and nothing can be checked against Bybit.
+
+const spotAScam: Article = {
+  id: 'spot-a-scam',
+  title: 'Check before you trust: rug pulls and fake coins',
+  summary:
+    'A price on a screen only means someone traded. Before you trust a coin, check who runs it, whether you can sell it, and what it promises.',
+  minutes: 4,
+  checked: '2026-11-12',
+  access: FREE,
+  blocks: [
+    { kind: 'h', text: 'The Squid Game token', id: 'squid' },
+    {
+      kind: 'p',
+      text: 'In late October 2021 a new token named after the Netflix series Squid Game appeared. It had nothing to do with Netflix. Its price climbed for days, and headlines about the climb brought in more buyers. Then buyers found they couldn’t sell it. On 1 November its creators cashed out millions of dollars, its website and social accounts disappeared, and the price fell to almost nothing. The rise had been real deals, between real buyers and a project built to trap them.',
+    },
+    { kind: 'h', text: 'How a rug pull works', id: 'rug-pull' },
+    {
+      kind: 'p',
+      text: 'A **rug pull** is when a coin’s creators take the buyers’ money and vanish. The creators usually hold most of the coins and control the money waiting to buy them. Sometimes the code itself stops ordinary holders from selling. Once enough buyers are in, the creators sell everything into their money and leave. It’s the thin queue at its worst: when you want out, there is no queue at all.',
+    },
+    { kind: 'h', text: 'Three checks before you trust a coin', id: 'checklist' },
+    {
+      kind: 'list',
+      ordered: true,
+      items: [
+        '**Who runs it?** Real, named people or a company that can be held to account somewhere. An anonymous team is a red flag on its own.',
+        '**Can you sell it?** A real, busy queue on a large exchange, not just one website. If a small test sale fails, stop.',
+        '**What does it promise?** No honest project promises a fixed return. “2% a day” is a warning, not a reason.',
+      ],
+    },
+    { kind: 'widget', id: 'scam-check' },
+    { kind: 'h', text: 'The same trick in other costumes', id: 'costumes' },
+    {
+      kind: 'p',
+      text: 'The pattern repeats with new clothes. Fake “support” asks for your recovery phrase (Lesson 2: never share it). Copycat coins borrow a famous name or logo. Apps show your balance growing but ask for a fee before you can withdraw: if you can’t take it out, it isn’t yours. Popularity proves nothing either: a celebrity post or a week of rises only means people traded.',
+    },
+    { kind: 'h', text: 'Why smart people fall for it', id: 'why' },
+    {
+      kind: 'p',
+      text: 'Scams don’t win by fooling careless people. They win by hurrying careful ones. A countdown, a “last chance”, a friend who says they already doubled their money: each one pushes you to act before you check. A rising price adds to it, because a chart that only goes up looks like proof. It isn’t. It only shows that people traded, and in a rug pull many of those trades are the creators’ own. The fix is dull and it works: slow down, run the three checks, and if anything fails, walk away. Missing a real chance costs you nothing; walking into a trap can cost you everything you put in.',
+    },
+    { kind: 'h', text: 'If you’ve already been caught', id: 'caught' },
+    {
+      kind: 'p',
+      text: 'Stop sending money, even if you’re told a fee will unlock what you’ve lost: that’s the same scam asking twice. Keep the messages, addresses and receipts. Report it to the police and, in the US, to the Federal Trade Commission. Be wary of anyone who then offers to recover your coins for a fee: “recovery” services are one of the most common follow-up scams.',
+    },
+    {
+      kind: 'callout',
+      tone: 'warn',
+      text: 'Here, everything is practice money. Out there, a promise of sure returns is the clearest warning sign there is.',
+    },
+  ],
+  selfTest: [
+    {
+      q: 'What made the Squid Game token a trap, besides its crash?',
+      a: 'Buyers couldn’t sell it, and its creators vanished with the money.',
+    },
+    {
+      q: 'Name the three checks before you trust a coin.',
+      a: 'Who runs it, whether you can sell it, and what it promises.',
+    },
+    {
+      q: 'Someone from “support” asks for your recovery phrase. What is it?',
+      a: 'A scam. Never share it: whoever has it controls your coins.',
+    },
+  ],
+  sources: [
+    {
+      label:
+        'CoinDesk: Squid Game token crashes; developers say they’ve left the project (1 Nov 2021)',
+      url: 'https://www.coindesk.com/markets/2021/11/01/squid-game-token-crashes-developers-say-theyve-left-the-project/',
+    },
+    {
+      label: 'US Federal Trade Commission: what to know about cryptocurrency and scams',
+      url: 'https://consumer.ftc.gov/articles/what-know-about-cryptocurrency-and-scams',
+    },
+  ],
+  practiceSoon: 'Lesson 4, Not all crypto is Bitcoin',
 };
 
 // ─── Mailboxes and keys ──────────────────────────────────────────────────────
@@ -468,7 +654,7 @@ const money101: Article = {
   title: 'Money 101: what makes something money',
   summary:
     'Money is whatever people accept for paying, for swapping and for comparing what things are worth. Almost every kind depends on someone in charge, and that is the weakness Bitcoin was built around.',
-  minutes: 5,
+  minutes: 2,
   checked: '2026-10-23',
   access: FREE,
   blocks: [
@@ -539,7 +725,7 @@ const bitcoinStory: Article = {
   title: 'Bitcoin’s story, and its plan in plain words',
   summary:
     'In 2008 someone called Satoshi Nakamoto published a nine-page plan for online cash without a bank. Its idea fits in one line: replace “trust me” with “check it”.',
-  minutes: 4,
+  minutes: 3,
   checked: '2026-11-12',
   access: FREE,
   // Practised in Lesson 2's Bitcoin card, whose Read more opens it (owner 2026-11-12)
@@ -646,7 +832,7 @@ const gettingBitcoin: Article = {
   title: 'Getting bitcoin: three ways',
   summary:
     'You can buy bitcoin on an exchange, receive it from another person, or earn it by mining. The easy way puts a company between you and your coins.',
-  minutes: 6,
+  minutes: 3,
   checked: '2026-11-12',
   access: FREE,
   blocks: [
@@ -730,6 +916,8 @@ export const ARTICLES: readonly Article[] = [
   gettingBitcoin,
   mailboxesKeys,
   exchangePrice,
+  priceSwings,
+  spotAScam,
 ];
 
 export function getArticle(id: ArticleId): Article {

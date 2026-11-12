@@ -96,15 +96,29 @@ describe('the learning graph', () => {
       },
     ]);
     expect(practiceFor('exchange-price')).toEqual([
-      { kind: 'lesson', lesson: 'lesson-02', screen: 1, label: 'Lesson 3: What a price is' },
+      { kind: 'lesson', lesson: 'lesson-02', screen: 1, label: 'Lesson 3: Two queues meet' },
       {
         kind: 'lesson',
         lesson: 'lesson-02',
         screen: 2,
-        label: 'Lesson 3: A market that never closes',
+        label: 'Lesson 3: When the queue runs thin',
       },
       { kind: 'tour', tour: 'primer', label: 'What you’re looking at' },
       { kind: 'tour', tour: 'buy-first-coin', label: 'Buy your first coin' },
+    ]);
+    // Rebuilt Lesson 3 (2026-11-12): the volatility card sits after the moment, screen 6
+    expect(practiceFor('price-swings')).toEqual([
+      {
+        kind: 'lesson',
+        lesson: 'lesson-02',
+        screen: 3,
+        label: 'Lesson 3: Thousands of deals, one candle',
+      },
+      { kind: 'lesson', lesson: 'lesson-02', screen: 6, label: 'Lesson 3: Big swings, both ways' },
+      { kind: 'tour', tour: 'primer', label: 'What you’re looking at' },
+    ]);
+    expect(practiceFor('spot-a-scam')).toEqual([
+      { kind: 'lesson', lesson: 'lesson-02', screen: 7, label: 'Lesson 3: Check before you trust' },
     ]);
     // Owner 2026-11-12: Lesson 2's Bitcoin card opens it with its Read more, so it practises it
     expect(practiceFor('bitcoin-story')).toEqual([

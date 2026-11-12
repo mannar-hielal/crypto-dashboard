@@ -59,7 +59,7 @@ function metrics(over: Partial<RetentionMetricsResponse> = {}): RetentionMetrics
         itemId: 'lesson-02',
         started: 6,
         completed: 5,
-        steps: [{ stepId: 'lesson-02.27', viewers: 5, closedHere: 1 }],
+        steps: [{ stepId: 'lesson-02.49', viewers: 5, closedHere: 1 }],
         rating: { count: 3, average: 4.3 },
       },
       {
@@ -148,7 +148,7 @@ describe('AdminMetricsPage', () => {
     renderPage();
 
     await waitFor(() => expect(screen.getByText('Lesson 3: Who sets the price?')).not.toBeNull());
-    expect(screen.getByText('7. Try it on the real screen')).not.toBeNull();
+    expect(screen.getByText('9. Try it on the real screen')).not.toBeNull();
     expect(screen.getByText(/rated 4.3 \/ 5 by 3/)).not.toBeNull();
   });
 

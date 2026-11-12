@@ -327,3 +327,26 @@
     animation: none;
   }
 }
+
+/* Lesson 3's cold open: the drawn Binance.US wick, dashed (drawn, not to scale) */
+.crashWick {
+  fill: none;
+  stroke: var(--color-brand-red); /* color.red */
+  stroke-width: 2.5;
+  stroke-dasharray: 5 4;
+  stroke-linecap: round;
+}
+
+.crashText {
+  fill: var(--color-brand-red); /* color.red */
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* A buy offer already taken: struck through in shape, not only colour */
+.eaten {
+  fill: transparent;
+  stroke: var(--color-brand-muted); /* color.muted */
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}

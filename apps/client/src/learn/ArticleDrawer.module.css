@@ -949,3 +949,87 @@
 .miningNew {
   color: var(--color-brand-amber); /* color.amber: the new block */
 }
+
+/* ─── Lesson 3's articles (2026-11-12) ─────────────────────────────────────── */
+
+/* A sold offer: struck through (shape, not only colour) */
+.eaten {
+  color: var(--color-brand-muted); /* color.muted */
+  opacity: 0.6;
+}
+
+.range {
+  width: 100%;
+  margin: 4px 0 12px;
+  accent-color: var(--color-brand-purple-dark); /* color.purpleDark */
+}
+
+.candleRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.candleSvg {
+  width: 120px;
+  height: 160px;
+  flex: none;
+}
+
+.candleLabel {
+  fill: var(--color-brand-muted);
+  font-size: 11px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .candleGrow {
+    transition:
+      y 200ms ease-out,
+      height 200ms ease-out;
+  }
+}
+
+.dealList {
+  margin: 0;
+  padding-left: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dealOn {
+  color: var(--color-brand-white);
+}
+
+.dealOff {
+  color: var(--color-brand-muted);
+}
+
+.swingBars {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px; /* fontSize.xs11 */
+}
+
+.swingBars li {
+  display: grid;
+  grid-template-columns: 72px 1fr 80px;
+  align-items: center;
+  gap: 8px;
+}
+
+.swingBar {
+  display: block;
+  height: 10px;
+  border-radius: 9999px;
+  background: var(--color-brand-amber); /* color.amber */
+}
+
+.scamStatement {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--color-brand-purple-dark); /* color.purpleDark */
+  background: var(--color-bg-surface); /* bg.surface */
+  font-size: 15px; /* fontSize.sm */
+}

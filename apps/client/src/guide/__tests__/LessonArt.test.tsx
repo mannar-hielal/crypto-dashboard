@@ -6,15 +6,18 @@ import { GuideAvatar, LessonArt } from '@/guide/LessonArt';
 import { MOODS, type LessonArtId } from '@/guide/lessons';
 
 const ARTS: LessonArtId[] = [
-  'hook',
   'money',
   'notebook',
   'ledger',
   'mailbox',
   'queues',
-  'busy',
   'tesla',
   'etf',
+  'flashCrash',
+  'staircase',
+  'candleAnatomy',
+  'swings',
+  'checkCoin',
 ];
 
 describe('the guides', () => {

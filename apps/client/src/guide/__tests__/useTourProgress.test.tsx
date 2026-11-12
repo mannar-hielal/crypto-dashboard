@@ -328,7 +328,7 @@ describe('useTourProgress', () => {
       trackEvent.mockClear();
       setProgress.mockClear();
       act(() => useLessonStore.getState().start('lesson-02', 4));
-      expect(calls()).toEqual([{ name: 'tour_step', itemId: 'lesson-02', stepId: 'lesson-02.25' }]);
+      expect(calls()).toEqual([{ name: 'tour_step', itemId: 'lesson-02', stepId: 'lesson-02.45' }]);
 
       act(() => useLessonStore.getState().reset());
       expect(calls().some((c) => c.name === 'tour_completed')).toBe(false);
@@ -336,7 +336,7 @@ describe('useTourProgress', () => {
       expect(calls().at(-1)).toEqual({
         name: 'tour_closed',
         itemId: 'lesson-02',
-        stepId: 'lesson-02.25',
+        stepId: 'lesson-02.45',
       });
     });
 
@@ -349,7 +349,7 @@ describe('useTourProgress', () => {
       expect(calls()).toEqual([
         { name: 'tour_closed', itemId: 'lesson-ownership', stepId: 'lesson-ownership.22' },
         { name: 'tour_started', itemId: 'lesson-02' },
-        { name: 'tour_step', itemId: 'lesson-02', stepId: 'lesson-02.25' },
+        { name: 'tour_step', itemId: 'lesson-02', stepId: 'lesson-02.45' },
       ]);
 
       // A start outside a look back closes the lesson it replaces too
@@ -358,7 +358,7 @@ describe('useTourProgress', () => {
       expect(calls()[0]).toEqual({
         name: 'tour_closed',
         itemId: 'lesson-02',
-        stepId: 'lesson-02.25',
+        stepId: 'lesson-02.45',
       });
 
       act(() => useLessonStore.getState().start('lesson-02', 4));
@@ -366,7 +366,7 @@ describe('useTourProgress', () => {
       trackEvent.mockClear();
       act(() => useLessonStore.getState().reset());
       expect(calls()).toEqual([
-        { name: 'tour_closed', itemId: 'lesson-02', stepId: 'lesson-02.25' },
+        { name: 'tour_closed', itemId: 'lesson-02', stepId: 'lesson-02.45' },
       ]);
     });
   });

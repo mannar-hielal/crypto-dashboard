@@ -216,3 +216,74 @@ describe('the mining race', () => {
     expect(status()).toMatch(/Press Try a guess/);
   });
 });
+
+describe('Lesson 3’s article widgets (2026-11-12)', () => {
+  afterEach(() => cleanup());
+
+  it('should sell into a busy and a thin queue, and stop at a limit', () => {
+    render(<ArticleWidget id="eat-the-queue" />);
+    // 6 coins: the thin queue is eaten down to 94
+    expect(status()).toBe(
+      'Thin queue: your 6 coins sold at 100, 99, 97, 97, 94, 94. The price on everyone’s screen is now 94.'
+    );
+    expect(document.body.textContent).toContain('slippage −6.00%');
+    expect(document.body.textContent).toContain('slippage −0.01%'); // the busy queue barely moves
+    const range = document.querySelector<HTMLInputElement>(guideSelector('article.queue.size'))!;
+    fireEvent.change(range, { target: { value: '10' } });
+    expect(range.getAttribute('aria-valuetext')).toBe('Sell 10 coins');
+    expect(status()).toMatch(/now 90\.$/);
+    click('article.queue.limit');
+    expect(
+      document.querySelector(guideSelector('article.queue.limit'))!.getAttribute('aria-pressed')
+    ).toBe('true');
+    expect(status()).toBe(
+      'Thin queue: your 4 coins sold at 100, 99, 97, 97. The price on everyone’s screen is now 97. 6 wait unsold: a limit sets the worst price you accept.'
+    );
+  });
+
+  it('should draw a candle deal by deal, colour it only at the close, then try another minute', () => {
+    render(<ArticleWidget id="candle-builder" />);
+    expect(status()).toBe(
+      'Deal 1 of 6: 64,010. Open 64,010, high 64,010, low 64,010, close so far 64,010.'
+    );
+    for (let i = 0; i < 5; i++) click('article.candle.next');
+    expect(status()).toMatch(/^▲ Closed higher than it opened: green\. That’s all a candle says\./);
+    expect(status()).toMatch(/high 64,120, low 63,940, close 64,090/);
+    click('article.candle.next'); // Try another minute
+    for (let i = 0; i < 5; i++) click('article.candle.next');
+    expect(status()).toMatch(/^▼ Closed lower than it opened: red\./);
+    click('article.candle.reset');
+    expect(status()).toMatch(/^Deal 1 of 6: 64,010/);
+  });
+
+  it('should show the same swing at every size, the loss always with a − sign', () => {
+    render(<ArticleWidget id="swing-sizer" />);
+    expect(status()).toBe('$100.00 became $67.13 at the low: −$32.87 (−32.9%).');
+    click('article.swing.size', '1000');
+    expect(status()).toBe('$1,000.00 became $671.30 at the low: −$328.70 (−32.9%).');
+    click('article.swing.moment', 'close');
+    expect(status()).toBe('$1,000.00 became $856.04 at the close: −$143.96 (−14.4%).');
+    // No gain is ever shown in money
+    expect(document.body.textContent).not.toMatch(/\+\$/);
+  });
+
+  it('should sort red flags from things that prove nothing, each with its why', () => {
+    render(<ArticleWidget id="scam-check" />);
+    expect(status()).toBe('Your call: red flag, or not?');
+    // The three red flags first, each answered right
+    for (let i = 0; i < 3; i++) {
+      click('article.scam.flag', 'red');
+      expect(status()).toMatch(/^✓ Red flag\./);
+      click('article.scam.next');
+    }
+    // "Its price rose 80% this week." called a red flag: shown calmly, a dot, never a red ✗
+    click('article.scam.flag', 'red');
+    expect(status()).toMatch(/^• Not a red flag\. Not a red flag on its own, but no proof either/);
+    expect(document.body.textContent).not.toContain('One is enough to walk away');
+    for (let i = 0; i < 2; i++) {
+      click('article.scam.next');
+      click('article.scam.flag', 'not');
+    }
+    expect(document.body.textContent).toContain('3 red flags. One is enough to walk away.');
+  });
+});

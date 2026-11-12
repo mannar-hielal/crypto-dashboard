@@ -72,14 +72,15 @@ describe('LessonSheet', () => {
     expect(sheet()).toBeNull();
   });
 
-  it('should show the first card with both guides talking, and step through the cards', () => {
+  it('should open Lesson 3 on the flash crash drawn from our own candles, and step through the cards', () => {
     at(0);
     renderSheet();
-    expect(sheet()!.textContent).toContain('Who decides?');
-    expect(sheet()!.textContent).toContain('Pulin');
-    expect(sheet()!.textContent).toContain('Berwyn');
+    expect(sheet()!.textContent).toContain('One bitcoin for $8,200');
+    // No photo (owner 2026-11-12): Bybit's minute candles, with Binance.US's wick drawn
+    expect(sheet()!.querySelector('[data-lesson-art="flashCrash"]')).not.toBeNull();
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('1');
 
+    fireEvent.keyDown(sheet()!, { key: 'Enter' }); // the beats in at once
     fireEvent.click(nextBtn()!);
     expect(useLessonStore.getState().screen).toBe(1);
     expect(sheet()!.textContent).toContain(lesson.cards[1].title);
@@ -120,7 +121,7 @@ describe('LessonSheet', () => {
   });
 
   it('should step aside for the tour, then come back on the questions when it ends', () => {
-    at(6); // try it
+    at(8); // try it (the moment and two cards come before it)
     renderSheet();
     fireEvent.click(screen.getByText('Show me'));
 
@@ -130,23 +131,23 @@ describe('LessonSheet', () => {
 
     act(() => useTourStore.getState().close()); // skipped, closed or finished: the same
     expect(useLessonStore.getState().inTour).toBe(false);
-    expect(useLessonStore.getState().screen).toBe(7);
+    expect(useLessonStore.getState().screen).toBe(9);
     expect(sheet()!.textContent).toContain('Check yourself');
   });
 
   it('should offer no tour on a phone, only a way on', () => {
     desktop = false;
-    at(6);
+    at(8);
     renderSheet();
     expect(screen.queryByText('Show me')).toBeNull();
     expect(sheet()!.textContent).toContain('larger screen');
     fireEvent.click(screen.getByText('Continue'));
-    expect(useLessonStore.getState().screen).toBe(7);
+    expect(useLessonStore.getState().screen).toBe(9);
   });
 
   it('should save the note to the journal on the last screen, and say so', async () => {
     addJournalNote.mockResolvedValue(null);
-    at(11);
+    at(13);
     renderSheet();
     const save = screen.getByText('Save to journal') as HTMLButtonElement;
     expect(save.disabled).toBe(true);
@@ -160,12 +161,12 @@ describe('LessonSheet', () => {
     );
     expect(addJournalNote).toHaveBeenCalledWith('How fees work');
     // The lesson stays on its last screen: the way on is the learner's choice
-    expect(useLessonStore.getState().screen).toBe(11);
+    expect(useLessonStore.getState().screen).toBe(13);
   });
 
   it('should say so when the note cannot be saved, and still let the learner go on', async () => {
     addJournalNote.mockResolvedValue('Network error');
-    at(11);
+    at(13);
     renderSheet();
     fireEvent.change(document.querySelector('[data-guide="lesson.note"]')!, {
       target: { value: 'x' },
@@ -181,7 +182,7 @@ describe('LessonSheet', () => {
 
   it('should save a journal line typed but not saved when the learner goes on', async () => {
     addJournalNote.mockResolvedValue(null);
-    at(11);
+    at(13);
     renderSheet();
     fireEvent.change(document.querySelector('[data-guide="lesson.note"]')!, {
       target: { value: ' Fees come off the top ' },
@@ -193,7 +194,7 @@ describe('LessonSheet', () => {
 
   it('should not save a journal line twice', async () => {
     addJournalNote.mockResolvedValue(null);
-    at(11);
+    at(13);
     renderSheet();
     fireEvent.change(document.querySelector('[data-guide="lesson.note"]')!, {
       target: { value: 'Once' },
@@ -208,7 +209,7 @@ describe('LessonSheet', () => {
   });
 
   it('should end on the ribbon, the journal and an optional rating, and finish', () => {
-    at(11);
+    at(13);
     renderSheet();
     expect(document.querySelector('[data-guide="lesson.finish-line"]')).not.toBeNull();
     expect(document.querySelector('[data-guide="lesson.note"]')).not.toBeNull();
@@ -223,7 +224,7 @@ describe('LessonSheet', () => {
   });
 
   it('should finish and start the next tour from the close', () => {
-    at(11);
+    at(13);
     renderSheet();
     fireEvent.click(screen.getByText('Buy your first coin'));
     expect(useLessonStore.getState().completed['lesson-02']).toBe(true);
@@ -277,7 +278,7 @@ describe('LessonSheet', () => {
   });
 
   it('should open the article from a peek, wait behind it, and come back on the same card', () => {
-    at(1); // What a price is
+    at(1); // Two queues meet
     renderSheet();
     fireEvent.click(
       document.querySelector('[data-guide="lesson.term"][data-guide-key="last-price"]')!
@@ -293,11 +294,11 @@ describe('LessonSheet', () => {
     expect(useLessonStore.getState().activeId).toBe('lesson-02');
 
     act(() => useArticleStore.getState().close());
-    expect(sheet()!.textContent).toContain('What a price is');
+    expect(sheet()!.textContent).toContain('Two queues meet');
   });
 
   it('should keep a history card’s drawn picture when the chart can’t load', async () => {
-    at(3); // Tesla
+    at(4); // Tesla
     renderSheet();
     await waitFor(() => expect(getCandles).toHaveBeenCalled());
     expect(getCandles.mock.calls[0]).toEqual([
@@ -312,19 +313,33 @@ describe('LessonSheet', () => {
     expect(sheet()!.querySelector('[data-mood="thinking"]')).not.toBeNull();
   });
 
-  it('should list what the learner can now do, each opening its article at the section', () => {
-    at(10); // the summary: Lesson 3 has no recap yet
+  it('should sum Lesson 3 up in four lines, each opening its article at the section', () => {
+    at(12); // the summary (rebuilt 2026-11-12: a recap, no longer "You can now")
     renderSheet();
-    expect(sheet()!.textContent).toContain('You can now');
-    expect(sheet()!.textContent).toContain('Read a candle’s open and close.');
+    expect(document.querySelector('#lesson-heading')!.textContent).toBe('Who sets the price?');
+    expect(sheet()!.textContent).not.toContain('You can now');
+    expect(document.querySelectorAll('[data-guide="lesson.recap"]')).toHaveLength(4);
+    expect(document.querySelector('[data-guide="lesson.highlight"]')!.textContent).toContain(
+      'The price is people'
+    );
     fireEvent.click(
-      document.querySelector('[data-guide="lesson.can-do"][data-guide-key="candles"]')!
+      document.querySelector('[data-guide="lesson.recap"][data-guide-key="volatility"]')!
     );
     expect(useArticleStore.getState()).toMatchObject({
-      openId: 'exchange-price',
-      section: 'candles',
-      from: { lesson: 'lesson-02', screen: 10 },
+      openId: 'price-swings',
+      section: 'volatility',
+      from: { lesson: 'lesson-02', screen: 12 },
     });
+  });
+
+  it('should put the moment after the Tesla card and go on teaching after it', () => {
+    at(5);
+    renderSheet();
+    expect(sheet()!.textContent).toContain('Your call');
+    fireEvent.click(option(getLesson('lesson-02').moment.correct));
+    fireEvent.click(nextBtn()!);
+    expect(useLessonStore.getState().screen).toBe(6);
+    expect(sheet()!.textContent).toContain('Big swings, both ways');
   });
 
   // ── Lesson 1's cold open and the Next button (owner's visual Q&A 2026-10-25) ───
@@ -489,7 +504,7 @@ describe('LessonSheet', () => {
   });
 
   it('should show a summary with no genesis at once', () => {
-    at(10); // Lesson 3
+    at(12); // Lesson 3
     renderSheet();
     expect(document.querySelector('[data-guide="lesson.genesis"]')).toBeNull();
     expect(nextBtn()!.dataset.ready).toBe('true');
@@ -606,7 +621,7 @@ describe('LessonSheet', () => {
   it('should hold every way out while a journal save is on its way, then do the first one asked', async () => {
     let land: (v: null) => void = () => undefined;
     addJournalNote.mockImplementation(() => new Promise<null>((resolve) => (land = resolve)));
-    at(11);
+    at(13);
     renderSheet();
     fireEvent.change(document.querySelector('[data-guide="lesson.note"]')!, {
       target: { value: 'Slow line' },
@@ -631,7 +646,7 @@ describe('LessonSheet', () => {
   });
 
   it('should keep Tab inside the sheet, and leave Esc to the map when it’s open over it', () => {
-    at(11);
+    at(13);
     renderSheet();
     const sheetEl = document.querySelector<HTMLElement>('[data-guide="lesson.sheet"]')!;
     const focusable = [
