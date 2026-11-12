@@ -65,6 +65,11 @@ describe('CheckpointSheet', () => {
       )!
     );
     expect(screen.getByText(/Right\./)).toBeTruthy();
+    // The shared question view opens the Why on the learner's own choice here too (#275)
+    const q = checkpoint.questions[0];
+    expect(document.querySelector(guideSelector('lesson.picked'))!.textContent).toBe(
+      `You picked “${q.options[q.correct]}”.`
+    );
     expect(next.disabled).toBe(false);
   });
 

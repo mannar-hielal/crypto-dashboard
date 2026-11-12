@@ -4591,6 +4591,11 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
   the custody card says the app's bitcoin is practice money it holds; each close has a teaser above the way on
   (`lesson.teaser`, not on a look back); every Why opens with "You picked “…”." (`lesson.picked`).
 - Review: `guided-learning-topics/06-finelo-comparison.md` (the owner's folder, not committed).
+- Code review of #275: the custody line no longer says the app holds your bitcoin (it holds none; the balance is
+  virtual, as the Terms say): "Here, nothing is real bitcoin: your balance is virtual practice money…"; "You picked"
+  is set apart in italics (its muted colour matched the Why around it); a test keeps every teaser on a lesson whose
+  way on is a lesson; the checkpoint test checks "You picked" too (it shares the question view); the manual steps
+  follow the new copy.
 
 ### 2026-11-12 — Lesson 2 opens on the real photo
 

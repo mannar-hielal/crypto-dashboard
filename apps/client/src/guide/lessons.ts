@@ -580,7 +580,7 @@ const lessonOwnership: Lesson = {
       title: 'Who holds your key?',
       art: 'custody',
       presenter: { who: 'tick', mood: 'thinking', pose: 'stand' },
-      text: 'You don’t have to hold the key yourself. Leave bitcoin on an exchange and it holds the key for you: that’s [[custody]]. It’s handy, and it’s how most people start. But your bitcoin is then only as safe as the company. When Mt. Gox failed in 2014, its customers’ bitcoin went with it. Here, your bitcoin is practice money the app holds: custody too, with nothing at risk while you learn.',
+      text: 'You don’t have to hold the key yourself. Leave bitcoin on an exchange and it holds the key for you: that’s [[custody]]. It’s handy, and it’s how most people start. But your bitcoin is then only as safe as the company. When Mt. Gox failed in 2014, its customers’ bitcoin went with it. Here, nothing is real bitcoin: your balance is virtual practice money, so nothing is at risk while you learn.',
     },
   ],
   moment: {

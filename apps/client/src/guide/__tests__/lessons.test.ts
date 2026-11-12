@@ -254,9 +254,20 @@ describe('lessons', () => {
       expect(JSON.stringify(card), title).toMatch(/Leo/);
     }
     // A bridge to this app, and a teaser on each close
-    expect(l2.cards.at(-1)!.text).toMatch(/practice money the app holds/);
+    expect(l2.cards.at(-1)!.text).toMatch(
+      /nothing is real bitcoin: your balance is virtual practice money/
+    );
+    // A paper-trading app holds no bitcoin: the card must never claim custody of it (review #275)
+    expect(l2.cards.at(-1)!.text).not.toMatch(/the app holds/);
     expect(l1.teaser).toMatch(/^You’ve seen the problem\. Next/);
     expect(l2.teaser).toMatch(/^Next: who decides/);
+  });
+
+  it('should only tease a next lesson that the close really offers', () => {
+    // A teaser promises the next lesson, so it needs a lesson to go on to (review #275)
+    for (const l of LESSONS) {
+      if (l.teaser) expect(l.next?.kind, l.id).toBe('lesson');
+    }
   });
 
   it('should start every lesson with an "Unlock" button on its first card', () => {
