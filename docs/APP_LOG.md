@@ -4584,6 +4584,20 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
 - **Tests:** `FinishLine.test` (the run, a tap, reduced motion), the sheet (Lesson 1's close, a close with no
   recap, the button order), the lesson rules (recap lines open real sections; Satoshi only in the recap).
 
+### 2026-11-12 — The Finelo content gaps closed
+
+- The owner's choices on what Finelo's first two lessons teach and ours didn't:
+  - **Trading basics in the buy/sell tours:** "Buy your first coin" now opens on the two choices (Buy if you expect
+    a rise, Sell to get out) and names buying for a rise **going long**; its last step says you now hold a
+    **position**, $100 of Bitcoin long, only on paper until you **close** it by selling. "Sell it and read the result"
+    says selling everything **closes your position**, and its result step that the result is now real and when you'd
+    have **taken a profit**. Spot is long-only, so going short stays for a later lesson. No step was added (tours stay
+    at five steps), so the funnel's step ids don't move.
+  - **Lesson 2 words:** **decentralized** (tappable) on the Bitcoin card; **block** and **hash** in plain words on
+    the ledger card ("Each page, called a block, is sealed … with a fingerprint called a hash"); **mining** (tappable,
+    "miners") on the stamp card. _Many notebooks, no Nora_ (the network article) now links back to the Bitcoin card too.
+  - **Beyond Bitcoin** is planned, not built: `guided-learning-topics/07-beyond-bitcoin-plan.md`.
+
 ### 2026-11-12 — The Finelo review's small wins (S items)
 
 - Lesson 1's 2008 line names Lehman Brothers; Lesson 2's cold open ends on its objective ("In the next 8 minutes: …",

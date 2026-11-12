@@ -134,7 +134,7 @@ const buyFirstCoin: Tour = {
         action: 'observe',
         anchor: 'trade.side.buy',
         explain:
-          'You are on Spot: you buy the coin itself. Buy shows the price you pay right now — the lowest price a seller accepts.',
+          'Every trade starts with two choices: Buy if you expect the price to rise, Sell to get out. Buying to gain from a rise is called going long. You are on Spot: you buy the coin itself. Buy shows the price you pay right now — the lowest price a seller accepts.',
         liveNote:
           'Sell is a little lower than Buy; that gap is the spread, a small cost of every trade.',
       },
@@ -166,7 +166,11 @@ const buyFirstCoin: Tour = {
       { suggest: '100', missingHint: FORM_HINT }
     ),
     fromDraft(
-      submit({ explain: 'Place the order. It fills immediately, and the amount field clears.' }),
+      // Owner 2026-11-12 (the Finelo gaps): what you hold now, and that it's only on paper until closed
+      submit({
+        explain:
+          'Place the order. It fills immediately and the amount field clears. You now hold a position: $100 of Bitcoin, long. Its profit or loss is only on paper until you close it by selling, in the next tour.',
+      }),
       {
         doneWhenEmpty: 'trade.amount',
         missingHint: FORM_HINT,
@@ -198,13 +202,19 @@ const sellAndReview: Tour = {
       text: 'Press Sell to put all of your Bitcoin into the order form, ready to sell.',
       missingHint: 'Open the Assets tab to find your Bitcoin.',
     },
-    fromDraft(submit({ explain: 'Place the sell order. It fills at the Sell price.' }), {
-      doneWhenEmpty: 'trade.amount',
-      missingHint: FORM_HINT,
-    }),
+    fromDraft(
+      submit({
+        explain:
+          'Place the sell order. Selling everything you bought closes your position. It fills at the Sell price.',
+      }),
+      {
+        doneWhenEmpty: 'trade.amount',
+        missingHint: FORM_HINT,
+      }
+    ),
     {
       kind: 'observe',
-      text: 'Done. You paid a 0.1% fee when you bought and again when you sold, so unless the price moved in your favour you finish a little behind. A small loss is normal: this is what practice is for.',
+      text: 'Done: your position is closed, so the result is now real. Had the price risen by more than the fees, you’d have taken a profit. You paid a 0.1% fee when you bought and again when you sold, so unless the price moved in your favour you finish a little behind. A small loss is normal: this is what practice is for.',
       nextLabel: 'One quick question',
     },
     {
