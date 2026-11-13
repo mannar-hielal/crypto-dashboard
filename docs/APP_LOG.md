@@ -4584,14 +4584,17 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
 - **Tests:** `FinishLine.test` (the run, a tap, reduced motion), the sheet (Lesson 1's close, a close with no
   recap, the button order), the lesson rules (recap lines open real sections; Satoshi only in the recap).
 
-### 2026-11-13 — A reuse that fails gives its cap slot back (review on #289)
+### 2026-11-13 — A reuse that fails before its session is minted gives its cap slot back (reviews on #289, #293)
 
-The reuse cap (4) was counted before the fresh session was minted. A transient DB error after the count (the user
-lookup, the insert, the post-mint check) answered 500, and the client's retry of that 500 found one slot fewer: on a
-flaky link the last retry could get a 401 and sign the learner out. The re-issue now runs in a `try`; on an error a
-reuse gives its slot back (`reuseCount` decrement, never below 0) and the error still answers the generic 500. A
-first rotation never touches the count. Best effort: if the refund itself fails it's logged and the cap stays on
-the strict side. Tests in `auth.test.ts` ("should give the cap slot back…", "should not touch the reuse count…").
+The reuse cap (4) was counted before the fresh session was minted. A transient DB error after the count answered
+500, and the client's retry of that 500 found one slot fewer: on a flaky link the last retry could get a 401 and sign
+the learner out. Now a reuse whose **user lookup** fails gives its slot back (`reuseCount` decrement, never below 0),
+and the error still answers the generic 500. The lookup is the one step known to come before any token exists. From
+the token insert on, the slot stays spent: a failure there (even a connection reset after the insert committed) may
+have left a live token, and refunding it would let a run of failures mint more than the cap (reviews on #293). A first
+rotation never touches the count. Best effort: if the refund itself fails it's logged and the cap stays on the strict
+side. Tests in `auth.test.ts`: "should give the cap slot back…", "should keep the cap slot spent when a reuse fails
+after its session was minted", "…when the token insert fails", "should not touch the reuse count…".
 
 ### 2026-11-13 — A lost session-refresh reply recovers: the server's reuse window
 

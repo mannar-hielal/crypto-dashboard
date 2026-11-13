@@ -109,7 +109,7 @@ supply-chain policy, secrets management, container hardening — see [`security.
   cookie alone (a faster tab may have set a newer valid one). After the window a replay reads as
   theft: that sign-in's family is deleted and a `warn` logged; other devices stay signed in (the
   accepted trade-off in [`security.md`](./security.md)). Each rotated token is served again at most
-  `REFRESH_REUSE_CAP` (4: the client's 3 reconnect retries and a tab; a test holds it above `SESSION_RECONNECT_TRIES`) times, counted atomically in the database; a reuse that then fails with a 500 gives its slot back, so the client's retry is still served. Every token carries its
+  `REFRESH_REUSE_CAP` (4: the client's 3 reconnect retries and a tab; a test holds it above `SESSION_RECONNECT_TRIES`) times, counted atomically in the database; a reuse that fails with a 500 before its session is minted (its user lookup) gives its slot back, so the client's retry is still served; from the token insert on, the slot stays spent. Every token carries its
   sign-in's `familyId` (set at login, kept on rotation): a logout deletes that family, so no token of
   the session outlives it and other devices stay signed in. A refresh re-checks, after minting, that
   the token it rotated still exists, and takes the new one back if a logout landed meanwhile. The
