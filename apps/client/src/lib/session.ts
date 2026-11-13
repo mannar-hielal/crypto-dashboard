@@ -134,9 +134,10 @@ export async function restoreSession(afterReconnect = 0): Promise<void> {
       retryWhenOnline();
       return;
     }
-    // Just back online and the request never got through: the network may not be ready yet.
-    // A refusal from the server (an HTTP error) signs out at once; only a failed fetch retries
-    if (afterReconnect > 0 && afterReconnect <= RECONNECT_TRIES && err instanceof TypeError) {
+    // Just back online and the request didn't get a real answer: the network may not be ready yet.
+    // Only a refusal (an HTTP 4xx, which the SDK carries as `status`) signs out at once; a failed
+    // fetch, a timeout (`TimeoutError`), a 5xx or a proxy's HTML error page retries (review on #284)
+    if (afterReconnect > 0 && afterReconnect <= RECONNECT_TRIES && !isRefusal(err)) {
       setTimeout(() => void restoreSession(afterReconnect + 1), 1000 * 2 ** (afterReconnect - 1));
       return;
     }
@@ -144,6 +145,12 @@ export async function restoreSession(afterReconnect = 0): Promise<void> {
     setAwaitingNetwork(false);
     setLoading(false);
   }
+}
+
+/** The server answered and said no (a 4xx): the session is really over */
+export function isRefusal(err: unknown): boolean {
+  const status = (err as { status?: unknown } | null)?.status;
+  return typeof status === 'number' && status >= 400 && status < 500;
 }
 
 /** The browser reports no connection at all (not an API it can't reach) */
