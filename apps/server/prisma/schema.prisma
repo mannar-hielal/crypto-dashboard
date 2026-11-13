@@ -121,6 +121,8 @@ model RefreshToken {
 
   @@index([userId])
   @@index([familyId])
+  // The daily purge deletes by expiry (review on #288)
+  @@index([expiresAt])
 }
 
 // 🔐 One-time use. Expires in 1 hour. Marked usedAt after consumption.

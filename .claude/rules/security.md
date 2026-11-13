@@ -32,10 +32,9 @@ owner accepted a narrower rule so that phones on flaky links (the PWA) don't sig
   thief's chain included, and logged at `warn` with the `userId`. The user's other devices stay
   signed in. Every session is still revoked by the explicit flows: password change or reset, email
   change, account deletion.
-- **Retention:** rotated rows are kept for `ROTATED_TOKEN_RETENTION_MS`, 7 days, the refresh token's
-  own lifetime. A stolen token is caught for as long as it could ever be used. That's about 670 rows
-  a week per active user, all purged within the week; lookups use the unique hash and the family
-  index. Lowering it shortens the theft signal: a replay after it gets a plain 401.
+- **Retention:** rotated rows are kept until they expire, 7 days, the refresh token's own lifetime. A stolen token is caught for as long as it could ever be used. That's about 670 rows
+  a week per active user, all purged within the week, in batches by the indexed `expiresAt`; lookups use the unique hash
+  and the family index. Lowering it shortens the theft signal: a replay after it gets a plain 401.
 - **Why:** with the reconnect retries the PWA needs, a reuse is far likelier to be a lost reply than
   theft. Revoking every device on it would punish the common case. The mechanics are in
   [`web.md`](./web.md) (Error handling) and `apps/server/src/routes/auth/index.ts`.

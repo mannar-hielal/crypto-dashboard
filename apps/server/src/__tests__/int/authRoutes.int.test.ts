@@ -4,10 +4,7 @@ import { createHash } from 'node:crypto';
  * concurrent requests, where the unit tests can only mock what `deleteMany` returns.
  */
 
-import {
-  purgeStaleRefreshTokens,
-  ROTATED_TOKEN_RETENTION_MS,
-} from '../../services/RefreshTokens.js';
+import { purgeStaleRefreshTokens } from '../../services/RefreshTokens.js';
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../../app.js';
@@ -194,7 +191,7 @@ describe('/api/auth/refresh reuse cap and logout scope on Postgres (review on #2
 });
 
 describe('purgeStaleRefreshTokens on Postgres', () => {
-  it('removes expired rows and rotated ones past their retention; recent rotated ones stay, for the theft signal', async () => {
+  it('removes expired rows, rotated or not; rotated rows stay until they expire, for the theft signal', async () => {
     const { userId, token } = await register();
     const first = refreshCookie(await refresh(token)); // the registration token, rotated now
     expect(first).toBeDefined();
@@ -217,19 +214,19 @@ describe('purgeStaleRefreshTokens on Postgres', () => {
     });
     await db.refreshToken.create({
       data: {
-        tokenHash: 'rotated-past-retention',
+        tokenHash: 'rotated-and-expired',
         userId,
         familyId: 'old',
-        expiresAt: new Date(Date.now() + 86_400_000),
-        rotatedAt: new Date(Date.now() - ROTATED_TOKEN_RETENTION_MS - 1000),
+        expiresAt: new Date(Date.now() - 1000),
+        rotatedAt: new Date(Date.now() - 2000),
       },
     });
-    // The expired one, and the rotated one past its retention (a deliberate 7 days)
+    // Expired rows go, rotated or not; rotated rows stay until they expire (the theft signal)
     expect(await purgeStaleRefreshTokens(db)).toBe(2);
     const left = await db.refreshToken.findMany({ where: { userId } });
     expect(left.map((r) => r.tokenHash)).toContain('stale-rotated');
     expect(left.map((r) => r.tokenHash)).not.toContain('expired');
-    expect(left.map((r) => r.tokenHash)).not.toContain('rotated-past-retention');
+    expect(left.map((r) => r.tokenHash)).not.toContain('rotated-and-expired');
     expect(left).toHaveLength(3); // the live token, the one rotated a moment ago, the older rotated one
   });
 });

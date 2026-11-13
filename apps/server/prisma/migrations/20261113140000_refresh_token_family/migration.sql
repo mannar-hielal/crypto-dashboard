@@ -13,3 +13,6 @@ ALTER COLUMN "familyId" SET DEFAULT (gen_random_uuid())::text;
 
 -- CreateIndex
 CREATE INDEX "RefreshToken_familyId_idx" ON "RefreshToken"("familyId");
+
+-- The daily purge deletes by expiry, on a table that now keeps rotated rows (review on #288)
+CREATE INDEX "RefreshToken_expiresAt_idx" ON "RefreshToken"("expiresAt");
