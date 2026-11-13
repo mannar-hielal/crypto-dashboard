@@ -178,10 +178,13 @@ describe('msUntilExpiry()', () => {
     }
   });
 
-  it('should tell a refusal (4xx) from everything else', () => {
+  it('should tell a refusal (401 / 403) from everything else', () => {
     expect(isRefusal(Object.assign(new Error('x'), { status: 401 }))).toBe(true);
     expect(isRefusal(Object.assign(new Error('x'), { status: 403 }))).toBe(true);
     expect(isRefusal(Object.assign(new Error('x'), { status: 503 }))).toBe(false);
+    // Temporary: rate limited, a proxy's timeout (review on #285)
+    expect(isRefusal(Object.assign(new Error('x'), { status: 429 }))).toBe(false);
+    expect(isRefusal(Object.assign(new Error('x'), { status: 408 }))).toBe(false);
     expect(isRefusal(new TypeError('Failed to fetch'))).toBe(false);
     expect(isRefusal(new DOMException('t', 'TimeoutError'))).toBe(false);
     expect(isRefusal(null)).toBe(false);
