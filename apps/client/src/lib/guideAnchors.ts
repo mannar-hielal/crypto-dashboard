@@ -266,6 +266,7 @@ export const GUIDE_ANCHORS = [
   'learn.card.dismiss',
   'learn.article',
   'learn.article.open',
+  'session.retry',
   'path.drawer',
   'path.close',
   'path.progress',

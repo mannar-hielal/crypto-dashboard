@@ -25,6 +25,7 @@ describe('ProtectedRoute, opened offline (PWA readiness, review on #283)', () =>
       user: null,
       isLoading: false,
       awaitingNetwork: false,
+      reconnectStalled: false,
     });
   });
   afterEach(() => {
@@ -44,6 +45,14 @@ describe('ProtectedRoute, opened offline (PWA readiness, review on #283)', () =>
     useAuthStore.setState({ awaitingNetwork: true });
     renderAt();
     expect(screen.getByRole('status').textContent).toBe('Reconnecting…');
+  });
+
+  it('should offer Try again, not /login, when the reconnect stalled (review on #290)', () => {
+    useAuthStore.setState({ awaitingNetwork: true, reconnectStalled: true });
+    renderAt();
+    expect(screen.queryByText('login')).toBeNull();
+    expect(screen.getByRole('status').textContent).toContain('Your session is probably fine');
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();
   });
 
   it('should send a signed-out visitor to /login as before', () => {

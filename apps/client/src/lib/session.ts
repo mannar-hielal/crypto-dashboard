@@ -106,19 +106,18 @@ const RECONNECT_TRIES = SESSION_RECONNECT_TRIES;
 /** Kept clear of the window's edge: clocks and proxies add a little */
 const RETRY_MARGIN_MS = 2_000;
 
-/**
- * When the reconnect retries must stop: a retry has to reach the server inside the reuse window,
- * which starts no earlier than the first attempt, so it must start a whole request timeout before
- * the window ends (review on #289). Set when the first attempt after reconnecting starts
- */
-let retryDeadline = 0;
-
 /** Whether a retry starting after `delayMs` still reaches the server inside the reuse window */
 export function retryFitsWindow(now: number, delayMs: number, deadline: number): boolean {
   return now + delayMs <= deadline;
 }
 
-/** The deadline for a reconnect that starts its first attempt at `startedAt` */
+/**
+ * When a reconnect's retries stop: a whole request timeout (and a margin) before the reuse window
+ * would end if it began at the first attempt. Best effort (reviews on #289, #290): the server's
+ * window starts at its rotation, which may have come before the connection dropped, so a retry can
+ * still land late; the deadline keeps that rare, and running out of retries never signs the learner
+ * out (they get Try again instead)
+ */
 export function reconnectDeadline(startedAt: number): number {
   return startedAt + SESSION_REUSE_WINDOW_MS - SDK_REQUEST_TIMEOUT_MS - RETRY_MARGIN_MS;
 }
@@ -128,9 +127,13 @@ export function reconnectDeadline(startedAt: number): number {
  * the user. A signed-out visitor (no cookie) gets `null` from refresh — no 401, no /me call.
  * Any failure just ends the loading state so ProtectedRoute can redirect to /login.
  */
-export async function restoreSession(afterReconnect = 0): Promise<void> {
-  const { setAuth, setLoading, setAwaitingNetwork } = useAuthStore.getState();
-  if (afterReconnect === 1) retryDeadline = reconnectDeadline(Date.now());
+export async function restoreSession(
+  afterReconnect = 0,
+  // Each reconnect carries its own deadline, so a second reconnect never moves another's (review
+  // on #290)
+  deadline: number = afterReconnect > 0 ? reconnectDeadline(Date.now()) : 0
+): Promise<void> {
+  const { setAuth, setLoading, setAwaitingNetwork, setReconnectStalled } = useAuthStore.getState();
   // A sign-out made while offline: finish it, and stay signed out (still offline: try next time)
   if (hasPendingSignOut()) {
     await signOutOnServer();
@@ -160,22 +163,25 @@ export async function restoreSession(afterReconnect = 0): Promise<void> {
       return;
     }
     // Back online, and /health already answered, so the network works (`reconnect`): retry a few
-    // times, 1, 2 and 4 s apart, on anything but a refusal (401 / 403). Safe inside the server's
-    // reuse window (owner 2026-11-13): /refresh serves a just-rotated token again for 30 s, so a
-    // retry after a lost reply gets a fresh token. Past the window it would read as theft and end
-    // the sign-in, so a retry is only sent if it reaches the server in time (review on #289)
+    // times, 1, 2 and 4 s apart, on anything but a refusal (401 / 403). Inside the server's reuse
+    // window (owner 2026-11-13) a retry after a lost reply gets a fresh token; past it a retry
+    // would read as theft and end the sign-in, so retries stop at the deadline (best effort)
     const delay = 1000 * 2 ** (afterReconnect - 1);
-    if (
-      afterReconnect > 0 &&
-      afterReconnect <= RECONNECT_TRIES &&
-      isSafeToRetry(err) &&
-      retryFitsWindow(Date.now(), delay, retryDeadline)
-    ) {
-      setTimeout(() => void restoreSession(afterReconnect + 1), delay);
+    if (afterReconnect > 0 && isSafeToRetry(err)) {
+      if (afterReconnect <= RECONNECT_TRIES && retryFitsWindow(Date.now(), delay, deadline)) {
+        setTimeout(() => void restoreSession(afterReconnect + 1, deadline), delay);
+        return;
+      }
+      // Out of safe retries, and the cookie may well still be valid: never a trip to /login.
+      // Protected pages offer Try again (owner 2026-11-13, review on #290)
+      setReconnectStalled(true);
+      setLoading(false);
       return;
     }
-    // Refresh rejected (expired / revoked cookie) or /me failed — stay signed out.
+    // Refresh rejected (expired / revoked cookie) or /me failed — stay signed out (to /login, so
+    // no stalled Try again either)
     setAwaitingNetwork(false);
+    setReconnectStalled(false);
     setLoading(false);
   }
 }
@@ -212,12 +218,19 @@ async function reconnect(probe = 0): Promise<void> {
       setTimeout(() => void reconnect(probe + 1), 1000 * 2 ** probe);
       return;
     }
-    const { setAwaitingNetwork, setLoading } = useAuthStore.getState();
-    setAwaitingNetwork(false);
+    // The API never answered: offer Try again rather than sign out (the cookie is untouched)
+    const { setReconnectStalled, setLoading } = useAuthStore.getState();
+    setReconnectStalled(true);
     setLoading(false);
     return;
   }
   await restoreSession(1);
+}
+
+/** The learner's Try again after a stalled reconnect: probe, then one refresh with a new deadline */
+export function retryReconnect(): void {
+  useAuthStore.getState().setReconnectStalled(false);
+  void reconnect();
 }
 
 /** The browser reports no connection at all (not an API it can't reach) */

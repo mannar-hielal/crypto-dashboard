@@ -7,6 +7,7 @@ import { authApi } from '@crypto-dashboard/sdk';
 import {
   isOffline,
   isSafeToRetry,
+  retryReconnect,
   reconnectDeadline,
   retryFitsWindow,
   msUntilExpiry,
@@ -151,7 +152,7 @@ describe('msUntilExpiry()', () => {
     }
   });
 
-  it('should sign out like an outage when the API never answers after reconnecting', async () => {
+  it('should offer Try again, not sign out, when the API never answers after reconnecting (review on #290)', async () => {
     vi.useFakeTimers();
     try {
       useAuthStore.setState({ accessToken: null, user: null, isLoading: true });
@@ -164,7 +165,7 @@ describe('msUntilExpiry()', () => {
       await vi.advanceTimersByTimeAsync(1000 + 2000 + 4000 + 8000);
       expect(health).toHaveBeenCalledTimes(5);
       expect(refresh).toHaveBeenCalledTimes(1); // never sent while the line was dead
-      expect(useAuthStore.getState()).toMatchObject({ isLoading: false, awaitingNetwork: false });
+      expect(useAuthStore.getState()).toMatchObject({ isLoading: false, reconnectStalled: true });
       onLine.mockRestore();
     } finally {
       vi.useRealTimers();
@@ -208,7 +209,7 @@ describe('msUntilExpiry()', () => {
     expect(retryFitsWindow(start + 17_500, 1000, deadline)).toBe(false);
   });
 
-  it('should send no retry that lands past the window when every try runs to its timeout', async () => {
+  it('should send no retry past its deadline when every try runs to its timeout, then offer Try again', async () => {
     vi.useFakeTimers();
     try {
       useAuthStore.setState({
@@ -218,12 +219,6 @@ describe('msUntilExpiry()', () => {
         awaitingNetwork: true,
       });
       // Each refresh hangs to the SDK's 10 s timeout, then fails
-      refresh.mockImplementation(
-        () =>
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new DOMException('signal timed out', 'TimeoutError')), 10_000)
-          )
-      );
       const started = Date.now();
       const starts: number[] = [];
       refresh.mockImplementation(() => {
@@ -238,11 +233,26 @@ describe('msUntilExpiry()', () => {
       expect(starts).toEqual([0, 11_000]);
       // Every request that was sent reached the server inside the 30 s window
       for (const t of starts) expect(t + 10_000).toBeLessThanOrEqual(30_000);
-      expect(useAuthStore.getState()).toMatchObject({ isLoading: false, awaitingNetwork: false });
+      expect(useAuthStore.getState()).toMatchObject({ isLoading: false, reconnectStalled: true });
     } finally {
       refresh.mockReset();
       vi.useRealTimers();
     }
+  });
+
+  it('should try again on the learner’s tap: probe, then one refresh, and sign them back in', async () => {
+    useAuthStore.setState({
+      accessToken: null,
+      user: null,
+      isLoading: false,
+      reconnectStalled: true,
+    });
+    refresh.mockResolvedValueOnce({ accessToken: 'again' } as never);
+    me.mockResolvedValueOnce({ user: { id: 'u1' } } as never);
+    retryReconnect();
+    expect(useAuthStore.getState().reconnectStalled).toBe(false);
+    await vi.waitFor(() => expect(useAuthStore.getState().accessToken).toBe('again'));
+    expect(health).toHaveBeenCalled();
   });
 
   it('should retry anything but a refusal (401 / 403)', () => {
@@ -254,7 +264,7 @@ describe('msUntilExpiry()', () => {
     expect(isSafeToRetry(Object.assign(new Error('x'), { status: 403 }))).toBe(false);
   });
 
-  it('should give up after three retries, and sign out at once on a 401', async () => {
+  it('should stop after three retries with Try again, and sign out at once on a 401', async () => {
     vi.useFakeTimers();
     try {
       useAuthStore.setState({
@@ -267,13 +277,14 @@ describe('msUntilExpiry()', () => {
       await restoreSession(1);
       await vi.advanceTimersByTimeAsync(1000 + 2000 + 4000);
       expect(refresh).toHaveBeenCalledTimes(4);
-      expect(useAuthStore.getState()).toMatchObject({ isLoading: false, awaitingNetwork: false });
+      expect(useAuthStore.getState()).toMatchObject({ isLoading: false, reconnectStalled: true });
 
       refresh.mockReset();
       useAuthStore.setState({ isLoading: true });
       refresh.mockRejectedValueOnce(Object.assign(new Error('Invalid'), { status: 401 }));
       await restoreSession(1);
-      expect(useAuthStore.getState().isLoading).toBe(false);
+      // A refusal is a real sign-out: no stalled Try again left over
+      expect(useAuthStore.getState()).toMatchObject({ isLoading: false, reconnectStalled: false });
       expect(refresh).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();
