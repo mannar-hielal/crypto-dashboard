@@ -5,7 +5,7 @@
  */
 
 import { expect, test } from '../../fixtures';
-import { at, placeOrder, signInAs } from '../../helpers';
+import { at, placeOrder, resetAccount, signInAs } from '../../helpers';
 
 const AVAX = '/dashboard/spot/AVAX/USDT';
 
@@ -48,11 +48,7 @@ test('[13.3.1][4.6] what tab A does shows in tab B; a reload keeps it @full', as
 
   // A reset in A empties B too (NEW-8-2)
   await at(a, 'account.settings').click();
-  await at(a, 'acct-settings.reset').click();
-  // The button swaps with an exit animation (AnimatePresence mode="wait"): click the confirm
-  // step only once it is there, or the click lands on the departing "Reset account"
-  await expect(at(a, 'acct-settings.reset')).toHaveText('Confirm reset?');
-  await at(a, 'acct-settings.reset').click();
+  await resetAccount(a); // the two-step confirm, retried if its 3 s window ran out
   await expect(at(b, 'assets.row', 'AVAX')).toHaveCount(0, { timeout: syncMs });
   await expect(at(b, 'assets.row', 'USDT')).toContainText('10,000.00', { timeout: syncMs });
 });

@@ -163,11 +163,10 @@ export function CheckpointSheet() {
             <div className={styles.body}>
               <QuestionView q={question} answer={answers[index]} onAnswer={answer} />
             </div>
-            <div className={styles.foot}>
-              <span className={styles.spacer} />
+            <div className={styles.footStack}>
               <button
                 type="button"
-                className={styles.primary}
+                className={`${styles.primary} ${styles.nextButton}`}
                 disabled={!answered}
                 onClick={next}
                 {...guide('checkpoint.next')}
@@ -198,7 +197,15 @@ export function CheckpointSheet() {
                 </ul>
               )}
             </div>
-            <div className={styles.foot}>
+            <div className={styles.footStack}>
+              <button
+                type="button"
+                className={`${styles.primary} ${styles.nextButton}`}
+                onClick={backToPath}
+                {...guide('checkpoint.done')}
+              >
+                Back to the path
+              </button>
               {!passed && (
                 <button
                   type="button"
@@ -209,15 +216,6 @@ export function CheckpointSheet() {
                   Try again
                 </button>
               )}
-              <span className={styles.spacer} />
-              <button
-                type="button"
-                className={styles.primary}
-                onClick={backToPath}
-                {...guide('checkpoint.done')}
-              >
-                Back to the path
-              </button>
             </div>
           </>
         )}

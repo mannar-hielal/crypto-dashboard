@@ -632,6 +632,143 @@ describe('POST /api/auth/refresh', () => {
     });
   });
 
+  it('should give the cap slot back when a reuse fails with a server error (review on #289)', async () => {
+    const updateManyMock = app.prisma.refreshToken.updateMany as ReturnType<typeof vi.fn>;
+    (app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({
+        id: 'rt-refund',
+        tokenHash: 'hashed-refund',
+        userId: 'user-1',
+        expiresAt: FUTURE,
+        rotatedAt: new Date(Date.now() - 3_000),
+        familyId: 'family-1',
+      })
+      .mockResolvedValueOnce({ rotatedAt: new Date(Date.now() - 3_000) });
+    // The stamp misses (already rotated); the cap's increment is allowed; then the refund
+    updateManyMock
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 1 });
+    // A transient DB error while minting the fresh session
+    (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new Error('connection reset')
+    );
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/refresh',
+      headers: { cookie: `refresh_token=${'7'.repeat(64)}` },
+    });
+
+    expect(res.statusCode).toBe(500);
+    expect(res.json()).toEqual({ error: 'Internal Server Error' });
+    expect(updateManyMock).toHaveBeenLastCalledWith({
+      where: { tokenHash: expect.any(String), reuseCount: { gt: 0 } },
+      data: { reuseCount: { decrement: 1 } },
+    });
+  });
+
+  it('should keep the cap slot spent when a reuse fails after its session was minted (review on #293)', async () => {
+    const updateManyMock = app.prisma.refreshToken.updateMany as ReturnType<typeof vi.fn>;
+    const createMock = app.prisma.refreshToken.create as ReturnType<typeof vi.fn>;
+    updateManyMock.mockClear();
+    createMock.mockClear();
+    (app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({
+        id: 'rt-minted',
+        tokenHash: 'hashed-minted',
+        userId: 'user-1',
+        expiresAt: FUTURE,
+        rotatedAt: new Date(Date.now() - 3_000),
+        familyId: 'family-1',
+      })
+      .mockResolvedValueOnce({ rotatedAt: new Date(Date.now() - 3_000) })
+      // The post-mint check fails: a live token already exists
+      .mockRejectedValueOnce(new Error('connection reset'));
+    // The stamp misses (already rotated); the cap's increment is allowed
+    updateManyMock.mockResolvedValueOnce({ count: 0 }).mockResolvedValueOnce({ count: 1 });
+    (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'user-1',
+      email: validUser.email,
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/refresh',
+      headers: { cookie: `refresh_token=${'5'.repeat(64)}` },
+    });
+
+    expect(res.statusCode).toBe(500);
+    expect(createMock).toHaveBeenCalledTimes(1); // the session was minted
+    // The stamp and the cap's increment only: no refund
+    expect(updateManyMock).toHaveBeenCalledTimes(2);
+    expect(updateManyMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ data: { reuseCount: { decrement: 1 } } })
+    );
+  });
+
+  it('should keep the cap slot spent when the token insert fails: it may have committed (review on #293)', async () => {
+    const updateManyMock = app.prisma.refreshToken.updateMany as ReturnType<typeof vi.fn>;
+    const createMock = app.prisma.refreshToken.create as ReturnType<typeof vi.fn>;
+    updateManyMock.mockClear();
+    (app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({
+        id: 'rt-insert',
+        tokenHash: 'hashed-insert',
+        userId: 'user-1',
+        expiresAt: FUTURE,
+        rotatedAt: new Date(Date.now() - 3_000),
+        familyId: 'family-1',
+      })
+      .mockResolvedValueOnce({ rotatedAt: new Date(Date.now() - 3_000) });
+    updateManyMock.mockResolvedValueOnce({ count: 0 }).mockResolvedValueOnce({ count: 1 });
+    (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'user-1',
+      email: validUser.email,
+    });
+    // The insert reports an error, as after a connection reset once the row was committed
+    createMock.mockRejectedValueOnce(new Error('connection reset'));
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/refresh',
+      headers: { cookie: `refresh_token=${'4'.repeat(64)}` },
+    });
+
+    expect(res.statusCode).toBe(500);
+    // The stamp and the cap's increment only: no refund
+    expect(updateManyMock).toHaveBeenCalledTimes(2);
+    expect(updateManyMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ data: { reuseCount: { decrement: 1 } } })
+    );
+  });
+
+  it('should not touch the reuse count when a first rotation fails (review on #289)', async () => {
+    const updateManyMock = app.prisma.refreshToken.updateMany as ReturnType<typeof vi.fn>;
+    updateManyMock.mockClear();
+    (app.prisma.refreshToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 'rt-first',
+      tokenHash: 'hashed-first',
+      userId: 'user-1',
+      expiresAt: FUTURE,
+      rotatedAt: null,
+      familyId: 'family-1',
+    });
+    updateManyMock.mockResolvedValueOnce({ count: 1 }); // the stamp wins
+    (app.prisma.user.findUnique as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new Error('connection reset')
+    );
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/refresh',
+      headers: { cookie: `refresh_token=${'6'.repeat(64)}` },
+    });
+
+    expect(res.statusCode).toBe(500);
+    expect(updateManyMock).toHaveBeenCalledTimes(1); // the stamp only, no refund
+  });
+
   it('should take back the token it just issued when a logout landed meanwhile (review on #288)', async () => {
     const deleteManyMock = app.prisma.refreshToken.deleteMany as ReturnType<typeof vi.fn>;
     const createMock = app.prisma.refreshToken.create as ReturnType<typeof vi.fn>;

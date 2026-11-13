@@ -4638,6 +4638,38 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
   `apps/server`) on the dev database. The owner's login answered 500 ("column `reuseCount` does not exist") until
   the three new migrations were applied. Production is unaffected: Fly runs the migrations before each deploy.
 
+### 2026-11-13 — Meet your guides: the hellos wrap instead of being cropped
+
+Owner's report: Lesson 1's longer pilot hellos ("Hi, I’m Pulin. I ask the questions you’re too polite to ask.")
+didn't fit side by side, so the clipped stage cut them off. The bubbles no longer use `nowrap`: each guide takes
+half the stage (at most 220 px), and the bubble wraps, centred, with `text-wrap: balance` (`GuidesMeet.module.css`).
+Checked at 390 and 1280 px.
+
+### 2026-11-13 — Questions say Right or Not quite, without repeating the pick; full-width buttons everywhere
+
+Owner's request:
+
+- **No "You picked …" line.** The line under a question's answer (added 2026-11-12 from the Finelo review) is gone.
+  The Why opens on **Right.** or **Not quite.**, since the chosen option is already marked. This covers every
+  lesson's questions, the "Your call" moment and the checkpoint, which share `QuestionView`. The `lesson.picked`
+  anchor and the `.picked` style are removed.
+- **Full-width main button on every screen.** The "Try it" screens (Lesson 1's notebook, Lesson 2's Sneaky Sam) had an
+  inline Continue in the body. The real-chart "Try it" (Lesson 3) had an inline Show me. Both now use the footer's
+  full-width button, with Skip this part and ← Back under it, like every card. The checkpoint's Next / See the
+  result and Back to the path are full width too, with Try again under it.
+
+### 2026-11-13 — A reuse that fails before its session is minted gives its cap slot back (reviews on #289, #293)
+
+The reuse cap (4) was counted before the fresh session was minted. A transient DB error after the count answered
+500, and the client's retry of that 500 found one slot fewer: on a flaky link the last retry could get a 401 and sign
+the learner out. Now a reuse whose **user lookup** fails gives its slot back (`reuseCount` decrement, never below 0),
+and the error still answers the generic 500. The lookup is the one step known to come before any token exists. From
+the token insert on, the slot stays spent: a failure there (even a connection reset after the insert committed) may
+have left a live token, and refunding it would let a run of failures mint more than the cap (reviews on #293). A first
+rotation never touches the count. Best effort: if the refund itself fails it's logged and the cap stays on the strict
+side. Tests in `auth.test.ts`: "should give the cap slot back…", "should keep the cap slot spent when a reuse fails
+after its session was minted", "…when the token insert fails", "should not touch the reuse count…".
+
 ### 2026-11-13 — A lost session-refresh reply recovers: the server's reuse window
 
 Reviews of the PWA work kept trading two risks: retrying a session refresh after reconnecting

@@ -192,10 +192,8 @@ export function QuestionView({
       </div>
       {answered && (
         <p className={styles.explain} role="status">
-          {/* The learner's own choice first (owner 2026-11-12, from the Finelo review) */}
-          <span className={styles.picked} {...guide('lesson.picked')}>
-            You picked “{q.options[answer]}”.
-          </span>{' '}
+          {/* Right or not, then why: no "You picked …" (owner 2026-11-13; the chosen option is
+              already marked above) */}
           <strong>{answer === q.correct ? 'Right. ' : 'Not quite. '}</strong>
           {q.explain}
         </p>
@@ -695,16 +693,6 @@ export function LessonSheet() {
           <>
             <p className={styles.text}>{lesson.tryIntro}</p>
             <ArticleWidget id={lesson.tryWidget} />
-            <div className={styles.inlineActions}>
-              <button
-                type="button"
-                className={styles.primary}
-                onClick={next}
-                {...guide('lesson.try')}
-              >
-                Continue
-              </button>
-            </div>
           </>
         );
         break;
@@ -719,21 +707,6 @@ export function LessonSheet() {
               back to it from the learning path.
             </p>
           )}
-          <div className={styles.inlineActions}>
-            {desktop && (
-              <button
-                type="button"
-                className={styles.primary}
-                onClick={startTour}
-                {...guide('lesson.try')}
-              >
-                Show me
-              </button>
-            )}
-            <button type="button" className={styles.link} onClick={next}>
-              {desktop ? 'Skip this part' : 'Continue'}
-            </button>
-          </div>
         </>
       );
       break;
@@ -749,6 +722,9 @@ export function LessonSheet() {
 
   // The try screen carries its own buttons; the close has the way on (and Finish for now)
   const showNext = screen.kind === 'card' || screen.kind === 'summary' || isQuestion;
+  // "Try it": its own main action in the same full-width footer as every screen's Next, with Skip
+  // and Back under it (owner 2026-11-13)
+  const tourTry = screen.kind === 'try' && !lesson.tryWidget && desktop;
   const nextWords = (screenCard?.nextLabel ?? 'Continue') + ' →';
 
   return createPortal(
@@ -835,6 +811,32 @@ export function LessonSheet() {
             >
               {nextWords}
             </button>
+            {screenIndex > 0 && (
+              <button
+                type="button"
+                className={styles.link}
+                onClick={goBack}
+                {...guide('lesson.back')}
+              >
+                ← Back
+              </button>
+            )}
+          </div>
+        ) : screen.kind === 'try' ? (
+          <div className={styles.footStack}>
+            <button
+              type="button"
+              className={`${styles.primary} ${styles.nextButton}`}
+              onClick={tourTry ? startTour : next}
+              {...(lesson.tryWidget || tourTry ? guide('lesson.try') : {})}
+            >
+              {tourTry ? 'Show me' : 'Continue'}
+            </button>
+            {tourTry && (
+              <button type="button" className={styles.link} onClick={next}>
+                Skip this part
+              </button>
+            )}
             {screenIndex > 0 && (
               <button
                 type="button"
