@@ -15,8 +15,6 @@ apps/*/node_modules/
 .env
 .env.*
 
-# TVP captured bundles — reference only
-tv-website-full/
 
 # HTTP Archive files — not source code
 *.har

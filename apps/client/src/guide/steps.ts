@@ -131,13 +131,7 @@ export function submit(e: Extra = {}): StepDraft {
 }
 
 export type AccountTab =
-  | 'positions'
-  | 'assets'
-  | 'closedpnl'
-  | 'orders'
-  | 'orderhistory'
-  | 'balancehistory'
-  | 'journal';
+  'positions' | 'assets' | 'closedpnl' | 'orders' | 'orderhistory' | 'balancehistory' | 'journal';
 
 export function openTab(tab: AccountTab, e: Extra = {}): StepDraft {
   return {

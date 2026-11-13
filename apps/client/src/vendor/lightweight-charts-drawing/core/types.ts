@@ -743,12 +743,7 @@ export type Drawing = WithId<
  *  replaces the kind's default style (position placement freezes its
  *  stop/profit offsets into it). */
 export type NewDrawing = (
-  | OnePoint
-  | TwoPoint
-  | ThreePoint
-  | FourPoint
-  | PolyPoint
-  | GhostFeedPoint
+  OnePoint | TwoPoint | ThreePoint | FourPoint | PolyPoint | GhostFeedPoint
 ) & {
   text?: string;
   glyph?: string;

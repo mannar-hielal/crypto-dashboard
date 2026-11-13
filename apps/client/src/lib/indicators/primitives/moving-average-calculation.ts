@@ -2,9 +2,7 @@ import type { CandlestickData, LineData, WhitespaceData, UTCTimestamp } from 'li
 import { ensureTimestampData } from '../helpers/timestamp-data';
 
 export type SupportedData =
-  | LineData<UTCTimestamp>
-  | CandlestickData<UTCTimestamp>
-  | WhitespaceData<UTCTimestamp>;
+  LineData<UTCTimestamp> | CandlestickData<UTCTimestamp> | WhitespaceData<UTCTimestamp>;
 
 export type MovingAverageSmoothing = 'SMA' | 'EMA' | 'WMA';
 

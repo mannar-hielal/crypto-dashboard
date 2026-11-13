@@ -37,9 +37,7 @@ let sentToday = 0;
 export function safeMessage(args: unknown[]): string {
   const text = args.find((a) => typeof a === 'string');
   const obj = args.find((a) => a !== null && typeof a === 'object') as
-    | { err?: unknown }
-    | Error
-    | undefined;
+    { err?: unknown } | Error | undefined;
   const err = obj instanceof Error ? obj : obj?.err instanceof Error ? obj.err : undefined;
   // …also when the message only quotes it (`Order write failed: ${err.message}`, review #201)
   if (err && (typeof text !== 'string' || (err.message !== '' && text.includes(err.message)))) {

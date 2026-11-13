@@ -216,22 +216,20 @@ function rangeTextCut(
 function rangeCustomTextItems(a: Pt, b: Pt, s: DrawingStyle): SceneItem[] {
   const g = rangeCustomTextGeom(a, b, s);
   if (!g) return [];
-  return g.lines.map(
-    (ln, k): SceneItem => ({
-      t: 'text',
-      x: g.x,
-      y: g.top + k * g.lineH,
-      text: ln,
-      anchor: 'middle',
-      baseline: 'hanging',
-      size: g.fs,
-      weight: s.customTextBold ? 700 : 400,
-      fontStyle: s.customTextItalic ? 'italic' : 'normal',
-      fill: s.customTextColor ?? '#2962ff',
-      inert: true,
-      pre: true,
-    })
-  );
+  return g.lines.map((ln, k): SceneItem => ({
+    t: 'text',
+    x: g.x,
+    y: g.top + k * g.lineH,
+    text: ln,
+    anchor: 'middle',
+    baseline: 'hanging',
+    size: g.fs,
+    weight: s.customTextBold ? 700 : 400,
+    fontStyle: s.customTextItalic ? 'italic' : 'normal',
+    fill: s.customTextColor ?? '#2962ff',
+    inert: true,
+    pre: true,
+  }));
 }
 
 function rangeFillOpacity(s: DrawingStyle): number {

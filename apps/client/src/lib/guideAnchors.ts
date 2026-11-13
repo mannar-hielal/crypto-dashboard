@@ -373,8 +373,7 @@ export function isGuideAnchor(name: string): name is GuideAnchor {
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
 export type GuideProps =
-  | { 'data-guide': GuideAnchor }
-  | { 'data-guide': GuideAnchor; 'data-guide-key': string };
+  { 'data-guide': GuideAnchor } | { 'data-guide': GuideAnchor; 'data-guide-key': string };
 
 /**
  * Props to spread onto the control: `<button {...guide('trade.submit')}>`, or for a row

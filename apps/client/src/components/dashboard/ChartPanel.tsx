@@ -334,8 +334,7 @@ export function ChartPanel({
       }
 
       const candle = param.seriesData.get(candleRef.current) as
-        | { open: number; high: number; low: number; close: number }
-        | undefined;
+        { open: number; high: number; low: number; close: number } | undefined;
       if (!candle) {
         setHoverData(null);
         return;
@@ -578,9 +577,7 @@ export function ChartPanel({
       const firstTime = toUTC(sortedBars[0].timestamp);
       const lastTime = toUTC(sortedBars[sortedBars.length - 1].timestamp);
       const visibleRange = timeScale?.getVisibleRange() as
-        | { from: UTCTimestamp; to: UTCTimestamp }
-        | null
-        | undefined;
+        { from: UTCTimestamp; to: UTCTimestamp } | null | undefined;
 
       const isFirstLoad = !notFirstLoad;
       const isOutOfRange =

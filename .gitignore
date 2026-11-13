@@ -44,8 +44,7 @@ prisma/migrations/
 # Internal docs — not for version control
 docs/PRE_LAUNCH_LEGAL.md
 
-# TVP captured bundles — reference only, not part of the project
-tv-website-full/
+# HTTP archive recordings — never committed
 *.har
 
 # OS

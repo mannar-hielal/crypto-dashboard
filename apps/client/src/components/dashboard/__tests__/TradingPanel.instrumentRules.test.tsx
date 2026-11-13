@@ -23,30 +23,28 @@ import { getByGuide, queryByGuide } from '@/test/guide';
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
 /** BTCUSDT rules as Bybit publishes them (the server's /api/market/instruments shape). */
-const RULES = vi.hoisted(
-  (): Record<'spot' | 'linear', Instrument> => ({
-    linear: {
-      symbol: 'BTCUSDT',
-      category: 'linear',
-      tickSize: 0.1,
-      qtyStep: 0.001,
-      minOrderQty: 0.001,
-      minNotional: 5,
-      maxLeverage: 100,
-      fundingIntervalMin: 480,
-    },
-    spot: {
-      symbol: 'BTCUSDT',
-      category: 'spot',
-      tickSize: 0.01,
-      qtyStep: 0.000001,
-      minOrderQty: 0.000001,
-      minNotional: 5,
-      maxLeverage: null,
-      fundingIntervalMin: null,
-    },
-  })
-);
+const RULES = vi.hoisted((): Record<'spot' | 'linear', Instrument> => ({
+  linear: {
+    symbol: 'BTCUSDT',
+    category: 'linear',
+    tickSize: 0.1,
+    qtyStep: 0.001,
+    minOrderQty: 0.001,
+    minNotional: 5,
+    maxLeverage: 100,
+    fundingIntervalMin: 480,
+  },
+  spot: {
+    symbol: 'BTCUSDT',
+    category: 'spot',
+    tickSize: 0.01,
+    qtyStep: 0.000001,
+    minOrderQty: 0.000001,
+    minNotional: 5,
+    maxLeverage: null,
+    fundingIntervalMin: null,
+  },
+}));
 
 const getInstruments = vi.hoisted(() =>
   vi.fn(async (category: MarketCategory = 'spot') => ({

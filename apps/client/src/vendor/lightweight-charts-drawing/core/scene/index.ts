@@ -316,30 +316,28 @@ export function sceneOf(d: Drawing, pts: Pt[], c: SceneContext): Scene {
 /** Locked-selection anchors (TV): a padlock glyph on each anchor point in
  *  place of the grab handles (moved from OpenTrader renderLockedAnchors). */
 export function sceneLockedAnchors(pts: Pt[], color: string): Scene {
-  return pts.map(
-    (p): SceneItem => ({
-      t: 'group',
-      inert: true,
-      items: [
-        {
-          t: 'circle',
-          cx: p.x,
-          cy: p.y,
-          r: HANDLE_RADIUS + 3,
-          fill: '#fff',
-          stroke: color,
-          strokeWidth: 1.5,
-        },
-        // padlock: shackle arc over a filled body
-        {
-          t: 'path',
-          d: `M ${p.x - 2} ${p.y - 0.5} v -1.5 a 2 2 0 0 1 4 0 v 1.5`,
-          fill: 'none',
-          stroke: color,
-          strokeWidth: 1.2,
-        },
-        { t: 'rect', x: p.x - 3.2, y: p.y - 0.5, w: 6.4, h: 4.6, rx: 1, fill: color },
-      ],
-    })
-  );
+  return pts.map((p): SceneItem => ({
+    t: 'group',
+    inert: true,
+    items: [
+      {
+        t: 'circle',
+        cx: p.x,
+        cy: p.y,
+        r: HANDLE_RADIUS + 3,
+        fill: '#fff',
+        stroke: color,
+        strokeWidth: 1.5,
+      },
+      // padlock: shackle arc over a filled body
+      {
+        t: 'path',
+        d: `M ${p.x - 2} ${p.y - 0.5} v -1.5 a 2 2 0 0 1 4 0 v 1.5`,
+        fill: 'none',
+        stroke: color,
+        strokeWidth: 1.2,
+      },
+      { t: 'rect', x: p.x - 3.2, y: p.y - 0.5, w: 6.4, h: 4.6, rx: 1, fill: color },
+    ],
+  }));
 }
