@@ -21,7 +21,7 @@ test('[8.8] reset clears an open position, a resting limit and the journal; bala
   await expect(page.getByText('before the reset')).toBeVisible();
 
   await at(page, 'account.settings').click();
-  await resetAccount(page); // the two-step confirm, retried if its 3 s window ran out // the two-step confirm
+  await resetAccount(page); // the two-step confirm, retried if its 3 s window ran out
 
   await at(page, 'account.tab', 'positions').click();
   await expect(at(page, 'positions.row', 'linear:ETHUSDT')).toHaveCount(0);
