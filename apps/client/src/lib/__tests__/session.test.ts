@@ -122,6 +122,54 @@ describe('msUntilExpiry()', () => {
     onLine.mockRestore();
   });
 
+  it('should retry a few times when the network isn’t ready yet just after coming back online (review on #283)', async () => {
+    vi.useFakeTimers();
+    try {
+      useAuthStore.setState({ accessToken: null, user: null, isLoading: true });
+      const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+      refresh.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+      await restoreSession();
+      onLine.mockReturnValue(true);
+      // The `online` event came early: the first two tries still fail, the third gets through
+      refresh
+        .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+        .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+        .mockResolvedValueOnce({ accessToken: 'back' } as never);
+      me.mockResolvedValueOnce({ user: { id: 'u1' } } as never);
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(0);
+      expect(useAuthStore.getState().isLoading).toBe(true); // still waiting, not signed out
+      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(useAuthStore.getState().accessToken).toBe('back');
+      expect(refresh).toHaveBeenCalledTimes(4);
+      onLine.mockRestore();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('should give up after its tries, and sign out at once when the server refuses', async () => {
+    vi.useFakeTimers();
+    try {
+      useAuthStore.setState({ accessToken: null, user: null, isLoading: true });
+      refresh.mockRejectedValue(new TypeError('Failed to fetch'));
+      await restoreSession(1);
+      await vi.advanceTimersByTimeAsync(1000 + 2000 + 4000);
+      expect(refresh).toHaveBeenCalledTimes(4);
+      expect(useAuthStore.getState().isLoading).toBe(false);
+
+      refresh.mockReset();
+      useAuthStore.setState({ isLoading: true });
+      refresh.mockRejectedValueOnce(Object.assign(new Error('Invalid'), { status: 401 }));
+      await restoreSession(1);
+      expect(useAuthStore.getState().isLoading).toBe(false);
+      expect(refresh).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('should not hang when online but the API is unreachable: it signs out as before (review on #283)', async () => {
     useAuthStore.setState({ accessToken: null, user: null, isLoading: true });
     refresh.mockRejectedValueOnce(new TypeError('Failed to fetch')); // an outage, DNS, a restart

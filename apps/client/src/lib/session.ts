@@ -100,7 +100,11 @@ export function startedNewSession(): void {
  * the user. A signed-out visitor (no cookie) gets `null` from refresh — no 401, no /me call.
  * Any failure just ends the loading state so ProtectedRoute can redirect to /login.
  */
-export async function restoreSession(): Promise<void> {
+/** Tries after the connection comes back, a second apart and doubling: the `online` event often
+ *  fires before the network really works (review on #283) */
+const RECONNECT_TRIES = 3;
+
+export async function restoreSession(afterReconnect = 0): Promise<void> {
   const { setAuth, setLoading } = useAuthStore.getState();
   // A sign-out made while offline: finish it, and stay signed out (still offline: try next time)
   if (hasPendingSignOut()) {
@@ -116,7 +120,7 @@ export async function restoreSession(): Promise<void> {
     }
     const { user } = await authApi.me(res.accessToken);
     setAuth(res.accessToken, user);
-  } catch {
+  } catch (err) {
     // The device is offline: the session may be fine, so don't treat the learner as signed out.
     // Stay loading and try again once the browser is back online (PWA readiness, 2026-11-13: the
     // installed app opened offline used to land on /login and stay signed out). Only when the
@@ -124,6 +128,12 @@ export async function restoreSession(): Promise<void> {
     // wait for an `online` event that never comes (review on #283), so it signs out as before
     if (isOffline()) {
       retryWhenOnline();
+      return;
+    }
+    // Just back online and the request never got through: the network may not be ready yet.
+    // A refusal from the server (an HTTP error) signs out at once; only a failed fetch retries
+    if (afterReconnect > 0 && afterReconnect <= RECONNECT_TRIES && err instanceof TypeError) {
+      setTimeout(() => void restoreSession(afterReconnect + 1), 1000 * 2 ** (afterReconnect - 1));
       return;
     }
     // Refresh rejected (expired / revoked cookie) or /me failed — stay signed out.
@@ -146,7 +156,7 @@ function retryWhenOnline(): void {
     'online',
     () => {
       waitingForOnline = false;
-      void restoreSession();
+      void restoreSession(1);
     },
     { once: true }
   );

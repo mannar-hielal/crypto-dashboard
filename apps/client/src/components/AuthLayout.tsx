@@ -16,7 +16,7 @@ export function AuthLayout({
 }: AuthLayoutProps) {
   return (
     <div
-      className="relative flex min-h-dvh flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+      className={`relative flex min-h-dvh flex-col pt-[env(safe-area-inset-top)]${hideFooter ? ' pb-[env(safe-area-inset-bottom)]' : ''}`}
       style={{
         background: `linear-gradient(180deg, ${bg.deep} 0%, ${bg.page} 30%, ${bg.navy} 100%)`,
       }}

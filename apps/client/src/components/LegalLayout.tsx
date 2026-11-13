@@ -15,7 +15,7 @@ export function LegalLayout({ title, lastUpdated, version, children }: LegalLayo
 
   return (
     <div
-      className="relative flex min-h-dvh flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] overflow-hidden"
+      className="relative flex min-h-dvh flex-col pt-[env(safe-area-inset-top)] overflow-hidden"
       style={{
         background: `linear-gradient(180deg, ${bg.deep} 0%, ${bg.page} 30%, ${bg.navy} 100%)`,
       }}
