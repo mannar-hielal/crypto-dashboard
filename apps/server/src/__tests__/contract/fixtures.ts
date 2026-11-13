@@ -13,6 +13,7 @@
 
 import type {
   AuthResponse,
+  HealthResponse,
   CandleHistoryResponse,
   EditPendingOrderRequest,
   InstrumentsResponse,
@@ -292,3 +293,9 @@ export const action = <R>(result: R): Required<PaperActionResponse<R>> => ({
   delta,
   sound: 'placed',
 });
+
+export const healthResponse: HealthResponse = {
+  status: 'ok',
+  timestamp: '2026-11-13T00:00:00.000Z',
+  environment: 'test',
+};

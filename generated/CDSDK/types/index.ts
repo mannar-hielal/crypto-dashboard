@@ -78,6 +78,13 @@ export const LEARN_ITEM_IDS = [
 ] as const;
 export type LearnItemId = (typeof LEARN_ITEM_IDS)[number];
 
+/** GET /health: the API is up (used as a reachability probe before a session refresh) */
+export interface HealthResponse {
+  status: string;
+  timestamp?: string;
+  environment?: string;
+}
+
 /**
  * `completed`: finished (never downgraded); `dismissed`: the learner closed the offer; `started`: a
  * lesson begun, with its furthest screen in `step`
