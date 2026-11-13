@@ -15,6 +15,9 @@ import { getLesson, isLessonId, lessonScreenOfStep, lessonStepId, type LessonId 
 import { useTourStore } from './tourStore';
 import { isTourId, type TourId } from './tours';
 
+/** Set while the server's furthest screens are merged in: they're already stored, so never sent */
+let applyingServer = false;
+
 /** A lesson's furthest screen, as its funnel step number (the server's `started` row) */
 function sendReached(id: LessonId, screen: number, accessToken: string): void {
   const step = Number(lessonStepId(getLesson(id), screen).split('.')[1]);
@@ -65,7 +68,13 @@ export function useTourProgress(): void {
             sendReached(id, screen, accessToken);
           }
         }
-        useLessonStore.getState().setReached(reached);
+        // The server's own answer: the writer below must not echo it back (review on #280)
+        applyingServer = true;
+        try {
+          useLessonStore.getState().setReached(reached);
+        } finally {
+          applyingServer = false;
+        }
         // The learning map: practice skipped on a phone, and checkpoints passed
         usePathStore.getState().setProgress({
           skippedTours: items
@@ -158,7 +167,7 @@ export function useTourProgress(): void {
   useEffect(() => {
     if (!accessToken) return;
     return useLessonStore.subscribe((state, prev) => {
-      if (state.reached === prev.reached || state.activeId === null) return;
+      if (state.reached === prev.reached || state.activeId === null || applyingServer) return;
       const id = state.activeId;
       const now = state.reached[id];
       // A replay of a finished lesson changes nothing on the server: no write

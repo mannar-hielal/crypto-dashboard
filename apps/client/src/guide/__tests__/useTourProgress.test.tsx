@@ -298,6 +298,15 @@ describe('useTourProgress', () => {
       token = 'tok';
     });
 
+    it('should not echo the server’s furthest screen back while a lesson is open (review on #280)', async () => {
+      // Lesson 3 open at screen 1 when the answer arrives with screen 5: nothing to send
+      act(() => useLessonStore.getState().start('lesson-02', 1));
+      getProgress.mockResolvedValue({ items: [{ ...item('lesson-02', 'started'), step: 46 }] });
+      renderHook(() => useTourProgress());
+      await waitFor(() => expect(useLessonStore.getState().reached).toEqual({ 'lesson-02': 5 }));
+      expect(setProgress).not.toHaveBeenCalled();
+    });
+
     it('should never send a lower screen than the furthest one', async () => {
       await loaded([{ ...item('lesson-02', 'started'), step: 46 }]);
       act(() => useLessonStore.getState().start('lesson-02', 2));
