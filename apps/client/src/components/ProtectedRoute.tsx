@@ -39,13 +39,15 @@ export function ProtectedRoute() {
   const location = useLocation();
   const online = useOnline();
 
-  // Back online, but the safe retries ran out: the cookie may well still be valid, so the learner
-  // gets Try again, never a trip to /login (owner 2026-11-13, review on #290)
+  // Back online, but the safe retries ran out: the cookie may still be valid, so the learner gets
+  // Try again rather than a straight trip to /login (owner 2026-11-13). Honest about the outcome:
+  // if the last reply was lost, the tap ends that sign-in and they sign in again (review on #290)
   if (reconnectStalled && !accessToken) {
     return (
       <div className="flex h-dvh flex-col items-center justify-center gap-4 px-6 text-center">
         <p className="text-muted-foreground max-w-xs text-sm" role="status">
-          We couldn’t reach the server to sign you back in. Your session is probably fine.
+          We couldn’t reach the server to sign you back in. Try again; if it still doesn’t work,
+          you’ll be asked to sign in.
         </p>
         <button
           type="button"

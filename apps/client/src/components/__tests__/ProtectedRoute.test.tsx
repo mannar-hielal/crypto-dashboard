@@ -51,7 +51,8 @@ describe('ProtectedRoute, opened offline (PWA readiness, review on #283)', () =>
     useAuthStore.setState({ awaitingNetwork: true, reconnectStalled: true });
     renderAt();
     expect(screen.queryByText('login')).toBeNull();
-    expect(screen.getByRole('status').textContent).toContain('Your session is probably fine');
+    // Honest: the tap may still end in signing in again
+    expect(screen.getByRole('status').textContent).toContain('you’ll be asked to sign in');
     expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();
   });
 

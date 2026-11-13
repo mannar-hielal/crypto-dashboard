@@ -172,8 +172,10 @@ export async function restoreSession(
         setTimeout(() => void restoreSession(afterReconnect + 1, deadline), delay);
         return;
       }
-      // Out of safe retries, and the cookie may well still be valid: never a trip to /login.
-      // Protected pages offer Try again (owner 2026-11-13, review on #290)
+      // Out of safe retries, and the cookie may still be valid: not a straight trip to /login.
+      // Protected pages offer Try again (owner 2026-11-13). A tap after the reuse window, if the
+      // original reply was lost, reads as theft and ends that sign-in (this device only), so the
+      // screen says the learner may be asked to sign in (review on #290)
       setReconnectStalled(true);
       setLoading(false);
       return;
