@@ -865,18 +865,40 @@ partial fills, ADL, insurance fund · VIP tiers, fee coupons, USDC / inverse con
   risk tiers, Closed P&L. Decisions, reference values, known gaps and open items →
   [Bybit Parity (BP-0 … BP-5) — reference](#-bybit-parity-bp-0--bp-5--reference).
 
+### ✅ Completed (added 2026-11-13 — Guided learning, PWA, sessions)
+
+Details in the dated entries further down (2026-10-22 → 2026-11-13).
+
+- **Guided learning path**: three lessons, presented by the guides Pulin and Berwyn. Lesson 1 is "What is the
+  problem?", Lesson 2 is "Who sets the price?" and Lesson 3 is about price swings and checking before you trust. A
+  zig-zag path, Duolingo-style, has progress rings synced to the server (`LearningProgress.step`), a dumbbell icon
+  for the lessons done on the chart, a checkpoint, and knowledge-base articles with interactive widgets.
+- **The friendlier voice, Phase 0–1**: the tone guide is agreed, and Lesson 1 is rewritten as the pilot (#286).
+  Phases 2–4 are planned below.
+- **PWA readiness**: the home-screen name "CryptoPaperTrade", install steps for every browser, safe-area insets,
+  offline handling with a `/health` probe, and a same-origin-only service-worker cache (#284).
+- **Session resilience**: a 30 s reuse window for rotated refresh tokens, token families, a reuse cap of 4, the
+  theft signal after the window, and the client's reconnect deadline with Try again (#288, #290).
+- **Test automation (`TRADING_TEST_PLAN.md` A8) P1–P5**: Postgres integration tests and coverage floors (P1),
+  Playwright on the fake feed (P2), testnet parity plus feed parity and spec drift (P3), fast-check and Stryker
+  (P4), the prod smoke and log alerts (P5).
+
 ### 📋 Planned (Next)
 
+- **Friendlier voice, Phases 2–4** (plan in the git-excluded `guided-learning-topics/09-fun-friendly-tone-plan.md`;
+  tone guide in the 2026-11-13 entry):
+  - Phase 2: new devices, one PR each, each through the visual Q&A gate: a "Careful" callout and "Ask anything",
+    the Patrick Hand font, chart notes, "Two sides" chats, a "Who does what?" match.
+  - Phase 3: Lessons 2–3, then articles and tours.
+  - Phase 4: Lessons 4+ written in the voice from the start.
+  - Before any of that, measure the pilot: Lesson 1's funnel and rating, 4 weeks before vs 4 weeks after its release.
+- **Lesson 4** of the guided path.
+- **Hardening** (`docs/HARDENING_PLAN.md`): H0 done; H1–H11 deferred by the owner (2026-09-30).
 - **Phase 2 — Pane view layer**: Extract point→pixel conversion from `DrawingPrimitive` into per-shape `PaneView` classes, decoupling chart-coordinate conversion from canvas rendering. Phase 1 (renderer classes) is complete; Phase 2 would also wire in-progress preview through per-shape renderers and add `SelectionRenderer`.
 - **Phase 3–4**: Tool descriptor system + tool variants via property overrides.
 - **Additional drawing tools**: Wire remaining placement (polyline, freehand) — Phase 1 refactoring laid per-shape renderer foundation, but polyline and freehand still need placement state machine support.
-- **Test automation** (`docs/TRADING_TEST_PLAN.md` A8), one small PR per step:
-  - P1: CI Postgres, migration and repository tests, coverage thresholds.
-  - P2: Playwright on a replayed Bybit feed.
-  - P3: nightly testnet parity ✅ (2026-09-28); still to do: spec-drift and feed parity jobs.
-  - P4: fast-check and Stryker ✅ (M7, 2026-09-30).
-  - P5: prod smoke and log alerts.
-  - P6: moved to `docs/HARDENING_PLAN.md` (no staging app, 2026-09-30).
+- **Test automation** (`docs/TRADING_TEST_PLAN.md` A8): P1–P5 done (see Completed above); P6 moved to
+  `docs/HARDENING_PLAN.md` (no staging app, 2026-09-30).
 - **Phase 4**: Advanced indicators, alerts, multi-symbol watchlist
 - **Phase 5**: Live broker integration — Bybit real-money trading (see full spec below)
 - **Phase 6**: AI trading bot — 3-role system: Scanner + Analyst + Executor, paper mode only (see full spec below)
@@ -4583,6 +4605,28 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
 - **The buttons:** every close stacks the way on first, as a full-width pill, with "Finish for now" under it.
 - **Tests:** `FinishLine.test` (the run, a tap, reduced motion), the sheet (Lesson 1's close, a close with no
   recap, the button order), the lesson rules (recap lines open real sections; Satoshi only in the recap).
+
+### 2026-11-13 — Housekeeping: the TradingView mirror deleted, dependencies updated
+
+- **`tv-website-full/` deleted** (owner). It was a 15 MB local copy of tradingview.com, git-ignored and used by no
+  code. The sale-readiness report had flagged it as an IP risk. Its entries are gone from `.gitignore`,
+  `.prettierignore` and `eslint.config.js`. `*.har` stays ignored: the 27 MB `www.tradingview.com.har` recording is
+  still on the owner's disk, and the same report suggests deleting it too.
+- **Dependencies:** every package moved to its newest minor or patch version (`pnpm update -r`), skipping releases
+  younger than 7 days (`--config.minimum-release-age=10080`, a guard against a freshly compromised version). The
+  audit shows no high or critical findings.
+  - `ws` 8.21 → 8.22 now completes the close itself right after a protocol error. `wsLogging.test` no longer
+    assumes the close waits for a terminate. Its real check is unchanged: exactly one error line and one close
+    line, with the real close code.
+  - Prettier 3.8 → 3.10 puts short union types on one line. 17 tracked files were reformatted, in a commit of their
+    own.
+  - **Major versions held back** for the owner's decision: TypeScript 7, Vitest 5 (with coverage-v8), framer-motion
+    14, Prisma 8 (still a release candidate), jsdom 31, `@fastify/rate-limit` 11, `@fastify/swagger-ui` 6,
+    fastify-plugin 6, `@hookform/resolvers` 7, dotenv 18, ioredis 6, lint-staged 17, uuid 14, vite-plugin-pwa 2.
+    `@types/node` stays on 24, matching the Node 24 runtime.
+- **Local dev after switching branches:** a branch that adds migrations needs `npx prisma migrate deploy` (in
+  `apps/server`) on the dev database. The owner's login answered 500 ("column `reuseCount` does not exist") until
+  the three new migrations were applied. Production is unaffected: Fly runs the migrations before each deploy.
 
 ### 2026-11-13 — A lost session-refresh reply recovers: the server's reuse window
 
