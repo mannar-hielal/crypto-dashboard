@@ -17,11 +17,16 @@
   padding: 4px 0 8px;
 }
 
+/* Each guide takes half the stage, so a long hello wraps inside it instead of being clipped
+   (owner 2026-11-13) */
 .guide {
   display: flex;
+  flex: 1 1 0;
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  max-width: 220px;
 }
 
 .figure {
@@ -39,7 +44,8 @@
   background: var(--color-bg-surface); /* bg.surface */
   font-size: 14px; /* fontSize.xs */
   font-weight: 600;
-  white-space: nowrap;
+  text-align: center;
+  text-wrap: balance; /* even lines, no lone word on the last one */
   transform-origin: bottom center;
 }
 

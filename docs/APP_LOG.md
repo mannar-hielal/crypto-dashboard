@@ -4584,6 +4584,13 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
 - **Tests:** `FinishLine.test` (the run, a tap, reduced motion), the sheet (Lesson 1's close, a close with no
   recap, the button order), the lesson rules (recap lines open real sections; Satoshi only in the recap).
 
+### 2026-11-13 — Meet your guides: the hellos wrap instead of being cropped
+
+Owner's report: Lesson 1's longer pilot hellos ("Hi, I’m Pulin. I ask the questions you’re too polite to ask.")
+didn't fit side by side, so the clipped stage cut them off. The bubbles no longer use `nowrap`: each guide takes
+half the stage (at most 220 px), and the bubble wraps, centred, with `text-wrap: balance` (`GuidesMeet.module.css`).
+Checked at 390 and 1280 px.
+
 ### 2026-11-13 — A lost session-refresh reply recovers: the server's reuse window
 
 Reviews of the PWA work kept trading two risks: retrying a session refresh after reconnecting
