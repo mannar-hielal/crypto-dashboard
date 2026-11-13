@@ -17,8 +17,8 @@ import {
   DeviceMobile,
   Eraser,
   GameController,
-  Globe,
   HardDrives,
+  MagnifyingGlass,
   ListNumbers,
   Mailbox as MailboxIcon,
   Notebook as NotebookIcon,
@@ -136,20 +136,6 @@ function BtcMark({
       height={size}
       className={className}
     />
-  );
-}
-
-/** Lesson 2's hook: Tock waits calmly beside the price tag (Tick presents) */
-function Hook() {
-  return (
-    <>
-      <rect x="118" y="10" width="110" height="40" rx="20" className={styles.panel} />
-      <BtcMark x={128} y={16} size={28} />
-      <text x="190" y="37" textAnchor="middle" className={styles.price}>
-        ?
-      </text>
-      <Guide who="tock" mood="calm" x={200} y={62} scale={0.95} />
-    </>
   );
 }
 
@@ -437,27 +423,6 @@ function Queues() {
   );
 }
 
-function Busy() {
-  return (
-    <>
-      <Globe weight={DUO} x={82} y={8} size={80} className={styles.system} />
-      <Clock weight={DUO} x={136} y={56} size={36} className={styles.amber} />
-      <text x="122" y="118" textAnchor="middle" className={styles.label}>
-        24/7, worldwide
-      </text>
-      {[0, 1, 2].map((i) => (
-        <g key={i}>
-          <User weight={DUO} x={206} y={10 + i * 30} size={26} className={styles.up} />
-          <User weight={DUO} x={262} y={10 + i * 30} size={26} className={styles.down} />
-        </g>
-      ))}
-      <Label x={256} y={118}>
-        buyers and sellers, always near
-      </Label>
-    </>
-  );
-}
-
 function Tesla() {
   return (
     <>
@@ -503,8 +468,202 @@ function BitcoinBirth() {
   );
 }
 
+// ─── Lesson 3 (rebuilt 2026-11-12) ───────────────────────────────────────────
+
+/**
+ * Bybit's BTCUSDT 1-minute candles, 21 Oct 2021 11:20–11:50 UTC (open, high, low, close; fetched
+ * 2026-11-12): the minute Binance.US printed $8,200, the rest of the market dipped about 2%
+ */
+const OCT_21_2021: readonly CandleShape[] = (
+  [
+    [65717, 65756, 65717, 65755.5],
+    [65755.5, 65766.5, 65755.5, 65766.5],
+    [65766.5, 65799, 65766, 65793],
+    [65793, 65900, 65792.5, 65880],
+    [65880, 65880, 65879.5, 65880],
+    [65880, 65940.5, 65879.5, 65922.5],
+    [65922.5, 65997.5, 65922, 65997.5],
+    [65997.5, 65997.5, 65997, 65997],
+    [65997, 66030, 65914, 66029.5],
+    [66029.5, 66048, 65998.5, 66048],
+    [66048, 66048, 65972, 65972.5],
+    [65972.5, 65972.5, 65889, 65943],
+    [65943, 65943.5, 65884, 65884],
+    [65884, 65884, 65800, 65800],
+    [65800, 65815, 64200, 64279],
+    [64279, 64940, 64251.5, 64731.5],
+    [64731.5, 64943, 64666, 64943],
+    [64943, 65320, 64923, 65199],
+    [65199, 65199.5, 64952.5, 65064.5],
+    [65064.5, 65236, 65064, 65235.5],
+    [65235.5, 65433, 65235.5, 65432.5],
+    [65432.5, 65487, 65087.5, 65249.5],
+    [65249.5, 65300, 64735, 64796],
+    [64796, 65039.5, 64796, 64955],
+    [64955, 64972, 64856.5, 64856.5],
+    [64856.5, 64880.5, 64551, 64760],
+    [64760, 65000, 64753, 65000],
+    [65000, 65080, 64999.5, 65020.5],
+    [65020.5, 65021, 64880.5, 64899],
+    [64899, 64920, 64759, 64759],
+    [64759, 64873.5, 64755, 64848.5],
+  ] as const
+).map(([open, high, low, close]) => ({ open, high, low, close }));
+
+/** The 11:34 candle: Binance.US's crash minute */
+const CRASH_MINUTE = 14;
+
+/**
+ * Lesson 3's cold open (no photo, owner 2026-11-12): Bybit's real minute candles, barely moving, and
+ * one dashed wick dropping off the frame to Binance.US's $8,200, drawn, not to scale
+ */
+function FlashCrash() {
+  const x = 40;
+  const width = 270;
+  const step = width / OCT_21_2021.length;
+  const crashX = x + step * CRASH_MINUTE + step / 2;
+  return (
+    <>
+      <text x="40" y="12" className={styles.label}>
+        Bybit, 1-minute candles · 21 Oct 2021
+      </text>
+      <text x="34" y="26" textAnchor="end" className={styles.label}>
+        $66k
+      </text>
+      <text x="34" y="80" textAnchor="end" className={styles.label}>
+        $64k
+      </text>
+      <Candles bars={[...OCT_21_2021]} x={x} y={22} width={width} height={56} />
+      <line x1={crashX} x2={crashX} y1={80} y2={150} className={styles.crashWick} />
+      <path
+        d={`M${crashX - 5} 143 L${crashX} 151 L${crashX + 5} 143`}
+        className={styles.crashWick}
+      />
+      <rect x={crashX - 160} y="112" width="150" height="34" rx="8" className={styles.panel} />
+      <text x={crashX - 85} y="127" textAnchor="middle" className={styles.crashText}>
+        Binance.US: $8,200
+      </text>
+      <text x={crashX - 85} y="140" textAnchor="middle" className={styles.label}>
+        same minute, off the scale
+      </text>
+    </>
+  );
+}
+
+/** A thin queue of buy offers, eaten from the top: each deal lower, the last far below */
+function Staircase() {
+  const steps = [
+    { price: '$65,000', y: 14, eaten: true },
+    { price: '$60,000', y: 38, eaten: true },
+    { price: '$40,000', y: 62, eaten: true },
+    { price: '$8,200', y: 116, eaten: false },
+  ];
+  return (
+    <>
+      <text x="196" y="10" textAnchor="middle" className={styles.label}>
+        buy offers waiting
+      </text>
+      {steps.map((s, i) => (
+        <g key={s.price}>
+          <rect
+            x={120 + i * 22}
+            y={s.y}
+            width="96"
+            height="18"
+            rx="4"
+            className={s.eaten ? styles.eaten : styles.panel}
+          />
+          <text x={168 + i * 22} y={s.y + 13} textAnchor="middle" className={styles.chipText}>
+            {s.price}
+          </text>
+        </g>
+      ))}
+      <path d="M220 23 L242 47 L264 71 L290 117" className={styles.crashWick} />
+      <text x="150" y="104" textAnchor="middle" className={styles.label}>
+        nobody waiting between
+      </text>
+    </>
+  );
+}
+
+/** One green and one red candle, open, high, low and close named, and a day-and-night mark */
+function CandleAnatomy() {
+  const candle = (x: number, up: boolean) => {
+    const top = up ? 40 : 50;
+    const bottom = up ? 104 : 96;
+    return (
+      <g className={up ? styles.up : styles.down}>
+        <line x1={x} x2={x} y1={18} y2={128} className={styles.wick} />
+        <rect x={x - 14} y={top} width="28" height={bottom - top} rx="2" className={styles.body} />
+      </g>
+    );
+  };
+  return (
+    <>
+      {candle(130, true)}
+      <text x="150" y="22" className={styles.label}>
+        high
+      </text>
+      <text x="150" y="44" className={styles.label}>
+        close
+      </text>
+      <text x="150" y="104" className={styles.label}>
+        open
+      </text>
+      <text x="150" y="130" className={styles.label}>
+        low
+      </text>
+      {candle(240, false)}
+      <text x="260" y="54" className={styles.label}>
+        open
+      </text>
+      <text x="260" y="96" className={styles.label}>
+        close
+      </text>
+      <Clock weight={DUO} x={286} y={4} size={26} className={styles.amber} />
+      <Label x={196} y={152}>
+        green: closed higher · red: closed lower
+      </Label>
+    </>
+  );
+}
+
+/** The chart card's fallback: one long fall, then days that rose, both ways */
+function Swings() {
+  const bars = fromCloses([16, 16.3, 15.6, 15.9, 15.2, 14.6, 9.4, 11.2, 10.4, 9.6, 11.6, 11.2]);
+  return (
+    <>
+      <Candles bars={bars} x={84} y={10} width={220} height={116} />
+      <Label x={194} y={148}>
+        May 2021: big swings, both ways
+      </Label>
+    </>
+  );
+}
+
+/** "Check before you trust": a made-up coin under the magnifier, three checks beside it */
+function CheckCoin() {
+  const rows = ['Who runs it?', 'Can you sell it?', 'What does it promise?'];
+  return (
+    <>
+      <circle cx="116" cy="54" r="30" className={styles.coin} />
+      <text x="116" y="60" textAnchor="middle" className={styles.coinText}>
+        ?
+      </text>
+      <MagnifyingGlass weight={DUO} x={118} y={40} size={52} className={styles.amber} />
+      {rows.map((r, i) => (
+        <g key={r}>
+          <rect x="182" y={18 + i * 34} width="128" height="26" rx="6" className={styles.panel} />
+          <text x="194" y={35 + i * 34} className={styles.chipText}>
+            {`${i + 1}. ${r}`}
+          </text>
+        </g>
+      ))}
+    </>
+  );
+}
+
 const ART: Record<LessonArtId, () => JSX.Element> = {
-  hook: Hook,
   money: Money,
   notebook: Notebook,
   oneNora: OneNora,
@@ -515,9 +674,13 @@ const ART: Record<LessonArtId, () => JSX.Element> = {
   keyHolders: KeyHolders,
   custody: Custody,
   queues: Queues,
-  busy: Busy,
   tesla: Tesla,
   etf: Etf,
+  flashCrash: FlashCrash,
+  staircase: Staircase,
+  candleAnatomy: CandleAnatomy,
+  swings: Swings,
+  checkCoin: CheckCoin,
 };
 
 /** A card's picture, with its presenting guide standing in the bottom-left corner */

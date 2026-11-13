@@ -35,6 +35,37 @@ describe('LearningProgress (Postgres)', () => {
     expect(rows[0].status).toBe('completed');
   });
 
+  it('raises a begun lesson’s step, never lowers it, and leaves a finished lesson alone', async () => {
+    // The same two writes as PUT /progress with `started` (the map's ring, 2026-11-12)
+    const userId = await createUser(db);
+    const start = async (itemId: string, step: number) => {
+      await db.learningProgress.createMany({
+        data: [{ userId, itemId, status: 'started', step }],
+        skipDuplicates: true,
+      });
+      await db.learningProgress.updateMany({
+        where: { userId, itemId, status: 'started', OR: [{ step: null }, { step: { lt: step } }] },
+        data: { step },
+      });
+    };
+    await start('lesson-02', 45);
+    await start('lesson-02', 47);
+    await start('lesson-02', 44);
+    const row = await db.learningProgress.findUnique({
+      where: { userId_itemId: { userId, itemId: 'lesson-02' } },
+    });
+    expect(row).toMatchObject({ status: 'started', step: 47 });
+
+    await db.learningProgress.create({
+      data: { userId, itemId: 'lesson-01', status: 'completed' },
+    });
+    await start('lesson-01', 23);
+    const done = await db.learningProgress.findUnique({
+      where: { userId_itemId: { userId, itemId: 'lesson-01' } },
+    });
+    expect(done).toMatchObject({ status: 'completed', step: null });
+  });
+
   it('keeps two users’ progress apart', async () => {
     const a = await createUser(db);
     const b = await createUser(db);

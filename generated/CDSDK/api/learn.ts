@@ -26,11 +26,12 @@ export const learnApi = {
       headers: { Authorization: `Bearer ${accessToken}` },
     }),
 
-  setProgress: (itemId: LearnItemId, status: LearnStatus, accessToken: string) =>
+  /** `started` takes a lesson's furthest screen as `step` (its funnel step number) */
+  setProgress: (itemId: LearnItemId, status: LearnStatus, accessToken: string, step?: number) =>
     request<{ item: LearnProgressItem }>(`/api/learn/progress/${encodeURIComponent(itemId)}`, {
       method: 'PUT',
       headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(step === undefined ? { status } : { status, step }),
     }),
 
   /** The account's habit badges and learning streak, counted from what is already stored */

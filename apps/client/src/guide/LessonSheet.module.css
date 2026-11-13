@@ -538,7 +538,12 @@
 .photoImg {
   display: block;
   width: 100%;
-  height: auto;
+  /* Every lesson photo shows at the Pizza Day photo's shape (1200 × 736), so the cold opens match in
+     height (owner 2026-11-12); a taller photo is cropped from the bottom, keeping its top (the
+     landfill's digger and James Howells' portrait) */
+  aspect-ratio: 1200 / 736;
+  object-fit: cover;
+  object-position: center top;
   animation: photoPush 6s ease-out both;
 }
 

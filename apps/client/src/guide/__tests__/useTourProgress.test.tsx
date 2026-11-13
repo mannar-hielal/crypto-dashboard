@@ -241,7 +241,7 @@ describe('useTourProgress', () => {
   });
 
   describe('lessons', () => {
-    async function loaded(items: ReturnType<typeof item>[] = []) {
+    async function loaded(items: (ReturnType<typeof item> & { step?: number })[] = []) {
       getProgress.mockResolvedValue({ items });
       renderHook(() => useTourProgress());
       await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
@@ -267,6 +267,55 @@ describe('useTourProgress', () => {
       expect(setProgress).toHaveBeenCalledWith('lesson-01', 'completed', 'tok');
     });
 
+    it('should load how far each begun lesson got, ignoring a step from an earlier version', async () => {
+      await loaded([
+        { ...item('lesson-02', 'started'), step: 46 },
+        // Lesson 1's steps 1–20 were its earlier version's: no screen today
+        { ...item('lesson-01', 'started'), step: 5 },
+      ]);
+      expect(useLessonStore.getState().reached).toEqual({ 'lesson-02': 5 });
+      // The server's own answer is never written back
+      expect(setProgress).not.toHaveBeenCalled();
+    });
+
+    it('should send screens reached before the server answered, then nothing twice', async () => {
+      // Begun before the progress loaded (or before signing in): nothing rises past it later
+      act(() => useLessonStore.getState().start('lesson-02', 3));
+      getProgress.mockResolvedValue({ items: [] });
+      renderHook(() => useTourProgress());
+      await waitFor(() => expect(useTourStore.getState().loaded).toBe(true));
+      expect(setProgress.mock.calls).toEqual([['lesson-02', 'started', 'tok', 44]]);
+      // The server's answer doesn't send it again
+      expect(useLessonStore.getState().reached).toEqual({ 'lesson-02': 3 });
+    });
+
+    it('should forget the furthest screens on sign-out, so the next account starts clean', async () => {
+      await loaded([{ ...item('lesson-02', 'started'), step: 46 }]);
+      expect(useLessonStore.getState().reached).toEqual({ 'lesson-02': 5 });
+      token = null; // signed out
+      renderHook(() => useTourProgress());
+      expect(useLessonStore.getState().reached).toEqual({});
+      token = 'tok';
+    });
+
+    it('should not echo the server’s furthest screen back while a lesson is open (review on #280)', async () => {
+      // Lesson 3 open at screen 1 when the answer arrives with screen 5: nothing to send
+      act(() => useLessonStore.getState().start('lesson-02', 1));
+      getProgress.mockResolvedValue({ items: [{ ...item('lesson-02', 'started'), step: 46 }] });
+      renderHook(() => useTourProgress());
+      await waitFor(() => expect(useLessonStore.getState().reached).toEqual({ 'lesson-02': 5 }));
+      expect(setProgress).not.toHaveBeenCalled();
+    });
+
+    it('should never send a lower screen than the furthest one', async () => {
+      await loaded([{ ...item('lesson-02', 'started'), step: 46 }]);
+      act(() => useLessonStore.getState().start('lesson-02', 2));
+      act(() => useLessonStore.getState().next());
+      expect(setProgress).not.toHaveBeenCalled();
+      act(() => useLessonStore.getState().start('lesson-02', 6));
+      expect(setProgress.mock.calls).toEqual([['lesson-02', 'started', 'tok', 47]]);
+    });
+
     it('should load finished lessons, and treat Lesson 1 as the offer being done with', async () => {
       await loaded([item('lesson-01', 'completed')]);
       expect(useLessonStore.getState().completed).toEqual({ 'lesson-01': true });
@@ -285,7 +334,12 @@ describe('useTourProgress', () => {
         { name: 'tour_step', itemId: 'lesson-01', stepId: 'lesson-01.22' },
         { name: 'tour_closed', itemId: 'lesson-01', stepId: 'lesson-01.22' },
       ]);
-      expect(setProgress).not.toHaveBeenCalled();
+      // How far it got, once per new furthest screen (the map's ring, 2026-11-12); no finish
+      expect(setProgress.mock.calls).toEqual([
+        ['lesson-01', 'started', 'tok', 21],
+        ['lesson-01', 'started', 'tok', 22],
+      ]);
+      setProgress.mockClear();
 
       trackEvent.mockClear();
       act(() => useLessonStore.getState().start('lesson-01'));
@@ -328,15 +382,16 @@ describe('useTourProgress', () => {
       trackEvent.mockClear();
       setProgress.mockClear();
       act(() => useLessonStore.getState().start('lesson-02', 4));
-      expect(calls()).toEqual([{ name: 'tour_step', itemId: 'lesson-02', stepId: 'lesson-02.25' }]);
+      expect(calls()).toEqual([{ name: 'tour_step', itemId: 'lesson-02', stepId: 'lesson-02.45' }]);
 
       act(() => useLessonStore.getState().reset());
       expect(calls().some((c) => c.name === 'tour_completed')).toBe(false);
+      // A replay of a finished lesson: no furthest-screen write (it changes nothing), never a finish
       expect(setProgress).not.toHaveBeenCalled();
       expect(calls().at(-1)).toEqual({
         name: 'tour_closed',
         itemId: 'lesson-02',
-        stepId: 'lesson-02.25',
+        stepId: 'lesson-02.45',
       });
     });
 
@@ -349,7 +404,7 @@ describe('useTourProgress', () => {
       expect(calls()).toEqual([
         { name: 'tour_closed', itemId: 'lesson-ownership', stepId: 'lesson-ownership.22' },
         { name: 'tour_started', itemId: 'lesson-02' },
-        { name: 'tour_step', itemId: 'lesson-02', stepId: 'lesson-02.25' },
+        { name: 'tour_step', itemId: 'lesson-02', stepId: 'lesson-02.45' },
       ]);
 
       // A start outside a look back closes the lesson it replaces too
@@ -358,7 +413,7 @@ describe('useTourProgress', () => {
       expect(calls()[0]).toEqual({
         name: 'tour_closed',
         itemId: 'lesson-02',
-        stepId: 'lesson-02.25',
+        stepId: 'lesson-02.45',
       });
 
       act(() => useLessonStore.getState().start('lesson-02', 4));
@@ -366,7 +421,7 @@ describe('useTourProgress', () => {
       trackEvent.mockClear();
       act(() => useLessonStore.getState().reset());
       expect(calls()).toEqual([
-        { name: 'tour_closed', itemId: 'lesson-02', stepId: 'lesson-02.25' },
+        { name: 'tour_closed', itemId: 'lesson-02', stepId: 'lesson-02.45' },
       ]);
     });
   });

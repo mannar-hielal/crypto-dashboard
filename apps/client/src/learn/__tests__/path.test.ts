@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { getLesson, lessonScreens } from '@/guide/lessons';
 import { FREE } from '@/learn/access';
 import { CHECKPOINTS } from '@/learn/checkpoints';
 import {
   CHAPTERS,
+  lessonFraction,
+  onChart,
   nodeOffset,
   openKeys,
   pathState,
@@ -117,8 +120,8 @@ describe('pathState', () => {
       [open, { ...open, id: 'two', number: 2, nodes: open.nodes.slice(2, 4) }]
     );
     expect(after.chapters[1].locked).toBe(false);
-    expect(after.current).toBe('lesson:lesson-02');
     expect(after.chapters[1].firstIndex).toBe(6);
+    expect(after.current).toBe('lesson:lesson-02');
   });
 
   it('should show a stop that is not on the plan as Pro, not locked, and not block the path', () => {
@@ -157,10 +160,31 @@ describe('the map', () => {
     }
   });
 
-  it('should zig-zag within 40 px either side', () => {
+  it('should zig-zag within 40 px either side (back by the owner, 2026-11-12)', () => {
     const offsets = Array.from({ length: 12 }, (_, i) => nodeOffset(i));
     expect(offsets[0]).toBe(0);
     expect(Math.max(...offsets.map(Math.abs))).toBeLessThanOrEqual(40);
     expect(new Set(offsets).size).toBeGreaterThan(3);
+  });
+
+  it('should ring a begun lesson with its share done, and nothing else', () => {
+    const screens = lessonScreens(getLesson('lesson-02')).length;
+    expect(lessonFraction('lesson-02', 6, false)).toBeCloseTo(7 / screens);
+    expect(lessonFraction('lesson-02', undefined, false)).toBeNull(); // not begun
+    expect(lessonFraction('lesson-02', 6, true)).toBeNull(); // done: the tick instead
+    // The last screen without a Finish: a full ring, still not done
+    expect(lessonFraction('lesson-02', screens - 1, false)).toBe(1);
+    const view = pathState({ ...empty(), reached: { 'lesson-01': 2 } });
+    const [l1, , , tour] = view.chapters[0].nodes;
+    expect(l1.fraction).toBeCloseTo(3 / lessonScreens(getLesson('lesson-01')).length);
+    expect(tour.fraction).toBeNull();
+  });
+
+  it('should mark what is done on the real chart: the practice, and Lesson 3', () => {
+    // Owner 2026-11-12: the dumbbell icon
+    expect(onChart({ kind: 'lesson', id: 'lesson-01', access: FREE })).toBe(false);
+    expect(onChart({ kind: 'lesson', id: 'lesson-02', access: FREE })).toBe(true);
+    expect(onChart({ kind: 'tour', id: 'buy-first-coin', access: FREE })).toBe(true);
+    expect(onChart({ kind: 'checkpoint', id: 'checkpoint-ch1', access: FREE })).toBe(false);
   });
 });

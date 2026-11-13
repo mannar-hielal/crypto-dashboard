@@ -78,12 +78,17 @@ export const LEARN_ITEM_IDS = [
 ] as const;
 export type LearnItemId = (typeof LEARN_ITEM_IDS)[number];
 
-/** `completed`: finished (never downgraded); `dismissed`: the learner closed the offer */
-export type LearnStatus = 'completed' | 'dismissed';
+/**
+ * `completed`: finished (never downgraded); `dismissed`: the learner closed the offer; `started`: a
+ * lesson begun, with its furthest screen in `step`
+ */
+export type LearnStatus = 'completed' | 'dismissed' | 'started';
 
 export interface LearnProgressItem {
   itemId: LearnItemId;
   status: LearnStatus;
+  /** A begun lesson's furthest screen, as its funnel step number (`lesson-02.<step>`) */
+  step?: number;
   updatedAt: string;
 }
 
@@ -93,6 +98,8 @@ export interface LearnProgressResponse {
 
 export interface SetLearnProgressRequest {
   status: LearnStatus;
+  /** With `started` only: the lesson's furthest screen as its funnel step number (1–999) */
+  step?: number;
 }
 
 /** What the client may report about a guided tour (a funnel: started → steps → completed / closed) */

@@ -1,5 +1,6 @@
 /**
- * The learning map (owner's visual Q&A 2026-10-24, after Finelo's "Crypto path"): opened from the
+ * The learning map, "Crypto trading path" (owner's visual Q&A 2026-10-24; renamed 2026-11-12, and
+ * the zig-zag kept after a vertical rail was tried and reverted the same day): opened from the
  * Route button beside the avatar, a 400 px drawer on the right over the dimmed dashboard, full
  * screen on phones. Chapters scroll by under a sticky band; each is a zig-zag of stops walked in
  * order (`learn/path.ts` holds the rules). A second tab keeps the Library — articles are reference
@@ -22,7 +23,7 @@ import { useTourStore } from '@/guide/tourStore';
 import { trapFocus } from '@/lib/trapFocus';
 import { useAuthStore } from '@/store/authStore';
 import { LibraryTab } from './LibraryTab';
-import { nodeOffset, type ChapterView, type NodeKind, type NodeView } from './path';
+import { nodeOffset, onChart, type ChapterView, type NodeKind, type NodeView } from './path';
 import { NodeIcon, PathNode } from './PathNode';
 import { usePathStore } from './pathStore';
 import { usePathView } from './usePathView';
@@ -58,7 +59,7 @@ function ChapterOverview({ nodes }: { nodes: NodeView[] }) {
       <ul className={styles.overviewList}>
         {nodes.map((v) => (
           <li key={v.key}>
-            <NodeIcon kind={v.node.kind} size={14} /> {v.title}
+            <NodeIcon kind={v.node.kind} onChart={onChart(v.node)} size={14} /> {v.title}
             <span className={styles.rowMeta}> · about {v.minutes} min</span>
           </li>
         ))}
@@ -305,7 +306,9 @@ export function PathDrawer() {
   if (!open) return null;
 
   const close = () => useTourStore.getState().closePanel();
-  const started = finished > 0;
+  // Something finished, or a lesson begun (its ring): the bubble says Continue
+  const started =
+    finished > 0 || view.chapters.some((c) => c.nodes.some((n) => n.fraction !== null));
 
   const start = ({ node }: NodeView) => {
     close();
@@ -346,7 +349,7 @@ export function PathDrawer() {
       >
         <div className={styles.head}>
           <h2 id="path-title" className={styles.title}>
-            Crypto path
+            Crypto trading path
           </h2>
           {habits && habits.streakDays > 0 && (
             <span
@@ -413,6 +416,14 @@ export function PathDrawer() {
               <p className={styles.intro}>
                 Short lessons, then practice on the real screen. Nothing here uses real money.
               </p>
+              <ul className={styles.legend} aria-label="Kinds of stop" {...guide('path.legend')}>
+                <li>
+                  <NodeIcon kind="lesson" size={14} /> Lesson
+                </li>
+                <li>
+                  <NodeIcon kind="tour" size={14} /> Practice on the real chart
+                </li>
+              </ul>
               {view.chapters.map((c) => (
                 <ChapterSection
                   key={c.chapter.id}

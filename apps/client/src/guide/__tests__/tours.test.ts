@@ -54,6 +54,17 @@ describe('tours', () => {
     expect(getTour('sell-and-review').next).toBeUndefined();
   });
 
+  it('should teach going long, a position, closing it and taking a profit (the Finelo gaps)', () => {
+    const buy = getTour('buy-first-coin').steps;
+    const sell = getTour('sell-and-review').steps;
+    expect(buy[0].text).toMatch(/Buy if you expect the price to rise, Sell to get out/);
+    expect(buy[0].text).toMatch(/going long/);
+    expect(buy.at(-1)!.text).toMatch(/You now hold a position: \$100 of Bitcoin, long/);
+    expect(buy.at(-1)!.text).toMatch(/until you close it by selling/);
+    expect(sell.map((s) => s.text).join(' ')).toMatch(/closes your position/);
+    expect(sell.map((s) => s.text).join(' ')).toMatch(/taken a profit/);
+  });
+
   it('should have the buy tour type dollars, not coins', () => {
     const steps = getTour('buy-first-coin').steps;
     expect(steps.some((s) => s.anchor === 'trade.amount-unit' && s.key === 'usdt')).toBe(true);

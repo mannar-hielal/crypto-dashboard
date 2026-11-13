@@ -74,6 +74,7 @@ describe('the learning graph', () => {
       },
     ]);
     expect(practiceFor('bitcoin-network').map((p) => p.label)).toEqual([
+      'Lesson 2: Money that no one controls',
       'Lesson 2: One ledger, thousands of copies',
       'Lesson 2: A stamp only you hold',
       'Lesson 2: Your bitcoin isn’t in your phone',
@@ -95,15 +96,29 @@ describe('the learning graph', () => {
       },
     ]);
     expect(practiceFor('exchange-price')).toEqual([
-      { kind: 'lesson', lesson: 'lesson-02', screen: 1, label: 'Lesson 3: What a price is' },
+      { kind: 'lesson', lesson: 'lesson-02', screen: 1, label: 'Lesson 3: Two queues meet' },
       {
         kind: 'lesson',
         lesson: 'lesson-02',
         screen: 2,
-        label: 'Lesson 3: A market that never closes',
+        label: 'Lesson 3: When the queue runs thin',
       },
       { kind: 'tour', tour: 'primer', label: 'What you’re looking at' },
       { kind: 'tour', tour: 'buy-first-coin', label: 'Buy your first coin' },
+    ]);
+    // Rebuilt Lesson 3 (2026-11-12): the volatility card sits after the moment, screen 6
+    expect(practiceFor('price-swings')).toEqual([
+      {
+        kind: 'lesson',
+        lesson: 'lesson-02',
+        screen: 3,
+        label: 'Lesson 3: Thousands of deals, one candle',
+      },
+      { kind: 'lesson', lesson: 'lesson-02', screen: 6, label: 'Lesson 3: Big swings, both ways' },
+      { kind: 'tour', tour: 'primer', label: 'What you’re looking at' },
+    ]);
+    expect(practiceFor('spot-a-scam')).toEqual([
+      { kind: 'lesson', lesson: 'lesson-02', screen: 7, label: 'Lesson 3: Check before you trust' },
     ]);
     // Owner 2026-11-12: Lesson 2's Bitcoin card opens it with its Read more, so it practises it
     expect(practiceFor('bitcoin-story')).toEqual([
@@ -113,7 +128,31 @@ describe('the learning graph', () => {
         screen: 1,
         label: 'Lesson 2: Money that no one controls',
       },
+      // The ledger card's Read more opens the mining section (owner 2026-11-12)
+      {
+        kind: 'lesson',
+        lesson: 'lesson-ownership',
+        screen: 2,
+        label: 'Lesson 2: One ledger, thousands of copies',
+      },
+      // The stamp card's [[miners|mining]] (review: the mining concept opens from a lesson again)
+      {
+        kind: 'lesson',
+        lesson: 'lesson-ownership',
+        screen: 4,
+        label: 'Lesson 2: A stamp only you hold',
+      },
     ]);
+  });
+
+  it('should open every concept on an article that really explains its term (review #278)', () => {
+    for (const concept of CONCEPTS) {
+      const article = getArticle(concept.article);
+      const words = JSON.stringify([article.title, article.summary, article.blocks]).toLowerCase();
+      // "Satoshi" may appear as satoshis; "Decentralized" as decentralised; match the stem
+      const stem = concept.term.toLowerCase().slice(0, Math.max(5, concept.term.length - 2));
+      expect(words, `${concept.id} → ${concept.article}`).toContain(stem);
+    }
   });
 
   it('should keep free things free: a free lesson never links to a paid concept or article', () => {
@@ -130,6 +169,13 @@ describe('the learning graph', () => {
       // Every other link a free lesson makes: a card's Read more, the recap and its highlight
       for (const card of lesson.cards) {
         if (card.more) expect(getArticle(card.more.article).access, card.title).toBe(FREE);
+        // …and a Read more's section is a real heading of its article
+        if (card.more?.section) {
+          const ids = getArticle(card.more.article).blocks.flatMap((b) =>
+            b.kind === 'h' && b.id ? [b.id] : []
+          );
+          expect(ids, card.title).toContain(card.more.section);
+        }
       }
       for (const item of [...(lesson.recap?.points ?? []), lesson.recap?.highlight]) {
         if (item?.article) expect(getArticle(item.article).access, item.text).toBe(FREE);

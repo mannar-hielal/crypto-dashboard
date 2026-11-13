@@ -47,6 +47,11 @@ type ReturnPlace = Pick<LessonRun, 'screen' | 'answers' | 'rating'> & { lesson: 
 interface LessonState extends LessonRun {
   /** Lessons finished, from the server and this session */
   completed: Partial<Record<LessonId, true>>;
+  /**
+   * The furthest screen (0-based) reached in each lesson, from the server and this session: the
+   * map's progress ring (owner 2026-11-12). It only rises; a look back doesn't count
+   */
+  reached: Partial<Record<LessonId, number>>;
   /** Counts every finish this session, a replay included: what the funnel reports as completed */
   finishes: number;
   /** During a look back: the lesson to return to, for "← Back to Lesson N" */
@@ -89,6 +94,10 @@ interface LessonState extends LessonRun {
   /** Close without finishing: ✕ or Esc (during a look back: back to the lesson) */
   close: () => void;
   setCompleted: (ids: LessonId[]) => void;
+  /** The server's furthest screens, merged: each lesson keeps the higher of the two */
+  setReached: (reached: Partial<Record<LessonId, number>>) => void;
+  /** Forget the furthest screens (signed out: they belong to the account that made them) */
+  clearReached: () => void;
   reset: () => void;
 }
 
@@ -100,6 +109,15 @@ export function noteToSave(s: Pick<LessonRun, 'note' | 'noteStatus' | 'noteError
 /** A screen index kept within the lesson */
 function clampScreen(id: LessonId, screen: number): number {
   return Math.min(Math.max(0, screen), lessonScreens(getLesson(id)).length - 1);
+}
+
+/** `reached` with a lesson's furthest screen raised to `screen` (never lowered) */
+function raised(
+  reached: Partial<Record<LessonId, number>>,
+  id: LessonId,
+  screen: number
+): Partial<Record<LessonId, number>> {
+  return screen > (reached[id] ?? -1) ? { ...reached, [id]: screen } : reached;
 }
 
 /** A lesson's run from its start, or no lesson at all */
@@ -119,6 +137,7 @@ function freshRun(id: LessonId | null, screen = 0): LessonRun {
 const initial = {
   ...freshRun(null),
   completed: {},
+  reached: {},
   finishes: 0,
   returnTo: null,
   run: 0,
@@ -134,16 +153,30 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
     // look back's lesson too): the same run carries on, at that screen if one is given; during
     // its tour, the tour does
     if (s.activeId === id) {
-      if (screen !== undefined && !s.inTour) set({ screen: clampScreen(id, screen) });
+      if (screen !== undefined && !s.inTour) {
+        const at = clampScreen(id, screen);
+        // A look back's own lesson is only visited: it isn't begun by it
+        set({ screen: at, reached: s.returnTo ? s.reached : raised(s.reached, id, at) });
+      }
       return;
     }
     // The lesson a look back came from: home, as it was left
     if (s.returnTo?.lesson === id) {
       get().returnBack();
-      if (screen !== undefined) set({ screen: clampScreen(id, screen) });
+      if (screen !== undefined) {
+        const at = clampScreen(id, screen);
+        set((now) => ({ screen: at, reached: raised(now.reached, id, at) }));
+      }
       return;
     }
-    set({ ...freshRun(id, screen), returnTo: null, run: s.run + 1, starts: s.starts + 1 });
+    const run = freshRun(id, screen);
+    set({
+      ...run,
+      reached: raised(s.reached, id, run.screen),
+      returnTo: null,
+      run: s.run + 1,
+      starts: s.starts + 1,
+    });
   },
 
   visit: (id, screen) => {
@@ -170,10 +203,16 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
   },
 
   next: () => {
-    const { activeId, screen } = get();
+    const { activeId, screen, returnTo, reached } = get();
     if (!activeId) return;
     const last = lessonScreens(getLesson(activeId)).length - 1;
-    if (screen < last) set({ screen: screen + 1 });
+    if (screen >= last) return;
+    // The map's ring (owner 2026-11-12): the furthest screen of the learner's own lesson, never of
+    // one they're only looking back at
+    set({
+      screen: screen + 1,
+      reached: returnTo ? reached : raised(reached, activeId, screen + 1),
+    });
   },
 
   back: () => {
@@ -244,6 +283,18 @@ export const useLessonStore = create<LessonState>()((set, get) => ({
       completed: Object.fromEntries(ids.map((id) => [id, true])) as Partial<Record<LessonId, true>>,
     }),
 
+  clearReached: () => set({ reached: {} }),
+
+  setReached: (reached) =>
+    set((s) => {
+      const merged = { ...s.reached };
+      for (const [id, screen] of Object.entries(reached) as [LessonId, number][]) {
+        merged[id] = Math.max(merged[id] ?? -1, clampScreen(id, screen));
+      }
+      return { reached: merged };
+    }),
+
   // `run` keeps counting: a save from before the reset must never match a run after it
-  reset: () => set((s) => ({ ...initial, answers: {}, completed: {}, run: s.run + 1 })),
+  reset: () =>
+    set((s) => ({ ...initial, answers: {}, completed: {}, reached: {}, run: s.run + 1 })),
 }));

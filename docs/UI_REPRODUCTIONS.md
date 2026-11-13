@@ -266,7 +266,7 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
    ([lesson.photo], no credit line, no guide), and the lines one by one ("2013 ·
    Newport, Wales" … "8,000 bitcoin" … "Not even him." … "In the next 8 minutes: what Bitcoin is…"), then **Unlock what Bitcoin really is →**. Card 2 **Money that no
    one controls** → Expect Pulin beside the Bitcoin mark rising with its amber burst (still with reduced motion),
-   "Bitcoin is digital money that runs without a bank or a boss…", four bold points (No one in charge, A fixed
+   "Bitcoin is decentralized digital money…" ([lesson.term `decentralized`]), four bold points (No one in charge, A fixed
    supply, Open to check, Yours, with a key), [lesson.more] Read more → (opens _Bitcoin's story_), and **So who
    keeps the ledger? →**. Card 3 **One ledger, thousands of copies** → Expect the dotted world map, "In Lesson 1 we saw the risk of one record keeper…" (no
    Nora anywhere in Lesson 2) and **How do I receive bitcoin? →**. [lesson.term `ledger`] → Expect the
@@ -297,12 +297,24 @@ charts need the real Bybit feed, the fake feed draws its own candles) or product
 5. The questions (the "support" scam with Berwyn worried, Mt. Gox, the address), the note (Skip), the close → Expect
    [lesson.teaser] "Next: who decides what one bitcoin costs, on the real chart." and [lesson.next-lesson] → Expect Lesson 2 ticked done and **Lesson 3 · Who
    sets the price?** at card 1.
-6. Cards 4–5 (live data only) → Expect real daily candles: Tesla 2021 with three markers; the ETF chart ending on 10
-   Jan 2024. Answer the moment → Expect the chart to play on to 23 Jan with "−14.5%".
-7. Desktop: Try it → [lesson.try] Show me → tap [symbolbar.price], rest on the newest candle, hover a red one → Expect
-   "Done ✓" after each, then the questions. A phone gets Continue instead.
-8. [nav.learn] (the Route icon beside the avatar) → [path.tab `library`] → Expect a **Library** of seven articles;
+6. Lesson 3 (rebuilt 2026-11-12) → Expect the cold open **One bitcoin for $8,200**: Bybit's minute candles with a
+   dashed red wick to "Binance.US: $8,200", the beats, and **Unlock who sets the price**. Then **Two queues meet**,
+   **When the queue runs thin** (the staircase, Read more → `exchange-price#liquidity`), **Thousands of deals, one
+   candle** and **Same company, opposite moves** (Tesla 2021, three markers, live data only).
+   Then the moment: the ETF chart ending on 10 Jan 2024; answer → Expect it to play on to 23 Jan with "−14.5%".
+   After it → Expect **Big swings, both ways** (May 2021: "Low $28,801" below, "+12.0%" above; Read more →
+   `price-swings#size`) and **Check before you trust** (Read more → `spot-a-scam#checklist`).
+7. Desktop: Try it → [lesson.try] Show me → tap [symbolbar.price] → Expect step 2's ring on the newest
+   candle with the arrow above it, pointing down; rest on it, hover a red one → Expect "Done ✓" after each, then the questions. A phone gets Continue instead.
+   The three questions (thin queue, size for the fall, the 2%-a-day coin), then the summary **Who sets the price?**
+   with four lines and "The price is people, trading every second.", then the close with [lesson.teaser] "Next: spend
+   $100 of practice money on Bitcoin…" and **Buy your first coin**.
+8. [nav.learn] (the Route icon beside the avatar) → [path.tab `library`] → Expect a **Library** of nine articles;
    [learn.article.open `exchange-price`] → Expect the drawer with **Library** in its head and the sources folded.
+   In **When the queue runs thin**, [article.queue.size] to 10 → Expect the thin queue down to 90; [article.queue.limit]
+   → Expect "6 wait unsold". In _Candles, news and big swings_, [article.candle.next] ×5 → Expect "▲ Closed higher…
+   green"; [article.swing.size `1000`] → Expect "$1,000.00 became $671.30 at the low: −$328.70 (−32.9%)". In
+   _Check before you trust_, the red-flag sorter → Expect a Why after every pick and "3 red flags…" once all six are in.
 
 **Manual check (M).** The pictures and the guides' faces at 375, 412, 820 and 1440 px (nothing clipped, the
 presenter never over the scene). Frequency: per release touching `guide/LessonArt.tsx`, `guide/art/` or the lessons.
@@ -314,9 +326,13 @@ presenter never over the scene). Frequency: per release touching `guide/LessonAr
 
 1. Look at the top bar → Expect the Route icon left of the avatar with an amber dot; the user menu has Settings and
    Sign out but no Learn.
-2. [nav.learn] → Expect **Crypto path** at 0 %, chapter 1 "Foundations of crypto" in purple with "0 of 6 done",
-   **Start** and Pulin over Lesson 1, padlocks on the next four stops, the crown open, and chapter 2 "Trade with a
-   plan" greyed with "Coming soon" and dashed stops nobody can tab to. Close and reopen → Expect no dot.
+2. [nav.learn] → Expect **Crypto trading path** at 0 %, the legend (book = Lesson, dumbbell = Practice on the real
+   chart), chapter 1 "Foundations of crypto" in purple with "0 of 6 done", the zig-zag with
+   **Start** and Pulin over Lesson 1, padlocks on the next four stops, a dumbbell on Lesson 3, "Buy your first coin" and
+   "Sell it and read the result", no "Hands-on" tag or badge anywhere, the crown open, and chapter 2 "Trade with a plan" greyed with "Coming soon" and dashed stops
+   nobody can tab to. Close and reopen → Expect no dot.
+   Open Lesson 1 to its sixth screen, close it, reload → Expect a ring about half round Lesson 1 (read back from the
+   server) and **Continue**.
 3. Tap [path.node `lesson:lesson-ownership`] → Expect "Finish “What is the problem?” first." and no lesson.
    [path.chapter.info `ch1`] → Expect the six stops with minutes and "After this chapter you can".
 4. [path.node `lesson:lesson-01`] → finish the lesson → reopen → Expect it ticked, 17 %, **Continue** on Lesson 2,
@@ -329,7 +345,7 @@ presenter never over the scene). Frequency: per release touching `guide/LessonAr
    only on a larger screen) and **Try again**.
 
 **Manual check (M).** The map at 375, 412, 820 and 1440 px: the zig-zag inside the drawer, the sticky chapter band,
-the bubble and Pulin never clipped. Frequency: per release touching `learn/Path*` or `learn/CheckpointSheet.tsx`.
+the bubble, Pulin and a progress ring never clipped. Frequency: per release touching `learn/Path*` or `learn/CheckpointSheet.tsx`.
 
 ## Stage 1 — Spot basics
 

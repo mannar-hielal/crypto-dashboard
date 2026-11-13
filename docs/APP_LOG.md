@@ -4584,6 +4584,170 @@ animated finish that isn't Finelo's cup. Their Q&A: a finish ribbon, Satoshi nam
 - **Tests:** `FinishLine.test` (the run, a tap, reduced motion), the sheet (Lesson 1's close, a close with no
   recap, the button order), the lesson rules (recap lines open real sections; Satoshi only in the recap).
 
+### 2026-11-12 — The zig-zag back, Duolingo-style: progress rings, a practice dumbbell, synced lesson progress
+
+The owner reversed the vertical rail (entry below) the same day: "the zig-zag broke the monotony". It's back, closer
+to Duolingo's path. Kept from the rail: the "Crypto trading path" title, the hands-on mode (`nodeMode`) and the arrow
+on the newest candle.
+
+- **The map** (`learn/PathNode.tsx`, `PathDrawer.tsx`): the zig-zag of 3D round stops, the dashed links, and the
+  Start/Continue bubble with Pulin, as before the rail.
+  - **Icons:** a lesson is a **book**; what's done **on the real chart** is a **dumbbell** (was a target): the buy and
+    sell practice, and Lesson 3, whose "Try it" is a tour there (`onChart` in `learn/path.ts`). The checkpoint keeps
+    the crown.
+  - **No "Hands-on" tag or badge** (owner, the same evening): they were tried and removed. The legend names the book
+    and "Practice on the real chart" only.
+- **Progress ring:** a lesson begun and not finished is ringed from 12 o'clock in the chapter's colour, for the share
+  of its screens reached (`lessonFraction` in `learn/path.ts`). Its label adds ", 5 of 14 screens". The ring replaces
+  the next step's breathing outline, and the bubble says Continue once any lesson is begun.
+- **Synced** (owner's choice: on the server, not the device):
+  - **Schema:** `LearningProgress` gains a nullable `step` (migration `20261112220000_learning_progress_step`) and the
+    status `started`.
+  - **Route:** `PUT /api/learn/progress/:itemId` takes `{ status: 'started', step }`, for a lesson only, with `step`
+    1–99, which is the funnel's step number including `stepBase`.
+  - 🔐 **Never downgrades:** the row is created if missing, and its step only rises while the lesson is unfinished. A
+    completed row is never touched.
+  - **SDK:** `LearnStatus` adds `started`, `LearnProgressItem.step`, and `setProgress(…, step?)`.
+  - **Client:** `lessonStore.reached` holds the furthest screen per lesson. It rises with every screen of the learner's
+    own lesson, never for a look back, and the server's answer is merged in. `useTourProgress` reads it (a step from an
+    earlier version of a lesson names no screen and is ignored) and writes one `started` per new furthest screen.
+- **Code review fixes (same day):**
+  - **Sign-out:** the furthest screens are cleared on sign-out, so the next account on the tab never sees them.
+  - **Sync on load:** screens reached before the server answered (or before signing in) are sent once it has.
+  - **Replays:** a replay of a finished lesson sends nothing.
+  - **The last screen:** a lesson left there without Finish keeps a full ring and **Continue**.
+  - **`step` range:** 1–999, leaving room for many `stepBase` rebuilds (each adds 20).
+  - **Only a start takes a step:** a finish or a dismissal with one is a 400, and a finish clears the stored step.
+  - **Fewer queries:** a new row or a raised step is answered without a read back.
+  - **The store:** `reached` is raised inside the actions that change the screen, not by a store subscriber.
+  - **The arrow:** a candle scrolled above the pane falls back to the whole chart.
+  - **Cleanup:** the unused stop modes (`StopMode`, `nodeMode`, `MODE_LABEL`) are gone (`onChart` drives the
+    dumbbell). The red-flag sorter counts its flags.
+- **Privacy policy 1.5** (12 Nov 2026): the "Learning progress" row now names lessons and the furthest screen of a
+  begun lesson. It's treated as **not material**, like 1.4: the same category, retention, legal basis and recipients.
+  Owner to confirm.
+- **Tests:**
+  - server: `learn.test` (started, never lower, a finished lesson untouched, refusals);
+  - the contract fixtures;
+  - `learningProgress.int.test` (the two writes on Postgres);
+  - client: `path.test` (zig-zag, `lessonFraction`), `PathDrawer.test` (ring, dumbbell, badge, label),
+    `lessonStore.test` (`reached`), `useTourProgress.test` (read, stale step, one write per screen).
+
+### 2026-11-12 — Lesson 3 rebuilt: who sets the price, why it swings, and check before you trust
+
+The owner's brief: cover Finelo's Lesson 3 and top it, with an attractive intro and 3–4-minute articles with
+something to do. The plan is `guided-learning-topics/08-lesson-3-plan.md` (revision 2026-11-12); the owner took its
+recommendations, and chose our own drawing over a photo for the cold open.
+
+- **Cold open, "One bitcoin for $8,200":** the Binance.US flash crash (21 Oct 2021, 11:34 UTC, a trader's algorithm
+  bug, back within the minute; CoinDesk, The Block). The picture (`flashCrash`) is Bybit's own 31 one-minute candles
+  for 11:20–11:50, barely moving, with a dashed wick drawn to "Binance.US: $8,200, off the scale". A cold open with a
+  drawing stands alone like a photo (the lesson rule allows `beats` + `art` without a presenter).
+- **Six cards, 69–77 words, each button naming the next step:** Two queues meet (Leo and Sofia, from Lesson 2), When
+  the queue runs thin (liquidity; Dogecoin's typical 2025 day ≈2.2× Bitcoin's, Bybit), Thousands of deals, one candle,
+  Same company, opposite moves (Tesla), then **the moment** (the ETF, its set-up now in the question's context), then
+  **Big swings, both ways** (the volatility card postponed earlier today: 19 May 2021, $100 → $67 at the low, "size for
+  the fall") and **Check before you trust** (the Squid Game rug pull, three checks, no price quoted). The "Who decides?"
+  and "Good news…" cards and the `hook`/`busy` drawings are gone; the spread lives in the article and the buy tour.
+- **`momentAfter`** (new on `Lesson`): the card the moment follows, so a lesson can go on teaching after it.
+  `lessonScreens()` splits there. Lesson 3: after card 4. **`stepBase` 40** (14 screens: steps 41–54).
+- **Questions:** a thin queue, sizing for the fall, the 2%-a-day coin. **Recap** with four lines (each opening its
+  article section) and the highlight "The price is people, trading every second." **Teaser** before a tour is now
+  allowed (the rule: a teaser names what the close offers). `minutes: 8`.
+- **Concepts:** `volatility`, `rug-pull` and `slippage` (new); `candle` and `hindsight` now open `price-swings`.
+- **Articles (3–4 min, each with something to do):**
+  - `exchange-price` rewritten: liquidity with the Binance.US story, slippage, small coins, limit orders, and the new
+    **`eat-the-queue`** widget (sell 1–10 coins into a busy and a thin queue; a limit at 97).
+  - `price-swings` (new): candles (moved, with the **`candle-builder`**: a candle drawn deal by deal), 24/7, news (China
+    24 Sep 2021 told correctly: −9.3% low, −4.5% close), volatility, and size for the fall with the **`swing-sizer`**
+    (19 May 2021 at $50–$1,000; losses always with a − sign, no gain in money).
+  - `spot-a-scam` (new): the Squid Game token, how a rug pull works, three checks with the **`scam-check`** sorter
+    (PupCoin, made up; wrong picks shown calmly), other costumes, why careful people fall for it, and what to do if
+    caught (stop paying, keep records, report, beware "recovery" services).
+- **Honest reading times:** a new test holds every article's `minutes` within one of its length (≈200 words a minute,
+  half a minute a widget). Relabelled: Money 101 5 → 2, SunCoin 5 → 3, Bitcoin's story 4 → 3, Getting bitcoin 6 → 3,
+  How Bitcoin's network works 3 → 4.
+- **Tests:** `lessons.test` (the new card list, the moment's place, card 5's both-ways and sizing, no price on the scam
+  card, the recap's articles, the teaser rule, `stepBase` 40), `LessonArt.test`, `LessonSheet.test` (new screen order,
+  the recap, teaching after the moment), `learnGraph.test`, `ArticleWidgets.test` (the four widgets),
+  `articleMinutes.test`, `useTourProgress.test` (step ids).
+
+### 2026-11-12 — Crypto trading path: our own rail, hands-on stops, and the arrow on the newest candle
+
+- **Renamed** "Crypto path" → **"Crypto trading path"** (owner).
+- **Our own look, not Finelo's** (owner's visual Q&A): the zig-zag of 3D stops, the dashed links and Tick over the next
+  stop are gone. Each chapter is a straight vertical **rail**: a marker on the rail and a card beside it (title, kind,
+  minutes), one button per stop, a **Start/Continue** chip on the next one. Notes and "Take the checkpoint" sit under
+  the cards.
+- **Hands-on vs reading** (owner: "any lesson with an exercise"): `nodeMode` in `learn/path.ts` marks a stop
+  `hands-on` when the learner does something (a lesson with `tryWidget` or `tour`, and every practice tour), `read` for
+  cards and articles only, `check` for a checkpoint. Hands-on markers are green rounded squares (a pointing hand on a
+  lesson, the target on a tour) with a "● Hands-on" tag; reading markers stay round in the chapter's colour; the
+  checkpoint is a diamond. A legend under the intro names both. Today every lesson has a "Now you try it", so all
+  five are hands-on; a reading-only lesson will show round.
+- **The primer's step 2 arrow** ("Hover the newest candle") now rings **the newest candle** and points down at it, not
+  at the whole chart (owner). ChartPanel registers a locator (`registerNewestCandle` in `guide/chartHover.ts`) that the
+  overlay reads every frame while a `hover: 'last'` step is open, so the ring follows the candle as it grows or the
+  chart scrolls; with the candle off screen it falls back to the whole chart.
+- **Tests:** `chartHover.test` (the candle box, the locator), `GuideOverlay.test` (ring on the candle, arrow above, the
+  fallback), `path.test` (`nodeMode`), `PathDrawer.test` (the title, the legend, the mode).
+
+### 2026-11-12 — Lesson photos at one height
+
+- Every lesson photo now shows at the Pizza Day photo's shape (1200 × 736, `aspect-ratio` + `object-fit: cover`), so
+  Lesson 2's landfill photo is as tall as Lesson 1's (owner). A taller photo is cropped from the bottom
+  (`object-position: center top`), which keeps the digger and James Howells' portrait.
+- The **node** peek's analogy is now the sceptical office worker (owner): "a sceptical office worker who checks every
+  payment against the rules before filing it, and keeps their own copy of every page" (was "one of thousands of
+  Noras"). The **ledger** peek, which Lesson 2's ledger card also opens, drops Nora too ("a notebook with one new
+  line per payment, and nothing ever erased"); a test keeps Nora out of every peek Lesson 2 opens.
+- **Mining moves to the ledger card** (owner): "Each page, called a block, is added by miners and sealed to the one
+  before…", with a Read more that opens _Bitcoin's story_ at **Mining: how a new block is added**. The card already
+  has its two tappable terms, so "miners" is plain text there; the stamp card is about sending again. A test checks
+  that a card's Read more section is a real heading of its article.
+- Code review (no security findings: copy, one CSS rule, tests): the stamp card names [[miners]] again ("once the nodes
+  accept it, miners add it to a new block"), so the mining peek opens from a lesson; the landfill photo's alt no
+  longer mentions the workers the new crop hides; the node analogy is shortened to fit a phone peek ("a sceptical
+  office worker who checks every payment before filing it").
+
+### 2026-11-12 — Bitcoin's story: mining in depth, with the mining race
+
+- The owner asked to elaborate on mining in _Bitcoin's story, and its plan in plain words_:
+  - **The plan, in six steps** is now six one-liners.
+  - **"Why a payment isn't instant"** and **"Satoshis: you never need a whole coin"** are gone.
+  - **Mining: how a new block is added** is the last section:
+    - blocks, and the hash that must start with zeros;
+    - hard to find, easy to check;
+    - a block about every 10 minutes, with the difficulty retargeted every 2,016 blocks;
+    - the reward (new bitcoin plus fees) halving every 210,000 blocks: 50 → 3.125 since April 2024;
+    - 21 million in all, the last around 2140;
+    - why it keeps the record honest;
+    - an honest note on electricity and specialised machines.
+  - The article now reads in about 4 minutes (was 7).
+- **The mining race** (`mining-race` widget, the owner's pick in the visual Q&A):
+  - four miners guess, and fingerprints miss until Miner C's starts 0000 on round 3;
+  - the block seals onto the chain and the reward shows;
+  - **Start over** resets it.
+    It's a sketch: the fingerprints are shortened, and real miners make trillions of guesses a second.
+- The `mining` concept now opens this article (Lesson 2's "miners" term leads to it). The self-test swaps the satoshis
+  question for two on mining. Review #278: the `satoshi` concept now opens _Getting bitcoin_, which gained one line
+  ("one bitcoin splits into 100,000,000 satoshis… $100 simply buys a fraction"), and a test checks that every
+  concept's article really mentions its term.
+
+### 2026-11-12 — The Finelo content gaps closed
+
+- The owner's choices on what Finelo's first two lessons teach and ours didn't:
+  - **Trading basics in the buy/sell tours:** "Buy your first coin" now opens on the two choices (Buy if you expect
+    a rise, Sell to get out) and names buying for a rise **going long**; its last step says you now hold a
+    **position**, $100 of Bitcoin long, only on paper until you **close** it by selling. "Sell it and read the result"
+    says selling everything **closes your position**, and its result step that the result is now real and when you'd
+    have **taken a profit**. Spot is long-only, so going short stays for a later lesson. No step was added (tours stay
+    at five steps), so the funnel's step ids don't move.
+  - **Lesson 2 words:** **decentralized** (tappable) on the Bitcoin card; **block** and **hash** in plain words on
+    the ledger card ("Each page, called a block, is sealed … with a fingerprint called a hash"); **mining** (tappable,
+    "miners") on the stamp card. _Many notebooks, no Nora_ (the network article) now links back to the Bitcoin card too.
+  - **Beyond Bitcoin** is planned, not built: `guided-learning-topics/07-beyond-bitcoin-plan.md`.
+
 ### 2026-11-12 — The Finelo review's small wins (S items)
 
 - Lesson 1's 2008 line names Lehman Brothers; Lesson 2's cold open ends on its objective ("In the next 8 minutes: …",
